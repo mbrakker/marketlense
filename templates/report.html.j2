@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ title }}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{font-family:system-ui,Arial,sans-serif;max-width:760px;margin:40px auto;padding:0 20px;line-height:1.55}
+h1,h2{line-height:1.25}
+.insights li{margin-bottom:.4rem}
+blockquote{margin:.6rem 0;padding:.6rem .8rem;border-left:4px solid #DDD;background:#FAFAFA}
+.footer{margin-top:2rem;color:#666;font-size:.9rem}
+code{background:#f5f5f5;padding:.1rem .3rem;border-radius:4px}
+.preview{margin:1rem 0}
+.preview img{max-width:100%;height:auto;border:1px solid #EEE;border-radius:8px}
+</style>
+</head>
+<body>
+  <h1>{{ doc_name }}</h1>
+
+  {% if preview_png %}
+  <div class="preview">
+    <h2>Preview</h2>
+    <img src="{{ preview_png }}" alt="Page 1 preview of {{ doc_name }}">
+  </div>
+  {% endif %}
+
+  <h2>TL;DR</h2>
+  <p>{{ data.tldr }}</p>
+
+  <h2>5 Insights</h2>
+  <ol class="insights">
+    {% for i in data.insights %}<li>{{ i }}</li>{% endfor %}
+  </ol>
+
+  <h2>Figure</h2>
+{% if data._figure_top %}
+  <p><img src="{{ data._figure_top }}" alt="Selected figure" style="max-width:100%;height:auto;border:1px solid #EEE;border-radius:8px"></p>
+{% elif data._figure_image %}
+  <p><img src="{{ data._figure_image }}" alt="Selected figure" style="max-width:100%;height:auto;border:1px solid #EEE;border-radius:8px"></p>
+{% endif %}
+<p><strong>{{ data.figure.title }}</strong><br>{{ data.figure.evidence }}</p>
+
+{% if data._figure_gallery and data._figure_gallery|length > 1 %}
+  <h3>Other candidates</h3>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    {% for p in data._figure_gallery[1:] %}
+      <img src="{{ p }}" alt="Candidate" style="max-width:240px;height:auto;border:1px solid #EEE;border-radius:6px">
+    {% endfor %}
+  </div>
+{% endif %}
+
+
+  <h2>Quote</h2>
+  <blockquote>“{{ data.quote.text }}” — <em>{{ data.quote.author }}</em></blockquote>
+
+  <h2>Commentary</h2>
+  <p>{{ data.commentary }}</p>
+
+  <div class="footer">
+    Source: {% if data.source %}<a href="{{ data.source }}">{{ data.source }}</a>{% else %}<em>Not provided</em>{% endif %}<br>
+    Generated from: {{ doc_name }} (Drive fileId: {{ file_id }})
+  </div>
+</body>
+</html>
