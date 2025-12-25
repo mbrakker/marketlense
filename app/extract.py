@@ -1,6 +1,6 @@
 from __future__ import annotations
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 import fitz, pdfplumber
 from PIL import Image
 import io
@@ -39,11 +39,17 @@ def _nearby_text(page: fitz.Page, rect: fitz.Rect, max_dist: float = 90) -> str:
             best = (text.strip(), dist)
     return best[0]
 
-def extract_charts(pdf_path: str, thumbs_dir: str) -> List[Candidate]:
+def extract_charts(
+    pdf_path: str,
+    thumbs_dir: str,
+    save_thumbs: bool = False,
+    doc: Optional[fitz.Document] = None,
+) -> List[Candidate]:
     out: List[Candidate] = []
-    with fitz.open(pdf_path) as doc:
-        for pno in range(len(doc)):
-            page = doc[pno]; rect = page.rect
+    local_doc = doc or fitz.open(pdf_path)
+    try:
+        for pno in range(len(local_doc)):
+            page = local_doc[pno]; rect = page.rect
             top_cut = rect.y0 + rect.height * 0.12
             bot_cut = rect.y1 - rect.height * 0.12
             local = 0
@@ -58,11 +64,11 @@ def extract_charts(pdf_path: str, thumbs_dir: str) -> List[Candidate]:
                 cap = _nearby_text(page, r)
                 if not any(k in (cap or "").lower() for k in CAPTION_HINTS) and area_frac < 0.08:
                     continue
-                pix = fitz.Pixmap(doc, xref)
+                pix = fitz.Pixmap(local_doc, xref)
                 if pix.alpha or (pix.colorspace and pix.colorspace != fitz.csRGB):
                     pix = fitz.Pixmap(fitz.csRGB, pix)
                 cid = f"chart-{pno}-{local}"
-                thumb = _save_thumb(pix, thumbs_dir, cid)
+                thumb = _save_thumb(pix, thumbs_dir, cid) if save_thumbs else None
                 out.append(Candidate(
                     id=cid, kind="chart", page=pno,
                     bbox=(r.x0,r.y0,r.x1,r.y1),
@@ -70,6 +76,9 @@ def extract_charts(pdf_path: str, thumbs_dir: str) -> List[Candidate]:
                     meta={"area_frac": round(area_frac,3), "aspect": round(aspect,2)}
                 ))
                 local += 1
+    finally:
+        if doc is None:
+            local_doc.close()
     return out
 
 def extract_tables(pdf_path: str, max_candidates: int = 10) -> List[Candidate]:
@@ -125,6 +134,6 @@ def extract_tables(pdf_path: str, max_candidates: int = 10) -> List[Candidate]:
 
     return out
 
-def collect_candidates(pdf_path: str, work_dir: str):
+def collect_candidates(pdf_path: str, work_dir: str, save_thumbs: bool = False, doc: Optional[fitz.Document] = None):
     thumbs = Path(work_dir)/"thumbs"
-    return extract_charts(pdf_path, thumbs.as_posix()) + extract_tables(pdf_path)
+    return extract_charts(pdf_path, thumbs.as_posix(), save_thumbs=save_thumbs, doc=doc) + extract_tables(pdf_path)
