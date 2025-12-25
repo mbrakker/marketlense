@@ -54,6 +54,7 @@ def _distance(a: fitz.Rect, b: fitz.Rect) -> float:
 def extract_best_figure_png(
     pdf_path: str, out_dir: str, file_id: str,
     min_page_area_frac: float = 0.06,   # at least 6% of page area
+    doc: Optional[fitz.Document] = None,
 ) -> Tuple[Optional[str], Optional[str]]:
     """
     Returns (relative_png_path, inferred_caption) or (None, None).
@@ -62,10 +63,10 @@ def extract_best_figure_png(
     try:
         out_root = Path(out_dir); (out_root / "assets").mkdir(parents=True, exist_ok=True)
         best = (None, 0.0, "")  # (pixmap, score, caption)
-        best_page = None
 
-        with fitz.open(pdf_path) as doc:
-            for pno, page in enumerate(doc):
+        local_doc = doc or fitz.open(pdf_path)
+        try:
+            for pno, page in enumerate(local_doc):
                 page_rect = page.rect
                 page_area = page_rect.get_area()
                 top_cut = page_rect.y0 + page_rect.height * 0.12
@@ -107,14 +108,16 @@ def extract_best_figure_png(
 
                     # Materialize pixmap only for new best to save memory
                     if score > best[1]:
-                        pix = fitz.Pixmap(doc, xref)
+                        pix = fitz.Pixmap(local_doc, xref)
                         if pix.width * pix.height < 80_000:  # hard floor
                             continue
                         # convert RGBA → RGB
                         if pix.n >= 4:
                             pix = fitz.Pixmap(fitz.csRGB, pix)
                         best = (pix, score, caption or f"Auto-selected image from page {pno+1}")
-                        best_page = pno
+        finally:
+            if doc is None and 'local_doc' in locals():
+                local_doc.close()
 
         if best[0] is None:
             return None, None
