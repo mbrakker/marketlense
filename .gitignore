@@ -60,3 +60,4 @@ state/
 
 # Local artifacts
 sa.json
+app/__pycache__/cli.cpython-312.pyc
