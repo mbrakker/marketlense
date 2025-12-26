@@ -15,6 +15,7 @@ from .extract import collect_candidates
 from .rank import rank_candidates_text_only
 from .crop import crop_regions
 from .normalize import normalize_report_payload
+from .unstructured_processor import process_pdf_with_unstructured
 import fitz
 
 
@@ -62,6 +63,16 @@ def ingest(
             console.print("[cyan]  -> downloading PDF...[/cyan]")
             logger.info("Downloading PDF %s", f.get("id"))
             pdf_path = ensure_download(drive, f, s.cache_dir)
+
+            # Run unstructured immediately after download and save JSON named after report
+            try:
+                console.print("[cyan]  -> running Unstructured on PDF...[/cyan]")
+                logger.info("Running Unstructured for %s", f.get("name"))
+                u_out = process_pdf_with_unstructured(pdf_path, s.output_dir, f.get("name"))
+                logger.info("Unstructured output saved to %s", u_out)
+            except Exception:
+                console.print("[yellow]  -> Unstructured processing failed; continuing[/yellow]")
+                logger.exception("Unstructured failed for %s", pdf_path)
 
             console.print("[cyan]  -> computing md5...[/cyan]")
             logger.info("Computing MD5 for %s", pdf_path)
