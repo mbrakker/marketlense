@@ -1,6 +1,6 @@
 from __future__ import annotations
-import json, base64, logging, os, time
-from typing import List, Dict, Any
+import json, logging, os, time
+from typing import List, Dict, Any, Optional
 from openai import OpenAI
 from .candidates import Candidate
 
@@ -12,7 +12,12 @@ RANK_SCHEMA_HINT = """
 Никаких лишних ключей/комментариев.
 """
 
-def rank_candidates_text_only(cands: List[Candidate], model: str, api_key: str) -> List[Dict[str, Any]]:
+def rank_candidates_text_only(
+    cands: List[Candidate],
+    model: str,
+    api_key: str,
+    debug_dir: Optional[str] = None,
+) -> List[Dict[str, Any]]:
     client = OpenAI(api_key=api_key)
     rows = [{
         "id": c.id, "type": c.kind, "page": c.page,
@@ -36,18 +41,19 @@ def rank_candidates_text_only(cands: List[Candidate], model: str, api_key: str) 
     )
     content = resp.choices[0].message.content
 
-    # Save raw model response for debugging/inspection
-    try:
-        dbg_dir = os.path.join(os.getcwd(), "debug")
-        os.makedirs(dbg_dir, exist_ok=True)
-        ts = time.strftime("%Y%m%d-%H%M%S")
-        fname = f"rank_raw_{ts}.txt"
-        path = os.path.join(dbg_dir, fname)
-        with open(path, "w", encoding="utf-8") as fh:
-            fh.write(content)
-        logger.info("Saved raw ranking response to %s", path)
-    except Exception:
-        logger.exception("Failed to write debug ranking response file")
+    # Save raw model response for debugging/inspection when requested
+    if debug_dir:
+        try:
+            dbg_dir = os.path.join(os.getcwd(), debug_dir)
+            os.makedirs(dbg_dir, exist_ok=True)
+            ts = time.strftime("%Y%m%d-%H%M%S")
+            fname = f"rank_raw_{ts}.txt"
+            path = os.path.join(dbg_dir, fname)
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(content)
+            logger.info("Saved raw ranking response to %s", path)
+        except Exception:
+            logger.exception("Failed to write debug ranking response file")
     try:
         parsed = json.loads(content)
     except Exception:

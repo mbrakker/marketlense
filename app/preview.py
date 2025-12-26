@@ -1,8 +1,9 @@
 # app/preview.py
 from pathlib import Path
+from typing import Optional
 import fitz  # PyMuPDF
 
-def first_page_png(pdf_path: str, out_dir: str, file_id: str, dpi: int = 144) -> str | None:
+def first_page_png(pdf_path: str, out_dir: str, file_id: str, dpi: int = 144, doc: Optional[fitz.Document] = None) -> str | None:
     """
     Render page 1 of PDF to PNG and return a path RELATIVE to the HTML (./out).
     Example returned value: "assets/<file_id>_page1.png"
@@ -16,14 +17,17 @@ def first_page_png(pdf_path: str, out_dir: str, file_id: str, dpi: int = 144) ->
 
         abs_png = img_dir / f"{file_id}_page1.png"
 
-        doc = fitz.open(pdf_path)
-        if doc.page_count == 0:
-            return None
-        page = doc.load_page(0)
-        zoom = dpi / 72.0
-        pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
-        pix.save(abs_png.as_posix())
-        doc.close()
+        local_doc = doc or fitz.open(pdf_path)
+        try:
+            if local_doc.page_count == 0:
+                return None
+            page = local_doc.load_page(0)
+            zoom = dpi / 72.0
+            pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
+            pix.save(abs_png.as_posix())
+        finally:
+            if doc is None:
+                local_doc.close()
 
         # Return RELATIVE path for use in <img src="..."> inside the HTML in ./out/
         rel_png = Path("assets") / abs_png.name
