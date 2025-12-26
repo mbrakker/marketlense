@@ -10,4 +10,7 @@ pymupdf>=1.24.9
 pdfplumber>=0.11.8
 
 unstructured==0.18.21
+pi_heif==1.1.1
+unstructured-inference==1.1.2
+pdf2image==1.17.0
 
