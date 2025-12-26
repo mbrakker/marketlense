@@ -1,15 +1,4 @@
 # app/cli.py
-import sys
-from pathlib import Path
-
-# When running this file directly (python app/cli.py), the parent package
-# may not be on sys.path which makes absolute imports like `app.x` fail.
-# Add the repo root to sys.path when executed as a script so absolute
-# `app.*` imports work both when running as a package and directly.
-if __package__ is None:
-    repo_root = Path(__file__).resolve().parents[1]
-    sys.path.insert(0, str(repo_root))
-
 import typer
 from rich.console import Console
 from rich.table import Table
