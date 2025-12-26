@@ -68,3 +68,5 @@ __pycache__/
 *.tmp
 
 # If you need to keep any of the above in the repo, remove the matching line(s) above.
+.env
+sa.json
