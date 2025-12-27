@@ -134,6 +134,6 @@ def extract_tables(pdf_path: str, max_candidates: int = 10) -> List[Candidate]:
 
     return out
 
-def collect_candidates(pdf_path: str, work_dir: str, save_thumbs: bool = False, doc: Optional[fitz.Document] = None):
+def collect_candidates(pdf_path: str, work_dir: str, save_thumbs: bool = False, doc: Optional[fitz.Document] = None) -> List[Candidate]:
     thumbs = Path(work_dir)/"thumbs"
     return extract_charts(pdf_path, thumbs.as_posix(), save_thumbs=save_thumbs, doc=doc) + extract_tables(pdf_path)

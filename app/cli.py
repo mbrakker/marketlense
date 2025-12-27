@@ -1,4 +1,17 @@
 # app/cli.py
+import sys
+from pathlib import Path
+
+# Support running directly: python app/cli.py
+# When run directly, add parent directory to path to enable package imports
+if __name__ == "__main__" and __package__ is None:
+    # Add parent directory to sys.path to enable 'app' package imports
+    parent_dir = Path(__file__).parent.parent
+    if str(parent_dir) not in sys.path:
+        sys.path.insert(0, str(parent_dir))
+    # Set __package__ so relative imports work
+    __package__ = "app"
+
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -15,6 +28,7 @@ from .extract import collect_candidates
 from .rank import rank_candidates_text_only
 from .crop import crop_regions
 from .normalize import normalize_report_payload
+from .models import CropItem
 import fitz
 
 
@@ -81,9 +95,9 @@ def ingest(
             with fitz.open(pdf_path) as doc:
                 fig_png, fig_caption = extract_best_figure_png(pdf_path, s.output_dir, f["id"], doc=doc)
                 if fig_png:
-                    data["_figure_image"] = fig_png
-                    if fig_caption and not (data["figure"].get("evidence") or "").strip():
-                        data["figure"]["evidence"] = fig_caption
+                    data._figure_image = fig_png
+                    if fig_caption and not (data.figure.evidence or "").strip():
+                        data.figure.evidence = fig_caption
 
                 console.print("[cyan]  -> finding tables/charts...[/cyan]")
                 logger.info("Finding tables/charts in %s", pdf_path)
@@ -103,23 +117,29 @@ def ingest(
                     # Join back coords for top-N (N=3)
                     id2cand = {c.id: c for c in cands}
                     top_items = []
-                    for row in sorted(ranked, key=lambda r: r.get("score",0), reverse=True)[:3]:
-                        c = id2cand.get(row["id"])
+                    for row in sorted(ranked, key=lambda r: r.score, reverse=True)[:3]:
+                        c = id2cand.get(row.id)
                         if not c: continue
-                        top_items.append({"id":c.id,"type":c.kind,"score":row.get("score",0),"page":c.page,"bbox":c.bbox})
+                        top_items.append(CropItem(
+                            id=c.id,
+                            type=c.kind,
+                            score=float(row.score),
+                            page=c.page,
+                            bbox=c.bbox
+                        ))
 
                     console.print("[cyan]  -> cropping top candidates...[/cyan]")
-                    logger.info("Cropping top candidates: %s", [i.get("id") for i in top_items])
+                    logger.info("Cropping top candidates: %s", [i.id for i in top_items])
                     sliced_paths = crop_regions(pdf_path, s.output_dir, top_items, doc=doc)
                 else:
                     console.print("[yellow]  -> no tables/charts found; skipping ranking[/yellow]")
                     logger.info("No tables/charts found for %s", f.get("id"))
 
-                # Put into the data dict for the template
+                # Put into the data for the template
                 # First image (if chart) → primary "Figure" image
                 if sliced_paths:
-                    data["_figure_gallery"] = sliced_paths  # full gallery
-                    data["_figure_top"] = sliced_paths[0]   # first as main
+                    data._figure_gallery = sliced_paths  # full gallery
+                    data._figure_top = sliced_paths[0]   # first as main
 
                 console.print("[cyan]  -> generating preview (page 1)...[/cyan]")
                 logger.info("Generating preview for %s", pdf_path)
@@ -127,9 +147,11 @@ def ingest(
 
             console.print("[cyan]  -> rendering HTML...[/cyan]")
             logger.info("Rendering HTML for %s", f.get("id"))
-            out_html = render_html(env, data, f["name"], f["id"], s.output_dir, preview_png=preview)
+            # Convert ReportPayload to dict for Jinja2 template rendering
+            data_dict = data.to_dict()
+            out_html = render_html(env, data_dict, f["name"], f["id"], s.output_dir, preview_png=preview)
 
-            state.record(f["id"], md5, data.get("_openai_file_id"))
+            state.record(f["id"], md5, data._openai_file_id)
             table.add_row(f["name"], f["id"], md5[:10] + "…", out_html)
 
             console.print(f"[green]  -> done {f['name']}[/green]")

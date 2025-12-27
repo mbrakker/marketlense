@@ -1,12 +1,12 @@
 from dataclasses import dataclass, asdict
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple
 
 @dataclass
 class Candidate:
     id: str                 # "chart-<page>-<idx>" | "table-<page>-<idx>"
     kind: str               # "chart" | "table"
     page: int               # 0-based
-    bbox: tuple[float,float,float,float]  # x0,y0,x1,y1 (PDF points)
+    bbox: Tuple[float, float, float, float]  # x0,y0,x1,y1 (PDF points)
     preview_text: str
     caption: Optional[str] = None
     thumb_path: Optional[str] = None

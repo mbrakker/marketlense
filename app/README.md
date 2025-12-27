@@ -45,7 +45,7 @@ pip install -r requirements.txt
 3. Run the CLI to ingest PDFs:
 
 ```bash
-python -m app.cli ingest --limit 10
+python -m app.cli --limit 10
 ```
 
 Module reference

@@ -3,6 +3,7 @@ import json, logging, os, time
 from typing import List, Dict, Any, Optional
 from openai import OpenAI
 from .candidates import Candidate
+from .models import RankedCandidate
 
 logger = logging.getLogger("market_lense.rank")
 
@@ -17,7 +18,7 @@ def rank_candidates_text_only(
     model: str,
     api_key: str,
     debug_dir: Optional[str] = None,
-) -> List[Dict[str, Any]]:
+) -> List[RankedCandidate]:
     client = OpenAI(api_key=api_key)
     rows = [{
         "id": c.id, "type": c.kind, "page": c.page,
@@ -61,19 +62,44 @@ def rank_candidates_text_only(
         raise
 
     # Defensive: accept either a bare list or a dict with a `results` key.
+    items: List[Dict[str, Any]]
     if isinstance(parsed, list):
-        return parsed
-
-    # If the model returned an object with a `results` list, use that.
-    if isinstance(parsed, dict):
+        items = parsed
+    elif isinstance(parsed, dict):
         if "results" in parsed and isinstance(parsed["results"], list):
             logger.info("Coercing ranking response: using parsed['results'] list")
-            return parsed["results"]
-        # some models might wrap payload under other keys like 'data' or 'items'
-        for candidate_key in ("data", "items", "results"):
-            if candidate_key in parsed and isinstance(parsed[candidate_key], list):
-                logger.info("Coercing ranking response: using parsed['%s'] list", candidate_key)
-                return parsed[candidate_key]
+            items = parsed["results"]
+        else:
+            # some models might wrap payload under other keys like 'data' or 'items'
+            found = False
+            for candidate_key in ("data", "items", "results"):
+                if candidate_key in parsed and isinstance(parsed[candidate_key], list):
+                    logger.info("Coercing ranking response: using parsed['%s'] list", candidate_key)
+                    items = parsed[candidate_key]
+                    found = True
+                    break
+            if not found:
+                logger.error("Ranking response has unexpected shape: %s", type(parsed).__name__)
+                raise ValueError("Ranking response did not return a JSON list of objects")
+    else:
+        logger.error("Ranking response has unexpected shape: %s", type(parsed).__name__)
+        raise ValueError("Ranking response did not return a JSON list of objects")
 
-    logger.error("Ranking response has unexpected shape: %s", type(parsed).__name__)
-    raise ValueError("Ranking response did not return a JSON list of objects")
+    # Convert dict items to RankedCandidate dataclasses
+    result: List[RankedCandidate] = []
+    for item in items:
+        if not isinstance(item, dict):
+            logger.warning("Skipping invalid ranking item: %s", type(item).__name__)
+            continue
+        try:
+            ranked = RankedCandidate(
+                id=item.get("id", ""),
+                type=item.get("type", ""),
+                score=int(item.get("score", 0))
+            )
+            result.append(ranked)
+        except (ValueError, TypeError) as e:
+            logger.warning("Failed to create RankedCandidate from item %s: %s", item, e)
+            continue
+
+    return result

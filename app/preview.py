@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Optional
 import fitz  # PyMuPDF
 
-def first_page_png(pdf_path: str, out_dir: str, file_id: str, dpi: int = 144, doc: Optional[fitz.Document] = None) -> str | None:
+def first_page_png(pdf_path: str, out_dir: str, file_id: str, dpi: int = 144, doc: Optional[fitz.Document] = None) -> Optional[str]:
     """
     Render page 1 of PDF to PNG and return a path RELATIVE to the HTML (./out).
     Example returned value: "assets/<file_id>_page1.png"

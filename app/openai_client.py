@@ -6,6 +6,7 @@ from openai import OpenAI
 from pypdf import PdfReader
 
 from .util import retry
+from .models import ReportPayload, Quote, Figure
 import logging
 
 logger = logging.getLogger("market_lense.openai_client")
@@ -87,12 +88,12 @@ def _extract_text_first_pages(pdf_path: str, max_pages: int = 5, max_chars: int 
 # ---------- Main entry (Completions JSON mode; SDK 2.x compatible) ----------
 
 @retry(backoffs=(1, 2, 4))
-def analyze_pdf(pdf_path: str, model: str, temperature: float, openai_api_key: str) -> Dict[str, Any]:
+def analyze_pdf(pdf_path: str, model: str, temperature: float, openai_api_key: str) -> ReportPayload:
     """
     MVP path: extract first ~5 pages of text locally, then call Chat Completions in JSON mode.
     This avoids file uploads and works across openai==2.x.
 
-    Returns: dict matching SCHEMA + adds _openai_file_id="" (no upload in this path).
+    Returns: ReportPayload dataclass matching SCHEMA + adds _openai_file_id="" (no upload in this path).
     """
     logger.info("analyze_pdf called: pdf_path=%s model=%s temperature=%s", pdf_path, model, temperature)
 
@@ -128,6 +129,28 @@ def analyze_pdf(pdf_path: str, model: str, temperature: float, openai_api_key: s
     # 3) Defensive validation
     _validate_payload(data)
 
-    # 4) Mark no file upload used in this path
-    data["_openai_file_id"] = ""
-    return data
+    # 4) Parse into dataclasses
+    quote = Quote(
+        text=data.get("quote", {}).get("text", ""),
+        author=data.get("quote", {}).get("author", "Unknown")
+    )
+    figure = Figure(
+        title=data.get("figure", {}).get("title", ""),
+        evidence=data.get("figure", {}).get("evidence", "")
+    )
+    
+    # Ensure insights is exactly 5 items
+    insights = data.get("insights", [])
+    if len(insights) < 5:
+        insights = insights + [""] * (5 - len(insights))
+    insights = insights[:5]
+
+    return ReportPayload(
+        tldr=data.get("tldr", ""),
+        insights=insights,
+        quote=quote,
+        figure=figure,
+        commentary=data.get("commentary", ""),
+        source=data.get("source", ""),
+        _openai_file_id="",
+    )

@@ -1,64 +1,66 @@
 # app/normalize.py
 from __future__ import annotations
-from typing import Any, Dict, List
+from typing import Any
+
+from .models import ReportPayload, Quote, Figure
 
 def _s(x: Any) -> str:
     if x is None: return ""
     return x if isinstance(x, str) else str(x)
 
-def _list_str(x: Any) -> List[str]:
-    if not isinstance(x, list): x = [x] if x is not None else []
-    out = [ _s(i) for i in x ]
-    return out
-
-def normalize_report_payload(data: Dict[str, Any]) -> Dict[str, Any]:
+def normalize_report_payload(data: ReportPayload) -> ReportPayload:
     """
-    Coerces the OpenAI JSON into the expected schema so downstream code and Jinja never crash.
+    Coerces the ReportPayload into the expected schema so downstream code and Jinja never crash.
     Ensures:
       - tldr/commentary/source are strings
       - insights is a list of exactly 5 strings (truncate/pad)
-      - quote and figure are dicts with required keys as strings
-    Leaves any extra keys intact.
+      - quote and figure have required keys as strings
+    Returns a normalized ReportPayload.
     """
-    if not isinstance(data, dict):
-        data = {"tldr": _s(data)}
+    # Normalize string fields
+    tldr = _s(data.tldr)
+    commentary = _s(data.commentary)
+    source = _s(data.source)
 
-    # tldr / commentary / source
-    data["tldr"] = _s(data.get("tldr", ""))
-    data["commentary"] = _s(data.get("commentary", ""))
-    data["source"] = _s(data.get("source", ""))
+    # Normalize insights → exactly 5 strings
+    insights = data.insights or []
+    if len(insights) < 5:
+        insights = insights + [""] * (5 - len(insights))
+    insights = insights[:5]
+    # Coerce each insight to string
+    insights = [_s(insight) for insight in insights]
 
-    # insights → exactly 5 strings
-    ins = _list_str(data.get("insights", []))
-    if len(ins) < 5:
-        ins += [""] * (5 - len(ins))
-    data["insights"] = ins[:5]
+    # Normalize quote
+    quote = Quote(
+        text=_s(data.quote.text),
+        author=_s(data.quote.author)
+    )
 
-    # quote → dict with text/author
-    q = data.get("quote", {})
-    if not isinstance(q, dict):
-        q = {"text": _s(q), "author": "Unknown"}
-    q["text"] = _s(q.get("text", ""))
-    q["author"] = _s(q.get("author", "Unknown"))
-    data["quote"] = q
+    # Normalize figure
+    figure = Figure(
+        title=_s(data.figure.title),
+        evidence=_s(data.figure.evidence)
+    )
 
-    # figure → dict with title/evidence
-    f = data.get("figure", {})
-    if not isinstance(f, dict):
-        f = {"title": _s(f), "evidence": ""}
-    f["title"] = _s(f.get("title", ""))
-    f["evidence"] = _s(f.get("evidence", ""))
-    data["figure"] = f
-
-    # ensure optional fields used later exist with safe types
-    if not isinstance(data.get("_figure_gallery", []), list):
-        data["_figure_gallery"] = []
-    data["_figure_top"] = _s(data.get("_figure_top", ""))
-    data["_figure_image"] = _s(data.get("_figure_image", ""))
+    # Normalize optional fields
+    _figure_gallery = data._figure_gallery or []
+    _figure_top = _s(data._figure_top)
+    _figure_image = _s(data._figure_image)
 
     # If a top figure path wasn't set but a selected figure image exists,
     # use it as the top figure so templates show it.
-    if not data["_figure_top"] and data["_figure_image"]:
-        data["_figure_top"] = data["_figure_image"]
+    if not _figure_top and _figure_image:
+        _figure_top = _figure_image
 
-    return data
+    return ReportPayload(
+        tldr=tldr,
+        insights=insights,
+        quote=quote,
+        figure=figure,
+        commentary=commentary,
+        source=source,
+        _openai_file_id=_s(data._openai_file_id),
+        _figure_image=_figure_image,
+        _figure_gallery=_figure_gallery,
+        _figure_top=_figure_top,
+    )
