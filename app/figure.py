@@ -52,7 +52,7 @@ def _distance(a: fitz.Rect, b: fitz.Rect) -> float:
     return (ac - bc).magnitude
 
 def extract_best_figure_png(
-    pdf_path: str, out_dir: str, file_id: str,
+    pdf_path: str, out_dir: str, report_name: str,
     min_page_area_frac: float = 0.06,   # at least 6% of page area
     doc: Optional[fitz.Document] = None,
 ) -> Tuple[Optional[str], Optional[str]]:
@@ -61,7 +61,9 @@ def extract_best_figure_png(
     Heuristics try hard to avoid logos/headers and prefer chart-like images.
     """
     try:
-        out_root = Path(out_dir); (out_root / "assets").mkdir(parents=True, exist_ok=True)
+        out_root = Path(out_dir)
+        img_dir = out_root / report_name / "assets"
+        img_dir.mkdir(parents=True, exist_ok=True)
         best = (None, 0.0, "")  # (pixmap, score, caption)
 
         local_doc = doc or fitz.open(pdf_path)
@@ -122,9 +124,9 @@ def extract_best_figure_png(
         if best[0] is None:
             return None, None
 
-        out_path = out_root / "assets" / f"{file_id}_figure.png"
+        out_path = img_dir / f"{report_name}.png"
         best[0].save(out_path.as_posix())
-        rel = Path("assets") / out_path.name
+        rel = Path(report_name) / "assets" / out_path.name
         return rel.as_posix(), best[2]
     except Exception:
         return None, None

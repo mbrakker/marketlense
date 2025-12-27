@@ -4,22 +4,27 @@ from typing import Iterable, List, Optional
 import fitz
 from .models import CropItem
 
-def crop_regions(pdf_path: str, out_dir: str, items: Iterable[CropItem], pad: int = 8, doc: Optional[fitz.Document] = None) -> List[str]:
-    Path(out_dir, "slices").mkdir(parents=True, exist_ok=True)
+def crop_regions(pdf_path: str, out_dir: str, report_name: str, items: Iterable[CropItem], pad: int = 8, doc: Optional[fitz.Document] = None) -> List[str]:
+    slices_dir = Path(out_dir) / report_name / "slices"
+    slices_dir.mkdir(parents=True, exist_ok=True)
     paths = []
     local_doc = doc or fitz.open(pdf_path)
     try:
-        for it in items:
+        for idx, it in enumerate(items):
             pno = it.page
             x0, y0, x1, y1 = it.bbox
             r = fitz.Rect(x0-pad, y0-pad, x1+pad, y1+pad)
             page = local_doc[pno]
             pix = page.get_pixmap(matrix=fitz.Matrix(2,2), clip=r, alpha=False)
-            op = Path(out_dir)/"slices"/f"{it.id}.png"
+            # First file: {report_name}.png, subsequent: {report_name}1.png, {report_name}2.png, etc.
+            if idx == 0:
+                filename = f"{report_name}.png"
+            else:
+                filename = f"{report_name}{idx}.png"
+            op = slices_dir / filename
             pix.save(op.as_posix())
-            # Return a path relative to the HTML output directory (so templates use
-            # "slices/...png" rather than "out/slices/...png" which causes "out/out/..." links).
-            rel = Path("slices") / op.name
+            # Return a path relative to the HTML output directory
+            rel = Path(report_name) / "slices" / filename
             paths.append(rel.as_posix())
     finally:
         if doc is None:

@@ -17,6 +17,7 @@ def render_html(env, data: Dict[str, Any], doc_name: str, file_id: str, out_dir:
         title=f"{doc_name} — Digest",
         preview_png=preview_png,
     )
-    out_path = Path(out_dir) / f"{file_id}_{slugify(doc_name)}.html"
+    report_name = slugify(doc_name)
+    out_path = Path(out_dir) / f"{report_name}.html"
     out_path.write_text(html, encoding="utf-8")
     return str(out_path)

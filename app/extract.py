@@ -8,7 +8,7 @@ from .candidates import Candidate
 
 CAPTION_HINTS = ("figure","fig.","exhibit","chart","graph","source")
 
-def _save_thumb(pix: fitz.Pixmap, out_dir: str, name: str, max_w: int = 480) -> str:
+def _save_thumb(pix: fitz.Pixmap, out_dir: str, report_name: str, index: int, max_w: int = 480) -> str:
     # Ensure RGB (no alpha / no CMYK)
     if pix.alpha:                       # has alpha channel
         pix = fitz.Pixmap(fitz.csRGB, pix)
@@ -24,7 +24,12 @@ def _save_thumb(pix: fitz.Pixmap, out_dir: str, name: str, max_w: int = 480) -> 
         img = img.resize((max_w, new_h), Image.LANCZOS)
 
     Path(out_dir).mkdir(parents=True, exist_ok=True)
-    p = Path(out_dir) / f"{name}.png"
+    # First file: {report_name}.png, subsequent: {report_name}1.png, {report_name}2.png, etc.
+    if index == 0:
+        filename = f"{report_name}.png"
+    else:
+        filename = f"{report_name}{index}.png"
+    p = Path(out_dir) / filename
     img.save(p.as_posix(), format="PNG")
     return p.as_posix()
 
@@ -42,12 +47,14 @@ def _nearby_text(page: fitz.Page, rect: fitz.Rect, max_dist: float = 90) -> str:
 def extract_charts(
     pdf_path: str,
     thumbs_dir: str,
+    report_name: str,
     save_thumbs: bool = False,
     doc: Optional[fitz.Document] = None,
 ) -> List[Candidate]:
     out: List[Candidate] = []
     local_doc = doc or fitz.open(pdf_path)
     try:
+        thumb_index = 0
         for pno in range(len(local_doc)):
             page = local_doc[pno]; rect = page.rect
             top_cut = rect.y0 + rect.height * 0.12
@@ -68,13 +75,20 @@ def extract_charts(
                 if pix.alpha or (pix.colorspace and pix.colorspace != fitz.csRGB):
                     pix = fitz.Pixmap(fitz.csRGB, pix)
                 cid = f"chart-{pno}-{local}"
-                thumb = _save_thumb(pix, thumbs_dir, cid) if save_thumbs else None
+                thumb = _save_thumb(pix, thumbs_dir, report_name, thumb_index) if save_thumbs else None
+                if save_thumbs and thumb:
+                    # Convert absolute path to relative path
+                    thumb_path = Path(thumb)
+                    rel_thumb = Path(report_name) / "thumbs" / thumb_path.name
+                    thumb = rel_thumb.as_posix()
                 out.append(Candidate(
                     id=cid, kind="chart", page=pno,
                     bbox=(r.x0,r.y0,r.x1,r.y1),
                     preview_text=cap or "", caption=cap, thumb_path=thumb,
                     meta={"area_frac": round(area_frac,3), "aspect": round(aspect,2)}
                 ))
+                if save_thumbs:
+                    thumb_index += 1
                 local += 1
     finally:
         if doc is None:
@@ -134,6 +148,6 @@ def extract_tables(pdf_path: str, max_candidates: int = 10) -> List[Candidate]:
 
     return out
 
-def collect_candidates(pdf_path: str, work_dir: str, save_thumbs: bool = False, doc: Optional[fitz.Document] = None) -> List[Candidate]:
-    thumbs = Path(work_dir)/"thumbs"
-    return extract_charts(pdf_path, thumbs.as_posix(), save_thumbs=save_thumbs, doc=doc) + extract_tables(pdf_path)
+def collect_candidates(pdf_path: str, work_dir: str, report_name: str, save_thumbs: bool = False, doc: Optional[fitz.Document] = None) -> List[Candidate]:
+    thumbs = Path(work_dir) / report_name / "thumbs"
+    return extract_charts(pdf_path, thumbs.as_posix(), report_name, save_thumbs=save_thumbs, doc=doc) + extract_tables(pdf_path)

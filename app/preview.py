@@ -3,19 +3,19 @@ from pathlib import Path
 from typing import Optional
 import fitz  # PyMuPDF
 
-def first_page_png(pdf_path: str, out_dir: str, file_id: str, dpi: int = 144, doc: Optional[fitz.Document] = None) -> Optional[str]:
+def first_page_png(pdf_path: str, out_dir: str, report_name: str, dpi: int = 144, doc: Optional[fitz.Document] = None) -> Optional[str]:
     """
     Render page 1 of PDF to PNG and return a path RELATIVE to the HTML (./out).
-    Example returned value: "assets/<file_id>_page1.png"
+    Example returned value: "<report_name>/assets/<report_name>.png"
     """
     try:
         out_root = Path(out_dir)
         out_root.mkdir(parents=True, exist_ok=True)
 
-        img_dir = out_root / "assets"
+        img_dir = out_root / report_name / "assets"
         img_dir.mkdir(parents=True, exist_ok=True)
 
-        abs_png = img_dir / f"{file_id}_page1.png"
+        abs_png = img_dir / f"{report_name}.png"
 
         local_doc = doc or fitz.open(pdf_path)
         try:
@@ -30,7 +30,7 @@ def first_page_png(pdf_path: str, out_dir: str, file_id: str, dpi: int = 144, do
                 local_doc.close()
 
         # Return RELATIVE path for use in <img src="..."> inside the HTML in ./out/
-        rel_png = Path("assets") / abs_png.name
+        rel_png = Path(report_name) / "assets" / abs_png.name
         return rel_png.as_posix()   # forward slashes for HTML
 
     except Exception:

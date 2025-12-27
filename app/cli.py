@@ -29,6 +29,7 @@ from .rank import rank_candidates_text_only
 from .crop import crop_regions
 from .normalize import normalize_report_payload
 from .models import CropItem
+from .util import slugify
 import fitz
 
 
@@ -91,9 +92,12 @@ def ingest(
             raw = analyze_pdf(pdf_path, s.openai_model, s.temperature, s.openai_api_key)
             data = normalize_report_payload(raw)
 
+            # Compute report name once per file
+            report_name = slugify(f["name"])
+
             # Open once and reuse across figure/preview/crops to avoid repeated file I/O.
             with fitz.open(pdf_path) as doc:
-                fig_png, fig_caption = extract_best_figure_png(pdf_path, s.output_dir, f["id"], doc=doc)
+                fig_png, fig_caption = extract_best_figure_png(pdf_path, s.output_dir, report_name, doc=doc)
                 if fig_png:
                     data._figure_image = fig_png
                     if fig_caption and not (data.figure.evidence or "").strip():
@@ -101,7 +105,7 @@ def ingest(
 
                 console.print("[cyan]  -> finding tables/charts...[/cyan]")
                 logger.info("Finding tables/charts in %s", pdf_path)
-                cands = collect_candidates(pdf_path, s.output_dir, doc=doc)
+                cands = collect_candidates(pdf_path, s.output_dir, report_name, doc=doc)
 
                 ranked = []
                 sliced_paths = []
@@ -130,7 +134,7 @@ def ingest(
 
                     console.print("[cyan]  -> cropping top candidates...[/cyan]")
                     logger.info("Cropping top candidates: %s", [i.id for i in top_items])
-                    sliced_paths = crop_regions(pdf_path, s.output_dir, top_items, doc=doc)
+                    sliced_paths = crop_regions(pdf_path, s.output_dir, report_name, top_items, doc=doc)
                 else:
                     console.print("[yellow]  -> no tables/charts found; skipping ranking[/yellow]")
                     logger.info("No tables/charts found for %s", f.get("id"))
@@ -143,7 +147,7 @@ def ingest(
 
                 console.print("[cyan]  -> generating preview (page 1)...[/cyan]")
                 logger.info("Generating preview for %s", pdf_path)
-                preview = first_page_png(pdf_path, s.output_dir, f["id"], doc=doc)
+                preview = first_page_png(pdf_path, s.output_dir, report_name, doc=doc)
 
             console.print("[cyan]  -> rendering HTML...[/cyan]")
             logger.info("Rendering HTML for %s", f.get("id"))
