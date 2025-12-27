@@ -5,6 +5,9 @@ from google.oauth2.service_account import Credentials
 from googleapiclient.http import MediaIoBaseDownload
 import io
 import hashlib
+import os
+import re
+import unicodedata
 
 def drive_client(sa_path: str):
     scopes = ["https://www.googleapis.com/auth/drive.readonly"]
@@ -29,15 +32,60 @@ def list_pdfs(drive, folder_id: str) -> Iterable[Dict[str, Any]]:
             break
 
 def ensure_download(drive, file_meta: Dict[str, Any], cache_dir: str) -> str:
-    path = Path(cache_dir) / f"{file_meta['id']}.pdf"
-    if not path.exists():
-        req = drive.files().get_media(fileId=file_meta["id"])
-        with open(path, "wb") as fh:
-            downloader = MediaIoBaseDownload(fh, req)
-            done = False
-            while not done:
-                status, done = downloader.next_chunk()
-    return str(path)
+    """Download file to cache_dir using the original Drive file name when possible.
+
+    Keeps the original PDF name (sanitized). If a file with the same name exists
+    and its checksum matches, it is reused. If the name exists but is different
+    content, a numeric suffix is appended.
+    """
+    # Prefer the provided original filename
+    raw_name = file_meta.get("name") or f"{file_meta['id']}.pdf"
+
+    # Normalize unicode, remove path segments and unsafe chars
+    name = os.path.basename(raw_name)
+    name = unicodedata.normalize("NFKD", name)
+    # Keep only a safe subset of characters
+    name = re.sub(r"[^A-Za-z0-9._ \-()]", "_", name).strip()
+    # Ensure .pdf extension
+    if not name.lower().endswith(".pdf"):
+        name = name + ".pdf"
+
+    cache_path = Path(cache_dir)
+    cache_path.mkdir(parents=True, exist_ok=True)
+
+    candidate = cache_path / name
+
+    # If file exists, check if it's same by md5; if so, reuse
+    if candidate.exists():
+        try:
+            existing_md5 = md5_for_file(str(candidate))
+            drive_md5 = file_meta.get("md5Checksum")
+            if drive_md5 and existing_md5 == drive_md5:
+                return str(candidate)
+        except Exception:
+            # If any error, fall back to potentially downloading or renaming
+            pass
+
+    # If name exists but different, find a non-colliding name
+    if candidate.exists():
+        base = candidate.stem
+        suffix = 1
+        while True:
+            new_name = f"{base}-{suffix}.pdf"
+            candidate = cache_path / new_name
+            if not candidate.exists():
+                break
+            suffix += 1
+
+    # Download to candidate path
+    req = drive.files().get_media(fileId=file_meta["id"])
+    with open(candidate, "wb") as fh:
+        downloader = MediaIoBaseDownload(fh, req)
+        done = False
+        while not done:
+            status, done = downloader.next_chunk()
+
+    return str(candidate)
 
 def md5_for_file(path: str) -> str:
     h = hashlib.md5()
