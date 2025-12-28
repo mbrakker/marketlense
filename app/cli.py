@@ -86,6 +86,8 @@ def ingest(
                     pdf_path = ensure_download(drive, f, s.cache_dir)
                     if not pdf_has_eof_marker(pdf_path):
                         logger.warning("EOF marker still missing after re-download: %s", pdf_path)
+                        console.print(f"[yellow]  -> PDF appears truncated; skipping {f.get('name')}[/yellow]")
+                        continue
     
                 console.print("[cyan]  -> computing md5...[/cyan]")
                 logger.info("Computing MD5 for %s", pdf_path)

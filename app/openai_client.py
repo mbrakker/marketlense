@@ -4,6 +4,7 @@ from typing import Any, Dict
 
 from openai import OpenAI
 from pypdf import PdfReader
+from pypdf.errors import PdfReadError, PdfStreamError
 
 from .util import retry
 from .models import ReportPayload, Quote, Figure
@@ -74,7 +75,11 @@ def _validate_payload(data: Dict[str, Any]) -> None:
 
 
 def _extract_text_first_pages(pdf_path: str, max_pages: int = 5, max_chars: int = 80_000) -> str:
-    reader = PdfReader(pdf_path)
+    try:
+        reader = PdfReader(pdf_path, strict=False)
+    except (PdfReadError, PdfStreamError) as exc:
+        logger.warning("Failed to read PDF %s (%s); continuing with empty text", pdf_path, exc)
+        return ""
     pages = min(len(reader.pages), max_pages)
     chunks = []
     for i in range(pages):
