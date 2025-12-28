@@ -4,8 +4,9 @@ from typing import Dict, Any, Optional
 from .util import slugify
 
 def jinja_env() -> Environment:
+    templates_dir = (Path(__file__).resolve().parent.parent / "templates")
     return Environment(
-        loader=FileSystemLoader("./templates"),
+        loader=FileSystemLoader(str(templates_dir)),
         autoescape=select_autoescape(["html", "xml"])
     )
 

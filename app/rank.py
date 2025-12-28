@@ -8,8 +8,8 @@ from .models import RankedCandidate
 logger = logging.getLogger("market_lense.rank")
 
 RANK_SCHEMA_HINT = """
-Верни СТРОГИЙ JSON массив объектов, каждый:
-{"id":"chart-0-1","type":"chart","score":0-100}
+Верни СТРОГИЙ JSON объект формата:
+{"results":[{"id":"chart-0-1","type":"chart","score":0-100}]}
 Никаких лишних ключей/комментариев.
 """
 

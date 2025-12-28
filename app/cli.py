@@ -29,7 +29,7 @@ from .rank import rank_candidates_text_only
 from .crop import crop_regions
 from .normalize import normalize_report_payload
 from .models import CropItem
-from .util import slugify
+from .util import slugify, pdf_has_eof_marker
 import fitz
 
 
@@ -57,118 +57,127 @@ def ingest(
 
     console.print(f"[cyan]Listing PDFs in folder {gdrive_folder_id}...[/cyan]")
     logger.info("Listing PDFs in folder %s", gdrive_folder_id)
-    state = State(s.state_db)
-    env = jinja_env()
-
-    processed = 0
-    table = Table(title="Processed Reports", box=box.SIMPLE_HEAVY)
-    table.add_column("File")
-    table.add_column("ID")
-    table.add_column("MD5")
-    table.add_column("HTML")
-
-    for idx, f in enumerate(list_pdfs(drive, gdrive_folder_id), start=1):
-        console.print(f"[cyan]Found file {idx}: {f['name']} ({f['id']})[/cyan]")
-        logger.info("Found file %s (%s) index=%d", f.get("name"), f.get("id"), idx)
-
-        if processed >= max_n:
-            break
-        try:
-            console.print("[cyan]  -> downloading PDF...[/cyan]")
-            logger.info("Downloading PDF %s", f.get("id"))
-            pdf_path = ensure_download(drive, f, s.cache_dir)
-
-            console.print("[cyan]  -> computing md5...[/cyan]")
-            logger.info("Computing MD5 for %s", pdf_path)
-            md5 = effective_md5(f, pdf_path)
-
-            if state.already_processed(f["id"], md5):
-                console.print("[yellow]  -> already processed, skipping[/yellow]")
-                logger.info("Skipping already processed file %s", f.get("id"))
-                continue
-
-            console.print("[cyan]  -> sending to OpenAI...[/cyan]")
-            logger.info("Sending %s to model %s (temp=%s)", pdf_path, s.openai_model, s.temperature)
-            raw = analyze_pdf(pdf_path, s.openai_model, s.temperature, s.openai_api_key)
-            data = normalize_report_payload(raw)
-
-            # Compute report name once per file
-            report_name = slugify(f["name"])
-
-            # Open once and reuse across figure/preview/crops to avoid repeated file I/O.
-            with fitz.open(pdf_path) as doc:
-                fig_png, fig_caption = extract_best_figure_png(pdf_path, s.output_dir, report_name, doc=doc)
-                if fig_png:
-                    data._figure_image = fig_png
-                    if fig_caption and not (data.figure.evidence or "").strip():
-                        data.figure.evidence = fig_caption
-
-                console.print("[cyan]  -> finding tables/charts...[/cyan]")
-                logger.info("Finding tables/charts in %s", pdf_path)
-                cands = collect_candidates(pdf_path, s.output_dir, report_name, doc=doc)
-
-                ranked = []
-                sliced_paths = []
-                if cands:
-                    console.print(f"[cyan]  -> ranking {len(cands)} candidates...[/cyan]")
-                    logger.info("Ranking %d candidate regions", len(cands))
+    with State(s.state_db) as state:
+        env = jinja_env()
+    
+        processed = 0
+        table = Table(title="Processed Reports", box=box.SIMPLE_HEAVY)
+        table.add_column("File")
+        table.add_column("ID")
+        table.add_column("MD5")
+        table.add_column("HTML")
+    
+        for idx, f in enumerate(list_pdfs(drive, gdrive_folder_id), start=1):
+            console.print(f"[cyan]Found file {idx}: {f['name']} ({f['id']})[/cyan]")
+            logger.info("Found file %s (%s) index=%d", f.get("name"), f.get("id"), idx)
+    
+            if processed >= max_n:
+                break
+            try:
+                console.print("[cyan]  -> downloading PDF...[/cyan]")
+                logger.info("Downloading PDF %s", f.get("id"))
+                pdf_path = ensure_download(drive, f, s.cache_dir)
+                if not pdf_has_eof_marker(pdf_path):
+                    logger.warning("EOF marker missing for %s; re-downloading once", pdf_path)
                     try:
-                        ranked = rank_candidates_text_only(cands, model=s.openai_model, api_key=s.openai_api_key, debug_dir=None)
+                        Path(pdf_path).unlink()
                     except Exception:
-                        logger.exception("Ranking failed for %s; continuing without ranks", f.get("id"))
-                        ranked = []
-
-                    # Join back coords for top-N (N=3)
-                    id2cand = {c.id: c for c in cands}
-                    top_items = []
-                    for row in sorted(ranked, key=lambda r: r.score, reverse=True)[:3]:
-                        c = id2cand.get(row.id)
-                        if not c: continue
-                        top_items.append(CropItem(
-                            id=c.id,
-                            type=c.kind,
-                            score=float(row.score),
-                            page=c.page,
-                            bbox=c.bbox
-                        ))
-
-                    console.print("[cyan]  -> cropping top candidates...[/cyan]")
-                    logger.info("Cropping top candidates: %s", [i.id for i in top_items])
-                    sliced_paths = crop_regions(pdf_path, s.output_dir, report_name, top_items, doc=doc)
-                else:
-                    console.print("[yellow]  -> no tables/charts found; skipping ranking[/yellow]")
-                    logger.info("No tables/charts found for %s", f.get("id"))
-
-                # Put into the data for the template
-                # First image (if chart) → primary "Figure" image
-                if sliced_paths:
-                    data._figure_gallery = sliced_paths  # full gallery
-                    data._figure_top = sliced_paths[0]   # first as main
-
-                console.print("[cyan]  -> generating preview (page 1)...[/cyan]")
-                logger.info("Generating preview for %s", pdf_path)
-                preview = first_page_png(pdf_path, s.output_dir, report_name, doc=doc)
-
-            console.print("[cyan]  -> rendering HTML...[/cyan]")
-            logger.info("Rendering HTML for %s", f.get("id"))
-            # Convert ReportPayload to dict for Jinja2 template rendering
-            data_dict = data.to_dict()
-            out_html = render_html(env, data_dict, f["name"], f["id"], s.output_dir, preview_png=preview)
-
-            state.record(f["id"], md5, data._openai_file_id)
-            table.add_row(f["name"], f["id"], md5[:10] + "…", out_html)
-
-            console.print(f"[green]  -> done {f['name']}[/green]")
-            logger.info("Done processing %s", f.get("name"))
-            processed += 1
-
-        except Exception as e:
-            console.print(f"[red]Error processing {f.get('name')}: {e}[/red]")
-            logger.exception("Error processing %s", f.get("name"))
-
-    console.print(table)
-    console.print(f"[green]Done: {processed} file(s).[/green]")
-
+                        logger.exception("Failed to remove cached PDF: %s", pdf_path)
+                    pdf_path = ensure_download(drive, f, s.cache_dir)
+                    if not pdf_has_eof_marker(pdf_path):
+                        logger.warning("EOF marker still missing after re-download: %s", pdf_path)
+    
+                console.print("[cyan]  -> computing md5...[/cyan]")
+                logger.info("Computing MD5 for %s", pdf_path)
+                md5 = effective_md5(f, pdf_path)
+    
+                if state.already_processed(f["id"], md5):
+                    console.print("[yellow]  -> already processed, skipping[/yellow]")
+                    logger.info("Skipping already processed file %s", f.get("id"))
+                    continue
+    
+                console.print("[cyan]  -> sending to OpenAI...[/cyan]")
+                logger.info("Sending %s to model %s (temp=%s)", pdf_path, s.openai_model, s.temperature)
+                raw = analyze_pdf(pdf_path, s.openai_model, s.temperature, s.openai_api_key)
+                data = normalize_report_payload(raw)
+    
+                # Compute report name once per file
+                report_name = slugify(f["name"])
+    
+                # Open once and reuse across figure/preview/crops to avoid repeated file I/O.
+                with fitz.open(pdf_path) as doc:
+                    fig_png, fig_caption = extract_best_figure_png(pdf_path, s.output_dir, report_name, doc=doc)
+                    if fig_png:
+                        data._figure_image = fig_png
+                        if fig_caption and not (data.figure.evidence or "").strip():
+                            data.figure.evidence = fig_caption
+    
+                    console.print("[cyan]  -> finding tables/charts...[/cyan]")
+                    logger.info("Finding tables/charts in %s", pdf_path)
+                    cands = collect_candidates(pdf_path, s.output_dir, report_name, doc=doc)
+    
+                    ranked = []
+                    sliced_paths = []
+                    if cands:
+                        console.print(f"[cyan]  -> ranking {len(cands)} candidates...[/cyan]")
+                        logger.info("Ranking %d candidate regions", len(cands))
+                        try:
+                            ranked = rank_candidates_text_only(cands, model=s.openai_model, api_key=s.openai_api_key, debug_dir=None)
+                        except Exception:
+                            logger.exception("Ranking failed for %s; continuing without ranks", f.get("id"))
+                            ranked = []
+    
+                        # Join back coords for top-N (N=3)
+                        id2cand = {c.id: c for c in cands}
+                        top_items = []
+                        for row in sorted(ranked, key=lambda r: r.score, reverse=True)[:3]:
+                            c = id2cand.get(row.id)
+                            if not c: continue
+                            top_items.append(CropItem(
+                                id=c.id,
+                                type=c.kind,
+                                score=float(row.score),
+                                page=c.page,
+                                bbox=c.bbox
+                            ))
+    
+                        console.print("[cyan]  -> cropping top candidates...[/cyan]")
+                        logger.info("Cropping top candidates: %s", [i.id for i in top_items])
+                        sliced_paths = crop_regions(pdf_path, s.output_dir, report_name, top_items, doc=doc)
+                    else:
+                        console.print("[yellow]  -> no tables/charts found; skipping ranking[/yellow]")
+                        logger.info("No tables/charts found for %s", f.get("id"))
+    
+                    # Put into the data for the template
+                    # First image (if chart) → primary "Figure" image
+                    if sliced_paths:
+                        data._figure_gallery = sliced_paths  # full gallery
+                        data._figure_top = sliced_paths[0]   # first as main
+    
+                    console.print("[cyan]  -> generating preview (page 1)...[/cyan]")
+                    logger.info("Generating preview for %s", pdf_path)
+                    preview = first_page_png(pdf_path, s.output_dir, report_name, doc=doc)
+    
+                console.print("[cyan]  -> rendering HTML...[/cyan]")
+                logger.info("Rendering HTML for %s", f.get("id"))
+                # Convert ReportPayload to dict for Jinja2 template rendering
+                data_dict = data.to_dict()
+                out_html = render_html(env, data_dict, f["name"], f["id"], s.output_dir, preview_png=preview)
+    
+                state.record(f["id"], md5, data._openai_file_id)
+                table.add_row(f["name"], f["id"], md5[:10] + "…", out_html)
+    
+                console.print(f"[green]  -> done {f['name']}[/green]")
+                logger.info("Done processing %s", f.get("name"))
+                processed += 1
+    
+            except Exception as e:
+                console.print(f"[red]Error processing {f.get('name')}: {e}[/red]")
+                logger.exception("Error processing %s", f.get("name"))
+    
+        console.print(table)
+        console.print(f"[green]Done: {processed} file(s).[/green]")
+    
 def main():
     app()
 

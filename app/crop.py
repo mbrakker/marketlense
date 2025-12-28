@@ -13,8 +13,11 @@ def crop_regions(pdf_path: str, out_dir: str, report_name: str, items: Iterable[
         for idx, it in enumerate(items):
             pno = it.page
             x0, y0, x1, y1 = it.bbox
-            r = fitz.Rect(x0-pad, y0-pad, x1+pad, y1+pad)
             page = local_doc[pno]
+            r = fitz.Rect(x0-pad, y0-pad, x1+pad, y1+pad)
+            r = r & page.rect
+            if r.is_empty:
+                continue
             pix = page.get_pixmap(matrix=fitz.Matrix(2,2), clip=r, alpha=False)
             # First file: {report_name}.png, subsequent: {report_name}1.png, {report_name}2.png, etc.
             if idx == 0:

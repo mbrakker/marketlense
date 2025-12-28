@@ -35,3 +35,12 @@ class State:
             "SELECT file_id, md5, processed_at, openai_file_id FROM processed WHERE file_id=?", (file_id,)
         )
         return cur.fetchone()
+
+    def close(self) -> None:
+        self.conn.close()
+
+    def __enter__(self) -> "State":
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        self.close()
