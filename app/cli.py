@@ -33,7 +33,7 @@ from .util import slugify, pdf_has_eof_marker
 import fitz
 
 
-app = typer.Typer(add_completion=False, help="PDF → Structured HTML digests")
+app = typer.Typer(add_completion=False, help="PDF -> Structured HTML digests")
 console = Console()
 import logging
 
@@ -151,7 +151,7 @@ def ingest(
                         logger.info("No tables/charts found for %s", f.get("id"))
     
                     # Put into the data for the template
-                    # First image (if chart) → primary "Figure" image
+                    # First image (if chart) - primary "Figure" image
                     if sliced_paths:
                         data._figure_gallery = sliced_paths  # full gallery
                         data._figure_top = sliced_paths[0]   # first as main
@@ -179,6 +179,15 @@ def ingest(
     
         console.print(table)
         console.print(f"[green]Done: {processed} file(s).[/green]")
+
+@app.callback(invoke_without_command=True)
+def cli(
+    ctx: typer.Context,
+    folder: str = typer.Option(None, help="Override Drive folder ID"),
+    limit: int = typer.Option(None, help="Max PDFs to process this run"),
+):
+    if ctx.invoked_subcommand is None:
+        ingest(folder=folder, limit=limit)
     
 def main():
     app()
