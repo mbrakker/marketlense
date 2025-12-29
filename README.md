@@ -185,14 +185,6 @@ Primary entrypoint:
 python -m src.cli ingest --limit 10
 ```
 
-Backward-compatible shim:
-
-```bash
-python -m app.cli ingest --limit 10
-```
-
----
-
 ## Output Layout
 
 Default output structure:
@@ -213,8 +205,6 @@ Default output structure:
 ---
 
 ## Migration Notes
-
-Legacy `app/*` modules have been deprecated in favor of `src/*`. Import paths should target `src` only. Attempting to call deprecated app modules will raise runtime errors to enforce architectural boundaries.
 
 Marker-based PDF-to-HTML conversion has been removed.
 

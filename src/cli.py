@@ -13,12 +13,12 @@ from src.services.config_service import load_settings
 from src.services.logging_service import setup_logging
 
 
-app = typer.Typer(add_completion=False, help="PDF -> Structured HTML digests")
+cli_app = typer.Typer(add_completion=False, help="PDF -> Structured HTML digests")
 console = Console()
 logger = logging.getLogger("market_lense.cli")
 
 
-@app.command("ingest")
+@cli_app.command("ingest")
 def ingest(
     folder: str = typer.Option(None, help="Override Drive folder ID"),
     limit: int = typer.Option(None, help="Max PDFs to process this run"),
@@ -60,7 +60,7 @@ def ingest(
     console.print(f"[green]Done: {processed} file(s).[/green]")
 
 
-@app.callback(invoke_without_command=True)
+@cli_app.callback(invoke_without_command=True)
 def cli(
     ctx: typer.Context,
     folder: str = typer.Option(None, help="Override Drive folder ID"),
@@ -71,7 +71,7 @@ def cli(
 
 
 def main() -> None:
-    app()
+    cli_app()
 
 
 if __name__ == "__main__":
