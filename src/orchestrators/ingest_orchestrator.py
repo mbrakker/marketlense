@@ -93,6 +93,13 @@ def run_ingest(
                     continue
 
                 if _should_skip(file, dl_resp.md5, state, file_ctx):
+                    log_event(
+                        logger,
+                        file_ctx,
+                        role="orchestrator",
+                        event="already_processed_skip",
+                        fields={"file_id": file.file_id, "md5": dl_resp.md5},
+                    )
                     outcomes.append(IngestOutcome(
                         schema_version="1.0",
                         file_id=file.file_id,
@@ -134,6 +141,21 @@ def run_ingest(
                         time.sleep(1 + attempt)
             except Exception as exc:
                 logger.exception("Error processing %s", file.file_id)
+                dl_resp = locals().get("dl_resp")
+                local_path = getattr(dl_resp, "local_path", None)
+                md5 = getattr(dl_resp, "md5", None)
+                log_event(
+                    logger,
+                    file_ctx,
+                    role="orchestrator",
+                    event="file_processing_error",
+                    fields={
+                        "file_id": file.file_id,
+                        "error": str(exc),
+                        "local_path": local_path,
+                        "md5": md5,
+                    },
+                )
                 outcomes.append(IngestOutcome(
                     schema_version="1.0",
                     file_id=file.file_id,
@@ -143,6 +165,7 @@ def run_ingest(
                     status="error",
                     error=str(exc),
                 ))
+                continue
 
     log_event(
         logger,
