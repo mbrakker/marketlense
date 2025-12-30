@@ -6,13 +6,13 @@ Enterprise PDF ingestion and analysis pipeline that converts Google Drive report
 
 ## Executive Summary
 
-Market Lense ingests PDFs from a configured Google Drive folder, extracts text and structured visual candidates (tables/charts), calls an LLM for a strict JSON analysis, ranks and crops key visuals, and renders a compact HTML digest. The system is organized around a strict architecture with contracts, services, generators, and orchestrators to ensure reliability, observability, and testability.
+Market Lense ingests PDFs from a configured Google Drive folder, extracts text and structured visual candidates (tables/charts), calls an LLM for a strict JSON analysis, ranks and crops key visuals, renders a compact HTML digest, and can publish the digest to WordPress. The system is organized around a strict architecture with contracts, services, generators, and orchestrators to ensure reliability, observability, and testability.
 
 Key traits:
 - Contract-first data model for all external I/O boundaries.
 - Service isolation for all external systems and file I/O.
 - Generator logic that composes services into domain outputs.
-- Orchestrator that controls sequencing, retries, and state.
+- Orchestrator that controls sequencing, retries, and state (including publishing).
 - Structured logging with run/task/span identifiers.
 
 ---
@@ -41,7 +41,7 @@ src/
 
 ---
 
-## End-to-End Flow
+## End-to-End Flow (Ingest)
 
 1. **Configuration load**
    - `src/services/config_service.py` loads environment variables and ensures required paths exist.
@@ -77,6 +77,31 @@ src/
 
 7. **State record**
    - The orchestrator records completion state after successful report generation.
+
+---
+
+## End-to-End Flow (Publish to WordPress)
+
+1. **Configuration load**
+   - `src/services/config_service.py` loads WordPress settings from `.env`.
+   - Produces `PublishSettings` contract.
+
+2. **Pipeline orchestration**
+   - Entry point: `src/cli.py` (`publish-wp`).
+   - `src/orchestrators/publish_orchestrator.py` coordinates HTML publishing.
+
+3. **HTML discovery**
+   - `src/services/file_service.py` lists generated HTML files in `OUTPUT_DIR`.
+
+4. **State checks**
+   - `src/services/state_service.py` verifies the report was processed and not already published.
+
+5. **Publishing (per file)**
+   - `src/generators/publish_generator.py` uploads report images, swaps image URLs, and creates a WordPress post.
+   - `src/services/wordpress_service.py` handles media and post API calls.
+
+6. **State record**
+   - Published posts are recorded with post ID and URL for idempotency.
 
 ---
 
@@ -137,7 +162,9 @@ Key contracts live under `src/contracts/`:
 - `report_models.py`: `ReportPayload`, `Quote`, `Figure`, etc.
 - `report_assets.py`: request/response contracts for figure, preview, crop, ranking, etc.
 - `normalize.py`: normalization request/response
+- `publish.py`: publish settings, requests, and outcomes
 - `state.py`: state store contracts
+- `wordpress.py`: WordPress request/response and auth settings
 - `pdf_utils.py`: EOF check contract
 
 ---
@@ -149,6 +176,8 @@ Minimal unit tests exist under `tests/`:
 - `test_normalize_service.py`: normalization behavior
 - `test_cli.py`: CLI wiring
 - `test_orchestrator_retry.py`: retry behavior
+- `test_publish_orchestrator.py`: publish orchestration
+- `test_html_utils.py`: HTML parsing helpers
 
 Run tests locally:
 
@@ -166,6 +195,7 @@ Required environment variables:
 - `GOOGLE_SERVICE_ACCOUNT_JSON`
 - `GDRIVE_FOLDER_ID`
 - `OPENAI_API_KEY`
+- `WP_SITE_URL` (for publish)
 
 Optional:
 - `OPENAI_MODEL`
@@ -174,6 +204,11 @@ Optional:
 - `CACHE_DIR`
 - `STATE_DB`
 - `TEMPERATURE`
+- `WP_USERNAME`
+- `WP_APP_PASSWORD`
+- `WP_BEARER_TOKEN`
+- `WP_ADMIN_URL` (used to infer site URL if `WP_SITE_URL` not set)
+- `WP_POST_STATUS`
 
 ---
 
@@ -183,6 +218,12 @@ Primary entrypoint:
 
 ```bash
 python -m src.cli ingest --limit 10
+```
+
+Publish generated HTML to WordPress:
+
+```bash
+python -m src.cli publish-wp --limit 10
 ```
 
 ## Output Layout
