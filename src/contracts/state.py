@@ -32,3 +32,28 @@ class StateGetResponse:
     md5: str
     processed_at: int
     openai_file_id: Optional[str]
+
+
+@dataclass(frozen=True)
+class StatePublishCheckRequest:
+    schema_version: str
+    file_id: str
+
+
+@dataclass(frozen=True)
+class StatePublishRecordRequest:
+    schema_version: str
+    file_id: str
+    md5: str
+    wp_post_id: int
+    wp_post_url: str
+
+
+@dataclass(frozen=True)
+class StatePublishGetResponse:
+    schema_version: str
+    file_id: str
+    md5: str
+    published_at: int
+    wp_post_id: int
+    wp_post_url: str

@@ -9,7 +9,8 @@ from rich import box
 
 from src.contracts.ingest import IngestSettings
 from src.orchestrators.ingest_orchestrator import run_ingest
-from src.services.config_service import load_settings
+from src.orchestrators.publish_orchestrator import run_publish
+from src.services.config_service import load_settings, load_publish_settings
 from src.services.logging_service import setup_logging
 
 
@@ -58,6 +59,38 @@ def ingest(
 
     console.print(table)
     console.print(f"[green]Done: {processed} file(s).[/green]")
+
+
+@cli_app.command("publish-wp")
+def publish_wp(
+    limit: int = typer.Option(None, help="Max HTML reports to publish this run"),
+):
+    setup_logging()
+    console.print("[cyan]Loading settings...[/cyan]")
+    logger.info("Loading settings")
+    settings = load_publish_settings()
+
+    console.print("[cyan]Publishing reports to WordPress...[/cyan]")
+    outcomes = run_publish(settings, limit=limit)
+
+    table = Table(title="Published Reports", box=box.SIMPLE_HEAVY)
+    table.add_column("HTML")
+    table.add_column("File ID")
+    table.add_column("Status")
+    table.add_column("Post URL")
+    published = 0
+    for outcome in outcomes:
+        if outcome.status == "published":
+            published += 1
+        table.add_row(
+            outcome.html_path,
+            outcome.file_id or "",
+            outcome.status,
+            outcome.post_url or "",
+        )
+
+    console.print(table)
+    console.print(f"[green]Done: {published} post(s) published.[/green]")
 
 
 @cli_app.callback(invoke_without_command=True)
