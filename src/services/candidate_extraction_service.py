@@ -167,13 +167,13 @@ def _extract_tables(pdf_path: str, max_candidates: int = 10) -> List[Candidate]:
 
 
 def collect_candidates(request: ExtractCandidatesRequest, ctx: RunContext) -> ExtractCandidatesResponse:
-    log_event(
-        logger,
+    logger.info(log_event(
         ctx,
         role="service",
         event="extract_candidates_start",
+        module=logger.name,
         fields={"pdf_path": request.pdf_path},
-    )
+    ))
     thumbs = Path(request.out_dir) / request.report_name / "thumbs"
     candidates = _extract_charts(
         request.pdf_path,
@@ -182,11 +182,11 @@ def collect_candidates(request: ExtractCandidatesRequest, ctx: RunContext) -> Ex
         save_thumbs=False,
         doc=None,
     ) + _extract_tables(request.pdf_path)
-    log_event(
-        logger,
+    logger.info(log_event(
         ctx,
         role="service",
         event="extract_candidates_complete",
+        module=logger.name,
         fields={"count": len(candidates)},
-    )
+    ))
     return ExtractCandidatesResponse(schema_version="1.0", candidates=candidates)

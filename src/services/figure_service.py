@@ -14,26 +14,26 @@ logger = logging.getLogger("market_lense.figure_service")
 
 
 def extract_best_figure(request: FigureExtractRequest, ctx: RunContext) -> FigureExtractResponse:
-    log_event(
-        logger,
+    logger.info(log_event(
         ctx,
         role="service",
         event="figure_extract_start",
+        module=logger.name,
         fields={"pdf_path": request.pdf_path},
-    )
+    ))
     img_path, caption = _extract_best_figure_png(
         request.pdf_path,
         request.out_dir,
         request.report_name,
         doc=None,
     )
-    log_event(
-        logger,
+    logger.info(log_event(
         ctx,
         role="service",
         event="figure_extract_complete",
+        module=logger.name,
         fields={"image_path": img_path or ""},
-    )
+    ))
     return FigureExtractResponse(schema_version="1.0", image_path=img_path, caption=caption)
 
 

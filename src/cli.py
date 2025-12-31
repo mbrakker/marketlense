@@ -7,11 +7,13 @@ from rich.console import Console
 from rich.table import Table
 from rich import box
 
+from src.contracts.config import ConfigLoadRequest
 from src.contracts.ingest import IngestSettings
 from src.orchestrators.ingest_orchestrator import run_ingest
 from src.orchestrators.publish_orchestrator import run_publish
 from src.services.config_service import load_settings, load_publish_settings
 from src.services.logging_service import setup_logging
+from src.utils.logging import log_event, new_run_context
 
 
 cli_app = typer.Typer(add_completion=False, help="PDF -> Structured HTML digests")
@@ -26,8 +28,15 @@ def ingest(
 ):
     setup_logging()
     console.print("[cyan]Loading settings...[/cyan]")
-    logger.info("Loading settings")
-    s = load_settings()
+    ctx = new_run_context(task_id="cli_ingest")
+    logger.info(log_event(
+        ctx,
+        role="orchestrator",
+        event="cli_load_settings_start",
+        module=logger.name,
+        fields={},
+    ))
+    s = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
 
     settings = IngestSettings(
         schema_version="1.0",
@@ -40,6 +49,14 @@ def ingest(
         cache_dir=s.cache_dir,
         state_db=s.state_db,
         temperature=s.temperature,
+        openai_seed=s.openai_seed,
+        pdf_text_max_pages=s.pdf_text_max_pages,
+        pdf_text_max_chars=s.pdf_text_max_chars,
+        rank_model=s.rank_model,
+        rank_temperature=s.rank_temperature,
+        rank_seed=s.rank_seed,
+        openai_timeout_seconds=s.openai_timeout_seconds,
+        rank_timeout_seconds=s.rank_timeout_seconds,
     )
 
     console.print("[cyan]Running ingest pipeline...[/cyan]")
@@ -67,8 +84,15 @@ def publish_wp(
 ):
     setup_logging()
     console.print("[cyan]Loading settings...[/cyan]")
-    logger.info("Loading settings")
-    settings = load_publish_settings()
+    ctx = new_run_context(task_id="cli_publish")
+    logger.info(log_event(
+        ctx,
+        role="orchestrator",
+        event="cli_load_publish_settings_start",
+        module=logger.name,
+        fields={},
+    ))
+    settings = load_publish_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
 
     console.print("[cyan]Publishing reports to WordPress...[/cyan]")
     outcomes = run_publish(settings, limit=limit)

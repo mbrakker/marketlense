@@ -13,13 +13,13 @@ logger = logging.getLogger("market_lense.render_service")
 
 
 def render_report(request: RenderRequest, ctx: RunContext) -> RenderResponse:
-    log_event(
-        logger,
+    logger.info(log_event(
         ctx,
         role="service",
         event="render_html_start",
+        module=logger.name,
         fields={"doc_name": request.doc_name, "file_id": request.file_id},
-    )
+    ))
     templates_dir = (Path(__file__).resolve().parents[2] / "templates")
     env = Environment(
         loader=FileSystemLoader(str(templates_dir)),
@@ -36,11 +36,11 @@ def render_report(request: RenderRequest, ctx: RunContext) -> RenderResponse:
     out_path = Path(request.out_dir) / f"{report_name}.html"
     out_path.write_text(html, encoding="utf-8")
     html_path = str(out_path)
-    log_event(
-        logger,
+    logger.info(log_event(
         ctx,
         role="service",
         event="render_html_complete",
+        module=logger.name,
         fields={"html_path": html_path},
-    )
+    ))
     return RenderResponse(schema_version="1.0", html_path=html_path)

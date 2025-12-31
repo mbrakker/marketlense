@@ -3,7 +3,6 @@ from unittest.mock import patch
 
 from src.contracts.drive import DriveFile, DriveDownloadResponse
 from src.contracts.ingest import IngestSettings
-from src.services.state_service import StateStore
 from src.utils.errors import AppError
 from src.orchestrators import ingest_orchestrator as orch
 
@@ -34,8 +33,9 @@ class TestOrchestratorRetry(unittest.TestCase):
         download_resp = DriveDownloadResponse(
             schema_version="1.0",
             file=drive_file,
-            local_path="cache/name.pdf",
+            content=b"pdf-bytes",
             md5="md5",
+            size=9,
         )
 
         retry_error = AppError(
@@ -44,15 +44,16 @@ class TestOrchestratorRetry(unittest.TestCase):
             retryable=True,
         )
 
-        with patch.object(orch, "build_drive_client", return_value=object()):
-            with patch.object(orch, "list_pdfs", return_value=[drive_file]):
-                with patch.object(orch, "download_pdf", return_value=download_resp):
-                    with patch.object(orch, "check_pdf_eof", return_value=type("X", (), {"has_eof": True})()):
-                        with patch.object(orch, "StateStore", return_value=StateStore(":memory:")):
-                            with patch.object(orch, "generate_report", side_effect=[retry_error, retry_error, retry_error]):
-                                outcomes = orch.run_ingest(settings, limit=1)
-                                self.assertEqual(1, len(outcomes))
-                                self.assertEqual("error", outcomes[0].status)
+        with patch.object(orch, "list_pdfs", return_value=[drive_file]):
+            with patch.object(orch, "download_pdf", return_value=download_resp):
+                with patch.object(orch, "file_exists", return_value=type("E", (), {"exists": False})()):
+                    with patch.object(orch, "write_bytes", return_value=type("W", (), {"md5": "md5"})()):
+                        with patch.object(orch, "check_pdf_eof", return_value=type("X", (), {"has_eof": True})()):
+                            with patch.object(orch.time, "sleep", return_value=None):
+                                with patch.object(orch, "generate_report", side_effect=[retry_error, retry_error, retry_error]):
+                                    outcomes = orch.run_ingest(settings, limit=1)
+                                    self.assertEqual(1, len(outcomes))
+                                    self.assertEqual("error", outcomes[0].status)
 
 
 if __name__ == "__main__":

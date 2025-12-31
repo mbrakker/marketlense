@@ -1,17 +1,32 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Optional
+
+
+@dataclass(frozen=True)
+class ConfigLoadRequest:
+    schema_version: str = field(metadata={"doc": "Config request schema version."})
+    path: str = field(metadata={"doc": "Absolute or workspace-relative path to the YAML config file."})
 
 
 @dataclass(frozen=True)
 class AppSettings:
-    schema_version: str
-    google_sa_path: str
-    gdrive_folder_id: str
-    openai_api_key: str
-    openai_model: str
-    batch_limit: int
-    output_dir: str
-    cache_dir: str
-    state_db: str
-    temperature: float
+    schema_version: str = field(metadata={"doc": "Settings schema version."})
+    google_sa_path: str = field(metadata={"doc": "Filesystem path to the Google service account JSON."})
+    gdrive_folder_id: str = field(metadata={"doc": "Google Drive folder ID containing source PDFs."})
+    openai_api_key: str = field(metadata={"doc": "OpenAI API key (secret, loaded from env)."})
+    openai_model: str = field(metadata={"doc": "OpenAI model ID for report generation."})
+    batch_limit: int = field(metadata={"doc": "Max PDFs to process per ingest run."})
+    output_dir: str = field(metadata={"doc": "Output directory for rendered HTML and assets."})
+    cache_dir: str = field(metadata={"doc": "Cache directory for downloaded PDFs."})
+    state_db: str = field(metadata={"doc": "SQLite path for processing state."})
+    temperature: float = field(metadata={"doc": "Sampling temperature for report generation."})
+    openai_seed: Optional[int] = field(default=None, metadata={"doc": "Optional seed for report generation."})
+    pdf_text_max_pages: int = field(default=5, metadata={"doc": "Max pages to extract for prompt context."})
+    pdf_text_max_chars: int = field(default=80_000, metadata={"doc": "Max extracted characters for prompt context."})
+    rank_model: str = field(default="", metadata={"doc": "OpenAI model ID for candidate ranking (optional override)."})
+    rank_temperature: float = field(default=1.0, metadata={"doc": "Sampling temperature for candidate ranking."})
+    rank_seed: Optional[int] = field(default=None, metadata={"doc": "Optional seed for candidate ranking."})
+    openai_timeout_seconds: float = field(default=600.0, metadata={"doc": "Timeout in seconds for OpenAI report generation calls."})
+    rank_timeout_seconds: float = field(default=600.0, metadata={"doc": "Timeout in seconds for OpenAI ranking calls."})

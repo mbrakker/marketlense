@@ -44,7 +44,9 @@ src/
 ## End-to-End Flow (Ingest)
 
 1. **Configuration load**
-   - `src/services/config_service.py` loads environment variables and ensures required paths exist.
+   - `src/services/config_service.py` loads YAML from `src/config/app.yaml` and ensures required paths exist.
+   - Missing values fall back to `.env` (for example Drive folder ID, service account path, and WordPress site/user).
+   - Secrets (OpenAI and WordPress tokens) come from `.env`.
    - Produces `AppSettings` contract.
 
 2. **Pipeline orchestration**
@@ -65,11 +67,11 @@ src/
 
 6. **Report generation (per file)**
    - `src/generators/report_generator.py` runs the core pipeline:
-     - **Text extraction**: `openai_service` extracts text from the first N pages (local PDF parsing).
+     - **Text extraction**: `pdf_text_service` extracts text from the first N pages.
      - **LLM analysis**: Sends prompt + extracted text to OpenAI for structured JSON output.
-     - **Normalization**: `normalize_service` enforces strict schema and list sizing.
+     - **Normalization**: `normalize_generator` enforces strict schema and list sizing.
      - **Figure selection**: `figure_service` selects a representative visual and caption.
-     - **Candidate extraction**: `candidate_extraction_service` finds chart/table regions.
+     - **Candidate extraction**: `extract_service` finds chart/table regions.
      - **Candidate ranking**: `rank_service` scores candidates via LLM.
      - **Cropping**: `crop_service` crops top-ranked regions.
      - **Preview rendering**: `preview_service` renders the first page to PNG.
@@ -83,7 +85,7 @@ src/
 ## End-to-End Flow (Publish to WordPress)
 
 1. **Configuration load**
-   - `src/services/config_service.py` loads WordPress settings from `.env`.
+   - `src/services/config_service.py` loads WordPress settings from YAML; secrets from `.env`.
    - Produces `PublishSettings` contract.
 
 2. **Pipeline orchestration**
@@ -149,7 +151,8 @@ src/prompts/report_generation/
   user.yaml
 ```
 
-Prompts are loaded and hashed by `src/services/prompt_service.py` and logged with their SHA256 hashes for reproducibility.
+Additional prompt namespaces (for example `rank_candidates/`) live alongside `report_generation/`.
+Prompts are rendered with Jinja2 (`{{ variable }}`), loaded and hashed by `src/services/prompt_service.py`, and logged with their SHA256 hashes for reproducibility.
 
 ---
 
@@ -159,9 +162,10 @@ Key contracts live under `src/contracts/`:
 - `config.py`: `AppSettings`
 - `drive.py`: Drive file and request/response contracts
 - `openai.py`: OpenAI request/response contracts
+- `pdf_text.py`: PDF text extraction contracts
+- `prompts.py`: Prompt load/render contracts
 - `report_models.py`: `ReportPayload`, `Quote`, `Figure`, etc.
 - `report_assets.py`: request/response contracts for figure, preview, crop, ranking, etc.
-- `normalize.py`: normalization request/response
 - `publish.py`: publish settings, requests, and outcomes
 - `state.py`: state store contracts
 - `wordpress.py`: WordPress request/response and auth settings
@@ -191,24 +195,14 @@ CI runs these tests via `.github/workflows/ci.yml`.
 
 ## Runtime Requirements
 
+Configuration lives in `src/config/app.yaml` with `.env` fallback for any missing values. Secrets come from environment variables.
+
 Required environment variables:
-- `GOOGLE_SERVICE_ACCOUNT_JSON`
-- `GDRIVE_FOLDER_ID`
 - `OPENAI_API_KEY`
-- `WP_SITE_URL` (for publish)
+- `WP_APP_PASSWORD` (or `WP_BEARER_TOKEN` if using bearer auth)
 
 Optional:
-- `OPENAI_MODEL`
-- `BATCH_LIMIT`
-- `OUTPUT_DIR`
-- `CACHE_DIR`
-- `STATE_DB`
-- `TEMPERATURE`
-- `WP_USERNAME`
-- `WP_APP_PASSWORD`
 - `WP_BEARER_TOKEN`
-- `WP_ADMIN_URL` (used to infer site URL if `WP_SITE_URL` not set)
-- `WP_POST_STATUS`
 
 ---
 

@@ -11,5 +11,5 @@ text: |
   8) Return ONLY valid JSON. Do not add any extra keys or text.
 
   [EXTRACTED TEXT START]
-  {extracted}
+  {{ extracted }}
   [EXTRACTED TEXT END]

@@ -5,14 +5,14 @@ import mimetypes
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
-from src.contracts.files import ReadBytesRequest, ReadTextRequest
+from src.contracts.files import FileExistsRequest, ReadBytesRequest, ReadTextRequest
 from src.contracts.publish import PublishOutcome, PublishRequest, PublishSettings
 from src.contracts.run_context import RunContext
 from src.contracts.wordpress import (
     WordPressMediaUploadRequest,
     WordPressPostCreateRequest,
 )
-from src.services.file_service import read_bytes, read_text
+from src.services.file_service import file_exists, read_bytes, read_text
 from src.services.wordpress_service import create_post, upload_media
 from src.utils.errors import AppError
 from src.utils.html_utils import (
@@ -35,25 +35,25 @@ def publish_html(
     settings: PublishSettings,
     ctx: RunContext,
 ) -> PublishOutcome:
-    log_event(
-        logger,
+    logger.info(log_event(
         ctx,
         role="generator",
         event="publish_start",
+        module=logger.name,
         fields={"html_path": request.html_path},
-    )
+    ))
 
     html_resp = read_text(ReadTextRequest(schema_version="1.0", path=request.html_path), ctx)
     html_text = html_resp.content
     file_id = request.file_id or extract_file_id(html_text)
     if not file_id:
-        log_event(
-            logger,
+        logger.info(log_event(
             ctx,
             role="generator",
             event="publish_missing_file_id",
+            module=logger.name,
             fields={"html_path": request.html_path},
-        )
+        ))
         return PublishOutcome(
             schema_version="1.0",
             html_path=request.html_path,
@@ -72,13 +72,13 @@ def publish_html(
         auth_header,
         ctx,
     )
-    log_event(
-        logger,
+    logger.info(log_event(
         ctx,
         role="generator",
         event="publish_images_uploaded",
+        module=logger.name,
         fields={"count": len(image_map), "featured_media": featured_media_id or 0},
-    )
+    ))
     rendered_html = replace_image_sources(html_text, image_map)
     body_html = extract_body_html(rendered_html)
 
@@ -99,13 +99,13 @@ def publish_html(
         ctx,
     )
 
-    log_event(
-        logger,
+    logger.info(log_event(
         ctx,
         role="generator",
         event="publish_complete",
+        module=logger.name,
         fields={"file_id": file_id, "post_id": post_resp.post_id, "post_url": post_resp.link},
-    )
+    ))
 
     return PublishOutcome(
         schema_version="1.0",
@@ -131,13 +131,13 @@ def _resolve_auth_header(settings: PublishSettings, ctx: RunContext) -> str:
             retryable=False,
         ) from exc
     source = "bearer_token" if settings.wp.bearer_token else "app_password"
-    log_event(
-        logger,
+    logger.info(log_event(
         ctx,
         role="generator",
         event="publish_auth_source",
+        module=logger.name,
         fields={"source": source},
-    )
+    ))
     return header
 
 
@@ -160,16 +160,16 @@ def _upload_images(
     for src in sources:
         if src in mapping:
             continue
-        local_path = _resolve_local_path(src, output_dir)
+        local_path = _resolve_local_path(src, output_dir, ctx)
         if not local_path:
             if not src.startswith("http://") and not src.startswith("https://"):
-                log_event(
-                    logger,
+                logger.info(log_event(
                     ctx,
                     role="generator",
                     event="publish_image_missing",
+                    module=logger.name,
                     fields={"src": src},
-                )
+                ))
             continue
         upload_resp = upload_media(
             _media_upload_request(local_path, src, base_url, auth_header, ctx),
@@ -209,11 +209,12 @@ def _media_upload_request(
     )
 
 
-def _resolve_local_path(src: str, output_dir: str) -> Optional[str]:
+def _resolve_local_path(src: str, output_dir: str, ctx: RunContext) -> Optional[str]:
     rel = src.lstrip("/").replace("\\", "/")
     if rel.startswith("http://") or rel.startswith("https://"):
         return None
     path = Path(output_dir) / rel
-    if not path.exists():
+    exists_resp = file_exists(FileExistsRequest(schema_version="1.0", path=str(path)), ctx)
+    if not exists_resp.exists:
         return None
     return str(path)

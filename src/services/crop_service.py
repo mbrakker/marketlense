@@ -15,13 +15,13 @@ logger = logging.getLogger("market_lense.crop_service")
 
 
 def crop_regions(request: CropRequest, ctx: RunContext) -> CropResponse:
-    log_event(
-        logger,
+    logger.info(log_event(
         ctx,
         role="service",
         event="crop_regions_start",
+        module=logger.name,
         fields={"pdf_path": request.pdf_path, "count": len(request.items)},
-    )
+    ))
     paths = _crop_regions(
         request.pdf_path,
         request.out_dir,
@@ -30,13 +30,13 @@ def crop_regions(request: CropRequest, ctx: RunContext) -> CropResponse:
         pad=request.pad,
         doc=None,
     )
-    log_event(
-        logger,
+    logger.info(log_event(
         ctx,
         role="service",
         event="crop_regions_complete",
+        module=logger.name,
         fields={"count": len(paths)},
-    )
+    ))
     return CropResponse(schema_version="1.0", paths=paths)
 
 

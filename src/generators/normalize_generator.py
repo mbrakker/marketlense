@@ -1,39 +1,38 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, List
 
 from src.contracts.report_models import Figure, Quote, ReportPayload
-from src.contracts.normalize import NormalizeRequest, NormalizeResponse
 from src.contracts.run_context import RunContext
 from src.utils.logging import log_event
 
-logger = logging.getLogger("market_lense.normalize_service")
+logger = logging.getLogger("market_lense.normalize_generator")
 
 
-def normalize_report(request: NormalizeRequest, ctx: RunContext) -> NormalizeResponse:
-    log_event(
-        logger,
+def normalize_report(payload: ReportPayload, ctx: RunContext) -> ReportPayload:
+    logger.info(log_event(
         ctx,
-        role="service",
+        role="generator",
         event="normalize_report_start",
-        fields={},
-    )
-    payload = _normalize_report_payload(request.payload)
-    log_event(
-        logger,
+        module=logger.name,
+        fields={"payload": payload.to_dict()},
+    ))
+    normalized = _normalize_report_payload(payload)
+    logger.info(log_event(
         ctx,
-        role="service",
+        role="generator",
         event="normalize_report_complete",
-        fields={},
-    )
-    return NormalizeResponse(schema_version="1.0", payload=payload)
+        module=logger.name,
+        fields={"payload": normalized.to_dict()},
+    ))
+    return normalized
 
 
-def _s(x: Any) -> str:
-    if x is None:
+def _s(value: Any) -> str:
+    if value is None:
         return ""
-    return x if isinstance(x, str) else str(x)
+    return value if isinstance(value, str) else str(value)
 
 
 def _normalize_report_payload(data: ReportPayload) -> ReportPayload:
@@ -41,7 +40,7 @@ def _normalize_report_payload(data: ReportPayload) -> ReportPayload:
     commentary = _s(data.commentary)
     source = _s(data.source)
 
-    insights = data.insights or []
+    insights: List[str] = data.insights or []
     if len(insights) < 5:
         insights = insights + [""] * (5 - len(insights))
     insights = insights[:5]

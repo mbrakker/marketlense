@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import json
 import logging
 from typing import Optional
 
 from src.contracts.openai import OpenAIAnalyzeRequest
+from src.contracts.pdf_text import PdfTextExtractRequest
+from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.contracts.report_models import CropItem
-from src.services.openai_service import analyze_pdf as openai_analyze
+from src.services.openai_service import analyze_report as openai_analyze
+from src.services.pdf_text_service import extract_pdf_text
+from src.services.prompt_service import load_prompt_set, render_prompt
 from src.utils.slugify import slugify
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
@@ -18,8 +23,7 @@ from src.contracts.report_assets import (
     RenderRequest,
 )
 from src.contracts.run_context import RunContext
-from src.contracts.normalize import NormalizeRequest
-from src.services.normalize_service import normalize_report as normalize_report_service
+from src.generators.normalize_generator import normalize_report
 from src.services.crop_service import crop_regions as crop_regions_service
 from src.services.extract_service import collect_candidates as collect_candidates_service
 from src.services.figure_service import extract_best_figure as extract_best_figure_service
@@ -39,31 +43,109 @@ def generate_report(
     md5: Optional[str],
     ctx: RunContext,
 ) -> IngestOutcome:
-    log_event(
-        logger,
+    logger.info(log_event(
         ctx,
         role="generator",
         event="report_generate_start",
+        module=logger.name,
         fields={"file_id": file.file_id, "name": file.name},
-    )
+    ))
 
-    openai_resp = openai_analyze(
-        OpenAIAnalyzeRequest(
+    text_resp = extract_pdf_text(
+        PdfTextExtractRequest(
             schema_version="1.0",
-            pdf_path=local_pdf_path,
-            model=settings.openai_model,
-            temperature=settings.temperature,
-            api_key=settings.openai_api_key,
+            path=local_pdf_path,
+            max_pages=settings.pdf_text_max_pages,
+            max_chars=settings.pdf_text_max_chars,
         ),
         ctx,
     )
-    raw = openai_resp.payload
-    normalize_resp = normalize_report_service(
-        NormalizeRequest(schema_version="1.0", payload=raw),
+    prompt_set = load_prompt_set(
+        PromptLoadRequest(schema_version="1.0", namespace="report_generation"),
         ctx,
     )
-    data = normalize_resp.payload
+    logger.info(log_event(
+        ctx,
+        role="generator",
+        event="prompt_selected",
+        module=logger.name,
+        fields={
+            "namespace": "report_generation",
+            "system_path": prompt_set.system.path,
+            "system_sha256": prompt_set.system.sha256,
+            "user_path": prompt_set.user.path,
+            "user_sha256": prompt_set.user.sha256,
+        },
+    ))
+    system_render = render_prompt(
+        PromptRenderRequest(
+            schema_version="1.0",
+            template=prompt_set.system,
+            variables={},
+        ),
+        ctx,
+    )
+    user_render = render_prompt(
+        PromptRenderRequest(
+            schema_version="1.0",
+            template=prompt_set.user,
+            variables={"extracted": text_resp.text},
+        ),
+        ctx,
+    )
+    logger.info(log_event(
+        ctx,
+        role="generator",
+        event="prompt_rendered",
+        module=logger.name,
+        fields={
+            "system_prompt": system_render.text,
+            "user_prompt": user_render.text,
+        },
+    ))
+    logger.info(log_event(
+        ctx,
+        role="generator",
+        event="openai_request_config",
+        module=logger.name,
+        fields={
+            "model": settings.openai_model,
+            "temperature": settings.temperature,
+            "seed": settings.openai_seed,
+        },
+    ))
+    openai_resp = openai_analyze(
+        OpenAIAnalyzeRequest(
+            schema_version="1.0",
+            system_prompt=system_render.text,
+            user_prompt=user_render.text,
+            prompt_system_sha256=prompt_set.system.sha256,
+            prompt_user_sha256=prompt_set.user.sha256,
+            model=settings.openai_model,
+            temperature=settings.temperature,
+            api_key=settings.openai_api_key,
+            seed=settings.openai_seed,
+            timeout_seconds=settings.openai_timeout_seconds,
+        ),
+        ctx,
+    )
+    logger.info(log_event(
+        ctx,
+        role="generator",
+        event="openai_raw_response",
+        module=logger.name,
+        fields={"request_id": openai_resp.request_id or "", "content": openai_resp.raw_content},
+    ))
+    raw = openai_resp.payload
+    data = normalize_report(raw, ctx)
     validate_report_payload(data)
+    logger.info(log_event(
+        ctx,
+        role="generator",
+        event="report_payload_validated",
+        module=logger.name,
+        fields={"file_id": file.file_id},
+    ))
     report_name = slugify(file.name)
 
     fig_resp = extract_best_figure_service(
@@ -94,20 +176,110 @@ def generate_report(
     if cands_resp.candidates:
         for cand in cands_resp.candidates:
             validate_candidate(cand)
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="candidate_validation_complete",
+            module=logger.name,
+            fields={"count": len(cands_resp.candidates)},
+        ))
+        rank_model = settings.rank_model or settings.openai_model
+        rows = [{
+            "id": c.id,
+            "type": c.kind,
+            "page": c.page,
+            "meta": c.meta or {},
+            "title_or_caption": (c.caption or "")[:300],
+            "table_preview": c.preview_text[:400] if c.kind == "table" else "",
+        } for c in cands_resp.candidates]
+        candidates_json = json.dumps(rows, ensure_ascii=True)
+        rank_prompt_set = load_prompt_set(
+            PromptLoadRequest(schema_version="1.0", namespace="rank_candidates"),
+            ctx,
+        )
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="prompt_selected",
+            module=logger.name,
+            fields={
+                "namespace": "rank_candidates",
+                "system_path": rank_prompt_set.system.path,
+                "system_sha256": rank_prompt_set.system.sha256,
+                "user_path": rank_prompt_set.user.path,
+                "user_sha256": rank_prompt_set.user.sha256,
+            },
+        ))
+        rank_system_render = render_prompt(
+            PromptRenderRequest(
+                schema_version="1.0",
+                template=rank_prompt_set.system,
+                variables={},
+            ),
+            ctx,
+        )
+        rank_user_render = render_prompt(
+            PromptRenderRequest(
+                schema_version="1.0",
+                template=rank_prompt_set.user,
+                variables={"candidates_json": candidates_json},
+            ),
+            ctx,
+        )
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="prompt_rendered",
+            module=logger.name,
+            fields={
+                "system_prompt": rank_system_render.text,
+                "user_prompt": rank_user_render.text,
+            },
+        ))
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="rank_request_config",
+            module=logger.name,
+            fields={
+                "model": rank_model,
+                "temperature": settings.rank_temperature,
+                "seed": settings.rank_seed,
+            },
+        ))
         try:
             ranked_resp = rank_candidates_service(
                 RankRequest(
                     schema_version="1.0",
-                    candidates=cands_resp.candidates,
-                    model=settings.openai_model,
+                    system_prompt=rank_system_render.text,
+                    user_prompt=rank_user_render.text,
+                    prompt_system_sha256=rank_prompt_set.system.sha256,
+                    prompt_user_sha256=rank_prompt_set.user.sha256,
+                    model=rank_model,
+                    temperature=settings.rank_temperature,
                     api_key=settings.openai_api_key,
-                    debug_dir=None,
+                    seed=settings.rank_seed,
+                    candidate_count=len(cands_resp.candidates),
+                    timeout_seconds=settings.rank_timeout_seconds,
                 ),
                 ctx,
             )
             ranked = ranked_resp.results
-        except Exception:
-            logger.exception("Ranking failed for %s; continuing without ranks", file.file_id)
+            logger.info(log_event(
+                ctx,
+                role="generator",
+                event="rank_raw_response",
+                module=logger.name,
+                fields={"request_id": ranked_resp.request_id or "", "content": ranked_resp.raw_content},
+            ))
+        except Exception as exc:
+            logger.info(log_event(
+                ctx,
+                role="generator",
+                event="rank_failed",
+                module=logger.name,
+                fields={"file_id": file.file_id, "error": str(exc)},
+            ))
             ranked = []
 
         id2cand = {c.id: c for c in cands_resp.candidates}
@@ -151,6 +323,13 @@ def generate_report(
     )
 
     data_dict = data.to_dict()
+    logger.info(log_event(
+        ctx,
+        role="generator",
+        event="report_payload_ready",
+        module=logger.name,
+        fields={"payload": data_dict},
+    ))
     render_resp = render_report_service(
         RenderRequest(
             schema_version="1.0",
@@ -164,13 +343,13 @@ def generate_report(
     )
     out_html = render_resp.html_path
 
-    log_event(
-        logger,
+    logger.info(log_event(
         ctx,
         role="generator",
         event="report_generate_complete",
+        module=logger.name,
         fields={"file_id": file.file_id, "html_path": out_html},
-    )
+    ))
 
     return IngestOutcome(
         schema_version="1.0",

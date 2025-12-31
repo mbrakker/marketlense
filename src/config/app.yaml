@@ -1,0 +1,30 @@
+schema_version: "1.0"
+
+paths:
+  output_dir: "./out"
+  cache_dir: "./cache"
+  state_db: "./state/index.sqlite"
+
+ingest:
+  google_sa_path: ""
+  gdrive_folder_id: ""
+  openai_model: "gpt-5"
+  temperature: 1.0
+  timeout_seconds: 600
+  seed: null
+  batch_limit: 20
+  pdf_text:
+    max_pages: 5
+    max_chars: 80000
+
+rank:
+  model: ""
+  temperature: 1.0
+  timeout_seconds: 600
+  seed: null
+
+publish:
+  wp:
+    site_url: ""
+    username: ""
+    post_status: "publish"

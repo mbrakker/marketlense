@@ -16,6 +16,10 @@ def setup_logging(level: int = logging.INFO) -> None:
     root = logging.getLogger()
     for h in list(root.handlers):
         root.removeHandler(h)
+        try:
+            h.close()
+        except Exception:
+            pass
 
     use_rich = os.getenv("RICH_DISABLE", "").lower() not in ("1", "true", "yes")
     if use_rich and hasattr(sys.stdout, "isatty") and not sys.stdout.isatty():

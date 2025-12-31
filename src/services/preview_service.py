@@ -14,13 +14,13 @@ logger = logging.getLogger("market_lense.preview_service")
 
 
 def render_preview(request: PreviewRequest, ctx: RunContext) -> PreviewResponse:
-    log_event(
-        logger,
+    logger.info(log_event(
         ctx,
         role="service",
         event="preview_render_start",
+        module=logger.name,
         fields={"pdf_path": request.pdf_path, "dpi": request.dpi},
-    )
+    ))
     img_path = _first_page_png(
         request.pdf_path,
         request.out_dir,
@@ -28,13 +28,13 @@ def render_preview(request: PreviewRequest, ctx: RunContext) -> PreviewResponse:
         dpi=request.dpi,
         doc=None,
     )
-    log_event(
-        logger,
+    logger.info(log_event(
         ctx,
         role="service",
         event="preview_render_complete",
+        module=logger.name,
         fields={"image_path": img_path or ""},
-    )
+    ))
     return PreviewResponse(schema_version="1.0", image_path=img_path)
 
 

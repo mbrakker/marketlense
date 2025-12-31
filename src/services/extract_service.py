@@ -11,19 +11,19 @@ logger = logging.getLogger("market_lense.extract_service")
 
 
 def collect_candidates(request: ExtractCandidatesRequest, ctx: RunContext) -> ExtractCandidatesResponse:
-    log_event(
-        logger,
+    logger.info(log_event(
         ctx,
         role="service",
         event="extract_candidates_start",
+        module=logger.name,
         fields={"pdf_path": request.pdf_path},
-    )
+    ))
     candidates = _collect_candidates(request, ctx).candidates
-    log_event(
-        logger,
+    logger.info(log_event(
         ctx,
         role="service",
         event="extract_candidates_complete",
+        module=logger.name,
         fields={"count": len(candidates)},
-    )
+    ))
     return ExtractCandidatesResponse(schema_version="1.0", candidates=candidates)

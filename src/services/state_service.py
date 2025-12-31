@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import logging
 import sqlite3
-from typing import Optional, Tuple
+from contextlib import contextmanager
+from typing import Optional
+
 from src.contracts.run_context import RunContext
 from src.contracts.state import (
     StateCheckRequest,
@@ -13,6 +15,7 @@ from src.contracts.state import (
     StatePublishRecordRequest,
     StateRecordRequest,
 )
+from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.state_service")
@@ -35,126 +38,100 @@ CREATE TABLE IF NOT EXISTS published (
 """
 
 
-class StateStore:
-    def __init__(self, path: str):
-        self.conn = sqlite3.connect(path)
-        self.conn.executescript(DDL)
-        self.conn.commit()
-
-    def already_processed(self, file_id: str, md5: str) -> bool:
-        cur = self.conn.execute(
-            "SELECT 1 FROM processed WHERE file_id=? AND md5=?", (file_id, md5)
+@contextmanager
+def _state_conn(path: str):
+    if not path:
+        raise AppError(
+            code="state_db_missing",
+            message="State DB path is required",
+            retryable=False,
         )
-        return cur.fetchone() is not None
-
-    def record(self, file_id: str, md5: str, openai_file_id: Optional[str]):
-        self.conn.execute(
-            "INSERT OR REPLACE INTO processed(file_id, md5, processed_at, openai_file_id) "
-            "VALUES(?, ?, strftime('%s','now'), ?)",
-            (file_id, md5, openai_file_id),
-        )
-        self.conn.commit()
-
-    def get(self, file_id: str) -> Optional[Tuple[str, str, int, Optional[str]]]:
-        cur = self.conn.execute(
-            "SELECT file_id, md5, processed_at, openai_file_id FROM processed WHERE file_id=?", (file_id,)
-        )
-        return cur.fetchone()
-
-    def already_published(self, file_id: str) -> bool:
-        cur = self.conn.execute(
-            "SELECT 1 FROM published WHERE file_id=?", (file_id,)
-        )
-        return cur.fetchone() is not None
-
-    def record_publish(self, file_id: str, md5: str, wp_post_id: int, wp_post_url: str) -> None:
-        self.conn.execute(
-            "INSERT OR REPLACE INTO published(file_id, md5, published_at, wp_post_id, wp_post_url) "
-            "VALUES(?, ?, strftime('%s','now'), ?, ?)",
-            (file_id, md5, wp_post_id, wp_post_url),
-        )
-        self.conn.commit()
-
-    def get_publish(self, file_id: str) -> Optional[Tuple[str, str, int, int, str]]:
-        cur = self.conn.execute(
-            "SELECT file_id, md5, published_at, wp_post_id, wp_post_url FROM published WHERE file_id=?",
-            (file_id,),
-        )
-        return cur.fetchone()
-
-    def close(self) -> None:
-        self.conn.close()
-
-    def __enter__(self) -> "StateStore":
-        return self
-
-    def __exit__(self, exc_type, exc, tb) -> None:
-        self.close()
+    conn = sqlite3.connect(path)
+    try:
+        conn.executescript(DDL)
+        conn.commit()
+        yield conn
+        conn.commit()
+    finally:
+        conn.close()
 
 
-def already_processed(state: StateStore, request: StateCheckRequest, ctx: RunContext) -> bool:
-    log_event(
-        logger,
+def already_processed(request: StateCheckRequest, ctx: RunContext) -> bool:
+    logger.info(log_event(
         ctx,
         role="service",
         event="state_check_start",
+        module=logger.name,
         fields={"file_id": request.file_id},
-    )
-    result = state.already_processed(request.file_id, request.md5)
-    log_event(
-        logger,
+    ))
+    with _state_conn(request.state_db) as conn:
+        cur = conn.execute(
+            "SELECT 1 FROM processed WHERE file_id=? AND md5=?", (request.file_id, request.md5)
+        )
+        result = cur.fetchone() is not None
+    logger.info(log_event(
         ctx,
         role="service",
         event="state_check_complete",
+        module=logger.name,
         fields={"file_id": request.file_id, "already_processed": result},
-    )
+    ))
     return result
 
 
-def record(state: StateStore, request: StateRecordRequest, ctx: RunContext) -> None:
-    log_event(
-        logger,
+def record(request: StateRecordRequest, ctx: RunContext) -> None:
+    logger.info(log_event(
         ctx,
         role="service",
         event="state_record_start",
+        module=logger.name,
         fields={"file_id": request.file_id},
-    )
-    state.record(request.file_id, request.md5, request.openai_file_id)
-    log_event(
-        logger,
+    ))
+    with _state_conn(request.state_db) as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO processed(file_id, md5, processed_at, openai_file_id) "
+            "VALUES(?, ?, strftime('%s','now'), ?)",
+            (request.file_id, request.md5, request.openai_file_id),
+        )
+    logger.info(log_event(
         ctx,
         role="service",
         event="state_record_complete",
+        module=logger.name,
         fields={"file_id": request.file_id},
-    )
+    ))
 
 
-def get(state: StateStore, request: StateGetRequest, ctx: RunContext) -> Optional[StateGetResponse]:
-    log_event(
-        logger,
+def get(request: StateGetRequest, ctx: RunContext) -> Optional[StateGetResponse]:
+    logger.info(log_event(
         ctx,
         role="service",
         event="state_get_start",
+        module=logger.name,
         fields={"file_id": request.file_id},
-    )
-    row = state.get(request.file_id)
+    ))
+    with _state_conn(request.state_db) as conn:
+        cur = conn.execute(
+            "SELECT file_id, md5, processed_at, openai_file_id FROM processed WHERE file_id=?", (request.file_id,)
+        )
+        row = cur.fetchone()
     if not row:
-        log_event(
-            logger,
+        logger.info(log_event(
             ctx,
             role="service",
             event="state_get_complete",
+            module=logger.name,
             fields={"file_id": request.file_id, "found": False},
-        )
+        ))
         return None
     file_id, md5, processed_at, openai_file_id = row
-    log_event(
-        logger,
+    logger.info(log_event(
         ctx,
         role="service",
         event="state_get_complete",
+        module=logger.name,
         fields={"file_id": request.file_id, "found": True},
-    )
+    ))
     return StateGetResponse(
         schema_version="1.0",
         file_id=file_id,
@@ -164,69 +141,83 @@ def get(state: StateStore, request: StateGetRequest, ctx: RunContext) -> Optiona
     )
 
 
-def already_published(state: StateStore, request: StatePublishCheckRequest, ctx: RunContext) -> bool:
-    log_event(
-        logger,
+def already_published(request: StatePublishCheckRequest, ctx: RunContext) -> bool:
+    logger.info(log_event(
         ctx,
         role="service",
         event="state_publish_check_start",
+        module=logger.name,
         fields={"file_id": request.file_id},
-    )
-    result = state.already_published(request.file_id)
-    log_event(
-        logger,
+    ))
+    with _state_conn(request.state_db) as conn:
+        cur = conn.execute(
+            "SELECT 1 FROM published WHERE file_id=?", (request.file_id,)
+        )
+        result = cur.fetchone() is not None
+    logger.info(log_event(
         ctx,
         role="service",
         event="state_publish_check_complete",
+        module=logger.name,
         fields={"file_id": request.file_id, "already_published": result},
-    )
+    ))
     return result
 
 
-def record_publish(state: StateStore, request: StatePublishRecordRequest, ctx: RunContext) -> None:
-    log_event(
-        logger,
+def record_publish(request: StatePublishRecordRequest, ctx: RunContext) -> None:
+    logger.info(log_event(
         ctx,
         role="service",
         event="state_publish_record_start",
+        module=logger.name,
         fields={"file_id": request.file_id, "wp_post_id": request.wp_post_id},
-    )
-    state.record_publish(request.file_id, request.md5, request.wp_post_id, request.wp_post_url)
-    log_event(
-        logger,
+    ))
+    with _state_conn(request.state_db) as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO published(file_id, md5, published_at, wp_post_id, wp_post_url) "
+            "VALUES(?, ?, strftime('%s','now'), ?, ?)",
+            (request.file_id, request.md5, request.wp_post_id, request.wp_post_url),
+        )
+    logger.info(log_event(
         ctx,
         role="service",
         event="state_publish_record_complete",
+        module=logger.name,
         fields={"file_id": request.file_id, "wp_post_id": request.wp_post_id},
-    )
+    ))
 
 
-def get_publish(state: StateStore, request: StatePublishCheckRequest, ctx: RunContext) -> Optional[StatePublishGetResponse]:
-    log_event(
-        logger,
+def get_publish(request: StatePublishCheckRequest, ctx: RunContext) -> Optional[StatePublishGetResponse]:
+    logger.info(log_event(
         ctx,
         role="service",
         event="state_publish_get_start",
+        module=logger.name,
         fields={"file_id": request.file_id},
-    )
-    row = state.get_publish(request.file_id)
+    ))
+    with _state_conn(request.state_db) as conn:
+        cur = conn.execute(
+            "SELECT file_id, md5, published_at, wp_post_id, wp_post_url FROM published WHERE file_id=?",
+            (request.file_id,),
+        )
+        row = cur.fetchone()
     if not row:
-        log_event(
-            logger,
+        logger.info(log_event(
             ctx,
             role="service",
             event="state_publish_get_complete",
+            module=logger.name,
             fields={"file_id": request.file_id, "found": False},
-        )
+        ))
         return None
     file_id, md5, published_at, wp_post_id, wp_post_url = row
-    log_event(
-        logger,
+    logger.info(log_event(
         ctx,
         role="service",
         event="state_publish_get_complete",
+        module=logger.name,
         fields={"file_id": file_id, "found": True},
-    )
+    ))
     return StatePublishGetResponse(
         schema_version="1.0",
         file_id=file_id,

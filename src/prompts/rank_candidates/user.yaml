@@ -1,0 +1,9 @@
+text: |
+  Task: select the most interesting charts/tables (0-100).
+  Criteria: percentages, deltas, KPIs, strong insights.
+  Return STRICT JSON of the form: {"results":[{"id":"chart-0-1","type":"chart","score":0-100}]}.
+  No extra keys or commentary.
+
+  [CANDIDATES]
+  {{ candidates_json }}
+  [CANDIDATES END]
