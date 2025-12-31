@@ -108,16 +108,29 @@ def rank_candidates(request: RankRequest, ctx: RunContext) -> RankResponse:
             continue
 
     request_id = getattr(resp, "id", None)
+    usage = getattr(resp, "usage", None)
+    prompt_tokens = getattr(usage, "prompt_tokens", None) if usage is not None else None
+    completion_tokens = getattr(usage, "completion_tokens", None) if usage is not None else None
+    total_tokens = getattr(usage, "total_tokens", None) if usage is not None else None
     logger.info(log_event(
         ctx,
         role="service",
         event="rank_candidates_complete",
         module=logger.name,
-        fields={"count": len(result), "request_id": request_id or ""},
+        fields={
+            "count": len(result),
+            "request_id": request_id or "",
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": total_tokens,
+        },
     ))
     return RankResponse(
         schema_version="1.0",
         results=result,
         raw_content=content,
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+        total_tokens=total_tokens,
         request_id=str(request_id) if request_id else None,
     )

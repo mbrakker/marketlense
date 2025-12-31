@@ -29,4 +29,7 @@ class OpenAIAnalyzeResponse:
     model: str = field(metadata={"doc": "OpenAI model ID used."})
     temperature: float = field(metadata={"doc": "Sampling temperature used."})
     raw_content: str = field(metadata={"doc": "Raw model response content."})
+    prompt_tokens: Optional[int] = field(default=None, metadata={"doc": "Provider prompt token count, if available."})
+    completion_tokens: Optional[int] = field(default=None, metadata={"doc": "Provider completion token count, if available."})
+    total_tokens: Optional[int] = field(default=None, metadata={"doc": "Provider total token count, if available."})
     request_id: Optional[str] = field(default=None, metadata={"doc": "Provider request ID, if available."})

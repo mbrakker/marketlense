@@ -87,6 +87,9 @@ class RankResponse:
     schema_version: str = field(metadata={"doc": "Rank response schema version."})
     results: List[RankedCandidate] = field(metadata={"doc": "Ranked candidate results."})
     raw_content: str = field(metadata={"doc": "Raw model response content."})
+    prompt_tokens: Optional[int] = field(default=None, metadata={"doc": "Provider prompt token count, if available."})
+    completion_tokens: Optional[int] = field(default=None, metadata={"doc": "Provider completion token count, if available."})
+    total_tokens: Optional[int] = field(default=None, metadata={"doc": "Provider total token count, if available."})
     request_id: Optional[str] = field(default=None, metadata={"doc": "Provider request ID, if available."})
 
 

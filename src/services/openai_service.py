@@ -86,6 +86,10 @@ def analyze_report(request: OpenAIAnalyzeRequest, ctx: RunContext) -> OpenAIAnal
         ) from exc
 
     request_id = getattr(resp, "id", None)
+    usage = getattr(resp, "usage", None)
+    prompt_tokens = getattr(usage, "prompt_tokens", None) if usage is not None else None
+    completion_tokens = getattr(usage, "completion_tokens", None) if usage is not None else None
+    total_tokens = getattr(usage, "total_tokens", None) if usage is not None else None
     logger.info(log_event(
         ctx,
         role="service",
@@ -95,6 +99,9 @@ def analyze_report(request: OpenAIAnalyzeRequest, ctx: RunContext) -> OpenAIAnal
             "request_id": request_id or "",
             "prompt_system_sha256": request.prompt_system_sha256,
             "prompt_user_sha256": request.prompt_user_sha256,
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": total_tokens,
         },
     ))
 
@@ -129,5 +136,8 @@ def analyze_report(request: OpenAIAnalyzeRequest, ctx: RunContext) -> OpenAIAnal
         model=request.model,
         temperature=request.temperature,
         raw_content=payload,
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+        total_tokens=total_tokens,
         request_id=str(request_id) if request_id else None,
     )

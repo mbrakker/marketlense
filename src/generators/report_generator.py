@@ -129,6 +129,11 @@ def generate_report(
         ),
         ctx,
     )
+    report_usage = {
+        "prompt_tokens": openai_resp.prompt_tokens,
+        "completion_tokens": openai_resp.completion_tokens,
+        "total_tokens": openai_resp.total_tokens,
+    }
     logger.info(log_event(
         ctx,
         role="generator",
@@ -172,6 +177,7 @@ def generate_report(
         ctx,
     )
     ranked = []
+    rank_usage = None
     sliced_paths = []
     if cands_resp.candidates:
         for cand in cands_resp.candidates:
@@ -247,6 +253,7 @@ def generate_report(
                 "seed": settings.rank_seed,
             },
         ))
+        rank_usage = {"prompt_tokens": None, "completion_tokens": None, "total_tokens": None}
         try:
             ranked_resp = rank_candidates_service(
                 RankRequest(
@@ -265,6 +272,11 @@ def generate_report(
                 ctx,
             )
             ranked = ranked_resp.results
+            rank_usage = {
+                "prompt_tokens": ranked_resp.prompt_tokens,
+                "completion_tokens": ranked_resp.completion_tokens,
+                "total_tokens": ranked_resp.total_tokens,
+            }
             logger.info(log_event(
                 ctx,
                 role="generator",
@@ -343,6 +355,16 @@ def generate_report(
     )
     out_html = render_resp.html_path
 
+    logger.info(log_event(
+        ctx,
+        role="generator",
+        event="token_usage_summary",
+        module=logger.name,
+        fields={
+            "report_generation": report_usage,
+            "rank_candidates": rank_usage if cands_resp.candidates else None,
+        },
+    ))
     logger.info(log_event(
         ctx,
         role="generator",
