@@ -4,6 +4,7 @@ paths:
   output_dir: "./out"
   cache_dir: "./cache"
   state_db: "./state/index.sqlite"
+  ingest_lock: "./state/ingest.lock"
 
 ingest:
   google_sa_path: ""
@@ -11,6 +12,7 @@ ingest:
   openai_model: "gpt-5"
   temperature: 1.0
   timeout_seconds: 600
+  lock_ttl_seconds: 7200
   seed: null
   batch_limit: 20
   pdf_text:

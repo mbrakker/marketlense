@@ -94,6 +94,20 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     openai_timeout_seconds = float(timeout_raw) if not _is_missing(timeout_raw) else 600.0
     rank_timeout_raw = rank.get("timeout_seconds")
     rank_timeout_seconds = float(rank_timeout_raw) if not _is_missing(rank_timeout_raw) else openai_timeout_seconds
+    lock_ttl_raw = ingest.get("lock_ttl_seconds")
+    if _is_missing(lock_ttl_raw):
+        lock_ttl_raw = _env_value("INGEST_LOCK_TTL_SECONDS")
+    ingest_lock_ttl_seconds = float(lock_ttl_raw) if not _is_missing(lock_ttl_raw) else 7200.0
+
+    output_dir = need(paths, "output_dir", "paths.output_dir", "OUTPUT_DIR")
+    cache_dir = need(paths, "cache_dir", "paths.cache_dir", "CACHE_DIR")
+    state_db = need(paths, "state_db", "paths.state_db", "STATE_DB")
+    lock_path_raw = paths.get("ingest_lock")
+    if _is_missing(lock_path_raw):
+        lock_path_raw = _env_value("INGEST_LOCK_PATH")
+    if _is_missing(lock_path_raw):
+        lock_path_raw = str(Path(state_db).parent / "ingest.lock")
+    ingest_lock_path = str(lock_path_raw)
 
     def _opt_int(value) -> int | None:
         if value is None or value == "":
@@ -107,9 +121,11 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         openai_api_key=need_env("OPENAI_API_KEY"),
         openai_model=openai_model,
         batch_limit=batch_limit,
-        output_dir=need(paths, "output_dir", "paths.output_dir", "OUTPUT_DIR"),
-        cache_dir=need(paths, "cache_dir", "paths.cache_dir", "CACHE_DIR"),
-        state_db=need(paths, "state_db", "paths.state_db", "STATE_DB"),
+        output_dir=output_dir,
+        cache_dir=cache_dir,
+        state_db=state_db,
+        ingest_lock_path=ingest_lock_path,
+        ingest_lock_ttl_seconds=ingest_lock_ttl_seconds,
         temperature=temperature,
         openai_seed=_opt_int(openai_seed_raw),
         pdf_text_max_pages=int(pdf_text.get("max_pages", 5)),
@@ -131,23 +147,26 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         ))
         raise RuntimeError(f"Missing required config/env values: {', '.join(missing)}")
 
-    Path(settings.output_dir).mkdir(parents=True, exist_ok=True)
-    Path(settings.cache_dir).mkdir(parents=True, exist_ok=True)
-    Path(settings.state_db).parent.mkdir(parents=True, exist_ok=True)
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="config_load_complete",
-        module=logger.name,
-        fields={
-            "output_dir": settings.output_dir,
-            "cache_dir": settings.cache_dir,
-            "state_db": settings.state_db,
-            "openai_model": settings.openai_model,
-            "temperature": settings.temperature,
-            "openai_seed": settings.openai_seed,
-            "rank_model": settings.rank_model,
-            "rank_temperature": settings.rank_temperature,
+        Path(settings.output_dir).mkdir(parents=True, exist_ok=True)
+        Path(settings.cache_dir).mkdir(parents=True, exist_ok=True)
+        Path(settings.state_db).parent.mkdir(parents=True, exist_ok=True)
+        Path(settings.ingest_lock_path).parent.mkdir(parents=True, exist_ok=True)
+        logger.info(log_event(
+            ctx,
+            role="service",
+            event="config_load_complete",
+            module=logger.name,
+            fields={
+                "output_dir": settings.output_dir,
+                "cache_dir": settings.cache_dir,
+                "state_db": settings.state_db,
+                "ingest_lock_path": settings.ingest_lock_path,
+                "ingest_lock_ttl_seconds": settings.ingest_lock_ttl_seconds,
+                "openai_model": settings.openai_model,
+                "temperature": settings.temperature,
+                "openai_seed": settings.openai_seed,
+                "rank_model": settings.rank_model,
+                "rank_temperature": settings.rank_temperature,
             "rank_seed": settings.rank_seed,
             "pdf_text_max_pages": settings.pdf_text_max_pages,
             "pdf_text_max_chars": settings.pdf_text_max_chars,

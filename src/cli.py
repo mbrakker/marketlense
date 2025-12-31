@@ -7,6 +7,7 @@ from rich.console import Console
 from rich.table import Table
 from rich import box
 
+from src.utils.errors import AppError
 from src.contracts.config import ConfigLoadRequest
 from src.contracts.ingest import IngestSettings
 from src.orchestrators.ingest_orchestrator import run_ingest
@@ -48,6 +49,8 @@ def ingest(
         output_dir=s.output_dir,
         cache_dir=s.cache_dir,
         state_db=s.state_db,
+        ingest_lock_path=s.ingest_lock_path,
+        ingest_lock_ttl_seconds=s.ingest_lock_ttl_seconds,
         temperature=s.temperature,
         openai_seed=s.openai_seed,
         pdf_text_max_pages=s.pdf_text_max_pages,
@@ -60,7 +63,13 @@ def ingest(
     )
 
     console.print("[cyan]Running ingest pipeline...[/cyan]")
-    outcomes = run_ingest(settings, folder_id=folder, limit=limit)
+    try:
+        outcomes = run_ingest(settings, folder_id=folder, limit=limit)
+    except AppError as exc:
+        if exc.code == "ingest_locked":
+            console.print(f"[red]{exc.message} (lock: {settings.ingest_lock_path})[/red]")
+            raise typer.Exit(code=1)
+        raise
 
     table = Table(title="Processed Reports", box=box.SIMPLE_HEAVY)
     table.add_column("File")

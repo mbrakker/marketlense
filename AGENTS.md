@@ -330,6 +330,7 @@ All errors MUST derive from a common base (e.g. `AppError`) with:
 * All model parameters and behavior live in YAML.
 * Secrets MUST come from env or secret store.
 * YAML MUST NOT contain secrets.
+* Any wrapper / orchestration timeout MUST be >= the configured service/model timeout (e.g., OpenAI timeout); never set a shorter outer timeout that can preempt the app-level limit.
 
 ---
 
