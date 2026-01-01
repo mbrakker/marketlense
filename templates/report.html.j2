@@ -27,6 +27,26 @@ code{background:#f5f5f5;padding:.1rem .3rem;border-radius:4px}
   </div>
   {% endif %}
 
+  {% if data.publisher or (data.taxonomy and data.taxonomy|length > 0) or data.region or data.time_period %}
+  <h2>Report metadata</h2>
+  {% if data.publisher %}
+  <p><strong>Publisher:</strong> {{ data.publisher }}</p>
+  {% endif %}
+  {% if data.region %}
+  <p><strong>Region:</strong> {{ data.region }}</p>
+  {% endif %}
+  {% if data.time_period %}
+  <p><strong>Time period:</strong> {{ data.time_period }}</p>
+  {% endif %}
+  {% if data.taxonomy and data.taxonomy|length > 0 %}
+  <div class="tags">
+    {% for tag in data.taxonomy %}
+      <span class="tag">{{ tag }}</span>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endif %}
+
   <h2>TL;DR</h2>
   <p>{{ data.tldr }}</p>
 
@@ -56,35 +76,7 @@ code{background:#f5f5f5;padding:.1rem .3rem;border-radius:4px}
   <h2>Quote</h2>
   <blockquote>"{{ data.quote.text }}" - <em>{{ data.quote.author }}</em></blockquote>
 
-  {% if report_title or data.publisher or (data.taxonomy and data.taxonomy|length > 0) or data.region or data.time_period %}
-  <h2>Report metadata</h2>
-  {% if report_title %}
-  <p><strong>Report title:</strong> {{ report_title }}</p>
-  {% endif %}
-  {% if data.publisher %}
-  <p><strong>Publisher:</strong> {{ data.publisher }}</p>
-  {% endif %}
-  {% if data.region %}
-  <p><strong>Region:</strong> {{ data.region }}</p>
-  {% endif %}
-  {% if data.time_period %}
-  <p><strong>Time period:</strong> {{ data.time_period }}</p>
-  {% endif %}
-  {% if data.taxonomy and data.taxonomy|length > 0 %}
-  <div class="tags">
-    {% for tag in data.taxonomy %}
-      <span class="tag">{{ tag }}</span>
-    {% endfor %}
-  </div>
-  {% endif %}
-  {% endif %}
-
   <h2>Commentary</h2>
   <p>{{ data.commentary }}</p>
-
-  <div class="footer">
-    Source: {% if data.source %}<a href="{{ data.source }}">{{ data.source }}</a>{% else %}<em>Not provided</em>{% endif %}<br>
-    Generated from: {{ doc_name }} (Drive fileId: {{ file_id }})
-  </div>
 </body>
 </html>
