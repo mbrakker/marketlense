@@ -39,6 +39,19 @@ def _normalize_report_payload(data: ReportPayload) -> ReportPayload:
     tldr = _s(data.tldr)
     commentary = _s(data.commentary)
     source = _s(data.source)
+    publisher = _s(data.publisher).strip()
+    taxonomy_raw = data.taxonomy or []
+    taxonomy = []
+    seen = set()
+    for item in taxonomy_raw:
+        item_s = _s(item).strip()
+        if not item_s:
+            continue
+        key = item_s.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        taxonomy.append(item_s)
 
     insights: List[str] = data.insights or []
     if len(insights) < 5:
@@ -68,6 +81,8 @@ def _normalize_report_payload(data: ReportPayload) -> ReportPayload:
         insights=insights,
         quote=quote,
         figure=figure,
+        publisher=publisher,
+        taxonomy=taxonomy,
         commentary=commentary,
         source=source,
         _openai_file_id=_s(data._openai_file_id),

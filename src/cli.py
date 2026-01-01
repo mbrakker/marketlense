@@ -49,6 +49,7 @@ def ingest(
         output_dir=s.output_dir,
         cache_dir=s.cache_dir,
         state_db=s.state_db,
+        reports_db=s.reports_db,
         ingest_lock_path=s.ingest_lock_path,
         ingest_lock_ttl_seconds=s.ingest_lock_ttl_seconds,
         temperature=s.temperature,

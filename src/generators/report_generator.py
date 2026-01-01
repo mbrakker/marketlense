@@ -7,6 +7,7 @@ from typing import Optional
 from src.contracts.openai import OpenAIAnalyzeRequest
 from src.contracts.pdf_text import PdfTextExtractRequest
 from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
+from src.contracts.report_store import ReportMetadataUpsertRequest
 from src.contracts.report_models import CropItem
 from src.services.openai_service import analyze_report as openai_analyze
 from src.services.pdf_text_service import extract_pdf_text
@@ -30,10 +31,17 @@ from src.services.figure_service import extract_best_figure as extract_best_figu
 from src.services.preview_service import render_preview as render_preview_service
 from src.services.rank_service import rank_candidates as rank_candidates_service
 from src.services.render_service import render_report as render_report_service
+from src.services.report_store_service import upsert_metadata as upsert_report_metadata
 from src.utils.logging import log_event
 from src.utils.validation import validate_candidate, validate_report_payload
 
 logger = logging.getLogger("market_lense.report_generator")
+
+
+def _derive_title(name: str) -> str:
+    base = name.rsplit(".", 1)[0]
+    cleaned = base.strip()
+    return cleaned or name
 
 
 def generate_report(
@@ -354,6 +362,21 @@ def generate_report(
         ctx,
     )
     out_html = render_resp.html_path
+
+    upsert_report_metadata(
+        ReportMetadataUpsertRequest(
+            schema_version="1.0",
+            db_path=settings.reports_db,
+            file_id=file.file_id,
+            title=_derive_title(file.name),
+            publisher=data.publisher or None,
+            taxonomy=data.taxonomy,
+            source_url=data.source,
+            html_path=out_html,
+            md5=md5,
+        ),
+        ctx,
+    )
 
     logger.info(log_event(
         ctx,

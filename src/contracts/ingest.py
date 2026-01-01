@@ -15,6 +15,7 @@ class IngestSettings:
     output_dir: str = field(metadata={"doc": "Output directory for rendered HTML and assets."})
     cache_dir: str = field(metadata={"doc": "Cache directory for downloaded PDFs."})
     state_db: str = field(metadata={"doc": "SQLite path for processing state."})
+    reports_db: str = field(metadata={"doc": "SQLite path for report metadata."})
     ingest_lock_path: str = field(metadata={"doc": "Filesystem path for the ingest single-run lock file."})
     temperature: float = field(metadata={"doc": "Sampling temperature for report generation."})
     ingest_lock_ttl_seconds: float = field(default=7200.0, metadata={"doc": "Seconds before a stale ingest lock is cleared; <=0 disables stale eviction."})

@@ -19,6 +19,7 @@ class TestOrchestratorRetry(unittest.TestCase):
             output_dir="./out",
             cache_dir="./cache",
             state_db=":memory:",
+            reports_db=":memory:",
             ingest_lock_path="./state/ingest.lock",
             ingest_lock_ttl_seconds=7200.0,
             temperature=1.0,

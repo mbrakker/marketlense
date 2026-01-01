@@ -34,6 +34,22 @@ class TestNormalizeService(unittest.TestCase):
         normalized = normalize_report(payload, ctx)
         self.assertEqual("img.png", normalized._figure_top)
 
+    def test_normalize_taxonomy_dedupes_and_strips(self) -> None:
+        payload = ReportPayload(
+            tldr="tldr",
+            insights=["a", "b", "c", "d", "e"],
+            quote=Quote(text="q", author="a"),
+            figure=Figure(title="t", evidence="e"),
+            commentary="c",
+            source="s",
+            publisher="  Org ",
+            taxonomy=["Ads", "ads", "  measurement "],
+        )
+        ctx = RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
+        normalized = normalize_report(payload, ctx)
+        self.assertEqual(["Ads", "measurement"], normalized.taxonomy)
+        self.assertEqual("Org", normalized.publisher)
+
 
 if __name__ == "__main__":
     unittest.main()

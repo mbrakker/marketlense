@@ -194,24 +194,15 @@ def run_ingest(
                     PdfEofCheckRequest(schema_version="1.0", path=cache_path),
                     file_ctx,
                 )
-                if not eof_check.has_eof:
+                eof_missing = not eof_check.has_eof
+                if eof_missing:
                     logger.info(log_event(
                         file_ctx,
                         role="orchestrator",
                         event="pdf_missing_eof",
                         module=logger.name,
-                        fields={"file_id": file.file_id, "path": cache_path},
+                        fields={"file_id": file.file_id, "path": cache_path, "proceeding": True},
                     ))
-                    outcomes.append(IngestOutcome(
-                        schema_version="1.0",
-                        file_id=file.file_id,
-                        name=file.name,
-                        md5=md5,
-                        html_path=None,
-                        status="skipped",
-                        error="pdf_missing_eof",
-                    ))
-                    continue
 
                 if _should_skip(file, md5, settings.state_db, file_ctx):
                     logger.info(log_event(

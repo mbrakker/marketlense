@@ -4,11 +4,12 @@ paths:
   output_dir: "./out"
   cache_dir: "./cache"
   state_db: "./state/index.sqlite"
+  reports_db: "./state/reports.sqlite"
   ingest_lock: "./state/ingest.lock"
 
 ingest:
-  google_sa_path: ""
-  gdrive_folder_id: ""
+  google_sa_path: "./sa.json"
+  gdrive_folder_id: "1UKaCLZBE3lM-nRoLtUkC2as8p9YMX9Qq"
   openai_model: "gpt-5"
   temperature: 1.0
   timeout_seconds: 600
@@ -20,13 +21,13 @@ ingest:
     max_chars: 80000
 
 rank:
-  model: ""
+  model: "gpt-5"
   temperature: 1.0
   timeout_seconds: 600
   seed: null
 
 publish:
   wp:
-    site_url: ""
-    username: ""
+    site_url: "http://marketlense.medianewsonline.com"
+    username: "admin"
     post_status: "publish"

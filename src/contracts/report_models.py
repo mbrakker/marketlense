@@ -26,6 +26,8 @@ class ReportPayload:
     figure: Figure = field(metadata={"doc": "Figure metadata."})
     commentary: str = field(metadata={"doc": "Commentary paragraph."})
     source: str = field(metadata={"doc": "Primary source URL, if any."})
+    publisher: str = field(default="", metadata={"doc": "Publisher or organization that authored the report."})
+    taxonomy: List[str] = field(default_factory=list, metadata={"doc": "List of taxonomy tags/categories."})
     _openai_file_id: str = field(default="", metadata={"doc": "Internal OpenAI file ID, if any."})
     _figure_image: str = field(default="", metadata={"doc": "Relative path to primary figure image."})
     _figure_gallery: List[str] = field(default_factory=list, metadata={"doc": "Relative paths to figure gallery images."})

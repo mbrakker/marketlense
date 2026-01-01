@@ -9,6 +9,8 @@ def validate_report_payload(payload: ReportPayload) -> None:
         raise ValueError("ReportPayload.schema_version is required")
     if not isinstance(payload.insights, list) or len(payload.insights) != 5:
         raise ValueError("ReportPayload.insights must contain exactly 5 items")
+    if not isinstance(payload.taxonomy, list):
+        raise ValueError("ReportPayload.taxonomy must be a list")
     if not payload.quote.text:
         raise ValueError("ReportPayload.quote.text is required")
     if not payload.figure.title and not payload.figure.evidence:

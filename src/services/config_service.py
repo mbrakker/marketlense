@@ -102,6 +102,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     output_dir = need(paths, "output_dir", "paths.output_dir", "OUTPUT_DIR")
     cache_dir = need(paths, "cache_dir", "paths.cache_dir", "CACHE_DIR")
     state_db = need(paths, "state_db", "paths.state_db", "STATE_DB")
+    reports_db = need(paths, "reports_db", "paths.reports_db", "REPORTS_DB")
     lock_path_raw = paths.get("ingest_lock")
     if _is_missing(lock_path_raw):
         lock_path_raw = _env_value("INGEST_LOCK_PATH")
@@ -124,6 +125,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         output_dir=output_dir,
         cache_dir=cache_dir,
         state_db=state_db,
+        reports_db=reports_db,
         ingest_lock_path=ingest_lock_path,
         ingest_lock_ttl_seconds=ingest_lock_ttl_seconds,
         temperature=temperature,
@@ -146,27 +148,28 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             fields={"missing": missing},
         ))
         raise RuntimeError(f"Missing required config/env values: {', '.join(missing)}")
-
-        Path(settings.output_dir).mkdir(parents=True, exist_ok=True)
-        Path(settings.cache_dir).mkdir(parents=True, exist_ok=True)
-        Path(settings.state_db).parent.mkdir(parents=True, exist_ok=True)
-        Path(settings.ingest_lock_path).parent.mkdir(parents=True, exist_ok=True)
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="config_load_complete",
-            module=logger.name,
-            fields={
-                "output_dir": settings.output_dir,
-                "cache_dir": settings.cache_dir,
-                "state_db": settings.state_db,
-                "ingest_lock_path": settings.ingest_lock_path,
-                "ingest_lock_ttl_seconds": settings.ingest_lock_ttl_seconds,
-                "openai_model": settings.openai_model,
-                "temperature": settings.temperature,
-                "openai_seed": settings.openai_seed,
-                "rank_model": settings.rank_model,
-                "rank_temperature": settings.rank_temperature,
+    Path(settings.output_dir).mkdir(parents=True, exist_ok=True)
+    Path(settings.cache_dir).mkdir(parents=True, exist_ok=True)
+    Path(settings.state_db).parent.mkdir(parents=True, exist_ok=True)
+    Path(settings.reports_db).parent.mkdir(parents=True, exist_ok=True)
+    Path(settings.ingest_lock_path).parent.mkdir(parents=True, exist_ok=True)
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="config_load_complete",
+        module=logger.name,
+        fields={
+            "output_dir": settings.output_dir,
+            "cache_dir": settings.cache_dir,
+            "state_db": settings.state_db,
+            "reports_db": settings.reports_db,
+            "ingest_lock_path": settings.ingest_lock_path,
+            "ingest_lock_ttl_seconds": settings.ingest_lock_ttl_seconds,
+            "openai_model": settings.openai_model,
+            "temperature": settings.temperature,
+            "openai_seed": settings.openai_seed,
+            "rank_model": settings.rank_model,
+            "rank_temperature": settings.rank_temperature,
             "rank_seed": settings.rank_seed,
             "pdf_text_max_pages": settings.pdf_text_max_pages,
             "pdf_text_max_chars": settings.pdf_text_max_chars,

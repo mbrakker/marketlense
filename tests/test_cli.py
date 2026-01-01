@@ -26,6 +26,7 @@ class TestCli(unittest.TestCase):
             output_dir="./out",
             cache_dir="./cache",
             state_db="./state/index.sqlite",
+            reports_db="./state/reports.sqlite",
             ingest_lock_path="./state/ingest.lock",
             ingest_lock_ttl_seconds=7200.0,
             temperature=1.0,
