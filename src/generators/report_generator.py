@@ -371,6 +371,8 @@ def generate_report(
             title=_derive_title(file.name),
             publisher=data.publisher or None,
             taxonomy=data.taxonomy,
+            region=data.region or None,
+            time_period=data.time_period or None,
             source_url=data.source,
             html_path=out_html,
             md5=md5,

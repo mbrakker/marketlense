@@ -7,10 +7,12 @@ text: |
   4) Figure: pick one key chart/table/metric; explain what it demonstrates (2-3 lines).
   5) Publisher: the organization that authored/released the report (trim branding like “Inc.” is okay).
   6) Taxonomy: array of 3-6 tags (e.g., ["retail media", "CTV", "attribution"]) derived from the report; lower_snake_case.
-  7) Commentary: 1 paragraph on implications for brands/measurement/ROAS.
-  8) Source: put the primary URL if present in the document; else empty string.
-  9) If uncertain about a number, state uncertainty explicitly.
-  10) Return ONLY valid JSON. Do not add any extra keys or text.
+  7) Region: the primary region/market focus (e.g., "US", "North America", "Global", "EMEA"); use a short descriptive label.
+  8) Time period: the key year(s) or range covered (e.g., "2024E-2028E", "Q4 2024", "2023"); prefer explicit ranges when given.
+  9) Commentary: 1 paragraph on implications for brands/measurement/ROAS.
+  10) Source: put the primary URL if present in the document; else empty string.
+  11) If uncertain about a number, state uncertainty explicitly.
+  12) Return ONLY valid JSON. Do not add any extra keys or text.
 
   JSON schema (all keys required):
   {
@@ -20,6 +22,8 @@ text: |
     "figure": {"title": string, "evidence": string},
     "publisher": string,
     "taxonomy": [string, ...],
+    "region": string,
+    "time_period": string,
     "commentary": string,
     "source": string
   }

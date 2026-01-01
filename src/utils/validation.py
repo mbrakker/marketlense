@@ -11,6 +11,10 @@ def validate_report_payload(payload: ReportPayload) -> None:
         raise ValueError("ReportPayload.insights must contain exactly 5 items")
     if not isinstance(payload.taxonomy, list):
         raise ValueError("ReportPayload.taxonomy must be a list")
+    if payload.region is None:
+        raise ValueError("ReportPayload.region is required (use empty string if unknown)")
+    if payload.time_period is None:
+        raise ValueError("ReportPayload.time_period is required (use empty string if unknown)")
     if not payload.quote.text:
         raise ValueError("ReportPayload.quote.text is required")
     if not payload.figure.title and not payload.figure.evidence:

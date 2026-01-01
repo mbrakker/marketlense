@@ -44,11 +44,15 @@ class TestNormalizeService(unittest.TestCase):
             source="s",
             publisher="  Org ",
             taxonomy=["Ads", "ads", "  measurement "],
+            region="  US ",
+            time_period=" 2024E ",
         )
         ctx = RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
         normalized = normalize_report(payload, ctx)
         self.assertEqual(["Ads", "measurement"], normalized.taxonomy)
         self.assertEqual("Org", normalized.publisher)
+        self.assertEqual("US", normalized.region)
+        self.assertEqual("2024E", normalized.time_period)
 
 
 if __name__ == "__main__":

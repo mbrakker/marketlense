@@ -24,6 +24,8 @@ CREATE TABLE IF NOT EXISTS reports (
   title TEXT NOT NULL,
   publisher TEXT,
   taxonomy_json TEXT NOT NULL,
+  region TEXT,
+  time_period TEXT,
   source_url TEXT,
   html_path TEXT,
   md5 TEXT,
@@ -34,6 +36,16 @@ CREATE TABLE IF NOT EXISTS reports (
 CREATE INDEX IF NOT EXISTS idx_reports_title ON reports(title);
 CREATE INDEX IF NOT EXISTS idx_reports_publisher ON reports(publisher);
 """
+
+
+def _ensure_schema(conn: sqlite3.Connection) -> None:
+    cur = conn.execute("PRAGMA table_info(reports)")
+    cols = {row[1] for row in cur.fetchall()}
+    if "region" not in cols:
+        conn.execute("ALTER TABLE reports ADD COLUMN region TEXT")
+    if "time_period" not in cols:
+        conn.execute("ALTER TABLE reports ADD COLUMN time_period TEXT")
+    conn.commit()
 
 
 @contextmanager
@@ -49,6 +61,7 @@ def _metadata_conn(path: str):
     conn = sqlite3.connect(path)
     try:
         conn.executescript(DDL)
+        _ensure_schema(conn)
         conn.commit()
         yield conn
         conn.commit()
@@ -82,6 +95,8 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
     md5 = request.md5.strip() if request.md5 and request.md5.strip() else None
     taxonomy = _clean_list(request.taxonomy)
     taxonomy_json = json.dumps(taxonomy, ensure_ascii=True)
+    region = request.region.strip() if request.region and request.region.strip() else None
+    time_period = request.time_period.strip() if request.time_period and request.time_period.strip() else None
 
     logger.info(log_event(
         ctx,
@@ -94,17 +109,21 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
             "title": request.title,
             "publisher": publisher,
             "taxonomy_count": len(taxonomy),
+            "region": region,
+            "time_period": time_period,
         },
     ))
     with _metadata_conn(request.db_path) as conn:
         conn.execute(
             """
-            INSERT INTO reports(file_id, title, publisher, taxonomy_json, source_url, html_path, md5, created_at, updated_at)
-            VALUES(?, ?, ?, ?, ?, ?, ?, strftime('%s','now'), strftime('%s','now'))
+            INSERT INTO reports(file_id, title, publisher, taxonomy_json, region, time_period, source_url, html_path, md5, created_at, updated_at)
+            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%s','now'), strftime('%s','now'))
             ON CONFLICT(file_id) DO UPDATE SET
                 title=excluded.title,
                 publisher=excluded.publisher,
                 taxonomy_json=excluded.taxonomy_json,
+                region=excluded.region,
+                time_period=excluded.time_period,
                 source_url=excluded.source_url,
                 html_path=excluded.html_path,
                 md5=excluded.md5,
@@ -115,6 +134,8 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
                 request.title,
                 publisher,
                 taxonomy_json,
+                region,
+                time_period,
                 source_url,
                 html_path,
                 md5,
@@ -140,7 +161,7 @@ def get_metadata(request: ReportMetadataGetRequest, ctx: RunContext) -> Optional
     with _metadata_conn(request.db_path) as conn:
         cur = conn.execute(
             """
-            SELECT file_id, title, publisher, taxonomy_json, source_url, html_path, md5, created_at, updated_at
+            SELECT file_id, title, publisher, taxonomy_json, region, time_period, source_url, html_path, md5, created_at, updated_at
             FROM reports
             WHERE file_id=?
             """,
@@ -177,13 +198,15 @@ def get_metadata(request: ReportMetadataGetRequest, ctx: RunContext) -> Optional
         schema_version="1.0",
         file_id=row[0],
         title=row[1],
-        created_at=int(row[7]),
-        updated_at=int(row[8]),
+        created_at=int(row[9]),
+        updated_at=int(row[10]),
         publisher=row[2],
         taxonomy=taxonomy,
-        source_url=row[4],
-        html_path=row[5],
-        md5=row[6],
+        region=row[4],
+        time_period=row[5],
+        source_url=row[6],
+        html_path=row[7],
+        md5=row[8],
     )
     logger.info(log_event(
         ctx,

@@ -18,7 +18,7 @@ from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.openai_service")
 
-REQUIRED_KEYS = ("tldr", "insights", "quote", "figure", "commentary", "source", "publisher", "taxonomy")
+REQUIRED_KEYS = ("tldr", "insights", "quote", "figure", "commentary", "source", "publisher", "taxonomy", "region", "time_period")
 
 
 def _validate_payload(data: dict) -> None:
@@ -29,6 +29,10 @@ def _validate_payload(data: dict) -> None:
         raise ValueError("`insights` must be a list of exactly 5 items")
     if not isinstance(data.get("taxonomy"), list):
         raise ValueError("`taxonomy` must be a list")
+    if "region" not in data:
+        raise ValueError("`region` is required")
+    if "time_period" not in data:
+        raise ValueError("`time_period` is required")
 
 
 def _legacy_chat_completion(request: OpenAIAnalyzeRequest) -> Dict[str, Any]:
@@ -174,6 +178,8 @@ def analyze_report(request: OpenAIAnalyzeRequest, ctx: RunContext) -> OpenAIAnal
         evidence=data.get("figure", {}).get("evidence", ""),
     )
     publisher = data.get("publisher", "") or ""
+    region = data.get("region", "") or ""
+    time_period = data.get("time_period", "") or ""
     raw_taxonomy = data.get("taxonomy") or []
     taxonomy = []
     if isinstance(raw_taxonomy, list):
@@ -190,6 +196,8 @@ def analyze_report(request: OpenAIAnalyzeRequest, ctx: RunContext) -> OpenAIAnal
         figure=figure,
         publisher=publisher,
         taxonomy=taxonomy,
+        region=region,
+        time_period=time_period,
         commentary=data.get("commentary", ""),
         source=data.get("source", ""),
         _openai_file_id="",

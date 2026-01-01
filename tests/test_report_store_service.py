@@ -23,6 +23,8 @@ class TestReportStoreService(unittest.TestCase):
                     title="Sample Report",
                     publisher="Publisher Inc",
                     taxonomy=["Ads", "  Measurement", ""],
+                    region="US",
+                    time_period="2024-2028",
                     source_url="https://example.com/report",
                     html_path="/tmp/report.html",
                     md5="abc123",
@@ -38,6 +40,8 @@ class TestReportStoreService(unittest.TestCase):
             self.assertEqual("Sample Report", first.title)
             self.assertEqual(["Ads", "Measurement"], first.taxonomy)
             self.assertEqual("Publisher Inc", first.publisher)
+            self.assertEqual("US", first.region)
+            self.assertEqual("2024-2028", first.time_period)
             self.assertEqual("https://example.com/report", first.source_url)
             self.assertEqual("/tmp/report.html", first.html_path)
             self.assertEqual("abc123", first.md5)
@@ -52,6 +56,8 @@ class TestReportStoreService(unittest.TestCase):
                     title="Updated Title",
                     publisher=None,
                     taxonomy=["Measurement", "Attribution"],
+                    region="North America",
+                    time_period="2025",
                     source_url=None,
                     html_path="/tmp/report-v2.html",
                     md5="def456",
@@ -71,6 +77,8 @@ class TestReportStoreService(unittest.TestCase):
             self.assertEqual("/tmp/report-v2.html", second.html_path)
             self.assertIsNone(second.publisher)
             self.assertIsNone(second.source_url)
+            self.assertEqual("North America", second.region)
+            self.assertEqual("2025", second.time_period)
 
     def test_missing_record_returns_none(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

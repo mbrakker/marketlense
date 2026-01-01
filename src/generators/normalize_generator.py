@@ -40,6 +40,8 @@ def _normalize_report_payload(data: ReportPayload) -> ReportPayload:
     commentary = _s(data.commentary)
     source = _s(data.source)
     publisher = _s(data.publisher).strip()
+    region = _s(data.region).strip()
+    time_period = _s(data.time_period).strip()
     taxonomy_raw = data.taxonomy or []
     taxonomy = []
     seen = set()
@@ -83,6 +85,8 @@ def _normalize_report_payload(data: ReportPayload) -> ReportPayload:
         figure=figure,
         publisher=publisher,
         taxonomy=taxonomy,
+        region=region,
+        time_period=time_period,
         commentary=commentary,
         source=source,
         _openai_file_id=_s(data._openai_file_id),
