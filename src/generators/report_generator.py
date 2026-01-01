@@ -329,6 +329,16 @@ def generate_report(
             ctx,
         )
         sliced_paths = crop_resp.paths
+        if top_items:
+            top_cand = id2cand.get(top_items[0].id)
+            if top_cand:
+                caption = (top_cand.caption or "").strip()
+                preview = (top_cand.preview_text or "").strip()
+                derived_title = caption or (preview[:140] if preview else "")
+                if derived_title:
+                    data.figure.title = derived_title
+                if caption or preview:
+                    data.figure.evidence = caption or preview
 
     if sliced_paths:
         data._figure_gallery = sliced_paths
