@@ -9,6 +9,7 @@ class TestNormalizeService(unittest.TestCase):
     def test_normalize_pads_insights(self) -> None:
         payload = ReportPayload(
             tldr="tldr",
+            title="My Report",
             insights=["a"],
             quote=Quote(text="q", author="a"),
             figure=Figure(title="t", evidence="e"),
@@ -22,6 +23,7 @@ class TestNormalizeService(unittest.TestCase):
     def test_normalize_sets_top_figure(self) -> None:
         payload = ReportPayload(
             tldr="tldr",
+            title="My Report",
             insights=["a", "b", "c", "d", "e"],
             quote=Quote(text="q", author="a"),
             figure=Figure(title="t", evidence="e"),
@@ -37,6 +39,7 @@ class TestNormalizeService(unittest.TestCase):
     def test_normalize_taxonomy_dedupes_and_strips(self) -> None:
         payload = ReportPayload(
             tldr="tldr",
+            title="  My Report  ",
             insights=["a", "b", "c", "d", "e"],
             quote=Quote(text="q", author="a"),
             figure=Figure(title="t", evidence="e"),
@@ -53,6 +56,7 @@ class TestNormalizeService(unittest.TestCase):
         self.assertEqual("Org", normalized.publisher)
         self.assertEqual("US", normalized.region)
         self.assertEqual("2024E", normalized.time_period)
+        self.assertEqual("My Report", normalized.title)
 
 
 if __name__ == "__main__":

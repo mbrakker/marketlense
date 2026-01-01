@@ -151,6 +151,8 @@ def generate_report(
     ))
     raw = openai_resp.payload
     data = normalize_report(raw, ctx)
+    report_title = data.title.strip() or _derive_title(file.name)
+    data.title = report_title
     validate_report_payload(data)
     logger.info(log_event(
         ctx,
@@ -368,7 +370,7 @@ def generate_report(
             schema_version="1.0",
             db_path=settings.reports_db,
             file_id=file.file_id,
-            title=_derive_title(file.name),
+            title=report_title,
             publisher=data.publisher or None,
             taxonomy=data.taxonomy,
             region=data.region or None,

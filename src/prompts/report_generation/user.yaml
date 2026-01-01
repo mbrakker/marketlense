@@ -5,18 +5,20 @@ text: |
   2) 5 insights: each must contain a concrete fact/metric/KPI or a clear causal takeaway.
   3) Quote: verbatim from the report + author/role (if unknown, set author="Unknown").
   4) Figure: pick one key chart/table/metric; explain what it demonstrates (2-3 lines).
-  5) Publisher: the organization that authored/released the report (trim branding like “Inc.” is okay).
-  6) Taxonomy: array of 3-6 tags (e.g., ["retail media", "CTV", "attribution"]) derived from the report; lower_snake_case.
-  7) Region: the primary region/market focus (e.g., "US", "North America", "Global", "EMEA"); use a short descriptive label.
-  8) Time period: the key year(s) or range covered (e.g., "2024E-2028E", "Q4 2024", "2023"); prefer explicit ranges when given.
-  9) Commentary: 1 paragraph on implications for brands/measurement/ROAS.
-  10) Source: put the primary URL if present in the document; else empty string.
-  11) If uncertain about a number, state uncertainty explicitly.
-  12) Return ONLY valid JSON. Do not add any extra keys or text.
+  5) Report title: concise human-readable title derived from the document (no ALL CAPS).
+  6) Publisher: the organization that authored/released the report (trim branding like "Inc." is okay).
+  7) Taxonomy: array of 3-6 tags (e.g., ["retail media", "CTV", "attribution"]) derived from the report; lower_snake_case.
+  8) Region: the primary region/market focus (e.g., "US", "North America", "Global", "EMEA"); use a short descriptive label.
+  9) Time period: the key year(s) or range covered (e.g., "2024E-2028E", "Q4 2024", "2023"); prefer explicit ranges when given.
+  10) Commentary: 1 paragraph on implications for brands/measurement/ROAS.
+  11) Source: put the primary URL if present in the document; else empty string.
+  12) If uncertain about a number, state uncertainty explicitly.
+  13) Return ONLY valid JSON. Do not add any extra keys or text.
 
   JSON schema (all keys required):
   {
     "tldr": string,
+    "title": string,
     "insights": [string, string, string, string, string],
     "quote": {"text": string, "author": string},
     "figure": {"title": string, "evidence": string},

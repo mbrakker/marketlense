@@ -9,6 +9,7 @@ class TestValidation(unittest.TestCase):
     def test_validate_report_payload_ok(self) -> None:
         payload = ReportPayload(
             tldr="tldr",
+            title="My Report",
             insights=["a", "b", "c", "d", "e"],
             quote=Quote(text="q", author="a"),
             figure=Figure(title="t", evidence="e"),
@@ -20,6 +21,7 @@ class TestValidation(unittest.TestCase):
     def test_validate_report_payload_bad_insights(self) -> None:
         payload = ReportPayload(
             tldr="tldr",
+            title="My Report",
             insights=["a"],
             quote=Quote(text="q", author="a"),
             figure=Figure(title="t", evidence="e"),
@@ -29,6 +31,18 @@ class TestValidation(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_report_payload(payload)
 
+    def test_validate_report_payload_requires_title(self) -> None:
+        payload = ReportPayload(
+            tldr="tldr",
+            title="",
+            insights=["a", "b", "c", "d", "e"],
+            quote=Quote(text="q", author="a"),
+            figure=Figure(title="t", evidence="e"),
+            commentary="c",
+            source="s",
+        )
+        with self.assertRaises(ValueError):
+            validate_report_payload(payload)
     def test_validate_candidate_ok(self) -> None:
         cand = Candidate(
             schema_version="1.0",

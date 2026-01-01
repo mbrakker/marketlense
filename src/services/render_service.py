@@ -25,11 +25,13 @@ def render_report(request: RenderRequest, ctx: RunContext) -> RenderResponse:
         loader=FileSystemLoader(str(templates_dir)),
         autoescape=select_autoescape(["html", "xml"]),
     )
+    report_title = str(request.data.get("title") or request.doc_name)
     html = env.get_template("report.html.j2").render(
         data=request.data,
         doc_name=request.doc_name,
         file_id=request.file_id,
-        title=f"{request.doc_name} - Digest",
+        title=f"{report_title} - Digest",
+        report_title=report_title,
         preview_png=request.preview_png,
     )
     report_name = slugify(request.doc_name)

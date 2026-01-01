@@ -7,6 +7,8 @@ from src.contracts.report_models import ReportPayload
 def validate_report_payload(payload: ReportPayload) -> None:
     if not payload.schema_version:
         raise ValueError("ReportPayload.schema_version is required")
+    if not (payload.title or "").strip():
+        raise ValueError("ReportPayload.title is required")
     if not isinstance(payload.insights, list) or len(payload.insights) != 5:
         raise ValueError("ReportPayload.insights must contain exactly 5 items")
     if not isinstance(payload.taxonomy, list):

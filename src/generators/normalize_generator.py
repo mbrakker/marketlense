@@ -37,6 +37,7 @@ def _s(value: Any) -> str:
 
 def _normalize_report_payload(data: ReportPayload) -> ReportPayload:
     tldr = _s(data.tldr)
+    title = _s(data.title).strip()
     commentary = _s(data.commentary)
     source = _s(data.source)
     publisher = _s(data.publisher).strip()
@@ -80,6 +81,7 @@ def _normalize_report_payload(data: ReportPayload) -> ReportPayload:
 
     return ReportPayload(
         tldr=tldr,
+        title=title,
         insights=insights,
         quote=quote,
         figure=figure,

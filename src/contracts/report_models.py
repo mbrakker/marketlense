@@ -21,6 +21,7 @@ class Figure:
 @dataclass
 class ReportPayload:
     tldr: str = field(metadata={"doc": "TL;DR summary."})
+    title: str = field(metadata={"doc": "Human-friendly report title extracted from the content."})
     insights: List[str] = field(metadata={"doc": "List of five insights."})
     quote: Quote = field(metadata={"doc": "Key quote extracted from the report."})
     figure: Figure = field(metadata={"doc": "Figure metadata."})

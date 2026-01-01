@@ -18,13 +18,15 @@ from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.openai_service")
 
-REQUIRED_KEYS = ("tldr", "insights", "quote", "figure", "commentary", "source", "publisher", "taxonomy", "region", "time_period")
+REQUIRED_KEYS = ("tldr", "title", "insights", "quote", "figure", "commentary", "source", "publisher", "taxonomy", "region", "time_period")
 
 
 def _validate_payload(data: dict) -> None:
     for k in REQUIRED_KEYS:
         if k not in data:
             raise ValueError(f"Missing key in JSON: {k}")
+    if not isinstance(data.get("title"), str) or not data.get("title", "").strip():
+        raise ValueError("`title` is required")
     if not isinstance(data.get("insights"), list) or len(data["insights"]) != 5:
         raise ValueError("`insights` must be a list of exactly 5 items")
     if not isinstance(data.get("taxonomy"), list):
@@ -177,6 +179,7 @@ def analyze_report(request: OpenAIAnalyzeRequest, ctx: RunContext) -> OpenAIAnal
         title=data.get("figure", {}).get("title", ""),
         evidence=data.get("figure", {}).get("evidence", ""),
     )
+    title = (data.get("title") or "").strip()
     publisher = data.get("publisher", "") or ""
     region = data.get("region", "") or ""
     time_period = data.get("time_period", "") or ""
@@ -191,6 +194,7 @@ def analyze_report(request: OpenAIAnalyzeRequest, ctx: RunContext) -> OpenAIAnal
 
     result = ReportPayload(
         tldr=data.get("tldr", ""),
+        title=title,
         insights=insights,
         quote=quote,
         figure=figure,
