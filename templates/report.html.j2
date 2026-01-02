@@ -14,8 +14,6 @@ blockquote{margin:.6rem 0;padding:.6rem .8rem;border-left:4px solid #DDD;backgro
 code{background:#f5f5f5;padding:.1rem .3rem;border-radius:4px}
 .preview{margin:1rem 0}
 .preview img{max-width:100%;height:auto;border:1px solid #EEE;border-radius:8px}
-.tags{display:flex;flex-wrap:wrap;gap:6px;margin:.6rem 0}
-.tag{background:#eef2ff;color:#1f2a44;border:1px solid #d8def0;border-radius:999px;padding:4px 10px;font-size:.9rem}
 </style>
 </head>
 <body>
@@ -38,20 +36,6 @@ code{background:#f5f5f5;padding:.1rem .3rem;border-radius:4px}
   {% endif %}
   {% if data.time_period %}
   <p><strong>Time period:</strong> {{ data.time_period }}</p>
-  {% endif %}
-  {% if (data.categories_display and data.categories_display|length > 0) or (data.categories and data.categories|length > 0) %}
-  <div class="tags">
-    {% for cat in (data.categories_display or data.categories) %}
-      <span class="tag">{{ cat }}</span>
-    {% endfor %}
-  </div>
-  {% endif %}
-  {% if data.taxonomy and data.taxonomy|length > 0 %}
-  <div class="tags">
-    {% for tag in data.taxonomy %}
-      <span class="tag">{{ tag }}</span>
-    {% endfor %}
-  </div>
   {% endif %}
   {% endif %}
 

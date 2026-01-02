@@ -1,8 +1,47 @@
 schema_version: '1.0'
 categories:
+- id: retail_logistics
+  label: Retail Logistics & Fulfillment
+  description: Inventory, warehousing, last-mile delivery, and omnichannel fulfillment operations.
+  tags:
+  - retail_logistics
+  - fulfillment
+  - last_mile
+  - warehousing
+  - inventory_management
+  - order_orchestration
+  - delivery_experience
+  - returns_management
+- id: digital_payments
+  label: Digital Payments & Wallets
+  description: Online payments, mobile wallets, checkout experience, and payment security.
+  tags:
+  - digital_payments
+  - payments
+  - digital_wallets
+  - mobile_payments
+  - online_checkout
+  - payment_gateways
+  - fraud_prevention
+  - payment_security
+  - payments_and_verification
+  - subscriptions
+- id: consumer_behavior
+  label: Consumer Behavior & Insights
+  description: Consumer attitudes, decision drivers, and shopping behaviors across journeys.
+  tags:
+  - consumer_behavior
+  - consumer_insights
+  - shopper_behavior
+  - audience_segments
+  - purchase_journey
+  - decision_drivers
+  - sentiment_analysis
+  - behavioral_data
 - id: business_performance
   label: Business Performance & Growth
-  description: Revenue growth, profitability, and commercial performance metrics and levers.
+  description: Revenue growth, profitability, and commercial performance metrics and
+    levers.
   tags:
   - business_performance
   - revenue_growth
@@ -13,9 +52,12 @@ categories:
   - margin_optimization
   - kpi_tracking
   - gmv_concentration
+  - gmv
+  - revenue_mix
 - id: agentic_commerce
   label: Agentic Commerce & Shopping Automation
-  description: Autonomous shopping agents, AI-assisted buying journeys, and automated checkout.
+  description: Autonomous shopping agents, AI-assisted buying journeys, and automated
+    checkout.
   tags:
   - agentic_commerce
   - shopping_agents
@@ -27,7 +69,8 @@ categories:
   - in_cart_optimization
 - id: OMNI-Channel
   label: Omni-Channel Marketing
-  description: Unified planning and activation across digital, physical, and owned channels.
+  description: Unified planning and activation across digital, physical, and owned
+    channels.
   tags:
   - omnichannel
   - cross_channel
@@ -50,6 +93,10 @@ categories:
   - creative_optimization
   - campaign_management
   - optimization
+  - advertising_revenue
+  - digital_advertising
+  - consumer_internet
+  - sports_betting
 - id: retail_media
   label: Retail & Commerce Media
   description: Retailer-owned ad networks and commerce monetization.
@@ -88,6 +135,8 @@ categories:
   - roi
   - roas
   - forecasting
+  - media_forecast
+  - market_forecast
 - id: privacy_identity
   label: Privacy, Identity & Data
   description: Identity resolution, data collaboration, and compliance.
@@ -102,6 +151,7 @@ categories:
   - gdpr
   - third_party_cookies
   - cookieless
+  - content_licensing
 - id: ai_automation
   label: AI & Automation
   description: AI-driven optimization, copilots, and workflow automation.
@@ -157,6 +207,10 @@ categories:
   - arpu
   - platform_reach
   - gaming
+  - monetization
+  - video_gaming
+  - mobile_gaming
+  - franchise_ip
 - id: search_performance
   label: Search & Performance Marketing
   description: Paid search, performance media, and optimization tactics.
@@ -169,3 +223,4 @@ categories:
   - bid_strategy
   - conversion_rate_optimization
   - cro
+  - discovery
