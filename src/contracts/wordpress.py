@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Dict, List, Optional
 
 
 @dataclass(frozen=True)
@@ -42,6 +42,7 @@ class WordPressPostCreateRequest:
     status: str = field(metadata={"doc": "Post status."})
     slug: Optional[str] = field(default=None, metadata={"doc": "Optional post slug."})
     featured_media: Optional[int] = field(default=None, metadata={"doc": "Optional featured media ID."})
+    categories: Optional[List[int]] = field(default=None, metadata={"doc": "Optional WordPress category IDs."})
 
 
 @dataclass(frozen=True)
@@ -67,3 +68,40 @@ class WordPressPostLookupResponse:
     found: bool = field(metadata={"doc": "True if a matching post was found."})
     post_id: Optional[int] = field(default=None, metadata={"doc": "Matching post ID, if found."})
     link: Optional[str] = field(default=None, metadata={"doc": "Matching post URL, if found."})
+
+
+@dataclass(frozen=True)
+class WordPressCategoryTerm:
+    schema_version: str = field(metadata={"doc": "Category term schema version."})
+    slug: str = field(metadata={"doc": "Category slug."})
+    name: str = field(metadata={"doc": "Category display name."})
+
+
+@dataclass(frozen=True)
+class WordPressCategoryEnsureRequest:
+    schema_version: str = field(metadata={"doc": "Category ensure request schema version."})
+    base_url: str = field(metadata={"doc": "WordPress site base URL."})
+    auth_header: str = field(metadata={"doc": "Authorization header value."})
+    categories: List[WordPressCategoryTerm] = field(metadata={"doc": "Category terms to ensure exist."})
+
+
+@dataclass(frozen=True)
+class WordPressCategoryEnsureResponse:
+    schema_version: str = field(metadata={"doc": "Category ensure response schema version."})
+    slug_to_id: Dict[str, int] = field(metadata={"doc": "Mapping of category slug to WordPress term ID."})
+
+
+@dataclass(frozen=True)
+class WordPressPostUpdateRequest:
+    schema_version: str = field(metadata={"doc": "Post update request schema version."})
+    base_url: str = field(metadata={"doc": "WordPress site base URL."})
+    auth_header: str = field(metadata={"doc": "Authorization header value."})
+    post_id: int = field(metadata={"doc": "WordPress post ID."})
+    categories: List[int] = field(metadata={"doc": "Category IDs to assign to the post."})
+
+
+@dataclass(frozen=True)
+class WordPressPostUpdateResponse:
+    schema_version: str = field(metadata={"doc": "Post update response schema version."})
+    post_id: int = field(metadata={"doc": "Updated WordPress post ID."})
+    link: Optional[str] = field(default=None, metadata={"doc": "Updated WordPress post URL, if returned."})

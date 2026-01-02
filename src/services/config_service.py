@@ -74,6 +74,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     ingest = data.get("ingest", {}) or {}
     pdf_text = ingest.get("pdf_text", {}) or {}
     rank = data.get("rank", {}) or {}
+    category_mapping_path = paths.get("category_mappings") or str(Path(__file__).resolve().parents[1] / "config" / "category-mappings.yaml")
 
     openai_model = need(ingest, "openai_model", "ingest.openai_model", "OPENAI_MODEL")
     temperature_raw = ingest.get("temperature")
@@ -126,6 +127,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         cache_dir=cache_dir,
         state_db=state_db,
         reports_db=reports_db,
+        category_mapping_path=category_mapping_path,
         ingest_lock_path=ingest_lock_path,
         ingest_lock_ttl_seconds=ingest_lock_ttl_seconds,
         temperature=temperature,
@@ -163,6 +165,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             "cache_dir": settings.cache_dir,
             "state_db": settings.state_db,
             "reports_db": settings.reports_db,
+            "category_mapping_path": settings.category_mapping_path,
             "ingest_lock_path": settings.ingest_lock_path,
             "ingest_lock_ttl_seconds": settings.ingest_lock_ttl_seconds,
             "openai_model": settings.openai_model,
@@ -224,9 +227,11 @@ def load_publish_settings(request: ConfigLoadRequest, ctx: RunContext) -> Publis
     paths = data.get("paths", {}) or {}
     publish = data.get("publish", {}) or {}
     wp_cfg = publish.get("wp", {}) or {}
+    category_mapping_path = paths.get("category_mappings") or str(Path(__file__).resolve().parents[1] / "config" / "category-mappings.yaml")
 
     output_dir = need(paths, "output_dir", "paths.output_dir", "OUTPUT_DIR")
     state_db = need(paths, "state_db", "paths.state_db", "STATE_DB")
+    reports_db = need(paths, "reports_db", "paths.reports_db", "REPORTS_DB")
 
     admin_url = wp_cfg.get("admin_url") or _env_value("WP_ADMIN_URL")
     site_url = wp_cfg.get("site_url") or _env_value("WP_SITE_URL")
@@ -266,6 +271,8 @@ def load_publish_settings(request: ConfigLoadRequest, ctx: RunContext) -> Publis
         schema_version=str(data.get("schema_version", "1.0")),
         output_dir=output_dir,
         state_db=state_db,
+        reports_db=reports_db,
+        category_mapping_path=category_mapping_path,
         wp=wp,
     )
     logger.info(log_event(
@@ -276,6 +283,7 @@ def load_publish_settings(request: ConfigLoadRequest, ctx: RunContext) -> Publis
         fields={
             "output_dir": settings.output_dir,
             "state_db": settings.state_db,
+            "reports_db": settings.reports_db,
             "site_url": settings.wp.site_url,
             "username": settings.wp.username,
             "post_status": settings.wp.post_status,

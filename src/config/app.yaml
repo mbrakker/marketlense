@@ -5,6 +5,7 @@ paths:
   cache_dir: "./cache"
   state_db: "./state/index.sqlite"
   reports_db: "./state/reports.sqlite"
+  category_mappings: "./src/config/category-mappings.yaml"
   ingest_lock: "./state/ingest.lock"
 
 ingest:

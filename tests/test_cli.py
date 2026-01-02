@@ -27,6 +27,7 @@ class TestCli(unittest.TestCase):
             cache_dir="./cache",
             state_db="./state/index.sqlite",
             reports_db="./state/reports.sqlite",
+            category_mapping_path="./src/config/category-mappings.yaml",
             ingest_lock_path="./state/ingest.lock",
             ingest_lock_ttl_seconds=7200.0,
             temperature=1.0,
@@ -59,6 +60,8 @@ class TestCli(unittest.TestCase):
             schema_version="1.0",
             output_dir="./out",
             state_db="./state/index.sqlite",
+            reports_db="./state/reports.sqlite",
+            category_mapping_path="./src/config/category-mappings.yaml",
             wp=WordPressAuthSettings(
                 schema_version="1.0",
                 site_url="https://example.com",

@@ -70,6 +70,7 @@ src/
      - **Text extraction**: `pdf_text_service` extracts text from the first N pages.
      - **LLM analysis**: Sends prompt + extracted text to OpenAI for structured JSON output.
      - **Normalization**: `normalize_generator` enforces strict schema and list sizing.
+     - **Categorization**: taxonomy tags are scored against `src/config/category-mappings.yaml`; top 3 categories are stored and rendered, and unmapped tags are appended under `uncategorized` in that YAML.
      - **Figure selection**: `figure_service` selects a representative visual and caption.
      - **Candidate extraction**: `extract_service` finds chart/table regions.
      - **Candidate ranking**: `rank_service` scores candidates via LLM.
@@ -156,6 +157,15 @@ Prompts are rendered with Jinja2 (`{{ variable }}`), loaded and hashed by `src/s
 
 ---
 
+## Category mappings
+
+- Canonical categories live in `src/config/category-mappings.yaml` (versioned by `schema_version`).
+- Taxonomy tags are matched against this file; each matching tag gives its category +1 point and the top 3 categories are assigned to the report and stored in the metadata DB.
+- Any taxonomy tags that do not map are appended to the `uncategorized` section in the same YAML under the report title. When tags become mapped later, they are removed from `uncategorized` on the next categorization pass.
+- Assigned categories are rendered in the HTML metadata block and synchronized to WordPress posts.
+
+---
+
 ## Contracts and Schemas
 
 Key contracts live under `src/contracts/`:
@@ -218,6 +228,18 @@ Publish generated HTML to WordPress:
 
 ```bash
 python -m src.cli publish-wp --limit 10
+```
+
+Re-score categories for all stored reports (updates DB + uncategorized tags list):
+
+```bash
+python -m src.cli recategorize
+```
+
+Update WordPress categories for already-published posts to match the latest mappings/DB:
+
+```bash
+python -m src.cli update-wp-categories
 ```
 
 ## Output Layout

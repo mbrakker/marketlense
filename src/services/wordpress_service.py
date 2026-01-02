@@ -12,8 +12,13 @@ from src.contracts.wordpress import (
     WordPressMediaUploadResponse,
     WordPressPostCreateRequest,
     WordPressPostCreateResponse,
+    WordPressCategoryEnsureRequest,
+    WordPressCategoryEnsureResponse,
+    WordPressCategoryTerm,
     WordPressPostLookupRequest,
     WordPressPostLookupResponse,
+    WordPressPostUpdateRequest,
+    WordPressPostUpdateResponse,
 )
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -98,7 +103,12 @@ def create_post(request: WordPressPostCreateRequest, ctx: RunContext) -> WordPre
         role="service",
         event="wp_post_create_start",
         module=logger.name,
-        fields={"title": request.title, "status": request.status, "slug": request.slug},
+        fields={
+            "title": request.title,
+            "status": request.status,
+            "slug": request.slug,
+            "categories_count": len(request.categories or []),
+        },
     ))
     url = f"{request.base_url.rstrip('/')}/wp-json/wp/v2/posts"
     headers = {
@@ -114,6 +124,8 @@ def create_post(request: WordPressPostCreateRequest, ctx: RunContext) -> WordPre
         payload["slug"] = request.slug
     if request.featured_media:
         payload["featured_media"] = request.featured_media
+    if request.categories:
+        payload["categories"] = request.categories
 
     try:
         resp = requests.post(url, headers=headers, data=json.dumps(payload), timeout=DEFAULT_TIMEOUT)
@@ -230,6 +242,149 @@ def find_post_by_file_id(request: WordPressPostLookupRequest, ctx: RunContext) -
         post_id=int(post_id) if post_id else None,
         link=str(link) if link else None,
     )
+
+
+def ensure_categories(request: WordPressCategoryEnsureRequest, ctx: RunContext) -> WordPressCategoryEnsureResponse:
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="wp_category_ensure_start",
+        module=logger.name,
+        fields={"count": len(request.categories)},
+    ))
+    base_url = f"{request.base_url.rstrip('/')}/wp-json/wp/v2/categories"
+    slug_to_id: Dict[str, int] = {}
+    headers = {
+        "Authorization": request.auth_header,
+        "Content-Type": "application/json",
+    }
+    for term in request.categories:
+        slug = term.slug
+        name = term.name or term.slug
+        try:
+            resp = requests.get(base_url, headers={"Authorization": request.auth_header}, params={"slug": slug}, timeout=DEFAULT_TIMEOUT)
+        except requests.RequestException as exc:
+            raise AppError(
+                code="wp_category_lookup_failed",
+                message="Failed to lookup WordPress category",
+                cause=exc,
+                retryable=True,
+            ) from exc
+
+        if resp.status_code >= 500:
+            raise AppError(
+                code="wp_category_lookup_server_error",
+                message=f"Category lookup server error: {resp.status_code}",
+                retryable=True,
+            )
+        if resp.status_code >= 400:
+            raise AppError(
+                code="wp_category_lookup_client_error",
+                message=f"Category lookup client error: {resp.status_code}",
+                retryable=False,
+            )
+
+        cat_id: Optional[int] = None
+        try:
+            payload = json.loads(resp.text)
+        except Exception:
+            payload = []
+        if isinstance(payload, list) and payload:
+            cat_id = payload[0].get("id")
+        if not cat_id:
+            try:
+                create_resp = requests.post(
+                    base_url,
+                    headers=headers,
+                    data=json.dumps({"name": name, "slug": slug}),
+                    timeout=DEFAULT_TIMEOUT,
+                )
+            except requests.RequestException as exc:
+                raise AppError(
+                    code="wp_category_create_failed",
+                    message="Failed to create WordPress category",
+                    cause=exc,
+                    retryable=True,
+                ) from exc
+
+            if create_resp.status_code >= 500:
+                raise AppError(
+                    code="wp_category_create_server_error",
+                    message=f"Category create server error: {create_resp.status_code}",
+                    retryable=True,
+                )
+            if create_resp.status_code >= 400:
+                raise AppError(
+                    code="wp_category_create_client_error",
+                    message=f"Category create client error: {create_resp.status_code}",
+                    retryable=False,
+                )
+            data = _safe_json(create_resp.text)
+            cat_id = data.get("id")
+        if not cat_id:
+            raise AppError(
+                code="wp_category_invalid_response",
+                message="Category ensure returned invalid response",
+                retryable=False,
+            )
+        slug_to_id[slug] = int(cat_id)
+
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="wp_category_ensure_complete",
+        module=logger.name,
+        fields={"count": len(slug_to_id)},
+    ))
+    return WordPressCategoryEnsureResponse(schema_version="1.0", slug_to_id=slug_to_id)
+
+
+def update_post_categories(request: WordPressPostUpdateRequest, ctx: RunContext) -> WordPressPostUpdateResponse:
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="wp_post_update_start",
+        module=logger.name,
+        fields={"post_id": request.post_id, "categories": request.categories},
+    ))
+    url = f"{request.base_url.rstrip('/')}/wp-json/wp/v2/posts/{request.post_id}"
+    headers = {
+        "Authorization": request.auth_header,
+        "Content-Type": "application/json",
+    }
+    payload = {"categories": request.categories}
+    try:
+        resp = requests.post(url, headers=headers, data=json.dumps(payload), timeout=DEFAULT_TIMEOUT)
+    except requests.RequestException as exc:
+        raise AppError(
+            code="wp_post_update_failed",
+            message="Failed to update WordPress post",
+            cause=exc,
+            retryable=True,
+        ) from exc
+
+    if resp.status_code >= 500:
+        raise AppError(
+            code="wp_post_update_server_error",
+            message=f"Post update server error: {resp.status_code}",
+            retryable=True,
+        )
+    if resp.status_code >= 400:
+        raise AppError(
+            code="wp_post_update_client_error",
+            message=f"Post update client error: {resp.status_code}",
+            retryable=False,
+        )
+    data = _safe_json(resp.text)
+    link = data.get("link")
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="wp_post_update_complete",
+        module=logger.name,
+        fields={"post_id": request.post_id},
+    ))
+    return WordPressPostUpdateResponse(schema_version="1.0", post_id=request.post_id, link=str(link) if link else None)
 
 
 def _update_media_alt_text(

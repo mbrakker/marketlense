@@ -39,6 +39,13 @@ code{background:#f5f5f5;padding:.1rem .3rem;border-radius:4px}
   {% if data.time_period %}
   <p><strong>Time period:</strong> {{ data.time_period }}</p>
   {% endif %}
+  {% if (data.categories_display and data.categories_display|length > 0) or (data.categories and data.categories|length > 0) %}
+  <div class="tags">
+    {% for cat in (data.categories_display or data.categories) %}
+      <span class="tag">{{ cat }}</span>
+    {% endfor %}
+  </div>
+  {% endif %}
   {% if data.taxonomy and data.taxonomy|length > 0 %}
   <div class="tags">
     {% for tag in data.taxonomy %}

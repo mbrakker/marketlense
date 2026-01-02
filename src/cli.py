@@ -8,10 +8,13 @@ from rich.table import Table
 from rich import box
 
 from src.utils.errors import AppError
+from src.contracts.categories import RecategorizeRequest
 from src.contracts.config import ConfigLoadRequest
 from src.contracts.ingest import IngestSettings
 from src.orchestrators.ingest_orchestrator import run_ingest
 from src.orchestrators.publish_orchestrator import run_publish
+from src.orchestrators.recategorize_orchestrator import run_recategorize
+from src.orchestrators.wp_category_update_orchestrator import run_update_wp_categories
 from src.services.config_service import load_settings, load_publish_settings
 from src.services.logging_service import setup_logging
 from src.utils.logging import log_event, new_run_context
@@ -50,6 +53,7 @@ def ingest(
         cache_dir=s.cache_dir,
         state_db=s.state_db,
         reports_db=s.reports_db,
+        category_mapping_path=s.category_mapping_path,
         ingest_lock_path=s.ingest_lock_path,
         ingest_lock_ttl_seconds=s.ingest_lock_ttl_seconds,
         temperature=s.temperature,
@@ -125,6 +129,77 @@ def publish_wp(
 
     console.print(table)
     console.print(f"[green]Done: {published} post(s) published.[/green]")
+
+
+@cli_app.command("recategorize")
+def recategorize():
+    setup_logging()
+    console.print("[cyan]Loading settings...[/cyan]")
+    ctx = new_run_context(task_id="cli_recategorize")
+    logger.info(log_event(
+        ctx,
+        role="orchestrator",
+        event="cli_load_settings_start",
+        module=logger.name,
+        fields={},
+    ))
+    s = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    console.print("[cyan]Recomputing categories...[/cyan]")
+    outcomes = run_recategorize(RecategorizeRequest(
+        schema_version="1.0",
+        db_path=s.reports_db,
+        category_mapping_path=s.category_mapping_path,
+    ))
+    table = Table(title="Recategorization", box=box.SIMPLE_HEAVY)
+    table.add_column("Title")
+    table.add_column("File ID")
+    table.add_column("Categories")
+    table.add_column("Unmapped")
+    table.add_column("Status")
+    updated = 0
+    for outcome in outcomes:
+        if outcome.status == "updated":
+            updated += 1
+        cats = ", ".join(outcome.categories)
+        unmapped = ", ".join(outcome.unmapped_tags)
+        table.add_row(outcome.title, outcome.file_id, cats, unmapped, outcome.status if not outcome.error else f"{outcome.status}:{outcome.error}")
+    console.print(table)
+    console.print(f"[green]Done: {updated} record(s) updated.[/green]")
+
+
+@cli_app.command("update-wp-categories")
+def update_wp_categories():
+    setup_logging()
+    console.print("[cyan]Loading publish settings...[/cyan]")
+    ctx = new_run_context(task_id="cli_update_wp_categories")
+    logger.info(log_event(
+        ctx,
+        role="orchestrator",
+        event="cli_load_publish_settings_start",
+        module=logger.name,
+        fields={},
+    ))
+    settings = load_publish_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    console.print("[cyan]Updating WordPress categories...[/cyan]")
+    outcomes = run_update_wp_categories(settings)
+    table = Table(title="WP Category Updates", box=box.SIMPLE_HEAVY)
+    table.add_column("File ID")
+    table.add_column("Post ID")
+    table.add_column("Categories")
+    table.add_column("Status")
+    updated = 0
+    for outcome in outcomes:
+        if outcome.status == "updated":
+            updated += 1
+        cats = ", ".join(outcome.categories)
+        table.add_row(
+            outcome.file_id,
+            str(outcome.post_id or ""),
+            cats,
+            outcome.status if not outcome.error else f"{outcome.status}:{outcome.error}",
+        )
+    console.print(table)
+    console.print(f"[green]Done: {updated} post(s) updated.[/green]")
 
 
 @cli_app.callback(invoke_without_command=True)

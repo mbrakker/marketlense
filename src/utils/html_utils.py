@@ -13,6 +13,7 @@ _FILE_ID_META_RX = re.compile(
     r'<meta[^>]+name=["\']drive-file-id["\'][^>]+content=["\']([^"\']+)["\']',
     re.IGNORECASE,
 )
+_FILE_ID_TEXT_RX = re.compile(r"Drive fileId:\s*([A-Za-z0-9._-]+)", re.IGNORECASE)
 _PREVIEW_BLOCK_RX = re.compile(r'<div class="preview".*?</div>', re.IGNORECASE | re.DOTALL)
 
 
@@ -49,6 +50,9 @@ def extract_file_id(html_text: str) -> Optional[str]:
     m_meta = _FILE_ID_META_RX.search(html_text)
     if m_meta:
         return m_meta.group(1)
+    m_text = _FILE_ID_TEXT_RX.search(html_text)
+    if m_text:
+        return m_text.group(1)
     return None
 
 

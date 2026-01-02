@@ -29,6 +29,7 @@ class ReportPayload:
     source: str = field(metadata={"doc": "Primary source URL, if any."})
     publisher: str = field(default="", metadata={"doc": "Publisher or organization that authored the report."})
     taxonomy: List[str] = field(default_factory=list, metadata={"doc": "List of taxonomy tags/categories."})
+    categories: List[str] = field(default_factory=list, metadata={"doc": "Assigned category IDs (max 3)."})
     region: str = field(default="", metadata={"doc": "Primary region/market focus of the report."})
     time_period: str = field(default="", metadata={"doc": "Primary time period covered by the report."})
     _openai_file_id: str = field(default="", metadata={"doc": "Internal OpenAI file ID, if any."})

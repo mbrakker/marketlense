@@ -3,17 +3,23 @@ from __future__ import annotations
 import logging
 import mimetypes
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from src.contracts.files import FileExistsRequest, ReadBytesRequest, ReadTextRequest
 from src.contracts.publish import PublishOutcome, PublishRequest, PublishSettings
+from src.contracts.report_store import ReportMetadataGetRequest
 from src.contracts.run_context import RunContext
 from src.contracts.wordpress import (
+    WordPressCategoryEnsureRequest,
+    WordPressCategoryTerm,
     WordPressMediaUploadRequest,
     WordPressPostCreateRequest,
 )
+from src.contracts.categories import CategoryMappingLoadRequest
+from src.services.category_mapping_service import load_mappings as load_category_mappings
 from src.services.file_service import file_exists, read_bytes, read_text
-from src.services.wordpress_service import create_post, upload_media
+from src.services.report_store_service import get_metadata
+from src.services.wordpress_service import create_post, ensure_categories, upload_media
 from src.utils.errors import AppError
 from src.utils.html_utils import (
     extract_body_html,
@@ -65,6 +71,37 @@ def publish_html(
     auth_header = _resolve_auth_header(settings, ctx)
     base_url = settings.wp.site_url.rstrip("/")
 
+    metadata = get_metadata(
+        ReportMetadataGetRequest(schema_version="1.0", db_path=settings.reports_db, file_id=file_id),
+        ctx,
+    )
+    category_ids_for_wp: list[int] = []
+    if metadata and metadata.categories:
+        mappings_resp = load_category_mappings(
+            CategoryMappingLoadRequest(schema_version="1.0", path=settings.category_mapping_path),
+            ctx,
+        )
+        id_to_label = {cat.id: cat.label or cat.id for cat in mappings_resp.mappings.categories}
+        terms = [
+            WordPressCategoryTerm(schema_version="1.0", slug=cat_id, name=id_to_label.get(cat_id, cat_id))
+            for cat_id in metadata.categories
+        ]
+        if terms:
+            ensure_resp = ensure_categories(
+                WordPressCategoryEnsureRequest(
+                    schema_version="1.0",
+                    base_url=base_url,
+                    auth_header=auth_header,
+                    categories=terms,
+                ),
+                ctx,
+            )
+            category_ids_for_wp = [
+                ensure_resp.slug_to_id[term.slug]
+                for term in terms
+                if term.slug in ensure_resp.slug_to_id
+            ]
+
     image_map, featured_media_id = _upload_images(
         html_text,
         settings.output_dir,
@@ -95,6 +132,7 @@ def publish_html(
             status=settings.wp.post_status,
             slug=slug,
             featured_media=featured_media_id,
+            categories=category_ids_for_wp if category_ids_for_wp else None,
         ),
         ctx,
     )

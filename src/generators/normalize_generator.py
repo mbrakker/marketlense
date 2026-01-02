@@ -55,6 +55,18 @@ def _normalize_report_payload(data: ReportPayload) -> ReportPayload:
             continue
         seen.add(key)
         taxonomy.append(item_s)
+    categories_raw = data.categories or []
+    categories = []
+    seen_categories = set()
+    for item in categories_raw:
+        item_s = _s(item).strip()
+        if not item_s:
+            continue
+        key = item_s.lower()
+        if key in seen_categories:
+            continue
+        seen_categories.add(key)
+        categories.append(item_s)
 
     insights: List[str] = data.insights or []
     if len(insights) < 5:
@@ -87,6 +99,7 @@ def _normalize_report_payload(data: ReportPayload) -> ReportPayload:
         figure=figure,
         publisher=publisher,
         taxonomy=taxonomy,
+        categories=categories,
         region=region,
         time_period=time_period,
         commentary=commentary,

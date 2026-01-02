@@ -11,6 +11,8 @@ class PublishSettings:
     schema_version: str = field(metadata={"doc": "Publish settings schema version."})
     output_dir: str = field(metadata={"doc": "Output directory containing HTML files."})
     state_db: str = field(metadata={"doc": "SQLite path for publishing state."})
+    reports_db: str = field(metadata={"doc": "SQLite path for report metadata (for category updates)."})
+    category_mapping_path: str = field(metadata={"doc": "Filesystem path to category mappings YAML."})
     wp: WordPressAuthSettings = field(metadata={"doc": "WordPress auth settings."})
 
 

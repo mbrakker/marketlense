@@ -24,6 +24,8 @@ from src.contracts.report_assets import (
     RenderRequest,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.categories import CategoryMappingLoadRequest, UncategorizedTagsUpdateRequest
+from src.generators.categorize_generator import categorize_taxonomy
 from src.generators.normalize_generator import normalize_report
 from src.services.crop_service import crop_regions as crop_regions_service
 from src.services.extract_service import collect_candidates as collect_candidates_service
@@ -31,6 +33,10 @@ from src.services.figure_service import extract_best_figure as extract_best_figu
 from src.services.preview_service import render_preview as render_preview_service
 from src.services.rank_service import rank_candidates as rank_candidates_service
 from src.services.render_service import render_report as render_report_service
+from src.services.category_mapping_service import (
+    load_mappings as load_category_mappings,
+    update_uncategorized_tags,
+)
 from src.services.report_store_service import upsert_metadata as upsert_report_metadata
 from src.utils.logging import log_event
 from src.utils.validation import validate_candidate, validate_report_payload
@@ -161,6 +167,23 @@ def generate_report(
         module=logger.name,
         fields={"file_id": file.file_id},
     ))
+
+    mappings_resp = load_category_mappings(
+        CategoryMappingLoadRequest(schema_version="1.0", path=settings.category_mapping_path),
+        ctx,
+    )
+    category_assignment = categorize_taxonomy(data.taxonomy, mappings_resp, ctx)
+    data.categories = category_assignment.categories
+    if category_assignment.unmapped_tags or mappings_resp.mappings.uncategorized:
+        update_uncategorized_tags(
+            UncategorizedTagsUpdateRequest(
+                schema_version="1.0",
+                path=settings.category_mapping_path,
+                report_title=report_title,
+                tags=category_assignment.unmapped_tags,
+            ),
+            ctx,
+        )
     report_name = slugify(file.name)
 
     fig_resp = extract_best_figure_service(
@@ -355,6 +378,7 @@ def generate_report(
     )
 
     data_dict = data.to_dict()
+    data_dict["categories_display"] = category_assignment.category_labels
     logger.info(log_event(
         ctx,
         role="generator",
@@ -379,15 +403,16 @@ def generate_report(
         ReportMetadataUpsertRequest(
             schema_version="1.0",
             db_path=settings.reports_db,
-            file_id=file.file_id,
-            title=report_title,
-            publisher=data.publisher or None,
-            taxonomy=data.taxonomy,
-            region=data.region or None,
-            time_period=data.time_period or None,
-            source_url=data.source,
-            html_path=out_html,
-            md5=md5,
+        file_id=file.file_id,
+        title=report_title,
+        publisher=data.publisher or None,
+        taxonomy=data.taxonomy,
+        categories=data.categories,
+        region=data.region or None,
+        time_period=data.time_period or None,
+        source_url=data.source,
+        html_path=out_html,
+        md5=md5,
         ),
         ctx,
     )

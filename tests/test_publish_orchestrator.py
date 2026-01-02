@@ -12,6 +12,8 @@ class TestPublishOrchestrator(unittest.TestCase):
             schema_version="1.0",
             output_dir="./out",
             state_db=":memory:",
+            reports_db=":memory:",
+            category_mapping_path="./src/config/category-mappings.yaml",
             wp=WordPressAuthSettings(
                 schema_version="1.0",
                 site_url="https://example.com",

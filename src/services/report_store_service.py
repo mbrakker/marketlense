@@ -10,6 +10,8 @@ from typing import List, Optional
 from src.contracts.report_store import (
     ReportMetadataGetRequest,
     ReportMetadataGetResponse,
+    ReportMetadataListRequest,
+    ReportMetadataListResponse,
     ReportMetadataUpsertRequest,
 )
 from src.contracts.run_context import RunContext
@@ -24,6 +26,7 @@ CREATE TABLE IF NOT EXISTS reports (
   title TEXT NOT NULL,
   publisher TEXT,
   taxonomy_json TEXT NOT NULL,
+  categories_json TEXT NOT NULL,
   region TEXT,
   time_period TEXT,
   source_url TEXT,
@@ -45,6 +48,8 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE reports ADD COLUMN region TEXT")
     if "time_period" not in cols:
         conn.execute("ALTER TABLE reports ADD COLUMN time_period TEXT")
+    if "categories_json" not in cols:
+        conn.execute("ALTER TABLE reports ADD COLUMN categories_json TEXT DEFAULT '[]'")
     conn.commit()
 
 
@@ -95,6 +100,8 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
     md5 = request.md5.strip() if request.md5 and request.md5.strip() else None
     taxonomy = _clean_list(request.taxonomy)
     taxonomy_json = json.dumps(taxonomy, ensure_ascii=True)
+    categories = _clean_list(request.categories)
+    categories_json = json.dumps(categories, ensure_ascii=True)
     region = request.region.strip() if request.region and request.region.strip() else None
     time_period = request.time_period.strip() if request.time_period and request.time_period.strip() else None
 
@@ -111,17 +118,19 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
             "taxonomy_count": len(taxonomy),
             "region": region,
             "time_period": time_period,
+            "categories_count": len(categories),
         },
     ))
     with _metadata_conn(request.db_path) as conn:
         conn.execute(
             """
-            INSERT INTO reports(file_id, title, publisher, taxonomy_json, region, time_period, source_url, html_path, md5, created_at, updated_at)
-            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%s','now'), strftime('%s','now'))
+            INSERT INTO reports(file_id, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, created_at, updated_at)
+            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%s','now'), strftime('%s','now'))
             ON CONFLICT(file_id) DO UPDATE SET
                 title=excluded.title,
                 publisher=excluded.publisher,
                 taxonomy_json=excluded.taxonomy_json,
+                categories_json=excluded.categories_json,
                 region=excluded.region,
                 time_period=excluded.time_period,
                 source_url=excluded.source_url,
@@ -134,6 +143,7 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
                 request.title,
                 publisher,
                 taxonomy_json,
+                categories_json,
                 region,
                 time_period,
                 source_url,
@@ -161,7 +171,7 @@ def get_metadata(request: ReportMetadataGetRequest, ctx: RunContext) -> Optional
     with _metadata_conn(request.db_path) as conn:
         cur = conn.execute(
             """
-            SELECT file_id, title, publisher, taxonomy_json, region, time_period, source_url, html_path, md5, created_at, updated_at
+            SELECT file_id, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, created_at, updated_at
             FROM reports
             WHERE file_id=?
             """,
@@ -180,7 +190,9 @@ def get_metadata(request: ReportMetadataGetRequest, ctx: RunContext) -> Optional
         return None
 
     taxonomy_json = row[3] or "[]"
+    categories_json = row[4] or "[]"
     taxonomy: List[str] = []
+    categories: List[str] = []
     try:
         parsed = json.loads(taxonomy_json)
         if isinstance(parsed, list):
@@ -193,20 +205,33 @@ def get_metadata(request: ReportMetadataGetRequest, ctx: RunContext) -> Optional
             module=logger.name,
             fields={"file_id": request.file_id},
         ))
+    try:
+        parsed_cats = json.loads(categories_json)
+        if isinstance(parsed_cats, list):
+            categories = _clean_list([str(item) for item in parsed_cats])
+    except json.JSONDecodeError:
+        logger.info(log_event(
+            ctx,
+            role="service",
+            event="report_metadata_categories_parse_failed",
+            module=logger.name,
+            fields={"file_id": request.file_id},
+        ))
 
     response = ReportMetadataGetResponse(
         schema_version="1.0",
         file_id=row[0],
         title=row[1],
-        created_at=int(row[9]),
-        updated_at=int(row[10]),
+        created_at=int(row[10]),
+        updated_at=int(row[11]),
         publisher=row[2],
         taxonomy=taxonomy,
-        region=row[4],
-        time_period=row[5],
-        source_url=row[6],
-        html_path=row[7],
-        md5=row[8],
+        categories=categories,
+        region=row[5],
+        time_period=row[6],
+        source_url=row[7],
+        html_path=row[8],
+        md5=row[9],
     )
     logger.info(log_event(
         ctx,
@@ -216,3 +241,74 @@ def get_metadata(request: ReportMetadataGetRequest, ctx: RunContext) -> Optional
         fields={"file_id": request.file_id, "found": True},
     ))
     return response
+
+
+def list_metadata(request: ReportMetadataListRequest, ctx: RunContext) -> ReportMetadataListResponse:
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="report_metadata_list_start",
+        module=logger.name,
+        fields={"db_path": request.db_path},
+    ))
+    rows: List[ReportMetadataGetResponse] = []
+    with _metadata_conn(request.db_path) as conn:
+        cur = conn.execute(
+            """
+            SELECT file_id, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, created_at, updated_at
+            FROM reports
+            ORDER BY created_at ASC
+            """
+        )
+        for row in cur.fetchall():
+            taxonomy_json = row[3] or "[]"
+            categories_json = row[4] or "[]"
+            taxonomy: List[str] = []
+            categories: List[str] = []
+            try:
+                parsed = json.loads(taxonomy_json)
+                if isinstance(parsed, list):
+                    taxonomy = _clean_list([str(item) for item in parsed])
+            except json.JSONDecodeError:
+                logger.info(log_event(
+                    ctx,
+                    role="service",
+                    event="report_metadata_taxonomy_parse_failed",
+                    module=logger.name,
+                    fields={"file_id": row[0]},
+                ))
+            try:
+                parsed_cats = json.loads(categories_json)
+                if isinstance(parsed_cats, list):
+                    categories = _clean_list([str(item) for item in parsed_cats])
+            except json.JSONDecodeError:
+                logger.info(log_event(
+                    ctx,
+                    role="service",
+                    event="report_metadata_categories_parse_failed",
+                    module=logger.name,
+                    fields={"file_id": row[0]},
+                ))
+            rows.append(ReportMetadataGetResponse(
+                schema_version="1.0",
+                file_id=row[0],
+                title=row[1],
+                created_at=int(row[10]),
+                updated_at=int(row[11]),
+                publisher=row[2],
+                taxonomy=taxonomy,
+                categories=categories,
+                region=row[5],
+                time_period=row[6],
+                source_url=row[7],
+                html_path=row[8],
+                md5=row[9],
+            ))
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="report_metadata_list_complete",
+        module=logger.name,
+        fields={"db_path": request.db_path, "count": len(rows)},
+    ))
+    return ReportMetadataListResponse(schema_version="1.0", records=rows)
