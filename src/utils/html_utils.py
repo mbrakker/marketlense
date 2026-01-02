@@ -9,7 +9,10 @@ _IMG_SRC_RX = re.compile(r'<img[^>]+src=["\']([^"\']+)["\']', re.IGNORECASE)
 _TITLE_RX = re.compile(r"<title>(.*?)</title>", re.IGNORECASE | re.DOTALL)
 _H1_RX = re.compile(r"<h1[^>]*>(.*?)</h1>", re.IGNORECASE | re.DOTALL)
 _BODY_RX = re.compile(r"<body[^>]*>(.*?)</body>", re.IGNORECASE | re.DOTALL)
-_FILE_ID_RX = re.compile(r"Drive fileId:\s*([A-Za-z0-9_\-]+)", re.IGNORECASE)
+_FILE_ID_META_RX = re.compile(
+    r'<meta[^>]+name=["\']drive-file-id["\'][^>]+content=["\']([^"\']+)["\']',
+    re.IGNORECASE,
+)
 _PREVIEW_BLOCK_RX = re.compile(r'<div class="preview".*?</div>', re.IGNORECASE | re.DOTALL)
 
 
@@ -43,9 +46,9 @@ def extract_body_html(html_text: str) -> str:
 
 
 def extract_file_id(html_text: str) -> Optional[str]:
-    m = _FILE_ID_RX.search(html_text)
-    if m:
-        return m.group(1)
+    m_meta = _FILE_ID_META_RX.search(html_text)
+    if m_meta:
+        return m_meta.group(1)
     return None
 
 
