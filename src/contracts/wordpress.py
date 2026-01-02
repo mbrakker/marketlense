@@ -43,6 +43,7 @@ class WordPressPostCreateRequest:
     slug: Optional[str] = field(default=None, metadata={"doc": "Optional post slug."})
     featured_media: Optional[int] = field(default=None, metadata={"doc": "Optional featured media ID."})
     categories: Optional[List[int]] = field(default=None, metadata={"doc": "Optional WordPress category IDs."})
+    tags: Optional[List[int]] = field(default=None, metadata={"doc": "Optional WordPress tag IDs."})
 
 
 @dataclass(frozen=True)
@@ -89,6 +90,20 @@ class WordPressCategoryEnsureRequest:
 class WordPressCategoryEnsureResponse:
     schema_version: str = field(metadata={"doc": "Category ensure response schema version."})
     slug_to_id: Dict[str, int] = field(metadata={"doc": "Mapping of category slug to WordPress term ID."})
+
+
+@dataclass(frozen=True)
+class WordPressTagEnsureRequest:
+    schema_version: str = field(metadata={"doc": "Tag ensure request schema version."})
+    base_url: str = field(metadata={"doc": "WordPress site base URL."})
+    auth_header: str = field(metadata={"doc": "Authorization header value."})
+    tags: List[str] = field(metadata={"doc": "Tag slugs to ensure exist."})
+
+
+@dataclass(frozen=True)
+class WordPressTagEnsureResponse:
+    schema_version: str = field(metadata={"doc": "Tag ensure response schema version."})
+    slug_to_id: Dict[str, int] = field(metadata={"doc": "Mapping of tag slug to WordPress term ID."})
 
 
 @dataclass(frozen=True)

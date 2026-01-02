@@ -19,6 +19,8 @@ from src.contracts.wordpress import (
     WordPressPostLookupResponse,
     WordPressPostUpdateRequest,
     WordPressPostUpdateResponse,
+    WordPressTagEnsureRequest,
+    WordPressTagEnsureResponse,
 )
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -108,6 +110,7 @@ def create_post(request: WordPressPostCreateRequest, ctx: RunContext) -> WordPre
             "status": request.status,
             "slug": request.slug,
             "categories_count": len(request.categories or []),
+            "tags_count": len(request.tags or []),
         },
     ))
     url = f"{request.base_url.rstrip('/')}/wp-json/wp/v2/posts"
@@ -126,6 +129,8 @@ def create_post(request: WordPressPostCreateRequest, ctx: RunContext) -> WordPre
         payload["featured_media"] = request.featured_media
     if request.categories:
         payload["categories"] = request.categories
+    if request.tags:
+        payload["tags"] = request.tags
 
     try:
         resp = requests.post(url, headers=headers, data=json.dumps(payload), timeout=DEFAULT_TIMEOUT)
@@ -337,6 +342,96 @@ def ensure_categories(request: WordPressCategoryEnsureRequest, ctx: RunContext) 
         fields={"count": len(slug_to_id)},
     ))
     return WordPressCategoryEnsureResponse(schema_version="1.0", slug_to_id=slug_to_id)
+
+
+def ensure_tags(request: WordPressTagEnsureRequest, ctx: RunContext) -> WordPressTagEnsureResponse:
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="wp_tag_ensure_start",
+        module=logger.name,
+        fields={"count": len(request.tags)},
+    ))
+    base_url = f"{request.base_url.rstrip('/')}/wp-json/wp/v2/tags"
+    slug_to_id: Dict[str, int] = {}
+    headers = {
+        "Authorization": request.auth_header,
+        "Content-Type": "application/json",
+    }
+    for slug in request.tags:
+        try:
+            resp = requests.get(base_url, headers={"Authorization": request.auth_header}, params={"slug": slug}, timeout=DEFAULT_TIMEOUT)
+        except requests.RequestException as exc:
+            raise AppError(
+                code="wp_tag_lookup_failed",
+                message="Failed to lookup WordPress tag",
+                cause=exc,
+                retryable=True,
+            ) from exc
+        if resp.status_code >= 500:
+            raise AppError(
+                code="wp_tag_lookup_server_error",
+                message=f"Tag lookup server error: {resp.status_code}",
+                retryable=True,
+            )
+        if resp.status_code >= 400:
+            raise AppError(
+                code="wp_tag_lookup_client_error",
+                message=f"Tag lookup client error: {resp.status_code}",
+                retryable=False,
+            )
+        tag_id: Optional[int] = None
+        try:
+            payload = json.loads(resp.text)
+        except Exception:
+            payload = []
+        if isinstance(payload, list) and payload:
+            tag_id = payload[0].get("id")
+        if not tag_id:
+            try:
+                create_resp = requests.post(
+                    base_url,
+                    headers=headers,
+                    data=json.dumps({"name": slug, "slug": slug}),
+                    timeout=DEFAULT_TIMEOUT,
+                )
+            except requests.RequestException as exc:
+                raise AppError(
+                    code="wp_tag_create_failed",
+                    message="Failed to create WordPress tag",
+                    cause=exc,
+                    retryable=True,
+                ) from exc
+            if create_resp.status_code >= 500:
+                raise AppError(
+                    code="wp_tag_create_server_error",
+                    message=f"Tag create server error: {create_resp.status_code}",
+                    retryable=True,
+                )
+            if create_resp.status_code >= 400:
+                raise AppError(
+                    code="wp_tag_create_client_error",
+                    message=f"Tag create client error: {create_resp.status_code}",
+                    retryable=False,
+                )
+            data = _safe_json(create_resp.text)
+            tag_id = data.get("id")
+        if not tag_id:
+            raise AppError(
+                code="wp_tag_invalid_response",
+                message="Tag ensure returned invalid response",
+                retryable=False,
+            )
+        slug_to_id[slug] = int(tag_id)
+
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="wp_tag_ensure_complete",
+        module=logger.name,
+        fields={"count": len(slug_to_id)},
+    ))
+    return WordPressTagEnsureResponse(schema_version="1.0", slug_to_id=slug_to_id)
 
 
 def update_post_categories(request: WordPressPostUpdateRequest, ctx: RunContext) -> WordPressPostUpdateResponse:
