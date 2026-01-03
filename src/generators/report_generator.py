@@ -25,6 +25,7 @@ from src.contracts.report_assets import (
 )
 from src.contracts.run_context import RunContext
 from src.contracts.categories import CategoryMappingLoadRequest, UncategorizedTagsUpdateRequest
+from src.contracts.pdf_utils import PdfInfoRequest
 from src.generators.categorize_generator import categorize_taxonomy
 from src.generators.normalize_generator import normalize_report
 from src.services.crop_service import crop_regions as crop_regions_service
@@ -38,6 +39,7 @@ from src.services.category_mapping_service import (
     update_uncategorized_tags,
 )
 from src.services.report_store_service import upsert_metadata as upsert_report_metadata
+from src.services.pdf_utils_service import extract_pdf_info
 from src.utils.logging import log_event
 from src.utils.validation import validate_candidate, validate_report_payload
 
@@ -63,6 +65,18 @@ def generate_report(
         event="report_generate_start",
         module=logger.name,
         fields={"file_id": file.file_id, "name": file.name},
+    ))
+
+    info_resp = extract_pdf_info(
+        PdfInfoRequest(schema_version="1.0", path=local_pdf_path),
+        ctx,
+    )
+    logger.info(log_event(
+        ctx,
+        role="generator",
+        event="pdf_info_loaded",
+        module=logger.name,
+        fields={"file_id": file.file_id, "page_count": info_resp.page_count, "metadata_keys": list(info_resp.metadata.keys())},
     ))
 
     text_resp = extract_pdf_text(
@@ -413,6 +427,8 @@ def generate_report(
         source_url=data.source,
         html_path=out_html,
         md5=md5,
+        page_count=info_resp.page_count,
+        pdf_metadata=info_resp.metadata,
         ),
         ctx,
     )

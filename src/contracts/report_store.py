@@ -18,6 +18,8 @@ class ReportMetadataUpsertRequest:
     source_url: Optional[str] = field(default=None, metadata={"doc": "Primary source URL associated with the report."})
     html_path: Optional[str] = field(default=None, metadata={"doc": "Filesystem path to the rendered HTML, if available."})
     md5: Optional[str] = field(default=None, metadata={"doc": "MD5 checksum of the source PDF, if available."})
+    page_count: Optional[int] = field(default=None, metadata={"doc": "Total pages in the source PDF, if known."})
+    pdf_metadata: dict[str, str] = field(default_factory=dict, metadata={"doc": "Flattened PDF metadata for the source document."})
 
 
 @dataclass(frozen=True)
@@ -42,6 +44,8 @@ class ReportMetadataGetResponse:
     source_url: Optional[str] = field(default=None, metadata={"doc": "Primary source URL associated with the report."})
     html_path: Optional[str] = field(default=None, metadata={"doc": "Filesystem path to the rendered HTML, if available."})
     md5: Optional[str] = field(default=None, metadata={"doc": "MD5 checksum of the source PDF, if available."})
+    page_count: Optional[int] = field(default=None, metadata={"doc": "Total pages in the source PDF, if known."})
+    pdf_metadata: dict[str, str] = field(default_factory=dict, metadata={"doc": "Flattened PDF metadata for the source document."})
 
 
 @dataclass(frozen=True)

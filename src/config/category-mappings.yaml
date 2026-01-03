@@ -2,7 +2,8 @@ schema_version: '1.0'
 categories:
 - id: retail_logistics
   label: Retail Logistics & Fulfillment
-  description: Inventory, warehousing, last-mile delivery, and omnichannel fulfillment operations.
+  description: Inventory, warehousing, last-mile delivery, and omnichannel fulfillment
+    operations.
   tags:
   - retail_logistics
   - fulfillment
@@ -28,7 +29,8 @@ categories:
   - subscriptions
 - id: consumer_behavior
   label: Consumer Behavior & Insights
-  description: Consumer attitudes, decision drivers, and shopping behaviors across journeys.
+  description: Consumer attitudes, decision drivers, and shopping behaviors across
+    journeys.
   tags:
   - consumer_behavior
   - consumer_insights
@@ -224,3 +226,18 @@ categories:
   - conversion_rate_optimization
   - cro
   - discovery
+uncategorized:
+- title: Sports media and betting outlook 2025
+  tags:
+  - sports_streaming
+  - live_sports
+  - nfl
+  - nba
+  - regional_sports_networks
+  - media_rights
+- title: 'Technology & Media Outlook 2025: Super Users'
+  tags:
+  - super_users
+  - multi_tasking
+  - immersive_experiences
+  - livestream_shopping
