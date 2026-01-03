@@ -67,6 +67,7 @@ src/
 
 6. **Report generation (per file)**
    - `src/generators/report_generator.py` runs the core pipeline:
+     - **PDF info**: `pdf_utils_service.extract_pdf_info` captures page count and sanitized PDF metadata for persistence.
      - **Text extraction**: `pdf_text_service` extracts text from the first N pages.
      - **LLM analysis**: Sends prompt + extracted text to OpenAI for structured JSON output.
      - **Normalization**: `normalize_generator` enforces strict schema and list sizing.
@@ -159,10 +160,11 @@ Prompts are rendered with Jinja2 (`{{ variable }}`), loaded and hashed by `src/s
 
 ## Category mappings
 
-- Canonical categories live in `src/config/category-mappings.yaml` (versioned by `schema_version`).
-- Taxonomy tags are matched against this file; each matching tag gives its category +1 point and the top 3 categories are assigned to the report and stored in the metadata DB.
-- Any taxonomy tags that do not map are appended to the `uncategorized` section in the same YAML under the report title. When tags become mapped later, they are removed from `uncategorized` on the next categorization pass.
-- Assigned categories are rendered in the HTML metadata block and synchronized to WordPress posts.
+- Source of truth: `src/config/category-mappings.yaml` (versioned by `schema_version`).
+- Scoring: each matched tag adds +1 to a category; top 3 categories are assigned to the report and stored in the metadata DB; categories sync to WordPress posts but are not rendered in HTML.
+- Maintenance: add categories with `id` (snake_case), `label`, `description`, and a focused `tags` list (lowercase, snake_case). Place new entries at the top to keep recent taxonomies visible.
+- Current taxonomy highlights: `digital_payments`, `retail_logistics`, `consumer_behavior`, `business_performance`, `agentic_commerce`, plus existing advertising, commerce, CTV, social video, and measurement tracks.
+- Unmapped handling: uncategorized tags are removed once mapped; if new tags appear, run `python -m src.cli recategorize` to refresh assignments and prune stale uncategorized entries.
 
 ---
 
@@ -179,7 +181,8 @@ Key contracts live under `src/contracts/`:
 - `publish.py`: publish settings, requests, and outcomes
 - `state.py`: state store contracts
 - `wordpress.py`: WordPress request/response and auth settings
-- `pdf_utils.py`: EOF check contract
+- `pdf_utils.py`: EOF check and PDF info (page count + metadata) contracts
+- `report_store.py`: report metadata upsert/get/list contracts, including page count and flattened PDF metadata
 
 ---
 
@@ -196,7 +199,7 @@ Minimal unit tests exist under `tests/`:
 Run tests locally:
 
 ```bash
-python -m unittest discover -s tests
+python -m pytest
 ```
 
 CI runs these tests via `.github/workflows/ci.yml`.
