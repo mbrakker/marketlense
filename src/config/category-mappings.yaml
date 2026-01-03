@@ -1,5 +1,129 @@
 schema_version: '1.0'
 categories:
+- id: chinese_online_platforms
+  label: Chinese Online Platforms
+  description: China-based ecommerce and social platforms, including marketplace and social commerce ecosystems.
+  tags:
+  - chinese_online_platforms
+  - china_marketplaces
+  - tmall
+  - aliexpress
+  - shein
+  - temu
+  - jd
+  - pinduoduo
+  - douyin
+  - wechat_mini_programs
+  - alibaba
+  - taobao
+  - crossborder_from_china
+- id: online_crossborder
+  label: Online Cross-Border Commerce
+  description: Cross-border ecommerce operations, localization, payments, duties, and logistics.
+  tags:
+  - online_crossborder
+  - crossborder
+  - cross_border
+  - crossborder_ecommerce
+  - localization
+  - multi_currency
+  - duties_and_taxes
+  - international_shipping
+  - customs
+  - global_logistics
+- id: tiktok_shop
+  label: TikTok Shop
+  description: TikTok-native commerce including shoppable video, creator-led selling, and in-app checkout.
+  tags:
+  - tiktok_shop
+  - tiktok
+  - shoppable_video
+  - live_shopping
+  - creator_commerce
+  - creator_affiliate
+  - in_app_checkout
+  - short_video_commerce
+  - shop_tab
+- id: social_commerce
+  label: Social Commerce
+  description: Shopping experiences embedded in social platforms, including live shopping, creator-led commerce, and in-app checkout.
+  tags:
+  - social_commerce
+  - social_shopping
+  - live_shopping
+  - in_app_checkout
+  - creator_commerce
+  - shoppable_video
+  - social_marketplace
+  - shop_tab
+  - link_in_bio
+  - tiktok_shop
+- id: online_marketplaces
+  label: Online Marketplaces & Platforms
+  description: Multi-seller marketplaces, platform operations, and marketplace growth strategies.
+  tags:
+  - online_marketplaces
+  - marketplaces
+  - marketplace_growth
+  - seller_acquisition
+  - category_expansion
+  - marketplace_trust
+  - platform_fees
+  - take_rate
+  - buyer_seller_flywheel
+  - sponsored_products
+  - sponsored_brands
+  - buy_box
+- id: amazon
+  label: Amazon Marketplace & Advertising
+  description: Amazon retail, marketplace operations, and Amazon Ads strategies.
+  tags:
+  - amazon
+  - amazon_ads
+  - amazon_dsp
+  - vendor_central
+  - seller_central
+  - amazon_marketplace
+  - retail_readiness
+  - fba
+  - fulfillment_by_amazon
+  - fbs
+  - amazon_sponsored_products
+  - amazon_sponsored_brands
+  - amazon_live
+  - rufus
+  - amc
+  - amazon_programmatic
+  - amazon_publisher_services
+  - amazon_attribution
+  - amazon_audio_ads
+  - amazon_connected_tv
+  - amazon_hardware
+  - amazon_devices
+  - alexa
+  - amazon_echo
+  - fire_tv
+  - kindle
+  - avn
+  - amazon_private_label
+  - amazon_vendor_negotiation
+  - avs
+  - amazon_vendor_services
+- id: technology
+  label: Technology & Innovation
+  description: Core technology platforms, infrastructure, and emerging innovations
+    shaping products and operations.
+  tags:
+  - technology
+  - tech_trends
+  - emerging_tech
+  - enterprise_tech
+  - cloud_infrastructure
+  - software_platforms
+  - hardware
+  - innovation
+  - smart_cameras
+  - ar_vr
 - id: retail_logistics
   label: Retail Logistics & Fulfillment
   description: Inventory, warehousing, last-mile delivery, and omnichannel fulfillment
@@ -40,6 +164,17 @@ categories:
   - decision_drivers
   - sentiment_analysis
   - behavioral_data
+  - super_users
+  - multi_tasking
+  - immersive_experiences
+  - livestream_shopping
+  - consumer_attention
+  - multitasking
+  - video
+  - social_media
+  - shopper_journey
+  - ratings_and_reviews
+  - price_comparison
 - id: business_performance
   label: Business Performance & Growth
   description: Revenue growth, profitability, and commercial performance metrics and
@@ -99,6 +234,7 @@ categories:
   - digital_advertising
   - consumer_internet
   - sports_betting
+  - internet_and_media
 - id: retail_media
   label: Retail & Commerce Media
   description: Retailer-owned ad networks and commerce monetization.
@@ -118,10 +254,22 @@ categories:
   - ctv
   - streaming_tv
   - streaming_video
+  - streaming
   - ott
   - avod
   - fast
   - streaming_ads
+  - sports_streaming
+  - live_sports
+  - nfl
+  - nba
+  - regional_sports_networks
+  - media_rights
+  - traditional_tv
+  - pay_tv
+  - virtual_pay_tv
+  - svod
+  - podcasting
 - id: measurement_attribution
   label: Measurement & Attribution
   description: Performance measurement, incrementality, and optimization.
@@ -139,6 +287,8 @@ categories:
   - forecasting
   - media_forecast
   - market_forecast
+  - forecasts
+  - growth_forecast
 - id: privacy_identity
   label: Privacy, Identity & Data
   description: Identity resolution, data collaboration, and compliance.
@@ -154,6 +304,7 @@ categories:
   - third_party_cookies
   - cookieless
   - content_licensing
+  - advertising_identity
 - id: ai_automation
   label: AI & Automation
   description: AI-driven optimization, copilots, and workflow automation.
@@ -178,6 +329,11 @@ categories:
   - digital_shelf
   - marketplace_ads
   - marketplaces
+  - product_content
+  - amazon
+  - enhanced_content
+  - holiday_shopping
+  - uk_retail
 - id: programmatic_ad_tech
   label: Programmatic & Ad Tech
   description: Buying platforms, exchanges, and supply-path optimization.
@@ -226,18 +382,13 @@ categories:
   - conversion_rate_optimization
   - cro
   - discovery
-uncategorized:
-- title: Sports media and betting outlook 2025
-  tags:
-  - sports_streaming
-  - live_sports
-  - nfl
-  - nba
-  - regional_sports_networks
-  - media_rights
-- title: 'Technology & Media Outlook 2025: Super Users'
-  tags:
-  - super_users
-  - multi_tasking
-  - immersive_experiences
-  - livestream_shopping
+  - conversion_rate
+  - retailer_search
+  - organic_rank
+  - keyword_strategy
+  - ecommerce_pricing
+  - price_benchmarking
+  - inflation
+  - joint_business_plans
+  - organizational_transformation
+  - automation_and_ai
