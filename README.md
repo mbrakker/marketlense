@@ -68,12 +68,13 @@ src/
 6. **Report generation (per file)**
    - `src/generators/report_generator.py` runs the core pipeline:
      - **PDF info**: `pdf_utils_service.extract_pdf_info` captures page count and sanitized PDF metadata for persistence.
-     - **Text extraction**: `pdf_text_service` extracts text from the first N pages.
-     - **LLM analysis**: Sends prompt + extracted text to OpenAI for structured JSON output.
-     - **Normalization**: `normalize_generator` enforces strict schema and list sizing.
-     - **Categorization**: taxonomy tags are scored against `src/config/category-mappings.yaml`; top 3 categories are stored and rendered, and unmapped tags are appended under `uncategorized` in that YAML.
-     - **Figure selection**: `figure_service` selects a representative visual and caption.
-     - **Candidate extraction**: `extract_service` finds chart/table regions.
+     - **PDF context**: `pdf_context_service.build_pdf_context` opens PyMuPDF and pypdf handles once; downstream services reuse them and fall back to local opens if unavailable.
+     - **Text extraction**: `pdf_text_service` extracts text from the first N pages (reusing the shared context when present).
+      - **LLM analysis**: Sends prompt + extracted text to OpenAI for structured JSON output.
+      - **Normalization**: `normalize_generator` enforces strict schema and list sizing.
+      - **Categorization**: taxonomy tags are scored against `src/config/category-mappings.yaml`; top 3 categories are stored and rendered, and unmapped tags are appended under `uncategorized` in that YAML.
+      - **Figure selection**: `figure_service` selects a representative visual and caption.
+      - **Candidate extraction**: `extract_service` finds chart/table regions.
      - **Candidate ranking**: `rank_service` scores candidates via LLM.
      - **Cropping**: `crop_service` crops top-ranked regions.
      - **Preview rendering**: `preview_service` renders the first page to PNG.
@@ -156,6 +157,8 @@ src/prompts/report_generation/
 Additional prompt namespaces (for example `rank_candidates/`) live alongside `report_generation/`.
 Prompts are rendered with Jinja2 (`{{ variable }}`), loaded and hashed by `src/services/prompt_service.py`, and logged with their SHA256 hashes for reproducibility.
 
+- Prompt caching: prompt sets are cached in-memory per namespace for the duration of a process. `PromptLoadRequest` supports `reload_if_changed` (mtime check) and `force_reload` (bypass cache) when you need to pick up edited prompt files mid-run.
+
 ---
 
 ## Category mappings
@@ -165,6 +168,7 @@ Prompts are rendered with Jinja2 (`{{ variable }}`), loaded and hashed by `src/s
 - Maintenance: add categories with `id` (snake_case), `label`, `description`, and a focused `tags` list (lowercase, snake_case). Place new entries at the top to keep recent taxonomies visible.
 - Current taxonomy highlights: `digital_payments`, `retail_logistics`, `consumer_behavior`, `business_performance`, `agentic_commerce`, plus existing advertising, commerce, CTV, social video, and measurement tracks.
 - Unmapped handling: uncategorized tags are removed once mapped; if new tags appear, run `python -m src.cli recategorize` to refresh assignments and prune stale uncategorized entries.
+- Mapping caching: category mappings are cached in-memory per path with optional `reload_if_changed`/`force_reload` flags on `CategoryMappingLoadRequest`. Uncategorized tag writes are batched in memory and flushed once per run by orchestrators (ingest/recategorize) to reduce YAML churn.
 
 ---
 
@@ -181,6 +185,7 @@ Key contracts live under `src/contracts/`:
 - `publish.py`: publish settings, requests, and outcomes
 - `state.py`: state store contracts
 - `wordpress.py`: WordPress request/response and auth settings
+- `pdf_context.py`: shared PDF context (PyMuPDF + pypdf handles) and build request/response contracts
 - `pdf_utils.py`: EOF check and PDF info (page count + metadata) contracts
 - `report_store.py`: report metadata upsert/get/list contracts, including page count and flattened PDF metadata
 
