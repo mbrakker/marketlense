@@ -172,7 +172,10 @@ def collect_candidates(request: ExtractCandidatesRequest, ctx: RunContext) -> Ex
         role="service",
         event="extract_candidates_start",
         module=logger.name,
-        fields={"pdf_path": request.pdf_path},
+        fields={
+            "pdf_path": request.pdf_path,
+            "using_context": bool(request.pdf_context and request.pdf_context.fitz_doc),
+        },
     ))
     thumbs = Path(request.out_dir) / request.report_name / "thumbs"
     candidates = _extract_charts(
@@ -180,7 +183,7 @@ def collect_candidates(request: ExtractCandidatesRequest, ctx: RunContext) -> Ex
         thumbs.as_posix(),
         request.report_name,
         save_thumbs=False,
-        doc=None,
+        doc=request.pdf_context.fitz_doc if request.pdf_context else None,
     ) + _extract_tables(request.pdf_path)
     logger.info(log_event(
         ctx,

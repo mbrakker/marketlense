@@ -19,14 +19,18 @@ def render_preview(request: PreviewRequest, ctx: RunContext) -> PreviewResponse:
         role="service",
         event="preview_render_start",
         module=logger.name,
-        fields={"pdf_path": request.pdf_path, "dpi": request.dpi},
+        fields={
+            "pdf_path": request.pdf_path,
+            "dpi": request.dpi,
+            "using_context": bool(request.pdf_context and request.pdf_context.fitz_doc),
+        },
     ))
     img_path = _first_page_png(
         request.pdf_path,
         request.out_dir,
         request.report_name,
         dpi=request.dpi,
-        doc=None,
+        doc=request.pdf_context.fitz_doc if request.pdf_context else None,
     )
     logger.info(log_event(
         ctx,

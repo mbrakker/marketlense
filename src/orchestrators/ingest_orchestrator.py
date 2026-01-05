@@ -6,6 +6,7 @@ import time
 from pathlib import Path
 from typing import Iterable, List, Optional
 
+from src.contracts.categories import UncategorizedTagsFlushRequest
 from src.contracts.pdf_utils import PdfEofCheckRequest
 from src.services.pdf_utils_service import check_pdf_eof
 from src.contracts.drive import DriveDownloadRequest, DriveListRequest, DriveFile
@@ -25,6 +26,7 @@ from src.services.lock_service import acquire_lock, release_lock
 from src.services.state_service import already_processed as state_already_processed
 from src.services.state_service import record as state_record
 from src.contracts.state import StateCheckRequest, StateRecordRequest
+from src.services.category_mapping_service import flush_uncategorized_tags
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.errors import AppError
 from src.utils.path_utils import safe_pdf_name
@@ -291,6 +293,22 @@ def run_ingest(
         ))
         return outcomes
     finally:
+        try:
+            flush_uncategorized_tags(
+                UncategorizedTagsFlushRequest(
+                    schema_version="1.0",
+                    path=settings.category_mapping_path,
+                ),
+                ctx,
+            )
+        except Exception as exc:
+            logger.info(log_event(
+                ctx,
+                role="orchestrator",
+                event="ingest_uncategorized_flush_failed",
+                module=logger.name,
+                fields={"path": settings.category_mapping_path, "error": str(exc)},
+            ))
         if lock_info:
             try:
                 release_lock(

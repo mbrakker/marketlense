@@ -2,7 +2,8 @@ schema_version: '1.0'
 categories:
 - id: chinese_online_platforms
   label: Chinese Online Platforms
-  description: China-based ecommerce and social platforms, including marketplace and social commerce ecosystems.
+  description: China-based ecommerce and social platforms, including marketplace and
+    social commerce ecosystems.
   tags:
   - chinese_online_platforms
   - china_marketplaces
@@ -19,7 +20,8 @@ categories:
   - crossborder_from_china
 - id: online_crossborder
   label: Online Cross-Border Commerce
-  description: Cross-border ecommerce operations, localization, payments, duties, and logistics.
+  description: Cross-border ecommerce operations, localization, payments, duties,
+    and logistics.
   tags:
   - online_crossborder
   - crossborder
@@ -33,7 +35,8 @@ categories:
   - global_logistics
 - id: tiktok_shop
   label: TikTok Shop
-  description: TikTok-native commerce including shoppable video, creator-led selling, and in-app checkout.
+  description: TikTok-native commerce including shoppable video, creator-led selling,
+    and in-app checkout.
   tags:
   - tiktok_shop
   - tiktok
@@ -46,7 +49,8 @@ categories:
   - shop_tab
 - id: social_commerce
   label: Social Commerce
-  description: Shopping experiences embedded in social platforms, including live shopping, creator-led commerce, and in-app checkout.
+  description: Shopping experiences embedded in social platforms, including live shopping,
+    creator-led commerce, and in-app checkout.
   tags:
   - social_commerce
   - social_shopping
@@ -60,7 +64,8 @@ categories:
   - tiktok_shop
 - id: online_marketplaces
   label: Online Marketplaces & Platforms
-  description: Multi-seller marketplaces, platform operations, and marketplace growth strategies.
+  description: Multi-seller marketplaces, platform operations, and marketplace growth
+    strategies.
   tags:
   - online_marketplaces
   - marketplaces
@@ -392,3 +397,68 @@ categories:
   - joint_business_plans
   - organizational_transformation
   - automation_and_ai
+uncategorized:
+- title: Online Nation 2025
+  tags:
+  - online_usage
+  - messaging_apps
+  - age_assurance
+  - vpn_behavior
+- title: 'Health at a Glance 2025: OECD indicators'
+  tags:
+  - health_system_performance
+  - gender_and_health
+  - health_expenditure
+  - access_and_quality
+  - risk_factors
+  - international_benchmarking
+- title: United States Outlook 2026
+  tags:
+  - ai_growth
+  - data_centers
+  - commercial_real_estate
+  - interest_rates
+  - labor_market
+  - gdp_growth
+- title: 'On the horizon 2026: home and family trends'
+  tags:
+  - home_trends
+  - positive_masculinity
+  - spirituality
+  - smart_home
+  - domestic_robots
+- title: European outlook 2026
+  tags:
+  - commercial_real_estate
+  - european_economy
+  - ai_and_productivity
+  - data_centres
+  - interest_rates
+  - office_demand
+- title: '2026 food trends: what''s next in dining'
+  tags:
+  - food_trends
+  - personalization
+  - value_perception
+  - sensory_experience
+- title: '2026 UK consumer trends: the trust deficit'
+  tags:
+  - consumer_trust
+  - spending_behavior
+  - cost_of_living
+  - uk_market
+  - public_sentiment
+- title: 'Tech trends 2026: from experimentation to impact'
+  tags:
+  - ai_infrastructure
+  - agentic_ai
+  - robotics
+  - cybersecurity
+  - edge_ai
+- title: '2026 marketing playbook: AI agents, retail media and inclusive growth'
+  tags:
+  - ai_agents
+  - generative_engine_optimisation
+  - synthetic_data
+  - creator_marketing
+  - inclusive_marketing

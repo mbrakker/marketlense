@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict
 
@@ -28,8 +29,20 @@ JINJA_ENV = Environment(
     keep_trailing_newline=True,
 )
 
+@dataclass(frozen=True)
+class _PromptCacheEntry:
+    prompt_set: PromptSet
+    system_mtime: float
+    user_mtime: float
+
+
+_PROMPT_CACHE: Dict[str, _PromptCacheEntry] = {}
+
 
 def load_prompt_set(request: PromptLoadRequest, ctx: RunContext) -> PromptSet:
+    base = PROMPTS_ROOT / request.namespace
+    system_path = base / "system.yaml"
+    user_path = base / "user.yaml"
     logger.info(log_event(
         ctx,
         role="service",
@@ -37,11 +50,59 @@ def load_prompt_set(request: PromptLoadRequest, ctx: RunContext) -> PromptSet:
         module=logger.name,
         fields={"namespace": request.namespace},
     ))
-    base = PROMPTS_ROOT / request.namespace
-    system_path = base / "system.yaml"
-    user_path = base / "user.yaml"
-    system_template = _load_prompt(system_path)
-    user_template = _load_prompt(user_path)
+    cache_entry = _PROMPT_CACHE.get(request.namespace)
+    prompt_set: PromptSet | None = None
+    source = "reloaded"
+    if cache_entry and not request.force_reload:
+        if not request.reload_if_changed:
+            logger.info(log_event(
+                ctx,
+                role="service",
+                event="prompt_load_cache_hit",
+                module=logger.name,
+                fields={"namespace": request.namespace, "validated": False},
+            ))
+            prompt_set = cache_entry.prompt_set
+            source = "cache"
+        elif _is_prompt_cache_valid(cache_entry, system_path, user_path):
+            logger.info(log_event(
+                ctx,
+                role="service",
+                event="prompt_load_cache_hit",
+                module=logger.name,
+                fields={
+                    "namespace": request.namespace,
+                    "validated": True,
+                    "system_path": cache_entry.prompt_set.system.path,
+                    "user_path": cache_entry.prompt_set.user.path,
+                },
+            ))
+            prompt_set = cache_entry.prompt_set
+            source = "cache_validated"
+        else:
+            logger.info(log_event(
+                ctx,
+                role="service",
+                event="prompt_load_cache_stale",
+                module=logger.name,
+                fields={"namespace": request.namespace},
+            ))
+    if prompt_set is None:
+        system_template = _load_prompt(system_path)
+        user_template = _load_prompt(user_path)
+        prompt_set = PromptSet(
+            schema_version="1.0",
+            system=system_template,
+            user=user_template,
+        )
+        _PROMPT_CACHE[request.namespace] = _PromptCacheEntry(
+            prompt_set=prompt_set,
+            system_mtime=_get_mtime(system_path),
+            user_mtime=_get_mtime(user_path),
+        )
+    else:
+        system_template = prompt_set.system
+        user_template = prompt_set.user
     logger.info(log_event(
         ctx,
         role="service",
@@ -52,13 +113,11 @@ def load_prompt_set(request: PromptLoadRequest, ctx: RunContext) -> PromptSet:
             "system_sha256": system_template.sha256,
             "user_path": user_template.path,
             "user_sha256": user_template.sha256,
+            "cached": source != "reloaded",
+            "source": source,
         },
     ))
-    return PromptSet(
-        schema_version="1.0",
-        system=system_template,
-        user=user_template,
-    )
+    return prompt_set
 
 
 def render_prompt(request: PromptRenderRequest, ctx: RunContext) -> PromptRenderResponse:
@@ -101,6 +160,17 @@ def render_prompt(request: PromptRenderRequest, ctx: RunContext) -> PromptRender
         fields={"template_path": request.template.path, "length": len(text)},
     ))
     return PromptRenderResponse(schema_version="1.0", text=text)
+
+
+def _get_mtime(path: Path) -> float:
+    return path.stat().st_mtime
+
+
+def _is_prompt_cache_valid(entry: _PromptCacheEntry, system_path: Path, user_path: Path) -> bool:
+    try:
+        return entry.system_mtime == system_path.stat().st_mtime and entry.user_mtime == user_path.stat().st_mtime
+    except FileNotFoundError:
+        return False
 
 
 def _load_prompt(path: Path) -> PromptTemplate:

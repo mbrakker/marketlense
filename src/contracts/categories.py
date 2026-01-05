@@ -29,6 +29,8 @@ class CategoryMappings:
 class CategoryMappingLoadRequest:
     schema_version: str = field(metadata={"doc": "Category mapping load request schema version."})
     path: str = field(metadata={"doc": "Filesystem path to the category mappings YAML."})
+    reload_if_changed: bool = field(default=False, metadata={"doc": "Reload mapping file if the on-disk copy changed."})
+    force_reload: bool = field(default=False, metadata={"doc": "Bypass cache and reload mappings from disk."})
 
 
 @dataclass(frozen=True)
@@ -43,6 +45,12 @@ class UncategorizedTagsUpdateRequest:
     path: str = field(metadata={"doc": "Filesystem path to the category mappings YAML."})
     report_title: str = field(metadata={"doc": "Report title for the uncategorized record."})
     tags: List[str] = field(metadata={"doc": "Tags that were not mapped for this report."})
+
+
+@dataclass(frozen=True)
+class UncategorizedTagsFlushRequest:
+    schema_version: str = field(metadata={"doc": "Uncategorized tag flush request schema version."})
+    path: str = field(metadata={"doc": "Filesystem path to the category mappings YAML."})
 
 
 @dataclass(frozen=True)

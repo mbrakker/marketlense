@@ -31,7 +31,7 @@ def run_update_wp_categories(settings: PublishSettings) -> List[WordPressCategor
         fields={"state_db": settings.state_db, "reports_db": settings.reports_db},
     ))
     mappings_resp = load_category_mappings(
-        CategoryMappingLoadRequest(schema_version="1.0", path=settings.category_mapping_path),
+        CategoryMappingLoadRequest(schema_version="1.0", path=settings.category_mapping_path, reload_if_changed=True),
         ctx,
     )
     list_resp = list_report_metadata(

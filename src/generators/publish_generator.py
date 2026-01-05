@@ -80,7 +80,7 @@ def publish_html(
     tag_ids_for_wp: list[int] = []
     if metadata and metadata.categories:
         mappings_resp = load_category_mappings(
-            CategoryMappingLoadRequest(schema_version="1.0", path=settings.category_mapping_path),
+            CategoryMappingLoadRequest(schema_version="1.0", path=settings.category_mapping_path, reload_if_changed=True),
             ctx,
         )
         id_to_label = {cat.id: cat.label or cat.id for cat in mappings_resp.mappings.categories}

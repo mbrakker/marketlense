@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from src.contracts.candidates import Candidate
+from src.contracts.pdf_context import PdfContext
 from src.contracts.report_models import CropItem, RankedCandidate
 
 
@@ -13,6 +14,7 @@ class ExtractCandidatesRequest:
     pdf_path: str = field(metadata={"doc": "Filesystem path to the PDF."})
     out_dir: str = field(metadata={"doc": "Output directory for any extracted assets."})
     report_name: str = field(metadata={"doc": "Normalized report name for asset paths."})
+    pdf_context: Optional[PdfContext] = field(default=None, metadata={"doc": "Optional pre-opened PDF context to reuse handles."})
 
 
 @dataclass(frozen=True)
@@ -27,6 +29,7 @@ class FigureExtractRequest:
     pdf_path: str = field(metadata={"doc": "Filesystem path to the PDF."})
     out_dir: str = field(metadata={"doc": "Output directory for extracted assets."})
     report_name: str = field(metadata={"doc": "Normalized report name for asset paths."})
+    pdf_context: Optional[PdfContext] = field(default=None, metadata={"doc": "Optional pre-opened PDF context to reuse handles."})
 
 
 @dataclass(frozen=True)
@@ -43,6 +46,7 @@ class PreviewRequest:
     out_dir: str = field(metadata={"doc": "Output directory for preview assets."})
     report_name: str = field(metadata={"doc": "Normalized report name for asset paths."})
     dpi: int = field(default=144, metadata={"doc": "Render DPI for preview PNG."})
+    pdf_context: Optional[PdfContext] = field(default=None, metadata={"doc": "Optional pre-opened PDF context to reuse handles."})
 
 
 @dataclass(frozen=True)
@@ -59,6 +63,7 @@ class CropRequest:
     report_name: str = field(metadata={"doc": "Normalized report name for asset paths."})
     items: List[CropItem] = field(metadata={"doc": "Crop targets."})
     pad: int = field(default=8, metadata={"doc": "Padding applied around crop boxes."})
+    pdf_context: Optional[PdfContext] = field(default=None, metadata={"doc": "Optional pre-opened PDF context to reuse handles."})
 
 
 @dataclass(frozen=True)

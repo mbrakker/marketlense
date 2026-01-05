@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Optional
+
+from src.contracts.pdf_context import PdfContext
 
 
 @dataclass(frozen=True)
@@ -9,6 +12,7 @@ class PdfTextExtractRequest:
     path: str = field(metadata={"doc": "Filesystem path to the PDF."})
     max_pages: int = field(metadata={"doc": "Maximum number of pages to extract."})
     max_chars: int = field(metadata={"doc": "Maximum number of characters to return."})
+    pdf_context: Optional[PdfContext] = field(default=None, metadata={"doc": "Optional pre-opened PDF context to reuse handles."})
 
 
 @dataclass(frozen=True)

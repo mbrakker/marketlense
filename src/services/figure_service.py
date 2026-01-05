@@ -19,13 +19,13 @@ def extract_best_figure(request: FigureExtractRequest, ctx: RunContext) -> Figur
         role="service",
         event="figure_extract_start",
         module=logger.name,
-        fields={"pdf_path": request.pdf_path},
+        fields={"pdf_path": request.pdf_path, "using_context": bool(request.pdf_context and request.pdf_context.fitz_doc)},
     ))
     img_path, caption = _extract_best_figure_png(
         request.pdf_path,
         request.out_dir,
         request.report_name,
-        doc=None,
+        doc=request.pdf_context.fitz_doc if request.pdf_context else None,
     )
     logger.info(log_event(
         ctx,

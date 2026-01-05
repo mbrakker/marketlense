@@ -8,6 +8,8 @@ from typing import Any, Dict
 class PromptLoadRequest:
     schema_version: str = field(metadata={"doc": "Prompt load request schema version."})
     namespace: str = field(metadata={"doc": "Prompt namespace under src/prompts."})
+    reload_if_changed: bool = field(default=False, metadata={"doc": "Force reload from disk if prompt files changed."})
+    force_reload: bool = field(default=False, metadata={"doc": "Bypass cache and reload prompts from disk."})
 
 
 @dataclass(frozen=True)

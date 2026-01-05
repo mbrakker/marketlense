@@ -20,7 +20,11 @@ def crop_regions(request: CropRequest, ctx: RunContext) -> CropResponse:
         role="service",
         event="crop_regions_start",
         module=logger.name,
-        fields={"pdf_path": request.pdf_path, "count": len(request.items)},
+        fields={
+            "pdf_path": request.pdf_path,
+            "count": len(request.items),
+            "using_context": bool(request.pdf_context and request.pdf_context.fitz_doc),
+        },
     ))
     paths = _crop_regions(
         request.pdf_path,
@@ -28,7 +32,7 @@ def crop_regions(request: CropRequest, ctx: RunContext) -> CropResponse:
         request.report_name,
         request.items,
         pad=request.pad,
-        doc=None,
+        doc=request.pdf_context.fitz_doc if request.pdf_context else None,
     )
     logger.info(log_event(
         ctx,
