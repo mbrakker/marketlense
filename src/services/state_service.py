@@ -25,7 +25,11 @@ CREATE TABLE IF NOT EXISTS processed (
   file_id TEXT PRIMARY KEY,
   md5 TEXT NOT NULL,
   processed_at INTEGER NOT NULL,
-  openai_file_id TEXT
+  openai_file_id TEXT,
+  vector_store_id TEXT,
+  vector_store_status TEXT,
+  indexed_at_utc TEXT,
+  last_error TEXT
 );
 
 CREATE TABLE IF NOT EXISTS published (
@@ -49,11 +53,28 @@ def _state_conn(path: str):
     conn = sqlite3.connect(path)
     try:
         conn.executescript(DDL)
+        _migrate_schema(conn)
         conn.commit()
         yield conn
         conn.commit()
     finally:
         conn.close()
+
+
+def _migrate_schema(conn: sqlite3.Connection) -> None:
+    """Add missing columns for processed table without dropping data."""
+    cur = conn.execute("PRAGMA table_info(processed)")
+    cols = {row[1] for row in cur.fetchall()}
+    required = {
+        "openai_file_id": "TEXT",
+        "vector_store_id": "TEXT",
+        "vector_store_status": "TEXT",
+        "indexed_at_utc": "TEXT",
+        "last_error": "TEXT",
+    }
+    for col, col_type in required.items():
+        if col not in cols:
+            conn.execute(f"ALTER TABLE processed ADD COLUMN {col} {col_type}")
 
 
 def already_processed(request: StateCheckRequest, ctx: RunContext) -> bool:
@@ -89,9 +110,18 @@ def record(request: StateRecordRequest, ctx: RunContext) -> None:
     ))
     with _state_conn(request.state_db) as conn:
         conn.execute(
-            "INSERT OR REPLACE INTO processed(file_id, md5, processed_at, openai_file_id) "
-            "VALUES(?, ?, strftime('%s','now'), ?)",
-            (request.file_id, request.md5, request.openai_file_id),
+            "INSERT OR REPLACE INTO processed("
+            "file_id, md5, processed_at, openai_file_id, vector_store_id, vector_store_status, indexed_at_utc, last_error"
+            ") VALUES(?, ?, strftime('%s','now'), ?, ?, ?, ?, ?)",
+            (
+                request.file_id,
+                request.md5,
+                request.openai_file_id,
+                request.vector_store_id,
+                request.vector_store_status,
+                request.indexed_at_utc,
+                request.last_error,
+            ),
         )
     logger.info(log_event(
         ctx,
@@ -112,7 +142,9 @@ def get(request: StateGetRequest, ctx: RunContext) -> Optional[StateGetResponse]
     ))
     with _state_conn(request.state_db) as conn:
         cur = conn.execute(
-            "SELECT file_id, md5, processed_at, openai_file_id FROM processed WHERE file_id=?", (request.file_id,)
+            "SELECT file_id, md5, processed_at, openai_file_id, vector_store_id, vector_store_status, indexed_at_utc, last_error "
+            "FROM processed WHERE file_id=?",
+            (request.file_id,),
         )
         row = cur.fetchone()
     if not row:
@@ -124,7 +156,7 @@ def get(request: StateGetRequest, ctx: RunContext) -> Optional[StateGetResponse]
             fields={"file_id": request.file_id, "found": False},
         ))
         return None
-    file_id, md5, processed_at, openai_file_id = row
+    file_id, md5, processed_at, openai_file_id, vector_store_id, vector_store_status, indexed_at_utc, last_error = row
     logger.info(log_event(
         ctx,
         role="service",
@@ -138,6 +170,10 @@ def get(request: StateGetRequest, ctx: RunContext) -> Optional[StateGetResponse]
         md5=md5,
         processed_at=processed_at,
         openai_file_id=openai_file_id,
+        vector_store_id=vector_store_id,
+        vector_store_status=vector_store_status,
+        indexed_at_utc=indexed_at_utc,
+        last_error=last_error,
     )
 
 

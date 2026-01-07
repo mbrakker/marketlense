@@ -13,7 +13,12 @@ except Exception:  # pragma: no cover - compatibility fallback
 
 from src.contracts.costs import CostLedgerAppendRequest, CostLedgerEntry, CostRollupRequest
 from src.contracts.report_models import Figure, Quote, ReportPayload
-from src.contracts.openai import OpenAIAnalyzeRequest, OpenAIAnalyzeResponse
+from src.contracts.openai import (
+    OpenAIAnalyzeRequest,
+    OpenAIAnalyzeResponse,
+    OpenAIResponseRequest,
+    OpenAIResponseResult,
+)
 from src.contracts.run_context import RunContext
 from src.services.cost_ledger_service import append_entry as append_cost_entry, rollup_daily
 from src.utils.costing import estimate_cost_usd
@@ -265,4 +270,143 @@ def analyze_report(request: OpenAIAnalyzeRequest, ctx: RunContext) -> OpenAIAnal
         completion_tokens=completion_tokens,
         total_tokens=total_tokens,
         request_id=str(request_id) if request_id else None,
+    )
+
+
+def openai_respond_with_vector_store(request: OpenAIResponseRequest, ctx: RunContext) -> OpenAIResponseResult:
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="openai_response_start",
+        module=logger.name,
+        fields={
+            "model": request.model,
+            "temperature": request.temperature,
+            "vector_store_id": request.vector_store_id,
+            "timeout_seconds": request.timeout_seconds,
+        },
+    ))
+    if not request.vector_store_id:
+        raise AppError(
+            code="vector_store_missing",
+            message="vector_store_id is required for file search responses",
+            retryable=False,
+        )
+    client_kwargs: dict = {"api_key": request.api_key}
+    if request.timeout_seconds is not None:
+        client_kwargs["timeout"] = request.timeout_seconds
+    client = OpenAI(**client_kwargs)
+    payload_args = {
+        "model": request.model,
+        "input": [
+            {"role": "system", "content": request.system_prompt},
+            {"role": "user", "content": request.user_prompt},
+        ],
+        "temperature": request.temperature,
+        "response_format": {"type": "json_object"},
+        "tools": [{"type": "file_search"}],
+        "tool_resources": {"file_search": {"vector_store_ids": [request.vector_store_id]}},
+    }
+    if request.seed is not None:
+        payload_args["seed"] = request.seed
+    try:
+        resp = client.responses.create(**payload_args)
+    except Exception as exc:
+        raise AppError(
+            code="openai_response_failed",
+            message="OpenAI responses request failed",
+            cause=exc,
+            retryable=True,
+            context={"model": request.model},
+        ) from exc
+
+    text = getattr(resp, "output_text", None)
+    if text is None:
+        output = getattr(resp, "output", None) or getattr(resp, "choices", None) or getattr(resp, "data", None)
+        if output and isinstance(output, list):
+            first = output[0]
+            content = getattr(first, "content", None) or (first.get("content") if isinstance(first, dict) else None)
+            if content and isinstance(content, list):
+                maybe_text = getattr(content[0], "text", None) or (content[0].get("text") if isinstance(content[0], dict) else None)
+                if maybe_text:
+                    text = maybe_text
+    if text is None:
+        text = getattr(resp, "text", "") or ""
+
+    usage = getattr(resp, "usage", None) or {}
+    input_tokens = getattr(usage, "input_tokens", None) if usage else None
+    output_tokens = getattr(usage, "output_tokens", None) if usage else None
+    if isinstance(usage, dict):
+        input_tokens = usage.get("input_tokens")
+        output_tokens = usage.get("output_tokens")
+    tool_calls = 0
+    if isinstance(usage, dict):
+        tool_calls = usage.get("total_tool_calls") or usage.get("tool_calls") or 0
+    parsed_json = None
+    if text:
+        try:
+            parsed_json = json.loads(text)
+        except json.JSONDecodeError:
+            parsed_json = None
+
+    estimated_cost = estimate_cost_usd(
+        request.model,
+        int(input_tokens or 0),
+        int(output_tokens or 0),
+        int(tool_calls or 0),
+        pricing=request.model_pricing or {},
+    )
+    try:
+        entry = CostLedgerEntry(
+            schema_version="1.0",
+            timestamp_utc=datetime.now(timezone.utc).isoformat(),
+            run_id=ctx.run_id,
+            task_id=ctx.task_id,
+            span_id=ctx.span_id,
+            step_name="openai_response_vector_store",
+            model=request.model,
+            input_tokens=int(input_tokens or 0),
+            output_tokens=int(output_tokens or 0),
+            cached_input_tokens=None,
+            tool_calls=int(tool_calls or 0),
+            estimated_cost_usd=estimated_cost,
+            extra={},
+        )
+        append_cost_entry(
+            CostLedgerAppendRequest(schema_version="1.0", path=request.cost_ledger_path, entry=entry),
+            ctx,
+        )
+        rollup_daily(
+            CostRollupRequest(schema_version="1.0", ledger_path=request.cost_ledger_path, out_path=request.cost_daily_path),
+            ctx,
+        )
+    except Exception as exc:  # pragma: no cover
+        logger.info(log_event(
+            ctx,
+            role="service",
+            event="cost_ledger_write_failed",
+            module=logger.name,
+            fields={"error": str(exc)},
+        ))
+
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="openai_response_complete",
+        module=logger.name,
+        fields={
+            "model": request.model,
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "tool_calls": tool_calls,
+        },
+    ))
+    return OpenAIResponseResult(
+        schema_version="1.0",
+        text=text,
+        parsed_json=parsed_json if isinstance(parsed_json, dict) else None,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        tool_calls=tool_calls,
+        model=request.model,
     )

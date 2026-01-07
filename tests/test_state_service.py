@@ -1,0 +1,79 @@
+import sqlite3
+from pathlib import Path
+
+from src.contracts.run_context import RunContext
+from src.contracts.state import StateCheckRequest, StateGetRequest, StateRecordRequest
+from src.services.state_service import already_processed, get, record
+
+
+def _ctx() -> RunContext:
+    return RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
+
+
+def test_migration_adds_vector_columns_and_preserves_data(tmp_path: Path) -> None:
+    db_path = tmp_path / "state.sqlite"
+    # Simulate legacy schema without vector columns.
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        """
+        CREATE TABLE processed (
+            file_id TEXT PRIMARY KEY,
+            md5 TEXT NOT NULL,
+            processed_at INTEGER NOT NULL,
+            openai_file_id TEXT
+        );
+        """
+    )
+    conn.commit()
+    conn.close()
+
+    req = StateRecordRequest(
+        schema_version="1.0",
+        state_db=str(db_path),
+        file_id="file-1",
+        md5="md5",
+        openai_file_id="of_123",
+        vector_store_id="vs_123",
+        vector_store_status="ready",
+        indexed_at_utc="2026-01-07T00:00:00Z",
+        last_error=None,
+    )
+    record(req, _ctx())
+
+    # Columns should exist after migration.
+    conn = sqlite3.connect(db_path)
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(processed)")}
+    conn.close()
+    assert {"vector_store_id", "vector_store_status", "indexed_at_utc", "last_error"}.issubset(cols)
+
+    resp = get(StateGetRequest(schema_version="1.0", state_db=str(db_path), file_id="file-1"), _ctx())
+    assert resp is not None
+    assert resp.file_id == "file-1"
+    assert resp.vector_store_id == "vs_123"
+    assert resp.vector_store_status == "ready"
+    assert resp.indexed_at_utc == "2026-01-07T00:00:00Z"
+    assert resp.last_error is None
+    assert resp.openai_file_id == "of_123"
+
+
+def test_record_and_get_with_defaults(tmp_path: Path) -> None:
+    db_path = tmp_path / "state.sqlite"
+    record(
+        StateRecordRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            file_id="file-2",
+            md5="md5-2",
+        ),
+        _ctx(),
+    )
+    assert already_processed(
+        StateCheckRequest(schema_version="1.0", state_db=str(db_path), file_id="file-2", md5="md5-2"),
+        _ctx(),
+    )
+    resp = get(StateGetRequest(schema_version="1.0", state_db=str(db_path), file_id="file-2"), _ctx())
+    assert resp is not None
+    assert resp.vector_store_id is None
+    assert resp.vector_store_status is None
+    assert resp.indexed_at_utc is None
+    assert resp.last_error is None

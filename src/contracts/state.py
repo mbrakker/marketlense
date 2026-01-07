@@ -18,7 +18,11 @@ class StateRecordRequest:
     state_db: str = field(metadata={"doc": "SQLite path for processing state."})
     file_id: str = field(metadata={"doc": "Drive file ID."})
     md5: str = field(metadata={"doc": "MD5 checksum of the PDF."})
-    openai_file_id: Optional[str] = field(metadata={"doc": "OpenAI file ID, if any."})
+    openai_file_id: Optional[str] = field(default=None, metadata={"doc": "OpenAI file ID, if any."})
+    vector_store_id: Optional[str] = field(default=None, metadata={"doc": "Vector store ID associated with the file, if any."})
+    vector_store_status: Optional[str] = field(default=None, metadata={"doc": "Vector store status, if any."})
+    indexed_at_utc: Optional[str] = field(default=None, metadata={"doc": "ISO-8601 UTC timestamp when the file was indexed, if known."})
+    last_error: Optional[str] = field(default=None, metadata={"doc": "Last error encountered during vector store operations, if any."})
 
 
 @dataclass(frozen=True)
@@ -34,7 +38,11 @@ class StateGetResponse:
     file_id: str = field(metadata={"doc": "Drive file ID."})
     md5: str = field(metadata={"doc": "MD5 checksum of the PDF."})
     processed_at: int = field(metadata={"doc": "Unix timestamp of processing."})
-    openai_file_id: Optional[str] = field(metadata={"doc": "OpenAI file ID, if any."})
+    openai_file_id: Optional[str] = field(default=None, metadata={"doc": "OpenAI file ID, if any."})
+    vector_store_id: Optional[str] = field(default=None, metadata={"doc": "Vector store ID associated with the file, if any."})
+    vector_store_status: Optional[str] = field(default=None, metadata={"doc": "Vector store status, if any."})
+    indexed_at_utc: Optional[str] = field(default=None, metadata={"doc": "ISO-8601 UTC timestamp when the file was indexed, if known."})
+    last_error: Optional[str] = field(default=None, metadata={"doc": "Last error encountered during vector store operations, if any."})
 
 
 @dataclass(frozen=True)
