@@ -9,6 +9,7 @@ import pymupdf as fitz
 from src.contracts.report_assets import PreviewRequest, PreviewResponse
 from src.contracts.run_context import RunContext
 from src.utils.logging import log_event
+from src.utils.slugify import slugify
 
 logger = logging.getLogger("market_lense.preview_service")
 
@@ -22,14 +23,18 @@ def render_preview(request: PreviewRequest, ctx: RunContext) -> PreviewResponse:
         fields={
             "pdf_path": request.pdf_path,
             "dpi": request.dpi,
+            "page_number": request.page_number,
+            "variant": request.variant,
             "using_context": bool(request.pdf_context and request.pdf_context.fitz_doc),
         },
     ))
-    img_path = _first_page_png(
+    img_path = _page_png(
         request.pdf_path,
         request.out_dir,
         request.report_name,
+        page_number=max(request.page_number, 0),
         dpi=request.dpi,
+        variant=request.variant,
         doc=request.pdf_context.fitz_doc if request.pdf_context else None,
     )
     logger.info(log_event(
@@ -37,16 +42,18 @@ def render_preview(request: PreviewRequest, ctx: RunContext) -> PreviewResponse:
         role="service",
         event="preview_render_complete",
         module=logger.name,
-        fields={"image_path": img_path or ""},
+        fields={"image_path": img_path or "", "page_number": request.page_number},
     ))
-    return PreviewResponse(schema_version="1.0", image_path=img_path)
+    return PreviewResponse(schema_version="1.1", image_path=img_path, page_number=max(request.page_number, 0))
 
 
-def _first_page_png(
+def _page_png(
     pdf_path: str,
     out_dir: str,
     report_name: str,
+    page_number: int = 0,
     dpi: int = 144,
+    variant: str | None = None,
     doc: Optional[fitz.Document] = None,
 ) -> Optional[str]:
     try:
@@ -56,13 +63,15 @@ def _first_page_png(
         img_dir = out_root / report_name / "assets"
         img_dir.mkdir(parents=True, exist_ok=True)
 
-        abs_png = img_dir / f"{report_name}.png"
+        variant_slug = slugify(variant) if variant else ""
+        suffix = f"-{variant_slug}" if variant_slug else ""
+        abs_png = img_dir / f"{report_name}{suffix}.png"
 
         local_doc = doc or fitz.open(pdf_path)
         try:
-            if local_doc.page_count == 0:
+            if local_doc.page_count == 0 or page_number >= local_doc.page_count:
                 return None
-            page = local_doc.load_page(0)
+            page = local_doc.load_page(page_number)
             zoom = dpi / 72.0
             pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
             pix.save(abs_png.as_posix())

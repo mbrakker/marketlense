@@ -45,6 +45,8 @@ class PreviewRequest:
     pdf_path: str = field(metadata={"doc": "Filesystem path to the PDF."})
     out_dir: str = field(metadata={"doc": "Output directory for preview assets."})
     report_name: str = field(metadata={"doc": "Normalized report name for asset paths."})
+    page_number: int = field(default=0, metadata={"doc": "Zero-based page number to render for the preview image."})
+    variant: str = field(default="", metadata={"doc": "Optional variant label appended to the preview filename."})
     dpi: int = field(default=144, metadata={"doc": "Render DPI for preview PNG."})
     pdf_context: Optional[PdfContext] = field(default=None, metadata={"doc": "Optional pre-opened PDF context to reuse handles."})
 
@@ -53,6 +55,7 @@ class PreviewRequest:
 class PreviewResponse:
     schema_version: str = field(metadata={"doc": "Preview render response schema version."})
     image_path: Optional[str] = field(metadata={"doc": "Relative preview image path, if rendered."})
+    page_number: int = field(default=0, metadata={"doc": "Zero-based page number that was rendered."})
 
 
 @dataclass(frozen=True)

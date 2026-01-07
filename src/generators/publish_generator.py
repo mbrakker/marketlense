@@ -73,7 +73,7 @@ def publish_html(
     base_url = settings.wp.site_url.rstrip("/")
 
     metadata = get_metadata(
-        ReportMetadataGetRequest(schema_version="1.0", db_path=settings.reports_db, file_id=file_id),
+        ReportMetadataGetRequest(schema_version="1.1", db_path=settings.reports_db, file_id=file_id),
         ctx,
     )
     category_ids_for_wp: list[int] = []

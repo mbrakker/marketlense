@@ -26,6 +26,13 @@ code{background:#f5f5f5;padding:.1rem .3rem;border-radius:4px}
   </div>
   {% endif %}
 
+  {% if data.contents_page_number and data.contents_page_number > 0 and data._contents_image %}
+  <div class="preview">
+    <h2>Contents page (page {{ data.contents_page_number }}){% if data.contents_heading %}: {{ data.contents_heading }}{% endif %}</h2>
+    <img src="{{ data._contents_image }}" alt="Contents page screenshot of {{ doc_name }}">
+  </div>
+  {% endif %}
+
   {% if data.publisher or (data.taxonomy and data.taxonomy|length > 0) or data.region or data.time_period %}
   <h2>Report metadata</h2>
   {% if data.publisher %}

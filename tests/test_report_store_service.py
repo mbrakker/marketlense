@@ -17,7 +17,7 @@ class TestReportStoreService(unittest.TestCase):
 
             upsert_metadata(
                 ReportMetadataUpsertRequest(
-                    schema_version="1.0",
+                    schema_version="1.1",
                     db_path=db_path,
                     file_id="file-1",
                     title="Sample Report",
@@ -28,11 +28,12 @@ class TestReportStoreService(unittest.TestCase):
                     source_url="https://example.com/report",
                     html_path="/tmp/report.html",
                     md5="abc123",
+                    contents_page_number=5,
                 ),
                 ctx,
             )
             first = get_metadata(
-                ReportMetadataGetRequest(schema_version="1.0", db_path=db_path, file_id="file-1"),
+                ReportMetadataGetRequest(schema_version="1.1", db_path=db_path, file_id="file-1"),
                 ctx,
             )
             self.assertIsNotNone(first)
@@ -46,11 +47,12 @@ class TestReportStoreService(unittest.TestCase):
             self.assertEqual("/tmp/report.html", first.html_path)
             self.assertEqual("abc123", first.md5)
             self.assertGreater(first.created_at, 0)
+            self.assertEqual(5, first.contents_page_number)
 
             time.sleep(0.01)
             upsert_metadata(
                 ReportMetadataUpsertRequest(
-                    schema_version="1.0",
+                    schema_version="1.1",
                     db_path=db_path,
                     file_id="file-1",
                     title="Updated Title",
@@ -61,11 +63,12 @@ class TestReportStoreService(unittest.TestCase):
                     source_url=None,
                     html_path="/tmp/report-v2.html",
                     md5="def456",
+                    contents_page_number=0,
                 ),
                 ctx,
             )
             second = get_metadata(
-                ReportMetadataGetRequest(schema_version="1.0", db_path=db_path, file_id="file-1"),
+                ReportMetadataGetRequest(schema_version="1.1", db_path=db_path, file_id="file-1"),
                 ctx,
             )
             assert second is not None
@@ -79,13 +82,14 @@ class TestReportStoreService(unittest.TestCase):
             self.assertIsNone(second.source_url)
             self.assertEqual("North America", second.region)
             self.assertEqual("2025", second.time_period)
+            self.assertEqual(0, second.contents_page_number)
 
     def test_missing_record_returns_none(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = os.path.join(tmpdir, "reports.sqlite")
             ctx = new_run_context(task_id="test_missing")
             resp = get_metadata(
-                ReportMetadataGetRequest(schema_version="1.0", db_path=db_path, file_id="missing"),
+                ReportMetadataGetRequest(schema_version="1.1", db_path=db_path, file_id="missing"),
                 ctx,
             )
             self.assertIsNone(resp)
@@ -97,7 +101,7 @@ class TestReportStoreService(unittest.TestCase):
             with self.assertRaises(AppError):
                 upsert_metadata(
                     ReportMetadataUpsertRequest(
-                        schema_version="1.0",
+                        schema_version="1.1",
                         db_path=db_path,
                         file_id="",
                         title="",

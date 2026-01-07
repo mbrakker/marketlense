@@ -65,6 +65,10 @@ def ingest(
         rank_seed=s.rank_seed,
         openai_timeout_seconds=s.openai_timeout_seconds,
         rank_timeout_seconds=s.rank_timeout_seconds,
+        contents_max_pages=s.contents_max_pages,
+        contents_min_headings=s.contents_min_headings,
+        contents_keywords=s.contents_keywords,
+        contents_preview_dpi=s.contents_preview_dpi,
     )
 
     console.print("[cyan]Running ingest pipeline...[/cyan]")

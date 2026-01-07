@@ -20,6 +20,14 @@ ingest:
   pdf_text:
     max_pages: 5
     max_chars: 80000
+  contents_page:
+    max_pages: 8
+    min_headings: 3
+    keywords:
+      - "table of contents"
+      - "contents"
+      - "index"
+    render_dpi: 144
 
 rank:
   model: "gpt-5"

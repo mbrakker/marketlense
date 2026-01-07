@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import List, Optional
 
 
 @dataclass(frozen=True)
@@ -34,3 +34,10 @@ class AppSettings:
     rank_seed: Optional[int] = field(default=None, metadata={"doc": "Optional seed for candidate ranking."})
     openai_timeout_seconds: float = field(default=600.0, metadata={"doc": "Timeout in seconds for OpenAI report generation calls."})
     rank_timeout_seconds: float = field(default=600.0, metadata={"doc": "Timeout in seconds for OpenAI ranking calls."})
+    contents_max_pages: int = field(default=8, metadata={"doc": "Max pages to scan from the start for contents/index detection."})
+    contents_min_headings: int = field(default=3, metadata={"doc": "Minimum heading-like entries required to confirm contents/index page."})
+    contents_keywords: List[str] = field(
+        default_factory=lambda: ["table of contents", "contents", "index"],
+        metadata={"doc": "Case-insensitive keywords that indicate a contents/index page."},
+    )
+    contents_preview_dpi: int = field(default=144, metadata={"doc": "Render DPI for contents/index page preview images."})

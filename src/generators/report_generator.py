@@ -10,6 +10,7 @@ from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.contracts.report_store import ReportMetadataUpsertRequest
 from src.contracts.report_models import CropItem
 from src.contracts.pdf_context import PdfContextBuildRequest
+from src.contracts.pdf_contents import PdfContentsDetectionRequest
 from src.services.openai_service import analyze_report as openai_analyze
 from src.services.pdf_text_service import extract_pdf_text
 from src.services.prompt_service import load_prompt_set, render_prompt
@@ -35,6 +36,7 @@ from src.services.figure_service import extract_best_figure as extract_best_figu
 from src.services.preview_service import render_preview as render_preview_service
 from src.services.rank_service import rank_candidates as rank_candidates_service
 from src.services.render_service import render_report as render_report_service
+from src.services.pdf_contents_service import detect_contents_page as detect_contents_page_service
 from src.services.category_mapping_service import (
     load_mappings as load_category_mappings,
     update_uncategorized_tags,
@@ -69,6 +71,10 @@ def generate_report(
         module=logger.name,
         fields={"file_id": file.file_id, "name": file.name},
     ))
+    report_name = slugify(file.name)
+    contents_page_number = 0
+    contents_image = ""
+    contents_heading = ""
 
     info_resp = extract_pdf_info(
         PdfInfoRequest(schema_version="1.0", path=local_pdf_path),
@@ -110,6 +116,57 @@ def generate_report(
             fields={"path": local_pdf_path, "error": str(exc)},
         ))
         pdf_context = None
+
+    try:
+        contents_resp = detect_contents_page_service(
+            PdfContentsDetectionRequest(
+                schema_version="1.0",
+                path=local_pdf_path,
+                max_pages=settings.contents_max_pages,
+                min_headings=settings.contents_min_headings,
+                keywords=settings.contents_keywords,
+                pdf_context=pdf_context,
+            ),
+            ctx,
+        )
+        if contents_resp.has_contents:
+            contents_page_number = contents_resp.page_number
+            contents_heading = contents_resp.heading or ""
+            contents_preview = render_preview_service(
+                PreviewRequest(
+                    schema_version="1.1",
+                    pdf_path=local_pdf_path,
+                    out_dir=settings.output_dir,
+                    report_name=report_name,
+                    page_number=max(contents_resp.page_index, 0),
+                    variant="contents",
+                    dpi=settings.contents_preview_dpi,
+                    pdf_context=pdf_context,
+                ),
+                ctx,
+            )
+            if contents_preview.image_path:
+                contents_image = contents_preview.image_path
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="contents_detection_result",
+            module=logger.name,
+            fields={
+                "file_id": file.file_id,
+                "has_contents": contents_resp.has_contents,
+                "page_number": contents_page_number,
+                "image_path": contents_image or "",
+            },
+        ))
+    except Exception as exc:
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="contents_detection_failed",
+            module=logger.name,
+            fields={"file_id": file.file_id, "error": str(exc)},
+        ))
 
     try:
         text_resp = extract_pdf_text(
@@ -232,7 +289,6 @@ def generate_report(
                 ),
                 ctx,
             )
-        report_name = slugify(file.name)
     
         fig_resp = extract_best_figure_service(
             FigureExtractRequest(
@@ -420,7 +476,7 @@ def generate_report(
     
         preview_resp = render_preview_service(
             PreviewRequest(
-                schema_version="1.0",
+                schema_version="1.1",
                 pdf_path=local_pdf_path,
                 out_dir=settings.output_dir,
                 report_name=report_name,
@@ -429,6 +485,9 @@ def generate_report(
             ctx,
         )
     
+        data.contents_page_number = contents_page_number
+        data.contents_heading = contents_heading
+        data._contents_image = contents_image
         data_dict = data.to_dict()
         data_dict["categories_display"] = category_assignment.category_labels
         logger.info(log_event(
@@ -453,20 +512,21 @@ def generate_report(
     
         upsert_report_metadata(
             ReportMetadataUpsertRequest(
-                schema_version="1.0",
+                schema_version="1.1",
                 db_path=settings.reports_db,
-            file_id=file.file_id,
-            title=report_title,
-            publisher=data.publisher or None,
-            taxonomy=data.taxonomy,
-            categories=data.categories,
-            region=data.region or None,
-            time_period=data.time_period or None,
-            source_url=data.source,
-            html_path=out_html,
-            md5=md5,
-            page_count=info_resp.page_count,
-            pdf_metadata=info_resp.metadata,
+                file_id=file.file_id,
+                title=report_title,
+                publisher=data.publisher or None,
+                taxonomy=data.taxonomy,
+                categories=data.categories,
+                region=data.region or None,
+                time_period=data.time_period or None,
+                source_url=data.source,
+                html_path=out_html,
+                md5=md5,
+                page_count=info_resp.page_count,
+                pdf_metadata=info_resp.metadata,
+                contents_page_number=contents_page_number,
             ),
             ctx,
         )

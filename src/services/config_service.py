@@ -74,6 +74,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     ingest = data.get("ingest", {}) or {}
     pdf_text = ingest.get("pdf_text", {}) or {}
     rank = data.get("rank", {}) or {}
+    contents_page = ingest.get("contents_page", {}) or {}
     category_mapping_path = paths.get("category_mappings") or str(Path(__file__).resolve().parents[1] / "config" / "category-mappings.yaml")
 
     openai_model = need(ingest, "openai_model", "ingest.openai_model", "OPENAI_MODEL")
@@ -99,6 +100,13 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     if _is_missing(lock_ttl_raw):
         lock_ttl_raw = _env_value("INGEST_LOCK_TTL_SECONDS")
     ingest_lock_ttl_seconds = float(lock_ttl_raw) if not _is_missing(lock_ttl_raw) else 7200.0
+    contents_max_pages = int(contents_page.get("max_pages", 8))
+    contents_min_headings = int(contents_page.get("min_headings", 3))
+    contents_keywords_cfg = contents_page.get("keywords") or ["table of contents", "contents", "index"]
+    contents_keywords = [str(k).strip() for k in contents_keywords_cfg if str(k).strip()]
+    if not contents_keywords:
+        contents_keywords = ["table of contents", "contents", "index"]
+    contents_preview_dpi = int(contents_page.get("render_dpi", 144))
 
     output_dir = need(paths, "output_dir", "paths.output_dir", "OUTPUT_DIR")
     cache_dir = need(paths, "cache_dir", "paths.cache_dir", "CACHE_DIR")
@@ -139,6 +147,10 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         rank_seed=_opt_int(rank_seed_raw),
         openai_timeout_seconds=openai_timeout_seconds,
         rank_timeout_seconds=rank_timeout_seconds,
+        contents_max_pages=contents_max_pages,
+        contents_min_headings=contents_min_headings,
+        contents_keywords=contents_keywords,
+        contents_preview_dpi=contents_preview_dpi,
     )
 
     if missing:
@@ -178,6 +190,10 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             "pdf_text_max_chars": settings.pdf_text_max_chars,
             "openai_timeout_seconds": settings.openai_timeout_seconds,
             "rank_timeout_seconds": settings.rank_timeout_seconds,
+            "contents_max_pages": settings.contents_max_pages,
+            "contents_min_headings": settings.contents_min_headings,
+            "contents_keywords": settings.contents_keywords,
+            "contents_preview_dpi": settings.contents_preview_dpi,
         },
     ))
     return settings

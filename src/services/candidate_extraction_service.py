@@ -15,6 +15,7 @@ from src.contracts.run_context import RunContext
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.candidate_extraction_service")
+_PDFMINER_LOGGERS = ("pdfminer", "pdfminer.pdfinterp", "pdfminer.cmapdb", "pdfminer.layout")
 
 CAPTION_HINTS = ("figure", "fig.", "exhibit", "chart", "graph", "source")
 
@@ -126,6 +127,8 @@ def _extract_tables(pdf_path: str, max_candidates: int = 10) -> List[Candidate]:
         except Exception:
             return ""
 
+    _suppress_pdfminer_warnings()
+
     with pdfplumber.open(pdf_path) as pdf:
         for pno, p in enumerate(pdf.pages):
             tables = p.find_tables(table_settings={
@@ -164,6 +167,15 @@ def _extract_tables(pdf_path: str, max_candidates: int = 10) -> List[Candidate]:
                 break
 
     return out
+
+
+def _suppress_pdfminer_warnings() -> None:
+    """Force pdfminer loggers to ERROR to avoid noisy color warnings."""
+    for name in _PDFMINER_LOGGERS:
+        try:
+            logging.getLogger(name).setLevel(logging.ERROR)
+        except Exception:
+            continue
 
 
 def collect_candidates(request: ExtractCandidatesRequest, ctx: RunContext) -> ExtractCandidatesResponse:

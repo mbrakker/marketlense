@@ -69,7 +69,8 @@ src/
    - `src/generators/report_generator.py` runs the core pipeline:
      - **PDF info**: `pdf_utils_service.extract_pdf_info` captures page count and sanitized PDF metadata for persistence.
      - **PDF context**: `pdf_context_service.build_pdf_context` opens PyMuPDF and pypdf handles once; downstream services reuse them and fall back to local opens if unavailable.
-     - **Text extraction**: `pdf_text_service` extracts text from the first N pages (reusing the shared context when present).
+     - **Contents/index detection**: scans the first pages for a contents/index section, renders a screenshot when found, and records the page number for HTML + DB output.
+      - **Text extraction**: `pdf_text_service` extracts text from the first N pages (reusing the shared context when present).
       - **LLM analysis**: Sends prompt + extracted text to OpenAI for structured JSON output.
       - **Normalization**: `normalize_generator` enforces strict schema and list sizing.
       - **Categorization**: taxonomy tags are scored against `src/config/category-mappings.yaml`; top 3 categories are stored and rendered, and unmapped tags are appended under `uncategorized` in that YAML.
@@ -214,6 +215,7 @@ CI runs these tests via `.github/workflows/ci.yml`.
 ## Runtime Requirements
 
 Configuration lives in `src/config/app.yaml` with `.env` fallback for any missing values. Secrets come from environment variables.
+- Contents/index detection is configured under `ingest.contents_page` (keywords, max_pages, min_headings, render_dpi).
 
 Required environment variables:
 - `OPENAI_API_KEY`

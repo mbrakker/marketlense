@@ -45,7 +45,7 @@ def run_recategorize(request: RecategorizeRequest) -> List[RecategorizeOutcome]:
             ctx,
         )
         list_resp = list_report_metadata(
-            ReportMetadataListRequest(schema_version="1.0", db_path=request.db_path),
+            ReportMetadataListRequest(schema_version="1.1", db_path=request.db_path),
             ctx,
         )
 
@@ -67,7 +67,7 @@ def run_recategorize(request: RecategorizeRequest) -> List[RecategorizeOutcome]:
 
                 upsert_metadata(
                     ReportMetadataUpsertRequest(
-                        schema_version="1.0",
+                        schema_version="1.1",
                         db_path=request.db_path,
                         file_id=record.file_id,
                         title=record.title,
@@ -79,6 +79,7 @@ def run_recategorize(request: RecategorizeRequest) -> List[RecategorizeOutcome]:
                         source_url=record.source_url,
                         html_path=record.html_path,
                         md5=record.md5,
+                        contents_page_number=record.contents_page_number,
                     ),
                     record_ctx,
                 )

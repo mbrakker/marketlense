@@ -35,7 +35,7 @@ def run_update_wp_categories(settings: PublishSettings) -> List[WordPressCategor
         ctx,
     )
     list_resp = list_report_metadata(
-        ReportMetadataListRequest(schema_version="1.0", db_path=settings.reports_db),
+        ReportMetadataListRequest(schema_version="1.1", db_path=settings.reports_db),
         ctx,
     )
     auth_header = build_auth_header(

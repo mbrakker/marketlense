@@ -32,11 +32,14 @@ class ReportPayload:
     categories: List[str] = field(default_factory=list, metadata={"doc": "Assigned category IDs (max 3)."})
     region: str = field(default="", metadata={"doc": "Primary region/market focus of the report."})
     time_period: str = field(default="", metadata={"doc": "Primary time period covered by the report."})
+    contents_page_number: int = field(default=0, metadata={"doc": "One-based page number for the contents/index page; 0 when absent."})
+    contents_heading: str = field(default="", metadata={"doc": "Matched heading text for the detected contents/index page, if any."})
     _openai_file_id: str = field(default="", metadata={"doc": "Internal OpenAI file ID, if any."})
     _figure_image: str = field(default="", metadata={"doc": "Relative path to primary figure image."})
     _figure_gallery: List[str] = field(default_factory=list, metadata={"doc": "Relative paths to figure gallery images."})
     _figure_top: str = field(default="", metadata={"doc": "Relative path to top-ranked figure image."})
-    schema_version: str = field(default="1.0", metadata={"doc": "Report payload schema version."})
+    _contents_image: str = field(default="", metadata={"doc": "Relative path to contents/index page screenshot, if any."})
+    schema_version: str = field(default="1.1", metadata={"doc": "Report payload schema version."})
 
     def to_dict(self) -> dict:
         result = asdict(self)

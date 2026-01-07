@@ -84,9 +84,13 @@ def _normalize_report_payload(data: ReportPayload) -> ReportPayload:
         evidence=_s(data.figure.evidence),
     )
 
+    contents_page_number = data.contents_page_number if isinstance(data.contents_page_number, int) and data.contents_page_number >= 0 else 0
+    contents_heading = _s(data.contents_heading)
+
     _figure_gallery = data._figure_gallery or []
     _figure_top = _s(data._figure_top)
     _figure_image = _s(data._figure_image)
+    _contents_image = _s(data._contents_image)
 
     if not _figure_top and _figure_image:
         _figure_top = _figure_image
@@ -108,4 +112,7 @@ def _normalize_report_payload(data: ReportPayload) -> ReportPayload:
         _figure_image=_figure_image,
         _figure_gallery=_figure_gallery,
         _figure_top=_figure_top,
+        contents_page_number=contents_page_number,
+        contents_heading=contents_heading,
+        _contents_image=_contents_image,
     )
