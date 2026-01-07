@@ -35,6 +35,9 @@ class IngestSettings:
         metadata={"doc": "Case-insensitive keywords that indicate a contents/index page."},
     )
     contents_preview_dpi: int = field(default=144, metadata={"doc": "Render DPI for contents/index page preview images."})
+    cost_ledger_path: str = field(default="./out/cost-ledger.jsonl", metadata={"doc": "Filesystem path for cost ledger JSONL output."})
+    cost_daily_path: str = field(default="./out/cost-daily.json", metadata={"doc": "Filesystem path for daily cost rollup JSON."})
+    model_pricing: dict = field(default_factory=dict, metadata={"doc": "Per-model pricing table; keys are model IDs with per-1k token pricing."})
 
 
 @dataclass(frozen=True)

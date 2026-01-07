@@ -88,6 +88,10 @@ class RankRequest:
     seed: Optional[int] = field(default=None, metadata={"doc": "Optional seed for deterministic sampling."})
     candidate_count: int = field(default=0, metadata={"doc": "Number of candidates included in the prompt."})
     timeout_seconds: Optional[float] = field(default=None, metadata={"doc": "Request timeout in seconds, if set."})
+    tool_calls: int = field(default=0, metadata={"doc": "Number of tool calls billed (if any)."})
+    cost_ledger_path: str = field(default="./out/cost-ledger.jsonl", metadata={"doc": "Filesystem path for the cost ledger JSONL output."})
+    cost_daily_path: str = field(default="./out/cost-daily.json", metadata={"doc": "Filesystem path for daily cost rollups."})
+    model_pricing: dict = field(default_factory=dict, metadata={"doc": "Per-model pricing table for cost estimation."})
 
 
 @dataclass(frozen=True)

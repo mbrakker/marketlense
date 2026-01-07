@@ -41,3 +41,9 @@ class AppSettings:
         metadata={"doc": "Case-insensitive keywords that indicate a contents/index page."},
     )
     contents_preview_dpi: int = field(default=144, metadata={"doc": "Render DPI for contents/index page preview images."})
+    analysis_mode: str = field(default="local_text", metadata={"doc": "Analysis mode to use: 'local_text' or 'vector_store'."})
+    use_vector_store: bool = field(default=False, metadata={"doc": "Whether to read context from the vector store; derived from analysis_mode when omitted."})
+    vector_store_keep: bool = field(default=True, metadata={"doc": "Whether to keep the vector store cache after runs."})
+    cost_ledger_path: str = field(default="./out/cost-ledger.jsonl", metadata={"doc": "Filesystem path for the cost ledger JSONL output."})
+    cost_daily_path: str = field(default="./out/cost-daily.json", metadata={"doc": "Filesystem path for daily cost rollups JSON."})
+    model_pricing: dict = field(default_factory=dict, metadata={"doc": "Per-model pricing table; keys are model IDs with per-1k token pricing."})

@@ -69,6 +69,9 @@ def ingest(
         contents_min_headings=s.contents_min_headings,
         contents_keywords=s.contents_keywords,
         contents_preview_dpi=s.contents_preview_dpi,
+        cost_ledger_path=s.cost_ledger_path,
+        cost_daily_path=s.cost_daily_path,
+        model_pricing=s.model_pricing,
     )
 
     console.print("[cyan]Running ingest pipeline...[/cyan]")

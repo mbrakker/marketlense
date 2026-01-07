@@ -31,6 +31,9 @@ class TestCli(unittest.TestCase):
             ingest_lock_path="./state/ingest.lock",
             ingest_lock_ttl_seconds=7200.0,
             temperature=1.0,
+            cost_ledger_path="./out/cost-ledger.jsonl",
+            cost_daily_path="./out/cost-daily.json",
+            model_pricing={},
         )
         outcomes = [
             IngestOutcome(

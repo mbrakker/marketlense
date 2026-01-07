@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime, timezone
 from typing import Any, Dict
 
 import openai as openai_legacy
@@ -10,9 +11,12 @@ try:
 except Exception:  # pragma: no cover - compatibility fallback
     OpenAI = None  # type: ignore[assignment]
 
+from src.contracts.costs import CostLedgerAppendRequest, CostLedgerEntry, CostRollupRequest
 from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.openai import OpenAIAnalyzeRequest, OpenAIAnalyzeResponse
 from src.contracts.run_context import RunContext
+from src.services.cost_ledger_service import append_entry as append_cost_entry, rollup_daily
+from src.utils.costing import estimate_cost_usd
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -93,6 +97,8 @@ def analyze_report(request: OpenAIAnalyzeRequest, ctx: RunContext) -> OpenAIAnal
     prompt_tokens = None
     completion_tokens = None
     total_tokens = None
+    tool_calls = request.tool_calls or 0
+    cached_tokens = request.cached_input_tokens
 
     def _do_modern_call() -> None:
         nonlocal payload, request_id, prompt_tokens, completion_tokens, total_tokens
@@ -155,6 +161,46 @@ def analyze_report(request: OpenAIAnalyzeRequest, ctx: RunContext) -> OpenAIAnal
             retryable=False,
             context={"model": request.model},
         ) from exc
+
+    estimated_cost = estimate_cost_usd(
+        request.model,
+        int(prompt_tokens or 0),
+        int(completion_tokens or 0),
+        int(tool_calls or 0),
+        pricing=request.model_pricing or {},
+    )
+    try:
+        entry = CostLedgerEntry(
+            schema_version="1.0",
+            timestamp_utc=datetime.now(timezone.utc).isoformat(),
+            run_id=ctx.run_id,
+            task_id=ctx.task_id,
+            span_id=ctx.span_id,
+            step_name="openai_analyze",
+            model=request.model,
+            input_tokens=int(prompt_tokens or 0),
+            output_tokens=int(completion_tokens or 0),
+            cached_input_tokens=int(cached_tokens) if cached_tokens is not None else None,
+            tool_calls=int(tool_calls or 0),
+            estimated_cost_usd=estimated_cost,
+            extra={"request_id": str(request_id) if request_id else None},
+        )
+        append_cost_entry(
+            CostLedgerAppendRequest(schema_version="1.0", path=request.cost_ledger_path, entry=entry),
+            ctx,
+        )
+        rollup_daily(
+            CostRollupRequest(schema_version="1.0", ledger_path=request.cost_ledger_path, out_path=request.cost_daily_path),
+            ctx,
+        )
+    except Exception as exc:  # pragma: no cover - ledger failures must not break main flow
+        logger.info(log_event(
+            ctx,
+            role="service",
+            event="cost_ledger_write_failed",
+            module=logger.name,
+            fields={"error": str(exc)},
+        ))
 
     logger.info(log_event(
         ctx,

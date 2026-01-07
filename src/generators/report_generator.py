@@ -245,6 +245,9 @@ def generate_report(
                 api_key=settings.openai_api_key,
                 seed=settings.openai_seed,
                 timeout_seconds=settings.openai_timeout_seconds,
+                cost_ledger_path=settings.cost_ledger_path,
+                cost_daily_path=settings.cost_daily_path,
+                model_pricing=settings.model_pricing,
             ),
             ctx,
         )
@@ -407,6 +410,9 @@ def generate_report(
                         seed=settings.rank_seed,
                         candidate_count=len(cands_resp.candidates),
                         timeout_seconds=settings.rank_timeout_seconds,
+                        cost_ledger_path=settings.cost_ledger_path,
+                        cost_daily_path=settings.cost_daily_path,
+                        model_pricing=settings.model_pricing,
                     ),
                     ctx,
                 )

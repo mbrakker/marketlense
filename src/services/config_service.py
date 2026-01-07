@@ -43,6 +43,18 @@ def _load_config(path: str) -> dict:
 def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     load_dotenv(find_dotenv(filename=".env", usecwd=True))
 
+    def _as_bool(value: object, default: bool) -> bool:
+        if isinstance(value, bool):
+            return value
+        if _is_missing(value):
+            return default
+        value_str = str(value).strip().lower()
+        if value_str in {"1", "true", "yes", "y", "on", "t"}:
+            return True
+        if value_str in {"0", "false", "no", "n", "off", "f"}:
+            return False
+        return default
+
     logger.info(log_event(
         ctx,
         role="service",
@@ -76,6 +88,8 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     rank = data.get("rank", {}) or {}
     contents_page = ingest.get("contents_page", {}) or {}
     category_mapping_path = paths.get("category_mappings") or str(Path(__file__).resolve().parents[1] / "config" / "category-mappings.yaml")
+    analysis_cfg = data.get("analysis", {}) or {}
+    cost_cfg = data.get("cost", {}) or {}
 
     openai_model = need(ingest, "openai_model", "ingest.openai_model", "OPENAI_MODEL")
     temperature_raw = ingest.get("temperature")
@@ -124,6 +138,24 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             return None
         return int(value)
 
+    env_analysis_mode = _env_value("ANALYSIS_MODE")
+    env_use_vector_store = _env_value("USE_VECTOR_STORE")
+    env_vector_store_keep = _env_value("VECTOR_STORE_KEEP")
+    env_cost_ledger_path = _env_value("COST_LEDGER_PATH")
+    analysis_mode_raw = env_analysis_mode or analysis_cfg.get("mode")
+    analysis_mode = str(analysis_mode_raw or "local_text").strip() or "local_text"
+    if env_use_vector_store:
+        use_vector_store = _as_bool(env_use_vector_store, default=analysis_mode == "vector_store")
+    elif env_analysis_mode:
+        use_vector_store = analysis_mode == "vector_store"
+    else:
+        use_vector_store = _as_bool(analysis_cfg.get("use_vector_store"), default=analysis_mode == "vector_store")
+    vector_store_keep_raw = env_vector_store_keep if env_vector_store_keep else analysis_cfg.get("vector_store_keep")
+    vector_store_keep = _as_bool(vector_store_keep_raw, default=True)
+    cost_ledger_path = str(env_cost_ledger_path or analysis_cfg.get("cost_ledger_path") or "./out/cost-ledger.jsonl")
+    cost_daily_path = str(cost_cfg.get("daily_path") or "./out/cost-daily.json")
+    model_pricing = cost_cfg.get("pricing") or {}
+
     settings = AppSettings(
         schema_version=str(data.get("schema_version", "1.0")),
         google_sa_path=need(ingest, "google_sa_path", "ingest.google_sa_path", "GOOGLE_SERVICE_ACCOUNT_JSON"),
@@ -151,6 +183,12 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         contents_min_headings=contents_min_headings,
         contents_keywords=contents_keywords,
         contents_preview_dpi=contents_preview_dpi,
+        analysis_mode=analysis_mode,
+        use_vector_store=use_vector_store,
+        vector_store_keep=vector_store_keep,
+        cost_ledger_path=cost_ledger_path,
+        cost_daily_path=cost_daily_path,
+        model_pricing=model_pricing,
     )
 
     if missing:
@@ -167,6 +205,8 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     Path(settings.state_db).parent.mkdir(parents=True, exist_ok=True)
     Path(settings.reports_db).parent.mkdir(parents=True, exist_ok=True)
     Path(settings.ingest_lock_path).parent.mkdir(parents=True, exist_ok=True)
+    Path(settings.cost_ledger_path).parent.mkdir(parents=True, exist_ok=True)
+    Path(settings.cost_daily_path).parent.mkdir(parents=True, exist_ok=True)
     logger.info(log_event(
         ctx,
         role="service",
@@ -194,6 +234,11 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             "contents_min_headings": settings.contents_min_headings,
             "contents_keywords": settings.contents_keywords,
             "contents_preview_dpi": settings.contents_preview_dpi,
+            "analysis_mode": settings.analysis_mode,
+            "use_vector_store": settings.use_vector_store,
+            "vector_store_keep": settings.vector_store_keep,
+            "cost_ledger_path": settings.cost_ledger_path,
+            "cost_daily_path": settings.cost_daily_path,
         },
     ))
     return settings

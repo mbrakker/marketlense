@@ -18,6 +18,11 @@ class OpenAIAnalyzeRequest:
     api_key: str = field(metadata={"doc": "OpenAI API key (secret, loaded from env)."})
     seed: Optional[int] = field(default=None, metadata={"doc": "Optional seed for deterministic sampling."})
     timeout_seconds: Optional[float] = field(default=None, metadata={"doc": "Request timeout in seconds, if set."})
+    tool_calls: int = field(default=0, metadata={"doc": "Expected number of tool calls billed (if known, else 0)."})
+    cached_input_tokens: Optional[int] = field(default=None, metadata={"doc": "Input tokens served from cache, if reported."})
+    cost_ledger_path: str = field(default="./out/cost-ledger.jsonl", metadata={"doc": "Filesystem path for the cost ledger JSONL output."})
+    cost_daily_path: str = field(default="./out/cost-daily.json", metadata={"doc": "Filesystem path for daily cost rollups."})
+    model_pricing: dict = field(default_factory=dict, metadata={"doc": "Per-model pricing table for cost estimation."})
 
 
 @dataclass(frozen=True)
