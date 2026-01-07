@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DocMap",
+  "type": "object",
+  "required": ["doc_id", "title", "sections"],
+  "properties": {
+    "schema_version": { "type": "string" },
+    "doc_id": { "type": "string" },
+    "title": { "type": "string" },
+    "summary": { "type": "string" },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "summary": { "type": "string" },
+          "pages": {
+            "type": "array",
+            "items": { "type": "integer" }
+          },
+          "references": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

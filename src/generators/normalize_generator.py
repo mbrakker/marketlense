@@ -6,6 +6,7 @@ from typing import Any, List
 from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.run_context import RunContext
 from src.utils.logging import log_event
+from src.utils.schema_validator import validate_schema
 
 logger = logging.getLogger("market_lense.normalize_generator")
 
@@ -27,6 +28,11 @@ def normalize_report(payload: ReportPayload, ctx: RunContext) -> ReportPayload:
         fields={"payload": normalized.to_dict()},
     ))
     return normalized
+
+
+def validate_with_schema(payload: dict, schema_name: str, ctx: RunContext) -> None:
+    """Validate an arbitrary payload against a named schema."""
+    validate_schema(payload, schema_name, ctx)
 
 
 def _s(value: Any) -> str:

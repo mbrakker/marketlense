@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Artifacts",
+  "type": "object",
+  "required": ["toc_topics", "summary", "insights_candidates", "insights_final", "quotes_final", "expert_comment", "linkedin_post"],
+  "properties": {
+    "schema_version": { "type": "string" },
+    "toc_topics": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "summary": { "type": "string" },
+    "insights_candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "text"],
+        "properties": {
+          "id": { "type": "string" },
+          "text": { "type": "string" },
+          "evidence": { "type": "string" },
+          "score": { "type": "number" }
+        }
+      }
+    },
+    "insights_final": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "text"],
+        "properties": {
+          "id": { "type": "string" },
+          "text": { "type": "string" },
+          "evidence": { "type": "string" }
+        }
+      }
+    },
+    "quotes_final": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["text"],
+        "properties": {
+          "text": { "type": "string" },
+          "speaker": { "type": "string" },
+          "citation": { "type": "string" }
+        }
+      }
+    },
+    "expert_comment": { "type": "string" },
+    "linkedin_post": { "type": "string" }
+  }
+}

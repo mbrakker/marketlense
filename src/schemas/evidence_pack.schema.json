@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EvidencePack",
+  "type": "object",
+  "required": ["scope", "methods", "findings"],
+  "properties": {
+    "schema_version": { "type": "string" },
+    "scope": { "type": "string" },
+    "methods": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "text"],
+        "properties": {
+          "id": { "type": "string" },
+          "text": { "type": "string" },
+          "evidence": { "type": "string" },
+          "confidence": { "type": "string" },
+          "pages": {
+            "type": "array",
+            "items": { "type": "integer" }
+          }
+        }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "quote_candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["text"],
+        "properties": {
+          "text": { "type": "string" },
+          "source": { "type": "string" },
+          "page": { "type": "integer" }
+        }
+      }
+    }
+  }
+}
