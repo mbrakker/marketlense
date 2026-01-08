@@ -41,6 +41,29 @@ src/
 
 ---
 
+## Configuration (YAML + .env)
+
+Primary config: `src/config/app.yaml`. Missing values can be provided via `.env` (loaded by `config_service`). Secrets must come from environment variables.
+
+Key fields and env overrides:
+- Paths: `paths.output_dir` (`OUTPUT_DIR`, default `./out`), `paths.cache_dir` (`CACHE_DIR`, default `./cache`), `paths.state_db` (`STATE_DB`), `paths.reports_db` (`REPORTS_DB`), `paths.category_mappings` (defaults to `src/config/category-mappings.yaml`).
+- Ingest: `ingest.google_sa_path` (`GOOGLE_SERVICE_ACCOUNT_JSON`), `ingest.gdrive_folder_id` (`GDRIVE_FOLDER_ID`), `ingest.openai_model` (`OPENAI_MODEL`), `ingest.batch_limit` (`BATCH_LIMIT`, default 20), `ingest.temperature` (`TEMPERATURE`, default 1.0), `ingest.timeout_seconds` (`OPENAI_TIMEOUT_SECONDS`, default 600), `ingest.lock_ttl_seconds` (`INGEST_LOCK_TTL_SECONDS`, default 7200), `ingest.contents_page.*` (keywords, max_pages, min_headings, render_dpi).
+- Analysis mode: `analysis.mode` (`ANALYSIS_MODE`, default `local_text`; set `vector_store` to enable file-search/Responses path).
+- Vector store toggles: `analysis.use_vector_store` (`USE_VECTOR_STORE`, default derived from mode), `analysis.vector_store_keep` (`VECTOR_STORE_KEEP`, default `true`).
+- Cost tracking: `analysis.cost_ledger_path` (`COST_LEDGER_PATH`, default `./out/cost-ledger.jsonl`), `cost.daily_path` (default `./out/cost-daily.json`), `cost.pricing` (per-model pricing map used by `utils.costing`).
+
+Secrets (env only):
+- `OPENAI_API_KEY` (required)
+- `WP_APP_PASSWORD` or `WP_BEARER_TOKEN` (publishing)
+- Optional provider keys (e.g., `MINERU_API_KEY`) if used.
+
+Prompt locations:
+- Local text analysis: `src/prompts/report_generation/`
+- Vector store evidence packs: `src/prompts/report_vs/**` (`doc_map/`, `evidence_packs/{scope,methods,findings,limitations,quote_candidates}/`)
+Prompts are YAML (system/user), hashed and logged by `src/services/prompt_service.py`.
+
+---
+
 ## End-to-End Flow (Ingest)
 
 1. **Configuration load**
@@ -147,15 +170,14 @@ The orchestrator retries report generation when a retryable `AppError` is raised
 
 ## Prompt Management
 
-Prompts are stored in YAML under:
+Prompts are stored in YAML by namespace:
 
 ```
-src/prompts/report_generation/
-  system.yaml
-  user.yaml
+src/prompts/report_generation/          # local_text mode
+src/prompts/report_vs/doc_map/          # vector_store doc map
+src/prompts/report_vs/evidence_packs/   # vector_store packs (scope/methods/findings/limitations/quote_candidates)
 ```
 
-Additional prompt namespaces (for example `rank_candidates/`) live alongside `report_generation/`.
 Prompts are rendered with Jinja2 (`{{ variable }}`), loaded and hashed by `src/services/prompt_service.py`, and logged with their SHA256 hashes for reproducibility.
 
 - Prompt caching: prompt sets are cached in-memory per namespace for the duration of a process. `PromptLoadRequest` supports `reload_if_changed` (mtime check) and `force_reload` (bypass cache) when you need to pick up edited prompt files mid-run.
@@ -192,6 +214,18 @@ Key contracts live under `src/contracts/`:
 
 ---
 
+## Schemas (JSON)
+
+Location: `src/schemas/`
+- `doc_map.schema.json`: required fields for DocMap outputs (id/title/publisher/year/figures, etc.).
+- `evidence_pack.schema.json`: permissive; accepts optional/empty `scope`, `methods`, `findings`, `limitations`, and `quote_candidates` with nullable fields and extra properties.
+- `artifacts.schema.json`: artifacts/toc/summary/insights/quotes payload shape.
+- `validation_report.schema.json`: structure for validation results.
+
+Schema validation is performed by `src/utils/schema_validator.py` and logged per pack.
+
+---
+
 ## Testing
 
 Minimal unit tests exist under `tests/`:
@@ -220,15 +254,13 @@ Configuration lives in `src/config/app.yaml` with `.env` fallback for any missin
 Required environment variables:
 - `OPENAI_API_KEY`
 - `WP_APP_PASSWORD` (or `WP_BEARER_TOKEN` if using bearer auth)
-
-Optional:
-- `WP_BEARER_TOKEN`
+- Optional: other provider keys (e.g., `MINERU_API_KEY`), `WP_USERNAME`/`WP_SITE_URL` if not set in YAML.
 
 ---
 
 ## CLI Usage
 
-Primary entrypoint:
+Primary entrypoint (defaults to `ingest` if no subcommand):
 
 ```bash
 python -m src.cli ingest --limit 10
@@ -251,6 +283,19 @@ Update WordPress categories for already-published posts to match the latest mapp
 ```bash
 python -m src.cli update-wp-categories
 ```
+
+Golden-set (vector store) harness for local PDFs:
+
+```bash
+python -m src.cli golden-set-vector --fixtures <dir> --limit <N>
+# --fixtures: directory containing PDFs
+# --limit: max PDFs to process (optional)
+```
+
+CLI options summary:
+- `--limit`: optional integer across batch commands.
+- `--folder`: optional Drive folder override for ingest.
+- `--fixtures`: required for `golden-set-vector`.
 
 ## Output Layout
 
@@ -282,8 +327,8 @@ Marker-based PDF-to-HTML conversion has been removed.
 To extend the system:
 - Add new services in `src/services` and define contracts in `src/contracts`.
 - Add new prompts in `src/prompts/<use_case>/`.
-- Add new generators to compose services into outputs.
-- Add orchestrators for new pipelines or batch flows.
+- Add new generators to compose services into outputs (local text or vector store flows).
+- Add orchestrators for new pipelines or batch flows (for example, additional golden-set harnesses).
 
 ---
 
@@ -292,3 +337,13 @@ To extend the system:
 - Secrets must not be committed to source control.
 - Use `.env` locally and environment variables in CI/CD.
 - Prompt logs are structured and should be routed to secure logging sinks in production.
+
+---
+
+## Vector Store & Cost Tracking Highlights
+
+- Vector stores: `src/services/vector_store_service.py` handles create/upload/attach/status/wait using OpenAI vector stores; used by vector-mode generators and the golden-set harness.
+- Analysis modes: `ANALYSIS_MODE=local_text` (default) keeps existing behavior; `ANALYSIS_MODE=vector_store` or `USE_VECTOR_STORE=true` enables file-search/Responses path.
+- Evidence packs: `src/generators/evidence_pack_generator.py` uses `src/prompts/report_vs/**` and writes packs + `out/report_analysis/<report_id>/*.json`; validation uses `src/schemas/evidence_pack.schema.json` (permissive for empty fields).
+- Golden-set vector harness: `src/orchestrators/golden_set_orchestrator.py` + CLI `golden-set-vector` process local PDFs end-to-end and write packs to `out/golden_set/<report_id>/packs/*.json`.
+- Cost ledger: `src/services/cost_ledger_service.py` appends JSONL entries for every LLM call and writes daily rollups (`./out/cost-ledger.jsonl`, `./out/cost-daily.json`) using per-model pricing from config.
