@@ -1,0 +1,45 @@
+{
+  "tldr": "Wind and storage paired to smooth volatility.",
+  "title": "Wind + Storage Update",
+  "insights": [
+    "Hybrid projects secured more PPAs",
+    "Interconnection queues remain long",
+    "Offshore bids softened",
+    "Storage duration inches up",
+    "Developers seek grid-forming specs"
+  ],
+  "quote": {
+    "text": "Storage is the new schedule keeper for wind",
+    "author": "Grid Planner",
+    "schema_version": "1.0"
+  },
+  "figure": {
+    "title": "Hybrid map",
+    "evidence": "Projects cluster near load pockets",
+    "schema_version": "1.0"
+  },
+  "commentary": "Policy support is moving hybrids from pilots to portfolio defaults.",
+  "source": "https://example.com/wind.pdf",
+  "publisher": "Grid Ops",
+  "taxonomy": [
+    "wind",
+    "storage",
+    "ppa"
+  ],
+  "categories": [
+    "power_markets"
+  ],
+  "region": "Europe",
+  "time_period": "2025",
+  "contents_page_number": 0,
+  "contents_heading": "",
+  "_openai_file_id": "",
+  "_figure_image": "",
+  "_figure_gallery": [],
+  "_figure_top": "",
+  "_contents_image": "",
+  "schema_version": "1.1",
+  "categories_display": [
+    "Power Markets"
+  ]
+}

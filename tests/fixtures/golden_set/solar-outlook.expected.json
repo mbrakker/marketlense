@@ -1,0 +1,45 @@
+{
+  "tldr": "Solar installations grew.",
+  "title": "Solar Outlook 2025",
+  "insights": [
+    "Utility-scale solar surged",
+    "Storage attachments increased",
+    "Policy boosted demand",
+    "Costs fell",
+    "Grid upgrades continued"
+  ],
+  "quote": {
+    "text": "Sun is shining on the solar market",
+    "author": "Analyst Q",
+    "schema_version": "1.0"
+  },
+  "figure": {
+    "title": "Solar capacity chart",
+    "evidence": "Capacity growth 2024-2025",
+    "schema_version": "1.0"
+  },
+  "commentary": "Record deployments expected in 2026.",
+  "source": "https://example.com/solar.pdf",
+  "publisher": "Energy Board",
+  "taxonomy": [
+    "solar",
+    "storage",
+    "policy"
+  ],
+  "categories": [
+    "energy_grid"
+  ],
+  "region": "Global",
+  "time_period": "2025",
+  "contents_page_number": 0,
+  "contents_heading": "",
+  "_openai_file_id": "",
+  "_figure_image": "",
+  "_figure_gallery": [],
+  "_figure_top": "",
+  "_contents_image": "",
+  "schema_version": "1.1",
+  "categories_display": [
+    "Energy Grid"
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "tldr": "EV sales kept rising despite headwinds.",
+  "title": "EV Sales Pulse",
+  "insights": [
+    "Fleet incentives shifted demand",
+    "Charging buildouts are uneven",
+    "Battery prices stabilized",
+    "Used EV market expanding",
+    "Policy clarity remains mixed"
+  ],
+  "quote": {
+    "text": "The EV curve is bending but not breaking",
+    "author": "Market Watcher",
+    "schema_version": "1.0"
+  },
+  "figure": {
+    "title": "EV share chart",
+    "evidence": "EV share climbed to 18%",
+    "schema_version": "1.0"
+  },
+  "commentary": "Volume growth persists even as margins tighten.",
+  "source": "https://example.com/ev.pdf",
+  "publisher": "Transit Insights",
+  "taxonomy": [
+    "ev",
+    "batteries",
+    "charging"
+  ],
+  "categories": [
+    "mobility"
+  ],
+  "region": "North America",
+  "time_period": "2025",
+  "contents_page_number": 0,
+  "contents_heading": "",
+  "_openai_file_id": "",
+  "_figure_image": "",
+  "_figure_gallery": [],
+  "_figure_top": "",
+  "_contents_image": "",
+  "schema_version": "1.1",
+  "categories_display": [
+    "Mobility"
+  ]
+}
