@@ -25,7 +25,7 @@ from src.contracts.run_context import RunContext
 from src.generators.report_generator import generate_report
 
 
-FIXTURES_ROOT = Path("tests/fixtures/golden_set")
+FIXTURES_ROOT = Path("out/fixtures/golden_set")
 
 
 def _load_cases() -> List[dict]:
@@ -37,6 +37,13 @@ def _load_yaml(path: Path) -> dict:
     import yaml
 
     return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+
+
+def _resolve(path_value: str) -> Path:
+    path = Path(path_value)
+    if path.is_absolute():
+        return path
+    return FIXTURES_ROOT / path
 
 
 def _load_expected_json(path: Path) -> dict:
@@ -146,8 +153,8 @@ def test_golden_reports_regression(tmp_path: Path, monkeypatch: pytest.MonkeyPat
         output_dir.mkdir(parents=True, exist_ok=True)
         cache_dir.mkdir(parents=True, exist_ok=True)
 
-        expected_json_path = Path(case["expected_json"])
-        expected_html_path = Path(case["expected_html"])
+        expected_json_path = _resolve(case["expected_json"])
+        expected_html_path = _resolve(case["expected_html"])
         expected_payload = _load_expected_json(expected_json_path)
         normalized_capture: Dict[str, Any] = {}
 
@@ -259,7 +266,8 @@ def test_golden_reports_regression(tmp_path: Path, monkeypatch: pytest.MonkeyPat
             md5_checksum="md5",
             version=None,
         )
-        outcome = generate_report(drive_file, str(Path(case["pdf"])), settings, md5="md5", ctx=_ctx(case_id))
+        pdf_path = _resolve(case["pdf"])
+        outcome = generate_report(drive_file, str(pdf_path), settings, md5="md5", ctx=_ctx(case_id))
 
         assert outcome.status == "processed"
         assert Path(outcome.html_path).exists()

@@ -293,6 +293,7 @@ python -m src.cli golden-set-vector --fixtures <dir> --limit <N>
 # --fixtures: directory containing PDFs
 # --limit: max PDFs to process (optional)
 ```
+Golden-set source PDFs now live under `out/fixtures/golden_set/pdfs`; pass that directory to the `--fixtures` flag when running locally.
 
 Vector-store ingest mode:
 
