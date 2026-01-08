@@ -20,6 +20,9 @@ pip-wheel-metadata/
 .pytest_cache/
 .coverage
 coverage.xml
+
+# Ignore local test fixtures (large PDFs, generated data)
+tests/fixtures/
 htmlcov/
 
 # Editor directories and files
