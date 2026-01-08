@@ -39,6 +39,8 @@ class ReportPayload:
     _figure_gallery: List[str] = field(default_factory=list, metadata={"doc": "Relative paths to figure gallery images."})
     _figure_top: str = field(default="", metadata={"doc": "Relative path to top-ranked figure image."})
     _contents_image: str = field(default="", metadata={"doc": "Relative path to contents/index page screenshot, if any."})
+    _vector_store_id: str = field(default="", metadata={"doc": "Vector store ID used for analysis, if any."})
+    _evidence_packs: dict = field(default_factory=dict, metadata={"doc": "Mapping of evidence pack names to stored JSON paths, if any."})
     schema_version: str = field(default="1.1", metadata={"doc": "Report payload schema version."})
 
     def to_dict(self) -> dict:

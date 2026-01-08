@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from pathlib import Path
 from typing import Optional
 
 from src.contracts.openai import OpenAIAnalyzeRequest
@@ -30,6 +31,7 @@ from src.contracts.categories import CategoryMappingLoadRequest, UncategorizedTa
 from src.contracts.pdf_utils import PdfInfoRequest
 from src.generators.categorize_generator import categorize_taxonomy
 from src.generators.normalize_generator import normalize_report
+from src.generators.evidence_pack_generator import generate_evidence_packs
 from src.services.crop_service import crop_regions as crop_regions_service
 from src.services.extract_service import collect_candidates as collect_candidates_service
 from src.services.figure_service import extract_best_figure as extract_best_figure_service
@@ -44,6 +46,8 @@ from src.services.category_mapping_service import (
 from src.services.report_store_service import upsert_metadata as upsert_report_metadata
 from src.services.pdf_context_service import build_pdf_context
 from src.services.pdf_utils_service import extract_pdf_info
+from src.services import vector_store_service, state_service
+from src.contracts.state import StateGetRequest
 from src.utils.logging import log_event
 from src.utils.validation import validate_candidate, validate_report_payload
 
@@ -54,6 +58,108 @@ def _derive_title(name: str) -> str:
     base = name.rsplit(".", 1)[0]
     cleaned = base.strip()
     return cleaned or name
+
+
+def _vector_store_enabled(settings: IngestSettings) -> bool:
+    return settings.use_vector_store or settings.analysis_mode == "vector_store"
+
+
+def _pack_paths(output_dir: str, report_id: str, pack_names: list[str]) -> dict[str, str]:
+    base = Path(output_dir) / "report_analysis" / report_id
+    return {name: str(base / f"{name}.json") for name in pack_names}
+
+
+def _ensure_vector_store(
+    file: DriveFile,
+    local_pdf_path: str,
+    settings: IngestSettings,
+    ctx: RunContext,
+):
+    vector_store_id = None
+    openai_file_id = None
+    vector_store_status = None
+    indexed_at_utc = None
+    last_error = None
+
+    logger.info(log_event(
+        ctx,
+        role="generator",
+        event="vector_store_prepare_start",
+        module=logger.name,
+        fields={"file_id": file.file_id, "analysis_mode": settings.analysis_mode},
+    ))
+    existing = None
+    try:
+        existing = state_service.get(
+            StateGetRequest(schema_version="1.0", state_db=settings.state_db, file_id=file.file_id),
+            ctx,
+        )
+    except Exception:
+        existing = None
+    if existing and settings.vector_store_keep and existing.vector_store_id:
+        vector_store_id = existing.vector_store_id
+        openai_file_id = existing.openai_file_id
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="vector_store_reuse",
+            module=logger.name,
+            fields={"file_id": file.file_id, "vector_store_id": vector_store_id},
+        ))
+        status_resp = vector_store_service.get_vector_store_status(vector_store_id, ctx=ctx)
+        vector_store_status = status_resp.status
+        indexed_at_utc = status_resp.indexed_at_utc
+        last_error = status_resp.last_error
+        if vector_store_status != "completed":
+            status_resp = vector_store_service.wait_until_indexed(
+                vector_store_id,
+                ctx=ctx,
+                timeout_s=int(settings.openai_timeout_seconds),
+                poll_interval_s=5,
+            )
+            vector_store_status = status_resp.status
+            indexed_at_utc = status_resp.indexed_at_utc
+            last_error = status_resp.last_error
+    if not vector_store_id:
+        vs_resp = vector_store_service.create_vector_store(
+            file.file_id,
+            {"file_id": file.file_id, "name": file.name},
+            ctx,
+        )
+        vector_store_id = vs_resp.vector_store_id
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="vector_store_created",
+            module=logger.name,
+            fields={"file_id": file.file_id, "vector_store_id": vector_store_id},
+        ))
+        upload_resp = vector_store_service.upload_file(local_pdf_path, ctx)
+        openai_file_id = upload_resp.openai_file_id
+        vector_store_service.attach_file(vector_store_id, upload_resp.openai_file_id, ctx)
+        status_resp = vector_store_service.wait_until_indexed(
+            vector_store_id,
+            ctx=ctx,
+            timeout_s=int(settings.openai_timeout_seconds),
+            poll_interval_s=5,
+        )
+        vector_store_status = status_resp.status
+        indexed_at_utc = status_resp.indexed_at_utc
+        last_error = status_resp.last_error
+
+    logger.info(log_event(
+        ctx,
+        role="generator",
+        event="vector_store_ready",
+        module=logger.name,
+        fields={
+            "file_id": file.file_id,
+            "vector_store_id": vector_store_id,
+            "status": vector_store_status,
+            "indexed_at_utc": indexed_at_utc or "",
+        },
+    ))
+    return vector_store_id, openai_file_id, vector_store_status, indexed_at_utc, last_error
 
 
 def generate_report(
@@ -479,7 +585,39 @@ def generate_report(
         if sliced_paths:
             data._figure_gallery = sliced_paths
             data._figure_top = sliced_paths[0]
-    
+
+        vector_store_id = None
+        vector_store_status = None
+        indexed_at_utc = None
+        openai_file_id = None
+        evidence_pack_paths: dict[str, str] = {}
+        last_error = None
+        if _vector_store_enabled(settings):
+            vector_store_id, openai_file_id, vector_store_status, indexed_at_utc, last_error = _ensure_vector_store(
+                file,
+                local_pdf_path,
+                settings,
+                ctx,
+            )
+            packs = generate_evidence_packs(
+                report_id=file.file_id,
+                vector_store_id=vector_store_id,
+                settings=settings,
+                ctx=ctx,
+            )
+            evidence_pack_paths = _pack_paths(settings.output_dir, file.file_id, list(packs.keys()))
+            data._vector_store_id = vector_store_id or ""
+            data._evidence_packs = evidence_pack_paths
+            if openai_file_id:
+                data._openai_file_id = openai_file_id
+            logger.info(log_event(
+                ctx,
+                role="generator",
+                event="evidence_packs_ready",
+                module=logger.name,
+                fields={"file_id": file.file_id, "vector_store_id": vector_store_id, "pack_count": len(evidence_pack_paths)},
+            ))
+
         preview_resp = render_preview_service(
             PreviewRequest(
                 schema_version="1.1",
@@ -533,6 +671,9 @@ def generate_report(
                 page_count=info_resp.page_count,
                 pdf_metadata=info_resp.metadata,
                 contents_page_number=contents_page_number,
+                analysis_mode=settings.analysis_mode,
+                vector_store_id=vector_store_id,
+                evidence_pack_paths=evidence_pack_paths,
             ),
             ctx,
         )
@@ -562,6 +703,12 @@ def generate_report(
             md5=md5,
             html_path=out_html,
             status="processed",
+            vector_store_id=vector_store_id,
+            vector_store_status=vector_store_status,
+            indexed_at_utc=indexed_at_utc,
+            openai_file_id=openai_file_id,
+            evidence_packs=evidence_pack_paths or None,
+            vector_store_last_error=last_error,
         )
     finally:
         if pdf_context is not None:

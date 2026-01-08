@@ -13,10 +13,10 @@ from src.utils.errors import AppError
 
 def _mock_client():
     client = MagicMock()
-    client.beta.vector_stores.create.return_value = {"id": "vs_123"}
+    client.vector_stores.create.return_value = {"id": "vs_123"}
     client.files.create.return_value = {"id": "file_123"}
-    client.beta.vector_stores.files.create.return_value = {"id": "file_123"}
-    client.beta.vector_stores.retrieve.return_value = {"status": "completed", "created_at": "2026-01-07T00:00:00Z"}
+    client.vector_stores.files.create.return_value = {"id": "file_123"}
+    client.vector_stores.retrieve.return_value = {"status": "completed", "created_at": "2026-01-07T00:00:00Z"}
     return client
 
 
@@ -58,7 +58,7 @@ def test_wait_until_indexed_success(mock_client_factory):
 @patch.object(svc, "_client")
 def test_wait_until_indexed_timeout(mock_client_factory):
     client = _mock_client()
-    client.beta.vector_stores.retrieve.side_effect = [
+    client.vector_stores.retrieve.side_effect = [
         {"status": "in_progress"},
         {"status": "in_progress"},
     ]

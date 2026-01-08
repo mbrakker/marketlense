@@ -21,6 +21,9 @@ class ReportMetadataUpsertRequest:
     page_count: Optional[int] = field(default=None, metadata={"doc": "Total pages in the source PDF, if known."})
     contents_page_number: int = field(default=0, metadata={"doc": "One-based page number for detected contents/index page; 0 when not found."})
     pdf_metadata: dict[str, str] = field(default_factory=dict, metadata={"doc": "Flattened PDF metadata for the source document."})
+    analysis_mode: str = field(default="local_text", metadata={"doc": "Analysis mode used to generate the report: local_text|vector_store."})
+    vector_store_id: Optional[str] = field(default=None, metadata={"doc": "Vector store ID used for evidence pack generation, if any."})
+    evidence_pack_paths: dict[str, str] = field(default_factory=dict, metadata={"doc": "Mapping of evidence pack names to stored JSON paths."})
 
 
 @dataclass(frozen=True)
@@ -48,6 +51,9 @@ class ReportMetadataGetResponse:
     page_count: Optional[int] = field(default=None, metadata={"doc": "Total pages in the source PDF, if known."})
     contents_page_number: int = field(default=0, metadata={"doc": "One-based page number for detected contents/index page; 0 when not found."})
     pdf_metadata: dict[str, str] = field(default_factory=dict, metadata={"doc": "Flattened PDF metadata for the source document."})
+    analysis_mode: str = field(default="local_text", metadata={"doc": "Analysis mode used to generate the report: local_text|vector_store."})
+    vector_store_id: Optional[str] = field(default=None, metadata={"doc": "Vector store ID used for evidence pack generation, if any."})
+    evidence_pack_paths: dict[str, str] = field(default_factory=dict, metadata={"doc": "Mapping of evidence pack names to stored JSON paths."})
 
 
 @dataclass(frozen=True)

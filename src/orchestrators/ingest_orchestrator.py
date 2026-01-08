@@ -230,13 +230,50 @@ def run_ingest(
                     try:
                         outcome = generate_report(file, cache_path, settings, md5, file_ctx)
                         outcomes.append(outcome)
+                        if outcome.vector_store_id:
+                            logger.info(log_event(
+                                file_ctx,
+                                role="orchestrator",
+                                event="VECTOR_STORE_CREATED",
+                                module=logger.name,
+                                fields={"file_id": file.file_id, "vector_store_id": outcome.vector_store_id},
+                            ))
+                        if outcome.vector_store_status:
+                            logger.info(log_event(
+                                file_ctx,
+                                role="orchestrator",
+                                event="VECTOR_STORE_INDEXED",
+                                module=logger.name,
+                                fields={
+                                    "file_id": file.file_id,
+                                    "vector_store_id": outcome.vector_store_id or "",
+                                    "status": outcome.vector_store_status,
+                                    "indexed_at_utc": outcome.indexed_at_utc or "",
+                                },
+                            ))
+                        if outcome.evidence_packs:
+                            logger.info(log_event(
+                                file_ctx,
+                                role="orchestrator",
+                                event="EVIDENCE_READY",
+                                module=logger.name,
+                                fields={
+                                    "file_id": file.file_id,
+                                    "vector_store_id": outcome.vector_store_id or "",
+                                    "pack_count": len(outcome.evidence_packs),
+                                },
+                            ))
                         state_record(
                             StateRecordRequest(
                                 schema_version="1.0",
                                 state_db=settings.state_db,
                                 file_id=file.file_id,
                                 md5=md5 or "",
-                                openai_file_id="",
+                                openai_file_id=outcome.openai_file_id or "",
+                                vector_store_id=outcome.vector_store_id,
+                                vector_store_status=outcome.vector_store_status,
+                                indexed_at_utc=outcome.indexed_at_utc,
+                                last_error=outcome.vector_store_last_error,
                             ),
                             file_ctx,
                         )

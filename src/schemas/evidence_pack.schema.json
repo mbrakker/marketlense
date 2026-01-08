@@ -2,24 +2,29 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "EvidencePack",
   "type": "object",
-  "required": ["scope", "methods", "findings"],
+  "additionalProperties": true,
   "properties": {
-    "schema_version": { "type": "string" },
-    "scope": { "type": "string" },
+    "schema_version": { "type": ["string", "null"] },
+    "scope": { "type": ["string", "object", "null"] },
     "methods": {
       "type": "array",
-      "items": { "type": "string" }
+      "items": {
+        "oneOf": [
+          { "type": "string" },
+          { "type": "object", "additionalProperties": true }
+        ]
+      }
     },
     "findings": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "text"],
+        "additionalProperties": true,
         "properties": {
-          "id": { "type": "string" },
-          "text": { "type": "string" },
-          "evidence": { "type": "string" },
-          "confidence": { "type": "string" },
+          "id": { "type": ["string", "null"] },
+          "text": { "type": ["string", "null"] },
+          "evidence": { "type": ["string", "null"] },
+          "confidence": { "type": ["string", "null"] },
           "pages": {
             "type": "array",
             "items": { "type": "integer" }
@@ -35,11 +40,11 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["text"],
+        "additionalProperties": true,
         "properties": {
-          "text": { "type": "string" },
-          "source": { "type": "string" },
-          "page": { "type": "integer" }
+          "text": { "type": ["string", "null"] },
+          "source": { "type": ["string", "null"] },
+          "page": { "type": ["integer", "null"] }
         }
       }
     }

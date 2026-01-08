@@ -48,7 +48,7 @@ def create_vector_store(report_id: str, metadata: Dict[str, str], ctx: Optional[
         fields={"report_id": report_id},
     ))
     try:
-        resp = _client().beta.vector_stores.create(name=report_id, metadata=metadata or {})
+        resp = _client().vector_stores.create(name=report_id, metadata=metadata or {})
         vector_store_id = getattr(resp, "id", None) or resp.get("id")  # type: ignore[union-attr]
         if not vector_store_id:
             raise AppError(
@@ -130,7 +130,7 @@ def attach_file(vector_store_id: str, file_id: str, ctx: Optional[RunContext] = 
         fields={"vector_store_id": vector_store_id, "openai_file_id": file_id},
     ))
     try:
-        resp = _client().beta.vector_stores.files.create(vector_store_id=vector_store_id, file_id=file_id)
+        resp = _client().vector_stores.files.create(vector_store_id=vector_store_id, file_id=file_id)
         attached_id = getattr(resp, "id", None) or resp.get("id")  # type: ignore[union-attr]
         if not attached_id:
             raise AppError(
@@ -167,10 +167,16 @@ def get_vector_store_status(vector_store_id: str, ctx: Optional[RunContext] = No
         fields={"vector_store_id": vector_store_id},
     ))
     try:
-        resp = _client().beta.vector_stores.retrieve(vector_store_id)
-        status = getattr(resp, "status", None) or resp.get("status")  # type: ignore[union-attr]
-        indexed_at = getattr(resp, "created_at", None) or resp.get("created_at")  # type: ignore[union-attr]
-        last_error = getattr(resp, "last_error", None) or resp.get("last_error")  # type: ignore[union-attr]
+        resp = _client().vector_stores.retrieve(vector_store_id)
+        status = getattr(resp, "status", None)
+        if status is None and isinstance(resp, dict):
+            status = resp.get("status")
+        indexed_at = getattr(resp, "created_at", None)
+        if indexed_at is None and isinstance(resp, dict):
+            indexed_at = resp.get("created_at")
+        last_error = getattr(resp, "last_error", None)
+        if last_error is None and isinstance(resp, dict):
+            last_error = resp.get("last_error")
     except Exception as exc:
         raise AppError(
             code="vector_store_status_failed",

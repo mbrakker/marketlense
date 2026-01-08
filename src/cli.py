@@ -15,6 +15,7 @@ from src.orchestrators.ingest_orchestrator import run_ingest
 from src.orchestrators.publish_orchestrator import run_publish
 from src.orchestrators.recategorize_orchestrator import run_recategorize
 from src.orchestrators.wp_category_update_orchestrator import run_update_wp_categories
+from src.orchestrators.golden_set_orchestrator import run_golden_set_vector
 from src.services.config_service import load_settings, load_publish_settings
 from src.services.logging_service import setup_logging
 from src.utils.logging import log_event, new_run_context
@@ -69,6 +70,9 @@ def ingest(
         contents_min_headings=s.contents_min_headings,
         contents_keywords=s.contents_keywords,
         contents_preview_dpi=s.contents_preview_dpi,
+        analysis_mode=s.analysis_mode,
+        use_vector_store=s.use_vector_store,
+        vector_store_keep=s.vector_store_keep,
         cost_ledger_path=s.cost_ledger_path,
         cost_daily_path=s.cost_daily_path,
         model_pricing=s.model_pricing,
@@ -207,6 +211,27 @@ def update_wp_categories():
         )
     console.print(table)
     console.print(f"[green]Done: {updated} post(s) updated.[/green]")
+
+
+@cli_app.command("golden-set-vector")
+def golden_set_vector(
+    fixtures: str = typer.Option(..., help="Directory containing local PDF fixtures"),
+    limit: int = typer.Option(None, help="Max PDFs to process this run"),
+):
+    setup_logging()
+    console.print("[cyan]Loading settings...[/cyan]")
+    ctx = new_run_context(task_id="cli_golden_set_vector")
+    logger.info(log_event(
+        ctx,
+        role="orchestrator",
+        event="cli_load_settings_start",
+        module=logger.name,
+        fields={},
+    ))
+    s = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    console.print("[cyan]Running golden-set vector pipeline...[/cyan]")
+    run_golden_set_vector(s, fixtures_dir=fixtures, limit=limit, ctx=ctx)
+    console.print("[green]Done.[/green]")
 
 
 @cli_app.callback(invoke_without_command=True)

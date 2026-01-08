@@ -1,0 +1,2 @@
+text: |
+  Return JSON with findings array; adhere to EvidencePack schema.

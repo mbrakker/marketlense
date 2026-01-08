@@ -93,12 +93,14 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
      - **PDF info**: `pdf_utils_service.extract_pdf_info` captures page count and sanitized PDF metadata for persistence.
      - **PDF context**: `pdf_context_service.build_pdf_context` opens PyMuPDF and pypdf handles once; downstream services reuse them and fall back to local opens if unavailable.
      - **Contents/index detection**: scans the first pages for a contents/index section, renders a screenshot when found, and records the page number for HTML + DB output.
-      - **Text extraction**: `pdf_text_service` extracts text from the first N pages (reusing the shared context when present).
-      - **LLM analysis**: Sends prompt + extracted text to OpenAI for structured JSON output.
-      - **Normalization**: `normalize_generator` enforces strict schema and list sizing.
-      - **Categorization**: taxonomy tags are scored against `src/config/category-mappings.yaml`; top 3 categories are stored and rendered, and unmapped tags are appended under `uncategorized` in that YAML.
-      - **Figure selection**: `figure_service` selects a representative visual and caption.
-      - **Candidate extraction**: `extract_service` finds chart/table regions.
+     - **Text extraction**: `pdf_text_service` extracts text from the first N pages (reusing the shared context when present).
+     - **LLM analysis**:
+       - `local_text` mode: Sends prompt + extracted text to OpenAI for structured JSON output.
+       - `vector_store` mode: Ensures a vector store exists (create → upload PDF → attach → wait for indexing via `vector_store_service`), then calls `openai_service.openai_respond_with_vector_store` (Responses API + file search). Evidence packs are generated via `src/generators/evidence_pack_generator.py` (doc_map, scope, methods, findings, limitations, quote_candidates), stored under `out/report_analysis/<file_id>/*.json`, and persisted in the metadata DB (`reports` table columns `vector_store_id`, `evidence_packs_json`; state DB stores `vector_store_status`, `indexed_at_utc`, `openai_file_id`, `last_error`). Orchestrator logs `VECTOR_STORE_CREATED`, `VECTOR_STORE_INDEXED`, `EVIDENCE_READY`.
+     - **Normalization**: `normalize_generator` enforces strict schema and list sizing.
+     - **Categorization**: taxonomy tags are scored against `src/config/category-mappings.yaml`; top 3 categories are stored and rendered, and unmapped tags are appended under `uncategorized` in that YAML.
+     - **Figure selection**: `figure_service` selects a representative visual and caption.
+     - **Candidate extraction**: `extract_service` finds chart/table regions.
      - **Candidate ranking**: `rank_service` scores candidates via LLM.
      - **Cropping**: `crop_service` crops top-ranked regions.
      - **Preview rendering**: `preview_service` renders the first page to PNG.
@@ -292,6 +294,14 @@ python -m src.cli golden-set-vector --fixtures <dir> --limit <N>
 # --limit: max PDFs to process (optional)
 ```
 
+Vector-store ingest mode:
+
+```bash
+ANALYSIS_MODE=vector_store USE_VECTOR_STORE=1 python -m src.cli ingest --limit 1
+```
+
+This reuses existing vector stores when `VECTOR_STORE_KEEP=true`, otherwise creates/attaches/waits per file and writes packs to `out/report_analysis/<file_id>/`.
+
 CLI options summary:
 - `--limit`: optional integer across batch commands.
 - `--folder`: optional Drive folder override for ingest.
@@ -312,6 +322,14 @@ Default output structure:
       <report-name>1.png
     thumbs/
       <report-name>.png
+  report_analysis/
+    <file_id>/
+      doc_map.json
+      scope.json
+      methods.json
+      findings.json
+      limitations.json
+      quote_candidates.json
 ```
 
 ---

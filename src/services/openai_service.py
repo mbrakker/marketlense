@@ -296,16 +296,16 @@ def openai_respond_with_vector_store(request: OpenAIResponseRequest, ctx: RunCon
     if request.timeout_seconds is not None:
         client_kwargs["timeout"] = request.timeout_seconds
     client = OpenAI(**client_kwargs)
+    user_prompt = request.user_prompt
+    if "json" not in user_prompt.lower():
+        user_prompt = f"{user_prompt}\n\nReturn a JSON object."
     payload_args = {
         "model": request.model,
-        "input": [
-            {"role": "system", "content": request.system_prompt},
-            {"role": "user", "content": request.user_prompt},
-        ],
+        "instructions": request.system_prompt,
+        "input": [{"role": "user", "content": user_prompt}],
         "temperature": request.temperature,
-        "response_format": {"type": "json_object"},
-        "tools": [{"type": "file_search"}],
-        "tool_resources": {"file_search": {"vector_store_ids": [request.vector_store_id]}},
+        "text": {"format": {"type": "json_object"}},
+        "tools": [{"type": "file_search", "vector_store_ids": [request.vector_store_id]}],
     }
     if request.seed is not None:
         payload_args["seed"] = request.seed

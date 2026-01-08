@@ -35,6 +35,9 @@ CREATE TABLE IF NOT EXISTS reports (
   page_count INTEGER,
   contents_page INTEGER,
   pdf_metadata_json TEXT,
+  analysis_mode TEXT,
+  vector_store_id TEXT,
+  evidence_packs_json TEXT,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
@@ -59,6 +62,12 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE reports ADD COLUMN contents_page INTEGER")
     if "pdf_metadata_json" not in cols:
         conn.execute("ALTER TABLE reports ADD COLUMN pdf_metadata_json TEXT")
+    if "analysis_mode" not in cols:
+        conn.execute("ALTER TABLE reports ADD COLUMN analysis_mode TEXT")
+    if "vector_store_id" not in cols:
+        conn.execute("ALTER TABLE reports ADD COLUMN vector_store_id TEXT")
+    if "evidence_packs_json" not in cols:
+        conn.execute("ALTER TABLE reports ADD COLUMN evidence_packs_json TEXT")
     conn.commit()
 
 
@@ -132,6 +141,10 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
     time_period = request.time_period.strip() if request.time_period and request.time_period.strip() else None
     metadata_clean = _clean_metadata(request.pdf_metadata)
     metadata_json = json.dumps(metadata_clean, ensure_ascii=True)
+    analysis_mode = request.analysis_mode.strip() if request.analysis_mode else "local_text"
+    vector_store_id = request.vector_store_id.strip() if request.vector_store_id else None
+    evidence_packs = request.evidence_pack_paths or {}
+    evidence_packs_json = json.dumps(evidence_packs, ensure_ascii=False)
 
     logger.info(log_event(
         ctx,
@@ -155,8 +168,8 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
     with _metadata_conn(request.db_path) as conn:
         conn.execute(
             """
-            INSERT INTO reports(file_id, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, created_at, updated_at)
-            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%s','now'), strftime('%s','now'))
+            INSERT INTO reports(file_id, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, created_at, updated_at)
+            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%s','now'), strftime('%s','now'))
             ON CONFLICT(file_id) DO UPDATE SET
                 title=excluded.title,
                 publisher=excluded.publisher,
@@ -170,6 +183,9 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
                 page_count=excluded.page_count,
                 contents_page=excluded.contents_page,
                 pdf_metadata_json=excluded.pdf_metadata_json,
+                analysis_mode=excluded.analysis_mode,
+                vector_store_id=excluded.vector_store_id,
+                evidence_packs_json=excluded.evidence_packs_json,
                 updated_at=strftime('%s','now')
             """,
             (
@@ -186,6 +202,9 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
                 page_count,
                 contents_page,
                 metadata_json,
+                analysis_mode,
+                vector_store_id,
+                evidence_packs_json,
             ),
         )
     logger.info(log_event(
@@ -208,7 +227,7 @@ def get_metadata(request: ReportMetadataGetRequest, ctx: RunContext) -> Optional
     with _metadata_conn(request.db_path) as conn:
         cur = conn.execute(
             """
-            SELECT file_id, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, created_at, updated_at
+            SELECT file_id, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, created_at, updated_at
             FROM reports
             WHERE file_id=?
             """,
@@ -231,8 +250,11 @@ def get_metadata(request: ReportMetadataGetRequest, ctx: RunContext) -> Optional
     page_count_raw = row[10]
     contents_page_raw = row[11]
     metadata_json = row[12] or "{}"
-    created_at = int(row[13])
-    updated_at = int(row[14])
+    analysis_mode = row[13] or "local_text"
+    vector_store_id = row[14]
+    evidence_packs_json = row[15] or "{}"
+    created_at = int(row[16])
+    updated_at = int(row[17])
     taxonomy: List[str] = []
     categories: List[str] = []
     pdf_metadata: dict[str, str] = {}
@@ -302,6 +324,20 @@ def get_metadata(request: ReportMetadataGetRequest, ctx: RunContext) -> Optional
             fields={"file_id": request.file_id, "raw": contents_page_raw},
         ))
 
+    evidence_pack_paths: dict[str, str] = {}
+    try:
+        parsed_packs = json.loads(evidence_packs_json)
+        if isinstance(parsed_packs, dict):
+            evidence_pack_paths = {str(k): str(v) for k, v in parsed_packs.items()}
+    except json.JSONDecodeError:
+        logger.info(log_event(
+            ctx,
+            role="service",
+            event="report_metadata_evidence_packs_parse_failed",
+            module=logger.name,
+            fields={"file_id": request.file_id},
+        ))
+
     response = ReportMetadataGetResponse(
         schema_version="1.1",
         file_id=row[0],
@@ -319,6 +355,9 @@ def get_metadata(request: ReportMetadataGetRequest, ctx: RunContext) -> Optional
         page_count=page_count,
         contents_page_number=contents_page_number,
         pdf_metadata=pdf_metadata,
+        analysis_mode=str(analysis_mode),
+        vector_store_id=vector_store_id,
+        evidence_pack_paths=evidence_pack_paths,
     )
     logger.info(log_event(
         ctx,
@@ -342,7 +381,7 @@ def list_metadata(request: ReportMetadataListRequest, ctx: RunContext) -> Report
     with _metadata_conn(request.db_path) as conn:
         cur = conn.execute(
             """
-            SELECT file_id, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, created_at, updated_at
+            SELECT file_id, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, created_at, updated_at
             FROM reports
             ORDER BY created_at ASC
             """
@@ -353,11 +392,15 @@ def list_metadata(request: ReportMetadataListRequest, ctx: RunContext) -> Report
             page_count_raw = row[10]
             contents_page_raw = row[11]
             metadata_json = row[12] or "{}"
+            analysis_mode = row[13] or "local_text"
+            vector_store_id = row[14]
+            evidence_packs_json = row[15] or "{}"
             taxonomy: List[str] = []
             categories: List[str] = []
             pdf_metadata: dict[str, str] = {}
             page_count: Optional[int] = None
             contents_page_number = 0
+            evidence_pack_paths: dict[str, str] = {}
             try:
                 parsed = json.loads(taxonomy_json)
                 if isinstance(parsed, list):
@@ -420,12 +463,24 @@ def list_metadata(request: ReportMetadataListRequest, ctx: RunContext) -> Report
                     module=logger.name,
                     fields={"file_id": row[0], "raw": contents_page_raw},
                 ))
+            try:
+                parsed_packs = json.loads(evidence_packs_json)
+                if isinstance(parsed_packs, dict):
+                    evidence_pack_paths = {str(k): str(v) for k, v in parsed_packs.items()}
+            except json.JSONDecodeError:
+                logger.info(log_event(
+                    ctx,
+                    role="service",
+                    event="report_metadata_evidence_packs_parse_failed",
+                    module=logger.name,
+                    fields={"file_id": row[0]},
+                ))
             rows.append(ReportMetadataGetResponse(
                 schema_version="1.1",
                 file_id=row[0],
                 title=row[1],
-                created_at=int(row[13]),
-                updated_at=int(row[14]),
+                created_at=int(row[16]),
+                updated_at=int(row[17]),
                 publisher=row[2],
                 taxonomy=taxonomy,
                 categories=categories,
@@ -437,6 +492,9 @@ def list_metadata(request: ReportMetadataListRequest, ctx: RunContext) -> Report
                 page_count=page_count,
                 contents_page_number=contents_page_number,
                 pdf_metadata=pdf_metadata,
+                analysis_mode=str(analysis_mode),
+                vector_store_id=vector_store_id,
+                evidence_pack_paths=evidence_pack_paths,
             ))
     logger.info(log_event(
         ctx,

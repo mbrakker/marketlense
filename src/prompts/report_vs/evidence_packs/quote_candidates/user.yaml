@@ -1,0 +1,2 @@
+text: |
+  Return JSON with quote_candidates array; adhere to EvidencePack schema.

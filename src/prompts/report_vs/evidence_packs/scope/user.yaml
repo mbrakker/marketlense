@@ -1,0 +1,2 @@
+text: |
+  Return JSON with scope filled; other fields optional. Follow EvidencePack schema.
