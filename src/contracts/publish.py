@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import List, Optional
 
 from src.contracts.wordpress import WordPressAuthSettings
 
@@ -14,6 +14,7 @@ class PublishSettings:
     reports_db: str = field(metadata={"doc": "SQLite path for report metadata (for category updates)."})
     category_mapping_path: str = field(metadata={"doc": "Filesystem path to category mappings YAML."})
     wp: WordPressAuthSettings = field(metadata={"doc": "WordPress auth settings."})
+    validation_policy: str = field(default="block", metadata={"doc": "Validation handling: block (skip publish on fail) or warn (log and continue)."})
 
 
 @dataclass(frozen=True)
@@ -32,3 +33,5 @@ class PublishOutcome:
     post_id: Optional[int] = field(default=None, metadata={"doc": "WordPress post ID, if created."})
     post_url: Optional[str] = field(default=None, metadata={"doc": "WordPress post URL, if created."})
     error: Optional[str] = field(default=None, metadata={"doc": "Error code/message when status=error or skipped."})
+    validation_status: Optional[str] = field(default=None, metadata={"doc": "Validation result applied at publish time: pass|fail|missing|error."})
+    validation_issues: List[str] = field(default_factory=list, metadata={"doc": "Validation issues summarised for the publish attempt, if any."})

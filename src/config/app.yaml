@@ -40,6 +40,8 @@ publish:
     site_url: "http://marketlense.medianewsonline.com"
     username: "admin"
     post_status: "publish"
+  validation:
+    policy: "block"
 
 analysis:
   mode: "local_text"

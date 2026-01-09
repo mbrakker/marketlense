@@ -1,0 +1,11 @@
+text: |
+  Artifacts to validate (JSON):
+  {{ report_json }}
+
+  Evidence snippets (JSON):
+  {{ evidence_json }}
+
+  Task:
+  - Review each sentence in the artifacts (insights, quotes, summaries, expert comment, LinkedIn post).
+  - Mark a sentence unsupported if the evidence snippets do not contain the facts, numbers, or wording needed to justify it.
+  - Keep the response as JSON with `unsupported` array; omit any additional prose.

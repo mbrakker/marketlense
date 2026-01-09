@@ -288,6 +288,7 @@ def load_publish_settings(request: ConfigLoadRequest, ctx: RunContext) -> Publis
     paths = data.get("paths", {}) or {}
     publish = data.get("publish", {}) or {}
     wp_cfg = publish.get("wp", {}) or {}
+    validation_cfg = publish.get("validation", {}) or {}
     category_mapping_path = paths.get("category_mappings") or str(Path(__file__).resolve().parents[1] / "config" / "category-mappings.yaml")
 
     output_dir = need(paths, "output_dir", "paths.output_dir", "OUTPUT_DIR")
@@ -315,6 +316,11 @@ def load_publish_settings(request: ConfigLoadRequest, ctx: RunContext) -> Publis
         post_status=wp_cfg.get("post_status") or _env_value("WP_POST_STATUS") or "publish",
     )
 
+    validation_policy_raw = validation_cfg.get("policy") or _env_value("PUBLISH_VALIDATION_POLICY") or "block"
+    validation_policy = str(validation_policy_raw).strip().lower()
+    if validation_policy not in {"block", "warn"}:
+        validation_policy = "block"
+
     if missing:
         logger.info(log_event(
             ctx,
@@ -334,6 +340,7 @@ def load_publish_settings(request: ConfigLoadRequest, ctx: RunContext) -> Publis
         state_db=state_db,
         reports_db=reports_db,
         category_mapping_path=category_mapping_path,
+        validation_policy=validation_policy,
         wp=wp,
     )
     logger.info(log_event(
@@ -348,6 +355,7 @@ def load_publish_settings(request: ConfigLoadRequest, ctx: RunContext) -> Publis
             "site_url": settings.wp.site_url,
             "username": settings.wp.username,
             "post_status": settings.wp.post_status,
+            "validation_policy": settings.validation_policy,
         },
     ))
     return settings

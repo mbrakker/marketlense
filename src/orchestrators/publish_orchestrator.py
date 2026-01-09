@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import logging
 import time
+import json
+from pathlib import Path
 from typing import List, Optional
 
 from src.contracts.files import ListHtmlRequest, ReadTextRequest
 from src.contracts.publish import PublishOutcome, PublishRequest, PublishSettings
 from src.contracts.state import StateGetRequest, StatePublishCheckRequest, StatePublishRecordRequest
+from src.contracts.validation import ValidationIssue, ValidationReport
 from src.contracts.wordpress import WordPressPostLookupRequest
 from src.services.file_service import list_html, read_text
 from src.services.state_service import already_published as state_already_published
@@ -20,6 +23,72 @@ from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.wp_auth import build_auth_header
 
 logger = logging.getLogger("market_lense.publish_orchestrator")
+
+
+def _validation_path(output_dir: str, file_id: str) -> str:
+    return str(Path(output_dir) / "report_analysis" / file_id / "validation.json")
+
+
+def _load_validation_report(file_id: str, settings: PublishSettings, ctx) -> Optional[ValidationReport]:
+    path = _validation_path(settings.output_dir, file_id)
+    try:
+        resp = read_text(ReadTextRequest(schema_version="1.0", path=path), ctx)
+    except AppError as exc:
+        logger.info(log_event(
+            ctx,
+            role="orchestrator",
+            event="publish_validation_missing",
+            module=logger.name,
+            fields={"file_id": file_id, "path": path, "error": exc.message},
+        ))
+        return None
+    try:
+        data = json.loads(resp.content)
+    except json.JSONDecodeError:
+        logger.info(log_event(
+            ctx,
+            role="orchestrator",
+            event="publish_validation_parse_failed",
+            module=logger.name,
+            fields={"file_id": file_id, "path": path},
+        ))
+        return None
+    issues_payload = data.get("issues") if isinstance(data, dict) else []
+    issues: List[ValidationIssue] = []
+    if isinstance(issues_payload, list):
+        for item in issues_payload:
+            if not isinstance(item, dict):
+                continue
+            issues.append(ValidationIssue(
+                schema_version=str(item.get("schema_version", "1.0")),
+                message=str(item.get("message", "")),
+                severity=str(item.get("severity", "warning")),
+                affected_section=str(item.get("affected_section", "")),
+            ))
+    status = str(data.get("status") or "fail")
+    severity = str(data.get("severity") or ("error" if status != "pass" else "pass"))
+    severity_norm = severity if severity in {"pass", "warning", "error"} else "error"
+    return ValidationReport(
+        schema_version=str(data.get("schema_version", "1.1")),
+        status=status,
+        severity=severity_norm,
+        issues=issues,
+        source_path=path,
+    )
+
+
+def _with_validation(outcome: PublishOutcome, status: Optional[str], issues: List[str]) -> PublishOutcome:
+    return PublishOutcome(
+        schema_version=outcome.schema_version,
+        html_path=outcome.html_path,
+        file_id=outcome.file_id,
+        status=outcome.status,
+        post_id=outcome.post_id,
+        post_url=outcome.post_url,
+        error=outcome.error,
+        validation_status=status,
+        validation_issues=issues,
+    )
 
 
 def run_publish(
@@ -114,6 +183,45 @@ def run_publish(
             ))
             continue
 
+        validation_report = _load_validation_report(file_id, settings, file_ctx)
+        validation_status = validation_report.status if validation_report else "missing"
+        validation_issues = [issue.message for issue in validation_report.issues] if validation_report else []
+        if settings.validation_policy == "block" and validation_status != "pass":
+            logger.info(log_event(
+                file_ctx,
+                role="orchestrator",
+                event="publish_validation_blocked",
+                module=logger.name,
+                fields={
+                    "file_id": file_id,
+                    "validation_status": validation_status,
+                    "issues": validation_issues,
+                },
+            ))
+            outcomes.append(PublishOutcome(
+                schema_version="1.0",
+                html_path=html_path,
+                file_id=file_id,
+                status="error",
+                error="validation_failed",
+                validation_status=validation_status,
+                validation_issues=validation_issues,
+            ))
+            continue
+        if validation_status != "pass":
+            logger.info(log_event(
+                file_ctx,
+                role="orchestrator",
+                event="publish_validation_warning",
+                module=logger.name,
+                fields={
+                    "file_id": file_id,
+                    "validation_status": validation_status,
+                    "issues": validation_issues,
+                    "policy": settings.validation_policy,
+                },
+            ))
+
         retries = 2
         outcome: Optional[PublishOutcome] = None
         for attempt in range(retries + 1):
@@ -155,6 +263,7 @@ def run_publish(
                         post_url=lookup_resp.link,
                         error="already_exists",
                     )
+                    outcome = _with_validation(outcome, validation_status, validation_issues)
                     break
 
                 outcome = publish_html(
@@ -162,6 +271,7 @@ def run_publish(
                     settings,
                     file_ctx,
                 )
+                outcome = _with_validation(outcome, validation_status, validation_issues)
                 if outcome.status == "published" and outcome.post_id and outcome.post_url:
                     state_record_publish(
                         StatePublishRecordRequest(
@@ -191,6 +301,7 @@ def run_publish(
                         status="error",
                         error=exc.message,
                     )
+                    outcome = _with_validation(outcome, validation_status, validation_issues)
                     break
                 logger.info(log_event(
                     file_ctx,
@@ -215,6 +326,7 @@ def run_publish(
                     status="error",
                     error=str(exc),
                 )
+                outcome = _with_validation(outcome, validation_status, validation_issues)
                 break
 
         if outcome is not None:
@@ -235,6 +347,8 @@ def run_publish(
             file_id=file_id,
             status="error",
             error="publish_failed",
+            validation_status=validation_status,
+            validation_issues=validation_issues,
         ))
 
     logger.info(log_event(

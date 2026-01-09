@@ -33,6 +33,7 @@ from src.generators.categorize_generator import categorize_taxonomy
 from src.generators.normalize_generator import normalize_report
 from src.generators.evidence_pack_generator import generate_evidence_packs
 from src.generators.artifact_generator import generate_artifacts
+from src.generators.validation_generator import validate_report as run_validation
 from src.services.crop_service import crop_regions as crop_regions_service
 from src.services.extract_service import collect_candidates as collect_candidates_service
 from src.services.figure_service import extract_best_figure as extract_best_figure_service
@@ -47,8 +48,9 @@ from src.services.category_mapping_service import (
 from src.services.report_store_service import upsert_metadata as upsert_report_metadata
 from src.services.pdf_context_service import build_pdf_context
 from src.services.pdf_utils_service import extract_pdf_info
-from src.services import vector_store_service, state_service
+from src.services import vector_store_service, state_service, report_analysis_store_service
 from src.contracts.state import StateGetRequest
+from src.contracts.validation import ValidationIssue, ValidationReport, ValidationRequest
 from src.utils.logging import log_event
 from src.utils.validation import validate_candidate, validate_report_payload
 
@@ -184,6 +186,8 @@ def generate_report(
     contents_heading = ""
     artifacts_payload: dict | None = None
     artifacts_path: str | None = None
+    validation_report: ValidationReport | None = None
+    evidence_packs: dict[str, dict] = {}
 
     info_resp = extract_pdf_info(
         PdfInfoRequest(schema_version="1.0", path=local_pdf_path),
@@ -608,6 +612,7 @@ def generate_report(
                 settings=settings,
                 ctx=ctx,
             )
+            evidence_packs = packs
             pack_names = list(packs.keys())
             evidence_pack_paths = _pack_paths(settings.output_dir, file.file_id, pack_names)
             data._vector_store_id = vector_store_id or ""
@@ -641,6 +646,66 @@ def generate_report(
                     fields={"file_id": file.file_id, "error": str(exc)},
                 ))
 
+        validation_path = None
+        try:
+            validation_req = ValidationRequest(
+                schema_version="1.0",
+                report_id=file.file_id,
+                report=data,
+                artifacts=artifacts_payload or {},
+                evidence_packs=evidence_packs,
+                vector_store_id=vector_store_id,
+            )
+            validation_report = run_validation(validation_req, settings, ctx)
+            validation_path = validation_report.source_path
+            if validation_path:
+                evidence_pack_paths["validation"] = validation_path
+        except Exception as exc:
+            logger.info(log_event(
+                ctx,
+                role="generator",
+                event="validation_failed",
+                module=logger.name,
+                fields={"file_id": file.file_id, "error": str(exc)},
+            ))
+            fallback_issue = ValidationIssue(
+                schema_version="1.0",
+                message=f"Validation error: {exc}",
+                severity="error",
+                affected_section="validation",
+            )
+            fallback_report = ValidationReport(
+                schema_version="1.1",
+                status="fail",
+                issues=[fallback_issue],
+                severity="error",
+            )
+            try:
+                validation_path = report_analysis_store_service.store_pack(
+                    settings.output_dir,
+                    file.file_id,
+                    "validation",
+                    fallback_report.to_dict(),
+                    ctx,
+                )
+                fallback_report = ValidationReport(
+                    schema_version=fallback_report.schema_version,
+                    status=fallback_report.status,
+                    issues=fallback_report.issues,
+                    severity=fallback_report.severity,
+                    source_path=validation_path,
+                )
+                evidence_pack_paths["validation"] = validation_path
+            except Exception as store_exc:  # pragma: no cover - best-effort fallback
+                logger.info(log_event(
+                    ctx,
+                    role="generator",
+                    event="validation_store_failed",
+                    module=logger.name,
+                    fields={"file_id": file.file_id, "error": str(store_exc)},
+                ))
+            validation_report = fallback_report
+
         preview_resp = render_preview_service(
             PreviewRequest(
                 schema_version="1.1",
@@ -658,6 +723,8 @@ def generate_report(
         data_dict = data.to_dict()
         if artifacts_payload:
             data_dict["artifacts"] = artifacts_payload
+        if validation_report:
+            data_dict["validation_report"] = validation_report.to_dict()
         data_dict["categories_display"] = category_assignment.category_labels
         logger.info(log_event(
             ctx,

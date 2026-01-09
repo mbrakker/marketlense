@@ -23,6 +23,7 @@ from src.contracts.report_assets import (
 from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.run_context import RunContext
 from src.generators.report_generator import generate_report
+from src.contracts.validation import ValidationReport
 
 
 FIXTURES_ROOT = Path("out/fixtures/golden_set")
@@ -241,6 +242,9 @@ def test_golden_reports_regression(tmp_path: Path, monkeypatch: pytest.MonkeyPat
         def fake_upsert_metadata(request, ctx):
             return None
 
+        def fake_validation(request, settings, ctx):
+            return ValidationReport(schema_version="1.1", status="pass", severity="pass", issues=[], source_path="")
+
         monkeypatch.setattr("src.generators.report_generator.extract_pdf_info", fake_pdf_info)
         monkeypatch.setattr("src.generators.report_generator.build_pdf_context", fake_build_pdf_context)
         monkeypatch.setattr("src.generators.report_generator.detect_contents_page_service", fake_detect_contents)
@@ -256,6 +260,7 @@ def test_golden_reports_regression(tmp_path: Path, monkeypatch: pytest.MonkeyPat
         monkeypatch.setattr("src.generators.report_generator.render_preview_service", fake_render_preview)
         monkeypatch.setattr("src.generators.report_generator.render_report_service", fake_render_report)
         monkeypatch.setattr("src.generators.report_generator.upsert_report_metadata", fake_upsert_metadata)
+        monkeypatch.setattr("src.generators.report_generator.run_validation", fake_validation)
 
         settings = _base_settings(output_dir, cache_dir, state_db, reports_db, category_map)
         drive_file = DriveFile(
@@ -271,6 +276,7 @@ def test_golden_reports_regression(tmp_path: Path, monkeypatch: pytest.MonkeyPat
 
         assert outcome.status == "processed"
         assert Path(outcome.html_path).exists()
+        normalized_capture["payload"].pop("validation_report", None)
         assert normalized_capture["payload"] == expected_payload
         html_text = Path(outcome.html_path).read_text(encoding="utf-8")
         expected_html = expected_html_path.read_text(encoding="utf-8")

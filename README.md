@@ -14,6 +14,7 @@ Key traits:
 - Generator logic that composes services into domain outputs.
 - Orchestrator that controls sequencing, retries, and state (including publishing).
 - Structured logging with run/task/span identifiers.
+- Built-in validation: semantic checks plus LLM grounding with persisted reports and publish-time policy controls.
 
 ---
 
@@ -51,6 +52,7 @@ Key fields and env overrides:
 - Analysis mode: `analysis.mode` (`ANALYSIS_MODE`, default `local_text`; set `vector_store` to enable file-search/Responses path).
 - Vector store toggles: `analysis.use_vector_store` (`USE_VECTOR_STORE`, default derived from mode), `analysis.vector_store_keep` (`VECTOR_STORE_KEEP`, default `true`).
 - Cost tracking: `analysis.cost_ledger_path` (`COST_LEDGER_PATH`, default `./out/cost-ledger.jsonl`), `cost.daily_path` (default `./out/cost-daily.json`), `cost.pricing` (per-model pricing map used by `utils.costing`).
+- Validation: `publish.validation.policy` (`PUBLISH_VALIDATION_POLICY`, default `block`; set to `warn` to allow publish with issues).
 
 Secrets (env only):
 - `OPENAI_API_KEY` (required)
@@ -95,9 +97,10 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
      - **PDF context**: `pdf_context_service.build_pdf_context` opens PyMuPDF and pypdf handles once; downstream services reuse them and fall back to local opens if unavailable.
      - **Contents/index detection**: scans the first pages for a contents/index section, renders a screenshot when found, and records the page number for HTML + DB output.
      - **Text extraction**: `pdf_text_service` extracts text from the first N pages (reusing the shared context when present).
-     - **LLM analysis**:
-       - `local_text` mode: Sends prompt + extracted text to OpenAI for structured JSON output.
-       - `vector_store` mode: Ensures a vector store exists (create → upload PDF → attach → wait for indexing via `vector_store_service`), then calls `openai_service.openai_respond_with_vector_store` (Responses API + file search). Evidence packs are generated via `src/generators/evidence_pack_generator.py` (doc_map, scope, methods, findings, limitations, quote_candidates), stored under `out/report_analysis/<file_id>/*.json`, and persisted in the metadata DB (`reports` table columns `vector_store_id`, `evidence_packs_json`; state DB stores `vector_store_status`, `indexed_at_utc`, `openai_file_id`, `last_error`). Orchestrator logs `VECTOR_STORE_CREATED`, `VECTOR_STORE_INDEXED`, `EVIDENCE_READY`.
+- **LLM analysis**:
+  - `local_text` mode: Sends prompt + extracted text to OpenAI for structured JSON output.
+  - `vector_store` mode: Ensures a vector store exists (create → upload PDF → attach → wait for indexing via `vector_store_service`), then calls `openai_service.openai_respond_with_vector_store` (Responses API + file search). Evidence packs are generated via `src/generators/evidence_pack_generator.py` (doc_map, scope, methods, findings, limitations, quote_candidates), stored under `out/report_analysis/<file_id>/*.json`, and persisted in the metadata DB (`reports` table columns `vector_store_id`, `evidence_packs_json`; state DB stores `vector_store_status`, `indexed_at_utc`, `openai_file_id`, `last_error`). Orchestrator logs `VECTOR_STORE_CREATED`, `VECTOR_STORE_INDEXED`, `EVIDENCE_READY`.
+  - **Validation**: `src/generators/validation_generator.py` runs semantic checks (metrics vs evidence, quotes verbatim, no new numbers in expert/LinkedIn) and LLM grounding (`src/prompts/report_vs/validate/grounding`). Results are stored at `out/report_analysis/<file_id>/validation.json`, added to the rendered payload, and logged.
      - **Normalization**: `normalize_generator` enforces strict schema and list sizing.
      - **Categorization**: taxonomy tags are scored against `src/config/category-mappings.yaml`; top 3 categories are stored and rendered, and unmapped tags are appended under `uncategorized` in that YAML.
      - **Figure selection**: `figure_service` selects a representative visual and caption.
@@ -134,6 +137,7 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
 
 6. **State record**
    - Published posts are recorded with post ID and URL for idempotency.
+   - Validation policy: `publish.validation.policy` set to `block` skips publish when validation fails/missing; `warn` logs issues but proceeds. Publish outcomes include validation status/issues.
 
 ---
 
@@ -215,6 +219,7 @@ Key contracts live under `src/contracts/`:
 - `pdf_context.py`: shared PDF context (PyMuPDF + pypdf handles) and build request/response contracts
 - `pdf_utils.py`: EOF check and PDF info (page count + metadata) contracts
 - `report_store.py`: report metadata upsert/get/list contracts, including page count and flattened PDF metadata
+- `validation.py`: validation requests, issues, and reports (persisted per report)
 
 ---
 
