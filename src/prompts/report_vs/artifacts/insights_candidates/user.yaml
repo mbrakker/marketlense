@@ -1,0 +1,14 @@
+text: |
+  Context:
+  - DocMap JSON: {{ doc_map_json }}
+  - Evidence packs JSON: {{ evidence_json }}
+
+  Task: Return a JSON object with `insights_candidates` as an array of 6-8 grounded items. Each item must include:
+  - id: stable identifier
+  - text: concise sentence capturing the data-backed insight
+  - evidence_id: id that maps to the evidence/findings you relied on
+  - evidence: short supporting quote/number
+  - metric: object with fields {value, unit, trend, timeframe, geography, segment, sample_size, confidence} (empty strings allowed but keep present)
+  - pages: page numbers if available
+  - score: optional numeric usefulness score (0-1)
+  Do not hallucinate numbers; lift them from the provided context only.

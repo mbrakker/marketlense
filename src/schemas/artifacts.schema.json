@@ -9,16 +9,57 @@
       "type": "array",
       "items": { "type": "string" }
     },
-    "summary": { "type": "string" },
+    "summary": {
+      "type": "object",
+      "required": ["tldr", "executive_summary", "claim_evidence_map"],
+      "properties": {
+        "tldr": { "type": "string" },
+        "executive_summary": { "type": "string" },
+        "claim_evidence_map": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["claim", "evidence_id", "evidence"],
+            "properties": {
+              "claim": { "type": "string" },
+              "evidence_id": { "type": "string" },
+              "evidence": { "type": "string" },
+              "pages": {
+                "type": "array",
+                "items": { "type": "integer" }
+              }
+            }
+          }
+        }
+      }
+    },
     "insights_candidates": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "text"],
+        "required": ["id", "text", "evidence_id"],
         "properties": {
           "id": { "type": "string" },
           "text": { "type": "string" },
+          "evidence_id": { "type": "string" },
           "evidence": { "type": "string" },
+          "metric": {
+            "type": "object",
+            "properties": {
+              "value": { "type": "string" },
+              "unit": { "type": "string" },
+              "trend": { "type": "string" },
+              "timeframe": { "type": "string" },
+              "geography": { "type": "string" },
+              "segment": { "type": "string" },
+              "sample_size": { "type": "string" },
+              "confidence": { "type": "string" }
+            }
+          },
+          "pages": {
+            "type": "array",
+            "items": { "type": "integer" }
+          },
           "score": { "type": "number" }
         }
       }
@@ -27,11 +68,29 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "text"],
+        "required": ["id", "text", "evidence_id"],
         "properties": {
           "id": { "type": "string" },
           "text": { "type": "string" },
-          "evidence": { "type": "string" }
+          "evidence_id": { "type": "string" },
+          "evidence": { "type": "string" },
+          "metric": {
+            "type": "object",
+            "properties": {
+              "value": { "type": "string" },
+              "unit": { "type": "string" },
+              "trend": { "type": "string" },
+              "timeframe": { "type": "string" },
+              "geography": { "type": "string" },
+              "segment": { "type": "string" },
+              "sample_size": { "type": "string" },
+              "confidence": { "type": "string" }
+            }
+          },
+          "pages": {
+            "type": "array",
+            "items": { "type": "integer" }
+          }
         }
       }
     },
@@ -39,11 +98,13 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["text"],
+        "required": ["text", "evidence_id"],
         "properties": {
           "text": { "type": "string" },
           "speaker": { "type": "string" },
-          "citation": { "type": "string" }
+          "citation": { "type": "string" },
+          "page": { "type": "integer" },
+          "evidence_id": { "type": "string" }
         }
       }
     },

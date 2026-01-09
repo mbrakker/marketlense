@@ -1,0 +1,6 @@
+text: |
+  Context:
+  - DocMap JSON: {{ doc_map_json }}
+  - Evidence packs JSON: {{ evidence_json }}
+
+  Task: Return a JSON object with `toc_topics` as an array of 3-8 short phrases (3-6 words) that mirror the report's major themes or sections. Do not invent topics; stay grounded in the provided context.

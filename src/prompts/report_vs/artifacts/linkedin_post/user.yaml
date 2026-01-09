@@ -1,0 +1,6 @@
+text: |
+  Context:
+  - TLDR + executive summary JSON: {{ summary_json }}
+  - Insights JSON: {{ insights_final_json }}
+
+  Task: Return a JSON object with `linkedin_post` as a single post (max 120 words). Make it engaging, avoid hashtags except 2-3 relevant ones, and ensure every detail is grounded in the supplied artifacts. Do not add new numbers or claims.

@@ -60,6 +60,7 @@ Secrets (env only):
 Prompt locations:
 - Local text analysis: `src/prompts/report_generation/`
 - Vector store evidence packs: `src/prompts/report_vs/**` (`doc_map/`, `evidence_packs/{scope,methods,findings,limitations,quote_candidates}/`)
+- Artifact generation: `src/prompts/report_vs/artifacts/**` (toc, summary, insights candidates/final, quotes, expert comment, LinkedIn post)
 Prompts are YAML (system/user), hashed and logged by `src/services/prompt_service.py`.
 
 ---
@@ -178,6 +179,7 @@ Prompts are stored in YAML by namespace:
 src/prompts/report_generation/          # local_text mode
 src/prompts/report_vs/doc_map/          # vector_store doc map
 src/prompts/report_vs/evidence_packs/   # vector_store packs (scope/methods/findings/limitations/quote_candidates)
+src/prompts/report_vs/artifacts/        # artifact sections (toc, summary, insights, quotes, expert comment, LinkedIn)
 ```
 
 Prompts are rendered with Jinja2 (`{{ variable }}`), loaded and hashed by `src/services/prompt_service.py`, and logged with their SHA256 hashes for reproducibility.
@@ -221,7 +223,7 @@ Key contracts live under `src/contracts/`:
 Location: `src/schemas/`
 - `doc_map.schema.json`: required fields for DocMap outputs (id/title/publisher/year/figures, etc.).
 - `evidence_pack.schema.json`: permissive; accepts optional/empty `scope`, `methods`, `findings`, `limitations`, and `quote_candidates` with nullable fields and extra properties.
-- `artifacts.schema.json`: artifacts/toc/summary/insights/quotes payload shape.
+- `artifacts.schema.json`: artifacts/toc/summary/insights/quotes/expert_comment/linkedin payload shape.
 - `validation_report.schema.json`: structure for validation results.
 
 Schema validation is performed by `src/utils/schema_validator.py` and logged per pack.
@@ -237,6 +239,9 @@ Minimal unit tests exist under `tests/`:
 - `test_orchestrator_retry.py`: retry behavior
 - `test_publish_orchestrator.py`: publish orchestration
 - `test_html_utils.py`: HTML parsing helpers
+- `test_artifact_generator.py`: artifact JSON generation/validation
+- `test_render_service_artifacts.py`: HTML sections for artifact rendering
+- `test_golden_set.py`: regression on golden fixtures in `out/fixtures/golden_set/` (expects metadata.yaml + expected JSON/HTML + referenced PDFs)
 
 Run tests locally:
 

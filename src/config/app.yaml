@@ -10,7 +10,7 @@ paths:
 
 ingest:
   google_sa_path: "./sa.json"
-  gdrive_folder_id: "18h4rFQDJzs5_9c-QZSW0-jgdkdwnX2pK"
+  gdrive_folder_id: "11eruy9ojkd6HdOXK_Uwqvq1TWEKiINTW"
   openai_model: "gpt-5"
   temperature: 1.0
   timeout_seconds: 600

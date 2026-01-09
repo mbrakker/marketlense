@@ -1,0 +1,7 @@
+text: |
+  Context:
+  - TLDR + executive summary JSON: {{ summary_json }}
+  - Insights JSON: {{ insights_final_json }}
+  - Quotes JSON: {{ quotes_json }}
+
+  Task: Return a JSON object with `expert_comment` as a short paragraph (3-4 sentences) that synthesizes the implications. Keep it grounded in the supplied insights and claims; do not introduce new facts.

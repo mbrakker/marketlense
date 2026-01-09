@@ -65,3 +65,18 @@ class OpenAIResponseResult:
     output_tokens: Optional[int] = field(default=None, metadata={"doc": "Provider output token count, if available."})
     tool_calls: Optional[int] = field(default=None, metadata={"doc": "Number of tool calls billed, if available."})
     model: str = field(default="", metadata={"doc": "Model ID used."})
+
+
+@dataclass(frozen=True)
+class OpenAIJSONPromptRequest:
+    schema_version: str = field(metadata={"doc": "OpenAI JSON prompt request schema version."})
+    system_prompt: str = field(metadata={"doc": "Rendered system prompt text."})
+    user_prompt: str = field(metadata={"doc": "Rendered user prompt text."})
+    model: str = field(metadata={"doc": "OpenAI model ID."})
+    temperature: float = field(metadata={"doc": "Sampling temperature."})
+    api_key: str = field(metadata={"doc": "OpenAI API key (secret, loaded from env)."})
+    seed: Optional[int] = field(default=None, metadata={"doc": "Optional seed for deterministic sampling."})
+    timeout_seconds: Optional[float] = field(default=None, metadata={"doc": "Request timeout in seconds, if set."})
+    cost_ledger_path: str = field(default="./out/cost-ledger.jsonl", metadata={"doc": "Filesystem path for the cost ledger JSONL output."})
+    cost_daily_path: str = field(default="./out/cost-daily.json", metadata={"doc": "Filesystem path for daily cost rollups."})
+    model_pricing: dict = field(default_factory=dict, metadata={"doc": "Per-model pricing table for cost estimation."})

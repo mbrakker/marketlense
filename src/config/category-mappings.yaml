@@ -448,6 +448,10 @@ uncategorized:
   - cost_of_living
   - uk_market
   - public_sentiment
+  - uk_consumers
+  - brand_loyalty
+  - consumer_sentiment
+  - institutional_trust
 - title: 'Tech trends 2026: from experimentation to impact'
   tags:
   - ai_infrastructure
@@ -526,3 +530,18 @@ uncategorized:
   - mens_fashion
   - accessories
   - search_insights
+- title: 'On the Horizon 2026: home and family trends'
+  tags:
+  - domestic_robots
+  - home_automation
+  - positive_masculinity
+  - astrology_and_tarot
+  - family_life
+- title: 'On the horizon: home and family trends for 2026'
+  tags:
+  - home_trends
+  - positive_masculinity
+  - astrology_tarot
+  - smart_home
+  - domestic_robots
+  - awe_and_wonder

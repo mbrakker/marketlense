@@ -16,6 +16,7 @@ from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.openai import (
     OpenAIAnalyzeRequest,
     OpenAIAnalyzeResponse,
+    OpenAIJSONPromptRequest,
     OpenAIResponseRequest,
     OpenAIResponseResult,
 )
@@ -49,6 +50,36 @@ def _validate_payload(data: dict) -> None:
 def _legacy_chat_completion(request: OpenAIAnalyzeRequest) -> Dict[str, Any]:
     # Compatibility path for environments where OpenAI client instantiation
     # fails (e.g., unexpected kwargs like proxies in older dependencies).
+    openai_legacy.api_key = request.api_key
+    if request.timeout_seconds is not None:
+        openai_legacy.timeout = request.timeout_seconds
+    payload_args = {
+        "model": request.model,
+        "messages": [
+            {"role": "system", "content": request.system_prompt},
+            {"role": "user", "content": request.user_prompt},
+        ],
+        "temperature": request.temperature,
+        "seed": request.seed,
+    }
+    try:
+        payload_args["response_format"] = {"type": "json_object"}
+        resp = openai_legacy.ChatCompletion.create(**payload_args)
+    except TypeError:
+        payload_args.pop("response_format", None)
+        resp = openai_legacy.ChatCompletion.create(**payload_args)
+    payload = resp["choices"][0]["message"]["content"]
+    usage = resp.get("usage") or {}
+    return {
+        "payload": payload,
+        "request_id": resp.get("id"),
+        "prompt_tokens": usage.get("prompt_tokens"),
+        "completion_tokens": usage.get("completion_tokens"),
+        "total_tokens": usage.get("total_tokens"),
+    }
+
+
+def _legacy_chat_json(request: OpenAIJSONPromptRequest) -> Dict[str, Any]:
     openai_legacy.api_key = request.api_key
     if request.timeout_seconds is not None:
         openai_legacy.timeout = request.timeout_seconds
@@ -270,6 +301,145 @@ def analyze_report(request: OpenAIAnalyzeRequest, ctx: RunContext) -> OpenAIAnal
         completion_tokens=completion_tokens,
         total_tokens=total_tokens,
         request_id=str(request_id) if request_id else None,
+    )
+
+
+def openai_chat_json(request: OpenAIJSONPromptRequest, ctx: RunContext) -> OpenAIResponseResult:
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="openai_chat_json_start",
+        module=logger.name,
+        fields={
+            "model": request.model,
+            "temperature": request.temperature,
+            "seed": request.seed,
+            "timeout_seconds": request.timeout_seconds,
+        },
+    ))
+    client_kwargs: dict = {"api_key": request.api_key}
+    if request.timeout_seconds is not None:
+        client_kwargs["timeout"] = request.timeout_seconds
+    text = ""
+    request_id = None
+    prompt_tokens = None
+    completion_tokens = None
+    total_tokens = None
+    tool_calls = 0
+
+    def _do_modern_call() -> None:
+        nonlocal text, request_id, prompt_tokens, completion_tokens, total_tokens
+        if OpenAI is None:
+            raise TypeError("OpenAI client not available")
+        client = OpenAI(**client_kwargs)
+        payload_args = {
+            "model": request.model,
+            "messages": [
+                {"role": "system", "content": request.system_prompt},
+                {"role": "user", "content": request.user_prompt},
+            ],
+            "response_format": {"type": "json_object"},
+            "temperature": request.temperature,
+        }
+        if request.seed is not None:
+            payload_args["seed"] = request.seed
+        resp = client.chat.completions.create(**payload_args)
+        text = resp.choices[0].message.content or ""
+        request_id = getattr(resp, "id", None)
+        usage = getattr(resp, "usage", None)
+        prompt_tokens = getattr(usage, "prompt_tokens", None) if usage is not None else None
+        completion_tokens = getattr(usage, "completion_tokens", None) if usage is not None else None
+        total_tokens = getattr(usage, "total_tokens", None) if usage is not None else None
+
+    try:
+        try:
+            _do_modern_call()
+        except TypeError:
+            legacy = _legacy_chat_json(request)
+            text = legacy.get("payload") or ""
+            request_id = legacy.get("request_id")
+            prompt_tokens = legacy.get("prompt_tokens")
+            completion_tokens = legacy.get("completion_tokens")
+            total_tokens = legacy.get("total_tokens")
+    except Exception as exc:
+        raise AppError(
+            code="openai_chat_failed",
+            message="OpenAI chat request failed",
+            cause=exc,
+            retryable=True,
+            context={"model": request.model},
+        ) from exc
+
+    parsed_json = None
+    if text:
+        try:
+            parsed_json = json.loads(text)
+        except json.JSONDecodeError:
+            parsed_json = None
+
+    estimated_cost = estimate_cost_usd(
+        request.model,
+        int(prompt_tokens or 0),
+        int(completion_tokens or 0),
+        int(tool_calls or 0),
+        pricing=request.model_pricing or {},
+    )
+    try:
+        entry = CostLedgerEntry(
+            schema_version="1.0",
+            timestamp_utc=datetime.now(timezone.utc).isoformat(),
+            run_id=ctx.run_id,
+            task_id=ctx.task_id,
+            span_id=ctx.span_id,
+            step_name="openai_chat_json",
+            model=request.model,
+            input_tokens=int(prompt_tokens or 0),
+            output_tokens=int(completion_tokens or 0),
+            cached_input_tokens=None,
+            tool_calls=int(tool_calls or 0),
+            estimated_cost_usd=estimated_cost,
+            extra={"request_id": str(request_id) if request_id else None},
+        )
+        append_cost_entry(
+            CostLedgerAppendRequest(schema_version="1.0", path=request.cost_ledger_path, entry=entry),
+            ctx,
+        )
+        rollup_daily(
+            CostRollupRequest(schema_version="1.0", ledger_path=request.cost_ledger_path, out_path=request.cost_daily_path),
+            ctx,
+        )
+    except Exception as exc:  # pragma: no cover
+        logger.info(log_event(
+            ctx,
+            role="service",
+            event="cost_ledger_write_failed",
+            module=logger.name,
+            fields={"error": str(exc)},
+        ))
+
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="openai_chat_json_complete",
+        module=logger.name,
+        fields={
+            "model": request.model,
+            "request_id": request_id or "",
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": total_tokens,
+            "parsed_json": isinstance(parsed_json, dict),
+        },
+    ))
+
+    return OpenAIResponseResult(
+        schema_version="1.0",
+        text=text or "",
+        parsed_json=parsed_json if isinstance(parsed_json, dict) else None,
+        input_tokens=prompt_tokens,
+        output_tokens=completion_tokens,
+        tool_calls=tool_calls,
+        model=request.model,
     )
 
 

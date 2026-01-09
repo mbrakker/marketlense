@@ -1,0 +1,7 @@
+text: |
+  Context:
+  - Candidate insights JSON: {{ insights_candidates_json }}
+  - DocMap JSON: {{ doc_map_json }}
+  - Evidence packs JSON: {{ evidence_json }}
+
+  Task: Choose the five strongest, non-overlapping insights. Preserve and propagate their evidence_id fields. Return a JSON object with `insights_final` as an array (exactly five items) matching the candidate shape (id, text, evidence_id, evidence, metric, pages). Tighten wording but do not change the underlying facts.

@@ -32,6 +32,7 @@ from src.contracts.pdf_utils import PdfInfoRequest
 from src.generators.categorize_generator import categorize_taxonomy
 from src.generators.normalize_generator import normalize_report
 from src.generators.evidence_pack_generator import generate_evidence_packs
+from src.generators.artifact_generator import generate_artifacts
 from src.services.crop_service import crop_regions as crop_regions_service
 from src.services.extract_service import collect_candidates as collect_candidates_service
 from src.services.figure_service import extract_best_figure as extract_best_figure_service
@@ -181,6 +182,8 @@ def generate_report(
     contents_page_number = 0
     contents_image = ""
     contents_heading = ""
+    artifacts_payload: dict | None = None
+    artifacts_path: str | None = None
 
     info_resp = extract_pdf_info(
         PdfInfoRequest(schema_version="1.0", path=local_pdf_path),
@@ -605,7 +608,8 @@ def generate_report(
                 settings=settings,
                 ctx=ctx,
             )
-            evidence_pack_paths = _pack_paths(settings.output_dir, file.file_id, list(packs.keys()))
+            pack_names = list(packs.keys())
+            evidence_pack_paths = _pack_paths(settings.output_dir, file.file_id, pack_names)
             data._vector_store_id = vector_store_id or ""
             data._evidence_packs = evidence_pack_paths
             if openai_file_id:
@@ -617,6 +621,25 @@ def generate_report(
                 module=logger.name,
                 fields={"file_id": file.file_id, "vector_store_id": vector_store_id, "pack_count": len(evidence_pack_paths)},
             ))
+            try:
+                artifacts_payload = generate_artifacts(
+                    report_id=file.file_id,
+                    doc_map=packs.get("doc_map", {}),
+                    evidence_packs=packs,
+                    settings=settings,
+                    vector_store_id=vector_store_id,
+                    ctx=ctx,
+                )
+                artifacts_path = _pack_paths(settings.output_dir, file.file_id, ["artifacts"])["artifacts"]
+                evidence_pack_paths["artifacts"] = artifacts_path
+            except Exception as exc:
+                logger.info(log_event(
+                    ctx,
+                    role="generator",
+                    event="artifacts_generation_failed",
+                    module=logger.name,
+                    fields={"file_id": file.file_id, "error": str(exc)},
+                ))
 
         preview_resp = render_preview_service(
             PreviewRequest(
@@ -633,6 +656,8 @@ def generate_report(
         data.contents_heading = contents_heading
         data._contents_image = contents_image
         data_dict = data.to_dict()
+        if artifacts_payload:
+            data_dict["artifacts"] = artifacts_payload
         data_dict["categories_display"] = category_assignment.category_labels
         logger.info(log_event(
             ctx,

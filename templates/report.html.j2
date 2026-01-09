@@ -14,10 +14,25 @@ blockquote{margin:.6rem 0;padding:.6rem .8rem;border-left:4px solid #DDD;backgro
 code{background:#f5f5f5;padding:.1rem .3rem;border-radius:4px}
 .preview{margin:1rem 0}
 .preview img{max-width:100%;height:auto;border:1px solid #EEE;border-radius:8px}
+.topics{display:flex;flex-wrap:wrap;gap:.4rem;margin:0;padding:0;list-style:none}
+.topics li{background:#f2f4f7;border:1px solid #e3e7ed;border-radius:12px;padding:.25rem .6rem;font-size:.95rem}
+.metadata p{margin:.2rem 0}
 </style>
 </head>
 <body>
   <h1>{{ report_title }}</h1>
+  {% set art = data.artifacts if data.artifacts is defined else {} %}
+  {% set summary = art.summary if art.summary is defined else {} %}
+  {% set tldr_text = summary.tldr if summary.tldr is defined else data.tldr %}
+  {% set exec_summary = summary.executive_summary if summary.executive_summary is defined else data.commentary %}
+  {% set claim_map = summary.claim_evidence_map if summary.claim_evidence_map is defined else [] %}
+  {% set insights_list = art.insights_final if art.insights_final is defined and art.insights_final else data.insights %}
+  {% set quotes_list = art.quotes_final if art.quotes_final is defined and art.quotes_final else [] %}
+  {% if not quotes_list and data.quote %}
+    {% set quotes_list = [{"text": data.quote.text, "speaker": data.quote.author, "citation": "", "page": data.contents_page_number or 0}] %}
+  {% endif %}
+  {% set expert_comment = art.expert_comment if art.expert_comment is defined else None %}
+  {% set linkedin_post = art.linkedin_post if art.linkedin_post is defined else "" %}
 
   {% if preview_png %}
   <div class="preview">
@@ -35,6 +50,7 @@ code{background:#f5f5f5;padding:.1rem .3rem;border-radius:4px}
 
   {% if data.publisher or (data.taxonomy and data.taxonomy|length > 0) or data.region or data.time_period %}
   <h2>Report metadata</h2>
+  <div class="metadata">
   {% if data.publisher %}
   <p><strong>Publisher:</strong> {{ data.publisher }}</p>
   {% endif %}
@@ -44,14 +60,44 @@ code{background:#f5f5f5;padding:.1rem .3rem;border-radius:4px}
   {% if data.time_period %}
   <p><strong>Time period:</strong> {{ data.time_period }}</p>
   {% endif %}
+  </div>
+  {% endif %}
+
+  {% if art.toc_topics is defined and art.toc_topics %}
+  <h2>Covered topics / TOC</h2>
+  <ul class="topics">
+    {% for topic in art.toc_topics %}<li>{{ topic }}</li>{% endfor %}
+  </ul>
   {% endif %}
 
   <h2>TL;DR</h2>
-  <p>{{ data.tldr }}</p>
+  <p>{{ tldr_text }}</p>
 
-  <h2>5 Insights</h2>
+  {% if exec_summary %}
+    <h2>Executive summary</h2>
+    <p>{{ exec_summary }}</p>
+    {% if claim_map %}
+    <ul>
+      {% for claim in claim_map %}
+        <li><strong>{{ claim.claim }}</strong>{% if claim.evidence %}: {{ claim.evidence }}{% endif %}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  {% endif %}
+
+  <h2>Key data insights</h2>
   <ol class="insights">
-    {% for i in data.insights %}<li>{{ i }}</li>{% endfor %}
+    {% for insight in insights_list %}
+      {% if insight.text is defined %}
+        <li>{{ insight.text }}
+          {% if insight.metric is defined and (insight.metric.value or insight.metric.unit or insight.metric.timeframe) %}
+            <div><em>{{ insight.metric.value }} {{ insight.metric.unit }} {{ insight.metric.timeframe }}</em></div>
+          {% endif %}
+        </li>
+      {% else %}
+        <li>{{ insight }}</li>
+      {% endif %}
+    {% endfor %}
   </ol>
 
   <h2>Figure</h2>
@@ -65,10 +111,24 @@ code{background:#f5f5f5;padding:.1rem .3rem;border-radius:4px}
 {% endif %}
 
 
-  <h2>Quote</h2>
-  <blockquote>"{{ data.quote.text }}" - <em>{{ data.quote.author }}</em></blockquote>
+  <h2>Key quotes</h2>
+  {% for quote in quotes_list %}
+    <blockquote>"{{ quote.text }}" - <em>{{ quote.speaker if quote.speaker is defined else quote.author }}</em>{% if quote.citation %} ({{ quote.citation }}){% endif %}</blockquote>
+  {% endfor %}
 
+  {% if expert_comment %}
+  <h2>Expert comment (generated)</h2>
+  <p>{{ expert_comment }}</p>
+  {% endif %}
+
+  {% if linkedin_post %}
+  <h2>LinkedIn post</h2>
+  <p>{{ linkedin_post }}</p>
+  {% endif %}
+
+  {% if data.commentary and not expert_comment %}
   <h2>Commentary</h2>
   <p>{{ data.commentary }}</p>
+  {% endif %}
 </body>
 </html>

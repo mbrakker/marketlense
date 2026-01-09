@@ -1,0 +1,13 @@
+text: |
+  Context:
+  - Quote candidates JSON (may be empty): {{ quote_candidates_json }}
+  - DocMap JSON: {{ doc_map_json }}
+  - Evidence packs JSON: {{ evidence_json }}
+
+  Task: Return a JSON object with `quotes_final` as an array of 2-4 items. Each item must include:
+  - text: verbatim quote
+  - speaker: who said it if known, else "Unknown"
+  - citation: short location (section title or source)
+  - page: page number if known, else omit or set 0
+  - evidence_id: identifier you derive (reuse source ids or create stable labels like quote_1)
+  Quotes must come from the provided context; do not paraphrase.
