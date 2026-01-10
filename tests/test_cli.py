@@ -4,6 +4,7 @@ import unittest
 from unittest.mock import patch
 
 from src.contracts.config import AppSettings
+from src.contracts.costs import CostReportResponse, CostTotals, StepCostTotal
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.publish import PublishOutcome, PublishSettings
 from src.contracts.wordpress import WordPressAuthSettings
@@ -92,6 +93,63 @@ class TestCli(unittest.TestCase):
                 run_publish_mock.assert_called_once()
                 passed_settings = run_publish_mock.call_args.args[0]
                 self.assertIsInstance(passed_settings, PublishSettings)
+
+    def test_cost_report_wires_service(self) -> None:
+        import src.cli as cli
+
+        settings = AppSettings(
+            schema_version="1.0",
+            google_sa_path="sa.json",
+            gdrive_folder_id="folder",
+            openai_api_key="key",
+            openai_model="gpt-5",
+            batch_limit=5,
+            output_dir="./out",
+            cache_dir="./cache",
+            state_db="./state/index.sqlite",
+            reports_db="./state/reports.sqlite",
+            category_mapping_path="./src/config/category-mappings.yaml",
+            ingest_lock_path="./state/ingest.lock",
+            ingest_lock_ttl_seconds=7200.0,
+            temperature=1.0,
+            cost_ledger_path="./out/cost-ledger.jsonl",
+            cost_daily_path="./out/cost-daily.json",
+            model_pricing={},
+        )
+        response = CostReportResponse(
+            schema_version="1.0",
+            filter_type="date",
+            filter_value="2026-01-01",
+            totals=CostTotals(
+                schema_version="1.0",
+                total_input_tokens=100,
+                total_output_tokens=50,
+                total_tool_calls=1,
+                estimated_cost_usd=0.01,
+            ),
+            top_steps=[
+                StepCostTotal(
+                    schema_version="1.0",
+                    step_name="openai_analyze",
+                    total_input_tokens=100,
+                    total_output_tokens=50,
+                    total_tool_calls=1,
+                    estimated_cost_usd=0.01,
+                )
+            ],
+            matched_entries=1,
+        )
+
+        with patch.object(cli, "load_settings", return_value=settings) as load_settings_mock:
+            with patch.object(cli, "generate_cost_report", return_value=response) as generate_mock:
+                with patch.object(cli.console, "print"):
+                    cli.cost_report(date="2026-01-01", run_id=None, top=1)
+        load_settings_mock.assert_called_once()
+        generate_mock.assert_called_once()
+        request = generate_mock.call_args.args[0]
+        self.assertEqual("2026-01-01", request.date_utc)
+        self.assertEqual(1, request.top_n)
+        self.assertIsNone(request.run_id)
 
 
 if __name__ == "__main__":

@@ -8,6 +8,7 @@ from rich.table import Table
 from rich import box
 
 from src.utils.errors import AppError
+from src.contracts.costs import CostReportRequest
 from src.contracts.categories import RecategorizeRequest
 from src.contracts.config import ConfigLoadRequest
 from src.contracts.ingest import IngestSettings
@@ -17,6 +18,7 @@ from src.orchestrators.recategorize_orchestrator import run_recategorize
 from src.orchestrators.wp_category_update_orchestrator import run_update_wp_categories
 from src.orchestrators.golden_set_orchestrator import run_golden_set_vector
 from src.services.config_service import load_settings, load_publish_settings
+from src.services.cost_ledger_service import generate_cost_report
 from src.services.logging_service import setup_logging
 from src.utils.logging import log_event, new_run_context
 
@@ -212,6 +214,88 @@ def update_wp_categories():
         )
     console.print(table)
     console.print(f"[green]Done: {updated} post(s) updated.[/green]")
+
+
+@cli_app.command("cost-report")
+def cost_report(
+    date: str = typer.Option(None, help="UTC date (YYYY-MM-DD) to summarize"),
+    run_id: str = typer.Option(None, help="Run identifier to summarize"),
+    top: int = typer.Option(5, help="Number of top-cost steps to show"),
+):
+    setup_logging()
+    if (date and run_id) or (not date and not run_id):
+        raise typer.BadParameter("Provide exactly one of --date or --run-id.")
+    if top <= 0:
+        raise typer.BadParameter("--top must be greater than zero.")
+
+    console.print("[cyan]Loading settings...[/cyan]")
+    ctx = new_run_context(task_id="cli_cost_report")
+    logger.info(log_event(
+        ctx,
+        role="orchestrator",
+        event="cli_cost_report_start",
+        module=logger.name,
+        fields={"date": date, "run_id": run_id, "top": top},
+    ))
+    settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+
+    try:
+        report = generate_cost_report(
+            CostReportRequest(
+                schema_version="1.0",
+                ledger_path=settings.cost_ledger_path,
+                date_utc=date,
+                run_id=run_id,
+                top_n=top,
+            ),
+            ctx,
+        )
+    except ValueError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1)
+
+    console.print(f"[cyan]Cost report for {report.filter_type}={report.filter_value}[/cyan]")
+    totals = report.totals
+    totals_table = Table(title="Totals", box=box.SIMPLE_HEAVY)
+    totals_table.add_column("Metric")
+    totals_table.add_column("Value", justify="right")
+    totals_table.add_row("total_input_tokens", str(totals.total_input_tokens))
+    totals_table.add_row("total_output_tokens", str(totals.total_output_tokens))
+    totals_table.add_row("total_tool_calls", str(totals.total_tool_calls))
+    totals_table.add_row("estimated_cost_usd", f"{totals.estimated_cost_usd:.6f}")
+    console.print(totals_table)
+
+    if report.top_steps:
+        steps_table = Table(title="Top steps by cost", box=box.SIMPLE_HEAVY)
+        steps_table.add_column("Step")
+        steps_table.add_column("Cost (USD)", justify="right")
+        steps_table.add_column("Input", justify="right")
+        steps_table.add_column("Output", justify="right")
+        steps_table.add_column("Tool calls", justify="right")
+        for step in report.top_steps:
+            steps_table.add_row(
+                step.step_name,
+                f"{step.estimated_cost_usd:.6f}",
+                str(step.total_input_tokens),
+                str(step.total_output_tokens),
+                str(step.total_tool_calls),
+            )
+        console.print(steps_table)
+    else:
+        console.print("[yellow]No matching ledger entries found.[/yellow]")
+
+    logger.info(log_event(
+        ctx,
+        role="orchestrator",
+        event="cli_cost_report_complete",
+        module=logger.name,
+        fields={
+            "filter_type": report.filter_type,
+            "filter_value": report.filter_value,
+            "matched_entries": report.matched_entries,
+            "top_steps": len(report.top_steps),
+        },
+    ))
 
 
 @cli_app.command("golden-set-vector")

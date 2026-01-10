@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 
 @dataclass(frozen=True)
@@ -55,4 +55,48 @@ class CostRollupRequest:
 class CostRollupResponse:
     schema_version: str = field(metadata={"doc": "Cost rollup response schema version."})
     out_path: str = field(metadata={"doc": "Path to the written rollup JSON file."})
-    totals: Dict[str, DailyCostTotal] = field(metadata={"doc": "Aggregated totals keyed by date (YYYY-MM-DD)."})
+    totals_by_date: Dict[str, DailyCostTotal] = field(metadata={"doc": "Aggregated totals keyed by date (YYYY-MM-DD)."})
+    totals_by_run: Dict[str, "CostTotals"] = field(metadata={"doc": "Aggregated totals keyed by run_id."})
+    totals_by_task: Dict[str, "CostTotals"] = field(metadata={"doc": "Aggregated totals keyed by task_id."})
+
+    @property
+    def totals(self) -> Dict[str, DailyCostTotal]:
+        return self.totals_by_date
+
+
+@dataclass(frozen=True)
+class CostTotals:
+    schema_version: str = field(metadata={"doc": "Cost totals schema version."})
+    total_input_tokens: int = field(metadata={"doc": "Sum of input tokens for the scope."})
+    total_output_tokens: int = field(metadata={"doc": "Sum of output tokens for the scope."})
+    total_tool_calls: int = field(metadata={"doc": "Sum of tool calls for the scope."})
+    estimated_cost_usd: float = field(metadata={"doc": "Estimated USD cost for the scope."})
+
+
+@dataclass(frozen=True)
+class StepCostTotal:
+    schema_version: str = field(metadata={"doc": "Step cost total schema version."})
+    step_name: str = field(metadata={"doc": "Step name used for cost aggregation."})
+    total_input_tokens: int = field(metadata={"doc": "Sum of input tokens for this step."})
+    total_output_tokens: int = field(metadata={"doc": "Sum of output tokens for this step."})
+    total_tool_calls: int = field(metadata={"doc": "Sum of tool calls for this step."})
+    estimated_cost_usd: float = field(metadata={"doc": "Estimated USD cost for this step."})
+
+
+@dataclass(frozen=True)
+class CostReportRequest:
+    schema_version: str = field(metadata={"doc": "Cost report request schema version."})
+    ledger_path: str = field(metadata={"doc": "Path to the ledger JSONL file to analyze."})
+    date_utc: Optional[str] = field(default=None, metadata={"doc": "Optional UTC date (YYYY-MM-DD) filter."})
+    run_id: Optional[str] = field(default=None, metadata={"doc": "Optional run_id filter."})
+    top_n: int = field(default=5, metadata={"doc": "Number of top-cost steps to return."})
+
+
+@dataclass(frozen=True)
+class CostReportResponse:
+    schema_version: str = field(metadata={"doc": "Cost report response schema version."})
+    filter_type: str = field(metadata={"doc": "Filter type applied: 'date' or 'run_id'."})
+    filter_value: str = field(metadata={"doc": "Filter value applied."})
+    totals: CostTotals = field(metadata={"doc": "Totals for the selected filter."})
+    top_steps: List[StepCostTotal] = field(metadata={"doc": "Top steps by estimated cost for the filter."})
+    matched_entries: int = field(metadata={"doc": "Number of ledger entries included in the report."})

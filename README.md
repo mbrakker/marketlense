@@ -298,6 +298,13 @@ Update WordPress categories for already-published posts to match the latest mapp
 python -m src.cli update-wp-categories
 ```
 
+Summarize LLM spend by date or run (using `cost_ledger_path` + `cost_daily_path` from config):
+
+```bash
+python -m src.cli cost-report --date YYYY-MM-DD
+python -m src.cli cost-report --run-id <run_id>
+```
+
 Golden-set (vector store) harness for local PDFs:
 
 ```bash
