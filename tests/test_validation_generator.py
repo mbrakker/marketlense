@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 import json
+from pathlib import Path
 
 from src.contracts.config import AppSettings
 from src.contracts.prompts import PromptSet, PromptTemplate
@@ -104,6 +105,11 @@ def _report():
     )
 
 
+def _low_text_status():
+    path = Path(__file__).parent / "fixtures" / "low_text_status.json"
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 def test_validation_flags_metric_and_quote_mismatches(tmp_path):
     settings = _settings(tmp_path)
     artifacts = {
@@ -163,3 +169,31 @@ def test_validation_detects_new_numbers_and_grounding(tmp_path):
     assert any(issue.affected_section == "expert_comment" for issue in result.issues)
     assert any("No evidence" in issue.message for issue in result.issues)
     assert any("Number" in issue.message for issue in result.issues)
+
+
+def test_validation_warns_on_data_gap(tmp_path):
+    settings = _settings(tmp_path)
+    artifacts = {
+        "insights_final": [{"id": "i1", "text": "Insight text", "evidence_id": "e1", "evidence": "", "metric": {"value": "10", "unit": "%", "timeframe": "2024"}}],
+        "source_status": _low_text_status(),
+    }
+    fake_openai = FakeOpenAI({"unsupported": []})
+    analysis_store = FakeAnalysisStore()
+    result = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="low_text_report",
+            report=_report(),
+            artifacts=artifacts,
+            evidence_packs={},
+            vector_store_id=None,
+        ),
+        settings,
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=fake_openai,
+        analysis_store=analysis_store,
+    )
+    assert result.status == "pass"
+    assert result.severity == "warning"
+    assert any(issue.severity == "warning" for issue in result.issues)

@@ -23,6 +23,7 @@ class IngestSettings:
     openai_seed: Optional[int] = field(default=None, metadata={"doc": "Optional seed for report generation."})
     pdf_text_max_pages: int = field(default=5, metadata={"doc": "Max pages to extract for prompt context."})
     pdf_text_max_chars: int = field(default=80_000, metadata={"doc": "Max extracted characters for prompt context."})
+    pdf_text_min_density: float = field(default=250.0, metadata={"doc": "Minimum characters per page considered usable text."})
     rank_model: str = field(default="", metadata={"doc": "OpenAI model ID for candidate ranking (optional override)."})
     rank_temperature: float = field(default=1.0, metadata={"doc": "Sampling temperature for candidate ranking."})
     rank_seed: Optional[int] = field(default=None, metadata={"doc": "Optional seed for candidate ranking."})
@@ -42,6 +43,7 @@ class IngestSettings:
     cost_daily_path: str = field(default="./out/cost-daily.json", metadata={"doc": "Filesystem path for daily cost rollup JSON."})
     model_pricing: dict = field(default_factory=dict, metadata={"doc": "Per-model pricing table; keys are model IDs with per-1k token pricing."})
     analysis_compare: bool = field(default=False, metadata={"doc": "Run both local_text and vector_store pipelines and store outputs for diffing."})
+    validation_data_gap_policy: str = field(default="warn", metadata={"doc": "Policy for data gaps: warn|fail controls validation severity when text evidence is missing."})
 
 
 @dataclass(frozen=True)

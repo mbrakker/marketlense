@@ -63,6 +63,7 @@ def ingest(
         openai_seed=s.openai_seed,
         pdf_text_max_pages=s.pdf_text_max_pages,
         pdf_text_max_chars=s.pdf_text_max_chars,
+        pdf_text_min_density=s.pdf_text_min_density,
         rank_model=s.rank_model,
         rank_temperature=s.rank_temperature,
         rank_seed=s.rank_seed,
@@ -79,6 +80,7 @@ def ingest(
         cost_ledger_path=s.cost_ledger_path,
         cost_daily_path=s.cost_daily_path,
         model_pricing=s.model_pricing,
+        validation_data_gap_policy=s.validation_data_gap_policy,
     )
 
     console.print("[cyan]Running ingest pipeline...[/cyan]")

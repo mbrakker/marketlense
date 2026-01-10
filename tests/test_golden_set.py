@@ -277,6 +277,8 @@ def test_golden_reports_regression(tmp_path: Path, monkeypatch: pytest.MonkeyPat
         assert outcome.status == "processed"
         assert Path(outcome.html_path).exists()
         normalized_capture["payload"].pop("validation_report", None)
+        for transient in ["_text_density", "_text_pages_sampled", "_text_char_count", "_text_not_available", "analysis_mode"]:
+            normalized_capture["payload"].pop(transient, None)
         assert normalized_capture["payload"] == expected_payload
         html_text = Path(outcome.html_path).read_text(encoding="utf-8")
         expected_html = expected_html_path.read_text(encoding="utf-8")

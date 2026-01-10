@@ -109,6 +109,20 @@
       }
     },
     "expert_comment": { "type": "string" },
-    "linkedin_post": { "type": "string" }
+    "linkedin_post": { "type": "string" },
+    "source_status": {
+      "type": "object",
+      "required": ["not_available", "reason"],
+      "properties": {
+        "schema_version": { "type": "string" },
+        "text_density": { "type": "number" },
+        "density_threshold": { "type": "number" },
+        "pages_sampled": { "type": "integer" },
+        "char_count": { "type": "integer" },
+        "not_available": { "type": "boolean" },
+        "reason": { "type": "string" },
+        "evidence_present": { "type": "boolean" }
+      }
+    }
   }
 }

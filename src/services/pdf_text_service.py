@@ -65,18 +65,20 @@ def extract_pdf_text(request: PdfTextExtractRequest, ctx: RunContext) -> PdfText
             chunks.append(text)
         raw_text = "\n\n".join(chunks)
         text_out = raw_text[: max(request.max_chars, 0)]
+        density = _compute_text_density(raw_text, pages)
         response = PdfTextExtractResponse(
             schema_version="1.0",
             text=text_out,
             pages_extracted=pages,
             char_count=len(text_out),
+            text_density=density,
         )
         logger.info(log_event(
             ctx,
             role="service",
             event="pdf_text_extract_complete",
             module=logger.name,
-            fields={"pages": response.pages_extracted, "chars": response.char_count},
+            fields={"pages": response.pages_extracted, "chars": response.char_count, "text_density": response.text_density},
         ))
         return response
     finally:
@@ -94,3 +96,12 @@ def _close_pypdf_reader(reader: PdfReader) -> None:
             close_fn()
     except Exception:
         pass
+
+
+def _compute_text_density(text: str, pages: int) -> float:
+    if not pages or pages <= 0:
+        return 0.0
+    try:
+        return len(text or "") / float(pages)
+    except Exception:
+        return 0.0

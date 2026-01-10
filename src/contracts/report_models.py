@@ -41,6 +41,10 @@ class ReportPayload:
     _contents_image: str = field(default="", metadata={"doc": "Relative path to contents/index page screenshot, if any."})
     _vector_store_id: str = field(default="", metadata={"doc": "Vector store ID used for analysis, if any."})
     _evidence_packs: dict = field(default_factory=dict, metadata={"doc": "Mapping of evidence pack names to stored JSON paths, if any."})
+    _text_density: float = field(default=0.0, metadata={"doc": "Characters per page across sampled PDF text."})
+    _text_pages_sampled: int = field(default=0, metadata={"doc": "Pages sampled for text extraction."})
+    _text_char_count: int = field(default=0, metadata={"doc": "Characters captured during text extraction."})
+    _text_not_available: bool = field(default=False, metadata={"doc": "True when text extraction is below density threshold."})
     schema_version: str = field(default="1.1", metadata={"doc": "Report payload schema version."})
 
     def to_dict(self) -> dict:

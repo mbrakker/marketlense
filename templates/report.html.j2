@@ -17,6 +17,8 @@ code{background:#f5f5f5;padding:.1rem .3rem;border-radius:4px}
 .topics{display:flex;flex-wrap:wrap;gap:.4rem;margin:0;padding:0;list-style:none}
 .topics li{background:#f2f4f7;border:1px solid #e3e7ed;border-radius:12px;padding:.25rem .6rem;font-size:.95rem}
 .metadata p{margin:.2rem 0}
+.notice{border:1px solid #f0c36d;background:#fff6e5;padding:.6rem .8rem;border-radius:8px;margin:.8rem 0}
+.muted{color:#666}
 </style>
 </head>
 <body>
@@ -33,6 +35,13 @@ code{background:#f5f5f5;padding:.1rem .3rem;border-radius:4px}
   {% endif %}
   {% set expert_comment = art.expert_comment if art.expert_comment is defined else None %}
   {% set linkedin_post = art.linkedin_post if art.linkedin_post is defined else "" %}
+  {% set source_status = art.source_status if art.source_status is defined else {} %}
+  {% set not_available = source_status.not_available if source_status.not_available is defined else False %}
+  {% set fallback_reason = source_status.reason if source_status.reason is defined else "" %}
+
+  {% if not_available %}
+  <div class="notice">Content not available from text{% if fallback_reason %}: {{ fallback_reason }}{% endif %}</div>
+  {% endif %}
 
   {% if preview_png %}
   <div class="preview">
@@ -68,6 +77,9 @@ code{background:#f5f5f5;padding:.1rem .3rem;border-radius:4px}
   <ul class="topics">
     {% for topic in art.toc_topics %}<li>{{ topic }}</li>{% endfor %}
   </ul>
+  {% elif not_available %}
+  <h2>Covered topics / TOC</h2>
+  <p class="muted">Not available from text.</p>
   {% endif %}
 
   <h2>TL;DR</h2>
@@ -86,19 +98,23 @@ code{background:#f5f5f5;padding:.1rem .3rem;border-radius:4px}
   {% endif %}
 
   <h2>Key data insights</h2>
-  <ol class="insights">
-    {% for insight in insights_list %}
-      {% if insight.text is defined %}
-        <li>{{ insight.text }}
-          {% if insight.metric is defined and (insight.metric.value or insight.metric.unit or insight.metric.timeframe) %}
-            <div><em>{{ insight.metric.value }} {{ insight.metric.unit }} {{ insight.metric.timeframe }}</em></div>
-          {% endif %}
-        </li>
-      {% else %}
-        <li>{{ insight }}</li>
-      {% endif %}
-    {% endfor %}
-  </ol>
+  {% if insights_list %}
+    <ol class="insights">
+      {% for insight in insights_list %}
+        {% if insight.text is defined %}
+          <li>{{ insight.text }}
+            {% if insight.metric is defined and (insight.metric.value or insight.metric.unit or insight.metric.timeframe) %}
+              <div><em>{{ insight.metric.value }} {{ insight.metric.unit }} {{ insight.metric.timeframe }}</em></div>
+            {% endif %}
+          </li>
+        {% else %}
+          <li>{{ insight }}</li>
+        {% endif %}
+      {% endfor %}
+    </ol>
+  {% else %}
+    <p class="muted">Not available from text.</p>
+  {% endif %}
 
   <h2>Figure</h2>
 {% if data._figure_top %}
@@ -112,9 +128,13 @@ code{background:#f5f5f5;padding:.1rem .3rem;border-radius:4px}
 
 
   <h2>Key quotes</h2>
-  {% for quote in quotes_list %}
-    <blockquote>"{{ quote.text }}" - <em>{{ quote.speaker if quote.speaker is defined else quote.author }}</em>{% if quote.citation %} ({{ quote.citation }}){% endif %}</blockquote>
-  {% endfor %}
+  {% if quotes_list %}
+    {% for quote in quotes_list %}
+      <blockquote>"{{ quote.text }}" - <em>{{ quote.speaker if quote.speaker is defined else quote.author }}</em>{% if quote.citation %} ({{ quote.citation }}){% endif %}</blockquote>
+    {% endfor %}
+  {% else %}
+    <p class="muted">Not available from text.</p>
+  {% endif %}
 
   {% if expert_comment %}
   <h2>Expert comment (generated)</h2>

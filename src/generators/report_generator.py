@@ -351,6 +351,25 @@ def generate_report(
         ),
         text_ctx,
     )
+    text_status = {
+        "schema_version": "1.0",
+        "text_density": float(text_resp.text_density or 0.0),
+        "density_threshold": float(getattr(settings, "pdf_text_min_density", 0.0)),
+        "pages_sampled": text_resp.pages_extracted,
+        "char_count": text_resp.char_count,
+        "not_available": False,
+        "reason": "",
+    }
+    if text_status["density_threshold"] and text_status["text_density"] < text_status["density_threshold"]:
+        text_status["not_available"] = True
+        text_status["reason"] = "text_density_below_threshold"
+    logger.info(log_event(
+        text_ctx,
+        role="generator",
+        event="text_density_evaluated",
+        module=logger.name,
+        fields={"density": text_status["text_density"], "threshold": text_status["density_threshold"], "pages": text_status["pages_sampled"], "char_count": text_status["char_count"], "not_available": text_status["not_available"]},
+    ))
     prompt_ctx = child_context(ctx, task_id=f"{ctx.task_id}:prompt")
     prompt_set = load_prompt_set(
         PromptLoadRequest(schema_version="1.0", namespace="report_generation", reload_if_changed=True),
@@ -449,6 +468,10 @@ def generate_report(
         module=logger.name,
         fields={"file_id": file.file_id},
     ))
+    data._text_density = text_status["text_density"]
+    data._text_pages_sampled = text_status["pages_sampled"]
+    data._text_char_count = text_status["char_count"]
+    data._text_not_available = text_status["not_available"]
 
     mappings_resp = load_category_mappings(
         CategoryMappingLoadRequest(schema_version="1.0", path=settings.category_mapping_path, reload_if_changed=True),
@@ -754,6 +777,7 @@ def generate_report(
                     evidence_packs=packs,
                     settings=settings,
                     vector_store_id=vector_store_id,
+                    source_status=text_status,
                     ctx=child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:artifacts"),
                 )
                 mode_evidence_paths["artifacts"] = _pack_paths(settings.output_dir, file.file_id, ["artifacts"])["artifacts"]

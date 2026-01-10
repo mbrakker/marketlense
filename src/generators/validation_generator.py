@@ -53,8 +53,19 @@ def validate_report(
     issues.extend(_validate_new_numbers(request.artifacts, insights))
     issues.extend(_run_grounding_check(request, settings, evidence_texts, prompt_client, openai_client, ctx))
 
+    data_gap = _has_data_gap(request.artifacts)
+    if data_gap and getattr(settings, "validation_data_gap_policy", "warn") == "warn":
+        issues = [
+            ValidationIssue(
+                schema_version=issue.schema_version,
+                message=issue.message,
+                severity="warning" if issue.severity == "error" else issue.severity,
+                affected_section=issue.affected_section,
+            )
+            for issue in issues
+        ]
     severity = _aggregate_severity(issues)
-    status = "pass" if not issues else "fail"
+    status = "pass" if severity != "error" else "fail"
     report = ValidationReport(schema_version="1.1", status=status, issues=issues, severity=severity)
 
     try:
@@ -455,3 +466,12 @@ def _issue(message: str, severity: str, section: str) -> ValidationIssue:
         severity=severity if severity in {"error", "warning", "info"} else "warning",
         affected_section=section,
     )
+
+
+def _has_data_gap(artifacts: dict) -> bool:
+    if not isinstance(artifacts, dict):
+        return False
+    status = artifacts.get("source_status")
+    if isinstance(status, dict):
+        return bool(status.get("not_available"))
+    return False

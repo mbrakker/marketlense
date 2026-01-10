@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 from types import SimpleNamespace
 
 from src.contracts.config import AppSettings
@@ -116,6 +118,11 @@ def _evidence_packs():
     }
 
 
+def _low_text_status():
+    path = Path(__file__).parent / "fixtures" / "low_text_status.json"
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 def test_generate_artifacts_validates_schema_and_evidence_ids(tmp_path):
     responses = [
         {"toc_topics": ["Topic 1", "Topic 2"]},
@@ -190,3 +197,26 @@ def test_generate_artifacts_backfills_missing_ids(tmp_path):
     assert all(item["evidence_id"] for item in payload["insights_final"])
     assert payload["quotes_final"][0]["evidence_id"] == "quote_1"
     validate_schema(payload, "artifacts", _ctx())
+
+
+def test_generate_artifacts_short_circuits_on_low_text(tmp_path):
+    analysis_store = FakeAnalysisStore()
+    fake_openai = FakeOpenAI([])
+    payload = generate_artifacts(
+        report_id="low_text",
+        doc_map={},
+        evidence_packs={},
+        settings=_settings(tmp_path, use_vector_store=True),
+        vector_store_id="vs_1",
+        source_status=_low_text_status(),
+        ctx=_ctx(),
+        openai_client=fake_openai,
+        prompt_client=FakePromptClient(),
+        analysis_store=analysis_store,
+    )
+    assert payload["source_status"]["not_available"] is True
+    assert "text_density_below_threshold" in payload["source_status"]["reason"]
+    assert "Not available from text" in payload["toc_topics"][0]
+    assert fake_openai.requests == []
+    validate_schema(payload, "artifacts", _ctx())
+    assert analysis_store.stored

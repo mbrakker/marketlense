@@ -25,6 +25,7 @@ def generate_artifacts(
     settings: AppSettings,
     *,
     vector_store_id: Optional[str] = None,
+    source_status: Optional[Dict[str, Any]] = None,
     ctx: Optional[RunContext] = None,
     openai_client=openai_service,
     prompt_client=prompt_service,
@@ -40,6 +41,33 @@ def generate_artifacts(
     ))
     safe_doc_map = doc_map or {}
     safe_evidence = evidence_packs or {}
+    has_density_input = isinstance(source_status, dict) and ("text_density" in source_status or "density_threshold" in source_status)
+    availability = _normalize_source_status(source_status, settings, has_density=has_density_input)
+    if has_density_input and availability["density_threshold"] and availability["text_density"] < availability["density_threshold"]:
+        availability["not_available"] = True
+        availability["reason"] = availability["reason"] or "text_density_below_threshold"
+    evidence_present = _has_evidence_content(safe_doc_map, safe_evidence)
+    availability["evidence_present"] = evidence_present
+    fallback_reasons: List[str] = []
+    if availability["not_available"] and availability["reason"]:
+        fallback_reasons.append(availability["reason"])
+    if not evidence_present:
+        fallback_reasons.append("evidence_packs_empty")
+    if fallback_reasons:
+        availability["not_available"] = True
+        availability["reason"] = ",".join(sorted(set(fallback_reasons)))
+        payload = _placeholder_artifacts(availability)
+        validate_schema(payload, "artifacts", ctx)
+        analysis_store.store_pack(settings.output_dir, report_id, "artifacts", payload, ctx)
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="artifact_short_circuit",
+            module=logger.name,
+            fields={"report_id": report_id, "reason": availability["reason"], "text_density": availability["text_density"], "evidence_present": evidence_present},
+        ))
+        return payload
+
     base_vars = {
         "doc_map_json": _dump_json(safe_doc_map),
         "evidence_json": _dump_json(safe_evidence),
@@ -176,6 +204,7 @@ def generate_artifacts(
         "quotes_final": quotes_final,
         "expert_comment": expert_comment,
         "linkedin_post": linkedin_post,
+        "source_status": availability,
     }
 
     try:
@@ -394,6 +423,85 @@ def _normalize_quotes(items: Any) -> List[Dict[str, Any]]:
             "evidence_id": evidence_id or f"quote_{idx + 1}",
         })
     return normalized
+
+
+def _normalize_source_status(source_status: Optional[Dict[str, Any]], settings: AppSettings, *, has_density: bool) -> Dict[str, Any]:
+    status = source_status.copy() if isinstance(source_status, dict) else {}
+    status.setdefault("schema_version", "1.0")
+    status.setdefault("text_density", 0.0)
+    status.setdefault("density_threshold", float(getattr(settings, "pdf_text_min_density", 0.0)) if has_density else 0.0)
+    status.setdefault("pages_sampled", 0)
+    status.setdefault("char_count", 0)
+    status.setdefault("not_available", False)
+    status.setdefault("reason", "")
+    status.setdefault("evidence_present", True)
+    return status
+
+
+def _has_evidence_content(doc_map: Dict[str, Any], evidence_packs: Dict[str, Any]) -> bool:
+    if isinstance(doc_map, dict):
+        sections = doc_map.get("sections")
+        if isinstance(sections, list) and len(sections) > 0:
+            return True
+    if not isinstance(evidence_packs, dict):
+        return False
+    for pack in evidence_packs.values():
+        if not isinstance(pack, dict):
+            continue
+        if pack.get("findings") or pack.get("quote_candidates") or pack.get("methods") or pack.get("scope") or pack.get("limitations"):
+            return True
+    return False
+
+
+def _placeholder_artifacts(status: Dict[str, Any]) -> Dict[str, Any]:
+    reason = status.get("reason") or "not_available_from_text"
+    placeholder_text = "Not available from text"
+    return {
+        "schema_version": "1.0",
+        "toc_topics": [placeholder_text],
+        "summary": {
+            "tldr": placeholder_text,
+            "executive_summary": placeholder_text,
+            "claim_evidence_map": [{
+                "claim": placeholder_text,
+                "evidence_id": "not_available",
+                "evidence": placeholder_text,
+                "pages": [],
+            }],
+        },
+        "insights_candidates": [{
+            "id": "candidate_1",
+            "text": placeholder_text,
+            "evidence_id": "not_available",
+            "evidence": placeholder_text,
+            "metric": {key: "" for key in METRIC_FIELDS},
+            "pages": [],
+            "score": 0.0,
+        }],
+        "insights_final": [{
+            "id": "insight_1",
+            "text": placeholder_text,
+            "evidence_id": "not_available",
+            "evidence": placeholder_text,
+            "metric": {key: "" for key in METRIC_FIELDS},
+            "pages": [],
+        }],
+        "quotes_final": [{
+            "text": placeholder_text,
+            "speaker": "Unknown",
+            "citation": reason.replace("_", " "),
+            "page": 0,
+            "evidence_id": "not_available",
+        }],
+        "expert_comment": placeholder_text,
+        "linkedin_post": placeholder_text,
+        "source_status": {
+            **status,
+            "not_available": True,
+            "reason": reason,
+            "evidence_present": bool(status.get("evidence_present", False)),
+        },
+    }
 
 
 def _dump_json(data: Any) -> str:

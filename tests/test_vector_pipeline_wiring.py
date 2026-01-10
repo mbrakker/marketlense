@@ -194,7 +194,7 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
     monkeypatch.setattr(rg, "extract_pdf_info", lambda req, ctx: SimpleNamespace(schema_version="1.0", path=req.path, page_count=1, metadata={"k": "v"}))
     monkeypatch.setattr(rg, "build_pdf_context", lambda req, ctx: SimpleNamespace(schema_version="1.0", context=DummyCtx(), fitz_error=None, pypdf_error=None))
     monkeypatch.setattr(rg, "detect_contents_page_service", lambda req, ctx: SimpleNamespace(schema_version="1.0", path=req.path, has_contents=False, page_index=-1, page_number=0, heading="", confidence=0.0))
-    monkeypatch.setattr(rg, "extract_pdf_text", lambda req, ctx: SimpleNamespace(schema_version="1.0", text="text", pages_extracted=1, char_count=4))
+    monkeypatch.setattr(rg, "extract_pdf_text", lambda req, ctx: SimpleNamespace(schema_version="1.0", text="text", pages_extracted=1, char_count=4, text_density=4.0))
     monkeypatch.setattr(rg, "load_prompt_set", lambda req, ctx: SimpleNamespace(schema_version="1.0", system=SimpleNamespace(path="s", sha256="s", text="s"), user=SimpleNamespace(path="u", sha256="u", text="u")))
     monkeypatch.setattr(rg, "render_prompt", lambda req, ctx: SimpleNamespace(schema_version="1.0", text=req.template.text))
 
@@ -234,7 +234,7 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
         }
 
     monkeypatch.setattr(rg, "generate_evidence_packs", _fake_evidence)
-    monkeypatch.setattr(rg, "generate_artifacts", lambda report_id, doc_map, evidence_packs, settings, vector_store_id=None, ctx=None: {"artifacts": True})
+    monkeypatch.setattr(rg, "generate_artifacts", lambda report_id, doc_map, evidence_packs, settings, vector_store_id=None, source_status=None, ctx=None: {"artifacts": True})
     monkeypatch.setattr(rg.report_analysis_store_service, "store_pack", lambda output_dir, report_id, pack_name, payload, ctx: analysis_store.append((pack_name, payload)) or str(tmp_path / "report_analysis" / report_id / f"{pack_name}.json"))
 
     def _fake_validation(req, settings, ctx, pack_name="validation"):

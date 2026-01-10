@@ -13,13 +13,16 @@ ingest:
   gdrive_folder_id: "11eruy9ojkd6HdOXK_Uwqvq1TWEKiINTW"
   openai_model: "gpt-5"
   temperature: 1.0
-  timeout_seconds: 600
+  timeout_seconds: 3600
   lock_ttl_seconds: 7200
   seed: null
   batch_limit: 20
   pdf_text:
     max_pages: 5
     max_chars: 80000
+    min_density: 250
+  validation:
+    data_gap_policy: "warn"
   contents_page:
     max_pages: 8
     min_headings: 3
@@ -32,7 +35,7 @@ ingest:
 rank:
   model: "gpt-5"
   temperature: 1.0
-  timeout_seconds: 600
+  timeout_seconds: 3600
   seed: null
 
 publish:

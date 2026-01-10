@@ -412,6 +412,8 @@ uncategorized:
   - access_and_quality
   - risk_factors
   - international_benchmarking
+  - population_health
+  - quality_of_care
 - title: United States Outlook 2026
   tags:
   - ai_growth
@@ -559,3 +561,10 @@ uncategorized:
   - trust
   - cost_of_living
   - government_sentiment
+- title: 'Tech trends 2026: moving from experimentation to impact'
+  tags:
+  - agentic_ai
+  - robotics
+  - ai_infrastructure
+  - hybrid_cloud
+  - cybersecurity

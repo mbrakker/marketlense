@@ -86,6 +86,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     ingest = data.get("ingest", {}) or {}
     pdf_text = ingest.get("pdf_text", {}) or {}
     rank = data.get("rank", {}) or {}
+    validation_cfg = ingest.get("validation", {}) or {}
     contents_page = ingest.get("contents_page", {}) or {}
     category_mapping_path = paths.get("category_mappings") or str(Path(__file__).resolve().parents[1] / "config" / "category-mappings.yaml")
     analysis_cfg = data.get("analysis", {}) or {}
@@ -121,6 +122,9 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     if not contents_keywords:
         contents_keywords = ["table of contents", "contents", "index"]
     contents_preview_dpi = int(contents_page.get("render_dpi", 144))
+    pdf_text_min_density = float(pdf_text.get("min_density", 250.0))
+    data_gap_policy_raw = str(validation_cfg.get("data_gap_policy", "warn")).strip().lower()
+    validation_data_gap_policy = data_gap_policy_raw if data_gap_policy_raw in {"warn", "fail"} else "warn"
 
     output_dir = need(paths, "output_dir", "paths.output_dir", "OUTPUT_DIR")
     cache_dir = need(paths, "cache_dir", "paths.cache_dir", "CACHE_DIR")
@@ -179,6 +183,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         openai_seed=_opt_int(openai_seed_raw),
         pdf_text_max_pages=int(pdf_text.get("max_pages", 5)),
         pdf_text_max_chars=int(pdf_text.get("max_chars", 80_000)),
+        pdf_text_min_density=pdf_text_min_density,
         rank_model=rank_model,
         rank_temperature=rank_temperature,
         rank_seed=_opt_int(rank_seed_raw),
@@ -195,6 +200,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         cost_ledger_path=cost_ledger_path,
         cost_daily_path=cost_daily_path,
         model_pricing=model_pricing,
+        validation_data_gap_policy=validation_data_gap_policy,
     )
 
     if missing:
@@ -234,6 +240,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             "rank_seed": settings.rank_seed,
             "pdf_text_max_pages": settings.pdf_text_max_pages,
             "pdf_text_max_chars": settings.pdf_text_max_chars,
+            "pdf_text_min_density": settings.pdf_text_min_density,
             "openai_timeout_seconds": settings.openai_timeout_seconds,
             "rank_timeout_seconds": settings.rank_timeout_seconds,
             "contents_max_pages": settings.contents_max_pages,
@@ -246,6 +253,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             "analysis_compare": settings.analysis_compare,
             "cost_ledger_path": settings.cost_ledger_path,
             "cost_daily_path": settings.cost_daily_path,
+            "validation_data_gap_policy": settings.validation_data_gap_policy,
         },
     ))
     return settings

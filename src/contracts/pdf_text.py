@@ -21,3 +21,4 @@ class PdfTextExtractResponse:
     text: str = field(metadata={"doc": "Extracted text content."})
     pages_extracted: int = field(metadata={"doc": "Number of pages extracted."})
     char_count: int = field(metadata={"doc": "Number of characters returned."})
+    text_density: float = field(default=0.0, metadata={"doc": "Characters per page across the sampled pages."})
