@@ -32,3 +32,162 @@
     - Beyond text rendering, there is no infographic generation pipeline. Add a generator/service to produce simple infographics/hero visuals for HTML and LinkedIn artifacts, wired into rendering and artifact generation flows.
 16. Support multiple prompts per process for variations/expert roles.
     - Today each step uses a single prompt set per namespace. Add a mechanism to run multiple prompt variants per step (e.g., different expert personas or stylistic variants), collect outputs, and select/ensemble or expose them, while keeping prompt logging/versioning intact.
+
+# Detailed Proposals
+
+## 1. Upgrade validator to perform semantic comparisons
+- **Context**: Validation in `src/generators/validation_generator.py` relies on exact substring or regex matching in `_metric_value_supported`, `_contains_token`, and `_validate_quotes`, which can miss paraphrases or stem variants.
+- **Proposal**:
+  - Add a semantic validation pass after `_collect_evidence_texts` that compares insight metrics and quotes against evidence snippets using embeddings or a lightweight LLM re-check.
+  - Keep schema validation (`validate_schema`) unchanged; new checks should only produce `ValidationIssue` entries.
+  - Wire model choice through `openai_service` with explicit logging of prompts, model, and evidence hashes.
+- **Acceptance**:
+  - Paraphrased metric values and quotes are flagged correctly with fewer false positives.
+  - Validation report includes both semantic and exact-match findings with clear severity.
+
+## 2. Upgrade all prompts
+- **Context**: Prompt namespaces live under `src/prompts/**` and are loaded via `prompt_service` contracts and `PromptLoadRequest`.
+- **Proposal**:
+  - Audit every namespace (report_generation, report_vs/{doc_map,evidence_packs,artifacts,validate}, rank_candidates) for clarity, safety, and schema alignment.
+  - Update prompt variables to match renderer usage (e.g., `PromptRenderRequest` variable names in generators).
+  - Bump prompt schema/version hashes and ensure logging is updated with new hashes.
+- **Acceptance**:
+  - All prompts render without missing variables.
+  - Updated prompt hashes appear in generator logs.
+
+## 3. Parallelize report processing
+- **Context**: `run_ingest` in `src/orchestrators/ingest_orchestrator.py` iterates PDFs sequentially and blocks on network/model calls.
+- **Proposal**:
+  - Add bounded concurrency (thread pool or asyncio) per file with a configurable limit in `IngestSettings`.
+  - Preserve lock semantics and state DB writes, using per-file `RunContext` and serialized cost ledger updates.
+  - Ensure retries still use `_run_step_with_retry` or a concurrency-safe equivalent.
+- **Acceptance**:
+  - Multiple PDFs process concurrently without double-processing or lock conflicts.
+  - Cost ledger and state DB are consistent after parallel runs.
+
+## 4. Make GPT model selection flexible per prompt call
+- **Context**: `AppSettings.openai_model` and `rank_model` are used across generators/services, making model choice global.
+- **Proposal**:
+  - Add per-namespace model overrides in configuration (e.g., `openai_models.report_vs_validate`, `openai_models.rank_candidates`).
+  - Thread model choice through generator calls into `openai_service` requests, with explicit logging per span.
+  - Keep defaults to current model values when overrides are absent.
+- **Acceptance**:
+  - Each prompt call logs the resolved model.
+  - Model overrides can be set per namespace without code changes.
+
+## 5. Combine redundant services to reduce excessive service proliferation
+- **Context**: PDF processing is split across `pdf_utils_service`, `pdf_text_service`, `pdf_context_service`, `pdf_contents_service`, and `extract_service` while sharing the same external PDF libraries.
+- **Proposal**:
+  - Consolidate all PDF I/O into a single PDF service module (e.g., `pdf_service`).
+  - Move shared constants and path handling to that module; refactor callers in generators/orchestrators to use the consolidated API.
+  - Ensure logs remain structured with `role="service"` and consistent `module` names.
+- **Acceptance**:
+  - Only one PDF service module handles external PDF libraries.
+  - All PDF-related calls originate from the consolidated service API.
+
+## 6. Update `AGENTS.md`
+- **Context**: `AGENTS.md` describes architectural constraints but does not reference current module naming or consolidation requirements.
+- **Proposal**:
+  - Add a dedicated rule about avoiding split services for a single external system (e.g., PDF libraries, OpenAI/vector store, WordPress).
+  - Update examples and naming to reflect current modules in `src/services/*`.
+- **Acceptance**:
+  - `AGENTS.md` explicitly calls out service consolidation and current module examples.
+
+## 7. Add cost tables
+- **Context**: `cost_ledger_service` and `generate_cost_report` emit totals but not readable tables in artifacts or CLI output.
+- **Proposal**:
+  - Add an HTML table artifact under `out/` (or configured output directory) for per-run and daily rollups.
+  - Add a CLI view in `src/cli.py` to print the same table to stdout.
+  - Link generated paths in `README.md` under a cost reporting section.
+- **Acceptance**:
+  - Cost tables are generated for each run and referenced in the README.
+  - CLI command prints the same aggregated totals.
+
+## 8. Add vector store logging to avoid recreating entries
+- **Context**: `vector_store_service.create_vector_store` is invoked without persisting IDs, so repeated runs create new stores.
+- **Proposal**:
+  - Persist `vector_store_id` per report in the state DB or report store when created or re-used.
+  - Update orchestrators (e.g., `golden_set_orchestrator`) to check for existing IDs and log reuse.
+  - Honor `analysis.vector_store_keep` when deciding to reuse or recreate.
+- **Acceptance**:
+  - Re-running a report reuses the same vector store unless `vector_store_keep` is false.
+  - Logs show reuse vs. create decision with stored IDs.
+
+## 9. Add categories/tags to vector store records
+- **Context**: Vector store metadata does not include report taxonomy, so filtering and cleanup cannot use categories.
+- **Proposal**:
+  - Add metadata fields (`categories`, `regions`, `time_period`) derived from `ReportPayload` and category mapping outputs.
+  - Pass metadata through `vector_store_service` creation/attachment requests.
+  - Ensure metadata is logged and kept in sync with state DB records.
+- **Acceptance**:
+  - Vector store records include taxonomy metadata and are queryable by tag.
+
+## 10. Create a GUI
+- **Context**: Only `src/cli.py` exists for interaction; no UI is available.
+- **Proposal**:
+  - Implement a minimal web UI (FastAPI + simple frontend or Streamlit) under `src/gui` or `src/orchestrators` with a dedicated service.
+  - Include controls to trigger ingest/publish, view progress logs, and inspect artifacts/cost tables/vector store status.
+  - Keep UI as a separate entrypoint to preserve CLI behavior.
+- **Acceptance**:
+  - UI can launch ingest/publish and show task status for a run.
+  - Artifacts and cost tables are browsable from the UI.
+
+## 11. Add vector store deletion support
+- **Context**: No delete/prune API exists in `vector_store_service`; `vector_store_keep` is unused for cleanup.
+- **Proposal**:
+  - Add delete operations in `vector_store_service` and wire them into orchestrators when `vector_store_keep` is false.
+  - Ensure deletion covers vector store assets and related files.
+  - Log deletion decisions with run/task/span IDs.
+- **Acceptance**:
+  - Orphaned vector stores are cleaned up when configured.
+  - Logs confirm deletion operations with IDs.
+
+## 12. Define and enforce cost limits
+- **Context**: Costs are tracked in `cost_ledger_path`/`cost_daily_path` but there are no guardrails.
+- **Proposal**:
+  - Add config thresholds in `app.yaml` (per-run and per-day) and surface them in `AppSettings`.
+  - Add orchestrator checks before OpenAI calls to block or warn based on thresholds.
+  - Log decisions and include the threshold values in structured logs.
+- **Acceptance**:
+  - Runs stop or warn when crossing configured cost limits.
+  - Logs show thresholds and current spend when a block occurs.
+
+## 13. Refine HTML and deduplicate repeated blocks
+- **Context**: `templates/report.html.j2` has repeated preview/figure handling and inline styling.
+- **Proposal**:
+  - Extract Jinja macros/partials for repeated preview/figure blocks.
+  - Normalize metadata rendering and shared styles to reduce drift.
+  - Add a small fixture to confirm the output structure remains stable.
+- **Acceptance**:
+  - HTML template no longer duplicates preview/gallery logic.
+  - Metadata block renders consistently across sections.
+
+## 14. Refine figure candidates and ranker to avoid low-data images
+- **Context**: Figure selection relies on `figure_service`, `rank_service`, and `extract_service`, but low-signal images slip through.
+- **Proposal**:
+  - Add an image quality filter (OCR density, chart/table heuristics, minimum text coverage).
+  - Extend candidate metadata with quality scores and feed them into ranking inputs.
+  - Improve cropping for chart/table boundaries before ranking.
+- **Acceptance**:
+  - Candidate set excludes low-content images and prioritizes meaningful charts.
+  - Ranking inputs include explicit quality features.
+
+## 15. Add infographics creator for HTML design and LinkedIn posts
+- **Context**: No pipeline exists for generating infographic assets beyond text artifacts.
+- **Proposal**:
+  - Add a generator/service pair to create infographic assets (SVG/PNG) from report highlights.
+  - Wire into HTML rendering and LinkedIn artifact generation flows.
+  - Store artifacts alongside existing outputs with metadata for reuse.
+- **Acceptance**:
+  - Infographic assets are created and referenced in HTML/LinkedIn outputs.
+  - Artifacts are logged and stored with report metadata.
+
+## 16. Support multiple prompts per process for variations/expert roles
+- **Context**: Each step uses one prompt namespace; no multi-prompt selection exists.
+- **Proposal**:
+  - Add configuration for multiple prompt variants per namespace.
+  - Generate outputs for each variant, then select/ensemble using a scoring heuristic or validation step.
+  - Preserve prompt logging/versioning for each variant.
+- **Acceptance**:
+  - Multiple prompt variants can be run per step and results are captured.
+  - Selection logic is logged with variant identifiers.
