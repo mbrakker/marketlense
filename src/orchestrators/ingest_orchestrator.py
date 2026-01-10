@@ -46,6 +46,25 @@ def _should_skip(file: DriveFile, md5: Optional[str], state_db: str, ctx: RunCon
     return state_already_processed(req, ctx)
 
 
+def _run_step_with_retry(step_name: str, ctx: RunContext, func, retries: int = 2):
+    attempt = 0
+    while True:
+        try:
+            return func()
+        except AppError as exc:
+            if not exc.retryable or attempt >= retries:
+                raise
+            logger.info(log_event(
+                ctx,
+                role="orchestrator",
+                event="step_retry",
+                module=logger.name,
+                fields={"step": step_name, "attempt": attempt + 1, "code": exc.code},
+            ))
+            time.sleep(1 + attempt)
+            attempt += 1
+
+
 def run_ingest(
     settings: IngestSettings,
     *,
@@ -166,7 +185,7 @@ def run_ingest(
                         file=file,
                         service_account_path=settings.google_sa_path,
                     )
-                    dl_resp = download_pdf(dl_req, file_ctx)
+                    dl_resp = _run_step_with_retry("download_pdf", file_ctx, lambda: download_pdf(dl_req, file_ctx))
                     write_resp = write_bytes(
                         WriteBytesRequest(schema_version="1.0", path=cache_path, content=dl_resp.content),
                         file_ctx,
@@ -186,7 +205,7 @@ def run_ingest(
                         file=file,
                         service_account_path=settings.google_sa_path,
                     )
-                    dl_resp = download_pdf(dl_req, file_ctx)
+                    dl_resp = _run_step_with_retry("download_pdf", file_ctx, lambda: download_pdf(dl_req, file_ctx))
                     write_resp = write_bytes(
                         WriteBytesRequest(schema_version="1.0", path=cache_path, content=dl_resp.content),
                         file_ctx,
@@ -225,71 +244,61 @@ def run_ingest(
                     ))
                     continue
 
-                retries = 2
-                for attempt in range(retries + 1):
-                    try:
-                        outcome = generate_report(file, cache_path, settings, md5, file_ctx)
-                        outcomes.append(outcome)
-                        if outcome.vector_store_id:
-                            logger.info(log_event(
-                                file_ctx,
-                                role="orchestrator",
-                                event="VECTOR_STORE_CREATED",
-                                module=logger.name,
-                                fields={"file_id": file.file_id, "vector_store_id": outcome.vector_store_id},
-                            ))
-                        if outcome.vector_store_status:
-                            logger.info(log_event(
-                                file_ctx,
-                                role="orchestrator",
-                                event="VECTOR_STORE_INDEXED",
-                                module=logger.name,
-                                fields={
-                                    "file_id": file.file_id,
-                                    "vector_store_id": outcome.vector_store_id or "",
-                                    "status": outcome.vector_store_status,
-                                    "indexed_at_utc": outcome.indexed_at_utc or "",
-                                },
-                            ))
-                        if outcome.evidence_packs:
-                            logger.info(log_event(
-                                file_ctx,
-                                role="orchestrator",
-                                event="EVIDENCE_READY",
-                                module=logger.name,
-                                fields={
-                                    "file_id": file.file_id,
-                                    "vector_store_id": outcome.vector_store_id or "",
-                                    "pack_count": len(outcome.evidence_packs),
-                                },
-                            ))
-                        state_record(
-                            StateRecordRequest(
-                                schema_version="1.0",
-                                state_db=settings.state_db,
-                                file_id=file.file_id,
-                                md5=md5 or "",
-                                openai_file_id=outcome.openai_file_id or "",
-                                vector_store_id=outcome.vector_store_id,
-                                vector_store_status=outcome.vector_store_status,
-                                indexed_at_utc=outcome.indexed_at_utc,
-                                last_error=outcome.vector_store_last_error,
-                            ),
-                            file_ctx,
-                        )
-                        processed += 1
-                        break
-                    except AppError as exc:
-                        if not exc.retryable or attempt >= retries:
-                            raise
-                        logger.info(log_event(
-                            file_ctx,
-                            role="orchestrator",
-                            event="report_retry",
-                            module=logger.name,
-                            fields={"file_id": file.file_id, "attempt": attempt + 1, "code": exc.code},
-                        ))
-                        time.sleep(1 + attempt)
+                outcome = _run_step_with_retry(
+                    "generate_report",
+                    file_ctx,
+                    lambda: generate_report(file, cache_path, settings, md5, file_ctx),
+                    retries=2,
+                )
+                outcomes.append(outcome)
+                if outcome.vector_store_id:
+                    logger.info(log_event(
+                        file_ctx,
+                        role="orchestrator",
+                        event="VECTOR_STORE_CREATED",
+                        module=logger.name,
+                        fields={"file_id": file.file_id, "vector_store_id": outcome.vector_store_id},
+                    ))
+                if outcome.vector_store_status:
+                    logger.info(log_event(
+                        file_ctx,
+                        role="orchestrator",
+                        event="VECTOR_STORE_INDEXED",
+                        module=logger.name,
+                        fields={
+                            "file_id": file.file_id,
+                            "vector_store_id": outcome.vector_store_id or "",
+                            "status": outcome.vector_store_status,
+                            "indexed_at_utc": outcome.indexed_at_utc or "",
+                        },
+                    ))
+                if outcome.evidence_packs:
+                    logger.info(log_event(
+                        file_ctx,
+                        role="orchestrator",
+                        event="EVIDENCE_READY",
+                        module=logger.name,
+                        fields={
+                            "file_id": file.file_id,
+                            "vector_store_id": outcome.vector_store_id or "",
+                            "pack_count": len(outcome.evidence_packs),
+                        },
+                    ))
+                state_record(
+                    StateRecordRequest(
+                        schema_version="1.0",
+                        state_db=settings.state_db,
+                        file_id=file.file_id,
+                        md5=md5 or "",
+                        openai_file_id=outcome.openai_file_id or "",
+                        vector_store_id=outcome.vector_store_id,
+                        vector_store_status=outcome.vector_store_status,
+                        indexed_at_utc=outcome.indexed_at_utc,
+                        last_error=outcome.vector_store_last_error,
+                    ),
+                    file_ctx,
+                )
+                processed += 1
             except Exception as exc:
                 logger.info(log_event(
                     file_ctx,

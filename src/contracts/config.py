@@ -47,3 +47,4 @@ class AppSettings:
     cost_ledger_path: str = field(default="./out/cost-ledger.jsonl", metadata={"doc": "Filesystem path for the cost ledger JSONL output."})
     cost_daily_path: str = field(default="./out/cost-daily.json", metadata={"doc": "Filesystem path for daily cost rollups JSON."})
     model_pricing: dict = field(default_factory=dict, metadata={"doc": "Per-model pricing table; keys are model IDs with per-1k token pricing."})
+    analysis_compare: bool = field(default=False, metadata={"doc": "Run both local_text and vector_store pipelines and store outputs for diffing."})

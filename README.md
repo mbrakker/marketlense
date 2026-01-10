@@ -15,6 +15,7 @@ Key traits:
 - Orchestrator that controls sequencing, retries, and state (including publishing).
 - Structured logging with run/task/span identifiers.
 - Built-in validation: semantic checks plus LLM grounding with persisted reports and publish-time policy controls.
+- Optional compare mode: run both `local_text` and `vector_store` analyses in one pass, persist both snapshots, and render a secondary HTML for side-by-side diffing/debugging.
 
 ---
 
@@ -51,6 +52,7 @@ Key fields and env overrides:
 - Ingest: `ingest.google_sa_path` (`GOOGLE_SERVICE_ACCOUNT_JSON`), `ingest.gdrive_folder_id` (`GDRIVE_FOLDER_ID`), `ingest.openai_model` (`OPENAI_MODEL`), `ingest.batch_limit` (`BATCH_LIMIT`, default 20), `ingest.temperature` (`TEMPERATURE`, default 1.0), `ingest.timeout_seconds` (`OPENAI_TIMEOUT_SECONDS`, default 600), `ingest.lock_ttl_seconds` (`INGEST_LOCK_TTL_SECONDS`, default 7200), `ingest.contents_page.*` (keywords, max_pages, min_headings, render_dpi).
 - Analysis mode: `analysis.mode` (`ANALYSIS_MODE`, default `local_text`; set `vector_store` to enable file-search/Responses path).
 - Vector store toggles: `analysis.use_vector_store` (`USE_VECTOR_STORE`, default derived from mode), `analysis.vector_store_keep` (`VECTOR_STORE_KEEP`, default `true`).
+- Compare toggle: `analysis.compare` (`ANALYSIS_COMPARE`, default `false`) to run both modes and store comparison artifacts/HTML.
 - Cost tracking: `analysis.cost_ledger_path` (`COST_LEDGER_PATH`, default `./out/cost-ledger.jsonl`), `cost.daily_path` (default `./out/cost-daily.json`), `cost.pricing` (per-model pricing map used by `utils.costing`).
 - Validation: `publish.validation.policy` (`PUBLISH_VALIDATION_POLICY`, default `block`; set to `warn` to allow publish with issues).
 
@@ -100,7 +102,7 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
 - **LLM analysis**:
   - `local_text` mode: Sends prompt + extracted text to OpenAI for structured JSON output.
   - `vector_store` mode: Ensures a vector store exists (create → upload PDF → attach → wait for indexing via `vector_store_service`), then calls `openai_service.openai_respond_with_vector_store` (Responses API + file search). Evidence packs are generated via `src/generators/evidence_pack_generator.py` (doc_map, scope, methods, findings, limitations, quote_candidates), stored under `out/report_analysis/<file_id>/*.json`, and persisted in the metadata DB (`reports` table columns `vector_store_id`, `evidence_packs_json`; state DB stores `vector_store_status`, `indexed_at_utc`, `openai_file_id`, `last_error`). Orchestrator logs `VECTOR_STORE_CREATED`, `VECTOR_STORE_INDEXED`, `EVIDENCE_READY`.
-  - **Validation**: `src/generators/validation_generator.py` runs semantic checks (metrics vs evidence, quotes verbatim, no new numbers in expert/LinkedIn) and LLM grounding (`src/prompts/report_vs/validate/grounding`). Results are stored at `out/report_analysis/<file_id>/validation.json`, added to the rendered payload, and logged.
+  - **Validation**: `src/generators/validation_generator.py` runs semantic checks (metrics vs evidence, quotes verbatim, no new numbers in expert/LinkedIn) and LLM grounding (`src/prompts/report_vs/validate/grounding`). Results are stored at `out/report_analysis/<file_id>/validation*.json`, added to the rendered payload, and logged.
      - **Normalization**: `normalize_generator` enforces strict schema and list sizing.
      - **Categorization**: taxonomy tags are scored against `src/config/category-mappings.yaml`; top 3 categories are stored and rendered, and unmapped tags are appended under `uncategorized` in that YAML.
      - **Figure selection**: `figure_service` selects a representative visual and caption.
@@ -108,7 +110,7 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
      - **Candidate ranking**: `rank_service` scores candidates via LLM.
      - **Cropping**: `crop_service` crops top-ranked regions.
      - **Preview rendering**: `preview_service` renders the first page to PNG.
-     - **HTML rendering**: `render_service` generates the final HTML digest.
+     - **HTML rendering**: `render_service` generates the final HTML digest; when compare mode is on, an additional `<report>-<mode>.html` is rendered for each comparison mode (e.g., vector_store) and recorded under `html_<mode>` in evidence pack paths.
 
 7. **State record**
    - The orchestrator records completion state after successful report generation.

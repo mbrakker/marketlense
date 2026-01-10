@@ -73,6 +73,7 @@ def ingest(
         analysis_mode=s.analysis_mode,
         use_vector_store=s.use_vector_store,
         vector_store_keep=s.vector_store_keep,
+        analysis_compare=s.analysis_compare,
         cost_ledger_path=s.cost_ledger_path,
         cost_daily_path=s.cost_daily_path,
         model_pricing=s.model_pricing,

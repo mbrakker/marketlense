@@ -237,9 +237,9 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
     monkeypatch.setattr(rg, "generate_artifacts", lambda report_id, doc_map, evidence_packs, settings, vector_store_id=None, ctx=None: {"artifacts": True})
     monkeypatch.setattr(rg.report_analysis_store_service, "store_pack", lambda output_dir, report_id, pack_name, payload, ctx: analysis_store.append((pack_name, payload)) or str(tmp_path / "report_analysis" / report_id / f"{pack_name}.json"))
 
-    def _fake_validation(req, settings, ctx):
+    def _fake_validation(req, settings, ctx, pack_name="validation"):
         validation_calls.append(req.report_id)
-        return ValidationReport(schema_version="1.1", status="pass", severity="pass", issues=[], source_path=str(tmp_path / "report_analysis" / req.report_id / "validation.json"))
+        return ValidationReport(schema_version="1.1", status="pass", severity="pass", issues=[], source_path=str(tmp_path / "report_analysis" / req.report_id / f"{pack_name}.json"))
 
     monkeypatch.setattr(rg, "run_validation", _fake_validation)
     def _fake_render_report(req, ctx):

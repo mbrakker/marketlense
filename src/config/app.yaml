@@ -47,6 +47,7 @@ analysis:
   mode: "local_text"
   use_vector_store: true
   vector_store_keep: true
+  compare: false
   cost_ledger_path: "./out/cost-ledger.jsonl"
 
 cost:

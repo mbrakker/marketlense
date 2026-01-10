@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from copy import deepcopy
 from pathlib import Path
 from typing import Optional
 
@@ -49,10 +50,11 @@ from src.services.report_store_service import upsert_metadata as upsert_report_m
 from src.services.pdf_context_service import build_pdf_context
 from src.services.pdf_utils_service import extract_pdf_info
 from src.services import vector_store_service, state_service, report_analysis_store_service
-from src.contracts.state import StateGetRequest
+from src.contracts.state import StateGetRequest, StateRecordRequest
 from src.contracts.validation import ValidationIssue, ValidationReport, ValidationRequest
-from src.utils.logging import log_event
+from src.utils.logging import child_context, log_event
 from src.utils.validation import validate_candidate, validate_report_payload
+from src.utils.errors import AppError
 
 logger = logging.getLogger("market_lense.report_generator")
 
@@ -70,6 +72,59 @@ def _vector_store_enabled(settings: IngestSettings) -> bool:
 def _pack_paths(output_dir: str, report_id: str, pack_names: list[str]) -> dict[str, str]:
     base = Path(output_dir) / "report_analysis" / report_id
     return {name: str(base / f"{name}.json") for name in pack_names}
+
+
+def _record_state_progress(
+    *,
+    settings: IngestSettings,
+    file_id: str,
+    md5: Optional[str],
+    ctx: RunContext,
+    stage: str,
+    vector_store_id: Optional[str] = None,
+    vector_store_status: Optional[str] = None,
+    indexed_at_utc: Optional[str] = None,
+    openai_file_id: Optional[str] = None,
+    last_error: Optional[str] = None,
+) -> None:
+    if not md5:
+        return
+    try:
+        state_service.record(
+            StateRecordRequest(
+                schema_version="1.0",
+                state_db=settings.state_db,
+                file_id=file_id,
+                md5=md5,
+                openai_file_id=openai_file_id or "",
+                vector_store_id=vector_store_id,
+                vector_store_status=vector_store_status,
+                indexed_at_utc=indexed_at_utc,
+                last_error=last_error,
+            ),
+            ctx,
+        )
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="state_progress_recorded",
+            module=logger.name,
+            fields={
+                "file_id": file_id,
+                "stage": stage,
+                "vector_store_id": vector_store_id or "",
+                "vector_store_status": vector_store_status or "",
+                "indexed_at_utc": indexed_at_utc or "",
+            },
+        ))
+    except Exception as exc:  # pragma: no cover - best-effort state tracking
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="state_progress_failed",
+            module=logger.name,
+            fields={"file_id": file_id, "stage": stage, "error": str(exc)},
+        ))
 
 
 def _ensure_vector_store(
@@ -173,28 +228,31 @@ def generate_report(
     ctx: RunContext,
 ) -> IngestOutcome:
     pdf_context = None
+    primary_mode = (settings.analysis_mode or "local_text").strip() or "local_text"
+    compare_enabled = bool(getattr(settings, "analysis_compare", False))
+    comparison_mode = "vector_store" if primary_mode != "vector_store" else "local_text"
+    analysis_modes = [primary_mode]
+    if compare_enabled and comparison_mode not in analysis_modes:
+        analysis_modes.append(comparison_mode)
     logger.info(log_event(
         ctx,
         role="generator",
         event="report_generate_start",
         module=logger.name,
-        fields={"file_id": file.file_id, "name": file.name},
+        fields={"file_id": file.file_id, "name": file.name, "modes": analysis_modes},
     ))
     report_name = slugify(file.name)
     contents_page_number = 0
     contents_image = ""
     contents_heading = ""
-    artifacts_payload: dict | None = None
-    artifacts_path: str | None = None
-    validation_report: ValidationReport | None = None
-    evidence_packs: dict[str, dict] = {}
 
+    info_ctx = child_context(ctx, task_id=f"{ctx.task_id}:pdf_info")
     info_resp = extract_pdf_info(
         PdfInfoRequest(schema_version="1.0", path=local_pdf_path),
-        ctx,
+        info_ctx,
     )
     logger.info(log_event(
-        ctx,
+        info_ctx,
         role="generator",
         event="pdf_info_loaded",
         module=logger.name,
@@ -202,14 +260,15 @@ def generate_report(
     ))
 
     try:
+        ctx_pdf = child_context(ctx, task_id=f"{ctx.task_id}:pdf_context")
         pdf_ctx_resp = build_pdf_context(
             PdfContextBuildRequest(schema_version="1.0", path=local_pdf_path),
-            ctx,
+            ctx_pdf,
         )
         pdf_context = pdf_ctx_resp.context
         if pdf_ctx_resp.fitz_error or pdf_ctx_resp.pypdf_error:
             logger.info(log_event(
-                ctx,
+                ctx_pdf,
                 role="generator",
                 event="pdf_context_partial",
                 module=logger.name,
@@ -240,7 +299,7 @@ def generate_report(
                 keywords=settings.contents_keywords,
                 pdf_context=pdf_context,
             ),
-            ctx,
+            child_context(ctx, task_id=f"{ctx.task_id}:contents"),
         )
         if contents_resp.has_contents:
             contents_page_number = contents_resp.page_number
@@ -281,19 +340,183 @@ def generate_report(
             fields={"file_id": file.file_id, "error": str(exc)},
         ))
 
-    try:
-        text_resp = extract_pdf_text(
-            PdfTextExtractRequest(
+    text_ctx = child_context(ctx, task_id=f"{ctx.task_id}:text")
+    text_resp = extract_pdf_text(
+        PdfTextExtractRequest(
+            schema_version="1.0",
+            path=local_pdf_path,
+            max_pages=settings.pdf_text_max_pages,
+            max_chars=settings.pdf_text_max_chars,
+            pdf_context=pdf_context,
+        ),
+        text_ctx,
+    )
+    prompt_ctx = child_context(ctx, task_id=f"{ctx.task_id}:prompt")
+    prompt_set = load_prompt_set(
+        PromptLoadRequest(schema_version="1.0", namespace="report_generation", reload_if_changed=True),
+        prompt_ctx,
+    )
+    logger.info(log_event(
+        prompt_ctx,
+        role="generator",
+        event="prompt_selected",
+        module=logger.name,
+        fields={
+            "namespace": "report_generation",
+            "system_path": prompt_set.system.path,
+            "system_sha256": prompt_set.system.sha256,
+            "user_path": prompt_set.user.path,
+            "user_sha256": prompt_set.user.sha256,
+        },
+    ))
+    system_render = render_prompt(
+        PromptRenderRequest(
+            schema_version="1.0",
+            template=prompt_set.system,
+            variables={},
+        ),
+        prompt_ctx,
+    )
+    user_render = render_prompt(
+        PromptRenderRequest(
+            schema_version="1.0",
+            template=prompt_set.user,
+            variables={"extracted": text_resp.text},
+        ),
+        prompt_ctx,
+    )
+    logger.info(log_event(
+        prompt_ctx,
+        role="generator",
+        event="prompt_rendered",
+        module=logger.name,
+        fields={
+            "system_prompt": system_render.text,
+            "user_prompt": user_render.text,
+        },
+    ))
+    logger.info(log_event(
+        prompt_ctx,
+        role="generator",
+        event="openai_request_config",
+        module=logger.name,
+        fields={
+            "model": settings.openai_model,
+            "temperature": settings.temperature,
+            "seed": settings.openai_seed,
+        },
+    ))
+    openai_ctx = child_context(ctx, task_id=f"{ctx.task_id}:analyze")
+    openai_resp = openai_analyze(
+        OpenAIAnalyzeRequest(
+            schema_version="1.0",
+            system_prompt=system_render.text,
+            user_prompt=user_render.text,
+            prompt_system_sha256=prompt_set.system.sha256,
+            prompt_user_sha256=prompt_set.user.sha256,
+            model=settings.openai_model,
+            temperature=settings.temperature,
+            api_key=settings.openai_api_key,
+            seed=settings.openai_seed,
+            timeout_seconds=settings.openai_timeout_seconds,
+            cost_ledger_path=settings.cost_ledger_path,
+            cost_daily_path=settings.cost_daily_path,
+            model_pricing=settings.model_pricing,
+        ),
+        openai_ctx,
+    )
+    report_usage = {
+        "prompt_tokens": openai_resp.prompt_tokens,
+        "completion_tokens": openai_resp.completion_tokens,
+        "total_tokens": openai_resp.total_tokens,
+    }
+    logger.info(log_event(
+        openai_ctx,
+        role="generator",
+        event="openai_raw_response",
+        module=logger.name,
+        fields={"request_id": openai_resp.request_id or "", "content": openai_resp.raw_content},
+    ))
+    raw = openai_resp.payload
+    data = normalize_report(raw, ctx)
+    report_title = data.title.strip() or _derive_title(file.name)
+    data.title = report_title
+    validate_report_payload(data)
+    logger.info(log_event(
+        ctx,
+        role="generator",
+        event="report_payload_validated",
+        module=logger.name,
+        fields={"file_id": file.file_id},
+    ))
+
+    mappings_resp = load_category_mappings(
+        CategoryMappingLoadRequest(schema_version="1.0", path=settings.category_mapping_path, reload_if_changed=True),
+        ctx,
+    )
+    category_assignment = categorize_taxonomy(data.taxonomy, mappings_resp, ctx)
+    data.categories = category_assignment.categories
+    if category_assignment.unmapped_tags or mappings_resp.mappings.uncategorized:
+        update_uncategorized_tags(
+            UncategorizedTagsUpdateRequest(
                 schema_version="1.0",
-                path=local_pdf_path,
-                max_pages=settings.pdf_text_max_pages,
-                max_chars=settings.pdf_text_max_chars,
-                pdf_context=pdf_context,
+                path=settings.category_mapping_path,
+                report_title=report_title,
+                tags=category_assignment.unmapped_tags,
             ),
             ctx,
         )
-        prompt_set = load_prompt_set(
-            PromptLoadRequest(schema_version="1.0", namespace="report_generation", reload_if_changed=True),
+
+    fig_resp = extract_best_figure_service(
+        FigureExtractRequest(
+            schema_version="1.0",
+            pdf_path=local_pdf_path,
+            out_dir=settings.output_dir,
+            report_name=report_name,
+            pdf_context=pdf_context,
+        ),
+        ctx,
+    )
+    if fig_resp.image_path:
+        data._figure_image = fig_resp.image_path
+        if fig_resp.caption and not (data.figure.evidence or "").strip():
+            data.figure.evidence = fig_resp.caption
+
+    cands_resp = collect_candidates_service(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=local_pdf_path,
+            out_dir=settings.output_dir,
+            report_name=report_name,
+            pdf_context=pdf_context,
+        ),
+        ctx,
+    )
+    ranked = []
+    rank_usage = None
+    sliced_paths = []
+    if cands_resp.candidates:
+        for cand in cands_resp.candidates:
+            validate_candidate(cand)
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="candidate_validation_complete",
+            module=logger.name,
+            fields={"count": len(cands_resp.candidates)},
+        ))
+        rank_model = settings.rank_model or settings.openai_model
+        rows = [{
+            "id": c.id,
+            "type": c.kind,
+            "page": c.page,
+            "meta": c.meta or {},
+            "title_or_caption": (c.caption or "")[:300],
+            "table_preview": c.preview_text[:400] if c.kind == "table" else "",
+        } for c in cands_resp.candidates]
+        candidates_json = json.dumps(rows, ensure_ascii=True)
+        rank_prompt_set = load_prompt_set(
+            PromptLoadRequest(schema_version="1.0", namespace="rank_candidates", reload_if_changed=True),
             ctx,
         )
         logger.info(log_event(
@@ -302,26 +525,26 @@ def generate_report(
             event="prompt_selected",
             module=logger.name,
             fields={
-                "namespace": "report_generation",
-                "system_path": prompt_set.system.path,
-                "system_sha256": prompt_set.system.sha256,
-                "user_path": prompt_set.user.path,
-                "user_sha256": prompt_set.user.sha256,
+                "namespace": "rank_candidates",
+                "system_path": rank_prompt_set.system.path,
+                "system_sha256": rank_prompt_set.system.sha256,
+                "user_path": rank_prompt_set.user.path,
+                "user_sha256": rank_prompt_set.user.sha256,
             },
         ))
-        system_render = render_prompt(
+        rank_system_render = render_prompt(
             PromptRenderRequest(
                 schema_version="1.0",
-                template=prompt_set.system,
+                template=rank_prompt_set.system,
                 variables={},
             ),
             ctx,
         )
-        user_render = render_prompt(
+        rank_user_render = render_prompt(
             PromptRenderRequest(
                 schema_version="1.0",
-                template=prompt_set.user,
-                variables={"extracted": text_resp.text},
+                template=rank_prompt_set.user,
+                variables={"candidates_json": candidates_json},
             ),
             ctx,
         )
@@ -331,301 +554,199 @@ def generate_report(
             event="prompt_rendered",
             module=logger.name,
             fields={
-                "system_prompt": system_render.text,
-                "user_prompt": user_render.text,
+                "system_prompt": rank_system_render.text,
+                "user_prompt": rank_user_render.text,
             },
         ))
         logger.info(log_event(
             ctx,
             role="generator",
-            event="openai_request_config",
+            event="rank_request_config",
             module=logger.name,
             fields={
-                "model": settings.openai_model,
-                "temperature": settings.temperature,
-                "seed": settings.openai_seed,
+                "model": rank_model,
+                "temperature": settings.rank_temperature,
+                "seed": settings.rank_seed,
             },
         ))
-        openai_resp = openai_analyze(
-            OpenAIAnalyzeRequest(
-                schema_version="1.0",
-                system_prompt=system_render.text,
-                user_prompt=user_render.text,
-                prompt_system_sha256=prompt_set.system.sha256,
-                prompt_user_sha256=prompt_set.user.sha256,
-                model=settings.openai_model,
-                temperature=settings.temperature,
-                api_key=settings.openai_api_key,
-                seed=settings.openai_seed,
-                timeout_seconds=settings.openai_timeout_seconds,
-                cost_ledger_path=settings.cost_ledger_path,
-                cost_daily_path=settings.cost_daily_path,
-                model_pricing=settings.model_pricing,
-            ),
-            ctx,
-        )
-        report_usage = {
-            "prompt_tokens": openai_resp.prompt_tokens,
-            "completion_tokens": openai_resp.completion_tokens,
-            "total_tokens": openai_resp.total_tokens,
-        }
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="openai_raw_response",
-            module=logger.name,
-            fields={"request_id": openai_resp.request_id or "", "content": openai_resp.raw_content},
-        ))
-        raw = openai_resp.payload
-        data = normalize_report(raw, ctx)
-        report_title = data.title.strip() or _derive_title(file.name)
-        data.title = report_title
-        validate_report_payload(data)
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="report_payload_validated",
-            module=logger.name,
-            fields={"file_id": file.file_id},
-        ))
-    
-        mappings_resp = load_category_mappings(
-            CategoryMappingLoadRequest(schema_version="1.0", path=settings.category_mapping_path, reload_if_changed=True),
-            ctx,
-        )
-        category_assignment = categorize_taxonomy(data.taxonomy, mappings_resp, ctx)
-        data.categories = category_assignment.categories
-        if category_assignment.unmapped_tags or mappings_resp.mappings.uncategorized:
-            update_uncategorized_tags(
-                UncategorizedTagsUpdateRequest(
+        rank_usage = {"prompt_tokens": None, "completion_tokens": None, "total_tokens": None}
+        try:
+            ranked_resp = rank_candidates_service(
+                RankRequest(
                     schema_version="1.0",
-                    path=settings.category_mapping_path,
-                    report_title=report_title,
-                    tags=category_assignment.unmapped_tags,
+                    system_prompt=rank_system_render.text,
+                    user_prompt=rank_user_render.text,
+                    prompt_system_sha256=rank_prompt_set.system.sha256,
+                    prompt_user_sha256=rank_prompt_set.user.sha256,
+                    model=rank_model,
+                    temperature=settings.rank_temperature,
+                    api_key=settings.openai_api_key,
+                    seed=settings.rank_seed,
+                    candidate_count=len(cands_resp.candidates),
+                    timeout_seconds=settings.rank_timeout_seconds,
+                    cost_ledger_path=settings.cost_ledger_path,
+                    cost_daily_path=settings.cost_daily_path,
+                    model_pricing=settings.model_pricing,
                 ),
                 ctx,
             )
-    
-        fig_resp = extract_best_figure_service(
-            FigureExtractRequest(
-                schema_version="1.0",
-                pdf_path=local_pdf_path,
-                out_dir=settings.output_dir,
-                report_name=report_name,
-                pdf_context=pdf_context,
-            ),
-            ctx,
-        )
-        if fig_resp.image_path:
-            data._figure_image = fig_resp.image_path
-            if fig_resp.caption and not (data.figure.evidence or "").strip():
-                data.figure.evidence = fig_resp.caption
-    
-        cands_resp = collect_candidates_service(
-            ExtractCandidatesRequest(
-                schema_version="1.0",
-                pdf_path=local_pdf_path,
-                out_dir=settings.output_dir,
-                report_name=report_name,
-                pdf_context=pdf_context,
-            ),
-            ctx,
-        )
-        ranked = []
-        rank_usage = None
-        sliced_paths = []
-        if cands_resp.candidates:
-            for cand in cands_resp.candidates:
-                validate_candidate(cand)
+            ranked = ranked_resp.results
+            rank_usage = {
+                "prompt_tokens": ranked_resp.prompt_tokens,
+                "completion_tokens": ranked_resp.completion_tokens,
+                "total_tokens": ranked_resp.total_tokens,
+            }
             logger.info(log_event(
                 ctx,
                 role="generator",
-                event="candidate_validation_complete",
+                event="rank_raw_response",
                 module=logger.name,
-                fields={"count": len(cands_resp.candidates)},
+                fields={"request_id": ranked_resp.request_id or "", "content": ranked_resp.raw_content},
             ))
-            rank_model = settings.rank_model or settings.openai_model
-            rows = [{
-                "id": c.id,
-                "type": c.kind,
-                "page": c.page,
-                "meta": c.meta or {},
-                "title_or_caption": (c.caption or "")[:300],
-                "table_preview": c.preview_text[:400] if c.kind == "table" else "",
-            } for c in cands_resp.candidates]
-            candidates_json = json.dumps(rows, ensure_ascii=True)
-            rank_prompt_set = load_prompt_set(
-                PromptLoadRequest(schema_version="1.0", namespace="rank_candidates", reload_if_changed=True),
-                ctx,
-            )
+        except Exception as exc:
             logger.info(log_event(
                 ctx,
                 role="generator",
-                event="prompt_selected",
+                event="rank_failed",
                 module=logger.name,
-                fields={
-                    "namespace": "rank_candidates",
-                    "system_path": rank_prompt_set.system.path,
-                    "system_sha256": rank_prompt_set.system.sha256,
-                    "user_path": rank_prompt_set.user.path,
-                    "user_sha256": rank_prompt_set.user.sha256,
-                },
+                fields={"file_id": file.file_id, "error": str(exc)},
             ))
-            rank_system_render = render_prompt(
-                PromptRenderRequest(
-                    schema_version="1.0",
-                    template=rank_prompt_set.system,
-                    variables={},
-                ),
-                ctx,
-            )
-            rank_user_render = render_prompt(
-                PromptRenderRequest(
-                    schema_version="1.0",
-                    template=rank_prompt_set.user,
-                    variables={"candidates_json": candidates_json},
-                ),
-                ctx,
-            )
-            logger.info(log_event(
-                ctx,
-                role="generator",
-                event="prompt_rendered",
-                module=logger.name,
-                fields={
-                    "system_prompt": rank_system_render.text,
-                    "user_prompt": rank_user_render.text,
-                },
-            ))
-            logger.info(log_event(
-                ctx,
-                role="generator",
-                event="rank_request_config",
-                module=logger.name,
-                fields={
-                    "model": rank_model,
-                    "temperature": settings.rank_temperature,
-                    "seed": settings.rank_seed,
-                },
-            ))
-            rank_usage = {"prompt_tokens": None, "completion_tokens": None, "total_tokens": None}
-            try:
-                ranked_resp = rank_candidates_service(
-                    RankRequest(
-                        schema_version="1.0",
-                        system_prompt=rank_system_render.text,
-                        user_prompt=rank_user_render.text,
-                        prompt_system_sha256=rank_prompt_set.system.sha256,
-                        prompt_user_sha256=rank_prompt_set.user.sha256,
-                        model=rank_model,
-                        temperature=settings.rank_temperature,
-                        api_key=settings.openai_api_key,
-                        seed=settings.rank_seed,
-                        candidate_count=len(cands_resp.candidates),
-                        timeout_seconds=settings.rank_timeout_seconds,
-                        cost_ledger_path=settings.cost_ledger_path,
-                        cost_daily_path=settings.cost_daily_path,
-                        model_pricing=settings.model_pricing,
-                    ),
-                    ctx,
-                )
-                ranked = ranked_resp.results
-                rank_usage = {
-                    "prompt_tokens": ranked_resp.prompt_tokens,
-                    "completion_tokens": ranked_resp.completion_tokens,
-                    "total_tokens": ranked_resp.total_tokens,
-                }
-                logger.info(log_event(
-                    ctx,
-                    role="generator",
-                    event="rank_raw_response",
-                    module=logger.name,
-                    fields={"request_id": ranked_resp.request_id or "", "content": ranked_resp.raw_content},
-                ))
-            except Exception as exc:
-                logger.info(log_event(
-                    ctx,
-                    role="generator",
-                    event="rank_failed",
-                    module=logger.name,
-                    fields={"file_id": file.file_id, "error": str(exc)},
-                ))
-                ranked = []
-    
-            id2cand = {c.id: c for c in cands_resp.candidates}
-            top_items = []
-            for row in sorted(ranked, key=lambda r: r.score, reverse=True)[:3]:
-                c = id2cand.get(row.id)
-                if not c:
-                    continue
-                top_items.append(CropItem(
-                    id=c.id,
-                    type=c.kind,
-                    score=float(row.score),
-                    page=c.page,
-                    bbox=c.bbox,
-                ))
-    
-            crop_resp = crop_regions_service(
-                CropRequest(
-                    schema_version="1.0",
-                    pdf_path=local_pdf_path,
-                    out_dir=settings.output_dir,
-                    report_name=report_name,
-                    items=top_items,
-                    pdf_context=pdf_context,
-                ),
-                ctx,
-            )
-            sliced_paths = crop_resp.paths
-            if top_items:
-                top_cand = id2cand.get(top_items[0].id)
-                if top_cand:
-                    caption = (top_cand.caption or "").strip()
-                    preview = (top_cand.preview_text or "").strip()
-                    derived_title = caption or (preview[:140] if preview else "")
-                    if derived_title:
-                        data.figure.title = derived_title
-                    if caption or preview:
-                        data.figure.evidence = caption or preview
-    
-        if sliced_paths:
-            data._figure_gallery = sliced_paths
-            data._figure_top = sliced_paths[0]
+            ranked = []
 
+        id2cand = {c.id: c for c in cands_resp.candidates}
+        top_items = []
+        for row in sorted(ranked, key=lambda r: r.score, reverse=True)[:3]:
+            c = id2cand.get(row.id)
+            if not c:
+                continue
+            top_items.append(CropItem(
+                id=c.id,
+                type=c.kind,
+                score=float(row.score),
+                page=c.page,
+                bbox=c.bbox,
+            ))
+
+        crop_resp = crop_regions_service(
+            CropRequest(
+                schema_version="1.0",
+                pdf_path=local_pdf_path,
+                out_dir=settings.output_dir,
+                report_name=report_name,
+                items=top_items,
+                pdf_context=pdf_context,
+            ),
+            ctx,
+        )
+        sliced_paths = crop_resp.paths
+        if top_items:
+            top_cand = id2cand.get(top_items[0].id)
+            if top_cand:
+                caption = (top_cand.caption or "").strip()
+                preview = (top_cand.preview_text or "").strip()
+                derived_title = caption or (preview[:140] if preview else "")
+                if derived_title:
+                    data.figure.title = derived_title
+                if caption or preview:
+                    data.figure.evidence = caption or preview
+
+    if sliced_paths:
+        data._figure_gallery = sliced_paths
+        data._figure_top = sliced_paths[0]
+
+    preview_ctx = child_context(ctx, task_id=f"{ctx.task_id}:preview")
+    preview_resp = render_preview_service(
+        PreviewRequest(
+            schema_version="1.1",
+            pdf_path=local_pdf_path,
+            out_dir=settings.output_dir,
+            report_name=report_name,
+            pdf_context=pdf_context,
+        ),
+        preview_ctx,
+    )
+
+    data.contents_page_number = contents_page_number
+    data.contents_heading = contents_heading
+    data._contents_image = contents_image
+    base_payload = deepcopy(data)
+
+    primary_result: dict | None = None
+    comparison_snapshots: dict[str, str] = {}
+    comparison_payloads: dict[str, dict] = {}
+    vector_info_for_outcome: dict[str, Optional[str]] = {
+        "vector_store_id": None,
+        "vector_store_status": None,
+        "indexed_at_utc": None,
+        "openai_file_id": None,
+        "last_error": None,
+    }
+
+    for mode in analysis_modes:
+        mode_ctx = child_context(ctx, task_id=f"{ctx.task_id}:{mode}")
+        mode_data = deepcopy(base_payload)
+        mode_evidence_packs: dict[str, dict] = {}
+        mode_evidence_paths: dict[str, str] = {}
+        artifacts_payload: dict | None = None
+        validation_report: ValidationReport | None = None
         vector_store_id = None
         vector_store_status = None
         indexed_at_utc = None
         openai_file_id = None
-        evidence_pack_paths: dict[str, str] = {}
         last_error = None
-        if _vector_store_enabled(settings):
+
+        if mode == "vector_store":
+            vector_ctx = child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:vector_store")
             vector_store_id, openai_file_id, vector_store_status, indexed_at_utc, last_error = _ensure_vector_store(
                 file,
                 local_pdf_path,
                 settings,
-                ctx,
+                vector_ctx,
+            )
+            _record_state_progress(
+                settings=settings,
+                file_id=file.file_id,
+                md5=md5,
+                ctx=vector_ctx,
+                stage="vector_store_ready",
+                vector_store_id=vector_store_id,
+                vector_store_status=vector_store_status,
+                indexed_at_utc=indexed_at_utc,
+                openai_file_id=openai_file_id,
+                last_error=last_error,
             )
             packs = generate_evidence_packs(
                 report_id=file.file_id,
                 vector_store_id=vector_store_id,
                 settings=settings,
-                ctx=ctx,
+                ctx=child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:evidence"),
             )
-            evidence_packs = packs
+            mode_evidence_packs = packs
             pack_names = list(packs.keys())
-            evidence_pack_paths = _pack_paths(settings.output_dir, file.file_id, pack_names)
-            data._vector_store_id = vector_store_id or ""
-            data._evidence_packs = evidence_pack_paths
+            mode_evidence_paths = _pack_paths(settings.output_dir, file.file_id, pack_names)
+            mode_data._vector_store_id = vector_store_id or ""
+            mode_data._evidence_packs = mode_evidence_paths
             if openai_file_id:
-                data._openai_file_id = openai_file_id
+                mode_data._openai_file_id = openai_file_id
             logger.info(log_event(
-                ctx,
+                mode_ctx,
                 role="generator",
                 event="evidence_packs_ready",
                 module=logger.name,
-                fields={"file_id": file.file_id, "vector_store_id": vector_store_id, "pack_count": len(evidence_pack_paths)},
+                fields={"file_id": file.file_id, "vector_store_id": vector_store_id, "pack_count": len(mode_evidence_paths)},
             ))
+            _record_state_progress(
+                settings=settings,
+                file_id=file.file_id,
+                md5=md5,
+                ctx=mode_ctx,
+                stage="evidence_packs",
+                vector_store_id=vector_store_id,
+                vector_store_status=vector_store_status,
+                indexed_at_utc=indexed_at_utc,
+                openai_file_id=openai_file_id,
+                last_error=last_error,
+            )
             try:
                 artifacts_payload = generate_artifacts(
                     report_id=file.file_id,
@@ -633,40 +754,63 @@ def generate_report(
                     evidence_packs=packs,
                     settings=settings,
                     vector_store_id=vector_store_id,
-                    ctx=ctx,
+                    ctx=child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:artifacts"),
                 )
-                artifacts_path = _pack_paths(settings.output_dir, file.file_id, ["artifacts"])["artifacts"]
-                evidence_pack_paths["artifacts"] = artifacts_path
+                mode_evidence_paths["artifacts"] = _pack_paths(settings.output_dir, file.file_id, ["artifacts"])["artifacts"]
+                _record_state_progress(
+                    settings=settings,
+                    file_id=file.file_id,
+                    md5=md5,
+                    ctx=mode_ctx,
+                    stage="artifacts_ready",
+                    vector_store_id=vector_store_id,
+                    vector_store_status=vector_store_status,
+                    indexed_at_utc=indexed_at_utc,
+                    openai_file_id=openai_file_id,
+                    last_error=last_error,
+                )
             except Exception as exc:
                 logger.info(log_event(
-                    ctx,
+                    mode_ctx,
                     role="generator",
                     event="artifacts_generation_failed",
                     module=logger.name,
                     fields={"file_id": file.file_id, "error": str(exc)},
                 ))
 
-        validation_path = None
+        validation_pack_name = "validation" if mode == primary_mode else f"validation_{mode}"
         try:
             validation_req = ValidationRequest(
                 schema_version="1.0",
                 report_id=file.file_id,
-                report=data,
+                report=mode_data,
                 artifacts=artifacts_payload or {},
-                evidence_packs=evidence_packs,
-                vector_store_id=vector_store_id,
+                evidence_packs=mode_evidence_packs,
+                vector_store_id=vector_store_id if mode == "vector_store" else None,
             )
-            validation_report = run_validation(validation_req, settings, ctx)
-            validation_path = validation_report.source_path
-            if validation_path:
-                evidence_pack_paths["validation"] = validation_path
+            validation_report = run_validation(validation_req, settings, child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:validation"), pack_name=validation_pack_name)
+            if validation_report.source_path:
+                mode_evidence_paths[validation_pack_name] = validation_report.source_path
+            if mode == "vector_store":
+                _record_state_progress(
+                    settings=settings,
+                    file_id=file.file_id,
+                    md5=md5,
+                    ctx=mode_ctx,
+                    stage="validation_complete",
+                    vector_store_id=vector_store_id,
+                    vector_store_status=vector_store_status,
+                    indexed_at_utc=indexed_at_utc,
+                    openai_file_id=openai_file_id,
+                    last_error=last_error,
+                )
         except Exception as exc:
             logger.info(log_event(
-                ctx,
+                mode_ctx,
                 role="generator",
                 event="validation_failed",
                 module=logger.name,
-                fields={"file_id": file.file_id, "error": str(exc)},
+                fields={"file_id": file.file_id, "error": str(exc), "mode": mode},
             ))
             fallback_issue = ValidationIssue(
                 schema_version="1.0",
@@ -684,9 +828,9 @@ def generate_report(
                 validation_path = report_analysis_store_service.store_pack(
                     settings.output_dir,
                     file.file_id,
-                    "validation",
+                    validation_pack_name,
                     fallback_report.to_dict(),
-                    ctx,
+                    mode_ctx,
                 )
                 fallback_report = ValidationReport(
                     schema_version=fallback_report.schema_version,
@@ -695,113 +839,172 @@ def generate_report(
                     severity=fallback_report.severity,
                     source_path=validation_path,
                 )
-                evidence_pack_paths["validation"] = validation_path
+                mode_evidence_paths[validation_pack_name] = validation_path
             except Exception as store_exc:  # pragma: no cover - best-effort fallback
                 logger.info(log_event(
-                    ctx,
+                    mode_ctx,
                     role="generator",
                     event="validation_store_failed",
                     module=logger.name,
-                    fields={"file_id": file.file_id, "error": str(store_exc)},
+                    fields={"file_id": file.file_id, "error": str(store_exc), "mode": mode},
                 ))
             validation_report = fallback_report
 
-        preview_resp = render_preview_service(
-            PreviewRequest(
-                schema_version="1.1",
-                pdf_path=local_pdf_path,
-                out_dir=settings.output_dir,
-                report_name=report_name,
-                pdf_context=pdf_context,
-            ),
-            ctx,
-        )
-    
-        data.contents_page_number = contents_page_number
-        data.contents_heading = contents_heading
-        data._contents_image = contents_image
-        data_dict = data.to_dict()
+        data_dict = mode_data.to_dict()
         if artifacts_payload:
             data_dict["artifacts"] = artifacts_payload
         if validation_report:
             data_dict["validation_report"] = validation_report.to_dict()
         data_dict["categories_display"] = category_assignment.category_labels
+        data_dict["analysis_mode"] = mode
         logger.info(log_event(
-            ctx,
+            mode_ctx,
             role="generator",
             event="report_payload_ready",
             module=logger.name,
             fields={"payload": data_dict},
         ))
-        render_resp = render_report_service(
+
+        snapshot_name = f"analysis_{mode}"
+        snapshot_path = report_analysis_store_service.store_pack(
+            settings.output_dir,
+            file.file_id,
+            snapshot_name,
+            data_dict,
+            mode_ctx,
+        )
+        mode_evidence_paths[snapshot_name] = snapshot_path
+
+        if mode == primary_mode:
+            primary_result = {
+                "data_dict": data_dict,
+                "evidence_paths": mode_evidence_paths,
+                "validation_report": validation_report,
+                "artifacts_payload": artifacts_payload,
+                "vector_store_id": vector_store_id,
+                "vector_store_status": vector_store_status,
+                "indexed_at_utc": indexed_at_utc,
+                "openai_file_id": openai_file_id,
+                "last_error": last_error,
+            }
+            if vector_store_id:
+                vector_info_for_outcome = {
+                    "vector_store_id": vector_store_id,
+                    "vector_store_status": vector_store_status,
+                    "indexed_at_utc": indexed_at_utc,
+                    "openai_file_id": openai_file_id,
+                    "last_error": last_error,
+                }
+    else:
+        comparison_snapshots[mode] = snapshot_path
+        if mode == "vector_store" and vector_store_id and not vector_info_for_outcome["vector_store_id"]:
+            vector_info_for_outcome = {
+                "vector_store_id": vector_store_id,
+                "vector_store_status": vector_store_status,
+                "indexed_at_utc": indexed_at_utc,
+                "openai_file_id": openai_file_id,
+                "last_error": last_error,
+            }
+        comparison_payloads[mode] = data_dict
+
+    if primary_result is None:
+        raise AppError(code="analysis_mode_invalid", message="No primary analysis mode executed", retryable=False)
+
+    primary_evidence_paths = dict(primary_result["evidence_paths"])
+    for mode, path in comparison_snapshots.items():
+        primary_evidence_paths[f"analysis_{mode}"] = path
+
+    for mode, payload in comparison_payloads.items():
+        render_ctx = child_context(ctx, task_id=f"{ctx.task_id}:render:{mode}")
+        comp_render = render_report_service(
             RenderRequest(
                 schema_version="1.0",
-                data=data_dict,
-                doc_name=file.name,
+                data=payload,
+                doc_name=f"{file.name} ({mode})",
                 file_id=file.file_id,
                 out_dir=settings.output_dir,
                 preview_png=preview_resp.image_path,
             ),
-            ctx,
+            render_ctx,
         )
-        out_html = render_resp.html_path
-    
-        upsert_report_metadata(
-            ReportMetadataUpsertRequest(
-                schema_version="1.1",
-                db_path=settings.reports_db,
-                file_id=file.file_id,
-                title=report_title,
-                publisher=data.publisher or None,
-                taxonomy=data.taxonomy,
-                categories=data.categories,
-                region=data.region or None,
-                time_period=data.time_period or None,
-                source_url=data.source,
-                html_path=out_html,
-                md5=md5,
-                page_count=info_resp.page_count,
-                pdf_metadata=info_resp.metadata,
-                contents_page_number=contents_page_number,
-                analysis_mode=settings.analysis_mode,
-                vector_store_id=vector_store_id,
-                evidence_pack_paths=evidence_pack_paths,
-            ),
-            ctx,
-        )
-    
+        primary_evidence_paths[f"html_{mode}"] = comp_render.html_path
         logger.info(log_event(
-            ctx,
+            render_ctx,
             role="generator",
-            event="token_usage_summary",
+            event="compare_html_rendered",
             module=logger.name,
-            fields={
-                "report_generation": report_usage,
-                "rank_candidates": rank_usage if cands_resp.candidates else None,
-            },
+            fields={"file_id": file.file_id, "mode": mode, "html_path": comp_render.html_path},
         ))
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="report_generate_complete",
-            module=logger.name,
-            fields={"file_id": file.file_id, "html_path": out_html},
-        ))
-    
-        return IngestOutcome(
+
+    render_resp = render_report_service(
+        RenderRequest(
             schema_version="1.0",
+            data=primary_result["data_dict"],
+            doc_name=file.name,
             file_id=file.file_id,
-            name=file.name,
-            md5=md5,
+            out_dir=settings.output_dir,
+            preview_png=preview_resp.image_path,
+        ),
+        ctx,
+    )
+    out_html = render_resp.html_path
+
+    upsert_report_metadata(
+        ReportMetadataUpsertRequest(
+            schema_version="1.1",
+            db_path=settings.reports_db,
+            file_id=file.file_id,
+            title=report_title,
+            publisher=data.publisher or None,
+            taxonomy=data.taxonomy,
+            categories=data.categories,
+            region=data.region or None,
+            time_period=data.time_period or None,
+            source_url=data.source,
             html_path=out_html,
-            status="processed",
-            vector_store_id=vector_store_id,
-            vector_store_status=vector_store_status,
-            indexed_at_utc=indexed_at_utc,
-            openai_file_id=openai_file_id,
-            evidence_packs=evidence_pack_paths or None,
-            vector_store_last_error=last_error,
-        )
-    finally:
-        if pdf_context is not None:
-            pdf_context.close()
+            md5=md5,
+            page_count=info_resp.page_count,
+            pdf_metadata=info_resp.metadata,
+            contents_page_number=contents_page_number,
+            analysis_mode=primary_mode,
+            vector_store_id=vector_info_for_outcome["vector_store_id"],
+            evidence_pack_paths=primary_evidence_paths,
+        ),
+        ctx,
+    )
+
+    logger.info(log_event(
+        ctx,
+        role="generator",
+        event="token_usage_summary",
+        module=logger.name,
+        fields={
+            "report_generation": report_usage,
+            "rank_candidates": rank_usage if cands_resp.candidates else None,
+        },
+    ))
+    logger.info(log_event(
+        ctx,
+        role="generator",
+        event="report_generate_complete",
+        module=logger.name,
+        fields={"file_id": file.file_id, "html_path": out_html, "modes": analysis_modes},
+    ))
+
+    if pdf_context is not None:
+        pdf_context.close()
+
+    return IngestOutcome(
+        schema_version="1.0",
+        file_id=file.file_id,
+        name=file.name,
+        md5=md5,
+        html_path=out_html,
+        status="processed",
+        vector_store_id=vector_info_for_outcome["vector_store_id"],
+        vector_store_status=vector_info_for_outcome["vector_store_status"],
+        indexed_at_utc=vector_info_for_outcome["indexed_at_utc"],
+        openai_file_id=vector_info_for_outcome["openai_file_id"],
+        evidence_packs=primary_evidence_paths or None,
+        vector_store_last_error=vector_info_for_outcome["last_error"],
+    )

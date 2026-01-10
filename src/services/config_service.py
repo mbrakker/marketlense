@@ -139,6 +139,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         return int(value)
 
     env_analysis_mode = _env_value("ANALYSIS_MODE")
+    env_analysis_compare = _env_value("ANALYSIS_COMPARE")
     env_use_vector_store = _env_value("USE_VECTOR_STORE")
     env_vector_store_keep = _env_value("VECTOR_STORE_KEEP")
     env_cost_ledger_path = _env_value("COST_LEDGER_PATH")
@@ -150,6 +151,10 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         use_vector_store = analysis_mode == "vector_store"
     else:
         use_vector_store = _as_bool(analysis_cfg.get("use_vector_store"), default=analysis_mode == "vector_store")
+    if env_analysis_compare:
+        analysis_compare = _as_bool(env_analysis_compare, default=False)
+    else:
+        analysis_compare = _as_bool(analysis_cfg.get("compare"), default=False)
     vector_store_keep_raw = env_vector_store_keep if env_vector_store_keep else analysis_cfg.get("vector_store_keep")
     vector_store_keep = _as_bool(vector_store_keep_raw, default=True)
     cost_ledger_path = str(env_cost_ledger_path or analysis_cfg.get("cost_ledger_path") or "./out/cost-ledger.jsonl")
@@ -186,6 +191,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         analysis_mode=analysis_mode,
         use_vector_store=use_vector_store,
         vector_store_keep=vector_store_keep,
+        analysis_compare=analysis_compare,
         cost_ledger_path=cost_ledger_path,
         cost_daily_path=cost_daily_path,
         model_pricing=model_pricing,
@@ -237,6 +243,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             "analysis_mode": settings.analysis_mode,
             "use_vector_store": settings.use_vector_store,
             "vector_store_keep": settings.vector_store_keep,
+            "analysis_compare": settings.analysis_compare,
             "cost_ledger_path": settings.cost_ledger_path,
             "cost_daily_path": settings.cost_daily_path,
         },

@@ -28,6 +28,7 @@ def validate_report(
     prompt_client=prompt_service,
     openai_client=openai_service,
     analysis_store=report_analysis_store_service,
+    pack_name: str = "validation",
 ) -> ValidationReport:
     ctx = ctx or new_run_context(task_id=f"validation:{request.report_id}")
     logger.info(log_event(
@@ -68,7 +69,7 @@ def validate_report(
         ))
         raise
 
-    stored_path = analysis_store.store_pack(settings.output_dir, request.report_id, "validation", report.to_dict(), ctx)
+    stored_path = analysis_store.store_pack(settings.output_dir, request.report_id, pack_name, report.to_dict(), ctx)
     report = ValidationReport(
         schema_version=report.schema_version,
         status=report.status,

@@ -242,7 +242,7 @@ def test_golden_reports_regression(tmp_path: Path, monkeypatch: pytest.MonkeyPat
         def fake_upsert_metadata(request, ctx):
             return None
 
-        def fake_validation(request, settings, ctx):
+        def fake_validation(request, settings, ctx, pack_name="validation"):
             return ValidationReport(schema_version="1.1", status="pass", severity="pass", issues=[], source_path="")
 
         monkeypatch.setattr("src.generators.report_generator.extract_pdf_info", fake_pdf_info)
