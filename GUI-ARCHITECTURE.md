@@ -1,14 +1,27 @@
+<<<<<<< ours
 # Market Lense Streamlit GUI Architecture
 
 ## Purpose
 Design a Streamlit-based GUI that exposes **all capabilities already present** in the Market Lense codebase, while keeping the interface minimal, discoverable, and aligned with the system’s architecture: contracts → services → generators → orchestrators. This GUI is an operational console for ingest, review, validation, publishing, monitoring, and configuration.
 
 The UI must make the current CLI workflows (`ingest`, `publish-wp`, `recategorize`, `update-wp-categories`, `cost-report`, `golden-set-vector`) feel like clear, guided flows with transparency into inputs, outputs, and logs. 【F:src/cli.py†L1-L279】
+=======
+# Market Lense Streamlit Admin & Control Panel Architecture
+
+## Purpose
+Build a **fully functional admin/control panel (cockpit)** in Streamlit that surfaces **every existing capability** of Market Lense with clear actions, diagnostics, and operational guardrails. The UI is not a new product layer; it is a thin, transparent shell over the existing **contracts → services → generators → orchestrators** architecture and current storage layout.
+
+This cockpit must:
+- Expose all CLI workflows (`ingest`, `publish-wp`, `recategorize`, `update-wp-categories`, `cost-report`, `golden-set-vector`) as guided UI actions.【F:src/cli.py†L1-L279】
+- Provide deep, inspectable views into **settings**, **databases**, **artifact files**, **logs**, **validation**, and **costs**.
+- Make the system’s **state, locks, retries, and live execution output** visible and explainable.
+>>>>>>> theirs
 
 ---
 
 ## Information Architecture (Navigation)
 
+<<<<<<< ours
 **Primary navigation (left sidebar):**
 1. **Overview** — system status + recent activity summary
 2. **Ingest** — Google Drive ingest pipeline
@@ -201,11 +214,205 @@ Each section is tied to code modules or persisted outputs to avoid inventing new
   - Present output layout (`out/`, `cache/`, `state/`) from config and list key artifact folders (HTML, report_analysis, assets). 【F:src/config/app.yaml†L1-L45】
 
 **Why this UI matters:** It makes storage and state explicit for troubleshooting.
+=======
+**Primary navigation (sidebar):**
+1. **Cockpit Overview** — system health, current locks, recent runs
+2. **Ingest Control** — Drive ingest pipeline control center
+3. **Report Command Center** — report-centric inspection (all data + processing history)
+4. **Analysis & Evidence** — vector-store evidence packs + artifacts
+5. **Validation Center** — validation outputs + policy
+6. **Publishing Control** — WordPress publish + category sync
+7. **Category Manager** — taxonomy mappings + recategorize
+8. **Cost & Usage** — spend + processing time graphs
+9. **Logs & Live Terminal** — structured events + real-time terminal mirroring
+10. **Settings & Prompts** — editable non-secret config + prompt registry
+11. **System & Storage** — DB tables, locks, output folders
+
+This layout groups actions by operational role and keeps the UI minimal: one dominant task per page with a clear “source of truth.”
+
+---
+
+## 1) Cockpit Overview (Admin Dashboard)
+
+**Goal:** One-glance operational status.
+
+**Core widgets (mapped to code/artifacts):**
+- **Active run/last run summary**: show `run_id`, number of tasks, success/error count from log events (`run_id`, `task_id`, `event`).【F:src/utils/logging.py†L1-L112】
+- **Recent reports**: latest entries from `reports` DB (title, publisher, HTML path, analysis mode).【F:src/services/report_store_service.py†L16-L206】
+- **Ingest lock**: show lock file path and owner to confirm concurrency control (`ingest_lock_path`).【F:src/orchestrators/ingest_orchestrator.py†L44-L124】
+- **Storage health**: status of `output_dir`, `cache_dir`, `state_db`, `reports_db` from config service (paths are created on load).【F:src/services/config_service.py†L120-L243】
+
+**Admin value:** immediate visibility into current workload and system readiness.
+
+---
+
+## 2) Ingest Control (Google Drive → HTML)
+
+**Goal:** A full operational console for ingest and evidence generation.
+
+**Inputs & switches:**
+- **Folder override** and **limit** (mapped to CLI `--folder` and `--limit`).【F:src/cli.py†L19-L101】
+- **Read-only settings**: OpenAI model, temperature, timeout, batch limit, pdf text settings (from config).【F:src/services/config_service.py†L120-L243】
+- **Mode display**: `analysis_mode`, `use_vector_store`, `analysis_compare`.【F:src/services/config_service.py†L145-L211】
+
+**Pipeline timeline:**
+- Stepper view showing:
+  - Drive list → cache hit/miss → download → EOF check → skip check → report generation → state record.【F:src/orchestrators/ingest_orchestrator.py†L122-L314】
+- Per-file status cards with:
+  - `file_id`, md5, HTML output path, vector store id/status, evidence pack count.【F:src/orchestrators/ingest_orchestrator.py†L231-L314】
+
+**Controls & safeguards:**
+- **Run ingest** button triggers `run_ingest`.【F:src/orchestrators/ingest_orchestrator.py†L49-L119】
+- If lock conflict is detected, display a blocking alert with the existing owner/ttl.【F:src/orchestrators/ingest_orchestrator.py†L61-L93】
+
+**Admin value:** safe ingest execution with full pipeline transparency and artifact tracking.
+
+---
+
+## 3) Report Command Center (Report-Centric View)
+
+**Goal:** A single report-focused workspace where an operator can select a report and see **all related data, processing info, and artifacts**.
+
+**Core report selector:**
+- Use the `reports` DB as the source of truth for selecting a report (title, file_id).【F:src/services/report_store_service.py†L16-L206】
+
+**Report detail sections (all tied to persisted data):**
+- **Metadata**: title, publisher, region, time period, taxonomy, categories, html_path, md5, analysis mode.【F:src/services/report_store_service.py†L207-L364】
+- **Processing provenance**:
+  - vector_store_id and evidence pack paths (for vector mode).【F:src/services/report_store_service.py†L207-L364】
+  - state DB status including vector store indexing status and errors (if any).【F:src/services/state_service.py†L8-L120】
+- **Artifacts panel**:
+  - HTML output link/button (from `html_path`).【F:src/services/report_store_service.py†L207-L364】
+  - Evidence packs JSON view (scope/methods/findings/limitations/quote candidates) via stored paths.【F:src/services/report_store_service.py†L207-L364】
+
+**Admin value:** a true report-centric cockpit that answers “everything about this report” in one place.
+
+---
+
+## 4) Analysis & Evidence (Vector Store + Packs)
+
+**Goal:** Inspect the evidence layer behind the report.
+
+**Features:**
+- **Vector store status**: show `vector_store_id`, `vector_store_status`, indexing timestamp from state DB.【F:src/services/state_service.py†L8-L120】
+- **Evidence pack explorer**: open JSON from paths stored in metadata (`scope`, `methods`, `findings`, `limitations`, `quote_candidates`).【F:src/services/report_store_service.py†L207-L364】
+- **Compare mode**: if enabled, show side-by-side outputs and pack paths for the two analysis modes.【F:src/services/config_service.py†L145-L211】
+
+**Admin value:** QA and auditability of evidence and LLM reasoning inputs.
+
+---
+
+## 5) Validation Center
+
+**Goal:** Ensure outputs meet validation policies and surface failures.
+
+**Features:**
+- **Validation policy panel**:
+  - `ingest.validation.data_gap_policy` (warn/fail).【F:src/services/config_service.py†L108-L211】
+  - `publish.validation.policy` (block/warn).【F:src/services/config_service.py†L300-L380】
+- **Validation report viewer**:
+  - Show validation JSON artifacts written during ingest (referenced in output directories). Orchestrator records outcomes alongside ingest results.【F:src/orchestrators/ingest_orchestrator.py†L231-L314】
+
+**Admin value:** explicit confidence and compliance controls for output quality.
+
+---
+
+## 6) Publishing Control (WordPress)
+
+**Goal:** Controlled publishing and category syncing.
+
+**Features:**
+- **Publish queue**: HTML files found under `OUTPUT_DIR`, with publish state from `state_db`.【F:src/services/state_service.py†L121-L229】
+- **Publish action**: trigger `run_publish` (CLI `publish-wp`).【F:src/cli.py†L78-L135】
+- **Settings summary**: site URL, username, post status, publish policy (read-only).【F:src/services/config_service.py†L300-L380】
+- **Result table**: status and post URL for each published report (stored in state DB).【F:src/services/state_service.py†L121-L229】
+
+**Admin value:** safe, auditable publishing with clear validation gating.
+
+---
+
+## 7) Category Manager (Taxonomy)
+
+**Goal:** Manage and re-apply taxonomy mappings.
+
+**Features:**
+- **Mapping viewer**: render `src/config/category-mappings.yaml` categories/tags. Path is in config.【F:src/services/config_service.py†L104-L211】
+- **Recategorize action**: trigger CLI `recategorize` to re-score all reports.【F:src/cli.py†L137-L178】
+- **WP category sync**: trigger `update-wp-categories` to align WordPress taxonomy.【F:src/cli.py†L180-L216】
+
+**Admin value:** keeps categorization consistent and aligned to latest mappings.
+
+---
+
+## 8) Cost & Usage (Spend + Processing Time)
+
+**Goal:** Govern spend and performance with trend graphs.
+
+**Features:**
+- **Ledger explorer**: open `cost-ledger.jsonl` and rollups `cost-daily.json` from config.【F:src/config/app.yaml†L1-L45】
+- **Cost report**: run by date or run_id (mirrors `cost-report` CLI).【F:src/cli.py†L218-L279】
+- **Usage graphs** (daily/weekly/per report):
+  - Spend per run/task and aggregated by day/week from the ledger file. The ledger entries provide the cost inputs for visualization (token usage + estimated cost).【F:src/services/cost_ledger_service.py†L1-L214】
+- **Processing time per process**:
+  - Use structured log event timestamps and run/task spans to compute elapsed time per step/run (log lines are timestamped and include `run_id`, `task_id`, `event`).【F:src/utils/logging.py†L63-L112】
+- **Pricing table**: display `cost.pricing` for model rate awareness.【F:src/config/app.yaml†L33-L45】
+
+**Admin value:** clear budget and performance monitoring with trend visibility.
+
+---
+
+## 9) Logs & Live Terminal (Observability)
+
+**Goal:** Full observability console with **real-time terminal mirroring**.
+
+**Features:**
+- **Log file discovery**: list the current log file based on `MARKET_LENSE_LOG_DIR` and naming convention.【F:src/services/logging_service.py†L1-L47】
+- **Structured log filters**: filter by `run_id`, `task_id`, `span_id`, `event`, `role`, `module`.【F:src/utils/logging.py†L63-L112】
+- **Real-time terminal mirroring**:
+  - Stream the running CLI process output (stdout/stderr) into a live panel so operators can see exactly “what is happening now.” The terminal output should match the same commands invoked by the UI actions (ingest/publish/etc.).【F:src/cli.py†L1-L279】
+- **Redaction awareness**: show that sensitive data is redacted via `***REDACTED***` in structured log output.【F:src/utils/logging.py†L24-L79】
+
+**Admin value:** true operational cockpit visibility while jobs are running.
+
+---
+
+## 10) Settings & Prompts (Editable, Non-Secret)
+
+**Goal:** Allow operators to **adjust configuration and prompts** safely, without exposing secrets.
+
+**Editable (non-secret) controls:**
+- **Config editor** for `app.yaml`:
+  - Update non-secret fields such as paths, ingest settings, analysis flags, model names, temperatures, and cost settings. The config file is the canonical source for these values.【F:src/config/app.yaml†L1-L45】
+- **Model selection**:
+  - Editable OpenAI model names (ingest + rank), temperatures, timeouts, and batch limits. These are already modeled in config and loaded by config service.【F:src/services/config_service.py†L72-L211】
+- **Prompt editor**:
+  - View/edit prompt YAML files under `src/prompts/**` with live SHA256 hash updates from prompt loading logic. Prompt content is read and hashed by `prompt_service`.【F:src/services/prompt_service.py†L21-L122】
+
+**Not editable:**
+- **Secrets** (OpenAI API keys, WP tokens, etc.) remain strictly in environment variables and are not exposed in UI. Config service loads these from env only.【F:src/services/config_service.py†L72-L211】
+
+**Admin value:** safe configuration tuning and prompt iteration without leaking credentials.
+
+---
+
+## 11) System & Storage (Databases + Locks)
+
+**Goal:** Provide direct visibility into the system’s state and file outputs.
+
+**Features:**
+- **State DB explorer**: show `processed` + `published` rows, including vector store status.【F:src/services/state_service.py†L16-L229】
+- **Reports DB explorer**: show `reports` rows with metadata and analysis mode.【F:src/services/report_store_service.py†L16-L206】
+- **Lock status**: display ingest lock path/owner to help resolve stuck runs.【F:src/orchestrators/ingest_orchestrator.py†L44-L124】
+- **Storage map**: show `out/`, `cache/`, `state/` paths and core artifact subfolders.【F:src/config/app.yaml†L1-L45】
+
+**Admin value:** clear operational control of persistence and concurrency.
+>>>>>>> theirs
 
 ---
 
 ## Visual Design Principles (Simplicity-First)
 
+<<<<<<< ours
 - **Single column main content** with optional right-side “Details” panel for selected report/log entry.
 - **Inline action buttons** only at natural decision points (Run ingest, Publish, Recategorize, Update WP categories, Generate Cost Report).
 - **Minimal color**: use status chips (success/warn/error) to avoid noisy interfaces.
@@ -215,6 +422,17 @@ Each section is tied to code modules or persisted outputs to avoid inventing new
 ---
 
 ## Data & Action Sources (Implementation Guide)
+=======
+- **One task per page**; sidebar navigation never overflows.
+- **Primary actions top-right**: “Run ingest”, “Publish”, “Recategorize”, etc.
+- **Minimal color**: status chips for success/warn/error.
+- **Details panel** on the right: metadata + file paths for selected rows.
+- **No hidden state**: always show the underlying source (DB, file, config).
+
+---
+
+## Data & Action Sources (Implementation Mapping)
+>>>>>>> theirs
 
 | UI Element | Source of Truth | Code Module |
 | --- | --- | --- |
@@ -234,6 +452,7 @@ Each section is tied to code modules or persisted outputs to avoid inventing new
 
 ```
 [Sidebar]
+<<<<<<< ours
 - Overview
 - Ingest
 - Reports
@@ -254,3 +473,26 @@ Each section is tied to code modules or persisted outputs to avoid inventing new
 ```
 
 This architecture ensures **every feature in the codebase is surfaced**, every setting is visible, and every operational process is observable without adding non-existent functionality.
+=======
+- Cockpit Overview
+- Ingest Control
+- Report Command Center
+- Analysis & Evidence
+- Validation Center
+- Publishing Control
+- Category Manager
+- Cost & Usage
+- Logs & Live Terminal
+- Settings & Prompts
+- System & Storage
+
+[Main]
+- Title + status chip
+- Primary action (button)
+- Contextual filters (date/run/file)
+- Primary table or cards
+- Details panel (metadata + paths)
+```
+
+This architecture upgrades the previous document into a **true admin and control cockpit**, while remaining strictly grounded in existing Market Lense capabilities, settings, databases, and logs.
+>>>>>>> theirs

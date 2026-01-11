@@ -493,6 +493,10 @@ uncategorized:
   - brand_experience
   - creative_strategy
   - purchase_anxiety
+  - engagement_strategy
+  - experiential_marketing
+  - creative_breakthrough
+  - conversion_optimization
 - title: 'Retail trends 2026: five forces reshaping the retail landscape'
   tags:
   - experience_economy
@@ -500,6 +504,8 @@ uncategorized:
   - consumer_trust
   - contextual_offers
   - ai_in_retail
+  - luxury_spending
+  - retail_sales
 - title: 'State of Brand 2026: branding at the edge in the dichotomy economy'
   tags:
   - brand_strategy
@@ -568,3 +574,21 @@ uncategorized:
   - ai_infrastructure
   - hybrid_cloud
   - cybersecurity
+- title: 'Branding at the edge: the 2026 state of brand'
+  tags:
+  - brand_strategy
+  - polarization
+  - ai_in_marketing
+  - data_optimization
+  - authenticity
+- title: 'OECD economic outlook: resilient growth with increasing fragilities'
+  tags:
+  - macroeconomic_outlook
+  - productivity
+  - regulatory_policy
+  - risk_assessment
+  - country_analysis
+- title: '2026 industry pulse: UK digital media outlook'
+  tags:
+  - digital_video
+  - media_quality
