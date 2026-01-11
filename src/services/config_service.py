@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import os
 import logging
+from dataclasses import asdict
 from pathlib import Path
 
 from dotenv import load_dotenv, find_dotenv
 import yaml
 
 from src.contracts.config import AppSettings, ConfigLoadRequest
+from src.contracts.ingest import IngestSettings
 from src.contracts.publish import PublishSettings
 from src.contracts.run_context import RunContext
 from src.contracts.wordpress import WordPressAuthSettings
@@ -40,6 +42,33 @@ def _load_config(path: str) -> dict:
         raise RuntimeError(f"Config YAML invalid: {path}") from exc
 
 
+class _ConfigResolver:
+    def __init__(self) -> None:
+        self.missing: list[str] = []
+
+    def need_env(self, key: str) -> str:
+        value = _env_value(key)
+        if _is_missing(value):
+            self.missing.append(f"env:{key}")
+        return value
+
+    def need(self, section: dict, key: str, label: str, env_key: str | None = None) -> str:
+        value = section.get(key)
+        if _is_missing(value) and env_key:
+            env_value = _env_value(env_key)
+            if not _is_missing(env_value):
+                return env_value
+        if _is_missing(value):
+            self.missing.append(label if not env_key else f"{label}|env:{env_key}")
+            return ""
+        return str(value)
+
+
+def to_ingest_settings(app_settings: AppSettings) -> IngestSettings:
+    """Convert AppSettings to IngestSettings without manual field mapping."""
+    return IngestSettings(**asdict(app_settings))
+
+
 def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     load_dotenv(find_dotenv(filename=".env", usecwd=True))
 
@@ -63,24 +92,9 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         fields={"path": request.path or str(CONFIG_PATH)},
     ))
     data = _load_config(request.path or str(CONFIG_PATH))
-    missing = []
-
-    def need_env(key: str) -> str:
-        v = os.getenv(key, "")
-        if not v:
-            missing.append(f"env:{key}")
-        return v
-
-    def need(section: dict, key: str, label: str, env_key: str | None = None) -> str:
-        v = section.get(key)
-        if _is_missing(v) and env_key:
-            env_v = _env_value(env_key)
-            if not _is_missing(env_v):
-                return env_v
-        if _is_missing(v):
-            missing.append(label if not env_key else f"{label}|env:{env_key}")
-            return ""
-        return str(v)
+    resolver = _ConfigResolver()
+    need = resolver.need
+    need_env = resolver.need_env
 
     paths = data.get("paths", {}) or {}
     ingest = data.get("ingest", {}) or {}
@@ -203,15 +217,15 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         validation_data_gap_policy=validation_data_gap_policy,
     )
 
-    if missing:
+    if resolver.missing:
         logger.info(log_event(
             ctx,
             role="service",
             event="config_load_failed",
             module=logger.name,
-            fields={"missing": missing},
+            fields={"missing": resolver.missing},
         ))
-        raise RuntimeError(f"Missing required config/env values: {', '.join(missing)}")
+        raise RuntimeError(f"Missing required config/env values: {', '.join(resolver.missing)}")
     Path(settings.output_dir).mkdir(parents=True, exist_ok=True)
     Path(settings.cache_dir).mkdir(parents=True, exist_ok=True)
     Path(settings.state_db).parent.mkdir(parents=True, exist_ok=True)
@@ -281,24 +295,9 @@ def load_publish_settings(request: ConfigLoadRequest, ctx: RunContext) -> Publis
         fields={"path": request.path or str(CONFIG_PATH)},
     ))
     data = _load_config(request.path or str(CONFIG_PATH))
-    missing = []
-
-    def need_env(k: str) -> str:
-        v = os.getenv(k, "")
-        if not v:
-            missing.append(f"env:{k}")
-        return v
-
-    def need(section: dict, key: str, label: str, env_key: str | None = None) -> str:
-        v = section.get(key)
-        if _is_missing(v) and env_key:
-            env_v = _env_value(env_key)
-            if not _is_missing(env_v):
-                return env_v
-        if _is_missing(v):
-            missing.append(label if not env_key else f"{label}|env:{env_key}")
-            return ""
-        return str(v)
+    resolver = _ConfigResolver()
+    need = resolver.need
+    need_env = resolver.need_env
 
     paths = data.get("paths", {}) or {}
     publish = data.get("publish", {}) or {}
@@ -336,15 +335,15 @@ def load_publish_settings(request: ConfigLoadRequest, ctx: RunContext) -> Publis
     if validation_policy not in {"block", "warn"}:
         validation_policy = "block"
 
-    if missing:
+    if resolver.missing:
         logger.info(log_event(
             ctx,
             role="service",
             event="publish_config_load_failed",
             module=logger.name,
-            fields={"missing": missing},
+            fields={"missing": resolver.missing},
         ))
-        raise RuntimeError(f"Missing required config/env values: {', '.join(missing)}")
+        raise RuntimeError(f"Missing required config/env values: {', '.join(resolver.missing)}")
 
     Path(output_dir).mkdir(parents=True, exist_ok=True)
     Path(state_db).parent.mkdir(parents=True, exist_ok=True)

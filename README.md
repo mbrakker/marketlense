@@ -48,6 +48,8 @@ src/
 
 Primary config: `src/config/app.yaml`. Missing values can be provided via `.env` (loaded by `config_service`). Secrets must come from environment variables.
 
+For dev wiring, use `src.services.config_service.to_ingest_settings` to adapt `AppSettings` into `IngestSettings` without hand-copying fields; new config keys are picked up automatically.
+
 Key fields and env overrides:
 - Paths: `paths.output_dir` (`OUTPUT_DIR`, default `./out`), `paths.cache_dir` (`CACHE_DIR`, default `./cache`), `paths.state_db` (`STATE_DB`), `paths.reports_db` (`REPORTS_DB`), `paths.category_mappings` (defaults to `src/config/category-mappings.yaml`).
 - Ingest: `ingest.google_sa_path` (`GOOGLE_SERVICE_ACCOUNT_JSON`), `ingest.gdrive_folder_id` (`GDRIVE_FOLDER_ID`), `ingest.openai_model` (`OPENAI_MODEL`), `ingest.batch_limit` (`BATCH_LIMIT`, default 20), `ingest.temperature` (`TEMPERATURE`, default 1.0), `ingest.timeout_seconds` (`OPENAI_TIMEOUT_SECONDS`, default 600), `ingest.lock_ttl_seconds` (`INGEST_LOCK_TTL_SECONDS`, default 7200), `ingest.contents_page.*` (keywords, max_pages, min_headings, render_dpi).
@@ -148,6 +150,8 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
 ## Logging and Observability
 
 Structured logs are emitted by all services and orchestrators using `src/utils/logging.py`.
+
+CLI-provided run contexts flow into the ingest orchestrator so CLI run/task IDs stay consistent across downstream orchestrator/service logs.
 
 Every log event includes:
 - `run_id`: pipeline run identifier

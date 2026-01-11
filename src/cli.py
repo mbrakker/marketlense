@@ -11,13 +11,12 @@ from src.utils.errors import AppError
 from src.contracts.costs import CostReportRequest
 from src.contracts.categories import RecategorizeRequest
 from src.contracts.config import ConfigLoadRequest
-from src.contracts.ingest import IngestSettings
 from src.orchestrators.ingest_orchestrator import run_ingest
 from src.orchestrators.publish_orchestrator import run_publish
 from src.orchestrators.recategorize_orchestrator import run_recategorize
 from src.orchestrators.wp_category_update_orchestrator import run_update_wp_categories
 from src.orchestrators.golden_set_orchestrator import run_golden_set_vector
-from src.services.config_service import load_settings, load_publish_settings
+from src.services.config_service import load_settings, load_publish_settings, to_ingest_settings
 from src.services.cost_ledger_service import generate_cost_report
 from src.services.logging_service import setup_logging
 from src.utils.logging import log_event, new_run_context
@@ -44,48 +43,11 @@ def ingest(
         fields={},
     ))
     s = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
-
-    settings = IngestSettings(
-        schema_version="1.0",
-        google_sa_path=s.google_sa_path,
-        gdrive_folder_id=s.gdrive_folder_id,
-        openai_api_key=s.openai_api_key,
-        openai_model=s.openai_model,
-        batch_limit=s.batch_limit,
-        output_dir=s.output_dir,
-        cache_dir=s.cache_dir,
-        state_db=s.state_db,
-        reports_db=s.reports_db,
-        category_mapping_path=s.category_mapping_path,
-        ingest_lock_path=s.ingest_lock_path,
-        ingest_lock_ttl_seconds=s.ingest_lock_ttl_seconds,
-        temperature=s.temperature,
-        openai_seed=s.openai_seed,
-        pdf_text_max_pages=s.pdf_text_max_pages,
-        pdf_text_max_chars=s.pdf_text_max_chars,
-        pdf_text_min_density=s.pdf_text_min_density,
-        rank_model=s.rank_model,
-        rank_temperature=s.rank_temperature,
-        rank_seed=s.rank_seed,
-        openai_timeout_seconds=s.openai_timeout_seconds,
-        rank_timeout_seconds=s.rank_timeout_seconds,
-        contents_max_pages=s.contents_max_pages,
-        contents_min_headings=s.contents_min_headings,
-        contents_keywords=s.contents_keywords,
-        contents_preview_dpi=s.contents_preview_dpi,
-        analysis_mode=s.analysis_mode,
-        use_vector_store=s.use_vector_store,
-        vector_store_keep=s.vector_store_keep,
-        analysis_compare=s.analysis_compare,
-        cost_ledger_path=s.cost_ledger_path,
-        cost_daily_path=s.cost_daily_path,
-        model_pricing=s.model_pricing,
-        validation_data_gap_policy=s.validation_data_gap_policy,
-    )
+    settings = to_ingest_settings(s)
 
     console.print("[cyan]Running ingest pipeline...[/cyan]")
     try:
-        outcomes = run_ingest(settings, folder_id=folder, limit=limit)
+        outcomes = run_ingest(settings, folder_id=folder, limit=limit, ctx=ctx)
     except AppError as exc:
         if exc.code == "ingest_locked":
             console.print(f"[red]{exc.message} (lock: {settings.ingest_lock_path})[/red]")

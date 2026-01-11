@@ -70,9 +70,10 @@ def run_ingest(
     *,
     folder_id: Optional[str] = None,
     limit: Optional[int] = None,
+    ctx: Optional[RunContext] = None,
 ) -> List[IngestOutcome]:
-    ctx = new_run_context()
-    lock_ctx = child_context(ctx, task_id="ingest_lock")
+    root_ctx = ctx or new_run_context()
+    lock_ctx = child_context(root_ctx, task_id="ingest_lock")
     lock_info = None
     outcomes: List[IngestOutcome] = []
     processed = 0
@@ -81,7 +82,7 @@ def run_ingest(
             LockAcquireRequest(
                 schema_version="1.0",
                 lock_path=settings.ingest_lock_path,
-                owner_id=f"ingest:{ctx.run_id}",
+                owner_id=f"ingest:{root_ctx.run_id}",
                 pid=os.getpid(),
                 ttl_seconds=settings.ingest_lock_ttl_seconds,
             ),
@@ -124,7 +125,7 @@ def run_ingest(
         ))
 
         logger.info(log_event(
-            ctx,
+            root_ctx,
             role="orchestrator",
             event="ingest_start",
             module=logger.name,
@@ -138,14 +139,14 @@ def run_ingest(
         )
         max_n = limit if limit is not None else settings.batch_limit
 
-        for file in list_pdfs(list_req, ctx):
+        for file in list_pdfs(list_req, root_ctx):
             if processed >= max_n:
                 break
 
             try:
                 cache_path = ""
                 md5 = None
-                file_ctx = child_context(ctx, task_id=file.file_id)
+                file_ctx = child_context(root_ctx, task_id=file.file_id)
                 cache_name = safe_pdf_name(file.name or f"{file.file_id}.pdf")
                 cache_path = str(Path(settings.cache_dir) / cache_name)
 
@@ -211,12 +212,11 @@ def run_ingest(
                         file_ctx,
                     )
                     md5 = write_resp.md5
-                eof_check = check_pdf_eof(
-                    PdfEofCheckRequest(schema_version="1.0", path=cache_path),
-                    file_ctx,
-                )
-                eof_missing = not eof_check.has_eof
-                if eof_missing:
+                    eof_check = check_pdf_eof(
+                        PdfEofCheckRequest(schema_version="1.0", path=cache_path),
+                        file_ctx,
+                    )
+                if not eof_check.has_eof:
                     logger.info(log_event(
                         file_ctx,
                         role="orchestrator",
@@ -303,13 +303,6 @@ def run_ingest(
                 logger.info(log_event(
                     file_ctx,
                     role="orchestrator",
-                    event="file_processing_exception",
-                    module=logger.name,
-                    fields={"file_id": file.file_id, "error": str(exc)},
-                ))
-                logger.info(log_event(
-                    file_ctx,
-                    role="orchestrator",
                     event="file_processing_error",
                     module=logger.name,
                     fields={
@@ -331,7 +324,7 @@ def run_ingest(
                 continue
 
         logger.info(log_event(
-            ctx,
+            root_ctx,
             role="orchestrator",
             event="ingest_complete",
             module=logger.name,
@@ -345,11 +338,11 @@ def run_ingest(
                     schema_version="1.0",
                     path=settings.category_mapping_path,
                 ),
-                ctx,
+                root_ctx,
             )
         except Exception as exc:
             logger.info(log_event(
-                ctx,
+                root_ctx,
                 role="orchestrator",
                 event="ingest_uncategorized_flush_failed",
                 module=logger.name,

@@ -53,6 +53,8 @@ class TestCli(unittest.TestCase):
                 load_settings_mock.assert_called_once()
                 run_ingest_mock.assert_called_once()
                 passed_settings = run_ingest_mock.call_args.args[0]
+                passed_ctx = run_ingest_mock.call_args.kwargs.get("ctx")
+                self.assertIs(passed_ctx, load_settings_mock.call_args.args[1])
                 self.assertIsInstance(passed_settings, IngestSettings)
                 self.assertEqual("folder", passed_settings.gdrive_folder_id)
                 self.assertEqual("gpt-5", passed_settings.openai_model)
