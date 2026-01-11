@@ -4,7 +4,7 @@
 ## Purpose
 Design a Streamlit-based GUI that exposes **all capabilities already present** in the Market Lense codebase, while keeping the interface minimal, discoverable, and aligned with the system’s architecture: contracts → services → generators → orchestrators. This GUI is an operational console for ingest, review, validation, publishing, monitoring, and configuration.
 
-The UI must make the current CLI workflows (`ingest`, `publish-wp`, `recategorize`, `update-wp-categories`, `cost-report`, `golden-set-vector`) feel like clear, guided flows with transparency into inputs, outputs, and logs. 【F:src/cli.py†L1-L279】
+The UI must make the current CLI workflows (`ingest`, `publish-wp`, `recategorize`, `update-wp-categories`, `cost-report`) feel like clear, guided flows with transparency into inputs, outputs, and logs. 【F:src/cli.py†L1-L279】
 =======
 # Market Lense Streamlit Admin & Control Panel Architecture
 
@@ -12,7 +12,7 @@ The UI must make the current CLI workflows (`ingest`, `publish-wp`, `recategoriz
 Build a **fully functional admin/control panel (cockpit)** in Streamlit that surfaces **every existing capability** of Market Lense with clear actions, diagnostics, and operational guardrails. The UI is not a new product layer; it is a thin, transparent shell over the existing **contracts → services → generators → orchestrators** architecture and current storage layout.
 
 This cockpit must:
-- Expose all CLI workflows (`ingest`, `publish-wp`, `recategorize`, `update-wp-categories`, `cost-report`, `golden-set-vector`) as guided UI actions.【F:src/cli.py†L1-L279】
+- Expose all CLI workflows (`ingest`, `publish-wp`, `recategorize`, `update-wp-categories`, `cost-report`) as guided UI actions.【F:src/cli.py†L1-L279】
 - Provide deep, inspectable views into **settings**, **databases**, **artifact files**, **logs**, **validation**, and **costs**.
 - Make the system’s **state, locks, retries, and live execution output** visible and explainable.
 >>>>>>> theirs

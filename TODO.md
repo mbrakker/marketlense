@@ -14,27 +14,21 @@
    - Embed the service-consolidation rule above and align examples with current module names (PDF, OpenAI/vector store, WordPress). Clarify that thin wrappers and split services (e.g., multiple PDF modules) violate the constitution.
 7. Add cost tables.
    - `cost_ledger_service` rolls up JSON and `generate_cost_report` exposes totals, but no tabular artifacts are emitted/published. Add HTML/CLI tables for daily/run rollups and link paths in `README.md`; optionally persist under `out/` for monitoring.
-8. Add vector store logging to avoid recreating entries.
-   - `vector_store_service.create_vector_store` is called (e.g., in `golden_set_orchestrator`) without persisting IDs; repeated runs create new stores. Record vector_store_id per report in state DB or report store, log reuse vs. create, and respect `analysis.vector_store_keep`.
-9. Add categories/tags to vector store records.
+8. Add categories/tags to vector store records.
    - Vector store metadata is empty/default; no taxonomy or tags from `ReportPayload`/category mappings are propagated. Include categories/regions/time_period as metadata on create/attach so queries can filter and deletion/reuse works by tag.
-10. Add taxonomy/categories to the vector-store CLI pipeline.
-    - `golden-set-vector` only builds vector stores + evidence packs; it never runs report analysis or category mapping. Extend the pipeline (or add a new generator path) to call the report analysis flow and persist taxonomy/categories in the report store.
-11. Update report metadata DB for vector-store CLI runs.
-    - The vector-store CLI updates the state DB but does not call `report_store_service.upsert_metadata`. Add report store updates for vector-store CLI runs so report metadata stays consistent.
-12. Create a GUI.
-    - Only `src/cli.py` exists. Provide a minimal web/desktop UI to trigger ingest/publish, view progress logs, inspect artifacts, cost tables, and vector store status.
-13. Add vector store deletion support.
+9. Create a GUI.
+   - Only `src/cli.py` exists. Provide a minimal web/desktop UI to trigger ingest/publish, view progress logs, inspect artifacts, cost tables, and vector store status.
+10. Add vector store deletion support.
     - No delete API in `vector_store_service`; flag `vector_store_keep` is unused for cleanup. Add delete/prune operations (vector store + files) and orchestrator hooks to avoid orphaned stores.
-14. Define and enforce cost limits.
+11. Define and enforce cost limits.
     - Costs are tracked (`cost_ledger_path`, `cost_daily_path`, pricing in `app.yaml`) but not enforced. Add config thresholds (per-run/day) and guardrails in orchestrators before OpenAI calls, with blocking/warning behavior and logging.
-15. Refine HTML and deduplicate repeated blocks.
+12. Refine HTML and deduplicate repeated blocks.
     - `templates/report.html.j2` contains repeated preview/figure handling and inline styling. Extract reusable blocks/macros, de-duplicate preview/gallery logic, and ensure consistent metadata rendering to reduce drift.
-16. Refine figure candidates and ranker to avoid low-data images.
+13. Refine figure candidates and ranker to avoid low-data images.
     - Current figure selection relies on extracted candidates and ranking (see `figure_service`, `rank_service`, and `extract_service` plus cropping). Add an image analysis step (OCR/content density/heuristics) to filter low-text/low-chart pages, improve table/chart detection and cropping, and feed richer features into the ranker to reduce weak visuals.
-17. Add infographics creator for HTML design and LinkedIn posts.
+14. Add infographics creator for HTML design and LinkedIn posts.
     - Beyond text rendering, there is no infographic generation pipeline. Add a generator/service to produce simple infographics/hero visuals for HTML and LinkedIn artifacts, wired into rendering and artifact generation flows.
-18. Support multiple prompts per process for variations/expert roles.
+15. Support multiple prompts per process for variations/expert roles.
     - Today each step uses a single prompt set per namespace. Add a mechanism to run multiple prompt variants per step (e.g., different expert personas or stylistic variants), collect outputs, and select/ensemble or expose them, while keeping prompt logging/versioning intact.
 
 # Detailed Proposals
@@ -107,17 +101,7 @@
   - Cost tables are generated for each run and referenced in the README.
   - CLI command prints the same aggregated totals.
 
-## 8. Add vector store logging to avoid recreating entries
-- **Context**: `vector_store_service.create_vector_store` is invoked without persisting IDs, so repeated runs create new stores.
-- **Proposal**:
-  - Persist `vector_store_id` per report in the state DB or report store when created or re-used.
-  - Update orchestrators (e.g., `golden_set_orchestrator`) to check for existing IDs and log reuse.
-  - Honor `analysis.vector_store_keep` when deciding to reuse or recreate.
-- **Acceptance**:
-  - Re-running a report reuses the same vector store unless `vector_store_keep` is false.
-  - Logs show reuse vs. create decision with stored IDs.
-
-## 9. Add categories/tags to vector store records
+## 8. Add categories/tags to vector store records
 - **Context**: Vector store metadata does not include report taxonomy, so filtering and cleanup cannot use categories.
 - **Proposal**:
   - Add metadata fields (`categories`, `regions`, `time_period`) derived from `ReportPayload` and category mapping outputs.
@@ -126,7 +110,7 @@
 - **Acceptance**:
   - Vector store records include taxonomy metadata and are queryable by tag.
 
-## 10. Create a GUI
+## 9. Create a GUI
 - **Context**: Only `src/cli.py` exists for interaction; no UI is available.
 - **Proposal**:
   - Implement a minimal web UI (FastAPI + simple frontend or Streamlit) under `src/gui` or `src/orchestrators` with a dedicated service.
@@ -136,7 +120,7 @@
   - UI can launch ingest/publish and show task status for a run.
   - Artifacts and cost tables are browsable from the UI.
 
-## 11. Add vector store deletion support
+## 10. Add vector store deletion support
 - **Context**: No delete/prune API exists in `vector_store_service`; `vector_store_keep` is unused for cleanup.
 - **Proposal**:
   - Add delete operations in `vector_store_service` and wire them into orchestrators when `vector_store_keep` is false.
@@ -146,7 +130,7 @@
   - Orphaned vector stores are cleaned up when configured.
   - Logs confirm deletion operations with IDs.
 
-## 12. Define and enforce cost limits
+## 11. Define and enforce cost limits
 - **Context**: Costs are tracked in `cost_ledger_path`/`cost_daily_path` but there are no guardrails.
 - **Proposal**:
   - Add config thresholds in `app.yaml` (per-run and per-day) and surface them in `AppSettings`.
@@ -156,7 +140,7 @@
   - Runs stop or warn when crossing configured cost limits.
   - Logs show thresholds and current spend when a block occurs.
 
-## 13. Refine HTML and deduplicate repeated blocks
+## 12. Refine HTML and deduplicate repeated blocks
 - **Context**: `templates/report.html.j2` has repeated preview/figure handling and inline styling.
 - **Proposal**:
   - Extract Jinja macros/partials for repeated preview/figure blocks.
@@ -166,7 +150,7 @@
   - HTML template no longer duplicates preview/gallery logic.
   - Metadata block renders consistently across sections.
 
-## 14. Refine figure candidates and ranker to avoid low-data images
+## 13. Refine figure candidates and ranker to avoid low-data images
 - **Context**: Figure selection relies on `figure_service`, `rank_service`, and `extract_service`, but low-signal images slip through.
 - **Proposal**:
   - Add an image quality filter (OCR density, chart/table heuristics, minimum text coverage).
@@ -176,7 +160,7 @@
   - Candidate set excludes low-content images and prioritizes meaningful charts.
   - Ranking inputs include explicit quality features.
 
-## 15. Add infographics creator for HTML design and LinkedIn posts
+## 14. Add infographics creator for HTML design and LinkedIn posts
 - **Context**: No pipeline exists for generating infographic assets beyond text artifacts.
 - **Proposal**:
   - Add a generator/service pair to create infographic assets (SVG/PNG) from report highlights.
@@ -186,7 +170,7 @@
   - Infographic assets are created and referenced in HTML/LinkedIn outputs.
   - Artifacts are logged and stored with report metadata.
 
-## 16. Support multiple prompts per process for variations/expert roles
+## 15. Support multiple prompts per process for variations/expert roles
 - **Context**: Each step uses one prompt namespace; no multi-prompt selection exists.
 - **Proposal**:
   - Add configuration for multiple prompt variants per namespace.

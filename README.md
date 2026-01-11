@@ -311,15 +311,6 @@ python -m src.cli cost-report --date YYYY-MM-DD
 python -m src.cli cost-report --run-id <run_id>
 ```
 
-Golden-set (vector store) harness for local PDFs:
-
-```bash
-python -m src.cli golden-set-vector --fixtures <dir> --limit <N>
-# --fixtures: directory containing PDFs
-# --limit: max PDFs to process (optional)
-```
-Golden-set source PDFs now live under `out/fixtures/golden_set/pdfs`; pass that directory to the `--fixtures` flag when running locally.
-
 Vector-store ingest mode:
 
 ```bash
@@ -331,7 +322,6 @@ This reuses existing vector stores when `VECTOR_STORE_KEEP=true`, otherwise crea
 CLI options summary:
 - `--limit`: optional integer across batch commands.
 - `--folder`: optional Drive folder override for ingest.
-- `--fixtures`: required for `golden-set-vector`.
 
 ## Output Layout
 
@@ -372,7 +362,7 @@ To extend the system:
 - Add new services in `src/services` and define contracts in `src/contracts`.
 - Add new prompts in `src/prompts/<use_case>/`.
 - Add new generators to compose services into outputs (local text or vector store flows).
-- Add orchestrators for new pipelines or batch flows (for example, additional golden-set harnesses).
+- Add orchestrators for new pipelines or batch flows as needed.
 
 ---
 
@@ -386,8 +376,7 @@ To extend the system:
 
 ## Vector Store & Cost Tracking Highlights
 
-- Vector stores: `src/services/vector_store_service.py` handles create/upload/attach/status/wait using OpenAI vector stores; used by vector-mode generators and the golden-set harness.
+- Vector stores: `src/services/vector_store_service.py` handles create/upload/attach/status/wait using OpenAI vector stores; used by vector-mode generators.
 - Analysis modes: `ANALYSIS_MODE=local_text` (default) keeps existing behavior; `ANALYSIS_MODE=vector_store` or `USE_VECTOR_STORE=true` enables file-search/Responses path.
 - Evidence packs: `src/generators/evidence_pack_generator.py` uses `src/prompts/report_vs/**` and writes packs + `out/report_analysis/<report_id>/*.json`; validation uses `src/schemas/evidence_pack.schema.json` (permissive for empty fields).
-- Golden-set vector harness: `src/orchestrators/golden_set_orchestrator.py` + CLI `golden-set-vector` process local PDFs end-to-end and write packs to `out/golden_set/<report_id>/packs/*.json`.
 - Cost ledger: `src/services/cost_ledger_service.py` appends JSONL entries for every LLM call and writes daily rollups (`./out/cost-ledger.jsonl`, `./out/cost-daily.json`) using per-model pricing from config.
