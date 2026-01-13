@@ -30,15 +30,15 @@ class TestConfigService(unittest.TestCase):
         }
         if include_analysis:
             config["analysis"] = {
-                "mode": "local_text",
-                "use_vector_store": False,
+                "mode": "vector_store",
+                "use_vector_store": True,
                 "vector_store_keep": True,
                 "cost_ledger_path": "./out/cost-ledger.jsonl",
             }
         config_path.write_text(yaml.safe_dump(config), encoding="utf-8")
         return str(config_path)
 
-    def test_defaults_use_local_text_mode(self) -> None:
+    def test_defaults_use_vector_mode(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(tmp_dir, include_analysis=False)
             with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
@@ -47,8 +47,8 @@ class TestConfigService(unittest.TestCase):
                     RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
                 )
 
-        self.assertEqual("local_text", settings.analysis_mode)
-        self.assertFalse(settings.use_vector_store)
+        self.assertEqual("vector_store", settings.analysis_mode)
+        self.assertTrue(settings.use_vector_store)
         self.assertTrue(settings.vector_store_keep)
         self.assertEqual("./out/cost-ledger.jsonl", settings.cost_ledger_path)
 

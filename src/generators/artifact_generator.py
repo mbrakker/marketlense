@@ -42,7 +42,7 @@ def generate_artifacts(
     safe_doc_map = doc_map or {}
     safe_evidence = evidence_packs or {}
     has_density_input = isinstance(source_status, dict) and ("text_density" in source_status or "density_threshold" in source_status)
-    availability = _normalize_source_status(source_status, settings, has_density=has_density_input)
+    availability = _normalize_source_status(source_status, settings, has_density=has_density_input, vector_store_id=vector_store_id)
     if has_density_input and availability["density_threshold"] and availability["text_density"] < availability["density_threshold"]:
         availability["not_available"] = True
         availability["reason"] = availability["reason"] or "text_density_below_threshold"
@@ -53,7 +53,7 @@ def generate_artifacts(
         fallback_reasons.append(availability["reason"])
     if not evidence_present:
         fallback_reasons.append("evidence_packs_empty")
-    if fallback_reasons:
+    if fallback_reasons and not vector_store_id:
         availability["not_available"] = True
         availability["reason"] = ",".join(sorted(set(fallback_reasons)))
         payload = _placeholder_artifacts(availability)
@@ -81,8 +81,8 @@ def generate_artifacts(
         ctx=toc_ctx,
         openai_client=openai_client,
         prompt_client=prompt_client,
-        allow_vector_store=False,
-        vector_store_id=None,
+        allow_vector_store=bool(vector_store_id),
+        vector_store_id=vector_store_id,
     )
     toc_topics = _normalize_topics(toc_result.get("toc_topics"))
 
@@ -94,8 +94,8 @@ def generate_artifacts(
         ctx=summary_ctx,
         openai_client=openai_client,
         prompt_client=prompt_client,
-        allow_vector_store=False,
-        vector_store_id=None,
+        allow_vector_store=bool(vector_store_id),
+        vector_store_id=vector_store_id,
     )
     summary = _normalize_summary(summary_result.get("summary"))
 
@@ -107,7 +107,7 @@ def generate_artifacts(
         ctx=insights_ctx,
         openai_client=openai_client,
         prompt_client=prompt_client,
-        allow_vector_store=bool(settings.use_vector_store and vector_store_id),
+        allow_vector_store=bool(vector_store_id),
         vector_store_id=vector_store_id,
     )
     insights_candidates = _normalize_insights(insights_candidates_result.get("insights_candidates"), prefix="candidate")
@@ -132,8 +132,8 @@ def generate_artifacts(
         ctx=insights_final_ctx,
         openai_client=openai_client,
         prompt_client=prompt_client,
-        allow_vector_store=False,
-        vector_store_id=None,
+        allow_vector_store=bool(vector_store_id),
+        vector_store_id=vector_store_id,
     )
     insights_final = _pad_insights(_normalize_insights(insights_final_result.get("insights_final"), prefix="insight"), insights_candidates)
 
@@ -155,8 +155,8 @@ def generate_artifacts(
         ctx=quotes_ctx,
         openai_client=openai_client,
         prompt_client=prompt_client,
-        allow_vector_store=False,
-        vector_store_id=None,
+        allow_vector_store=bool(vector_store_id),
+        vector_store_id=vector_store_id,
     )
     quotes_final = _normalize_quotes(quotes_result.get("quotes_final"))
 
@@ -173,8 +173,8 @@ def generate_artifacts(
         ctx=expert_ctx,
         openai_client=openai_client,
         prompt_client=prompt_client,
-        allow_vector_store=False,
-        vector_store_id=None,
+        allow_vector_store=bool(vector_store_id),
+        vector_store_id=vector_store_id,
     )
     expert_comment = _s(expert_result.get("expert_comment"))
 
@@ -190,8 +190,8 @@ def generate_artifacts(
         ctx=linkedin_ctx,
         openai_client=openai_client,
         prompt_client=prompt_client,
-        allow_vector_store=False,
-        vector_store_id=None,
+        allow_vector_store=bool(vector_store_id),
+        vector_store_id=vector_store_id,
     )
     linkedin_post = _s(linkedin_result.get("linkedin_post"))
 
@@ -425,7 +425,13 @@ def _normalize_quotes(items: Any) -> List[Dict[str, Any]]:
     return normalized
 
 
-def _normalize_source_status(source_status: Optional[Dict[str, Any]], settings: AppSettings, *, has_density: bool) -> Dict[str, Any]:
+def _normalize_source_status(
+    source_status: Optional[Dict[str, Any]],
+    settings: AppSettings,
+    *,
+    has_density: bool,
+    vector_store_id: Optional[str] = None,
+) -> Dict[str, Any]:
     status = source_status.copy() if isinstance(source_status, dict) else {}
     status.setdefault("schema_version", "1.0")
     status.setdefault("text_density", 0.0)
@@ -435,6 +441,10 @@ def _normalize_source_status(source_status: Optional[Dict[str, Any]], settings: 
     status.setdefault("not_available", False)
     status.setdefault("reason", "")
     status.setdefault("evidence_present", True)
+    if vector_store_id:
+        status["density_threshold"] = 0.0
+        status["not_available"] = False
+        status["reason"] = ""
     return status
 
 

@@ -12,7 +12,7 @@ def _ctx() -> RunContext:
 
 def test_load_prompt_set_hashes(caplog):
     caplog.set_level(logging.INFO, logger="market_lense.prompt_service")
-    prompt_set = load_prompt_set(PromptLoadRequest(schema_version="1.0", namespace="report_generation"), _ctx())
+    prompt_set = load_prompt_set(PromptLoadRequest(schema_version="1.0", namespace="report_vs/doc_map"), _ctx())
     assert prompt_set.system.text
     assert prompt_set.user.text
     sys_hash = hashlib.sha256(prompt_set.system.text.encode("utf-8")).hexdigest()

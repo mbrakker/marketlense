@@ -474,7 +474,6 @@ def openai_respond_with_vector_store(request: OpenAIResponseRequest, ctx: RunCon
         "instructions": request.system_prompt,
         "input": [{"role": "user", "content": user_prompt}],
         "temperature": request.temperature,
-        "text": {"format": {"type": "json_object"}},
         "tools": [{"type": "file_search", "vector_store_ids": [request.vector_store_id]}],
     }
     if request.seed is not None:
@@ -482,12 +481,24 @@ def openai_respond_with_vector_store(request: OpenAIResponseRequest, ctx: RunCon
     try:
         resp = client.responses.create(**payload_args)
     except Exception as exc:
+        logger.info(log_event(
+            ctx,
+            role="service",
+            event="openai_response_error",
+            module=logger.name,
+            fields={
+                "model": request.model,
+                "vector_store_id": request.vector_store_id,
+                "error": str(exc),
+                "error_type": type(exc).__name__,
+            },
+        ))
         raise AppError(
             code="openai_response_failed",
             message="OpenAI responses request failed",
             cause=exc,
             retryable=True,
-            context={"model": request.model},
+            context={"model": request.model, "vector_store_id": request.vector_store_id, "error": str(exc)},
         ) from exc
 
     text = getattr(resp, "output_text", None)
@@ -569,6 +580,7 @@ def openai_respond_with_vector_store(request: OpenAIResponseRequest, ctx: RunCon
             "input_tokens": input_tokens,
             "output_tokens": output_tokens,
             "tool_calls": tool_calls,
+            "parsed_json": parsed_json is not None,
         },
     ))
     return OpenAIResponseResult(

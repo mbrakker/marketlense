@@ -52,7 +52,7 @@ class FakeAnalysisStore:
         return f"{output_dir}/{report_id}/{pack_name}.json"
 
 
-def _settings(tmp_path, *, use_vector_store=False):
+def _settings(tmp_path):
     return AppSettings(
         schema_version="1.0",
         google_sa_path="sa.json",
@@ -80,8 +80,8 @@ def _settings(tmp_path, *, use_vector_store=False):
         contents_min_headings=1,
         contents_keywords=["contents"],
         contents_preview_dpi=72,
-        analysis_mode="vector_store" if use_vector_store else "local_text",
-        use_vector_store=use_vector_store,
+        analysis_mode="vector_store",
+        use_vector_store=True,
         vector_store_keep=True,
         cost_ledger_path=str(tmp_path / "cost-ledger.jsonl"),
         cost_daily_path=str(tmp_path / "cost-daily.json"),
@@ -143,7 +143,7 @@ def test_validation_flags_metric_and_quote_mismatches(tmp_path):
 
 
 def test_validation_detects_new_numbers_and_grounding(tmp_path):
-    settings = _settings(tmp_path, use_vector_store=False)
+    settings = _settings(tmp_path)
     artifacts = {
         "insights_final": [{"id": "i1", "text": "Insight 1", "evidence_id": "e1", "evidence": "Revenue up 5%", "metric": {"value": "5", "unit": "%", "timeframe": "2024"}}],
         "expert_comment": "We expect revenue to reach 99 soon.",

@@ -114,7 +114,6 @@ def _normalize_report_payload(data: ReportPayload) -> ReportPayload:
         time_period=time_period,
         commentary=commentary,
         source=source,
-        _openai_file_id=_s(data._openai_file_id),
         _figure_image=_figure_image,
         _figure_gallery=_figure_gallery,
         _figure_top=_figure_top,

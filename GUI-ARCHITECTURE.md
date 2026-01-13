@@ -65,7 +65,7 @@ Each section is tied to code modules or persisted outputs to avoid inventing new
   - List PDFs from Drive, cache hit/miss, download status, EOF check, and skip logic for already-processed items. 【F:src/orchestrators/ingest_orchestrator.py†L122-L229】
   - Show processing outcomes per file: status, HTML path, md5, vector store ID/status (if present). 【F:src/orchestrators/ingest_orchestrator.py†L231-L314】
 - **Mode controls (read-only display + info)**
-  - Show whether analysis is in `local_text` or `vector_store` mode; whether compare mode is enabled. These are loaded from config/env and passed into `IngestSettings`. 【F:src/services/config_service.py†L145-L211】
+  - Show analysis mode (`vector_store`, default/only) and compare toggle (legacy/ignored). These are loaded from config/env and passed into `IngestSettings`. 【F:src/services/config_service.py†L145-L211】
 
 **Why this UI matters:** It makes the ingest orchestration and its skip/lock behavior visible without leaving Streamlit.
 
@@ -253,7 +253,7 @@ This layout groups actions by operational role and keeps the UI minimal: one dom
 **Inputs & switches:**
 - **Folder override** and **limit** (mapped to CLI `--folder` and `--limit`).【F:src/cli.py†L19-L101】
 - **Read-only settings**: OpenAI model, temperature, timeout, batch limit, pdf text settings (from config).【F:src/services/config_service.py†L120-L243】
-- **Mode display**: `analysis_mode`, `use_vector_store`, `analysis_compare`.【F:src/services/config_service.py†L145-L211】
+- **Mode display**: Single vector_store analysis; compare toggle is legacy/ignored. 【F:src/services/config_service.py†L145-L211】
 
 **Pipeline timeline:**
 - Stepper view showing:

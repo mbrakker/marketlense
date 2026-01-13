@@ -66,7 +66,7 @@ class FakeAnalysisStore:
         return f"{output_dir}/{report_id}/{pack_name}.json"
 
 
-def _settings(tmp_path, *, use_vector_store=True):
+def _settings(tmp_path):
     return AppSettings(
         schema_version="1.0",
         google_sa_path="sa.json",
@@ -94,8 +94,8 @@ def _settings(tmp_path, *, use_vector_store=True):
         contents_min_headings=1,
         contents_keywords=["contents"],
         contents_preview_dpi=72,
-        analysis_mode="vector_store" if use_vector_store else "local_text",
-        use_vector_store=use_vector_store,
+        analysis_mode="vector_store",
+        use_vector_store=True,
         vector_store_keep=True,
         cost_ledger_path=str(tmp_path / "cost-ledger.jsonl"),
         cost_daily_path=str(tmp_path / "cost-daily.json"),
@@ -155,7 +155,7 @@ def test_generate_artifacts_validates_schema_and_evidence_ids(tmp_path):
         report_id="r1",
         doc_map=_doc_map(),
         evidence_packs=_evidence_packs(),
-        settings=_settings(tmp_path, use_vector_store=True),
+        settings=_settings(tmp_path),
         vector_store_id="vs_1",
         ctx=_ctx(),
         openai_client=fake_openai,
@@ -184,7 +184,7 @@ def test_generate_artifacts_backfills_missing_ids(tmp_path):
         report_id="r2",
         doc_map=_doc_map(),
         evidence_packs=_evidence_packs(),
-        settings=_settings(tmp_path, use_vector_store=False),
+        settings=_settings(tmp_path),
         vector_store_id=None,
         ctx=_ctx(),
         openai_client=fake_openai,
@@ -199,14 +199,23 @@ def test_generate_artifacts_backfills_missing_ids(tmp_path):
     validate_schema(payload, "artifacts", _ctx())
 
 
-def test_generate_artifacts_short_circuits_on_low_text(tmp_path):
+def test_generate_artifacts_ignores_low_text_when_vector_store(tmp_path):
     analysis_store = FakeAnalysisStore()
-    fake_openai = FakeOpenAI([])
+    responses = [
+        {"toc_topics": ["Topic 1"]},
+        {"summary": {"tldr": "TLDR", "executive_summary": "Exec", "claim_evidence_map": [{"claim": "Claim", "evidence_id": "f1", "evidence": "E", "pages": [1]}]}},
+        {"insights_candidates": [{"id": "c1", "text": "Insight", "evidence_id": "f1", "evidence": "E", "metric": {}, "pages": [1], "score": 0.9}]},
+        {"insights_final": [{"id": "f1", "text": "Final", "evidence_id": "f1", "evidence": "E", "metric": {}, "pages": [1]}]},
+        {"quotes_final": [{"text": "Quote", "speaker": "Analyst", "citation": "", "page": 1, "evidence_id": "q1"}]},
+        {"expert_comment": "Comment"},
+        {"linkedin_post": "Post"},
+    ]
+    fake_openai = FakeOpenAI(responses)
     payload = generate_artifacts(
         report_id="low_text",
-        doc_map={},
-        evidence_packs={},
-        settings=_settings(tmp_path, use_vector_store=True),
+        doc_map=_doc_map(),
+        evidence_packs=_evidence_packs(),
+        settings=_settings(tmp_path),
         vector_store_id="vs_1",
         source_status=_low_text_status(),
         ctx=_ctx(),
@@ -214,9 +223,7 @@ def test_generate_artifacts_short_circuits_on_low_text(tmp_path):
         prompt_client=FakePromptClient(),
         analysis_store=analysis_store,
     )
-    assert payload["source_status"]["not_available"] is True
-    assert "text_density_below_threshold" in payload["source_status"]["reason"]
-    assert "Not available from text" in payload["toc_topics"][0]
-    assert fake_openai.requests == []
+    assert payload["source_status"]["not_available"] is False
+    assert fake_openai.requests and all(req[0] == "vector" for req in fake_openai.requests)
     validate_schema(payload, "artifacts", _ctx())
     assert analysis_store.stored

@@ -141,7 +141,7 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
     time_period = request.time_period.strip() if request.time_period and request.time_period.strip() else None
     metadata_clean = _clean_metadata(request.pdf_metadata)
     metadata_json = json.dumps(metadata_clean, ensure_ascii=True)
-    analysis_mode = request.analysis_mode.strip() if request.analysis_mode else "local_text"
+    analysis_mode = request.analysis_mode.strip() if request.analysis_mode else "vector_store"
     vector_store_id = request.vector_store_id.strip() if request.vector_store_id else None
     evidence_packs = request.evidence_pack_paths or {}
     evidence_packs_json = json.dumps(evidence_packs, ensure_ascii=False)
@@ -250,7 +250,7 @@ def get_metadata(request: ReportMetadataGetRequest, ctx: RunContext) -> Optional
     page_count_raw = row[10]
     contents_page_raw = row[11]
     metadata_json = row[12] or "{}"
-    analysis_mode = row[13] or "local_text"
+    analysis_mode = row[13] or "vector_store"
     vector_store_id = row[14]
     evidence_packs_json = row[15] or "{}"
     created_at = int(row[16])
@@ -392,7 +392,7 @@ def list_metadata(request: ReportMetadataListRequest, ctx: RunContext) -> Report
             page_count_raw = row[10]
             contents_page_raw = row[11]
             metadata_json = row[12] or "{}"
-            analysis_mode = row[13] or "local_text"
+            analysis_mode = row[13] or "vector_store"
             vector_store_id = row[14]
             evidence_packs_json = row[15] or "{}"
             taxonomy: List[str] = []

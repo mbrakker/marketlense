@@ -156,23 +156,11 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             return None
         return int(value)
 
-    env_analysis_mode = _env_value("ANALYSIS_MODE")
-    env_analysis_compare = _env_value("ANALYSIS_COMPARE")
-    env_use_vector_store = _env_value("USE_VECTOR_STORE")
     env_vector_store_keep = _env_value("VECTOR_STORE_KEEP")
     env_cost_ledger_path = _env_value("COST_LEDGER_PATH")
-    analysis_mode_raw = env_analysis_mode or analysis_cfg.get("mode")
-    analysis_mode = str(analysis_mode_raw or "local_text").strip() or "local_text"
-    if env_use_vector_store:
-        use_vector_store = _as_bool(env_use_vector_store, default=analysis_mode == "vector_store")
-    elif env_analysis_mode:
-        use_vector_store = analysis_mode == "vector_store"
-    else:
-        use_vector_store = _as_bool(analysis_cfg.get("use_vector_store"), default=analysis_mode == "vector_store")
-    if env_analysis_compare:
-        analysis_compare = _as_bool(env_analysis_compare, default=False)
-    else:
-        analysis_compare = _as_bool(analysis_cfg.get("compare"), default=False)
+    analysis_mode = "vector_store"
+    use_vector_store = True
+    analysis_compare = False
     vector_store_keep_raw = env_vector_store_keep if env_vector_store_keep else analysis_cfg.get("vector_store_keep")
     vector_store_keep = _as_bool(vector_store_keep_raw, default=True)
     cost_ledger_path = str(env_cost_ledger_path or analysis_cfg.get("cost_ledger_path") or "./out/cost-ledger.jsonl")

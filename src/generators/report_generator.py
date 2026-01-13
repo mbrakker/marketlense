@@ -6,16 +6,13 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Optional
 
-from src.contracts.openai import OpenAIAnalyzeRequest
 from src.contracts.pdf_text import PdfTextExtractRequest
-from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.contracts.report_store import ReportMetadataUpsertRequest
-from src.contracts.report_models import CropItem
+from src.contracts.report_models import CropItem, Figure, Quote, ReportPayload
 from src.contracts.pdf_context import PdfContextBuildRequest
 from src.contracts.pdf_contents import PdfContentsDetectionRequest
-from src.services.openai_service import analyze_report as openai_analyze
+from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.services.pdf_text_service import extract_pdf_text
-from src.services.prompt_service import load_prompt_set, render_prompt
 from src.utils.slugify import slugify
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
@@ -41,6 +38,7 @@ from src.services.figure_service import extract_best_figure as extract_best_figu
 from src.services.preview_service import render_preview as render_preview_service
 from src.services.rank_service import rank_candidates as rank_candidates_service
 from src.services.render_service import render_report as render_report_service
+from src.services.prompt_service import load_prompt_set, render_prompt
 from src.services.pdf_contents_service import detect_contents_page as detect_contents_page_service
 from src.services.category_mapping_service import (
     load_mappings as load_category_mappings,
@@ -53,7 +51,7 @@ from src.services import vector_store_service, state_service, report_analysis_st
 from src.contracts.state import StateGetRequest, StateRecordRequest
 from src.contracts.validation import ValidationIssue, ValidationReport, ValidationRequest
 from src.utils.logging import child_context, log_event
-from src.utils.validation import validate_candidate, validate_report_payload
+from src.utils.validation import validate_candidate
 from src.utils.errors import AppError
 
 logger = logging.getLogger("market_lense.report_generator")
@@ -64,14 +62,58 @@ def _derive_title(name: str) -> str:
     cleaned = base.strip()
     return cleaned or name
 
-
-def _vector_store_enabled(settings: IngestSettings) -> bool:
-    return settings.use_vector_store or settings.analysis_mode == "vector_store"
-
-
 def _pack_paths(output_dir: str, report_id: str, pack_names: list[str]) -> dict[str, str]:
     base = Path(output_dir) / "report_analysis" / report_id
     return {name: str(base / f"{name}.json") for name in pack_names}
+
+
+def _base_payload(title: str, contents_page_number: int, contents_heading: str, contents_image: str) -> ReportPayload:
+    return ReportPayload(
+        tldr="Not available from text",
+        title=title,
+        insights=["", "", "", "", ""],
+        quote=Quote(text="", author="Unknown"),
+        figure=Figure(title="", evidence=""),
+        commentary="",
+        source="",
+        publisher="",
+        taxonomy=[],
+        categories=[],
+        region="",
+        time_period="",
+        contents_page_number=contents_page_number,
+        contents_heading=contents_heading,
+        _contents_image=contents_image,
+    )
+
+
+def _merge_artifacts_into_payload(payload: ReportPayload, artifacts: dict) -> ReportPayload:
+    if not isinstance(artifacts, dict):
+        return payload
+    summary = artifacts.get("summary") if isinstance(artifacts.get("summary"), dict) else {}
+    tldr = summary.get("tldr") if isinstance(summary, dict) else None
+    exec_summary = summary.get("executive_summary") if isinstance(summary, dict) else None
+    if tldr:
+        payload.tldr = str(tldr)
+    if exec_summary:
+        payload.commentary = str(exec_summary)
+    insights_final = artifacts.get("insights_final") if isinstance(artifacts.get("insights_final"), list) else []
+    if insights_final:
+        normalized = []
+        for item in insights_final[:5]:
+            if isinstance(item, dict):
+                normalized.append(str(item.get("text") or ""))
+            else:
+                normalized.append(str(item))
+        while len(normalized) < 5:
+            normalized.append("")
+        payload.insights = normalized
+    quotes_final = artifacts.get("quotes_final") if isinstance(artifacts.get("quotes_final"), list) else []
+    if quotes_final:
+        first_quote = quotes_final[0] if quotes_final else {}
+        if isinstance(first_quote, dict):
+            payload.quote = Quote(text=str(first_quote.get("text") or ""), author=str(first_quote.get("speaker") or first_quote.get("author") or "Unknown"))
+    return payload
 
 
 def _record_state_progress(
@@ -228,12 +270,8 @@ def generate_report(
     ctx: RunContext,
 ) -> IngestOutcome:
     pdf_context = None
-    primary_mode = (settings.analysis_mode or "local_text").strip() or "local_text"
-    compare_enabled = bool(getattr(settings, "analysis_compare", False))
-    comparison_mode = "vector_store" if primary_mode != "vector_store" else "local_text"
-    analysis_modes = [primary_mode]
-    if compare_enabled and comparison_mode not in analysis_modes:
-        analysis_modes.append(comparison_mode)
+    analysis_mode = "vector_store"
+    analysis_modes = [analysis_mode]
     logger.info(log_event(
         ctx,
         role="generator",
@@ -370,104 +408,8 @@ def generate_report(
         module=logger.name,
         fields={"density": text_status["text_density"], "threshold": text_status["density_threshold"], "pages": text_status["pages_sampled"], "char_count": text_status["char_count"], "not_available": text_status["not_available"]},
     ))
-    prompt_ctx = child_context(ctx, task_id=f"{ctx.task_id}:prompt")
-    prompt_set = load_prompt_set(
-        PromptLoadRequest(schema_version="1.0", namespace="report_generation", reload_if_changed=True),
-        prompt_ctx,
-    )
-    logger.info(log_event(
-        prompt_ctx,
-        role="generator",
-        event="prompt_selected",
-        module=logger.name,
-        fields={
-            "namespace": "report_generation",
-            "system_path": prompt_set.system.path,
-            "system_sha256": prompt_set.system.sha256,
-            "user_path": prompt_set.user.path,
-            "user_sha256": prompt_set.user.sha256,
-        },
-    ))
-    system_render = render_prompt(
-        PromptRenderRequest(
-            schema_version="1.0",
-            template=prompt_set.system,
-            variables={},
-        ),
-        prompt_ctx,
-    )
-    user_render = render_prompt(
-        PromptRenderRequest(
-            schema_version="1.0",
-            template=prompt_set.user,
-            variables={"extracted": text_resp.text},
-        ),
-        prompt_ctx,
-    )
-    logger.info(log_event(
-        prompt_ctx,
-        role="generator",
-        event="prompt_rendered",
-        module=logger.name,
-        fields={
-            "system_prompt": system_render.text,
-            "user_prompt": user_render.text,
-        },
-    ))
-    logger.info(log_event(
-        prompt_ctx,
-        role="generator",
-        event="openai_request_config",
-        module=logger.name,
-        fields={
-            "model": settings.openai_model,
-            "temperature": settings.temperature,
-            "seed": settings.openai_seed,
-        },
-    ))
-    openai_ctx = child_context(ctx, task_id=f"{ctx.task_id}:analyze")
-    openai_resp = openai_analyze(
-        OpenAIAnalyzeRequest(
-            schema_version="1.0",
-            system_prompt=system_render.text,
-            user_prompt=user_render.text,
-            prompt_system_sha256=prompt_set.system.sha256,
-            prompt_user_sha256=prompt_set.user.sha256,
-            model=settings.openai_model,
-            temperature=settings.temperature,
-            api_key=settings.openai_api_key,
-            seed=settings.openai_seed,
-            timeout_seconds=settings.openai_timeout_seconds,
-            cost_ledger_path=settings.cost_ledger_path,
-            cost_daily_path=settings.cost_daily_path,
-            model_pricing=settings.model_pricing,
-        ),
-        openai_ctx,
-    )
-    report_usage = {
-        "prompt_tokens": openai_resp.prompt_tokens,
-        "completion_tokens": openai_resp.completion_tokens,
-        "total_tokens": openai_resp.total_tokens,
-    }
-    logger.info(log_event(
-        openai_ctx,
-        role="generator",
-        event="openai_raw_response",
-        module=logger.name,
-        fields={"request_id": openai_resp.request_id or "", "content": openai_resp.raw_content},
-    ))
-    raw = openai_resp.payload
-    data = normalize_report(raw, ctx)
-    report_title = data.title.strip() or _derive_title(file.name)
-    data.title = report_title
-    validate_report_payload(data)
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="report_payload_validated",
-        module=logger.name,
-        fields={"file_id": file.file_id},
-    ))
+    report_title = _derive_title(file.name)
+    data = _base_payload(report_title, contents_page_number, contents_heading, contents_image)
     data._text_density = text_status["text_density"]
     data._text_pages_sampled = text_status["pages_sampled"]
     data._text_char_count = text_status["char_count"]
@@ -692,273 +634,216 @@ def generate_report(
     data.contents_page_number = contents_page_number
     data.contents_heading = contents_heading
     data._contents_image = contents_image
-    base_payload = deepcopy(data)
+    base_payload = normalize_report(data, ctx)
 
-    primary_result: dict | None = None
-    comparison_snapshots: dict[str, str] = {}
-    comparison_payloads: dict[str, dict] = {}
-    vector_info_for_outcome: dict[str, Optional[str]] = {
-        "vector_store_id": None,
-        "vector_store_status": None,
-        "indexed_at_utc": None,
-        "openai_file_id": None,
-        "last_error": None,
-    }
+    mode_ctx = child_context(ctx, task_id=f"{ctx.task_id}:vector_store")
+    mode_data = deepcopy(base_payload)
+    mode_evidence_packs: dict[str, dict] = {}
+    mode_evidence_paths: dict[str, str] = {}
+    validation_report: ValidationReport | None = None
+    vector_store_id = None
+    vector_store_status = None
+    indexed_at_utc = None
+    openai_file_id = None
+    last_error = None
+    artifacts_payload: dict | None = None
 
-    for mode in analysis_modes:
-        mode_ctx = child_context(ctx, task_id=f"{ctx.task_id}:{mode}")
-        mode_data = deepcopy(base_payload)
-        mode_evidence_packs: dict[str, dict] = {}
-        mode_evidence_paths: dict[str, str] = {}
-        artifacts_payload: dict | None = None
-        validation_report: ValidationReport | None = None
-        vector_store_id = None
-        vector_store_status = None
-        indexed_at_utc = None
-        openai_file_id = None
-        last_error = None
+    vector_store_id, openai_file_id, vector_store_status, indexed_at_utc, last_error = _ensure_vector_store(
+        file,
+        local_pdf_path,
+        settings,
+        mode_ctx,
+    )
+    _record_state_progress(
+        settings=settings,
+        file_id=file.file_id,
+        md5=md5,
+        ctx=mode_ctx,
+        stage="vector_store_ready",
+        vector_store_id=vector_store_id,
+        vector_store_status=vector_store_status,
+        indexed_at_utc=indexed_at_utc,
+        openai_file_id=openai_file_id,
+        last_error=last_error,
+    )
+    packs = generate_evidence_packs(
+        report_id=file.file_id,
+        vector_store_id=vector_store_id,
+        settings=settings,
+        ctx=child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:evidence"),
+    )
+    mode_evidence_packs = packs
+    pack_names = list(packs.keys())
+    mode_evidence_paths = _pack_paths(settings.output_dir, file.file_id, pack_names)
+    mode_data._vector_store_id = vector_store_id or ""
+    mode_data._evidence_packs = mode_evidence_paths
+    logger.info(log_event(
+        mode_ctx,
+        role="generator",
+        event="evidence_packs_ready",
+        module=logger.name,
+        fields={"file_id": file.file_id, "vector_store_id": vector_store_id, "pack_count": len(mode_evidence_paths)},
+    ))
+    _record_state_progress(
+        settings=settings,
+        file_id=file.file_id,
+        md5=md5,
+        ctx=mode_ctx,
+        stage="evidence_packs",
+        vector_store_id=vector_store_id,
+        vector_store_status=vector_store_status,
+        indexed_at_utc=indexed_at_utc,
+        openai_file_id=openai_file_id,
+        last_error=last_error,
+    )
+    try:
+        artifacts_payload = generate_artifacts(
+            report_id=file.file_id,
+            doc_map=packs.get("doc_map", {}),
+            evidence_packs=packs,
+            settings=settings,
+            vector_store_id=vector_store_id,
+            source_status=text_status,
+            ctx=child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:artifacts"),
+        )
+        mode_evidence_paths["artifacts"] = _pack_paths(settings.output_dir, file.file_id, ["artifacts"])["artifacts"]
+        _record_state_progress(
+            settings=settings,
+            file_id=file.file_id,
+            md5=md5,
+            ctx=mode_ctx,
+            stage="artifacts_ready",
+            vector_store_id=vector_store_id,
+            vector_store_status=vector_store_status,
+            indexed_at_utc=indexed_at_utc,
+            openai_file_id=openai_file_id,
+            last_error=last_error,
+        )
+    except Exception as exc:
+        logger.info(log_event(
+            mode_ctx,
+            role="generator",
+            event="artifacts_generation_failed",
+            module=logger.name,
+            fields={"file_id": file.file_id, "error": str(exc)},
+        ))
 
-        if mode == "vector_store":
-            vector_ctx = child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:vector_store")
-            vector_store_id, openai_file_id, vector_store_status, indexed_at_utc, last_error = _ensure_vector_store(
-                file,
-                local_pdf_path,
-                settings,
-                vector_ctx,
-            )
-            _record_state_progress(
-                settings=settings,
-                file_id=file.file_id,
-                md5=md5,
-                ctx=vector_ctx,
-                stage="vector_store_ready",
-                vector_store_id=vector_store_id,
-                vector_store_status=vector_store_status,
-                indexed_at_utc=indexed_at_utc,
-                openai_file_id=openai_file_id,
-                last_error=last_error,
-            )
-            packs = generate_evidence_packs(
-                report_id=file.file_id,
-                vector_store_id=vector_store_id,
-                settings=settings,
-                ctx=child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:evidence"),
-            )
-            mode_evidence_packs = packs
-            pack_names = list(packs.keys())
-            mode_evidence_paths = _pack_paths(settings.output_dir, file.file_id, pack_names)
-            mode_data._vector_store_id = vector_store_id or ""
-            mode_data._evidence_packs = mode_evidence_paths
-            if openai_file_id:
-                mode_data._openai_file_id = openai_file_id
-            logger.info(log_event(
-                mode_ctx,
-                role="generator",
-                event="evidence_packs_ready",
-                module=logger.name,
-                fields={"file_id": file.file_id, "vector_store_id": vector_store_id, "pack_count": len(mode_evidence_paths)},
-            ))
-            _record_state_progress(
-                settings=settings,
-                file_id=file.file_id,
-                md5=md5,
-                ctx=mode_ctx,
-                stage="evidence_packs",
-                vector_store_id=vector_store_id,
-                vector_store_status=vector_store_status,
-                indexed_at_utc=indexed_at_utc,
-                openai_file_id=openai_file_id,
-                last_error=last_error,
-            )
-            try:
-                artifacts_payload = generate_artifacts(
-                    report_id=file.file_id,
-                    doc_map=packs.get("doc_map", {}),
-                    evidence_packs=packs,
-                    settings=settings,
-                    vector_store_id=vector_store_id,
-                    source_status=text_status,
-                    ctx=child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:artifacts"),
-                )
-                mode_evidence_paths["artifacts"] = _pack_paths(settings.output_dir, file.file_id, ["artifacts"])["artifacts"]
-                _record_state_progress(
-                    settings=settings,
-                    file_id=file.file_id,
-                    md5=md5,
-                    ctx=mode_ctx,
-                    stage="artifacts_ready",
-                    vector_store_id=vector_store_id,
-                    vector_store_status=vector_store_status,
-                    indexed_at_utc=indexed_at_utc,
-                    openai_file_id=openai_file_id,
-                    last_error=last_error,
-                )
-            except Exception as exc:
-                logger.info(log_event(
-                    mode_ctx,
-                    role="generator",
-                    event="artifacts_generation_failed",
-                    module=logger.name,
-                    fields={"file_id": file.file_id, "error": str(exc)},
-                ))
+    mode_data = _merge_artifacts_into_payload(mode_data, artifacts_payload or {})
 
-        validation_pack_name = "validation" if mode == primary_mode else f"validation_{mode}"
+    validation_pack_name = "validation"
+    try:
+        validation_req = ValidationRequest(
+            schema_version="1.0",
+            report_id=file.file_id,
+            report=mode_data,
+            artifacts=artifacts_payload or {},
+            evidence_packs=mode_evidence_packs,
+            vector_store_id=vector_store_id,
+        )
+        validation_report = run_validation(validation_req, settings, child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:validation"), pack_name=validation_pack_name)
+        if validation_report.source_path:
+            mode_evidence_paths[validation_pack_name] = validation_report.source_path
+        _record_state_progress(
+            settings=settings,
+            file_id=file.file_id,
+            md5=md5,
+            ctx=mode_ctx,
+            stage="validation_complete",
+            vector_store_id=vector_store_id,
+            vector_store_status=vector_store_status,
+            indexed_at_utc=indexed_at_utc,
+            openai_file_id=openai_file_id,
+            last_error=last_error,
+        )
+    except Exception as exc:
+        logger.info(log_event(
+            mode_ctx,
+            role="generator",
+            event="validation_failed",
+            module=logger.name,
+            fields={"file_id": file.file_id, "error": str(exc), "mode": analysis_mode},
+        ))
+        fallback_issue = ValidationIssue(
+            schema_version="1.0",
+            message=f"Validation error: {exc}",
+            severity="error",
+            affected_section="validation",
+        )
+        fallback_report = ValidationReport(
+            schema_version="1.1",
+            status="fail",
+            issues=[fallback_issue],
+            severity="error",
+        )
         try:
-            validation_req = ValidationRequest(
-                schema_version="1.0",
-                report_id=file.file_id,
-                report=mode_data,
-                artifacts=artifacts_payload or {},
-                evidence_packs=mode_evidence_packs,
-                vector_store_id=vector_store_id if mode == "vector_store" else None,
-            )
-            validation_report = run_validation(validation_req, settings, child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:validation"), pack_name=validation_pack_name)
-            if validation_report.source_path:
-                mode_evidence_paths[validation_pack_name] = validation_report.source_path
-            if mode == "vector_store":
-                _record_state_progress(
-                    settings=settings,
-                    file_id=file.file_id,
-                    md5=md5,
-                    ctx=mode_ctx,
-                    stage="validation_complete",
-                    vector_store_id=vector_store_id,
-                    vector_store_status=vector_store_status,
-                    indexed_at_utc=indexed_at_utc,
-                    openai_file_id=openai_file_id,
-                    last_error=last_error,
-                )
-        except Exception as exc:
-            logger.info(log_event(
+            validation_path = report_analysis_store_service.store_pack(
+                settings.output_dir,
+                file.file_id,
+                validation_pack_name,
+                fallback_report.to_dict(),
                 mode_ctx,
-                role="generator",
-                event="validation_failed",
-                module=logger.name,
-                fields={"file_id": file.file_id, "error": str(exc), "mode": mode},
-            ))
-            fallback_issue = ValidationIssue(
-                schema_version="1.0",
-                message=f"Validation error: {exc}",
-                severity="error",
-                affected_section="validation",
             )
             fallback_report = ValidationReport(
-                schema_version="1.1",
-                status="fail",
-                issues=[fallback_issue],
-                severity="error",
+                schema_version=fallback_report.schema_version,
+                status=fallback_report.status,
+                issues=fallback_report.issues,
+                severity=fallback_report.severity,
+                source_path=validation_path,
             )
-            try:
-                validation_path = report_analysis_store_service.store_pack(
-                    settings.output_dir,
-                    file.file_id,
-                    validation_pack_name,
-                    fallback_report.to_dict(),
-                    mode_ctx,
-                )
-                fallback_report = ValidationReport(
-                    schema_version=fallback_report.schema_version,
-                    status=fallback_report.status,
-                    issues=fallback_report.issues,
-                    severity=fallback_report.severity,
-                    source_path=validation_path,
-                )
-                mode_evidence_paths[validation_pack_name] = validation_path
-            except Exception as store_exc:  # pragma: no cover - best-effort fallback
-                logger.info(log_event(
-                    mode_ctx,
-                    role="generator",
-                    event="validation_store_failed",
-                    module=logger.name,
-                    fields={"file_id": file.file_id, "error": str(store_exc), "mode": mode},
-                ))
-            validation_report = fallback_report
+            mode_evidence_paths[validation_pack_name] = validation_path
+        except Exception as store_exc:  # pragma: no cover - best-effort fallback
+            logger.info(log_event(
+                mode_ctx,
+                role="generator",
+                event="validation_store_failed",
+                module=logger.name,
+                fields={"file_id": file.file_id, "error": str(store_exc), "mode": analysis_mode},
+            ))
+        validation_report = fallback_report
 
-        data_dict = mode_data.to_dict()
-        if artifacts_payload:
-            data_dict["artifacts"] = artifacts_payload
-        if validation_report:
-            data_dict["validation_report"] = validation_report.to_dict()
-        data_dict["categories_display"] = category_assignment.category_labels
-        data_dict["analysis_mode"] = mode
-        logger.info(log_event(
-            mode_ctx,
-            role="generator",
-            event="report_payload_ready",
-            module=logger.name,
-            fields={"payload": data_dict},
-        ))
+    data_dict = mode_data.to_dict()
+    if artifacts_payload:
+        data_dict["artifacts"] = artifacts_payload
+    if validation_report:
+        data_dict["validation_report"] = validation_report.to_dict()
+    data_dict["categories_display"] = category_assignment.category_labels
+    data_dict["analysis_mode"] = analysis_mode
+    logger.info(log_event(
+        mode_ctx,
+        role="generator",
+        event="report_payload_ready",
+        module=logger.name,
+        fields={"payload": data_dict},
+    ))
 
-        snapshot_name = f"analysis_{mode}"
-        snapshot_path = report_analysis_store_service.store_pack(
-            settings.output_dir,
-            file.file_id,
-            snapshot_name,
-            data_dict,
-            mode_ctx,
-        )
-        mode_evidence_paths[snapshot_name] = snapshot_path
-
-        if mode == primary_mode:
-            primary_result = {
-                "data_dict": data_dict,
-                "evidence_paths": mode_evidence_paths,
-                "validation_report": validation_report,
-                "artifacts_payload": artifacts_payload,
-                "vector_store_id": vector_store_id,
-                "vector_store_status": vector_store_status,
-                "indexed_at_utc": indexed_at_utc,
-                "openai_file_id": openai_file_id,
-                "last_error": last_error,
-            }
-            if vector_store_id:
-                vector_info_for_outcome = {
-                    "vector_store_id": vector_store_id,
-                    "vector_store_status": vector_store_status,
-                    "indexed_at_utc": indexed_at_utc,
-                    "openai_file_id": openai_file_id,
-                    "last_error": last_error,
-                }
-    else:
-        comparison_snapshots[mode] = snapshot_path
-        if mode == "vector_store" and vector_store_id and not vector_info_for_outcome["vector_store_id"]:
-            vector_info_for_outcome = {
-                "vector_store_id": vector_store_id,
-                "vector_store_status": vector_store_status,
-                "indexed_at_utc": indexed_at_utc,
-                "openai_file_id": openai_file_id,
-                "last_error": last_error,
-            }
-        comparison_payloads[mode] = data_dict
-
-    if primary_result is None:
-        raise AppError(code="analysis_mode_invalid", message="No primary analysis mode executed", retryable=False)
-
-    primary_evidence_paths = dict(primary_result["evidence_paths"])
-    for mode, path in comparison_snapshots.items():
-        primary_evidence_paths[f"analysis_{mode}"] = path
-
-    for mode, payload in comparison_payloads.items():
-        render_ctx = child_context(ctx, task_id=f"{ctx.task_id}:render:{mode}")
-        comp_render = render_report_service(
-            RenderRequest(
-                schema_version="1.0",
-                data=payload,
-                doc_name=f"{file.name} ({mode})",
-                file_id=file.file_id,
-                out_dir=settings.output_dir,
-                preview_png=preview_resp.image_path,
-            ),
-            render_ctx,
-        )
-        primary_evidence_paths[f"html_{mode}"] = comp_render.html_path
-        logger.info(log_event(
-            render_ctx,
-            role="generator",
-            event="compare_html_rendered",
-            module=logger.name,
-            fields={"file_id": file.file_id, "mode": mode, "html_path": comp_render.html_path},
-        ))
+    snapshot_name = f"analysis_{analysis_mode}"
+    snapshot_path = report_analysis_store_service.store_pack(
+        settings.output_dir,
+        file.file_id,
+        snapshot_name,
+        data_dict,
+        mode_ctx,
+    )
+    mode_evidence_paths[snapshot_name] = snapshot_path
+    primary_result = {
+        "data_dict": data_dict,
+        "evidence_paths": mode_evidence_paths,
+        "validation_report": validation_report,
+        "artifacts_payload": artifacts_payload,
+        "vector_store_id": vector_store_id,
+        "vector_store_status": vector_store_status,
+        "indexed_at_utc": indexed_at_utc,
+        "openai_file_id": openai_file_id,
+        "last_error": last_error,
+    }
+    vector_info_for_outcome = {
+        "vector_store_id": vector_store_id,
+        "vector_store_status": vector_store_status,
+        "indexed_at_utc": indexed_at_utc,
+        "openai_file_id": openai_file_id,
+        "last_error": last_error,
+    }
+    primary_evidence_paths = dict(mode_evidence_paths)
 
     render_resp = render_report_service(
         RenderRequest(
@@ -990,7 +875,7 @@ def generate_report(
             page_count=info_resp.page_count,
             pdf_metadata=info_resp.metadata,
             contents_page_number=contents_page_number,
-            analysis_mode=primary_mode,
+            analysis_mode=analysis_mode,
             vector_store_id=vector_info_for_outcome["vector_store_id"],
             evidence_pack_paths=primary_evidence_paths,
         ),
@@ -1003,7 +888,7 @@ def generate_report(
         event="token_usage_summary",
         module=logger.name,
         fields={
-            "report_generation": report_usage,
+            "report_generation": None,
             "rank_candidates": rank_usage if cands_resp.candidates else None,
         },
     ))

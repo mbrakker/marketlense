@@ -15,8 +15,8 @@ Key traits:
 - Orchestrator that controls sequencing, retries, and state (including publishing).
 - Structured logging with run/task/span identifiers.
 - Built-in validation: semantic checks plus LLM grounding with persisted reports and publish-time policy controls.
-- Low-text resilience: text density heuristics detect PDFs with little/no extractable text and emit explicit “not available from text” artifacts + HTML notices instead of blank sections.
-- Optional compare mode: run both `local_text` and `vector_store` analyses in one pass, persist both snapshots, and render a secondary HTML for side-by-side diffing/debugging.
+- Low-text resilience: text density heuristics detect PDFs with little/no extractable text and emit explicit "not available from text" artifacts + HTML notices instead of blank sections.
+- Vector store is the default and only analysis path; legacy local_text prompt stuffing has been removed now that vector_store is validated.
 
 ---
 
@@ -53,10 +53,8 @@ For dev wiring, use `src.services.config_service.to_ingest_settings` to adapt `A
 Key fields and env overrides:
 - Paths: `paths.output_dir` (`OUTPUT_DIR`, default `./out`), `paths.cache_dir` (`CACHE_DIR`, default `./cache`), `paths.state_db` (`STATE_DB`), `paths.reports_db` (`REPORTS_DB`), `paths.category_mappings` (defaults to `src/config/category-mappings.yaml`).
 - Ingest: `ingest.google_sa_path` (`GOOGLE_SERVICE_ACCOUNT_JSON`), `ingest.gdrive_folder_id` (`GDRIVE_FOLDER_ID`), `ingest.openai_model` (`OPENAI_MODEL`), `ingest.batch_limit` (`BATCH_LIMIT`, default 20), `ingest.temperature` (`TEMPERATURE`, default 1.0), `ingest.timeout_seconds` (`OPENAI_TIMEOUT_SECONDS`, default 600), `ingest.lock_ttl_seconds` (`INGEST_LOCK_TTL_SECONDS`, default 7200), `ingest.contents_page.*` (keywords, max_pages, min_headings, render_dpi).
-- PDF text density: `ingest.pdf_text.min_density` (default `250` chars/page) to trigger “not available from text” fallbacks when extraction is sparse.
-- Analysis mode: `analysis.mode` (`ANALYSIS_MODE`, default `local_text`; set `vector_store` to enable file-search/Responses path).
-- Vector store toggles: `analysis.use_vector_store` (`USE_VECTOR_STORE`, default derived from mode), `analysis.vector_store_keep` (`VECTOR_STORE_KEEP`, default `true`).
-- Compare toggle: `analysis.compare` (`ANALYSIS_COMPARE`, default `false`) to run both modes and store comparison artifacts/HTML.
+- PDF text density: `ingest.pdf_text.min_density` (default `250` chars/page) to trigger "not available from text" fallbacks when extraction is sparse.
+- Vector store: `analysis.vector_store_keep` (`VECTOR_STORE_KEEP`, default `true`) controls whether to retain caches between runs. Analysis always uses the vector_store path; compare toggles are legacy/ignored.
 - Cost tracking: `analysis.cost_ledger_path` (`COST_LEDGER_PATH`, default `./out/cost-ledger.jsonl`), `cost.daily_path` (default `./out/cost-daily.json`), `cost.pricing` (per-model pricing map used by `utils.costing`).
 - Validation: `ingest.validation.data_gap_policy` (default `warn`) controls whether missing evidence/text gaps downgrade errors to warnings; `publish.validation.policy` (`PUBLISH_VALIDATION_POLICY`, default `block`; set to `warn` to allow publish with issues).
 
@@ -66,7 +64,6 @@ Secrets (env only):
 - Optional provider keys (e.g., `MINERU_API_KEY`) if used.
 
 Prompt locations:
-- Local text analysis: `src/prompts/report_generation/`
 - Vector store evidence packs: `src/prompts/report_vs/**` (`doc_map/`, `evidence_packs/{scope,methods,findings,limitations,quote_candidates}/`)
 - Artifact generation: `src/prompts/report_vs/artifacts/**` (toc, summary, insights candidates/final, quotes, expert comment, LinkedIn post)
 Prompts are YAML (system/user), hashed and logged by `src/services/prompt_service.py`.
@@ -104,8 +101,7 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
      - **Contents/index detection**: scans the first pages for a contents/index section, renders a screenshot when found, and records the page number for HTML + DB output.
      - **Text extraction**: `pdf_text_service` extracts text from the first N pages (reusing the shared context when present) and computes text density; if density falls below `ingest.pdf_text.min_density`, downstream artifacts short-circuit to explicit “not available from text” placeholders with HTML notices.
 - **LLM analysis**:
-  - `local_text` mode: Sends prompt + extracted text to OpenAI for structured JSON output.
-  - `vector_store` mode: Ensures a vector store exists (create → upload PDF → attach → wait for indexing via `vector_store_service`), then calls `openai_service.openai_respond_with_vector_store` (Responses API + file search). Evidence packs are generated via `src/generators/evidence_pack_generator.py` (doc_map, scope, methods, findings, limitations, quote_candidates), stored under `out/report_analysis/<file_id>/*.json`, and persisted in the metadata DB (`reports` table columns `vector_store_id`, `evidence_packs_json`; state DB stores `vector_store_status`, `indexed_at_utc`, `openai_file_id`, `last_error`). Orchestrator logs `VECTOR_STORE_CREATED`, `VECTOR_STORE_INDEXED`, `EVIDENCE_READY`.
+  - `vector_store` mode (only path): Ensures a vector store exists (create → upload PDF → attach → wait for indexing via `vector_store_service`), then calls `openai_service.openai_respond_with_vector_store` (Responses API + file search). Evidence packs are generated via `src/generators/evidence_pack_generator.py` (doc_map, scope, methods, findings, limitations, quote_candidates), stored under `out/report_analysis/<file_id>/*.json`, and persisted in the metadata DB (`reports` table columns `vector_store_id`, `evidence_packs_json`; state DB stores `vector_store_status`, `indexed_at_utc`, `openai_file_id`, `last_error`). Orchestrator logs `VECTOR_STORE_CREATED`, `VECTOR_STORE_INDEXED`, `EVIDENCE_READY`.
   - **Validation**: `src/generators/validation_generator.py` runs semantic checks (metrics vs evidence, quotes verbatim, no new numbers in expert/LinkedIn) and LLM grounding (`src/prompts/report_vs/validate/grounding`). Results are stored at `out/report_analysis/<file_id>/validation*.json`, added to the rendered payload, and logged. When `ingest.validation.data_gap_policy` is `warn`, evidence/text gaps downgrade to warnings instead of failing the run.
      - **Normalization**: `normalize_generator` enforces strict schema and list sizing.
      - **Categorization**: taxonomy tags are scored against `src/config/category-mappings.yaml`; top 3 categories are stored and rendered, and unmapped tags are appended under `uncategorized` in that YAML.
@@ -114,7 +110,7 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
      - **Candidate ranking**: `rank_service` scores candidates via LLM.
      - **Cropping**: `crop_service` crops top-ranked regions.
      - **Preview rendering**: `preview_service` renders the first page to PNG.
-     - **HTML rendering**: `render_service` generates the final HTML digest; when compare mode is on, an additional `<report>-<mode>.html` is rendered for each comparison mode (e.g., vector_store) and recorded under `html_<mode>` in evidence pack paths.
+     - **HTML rendering**: `render_service` generates the final HTML digest.
 
 7. **State record**
    - The orchestrator records completion state after successful report generation.
@@ -188,7 +184,6 @@ The orchestrator retries report generation when a retryable `AppError` is raised
 Prompts are stored in YAML by namespace:
 
 ```
-src/prompts/report_generation/          # local_text mode
 src/prompts/report_vs/doc_map/          # vector_store doc map
 src/prompts/report_vs/evidence_packs/   # vector_store packs (scope/methods/findings/limitations/quote_candidates)
 src/prompts/report_vs/artifacts/        # artifact sections (toc, summary, insights, quotes, expert comment, LinkedIn)
@@ -314,7 +309,7 @@ python -m src.cli cost-report --run-id <run_id>
 Vector-store ingest mode:
 
 ```bash
-ANALYSIS_MODE=vector_store USE_VECTOR_STORE=1 python -m src.cli ingest --limit 1
+ANALYSIS_MODE=vector_store python -m src.cli ingest --limit 1
 ```
 
 This reuses existing vector stores when `VECTOR_STORE_KEEP=true`, otherwise creates/attaches/waits per file and writes packs to `out/report_analysis/<file_id>/`.
@@ -361,7 +356,7 @@ Marker-based PDF-to-HTML conversion has been removed.
 To extend the system:
 - Add new services in `src/services` and define contracts in `src/contracts`.
 - Add new prompts in `src/prompts/<use_case>/`.
-- Add new generators to compose services into outputs (local text or vector store flows).
+- Add new generators to compose services into outputs.
 - Add orchestrators for new pipelines or batch flows as needed.
 
 ---
@@ -377,6 +372,6 @@ To extend the system:
 ## Vector Store & Cost Tracking Highlights
 
 - Vector stores: `src/services/vector_store_service.py` handles create/upload/attach/status/wait using OpenAI vector stores; used by vector-mode generators.
-- Analysis modes: `ANALYSIS_MODE=local_text` (default) keeps existing behavior; `ANALYSIS_MODE=vector_store` or `USE_VECTOR_STORE=true` enables file-search/Responses path.
+- Analysis uses vector_store only; `ANALYSIS_MODE`/`USE_VECTOR_STORE` toggles are no longer needed.
 - Evidence packs: `src/generators/evidence_pack_generator.py` uses `src/prompts/report_vs/**` and writes packs + `out/report_analysis/<report_id>/*.json`; validation uses `src/schemas/evidence_pack.schema.json` (permissive for empty fields).
 - Cost ledger: `src/services/cost_ledger_service.py` appends JSONL entries for every LLM call and writes daily rollups (`./out/cost-ledger.jsonl`, `./out/cost-daily.json`) using per-model pricing from config.

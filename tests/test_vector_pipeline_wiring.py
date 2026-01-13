@@ -8,7 +8,6 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.run_context import RunContext
-from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.validation import ValidationReport
 from src.contracts.report_assets import RenderResponse
 from src.generators import report_generator as rg
@@ -159,32 +158,7 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
     validation_calls = []
     analysis_store = []
     vector_calls = []
-    openai_calls = []
     ctx = RunContext(schema_version="1.0", run_id="run-vs", task_id="task-vs", span_id="span-vs")
-
-    class DummyCtx:
-        def __init__(self):
-            self.fitz_doc = None
-            self.pypdf_reader = None
-
-        def close(self):
-            pass
-
-    def _report_payload():
-        return ReportPayload(
-            tldr="tldr",
-            title="Vector Report",
-            insights=["i1", "i2", "i3", "i4", "i5"],
-            quote=Quote(text="Quote", author="Author"),
-            figure=Figure(title="Fig", evidence="Ev"),
-            commentary="Comment",
-            source="Source",
-            publisher="Pub",
-            taxonomy=["tag"],
-            categories=[],
-            region="US",
-            time_period="2024",
-        )
 
     monkeypatch.setattr(rg.state_service, "get", lambda req, ctx: None)
     monkeypatch.setattr(rg.vector_store_service, "create_vector_store", lambda file_id, meta, ctx: SimpleNamespace(vector_store_id="vs_new") if vector_calls.append(("create", file_id)) is None else SimpleNamespace(vector_store_id="vs_new"))
@@ -192,29 +166,9 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
     monkeypatch.setattr(rg.vector_store_service, "attach_file", lambda vector_store_id, file_id, ctx: vector_calls.append(("attach", vector_store_id, file_id)))
     monkeypatch.setattr(rg.vector_store_service, "wait_until_indexed", lambda vector_store_id, ctx, timeout_s, poll_interval_s: vector_calls.append(("wait", timeout_s)) or SimpleNamespace(status="completed", indexed_at_utc="2024-01-01T00:00:00Z", last_error=None))
     monkeypatch.setattr(rg, "extract_pdf_info", lambda req, ctx: SimpleNamespace(schema_version="1.0", path=req.path, page_count=1, metadata={"k": "v"}))
-    monkeypatch.setattr(rg, "build_pdf_context", lambda req, ctx: SimpleNamespace(schema_version="1.0", context=DummyCtx(), fitz_error=None, pypdf_error=None))
+    monkeypatch.setattr(rg, "build_pdf_context", lambda req, ctx: SimpleNamespace(schema_version="1.0", context=SimpleNamespace(fitz_doc=None, pypdf_reader=None, close=lambda: None), fitz_error=None, pypdf_error=None))
     monkeypatch.setattr(rg, "detect_contents_page_service", lambda req, ctx: SimpleNamespace(schema_version="1.0", path=req.path, has_contents=False, page_index=-1, page_number=0, heading="", confidence=0.0))
     monkeypatch.setattr(rg, "extract_pdf_text", lambda req, ctx: SimpleNamespace(schema_version="1.0", text="text", pages_extracted=1, char_count=4, text_density=4.0))
-    monkeypatch.setattr(rg, "load_prompt_set", lambda req, ctx: SimpleNamespace(schema_version="1.0", system=SimpleNamespace(path="s", sha256="s", text="s"), user=SimpleNamespace(path="u", sha256="u", text="u")))
-    monkeypatch.setattr(rg, "render_prompt", lambda req, ctx: SimpleNamespace(schema_version="1.0", text=req.template.text))
-
-    def _fake_openai(req, ctx):
-        openai_calls.append(req.timeout_seconds)
-        return SimpleNamespace(
-            schema_version="1.0",
-            payload=_report_payload(),
-            prompt_system_sha256=req.prompt_system_sha256,
-            prompt_user_sha256=req.prompt_user_sha256,
-            model=req.model,
-            temperature=req.temperature,
-            raw_content="{}",
-            prompt_tokens=0,
-            completion_tokens=0,
-            total_tokens=0,
-            request_id="req",
-        )
-
-    monkeypatch.setattr(rg, "openai_analyze", _fake_openai)
     monkeypatch.setattr(rg, "load_category_mappings", lambda req, ctx: SimpleNamespace(mappings=SimpleNamespace(schema_version="1.0", categories=[], uncategorized=[])))
     monkeypatch.setattr(rg, "categorize_taxonomy", lambda taxonomy, mappings, ctx: SimpleNamespace(categories=["cat"], category_labels=["Category"], unmapped_tags=[]))
     monkeypatch.setattr(rg, "update_uncategorized_tags", lambda req, ctx: None)
@@ -234,7 +188,7 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
         }
 
     monkeypatch.setattr(rg, "generate_evidence_packs", _fake_evidence)
-    monkeypatch.setattr(rg, "generate_artifacts", lambda report_id, doc_map, evidence_packs, settings, vector_store_id=None, source_status=None, ctx=None: {"artifacts": True})
+    monkeypatch.setattr(rg, "generate_artifacts", lambda report_id, doc_map, evidence_packs, settings, vector_store_id=None, source_status=None, ctx=None: {"summary": {"tldr": "tldr", "executive_summary": "exec"}, "insights_final": [{"text": "insight"}], "quotes_final": [{"text": "qt", "speaker": "sp"}]})
     monkeypatch.setattr(rg.report_analysis_store_service, "store_pack", lambda output_dir, report_id, pack_name, payload, ctx: analysis_store.append((pack_name, payload)) or str(tmp_path / "report_analysis" / report_id / f"{pack_name}.json"))
 
     def _fake_validation(req, settings, ctx, pack_name="validation"):
@@ -258,4 +212,4 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
     assert "validation" in outcome.evidence_packs
     assert Path(outcome.html_path).exists()
     assert validation_calls == ["file_vs"]
-    assert openai_calls == [3600.0]
+    assert ("artifacts", {"summary": {"tldr": "tldr", "executive_summary": "exec"}, "insights_final": [{"text": "insight"}], "quotes_final": [{"text": "qt", "speaker": "sp"}]}) in analysis_store

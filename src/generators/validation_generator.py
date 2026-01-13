@@ -217,7 +217,7 @@ def _run_grounding_check(
         },
     ))
 
-    use_vector_store = bool(request.vector_store_id and settings.use_vector_store)
+    use_vector_store = bool(request.vector_store_id)
     logger.info(log_event(
         prompt_ctx,
         role="generator",
