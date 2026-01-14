@@ -10,6 +10,7 @@ from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.contracts.run_context import RunContext
 from src.services import openai_service, prompt_service, report_analysis_store_service
 from src.utils.errors import AppError
+from src.utils.model_resolver import resolve_model
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.schema_validator import validate_schema
 
@@ -256,6 +257,18 @@ def _call_json_model(
             "prompt_user_sha256": prompt_set.user.sha256,
         },
     ))
+    resolved_model = resolve_model(namespace, getattr(settings, "openai_models", {}), settings.openai_model)
+    logger.info(log_event(
+        ctx,
+        role="generator",
+        event="model_resolved",
+        module=logger.name,
+        fields={
+            "namespace": namespace,
+            "resolved_model": resolved_model,
+            "default_model": settings.openai_model,
+        },
+    ))
     if allow_vector_store and vector_store_id:
         resp = openai_client.openai_respond_with_vector_store(
             OpenAIResponseRequest(
@@ -263,7 +276,7 @@ def _call_json_model(
                 system_prompt=system_rendered.text,
                 user_prompt=user_rendered.text,
                 vector_store_id=vector_store_id,
-                model=settings.openai_model,
+                model=resolved_model,
                 temperature=settings.temperature,
                 api_key=settings.openai_api_key,
                 seed=settings.openai_seed,
@@ -280,7 +293,7 @@ def _call_json_model(
                 schema_version="1.0",
                 system_prompt=system_rendered.text,
                 user_prompt=user_rendered.text,
-                model=settings.openai_model,
+                model=resolved_model,
                 temperature=settings.temperature,
                 api_key=settings.openai_api_key,
                 seed=settings.openai_seed,
@@ -299,7 +312,7 @@ def _call_json_model(
         module=logger.name,
         fields={
             "namespace": namespace,
-            "model": getattr(resp, "model", settings.openai_model),
+            "model": getattr(resp, "model", resolved_model),
             "has_json": bool(resp.parsed_json),
         },
     ))

@@ -53,6 +53,7 @@ from src.contracts.validation import ValidationIssue, ValidationReport, Validati
 from src.utils.logging import child_context, log_event
 from src.utils.validation import validate_candidate
 from src.utils.errors import AppError
+from src.utils.model_resolver import resolve_model
 
 logger = logging.getLogger("market_lense.report_generator")
 
@@ -471,6 +472,7 @@ def generate_report(
             fields={"count": len(cands_resp.candidates)},
         ))
         rank_model = settings.rank_model or settings.openai_model
+        resolved_rank_model = resolve_model("rank_candidates", getattr(settings, "openai_models", {}), rank_model)
         rows = [{
             "id": c.id,
             "type": c.kind,
@@ -529,7 +531,7 @@ def generate_report(
             event="rank_request_config",
             module=logger.name,
             fields={
-                "model": rank_model,
+                "model": resolved_rank_model,
                 "temperature": settings.rank_temperature,
                 "seed": settings.rank_seed,
             },
@@ -543,7 +545,7 @@ def generate_report(
                     user_prompt=rank_user_render.text,
                     prompt_system_sha256=rank_prompt_set.system.sha256,
                     prompt_user_sha256=rank_prompt_set.user.sha256,
-                    model=rank_model,
+                    model=resolved_rank_model,
                     temperature=settings.rank_temperature,
                     api_key=settings.openai_api_key,
                     seed=settings.rank_seed,

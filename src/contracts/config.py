@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 
 @dataclass(frozen=True)
@@ -25,6 +25,7 @@ class AppSettings:
     category_mapping_path: str = field(metadata={"doc": "Filesystem path to category mappings YAML."})
     ingest_lock_path: str = field(metadata={"doc": "Filesystem path for the ingest single-run lock file."})
     temperature: float = field(metadata={"doc": "Sampling temperature for report generation."})
+    openai_models: Dict[str, str] = field(default_factory=dict, metadata={"doc": "Per-namespace OpenAI model overrides keyed by namespace/prefix."})
     ingest_lock_ttl_seconds: float = field(default=7200.0, metadata={"doc": "Seconds before a stale ingest lock is cleared; <=0 disables stale eviction."})
     openai_seed: Optional[int] = field(default=None, metadata={"doc": "Optional seed for report generation."})
     pdf_text_max_pages: int = field(default=5, metadata={"doc": "Max pages to extract for prompt context."})

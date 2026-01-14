@@ -14,6 +14,7 @@ from src.services import openai_service, prompt_service, report_analysis_store_s
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.schema_validator import validate_schema
+from src.utils.model_resolver import resolve_model
 
 logger = logging.getLogger("market_lense.validation_generator")
 
@@ -185,14 +186,15 @@ def _run_grounding_check(
 ) -> List[ValidationIssue]:
     issues: List[ValidationIssue] = []
     prompt_ctx = child_context(ctx, task_id=f"{ctx.task_id}:grounding")
-    prompt_set = prompt_client.load_prompt_set(PromptLoadRequest(schema_version="1.0", namespace="report_vs/validate/grounding"), prompt_ctx)
+    prompt_namespace = "report_vs/validate/grounding"
+    prompt_set = prompt_client.load_prompt_set(PromptLoadRequest(schema_version="1.0", namespace=prompt_namespace), prompt_ctx)
     logger.info(log_event(
         prompt_ctx,
         role="generator",
         event="prompt_selected",
         module=logger.name,
         fields={
-            "namespace": "report_vs/validate/grounding",
+            "namespace": prompt_namespace,
             "system_path": prompt_set.system.path,
             "system_sha256": prompt_set.system.sha256,
             "user_path": prompt_set.user.path,
@@ -217,6 +219,18 @@ def _run_grounding_check(
         },
     ))
 
+    resolved_model = resolve_model(prompt_namespace, getattr(settings, "openai_models", {}), settings.openai_model)
+    logger.info(log_event(
+        prompt_ctx,
+        role="generator",
+        event="model_resolved",
+        module=logger.name,
+        fields={
+            "namespace": prompt_namespace,
+            "resolved_model": resolved_model,
+            "default_model": settings.openai_model,
+        },
+    ))
     use_vector_store = bool(request.vector_store_id)
     logger.info(log_event(
         prompt_ctx,
@@ -224,7 +238,7 @@ def _run_grounding_check(
         event="grounding_request_config",
         module=logger.name,
         fields={
-            "model": settings.openai_model,
+            "model": resolved_model,
             "temperature": settings.temperature,
             "vector_store": use_vector_store,
             "seed": settings.openai_seed,
@@ -233,17 +247,17 @@ def _run_grounding_check(
     try:
         if use_vector_store:
             resp = openai_client.openai_respond_with_vector_store(
-                OpenAIResponseRequest(
-                    schema_version="1.0",
-                    system_prompt=system_render.text,
-                    user_prompt=user_render.text,
-                    vector_store_id=request.vector_store_id or "",
-                    model=settings.openai_model,
-                    temperature=settings.temperature,
-                    api_key=settings.openai_api_key,
-                    seed=settings.openai_seed,
-                    timeout_seconds=settings.openai_timeout_seconds,
-                    cost_ledger_path=settings.cost_ledger_path,
+            OpenAIResponseRequest(
+                schema_version="1.0",
+                system_prompt=system_render.text,
+                user_prompt=user_render.text,
+                vector_store_id=request.vector_store_id or "",
+                model=resolved_model,
+                temperature=settings.temperature,
+                api_key=settings.openai_api_key,
+                seed=settings.openai_seed,
+                timeout_seconds=settings.openai_timeout_seconds,
+                cost_ledger_path=settings.cost_ledger_path,
                     cost_daily_path=settings.cost_daily_path,
                     model_pricing=settings.model_pricing,
                 ),
@@ -251,15 +265,15 @@ def _run_grounding_check(
             )
         else:
             resp = openai_client.openai_chat_json(
-                OpenAIJSONPromptRequest(
-                    schema_version="1.0",
-                    system_prompt=system_render.text,
-                    user_prompt=user_render.text,
-                    model=settings.openai_model,
-                    temperature=settings.temperature,
-                    api_key=settings.openai_api_key,
-                    seed=settings.openai_seed,
-                    timeout_seconds=settings.openai_timeout_seconds,
+            OpenAIJSONPromptRequest(
+                schema_version="1.0",
+                system_prompt=system_render.text,
+                user_prompt=user_render.text,
+                model=resolved_model,
+                temperature=settings.temperature,
+                api_key=settings.openai_api_key,
+                seed=settings.openai_seed,
+                timeout_seconds=settings.openai_timeout_seconds,
                     cost_ledger_path=settings.cost_ledger_path,
                     cost_daily_path=settings.cost_daily_path,
                     model_pricing=settings.model_pricing,

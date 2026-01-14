@@ -32,6 +32,25 @@ ingest:
       - "index"
     render_dpi: 144
 
+openai_models:
+  report_vs/artifacts: "gpt-5"
+  report_vs/artifacts/toc: "gpt-5"
+  report_vs/artifacts/summary: "gpt-5"
+  report_vs/artifacts/insights_candidates: "gpt-5-mini"
+  report_vs/artifacts/insights_final: "gpt-5"
+  report_vs/artifacts/quotes: "gpt-5-mini"
+  report_vs/artifacts/expert_comment: "gpt-5"
+  report_vs/artifacts/linkedin_post: "gpt-5"
+  report_vs/doc_map: "gpt-5"
+  report_vs/evidence_packs: "o3"
+  report_vs/evidence_packs/scope: "gpt-5-mini"
+  report_vs/evidence_packs/findings: "o3"
+  report_vs/evidence_packs/limitations: "o3"
+  report_vs/evidence_packs/methods: "o3"
+  report_vs/evidence_packs/quote_candidates: "gpt-5-mini"
+  report_vs/validate/grounding: "o3"
+  rank_candidates: "gpt-5"
+
 rank:
   model: "gpt-5"
   temperature: 1.0

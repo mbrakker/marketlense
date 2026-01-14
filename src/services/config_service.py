@@ -107,6 +107,14 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     cost_cfg = data.get("cost", {}) or {}
 
     openai_model = need(ingest, "openai_model", "ingest.openai_model", "OPENAI_MODEL")
+    openai_models_raw = data.get("openai_models") or {}
+    openai_models: dict[str, str] = {}
+    if isinstance(openai_models_raw, dict):
+        for key, value in openai_models_raw.items():
+            key_str = str(key).strip()
+            val_str = str(value).strip()
+            if key_str and val_str:
+                openai_models[key_str] = val_str
     temperature_raw = ingest.get("temperature")
     if _is_missing(temperature_raw):
         temperature_raw = _env_value("TEMPERATURE")
@@ -173,6 +181,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         gdrive_folder_id=need(ingest, "gdrive_folder_id", "ingest.gdrive_folder_id", "GDRIVE_FOLDER_ID"),
         openai_api_key=need_env("OPENAI_API_KEY"),
         openai_model=openai_model,
+        openai_models=openai_models,
         batch_limit=batch_limit,
         output_dir=output_dir,
         cache_dir=cache_dir,
@@ -235,6 +244,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             "ingest_lock_path": settings.ingest_lock_path,
             "ingest_lock_ttl_seconds": settings.ingest_lock_ttl_seconds,
             "openai_model": settings.openai_model,
+            "openai_models": settings.openai_models,
             "temperature": settings.temperature,
             "openai_seed": settings.openai_seed,
             "rank_model": settings.rank_model,

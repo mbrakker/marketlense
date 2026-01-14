@@ -13,6 +13,7 @@ from src.services import report_analysis_store_service
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.schema_validator import validate_schema
 from src.utils.errors import AppError
+from src.utils.model_resolver import resolve_model
 
 logger = logging.getLogger("market_lense.evidence_pack_generator")
 
@@ -91,6 +92,18 @@ def _generate_pack(
     prompt_set = prompt_client.load_prompt_set(PromptLoadRequest(schema_version="1.0", namespace=prompt_namespace), ctx)
     system_prompt = prompt_set.system.text
     user_prompt = prompt_set.user.text
+    resolved_model = resolve_model(prompt_namespace, getattr(settings, "openai_models", {}), settings.openai_model)
+    logger.info(log_event(
+        ctx,
+        role="generator",
+        event="model_resolved",
+        module=logger.name,
+        fields={
+            "namespace": prompt_namespace,
+            "resolved_model": resolved_model,
+            "default_model": settings.openai_model,
+        },
+    ))
     parsed_json = None
     not_found_reason = ""
     try:
@@ -100,7 +113,7 @@ def _generate_pack(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
                 vector_store_id=vector_store_id,
-                model=settings.openai_model,
+                model=resolved_model,
                 temperature=settings.temperature,
                 api_key=settings.openai_api_key,
                 seed=settings.openai_seed,
