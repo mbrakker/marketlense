@@ -88,6 +88,17 @@ A Service is the **only** place where the system touches the outside world.
 * Decide *when* to retry
 * Combine multiple external systems
 
+**Service consolidation (mandatory)**
+
+* One external system = one service module. Splitting the same system across multiple service modules is forbidden.
+* Thin wrappers that merely delegate to another service for the same system are violations; consolidate into one module.
+* Examples (current modules):
+
+  * PDF libraries MUST live in a single service (e.g., `pdf_service.py`), not `pdf_utils_service.py` + `pdf_text_service.py` + `pdf_context_service.py` + `pdf_contents_service.py` + `extract_service.py`.
+  * OpenAI access belongs in `openai_service.py` only; do not add `openai_*` service shards.
+  * Vector store access belongs in `vector_store_service.py` only; do not split indexing/query/deletion into separate services.
+  * WordPress access belongs in `wordpress_service.py` only.
+
 ---
 
 ### 1.3 Generators (Business / Domain Logic)
@@ -216,9 +227,9 @@ src/
 
 **Import rules**
 
-* `services` → contracts, utils
-* `generators` → services, contracts, utils
-* `orchestrators` → generators, services, contracts, utils
+* `services` -> contracts, utils
+* `generators` -> services, contracts, utils
+* `orchestrators` -> generators, services, contracts, utils
 * Reverse imports are forbidden.
 
 ---
@@ -409,10 +420,10 @@ These rules are **enforceable**.
 
 Violations:
 
-* Multiple roles in one module → **invalid design**
-* Missing logs → **incomplete implementation**
-* Prompt text in code → **hard violation**
-* Unrecoverable errors without notification → **bug**
+* Multiple roles in one module -> **invalid design**
+* Missing logs -> **incomplete implementation**
+* Prompt text in code -> **hard violation**
+* Unrecoverable errors without notification -> **bug**
 
 Coding agents:
 

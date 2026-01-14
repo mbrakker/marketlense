@@ -6,25 +6,23 @@
    - Prompt namespaces live under `src/prompts/**` (report_generation, report_vs/{doc_map,evidence_packs,artifacts,validate}, rank_candidates). Refresh wording, safety, and output formats; ensure variables match renderer usage in `prompt_service` and bump schema/version hashes for logging.
 3. Parallelize report processing.
    - `run_ingest` in `src/orchestrators/ingest_orchestrator.py` processes PDFs serially and blocks on OpenAI calls. Add bounded concurrency per file while keeping lock semantics, and preserve cost ledger/state-db writes without races.
-4. Combine redundant services to reduce excessive service proliferation.
-   - PDF I/O is split across `pdf_utils_service`, `pdf_text_service`, `pdf_context_service`, `pdf_contents_service`, and `extract_service` while using the same pypdf/fitz handles. Consolidate into a single PDF service per AGENTS rules (one external system per module) and refactor callers.
-5. Update `AGENTS.md`.
-   - Embed the service-consolidation rule above and align examples with current module names (PDF, OpenAI/vector store, WordPress). Clarify that thin wrappers and split services (e.g., multiple PDF modules) violate the constitution.
-6. Add categories/tags to vector store records.
+4. Consolidate services to match the service-consolidation rule.
+   - Merge PDF-related services into a single `pdf_service.py` and refactor callers; eliminate thin wrapper service shards for any single external system.
+5. Add categories/tags to vector store records.
    - Vector store metadata is empty/default; no taxonomy or tags from `ReportPayload`/category mappings are propagated. Include categories/regions/time_period as metadata on create/attach so queries can filter and deletion/reuse works by tag.
-7. Create a GUI.
+6. Create a GUI.
    - Only `src/cli.py` exists. Provide a minimal web/desktop UI to trigger ingest/publish, view progress logs, inspect artifacts, cost tables, and vector store status.
-8. Add vector store deletion support.
+7. Add vector store deletion support.
     - No delete API in `vector_store_service`; flag `vector_store_keep` is unused for cleanup. Add delete/prune operations (vector store + files) and orchestrator hooks to avoid orphaned stores.
-9. Define and enforce cost limits.
+8. Define and enforce cost limits.
     - Costs are tracked (`cost_ledger_path`, `cost_daily_path`, pricing in `app.yaml`) but not enforced. Add config thresholds (per-run/day) and guardrails in orchestrators before OpenAI calls, with blocking/warning behavior and logging.
-10. Refine HTML and deduplicate repeated blocks.
+9. Refine HTML and deduplicate repeated blocks.
     - `templates/report.html.j2` contains repeated preview/figure handling and inline styling. Extract reusable blocks/macros, de-duplicate preview/gallery logic, and ensure consistent metadata rendering to reduce drift.
-11. Refine figure candidates and ranker to avoid low-data images.
+10. Refine figure candidates and ranker to avoid low-data images.
     - Current figure selection relies on extracted candidates and ranking (see `figure_service`, `rank_service`, and `extract_service` plus cropping). Add an image analysis step (OCR/content density/heuristics) to filter low-text/low-chart pages, improve table/chart detection and cropping, and feed richer features into the ranker to reduce weak visuals.
-12. Add infographics creator for HTML design and LinkedIn posts.
+11. Add infographics creator for HTML design and LinkedIn posts.
     - Beyond text rendering, there is no infographic generation pipeline. Add a generator/service to produce simple infographics/hero visuals for HTML and LinkedIn artifacts, wired into rendering and artifact generation flows.
-13. Support multiple prompts per process for variations/expert roles.
+12. Support multiple prompts per process for variations/expert roles.
     - Today each step uses a single prompt set per namespace. Add a mechanism to run multiple prompt variants per step (e.g., different expert personas or stylistic variants), collect outputs, and select/ensemble or expose them, while keeping prompt logging/versioning intact.
 
 # Detailed Proposals
@@ -59,25 +57,18 @@
   - Multiple PDFs process concurrently without double-processing or lock conflicts.
   - Cost ledger and state DB are consistent after parallel runs.
 
-## 4. Combine redundant services to reduce excessive service proliferation
-- **Context**: PDF processing is split across `pdf_utils_service`, `pdf_text_service`, `pdf_context_service`, `pdf_contents_service`, and `extract_service` while sharing the same external PDF libraries.
+## 4. Consolidate services to match the service-consolidation rule
+- **Context**: PDF processing is split across `pdf_utils_service`, `pdf_text_service`, `pdf_context_service`, `pdf_contents_service`, and `extract_service` while sharing the same external PDF libraries. Thin wrapper service shards for a single external system violate the rule.
 - **Proposal**:
   - Consolidate all PDF I/O into a single PDF service module (e.g., `pdf_service`).
   - Move shared constants and path handling to that module; refactor callers in generators/orchestrators to use the consolidated API.
+  - Eliminate thin wrapper services for any single external system (OpenAI/vector store/WordPress).
   - Ensure logs remain structured with `role="service"` and consistent `module` names.
 - **Acceptance**:
-  - Only one PDF service module handles external PDF libraries.
+  - Only one service module handles each external system.
   - All PDF-related calls originate from the consolidated service API.
 
-## 5. Update `AGENTS.md`
-- **Context**: `AGENTS.md` describes architectural constraints but does not reference current module naming or consolidation requirements.
-- **Proposal**:
-  - Add a dedicated rule about avoiding split services for a single external system (e.g., PDF libraries, OpenAI/vector store, WordPress).
-  - Update examples and naming to reflect current modules in `src/services/*`.
-- **Acceptance**:
-  - `AGENTS.md` explicitly calls out service consolidation and current module examples.
-
-## 6. Add categories/tags to vector store records
+## 5. Add categories/tags to vector store records
 - **Context**: Vector store metadata does not include report taxonomy, so filtering and cleanup cannot use categories.
 - **Proposal**:
   - Add metadata fields (`categories`, `regions`, `time_period`) derived from `ReportPayload` and category mapping outputs.
@@ -86,7 +77,7 @@
 - **Acceptance**:
   - Vector store records include taxonomy metadata and are queryable by tag.
 
-## 7. Create a GUI
+## 6. Create a GUI
 - **Context**: Only `src/cli.py` exists for interaction; no UI is available.
 - **Proposal**:
   - Implement a minimal web UI (FastAPI + simple frontend or Streamlit) under `src/gui` or `src/orchestrators` with a dedicated service.
@@ -96,7 +87,7 @@
   - UI can launch ingest/publish and show task status for a run.
   - Artifacts and cost tables are browsable from the UI.
 
-## 8. Add vector store deletion support
+## 7. Add vector store deletion support
 - **Context**: No delete/prune API exists in `vector_store_service`; `vector_store_keep` is unused for cleanup.
 - **Proposal**:
   - Add delete operations in `vector_store_service` and wire them into orchestrators when `vector_store_keep` is false.
@@ -106,7 +97,7 @@
   - Orphaned vector stores are cleaned up when configured.
   - Logs confirm deletion operations with IDs.
 
-## 9. Define and enforce cost limits
+## 8. Define and enforce cost limits
 - **Context**: Costs are tracked in `cost_ledger_path`/`cost_daily_path` but there are no guardrails.
 - **Proposal**:
   - Add config thresholds in `app.yaml` (per-run and per-day) and surface them in `AppSettings`.
@@ -116,7 +107,7 @@
   - Runs stop or warn when crossing configured cost limits.
   - Logs show thresholds and current spend when a block occurs.
 
-## 10. Refine HTML and deduplicate repeated blocks
+## 9. Refine HTML and deduplicate repeated blocks
 - **Context**: `templates/report.html.j2` has repeated preview/figure handling and inline styling.
 - **Proposal**:
   - Extract Jinja macros/partials for repeated preview/figure blocks.
@@ -126,7 +117,7 @@
   - HTML template no longer duplicates preview/gallery logic.
   - Metadata block renders consistently across sections.
 
-## 11. Refine figure candidates and ranker to avoid low-data images
+## 10. Refine figure candidates and ranker to avoid low-data images
 - **Context**: Figure selection relies on `figure_service`, `rank_service`, and `extract_service`, but low-signal images slip through.
 - **Proposal**:
   - Add an image quality filter (OCR density, chart/table heuristics, minimum text coverage).
@@ -136,7 +127,7 @@
   - Candidate set excludes low-content images and prioritizes meaningful charts.
   - Ranking inputs include explicit quality features.
 
-## 12. Add infographics creator for HTML design and LinkedIn posts
+## 11. Add infographics creator for HTML design and LinkedIn posts
 - **Context**: No pipeline exists for generating infographic assets beyond text artifacts.
 - **Proposal**:
   - Add a generator/service pair to create infographic assets (SVG/PNG) from report highlights.
@@ -146,7 +137,7 @@
   - Infographic assets are created and referenced in HTML/LinkedIn outputs.
   - Artifacts are logged and stored with report metadata.
 
-## 13. Support multiple prompts per process for variations/expert roles
+## 12. Support multiple prompts per process for variations/expert roles
 - **Context**: Each step uses one prompt namespace; no multi-prompt selection exists.
 - **Proposal**:
   - Add configuration for multiple prompt variants per namespace.
