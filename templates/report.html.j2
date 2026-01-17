@@ -69,6 +69,14 @@ code{background:#f5f5f5;padding:.1rem .3rem;border-radius:4px}
   {% if data.time_period %}
   <p><strong>Time period:</strong> {{ data.time_period }}</p>
   {% endif %}
+  {% if data.categories_display is defined and data.categories_display %}
+  <p><strong>Categories:</strong> {{ data.categories_display | join(", ") }}</p>
+  {% elif data.categories and data.categories|length > 0 %}
+  <p><strong>Categories:</strong> {{ data.categories | join(", ") }}</p>
+  {% endif %}
+  {% if data.taxonomy and data.taxonomy|length > 0 %}
+  <p><strong>Tags:</strong> {{ data.taxonomy | join(", ") }}</p>
+  {% endif %}
   </div>
   {% endif %}
 

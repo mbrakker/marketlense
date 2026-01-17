@@ -1,0 +1,16 @@
+text: |
+  Report title: {{ report_title }}
+
+  Task:
+  Use file_search to identify the report's primary taxonomy tags, its main region/market focus, and the primary time period covered.
+
+  Allowed tags (use exact strings where applicable):
+  {{ allowed_tags_json }}
+
+  Return a JSON object:
+  {
+    "schema_version": "1.0",
+    "taxonomy": ["tag1", "tag2", "..."],
+    "region": "Region name or empty string",
+    "time_period": "Time period or empty string"
+  }

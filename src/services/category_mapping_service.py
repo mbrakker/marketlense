@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import re
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Set, Tuple
@@ -53,7 +55,9 @@ def _clean_tags(tags: List[str]) -> List[str]:
 
 
 def _norm_tag(tag: str) -> str:
-    return tag.strip().lower().replace(" ", "_")
+    normalized = unicodedata.normalize("NFKC", tag).strip().lower()
+    normalized = re.sub(r"[\\W]+", "_", normalized)
+    return normalized.strip("_")
 
 
 def load_mappings(request: CategoryMappingLoadRequest, ctx: RunContext) -> CategoryMappingLoadResponse:

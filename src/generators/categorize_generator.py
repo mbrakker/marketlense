@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import re
+import unicodedata
 from collections import defaultdict
 from typing import Dict, List
 
@@ -76,7 +78,9 @@ def categorize_taxonomy(
 
 
 def _norm_tag(tag: str) -> str:
-    return tag.strip().lower().replace(" ", "_")
+    normalized = unicodedata.normalize("NFKC", tag).strip().lower()
+    normalized = re.sub(r"[\\W]+", "_", normalized)
+    return normalized.strip("_")
 
 
 def _category_label(cat_id: str, defs: Dict[str, CategoryDefinition]) -> str:

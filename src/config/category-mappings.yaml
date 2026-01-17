@@ -129,6 +129,19 @@ categories:
   - innovation
   - smart_cameras
   - ar_vr
+  - ai_infrastructure
+  - ai_and_productivity
+  - data_centers
+  - data_centres
+  - edge_ai
+  - hybrid_cloud
+  - robotics
+  - cybersecurity
+  - smart_home
+  - home_automation
+  - domestic_robots
+  - physical_ai
+  - Innovation and experimentation
 - id: retail_logistics
   label: Retail Logistics & Fulfillment
   description: Inventory, warehousing, last-mile delivery, and omnichannel fulfillment
@@ -180,6 +193,37 @@ categories:
   - shopper_journey
   - ratings_and_reviews
   - price_comparison
+  - online_usage
+  - messaging_apps
+  - consumer_trends
+  - consumer_trust
+  - spending_behavior
+  - cost_of_living
+  - public_sentiment
+  - uk_consumers
+  - consumer_sentiment
+  - institutional_trust
+  - trust
+  - brand_loyalty
+  - purchase_anxiety
+  - value_perception
+  - personalization
+  - sensory_experience
+  - experience_economy
+  - luxury_spending
+  - home_trends
+  - home_decor
+  - mens_fashion
+  - accessories
+  - food_trends
+  - positive_masculinity
+  - spirituality
+  - astrology_and_tarot
+  - astrology_tarot
+  - awe_and_wonder
+  - family_life
+  - 'Consumer trend: treatonomics'
+  - government_sentiment
 - id: business_performance
   label: Business Performance & Growth
   description: Revenue growth, profitability, and commercial performance metrics and
@@ -196,6 +240,45 @@ categories:
   - gmv_concentration
   - gmv
   - revenue_mix
+  - brand_growth
+  - penetration
+  - global_ranking
+  - consumer_reach_points
+  - retail_sales
+  - fmcg
+- id: macroeconomics
+  label: Macroeconomics & Regional Outlooks
+  description: Macro indicators, regional outlooks, and policy-driven market dynamics.
+  tags:
+  - macroeconomic_outlook
+  - gdp_growth
+  - interest_rates
+  - labor_market
+  - productivity
+  - economic_dynamism
+  - regulation_reform
+  - regulatory_policy
+  - risk_management
+  - risk_assessment
+  - country_forecasts
+  - country_analysis
+  - european_economy
+  - commercial_real_estate
+  - office_demand
+  - digital_economy
+  - uk_market
+- id: healthcare
+  label: Healthcare Systems & Outcomes
+  description: Health system performance, spending, and population outcomes.
+  tags:
+  - health_system_performance
+  - gender_and_health
+  - health_expenditure
+  - access_and_quality
+  - risk_factors
+  - international_benchmarking
+  - population_health
+  - quality_of_care
 - id: agentic_commerce
   label: Agentic Commerce & Shopping Automation
   description: Autonomous shopping agents, AI-assisted buying journeys, and automated
@@ -216,6 +299,7 @@ categories:
   tags:
   - omnichannel
   - cross_channel
+  - cross_channel_integration
   - integrated_marketing
   - customer_journey
   - channel_orchestration
@@ -240,6 +324,32 @@ categories:
   - consumer_internet
   - sports_betting
   - internet_and_media
+  - ad_equity
+  - ad_receptivity
+  - media_receptivity
+  - apac_media
+  - genai_sentiment
+  - genai_in_advertising
+  - digital_ad_spend
+  - media_quality
+  - brand_experience
+  - brand_strategy
+  - Brand building and marketing effectiveness
+  - creative_strategy
+  - creative_breakthrough
+  - experiential_marketing
+  - irl_experiences
+  - authenticity
+  - polarization
+  - cultural_polarization
+  - ai_in_marketing
+  - inclusive_marketing
+  - Inclusive marketing and brand inclusion
+  - engagement
+  - engagement_strategy
+  - contextual_offers
+  - Creative optimisation with AI
+  - data_activation
 - id: retail_media
   label: Retail & Commerce Media
   description: Retailer-owned ad networks and commerce monetization.
@@ -251,6 +361,7 @@ categories:
   - onsite_ads
   - offsite_media
   - retail_data
+  - Retail media networks and shoppable ads
 - id: connected_tv
   label: Connected TV & Streaming
   description: CTV, streaming video, and ad-supported OTT/FAST inventory.
@@ -275,6 +386,7 @@ categories:
   - virtual_pay_tv
   - svod
   - podcasting
+  - digital_video
 - id: measurement_attribution
   label: Measurement & Attribution
   description: Performance measurement, incrementality, and optimization.
@@ -294,6 +406,7 @@ categories:
   - market_forecast
   - forecasts
   - growth_forecast
+  - data_optimization
 - id: privacy_identity
   label: Privacy, Identity & Data
   description: Identity resolution, data collaboration, and compliance.
@@ -310,6 +423,8 @@ categories:
   - cookieless
   - content_licensing
   - advertising_identity
+  - age_assurance
+  - vpn_behavior
 - id: ai_automation
   label: AI & Automation
   description: AI-driven optimization, copilots, and workflow automation.
@@ -321,6 +436,12 @@ categories:
   - predictive_modeling
   - copilots
   - llm
+  - ai_agents
+  - agentic_ai
+  - ai_growth
+  - Generative AI and AI agents
+  - synthetic_data
+  - Synthetic data and augmented audiences
 - id: omnichannel_commerce
   label: Omnichannel Commerce
   description: Ecommerce, in-store digital, and shopper experience.
@@ -339,6 +460,8 @@ categories:
   - enhanced_content
   - holiday_shopping
   - uk_retail
+  - ai_in_retail
+  - private_label
 - id: programmatic_ad_tech
   label: Programmatic & Ad Tech
   description: Buying platforms, exchanges, and supply-path optimization.
@@ -351,6 +474,7 @@ categories:
   - brand_safety
   - supply_path_optimization
   - spo
+  - programmatic_advertising
 - id: social_video_creator
   label: Social, Short Video & Creator
   description: Social platforms, creator economy, and short-form video.
@@ -374,6 +498,11 @@ categories:
   - video_gaming
   - mobile_gaming
   - franchise_ip
+  - creator_marketing
+  - Creator economy and creator-led content
+  - Micro-communities and social engagement
+  - vertical_video
+  - game_development
 - id: search_performance
   label: Search & Performance Marketing
   description: Paid search, performance media, and optimization tactics.
@@ -397,204 +526,34 @@ categories:
   - joint_business_plans
   - organizational_transformation
   - automation_and_ai
-uncategorized:
-- title: Online Nation 2025
-  tags:
-  - online_usage
-  - messaging_apps
-  - age_assurance
-  - vpn_behavior
-- title: 'Health at a Glance 2025: OECD indicators'
-  tags:
-  - health_system_performance
-  - gender_and_health
-  - health_expenditure
-  - access_and_quality
-  - risk_factors
-  - international_benchmarking
-  - population_health
-  - quality_of_care
-- title: United States Outlook 2026
-  tags:
-  - ai_growth
-  - data_centers
-  - commercial_real_estate
-  - interest_rates
-  - labor_market
-  - gdp_growth
-- title: 'On the horizon 2026: home and family trends'
-  tags:
-  - home_trends
-  - positive_masculinity
-  - spirituality
-  - smart_home
-  - domestic_robots
-- title: European outlook 2026
-  tags:
-  - commercial_real_estate
-  - european_economy
-  - ai_and_productivity
-  - data_centres
-  - interest_rates
-  - office_demand
-- title: '2026 food trends: what''s next in dining'
-  tags:
-  - food_trends
-  - personalization
-  - value_perception
-  - sensory_experience
-- title: '2026 UK consumer trends: the trust deficit'
-  tags:
-  - consumer_trust
-  - spending_behavior
-  - cost_of_living
-  - uk_market
-  - public_sentiment
-  - uk_consumers
-  - brand_loyalty
-  - consumer_sentiment
-  - institutional_trust
-- title: 'Tech trends 2026: from experimentation to impact'
-  tags:
-  - ai_infrastructure
-  - agentic_ai
-  - robotics
-  - cybersecurity
-  - edge_ai
-- title: '2026 marketing playbook: AI agents, retail media and inclusive growth'
-  tags:
-  - ai_agents
-  - generative_engine_optimisation
-  - synthetic_data
-  - creator_marketing
-  - inclusive_marketing
-- title: 'Brand Footprint 2025: winning the 50:50 game'
-  tags:
-  - fmcg
-  - brand_growth
-  - penetration
-  - consumer_reach_points
-  - global_ranking
-- title: APAC media receptivity and ad equity in 2025
-  tags:
-  - ad_equity
-  - media_receptivity
-  - genai_sentiment
-  - apac_media
-- title: 'Media Reactions 2025: global media preferences and 2026 planning'
-  tags:
-  - ad_receptivity
-  - cross_channel_integration
-  - genai_in_advertising
-- title: '2026 predictions: consumer trends shaping the marketing landscape'
-  tags:
-  - consumer_trends
-  - engagement
-  - brand_experience
-  - creative_strategy
-  - purchase_anxiety
-  - engagement_strategy
-  - experiential_marketing
-  - creative_breakthrough
-  - conversion_optimization
-- title: 'Retail trends 2026: five forces reshaping the retail landscape'
-  tags:
-  - experience_economy
-  - private_label
-  - consumer_trust
-  - contextual_offers
-  - ai_in_retail
-  - luxury_spending
-  - retail_sales
-- title: 'State of Brand 2026: branding at the edge in the dichotomy economy'
-  tags:
-  - brand_strategy
-  - data_activation
-  - cultural_polarization
-  - irl_experiences
-- title: 'OECD Economic Outlook December 2025: resilient growth with rising fragilities'
-  tags:
-  - macroeconomic_outlook
-  - productivity
-  - regulation_reform
-  - economic_dynamism
-  - risk_management
-  - country_forecasts
-- title: 2026 industry pulse report, UK edition
-  tags:
-  - digital_video
-  - programmatic_advertising
-  - media_quality
-- title: Six predictions for 2026 across AI and gaming
-  tags:
-  - vertical_video
-  - app_downloads
-  - digital_ad_spend
-  - traffic_acquisition
-- title: 'Pinterest Predicts 2026: global trend forecast'
-  tags:
-  - consumer_trends
-  - home_decor
-  - mens_fashion
-  - accessories
   - search_insights
-- title: 'On the Horizon 2026: home and family trends'
-  tags:
-  - domestic_robots
-  - home_automation
-  - positive_masculinity
-  - astrology_and_tarot
-  - family_life
-- title: 'On the horizon: home and family trends for 2026'
-  tags:
-  - home_trends
-  - positive_masculinity
-  - astrology_tarot
-  - smart_home
-  - domestic_robots
-  - awe_and_wonder
-- title: 'On the horizon: home and family in 2026'
-  tags:
-  - positive_masculinity
-  - spirituality
-  - astrology_and_tarot
-  - domestic_robots
-  - physical_ai
-  - home_trends
-- title: 'UK consumer trends 2026: the trust deficit'
-  tags:
-  - consumer_trends
-  - trust
-  - cost_of_living
-  - government_sentiment
-- title: 'Tech trends 2026: moving from experimentation to impact'
-  tags:
-  - agentic_ai
-  - robotics
-  - ai_infrastructure
-  - hybrid_cloud
-  - cybersecurity
-- title: 'Branding at the edge: the 2026 state of brand'
-  tags:
-  - brand_strategy
-  - polarization
-  - ai_in_marketing
-  - data_optimization
-  - authenticity
-- title: 'OECD economic outlook: resilient growth with increasing fragilities'
-  tags:
-  - macroeconomic_outlook
-  - productivity
-  - regulatory_policy
-  - risk_assessment
-  - country_analysis
-- title: '2026 industry pulse: UK digital media outlook'
-  tags:
-  - digital_video
-  - media_quality
-- title: Six predictions for 2026 in the digital economy
-  tags:
-  - vertical_video
+  - generative_engine_optimisation
+  - Generative Engine Optimisation (GEO)
+  - conversion_optimization
+  - traffic_acquisition
   - web_traffic
-  - game_development
-  - digital_economy
+  - app_downloads
+uncategorized:
+- title: WORLDPANEL - Brand-footprint-2025 - ACIG
+  tags:
+  - Fast-Moving Consumer Goods (FMCG)
+  - Brand Footprint and Global Brand Ranking
+  - Consumer Reach Points (CRP) metric
+  - Penetration and Shopper Recruitment
+  - Brand Growth Strategy
+  - Product Innovation and Occasion Expansion
+  - Regional Market Performance Analysis
+  - Top 50 Most Chosen Brands
+  - Data Collection and Panel Methodology
+- title: KANTAR - Media Reactions 2025 APAC Webinar Deck_ACIG
+  tags:
+  - Ad equity and brand lift measurement
+  - Media channels performance
+  - Media brand ad equity
+  - Consumer ad receptivity
+  - Marketer preferences and budget allocation
+  - Digital Out of Home (DOOH)
+  - Video and streaming advertising
+  - Social media advertising
+  - E-commerce and retail media advertising
+  - Generative AI in advertising

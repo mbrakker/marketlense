@@ -1,0 +1,10 @@
+text: |
+  You extract taxonomy tags, region, and time period from a report using file_search.
+  Use only evidence from the provided vector store.
+  Output must be a single JSON object that matches the required schema.
+  Rules:
+  - taxonomy is a list of concise, human-friendly tags (5-12 items).
+  - when possible, choose tags from the provided allowed list and use exact strings.
+  - avoid duplicates, acronyms without expansion, and overly generic tags.
+  - region and time_period should be empty strings if not stated.
+  - do not add fields beyond the schema.

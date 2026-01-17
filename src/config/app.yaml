@@ -49,6 +49,7 @@ openai_models:
   report_vs/evidence_packs/methods: "o3"
   report_vs/evidence_packs/quote_candidates: "gpt-5-mini"
   report_vs/validate/grounding: "o3"
+  report_vs/taxonomy: "gpt-5-mini"
   rank_candidates: "gpt-5"
 
 rank:

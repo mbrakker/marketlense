@@ -17,6 +17,7 @@ Key traits:
 - Built-in validation: semantic checks plus LLM grounding with persisted reports and publish-time policy controls.
 - Low-text resilience: text density heuristics detect PDFs with little/no extractable text and emit explicit "not available from text" artifacts + HTML notices instead of blank sections.
 - Vector store is the default and only analysis path; legacy local_text prompt stuffing has been removed now that vector_store is validated.
+- Taxonomy extraction uses vector store retrieval and maps tags to categories; tags and categories are rendered in the HTML metadata block.
 
 ---
 
@@ -62,6 +63,7 @@ Per-step model selection (new):
 - Vector store: `analysis.vector_store_keep` (`VECTOR_STORE_KEEP`, default `true`) controls whether to retain caches between runs. Analysis always uses the vector_store path; compare toggles are legacy/ignored.
 - Cost tracking: `analysis.cost_ledger_path` (`COST_LEDGER_PATH`, default `./out/cost-ledger.jsonl`), `cost.daily_path` (default `./out/cost-daily.json`), `cost.pricing` (per-model pricing map used by `utils.costing`).
 - Validation: `ingest.validation.data_gap_policy` (default `warn`) controls whether missing evidence/text gaps downgrade errors to warnings; `publish.validation.policy` (`PUBLISH_VALIDATION_POLICY`, default `block`; set to `warn` to allow publish with issues).
+- Taxonomy extraction: set `openai_models.report_vs/taxonomy` to override the tag/region/time period extractor.
 
 Secrets (env only):
 - `OPENAI_API_KEY` (required)
@@ -71,6 +73,7 @@ Secrets (env only):
 Prompt locations:
 - Vector store evidence packs: `src/prompts/report_vs/**` (`doc_map/`, `evidence_packs/{scope,methods,findings,limitations,quote_candidates}/`)
 - Artifact generation: `src/prompts/report_vs/artifacts/**` (toc, summary, insights candidates/final, quotes, expert comment, LinkedIn post)
+- Taxonomy extraction: `src/prompts/report_vs/taxonomy/`
 Prompts are YAML (system/user), hashed and logged by `src/services/prompt_service.py`.
 
 ---
@@ -105,9 +108,10 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
      - **PDF context**: `pdf_context_service.build_pdf_context` opens PyMuPDF and pypdf handles once; downstream services reuse them and fall back to local opens if unavailable.
      - **Contents/index detection**: scans the first pages for a contents/index section, renders a screenshot when found, and records the page number for HTML + DB output.
      - **Text extraction**: `pdf_text_service` extracts text from the first N pages (reusing the shared context when present) and computes text density; if density falls below `ingest.pdf_text.min_density`, downstream artifacts short-circuit to explicit “not available from text” placeholders with HTML notices.
-- **LLM analysis**:
-  - `vector_store` mode (only path): Ensures a vector store exists (create → upload PDF → attach → wait for indexing via `vector_store_service`), then calls `openai_service.openai_respond_with_vector_store` (Responses API + file search). Evidence packs are generated via `src/generators/evidence_pack_generator.py` (doc_map, scope, methods, findings, limitations, quote_candidates), stored under `out/report_analysis/<file_id>/*.json`, and persisted in the metadata DB (`reports` table columns `vector_store_id`, `evidence_packs_json`; state DB stores `vector_store_status`, `indexed_at_utc`, `openai_file_id`, `last_error`). Orchestrator logs `VECTOR_STORE_CREATED`, `VECTOR_STORE_INDEXED`, `EVIDENCE_READY`.
-  - **Validation**: `src/generators/validation_generator.py` runs semantic checks (metrics vs evidence, quotes verbatim, no new numbers in expert/LinkedIn) and LLM grounding (`src/prompts/report_vs/validate/grounding`). Results are stored at `out/report_analysis/<file_id>/validation*.json`, added to the rendered payload, and logged. When `ingest.validation.data_gap_policy` is `warn`, evidence/text gaps downgrade to warnings instead of failing the run.
+     - **LLM analysis**:
+       - `vector_store` mode (only path): Ensures a vector store exists (create -> upload PDF -> attach -> wait for indexing via `vector_store_service`), then calls `openai_service.openai_respond_with_vector_store` (Responses API + file search). Evidence packs are generated via `src/generators/evidence_pack_generator.py` (doc_map, scope, methods, findings, limitations, quote_candidates), stored under `out/report_analysis/<file_id>/*.json`, and persisted in the metadata DB (`reports` table columns `vector_store_id`, `evidence_packs_json`; state DB stores `vector_store_status`, `indexed_at_utc`, `openai_file_id`, `last_error`). Orchestrator logs `VECTOR_STORE_CREATED`, `VECTOR_STORE_INDEXED`, `EVIDENCE_READY`.
+       - Taxonomy extraction: `src/generators/taxonomy_generator.py` uses `src/prompts/report_vs/taxonomy/` to extract tags/regions/time_period from the vector store; tags map to categories and persist to the reports DB and HTML.
+     - **Validation**: `src/generators/validation_generator.py` runs semantic checks (metrics vs evidence, quotes verbatim, no new numbers in expert/LinkedIn) and LLM grounding (`src/prompts/report_vs/validate/grounding`). Results are stored at `out/report_analysis/<file_id>/validation*.json`, added to the rendered payload, and logged. When `ingest.validation.data_gap_policy` is `warn`, evidence/text gaps downgrade to warnings instead of failing the run.
      - **Normalization**: `normalize_generator` enforces strict schema and list sizing.
      - **Categorization**: taxonomy tags are scored against `src/config/category-mappings.yaml`; top 3 categories are stored and rendered, and unmapped tags are appended under `uncategorized` in that YAML.
      - **Figure selection**: `figure_service` selects a representative visual and caption.
@@ -203,7 +207,8 @@ Prompts are rendered with Jinja2 (`{{ variable }}`), loaded and hashed by `src/s
 ## Category mappings
 
 - Source of truth: `src/config/category-mappings.yaml` (versioned by `schema_version`).
-- Scoring: each matched tag adds +1 to a category; top 3 categories are assigned to the report and stored in the metadata DB; categories sync to WordPress posts but are not rendered in HTML.
+- Scoring: each matched tag adds +1 to a category; top 3 categories are assigned to the report, stored in the metadata DB, rendered in HTML metadata, and synced to WordPress posts.
+- Taxonomy prompt: allowed tags from the mappings are provided to `src/prompts/report_vs/taxonomy/`; unmapped tags are appended under `uncategorized` for review.
 - Maintenance: add categories with `id` (snake_case), `label`, `description`, and a focused `tags` list (lowercase, snake_case). Place new entries at the top to keep recent taxonomies visible.
 - Current taxonomy highlights: `digital_payments`, `retail_logistics`, `consumer_behavior`, `business_performance`, `agentic_commerce`, plus existing advertising, commerce, CTV, social video, and measurement tracks.
 - Unmapped handling: uncategorized tags are removed once mapped; if new tags appear, run `python -m src.cli recategorize` to refresh assignments and prune stale uncategorized entries.
@@ -238,6 +243,7 @@ Location: `src/schemas/`
 - `evidence_pack.schema.json`: permissive; accepts optional/empty `scope`, `methods`, `findings`, `limitations`, and `quote_candidates` with nullable fields and extra properties.
 - `artifacts.schema.json`: artifacts/toc/summary/insights/quotes/expert_comment/linkedin payload shape.
 - `validation_report.schema.json`: structure for validation results.
+- `taxonomy.schema.json`: taxonomy extractor response schema for tags/regions/time_period.
 
 Schema validation is performed by `src/utils/schema_validator.py` and logged per pack.
 

@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TaxonomyExtraction",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["taxonomy", "region", "time_period"],
+  "properties": {
+    "schema_version": { "type": ["string", "null"] },
+    "taxonomy": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "region": { "type": ["string", "null"] },
+    "time_period": { "type": ["string", "null"] },
+    "not_found_reason": { "type": ["string", "null"] }
+  }
+}
