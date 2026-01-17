@@ -24,6 +24,8 @@
     - Beyond text rendering, there is no infographic generation pipeline. Add a generator/service to produce simple infographics/hero visuals for HTML and LinkedIn artifacts, wired into rendering and artifact generation flows.
 12. Support multiple prompts per process for variations/expert roles.
     - Today each step uses a single prompt set per namespace. Add a mechanism to run multiple prompt variants per step (e.g., different expert personas or stylistic variants), collect outputs, and select/ensemble or expose them, while keeping prompt logging/versioning intact.
+13. Fix publish config validation logic.
+    - `load_publish_settings` references an undefined `missing` list and normalizes `site_url` before validation, which causes crashes or silent misconfigurations. Use the resolver’s `missing` list consistently and only normalize after validating inputs.
 
 # Detailed Proposals
 
@@ -147,3 +149,13 @@
 - **Acceptance**:
   - Multiple prompt variants can be run per step and results are captured.
   - Selection logic is logged with variant identifiers.
+
+## 13. Fix publish config validation logic
+- **Context**: `load_publish_settings` references an undefined `missing` list and normalizes `site_url` before checking for missing values, leading to `NameError` or `AttributeError` and missed config validation.
+- **Proposal**:
+  - Replace `missing.append(...)` with `resolver.missing.append(...)`.
+  - Only call `_normalize_site_url` after confirming `site_url` is present.
+  - Add a small unit test to ensure missing WP config yields a clean error instead of a crash.
+- **Acceptance**:
+  - Missing WordPress config is reported via the standard missing list.
+  - No `NameError`/`AttributeError` occurs when `site_url` or credentials are absent.
