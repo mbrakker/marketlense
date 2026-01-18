@@ -12,6 +12,7 @@ from src.contracts.validation import ValidationReport
 from src.contracts.report_assets import RenderResponse
 from src.generators import report_generator as rg
 from src.orchestrators import ingest_orchestrator as orch
+from src.contracts.taxonomy import TaxonomyExtractResponse
 
 
 def _ingest_settings(tmp_path):
@@ -61,22 +62,22 @@ def test_ensure_vector_store_creates_and_waits(monkeypatch, tmp_path):
     monkeypatch.setattr(
         rg.vector_store_service,
         "create_vector_store",
-        lambda report_id, metadata, ctx: calls.append("create") or SimpleNamespace(vector_store_id="vs_123"),
+        lambda req, ctx: calls.append("create") or SimpleNamespace(vector_store_id="vs_123"),
     )
     monkeypatch.setattr(
         rg.vector_store_service,
         "upload_file",
-        lambda path, ctx: calls.append("upload") or SimpleNamespace(openai_file_id="file_upload_1"),
+        lambda req, ctx: calls.append("upload") or SimpleNamespace(openai_file_id="file_upload_1"),
     )
     monkeypatch.setattr(
         rg.vector_store_service,
         "attach_file",
-        lambda vector_store_id, file_id, ctx: calls.append("attach") or None,
+        lambda req, ctx: calls.append("attach") or None,
     )
     monkeypatch.setattr(
         rg.vector_store_service,
         "wait_until_indexed",
-        lambda vector_store_id, ctx, timeout_s, poll_interval_s: calls.append("wait")
+        lambda req, ctx: calls.append("wait")
         or SimpleNamespace(status="completed", indexed_at_utc="2024-01-01T00:00:00Z", last_error=None),
     )
     vector_store_id, openai_file_id, status, indexed_at_utc, last_error = rg._ensure_vector_store(
@@ -161,10 +162,10 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
     ctx = RunContext(schema_version="1.0", run_id="run-vs", task_id="task-vs", span_id="span-vs")
 
     monkeypatch.setattr(rg.state_service, "get", lambda req, ctx: None)
-    monkeypatch.setattr(rg.vector_store_service, "create_vector_store", lambda file_id, meta, ctx: SimpleNamespace(vector_store_id="vs_new") if vector_calls.append(("create", file_id)) is None else SimpleNamespace(vector_store_id="vs_new"))
-    monkeypatch.setattr(rg.vector_store_service, "upload_file", lambda path, ctx: SimpleNamespace(openai_file_id="file_upload") if vector_calls.append(("upload", path)) is None else SimpleNamespace(openai_file_id="file_upload"))
-    monkeypatch.setattr(rg.vector_store_service, "attach_file", lambda vector_store_id, file_id, ctx: vector_calls.append(("attach", vector_store_id, file_id)))
-    monkeypatch.setattr(rg.vector_store_service, "wait_until_indexed", lambda vector_store_id, ctx, timeout_s, poll_interval_s: vector_calls.append(("wait", timeout_s)) or SimpleNamespace(status="completed", indexed_at_utc="2024-01-01T00:00:00Z", last_error=None))
+    monkeypatch.setattr(rg.vector_store_service, "create_vector_store", lambda req, ctx: SimpleNamespace(vector_store_id="vs_new") if vector_calls.append(("create", req.name)) is None else SimpleNamespace(vector_store_id="vs_new"))
+    monkeypatch.setattr(rg.vector_store_service, "upload_file", lambda req, ctx: SimpleNamespace(openai_file_id="file_upload") if vector_calls.append(("upload", req.vector_store_id, req.file_path)) is None else SimpleNamespace(openai_file_id="file_upload"))
+    monkeypatch.setattr(rg.vector_store_service, "attach_file", lambda req, ctx: vector_calls.append(("attach", req.vector_store_id, req.openai_file_id)))
+    monkeypatch.setattr(rg.vector_store_service, "wait_until_indexed", lambda req, ctx: vector_calls.append(("wait", req.timeout_s, req.poll_interval_s)) or SimpleNamespace(status="completed", indexed_at_utc="2024-01-01T00:00:00Z", last_error=None))
     monkeypatch.setattr(rg, "extract_pdf_info", lambda req, ctx: SimpleNamespace(schema_version="1.0", path=req.path, page_count=1, metadata={"k": "v"}))
     monkeypatch.setattr(rg, "build_pdf_context", lambda req, ctx: SimpleNamespace(schema_version="1.0", context=SimpleNamespace(fitz_doc=None, pypdf_reader=None, close=lambda: None), fitz_error=None, pypdf_error=None))
     monkeypatch.setattr(rg, "detect_contents_page_service", lambda req, ctx: SimpleNamespace(schema_version="1.0", path=req.path, has_contents=False, page_index=-1, page_number=0, heading="", confidence=0.0))
@@ -175,6 +176,8 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
     monkeypatch.setattr(rg, "extract_best_figure_service", lambda req, ctx: SimpleNamespace(image_path=None, caption=None))
     monkeypatch.setattr(rg, "collect_candidates_service", lambda req, ctx: SimpleNamespace(candidates=[]))
     monkeypatch.setattr(rg, "render_preview_service", lambda req, ctx: SimpleNamespace(schema_version="1.1", image_path=str(tmp_path / "preview.png"), page_number=0))
+    monkeypatch.setattr(rg, "extract_taxonomy", lambda req, ctx: TaxonomyExtractResponse(schema_version="1.0", taxonomy=["tag"], region="US", time_period="2024"))
+    monkeypatch.setattr(rg.vector_store_service, "update_metadata", lambda req, ctx: None)
 
     def _fake_evidence(report_id, vector_store_id, settings, ctx, **kwargs):
         assert settings.openai_timeout_seconds == 3600.0
@@ -188,7 +191,16 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
         }
 
     monkeypatch.setattr(rg, "generate_evidence_packs", _fake_evidence)
-    monkeypatch.setattr(rg, "generate_artifacts", lambda report_id, doc_map, evidence_packs, settings, vector_store_id=None, source_status=None, ctx=None: {"summary": {"tldr": "tldr", "executive_summary": "exec"}, "insights_final": [{"text": "insight"}], "quotes_final": [{"text": "qt", "speaker": "sp"}]})
+    def _fake_artifacts(report_id, doc_map, evidence_packs, settings, vector_store_id=None, source_status=None, ctx=None):
+        payload = {
+            "summary": {"tldr": "tldr", "executive_summary": "exec"},
+            "insights_final": [{"text": "insight"}],
+            "quotes_final": [{"text": "qt", "speaker": "sp"}],
+        }
+        rg.report_analysis_store_service.store_pack(settings.output_dir, report_id, "artifacts", payload, ctx)
+        return payload
+
+    monkeypatch.setattr(rg, "generate_artifacts", _fake_artifacts)
     monkeypatch.setattr(rg.report_analysis_store_service, "store_pack", lambda output_dir, report_id, pack_name, payload, ctx: analysis_store.append((pack_name, payload)) or str(tmp_path / "report_analysis" / report_id / f"{pack_name}.json"))
 
     def _fake_validation(req, settings, ctx, pack_name="validation"):

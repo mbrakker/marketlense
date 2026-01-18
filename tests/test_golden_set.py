@@ -8,7 +8,6 @@ import pytest
 from src.contracts.categories import CategoryAssignment, CategoryMappings, CategoryMappingLoadResponse, CategoryDefinition
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestSettings
-from src.contracts.openai import OpenAIAnalyzeResponse
 from src.contracts.pdf_context import PdfContext, PdfContextBuildResponse
 from src.contracts.pdf_contents import PdfContentsDetectionResponse
 from src.contracts.pdf_text import PdfTextExtractResponse
@@ -23,6 +22,7 @@ from src.contracts.report_assets import (
 from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.run_context import RunContext
 from src.generators.report_generator import generate_report
+from src.contracts.taxonomy import TaxonomyExtractResponse
 from src.contracts.validation import ValidationReport
 
 
@@ -188,22 +188,6 @@ def test_golden_reports_regression(tmp_path: Path, monkeypatch: pytest.MonkeyPat
         def fake_render_prompt(request, ctx):
             return PromptRenderResponse(schema_version="1.0", text=request.template.text)
 
-        def fake_openai(request, ctx):
-            payload = _payload_from_dict(expected_payload)
-            return OpenAIAnalyzeResponse(
-                schema_version="1.0",
-                payload=payload,
-                prompt_system_sha256=request.prompt_system_sha256,
-                prompt_user_sha256=request.prompt_user_sha256,
-                model=request.model,
-                temperature=request.temperature,
-                raw_content=json.dumps(expected_payload),
-                prompt_tokens=0,
-                completion_tokens=0,
-                total_tokens=0,
-                request_id="req-golden",
-            )
-
         def fake_load_category_mappings(request, ctx):
             definitions = [
                 CategoryDefinition(id=cat_id, label=label, description="", tags=[])
@@ -245,13 +229,50 @@ def test_golden_reports_regression(tmp_path: Path, monkeypatch: pytest.MonkeyPat
         def fake_validation(request, settings, ctx, pack_name="validation"):
             return ValidationReport(schema_version="1.1", status="pass", severity="pass", issues=[], source_path="")
 
+        def fake_ensure_vector_store(file, local_pdf_path, settings, ctx):
+            return None, None, None, None, None
+
+        def fake_extract_taxonomy(request, ctx):
+            return TaxonomyExtractResponse(
+                schema_version="1.0",
+                taxonomy=["Tag1"],
+                region="US",
+                time_period="2024",
+                not_found_reason=None,
+            )
+
+        def fake_generate_evidence_packs(report_id, vector_store_id, settings, ctx, **kwargs):
+            return {}
+
+        def fake_generate_artifacts(report_id, doc_map, evidence_packs, settings, vector_store_id=None, source_status=None, ctx=None):
+            return {
+                "summary": {
+                    "tldr": "TLDR text",
+                    "executive_summary": "Commentary text",
+                    "claim_evidence_map": [],
+                },
+                "insights_final": [
+                    {"text": "Insight A"},
+                    {"text": "Insight B"},
+                    {"text": "Insight C"},
+                    {"text": "Insight D"},
+                    {"text": "Insight E"},
+                ],
+                "quotes_final": [
+                    {"text": "Quote", "speaker": "Author"},
+                ],
+            }
+
         monkeypatch.setattr("src.generators.report_generator.extract_pdf_info", fake_pdf_info)
         monkeypatch.setattr("src.generators.report_generator.build_pdf_context", fake_build_pdf_context)
         monkeypatch.setattr("src.generators.report_generator.detect_contents_page_service", fake_detect_contents)
         monkeypatch.setattr("src.generators.report_generator.extract_pdf_text", fake_pdf_text)
         monkeypatch.setattr("src.generators.report_generator.load_prompt_set", fake_load_prompt_set)
         monkeypatch.setattr("src.generators.report_generator.render_prompt", fake_render_prompt)
-        monkeypatch.setattr("src.generators.report_generator.openai_analyze", fake_openai)
+        monkeypatch.setattr("src.generators.report_generator._ensure_vector_store", fake_ensure_vector_store)
+        monkeypatch.setattr("src.generators.report_generator.extract_taxonomy", fake_extract_taxonomy)
+        monkeypatch.setattr("src.generators.report_generator.generate_evidence_packs", fake_generate_evidence_packs)
+        monkeypatch.setattr("src.generators.report_generator.generate_artifacts", fake_generate_artifacts)
         monkeypatch.setattr("src.generators.report_generator.load_category_mappings", fake_load_category_mappings)
         monkeypatch.setattr("src.generators.report_generator.categorize_taxonomy", fake_categorize)
         monkeypatch.setattr("src.generators.report_generator.update_uncategorized_tags", fake_update_uncategorized)
@@ -279,6 +300,8 @@ def test_golden_reports_regression(tmp_path: Path, monkeypatch: pytest.MonkeyPat
         normalized_capture["payload"].pop("validation_report", None)
         for transient in ["_text_density", "_text_pages_sampled", "_text_char_count", "_text_not_available", "analysis_mode"]:
             normalized_capture["payload"].pop(transient, None)
+        normalized_capture["payload"].pop("_evidence_packs", None)
+        expected_payload.pop("_evidence_packs", None)
         assert normalized_capture["payload"] == expected_payload
         html_text = Path(outcome.html_path).read_text(encoding="utf-8")
         expected_html = expected_html_path.read_text(encoding="utf-8")

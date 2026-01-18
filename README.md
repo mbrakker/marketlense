@@ -89,6 +89,7 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
 2. **Pipeline orchestration**
    - Entry point: `src/cli.py`.
    - `src/orchestrators/ingest_orchestrator.py` loads settings and coordinates the ingest flow.
+   - Before doing any work, ingest probes `state_db` and `reports_db` for write access (SQLite `BEGIN IMMEDIATE`). If either DB is locked, the run exits early with `db_locked` to avoid partial outputs.
 
 3. **Drive discovery**
    - `src/services/drive_service.py` lists PDF files in the target Drive folder.
@@ -265,8 +266,10 @@ Minimal unit tests exist under `tests/`:
 Run tests locally:
 
 ```bash
-python -m pytest
+pytest
 ```
+
+`pytest.ini` sets `pythonpath = .` so `src.*` imports resolve without exporting `PYTHONPATH`.
 
 CI runs these tests via `.github/workflows/ci.yml`.
 

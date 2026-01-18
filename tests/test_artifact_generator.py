@@ -164,7 +164,7 @@ def test_generate_artifacts_validates_schema_and_evidence_ids(tmp_path):
     )
     assert all(item["evidence_id"] for item in payload["insights_candidates"])
     assert all(item["evidence_id"] for item in payload["insights_final"])
-    assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 1
+    assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 7
     validate_schema(payload, "artifacts", _ctx())
     assert analysis_store.stored and analysis_store.stored[0][2] == "artifacts"
 

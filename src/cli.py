@@ -51,6 +51,9 @@ def ingest(
         if exc.code == "ingest_locked":
             console.print(f"[red]{exc.message} (lock: {settings.ingest_lock_path})[/red]")
             raise typer.Exit(code=1)
+        if exc.code == "db_locked":
+            console.print(f"[red]{exc.message}[/red]")
+            raise typer.Exit(code=1)
         raise
 
     table = Table(title="Processed Reports", box=box.SIMPLE_HEAVY)

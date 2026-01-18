@@ -26,6 +26,22 @@ class StateRecordRequest:
 
 
 @dataclass(frozen=True)
+class StateDbAccessRequest:
+    schema_version: str = field(metadata={"doc": "State DB access check request schema version."})
+    state_db: str = field(metadata={"doc": "SQLite path for processing state."})
+    timeout_seconds: float = field(default=0.0, metadata={"doc": "SQLite connection timeout in seconds for lock detection."})
+
+
+@dataclass(frozen=True)
+class StateDbAccessResponse:
+    schema_version: str = field(metadata={"doc": "State DB access check response schema version."})
+    state_db: str = field(metadata={"doc": "SQLite path for processing state."})
+    accessible: bool = field(metadata={"doc": "True when the state DB can be opened for writing."})
+    locked: bool = field(metadata={"doc": "True when the state DB is locked by another process."})
+    message: str = field(default="", metadata={"doc": "Additional detail for the access check result."})
+
+
+@dataclass(frozen=True)
 class StateGetRequest:
     schema_version: str = field(metadata={"doc": "State get request schema version."})
     state_db: str = field(metadata={"doc": "SQLite path for processing state."})

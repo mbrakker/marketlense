@@ -2,8 +2,18 @@ import sqlite3
 from pathlib import Path
 
 from src.contracts.run_context import RunContext
-from src.contracts.state import StateCheckRequest, StateGetRequest, StateRecordRequest
-from src.services.state_service import already_processed, get, record
+from src.contracts.state import (
+    StateCheckRequest,
+    StateDbAccessRequest,
+    StateGetRequest,
+    StateRecordRequest,
+)
+from src.services.state_service import (
+    already_processed,
+    check_state_db_access,
+    get,
+    record,
+)
 
 
 def _ctx() -> RunContext:
@@ -77,3 +87,29 @@ def test_record_and_get_with_defaults(tmp_path: Path) -> None:
     assert resp.vector_store_status is None
     assert resp.indexed_at_utc is None
     assert resp.last_error is None
+
+
+def test_state_db_access_detects_lock(tmp_path: Path) -> None:
+    db_path = tmp_path / "state.sqlite"
+    conn = sqlite3.connect(db_path)
+    conn.execute("BEGIN EXCLUSIVE")
+    try:
+        resp = check_state_db_access(
+            StateDbAccessRequest(schema_version="1.0", state_db=str(db_path), timeout_seconds=0.0),
+            _ctx(),
+        )
+        assert resp.accessible is False
+        assert resp.locked is True
+    finally:
+        conn.rollback()
+        conn.close()
+
+
+def test_state_db_access_allows_unlocked_db(tmp_path: Path) -> None:
+    db_path = tmp_path / "state.sqlite"
+    resp = check_state_db_access(
+        StateDbAccessRequest(schema_version="1.0", state_db=str(db_path), timeout_seconds=0.0),
+        _ctx(),
+    )
+    assert resp.accessible is True
+    assert resp.locked is False

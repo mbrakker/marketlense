@@ -8,6 +8,8 @@ from typing import Optional
 from src.contracts.run_context import RunContext
 from src.contracts.state import (
     StateCheckRequest,
+    StateDbAccessRequest,
+    StateDbAccessResponse,
     StateGetRequest,
     StateGetResponse,
     StatePublishCheckRequest,
@@ -19,6 +21,9 @@ from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.state_service")
+
+ACCESS_TIMEOUT_SECONDS = 0.0
+LOCK_ERROR_MARKERS = ("database is locked", "database is busy")
 
 DDL = """
 CREATE TABLE IF NOT EXISTS processed (
@@ -75,6 +80,129 @@ def _migrate_schema(conn: sqlite3.Connection) -> None:
     for col, col_type in required.items():
         if col not in cols:
             conn.execute(f"ALTER TABLE processed ADD COLUMN {col} {col_type}")
+
+
+def _is_lock_error(exc: Exception) -> bool:
+    message = str(exc).lower()
+    return any(marker in message for marker in LOCK_ERROR_MARKERS)
+
+
+def check_state_db_access(request: StateDbAccessRequest, ctx: RunContext) -> StateDbAccessResponse:
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="state_db_access_start",
+        module=logger.name,
+        fields={"state_db": request.state_db, "timeout_seconds": request.timeout_seconds},
+    ))
+    if not request.state_db or not request.state_db.strip():
+        raise AppError(
+            code="state_db_missing",
+            message="State DB path is required",
+            retryable=False,
+            severity="error",
+        )
+    timeout = request.timeout_seconds if request.timeout_seconds >= 0 else ACCESS_TIMEOUT_SECONDS
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="state_db_access_config",
+        module=logger.name,
+        fields={"timeout_seconds": timeout},
+    ))
+    try:
+        conn = sqlite3.connect(request.state_db, timeout=timeout)
+    except Exception as exc:
+        logger.info(log_event(
+            ctx,
+            role="service",
+            event="state_db_access_connect_failed",
+            module=logger.name,
+            fields={"state_db": request.state_db, "error": str(exc)},
+        ))
+        raise AppError(
+            code="state_db_unavailable",
+            message="Failed to open state DB",
+            cause=exc,
+            retryable=True,
+            context={"state_db": request.state_db},
+        ) from exc
+    try:
+        logger.info(log_event(
+            ctx,
+            role="service",
+            event="state_db_access_probe",
+            module=logger.name,
+            fields={"state_db": request.state_db},
+        ))
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute("ROLLBACK")
+    except sqlite3.OperationalError as exc:
+        if _is_lock_error(exc):
+            message = str(exc)
+            logger.info(log_event(
+                ctx,
+                role="service",
+                event="state_db_access_locked",
+                module=logger.name,
+                fields={"state_db": request.state_db, "error": message},
+            ))
+            response = StateDbAccessResponse(
+                schema_version="1.0",
+                state_db=request.state_db,
+                accessible=False,
+                locked=True,
+                message=message,
+            )
+            logger.info(log_event(
+                ctx,
+                role="service",
+                event="state_db_access_complete",
+                module=logger.name,
+                fields={
+                    "state_db": response.state_db,
+                    "accessible": response.accessible,
+                    "locked": response.locked,
+                    "message": response.message,
+                },
+            ))
+            return response
+        logger.info(log_event(
+            ctx,
+            role="service",
+            event="state_db_access_failed",
+            module=logger.name,
+            fields={"state_db": request.state_db, "error": str(exc)},
+        ))
+        raise AppError(
+            code="state_db_unavailable",
+            message="State DB is not accessible",
+            cause=exc,
+            retryable=True,
+            context={"state_db": request.state_db},
+        ) from exc
+    finally:
+        conn.close()
+    response = StateDbAccessResponse(
+        schema_version="1.0",
+        state_db=request.state_db,
+        accessible=True,
+        locked=False,
+        message="",
+    )
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="state_db_access_complete",
+        module=logger.name,
+        fields={
+            "state_db": response.state_db,
+            "accessible": response.accessible,
+            "locked": response.locked,
+            "message": response.message,
+        },
+    ))
+    return response
 
 
 def already_processed(request: StateCheckRequest, ctx: RunContext) -> bool:

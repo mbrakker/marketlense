@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import List, Optional
 
 from src.contracts.report_store import (
+    ReportMetadataDbAccessRequest,
+    ReportMetadataDbAccessResponse,
     ReportMetadataGetRequest,
     ReportMetadataGetResponse,
     ReportMetadataListRequest,
@@ -19,6 +21,9 @@ from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.report_store_service")
+
+ACCESS_TIMEOUT_SECONDS = 0.0
+LOCK_ERROR_MARKERS = ("database is locked", "database is busy")
 
 DDL = """
 CREATE TABLE IF NOT EXISTS reports (
@@ -109,6 +114,129 @@ def _clean_metadata(metadata: dict[str, str]) -> dict[str, str]:
             continue
         cleaned[key_str] = val_str
     return cleaned
+
+
+def _is_lock_error(exc: Exception) -> bool:
+    message = str(exc).lower()
+    return any(marker in message for marker in LOCK_ERROR_MARKERS)
+
+
+def check_report_db_access(request: ReportMetadataDbAccessRequest, ctx: RunContext) -> ReportMetadataDbAccessResponse:
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="report_db_access_start",
+        module=logger.name,
+        fields={"db_path": request.db_path, "timeout_seconds": request.timeout_seconds},
+    ))
+    if not request.db_path or not request.db_path.strip():
+        raise AppError(
+            code="metadata_db_missing",
+            message="Report metadata DB path is required",
+            retryable=False,
+            severity="error",
+        )
+    timeout = request.timeout_seconds if request.timeout_seconds >= 0 else ACCESS_TIMEOUT_SECONDS
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="report_db_access_config",
+        module=logger.name,
+        fields={"timeout_seconds": timeout},
+    ))
+    try:
+        conn = sqlite3.connect(request.db_path, timeout=timeout)
+    except Exception as exc:
+        logger.info(log_event(
+            ctx,
+            role="service",
+            event="report_db_access_connect_failed",
+            module=logger.name,
+            fields={"db_path": request.db_path, "error": str(exc)},
+        ))
+        raise AppError(
+            code="metadata_db_unavailable",
+            message="Failed to open report metadata DB",
+            cause=exc,
+            retryable=True,
+            context={"db_path": request.db_path},
+        ) from exc
+    try:
+        logger.info(log_event(
+            ctx,
+            role="service",
+            event="report_db_access_probe",
+            module=logger.name,
+            fields={"db_path": request.db_path},
+        ))
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute("ROLLBACK")
+    except sqlite3.OperationalError as exc:
+        if _is_lock_error(exc):
+            message = str(exc)
+            logger.info(log_event(
+                ctx,
+                role="service",
+                event="report_db_access_locked",
+                module=logger.name,
+                fields={"db_path": request.db_path, "error": message},
+            ))
+            response = ReportMetadataDbAccessResponse(
+                schema_version="1.0",
+                db_path=request.db_path,
+                accessible=False,
+                locked=True,
+                message=message,
+            )
+            logger.info(log_event(
+                ctx,
+                role="service",
+                event="report_db_access_complete",
+                module=logger.name,
+                fields={
+                    "db_path": response.db_path,
+                    "accessible": response.accessible,
+                    "locked": response.locked,
+                    "message": response.message,
+                },
+            ))
+            return response
+        logger.info(log_event(
+            ctx,
+            role="service",
+            event="report_db_access_failed",
+            module=logger.name,
+            fields={"db_path": request.db_path, "error": str(exc)},
+        ))
+        raise AppError(
+            code="metadata_db_unavailable",
+            message="Report metadata DB is not accessible",
+            cause=exc,
+            retryable=True,
+            context={"db_path": request.db_path},
+        ) from exc
+    finally:
+        conn.close()
+    response = ReportMetadataDbAccessResponse(
+        schema_version="1.0",
+        db_path=request.db_path,
+        accessible=True,
+        locked=False,
+        message="",
+    )
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="report_db_access_complete",
+        module=logger.name,
+        fields={
+            "db_path": response.db_path,
+            "accessible": response.accessible,
+            "locked": response.locked,
+            "message": response.message,
+        },
+    ))
+    return response
 
 
 def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> None:

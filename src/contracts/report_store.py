@@ -27,6 +27,22 @@ class ReportMetadataUpsertRequest:
 
 
 @dataclass(frozen=True)
+class ReportMetadataDbAccessRequest:
+    schema_version: str = field(metadata={"doc": "Report metadata DB access check request schema version."})
+    db_path: str = field(metadata={"doc": "Filesystem path to the report metadata SQLite database."})
+    timeout_seconds: float = field(default=0.0, metadata={"doc": "SQLite connection timeout in seconds for lock detection."})
+
+
+@dataclass(frozen=True)
+class ReportMetadataDbAccessResponse:
+    schema_version: str = field(metadata={"doc": "Report metadata DB access check response schema version."})
+    db_path: str = field(metadata={"doc": "Filesystem path to the report metadata SQLite database."})
+    accessible: bool = field(metadata={"doc": "True when the metadata DB can be opened for writing."})
+    locked: bool = field(metadata={"doc": "True when the metadata DB is locked by another process."})
+    message: str = field(default="", metadata={"doc": "Additional detail for the access check result."})
+
+
+@dataclass(frozen=True)
 class ReportMetadataGetRequest:
     schema_version: str = field(metadata={"doc": "Metadata get request schema version."})
     db_path: str = field(metadata={"doc": "Filesystem path to the report metadata SQLite database."})

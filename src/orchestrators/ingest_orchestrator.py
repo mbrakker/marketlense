@@ -12,6 +12,7 @@ from src.services.pdf_utils_service import check_pdf_eof
 from src.contracts.drive import DriveDownloadRequest, DriveListRequest, DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.lock import LockAcquireRequest, LockReleaseRequest
+from src.contracts.report_store import ReportMetadataDbAccessRequest
 from src.contracts.run_context import RunContext
 from src.generators.report_generator import generate_report
 from src.services.drive_service import download_pdf, list_pdfs
@@ -23,15 +24,18 @@ from src.services.file_service import (
 )
 from src.contracts.files import DeleteFileRequest, FileExistsRequest, FileHashRequest, WriteBytesRequest
 from src.services.lock_service import acquire_lock, release_lock
+from src.services.report_store_service import check_report_db_access
 from src.services.state_service import already_processed as state_already_processed
+from src.services.state_service import check_state_db_access
 from src.services.state_service import record as state_record
-from src.contracts.state import StateCheckRequest, StateRecordRequest
+from src.contracts.state import StateCheckRequest, StateDbAccessRequest, StateRecordRequest
 from src.services.category_mapping_service import flush_uncategorized_tags
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.errors import AppError
 from src.utils.path_utils import safe_pdf_name
 
 logger = logging.getLogger("market_lense.ingest_orchestrator")
+DB_ACCESS_TIMEOUT_SECONDS = 0.0
 
 
 def _should_skip(file: DriveFile, md5: Optional[str], state_db: str, ctx: RunContext) -> bool:
@@ -121,6 +125,72 @@ def run_ingest(
                 "lock_path": settings.ingest_lock_path,
                 "owner_id": lock_info.owner_id if lock_info else "",
                 "pid": lock_info.pid if lock_info else None,
+            },
+        ))
+
+        db_ctx = child_context(root_ctx, task_id="ingest_db_access")
+        logger.info(log_event(
+            db_ctx,
+            role="orchestrator",
+            event="ingest_db_access_start",
+            module=logger.name,
+            fields={"state_db": settings.state_db, "reports_db": settings.reports_db},
+        ))
+        state_access = check_state_db_access(
+            StateDbAccessRequest(
+                schema_version="1.0",
+                state_db=settings.state_db,
+                timeout_seconds=DB_ACCESS_TIMEOUT_SECONDS,
+            ),
+            db_ctx,
+        )
+        report_access = check_report_db_access(
+            ReportMetadataDbAccessRequest(
+                schema_version="1.0",
+                db_path=settings.reports_db,
+                timeout_seconds=DB_ACCESS_TIMEOUT_SECONDS,
+            ),
+            db_ctx,
+        )
+        if not state_access.accessible or not report_access.accessible:
+            locked = []
+            if state_access.locked:
+                locked.append(f"state_db={settings.state_db}")
+            if report_access.locked:
+                locked.append(f"reports_db={settings.reports_db}")
+            reason = ", ".join(locked) if locked else "unknown"
+            logger.info(log_event(
+                db_ctx,
+                role="orchestrator",
+                event="ingest_db_access_blocked",
+                module=logger.name,
+                fields={
+                    "state_db_accessible": state_access.accessible,
+                    "state_db_locked": state_access.locked,
+                    "reports_db_accessible": report_access.accessible,
+                    "reports_db_locked": report_access.locked,
+                    "reason": reason,
+                },
+            ))
+            raise AppError(
+                code="db_locked",
+                message=f"Database locked: {reason}",
+                retryable=False,
+                context={
+                    "state_db": settings.state_db,
+                    "reports_db": settings.reports_db,
+                    "state_db_locked": state_access.locked,
+                    "reports_db_locked": report_access.locked,
+                },
+            )
+        logger.info(log_event(
+            db_ctx,
+            role="orchestrator",
+            event="ingest_db_access_complete",
+            module=logger.name,
+            fields={
+                "state_db": settings.state_db,
+                "reports_db": settings.reports_db,
             },
         ))
 

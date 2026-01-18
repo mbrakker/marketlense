@@ -1,10 +1,19 @@
 import os
+import sqlite3
 import tempfile
 import time
 import unittest
 
-from src.contracts.report_store import ReportMetadataGetRequest, ReportMetadataUpsertRequest
-from src.services.report_store_service import get_metadata, upsert_metadata
+from src.contracts.report_store import (
+    ReportMetadataDbAccessRequest,
+    ReportMetadataGetRequest,
+    ReportMetadataUpsertRequest,
+)
+from src.services.report_store_service import (
+    check_report_db_access,
+    get_metadata,
+    upsert_metadata,
+)
 from src.utils.errors import AppError
 from src.utils.logging import new_run_context
 
@@ -113,6 +122,32 @@ class TestReportStoreService(unittest.TestCase):
                     ),
                     ctx,
                 )
+
+    def test_report_db_access_detects_lock(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            conn = sqlite3.connect(db_path)
+            conn.execute("BEGIN EXCLUSIVE")
+            try:
+                resp = check_report_db_access(
+                    ReportMetadataDbAccessRequest(schema_version="1.0", db_path=db_path, timeout_seconds=0.0),
+                    new_run_context(task_id="test_db_access_lock"),
+                )
+                self.assertFalse(resp.accessible)
+                self.assertTrue(resp.locked)
+            finally:
+                conn.rollback()
+                conn.close()
+
+    def test_report_db_access_allows_unlocked_db(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            resp = check_report_db_access(
+                ReportMetadataDbAccessRequest(schema_version="1.0", db_path=db_path, timeout_seconds=0.0),
+                new_run_context(task_id="test_db_access_ok"),
+            )
+            self.assertTrue(resp.accessible)
+            self.assertFalse(resp.locked)
 
 
 if __name__ == "__main__":
