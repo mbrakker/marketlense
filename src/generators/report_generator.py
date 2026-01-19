@@ -558,6 +558,7 @@ def generate_report(
     ranked = []
     rank_usage = None
     sliced_paths = []
+    candidate_paths = []
     if cands_resp.candidates:
         for cand in cands_resp.candidates:
             validate_candidate(cand)
@@ -568,6 +569,53 @@ def generate_report(
             module=logger.name,
             fields={"count": len(cands_resp.candidates)},
         ))
+        all_items = [
+            CropItem(
+                id=c.id,
+                type=c.kind,
+                score=0.0,
+                page=c.page,
+                bbox=c.bbox,
+            )
+            for c in cands_resp.candidates
+        ]
+        if all_items:
+            logger.info(log_event(
+                ctx,
+                role="generator",
+                event="candidate_crops_start",
+                module=logger.name,
+                fields={"count": len(all_items), "subdir": "candidates"},
+            ))
+            try:
+                candidate_crop_resp = crop_regions_service(
+                    CropRequest(
+                        schema_version="1.0",
+                        pdf_path=local_pdf_path,
+                        out_dir=settings.output_dir,
+                        report_name=report_name,
+                        subdir="candidates",
+                        items=all_items,
+                        pdf_context=pdf_context,
+                    ),
+                    ctx,
+                )
+                candidate_paths = candidate_crop_resp.paths
+                logger.info(log_event(
+                    ctx,
+                    role="generator",
+                    event="candidate_crops_complete",
+                    module=logger.name,
+                    fields={"count": len(candidate_paths), "subdir": "candidates"},
+                ))
+            except Exception as exc:
+                logger.info(log_event(
+                    ctx,
+                    role="generator",
+                    event="candidate_crops_failed",
+                    module=logger.name,
+                    fields={"error": str(exc), "subdir": "candidates"},
+                ))
         rank_model = settings.rank_model or settings.openai_model
         resolved_rank_model = resolve_model("rank_candidates", getattr(settings, "openai_models", {}), rank_model)
         rows = [{

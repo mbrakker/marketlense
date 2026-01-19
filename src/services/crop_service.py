@@ -23,6 +23,7 @@ def crop_regions(request: CropRequest, ctx: RunContext) -> CropResponse:
         fields={
             "pdf_path": request.pdf_path,
             "count": len(request.items),
+            "subdir": request.subdir,
             "using_context": bool(request.pdf_context and request.pdf_context.fitz_doc),
         },
     ))
@@ -30,6 +31,7 @@ def crop_regions(request: CropRequest, ctx: RunContext) -> CropResponse:
         request.pdf_path,
         request.out_dir,
         request.report_name,
+        request.subdir,
         request.items,
         pad=request.pad,
         doc=request.pdf_context.fitz_doc if request.pdf_context else None,
@@ -48,12 +50,14 @@ def _crop_regions(
     pdf_path: str,
     out_dir: str,
     report_name: str,
+    subdir: str,
     items: Iterable[CropItem],
     pad: int = 8,
     doc: Optional[fitz.Document] = None,
 ) -> List[str]:
-    slices_dir = Path(out_dir) / report_name / "slices"
-    slices_dir.mkdir(parents=True, exist_ok=True)
+    safe_subdir = subdir or "slices"
+    output_dir = Path(out_dir) / report_name / safe_subdir
+    output_dir.mkdir(parents=True, exist_ok=True)
     paths = []
     local_doc = doc or fitz.open(pdf_path)
     try:
@@ -70,9 +74,9 @@ def _crop_regions(
                 filename = f"{report_name}.png"
             else:
                 filename = f"{report_name}{idx}.png"
-            op = slices_dir / filename
+            op = output_dir / filename
             pix.save(op.as_posix())
-            rel = Path(report_name) / "slices" / filename
+            rel = Path(report_name) / safe_subdir / filename
             paths.append(rel.as_posix())
     finally:
         if doc is None:

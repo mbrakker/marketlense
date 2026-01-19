@@ -12,7 +12,19 @@ LOG_DIR_ENV = "MARKET_LENSE_LOG_DIR"
 LOG_FILE_PREFIX = "market_lense"
 
 
+def _force_utf8_stdio() -> None:
+    for stream_name in ("stdout", "stderr"):
+        stream = getattr(sys, stream_name, None)
+        if not stream:
+            continue
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            continue
+
+
 def setup_logging(level: int = logging.INFO) -> None:
+    _force_utf8_stdio()
     root = logging.getLogger()
     for h in list(root.handlers):
         root.removeHandler(h)

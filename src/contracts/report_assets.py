@@ -65,6 +65,7 @@ class CropRequest:
     out_dir: str = field(metadata={"doc": "Output directory for cropped assets."})
     report_name: str = field(metadata={"doc": "Normalized report name for asset paths."})
     items: List[CropItem] = field(metadata={"doc": "Crop targets."})
+    subdir: str = field(default="slices", metadata={"doc": "Report subdirectory for cropped assets (e.g., slices, candidates)."})
     pad: int = field(default=8, metadata={"doc": "Padding applied around crop boxes."})
     pdf_context: Optional[PdfContext] = field(default=None, metadata={"doc": "Optional pre-opened PDF context to reuse handles."})
 
