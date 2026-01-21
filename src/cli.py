@@ -12,6 +12,7 @@ from src.contracts.costs import CostReportRequest
 from src.contracts.categories import RecategorizeRequest
 from src.contracts.config import ConfigLoadRequest
 from src.orchestrators.ingest_orchestrator import run_ingest
+from src.orchestrators.candidate_extraction_orchestrator import run_candidate_extraction
 from src.orchestrators.publish_orchestrator import run_publish
 from src.orchestrators.recategorize_orchestrator import run_recategorize
 from src.orchestrators.wp_category_update_orchestrator import run_update_wp_categories
@@ -70,6 +71,58 @@ def ingest(
 
     console.print(table)
     console.print(f"[green]Done: {processed} file(s).[/green]")
+
+
+@cli_app.command("extract-candidates")
+def extract_candidates(
+    folder: str = typer.Option(None, help="Override Drive folder ID"),
+    limit: int = typer.Option(None, help="Max PDFs to process this run"),
+    file_id: str = typer.Option(None, help="Optional Drive file ID to process"),
+    pdf: str = typer.Option(None, help="Local PDF path to process instead of Drive"),
+    report_id: str = typer.Option(None, help="Optional report ID override for local PDFs"),
+):
+    setup_logging()
+    console.print("[cyan]Loading settings...[/cyan]")
+    ctx = new_run_context(task_id="cli_extract_candidates")
+    logger.info(log_event(
+        ctx,
+        role="orchestrator",
+        event="cli_candidate_extract_start",
+        module=logger.name,
+        fields={"folder": folder or "", "limit": limit, "file_id": file_id or "", "pdf": pdf or ""},
+    ))
+    s = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    settings = to_ingest_settings(s)
+
+    console.print("[cyan]Running candidate extraction...[/cyan]")
+    outcomes = run_candidate_extraction(
+        settings,
+        folder_id=folder,
+        limit=limit,
+        file_id=file_id,
+        pdf_path=pdf,
+        report_id=report_id,
+        ctx=ctx,
+    )
+
+    table = Table(title="Candidate Extraction", box=box.SIMPLE_HEAVY)
+    table.add_column("Report")
+    table.add_column("ID")
+    table.add_column("Candidates", justify="right")
+    table.add_column("Charts", justify="right")
+    table.add_column("Tables", justify="right")
+    table.add_column("JSON")
+    for outcome in outcomes:
+        table.add_row(
+            outcome.report_name,
+            outcome.report_id,
+            str(outcome.candidate_count),
+            str(outcome.chart_count),
+            str(outcome.table_count),
+            outcome.candidates_path or "",
+        )
+    console.print(table)
+    console.print(f"[green]Done: {len(outcomes)} run(s).[/green]")
 
 
 @cli_app.command("publish-wp")
