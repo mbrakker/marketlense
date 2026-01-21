@@ -320,6 +320,14 @@ python -m src.cli cost-report --date YYYY-MM-DD
 python -m src.cli cost-report --run-id <run_id>
 ```
 
+Extract chart/table candidates without running LLM analysis (writes JSON + crops):
+
+```bash
+python -m src.cli extract-candidates --limit 10
+python -m src.cli extract-candidates --file-id <drive_file_id>
+python -m src.cli extract-candidates --pdf "C:\\path\\report.pdf"
+```
+
 Vector-store ingest mode:
 
 ```bash
@@ -345,8 +353,14 @@ Default output structure:
     slices/
       <report-name>.png
       <report-name>1.png
+    candidates/
+      <report-name>.png
+      <report-name>1.png
     thumbs/
       <report-name>.png
+  candidates/
+    <report_id>/
+      candidates.json
   report_analysis/
     <file_id>/
       doc_map.json
