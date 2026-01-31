@@ -28,17 +28,30 @@ CHART_TEXT_MAX_LINES = 6
 CHART_TEXT_MIN_CHARS = 60
 CHART_TEXT_RATIO_THRESHOLD = 0.35
 CHART_DEDUP_IOU = 0.9
+CHART_OVERLAP_IOU = 0.85
+CHART_OVERLAP_CONTAINMENT = 0.88
 CHART_MARGIN_FRAC = 0.12
 CHART_MARGIN_RELAX_FRAC = 0.05
 CHART_PAD_X_FRAC = 0.01
 CHART_PAD_Y_FRAC = 0.008
 CHART_NOTE_MAX_DIST = 140
+CHART_NOTE_MAX_GAP_X_FRAC = 0.25
+CHART_CAPTION_TOP_PAD_PX = 16.0
+CHART_CAPTION_TOP_PAD_FRAC = 0.35
+CHART_CAPTION_TOP_SEARCH_FRAC = 0.2
+CHART_CAPTION_TOP_GUARD_FRAC = 0.01
+CHART_CAPTION_TOP_BLOCK_H_OVERLAP = 0.3
+CHART_CAPTION_MERGE_MAX_GAP_FRAC = 0.18
 CHART_CROP_PAD_COMPENSATION = 0
-CHART_NOTE_PAD_EXTRA = 16
+CHART_NOTE_PAD_EXTRA = 24
+CHART_NOTE_BELOW_GUARD_PX = 3
+CHART_NOTE_BELOW_MIN_H_OVERLAP = 0.2
 CHART_LABEL_MAX_GAP_FRAC = 0.06
 CHART_LABEL_MAX_V_GAP_FRAC = 0.05
 CHART_LABEL_MIN_V_OVERLAP = 0.35
 CHART_LABEL_MIN_H_OVERLAP = 0.35
+CHART_LABEL_PARAGRAPH_MIN_LINES = 3
+CHART_LABEL_PARAGRAPH_MAX_AVG_LINE_LEN = 32
 CHART_LABEL_MAX_LINES = 6
 CHART_LABEL_MAX_AVG_LINE_LEN = 40
 CHART_LABEL_MAX_HEIGHT_FRAC = 0.5
@@ -57,6 +70,7 @@ CHART_HEADING_TOP_MAX_PAD_FRAC = 0.0
 CHART_HEADING_TOP_SEARCH_FRAC = 0.25
 CHART_HEADING_TOP_GUARD_FRAC = 0.01
 CHART_HEADING_TOP_BLOCK_H_OVERLAP = 0.3
+CHART_HEADING_MERGE_MAX_GAP_FRAC = 0.08
 DRAWING_MIN_RECT_DIM = 6.0
 DRAWING_MIN_RECT_AREA = 200.0
 DRAWING_BACKGROUND_MIN_AREA_FRAC = 0.9
@@ -114,10 +128,28 @@ TABLE_STREAM_INFOBOX_MAX_NUMERIC_RATIO = 0.08
 TABLE_STREAM_INFOBOX_MAX_AVG_WORDS = 3.5
 TABLE_STREAM_INFOBOX_MIN_LINES = 18
 TABLE_STREAM_INFOBOX_MAX_ROW_LEN_CV = 0.7
+TABLE_STREAM_LIST_MIN_ROWS = 6
+TABLE_STREAM_LIST_MAX_COLS = 3
+TABLE_STREAM_LIST_MAX_AVG_WORDS = 2.2
+TABLE_STREAM_LIST_MAX_NUMERIC_RATIO = 0.08
+TABLE_STREAM_LIST_MAX_AREA_FRAC = 0.12
+TABLE_STREAM_PANEL_MIN_AREA_FRAC = 0.25
+TABLE_STREAM_PANEL_MIN_ROWS = 8
+TABLE_STREAM_PANEL_MAX_COLS = 4
+TABLE_STREAM_PANEL_MAX_AVG_WORDS = 2.6
+TABLE_STREAM_PANEL_MAX_NUMERIC_RATIO = 0.08
+TABLE_STREAM_SPARSE_MIN_AREA = 0.6
+TABLE_STREAM_SPARSE_MAX_LINES = 15
+TABLE_STREAM_SPARSE_MIN_AVG_LINE_LEN = 55
+TABLE_STREAM_SPARSE_MAX_NUMERIC_RATIO = 0.05
+TABLE_STREAM_SPARSE_MAX_COLS = 5
 INFO_HEADING_MIN_WORDS = 3
 INFO_HEADING_MIN_ALPHA_RATIO = 0.55
 INFO_HEADING_MIN_SIZE = 12.0
 INFO_HEADING_SIZE_DELTA = 2.0
+INFO_HEADING_MAX_WORDS = 30
+INFO_HEADING_MAX_CHARS = 160
+INFO_HEADING_MAX_SENTENCES = 2
 INFO_HEADING_MERGE_GAP_FRAC = 0.012
 INFO_HEADING_MERGE_SIZE_DELTA = 2.0
 INFO_HEADING_MERGE_H_OVERLAP = 0.4
@@ -127,6 +159,19 @@ INFO_CHART_BAND_FRAC = 0.6
 INFO_CHART_MAX_GAP_FRAC = 0.25
 INFO_CHART_CLUSTER_GAP_FRAC = 0.05
 INFO_CHART_MAX_ASPECT = 4.0
+TABLE_EXPAND_MAX_GAP_FRAC = 0.12
+TABLE_EXPAND_LATTICE_MAX_GAP_FRAC = 0.08
+TABLE_EXPAND_MAX_BLOCK_HEIGHT_FRAC = 0.4
+TABLE_EXPAND_MAX_LINES = 4
+TABLE_EXPAND_MAX_AVG_LINE_LEN = 60
+TABLE_EXPAND_HEADING_MAX_LINES = 2
+TABLE_EXPAND_HEADING_MAX_AVG_LINE_LEN = 120
+TABLE_EXPAND_HEADING_MIN_ALPHA_RATIO = 0.55
+TABLE_EXPAND_HEADING_MAX_SENTENCES = 2
+TABLE_EXPAND_MIN_H_OVERLAP = 0.2
+TABLE_EXPAND_MIN_V_OVERLAP = 0.2
+TABLE_EXPAND_STREAM_WIDE_MIN_WIDTH_FRAC = 0.85
+TABLE_EXPAND_STREAM_WIDE_MIN_HEIGHT_FRAC = 0.4
 TEXT_BLOCK_MIN_LINES = 8
 TEXT_BLOCK_MIN_AVG_LINE_LEN = 35
 TEXT_BLOCK_MIN_AREA_FRAC = 0.55
@@ -134,7 +179,7 @@ TEXT_BLOCK_MAX_NUMERIC_RATIO = 0.07
 TEXT_BLOCK_LOOSE_MIN_LINES = 18
 TEXT_BLOCK_LOOSE_MIN_AVG_LINE_LEN = 24
 TEXT_BLOCK_LOOSE_MAX_NUMERIC_RATIO = 0.05
-_PAGE_NUMBER_RX = re.compile(r"^\s*\d{1,4}(?:\s*[--]\s*\d{1,4})?\s*$")
+_PAGE_NUMBER_RX = re.compile(r"^\s*[^0-9]*\d{1,4}(?:\s*[-–]\s*\d{1,4})?\s*$")
 
 
 @dataclass(frozen=True)
@@ -198,11 +243,54 @@ def _rect_iou(a: fitz.Rect, b: fitz.Rect) -> float:
     return inter_area / union
 
 
+def _rect_containment_ratio(a: fitz.Rect, b: fitz.Rect) -> float:
+    inter = a & b
+    if inter.is_empty:
+        return 0.0
+    inter_area = inter.get_area()
+    if inter_area <= 0.0:
+        return 0.0
+    denom = min(a.get_area(), b.get_area())
+    if denom <= 0.0:
+        return 0.0
+    return inter_area / denom
+
+
 def _rect_seen(rect: fitz.Rect, seen: List[fitz.Rect]) -> bool:
     for existing in seen:
         if _rect_iou(rect, existing) >= CHART_DEDUP_IOU:
             return True
     return False
+
+
+def _chart_candidate_score(
+    area_frac: float,
+    has_hint: bool,
+    caption: str,
+    note_included: bool,
+) -> float:
+    score = area_frac
+    if has_hint:
+        score += 0.2
+    if caption:
+        score += min(0.2, len(caption) / 200.0)
+    if note_included:
+        score += 0.1
+    return score
+
+
+def _find_overlapping_kept(
+    rect: fitz.Rect,
+    kept: List[Tuple[fitz.Rect, float, int]],
+) -> Optional[int]:
+    for idx, (existing, _score, _out_idx) in enumerate(kept):
+        if _rect_iou(rect, existing) >= CHART_OVERLAP_IOU:
+            return idx
+        if _rect_containment_ratio(rect, existing) >= CHART_OVERLAP_CONTAINMENT:
+            return idx
+        if _rect_containment_ratio(existing, rect) >= CHART_OVERLAP_CONTAINMENT:
+            return idx
+    return None
 
 
 def _image_block_rects(page: fitz.Page) -> List[fitz.Rect]:
@@ -318,7 +406,7 @@ def _drawing_caption_rects(page: fitz.Page) -> List[Tuple[fitz.Rect, str, fitz.R
                 merged |= r
         merged |= cap_rect
         merged = _pad_rect(merged, page_rect)
-        merged = _clamp_top_to_caption(merged, cap_rect, page_rect)
+        merged = _clamp_top_to_caption(merged, cap_rect, page, page_rect)
         merged = _extend_with_note_blocks(page, merged)
         if merged.get_area() <= 0:
             continue
@@ -354,6 +442,15 @@ def _alpha_ratio(text: str) -> float:
     return alpha / total if total else 0.0
 
 
+def _is_page_number_text(text: str) -> bool:
+    if not text:
+        return False
+    cleaned = text.strip()
+    if not _PAGE_NUMBER_RX.match(cleaned):
+        return False
+    return _alpha_ratio(cleaned) <= 0.3
+
+
 def _heading_lines(page: fitz.Page) -> List[Tuple[fitz.Rect, str]]:
     try:
         data = page.get_text("dict")
@@ -362,6 +459,8 @@ def _heading_lines(page: fitz.Page) -> List[Tuple[fitz.Rect, str]]:
     sizes = []
     lines_data = []
     for block in data.get("blocks", []):
+        block_lines: List[Tuple[fitz.Rect, str, float]] = []
+        block_chars = 0
         for line in block.get("lines", []):
             spans = line.get("spans", [])
             if not spans:
@@ -373,9 +472,20 @@ def _heading_lines(page: fitz.Page) -> List[Tuple[fitz.Rect, str]]:
             size = sum(size_vals) / max(1, len(size_vals))
             bbox = line.get("bbox")
             if bbox and len(bbox) == 4:
-                lines_data.append((fitz.Rect(*bbox), text, size))
+                block_lines.append((fitz.Rect(*bbox), text, size))
             if _alpha_ratio(text) >= INFO_HEADING_MIN_ALPHA_RATIO:
                 sizes.append(size)
+            block_chars += len(text)
+        if not block_lines:
+            continue
+        block_line_count = len(block_lines)
+        avg_block_line_len = block_chars / max(1, block_line_count)
+        if (
+            block_line_count >= CHART_LABEL_PARAGRAPH_MIN_LINES
+            and avg_block_line_len > CHART_LABEL_PARAGRAPH_MAX_AVG_LINE_LEN
+        ):
+            continue
+        lines_data.extend(block_lines)
     if not sizes:
         return []
     try:
@@ -390,6 +500,13 @@ def _heading_lines(page: fitz.Page) -> List[Tuple[fitz.Rect, str]]:
         if _alpha_ratio(text) < INFO_HEADING_MIN_ALPHA_RATIO:
             continue
         if len(text.split()) < INFO_HEADING_MIN_WORDS:
+            continue
+        if len(text) > INFO_HEADING_MAX_CHARS:
+            continue
+        if len(text.split()) > INFO_HEADING_MAX_WORDS:
+            continue
+        sentence_marks = text.count(".") + text.count("!") + text.count("?")
+        if sentence_marks > INFO_HEADING_MAX_SENTENCES:
             continue
         lowered = text.lower()
         if any(hint in lowered for hint in TABLE_CAPTION_HINTS):
@@ -433,6 +550,34 @@ def _cluster_rects_by_y(rects: List[fitz.Rect], gap: float) -> List[List[fitz.Re
     return clusters
 
 
+def _has_intervening_paragraph(
+    page: fitz.Page,
+    head_rect: fitz.Rect,
+    chart_rect: fitz.Rect,
+) -> bool:
+    if chart_rect.y0 <= head_rect.y1:
+        return False
+    try:
+        blocks = page.get_text("blocks")
+    except Exception:
+        return False
+    for x0, y0, x1, y1, text, *_ in blocks:
+        if not text:
+            continue
+        block = fitz.Rect(x0, y0, x1, y1)
+        if block.y0 < head_rect.y1 or block.y1 > chart_rect.y0:
+            continue
+        if _horizontal_overlap_ratio(block, chart_rect) < CHART_HEADING_TOP_BLOCK_H_OVERLAP:
+            continue
+        lines, chars = _text_stats(str(text))
+        if lines == 0:
+            continue
+        avg_line_len = chars / max(1, lines)
+        if lines >= CHART_LABEL_PARAGRAPH_MIN_LINES and avg_line_len > CHART_LABEL_PARAGRAPH_MAX_AVG_LINE_LEN:
+            return True
+    return False
+
+
 def _heading_chart_rects(page: fitz.Page) -> List[Tuple[fitz.Rect, str, fitz.Rect]]:
     headings = _heading_lines(page)
     if not headings:
@@ -464,9 +609,11 @@ def _heading_chart_rects(page: fitz.Page) -> List[Tuple[fitz.Rect, str, fitz.Rec
         gap = merged.y0 - head_rect.y1
         if gap > max_gap:
             continue
+        if _has_intervening_paragraph(page, head_rect, merged):
+            continue
         merged |= head_rect
         merged = _pad_rect(merged, page_rect)
-        merged = _clamp_top_to_caption(merged, head_rect, page_rect)
+        merged = _clamp_top_to_caption(merged, head_rect, page, page_rect)
         candidates.append((merged, head_text, head_rect))
     deduped: List[Tuple[fitz.Rect, str, fitz.Rect]] = []
     for rect, text, head_rect in candidates:
@@ -546,10 +693,19 @@ def _pad_rect(rect: fitz.Rect, page_rect: fitz.Rect) -> fitz.Rect:
     return fitz.Rect(x0, y0, x1, y1)
 
 
-def _clamp_top_to_caption(rect: fitz.Rect, cap_rect: fitz.Rect, page_rect: fitz.Rect) -> fitz.Rect:
-    min_top = max(page_rect.y0, cap_rect.y0)
-    if rect.y0 < min_top:
-        return fitz.Rect(rect.x0, min_top, rect.x1, rect.y1)
+def _clamp_top_to_caption(
+    rect: fitz.Rect,
+    cap_rect: fitz.Rect,
+    page: fitz.Page,
+    page_rect: fitz.Rect,
+) -> fitz.Rect:
+    pad = max(CHART_CAPTION_TOP_PAD_PX, cap_rect.height * CHART_CAPTION_TOP_PAD_FRAC, 0.0)
+    target_top = max(page_rect.y0, cap_rect.y0 - pad)
+    block_limit = _caption_top_block_limit(page, cap_rect, page_rect)
+    if block_limit is not None:
+        target_top = max(target_top, block_limit)
+    if rect.y0 != target_top:
+        return fitz.Rect(rect.x0, target_top, rect.x1, rect.y1)
     return rect
 
 
@@ -559,6 +715,8 @@ def _clamp_top_to_heading(
     page: fitz.Page,
     page_rect: fitz.Rect,
 ) -> fitz.Rect:
+    if _has_internal_top_text(page, rect, head_rect):
+        return rect
     max_pad = max(page_rect.height * CHART_HEADING_TOP_MAX_PAD_FRAC, 0.0)
     min_top = max(page_rect.y0, head_rect.y0 - max_pad)
     block_limit = _heading_top_block_limit(page, head_rect, page_rect)
@@ -584,6 +742,8 @@ def _heading_top_block_limit(
     for x0, y0, x1, y1, text, *_ in blocks:
         if not text:
             continue
+        if _is_page_number_text(text):
+            continue
         block = fitz.Rect(x0, y0, x1, y1)
         if block.y1 > head_rect.y0:
             continue
@@ -598,9 +758,41 @@ def _heading_top_block_limit(
     return min(page_rect.y1, best_y1 + guard)
 
 
+def _caption_top_block_limit(
+    page: fitz.Page,
+    cap_rect: fitz.Rect,
+    page_rect: fitz.Rect,
+) -> Optional[float]:
+    search = page_rect.height * CHART_CAPTION_TOP_SEARCH_FRAC
+    guard = max(page_rect.height * CHART_CAPTION_TOP_GUARD_FRAC, 2.0)
+    best_y1 = None
+    try:
+        blocks = page.get_text("blocks")
+    except Exception:
+        return None
+    for x0, y0, x1, y1, text, *_ in blocks:
+        if not text:
+            continue
+        if _is_page_number_text(text):
+            continue
+        block = fitz.Rect(x0, y0, x1, y1)
+        if block.y1 > cap_rect.y0:
+            continue
+        if cap_rect.y0 - block.y1 > search:
+            continue
+        if _horizontal_overlap_ratio(block, cap_rect) < CHART_CAPTION_TOP_BLOCK_H_OVERLAP:
+            continue
+        if best_y1 is None or block.y1 > best_y1:
+            best_y1 = block.y1
+    if best_y1 is None:
+        return None
+    return min(page_rect.y1, best_y1 + guard)
+
+
 def _extend_with_note_blocks(page: fitz.Page, rect: fitz.Rect) -> fitz.Rect:
     page_rect = page.rect
     limit = min(page_rect.y1, rect.y1 + CHART_NOTE_MAX_DIST)
+    max_gap_x = page_rect.width * CHART_NOTE_MAX_GAP_X_FRAC
     expanded = rect
     try:
         blocks = page.get_text("blocks")
@@ -616,7 +808,12 @@ def _extend_with_note_blocks(page: fitz.Page, rect: fitz.Rect) -> fitz.Rect:
         if not (first.startswith("note:") or first.startswith("source:") or first.startswith("statlink")):
             continue
         block = fitz.Rect(x0, y0, x1, y1)
-        if _horizontal_overlap_ratio(block, rect) < 0.3:
+        h_overlap = _horizontal_overlap_ratio(block, rect)
+        gap_ok = (
+            (block.x0 >= rect.x1 and block.x0 - rect.x1 <= max_gap_x)
+            or (block.x1 <= rect.x0 and rect.x0 - block.x1 <= max_gap_x)
+        )
+        if h_overlap < 0.3 and not gap_ok:
             continue
         expanded |= block
     return expanded
@@ -641,6 +838,8 @@ def _extend_with_adjacent_text_blocks(page: fitz.Page, rect: fitz.Rect) -> fitz.
         if lines == 0:
             continue
         avg_line_len = chars / max(1, lines)
+        if lines >= CHART_LABEL_PARAGRAPH_MIN_LINES and avg_line_len > CHART_LABEL_PARAGRAPH_MAX_AVG_LINE_LEN:
+            continue
         if lines > CHART_LABEL_MAX_LINES:
             continue
         if avg_line_len > CHART_LABEL_MAX_AVG_LINE_LEN:
@@ -666,6 +865,47 @@ def _extend_with_adjacent_text_blocks(page: fitz.Page, rect: fitz.Rect) -> fitz.
             elif block.y1 > rect.y1 and block.y1 - rect.y1 <= max_v_gap:
                 expanded |= block
     return expanded
+
+
+def _has_internal_top_text(
+    page: fitz.Page,
+    rect: fitz.Rect,
+    head_rect: fitz.Rect,
+) -> bool:
+    search = page.rect.height * CHART_HEADING_TOP_SEARCH_FRAC
+    try:
+        blocks = page.get_text("blocks")
+    except Exception:
+        return False
+    for x0, y0, x1, y1, text, *_ in blocks:
+        if not text:
+            continue
+        if _is_page_number_text(text):
+            continue
+        block = fitz.Rect(x0, y0, x1, y1)
+        if not block.intersects(rect):
+            continue
+        if block.y0 >= head_rect.y0:
+            continue
+        if head_rect.y0 - block.y1 > search:
+            continue
+        if _horizontal_overlap_ratio(block, rect) < CHART_HEADING_TOP_BLOCK_H_OVERLAP:
+            continue
+        lines, chars = _text_stats(str(text))
+        if lines == 0:
+            continue
+        avg_line_len = chars / max(1, lines)
+        if lines >= CHART_LABEL_PARAGRAPH_MIN_LINES and avg_line_len > CHART_LABEL_PARAGRAPH_MAX_AVG_LINE_LEN:
+            continue
+        return True
+    return False
+
+
+def _extend_with_heading_above(page: fitz.Page, rect: fitz.Rect) -> fitz.Rect:
+    head_rect = _nearest_heading_above(page, rect)
+    if head_rect is None:
+        return rect
+    return rect | head_rect
 
 
 def _adjust_rect_for_text_margins(
@@ -812,9 +1052,51 @@ def _caption_near_top(rect: fitz.Rect, cap_rect: fitz.Rect, frac: float = 0.35) 
     return cap_rect.y0 <= rect.y0 + rect.height * frac
 
 
+def _merge_caption_above(
+    rect: fitz.Rect,
+    cap_rect: fitz.Rect,
+    page_rect: fitz.Rect,
+) -> fitz.Rect:
+    max_gap = page_rect.height * CHART_CAPTION_MERGE_MAX_GAP_FRAC
+    if cap_rect.y1 <= rect.y0 and rect.y0 - cap_rect.y1 <= max_gap:
+        return rect | cap_rect
+    if cap_rect.y0 < rect.y0 and cap_rect.y1 > rect.y0:
+        return rect | cap_rect
+    return rect
+
+
+def _nearest_heading_above(page: fitz.Page, rect: fitz.Rect) -> Optional[fitz.Rect]:
+    headings = _heading_lines(page)
+    if not headings:
+        return None
+    page_rect = page.rect
+    max_gap = page_rect.height * CHART_HEADING_MERGE_MAX_GAP_FRAC
+    best_rect: Optional[fitz.Rect] = None
+    best_dist = 1e9
+    for head_rect, _ in headings:
+        if _horizontal_overlap_ratio(head_rect, rect) < CHART_HEADING_TOP_BLOCK_H_OVERLAP:
+            continue
+        if head_rect.y1 <= rect.y0:
+            if rect.y0 - head_rect.y1 <= max_gap:
+                if _has_intervening_paragraph(page, head_rect, rect):
+                    continue
+                dist = rect.y0 - head_rect.y1
+                if dist < best_dist:
+                    best_rect = head_rect
+                    best_dist = dist
+            continue
+        if head_rect.intersects(rect) and head_rect.y0 <= rect.y0 + rect.height * 0.4:
+            if 0.0 < best_dist:
+                best_rect = head_rect
+                best_dist = 0.0
+    return best_rect
+
+
 def _note_block_bottom(page: fitz.Page, rect: fitz.Rect) -> Optional[float]:
     min_y0 = rect.y0 + rect.height * 0.45
     best: Optional[float] = None
+    page_rect = page.rect
+    max_gap_x = page_rect.width * CHART_NOTE_MAX_GAP_X_FRAC
     try:
         blocks = page.get_text("blocks")
     except Exception:
@@ -829,23 +1111,169 @@ def _note_block_bottom(page: fitz.Page, rect: fitz.Rect) -> Optional[float]:
         if not (first.startswith("note:") or first.startswith("source:") or first.startswith("statlink")):
             continue
         block = fitz.Rect(x0, y0, x1, y1)
-        if _horizontal_overlap_ratio(block, rect) < 0.3:
+        h_overlap = _horizontal_overlap_ratio(block, rect)
+        gap_ok = (
+            (block.x0 >= rect.x1 and block.x0 - rect.x1 <= max_gap_x)
+            or (block.x1 <= rect.x0 and rect.x0 - block.x1 <= max_gap_x)
+        )
+        if h_overlap < 0.3 and not gap_ok:
             continue
         if best is None or y1 > best:
             best = y1
     return best
 
 
-def _clamp_bottom_to_note(rect: fitz.Rect, note_bottom: float, page_rect: fitz.Rect) -> fitz.Rect:
+def _next_block_top_below(
+    page: fitz.Page,
+    rect: fitz.Rect,
+    min_y: float,
+    max_y: float,
+) -> Optional[float]:
+    best: Optional[float] = None
+    blocks: List[fitz.Rect] = []
+    try:
+        for x0, y0, x1, y1, text, *_ in page.get_text("blocks"):
+            if not text:
+                continue
+            blocks.append(fitz.Rect(x0, y0, x1, y1))
+    except Exception:
+        blocks = []
+    blocks.extend(_drawing_rects(page))
+    blocks.extend(_image_block_rects(page))
+    for block in blocks:
+        if block.y0 < min_y or block.y0 > max_y:
+            continue
+        if _horizontal_overlap_ratio(block, rect) < CHART_NOTE_BELOW_MIN_H_OVERLAP:
+            continue
+        if best is None or block.y0 < best:
+            best = block.y0
+    return best
+
+
+def _clamp_bottom_to_note(
+    page: fitz.Page,
+    rect: fitz.Rect,
+    note_bottom: float,
+    page_rect: fitz.Rect,
+) -> fitz.Rect:
     max_bottom = min(
         page_rect.y1,
         note_bottom - CHART_CROP_PAD_COMPENSATION + CHART_NOTE_PAD_EXTRA,
     )
+    blocker_top = _next_block_top_below(
+        page,
+        rect,
+        note_bottom + 1,
+        max_bottom + CHART_NOTE_BELOW_GUARD_PX,
+    )
+    if blocker_top is not None:
+        max_bottom = min(max_bottom, blocker_top - CHART_NOTE_BELOW_GUARD_PX)
     if max_bottom <= rect.y0:
         return rect
     if rect.y1 > max_bottom:
         return fitz.Rect(rect.x0, rect.y0, rect.x1, max_bottom)
+    if rect.y1 < max_bottom:
+        return fitz.Rect(rect.x0, rect.y0, rect.x1, max_bottom)
     return rect
+
+
+def _expand_table_bbox(
+    page: fitz.Page,
+    bbox: Tuple[float, float, float, float],
+    method: str,
+) -> Tuple[float, float, float, float]:
+    if method not in ("stream", "lattice"):
+        return bbox
+    rect = fitz.Rect(*bbox)
+    page_rect = page.rect
+    gap_frac = TABLE_EXPAND_MAX_GAP_FRAC if method == "stream" else TABLE_EXPAND_LATTICE_MAX_GAP_FRAC
+    max_gap_x = page_rect.width * gap_frac
+    max_gap_y = page_rect.height * gap_frac
+    expanded = rect
+
+    try:
+        blocks = page.get_text("blocks")
+    except Exception:
+        blocks = []
+
+    for x0, y0, x1, y1, text, *_ in blocks:
+        if not text:
+            continue
+        block = fitz.Rect(x0, y0, x1, y1)
+        if block.height > rect.height * TABLE_EXPAND_MAX_BLOCK_HEIGHT_FRAC:
+            continue
+        text_str = str(text)
+        lines, chars = _text_stats(text_str)
+        if lines == 0:
+            continue
+        avg_line_len = chars / max(1, lines)
+        heading_like = _heading_like_block(text_str, lines, avg_line_len)
+        if not heading_like and (lines > TABLE_EXPAND_MAX_LINES or avg_line_len > TABLE_EXPAND_MAX_AVG_LINE_LEN):
+            continue
+
+        inter_area = _rect_intersection_area(block, rect)
+        if inter_area > 0.0:
+            if block.x0 < rect.x0 and rect.x0 - block.x0 <= max_gap_x:
+                expanded |= block
+            if block.x1 > rect.x1 and block.x1 - rect.x1 <= max_gap_x:
+                expanded |= block
+            if block.y0 < rect.y0 and rect.y0 - block.y0 <= max_gap_y:
+                expanded |= block
+            if block.y1 > rect.y1 and block.y1 - rect.y1 <= max_gap_y:
+                expanded |= block
+            continue
+
+        if block.y1 <= rect.y0 and rect.y0 - block.y1 <= max_gap_y:
+            if _horizontal_overlap_ratio(block, rect) >= TABLE_EXPAND_MIN_H_OVERLAP:
+                expanded |= block
+        elif block.y0 >= rect.y1 and block.y0 - rect.y1 <= max_gap_y:
+            if _horizontal_overlap_ratio(block, rect) >= TABLE_EXPAND_MIN_H_OVERLAP:
+                expanded |= block
+        elif block.x1 <= rect.x0 and rect.x0 - block.x1 <= max_gap_x:
+            if _vertical_overlap_ratio(block, rect) >= TABLE_EXPAND_MIN_V_OVERLAP:
+                expanded |= block
+        elif block.x0 >= rect.x1 and block.x0 - rect.x1 <= max_gap_x:
+            if _vertical_overlap_ratio(block, rect) >= TABLE_EXPAND_MIN_V_OVERLAP:
+                expanded |= block
+
+    drawings = _drawing_rects(page) + _image_block_rects(page)
+    for block in drawings:
+        if _rect_intersection_area(block, rect) > 0.0:
+            if block.x0 < rect.x0 and rect.x0 - block.x0 <= max_gap_x:
+                expanded |= block
+            if block.x1 > rect.x1 and block.x1 - rect.x1 <= max_gap_x:
+                expanded |= block
+            if block.y0 < rect.y0 and rect.y0 - block.y0 <= max_gap_y:
+                expanded |= block
+            if block.y1 > rect.y1 and block.y1 - rect.y1 <= max_gap_y:
+                expanded |= block
+            continue
+        if block.x1 <= rect.x0 and rect.x0 - block.x1 <= max_gap_x:
+            if _vertical_overlap_ratio(block, rect) >= TABLE_EXPAND_MIN_V_OVERLAP:
+                expanded |= block
+        elif block.x0 >= rect.x1 and block.x0 - rect.x1 <= max_gap_x:
+            if _vertical_overlap_ratio(block, rect) >= TABLE_EXPAND_MIN_V_OVERLAP:
+                expanded |= block
+        elif block.y1 <= rect.y0 and rect.y0 - block.y1 <= max_gap_y:
+            if _horizontal_overlap_ratio(block, rect) >= TABLE_EXPAND_MIN_H_OVERLAP:
+                expanded |= block
+        elif block.y0 >= rect.y1 and block.y0 - rect.y1 <= max_gap_y:
+            if _horizontal_overlap_ratio(block, rect) >= TABLE_EXPAND_MIN_H_OVERLAP:
+                expanded |= block
+
+    if method == "stream":
+        width_frac = expanded.width / max(1.0, page_rect.width)
+        height_frac = expanded.height / max(1.0, page_rect.height)
+        if width_frac >= TABLE_EXPAND_STREAM_WIDE_MIN_WIDTH_FRAC and height_frac >= TABLE_EXPAND_STREAM_WIDE_MIN_HEIGHT_FRAC:
+            if page_rect.x1 - expanded.x1 <= max_gap_x:
+                expanded = fitz.Rect(expanded.x0, expanded.y0, page_rect.x1, expanded.y1)
+            if expanded.x0 - page_rect.x0 <= max_gap_x:
+                expanded = fitz.Rect(page_rect.x0, expanded.y0, expanded.x1, expanded.y1)
+
+    expanded &= page_rect
+    if expanded.is_empty:
+        return bbox
+    return (expanded.x0, expanded.y0, expanded.x1, expanded.y1)
 
 
 def _save_thumb(pix: fitz.Pixmap, out_dir: str, report_name: str, index: int, max_w: int = 480) -> str:
@@ -875,6 +1303,8 @@ def _nearby_text(page: fitz.Page, rect: fitz.Rect, max_dist: float = 90) -> str:
     best = ("", 1e9)
     for x0, y0, x1, y1, text, *_ in page.get_text("blocks"):
         if not text:
+            continue
+        if _is_page_number_text(text):
             continue
         r = fitz.Rect(x0, y0, x1, y1)
         dy = r.y0 - rect.y1
@@ -911,15 +1341,12 @@ def _extract_charts(
             relaxed_top = rect.y0 + rect.height * CHART_MARGIN_RELAX_FRAC
             relaxed_bot = rect.y1 - rect.height * CHART_MARGIN_RELAX_FRAC
             local = 0
-            seen_rects: List[fitz.Rect] = []
+            kept: List[Tuple[fitz.Rect, float, int]] = []
             candidates = _collect_chart_rects(page)
             for rect_item in candidates:
                 stats["raw"] = int(stats["raw"]) + 1
                 r = rect_item.rect
-                if _rect_seen(r, seen_rects):
-                    stats["rejected"] = int(stats["rejected"]) + 1
-                    _tally_reason(stats, "dup")
-                    continue
+                base_rect = r
                 area_frac = r.get_area() / rect.get_area()
                 aspect = r.width / max(1, r.height)
                 aspect_max = INFO_CHART_MAX_ASPECT if rect_item.kind == "heading" else 2.5
@@ -933,6 +1360,8 @@ def _extract_charts(
                     cap_rect, cap = _nearest_caption_block(page, r, CHART_CAPTION_HINTS)
                 if not cap:
                     cap = _nearby_text(page, r)
+                if cap and _is_page_number_text(cap):
+                    cap = ""
                 cap_lower = (cap or "").lower()
                 has_hint = any(k in cap_lower for k in CAPTION_HINTS)
                 if r.y0 < top_cut or r.y1 > bot_cut:
@@ -958,6 +1387,11 @@ def _extract_charts(
                     bbox_text = ""
                 text_lines, text_chars = _text_stats(bbox_text)
                 text_ratio = (text_chars / page_chars) if page_chars else 0.0
+                if rect_item.kind in ("xref", "block") and not has_hint:
+                    if (not cap or len(cap.strip()) < 8) and text_chars <= 8 and area_frac < 0.5:
+                        stats["rejected"] = int(stats["rejected"]) + 1
+                        _tally_reason(stats, "decorative_image")
+                        continue
                 if _chart_text_heavy(text_lines, text_chars, text_ratio):
                     if rect_item.kind == "draw" and has_hint and text_ratio <= 0.55:
                         pass
@@ -966,9 +1400,24 @@ def _extract_charts(
                         _tally_reason(stats, "text_dense")
                         continue
                 r_final = r
-                if rect_item.kind in ("draw", "heading"):
+                expanded_with_heading = False
+                if cap_rect is not None and has_hint:
+                    r_final = _merge_caption_above(r_final, cap_rect, rect)
+                allow_adjacent = rect_item.kind in ("draw", "heading") or (
+                    rect_item.kind == "xref" and has_hint
+                )
+                if allow_adjacent:
                     r_final = _extend_with_adjacent_text_blocks(page, r_final)
-                r_final = _pad_rect(r_final, rect)
+                if not has_hint and rect_item.kind == "heading":
+                    expanded = _extend_with_heading_above(page, r_final)
+                    expanded_with_heading = expanded.y0 < r_final.y0 - 1
+                    r_final = expanded
+                if not has_hint and rect_item.kind not in ("heading", "xref"):
+                    head_rect = _nearest_heading_above(page, r_final)
+                    if head_rect is not None:
+                        r_final = r_final | head_rect
+                if rect_item.kind != "xref" or has_hint:
+                    r_final = _pad_rect(r_final, rect)
                 if not has_hint and rect_item.kind in ("draw", "heading"):
                     if rect_item.kind == "heading":
                         r_final = _adjust_rect_for_text_margins(
@@ -985,16 +1434,23 @@ def _extract_charts(
                     else:
                         r_final = _adjust_rect_for_text_margins(page, r_final)
                         r_final = _expand_rect_into_whitespace(page, r_final)
-                if rect_item.kind == "heading" and cap_rect is not None:
+                if rect_item.kind == "heading" and cap_rect is not None and not expanded_with_heading:
                     r_final = _clamp_top_to_heading(r_final, cap_rect, page, rect)
-                if has_hint:
-                    r_final = _extend_with_note_blocks(page, r_final)
-                    note_bottom = _note_block_bottom(page, r_final)
-                    if note_bottom is not None:
-                        r_final = _clamp_bottom_to_note(r_final, note_bottom, rect)
+                if not has_hint and rect_item.kind not in ("heading", "xref"):
+                    head_rect = _nearest_heading_above(page, r_final)
+                    if head_rect is not None:
+                        r_final = _clamp_top_to_heading(r_final, head_rect, page, rect)
+                r_final = _extend_with_note_blocks(page, r_final)
+                if cap_rect is not None and has_hint and cap_rect.y0 < base_rect.y0:
+                    r_final = _clamp_top_to_caption(r_final, cap_rect, page, rect)
+                note_bottom = _note_block_bottom(page, r_final)
+                note_included = note_bottom is not None
+                if note_bottom is not None:
+                    r_final = _clamp_bottom_to_note(page, r_final, note_bottom, rect)
                 if cap_rect is not None and _caption_near_top(r_final, cap_rect):
                     if has_hint or rect_item.kind != "heading":
-                        r_final = _clamp_top_to_caption(r_final, cap_rect, rect)
+                        r_final = _clamp_top_to_caption(r_final, cap_rect, page, rect)
+                r_final = _trim_top_page_number(r_final, page, cap_rect if has_hint else None)
                 try:
                     bbox_text = page.get_text("text", clip=r_final)
                 except Exception:
@@ -1023,7 +1479,7 @@ def _extract_charts(
                     thumb_path = Path(thumb)
                     rel_thumb = Path(report_name) / "thumbs" / thumb_path.name
                     thumb = rel_thumb.as_posix()
-                out.append(Candidate(
+                candidate = Candidate(
                     schema_version="1.0",
                     id=cid,
                     kind="chart",
@@ -1039,11 +1495,25 @@ def _extract_charts(
                         "text_chars": text_chars,
                         "text_ratio": round(text_ratio, 3),
                     },
-                ))
-                seen_rects.append(r_final)
+                )
+                score = _chart_candidate_score(area_frac, has_hint, cap or "", note_included)
+                overlap_idx = _find_overlapping_kept(r_final, kept)
+                if overlap_idx is not None:
+                    existing_score = kept[overlap_idx][1]
+                    if score <= existing_score:
+                        stats["rejected"] = int(stats["rejected"]) + 1
+                        _tally_reason(stats, "overlap_dup")
+                        continue
+                    out_idx = kept[overlap_idx][2]
+                    out[out_idx] = candidate
+                    kept[overlap_idx] = (r_final, score, out_idx)
+                    stats["replaced"] = int(stats.get("replaced", 0)) + 1
+                else:
+                    out.append(candidate)
+                    kept.append((r_final, score, len(out) - 1))
+                    stats["kept"] = int(stats["kept"]) + 1
                 if save_thumbs:
                     thumb_index += 1
-                stats["kept"] = int(stats["kept"]) + 1
                 local += 1
     finally:
         if doc is None:
@@ -1108,6 +1578,8 @@ def _extract_tables(pdf_path: str, max_candidates: int = 10) -> Tuple[List[Candi
 
                 for i, cand in enumerate(sorted(deduped, key=_table_sort_key)):
                     x0, y0, x1, y1 = cand.bbox
+                    if fitz_page is not None:
+                        x0, y0, x1, y1 = _expand_table_bbox(fitz_page, (x0, y0, x1, y1), cand.method)
                     cid = f"table-{pno}-{i}"
                     out.append(Candidate(
                         schema_version="1.0",
@@ -1364,7 +1836,45 @@ def _row_len_cv(lengths: List[int]) -> float:
 
 
 def _cell_is_page_number(text: str) -> bool:
-    return bool(_PAGE_NUMBER_RX.match(text))
+    return _is_page_number_text(text)
+
+
+def _trim_top_page_number(
+    rect: fitz.Rect,
+    page: fitz.Page,
+    cap_rect: Optional[fitz.Rect],
+) -> fitz.Rect:
+    page_rect = page.rect
+    top_band = page_rect.height * 0.15
+    right_band = page_rect.x0 + page_rect.width * 0.55
+    guard = max(page_rect.height * 0.008, 6.0)
+    best_y1: Optional[float] = None
+    try:
+        blocks = page.get_text("blocks")
+    except Exception:
+        return rect
+    for x0, y0, x1, y1, text, *_ in blocks:
+        if not text:
+            continue
+        if not _is_page_number_text(text):
+            continue
+        block = fitz.Rect(x0, y0, x1, y1)
+        if block.y0 > page_rect.y0 + top_band:
+            continue
+        if block.x0 < right_band:
+            continue
+        if not block.intersects(rect):
+            continue
+        if cap_rect is not None and block.y1 >= cap_rect.y0 - guard:
+            continue
+        if best_y1 is None or block.y1 > best_y1:
+            best_y1 = block.y1
+    if best_y1 is None:
+        return rect
+    new_top = max(rect.y0, best_y1 + guard)
+    if new_top >= rect.y1:
+        return rect
+    return fitz.Rect(rect.x0, new_top, rect.x1, rect.y1)
 
 
 def _index_page_ratio(rows: List[List[object]]) -> float:
@@ -1387,6 +1897,21 @@ def _rect_intersection_area(a: fitz.Rect, b: fitz.Rect) -> float:
     if inter.is_empty:
         return 0.0
     return max(0.0, inter.get_area())
+
+
+def _heading_like_block(text: str, lines: int, avg_line_len: float) -> bool:
+    if lines == 0:
+        return False
+    if lines > TABLE_EXPAND_HEADING_MAX_LINES:
+        return False
+    if avg_line_len > TABLE_EXPAND_HEADING_MAX_AVG_LINE_LEN:
+        return False
+    if _alpha_ratio(text) < TABLE_EXPAND_HEADING_MIN_ALPHA_RATIO:
+        return False
+    sentence_marks = text.count(".") + text.count("!") + text.count("?")
+    if sentence_marks > TABLE_EXPAND_HEADING_MAX_SENTENCES:
+        return False
+    return True
 
 
 
@@ -1470,6 +1995,12 @@ def _validate_table_candidate(cand: _TableCandidate) -> Tuple[bool, str]:
             return False, "stream_text_block"
         if _stream_infobox_like(cand):
             return False, "stream_infobox"
+        if _stream_list_like(cand):
+            return False, "stream_list"
+        if _stream_panel_like(cand):
+            return False, "stream_panel"
+        if _stream_sparse_text_like(cand):
+            return False, "stream_sparse_text"
         if _stream_low_consistency(cand):
             return False, "stream_low_consistency"
         if _text_block_like_loose(cand):
@@ -1532,6 +2063,54 @@ def _stream_infobox_like(cand: _TableCandidate) -> bool:
     if cand.line_count < TABLE_STREAM_INFOBOX_MIN_LINES:
         return False
     if cand.row_len_cv > TABLE_STREAM_INFOBOX_MAX_ROW_LEN_CV:
+        return False
+    return True
+
+
+def _stream_list_like(cand: _TableCandidate) -> bool:
+    if cand.caption_hint:
+        return False
+    if cand.row_count < TABLE_STREAM_LIST_MIN_ROWS:
+        return False
+    if cand.col_count > TABLE_STREAM_LIST_MAX_COLS:
+        return False
+    if cand.area_frac > TABLE_STREAM_LIST_MAX_AREA_FRAC:
+        return False
+    if cand.avg_words_per_cell > TABLE_STREAM_LIST_MAX_AVG_WORDS:
+        return False
+    if cand.numeric_ratio > TABLE_STREAM_LIST_MAX_NUMERIC_RATIO:
+        return False
+    return True
+
+
+def _stream_panel_like(cand: _TableCandidate) -> bool:
+    if cand.caption_hint:
+        return False
+    if cand.area_frac < TABLE_STREAM_PANEL_MIN_AREA_FRAC:
+        return False
+    if cand.row_count < TABLE_STREAM_PANEL_MIN_ROWS:
+        return False
+    if cand.col_count > TABLE_STREAM_PANEL_MAX_COLS:
+        return False
+    if cand.avg_words_per_cell > TABLE_STREAM_PANEL_MAX_AVG_WORDS:
+        return False
+    if cand.numeric_ratio > TABLE_STREAM_PANEL_MAX_NUMERIC_RATIO:
+        return False
+    return True
+
+
+def _stream_sparse_text_like(cand: _TableCandidate) -> bool:
+    if cand.caption_hint:
+        return False
+    if cand.area_frac < TABLE_STREAM_SPARSE_MIN_AREA:
+        return False
+    if cand.line_count > TABLE_STREAM_SPARSE_MAX_LINES:
+        return False
+    if cand.avg_line_len < TABLE_STREAM_SPARSE_MIN_AVG_LINE_LEN:
+        return False
+    if cand.numeric_ratio > TABLE_STREAM_SPARSE_MAX_NUMERIC_RATIO:
+        return False
+    if cand.col_count > TABLE_STREAM_SPARSE_MAX_COLS:
         return False
     return True
 

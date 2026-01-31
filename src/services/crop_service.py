@@ -16,9 +16,9 @@ logger = logging.getLogger("market_lense.crop_service")
 
 CROP_TRIM_MAX_FRAC = 0.08
 CROP_TRIM_MIN_PX = 12
-CROP_TRIM_KEEP_PX = 2
+CROP_TRIM_KEEP_PX = 8
 CROP_TRIM_TOLERANCE = 8
-CROP_TRIM_MIN_BG_FRAC = 0.98
+CROP_TRIM_MIN_BG_FRAC = 0.9995
 CROP_TRIM_SAMPLES = 60
 
 
@@ -45,7 +45,7 @@ def _dominant_border_color(img: Image.Image, box: int = 4) -> tuple[int, int, in
 
 def _row_is_bg(img: Image.Image, y: int, bg: tuple[int, int, int], tol: int) -> bool:
     width, _ = img.size
-    step = max(1, width // CROP_TRIM_SAMPLES)
+    step = 1
     samples = 0
     match = 0
     for x in range(0, width, step):
@@ -58,7 +58,7 @@ def _row_is_bg(img: Image.Image, y: int, bg: tuple[int, int, int], tol: int) -> 
 
 def _col_is_bg(img: Image.Image, x: int, bg: tuple[int, int, int], tol: int) -> bool:
     _, height = img.size
-    step = max(1, height // CROP_TRIM_SAMPLES)
+    step = 1
     samples = 0
     match = 0
     for y in range(0, height, step):
@@ -180,7 +180,7 @@ def _crop_regions(
             if it.type == "chart":
                 try:
                     img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
-                    img = _trim_uniform_border(img, allow_bottom=False)
+                    img = _trim_uniform_border(img, allow_bottom=False, allow_right=False)
                 except Exception:
                     img = None
             if idx == 0:

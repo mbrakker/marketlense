@@ -40,8 +40,8 @@ def _candidate_payload(candidates, crop_map: Dict[str, str]) -> List[dict]:
     return payload
 
 
-def _candidates_path(output_dir: str, report_id: str) -> str:
-    base = Path(output_dir) / "candidates" / report_id
+def _candidates_path(output_dir: str, report_name: str, subdir: str) -> str:
+    base = Path(output_dir) / report_name / (subdir or "candidates")
     return str(base / "candidates.json")
 
 
@@ -152,7 +152,7 @@ def generate_candidate_pack(request: CandidateExtractRequest, ctx: RunContext) -
             "table_count": table_count,
             "candidates": _candidate_payload(candidates_resp.candidates, crop_map),
         }
-        output_path = _candidates_path(request.output_dir, request.report_id)
+        output_path = _candidates_path(request.output_dir, request.report_name, request.subdir)
         write_bytes(
             WriteBytesRequest(
                 schema_version="1.0",
