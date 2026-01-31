@@ -1,7 +1,5 @@
 # TODO
 
-1. Upgrade validator to perform semantic comparisons (reduce word-by-word false positives).
-   - Current checks in `src/generators/validation_generator.py` rely on substring/regex matching (`_metric_value_supported`, `_contains_token`, `_validate_quotes`) and miss paraphrases/stem variants. Add semantic comparison (embeddings or LLM re-check) against evidence snippets to cut false negatives/positives while keeping schema validation intact.
 2. Upgrade all prompts.
    - Prompt namespaces live under `src/prompts/**` (report_generation, report_vs/{doc_map,evidence_packs,artifacts,validate}, rank_candidates). Refresh wording, safety, and output formats; ensure variables match renderer usage in `prompt_service` and bump schema/version hashes for logging.
 3. Parallelize report processing.
@@ -28,16 +26,6 @@
     - `load_publish_settings` references an undefined `missing` list and normalizes `site_url` before validation, which causes crashes or silent misconfigurations. Use the resolver’s `missing` list consistently and only normalize after validating inputs.
 
 # Detailed Proposals
-
-## 1. Upgrade validator to perform semantic comparisons
-- **Context**: Validation in `src/generators/validation_generator.py` relies on exact substring or regex matching in `_metric_value_supported`, `_contains_token`, and `_validate_quotes`, which can miss paraphrases or stem variants.
-- **Proposal**:
-  - Add a semantic validation pass after `_collect_evidence_texts` that compares insight metrics and quotes against evidence snippets using embeddings or a lightweight LLM re-check.
-  - Keep schema validation (`validate_schema`) unchanged; new checks should only produce `ValidationIssue` entries.
-  - Wire model choice through `openai_service` with explicit logging of prompts, model, and evidence hashes.
-- **Acceptance**:
-  - Paraphrased metric values and quotes are flagged correctly with fewer false positives.
-  - Validation report includes both semantic and exact-match findings with clear severity.
 
 ## 2. Upgrade all prompts
 - **Context**: Prompt namespaces live under `src/prompts/**` and are loaded via `prompt_service` contracts and `PromptLoadRequest`.

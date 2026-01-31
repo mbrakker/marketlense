@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import logging
 import re
+import hashlib
+from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from src.contracts.config import AppSettings
@@ -19,6 +21,20 @@ from src.utils.model_resolver import resolve_model
 logger = logging.getLogger("market_lense.validation_generator")
 
 _SEVERITY_ORDER = ("error", "warning", "info", "pass")
+
+
+@dataclass(frozen=True)
+class _SemanticSupport:
+    supported: bool
+    confidence: float
+    reason: str
+
+
+@dataclass(frozen=True)
+class _SemanticCheckOutcome:
+    metric_support: Dict[str, _SemanticSupport]
+    quote_support: Dict[str, _SemanticSupport]
+    issues: List[ValidationIssue]
 
 
 def validate_report(
@@ -48,9 +64,19 @@ def validate_report(
     insights = _ensure_list(request.artifacts.get("insights_final") if isinstance(request.artifacts, dict) else [])
     quotes = _extract_quotes(request, insights)
     evidence_texts, evidence_map = _collect_evidence_texts(request.artifacts, request.evidence_packs)
+    semantic_outcome = _run_semantic_validation(
+        insights,
+        quotes,
+        evidence_texts,
+        settings,
+        prompt_client,
+        openai_client,
+        ctx,
+    )
 
-    issues.extend(_validate_insight_metrics(insights, evidence_map))
-    issues.extend(_validate_quotes(quotes, evidence_texts))
+    issues.extend(semantic_outcome.issues)
+    issues.extend(_validate_insight_metrics(insights, evidence_map, semantic_outcome.metric_support))
+    issues.extend(_validate_quotes(quotes, evidence_texts, semantic_outcome.quote_support))
     issues.extend(_validate_new_numbers(request.artifacts, insights))
     issues.extend(_run_grounding_check(request, settings, evidence_texts, prompt_client, openai_client, ctx))
 
@@ -99,7 +125,11 @@ def validate_report(
     return report
 
 
-def _validate_insight_metrics(insights: Sequence[dict], evidence_map: Dict[str, str]) -> List[ValidationIssue]:
+def _validate_insight_metrics(
+    insights: Sequence[dict],
+    evidence_map: Dict[str, str],
+    semantic_support: Optional[Dict[str, _SemanticSupport]] = None,
+) -> List[ValidationIssue]:
     issues: List[ValidationIssue] = []
     for idx, insight in enumerate(insights):
         if not isinstance(insight, dict):
@@ -118,28 +148,57 @@ def _validate_insight_metrics(insights: Sequence[dict], evidence_map: Dict[str, 
         value = _s(metric.get("value")).strip()
         unit = _s(metric.get("unit")).strip()
         timeframe = _s(metric.get("timeframe")).strip()
-        if value and not _metric_value_supported(value, evidence_text):
+        semantic_entry = (semantic_support or {}).get(label)
+        value_supported_exact = _metric_value_supported(value, evidence_text)
+        value_supported_semantic = semantic_entry.supported if semantic_entry else False
+        if value and not (value_supported_exact or value_supported_semantic):
+            reason = f" ({semantic_entry.reason})" if semantic_entry and semantic_entry.reason else ""
+            severity = "error" if not semantic_entry or semantic_entry.confidence >= 0.6 else "warning"
             issues.append(_issue(
-                message=f"Metric value '{value}' not found in evidence for {label}",
-                severity="error",
+                message=f"Metric value '{value}' not found in evidence for {label}{reason}",
+                severity=severity,
+                section=f"insights:{label}",
+            ))
+        if value and not value_supported_exact and value_supported_semantic:
+            issues.append(_issue(
+                message=f"Metric value '{value}' not verbatim but semantically supported (confidence={_format_confidence(semantic_entry.confidence)}) for {label}",
+                severity="info",
                 section=f"insights:{label}",
             ))
         if unit and not _contains_token(unit, evidence_text):
-            issues.append(_issue(
-                message=f"Metric unit '{unit}' not present in evidence for {label}",
-                severity="warning",
-                section=f"insights:{label}",
-            ))
+            if semantic_entry and semantic_entry.supported:
+                issues.append(_issue(
+                    message=f"Metric unit '{unit}' not verbatim but semantically supported (confidence={_format_confidence(semantic_entry.confidence)}) for {label}",
+                    severity="info",
+                    section=f"insights:{label}",
+                ))
+            else:
+                issues.append(_issue(
+                    message=f"Metric unit '{unit}' not present in evidence for {label}",
+                    severity="warning",
+                    section=f"insights:{label}",
+                ))
         if timeframe and not _contains_token(timeframe, evidence_text):
-            issues.append(_issue(
-                message=f"Metric timeframe '{timeframe}' not present in evidence for {label}",
-                severity="warning",
-                section=f"insights:{label}",
-            ))
+            if semantic_entry and semantic_entry.supported:
+                issues.append(_issue(
+                    message=f"Metric timeframe '{timeframe}' not verbatim but semantically supported (confidence={_format_confidence(semantic_entry.confidence)}) for {label}",
+                    severity="info",
+                    section=f"insights:{label}",
+                ))
+            else:
+                issues.append(_issue(
+                    message=f"Metric timeframe '{timeframe}' not present in evidence for {label}",
+                    severity="warning",
+                    section=f"insights:{label}",
+                ))
     return issues
 
 
-def _validate_quotes(quotes: Sequence[dict], evidence_texts: Sequence[str]) -> List[ValidationIssue]:
+def _validate_quotes(
+    quotes: Sequence[dict],
+    evidence_texts: Sequence[str],
+    semantic_support: Optional[Dict[str, _SemanticSupport]] = None,
+) -> List[ValidationIssue]:
     issues: List[ValidationIssue] = []
     if not quotes:
         return issues
@@ -149,11 +208,24 @@ def _validate_quotes(quotes: Sequence[dict], evidence_texts: Sequence[str]) -> L
         text = _s(quote.get("text"))
         if not text:
             continue
-        if not any(text in evidence for evidence in evidence_texts):
+        label = _quote_label(quote, idx)
+        semantic_entry = (semantic_support or {}).get(label)
+        verbatim_match = any(text in evidence for evidence in evidence_texts)
+        if verbatim_match:
+            continue
+        if semantic_entry and semantic_entry.supported:
             issues.append(_issue(
-                message=f"Quote not verbatim in evidence: {text[:120]}",
-                severity="error",
-                section=f"quotes:{idx + 1}",
+                message=f"Quote paraphrased but semantically supported (confidence={_format_confidence(semantic_entry.confidence)}): {text[:120]}",
+                severity="info",
+                section=f"quotes:{label}",
+            ))
+        else:
+            reason = f" ({semantic_entry.reason})" if semantic_entry and semantic_entry.reason else ""
+            severity = "error" if not semantic_entry or semantic_entry.confidence >= 0.6 else "warning"
+            issues.append(_issue(
+                message=f"Quote not verbatim in evidence{reason}: {text[:120]}",
+                severity=severity,
+                section=f"quotes:{label}",
             ))
     return issues
 
@@ -174,6 +246,159 @@ def _validate_new_numbers(artifacts: dict, insights: Sequence[dict]) -> List[Val
                     section=section,
                 ))
     return issues
+
+
+def _run_semantic_validation(
+    insights: Sequence[dict],
+    quotes: Sequence[dict],
+    evidence_texts: Sequence[str],
+    settings: AppSettings,
+    prompt_client,
+    openai_client,
+    ctx: RunContext,
+) -> _SemanticCheckOutcome:
+    if not evidence_texts or (not insights and not quotes):
+        return _SemanticCheckOutcome(metric_support={}, quote_support={}, issues=[])
+    semantic_ctx = child_context(ctx, task_id=f"{ctx.task_id}:semantic")
+    logger.info(log_event(
+        semantic_ctx,
+        role="generator",
+        event="semantic_validation_start",
+        module=logger.name,
+        fields={
+            "insight_count": len(insights),
+            "quote_count": len(quotes),
+            "evidence_count": len(evidence_texts),
+        },
+    ))
+    prompt_namespace = "report_vs/validate/semantic"
+    prompt_set = prompt_client.load_prompt_set(PromptLoadRequest(schema_version="1.0", namespace=prompt_namespace), semantic_ctx)
+    logger.info(log_event(
+        semantic_ctx,
+        role="generator",
+        event="prompt_selected",
+        module=logger.name,
+        fields={
+            "namespace": prompt_namespace,
+            "system_path": prompt_set.system.path,
+            "system_sha256": prompt_set.system.sha256,
+            "user_path": prompt_set.user.path,
+            "user_sha256": prompt_set.user.sha256,
+        },
+    ))
+    payload = _semantic_payload(insights, quotes)
+    prompt_vars = {
+        "metrics_json": json.dumps(payload["metrics"], ensure_ascii=False),
+        "quotes_json": json.dumps(payload["quotes"], ensure_ascii=False),
+        "evidence_json": json.dumps(list(evidence_texts), ensure_ascii=False),
+    }
+    system_render = prompt_client.render_prompt(PromptRenderRequest(schema_version="1.0", template=prompt_set.system, variables=prompt_vars), semantic_ctx)
+    user_render = prompt_client.render_prompt(PromptRenderRequest(schema_version="1.0", template=prompt_set.user, variables=prompt_vars), semantic_ctx)
+    logger.info(log_event(
+        semantic_ctx,
+        role="generator",
+        event="prompt_rendered",
+        module=logger.name,
+        fields={
+            "system_prompt": system_render.text,
+            "user_prompt": user_render.text,
+        },
+    ))
+    resolved_model = resolve_model(prompt_namespace, getattr(settings, "openai_models", {}), settings.openai_model)
+    evidence_hash = hashlib.sha256("||".join(evidence_texts).encode("utf-8")).hexdigest()
+    metrics_hash = hashlib.sha256(json.dumps(payload["metrics"], sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
+    quotes_hash = hashlib.sha256(json.dumps(payload["quotes"], sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
+    logger.info(log_event(
+        semantic_ctx,
+        role="generator",
+        event="model_resolved",
+        module=logger.name,
+        fields={
+            "namespace": prompt_namespace,
+            "resolved_model": resolved_model,
+            "default_model": settings.openai_model,
+            "evidence_sha256": evidence_hash,
+            "metrics_sha256": metrics_hash,
+            "quotes_sha256": quotes_hash,
+        },
+    ))
+    logger.info(log_event(
+        semantic_ctx,
+        role="generator",
+        event="semantic_request_config",
+        module=logger.name,
+        fields={
+            "model": resolved_model,
+            "temperature": settings.temperature,
+            "seed": settings.openai_seed,
+        },
+    ))
+    try:
+        resp = openai_client.openai_chat_json(
+            OpenAIJSONPromptRequest(
+                schema_version="1.0",
+                system_prompt=system_render.text,
+                user_prompt=user_render.text,
+                model=resolved_model,
+                temperature=settings.temperature,
+                api_key=settings.openai_api_key,
+                seed=settings.openai_seed,
+                timeout_seconds=settings.openai_timeout_seconds,
+                cost_ledger_path=settings.cost_ledger_path,
+                cost_daily_path=settings.cost_daily_path,
+                model_pricing=settings.model_pricing,
+            ),
+            semantic_ctx,
+        )
+        parsed = resp.parsed_json if isinstance(resp.parsed_json, dict) else None
+        logger.info(log_event(
+            semantic_ctx,
+            role="generator",
+            event="semantic_response",
+            module=logger.name,
+            fields={
+                "has_json": isinstance(parsed, dict),
+                "input_tokens": resp.input_tokens,
+                "output_tokens": resp.output_tokens,
+            },
+        ))
+        if parsed is None:
+            raise AppError(
+                code="semantic_response_invalid",
+                message="Semantic validation did not return JSON payload",
+                retryable=False,
+                context={"model": resolved_model},
+            )
+        outcome = _parse_semantic_response(parsed)
+        logger.info(log_event(
+            semantic_ctx,
+            role="generator",
+            event="semantic_validation_complete",
+            module=logger.name,
+            fields={
+                "metric_entries": len(outcome.metric_support),
+                "quote_entries": len(outcome.quote_support),
+                "issue_count": len(outcome.issues),
+            },
+        ))
+        return outcome
+    except AppError as exc:
+        logger.info(log_event(
+            semantic_ctx,
+            role="generator",
+            event="semantic_validation_failed",
+            module=logger.name,
+            fields={"code": exc.code, "message": exc.message},
+        ))
+        return _SemanticCheckOutcome(
+            metric_support={},
+            quote_support={},
+            issues=[_issue(
+                message=f"Semantic validation failed: {exc.message}",
+                severity="warning",
+                section="semantic",
+            )],
+        )
 
 
 def _run_grounding_check(
@@ -335,13 +560,98 @@ def _grounding_payload(request: ValidationRequest, artifacts: dict) -> dict:
     }
 
 
+def _semantic_payload(insights: Sequence[dict], quotes: Sequence[dict]) -> dict:
+    metrics: List[dict] = []
+    for idx, insight in enumerate(insights):
+        if not isinstance(insight, dict):
+            continue
+        metric = insight.get("metric") if isinstance(insight.get("metric"), dict) else {}
+        metrics.append({
+            "id": _s(insight.get("id") or f"insight_{idx + 1}"),
+            "value": _s(metric.get("value")),
+            "unit": _s(metric.get("unit")),
+            "timeframe": _s(metric.get("timeframe")),
+            "insight_text": _s(insight.get("text")),
+            "evidence_id": _s(insight.get("evidence_id")),
+        })
+    quote_entries: List[dict] = []
+    for idx, quote in enumerate(quotes):
+        if not isinstance(quote, dict):
+            continue
+        quote_entries.append({
+            "id": _quote_label(quote, idx),
+            "text": _s(quote.get("text")),
+            "speaker": _s(quote.get("speaker")),
+            "evidence_id": _s(quote.get("evidence_id")),
+        })
+    return {"metrics": metrics, "quotes": quote_entries}
+
+
+def _parse_semantic_response(payload: dict) -> _SemanticCheckOutcome:
+    metric_support: Dict[str, _SemanticSupport] = {}
+    quote_support: Dict[str, _SemanticSupport] = {}
+    issues: List[ValidationIssue] = []
+    metrics = payload.get("metrics") if isinstance(payload, dict) else []
+    if isinstance(metrics, list):
+        for entry in metrics:
+            if not isinstance(entry, dict):
+                continue
+            label = _s(entry.get("id") or entry.get("label") or entry.get("insight_id"))
+            if not label:
+                continue
+            state = entry.get("supported")
+            if isinstance(state, str):
+                normalized = state.strip().lower()
+                supported = normalized in {"true", "yes", "supported", "pass"}
+            else:
+                supported = bool(state) if state is not None else False
+            confidence = _to_float(entry.get("confidence"))
+            confidence = confidence if confidence is not None else 0.0
+            reason = _s(entry.get("reason"))
+            metric_support[label] = _SemanticSupport(supported=supported, confidence=confidence, reason=reason)
+            if not supported:
+                severity = "error" if confidence >= 0.6 else "warning"
+                reason_suffix = f" ({reason})" if reason else ""
+                issues.append(_issue(
+                    message=f"Semantic check: metric for {label} not supported{reason_suffix}",
+                    severity=severity,
+                    section=f"insights:{label}",
+                ))
+    quotes = payload.get("quotes") if isinstance(payload, dict) else []
+    if isinstance(quotes, list):
+        for entry in quotes:
+            if not isinstance(entry, dict):
+                continue
+            label = _s(entry.get("id") or entry.get("label") or entry.get("quote_id"))
+            if not label:
+                continue
+            state = entry.get("supported")
+            if isinstance(state, str):
+                normalized = state.strip().lower()
+                supported = normalized in {"true", "yes", "supported", "pass"}
+            else:
+                supported = bool(state) if state is not None else False
+            confidence = _to_float(entry.get("confidence"))
+            confidence = confidence if confidence is not None else 0.0
+            reason = _s(entry.get("reason"))
+            quote_support[label] = _SemanticSupport(supported=supported, confidence=confidence, reason=reason)
+            if not supported:
+                severity = "error" if confidence >= 0.6 else "warning"
+                reason_suffix = f" ({reason})" if reason else ""
+                issues.append(_issue(
+                    message=f"Semantic check: quote {label} not supported{reason_suffix}",
+                    severity=severity,
+                    section=f"quotes:{label}",
+                ))
+    return _SemanticCheckOutcome(metric_support=metric_support, quote_support=quote_support, issues=issues)
+
+
 def _aggregate_severity(issues: Sequence[ValidationIssue]) -> str:
-    if not issues:
-        return "pass"
-    for level in _SEVERITY_ORDER:
-        if any(issue.severity == level for issue in issues):
-            return level
-    return "warning"
+    if any(issue.severity == "error" for issue in issues):
+        return "error"
+    if any(issue.severity == "warning" for issue in issues):
+        return "warning"
+    return "pass"
 
 
 def _collect_allowed_numbers(insights: Sequence[dict]) -> List[float]:
@@ -419,6 +729,13 @@ def _extract_quotes(request: ValidationRequest, insights: Sequence[dict]) -> Lis
     return [{"text": quote.text, "speaker": quote.author, "evidence_id": _s(insights[0].get("evidence_id")) if insights else ""}]
 
 
+def _quote_label(quote: dict, idx: int) -> str:
+    explicit = _s(quote.get("id") or quote.get("evidence_id"))
+    if explicit:
+        return explicit
+    return str(idx + 1)
+
+
 def _metric_value_supported(value: str, evidence_text: str) -> bool:
     if not value:
         return True
@@ -480,6 +797,13 @@ def _issue(message: str, severity: str, section: str) -> ValidationIssue:
         severity=severity if severity in {"error", "warning", "info"} else "warning",
         affected_section=section,
     )
+
+
+def _format_confidence(value: float) -> str:
+    try:
+        return f"{float(value):.2f}"
+    except (TypeError, ValueError):
+        return "0.00"
 
 
 def _has_data_gap(artifacts: dict) -> bool:

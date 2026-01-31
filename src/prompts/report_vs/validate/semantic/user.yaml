@@ -1,0 +1,16 @@
+text: |
+  Metrics (JSON):
+  {{ metrics_json }}
+
+  Quotes (JSON):
+  {{ quotes_json }}
+
+  Evidence snippets (JSON):
+  {{ evidence_json }}
+
+  Instructions:
+  - For each metric, verify whether its value (and unit/timeframe if present) is supported by any evidence snippet, allowing paraphrases and numeric equivalents.
+  - For each quote, check whether its meaning is supported even if wording differs.
+  - Use `confidence` 0.0 (no support) to 1.0 (direct textual support). Lower confidence indicates uncertainty.
+  - Prefer `supported: false` if evidence is missing or conflicting.
+  Return only the JSON object described in the system prompt.

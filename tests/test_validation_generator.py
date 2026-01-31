@@ -22,16 +22,22 @@ class FakePromptClient:
 
 
 class FakeOpenAI:
-    def __init__(self, payload):
-        self.payload = payload
+    def __init__(self, *payloads):
+        self.payloads = list(payloads) or [{}]
         self.requests = []
 
+    def _next_payload(self):
+        if self.payloads:
+            return self.payloads.pop(0)
+        return {}
+
     def openai_chat_json(self, req, ctx):
+        payload = self._next_payload()
         self.requests.append(("chat", req.model))
         return OpenAIResponseResult(
             schema_version="1.0",
-            text=json.dumps(self.payload),
-            parsed_json=self.payload,
+            text=json.dumps(payload),
+            parsed_json=payload,
             input_tokens=0,
             output_tokens=0,
             tool_calls=0,
@@ -142,13 +148,61 @@ def test_validation_flags_metric_and_quote_mismatches(tmp_path):
     assert analysis_store.stored and analysis_store.stored[0][2] == "validation"
 
 
+def test_validation_accepts_paraphrased_metrics_and_quotes(tmp_path):
+    settings = _settings(tmp_path)
+    artifacts = {
+        "insights_final": [
+            {
+                "id": "i1",
+                "text": "Revenue grew year over year",
+                "evidence_id": "e1",
+                "evidence": "The company reported ten percent year-over-year revenue growth.",
+                "metric": {"value": "10%", "unit": "%", "timeframe": "2024"},
+            },
+        ],
+        "quotes_final": [
+            {"id": "q1", "text": "Revenue grew ten percent YoY", "speaker": "CEO", "citation": "The CEO noted a year-over-year increase of ten pct."},
+        ],
+    }
+    semantic_payload = {
+        "metrics": [{"id": "i1", "supported": True, "confidence": 0.82, "reason": "Paraphrase matches evidence"}],
+        "quotes": [{"id": "q1", "supported": True, "confidence": 0.81, "reason": "Meaning preserved"}],
+    }
+    grounding_payload = {"unsupported": []}
+    fake_openai = FakeOpenAI(semantic_payload, grounding_payload)
+    analysis_store = FakeAnalysisStore()
+    result = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="r1",
+            report=_report(),
+            artifacts=artifacts,
+            evidence_packs={},
+            vector_store_id=None,
+        ),
+        settings,
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=fake_openai,
+        analysis_store=analysis_store,
+    )
+    assert result.status == "pass"
+    assert result.severity in {"info", "pass"}
+    assert all(issue.severity != "error" for issue in result.issues)
+    assert any("semantically supported" in issue.message for issue in result.issues)
+    assert analysis_store.stored and analysis_store.stored[0][2] == "validation"
+
+
 def test_validation_detects_new_numbers_and_grounding(tmp_path):
     settings = _settings(tmp_path)
     artifacts = {
         "insights_final": [{"id": "i1", "text": "Insight 1", "evidence_id": "e1", "evidence": "Revenue up 5%", "metric": {"value": "5", "unit": "%", "timeframe": "2024"}}],
         "expert_comment": "We expect revenue to reach 99 soon.",
     }
-    fake_openai = FakeOpenAI({"unsupported": [{"section": "expert_comment", "text": "We expect", "reason": "No evidence"}]})
+    fake_openai = FakeOpenAI(
+        {"metrics": [], "quotes": []},
+        {"unsupported": [{"section": "expert_comment", "text": "We expect", "reason": "No evidence"}]},
+    )
     analysis_store = FakeAnalysisStore()
     result = validate_report(
         ValidationRequest(
