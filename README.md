@@ -64,6 +64,7 @@ Per-step model selection (new):
 - Cost tracking: `analysis.cost_ledger_path` (`COST_LEDGER_PATH`, default `./out/cost-ledger.jsonl`), `cost.daily_path` (default `./out/cost-daily.json`), `cost.pricing` (per-model pricing map used by `utils.costing`).
 - Validation: `ingest.validation.data_gap_policy` (default `warn`) controls whether missing evidence/text gaps downgrade errors to warnings; `publish.validation.policy` (`PUBLISH_VALIDATION_POLICY`, default `block`; set to `warn` to allow publish with issues).
 - Taxonomy extraction: set `openai_models.report_vs/taxonomy` to override the tag/region/time period extractor.
+- Cover images: `paths.cover_styles` points to `src/config/cover-styles.yaml` (defaults to that path). Fonts are local files; the default config uses `templates/GOTHICB.TTF` for both regular/bold. Ensure the font file exists on the host; otherwise cover rendering will fail with `cover_font_invalid`. Background image is optional; leave blank for a solid background.
 
 Secrets (env only):
 - `OPENAI_API_KEY` (required)
@@ -123,6 +124,7 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
      - **Candidate ranking**: `rank_service` scores candidates via LLM (model resolves from `openai_models.rank_candidates` if set, else `rank.model`, then `ingest.openai_model`).
      - **Cropping**: `crop_service` crops top-ranked regions.
      - **Preview rendering**: `preview_service` renders the first page to PNG.
+     - **Cover image generation**: `cover_image_generator` resolves style from `cover-styles.yaml` using the report’s first category (falls back to `default`), title, optional publisher, and optional time period. Renders via `cover_image_service` to `out/<report-slug>/<publisher>-<title>.png`, logging the resolved style and render path.
      - **HTML rendering**: `render_service` generates the final HTML digest.
 
 7. **State record**

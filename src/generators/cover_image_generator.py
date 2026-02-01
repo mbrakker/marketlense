@@ -124,24 +124,6 @@ def generate_cover_images(request: CoverImageGenerationRequest, ctx: RunContext)
                 error=error,
             ))
             continue
-        if not normalized.publisher:
-            error = "Publisher is required"
-            logger.info(log_event(
-                ctx,
-                role="generator",
-                event="cover_generate_validation_failed",
-                module=logger.name,
-                fields={"file_id": normalized.file_id, "error": error},
-            ))
-            outcomes.append(CoverImageGenerationOutcome(
-                schema_version="1.0",
-                file_id=normalized.file_id,
-                title=normalized.title,
-                output_path=None,
-                status="error",
-                error=error,
-            ))
-            continue
 
         report_slug = slugify(normalized.title)
         filename_slug = slugify(f"{normalized.publisher} {normalized.title}")

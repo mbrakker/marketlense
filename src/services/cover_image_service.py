@@ -163,8 +163,6 @@ def render_cover_image(request: CoverImageRenderRequest, ctx: RunContext) -> Cov
     publisher = _normalize_text(request.publisher)
     if not title:
         raise AppError(code="cover_title_missing", message="Report title is required", retryable=False)
-    if not publisher:
-        raise AppError(code="cover_publisher_missing", message="Publisher is required", retryable=False)
 
     layout = request.layout
     style = request.style

@@ -78,7 +78,7 @@ class CoverImageReport:
     schema_version: str = field(metadata={"doc": "Cover image report data schema version."})
     file_id: str = field(metadata={"doc": "Report file identifier."})
     title: str = field(metadata={"doc": "Report title."})
-    publisher: str = field(metadata={"doc": "Report publisher."})
+    publisher: Optional[str] = field(metadata={"doc": "Report publisher (optional)."})
     categories: List[str] = field(default_factory=list, metadata={"doc": "Assigned category identifiers."})
     time_period: Optional[str] = field(default=None, metadata={"doc": "Optional time period label."})
 
@@ -116,7 +116,7 @@ class CoverImageRenderRequest:
     schema_version: str = field(metadata={"doc": "Cover image render request schema version."})
     output_path: str = field(metadata={"doc": "Filesystem path for the rendered PNG."})
     title: str = field(metadata={"doc": "Report title."})
-    publisher: str = field(metadata={"doc": "Report publisher."})
+    publisher: Optional[str] = field(metadata={"doc": "Report publisher (optional)."})
     category_label: str = field(metadata={"doc": "Category label text."})
     style: CoverImageStyle = field(metadata={"doc": "Resolved style for the report."})
     layout: CoverImageLayout = field(metadata={"doc": "Layout configuration for rendering."})

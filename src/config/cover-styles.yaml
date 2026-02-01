@@ -27,8 +27,8 @@ defaults:
   accent_color: "#38BDF8"
   text_color: "#F8FAFC"
   category_label: "Industry Report"
-  font_regular_path: "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
-  font_bold_path: "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+  font_regular_path: "./templates/GOTHICB.TTF"
+  font_bold_path: "./templates/GOTHICB.TTF"
   background_image_path: ""
 
 categories:
