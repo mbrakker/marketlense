@@ -21,6 +21,7 @@ class TestOrchestratorRetry(unittest.TestCase):
             state_db=":memory:",
             reports_db=":memory:",
             category_mapping_path="./src/config/category-mappings.yaml",
+            cover_style_path="./src/config/cover-styles.yaml",
             ingest_lock_path="./state/ingest.lock",
             ingest_lock_ttl_seconds=7200.0,
             temperature=1.0,

@@ -17,6 +17,7 @@ from src.utils.slugify import slugify
 
 
 def _ingest_settings(tmp_path):
+    cover_style_path = Path(__file__).resolve().parents[1] / "src" / "config" / "cover-styles.yaml"
     return IngestSettings(
         schema_version="1.0",
         google_sa_path="sa.json",
@@ -29,6 +30,7 @@ def _ingest_settings(tmp_path):
         state_db=str(tmp_path / "state.sqlite"),
         reports_db=str(tmp_path / "reports.sqlite"),
         category_mapping_path="cats.yaml",
+        cover_style_path=str(cover_style_path),
         ingest_lock_path=str(tmp_path / "lock"),
         ingest_lock_ttl_seconds=1.0,
         temperature=0.1,

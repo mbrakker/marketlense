@@ -31,6 +31,7 @@ from src.generators.categorize_generator import categorize_taxonomy
 from src.generators.normalize_generator import normalize_report
 from src.generators.evidence_pack_generator import generate_evidence_packs
 from src.generators.artifact_generator import generate_artifacts
+from src.generators.cover_image_generator import generate_cover_images
 from src.generators.taxonomy_generator import extract_taxonomy
 from src.generators.validation_generator import validate_report as run_validation
 from src.services.crop_service import crop_regions as crop_regions_service
@@ -52,6 +53,7 @@ from src.services import vector_store_service, state_service, report_analysis_st
 from src.contracts.state import StateGetRequest, StateRecordRequest
 from src.contracts.validation import ValidationIssue, ValidationReport, ValidationRequest
 from src.contracts.taxonomy import TaxonomyExtractRequest
+from src.contracts.cover_images import CoverImageGenerationRequest, CoverImageReport
 from src.contracts.vector_store import (
     VectorStoreAttachFileRequest,
     VectorStoreCreateRequest,
@@ -133,6 +135,17 @@ def _merge_artifacts_into_payload(payload: ReportPayload, artifacts: dict) -> Re
         if isinstance(first_quote, dict):
             payload.quote = Quote(text=str(first_quote.get("text") or ""), author=str(first_quote.get("speaker") or first_quote.get("author") or "Unknown"))
     return payload
+
+
+def _resolve_publisher(payload: ReportPayload, pdf_metadata: dict[str, str]) -> str:
+    publisher = (payload.publisher or "").strip()
+    if publisher:
+        return publisher
+    for key in ("Author", "author", "Producer", "producer", "Creator", "creator"):
+        value = pdf_metadata.get(key)
+        if value and str(value).strip():
+            return str(value).strip()
+    return ""
 
 
 def _record_state_progress(
@@ -467,6 +480,14 @@ def generate_report(
     data._text_pages_sampled = text_status["pages_sampled"]
     data._text_char_count = text_status["char_count"]
     data._text_not_available = text_status["not_available"]
+    data.publisher = _resolve_publisher(data, info_resp.metadata)
+    logger.info(log_event(
+        ctx,
+        role="generator",
+        event="publisher_resolved",
+        module=logger.name,
+        fields={"file_id": file.file_id, "publisher": data.publisher},
+    ))
 
     mode_ctx = child_context(ctx, task_id=f"{ctx.task_id}:vector_store")
     vector_store_id, openai_file_id, vector_store_status, indexed_at_utc, last_error = _ensure_vector_store(
@@ -1020,6 +1041,48 @@ def generate_report(
         ),
         ctx,
     )
+
+    cover_ctx = child_context(ctx, task_id=f"{ctx.task_id}:cover_image")
+    try:
+        cover_outcomes = generate_cover_images(
+            CoverImageGenerationRequest(
+                schema_version="1.0",
+                output_dir=settings.output_dir,
+                style_config_path=settings.cover_style_path,
+                reports=[
+                    CoverImageReport(
+                        schema_version="1.0",
+                        file_id=file.file_id,
+                        title=report_title,
+                        publisher=data.publisher,
+                        categories=list(data.categories),
+                        time_period=data.time_period or None,
+                    ),
+                ],
+            ),
+            cover_ctx,
+        )
+        cover_outcome = cover_outcomes[0] if cover_outcomes else None
+        logger.info(log_event(
+            cover_ctx,
+            role="generator",
+            event="cover_image_generation_complete",
+            module=logger.name,
+            fields={
+                "file_id": file.file_id,
+                "status": cover_outcome.status if cover_outcome else "skipped",
+                "output_path": cover_outcome.output_path if cover_outcome else "",
+                "error": cover_outcome.error if cover_outcome else "",
+            },
+        ))
+    except AppError as exc:
+        logger.info(log_event(
+            cover_ctx,
+            role="generator",
+            event="cover_image_generation_failed",
+            module=logger.name,
+            fields={"file_id": file.file_id, "code": exc.code, "error": exc.message},
+        ))
 
     logger.info(log_event(
         ctx,

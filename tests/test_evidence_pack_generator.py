@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from pathlib import Path
 
 from src.contracts.config import AppSettings
 from src.contracts.openai import OpenAIResponseResult
@@ -54,6 +55,7 @@ def _settings(tmp_path):
         state_db=str(tmp_path / "state.sqlite"),
         reports_db=str(tmp_path / "reports.sqlite"),
         category_mapping_path="cats.yaml",
+        cover_style_path=str(Path(__file__).resolve().parents[1] / "src" / "config" / "cover-styles.yaml"),
         ingest_lock_path=str(tmp_path / "lock"),
         temperature=0.1,
         ingest_lock_ttl_seconds=1.0,

@@ -107,6 +107,7 @@ def _render_html(data: Dict[str, Any]) -> str:
 
 
 def _base_settings(output_dir: Path, cache_dir: Path, state_db: Path, reports_db: Path, category_map: Path) -> IngestSettings:
+    cover_style_path = Path(__file__).resolve().parents[1] / "src" / "config" / "cover-styles.yaml"
     return IngestSettings(
         schema_version="1.0",
         google_sa_path=str(output_dir / "sa.json"),
@@ -119,6 +120,7 @@ def _base_settings(output_dir: Path, cache_dir: Path, state_db: Path, reports_db
         state_db=str(state_db),
         reports_db=str(reports_db),
         category_mapping_path=str(category_map),
+        cover_style_path=str(cover_style_path),
         ingest_lock_path=str(output_dir / "ingest.lock"),
         ingest_lock_ttl_seconds=10.0,
         temperature=0.2,

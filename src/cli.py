@@ -11,8 +11,10 @@ from src.utils.errors import AppError
 from src.contracts.costs import CostReportRequest
 from src.contracts.categories import RecategorizeRequest
 from src.contracts.config import ConfigLoadRequest
+from src.contracts.cover_images import CoverImageOrchestratorRequest
 from src.orchestrators.ingest_orchestrator import run_ingest
 from src.orchestrators.candidate_extraction_orchestrator import run_candidate_extraction
+from src.orchestrators.cover_image_orchestrator import run_cover_image_generation
 from src.orchestrators.publish_orchestrator import run_publish
 from src.orchestrators.recategorize_orchestrator import run_recategorize
 from src.orchestrators.wp_category_update_orchestrator import run_update_wp_categories
@@ -198,6 +200,53 @@ def recategorize():
         table.add_row(outcome.title, outcome.file_id, cats, unmapped, outcome.status if not outcome.error else f"{outcome.status}:{outcome.error}")
     console.print(table)
     console.print(f"[green]Done: {updated} record(s) updated.[/green]")
+
+
+@cli_app.command("generate-covers")
+def generate_covers(
+    style_config: str = typer.Option("", help="Override path to cover style YAML"),
+    limit: int = typer.Option(None, help="Max reports to process this run"),
+    file_id: str = typer.Option(None, help="Optional report file ID to process"),
+):
+    setup_logging()
+    console.print("[cyan]Loading settings...[/cyan]")
+    ctx = new_run_context(task_id="cli_generate_covers")
+    logger.info(log_event(
+        ctx,
+        role="orchestrator",
+        event="cli_cover_generate_start",
+        module=logger.name,
+        fields={"style_config": style_config or "", "limit": limit, "file_id": file_id or ""},
+    ))
+    settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+
+    console.print("[cyan]Generating cover images...[/cyan]")
+    outcomes = run_cover_image_generation(
+        CoverImageOrchestratorRequest(
+            schema_version="1.0",
+            reports_db=settings.reports_db,
+            output_dir=settings.output_dir,
+            style_config_path=style_config,
+            limit=limit,
+            file_id=file_id,
+        ),
+        ctx=ctx,
+    )
+
+    table = Table(title="Cover Images", box=box.SIMPLE_HEAVY)
+    table.add_column("Report")
+    table.add_column("File ID")
+    table.add_column("Status")
+    table.add_column("Output")
+    for outcome in outcomes:
+        table.add_row(
+            outcome.title,
+            outcome.file_id,
+            outcome.status,
+            outcome.output_path or outcome.error or "",
+        )
+    console.print(table)
+    console.print(f"[green]Done: {len(outcomes)} report(s).[/green]")
 
 
 @cli_app.command("update-wp-categories")

@@ -17,6 +17,7 @@ class IngestSettings:
     state_db: str = field(metadata={"doc": "SQLite path for processing state."})
     reports_db: str = field(metadata={"doc": "SQLite path for report metadata."})
     category_mapping_path: str = field(metadata={"doc": "Filesystem path to category mappings YAML."})
+    cover_style_path: str = field(metadata={"doc": "Filesystem path to cover style YAML."})
     ingest_lock_path: str = field(metadata={"doc": "Filesystem path for the ingest single-run lock file."})
     temperature: float = field(metadata={"doc": "Sampling temperature for report generation."})
     openai_models: Dict[str, str] = field(default_factory=dict, metadata={"doc": "Per-namespace OpenAI model overrides keyed by namespace/prefix."})

@@ -103,6 +103,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     validation_cfg = ingest.get("validation", {}) or {}
     contents_page = ingest.get("contents_page", {}) or {}
     category_mapping_path = paths.get("category_mappings") or str(Path(__file__).resolve().parents[1] / "config" / "category-mappings.yaml")
+    cover_style_path = paths.get("cover_styles") or str(Path(__file__).resolve().parents[1] / "config" / "cover-styles.yaml")
     analysis_cfg = data.get("analysis", {}) or {}
     cost_cfg = data.get("cost", {}) or {}
 
@@ -188,6 +189,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         state_db=state_db,
         reports_db=reports_db,
         category_mapping_path=category_mapping_path,
+        cover_style_path=cover_style_path,
         ingest_lock_path=ingest_lock_path,
         ingest_lock_ttl_seconds=ingest_lock_ttl_seconds,
         temperature=temperature,
