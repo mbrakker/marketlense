@@ -1,6 +1,27 @@
 text: |
-  Context:
-  - TLDR + executive summary JSON: {{ summary_json }}
-  - Insights JSON: {{ insights_final_json }}
+  Context (authoritative sources only):
+  - TLDR + Executive Summary (JSON): {{ summary_json }}
+  - Validated Insights (JSON): {{ insights_final_json }}
 
-  Task: Return a JSON object with `linkedin_post` as a single post (max 120 words). Make it engaging, avoid hashtags except 2-3 relevant ones, and ensure every detail is grounded in the supplied artifacts. Do not add new numbers or claims.
+  Task:
+  Create a single LinkedIn post and return it as a JSON object with the key `linkedin_post`.
+
+  Writing requirements:
+  - Max 500 words
+  - Expert, strategic, and insight-led (written for senior ecommerce / digital leaders)
+  - Start with a strong, concrete insight or implication, not a generic hook
+  - Focus on "what this means" for the market or decision-makers
+  - Use a confident, human tone (no AI patterns, no em dashes, no clichés)
+  - No emojis
+  - Avoid hashtags except 2–3 highly relevant industry hashtags at the end
+  - Use data points from the report to back up claims (no vague generalities) - put them in bulletpoints if needed
+
+  Content constraints (strict):
+  - Every statement must be directly supported by the provided JSON artifacts
+  - Do not introduce new metrics, benchmarks, projections, or assumptions
+  - Do not generalize beyond what the report explicitly supports
+  - If something is not clearly supported, omit it
+
+  Output:
+  - Valid JSON only
+  - No commentary, no explanations, no markdown

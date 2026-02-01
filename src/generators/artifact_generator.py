@@ -25,6 +25,7 @@ def generate_artifacts(
     evidence_packs: Dict[str, Any],
     settings: AppSettings,
     *,
+    report_name: Optional[str] = None,
     vector_store_id: Optional[str] = None,
     source_status: Optional[Dict[str, Any]] = None,
     ctx: Optional[RunContext] = None,
@@ -59,7 +60,14 @@ def generate_artifacts(
         availability["reason"] = ",".join(sorted(set(fallback_reasons)))
         payload = _placeholder_artifacts(availability)
         validate_schema(payload, "artifacts", ctx)
-        analysis_store.store_pack(settings.output_dir, report_id, "artifacts", payload, ctx)
+        analysis_store.store_pack(
+            settings.output_dir,
+            report_id,
+            "artifacts",
+            payload,
+            ctx,
+            report_slug=report_name,
+        )
         logger.info(log_event(
             ctx,
             role="generator",
@@ -220,7 +228,14 @@ def generate_artifacts(
         ))
         raise
 
-    analysis_store.store_pack(settings.output_dir, report_id, "artifacts", artifacts_payload, ctx)
+    analysis_store.store_pack(
+        settings.output_dir,
+        report_id,
+        "artifacts",
+        artifacts_payload,
+        ctx,
+        report_slug=report_name,
+    )
 
     logger.info(log_event(
         ctx,

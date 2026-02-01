@@ -226,7 +226,7 @@ def test_golden_reports_regression(tmp_path: Path, monkeypatch: pytest.MonkeyPat
         def fake_upsert_metadata(request, ctx):
             return None
 
-        def fake_validation(request, settings, ctx, pack_name="validation"):
+        def fake_validation(request, settings, ctx, pack_name="validation", **kwargs):
             return ValidationReport(schema_version="1.1", status="pass", severity="pass", issues=[], source_path="")
 
         def fake_ensure_vector_store(file, local_pdf_path, settings, ctx):
@@ -241,10 +241,10 @@ def test_golden_reports_regression(tmp_path: Path, monkeypatch: pytest.MonkeyPat
                 not_found_reason=None,
             )
 
-        def fake_generate_evidence_packs(report_id, vector_store_id, settings, ctx, **kwargs):
+        def fake_generate_evidence_packs(report_id, report_name, vector_store_id, settings, ctx, **kwargs):
             return {}
 
-        def fake_generate_artifacts(report_id, doc_map, evidence_packs, settings, vector_store_id=None, source_status=None, ctx=None):
+        def fake_generate_artifacts(report_id, doc_map, evidence_packs, settings, vector_store_id=None, source_status=None, ctx=None, report_name=None, **kwargs):
             return {
                 "summary": {
                     "tldr": "TLDR text",

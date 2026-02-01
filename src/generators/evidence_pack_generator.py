@@ -20,6 +20,7 @@ logger = logging.getLogger("market_lense.evidence_pack_generator")
 
 def generate_evidence_packs(
     report_id: str,
+    report_name: str,
     vector_store_id: str,
     settings: AppSettings,
     ctx: Optional[RunContext] = None,
@@ -49,6 +50,7 @@ def generate_evidence_packs(
         step_ctx = child_context(ctx, task_id=f"{ctx.task_id}:{step_name}")
         results[step_name] = _generate_pack(
             report_id=report_id,
+            report_name=report_name,
             vector_store_id=vector_store_id,
             prompt_namespace=f"report_vs/{prompt_ns}",
             schema_name="doc_map" if schema == "doc_map" else "evidence_pack",
@@ -72,6 +74,7 @@ def generate_evidence_packs(
 def _generate_pack(
     *,
     report_id: str,
+    report_name: str,
     vector_store_id: str,
     prompt_namespace: str,
     schema_name: str,
@@ -136,7 +139,14 @@ def _generate_pack(
         not_found_reason = exc.code
         parsed_json = None
     result_payload = parsed_json or _empty_payload(schema_name, not_found_reason)
-    analysis_store.store_pack(settings.output_dir, report_id, pack_name, result_payload, ctx)
+    analysis_store.store_pack(
+        settings.output_dir,
+        report_id,
+        pack_name,
+        result_payload,
+        ctx,
+        report_slug=report_name,
+    )
     logger.info(log_event(
         ctx,
         role="generator",

@@ -25,33 +25,49 @@ from src.utils.wp_auth import build_auth_header
 logger = logging.getLogger("market_lense.publish_orchestrator")
 
 
-def _validation_path(output_dir: str, file_id: str) -> str:
-    return str(Path(output_dir) / "report_analysis" / file_id / "validation.json")
+def _validation_paths(output_dir: str, file_id: str, html_path: str) -> list[Path]:
+    """
+    Preferred path: per-report folder (out/<report-slug>/report_analysis/validation.json).
+    Fallback: legacy path (out/report_analysis/<file_id>/validation.json).
+    """
+    html_slug = Path(html_path).stem
+    primary = Path(output_dir) / html_slug / "report_analysis" / "validation.json"
+    legacy = Path(output_dir) / "report_analysis" / file_id / "validation.json"
+    if primary == legacy:
+        return [primary]
+    return [primary, legacy]
 
 
-def _load_validation_report(file_id: str, settings: PublishSettings, ctx) -> Optional[ValidationReport]:
-    path = _validation_path(settings.output_dir, file_id)
-    try:
-        resp = read_text(ReadTextRequest(schema_version="1.0", path=path), ctx)
-    except AppError as exc:
-        logger.info(log_event(
-            ctx,
-            role="orchestrator",
-            event="publish_validation_missing",
-            module=logger.name,
-            fields={"file_id": file_id, "path": path, "error": exc.message},
-        ))
-        return None
-    try:
-        data = json.loads(resp.content)
-    except json.JSONDecodeError:
-        logger.info(log_event(
-            ctx,
-            role="orchestrator",
-            event="publish_validation_parse_failed",
-            module=logger.name,
-            fields={"file_id": file_id, "path": path},
-        ))
+def _load_validation_report(file_id: str, html_path: str, settings: PublishSettings, ctx) -> Optional[ValidationReport]:
+    candidates = _validation_paths(settings.output_dir, file_id, html_path)
+    data = None
+    used_path: Optional[Path] = None
+    for path in candidates:
+        try:
+            resp = read_text(ReadTextRequest(schema_version="1.0", path=str(path)), ctx)
+        except AppError as exc:
+            logger.info(log_event(
+                ctx,
+                role="orchestrator",
+                event="publish_validation_missing",
+                module=logger.name,
+                fields={"file_id": file_id, "path": str(path), "error": exc.message},
+            ))
+            continue
+        try:
+            data = json.loads(resp.content)
+            used_path = path
+            break
+        except json.JSONDecodeError:
+            logger.info(log_event(
+                ctx,
+                role="orchestrator",
+                event="publish_validation_parse_failed",
+                module=logger.name,
+                fields={"file_id": file_id, "path": str(path)},
+            ))
+            continue
+    if data is None or used_path is None:
         return None
     issues_payload = data.get("issues") if isinstance(data, dict) else []
     issues: List[ValidationIssue] = []
@@ -73,7 +89,7 @@ def _load_validation_report(file_id: str, settings: PublishSettings, ctx) -> Opt
         status=status,
         severity=severity_norm,
         issues=issues,
-        source_path=path,
+        source_path=str(used_path),
     )
 
 
@@ -183,7 +199,7 @@ def run_publish(
             ))
             continue
 
-        validation_report = _load_validation_report(file_id, settings, file_ctx)
+        validation_report = _load_validation_report(file_id, html_path, settings, file_ctx)
         validation_status = validation_report.status if validation_report else "missing"
         validation_issues = [issue.message for issue in validation_report.issues] if validation_report else []
         if settings.validation_policy == "block" and validation_status != "pass":

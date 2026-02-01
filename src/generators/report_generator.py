@@ -74,9 +74,16 @@ def _derive_title(name: str) -> str:
     cleaned = base.strip()
     return cleaned or name
 
-def _pack_paths(output_dir: str, report_id: str, pack_names: list[str]) -> dict[str, str]:
-    base = Path(output_dir) / "report_analysis" / report_id
-    return {name: str(base / f"{name}.json") for name in pack_names}
+def _pack_paths(output_dir: str, report_id: str, report_name: str, pack_names: list[str]) -> dict[str, str]:
+    return {
+        name: str(report_analysis_store_service.pack_path(
+            output_dir,
+            report_id,
+            name,
+            report_slug=report_name,
+        ))
+        for name in pack_names
+    }
 
 
 def _base_payload(title: str, contents_page_number: int, contents_heading: str, contents_image: str) -> ReportPayload:
@@ -790,13 +797,14 @@ def generate_report(
     artifacts_payload: dict | None = None
     packs = generate_evidence_packs(
         report_id=file.file_id,
+        report_name=report_name,
         vector_store_id=vector_store_id,
         settings=settings,
         ctx=child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:evidence"),
     )
     mode_evidence_packs = packs
     pack_names = list(packs.keys())
-    mode_evidence_paths = _pack_paths(settings.output_dir, file.file_id, pack_names)
+    mode_evidence_paths = _pack_paths(settings.output_dir, file.file_id, report_name, pack_names)
     mode_data._vector_store_id = vector_store_id or ""
     mode_data._evidence_packs = mode_evidence_paths
     logger.info(log_event(
@@ -821,6 +829,7 @@ def generate_report(
     try:
         artifacts_payload = generate_artifacts(
             report_id=file.file_id,
+            report_name=report_name,
             doc_map=packs.get("doc_map", {}),
             evidence_packs=packs,
             settings=settings,
@@ -828,7 +837,7 @@ def generate_report(
             source_status=text_status,
             ctx=child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:artifacts"),
         )
-        mode_evidence_paths["artifacts"] = _pack_paths(settings.output_dir, file.file_id, ["artifacts"])["artifacts"]
+        mode_evidence_paths["artifacts"] = _pack_paths(settings.output_dir, file.file_id, report_name, ["artifacts"])["artifacts"]
         _record_state_progress(
             settings=settings,
             file_id=file.file_id,
@@ -862,7 +871,13 @@ def generate_report(
             evidence_packs=mode_evidence_packs,
             vector_store_id=vector_store_id,
         )
-        validation_report = run_validation(validation_req, settings, child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:validation"), pack_name=validation_pack_name)
+        validation_report = run_validation(
+            validation_req,
+            settings,
+            child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:validation"),
+            pack_name=validation_pack_name,
+            report_name=report_name,
+        )
         if validation_report.source_path:
             mode_evidence_paths[validation_pack_name] = validation_report.source_path
         _record_state_progress(
@@ -904,6 +919,7 @@ def generate_report(
                 validation_pack_name,
                 fallback_report.to_dict(),
                 mode_ctx,
+                report_slug=report_name,
             )
             fallback_report = ValidationReport(
                 schema_version=fallback_report.schema_version,
@@ -945,6 +961,7 @@ def generate_report(
         snapshot_name,
         data_dict,
         mode_ctx,
+        report_slug=report_name,
     )
     mode_evidence_paths[snapshot_name] = snapshot_path
     primary_result = {

@@ -9,6 +9,7 @@ from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationRequest
 from src.contracts.openai import OpenAIResponseResult
 from src.generators.validation_generator import validate_report
+from src.utils.slugify import slugify
 
 
 class FakePromptClient:
@@ -53,9 +54,11 @@ class FakeAnalysisStore:
     def __init__(self):
         self.stored = []
 
-    def store_pack(self, output_dir, report_id, pack_name, payload, ctx):
+    def store_pack(self, output_dir, report_id, pack_name, payload, ctx, report_slug=None, mirror_legacy=True):
+        slug = slugify(report_slug or report_id)
+        path = Path(output_dir) / slug / "report_analysis" / f"{pack_name}.json"
         self.stored.append((output_dir, report_id, pack_name, payload))
-        return f"{output_dir}/{report_id}/{pack_name}.json"
+        return str(path)
 
 
 def _settings(tmp_path):
@@ -223,6 +226,40 @@ def test_validation_detects_new_numbers_and_grounding(tmp_path):
     assert any(issue.affected_section == "expert_comment" for issue in result.issues)
     assert any("No evidence" in issue.message for issue in result.issues)
     assert any("Number" in issue.message for issue in result.issues)
+
+
+def test_commentary_numbers_allowed_when_in_report_or_evidence(tmp_path):
+    settings = _settings(tmp_path)
+    artifacts = {
+        "summary": {"tldr": "TLDR", "executive_summary": "Exec 42%", "claim_evidence_map": []},
+        "insights_final": [],
+        "quotes_final": [{"text": "Revenue grew 42% year over year", "speaker": "CEO", "citation": "Revenue grew 42% year over year", "evidence_id": "f1"}],
+        "expert_comment": "We expect revenue to stay around 42% growth.",
+        "linkedin_post": "Analysts noted 42% expansion.",
+    }
+    evidence_packs = {"pack": {"findings": [{"id": "f1", "evidence": "Revenue grew 42% year over year"}]}}
+    fake_openai = FakeOpenAI(
+        {"metrics": [], "quotes": []},
+        {"unsupported": []},
+    )
+    analysis_store = FakeAnalysisStore()
+    result = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="r3",
+            report=_report(),
+            artifacts=artifacts,
+            evidence_packs=evidence_packs,
+            vector_store_id=None,
+        ),
+        settings,
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=fake_openai,
+        analysis_store=analysis_store,
+    )
+    assert result.status == "pass"
+    assert not any("Number" in issue.message for issue in result.issues)
 
 
 def test_validation_warns_on_data_gap(tmp_path):

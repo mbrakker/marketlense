@@ -8,6 +8,7 @@ from src.contracts.prompts import PromptSet, PromptTemplate
 from src.contracts.run_context import RunContext
 from src.generators.artifact_generator import generate_artifacts
 from src.utils.schema_validator import validate_schema
+from src.utils.slugify import slugify
 
 
 class FakePromptClient:
@@ -61,9 +62,11 @@ class FakeAnalysisStore:
     def __init__(self):
         self.stored = []
 
-    def store_pack(self, output_dir, report_id, pack_name, payload, ctx):
+    def store_pack(self, output_dir, report_id, pack_name, payload, ctx, report_slug=None, mirror_legacy=True):
+        slug = slugify(report_slug or report_id)
+        path = Path(output_dir) / slug / "report_analysis" / f"{pack_name}.json"
         self.stored.append((output_dir, report_id, pack_name, payload))
-        return f"{output_dir}/{report_id}/{pack_name}.json"
+        return str(path)
 
 
 def _settings(tmp_path):
@@ -153,6 +156,7 @@ def test_generate_artifacts_validates_schema_and_evidence_ids(tmp_path):
     analysis_store = FakeAnalysisStore()
     payload = generate_artifacts(
         report_id="r1",
+        report_name="report",
         doc_map=_doc_map(),
         evidence_packs=_evidence_packs(),
         settings=_settings(tmp_path),
@@ -182,6 +186,7 @@ def test_generate_artifacts_backfills_missing_ids(tmp_path):
     fake_openai = FakeOpenAI(responses)
     payload = generate_artifacts(
         report_id="r2",
+        report_name="report",
         doc_map=_doc_map(),
         evidence_packs=_evidence_packs(),
         settings=_settings(tmp_path),
@@ -213,6 +218,7 @@ def test_generate_artifacts_ignores_low_text_when_vector_store(tmp_path):
     fake_openai = FakeOpenAI(responses)
     payload = generate_artifacts(
         report_id="low_text",
+        report_name="report",
         doc_map=_doc_map(),
         evidence_packs=_evidence_packs(),
         settings=_settings(tmp_path),

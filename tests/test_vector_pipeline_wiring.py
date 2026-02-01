@@ -13,6 +13,7 @@ from src.contracts.report_assets import RenderResponse
 from src.generators import report_generator as rg
 from src.orchestrators import ingest_orchestrator as orch
 from src.contracts.taxonomy import TaxonomyExtractResponse
+from src.utils.slugify import slugify
 
 
 def _ingest_settings(tmp_path):
@@ -191,21 +192,40 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
         }
 
     monkeypatch.setattr(rg, "generate_evidence_packs", _fake_evidence)
-    def _fake_artifacts(report_id, doc_map, evidence_packs, settings, vector_store_id=None, source_status=None, ctx=None):
+    def _fake_artifacts(report_id, doc_map, evidence_packs, settings, vector_store_id=None, source_status=None, ctx=None, report_name=None, **kwargs):
         payload = {
             "summary": {"tldr": "tldr", "executive_summary": "exec"},
             "insights_final": [{"text": "insight"}],
             "quotes_final": [{"text": "qt", "speaker": "sp"}],
         }
-        rg.report_analysis_store_service.store_pack(settings.output_dir, report_id, "artifacts", payload, ctx)
+        rg.report_analysis_store_service.store_pack(
+            settings.output_dir,
+            report_id,
+            "artifacts",
+            payload,
+            ctx,
+            report_slug=report_name,
+        )
         return payload
 
     monkeypatch.setattr(rg, "generate_artifacts", _fake_artifacts)
-    monkeypatch.setattr(rg.report_analysis_store_service, "store_pack", lambda output_dir, report_id, pack_name, payload, ctx: analysis_store.append((pack_name, payload)) or str(tmp_path / "report_analysis" / report_id / f"{pack_name}.json"))
+    monkeypatch.setattr(
+        rg.report_analysis_store_service,
+        "store_pack",
+        lambda output_dir, report_id, pack_name, payload, ctx, **kwargs: analysis_store.append((pack_name, payload))
+        or str(Path(output_dir) / slugify(kwargs.get("report_slug") or report_id) / "report_analysis" / f"{pack_name}.json"),
+    )
 
-    def _fake_validation(req, settings, ctx, pack_name="validation"):
+    def _fake_validation(req, settings, ctx, pack_name="validation", **kwargs):
         validation_calls.append(req.report_id)
-        return ValidationReport(schema_version="1.1", status="pass", severity="pass", issues=[], source_path=str(tmp_path / "report_analysis" / req.report_id / f"{pack_name}.json"))
+        slug = slugify(kwargs.get("report_name") or req.report_id)
+        return ValidationReport(
+            schema_version="1.1",
+            status="pass",
+            severity="pass",
+            issues=[],
+            source_path=str(Path(settings.output_dir) / slug / "report_analysis" / f"{pack_name}.json"),
+        )
 
     monkeypatch.setattr(rg, "run_validation", _fake_validation)
     def _fake_render_report(req, ctx):

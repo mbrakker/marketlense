@@ -1,2 +1,2 @@
 text: |
-  Return a JSON object matching the DocMap schema. Be concise.
+  Return a JSON object matching the DocMap schema. Be concise. No new data, only use provided report content.

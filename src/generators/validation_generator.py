@@ -10,6 +10,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 from src.contracts.config import AppSettings
 from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIResponseRequest
 from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
+from src.contracts.report_models import ReportPayload
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationIssue, ValidationReport, ValidationRequest
 from src.services import openai_service, prompt_service, report_analysis_store_service
@@ -46,6 +47,7 @@ def validate_report(
     openai_client=openai_service,
     analysis_store=report_analysis_store_service,
     pack_name: str = "validation",
+    report_name: Optional[str] = None,
 ) -> ValidationReport:
     ctx = ctx or new_run_context(task_id=f"validation:{request.report_id}")
     logger.info(log_event(
@@ -77,7 +79,7 @@ def validate_report(
     issues.extend(semantic_outcome.issues)
     issues.extend(_validate_insight_metrics(insights, evidence_map, semantic_outcome.metric_support))
     issues.extend(_validate_quotes(quotes, evidence_texts, semantic_outcome.quote_support))
-    issues.extend(_validate_new_numbers(request.artifacts, insights))
+    issues.extend(_validate_new_numbers(request.artifacts, insights, request.report, evidence_texts))
     issues.extend(_run_grounding_check(request, settings, evidence_texts, prompt_client, openai_client, ctx))
 
     data_gap = _has_data_gap(request.artifacts)
@@ -107,7 +109,14 @@ def validate_report(
         ))
         raise
 
-    stored_path = analysis_store.store_pack(settings.output_dir, request.report_id, pack_name, report.to_dict(), ctx)
+    stored_path = analysis_store.store_pack(
+        settings.output_dir,
+        request.report_id,
+        pack_name,
+        report.to_dict(),
+        ctx,
+        report_slug=report_name,
+    )
     report = ValidationReport(
         schema_version=report.schema_version,
         status=report.status,
@@ -230,9 +239,14 @@ def _validate_quotes(
     return issues
 
 
-def _validate_new_numbers(artifacts: dict, insights: Sequence[dict]) -> List[ValidationIssue]:
+def _validate_new_numbers(
+    artifacts: dict,
+    insights: Sequence[dict],
+    report: ReportPayload,
+    evidence_texts: Sequence[str],
+) -> List[ValidationIssue]:
     issues: List[ValidationIssue] = []
-    allowed_numbers = _collect_allowed_numbers(insights)
+    allowed_numbers = _collect_allowed_numbers(insights, report, artifacts, evidence_texts)
     expert_comment = _s(artifacts.get("expert_comment") if isinstance(artifacts, dict) else "")
     linkedin_post = _s(artifacts.get("linkedin_post") if isinstance(artifacts, dict) else "")
     for text, section in ((expert_comment, "expert_comment"), (linkedin_post, "linkedin_post")):
@@ -241,7 +255,7 @@ def _validate_new_numbers(artifacts: dict, insights: Sequence[dict]) -> List[Val
         for number in _extract_numbers(text):
             if not _number_allowed(number, allowed_numbers):
                 issues.append(_issue(
-                    message=f"Number {number} not present in insights",
+                    message=f"Number {number} not present in report or evidence",
                     severity="warning",
                     section=section,
                 ))
@@ -654,7 +668,21 @@ def _aggregate_severity(issues: Sequence[ValidationIssue]) -> str:
     return "pass"
 
 
-def _collect_allowed_numbers(insights: Sequence[dict]) -> List[float]:
+def _collect_allowed_numbers(
+    insights: Sequence[dict],
+    report: ReportPayload,
+    artifacts: dict,
+    evidence_texts: Sequence[str],
+) -> List[float]:
+    numbers: List[float] = []
+    numbers.extend(_collect_numbers_from_insights(insights))
+    numbers.extend(_collect_numbers_from_report(report))
+    numbers.extend(_collect_numbers_from_artifacts(artifacts))
+    numbers.extend(_collect_numbers_from_texts(evidence_texts))
+    return numbers
+
+
+def _collect_numbers_from_insights(insights: Sequence[dict]) -> List[float]:
     numbers: List[float] = []
     for insight in insights:
         if not isinstance(insight, dict):
@@ -664,6 +692,53 @@ def _collect_allowed_numbers(insights: Sequence[dict]) -> List[float]:
         if val is not None:
             numbers.append(val)
         numbers.extend(_extract_numbers(_s(insight.get("text"))))
+    return numbers
+
+
+def _collect_numbers_from_report(report: ReportPayload) -> List[float]:
+    if not isinstance(report, ReportPayload):
+        return []
+    texts: List[str] = [
+        report.tldr,
+        report.title,
+        report.commentary,
+        report.quote.text if getattr(report, "quote", None) else "",
+        report.figure.evidence if getattr(report, "figure", None) else "",
+        report.time_period,
+        report.region,
+        report.source,
+    ]
+    texts.extend(report.insights or [])
+    texts.extend(report.taxonomy or [])
+    texts.extend(report.categories or [])
+    return _collect_numbers_from_texts(texts)
+
+
+def _collect_numbers_from_artifacts(artifacts: dict) -> List[float]:
+    if not isinstance(artifacts, dict):
+        return []
+    numbers: List[float] = []
+    texts: List[str] = []
+    summary = artifacts.get("summary") if isinstance(artifacts.get("summary"), dict) else {}
+    if summary:
+        texts.append(summary.get("tldr"))
+        texts.append(summary.get("executive_summary"))
+        for claim in summary.get("claim_evidence_map") or []:
+            if isinstance(claim, dict):
+                texts.append(claim.get("claim"))
+    numbers.extend(_collect_numbers_from_texts(texts))
+    numbers.extend(_collect_numbers_from_insights(artifacts.get("insights_final") or []))
+    numbers.extend(_collect_numbers_from_insights(artifacts.get("insights_candidates") or []))
+    for quote in artifacts.get("quotes_final") or []:
+        if isinstance(quote, dict):
+            numbers.extend(_extract_numbers(_s(quote.get("text"))))
+    return numbers
+
+
+def _collect_numbers_from_texts(texts: Iterable[Any]) -> List[float]:
+    numbers: List[float] = []
+    for text in texts:
+        numbers.extend(_extract_numbers(_s(text)))
     return numbers
 
 

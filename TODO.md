@@ -6,8 +6,6 @@
    - `run_ingest` in `src/orchestrators/ingest_orchestrator.py` processes PDFs serially and blocks on OpenAI calls. Add bounded concurrency per file while keeping lock semantics, and preserve cost ledger/state-db writes without races.
 4. Consolidate services to match the service-consolidation rule.
    - Merge PDF-related services into a single `pdf_service.py` and refactor callers; eliminate thin wrapper service shards for any single external system.
-5. [DONE] Add categories/tags to vector store records.
-   - Vector store metadata is empty/default; no taxonomy or tags from `ReportPayload`/category mappings are propagated. Include categories/regions/time_period as metadata on create/attach so queries can filter and deletion/reuse works by tag.
 6. Create a GUI.
    - Only `src/cli.py` exists. Provide a minimal web/desktop UI to trigger ingest/publish, view progress logs, inspect artifacts, cost tables, and vector store status.
 7. Add vector store deletion support.
@@ -57,16 +55,6 @@
 - **Acceptance**:
   - Only one service module handles each external system.
   - All PDF-related calls originate from the consolidated service API.
-
-## 5. Add categories/tags to vector store records
-- **Status**: Completed (taxonomy metadata persists to vector store and report outputs).
-- **Context**: Vector store metadata does not include report taxonomy, so filtering and cleanup cannot use categories.
-- **Proposal**:
-  - Add metadata fields (`categories`, `regions`, `time_period`) derived from `ReportPayload` and category mapping outputs.
-  - Pass metadata through `vector_store_service` creation/attachment requests.
-  - Ensure metadata is logged and kept in sync with state DB records.
-- **Acceptance**:
-  - Vector store records include taxonomy metadata and are queryable by tag.
 
 ## 6. Create a GUI
 - **Context**: Only `src/cli.py` exists for interaction; no UI is available.

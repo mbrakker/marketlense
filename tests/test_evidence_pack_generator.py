@@ -5,6 +5,7 @@ from src.contracts.openai import OpenAIResponseResult
 from src.contracts.prompts import PromptSet, PromptTemplate
 from src.contracts.run_context import RunContext
 from src.generators.evidence_pack_generator import generate_evidence_packs
+from src.utils.slugify import slugify
 
 
 class FakePromptClient:
@@ -34,9 +35,10 @@ class FakeAnalysisStore:
     def __init__(self):
         self.stored = []
 
-    def store_pack(self, output_dir, report_id, pack_name, payload, ctx):
+    def store_pack(self, output_dir, report_id, pack_name, payload, ctx, report_slug=None, mirror_legacy=True):
+        slug = slugify(report_slug or report_id)
         self.stored.append((report_id, pack_name, payload))
-        return f"{output_dir}/{report_id}/{pack_name}.json"
+        return f"{output_dir}/{slug}/report_analysis/{pack_name}.json"
 
 
 def _settings(tmp_path):
@@ -86,6 +88,7 @@ def test_generate_evidence_packs_success(tmp_path):
     analysis_store = FakeAnalysisStore()
     packs = generate_evidence_packs(
         report_id="r1",
+        report_name="report",
         vector_store_id="vs_1",
         settings=_settings(tmp_path),
         ctx=_ctx(),
@@ -104,6 +107,7 @@ def test_generate_evidence_packs_handles_missing_json(tmp_path):
     analysis_store = FakeAnalysisStore()
     packs = generate_evidence_packs(
         report_id="r1",
+        report_name="report",
         vector_store_id="vs_1",
         settings=_settings(tmp_path),
         ctx=_ctx(),
