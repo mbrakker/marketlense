@@ -93,6 +93,8 @@ def generate_cover_images(request: CoverImageGenerationRequest, ctx: RunContext)
         overrides = overrides or CoverImageStyleOverrides(schema_version="1.0")
         style = _merge_style(config.defaults, overrides)
         label_text = _category_label(category, style)
+        label_origin = "style.category_label" if style.category_label.strip() else "derived_from_category"
+        category_origin = "report.categories[0]" if normalized.categories else "default_fallback"
 
         logger.info(log_event(
             ctx,
@@ -103,6 +105,27 @@ def generate_cover_images(request: CoverImageGenerationRequest, ctx: RunContext)
                 "file_id": normalized.file_id,
                 "category": category,
                 "label_text": label_text,
+            },
+        ))
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="cover_generate_text_sources",
+            module=logger.name,
+            fields={
+                "file_id": normalized.file_id,
+                "title": normalized.title,
+                "title_source": "CoverImageReport.title",
+                "publisher": normalized.publisher,
+                "publisher_source": "CoverImageReport.publisher (from upstream DocMap)",
+                "category": category,
+                "category_source": category_origin,
+                "category_label": label_text,
+                "category_label_source": label_origin,
+                "time_period": normalized.time_period or "",
+                "time_period_source": "CoverImageReport.time_period",
+                "region": normalized.region or "",
+                "region_source": "CoverImageReport.region",
             },
         ))
 
@@ -125,9 +148,12 @@ def generate_cover_images(request: CoverImageGenerationRequest, ctx: RunContext)
             ))
             continue
 
-        report_slug = slugify(normalized.title)
+        # Align cover output directory with other report assets (HTML, evidence packs) which use the slugified PDF name (includes "-pdf").
+        report_slug = slugify(f"{normalized.title}.pdf")
         filename_slug = slugify(f"{normalized.publisher} {normalized.title}")
-        output_path = str(Path(request.output_dir) / report_slug / f"{filename_slug}.png")
+        assets_dir = Path(request.output_dir) / report_slug / "assets"
+        assets_dir.mkdir(parents=True, exist_ok=True)
+        output_path = str(assets_dir / f"{filename_slug}.png")
 
         try:
             render_cover_image(

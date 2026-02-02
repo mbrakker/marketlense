@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Optional
 
 from src.contracts.pdf_text import PdfTextExtractRequest
-from src.contracts.report_store import ReportMetadataUpsertRequest
+from src.contracts.report_store import ReportMetadataGetRequest, ReportMetadataUpsertRequest
 from src.contracts.report_models import CropItem, Figure, Quote, ReportPayload
 from src.contracts.pdf_context import PdfContextBuildRequest
 from src.contracts.pdf_contents import PdfContentsDetectionRequest
@@ -46,7 +46,10 @@ from src.services.category_mapping_service import (
     load_mappings as load_category_mappings,
     update_uncategorized_tags,
 )
-from src.services.report_store_service import upsert_metadata as upsert_report_metadata
+from src.services.report_store_service import (
+    get_metadata as get_report_metadata,
+    upsert_metadata as upsert_report_metadata,
+)
 from src.services.pdf_context_service import build_pdf_context
 from src.services.pdf_utils_service import extract_pdf_info
 from src.services import vector_store_service, state_service, report_analysis_store_service
@@ -138,13 +141,8 @@ def _merge_artifacts_into_payload(payload: ReportPayload, artifacts: dict) -> Re
 
 
 def _resolve_publisher(payload: ReportPayload, pdf_metadata: dict[str, str]) -> str:
-    publisher = (payload.publisher or "").strip()
-    if publisher:
-        return publisher
-    for key in ("Author", "author", "Producer", "producer", "Creator", "creator"):
-        value = pdf_metadata.get(key)
-        if value and str(value).strip():
-            return str(value).strip()
+    # Publisher is now sourced exclusively from the DocMap evidence pack.
+    # Ignore payload-provided values and PDF metadata to avoid inconsistent sources.
     return ""
 
 
@@ -847,6 +845,28 @@ def generate_report(
         openai_file_id=openai_file_id,
         last_error=last_error,
     )
+    doc_map_pack = packs.get("doc_map", {})
+    if isinstance(doc_map_pack, dict):
+        doc_map_title = str(doc_map_pack.get("title") or "").strip()
+        if doc_map_title:
+            data.title = doc_map_title
+        doc_map_publisher = str(doc_map_pack.get("publisher") or "").strip()
+        if doc_map_publisher and not data.publisher:
+            data.publisher = doc_map_publisher
+        if doc_map_title or doc_map_publisher:
+            logger.info(log_event(
+                mode_ctx,
+                role="generator",
+                event="doc_map_resolved_metadata",
+                module=logger.name,
+                fields={
+                    "file_id": file.file_id,
+                    "title": data.title,
+                    "publisher": data.publisher,
+                    "title_source": "doc_map.title" if doc_map_title else "ingest_payload",
+                    "publisher_source": "doc_map.publisher" if doc_map_publisher else "unset",
+                },
+            ))
     try:
         artifacts_payload = generate_artifacts(
             report_id=file.file_id,
@@ -1042,6 +1062,19 @@ def generate_report(
         ctx,
     )
 
+    cover_meta = get_report_metadata(
+        ReportMetadataGetRequest(
+            schema_version="1.0",
+            db_path=settings.reports_db,
+            file_id=file.file_id,
+        ),
+        child_context(ctx, task_id=f"{ctx.task_id}:cover_metadata"),
+    )
+    cover_title = (cover_meta.title if cover_meta else report_title).strip()
+    cover_publisher = (cover_meta.publisher or "").strip() if cover_meta else (data.publisher or "")
+    cover_time_period = cover_meta.time_period if cover_meta else (data.time_period or None)
+    cover_region = cover_meta.region if cover_meta else (data.region or None)
+
     cover_ctx = child_context(ctx, task_id=f"{ctx.task_id}:cover_image")
     try:
         cover_outcomes = generate_cover_images(
@@ -1053,10 +1086,11 @@ def generate_report(
                     CoverImageReport(
                         schema_version="1.0",
                         file_id=file.file_id,
-                        title=report_title,
-                        publisher=data.publisher,
+                        title=cover_title,
+                        publisher=cover_publisher,
                         categories=list(data.categories),
-                        time_period=data.time_period or None,
+                        time_period=cover_time_period,
+                        region=cover_region,
                     ),
                 ],
             ),
