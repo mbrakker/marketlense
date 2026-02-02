@@ -26,8 +26,9 @@ logger = logging.getLogger("market_lense.cover_image_generator")
 def _normalize_report(report: CoverImageReport) -> CoverImageReport:
     title = str(report.title or "").strip()
     publisher = str(report.publisher or "").strip()
-    categories = [str(cat).strip().lower() for cat in report.categories if str(cat).strip()]
+    categories = [str(cat).strip() for cat in report.categories if str(cat).strip()]
     time_period = str(report.time_period).strip() if report.time_period else None
+    region = str(report.region).strip() if report.region else None
     return CoverImageReport(
         schema_version=report.schema_version,
         file_id=str(report.file_id).strip(),
@@ -35,11 +36,14 @@ def _normalize_report(report: CoverImageReport) -> CoverImageReport:
         publisher=publisher,
         categories=categories,
         time_period=time_period,
+        region=region,
     )
 
 
-def _resolve_category(report: CoverImageReport) -> str:
-    return report.categories[0] if report.categories else "default"
+def _resolve_style_category(report: CoverImageReport) -> str:
+    if report.categories:
+        return str(report.categories[0]).strip().lower()
+    return "default"
 
 
 def _merge_style(defaults: CoverImageStyle, overrides) -> CoverImageStyle:
@@ -55,12 +59,13 @@ def _merge_style(defaults: CoverImageStyle, overrides) -> CoverImageStyle:
     )
 
 
-def _category_label(category: str, style: CoverImageStyle) -> str:
-    if style.category_label.strip():
-        return style.category_label
-    if category == "default":
-        return ""
-    return category.replace("_", " ").title()
+def _category_label(category: str) -> str:
+    return str(category or "").strip()
+
+
+def _footer_label(time_period: str | None, region: str | None) -> str:
+    pieces = [str(piece).strip() for piece in (region, time_period) if piece and str(piece).strip()]
+    return " • ".join(pieces)
 
 
 def generate_cover_images(request: CoverImageGenerationRequest, ctx: RunContext) -> List[CoverImageGenerationOutcome]:
@@ -86,15 +91,16 @@ def generate_cover_images(request: CoverImageGenerationRequest, ctx: RunContext)
 
     for report in request.reports:
         normalized = _normalize_report(report)
-        category = _resolve_category(normalized)
-        overrides = config.categories.get(category)
+        style_category = _resolve_style_category(normalized)
+        overrides = config.categories.get(style_category)
         if overrides is None:
             overrides = config.categories.get("default")
         overrides = overrides or CoverImageStyleOverrides(schema_version="1.0")
         style = _merge_style(config.defaults, overrides)
-        label_text = _category_label(category, style)
-        label_origin = "style.category_label" if style.category_label.strip() else "derived_from_category"
-        category_origin = "report.categories[0]" if normalized.categories else "default_fallback"
+        label_text = _category_label(normalized.categories[0]) if normalized.categories else ""
+        label_origin = "report.categories[0]" if normalized.categories else "report.categories[0] (empty)"
+        category_origin = "report.categories[0]" if normalized.categories else "report.categories (empty)"
+        footer_label = _footer_label(normalized.time_period, normalized.region)
 
         logger.info(log_event(
             ctx,
@@ -103,7 +109,7 @@ def generate_cover_images(request: CoverImageGenerationRequest, ctx: RunContext)
             module=logger.name,
             fields={
                 "file_id": normalized.file_id,
-                "category": category,
+                "category": style_category,
                 "label_text": label_text,
             },
         ))
@@ -117,8 +123,8 @@ def generate_cover_images(request: CoverImageGenerationRequest, ctx: RunContext)
                 "title": normalized.title,
                 "title_source": "CoverImageReport.title",
                 "publisher": normalized.publisher,
-                "publisher_source": "CoverImageReport.publisher (from upstream DocMap)",
-                "category": category,
+                "publisher_source": "CoverImageReport.publisher",
+                "category": normalized.categories[0] if normalized.categories else "",
                 "category_source": category_origin,
                 "category_label": label_text,
                 "category_label_source": label_origin,
@@ -126,6 +132,7 @@ def generate_cover_images(request: CoverImageGenerationRequest, ctx: RunContext)
                 "time_period_source": "CoverImageReport.time_period",
                 "region": normalized.region or "",
                 "region_source": "CoverImageReport.region",
+                "footer_label": footer_label,
             },
         ))
 
@@ -162,7 +169,7 @@ def generate_cover_images(request: CoverImageGenerationRequest, ctx: RunContext)
                     output_path=output_path,
                     title=normalized.title,
                     publisher=normalized.publisher,
-                    time_period=normalized.time_period,
+                    time_period=footer_label,
                     category_label=label_text,
                     style=style,
                     layout=config.layout,

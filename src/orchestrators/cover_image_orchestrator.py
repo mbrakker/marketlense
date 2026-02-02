@@ -26,6 +26,7 @@ def _report_from_metadata(metadata) -> CoverImageReport:
         publisher=metadata.publisher or "",
         categories=list(metadata.categories or []),
         time_period=metadata.time_period,
+        region=metadata.region,
     )
 
 

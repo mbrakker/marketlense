@@ -124,7 +124,7 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
      - **Candidate ranking**: `rank_service` scores candidates via LLM (model resolves from `openai_models.rank_candidates` if set, else `rank.model`, then `ingest.openai_model`).
      - **Cropping**: `crop_service` crops top-ranked regions.
      - **Preview rendering**: `preview_service` renders the first page to PNG.
-     - **Cover image generation**: `cover_image_generator` resolves style from `cover-styles.yaml` using the report’s first category (falls back to `default`), title, optional publisher, and optional time period. Renders via `cover_image_service` to `out/<report-slug>/<publisher>-<title>.png`, logging the resolved style and render path.
+     - **Cover image generation**: `cover_image_generator` resolves style from `cover-styles.yaml` using the report’s first category (falls back to `default` for styling only), while the rendered label text, title, publisher, time period, and region always come from report metadata in the DB. Renders via `cover_image_service` to `out/<report-slug>/<publisher>-<title>.png`, logging the resolved style and render path.
      - **HTML rendering**: `render_service` generates the final HTML digest.
 
 7. **State record**
