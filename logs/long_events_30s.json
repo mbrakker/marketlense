@@ -1,0 +1,662 @@
+[
+  {
+    "task_id": "cli_ingest",
+    "event": "drive_list",
+    "duration": 1473.0
+  },
+  {
+    "task_id": "cli_ingest",
+    "event": "ingest",
+    "duration": 1473.0
+  },
+  {
+    "task_id": "1QUW2Cd3RsIbqdOjEXiNbDygabqOaTcht",
+    "event": "report_generate",
+    "duration": 1468.0
+  },
+  {
+    "task_id": "cli_ingest",
+    "event": "drive_list",
+    "duration": 1079.0
+  },
+  {
+    "task_id": "cli_ingest",
+    "event": "ingest",
+    "duration": 1079.0
+  },
+  {
+    "task_id": "1cOuTjeEGjA_0mVyMAky_S0Lzvb3WFHqq",
+    "event": "report_generate",
+    "duration": 1075.0
+  },
+  {
+    "task_id": "cli_ingest",
+    "event": "drive_list",
+    "duration": 958.0
+  },
+  {
+    "task_id": "cli_ingest",
+    "event": "ingest",
+    "duration": 958.0
+  },
+  {
+    "task_id": "1hu5bPOqpGgIPv4jVt1GZxiBsGbogRHEV",
+    "event": "report_generate",
+    "duration": 952.0
+  },
+  {
+    "task_id": "cli_ingest",
+    "event": "drive_list",
+    "duration": 940.0
+  },
+  {
+    "task_id": "cli_ingest",
+    "event": "ingest",
+    "duration": 940.0
+  },
+  {
+    "task_id": "19mCA5qAAigP3whliVq9Wlt77J4KSADlo",
+    "event": "report_generate",
+    "duration": 937.0
+  },
+  {
+    "task_id": "cli_ingest",
+    "event": "drive_list",
+    "duration": 763.0
+  },
+  {
+    "task_id": "cli_ingest",
+    "event": "ingest",
+    "duration": 763.0
+  },
+  {
+    "task_id": "1Qk-y20Ki1-LkUl7AK1iWS3Gj1_Bmqa-J",
+    "event": "report_generate",
+    "duration": 756.0
+  },
+  {
+    "task_id": "1QUW2Cd3RsIbqdOjEXiNbDygabqOaTcht:vector_store:artifacts",
+    "event": "artifact_generate",
+    "duration": 517.0
+  },
+  {
+    "task_id": "1cOuTjeEGjA_0mVyMAky_S0Lzvb3WFHqq:vector_store:artifacts",
+    "event": "artifact_generate",
+    "duration": 422.0
+  },
+  {
+    "task_id": "19mCA5qAAigP3whliVq9Wlt77J4KSADlo:vector_store:artifacts",
+    "event": "artifact_generate",
+    "duration": 390.0
+  },
+  {
+    "task_id": "1QUW2Cd3RsIbqdOjEXiNbDygabqOaTcht:vector_store:evidence",
+    "event": "evidence_pack",
+    "duration": 380.0
+  },
+  {
+    "task_id": "19mCA5qAAigP3whliVq9Wlt77J4KSADlo:vector_store:evidence",
+    "event": "evidence_pack",
+    "duration": 329.0
+  },
+  {
+    "task_id": "1hu5bPOqpGgIPv4jVt1GZxiBsGbogRHEV:vector_store:artifacts",
+    "event": "artifact_generate",
+    "duration": 327.0
+  },
+  {
+    "task_id": "1cOuTjeEGjA_0mVyMAky_S0Lzvb3WFHqq:vector_store:evidence",
+    "event": "evidence_pack",
+    "duration": 320.0
+  },
+  {
+    "task_id": "1Qk-y20Ki1-LkUl7AK1iWS3Gj1_Bmqa-J:vector_store:artifacts",
+    "event": "artifact_generate",
+    "duration": 264.0
+  },
+  {
+    "task_id": "1QUW2Cd3RsIbqdOjEXiNbDygabqOaTcht",
+    "event": "extract_candidates",
+    "duration": 237.0
+  },
+  {
+    "task_id": "1cOuTjeEGjA_0mVyMAky_S0Lzvb3WFHqq:vector_store:validation",
+    "event": "validation",
+    "duration": 203.0
+  },
+  {
+    "task_id": "1hu5bPOqpGgIPv4jVt1GZxiBsGbogRHEV:vector_store:evidence",
+    "event": "evidence_pack",
+    "duration": 194.0
+  },
+  {
+    "task_id": "1QUW2Cd3RsIbqdOjEXiNbDygabqOaTcht:vector_store:validation",
+    "event": "validation",
+    "duration": 166.0
+  },
+  {
+    "task_id": "1Qk-y20Ki1-LkUl7AK1iWS3Gj1_Bmqa-J:vector_store:evidence",
+    "event": "evidence_pack",
+    "duration": 151.0
+  },
+  {
+    "task_id": "1Qk-y20Ki1-LkUl7AK1iWS3Gj1_Bmqa-J",
+    "event": "extract_candidates",
+    "duration": 124.0
+  },
+  {
+    "task_id": "1cOuTjeEGjA_0mVyMAky_S0Lzvb3WFHqq:vector_store:validation:semantic",
+    "event": "openai_chat_json",
+    "duration": 118.0
+  },
+  {
+    "task_id": "1cOuTjeEGjA_0mVyMAky_S0Lzvb3WFHqq:vector_store:validation:semantic",
+    "event": "semantic_validation",
+    "duration": 118.0
+  },
+  {
+    "task_id": "19mCA5qAAigP3whliVq9Wlt77J4KSADlo:vector_store:evidence:doc_map",
+    "event": "openai_response",
+    "duration": 114.0
+  },
+  {
+    "task_id": "19mCA5qAAigP3whliVq9Wlt77J4KSADlo:vector_store:evidence:doc_map",
+    "event": "evidence_pack_step",
+    "duration": 114.0
+  },
+  {
+    "task_id": "1hu5bPOqpGgIPv4jVt1GZxiBsGbogRHEV:vector_store",
+    "event": "vector_store_upload",
+    "duration": 113.0
+  },
+  {
+    "task_id": "19mCA5qAAigP3whliVq9Wlt77J4KSADlo:vector_store:validation",
+    "event": "validation",
+    "duration": 113.0
+  },
+  {
+    "task_id": "1cOuTjeEGjA_0mVyMAky_S0Lzvb3WFHqq:vector_store:evidence:doc_map",
+    "event": "openai_response",
+    "duration": 111.0
+  },
+  {
+    "task_id": "1cOuTjeEGjA_0mVyMAky_S0Lzvb3WFHqq:vector_store:evidence:doc_map",
+    "event": "evidence_pack_step",
+    "duration": 111.0
+  },
+  {
+    "task_id": "1hu5bPOqpGgIPv4jVt1GZxiBsGbogRHEV:vector_store:validation",
+    "event": "validation",
+    "duration": 105.0
+  },
+  {
+    "task_id": "1QUW2Cd3RsIbqdOjEXiNbDygabqOaTcht:vector_store:validation:grounding",
+    "event": "openai_response",
+    "duration": 101.0
+  },
+  {
+    "task_id": "1cOuTjeEGjA_0mVyMAky_S0Lzvb3WFHqq:vector_store:artifacts:linkedin_post",
+    "event": "openai_response",
+    "duration": 100.0
+  },
+  {
+    "task_id": "1QUW2Cd3RsIbqdOjEXiNbDygabqOaTcht:vector_store:artifacts:expert_comment",
+    "event": "openai_response",
+    "duration": 99.0
+  },
+  {
+    "task_id": "1QUW2Cd3RsIbqdOjEXiNbDygabqOaTcht:vector_store:artifacts:summary",
+    "event": "openai_response",
+    "duration": 91.0
+  },
+  {
+    "task_id": "1QUW2Cd3RsIbqdOjEXiNbDygabqOaTcht:vector_store:evidence:doc_map",
+    "event": "openai_response",
+    "duration": 90.0
+  },
+  {
+    "task_id": "1QUW2Cd3RsIbqdOjEXiNbDygabqOaTcht:vector_store:evidence:doc_map",
+    "event": "evidence_pack_step",
+    "duration": 90.0
+  },
+  {
+    "task_id": "19mCA5qAAigP3whliVq9Wlt77J4KSADlo:vector_store:artifacts:summary",
+    "event": "openai_response",
+    "duration": 87.0
+  },
+  {
+    "task_id": "1cOuTjeEGjA_0mVyMAky_S0Lzvb3WFHqq:vector_store:validation:grounding",
+    "event": "openai_response",
+    "duration": 84.0
+  },
+  {
+    "task_id": "1QUW2Cd3RsIbqdOjEXiNbDygabqOaTcht:vector_store:artifacts:insights_candidates",
+    "event": "openai_response",
+    "duration": 78.0
+  },
+  {
+    "task_id": "1Qk-y20Ki1-LkUl7AK1iWS3Gj1_Bmqa-J:vector_store:artifacts:expert_comment",
+    "event": "openai_response",
+    "duration": 78.0
+  },
+  {
+    "task_id": "1QUW2Cd3RsIbqdOjEXiNbDygabqOaTcht:vector_store:artifacts:linkedin_post",
+    "event": "openai_response",
+    "duration": 76.0
+  },
+  {
+    "task_id": "19mCA5qAAigP3whliVq9Wlt77J4KSADlo:vector_store:validation:grounding",
+    "event": "openai_response",
+    "duration": 73.0
+  },
+  {
+    "task_id": "1QUW2Cd3RsIbqdOjEXiNbDygabqOaTcht:vector_store:evidence:findings",
+    "event": "openai_response",
+    "duration": 72.0
+  },
+  {
+    "task_id": "1QUW2Cd3RsIbqdOjEXiNbDygabqOaTcht:vector_store:evidence:findings",
+    "event": "evidence_pack_step",
+    "duration": 72.0
+  },
+  {
+    "task_id": "1hu5bPOqpGgIPv4jVt1GZxiBsGbogRHEV",
+    "event": "extract_candidates",
+    "duration": 71.0
+  },
+  {
+    "task_id": "1hu5bPOqpGgIPv4jVt1GZxiBsGbogRHEV:vector_store:artifacts:summary",
+    "event": "openai_response",
+    "duration": 71.0
+  },
+  {
+    "task_id": "1cOuTjeEGjA_0mVyMAky_S0Lzvb3WFHqq:vector_store:artifacts:summary",
+    "event": "openai_response",
+    "duration": 69.0
+  },
+  {
+    "task_id": "1QUW2Cd3RsIbqdOjEXiNbDygabqOaTcht:vector_store:evidence:scope",
+    "event": "openai_response",
+    "duration": 68.0
+  },
+  {
+    "task_id": "1QUW2Cd3RsIbqdOjEXiNbDygabqOaTcht:vector_store:evidence:scope",
+    "event": "evidence_pack_step",
+    "duration": 68.0
+  },
+  {
+    "task_id": "1Qk-y20Ki1-LkUl7AK1iWS3Gj1_Bmqa-J:vector_store:validation",
+    "event": "validation",
+    "duration": 66.0
+  },
+  {
+    "task_id": "1QUW2Cd3RsIbqdOjEXiNbDygabqOaTcht:vector_store:validation:semantic",
+    "event": "openai_chat_json",
+    "duration": 65.0
+  },
+  {
+    "task_id": "1QUW2Cd3RsIbqdOjEXiNbDygabqOaTcht:vector_store:validation:semantic",
+    "event": "semantic_validation",
+    "duration": 65.0
+  },
+  {
+    "task_id": "19mCA5qAAigP3whliVq9Wlt77J4KSADlo:vector_store:artifacts:linkedin_post",
+    "event": "openai_response",
+    "duration": 65.0
+  },
+  {
+    "task_id": "1cOuTjeEGjA_0mVyMAky_S0Lzvb3WFHqq:vector_store:artifacts:expert_comment",
+    "event": "openai_response",
+    "duration": 64.0
+  },
+  {
+    "task_id": "1QUW2Cd3RsIbqdOjEXiNbDygabqOaTcht:vector_store:artifacts:insights_final",
+    "event": "openai_response",
+    "duration": 64.0
+  },
+  {
+    "task_id": "1QUW2Cd3RsIbqdOjEXiNbDygabqOaTcht:vector_store:taxonomy",
+    "event": "taxonomy_extract",
+    "duration": 61.0
+  },
+  {
+    "task_id": "1QUW2Cd3RsIbqdOjEXiNbDygabqOaTcht:vector_store:taxonomy",
+    "event": "openai_response",
+    "duration": 60.0
+  },
+  {
+    "task_id": "1hu5bPOqpGgIPv4jVt1GZxiBsGbogRHEV:vector_store:validation:grounding",
+    "event": "openai_response",
+    "duration": 60.0
+  },
+  {
+    "task_id": "19mCA5qAAigP3whliVq9Wlt77J4KSADlo:vector_store:artifacts:expert_comment",
+    "event": "openai_response",
+    "duration": 60.0
+  },
+  {
+    "task_id": "1cOuTjeEGjA_0mVyMAky_S0Lzvb3WFHqq:vector_store:evidence:limitations",
+    "event": "openai_response",
+    "duration": 57.0
+  },
+  {
+    "task_id": "1cOuTjeEGjA_0mVyMAky_S0Lzvb3WFHqq:vector_store:evidence:limitations",
+    "event": "evidence_pack_step",
+    "duration": 57.0
+  },
+  {
+    "task_id": "1cOuTjeEGjA_0mVyMAky_S0Lzvb3WFHqq:vector_store:artifacts:insights_candidates",
+    "event": "openai_response",
+    "duration": 57.0
+  },
+  {
+    "task_id": "1QUW2Cd3RsIbqdOjEXiNbDygabqOaTcht:vector_store:evidence:limitations",
+    "event": "openai_response",
+    "duration": 56.0
+  },
+  {
+    "task_id": "1QUW2Cd3RsIbqdOjEXiNbDygabqOaTcht:vector_store:evidence:limitations",
+    "event": "evidence_pack_step",
+    "duration": 56.0
+  },
+  {
+    "task_id": "1hu5bPOqpGgIPv4jVt1GZxiBsGbogRHEV:vector_store:artifacts:linkedin_post",
+    "event": "openai_response",
+    "duration": 56.0
+  },
+  {
+    "task_id": "19mCA5qAAigP3whliVq9Wlt77J4KSADlo:vector_store:evidence:findings",
+    "event": "openai_response",
+    "duration": 56.0
+  },
+  {
+    "task_id": "19mCA5qAAigP3whliVq9Wlt77J4KSADlo:vector_store:evidence:findings",
+    "event": "evidence_pack_step",
+    "duration": 56.0
+  },
+  {
+    "task_id": "19mCA5qAAigP3whliVq9Wlt77J4KSADlo:vector_store:artifacts:insights_final",
+    "event": "openai_response",
+    "duration": 56.0
+  },
+  {
+    "task_id": "1QUW2Cd3RsIbqdOjEXiNbDygabqOaTcht:vector_store:artifacts:toc",
+    "event": "openai_response",
+    "duration": 55.0
+  },
+  {
+    "task_id": "1QUW2Cd3RsIbqdOjEXiNbDygabqOaTcht:vector_store:artifacts:quotes",
+    "event": "openai_response",
+    "duration": 54.0
+  },
+  {
+    "task_id": "1cOuTjeEGjA_0mVyMAky_S0Lzvb3WFHqq:vector_store:evidence:quote_candidates",
+    "event": "evidence_pack_step",
+    "duration": 52.0
+  },
+  {
+    "task_id": "1cOuTjeEGjA_0mVyMAky_S0Lzvb3WFHqq:vector_store:evidence:quote_candidates",
+    "event": "openai_response",
+    "duration": 51.0
+  },
+  {
+    "task_id": "1Qk-y20Ki1-LkUl7AK1iWS3Gj1_Bmqa-J:vector_store:artifacts:insights_candidates",
+    "event": "openai_response",
+    "duration": 51.0
+  },
+  {
+    "task_id": "1cOuTjeEGjA_0mVyMAky_S0Lzvb3WFHqq:vector_store:artifacts:insights_final",
+    "event": "openai_response",
+    "duration": 50.0
+  },
+  {
+    "task_id": "1hu5bPOqpGgIPv4jVt1GZxiBsGbogRHEV:vector_store:evidence:doc_map",
+    "event": "openai_response",
+    "duration": 50.0
+  },
+  {
+    "task_id": "1hu5bPOqpGgIPv4jVt1GZxiBsGbogRHEV:vector_store:evidence:doc_map",
+    "event": "evidence_pack_step",
+    "duration": 50.0
+  },
+  {
+    "task_id": "1hu5bPOqpGgIPv4jVt1GZxiBsGbogRHEV:vector_store:artifacts:expert_comment",
+    "event": "openai_response",
+    "duration": 50.0
+  },
+  {
+    "task_id": "1Qk-y20Ki1-LkUl7AK1iWS3Gj1_Bmqa-J",
+    "event": "figure_extract",
+    "duration": 50.0
+  },
+  {
+    "task_id": "1QUW2Cd3RsIbqdOjEXiNbDygabqOaTcht:vector_store:evidence:quote_candidates",
+    "event": "openai_response",
+    "duration": 49.0
+  },
+  {
+    "task_id": "1QUW2Cd3RsIbqdOjEXiNbDygabqOaTcht:vector_store:evidence:quote_candidates",
+    "event": "evidence_pack_step",
+    "duration": 49.0
+  },
+  {
+    "task_id": "1hu5bPOqpGgIPv4jVt1GZxiBsGbogRHEV:vector_store:artifacts:insights_candidates",
+    "event": "openai_response",
+    "duration": 49.0
+  },
+  {
+    "task_id": "19mCA5qAAigP3whliVq9Wlt77J4KSADlo:vector_store:evidence:methods",
+    "event": "openai_response",
+    "duration": 49.0
+  },
+  {
+    "task_id": "19mCA5qAAigP3whliVq9Wlt77J4KSADlo:vector_store:evidence:methods",
+    "event": "evidence_pack_step",
+    "duration": 49.0
+  },
+  {
+    "task_id": "1cOuTjeEGjA_0mVyMAky_S0Lzvb3WFHqq:vector_store:artifacts:quotes",
+    "event": "openai_response",
+    "duration": 48.0
+  },
+  {
+    "task_id": "19mCA5qAAigP3whliVq9Wlt77J4KSADlo:vector_store:evidence:scope",
+    "event": "openai_response",
+    "duration": 48.0
+  },
+  {
+    "task_id": "19mCA5qAAigP3whliVq9Wlt77J4KSADlo:vector_store:evidence:scope",
+    "event": "evidence_pack_step",
+    "duration": 48.0
+  },
+  {
+    "task_id": "19mCA5qAAigP3whliVq9Wlt77J4KSADlo:vector_store:taxonomy",
+    "event": "openai_response",
+    "duration": 47.0
+  },
+  {
+    "task_id": "19mCA5qAAigP3whliVq9Wlt77J4KSADlo:vector_store:taxonomy",
+    "event": "taxonomy_extract",
+    "duration": 47.0
+  },
+  {
+    "task_id": "1QUW2Cd3RsIbqdOjEXiNbDygabqOaTcht:vector_store:evidence:methods",
+    "event": "openai_response",
+    "duration": 45.0
+  },
+  {
+    "task_id": "1QUW2Cd3RsIbqdOjEXiNbDygabqOaTcht:vector_store:evidence:methods",
+    "event": "evidence_pack_step",
+    "duration": 45.0
+  },
+  {
+    "task_id": "1hu5bPOqpGgIPv4jVt1GZxiBsGbogRHEV:vector_store:validation:semantic",
+    "event": "openai_chat_json",
+    "duration": 45.0
+  },
+  {
+    "task_id": "1hu5bPOqpGgIPv4jVt1GZxiBsGbogRHEV:vector_store:validation:semantic",
+    "event": "semantic_validation",
+    "duration": 45.0
+  },
+  {
+    "task_id": "1Qk-y20Ki1-LkUl7AK1iWS3Gj1_Bmqa-J:vector_store:artifacts:linkedin_post",
+    "event": "openai_response",
+    "duration": 44.0
+  },
+  {
+    "task_id": "19mCA5qAAigP3whliVq9Wlt77J4KSADlo:vector_store:artifacts:toc",
+    "event": "openai_response",
+    "duration": 43.0
+  },
+  {
+    "task_id": "19mCA5qAAigP3whliVq9Wlt77J4KSADlo:vector_store:artifacts:insights_candidates",
+    "event": "openai_response",
+    "duration": 43.0
+  },
+  {
+    "task_id": "1cOuTjeEGjA_0mVyMAky_S0Lzvb3WFHqq:vector_store:taxonomy",
+    "event": "openai_response",
+    "duration": 42.0
+  },
+  {
+    "task_id": "1cOuTjeEGjA_0mVyMAky_S0Lzvb3WFHqq:vector_store:taxonomy",
+    "event": "taxonomy_extract",
+    "duration": 42.0
+  },
+  {
+    "task_id": "1Qk-y20Ki1-LkUl7AK1iWS3Gj1_Bmqa-J:vector_store:validation:grounding",
+    "event": "openai_response",
+    "duration": 42.0
+  },
+  {
+    "task_id": "1hu5bPOqpGgIPv4jVt1GZxiBsGbogRHEV:vector_store:evidence:methods",
+    "event": "openai_response",
+    "duration": 41.0
+  },
+  {
+    "task_id": "1hu5bPOqpGgIPv4jVt1GZxiBsGbogRHEV:vector_store:evidence:methods",
+    "event": "evidence_pack_step",
+    "duration": 41.0
+  },
+  {
+    "task_id": "1Qk-y20Ki1-LkUl7AK1iWS3Gj1_Bmqa-J:vector_store:evidence:doc_map",
+    "event": "openai_response",
+    "duration": 41.0
+  },
+  {
+    "task_id": "1Qk-y20Ki1-LkUl7AK1iWS3Gj1_Bmqa-J:vector_store:evidence:doc_map",
+    "event": "evidence_pack_step",
+    "duration": 41.0
+  },
+  {
+    "task_id": "19mCA5qAAigP3whliVq9Wlt77J4KSADlo:vector_store:validation:semantic",
+    "event": "openai_chat_json",
+    "duration": 40.0
+  },
+  {
+    "task_id": "19mCA5qAAigP3whliVq9Wlt77J4KSADlo:vector_store:validation:semantic",
+    "event": "semantic_validation",
+    "duration": 40.0
+  },
+  {
+    "task_id": "1hu5bPOqpGgIPv4jVt1GZxiBsGbogRHEV:vector_store:artifacts:quotes",
+    "event": "openai_response",
+    "duration": 36.0
+  },
+  {
+    "task_id": "19mCA5qAAigP3whliVq9Wlt77J4KSADlo:vector_store:artifacts:quotes",
+    "event": "openai_response",
+    "duration": 36.0
+  },
+  {
+    "task_id": "1cOuTjeEGjA_0mVyMAky_S0Lzvb3WFHqq:vector_store:evidence:findings",
+    "event": "openai_response",
+    "duration": 35.0
+  },
+  {
+    "task_id": "1cOuTjeEGjA_0mVyMAky_S0Lzvb3WFHqq:vector_store:evidence:findings",
+    "event": "evidence_pack_step",
+    "duration": 35.0
+  },
+  {
+    "task_id": "1hu5bPOqpGgIPv4jVt1GZxiBsGbogRHEV:vector_store:evidence:quote_candidates",
+    "event": "openai_response",
+    "duration": 35.0
+  },
+  {
+    "task_id": "1hu5bPOqpGgIPv4jVt1GZxiBsGbogRHEV:vector_store:evidence:quote_candidates",
+    "event": "evidence_pack_step",
+    "duration": 35.0
+  },
+  {
+    "task_id": "c21980a9-e033-4987-aec2-4e27273f8414",
+    "event": "publish",
+    "duration": 35.0
+  },
+  {
+    "task_id": "1Qk-y20Ki1-LkUl7AK1iWS3Gj1_Bmqa-J:vector_store:artifacts:summary",
+    "event": "openai_response",
+    "duration": 35.0
+  },
+  {
+    "task_id": "1cOuTjeEGjA_0mVyMAky_S0Lzvb3WFHqq:vector_store:evidence:methods",
+    "event": "openai_response",
+    "duration": 34.0
+  },
+  {
+    "task_id": "1cOuTjeEGjA_0mVyMAky_S0Lzvb3WFHqq:vector_store:evidence:methods",
+    "event": "evidence_pack_step",
+    "duration": 34.0
+  },
+  {
+    "task_id": "1cOuTjeEGjA_0mVyMAky_S0Lzvb3WFHqq:vector_store:artifacts:toc",
+    "event": "openai_response",
+    "duration": 34.0
+  },
+  {
+    "task_id": "1hu5bPOqpGgIPv4jVt1GZxiBsGbogRHEV:vector_store:artifacts:insights_final",
+    "event": "openai_response",
+    "duration": 33.0
+  },
+  {
+    "task_id": "19mCA5qAAigP3whliVq9Wlt77J4KSADlo:vector_store:evidence:limitations",
+    "event": "openai_response",
+    "duration": 33.0
+  },
+  {
+    "task_id": "19mCA5qAAigP3whliVq9Wlt77J4KSADlo:vector_store:evidence:limitations",
+    "event": "evidence_pack_step",
+    "duration": 33.0
+  },
+  {
+    "task_id": "1hu5bPOqpGgIPv4jVt1GZxiBsGbogRHEV:vector_store:artifacts:toc",
+    "event": "openai_response",
+    "duration": 32.0
+  },
+  {
+    "task_id": "out\\morningstar-2026-outlook-acig-pdf.html",
+    "event": "publish",
+    "duration": 32.0
+  },
+  {
+    "task_id": "1cOuTjeEGjA_0mVyMAky_S0Lzvb3WFHqq:vector_store:evidence:scope",
+    "event": "openai_response",
+    "duration": 31.0
+  },
+  {
+    "task_id": "1cOuTjeEGjA_0mVyMAky_S0Lzvb3WFHqq:vector_store:evidence:scope",
+    "event": "evidence_pack_step",
+    "duration": 31.0
+  },
+  {
+    "task_id": "1Qk-y20Ki1-LkUl7AK1iWS3Gj1_Bmqa-J:vector_store:taxonomy",
+    "event": "taxonomy_extract",
+    "duration": 31.0
+  },
+  {
+    "task_id": "1Qk-y20Ki1-LkUl7AK1iWS3Gj1_Bmqa-J:vector_store:taxonomy",
+    "event": "openai_response",
+    "duration": 30.0
+  }
+]

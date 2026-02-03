@@ -13,7 +13,7 @@ from src.contracts.run_context import RunContext
 from src.generators.candidate_extraction_generator import generate_candidate_pack
 from src.services.drive_service import download_pdf, list_pdfs
 from src.services.file_service import file_exists, file_md5, write_bytes
-from src.services.pdf_utils_service import check_pdf_eof
+from src.services.pdf_service import check_pdf_eof
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.path_utils import safe_pdf_name
 from src.utils.slugify import slugify

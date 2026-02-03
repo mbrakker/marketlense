@@ -39,6 +39,7 @@ src/
 
 - **Contracts**: Define schema and shape of inputs/outputs at service boundaries. No logic.
 - **Services**: Only I/O. Talk to external APIs, filesystem, databases, or system resources. No business logic.
+- **Schema validation**: JSON schema loading/validation is treated as I/O and lives in `src/services/schema_validator_service.py`.
 - **Generators**: Compose services and enforce domain rules (e.g., which charts are selected, how outputs are structured).
 - **Orchestrators**: Define when and in what order things happen, including retries and state transitions.
 - **Utils**: Pure deterministic functions (no I/O, no global state).
@@ -98,7 +99,7 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
 
 4. **Download + integrity check**
    - `drive_service.download_pdf(...)` downloads the PDF into cache.
-   - `src/services/pdf_utils_service.py` checks for EOF marker and redownloads once if missing.
+   - `src/services/pdf_service.py` checks for EOF marker and redownloads once if missing; read failures now raise structured `AppError`s.
 
 5. **State management**
    - `src/services/state_service.py` maintains a SQLite store of processed file IDs and hashes.
@@ -106,21 +107,21 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
 
 6. **Report generation (per file)**
    - `src/generators/report_generator.py` runs the core pipeline:
-     - **PDF info**: `pdf_utils_service.extract_pdf_info` captures page count and sanitized PDF metadata for persistence.
-     - **PDF context**: `pdf_context_service.build_pdf_context` opens PyMuPDF and pypdf handles once; downstream services reuse them and fall back to local opens if unavailable.
+     - **PDF info**: `pdf_service.extract_pdf_info` captures page count and sanitized PDF metadata for persistence.
+     - **PDF context**: `pdf_service.build_pdf_context` opens PyMuPDF and pypdf handles once; downstream services reuse them and fall back to local opens if unavailable.
      - **Contents/index detection**: scans the first pages for a contents/index section, renders a screenshot when found, and records the page number for HTML + DB output.
-     - **Text extraction**: `pdf_text_service` extracts text from the first N pages (reusing the shared context when present) and computes text density; if density falls below `ingest.pdf_text.min_density`, downstream artifacts short-circuit to explicit “not available from text” placeholders with HTML notices.
+     - **Text extraction**: `pdf_service.extract_pdf_text` extracts text from the first N pages (reusing the shared context when present) and computes text density; if density falls below `ingest.pdf_text.min_density`, downstream artifacts short-circuit to explicit “not available from text” placeholders with HTML notices.
      - **LLM analysis**:
       - `vector_store` mode (only path): Ensures a vector store exists (create -> upload PDF -> attach -> wait for indexing via `vector_store_service`), then calls `openai_service.openai_respond_with_vector_store` (Responses API + file search). Evidence packs are generated via `src/generators/evidence_pack_generator.py` (doc_map, scope, methods, findings, limitations, quote_candidates), stored under `out/<report-slug>/report_analysis/*.json` (mirrored to `out/report_analysis/<file_id>/` for backward compatibility), and persisted in the metadata DB (`reports` table columns `vector_store_id`, `evidence_packs_json`; state DB stores `vector_store_status`, `indexed_at_utc`, `openai_file_id`, `last_error`). Orchestrator logs `VECTOR_STORE_CREATED`, `VECTOR_STORE_INDEXED`, `EVIDENCE_READY`.
        - Taxonomy extraction: `src/generators/taxonomy_generator.py` uses `src/prompts/report_vs/taxonomy/` to extract tags/regions/time_period from the vector store; tags map to categories and persist to the reports DB and HTML.
      - **Validation**: `src/generators/validation_generator.py` now does a two-pass check:
        - Exact: numeric match, token presence, verbatim quotes, and “new numbers” in expert/LinkedIn text.
        - Semantic: LLM re-check via `src/prompts/report_vs/validate/semantic/{system,user}.yaml` (model resolved via `openai_models` longest-prefix match) that scores metric/quote support against evidence snippets and logs prompt hashes + evidence/metric/quote SHA-256. Semantic “supported” adds `info` issues; “unsupported” raises `warning|error`. Grounding still runs (`report_vs/validate/grounding`) for unsupported sentences end-to-end.
-      - Results persist to `out/<report-slug>/report_analysis/validation*.json` (legacy copy at `out/report_analysis/<file_id>/`) and flow into HTML and publish policy decisions. When `ingest.validation.data_gap_policy` is `warn`, missing evidence/text downgrades to warnings.
+      - Results persist to `out/<report-slug>/report_analysis/validation*.json` (legacy copy at `out/report_analysis/<file_id>/`) and flow into HTML and publish policy decisions. When `ingest.validation.data_gap_policy` is `warn`, missing evidence/text downgrades to warnings. Schema validation is performed via `schema_validator_service`.
      - **Normalization**: `normalize_generator` enforces strict schema and list sizing.
      - **Categorization**: taxonomy tags are scored against `src/config/category-mappings.yaml`; top 3 categories are stored and rendered, and unmapped tags are appended under `uncategorized` in that YAML.
      - **Figure selection**: `figure_service` selects a representative visual and caption.
-     - **Candidate extraction**: `extract_service` finds chart/table regions.
+     - **Candidate extraction**: `candidate_extraction_service` finds chart/table regions.
      - **Candidate ranking**: `rank_service` scores candidates via LLM (model resolves from `openai_models.rank_candidates` if set, else `rank.model`, then `ingest.openai_model`).
      - **Cropping**: `crop_service` crops top-ranked regions.
      - **Preview rendering**: `preview_service` renders the first page to PNG.
@@ -161,6 +162,7 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
 ## Logging and Observability
 
 Structured logs are emitted by all services and orchestrators using `src/utils/logging.py`.
+Redaction covers API keys, bearer tokens, and common PII patterns before log emission.
 
 CLI-provided run contexts flow into the ingest orchestrator so CLI run/task IDs stay consistent across downstream orchestrator/service logs.
 

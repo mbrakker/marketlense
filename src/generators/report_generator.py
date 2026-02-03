@@ -12,7 +12,7 @@ from src.contracts.report_models import CropItem, Figure, Quote, ReportPayload
 from src.contracts.pdf_context import PdfContextBuildRequest
 from src.contracts.pdf_contents import PdfContentsDetectionRequest
 from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
-from src.services.pdf_text_service import extract_pdf_text
+from src.services.pdf_service import extract_pdf_text
 from src.utils.slugify import slugify
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
@@ -35,13 +35,13 @@ from src.generators.cover_image_generator import generate_cover_images
 from src.generators.taxonomy_generator import extract_taxonomy
 from src.generators.validation_generator import validate_report as run_validation
 from src.services.crop_service import crop_regions as crop_regions_service
-from src.services.extract_service import collect_candidates as collect_candidates_service
+from src.services.candidate_extraction_service import collect_candidates as collect_candidates_service
 from src.services.figure_service import extract_best_figure as extract_best_figure_service
 from src.services.preview_service import render_preview as render_preview_service
 from src.services.rank_service import rank_candidates as rank_candidates_service
 from src.services.render_service import render_report as render_report_service
 from src.services.prompt_service import load_prompt_set, render_prompt
-from src.services.pdf_contents_service import detect_contents_page as detect_contents_page_service
+from src.services.pdf_service import detect_contents_page as detect_contents_page_service
 from src.services.category_mapping_service import (
     load_mappings as load_category_mappings,
     update_uncategorized_tags,
@@ -50,8 +50,7 @@ from src.services.report_store_service import (
     get_metadata as get_report_metadata,
     upsert_metadata as upsert_report_metadata,
 )
-from src.services.pdf_context_service import build_pdf_context
-from src.services.pdf_utils_service import extract_pdf_info
+from src.services.pdf_service import build_pdf_context, extract_pdf_info
 from src.services import vector_store_service, state_service, report_analysis_store_service
 from src.contracts.state import StateGetRequest, StateRecordRequest
 from src.contracts.validation import ValidationIssue, ValidationReport, ValidationRequest

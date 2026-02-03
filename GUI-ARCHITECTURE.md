@@ -33,6 +33,9 @@ The UI must make inputs, outputs, logs, and artifact locations visible without i
 11. **Logs & Live Terminal** - structured events + live run output
 12. **Settings & Prompts** - read-only config + prompt registry
 13. **System & Storage** - DB tables, locks, output folders
+14. **Developer & Test Tools** - golden-set/regression, prompt sandbox, raw model outputs (debug)
+
+This layout keeps the UI minimal: one dominant task per page with a clear, inspectable source of truth.
 
 This layout keeps the UI minimal: one dominant task per page with a clear, inspectable source of truth.
 
@@ -88,7 +91,9 @@ This layout keeps the UI minimal: one dominant task per page with a clear, inspe
 **Outputs:**
 - Show `candidates.json` path, candidate count, chart/table counts, and crop count. Candidate packs are written under `output_dir/<report_name>/candidates/` by the generator.【F:src/generators/candidate_extraction_generator.py†L1-L190】
 - Provide a viewer for the saved JSON and cropped image paths (if present).【F:src/generators/candidate_extraction_generator.py†L1-L190】
-
+**Ranking controls & debug:**
+- Allow re-running candidate ranking for a selected `candidates.json`, select rank model/temperature/seed override, and re-run ranking without a full ingest. Show ranked table and let operators select a top-N crop operation.
+- Expose raw model outputs and debug files (e.g., `debug/rank_raw_<ts>.txt`) for troubleshooting ranking prompts and model responses.
 **Admin value:** supports visual QA and asset harvesting without leaving Streamlit.
 
 ---
@@ -135,6 +140,8 @@ This layout keeps the UI minimal: one dominant task per page with a clear, inspe
 **Features:**
 - **Vector store status**: show `vector_store_id`, `vector_store_status`, indexing timestamp from state DB.【F:src/services/state_service.py†L8-L120】
 - **Evidence pack explorer**: open JSON from paths stored in metadata (`scope`, `methods`, `findings`, `limitations`, `quote_candidates`).【F:src/services/report_store_service.py†L207-L364】
+- **Re-generate evidence packs**: allow re-running `generate_evidence_packs` for a report (writes refreshed pack JSON and updates stored pack paths).【F:src/generators/evidence_pack_generator.py†L1-L240】
+- **Vector store actions**: surface actions to force reindexing/status refresh, and (only if supported by the provider) delete/prune vector store instances; the UI should disable or hide delete when a delete API is not available.
 - **Compare mode**: if enabled, show side-by-side outputs and pack paths for the two analysis modes.【F:src/services/config_service.py†L145-L211】
 
 **Admin value:** QA and auditability of evidence and LLM reasoning inputs.
@@ -207,6 +214,7 @@ This layout keeps the UI minimal: one dominant task per page with a clear, inspe
 - **Log file discovery**: list the current log file based on `MARKET_LENSE_LOG_DIR` and naming convention.【F:src/services/logging_service.py†L1-L47】
 - **Structured log filters**: filter by `run_id`, `task_id`, `span_id`, `event`, `role`, `module`.【F:src/utils/logging.py†L63-L112】
 - **Live run output**: when the UI triggers a CLI workflow, stream stdout/stderr into a live panel so operators can see real-time progress for ingest/publish/covers/candidates.
+- **Raw model output viewer**: surface saved raw model responses (debug directory) for artifacts generation, ranking, semantic validation, etc., so operators can download and inspect raw JSON/edge-cases.
 - **Redaction awareness**: show that sensitive data is redacted via `***REDACTED***` in structured log output.【F:src/utils/logging.py†L24-L79】
 
 **Admin value:** true operational visibility while jobs are running.
@@ -220,8 +228,7 @@ This layout keeps the UI minimal: one dominant task per page with a clear, inspe
 **Features:**
 - **Config summary**: read-only view of `app.yaml` (paths, ingest, analysis, publish, cost).【F:src/config/app.yaml†L1-L45】
 - **Env overrides status**: display which values are coming from env vs YAML, mirroring config service behavior.【F:src/services/config_service.py†L41-L213】
-- **Prompt namespaces**: list prompt namespaces under `src/prompts` and show each prompt's SHA256 hash as computed by prompt service.【F:src/services/prompt_service.py†L1-L122】
-
+- **Prompt namespaces**: list prompt namespaces under `src/prompts` and show each prompt's SHA256 hash as computed by prompt service.【F:src/services/prompt_service.py†L1-L122】- **Prompt sandbox / test harness**: allow operators to render a prompt with custom variables, view the rendered system & user prompt text, and optionally run a dry LLM invocation (JSON mode or vector-backed) to observe a sample response. Save sandbox runs to the debug directory for review.
 **Not displayed:**
 - Secrets (OpenAI keys, WP tokens, etc.) remain strictly in environment variables and are not exposed in UI.【F:src/services/config_service.py†L41-L213】
 
@@ -240,6 +247,20 @@ This layout keeps the UI minimal: one dominant task per page with a clear, inspe
 - **Storage map**: show `out/`, `cache/`, `state/` paths and core artifact subfolders (HTML, evidence packs, assets, candidates).【F:src/config/app.yaml†L1-L45】
 
 **Admin value:** clear operational control of persistence and concurrency.
+
+---
+
+## 14) Developer & Golden Set (Testing & Regression Harness)
+
+**Goal:** Provide a place for regression testing, golden-set runs, and developer-facing debug tools.
+
+**Features:**
+- **Golden set runner**: trigger the regression harness (`pytest -m golden_set`) or the `run_golden_set.ps1` wrapper so operators can validate a batch of canonical cases.【F:tests/test_golden_set.py†L1-L200】【F:scripts/run_golden_set.ps1†L1-L20】
+- **Test runner**: allow launching selected test markers or CI-like smoke tests to validate environment health.
+- **Debug tools**: prompt sandbox, raw model outputs viewer (debug), re-run evidence packs, re-run ranking, and a place to stash curated test variables/configs.
+- **Fixture fetcher**: helper to fetch or restore golden fixtures when missing (or show clear skip rationale) to reduce friction for local regression runs.
+
+**Admin value:** makes it easy to validate behavior, reproduce regressions, and triage model-output edge cases.
 
 ---
 

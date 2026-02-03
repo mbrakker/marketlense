@@ -8,7 +8,7 @@ from typing import Iterable, List, Optional
 
 from src.contracts.categories import UncategorizedTagsFlushRequest
 from src.contracts.pdf_utils import PdfEofCheckRequest
-from src.services.pdf_utils_service import check_pdf_eof
+from src.services.pdf_service import check_pdf_eof
 from src.contracts.drive import DriveDownloadRequest, DriveListRequest, DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.lock import LockAcquireRequest, LockReleaseRequest
