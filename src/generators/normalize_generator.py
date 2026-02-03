@@ -6,7 +6,7 @@ from typing import Any, List
 from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.run_context import RunContext
 from src.utils.logging import log_event
-from src.utils.schema_validator import validate_schema
+from src.services.schema_validator_service import validate_schema
 
 logger = logging.getLogger("market_lense.normalize_generator")
 

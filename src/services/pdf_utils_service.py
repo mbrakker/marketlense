@@ -25,8 +25,20 @@ def check_pdf_eof(request: PdfEofCheckRequest, ctx: RunContext) -> PdfEofCheckRe
     ))
     try:
         data = Path(request.path).read_bytes()
-    except Exception:
-        data = b""
+    except FileNotFoundError as exc:
+        raise AppError(
+            code="pdf_not_found",
+            message=f"PDF not found: {request.path}",
+            cause=exc,
+            retryable=False,
+        ) from exc
+    except Exception as exc:
+        raise AppError(
+            code="pdf_read_failed",
+            message=f"Failed to read PDF bytes: {request.path}",
+            cause=exc,
+            retryable=True,
+        ) from exc
     has_eof = _pdf_has_eof_marker(data)
     logger.info(log_event(
         ctx,

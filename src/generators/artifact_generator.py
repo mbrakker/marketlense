@@ -12,7 +12,7 @@ from src.services import openai_service, prompt_service, report_analysis_store_s
 from src.utils.errors import AppError
 from src.utils.model_resolver import resolve_model
 from src.utils.logging import child_context, log_event, new_run_context
-from src.utils.schema_validator import validate_schema
+from src.services.schema_validator_service import validate_schema
 
 logger = logging.getLogger("market_lense.artifact_generator")
 

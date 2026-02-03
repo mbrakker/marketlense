@@ -7,7 +7,7 @@ from src.contracts.openai import OpenAIResponseResult
 from src.contracts.prompts import PromptSet, PromptTemplate
 from src.contracts.run_context import RunContext
 from src.generators.artifact_generator import generate_artifacts
-from src.utils.schema_validator import validate_schema
+from src.services.schema_validator_service import validate_schema
 from src.utils.slugify import slugify
 
 

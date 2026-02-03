@@ -144,6 +144,8 @@ def _base_settings(output_dir: Path, cache_dir: Path, state_db: Path, reports_db
 
 @pytest.mark.golden_set
 def test_golden_reports_regression(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    if not (FIXTURES_ROOT / "metadata.yaml").exists():
+        pytest.skip("Golden set fixtures not available")
     cases = _load_cases()
     assert cases, "Expected at least one golden case"
     for case in cases:

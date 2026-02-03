@@ -298,6 +298,7 @@ def load_publish_settings(request: ConfigLoadRequest, ctx: RunContext) -> Publis
     resolver = _ConfigResolver()
     need = resolver.need
     need_env = resolver.need_env
+    missing = resolver.missing
 
     paths = data.get("paths", {}) or {}
     publish = data.get("publish", {}) or {}
@@ -315,6 +316,7 @@ def load_publish_settings(request: ConfigLoadRequest, ctx: RunContext) -> Publis
         site_url = _site_url_from_admin(admin_url)
     if _is_missing(site_url):
         missing.append("publish.wp.site_url|env:WP_SITE_URL|env:WP_ADMIN_URL")
+    site_url = site_url or ""
 
     app_password = os.getenv("WP_APP_PASSWORD", "")
     bearer_token = os.getenv("WP_BEARER_TOKEN", "")

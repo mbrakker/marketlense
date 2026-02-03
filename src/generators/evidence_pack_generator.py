@@ -11,7 +11,7 @@ from src.services import openai_service
 from src.services import prompt_service
 from src.services import report_analysis_store_service
 from src.utils.logging import child_context, log_event, new_run_context
-from src.utils.schema_validator import validate_schema
+from src.services.schema_validator_service import validate_schema
 from src.utils.errors import AppError
 from src.utils.model_resolver import resolve_model
 

@@ -14,7 +14,7 @@ from src.services import openai_service, prompt_service
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.model_resolver import resolve_model
-from src.utils.schema_validator import validate_schema
+from src.services.schema_validator_service import validate_schema
 
 logger = logging.getLogger("market_lense.taxonomy_generator")
 

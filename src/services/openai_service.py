@@ -465,7 +465,6 @@ def openai_respond_with_vector_store(request: OpenAIResponseRequest, ctx: RunCon
     client_kwargs: dict = {"api_key": request.api_key}
     if request.timeout_seconds is not None:
         client_kwargs["timeout"] = request.timeout_seconds
-    client = OpenAI(**client_kwargs)
     user_prompt = request.user_prompt
     if "json" not in user_prompt.lower():
         user_prompt = f"{user_prompt}\n\nReturn a JSON object."
@@ -479,7 +478,18 @@ def openai_respond_with_vector_store(request: OpenAIResponseRequest, ctx: RunCon
     if request.seed is not None:
         payload_args["seed"] = request.seed
     try:
+        if OpenAI is None:
+            raise TypeError("OpenAI client not available")
+        client = OpenAI(**client_kwargs)
         resp = client.responses.create(**payload_args)
+    except TypeError as exc:
+        raise AppError(
+            code="openai_client_unavailable",
+            message="OpenAI client not available",
+            cause=exc,
+            retryable=False,
+            context={"model": request.model},
+        ) from exc
     except Exception as exc:
         logger.info(log_event(
             ctx,

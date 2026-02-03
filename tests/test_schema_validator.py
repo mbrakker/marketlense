@@ -1,7 +1,7 @@
 import pytest
 
 from src.contracts.run_context import RunContext
-from src.utils.schema_validator import validate_schema
+from src.services.schema_validator_service import validate_schema
 from src.utils.errors import AppError
 
 

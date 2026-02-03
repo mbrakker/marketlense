@@ -3,13 +3,13 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any, Dict
 
 from src.contracts.run_context import RunContext
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
-logger = logging.getLogger("market_lense.schema_validator")
+logger = logging.getLogger("market_lense.schema_validator_service")
 SCHEMAS_ROOT = Path(__file__).resolve().parents[1] / "schemas"
 _SCHEMA_CACHE: Dict[str, dict] = {}
 
@@ -24,7 +24,15 @@ def _load_schema(name: str) -> dict:
             message=f"Schema not found: {path}",
             retryable=False,
         )
-    data = json.loads(path.read_text(encoding="utf-8"))
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise AppError(
+            code="schema_invalid_json",
+            message=f"Schema JSON invalid: {path}",
+            cause=exc,
+            retryable=False,
+        ) from exc
     _SCHEMA_CACHE[name] = data
     return data
 
