@@ -19,7 +19,7 @@
 9. Support multiple prompts per process for variations/expert roles.
     - Today each step uses a single prompt set per namespace. Add a mechanism to run multiple prompt variants per step (e.g., different expert personas or stylistic variants), collect outputs, and select/ensemble or expose them, while keeping prompt logging/versioning intact.
 10. Validate docmap pass. (DONE)
-    - After the docmap pass, check if data has been generated. If no data is present, log an error and halt processing for the current PDF.
+    - After the docmap pass, check if data has been generated. If no data is present, log an error, halt processing for the current PDF, and persist a doc_map summary in state.
 11. Validate report text extractability.
     - Before uploading to the vector store, check three random pages of the report for extractable text (no OCR required). If no text is found, log an error and halt further processing.
 
@@ -125,6 +125,9 @@
 - **Acceptance**:
   - PDFs with no data after the docmap pass are halted with a clear error message.
   - Logs & state database contain detailed information about the failure for debugging.
+- **Implementation notes**:
+  - Orchestrator logs `doc_map_validation_halt` with DocMap summary fields.
+  - State DB persists `doc_map_summary_json` alongside `last_error`.
 
 ## 11. Validate report text extractability
 - **Context**: Reports without extractable text may indicate issues with the input PDF or earlier processing steps, leading to wasted resources if uploaded to the vector store.

@@ -38,7 +38,8 @@ CREATE TABLE IF NOT EXISTS processed (
   last_error TEXT,
   text_validation_status TEXT,
   text_validation_reason TEXT,
-  text_validation_pages_json TEXT
+  text_validation_pages_json TEXT,
+  doc_map_summary_json TEXT
 );
 
 CREATE TABLE IF NOT EXISTS published (
@@ -83,6 +84,7 @@ def _migrate_schema(conn: sqlite3.Connection) -> None:
         "text_validation_status": "TEXT",
         "text_validation_reason": "TEXT",
         "text_validation_pages_json": "TEXT",
+        "doc_map_summary_json": "TEXT",
     }
     for col, col_type in required.items():
         if col not in cols:
@@ -247,8 +249,8 @@ def record(request: StateRecordRequest, ctx: RunContext) -> None:
         conn.execute(
             "INSERT OR REPLACE INTO processed("
             "file_id, md5, processed_at, openai_file_id, vector_store_id, vector_store_status, indexed_at_utc, "
-            "last_error, text_validation_status, text_validation_reason, text_validation_pages_json"
-            ") VALUES(?, ?, strftime('%s','now'), ?, ?, ?, ?, ?, ?, ?, ?)",
+            "last_error, text_validation_status, text_validation_reason, text_validation_pages_json, doc_map_summary_json"
+            ") VALUES(?, ?, strftime('%s','now'), ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 request.file_id,
                 request.md5,
@@ -260,6 +262,7 @@ def record(request: StateRecordRequest, ctx: RunContext) -> None:
                 request.text_validation_status,
                 request.text_validation_reason,
                 json.dumps(request.text_validation_pages) if request.text_validation_pages is not None else None,
+                json.dumps(request.doc_map_summary) if request.doc_map_summary is not None else None,
             ),
         )
     logger.info(log_event(
@@ -282,7 +285,7 @@ def get(request: StateGetRequest, ctx: RunContext) -> Optional[StateGetResponse]
     with _state_conn(request.state_db) as conn:
         cur = conn.execute(
             "SELECT file_id, md5, processed_at, openai_file_id, vector_store_id, vector_store_status, indexed_at_utc, "
-            "last_error, text_validation_status, text_validation_reason, text_validation_pages_json "
+            "last_error, text_validation_status, text_validation_reason, text_validation_pages_json, doc_map_summary_json "
             "FROM processed WHERE file_id=?",
             (request.file_id,),
         )
@@ -308,6 +311,7 @@ def get(request: StateGetRequest, ctx: RunContext) -> Optional[StateGetResponse]
         text_validation_status,
         text_validation_reason,
         text_validation_pages_json,
+        doc_map_summary_json,
     ) = row
     text_validation_pages = None
     if text_validation_pages_json:
@@ -317,6 +321,14 @@ def get(request: StateGetRequest, ctx: RunContext) -> Optional[StateGetResponse]
                 text_validation_pages = parsed
         except json.JSONDecodeError:
             text_validation_pages = None
+    doc_map_summary = None
+    if doc_map_summary_json:
+        try:
+            parsed = json.loads(doc_map_summary_json)
+            if isinstance(parsed, dict):
+                doc_map_summary = parsed
+        except json.JSONDecodeError:
+            doc_map_summary = None
     logger.info(log_event(
         ctx,
         role="service",
@@ -337,6 +349,7 @@ def get(request: StateGetRequest, ctx: RunContext) -> Optional[StateGetResponse]
         text_validation_status=text_validation_status,
         text_validation_reason=text_validation_reason,
         text_validation_pages=text_validation_pages,
+        doc_map_summary=doc_map_summary,
     )
 
 

@@ -659,6 +659,25 @@ def run_ingest(
                             "vector_store_id": outcome.vector_store_id or "",
                         },
                     ))
+                    if outcome.doc_map_summary:
+                        summary = outcome.doc_map_summary
+                        logger.info(log_event(
+                            file_ctx,
+                            role="orchestrator",
+                            event="doc_map_validation_halt",
+                            module=logger.name,
+                            fields={
+                                "file_id": file.file_id,
+                                "md5": md5 or "",
+                                "error": outcome.error or "",
+                                "has_content": summary.get("has_content"),
+                                "sections_count": summary.get("sections_count"),
+                                "title_present": summary.get("title_present"),
+                                "doc_id_present": summary.get("doc_id_present"),
+                                "summary_present": summary.get("summary_present"),
+                                "not_found_reason": summary.get("not_found_reason") or "",
+                            },
+                        ))
                 last_error = outcome.vector_store_last_error
                 if outcome.status == "error" and outcome.error:
                     last_error = outcome.error if not last_error else f"{last_error} | {outcome.error}"
@@ -676,6 +695,7 @@ def run_ingest(
                         text_validation_status=outcome.text_validation_status,
                         text_validation_reason=outcome.text_validation_reason,
                         text_validation_pages=outcome.text_validation_pages,
+                        doc_map_summary=outcome.doc_map_summary,
                     ),
                     file_ctx,
                 )

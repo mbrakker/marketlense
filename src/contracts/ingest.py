@@ -67,3 +67,4 @@ class IngestOutcome:
     text_validation_status: Optional[str] = field(default=None, metadata={"doc": "Extractable text validation status: pass|fail, if evaluated."})
     text_validation_reason: Optional[str] = field(default=None, metadata={"doc": "Extractable text validation failure reason, if any."})
     text_validation_pages: Optional[List[int]] = field(default=None, metadata={"doc": "Page numbers sampled for extractable text validation."})
+    doc_map_summary: Optional[Dict[str, object]] = field(default=None, metadata={"doc": "DocMap validation summary when doc_map is empty, if available."})

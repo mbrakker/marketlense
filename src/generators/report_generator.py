@@ -925,6 +925,7 @@ def generate_report(
         )
     except AppError as exc:
         if exc.code == "doc_map_empty":
+            doc_map_summary = exc.context if isinstance(exc.context, dict) else None
             logger.info(log_event(
                 mode_ctx,
                 role="generator",
@@ -934,8 +935,12 @@ def generate_report(
                     "file_id": file.file_id,
                     "code": exc.code,
                     "message": exc.message,
-                    "sections_count": exc.context.get("sections_count") if exc.context else None,
-                    "not_found_reason": exc.context.get("not_found_reason") if exc.context else "",
+                    "has_content": doc_map_summary.get("has_content") if doc_map_summary else None,
+                    "sections_count": doc_map_summary.get("sections_count") if doc_map_summary else None,
+                    "title_present": doc_map_summary.get("title_present") if doc_map_summary else None,
+                    "doc_id_present": doc_map_summary.get("doc_id_present") if doc_map_summary else None,
+                    "summary_present": doc_map_summary.get("summary_present") if doc_map_summary else None,
+                    "not_found_reason": doc_map_summary.get("not_found_reason") if doc_map_summary else "",
                 },
             ))
             if pdf_context is not None:
@@ -956,6 +961,7 @@ def generate_report(
                 text_validation_status=text_validation_status,
                 text_validation_reason=text_validation_reason,
                 text_validation_pages=text_validation_pages,
+                doc_map_summary=doc_map_summary,
             )
         raise
     mode_evidence_packs = packs

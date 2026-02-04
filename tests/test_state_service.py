@@ -54,7 +54,7 @@ def test_migration_adds_vector_columns_and_preserves_data(tmp_path: Path) -> Non
     conn = sqlite3.connect(db_path)
     cols = {row[1] for row in conn.execute("PRAGMA table_info(processed)")}
     conn.close()
-    assert {"vector_store_id", "vector_store_status", "indexed_at_utc", "last_error"}.issubset(cols)
+    assert {"vector_store_id", "vector_store_status", "indexed_at_utc", "last_error", "doc_map_summary_json"}.issubset(cols)
 
     resp = get(StateGetRequest(schema_version="1.0", state_db=str(db_path), file_id="file-1"), _ctx())
     assert resp is not None
@@ -64,6 +64,7 @@ def test_migration_adds_vector_columns_and_preserves_data(tmp_path: Path) -> Non
     assert resp.indexed_at_utc == "2026-01-07T00:00:00Z"
     assert resp.last_error is None
     assert resp.openai_file_id == "of_123"
+    assert resp.doc_map_summary is None
 
 
 def test_record_and_get_with_defaults(tmp_path: Path) -> None:
@@ -87,6 +88,25 @@ def test_record_and_get_with_defaults(tmp_path: Path) -> None:
     assert resp.vector_store_status is None
     assert resp.indexed_at_utc is None
     assert resp.last_error is None
+    assert resp.doc_map_summary is None
+
+
+def test_record_and_get_doc_map_summary(tmp_path: Path) -> None:
+    db_path = tmp_path / "state.sqlite"
+    summary = {"sections_count": 0, "not_found_reason": "model_returned_no_json"}
+    record(
+        StateRecordRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            file_id="file-3",
+            md5="md5-3",
+            doc_map_summary=summary,
+        ),
+        _ctx(),
+    )
+    resp = get(StateGetRequest(schema_version="1.0", state_db=str(db_path), file_id="file-3"), _ctx())
+    assert resp is not None
+    assert resp.doc_map_summary == summary
 
 
 def test_state_db_access_detects_lock(tmp_path: Path) -> None:

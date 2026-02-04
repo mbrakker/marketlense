@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 
 @dataclass(frozen=True)
@@ -26,6 +26,7 @@ class StateRecordRequest:
     text_validation_status: Optional[str] = field(default=None, metadata={"doc": "Extractable text validation status: pass|fail, if evaluated."})
     text_validation_reason: Optional[str] = field(default=None, metadata={"doc": "Extractable text validation failure reason, if any."})
     text_validation_pages: Optional[List[int]] = field(default=None, metadata={"doc": "Page numbers sampled for extractable text validation."})
+    doc_map_summary: Optional[Dict[str, object]] = field(default=None, metadata={"doc": "DocMap validation summary when doc_map is empty, if available."})
 
 
 @dataclass(frozen=True)
@@ -65,6 +66,7 @@ class StateGetResponse:
     text_validation_status: Optional[str] = field(default=None, metadata={"doc": "Extractable text validation status: pass|fail, if evaluated."})
     text_validation_reason: Optional[str] = field(default=None, metadata={"doc": "Extractable text validation failure reason, if any."})
     text_validation_pages: Optional[List[int]] = field(default=None, metadata={"doc": "Page numbers sampled for extractable text validation."})
+    doc_map_summary: Optional[Dict[str, object]] = field(default=None, metadata={"doc": "DocMap validation summary when doc_map is empty, if available."})
 
 
 @dataclass(frozen=True)

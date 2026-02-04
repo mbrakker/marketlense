@@ -162,6 +162,54 @@ def test_ingest_orchestrator_records_vector_events(monkeypatch, tmp_path):
     assert rec.openai_file_id == "file_upload_1"
 
 
+def test_ingest_orchestrator_records_doc_map_summary(monkeypatch, tmp_path):
+    settings = _ingest_settings(tmp_path)
+    file = DriveFile(schema_version="1.0", file_id="file", name="name.pdf", modified_time=None, md5_checksum="md5", version=None)
+    summary = {"sections_count": 0, "not_found_reason": "model_returned_no_json"}
+    outcome = IngestOutcome(
+        schema_version="1.0",
+        file_id=file.file_id,
+        name=file.name,
+        md5="md5",
+        html_path=None,
+        status="error",
+        error="doc_map_empty:no_content",
+        vector_store_id="vs_1",
+        vector_store_status="completed",
+        indexed_at_utc="2024-01-01T00:00:00Z",
+        openai_file_id="file_upload_1",
+        evidence_packs=None,
+        vector_store_last_error=None,
+        doc_map_summary=summary,
+    )
+    state_records = []
+
+    monkeypatch.setattr(orch, "acquire_lock", lambda req, ctx: SimpleNamespace(acquired=True, lock=SimpleNamespace(lock_path=req.lock_path, owner_id=req.owner_id, pid=req.pid), conflict=None))
+    monkeypatch.setattr(orch, "release_lock", lambda req, ctx: None)
+    monkeypatch.setattr(orch, "flush_uncategorized_tags", lambda req, ctx: None)
+    monkeypatch.setattr(orch, "list_pdfs", lambda req, ctx: [file])
+    monkeypatch.setattr(orch, "download_pdf_to_path", lambda req, ctx: SimpleNamespace(output_path=req.output_path, md5="md5", size=9))
+    stat_calls = {"count": 0}
+    def _file_stat(req, ctx):
+        if stat_calls["count"] == 0:
+            stat_calls["count"] += 1
+            return SimpleNamespace(exists=False, size_bytes=None, mtime_utc=None, md5=None)
+        return SimpleNamespace(exists=True, size_bytes=9, mtime_utc=1.0, md5=None)
+    monkeypatch.setattr(orch, "file_stat", _file_stat)
+    monkeypatch.setattr(orch, "write_bytes", lambda req, ctx: SimpleNamespace(md5="md5"))
+    monkeypatch.setattr(orch, "check_pdf_eof", lambda req, ctx: SimpleNamespace(has_eof=True))
+    monkeypatch.setattr(orch, "state_already_processed", lambda req, ctx: False)
+    monkeypatch.setattr(orch, "generate_report", lambda file, cache_path, settings, md5, ctx: outcome)
+    monkeypatch.setattr(orch, "state_record", lambda req, ctx: state_records.append(req))
+    monkeypatch.setattr(orch.logger, "info", lambda payload: None)
+
+    results = orch.run_ingest(settings, limit=1)
+
+    assert results[0].status == "error"
+    assert state_records, "state_record should be invoked"
+    assert state_records[0].doc_map_summary == summary
+
+
 def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
     settings = _ingest_settings(tmp_path)
     settings = settings.__class__(**{**settings.__dict__, "openai_timeout_seconds": 3600.0})
@@ -332,3 +380,6 @@ def test_generate_report_doc_map_empty_halts(monkeypatch, tmp_path):
     assert outcome.status == "error"
     assert "doc_map_empty" in (outcome.error or "")
     assert outcome.vector_store_id == "vs_new"
+    assert outcome.doc_map_summary is not None
+    assert outcome.doc_map_summary.get("sections_count") == 0
+    assert outcome.doc_map_summary.get("not_found_reason") == "model_returned_no_json"
