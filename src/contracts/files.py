@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Optional
 
 
 @dataclass(frozen=True)
@@ -83,6 +83,23 @@ class FileHashResponse:
     schema_version: str = field(metadata={"doc": "File hash response schema version."})
     path: str = field(metadata={"doc": "Filesystem path hashed."})
     md5: str = field(metadata={"doc": "MD5 checksum of the file."})
+
+
+@dataclass(frozen=True)
+class FileStatRequest:
+    schema_version: str = field(metadata={"doc": "File stat request schema version."})
+    path: str = field(metadata={"doc": "Filesystem path to stat."})
+    compute_md5: bool = field(default=False, metadata={"doc": "If true, compute the file MD5 hash."})
+
+
+@dataclass(frozen=True)
+class FileStatResponse:
+    schema_version: str = field(metadata={"doc": "File stat response schema version."})
+    path: str = field(metadata={"doc": "Filesystem path stat'ed."})
+    exists: bool = field(metadata={"doc": "True if the path exists."})
+    size_bytes: Optional[int] = field(metadata={"doc": "File size in bytes when available."})
+    mtime_utc: Optional[float] = field(metadata={"doc": "Last modified time (epoch seconds) when available."})
+    md5: Optional[str] = field(default=None, metadata={"doc": "MD5 checksum when computed."})
 
 
 @dataclass(frozen=True)

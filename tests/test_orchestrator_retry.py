@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from src.contracts.drive import DriveFile, DriveDownloadResponse
+from src.contracts.drive import DriveDownloadToPathResponse, DriveFile
 from src.contracts.ingest import IngestSettings
 from src.utils.errors import AppError
 from src.orchestrators import ingest_orchestrator as orch
@@ -35,10 +35,10 @@ class TestOrchestratorRetry(unittest.TestCase):
             md5_checksum="md5",
             version=None,
         )
-        download_resp = DriveDownloadResponse(
+        download_resp = DriveDownloadToPathResponse(
             schema_version="1.0",
             file=drive_file,
-            content=b"pdf-bytes",
+            output_path="./cache/file.pdf",
             md5="md5",
             size=9,
         )
@@ -49,9 +49,12 @@ class TestOrchestratorRetry(unittest.TestCase):
             retryable=True,
         )
 
+        stat_missing = type("S", (), {"exists": False, "size_bytes": None, "mtime_utc": None, "md5": None})()
+        stat_present = type("S", (), {"exists": True, "size_bytes": 9, "mtime_utc": 1.0, "md5": None})()
+
         with patch.object(orch, "list_pdfs", return_value=[drive_file]):
-            with patch.object(orch, "download_pdf", return_value=download_resp):
-                with patch.object(orch, "file_exists", return_value=type("E", (), {"exists": False})()):
+            with patch.object(orch, "download_pdf_to_path", return_value=download_resp):
+                with patch.object(orch, "file_stat", side_effect=[stat_missing, stat_present]):
                     with patch.object(orch, "write_bytes", return_value=type("W", (), {"md5": "md5"})()):
                         with patch.object(orch, "check_pdf_eof", return_value=type("X", (), {"has_eof": True})()):
                             with patch.object(orch.time, "sleep", return_value=None):

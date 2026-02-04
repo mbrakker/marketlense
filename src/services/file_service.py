@@ -12,6 +12,8 @@ from src.contracts.files import (
     FileExistsResponse,
     FileHashRequest,
     FileHashResponse,
+    FileStatRequest,
+    FileStatResponse,
     ListHtmlRequest,
     ListHtmlResponse,
     ReadBytesRequest,
@@ -215,6 +217,76 @@ def file_md5(request: FileHashRequest, ctx: RunContext) -> FileHashResponse:
         fields={"path": request.path, "md5": md5},
     ))
     return FileHashResponse(schema_version="1.0", path=request.path, md5=md5)
+
+
+def file_stat(request: FileStatRequest, ctx: RunContext) -> FileStatResponse:
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="file_stat_start",
+        module=logger.name,
+        fields={"path": request.path, "compute_md5": request.compute_md5},
+    ))
+    path = Path(request.path)
+    if not path.exists():
+        response = FileStatResponse(
+            schema_version="1.0",
+            path=request.path,
+            exists=False,
+            size_bytes=None,
+            mtime_utc=None,
+            md5=None,
+        )
+        logger.info(log_event(
+            ctx,
+            role="service",
+            event="file_stat_complete",
+            module=logger.name,
+            fields={"path": request.path, "exists": False},
+        ))
+        return response
+    try:
+        stat = path.stat()
+    except Exception as exc:
+        raise AppError(
+            code="file_stat_failed",
+            message=f"Failed to stat file: {request.path}",
+            cause=exc,
+            retryable=False,
+        ) from exc
+    md5 = None
+    if request.compute_md5:
+        try:
+            md5 = _md5_file(path)
+        except Exception as exc:
+            raise AppError(
+                code="file_hash_failed",
+                message=f"Failed to hash file: {request.path}",
+                cause=exc,
+                retryable=False,
+            ) from exc
+    response = FileStatResponse(
+        schema_version="1.0",
+        path=request.path,
+        exists=True,
+        size_bytes=stat.st_size,
+        mtime_utc=stat.st_mtime,
+        md5=md5,
+    )
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="file_stat_complete",
+        module=logger.name,
+        fields={
+            "path": request.path,
+            "exists": True,
+            "size_bytes": response.size_bytes,
+            "mtime_utc": response.mtime_utc,
+            "md5": response.md5,
+        },
+    ))
+    return response
 
 
 def delete_file(request: DeleteFileRequest, ctx: RunContext) -> DeleteFileResponse:

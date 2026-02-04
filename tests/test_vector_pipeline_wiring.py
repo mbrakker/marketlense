@@ -121,12 +121,17 @@ def test_ingest_orchestrator_records_vector_events(monkeypatch, tmp_path):
     monkeypatch.setattr(orch, "release_lock", lambda req, ctx: None)
     monkeypatch.setattr(orch, "flush_uncategorized_tags", lambda req, ctx: None)
     monkeypatch.setattr(orch, "list_pdfs", lambda req, ctx: [file])
-    monkeypatch.setattr(orch, "download_pdf", lambda req, ctx: SimpleNamespace(content=b"pdf-bytes", md5="md5"))
-    monkeypatch.setattr(orch, "file_exists", lambda req, ctx: SimpleNamespace(exists=False))
+    monkeypatch.setattr(orch, "download_pdf_to_path", lambda req, ctx: SimpleNamespace(output_path=req.output_path, md5="md5", size=9))
+    stat_calls = {"count": 0}
+    def _file_stat(req, ctx):
+        if stat_calls["count"] == 0:
+            stat_calls["count"] += 1
+            return SimpleNamespace(exists=False, size_bytes=None, mtime_utc=None, md5=None)
+        return SimpleNamespace(exists=True, size_bytes=9, mtime_utc=1.0, md5=None)
+    monkeypatch.setattr(orch, "file_stat", _file_stat)
     monkeypatch.setattr(orch, "write_bytes", lambda req, ctx: SimpleNamespace(md5="md5"))
     monkeypatch.setattr(orch, "check_pdf_eof", lambda req, ctx: SimpleNamespace(has_eof=True))
     monkeypatch.setattr(orch, "state_already_processed", lambda req, ctx: False)
-    monkeypatch.setattr(orch, "file_md5", lambda req, ctx: SimpleNamespace(md5="md5"))
     monkeypatch.setattr(orch, "generate_report", lambda file, cache_path, settings, md5, ctx: outcome)
 
     def _record_state(req, ctx):

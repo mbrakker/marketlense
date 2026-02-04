@@ -25,6 +25,7 @@ from src.utils.logging import log_event
 from src.utils.pdf_utils import pdf_has_eof_marker as _pdf_has_eof_marker
 
 logger = logging.getLogger("market_lense.pdf_service")
+EOF_TAIL_BYTES = 2048
 
 
 def check_pdf_eof(request: PdfEofCheckRequest, ctx: RunContext) -> PdfEofCheckResponse:
@@ -33,10 +34,19 @@ def check_pdf_eof(request: PdfEofCheckRequest, ctx: RunContext) -> PdfEofCheckRe
         role="service",
         event="pdf_eof_check_start",
         module=logger.name,
-        fields={"path": request.path},
+        fields={"path": request.path, "tail_bytes": EOF_TAIL_BYTES},
     ))
     try:
-        data = Path(request.path).read_bytes()
+        path = Path(request.path)
+        with path.open("rb") as fh:
+            fh.seek(0, 2)
+            size = fh.tell()
+            if size <= 0:
+                data = b""
+            else:
+                start = max(size - EOF_TAIL_BYTES, 0)
+                fh.seek(start)
+                data = fh.read()
     except FileNotFoundError as exc:
         raise AppError(
             code="pdf_not_found",
@@ -57,7 +67,7 @@ def check_pdf_eof(request: PdfEofCheckRequest, ctx: RunContext) -> PdfEofCheckRe
         role="service",
         event="pdf_eof_check_complete",
         module=logger.name,
-        fields={"path": request.path, "has_eof": has_eof},
+        fields={"path": request.path, "has_eof": has_eof, "tail_bytes": EOF_TAIL_BYTES},
     ))
     return PdfEofCheckResponse(schema_version="1.0", path=request.path, has_eof=has_eof)
 

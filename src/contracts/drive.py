@@ -35,3 +35,21 @@ class DriveDownloadResponse:
     content: bytes = field(metadata={"doc": "Downloaded file bytes."})
     md5: Optional[str] = field(metadata={"doc": "MD5 checksum of the downloaded content."})
     size: int = field(metadata={"doc": "Size of the downloaded content in bytes."})
+
+
+@dataclass(frozen=True)
+class DriveDownloadToPathRequest:
+    schema_version: str = field(metadata={"doc": "Drive download-to-path request schema version."})
+    file: DriveFile = field(metadata={"doc": "Drive file to download."})
+    service_account_path: str = field(metadata={"doc": "Filesystem path to the Google service account JSON."})
+    output_path: str = field(metadata={"doc": "Filesystem path to write the downloaded PDF."})
+    make_parents: bool = field(default=True, metadata={"doc": "Create parent directories if needed."})
+
+
+@dataclass(frozen=True)
+class DriveDownloadToPathResponse:
+    schema_version: str = field(metadata={"doc": "Drive download-to-path response schema version."})
+    file: DriveFile = field(metadata={"doc": "Drive file metadata."})
+    output_path: str = field(metadata={"doc": "Filesystem path written."})
+    md5: Optional[str] = field(metadata={"doc": "MD5 checksum of the downloaded content."})
+    size: int = field(metadata={"doc": "Size of the downloaded content in bytes."})

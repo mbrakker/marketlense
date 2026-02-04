@@ -13,16 +13,15 @@ Source list (summary)
   - 9) Materialize list (up to limit) before processing.
   - 10) Stop paging when `modifiedTime <= last_run`.
 - Ingest
-  - 1) Skip download/EOF/hash when state already has md5.
-  - 2) Cache by `file_id` (not name).
-  - 3) Add md5 sidecar/state to avoid rehash.
-  - 4) Skip EOF checks on cache hits.
-  - 5) EOF check should read only tail bytes.
-  - 6) Stream download to disk + md5 while streaming.
-  - 7) If Drive md5 matches cached, skip `file_md5`.
-  - 8) Skip report generation if HTML exists for same md5.
-  - 9) Cooldown for recent permanent failures.
-  - 10) Add `file_stat` service for exists+size+mtime(+md5).
+  - [x] 1) Skip download/EOF/hash when state already has md5.
+  - [x] 2) Cache by `file_id` (not name).
+  - [x] 3) Add md5 sidecar/state to avoid rehash.
+  - [x] 4) Skip EOF checks on cache hits.
+  - [x] 5) EOF check should read only tail bytes.
+  - [x] 6) Stream download to disk + md5 while streaming.
+  - [x] 7) If Drive md5 matches cached, skip `file_md5`.
+  - [x] 8) Skip report generation if HTML exists for same md5.
+  - [x] 10) Add `file_stat` service for exists+size+mtime(+md5).
 - Report generate
   - 1) Cache packs/artifacts/validation/html by md5 + prompt/model hash.
   - 2) Cache `pdf_info`, contents detection, text extraction by md5.
@@ -137,7 +136,7 @@ Drive list
      - Page loop terminates early when cutoff is reached.
 
 Ingest
-1) Skip download/EOF/hash when state already has md5
+1) Skip download/EOF/hash when state already has md5 (DONE)
    - Goal: Avoid unnecessary I/O when file already processed.
    - Context: `_should_skip` is called after cache/EOF checks.
    - Deliverables:
@@ -147,7 +146,7 @@ Ingest
    - Acceptance:
      - Previously processed files do not trigger download logs.
 
-2) Cache by `file_id` instead of file name
+2) Cache by `file_id` instead of file name (DONE)
    - Goal: Prevent cache misses on renamed files.
    - Context: Cache path uses `safe_pdf_name(file.name)`.
    - Deliverables:
@@ -156,7 +155,7 @@ Ingest
    - Acceptance:
      - Renaming a Drive file does not trigger re-download.
 
-3) Add md5 sidecar/state to avoid rehash
+3) Add md5 sidecar/state to avoid rehash (DONE)
    - Goal: Avoid expensive `file_md5` on every run.
    - Context: Cache hit still computes md5 if file exists.
    - Deliverables:
@@ -166,7 +165,7 @@ Ingest
    - Acceptance:
      - Cache hits avoid `file_md5` unless file changed.
 
-4) Skip EOF checks on cache hits
+4) Skip EOF checks on cache hits (DONE)
    - Goal: Reduce extra file reads when cache is valid.
    - Context: EOF check reads the full file even on cache hits.
    - Deliverables:
@@ -175,7 +174,7 @@ Ingest
    - Acceptance:
      - Cache hit path has no EOF read logs.
 
-5) EOF check should read only tail bytes
+5) EOF check should read only tail bytes (DONE)
    - Goal: Reduce I/O for large PDFs.
    - Context: `check_pdf_eof` reads entire file bytes.
    - Deliverables:
@@ -184,7 +183,7 @@ Ingest
    - Acceptance:
      - File read in EOF check is O(tail bytes), not full size.
 
-6) Stream download to disk + md5 while streaming
+6) Stream download to disk + md5 while streaming (DONE)
    - Goal: Avoid buffering large files in memory and rehashing.
    - Context: Download reads into memory then writes and hashes.
    - Deliverables:
@@ -194,7 +193,7 @@ Ingest
    - Acceptance:
      - Download does not allocate full file in memory.
 
-7) If Drive md5 matches cached, skip `file_md5`
+7) If Drive md5 matches cached, skip `file_md5` (DONE)
    - Goal: Use Drive checksum to avoid local hash.
    - Context: `file_md5` is invoked even when Drive md5 exists.
    - Deliverables:
@@ -203,7 +202,7 @@ Ingest
    - Acceptance:
      - `file_md5` logs appear only when Drive md5 is missing or sidecar absent.
 
-8) Skip report generation if HTML exists for same md5
+8) Skip report generation if HTML exists for same md5 (DONE)
    - Goal: Avoid re-generating reports already rendered.
    - Context: Some state rows may be missing; HTML already exists.
    - Deliverables:
@@ -212,16 +211,8 @@ Ingest
    - Acceptance:
      - Re-ingest does not regenerate unchanged reports.
 
-9) Cooldown for recent permanent failures
-   - Goal: Avoid reprocessing repeatedly failing files.
-   - Context: Current loop retries on each run regardless of error history.
-   - Deliverables:
-     - Record failure timestamp + error code in state.
-     - If last error is non-retryable and within cooldown, skip.
-   - Acceptance:
-     - Failures within cooldown are skipped with a log event.
 
-10) Add `file_stat` service (exists + size + mtime + optional md5)
+10) Add `file_stat` service (exists + size + mtime + optional md5) (DONE)
    - Goal: Reduce multiple file open/stat operations.
    - Context: `file_exists` + `file_md5` are separate calls.
    - Deliverables:

@@ -1,30 +1,36 @@
 from __future__ import annotations
 
+import json
 import logging
 import os
 import time
 from pathlib import Path
-from typing import Iterable, List, Optional
+from typing import List, Optional
 
 from src.contracts.categories import UncategorizedTagsFlushRequest
 from src.contracts.pdf_utils import PdfEofCheckRequest
 from src.services.pdf_service import check_pdf_eof
-from src.contracts.drive import DriveDownloadRequest, DriveListRequest, DriveFile
+from src.contracts.drive import DriveDownloadToPathRequest, DriveListRequest, DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.lock import LockAcquireRequest, LockReleaseRequest
-from src.contracts.report_store import ReportMetadataDbAccessRequest
+from src.contracts.report_store import ReportMetadataDbAccessRequest, ReportMetadataGetRequest
 from src.contracts.run_context import RunContext
 from src.generators.report_generator import generate_report
-from src.services.drive_service import download_pdf, list_pdfs
+from src.services.drive_service import download_pdf_to_path, list_pdfs
 from src.services.file_service import (
     delete_file,
-    file_exists,
-    file_md5,
+    file_stat,
+    read_text,
     write_bytes,
 )
-from src.contracts.files import DeleteFileRequest, FileExistsRequest, FileHashRequest, WriteBytesRequest
+from src.contracts.files import (
+    DeleteFileRequest,
+    FileStatRequest,
+    ReadTextRequest,
+    WriteBytesRequest,
+)
 from src.services.lock_service import acquire_lock, release_lock
-from src.services.report_store_service import check_report_db_access
+from src.services.report_store_service import check_report_db_access, get_metadata as get_report_metadata
 from src.services.state_service import already_processed as state_already_processed
 from src.services.state_service import check_state_db_access
 from src.services.state_service import record as state_record
@@ -36,6 +42,9 @@ from src.utils.path_utils import safe_pdf_name
 
 logger = logging.getLogger("market_lense.ingest_orchestrator")
 DB_ACCESS_TIMEOUT_SECONDS = 0.0
+MD5_SIDECAR_SUFFIX = ".md5.json"
+MD5_SIDECAR_SCHEMA = "1.0"
+EOF_RETRY_LIMIT = 1
 
 
 def _should_skip(file: DriveFile, md5: Optional[str], state_db: str, ctx: RunContext) -> bool:
@@ -48,6 +57,177 @@ def _should_skip(file: DriveFile, md5: Optional[str], state_db: str, ctx: RunCon
         md5=md5,
     )
     return state_already_processed(req, ctx)
+
+
+def _cache_pdf_path(settings: IngestSettings, file: DriveFile) -> str:
+    cache_name = safe_pdf_name(file.file_id)
+    return str(Path(settings.cache_dir) / cache_name)
+
+
+def _md5_sidecar_path(cache_path: str) -> str:
+    return f"{cache_path}{MD5_SIDECAR_SUFFIX}"
+
+
+def _normalize_mtime(value: Optional[float]) -> Optional[int]:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _load_md5_sidecar(path: str, file_id: str, ctx: RunContext) -> Optional[dict]:
+    try:
+        resp = read_text(ReadTextRequest(schema_version="1.0", path=path), ctx)
+    except AppError as exc:
+        if exc.code == "file_not_found":
+            logger.info(log_event(
+                ctx,
+                role="orchestrator",
+                event="md5_sidecar_missing",
+                module=logger.name,
+                fields={"file_id": file_id, "path": path},
+            ))
+            return None
+        logger.info(log_event(
+            ctx,
+            role="orchestrator",
+            event="md5_sidecar_read_failed",
+            module=logger.name,
+            fields={"file_id": file_id, "path": path, "error": exc.message},
+        ))
+        return None
+    try:
+        payload = json.loads(resp.content)
+    except json.JSONDecodeError as exc:
+        logger.info(log_event(
+            ctx,
+            role="orchestrator",
+            event="md5_sidecar_invalid_json",
+            module=logger.name,
+            fields={"file_id": file_id, "path": path, "error": str(exc)},
+        ))
+        return None
+    if not isinstance(payload, dict):
+        logger.info(log_event(
+            ctx,
+            role="orchestrator",
+            event="md5_sidecar_invalid_payload",
+            module=logger.name,
+            fields={"file_id": file_id, "path": path},
+        ))
+        return None
+    logger.info(log_event(
+        ctx,
+        role="orchestrator",
+        event="md5_sidecar_loaded",
+        module=logger.name,
+        fields={"file_id": file_id, "path": path},
+    ))
+    return payload
+
+
+def _sidecar_md5_for_stat(payload: dict, size_bytes: Optional[int], mtime_utc: Optional[float]) -> Optional[str]:
+    if not payload:
+        return None
+    md5 = str(payload.get("md5") or "").strip()
+    if not md5:
+        return None
+    try:
+        sidecar_size = int(payload.get("size_bytes"))
+    except (TypeError, ValueError):
+        return None
+    sidecar_mtime = _normalize_mtime(payload.get("mtime_utc"))
+    stat_mtime = _normalize_mtime(mtime_utc)
+    if size_bytes is None or sidecar_size != size_bytes:
+        return None
+    if sidecar_mtime is None or stat_mtime is None or sidecar_mtime != stat_mtime:
+        return None
+    return md5
+
+
+def _write_md5_sidecar(
+    path: str,
+    file: DriveFile,
+    md5: Optional[str],
+    size_bytes: Optional[int],
+    mtime_utc: Optional[float],
+    ctx: RunContext,
+) -> None:
+    if not md5 or size_bytes is None or mtime_utc is None:
+        return
+    payload = {
+        "schema_version": MD5_SIDECAR_SCHEMA,
+        "file_id": file.file_id,
+        "name": file.name or "",
+        "md5": md5,
+        "size_bytes": int(size_bytes),
+        "mtime_utc": _normalize_mtime(mtime_utc),
+    }
+    content = json.dumps(payload, ensure_ascii=True)
+    write_bytes(
+        WriteBytesRequest(schema_version="1.0", path=path, content=content.encode("utf-8")),
+        ctx,
+    )
+    logger.info(log_event(
+        ctx,
+        role="orchestrator",
+        event="md5_sidecar_written",
+        module=logger.name,
+        fields={"file_id": file.file_id, "path": path, "size_bytes": size_bytes},
+    ))
+
+
+def _existing_report_html(
+    file: DriveFile,
+    md5: str,
+    settings: IngestSettings,
+    ctx: RunContext,
+) -> Optional[str]:
+    if not md5:
+        return None
+    try:
+        metadata = get_report_metadata(
+            ReportMetadataGetRequest(
+                schema_version="1.0",
+                db_path=settings.reports_db,
+                file_id=file.file_id,
+            ),
+            ctx,
+        )
+    except Exception as exc:
+        logger.info(log_event(
+            ctx,
+            role="orchestrator",
+            event="report_metadata_lookup_failed",
+            module=logger.name,
+            fields={"file_id": file.file_id, "error": str(exc)},
+        ))
+        return None
+    if not metadata or not metadata.md5 or metadata.md5 != md5:
+        return None
+    html_path = (metadata.html_path or "").strip()
+    if not html_path:
+        return None
+    html_stat = file_stat(FileStatRequest(schema_version="1.0", path=html_path), ctx)
+    if not html_stat.exists:
+        logger.info(log_event(
+            ctx,
+            role="orchestrator",
+            event="report_html_missing",
+            module=logger.name,
+            fields={"file_id": file.file_id, "md5": md5, "html_path": html_path},
+        ))
+        return None
+    logger.info(log_event(
+        ctx,
+        role="orchestrator",
+        event="report_html_cache_hit",
+        module=logger.name,
+        fields={"file_id": file.file_id, "md5": md5, "html_path": html_path},
+    ))
+    return html_path
 
 
 def _run_step_with_retry(step_name: str, ctx: RunContext, func, retries: int = 2):
@@ -214,88 +394,178 @@ def run_ingest(
                 break
 
             try:
-                cache_path = ""
-                md5 = None
                 file_ctx = child_context(root_ctx, task_id=file.file_id)
-                cache_name = safe_pdf_name(file.name or f"{file.file_id}.pdf")
-                cache_path = str(Path(settings.cache_dir) / cache_name)
+                cache_path = _cache_pdf_path(settings, file)
+                sidecar_path = _md5_sidecar_path(cache_path)
+                md5 = None
+                drive_md5 = file.md5_checksum.strip() if file.md5_checksum else None
+                state_checked_md5 = None
+                report_checked_md5 = None
 
-                exists_resp = file_exists(
-                    FileExistsRequest(schema_version="1.0", path=cache_path),
-                    file_ctx,
-                )
-                cache_hit = False
-                if exists_resp.exists and file.md5_checksum:
-                    md5_resp = file_md5(
-                        FileHashRequest(schema_version="1.0", path=cache_path),
-                        file_ctx,
-                    )
-                    if md5_resp.md5 == file.md5_checksum:
-                        md5 = md5_resp.md5
-                        cache_hit = True
-                if cache_hit:
+                if drive_md5 and _should_skip(file, drive_md5, settings.state_db, file_ctx):
                     logger.info(log_event(
                         file_ctx,
                         role="orchestrator",
-                        event="pdf_cache_hit",
+                        event="already_processed_skip",
                         module=logger.name,
-                        fields={"file_id": file.file_id, "path": cache_path, "md5": md5},
+                        fields={"file_id": file.file_id, "md5": drive_md5},
+                    ))
+                    outcomes.append(IngestOutcome(
+                        schema_version="1.0",
+                        file_id=file.file_id,
+                        name=file.name,
+                        md5=drive_md5,
+                        html_path=None,
+                        status="skipped",
+                        error="already_processed",
+                    ))
+                    continue
+                if drive_md5:
+                    state_checked_md5 = drive_md5
+                    existing_html = _existing_report_html(file, drive_md5, settings, file_ctx)
+                    report_checked_md5 = drive_md5
+                    if existing_html:
+                        logger.info(log_event(
+                            file_ctx,
+                            role="orchestrator",
+                            event="report_html_skip",
+                            module=logger.name,
+                            fields={"file_id": file.file_id, "md5": drive_md5, "html_path": existing_html},
+                        ))
+                        outcomes.append(IngestOutcome(
+                            schema_version="1.0",
+                            file_id=file.file_id,
+                            name=file.name,
+                            md5=drive_md5,
+                            html_path=existing_html,
+                            status="skipped",
+                            error="html_exists",
+                        ))
+                        continue
+
+                cache_hit = False
+                cache_reason = ""
+                sidecar_used = False
+                stat_resp = file_stat(FileStatRequest(schema_version="1.0", path=cache_path), file_ctx)
+                if stat_resp.exists:
+                    sidecar_payload = _load_md5_sidecar(sidecar_path, file.file_id, file_ctx)
+                    md5 = _sidecar_md5_for_stat(sidecar_payload, stat_resp.size_bytes, stat_resp.mtime_utc)
+                    if md5:
+                        sidecar_used = True
+                        logger.info(log_event(
+                            file_ctx,
+                            role="orchestrator",
+                            event="md5_sidecar_hit",
+                            module=logger.name,
+                            fields={"file_id": file.file_id, "path": sidecar_path, "md5": md5},
+                        ))
+                    else:
+                        if sidecar_payload:
+                            logger.info(log_event(
+                                file_ctx,
+                                role="orchestrator",
+                                event="md5_sidecar_mismatch",
+                                module=logger.name,
+                                fields={"file_id": file.file_id, "path": sidecar_path},
+                            ))
+                        stat_resp = file_stat(
+                            FileStatRequest(schema_version="1.0", path=cache_path, compute_md5=True),
+                            file_ctx,
+                        )
+                        md5 = stat_resp.md5
+                        if md5:
+                            _write_md5_sidecar(
+                                sidecar_path,
+                                file,
+                                md5,
+                                stat_resp.size_bytes,
+                                stat_resp.mtime_utc,
+                                file_ctx,
+                            )
+                    if drive_md5 and md5:
+                        cache_hit = md5 == drive_md5
+                        if not cache_hit:
+                            cache_reason = "md5_mismatch"
+                    else:
+                        cache_hit = md5 is not None
+                        if md5 is None:
+                            cache_reason = "md5_unavailable"
+                    logger.info(log_event(
+                        file_ctx,
+                        role="orchestrator",
+                        event="pdf_cache_hit" if cache_hit else "pdf_cache_miss",
+                        module=logger.name,
+                        fields={
+                            "file_id": file.file_id,
+                            "path": cache_path,
+                            "md5": md5,
+                            "drive_md5": drive_md5 or "",
+                            "reason": cache_reason or ("sidecar" if sidecar_used else "hashed"),
+                        },
                     ))
                 else:
+                    cache_reason = "missing"
                     logger.info(log_event(
                         file_ctx,
                         role="orchestrator",
                         event="pdf_cache_miss",
                         module=logger.name,
-                        fields={"file_id": file.file_id, "path": cache_path},
+                        fields={"file_id": file.file_id, "path": cache_path, "reason": cache_reason},
                     ))
 
                 if not cache_hit:
-                    dl_req = DriveDownloadRequest(
+                    dl_req = DriveDownloadToPathRequest(
                         schema_version="1.0",
                         file=file,
                         service_account_path=settings.google_sa_path,
+                        output_path=cache_path,
                     )
-                    dl_resp = _run_step_with_retry("download_pdf", file_ctx, lambda: download_pdf(dl_req, file_ctx))
-                    write_resp = write_bytes(
-                        WriteBytesRequest(schema_version="1.0", path=cache_path, content=dl_resp.content),
+                    eof_check = None
+                    attempt = 0
+                    while True:
+                        dl_resp = _run_step_with_retry(
+                            "download_pdf",
+                            file_ctx,
+                            lambda: download_pdf_to_path(dl_req, file_ctx),
+                        )
+                        md5 = dl_resp.md5 or drive_md5
+                        eof_check = check_pdf_eof(
+                            PdfEofCheckRequest(schema_version="1.0", path=cache_path),
+                            file_ctx,
+                        )
+                        if eof_check.has_eof or attempt >= EOF_RETRY_LIMIT:
+                            break
+                        logger.info(log_event(
+                            file_ctx,
+                            role="orchestrator",
+                            event="pdf_eof_retry",
+                            module=logger.name,
+                            fields={"file_id": file.file_id, "path": cache_path, "attempt": attempt + 1},
+                        ))
+                        delete_file(
+                            DeleteFileRequest(schema_version="1.0", path=cache_path, missing_ok=True),
+                            file_ctx,
+                        )
+                        attempt += 1
+                    if eof_check and not eof_check.has_eof:
+                        logger.info(log_event(
+                            file_ctx,
+                            role="orchestrator",
+                            event="pdf_missing_eof",
+                            module=logger.name,
+                            fields={"file_id": file.file_id, "path": cache_path, "proceeding": True},
+                        ))
+                    stat_resp = file_stat(FileStatRequest(schema_version="1.0", path=cache_path), file_ctx)
+                    _write_md5_sidecar(
+                        sidecar_path,
+                        file,
+                        md5,
+                        stat_resp.size_bytes,
+                        stat_resp.mtime_utc,
                         file_ctx,
                     )
-                    md5 = write_resp.md5
-                eof_check = check_pdf_eof(
-                    PdfEofCheckRequest(schema_version="1.0", path=cache_path),
-                    file_ctx,
-                )
-                if not eof_check.has_eof:
-                    delete_file(
-                        DeleteFileRequest(schema_version="1.0", path=cache_path, missing_ok=True),
-                        file_ctx,
-                    )
-                    dl_req = DriveDownloadRequest(
-                        schema_version="1.0",
-                        file=file,
-                        service_account_path=settings.google_sa_path,
-                    )
-                    dl_resp = _run_step_with_retry("download_pdf", file_ctx, lambda: download_pdf(dl_req, file_ctx))
-                    write_resp = write_bytes(
-                        WriteBytesRequest(schema_version="1.0", path=cache_path, content=dl_resp.content),
-                        file_ctx,
-                    )
-                    md5 = write_resp.md5
-                    eof_check = check_pdf_eof(
-                        PdfEofCheckRequest(schema_version="1.0", path=cache_path),
-                        file_ctx,
-                    )
-                if not eof_check.has_eof:
-                    logger.info(log_event(
-                        file_ctx,
-                        role="orchestrator",
-                        event="pdf_missing_eof",
-                        module=logger.name,
-                        fields={"file_id": file.file_id, "path": cache_path, "proceeding": True},
-                    ))
 
-                if _should_skip(file, md5, settings.state_db, file_ctx):
+                if md5 and md5 != state_checked_md5 and _should_skip(file, md5, settings.state_db, file_ctx):
                     logger.info(log_event(
                         file_ctx,
                         role="orchestrator",
@@ -313,6 +583,28 @@ def run_ingest(
                         error="already_processed",
                     ))
                     continue
+
+                if md5 and md5 != report_checked_md5:
+                    existing_html = _existing_report_html(file, md5, settings, file_ctx)
+                    report_checked_md5 = md5
+                    if existing_html:
+                        logger.info(log_event(
+                            file_ctx,
+                            role="orchestrator",
+                            event="report_html_skip",
+                            module=logger.name,
+                            fields={"file_id": file.file_id, "md5": md5, "html_path": existing_html},
+                        ))
+                        outcomes.append(IngestOutcome(
+                            schema_version="1.0",
+                            file_id=file.file_id,
+                            name=file.name,
+                            md5=md5,
+                            html_path=existing_html,
+                            status="skipped",
+                            error="html_exists",
+                        ))
+                        continue
 
                 outcome = _run_step_with_retry(
                     "generate_report",

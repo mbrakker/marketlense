@@ -15,6 +15,7 @@ Key traits:
 - Orchestrator that controls sequencing, retries, and state (including publishing).
 - Structured logging with run/task/span identifiers.
 - Built-in validation: semantic checks plus LLM grounding with persisted reports and publish-time policy controls.
+- Text extractability gate: before analysis, the pipeline samples deterministic pages and aborts early with `pdf_text_unextractable` when none contain extractable text.
 - Low-text resilience: text density heuristics detect PDFs with little/no extractable text and emit explicit "not available from text" artifacts + HTML notices instead of blank sections.
 - Vector store is the default and only analysis path; legacy local_text prompt stuffing has been removed now that vector_store is validated.
 - Taxonomy extraction uses vector store retrieval and maps tags to categories; tags and categories are rendered in the HTML metadata block.
@@ -55,7 +56,7 @@ For dev wiring, use `src.services.config_service.to_ingest_settings` to adapt `A
 Key fields and env overrides:
 - Paths: `paths.output_dir` (`OUTPUT_DIR`, default `./out`), `paths.cache_dir` (`CACHE_DIR`, default `./cache`), `paths.state_db` (`STATE_DB`), `paths.reports_db` (`REPORTS_DB`), `paths.category_mappings` (defaults to `src/config/category-mappings.yaml`).
 - Ingest: `ingest.google_sa_path` (`GOOGLE_SERVICE_ACCOUNT_JSON`), `ingest.gdrive_folder_id` (`GDRIVE_FOLDER_ID`), `ingest.openai_model` (`OPENAI_MODEL`), `ingest.batch_limit` (`BATCH_LIMIT`, default 20), `ingest.temperature` (`TEMPERATURE`, default 1.0), `ingest.timeout_seconds` (`OPENAI_TIMEOUT_SECONDS`, default 600), `ingest.lock_ttl_seconds` (`INGEST_LOCK_TTL_SECONDS`, default 7200), `ingest.contents_page.*` (keywords, max_pages, min_headings, render_dpi).
-- PDF text extraction: `ingest.pdf_text.max_pages` and `ingest.pdf_text.max_chars` cap how much text is sampled per PDF; `ingest.pdf_text.min_density` (default `250` chars/page) triggers "not available from text" fallbacks when extraction is sparse.
+- PDF text extraction: `ingest.pdf_text.max_pages` and `ingest.pdf_text.max_chars` cap how much text is sampled per PDF; `ingest.pdf_text.min_density` (default `250` chars/page) triggers "not available from text" fallbacks when extraction is sparse; `ingest.pdf_text.sample_pages` (default `3`) controls the deterministic sample used to validate extractability before analysis.
 - Model overrides: `openai_models` maps prompt namespaces (or prefixes) to model IDs. Longest-prefix match wins. Falls back to `ingest.openai_model` for most prompts and to `rank.model` for `rank_candidates` unless an override is provided.
 
 Per-step model selection (new):
@@ -98,12 +99,15 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
    - Produces `DriveFile` contracts.
 
 4. **Download + integrity check**
-   - `drive_service.download_pdf(...)` downloads the PDF into cache.
-   - `src/services/pdf_service.py` checks for EOF marker and redownloads once if missing; read failures now raise structured `AppError`s.
+   - Cache paths are keyed by `file_id` (not file name) under `cache_dir`.
+   - `file_service.file_stat(...)` reads exists/size/mtime and consults a `.md5.json` sidecar to avoid re-hashing cached files.
+   - Cache hits skip EOF checks; if Drive provides `md5Checksum`, it is compared against cached md5.
+   - `drive_service.download_pdf_to_path(...)` streams PDF bytes directly to disk while computing md5.
+   - `src/services/pdf_service.py` checks for EOF marker using only tail bytes and redownloads once if missing.
 
 5. **State management**
    - `src/services/state_service.py` maintains a SQLite store of processed file IDs and hashes.
-   - Skips already-processed documents.
+   - If Drive provides `md5Checksum`, already-processed files are skipped before any download or hashing.
 
 6. **Report generation (per file)**
    - `src/generators/report_generator.py` runs the core pipeline:
@@ -111,6 +115,7 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
      - **PDF context**: `pdf_service.build_pdf_context` opens PyMuPDF and pypdf handles once; downstream services reuse them and fall back to local opens if unavailable.
      - **Contents/index detection**: scans the first pages for a contents/index section, renders a screenshot when found, and records the page number for HTML + DB output.
      - **Text extraction**: `pdf_service.extract_pdf_text` extracts text from the first N pages (reusing the shared context when present) and computes text density; if density falls below `ingest.pdf_text.min_density`, downstream artifacts short-circuit to explicit “not available from text” placeholders with HTML notices.
+     - **Text extractability check**: deterministically samples `ingest.pdf_text.sample_pages` pages (seeded by file id + hash) via `pdf_service.sample_pdf_text`; if none contain extractable text, the run aborts early with `pdf_text_unextractable` before any vector store or LLM work.
      - **LLM analysis**:
       - `vector_store` mode (only path): Ensures a vector store exists (create -> upload PDF -> attach -> wait for indexing via `vector_store_service`), then calls `openai_service.openai_respond_with_vector_store` (Responses API + file search). Evidence packs are generated via `src/generators/evidence_pack_generator.py` (doc_map, scope, methods, findings, limitations, quote_candidates), stored under `out/<report-slug>/report_analysis/*.json` (mirrored to `out/report_analysis/<file_id>/` for backward compatibility), and persisted in the metadata DB (`reports` table columns `vector_store_id`, `evidence_packs_json`; state DB stores `vector_store_status`, `indexed_at_utc`, `openai_file_id`, `last_error`). Orchestrator logs `VECTOR_STORE_CREATED`, `VECTOR_STORE_INDEXED`, `EVIDENCE_READY`.
        - Taxonomy extraction: `src/generators/taxonomy_generator.py` uses `src/prompts/report_vs/taxonomy/` to extract tags/regions/time_period from the vector store; tags map to categories and persist to the reports DB and HTML.
@@ -127,6 +132,7 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
      - **Preview rendering**: `preview_service` renders the first page to PNG.
      - **Cover image generation**: `cover_image_generator` resolves style from `cover-styles.yaml` using the report’s first category (falls back to `default` for styling only), while the rendered label text, title, publisher, time period, and region always come from report metadata in the DB. Renders via `cover_image_service` to `out/<report-slug>/<publisher>-<title>.png`, logging the resolved style and render path.
      - **HTML rendering**: `render_service` generates the final HTML digest.
+   - If the reports DB already has `html_path` for the same `file_id` + md5 and the HTML exists on disk, the orchestrator skips report generation.
 
 7. **State record**
    - The orchestrator records completion state after successful report generation.
