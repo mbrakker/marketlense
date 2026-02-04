@@ -3,6 +3,8 @@ from pathlib import Path
 import sys
 import json
 
+import pytest
+
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from src.contracts.drive import DriveFile
@@ -15,6 +17,7 @@ from src.generators import report_generator as rg
 from src.orchestrators import ingest_orchestrator as orch
 from src.contracts.taxonomy import TaxonomyExtractResponse
 from src.utils.slugify import slugify
+from src.utils.errors import AppError
 from pypdf import PdfWriter
 
 
@@ -266,3 +269,66 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
     assert Path(outcome.html_path).exists()
     assert validation_calls == ["file_vs"]
     assert ("artifacts", {"summary": {"tldr": "tldr", "executive_summary": "exec"}, "insights_final": [{"text": "insight"}], "quotes_final": [{"text": "qt", "speaker": "sp"}]}) in analysis_store
+
+
+def test_generate_report_doc_map_empty_halts(monkeypatch, tmp_path):
+    settings = _ingest_settings(tmp_path)
+    settings = settings.__class__(**{**settings.__dict__, "openai_timeout_seconds": 3600.0})
+    pdf_path = tmp_path / "sample.pdf"
+    writer = PdfWriter()
+    writer.add_blank_page(width=72, height=72)
+    with pdf_path.open("wb") as handle:
+        writer.write(handle)
+
+    file = DriveFile(schema_version="1.0", file_id="file_vs", name="vector.pdf", modified_time=None, md5_checksum="md5", version=None)
+    ctx = RunContext(schema_version="1.0", run_id="run-vs", task_id="task-vs", span_id="span-vs")
+
+    monkeypatch.setattr(rg.state_service, "get", lambda req, ctx: None)
+    monkeypatch.setattr(rg.vector_store_service, "create_vector_store", lambda req, ctx: SimpleNamespace(vector_store_id="vs_new"))
+    monkeypatch.setattr(rg.vector_store_service, "upload_file", lambda req, ctx: SimpleNamespace(openai_file_id="file_upload"))
+    monkeypatch.setattr(rg.vector_store_service, "attach_file", lambda req, ctx: None)
+    monkeypatch.setattr(rg.vector_store_service, "wait_until_indexed", lambda req, ctx: SimpleNamespace(status="completed", indexed_at_utc="2024-01-01T00:00:00Z", last_error=None))
+    monkeypatch.setattr(rg, "extract_pdf_info", lambda req, ctx: SimpleNamespace(schema_version="1.0", path=req.path, page_count=1, metadata={"k": "v"}))
+    monkeypatch.setattr(rg, "build_pdf_context", lambda req, ctx: SimpleNamespace(schema_version="1.0", context=SimpleNamespace(fitz_doc=None, pypdf_reader=None, close=lambda: None), fitz_error=None, pypdf_error=None))
+    monkeypatch.setattr(rg, "detect_contents_page_service", lambda req, ctx: SimpleNamespace(schema_version="1.0", path=req.path, has_contents=False, page_index=-1, page_number=0, heading="", confidence=0.0))
+    monkeypatch.setattr(rg, "extract_pdf_text", lambda req, ctx: SimpleNamespace(schema_version="1.0", text="text", pages_extracted=1, char_count=4, text_density=4.0))
+    monkeypatch.setattr(rg, "load_category_mappings", lambda req, ctx: SimpleNamespace(mappings=SimpleNamespace(schema_version="1.0", categories=[], uncategorized=[])))
+    monkeypatch.setattr(rg, "categorize_taxonomy", lambda taxonomy, mappings, ctx: SimpleNamespace(categories=["cat"], category_labels=["Category"], unmapped_tags=[]))
+    monkeypatch.setattr(rg, "update_uncategorized_tags", lambda req, ctx: None)
+    monkeypatch.setattr(rg, "extract_best_figure_service", lambda req, ctx: SimpleNamespace(image_path=None, caption=None))
+    monkeypatch.setattr(rg, "collect_candidates_service", lambda req, ctx: SimpleNamespace(candidates=[]))
+    monkeypatch.setattr(rg, "render_preview_service", lambda req, ctx: SimpleNamespace(schema_version="1.1", image_path=str(tmp_path / "preview.png"), page_number=0))
+    monkeypatch.setattr(rg, "extract_taxonomy", lambda req, ctx: TaxonomyExtractResponse(schema_version="1.0", taxonomy=["tag"], region="US", time_period="2024"))
+    monkeypatch.setattr(rg.vector_store_service, "update_metadata", lambda req, ctx: None)
+    monkeypatch.setattr(
+        rg,
+        "sample_pdf_text",
+        lambda req, ctx: PdfTextSampleResponse(
+            schema_version="1.0",
+            samples=[PdfTextSample(page_index=0, page_number=1, char_count=12, has_text=True)],
+            any_text=True,
+        ),
+    )
+
+    def _fake_evidence(*args, **kwargs):
+        raise AppError(
+            code="doc_map_empty",
+            message="doc_map_empty:no_content",
+            retryable=False,
+            context={"sections_count": 0, "not_found_reason": "model_returned_no_json"},
+        )
+
+    def _unexpected(*args, **kwargs):
+        pytest.fail("Unexpected downstream call after doc_map_empty")
+
+    monkeypatch.setattr(rg, "generate_evidence_packs", _fake_evidence)
+    monkeypatch.setattr(rg, "generate_artifacts", _unexpected)
+    monkeypatch.setattr(rg, "run_validation", _unexpected)
+    monkeypatch.setattr(rg, "render_report_service", _unexpected)
+    monkeypatch.setattr(rg, "upsert_report_metadata", _unexpected)
+
+    outcome = rg.generate_report(file, str(pdf_path), settings, md5="md5", ctx=ctx)
+
+    assert outcome.status == "error"
+    assert "doc_map_empty" in (outcome.error or "")
+    assert outcome.vector_store_id == "vs_new"

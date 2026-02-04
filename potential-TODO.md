@@ -21,8 +21,7 @@
 18. Parallelize WordPress media uploads for image-heavy reports.
 19. Share category mapping cache between publish and WP-category update flows.
 20. Extract validation JSON parsing into a small service/helper for reuse.
-21. Bundle golden set fixtures (or provide a fetch script) so `tests/test_golden_set.py` does not skip when `out/fixtures/golden_set` is missing.
-22. Audit external scripts/docs for legacy `pdf_*_service` imports after consolidation into `pdf_service.py`.
+21. Audit external scripts/docs for legacy `pdf_*_service` imports after consolidation into `pdf_service.py`.
 
 ## High-Impact (No Effort Limits)
 1. Parallelize ingest with a bounded worker pool plus idempotent locks.

@@ -1,11 +1,14 @@
 from types import SimpleNamespace
 from pathlib import Path
 
+import pytest
+
 from src.contracts.config import AppSettings
 from src.contracts.openai import OpenAIResponseResult
 from src.contracts.prompts import PromptSet, PromptTemplate
 from src.contracts.run_context import RunContext
 from src.generators.evidence_pack_generator import generate_evidence_packs
+from src.utils.errors import AppError
 from src.utils.slugify import slugify
 
 
@@ -107,14 +110,20 @@ def test_generate_evidence_packs_success(tmp_path):
 def test_generate_evidence_packs_handles_missing_json(tmp_path):
     fake_openai = FakeOpenAIClient(parsed=None)
     analysis_store = FakeAnalysisStore()
-    packs = generate_evidence_packs(
-        report_id="r1",
-        report_name="report",
-        vector_store_id="vs_1",
-        settings=_settings(tmp_path),
-        ctx=_ctx(),
-        openai_client=fake_openai,
-        prompt_client=FakePromptClient(),
-        analysis_store=analysis_store,
-    )
-    assert packs["scope"]["not_found_reason"] == "model_returned_no_json"
+    with pytest.raises(AppError) as exc_info:
+        generate_evidence_packs(
+            report_id="r1",
+            report_name="report",
+            vector_store_id="vs_1",
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            openai_client=fake_openai,
+            prompt_client=FakePromptClient(),
+            analysis_store=analysis_store,
+        )
+    assert exc_info.value.code == "doc_map_empty"
+    assert len(analysis_store.stored) == 1
+    stored_report_id, stored_pack, stored_payload = analysis_store.stored[0]
+    assert stored_report_id == "r1"
+    assert stored_pack == "doc_map"
+    assert stored_payload["not_found_reason"] == "model_returned_no_json"

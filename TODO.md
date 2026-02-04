@@ -18,7 +18,7 @@
     - Beyond text rendering, there is no infographic generation pipeline. Add a generator/service to produce simple infographics/hero visuals for HTML and LinkedIn artifacts, wired into rendering and artifact generation flows.
 9. Support multiple prompts per process for variations/expert roles.
     - Today each step uses a single prompt set per namespace. Add a mechanism to run multiple prompt variants per step (e.g., different expert personas or stylistic variants), collect outputs, and select/ensemble or expose them, while keeping prompt logging/versioning intact.
-10. Validate docmap pass.
+10. Validate docmap pass. (DONE)
     - After the docmap pass, check if data has been generated. If no data is present, log an error and halt processing for the current PDF.
 11. Validate report text extractability.
     - Before uploading to the vector store, check three random pages of the report for extractable text (no OCR required). If no text is found, log an error and halt further processing.
@@ -116,6 +116,7 @@
   - Selection logic is logged with variant identifiers.
 
 ## 10. Validate docmap pass
+- **Status**: Completed.
 - **Context**: The docmap pass generates data for further processing. If no data is generated, subsequent steps may fail or produce invalid results.
 - **Proposal**:
   - Add a validation step after the docmap pass to ensure data has been generated.

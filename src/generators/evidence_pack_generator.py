@@ -61,6 +61,31 @@ def generate_evidence_packs(
             analysis_store=analysis_store,
             pack_name=step_name,
         )
+        if step_name == "doc_map":
+            summary = _summarize_doc_map(results[step_name])
+            if not summary["has_content"]:
+                reason = summary["not_found_reason"] or "no_content"
+                logger.info(log_event(
+                    step_ctx,
+                    role="generator",
+                    event="doc_map_validation_failed",
+                    module=logger.name,
+                    fields={
+                        "report_id": report_id,
+                        "vector_store_id": vector_store_id,
+                        "sections_count": summary["sections_count"],
+                        "title_present": summary["title_present"],
+                        "doc_id_present": summary["doc_id_present"],
+                        "summary_present": summary["summary_present"],
+                        "not_found_reason": summary["not_found_reason"],
+                    },
+                ))
+                raise AppError(
+                    code="doc_map_empty",
+                    message=f"doc_map_empty:{reason}",
+                    retryable=False,
+                    context=summary,
+                )
     logger.info(log_event(
         ctx,
         role="generator",
@@ -161,3 +186,29 @@ def _empty_payload(schema_name: str, reason: str) -> dict:
     if schema_name == "doc_map":
         return {"doc_id": "", "title": "", "sections": [], "not_found_reason": reason}
     return {"scope": "", "methods": [], "findings": [], "limitations": [], "quote_candidates": [], "not_found_reason": reason}
+
+
+def _summarize_doc_map(payload: dict) -> dict:
+    if not isinstance(payload, dict):
+        return {
+            "has_content": False,
+            "sections_count": 0,
+            "title_present": False,
+            "doc_id_present": False,
+            "summary_present": False,
+            "not_found_reason": "invalid_payload",
+        }
+    title = str(payload.get("title") or "").strip()
+    doc_id = str(payload.get("doc_id") or "").strip()
+    summary_text = str(payload.get("summary") or "").strip()
+    sections = payload.get("sections")
+    sections_count = len(sections) if isinstance(sections, list) else 0
+    not_found_reason = str(payload.get("not_found_reason") or "").strip()
+    return {
+        "has_content": bool(title or doc_id or summary_text or sections_count),
+        "sections_count": sections_count,
+        "title_present": bool(title),
+        "doc_id_present": bool(doc_id),
+        "summary_present": bool(summary_text),
+        "not_found_reason": not_found_reason,
+    }

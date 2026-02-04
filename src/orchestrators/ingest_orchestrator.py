@@ -646,6 +646,22 @@ def run_ingest(
                             "pack_count": len(outcome.evidence_packs),
                         },
                     ))
+                if outcome.status == "error":
+                    logger.info(log_event(
+                        file_ctx,
+                        role="orchestrator",
+                        event="report_generation_failed",
+                        module=logger.name,
+                        fields={
+                            "file_id": file.file_id,
+                            "md5": md5 or "",
+                            "error": outcome.error or "",
+                            "vector_store_id": outcome.vector_store_id or "",
+                        },
+                    ))
+                last_error = outcome.vector_store_last_error
+                if outcome.status == "error" and outcome.error:
+                    last_error = outcome.error if not last_error else f"{last_error} | {outcome.error}"
                 state_record(
                     StateRecordRequest(
                         schema_version="1.0",
@@ -656,7 +672,7 @@ def run_ingest(
                         vector_store_id=outcome.vector_store_id,
                         vector_store_status=outcome.vector_store_status,
                         indexed_at_utc=outcome.indexed_at_utc,
-                        last_error=outcome.vector_store_last_error,
+                        last_error=last_error,
                         text_validation_status=outcome.text_validation_status,
                         text_validation_reason=outcome.text_validation_reason,
                         text_validation_pages=outcome.text_validation_pages,

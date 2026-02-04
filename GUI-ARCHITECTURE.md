@@ -33,7 +33,7 @@ The UI must make inputs, outputs, logs, and artifact locations visible without i
 11. **Logs & Live Terminal** - structured events + live run output
 12. **Settings & Prompts** - read-only config + prompt registry
 13. **System & Storage** - DB tables, locks, output folders
-14. **Developer & Test Tools** - golden-set/regression, prompt sandbox, raw model outputs (debug)
+14. **Developer & Test Tools** - prompt sandbox, raw model outputs (debug)
 
 This layout keeps the UI minimal: one dominant task per page with a clear, inspectable source of truth.
 
@@ -250,17 +250,15 @@ This layout keeps the UI minimal: one dominant task per page with a clear, inspe
 
 ---
 
-## 14) Developer & Golden Set (Testing & Regression Harness)
+## 14) Developer & Test Tools (Testing & Debug)
 
-**Goal:** Provide a place for regression testing, golden-set runs, and developer-facing debug tools.
+**Goal:** Provide a place for testing and developer-facing debug tools.
 
 **Features:**
-- **Golden set runner**: trigger the regression harness (`pytest -m golden_set`) or the `run_golden_set.ps1` wrapper so operators can validate a batch of canonical cases.【F:tests/test_golden_set.py†L1-L200】【F:scripts/run_golden_set.ps1†L1-L20】
 - **Test runner**: allow launching selected test markers or CI-like smoke tests to validate environment health.
 - **Debug tools**: prompt sandbox, raw model outputs viewer (debug), re-run evidence packs, re-run ranking, and a place to stash curated test variables/configs.
-- **Fixture fetcher**: helper to fetch or restore golden fixtures when missing (or show clear skip rationale) to reduce friction for local regression runs.
 
-**Admin value:** makes it easy to validate behavior, reproduce regressions, and triage model-output edge cases.
+**Admin value:** makes it easy to validate behavior and triage model-output edge cases.
 
 ---
 

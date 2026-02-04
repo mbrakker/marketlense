@@ -9,6 +9,7 @@ Enterprise PDF ingestion and analysis pipeline that converts Google Drive report
 Market Lense ingests PDFs from a configured Google Drive folder, extracts text and structured visual candidates (tables/charts), calls an LLM for a strict JSON analysis, ranks and crops key visuals, renders a compact HTML digest, and can publish the digest to WordPress. The system is organized around a strict architecture with contracts, services, generators, and orchestrators to ensure reliability, observability, and testability.
 
 Key traits:
+
 - Contract-first data model for all external I/O boundaries.
 - Service isolation for all external systems and file I/O.
 - Generator logic that composes services into domain outputs.
@@ -16,6 +17,7 @@ Key traits:
 - Structured logging with run/task/span identifiers.
 - Built-in validation: semantic checks plus LLM grounding with persisted reports and publish-time policy controls.
 - Text extractability gate: before analysis, the pipeline samples deterministic pages and aborts early with `pdf_text_unextractable` when none contain extractable text.
+- DocMap validation gate: if the doc_map evidence pack is empty (no sections/title/doc_id/summary), processing halts for that PDF and the failure is recorded.
 - Low-text resilience: text density heuristics detect PDFs with little/no extractable text and emit explicit "not available from text" artifacts + HTML notices instead of blank sections.
 - Vector store is the default and only analysis path; legacy local_text prompt stuffing has been removed now that vector_store is validated.
 - Taxonomy extraction uses vector store retrieval and maps tags to categories; tags and categories are rendered in the HTML metadata block.
@@ -26,7 +28,7 @@ Key traits:
 
 The codebase follows a strict layered architecture under `src/`:
 
-```
+```text
 src/
   contracts/         # Dataclass contracts for inputs/outputs
   services/          # External I/O services (Drive, OpenAI, files, etc.)
@@ -54,12 +56,14 @@ Primary config: `src/config/app.yaml`. Missing values can be provided via `.env`
 For dev wiring, use `src.services.config_service.to_ingest_settings` to adapt `AppSettings` into `IngestSettings` without hand-copying fields; new config keys are picked up automatically.
 
 Key fields and env overrides:
+
 - Paths: `paths.output_dir` (`OUTPUT_DIR`, default `./out`), `paths.cache_dir` (`CACHE_DIR`, default `./cache`), `paths.state_db` (`STATE_DB`), `paths.reports_db` (`REPORTS_DB`), `paths.category_mappings` (defaults to `src/config/category-mappings.yaml`).
 - Ingest: `ingest.google_sa_path` (`GOOGLE_SERVICE_ACCOUNT_JSON`), `ingest.gdrive_folder_id` (`GDRIVE_FOLDER_ID`), `ingest.openai_model` (`OPENAI_MODEL`), `ingest.batch_limit` (`BATCH_LIMIT`, default 20), `ingest.temperature` (`TEMPERATURE`, default 1.0), `ingest.timeout_seconds` (`OPENAI_TIMEOUT_SECONDS`, default 600), `ingest.lock_ttl_seconds` (`INGEST_LOCK_TTL_SECONDS`, default 7200), `ingest.contents_page.*` (keywords, max_pages, min_headings, render_dpi).
 - PDF text extraction: `ingest.pdf_text.max_pages` and `ingest.pdf_text.max_chars` cap how much text is sampled per PDF; `ingest.pdf_text.min_density` (default `250` chars/page) triggers "not available from text" fallbacks when extraction is sparse; `ingest.pdf_text.sample_pages` (default `3`) controls the deterministic sample used to validate extractability before analysis.
 - Model overrides: `openai_models` maps prompt namespaces (or prefixes) to model IDs. Longest-prefix match wins. Falls back to `ingest.openai_model` for most prompts and to `rank.model` for `rank_candidates` unless an override is provided.
 
 Per-step model selection (new):
+
 - Set `openai_models` entries to pin specific prompt calls to specific models (e.g., `report_vs/artifacts/summary`, `report_vs/evidence_packs/findings`, `report_vs/validate/grounding`, `rank_candidates`).
 - Prefix keys apply to all nested namespaces unless a more specific key exists (e.g., `report_vs/evidence_packs` covers all evidence packs).
 - Vector store: `analysis.vector_store_keep` (`VECTOR_STORE_KEEP`, default `true`) controls whether to retain caches between runs. Analysis always uses the vector_store path; compare toggles are legacy/ignored.
@@ -69,14 +73,17 @@ Per-step model selection (new):
 - Cover images: `paths.cover_styles` points to `src/config/cover-styles.yaml` (defaults to that path). Fonts are local files; the default config uses `templates/GOTHICB.TTF` for both regular/bold. Ensure the font file exists on the host; otherwise cover rendering will fail with `cover_font_invalid`. Background image is optional; leave blank for a solid background.
 
 Secrets (env only):
+
 - `OPENAI_API_KEY` (required)
 - `WP_APP_PASSWORD` or `WP_BEARER_TOKEN` (publishing)
 - Optional provider keys (e.g., `MINERU_API_KEY`) if used.
 
 Prompt locations:
+
 - Vector store evidence packs: `src/prompts/report_vs/**` (`doc_map/`, `evidence_packs/{scope,methods,findings,limitations,quote_candidates}/`)
 - Artifact generation: `src/prompts/report_vs/artifacts/**` (toc, summary, insights candidates/final, quotes, expert comment, LinkedIn post)
 - Taxonomy extraction: `src/prompts/report_vs/taxonomy/`
+
 Prompts are YAML (system/user), hashed and logged by `src/services/prompt_service.py`.
 
 ---
@@ -117,12 +124,13 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
      - **Text extraction**: `pdf_service.extract_pdf_text` extracts text from the first N pages (reusing the shared context when present) and computes text density; if density falls below `ingest.pdf_text.min_density`, downstream artifacts short-circuit to explicit “not available from text” placeholders with HTML notices.
      - **Text extractability check**: deterministically samples `ingest.pdf_text.sample_pages` pages (seeded by file id + hash) via `pdf_service.sample_pdf_text`; if none contain extractable text, the run aborts early with `pdf_text_unextractable` before any vector store or LLM work.
      - **LLM analysis**:
-      - `vector_store` mode (only path): Ensures a vector store exists (create -> upload PDF -> attach -> wait for indexing via `vector_store_service`), then calls `openai_service.openai_respond_with_vector_store` (Responses API + file search). Evidence packs are generated via `src/generators/evidence_pack_generator.py` (doc_map, scope, methods, findings, limitations, quote_candidates), stored under `out/<report-slug>/report_analysis/*.json` (mirrored to `out/report_analysis/<file_id>/` for backward compatibility), and persisted in the metadata DB (`reports` table columns `vector_store_id`, `evidence_packs_json`; state DB stores `vector_store_status`, `indexed_at_utc`, `openai_file_id`, `last_error`). Orchestrator logs `VECTOR_STORE_CREATED`, `VECTOR_STORE_INDEXED`, `EVIDENCE_READY`.
+       - `vector_store` mode (only path): Ensures a vector store exists (create -> upload PDF -> attach -> wait for indexing via `vector_store_service`), then calls `openai_service.openai_respond_with_vector_store` (Responses API + file search). Evidence packs are generated via `src/generators/evidence_pack_generator.py` (doc_map, scope, methods, findings, limitations, quote_candidates), stored under `out/<report-slug>/report_analysis/*.json` (mirrored to `out/report_analysis/<file_id>/` for backward compatibility), and persisted in the metadata DB (`reports` table columns `vector_store_id`, `evidence_packs_json`; state DB stores `vector_store_status`, `indexed_at_utc`, `openai_file_id`, `last_error`). Orchestrator logs `VECTOR_STORE_CREATED`, `VECTOR_STORE_INDEXED`, `EVIDENCE_READY`.
+       - DocMap validation: if the `doc_map` pack is empty (no sections/title/doc_id/summary), the report is halted for that PDF and the error is logged/recorded.
        - Taxonomy extraction: `src/generators/taxonomy_generator.py` uses `src/prompts/report_vs/taxonomy/` to extract tags/regions/time_period from the vector store; tags map to categories and persist to the reports DB and HTML.
      - **Validation**: `src/generators/validation_generator.py` now does a two-pass check:
        - Exact: numeric match, token presence, verbatim quotes, and “new numbers” in expert/LinkedIn text.
        - Semantic: LLM re-check via `src/prompts/report_vs/validate/semantic/{system,user}.yaml` (model resolved via `openai_models` longest-prefix match) that scores metric/quote support against evidence snippets and logs prompt hashes + evidence/metric/quote SHA-256. Semantic “supported” adds `info` issues; “unsupported” raises `warning|error`. Grounding still runs (`report_vs/validate/grounding`) for unsupported sentences end-to-end.
-      - Results persist to `out/<report-slug>/report_analysis/validation*.json` (legacy copy at `out/report_analysis/<file_id>/`) and flow into HTML and publish policy decisions. When `ingest.validation.data_gap_policy` is `warn`, missing evidence/text downgrades to warnings. Schema validation is performed via `schema_validator_service`.
+       - Results persist to `out/<report-slug>/report_analysis/validation*.json` (legacy copy at `out/report_analysis/<file_id>/`) and flow into HTML and publish policy decisions. When `ingest.validation.data_gap_policy` is `warn`, missing evidence/text downgrades to warnings. Schema validation is performed via `schema_validator_service`.
      - **Normalization**: `normalize_generator` enforces strict schema and list sizing.
      - **Categorization**: taxonomy tags are scored against `src/config/category-mappings.yaml`; top 3 categories are stored and rendered, and unmapped tags are appended under `uncategorized` in that YAML.
      - **Figure selection**: `figure_service` selects a representative visual and caption.
@@ -135,7 +143,7 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
    - If the reports DB already has `html_path` for the same `file_id` + md5 and the HTML exists on disk, the orchestrator skips report generation.
 
 7. **State record**
-   - The orchestrator records completion state after successful report generation.
+   - The orchestrator records completion or failure state after each report generation attempt (including `doc_map_empty` and `pdf_text_unextractable` errors).
 
 ---
 
@@ -173,6 +181,7 @@ Redaction covers API keys, bearer tokens, and common PII patterns before log emi
 CLI-provided run contexts flow into the ingest orchestrator so CLI run/task IDs stay consistent across downstream orchestrator/service logs.
 
 Every log event includes:
+
 - `run_id`: pipeline run identifier
 - `task_id`: per-file identifier
 - `span_id`: per-operation span identifier
@@ -181,6 +190,7 @@ Every log event includes:
 - `event`: logical event name
 
 Examples:
+
 - `openai_analyze_start`
 - `openai_prompts_loaded`
 - `drive_download_complete`
@@ -191,6 +201,7 @@ Examples:
 ## Error Taxonomy and Retries
 
 All external I/O services raise `AppError` with attributes:
+
 - `code`
 - `message`
 - `cause`
@@ -206,7 +217,7 @@ The orchestrator retries report generation when a retryable `AppError` is raised
 
 Prompts are stored in YAML by namespace:
 
-```
+```text
 src/prompts/report_vs/doc_map/          # vector_store doc map
 src/prompts/report_vs/evidence_packs/   # vector_store packs (scope/methods/findings/limitations/quote_candidates)
 src/prompts/report_vs/artifacts/        # artifact sections (toc, summary, insights, quotes, expert comment, LinkedIn)
@@ -233,6 +244,7 @@ Prompts are rendered with Jinja2 (`{{ variable }}`), loaded and hashed by `src/s
 ## Contracts and Schemas
 
 Key contracts live under `src/contracts/`:
+
 - `config.py`: `AppSettings`
 - `drive.py`: Drive file and request/response contracts
 - `openai.py`: OpenAI request/response contracts
@@ -253,6 +265,7 @@ Key contracts live under `src/contracts/`:
 ## Schemas (JSON)
 
 Location: `src/schemas/`
+
 - `doc_map.schema.json`: required fields for DocMap outputs (id/title/publisher/year/figures, etc.).
 - `evidence_pack.schema.json`: permissive; accepts optional/empty `scope`, `methods`, `findings`, `limitations`, and `quote_candidates` with nullable fields and extra properties.
 - `artifacts.schema.json`: artifacts/toc/summary/insights/quotes/expert_comment/linkedin payload shape.
@@ -266,6 +279,7 @@ Schema validation is performed by `src/utils/schema_validator.py` and logged per
 ## Testing
 
 Minimal unit tests exist under `tests/`:
+
 - `test_validation.py`: contract validation helpers
 - `test_normalize_service.py`: normalization behavior
 - `test_cli.py`: CLI wiring
@@ -274,7 +288,6 @@ Minimal unit tests exist under `tests/`:
 - `test_html_utils.py`: HTML parsing helpers
 - `test_artifact_generator.py`: artifact JSON generation/validation
 - `test_render_service_artifacts.py`: HTML sections for artifact rendering
-- `test_golden_set.py`: regression on golden fixtures in `out/fixtures/golden_set/` (expects metadata.yaml + expected JSON/HTML + referenced PDFs)
 
 Run tests locally:
 
@@ -291,9 +304,11 @@ CI runs these tests via `.github/workflows/ci.yml`.
 ## Runtime Requirements
 
 Configuration lives in `src/config/app.yaml` with `.env` fallback for any missing values. Secrets come from environment variables.
+
 - Contents/index detection is configured under `ingest.contents_page` (keywords, max_pages, min_headings, render_dpi).
 
 Required environment variables:
+
 - `OPENAI_API_KEY`
 - `WP_APP_PASSWORD` (or `WP_BEARER_TOKEN` if using bearer auth)
 - Optional: other provider keys (e.g., `MINERU_API_KEY`), `WP_USERNAME`/`WP_SITE_URL` if not set in YAML.
@@ -350,6 +365,7 @@ ANALYSIS_MODE=vector_store python -m src.cli ingest --limit 1
 This reuses existing vector stores when `VECTOR_STORE_KEEP=true`, otherwise creates/attaches/waits per file and writes packs to `out/<report-slug>/report_analysis/` (plus a legacy mirror under `out/report_analysis/<file_id>/`).
 
 CLI options summary:
+
 - `--limit`: optional integer across batch commands.
 - `--folder`: optional Drive folder override for ingest.
 
@@ -357,7 +373,7 @@ CLI options summary:
 
 Default output structure:
 
-```
+```text
 ./out/
   <report-name>.html
   <report-name>/
@@ -395,6 +411,7 @@ Marker-based PDF-to-HTML conversion has been removed.
 ## Support and Extension Points
 
 To extend the system:
+
 - Add new services in `src/services` and define contracts in `src/contracts`.
 - Add new prompts in `src/prompts/<use_case>/`.
 - Add new generators to compose services into outputs.

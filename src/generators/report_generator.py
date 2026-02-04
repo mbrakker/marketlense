@@ -915,13 +915,49 @@ def generate_report(
     mode_evidence_paths: dict[str, str] = {}
     validation_report: ValidationReport | None = None
     artifacts_payload: dict | None = None
-    packs = generate_evidence_packs(
-        report_id=file.file_id,
-        report_name=report_name,
-        vector_store_id=vector_store_id,
-        settings=settings,
-        ctx=child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:evidence"),
-    )
+    try:
+        packs = generate_evidence_packs(
+            report_id=file.file_id,
+            report_name=report_name,
+            vector_store_id=vector_store_id,
+            settings=settings,
+            ctx=child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:evidence"),
+        )
+    except AppError as exc:
+        if exc.code == "doc_map_empty":
+            logger.info(log_event(
+                mode_ctx,
+                role="generator",
+                event="doc_map_validation_halt",
+                module=logger.name,
+                fields={
+                    "file_id": file.file_id,
+                    "code": exc.code,
+                    "message": exc.message,
+                    "sections_count": exc.context.get("sections_count") if exc.context else None,
+                    "not_found_reason": exc.context.get("not_found_reason") if exc.context else "",
+                },
+            ))
+            if pdf_context is not None:
+                pdf_context.close()
+            return IngestOutcome(
+                schema_version="1.0",
+                file_id=file.file_id,
+                name=file.name,
+                md5=md5,
+                html_path=None,
+                status="error",
+                error=exc.message or exc.code,
+                vector_store_id=vector_store_id,
+                vector_store_status=vector_store_status,
+                indexed_at_utc=indexed_at_utc,
+                openai_file_id=openai_file_id,
+                vector_store_last_error=last_error,
+                text_validation_status=text_validation_status,
+                text_validation_reason=text_validation_reason,
+                text_validation_pages=text_validation_pages,
+            )
+        raise
     mode_evidence_packs = packs
     pack_names = list(packs.keys())
     mode_evidence_paths = _pack_paths(settings.output_dir, file.file_id, report_name, pack_names)
