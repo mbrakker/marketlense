@@ -90,6 +90,28 @@ def _select_sample_pages(file_id: str, md5: Optional[str], page_count: int, samp
     rng = random.Random(seed)
     return sorted(rng.sample(range(page_count), count))
 
+
+def _doc_map_has_content(doc_map_pack: dict) -> bool:
+    if not isinstance(doc_map_pack, dict):
+        return False
+    doc_id = str(doc_map_pack.get("doc_id") or "").strip()
+    title = str(doc_map_pack.get("title") or "").strip()
+    publisher = str(doc_map_pack.get("publisher") or "").strip()
+    sections = doc_map_pack.get("sections")
+    has_sections = False
+    if isinstance(sections, list):
+        for section in sections:
+            if not isinstance(section, dict):
+                continue
+            section_title = str(section.get("title") or "").strip()
+            section_summary = str(section.get("summary") or "").strip()
+            page_start = section.get("page_start")
+            page_end = section.get("page_end")
+            if section_title or section_summary or page_start is not None or page_end is not None:
+                has_sections = True
+                break
+    return bool(doc_id or title or publisher or has_sections)
+
 def _pack_paths(output_dir: str, report_id: str, report_name: str, pack_names: list[str]) -> dict[str, str]:
     return {
         name: str(report_analysis_store_service.pack_path(
@@ -934,6 +956,49 @@ def generate_report(
         module=logger.name,
         fields={"file_id": file.file_id, "vector_store_id": vector_store_id, "pack_count": len(mode_evidence_paths)},
     ))
+    doc_map_pack = packs.get("doc_map", {})
+    if not _doc_map_has_content(doc_map_pack):
+        not_found_reason = ""
+        if isinstance(doc_map_pack, dict):
+            not_found_reason = str(doc_map_pack.get("not_found_reason") or "")
+        logger.info(log_event(
+            mode_ctx,
+            role="generator",
+            event="doc_map_validation_failed",
+            module=logger.name,
+            fields={
+                "file_id": file.file_id,
+                "vector_store_id": vector_store_id or "",
+                "doc_id": str(doc_map_pack.get("doc_id") or "") if isinstance(doc_map_pack, dict) else "",
+                "title": str(doc_map_pack.get("title") or "") if isinstance(doc_map_pack, dict) else "",
+                "publisher": str(doc_map_pack.get("publisher") or "") if isinstance(doc_map_pack, dict) else "",
+                "sections_count": len(doc_map_pack.get("sections") or []) if isinstance(doc_map_pack, dict) else 0,
+                "not_found_reason": not_found_reason,
+            },
+        ))
+        last_error = "doc_map_empty"
+        _record_state_progress(
+            settings=settings,
+            file_id=file.file_id,
+            md5=md5,
+            ctx=mode_ctx,
+            stage="doc_map_validation_failed",
+            vector_store_id=vector_store_id,
+            vector_store_status=vector_store_status,
+            indexed_at_utc=indexed_at_utc,
+            openai_file_id=openai_file_id,
+            last_error=last_error,
+        )
+        raise AppError(
+            code=last_error,
+            message="Doc map pass produced no usable content; halting report generation.",
+            retryable=False,
+            context={
+                "file_id": file.file_id,
+                "vector_store_id": vector_store_id,
+                "doc_map_not_found_reason": not_found_reason,
+            },
+        )
     _record_state_progress(
         settings=settings,
         file_id=file.file_id,
@@ -946,7 +1011,6 @@ def generate_report(
         openai_file_id=openai_file_id,
         last_error=last_error,
     )
-    doc_map_pack = packs.get("doc_map", {})
     if isinstance(doc_map_pack, dict):
         doc_map_title = str(doc_map_pack.get("title") or "").strip()
         if doc_map_title:

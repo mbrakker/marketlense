@@ -22,7 +22,9 @@ pip-wheel-metadata/
 coverage.xml
 
 # Ignore local test fixtures (large PDFs, generated data)
-tests/fixtures/
+!tests/fixtures/
+tests/fixtures/*
+!tests/fixtures/low_text_status.json
 htmlcov/
 
 # Editor directories and files

@@ -18,9 +18,7 @@
     - Beyond text rendering, there is no infographic generation pipeline. Add a generator/service to produce simple infographics/hero visuals for HTML and LinkedIn artifacts, wired into rendering and artifact generation flows.
 9. Support multiple prompts per process for variations/expert roles.
     - Today each step uses a single prompt set per namespace. Add a mechanism to run multiple prompt variants per step (e.g., different expert personas or stylistic variants), collect outputs, and select/ensemble or expose them, while keeping prompt logging/versioning intact.
-10. Validate docmap pass.
-    - After the docmap pass, check if data has been generated. If no data is present, log an error and halt processing for the current PDF.
-11. Validate report text extractability.
+10. Validate report text extractability.
     - Before uploading to the vector store, check three random pages of the report for extractable text (no OCR required). If no text is found, log an error and halt further processing.
 
 # Detailed Proposals
@@ -115,17 +113,7 @@
   - Multiple prompt variants can be run per step and results are captured.
   - Selection logic is logged with variant identifiers.
 
-## 10. Validate docmap pass
-- **Context**: The docmap pass generates data for further processing. If no data is generated, subsequent steps may fail or produce invalid results.
-- **Proposal**:
-  - Add a validation step after the docmap pass to ensure data has been generated.
-  - If no data is present, log an error message and stop processing the current PDF to prevent further invalid operations.
-  - Ensure this validation step is integrated into the orchestrator pipeline.
-- **Acceptance**:
-  - PDFs with no data after the docmap pass are halted with a clear error message.
-  - Logs & state database contain detailed information about the failure for debugging.
-
-## 11. Validate report text extractability
+## 10. Validate report text extractability
 - **Context**: Reports without extractable text may indicate issues with the input PDF or earlier processing steps, leading to wasted resources if uploaded to the vector store.
 - **Proposal**:
   - Implement a validation step to randomly select three pages from the report and check for extractable text.
@@ -134,4 +122,3 @@
 - **Acceptance**:
   - Reports without extractable text are halted with a clear error message.
   - Logs & state database contain detailed information about the failure for debugging.
-
