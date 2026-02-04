@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import List, Optional
 
 
 @dataclass(frozen=True)
@@ -23,6 +23,9 @@ class StateRecordRequest:
     vector_store_status: Optional[str] = field(default=None, metadata={"doc": "Vector store status, if any."})
     indexed_at_utc: Optional[str] = field(default=None, metadata={"doc": "ISO-8601 UTC timestamp when the file was indexed, if known."})
     last_error: Optional[str] = field(default=None, metadata={"doc": "Last error encountered during vector store operations, if any."})
+    text_validation_status: Optional[str] = field(default=None, metadata={"doc": "Extractable text validation status: pass|fail, if evaluated."})
+    text_validation_reason: Optional[str] = field(default=None, metadata={"doc": "Extractable text validation failure reason, if any."})
+    text_validation_pages: Optional[List[int]] = field(default=None, metadata={"doc": "Page numbers sampled for extractable text validation."})
 
 
 @dataclass(frozen=True)
@@ -59,6 +62,9 @@ class StateGetResponse:
     vector_store_status: Optional[str] = field(default=None, metadata={"doc": "Vector store status, if any."})
     indexed_at_utc: Optional[str] = field(default=None, metadata={"doc": "ISO-8601 UTC timestamp when the file was indexed, if known."})
     last_error: Optional[str] = field(default=None, metadata={"doc": "Last error encountered during vector store operations, if any."})
+    text_validation_status: Optional[str] = field(default=None, metadata={"doc": "Extractable text validation status: pass|fail, if evaluated."})
+    text_validation_reason: Optional[str] = field(default=None, metadata={"doc": "Extractable text validation failure reason, if any."})
+    text_validation_pages: Optional[List[int]] = field(default=None, metadata={"doc": "Page numbers sampled for extractable text validation."})
 
 
 @dataclass(frozen=True)

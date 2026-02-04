@@ -1,18 +1,20 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
+import random
 from copy import deepcopy
 from pathlib import Path
 from typing import Optional
 
-from src.contracts.pdf_text import PdfTextExtractRequest
+from src.contracts.pdf_text import PdfTextExtractRequest, PdfTextSampleRequest
 from src.contracts.report_store import ReportMetadataGetRequest, ReportMetadataUpsertRequest
 from src.contracts.report_models import CropItem, Figure, Quote, ReportPayload
 from src.contracts.pdf_context import PdfContextBuildRequest
 from src.contracts.pdf_contents import PdfContentsDetectionRequest
 from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
-from src.services.pdf_service import extract_pdf_text
+from src.services.pdf_service import extract_pdf_text, sample_pdf_text
 from src.utils.slugify import slugify
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
@@ -77,6 +79,16 @@ def _derive_title(name: str) -> str:
     base = name.rsplit(".", 1)[0]
     cleaned = base.strip()
     return cleaned or name
+
+
+def _select_sample_pages(file_id: str, md5: Optional[str], page_count: int, sample_count: int) -> list[int]:
+    if page_count <= 0 or sample_count <= 0:
+        return []
+    count = min(sample_count, page_count)
+    seed_input = f"{file_id}:{md5 or ''}:{page_count}"
+    seed = int(hashlib.sha256(seed_input.encode("utf-8")).hexdigest(), 16) % (2**32)
+    rng = random.Random(seed)
+    return sorted(rng.sample(range(page_count), count))
 
 def _pack_paths(output_dir: str, report_id: str, report_name: str, pack_names: list[str]) -> dict[str, str]:
     return {
@@ -471,6 +483,96 @@ def generate_report(
         module=logger.name,
         fields={"density": text_status["text_density"], "threshold": text_status["density_threshold"], "pages": text_status["pages_sampled"], "char_count": text_status["char_count"], "not_available": text_status["not_available"]},
     ))
+    sample_ctx = child_context(ctx, task_id=f"{ctx.task_id}:text_sample")
+    sample_indices = _select_sample_pages(
+        file_id=file.file_id,
+        md5=md5,
+        page_count=info_resp.page_count,
+        sample_count=settings.pdf_text_sample_pages,
+    )
+    text_validation_status = "pass"
+    text_validation_reason = ""
+    text_validation_pages: list[int] = [idx + 1 for idx in sample_indices]
+    if not sample_indices:
+        text_validation_status = "fail"
+        text_validation_reason = "no_pages_to_sample"
+        logger.info(log_event(
+            sample_ctx,
+            role="generator",
+            event="text_extractability_failed",
+            module=logger.name,
+            fields={
+                "file_id": file.file_id,
+                "reason": text_validation_reason,
+                "page_count": info_resp.page_count,
+                "sample_pages": text_validation_pages,
+            },
+        ))
+        if pdf_context is not None:
+            pdf_context.close()
+        return IngestOutcome(
+            schema_version="1.0",
+            file_id=file.file_id,
+            name=file.name,
+            md5=md5,
+            html_path=None,
+            status="error",
+            error="pdf_text_unextractable",
+            text_validation_status=text_validation_status,
+            text_validation_reason=text_validation_reason,
+            text_validation_pages=text_validation_pages,
+        )
+    sample_resp = sample_pdf_text(
+        PdfTextSampleRequest(
+            schema_version="1.0",
+            path=local_pdf_path,
+            page_indices=sample_indices,
+            pdf_context=pdf_context,
+        ),
+        sample_ctx,
+    )
+    sample_chars = {sample.page_number: sample.char_count for sample in sample_resp.samples}
+    logger.info(log_event(
+        sample_ctx,
+        role="generator",
+        event="text_extractability_checked",
+        module=logger.name,
+        fields={
+            "file_id": file.file_id,
+            "sample_pages": text_validation_pages,
+            "any_text": sample_resp.any_text,
+            "char_counts": sample_chars,
+        },
+    ))
+    if not sample_resp.any_text:
+        text_validation_status = "fail"
+        text_validation_reason = "no_text_in_sampled_pages"
+        logger.info(log_event(
+            sample_ctx,
+            role="generator",
+            event="text_extractability_failed",
+            module=logger.name,
+            fields={
+                "file_id": file.file_id,
+                "reason": text_validation_reason,
+                "sample_pages": text_validation_pages,
+                "char_counts": sample_chars,
+            },
+        ))
+        if pdf_context is not None:
+            pdf_context.close()
+        return IngestOutcome(
+            schema_version="1.0",
+            file_id=file.file_id,
+            name=file.name,
+            md5=md5,
+            html_path=None,
+            status="error",
+            error="pdf_text_unextractable",
+            text_validation_status=text_validation_status,
+            text_validation_reason=text_validation_reason,
+            text_validation_pages=text_validation_pages,
+        )
     report_title = _derive_title(file.name)
     data = _base_payload(report_title, contents_page_number, contents_heading, contents_image)
     data._text_density = text_status["text_density"]
@@ -1151,4 +1253,7 @@ def generate_report(
         openai_file_id=vector_info_for_outcome["openai_file_id"],
         evidence_packs=primary_evidence_paths or None,
         vector_store_last_error=vector_info_for_outcome["last_error"],
+        text_validation_status=text_validation_status,
+        text_validation_reason=text_validation_reason,
+        text_validation_pages=text_validation_pages,
     )

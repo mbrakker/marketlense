@@ -22,6 +22,7 @@ ingest:
     max_pages: 5
     max_chars: 80000
     min_density: 250
+    sample_pages: 3
   validation:
     data_gap_policy: "warn"
   contents_page:

@@ -365,6 +365,9 @@ def run_ingest(
                         vector_store_status=outcome.vector_store_status,
                         indexed_at_utc=outcome.indexed_at_utc,
                         last_error=outcome.vector_store_last_error,
+                        text_validation_status=outcome.text_validation_status,
+                        text_validation_reason=outcome.text_validation_reason,
+                        text_validation_pages=outcome.text_validation_pages,
                     ),
                     file_ctx,
                 )

@@ -32,6 +32,7 @@ class AppSettings:
     pdf_text_max_pages: int = field(default=5, metadata={"doc": "Max pages to extract for prompt context."})
     pdf_text_max_chars: int = field(default=80_000, metadata={"doc": "Max extracted characters for prompt context."})
     pdf_text_min_density: float = field(default=250.0, metadata={"doc": "Minimum characters per page considered usable text."})
+    pdf_text_sample_pages: int = field(default=3, metadata={"doc": "Number of pages to sample when validating extractable text."})
     rank_model: str = field(default="", metadata={"doc": "OpenAI model ID for candidate ranking (optional override)."})
     rank_temperature: float = field(default=1.0, metadata={"doc": "Sampling temperature for candidate ranking."})
     rank_seed: Optional[int] = field(default=None, metadata={"doc": "Optional seed for candidate ranking."})

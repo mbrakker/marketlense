@@ -10,10 +10,12 @@ from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationReport
 from src.contracts.report_assets import RenderResponse
+from src.contracts.pdf_text import PdfTextSample, PdfTextSampleResponse
 from src.generators import report_generator as rg
 from src.orchestrators import ingest_orchestrator as orch
 from src.contracts.taxonomy import TaxonomyExtractResponse
 from src.utils.slugify import slugify
+from pypdf import PdfWriter
 
 
 def _ingest_settings(tmp_path):
@@ -156,7 +158,10 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
     settings = _ingest_settings(tmp_path)
     settings = settings.__class__(**{**settings.__dict__, "openai_timeout_seconds": 3600.0})
     pdf_path = tmp_path / "sample.pdf"
-    pdf_path.write_bytes(b"%PDF-1.4")
+    writer = PdfWriter()
+    writer.add_blank_page(width=72, height=72)
+    with pdf_path.open("wb") as handle:
+        writer.write(handle)
 
     file = DriveFile(schema_version="1.0", file_id="file_vs", name="vector.pdf", modified_time=None, md5_checksum="md5", version=None)
     validation_calls = []
@@ -181,6 +186,15 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
     monkeypatch.setattr(rg, "render_preview_service", lambda req, ctx: SimpleNamespace(schema_version="1.1", image_path=str(tmp_path / "preview.png"), page_number=0))
     monkeypatch.setattr(rg, "extract_taxonomy", lambda req, ctx: TaxonomyExtractResponse(schema_version="1.0", taxonomy=["tag"], region="US", time_period="2024"))
     monkeypatch.setattr(rg.vector_store_service, "update_metadata", lambda req, ctx: None)
+    monkeypatch.setattr(
+        rg,
+        "sample_pdf_text",
+        lambda req, ctx: PdfTextSampleResponse(
+            schema_version="1.0",
+            samples=[PdfTextSample(page_index=0, page_number=1, char_count=12, has_text=True)],
+            any_text=True,
+        ),
+    )
 
     def _fake_evidence(report_id, vector_store_id, settings, ctx, **kwargs):
         assert settings.openai_timeout_seconds == 3600.0

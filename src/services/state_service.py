@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import sqlite3
 from contextlib import contextmanager
@@ -34,7 +35,10 @@ CREATE TABLE IF NOT EXISTS processed (
   vector_store_id TEXT,
   vector_store_status TEXT,
   indexed_at_utc TEXT,
-  last_error TEXT
+  last_error TEXT,
+  text_validation_status TEXT,
+  text_validation_reason TEXT,
+  text_validation_pages_json TEXT
 );
 
 CREATE TABLE IF NOT EXISTS published (
@@ -76,6 +80,9 @@ def _migrate_schema(conn: sqlite3.Connection) -> None:
         "vector_store_status": "TEXT",
         "indexed_at_utc": "TEXT",
         "last_error": "TEXT",
+        "text_validation_status": "TEXT",
+        "text_validation_reason": "TEXT",
+        "text_validation_pages_json": "TEXT",
     }
     for col, col_type in required.items():
         if col not in cols:
@@ -239,8 +246,9 @@ def record(request: StateRecordRequest, ctx: RunContext) -> None:
     with _state_conn(request.state_db) as conn:
         conn.execute(
             "INSERT OR REPLACE INTO processed("
-            "file_id, md5, processed_at, openai_file_id, vector_store_id, vector_store_status, indexed_at_utc, last_error"
-            ") VALUES(?, ?, strftime('%s','now'), ?, ?, ?, ?, ?)",
+            "file_id, md5, processed_at, openai_file_id, vector_store_id, vector_store_status, indexed_at_utc, "
+            "last_error, text_validation_status, text_validation_reason, text_validation_pages_json"
+            ") VALUES(?, ?, strftime('%s','now'), ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 request.file_id,
                 request.md5,
@@ -249,6 +257,9 @@ def record(request: StateRecordRequest, ctx: RunContext) -> None:
                 request.vector_store_status,
                 request.indexed_at_utc,
                 request.last_error,
+                request.text_validation_status,
+                request.text_validation_reason,
+                json.dumps(request.text_validation_pages) if request.text_validation_pages is not None else None,
             ),
         )
     logger.info(log_event(
@@ -270,7 +281,8 @@ def get(request: StateGetRequest, ctx: RunContext) -> Optional[StateGetResponse]
     ))
     with _state_conn(request.state_db) as conn:
         cur = conn.execute(
-            "SELECT file_id, md5, processed_at, openai_file_id, vector_store_id, vector_store_status, indexed_at_utc, last_error "
+            "SELECT file_id, md5, processed_at, openai_file_id, vector_store_id, vector_store_status, indexed_at_utc, "
+            "last_error, text_validation_status, text_validation_reason, text_validation_pages_json "
             "FROM processed WHERE file_id=?",
             (request.file_id,),
         )
@@ -284,7 +296,27 @@ def get(request: StateGetRequest, ctx: RunContext) -> Optional[StateGetResponse]
             fields={"file_id": request.file_id, "found": False},
         ))
         return None
-    file_id, md5, processed_at, openai_file_id, vector_store_id, vector_store_status, indexed_at_utc, last_error = row
+    (
+        file_id,
+        md5,
+        processed_at,
+        openai_file_id,
+        vector_store_id,
+        vector_store_status,
+        indexed_at_utc,
+        last_error,
+        text_validation_status,
+        text_validation_reason,
+        text_validation_pages_json,
+    ) = row
+    text_validation_pages = None
+    if text_validation_pages_json:
+        try:
+            parsed = json.loads(text_validation_pages_json)
+            if isinstance(parsed, list) and all(isinstance(item, int) for item in parsed):
+                text_validation_pages = parsed
+        except json.JSONDecodeError:
+            text_validation_pages = None
     logger.info(log_event(
         ctx,
         role="service",
@@ -302,6 +334,9 @@ def get(request: StateGetRequest, ctx: RunContext) -> Optional[StateGetResponse]
         vector_store_status=vector_store_status,
         indexed_at_utc=indexed_at_utc,
         last_error=last_error,
+        text_validation_status=text_validation_status,
+        text_validation_reason=text_validation_reason,
+        text_validation_pages=text_validation_pages,
     )
 
 

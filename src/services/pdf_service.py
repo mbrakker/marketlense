@@ -11,7 +11,13 @@ from pypdf.errors import PdfReadError, PdfStreamError
 
 from src.contracts.pdf_context import PdfContext, PdfContextBuildRequest, PdfContextBuildResponse
 from src.contracts.pdf_contents import PdfContentsDetectionRequest, PdfContentsDetectionResponse
-from src.contracts.pdf_text import PdfTextExtractRequest, PdfTextExtractResponse
+from src.contracts.pdf_text import (
+    PdfTextExtractRequest,
+    PdfTextExtractResponse,
+    PdfTextSample,
+    PdfTextSampleRequest,
+    PdfTextSampleResponse,
+)
 from src.contracts.pdf_utils import PdfEofCheckRequest, PdfEofCheckResponse, PdfInfoRequest, PdfInfoResponse
 from src.contracts.run_context import RunContext
 from src.utils.errors import AppError
@@ -234,6 +240,83 @@ def extract_pdf_text(request: PdfTextExtractRequest, ctx: RunContext) -> PdfText
             event="pdf_text_extract_complete",
             module=logger.name,
             fields={"pages": response.pages_extracted, "chars": response.char_count, "text_density": response.text_density},
+        ))
+        return response
+    finally:
+        if owns_reader and reader is not None:
+            _close_pypdf_reader(reader)
+
+
+def sample_pdf_text(request: PdfTextSampleRequest, ctx: RunContext) -> PdfTextSampleResponse:
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="pdf_text_sample_start",
+        module=logger.name,
+        fields={
+            "path": request.path,
+            "page_indices": request.page_indices,
+            "using_context": bool(request.pdf_context and request.pdf_context.pypdf_reader),
+        },
+    ))
+    reader = request.pdf_context.pypdf_reader if request.pdf_context else None
+    owns_reader = False
+    if reader is None:
+        try:
+            reader = PdfReader(request.path, strict=False)
+            owns_reader = True
+        except FileNotFoundError as exc:
+            raise AppError(
+                code="pdf_not_found",
+                message=f"PDF not found: {request.path}",
+                cause=exc,
+                retryable=False,
+            ) from exc
+        except (PdfReadError, PdfStreamError) as exc:
+            raise AppError(
+                code="pdf_read_failed",
+                message=f"Failed to read PDF: {request.path}",
+                cause=exc,
+                retryable=True,
+            ) from exc
+        except Exception as exc:
+            raise AppError(
+                code="pdf_read_failed",
+                message=f"Failed to read PDF: {request.path}",
+                cause=exc,
+                retryable=True,
+            ) from exc
+
+    try:
+        page_count = len(reader.pages)
+        samples = []
+        for idx in request.page_indices:
+            if idx < 0 or idx >= page_count:
+                continue
+            text = _extract_text(reader, idx)
+            char_count = len(text)
+            samples.append(PdfTextSample(
+                page_index=idx,
+                page_number=idx + 1,
+                char_count=char_count,
+                has_text=bool(text.strip()),
+            ))
+        any_text = any(sample.has_text for sample in samples)
+        response = PdfTextSampleResponse(
+            schema_version="1.0",
+            samples=samples,
+            any_text=any_text,
+        )
+        logger.info(log_event(
+            ctx,
+            role="service",
+            event="pdf_text_sample_complete",
+            module=logger.name,
+            fields={
+                "sample_count": len(samples),
+                "any_text": any_text,
+                "page_indices": [sample.page_index for sample in samples],
+            },
         ))
         return response
     finally:

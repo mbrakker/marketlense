@@ -146,6 +146,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         contents_keywords = ["table of contents", "contents", "index"]
     contents_preview_dpi = int(contents_page.get("render_dpi", 144))
     pdf_text_min_density = float(pdf_text.get("min_density", 250.0))
+    pdf_text_sample_pages = int(pdf_text.get("sample_pages", 3))
     data_gap_policy_raw = str(validation_cfg.get("data_gap_policy", "warn")).strip().lower()
     validation_data_gap_policy = data_gap_policy_raw if data_gap_policy_raw in {"warn", "fail"} else "warn"
 
@@ -197,6 +198,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         pdf_text_max_pages=int(pdf_text.get("max_pages", 5)),
         pdf_text_max_chars=int(pdf_text.get("max_chars", 80_000)),
         pdf_text_min_density=pdf_text_min_density,
+        pdf_text_sample_pages=pdf_text_sample_pages,
         rank_model=rank_model,
         rank_temperature=rank_temperature,
         rank_seed=_opt_int(rank_seed_raw),
@@ -255,6 +257,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             "pdf_text_max_pages": settings.pdf_text_max_pages,
             "pdf_text_max_chars": settings.pdf_text_max_chars,
             "pdf_text_min_density": settings.pdf_text_min_density,
+            "pdf_text_sample_pages": settings.pdf_text_sample_pages,
             "openai_timeout_seconds": settings.openai_timeout_seconds,
             "rank_timeout_seconds": settings.rank_timeout_seconds,
             "contents_max_pages": settings.contents_max_pages,
