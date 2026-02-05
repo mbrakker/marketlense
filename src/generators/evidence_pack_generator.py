@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import json
 import logging
 from typing import Callable, Dict, Optional
 
 from src.contracts.config import AppSettings
+from src.contracts.files import ReadTextRequest
 from src.contracts.openai import OpenAIResponseRequest, OpenAIResponseResult
 from src.contracts.prompts import PromptLoadRequest
 from src.contracts.run_context import RunContext
+from src.services import file_service
 from src.services import openai_service
 from src.services import prompt_service
 from src.services import report_analysis_store_service
@@ -14,6 +17,7 @@ from src.utils.logging import child_context, log_event, new_run_context
 from src.services.schema_validator_service import validate_schema
 from src.utils.errors import AppError
 from src.utils.model_resolver import resolve_model
+from src.utils.cache_utils import sha256_json
 
 logger = logging.getLogger("market_lense.evidence_pack_generator")
 
@@ -24,6 +28,7 @@ def generate_evidence_packs(
     vector_store_id: str,
     settings: AppSettings,
     ctx: Optional[RunContext] = None,
+    md5: Optional[str] = None,
     *,
     openai_client=openai_service,
     prompt_client=prompt_service,
@@ -56,6 +61,7 @@ def generate_evidence_packs(
             schema_name="doc_map" if schema == "doc_map" else "evidence_pack",
             settings=settings,
             ctx=step_ctx,
+            md5=md5,
             openai_client=openai_client,
             prompt_client=prompt_client,
             analysis_store=analysis_store,
@@ -105,6 +111,7 @@ def _generate_pack(
     schema_name: str,
     settings: AppSettings,
     ctx: RunContext,
+    md5: Optional[str],
     openai_client,
     prompt_client,
     analysis_store,
@@ -121,6 +128,40 @@ def _generate_pack(
     system_prompt = prompt_set.system.text
     user_prompt = prompt_set.user.text
     resolved_model = resolve_model(prompt_namespace, getattr(settings, "openai_models", {}), settings.openai_model)
+    cache_meta = None
+    cache_key = ""
+    if md5:
+        cache_meta = {
+            "schema_version": "1.0",
+            "md5": md5,
+            "pack_name": pack_name,
+            "schema_name": schema_name,
+            "prompt_system_sha256": prompt_set.system.sha256,
+            "prompt_user_sha256": prompt_set.user.sha256,
+            "model": resolved_model,
+            "temperature": settings.temperature,
+            "seed": settings.openai_seed,
+        }
+        cache_key = sha256_json(cache_meta)
+        if settings.vector_store_keep:
+            cached = _load_cached_pack(
+                output_dir=settings.output_dir,
+                report_id=report_id,
+                pack_name=pack_name,
+                report_name=report_name,
+                cache_key=cache_key,
+                ctx=ctx,
+                analysis_store=analysis_store,
+            )
+            if cached is not None:
+                logger.info(log_event(
+                    ctx,
+                    role="generator",
+                    event="evidence_pack_cache_hit",
+                    module=logger.name,
+                    fields={"report_id": report_id, "pack": pack_name},
+                ))
+                return cached
     logger.info(log_event(
         ctx,
         role="generator",
@@ -164,6 +205,12 @@ def _generate_pack(
         not_found_reason = exc.code
         parsed_json = None
     result_payload = parsed_json or _empty_payload(schema_name, not_found_reason)
+    if cache_meta and isinstance(result_payload, dict):
+        result_payload = dict(result_payload)
+        result_payload["_cache"] = {
+            **cache_meta,
+            "key": cache_key,
+        }
     analysis_store.store_pack(
         settings.output_dir,
         report_id,
@@ -171,6 +218,7 @@ def _generate_pack(
         result_payload,
         ctx,
         report_slug=report_name,
+        mirror_legacy=settings.mirror_legacy_packs,
     )
     logger.info(log_event(
         ctx,
@@ -212,3 +260,54 @@ def _summarize_doc_map(payload: dict) -> dict:
         "summary_present": bool(summary_text),
         "not_found_reason": not_found_reason,
     }
+
+
+def _resolve_pack_path(output_dir: str, report_id: str, pack_name: str, report_name: str, analysis_store) -> str:
+    if hasattr(analysis_store, "pack_path"):
+        return str(analysis_store.pack_path(output_dir, report_id, pack_name, report_slug=report_name))
+    return str(report_analysis_store_service.pack_path(output_dir, report_id, pack_name, report_slug=report_name))
+
+
+def _load_cached_pack(
+    *,
+    output_dir: str,
+    report_id: str,
+    pack_name: str,
+    report_name: str,
+    cache_key: str,
+    ctx: RunContext,
+    analysis_store,
+) -> Optional[dict]:
+    if not cache_key:
+        return None
+    path = _resolve_pack_path(output_dir, report_id, pack_name, report_name, analysis_store)
+    try:
+        resp = file_service.read_text(ReadTextRequest(schema_version="1.0", path=path), ctx)
+    except AppError as exc:
+        if exc.code == "file_not_found":
+            return None
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="evidence_pack_cache_read_failed",
+            module=logger.name,
+            fields={"report_id": report_id, "pack": pack_name, "error": exc.message},
+        ))
+        return None
+    try:
+        payload = json.loads(resp.content)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(payload, dict):
+        return None
+    cached = payload.get("_cache") if isinstance(payload.get("_cache"), dict) else {}
+    if cached.get("key") != cache_key:
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="evidence_pack_cache_miss",
+            module=logger.name,
+            fields={"report_id": report_id, "pack": pack_name},
+        ))
+        return None
+    return payload

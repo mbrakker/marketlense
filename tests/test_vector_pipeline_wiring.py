@@ -63,7 +63,7 @@ def _ingest_settings(tmp_path):
 def test_ensure_vector_store_creates_and_waits(monkeypatch, tmp_path):
     settings = _ingest_settings(tmp_path)
     ctx = RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
-    file = DriveFile(schema_version="1.0", file_id="file_1", name="report.pdf", modified_time=None, md5_checksum="md5", version=None)
+    file = DriveFile(schema_version="1.0", file_id="file_1", name="report.pdf", modified_time=None, md5_checksum="md5")
     calls: list[str] = []
 
     monkeypatch.setattr(rg.state_service, "get", lambda req, ctx: None)
@@ -102,7 +102,7 @@ def test_ensure_vector_store_creates_and_waits(monkeypatch, tmp_path):
 
 def test_ingest_orchestrator_records_vector_events(monkeypatch, tmp_path):
     settings = _ingest_settings(tmp_path)
-    file = DriveFile(schema_version="1.0", file_id="file", name="name.pdf", modified_time=None, md5_checksum="md5", version=None)
+    file = DriveFile(schema_version="1.0", file_id="file", name="name.pdf", modified_time=None, md5_checksum="md5")
     outcome = IngestOutcome(
         schema_version="1.0",
         file_id=file.file_id,
@@ -164,7 +164,7 @@ def test_ingest_orchestrator_records_vector_events(monkeypatch, tmp_path):
 
 def test_ingest_orchestrator_records_doc_map_summary(monkeypatch, tmp_path):
     settings = _ingest_settings(tmp_path)
-    file = DriveFile(schema_version="1.0", file_id="file", name="name.pdf", modified_time=None, md5_checksum="md5", version=None)
+    file = DriveFile(schema_version="1.0", file_id="file", name="name.pdf", modified_time=None, md5_checksum="md5")
     summary = {"sections_count": 0, "not_found_reason": "model_returned_no_json"}
     outcome = IngestOutcome(
         schema_version="1.0",
@@ -219,7 +219,7 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
     with pdf_path.open("wb") as handle:
         writer.write(handle)
 
-    file = DriveFile(schema_version="1.0", file_id="file_vs", name="vector.pdf", modified_time=None, md5_checksum="md5", version=None)
+    file = DriveFile(schema_version="1.0", file_id="file_vs", name="vector.pdf", modified_time=None, md5_checksum="md5")
     validation_calls = []
     analysis_store = []
     vector_calls = []
@@ -328,7 +328,7 @@ def test_generate_report_doc_map_empty_halts(monkeypatch, tmp_path):
     with pdf_path.open("wb") as handle:
         writer.write(handle)
 
-    file = DriveFile(schema_version="1.0", file_id="file_vs", name="vector.pdf", modified_time=None, md5_checksum="md5", version=None)
+    file = DriveFile(schema_version="1.0", file_id="file_vs", name="vector.pdf", modified_time=None, md5_checksum="md5")
     ctx = RunContext(schema_version="1.0", run_id="run-vs", task_id="task-vs", span_id="span-vs")
 
     monkeypatch.setattr(rg.state_service, "get", lambda req, ctx: None)

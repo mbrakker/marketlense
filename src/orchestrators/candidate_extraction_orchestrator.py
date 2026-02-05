@@ -180,12 +180,18 @@ def run_candidate_extraction(
             ))
         return outcomes
 
+    max_n = limit if limit is not None else settings.batch_limit
     list_req = DriveListRequest(
         schema_version="1.0",
         folder_id=folder_id or settings.gdrive_folder_id,
         service_account_path=settings.google_sa_path,
+        page_size=min(max_n, 1000) if limit is not None else None,
+        order_by="modifiedTime desc" if limit is not None else None,
+        list_mode="full",
+        supports_all_drives=settings.drive_supports_all_drives,
+        include_items_from_all_drives=settings.drive_include_items_from_all_drives,
+        drive_id=settings.drive_id,
     )
-    max_n = limit if limit is not None else settings.batch_limit
     processed = 0
 
     for file in list_pdfs(list_req, root_ctx):

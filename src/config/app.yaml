@@ -12,12 +12,19 @@ paths:
 ingest:
   google_sa_path: "./sa.json"
   gdrive_folder_id: "11eruy9ojkd6HdOXK_Uwqvq1TWEKiINTW"
+  drive:
+    supports_all_drives: true
+    include_items_from_all_drives: true
+    drive_id: ""
+    list_mode: "metadata"
   openai_model: "gpt-5"
   temperature: 1.0
   timeout_seconds: 7200
   lock_ttl_seconds: 7200
   seed: null
   batch_limit: 20
+  debug_candidate_gallery: false
+  cover_cache_enabled: true
   pdf_text:
     max_pages: 5
     max_chars: 80000
@@ -32,6 +39,7 @@ ingest:
       - "table of contents"
       - "contents"
       - "index"
+    preview_enabled: true
     render_dpi: 144
 
 openai_models:
@@ -59,6 +67,7 @@ rank:
   temperature: 1.0
   timeout_seconds: 7200
   seed: null
+  max_candidates: 40
 
 publish:
   wp:
@@ -70,6 +79,7 @@ publish:
 
 analysis:
   vector_store_keep: true
+  mirror_legacy_packs: true
   compare: false
   cost_ledger_path: "./out/cost-ledger.jsonl"
 

@@ -413,8 +413,10 @@ CI MUST enforce:
 * tests
 
 ---
+## 9. Documentation Rules
+* Every meaningful change in code, architecture, settings options or setup must be documented in readme.
 
-## 9. Enforcement Rules
+## 10. Enforcement Rules
 
 These rules are **enforceable**.
 

@@ -8,16 +8,17 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Optional
 
-from src.contracts.pdf_text import PdfTextExtractRequest, PdfTextSampleRequest
+from src.contracts.pdf_text import PdfTextExtractRequest, PdfTextExtractResponse, PdfTextSampleRequest
 from src.contracts.report_store import ReportMetadataGetRequest, ReportMetadataUpsertRequest
 from src.contracts.report_models import CropItem, Figure, Quote, ReportPayload
 from src.contracts.pdf_context import PdfContextBuildRequest
-from src.contracts.pdf_contents import PdfContentsDetectionRequest
+from src.contracts.pdf_contents import PdfContentsDetectionRequest, PdfContentsDetectionResponse
 from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.services.pdf_service import extract_pdf_text, sample_pdf_text
 from src.utils.slugify import slugify
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
+from src.contracts.files import FileStatRequest, ReadTextRequest, WriteBytesRequest
 from src.contracts.report_assets import (
     CropRequest,
     ExtractCandidatesRequest,
@@ -28,7 +29,7 @@ from src.contracts.report_assets import (
 )
 from src.contracts.run_context import RunContext
 from src.contracts.categories import CategoryMappingLoadRequest, UncategorizedTagsUpdateRequest
-from src.contracts.pdf_utils import PdfInfoRequest
+from src.contracts.pdf_utils import PdfInfoRequest, PdfInfoResponse
 from src.generators.categorize_generator import categorize_taxonomy
 from src.generators.normalize_generator import normalize_report
 from src.generators.evidence_pack_generator import generate_evidence_packs
@@ -44,6 +45,7 @@ from src.services.rank_service import rank_candidates as rank_candidates_service
 from src.services.render_service import render_report as render_report_service
 from src.services.prompt_service import load_prompt_set, render_prompt
 from src.services.pdf_service import detect_contents_page as detect_contents_page_service
+from src.services.file_service import file_stat, read_text, write_bytes
 from src.services.category_mapping_service import (
     load_mappings as load_category_mappings,
     update_uncategorized_tags,
@@ -71,6 +73,7 @@ from src.utils.logging import child_context, log_event
 from src.utils.validation import validate_candidate
 from src.utils.errors import AppError
 from src.utils.model_resolver import resolve_model
+from src.utils.cache_utils import sha256_json
 
 logger = logging.getLogger("market_lense.report_generator")
 
@@ -100,6 +103,96 @@ def _pack_paths(output_dir: str, report_id: str, report_name: str, pack_names: l
         ))
         for name in pack_names
     }
+
+
+def _report_slug(file: DriveFile) -> str:
+    return slugify(file.name or file.file_id)
+
+
+def _cache_dir(settings: IngestSettings, md5: str) -> Path:
+    return Path(settings.cache_dir) / "pdf_cache" / md5
+
+
+def _read_cache_json(path: Path, ctx: RunContext) -> Optional[dict]:
+    try:
+        resp = read_text(ReadTextRequest(schema_version="1.0", path=str(path)), ctx)
+    except AppError as exc:
+        if exc.code == "file_not_found":
+            return None
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="cache_read_failed",
+            module=logger.name,
+            fields={"path": str(path), "error": exc.message},
+        ))
+        return None
+    try:
+        payload = json.loads(resp.content)
+    except json.JSONDecodeError:
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _write_cache_json(path: Path, payload: dict, ctx: RunContext) -> None:
+    data = json.dumps(payload, ensure_ascii=True)
+    write_bytes(
+        WriteBytesRequest(schema_version="1.0", path=str(path), content=data.encode("utf-8")),
+        ctx,
+    )
+
+
+def _pdf_info_cache_key(md5: str) -> str:
+    return sha256_json({"schema_version": "1.0", "md5": md5})
+
+
+def _contents_cache_key(md5: str, settings: IngestSettings) -> str:
+    return sha256_json({
+        "schema_version": "1.0",
+        "md5": md5,
+        "max_pages": settings.contents_max_pages,
+        "min_headings": settings.contents_min_headings,
+        "keywords": settings.contents_keywords,
+    })
+
+
+def _text_cache_key(md5: str, settings: IngestSettings) -> str:
+    return sha256_json({
+        "schema_version": "1.0",
+        "md5": md5,
+        "max_pages": settings.pdf_text_max_pages,
+        "max_chars": settings.pdf_text_max_chars,
+    })
+
+
+def _cache_path(cache_root: Path, prefix: str, cache_key: str) -> Path:
+    return cache_root / f"{prefix}_{cache_key}.json"
+
+
+def _template_sha256(path: Path, ctx: RunContext) -> Optional[str]:
+    try:
+        resp = read_text(ReadTextRequest(schema_version="1.0", path=str(path)), ctx)
+    except AppError as exc:
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="template_hash_failed",
+            module=logger.name,
+            fields={"path": str(path), "error": exc.message},
+        ))
+        return None
+    return hashlib.sha256(resp.content.encode("utf-8")).hexdigest()
+
+
+def _html_cache_key(md5: str, template_sha256: str, data_sha256: str, preview_png: str, doc_name: str) -> str:
+    return sha256_json({
+        "schema_version": "1.0",
+        "md5": md5,
+        "template_sha256": template_sha256,
+        "data_sha256": data_sha256,
+        "preview_png": preview_png,
+        "doc_name": doc_name,
+    })
 
 
 def _base_payload(title: str, contents_page_number: int, contents_heading: str, contents_image: str) -> ReportPayload:
@@ -347,30 +440,19 @@ def generate_report(
     pdf_context = None
     analysis_mode = "vector_store"
     analysis_modes = [analysis_mode]
+    file_name = file.name or file.file_id
     logger.info(log_event(
         ctx,
         role="generator",
         event="report_generate_start",
         module=logger.name,
-        fields={"file_id": file.file_id, "name": file.name, "modes": analysis_modes},
+        fields={"file_id": file.file_id, "name": file_name, "modes": analysis_modes},
     ))
-    report_name = slugify(file.name)
+    report_name = _report_slug(file)
+    cache_root = _cache_dir(settings, md5) if md5 else None
     contents_page_number = 0
     contents_image = ""
     contents_heading = ""
-
-    info_ctx = child_context(ctx, task_id=f"{ctx.task_id}:pdf_info")
-    info_resp = extract_pdf_info(
-        PdfInfoRequest(schema_version="1.0", path=local_pdf_path),
-        info_ctx,
-    )
-    logger.info(log_event(
-        info_ctx,
-        role="generator",
-        event="pdf_info_loaded",
-        module=logger.name,
-        fields={"file_id": file.file_id, "page_count": info_resp.page_count, "metadata_keys": list(info_resp.metadata.keys())},
-    ))
 
     try:
         ctx_pdf = child_context(ctx, task_id=f"{ctx.task_id}:pdf_context")
@@ -402,38 +484,174 @@ def generate_report(
         ))
         pdf_context = None
 
-    try:
-        contents_resp = detect_contents_page_service(
-            PdfContentsDetectionRequest(
+    info_ctx = child_context(ctx, task_id=f"{ctx.task_id}:pdf_info")
+    info_resp = None
+    info_cache_hit = False
+    info_cache_key = ""
+    info_cache_path = None
+    if md5 and cache_root is not None:
+        info_cache_key = _pdf_info_cache_key(md5)
+        info_cache_path = _cache_path(cache_root, "pdf_info", info_cache_key)
+        cached = _read_cache_json(info_cache_path, info_ctx)
+        if cached and cached.get("key") == info_cache_key:
+            page_count = int(cached.get("page_count") or 0)
+            metadata = cached.get("metadata") if isinstance(cached.get("metadata"), dict) else {}
+            info_resp = PdfInfoResponse(
                 schema_version="1.0",
                 path=local_pdf_path,
-                max_pages=settings.contents_max_pages,
-                min_headings=settings.contents_min_headings,
-                keywords=settings.contents_keywords,
-                pdf_context=pdf_context,
-            ),
-            child_context(ctx, task_id=f"{ctx.task_id}:contents"),
+                page_count=page_count,
+                metadata=metadata,
+            )
+            info_cache_hit = True
+            logger.info(log_event(
+                info_ctx,
+                role="generator",
+                event="pdf_info_cache_hit",
+                module=logger.name,
+                fields={"file_id": file.file_id, "cache_path": str(info_cache_path)},
+            ))
+        else:
+            logger.info(log_event(
+                info_ctx,
+                role="generator",
+                event="pdf_info_cache_miss",
+                module=logger.name,
+                fields={"file_id": file.file_id, "cache_path": str(info_cache_path) if info_cache_path else ""},
+            ))
+    if info_resp is None:
+        info_resp = extract_pdf_info(
+            PdfInfoRequest(schema_version="1.0", path=local_pdf_path, pdf_context=pdf_context),
+            info_ctx,
         )
+        if md5 and cache_root is not None and info_cache_path is not None:
+            _write_cache_json(
+                info_cache_path,
+                {
+                    "schema_version": "1.0",
+                    "key": info_cache_key,
+                    "page_count": info_resp.page_count,
+                    "metadata": info_resp.metadata,
+                },
+                info_ctx,
+            )
+            logger.info(log_event(
+                info_ctx,
+                role="generator",
+                event="pdf_info_cache_written",
+                module=logger.name,
+                fields={"file_id": file.file_id, "cache_path": str(info_cache_path)},
+            ))
+    logger.info(log_event(
+        info_ctx,
+        role="generator",
+        event="pdf_info_loaded",
+        module=logger.name,
+        fields={
+            "file_id": file.file_id,
+            "page_count": info_resp.page_count,
+            "metadata_keys": list(info_resp.metadata.keys()),
+            "cache_hit": info_cache_hit,
+        },
+    ))
+
+    try:
+        contents_ctx = child_context(ctx, task_id=f"{ctx.task_id}:contents")
+        contents_resp = None
+        contents_cache_hit = False
+        contents_cache_key = ""
+        contents_cache_path = None
+        if md5 and cache_root is not None:
+            contents_cache_key = _contents_cache_key(md5, settings)
+            contents_cache_path = _cache_path(cache_root, "contents", contents_cache_key)
+            cached = _read_cache_json(contents_cache_path, contents_ctx)
+            if cached and cached.get("key") == contents_cache_key:
+                contents_resp = PdfContentsDetectionResponse(
+                    schema_version="1.0",
+                    path=local_pdf_path,
+                    has_contents=bool(cached.get("has_contents")),
+                    page_index=int(cached.get("page_index") or -1),
+                    page_number=int(cached.get("page_number") or 0),
+                    heading=str(cached.get("heading") or ""),
+                    confidence=float(cached.get("confidence") or 0.0),
+                )
+                contents_cache_hit = True
+                logger.info(log_event(
+                    contents_ctx,
+                    role="generator",
+                    event="contents_cache_hit",
+                    module=logger.name,
+                    fields={"file_id": file.file_id, "cache_path": str(contents_cache_path)},
+                ))
+            else:
+                logger.info(log_event(
+                    contents_ctx,
+                    role="generator",
+                    event="contents_cache_miss",
+                    module=logger.name,
+                    fields={"file_id": file.file_id, "cache_path": str(contents_cache_path) if contents_cache_path else ""},
+                ))
+        if contents_resp is None:
+            contents_resp = detect_contents_page_service(
+                PdfContentsDetectionRequest(
+                    schema_version="1.0",
+                    path=local_pdf_path,
+                    max_pages=settings.contents_max_pages,
+                    min_headings=settings.contents_min_headings,
+                    keywords=settings.contents_keywords,
+                    pdf_context=pdf_context,
+                ),
+                contents_ctx,
+            )
+            if md5 and cache_root is not None and contents_cache_path is not None:
+                _write_cache_json(
+                    contents_cache_path,
+                    {
+                        "schema_version": "1.0",
+                        "key": contents_cache_key,
+                        "has_contents": contents_resp.has_contents,
+                        "page_index": contents_resp.page_index,
+                        "page_number": contents_resp.page_number,
+                        "heading": contents_resp.heading,
+                        "confidence": contents_resp.confidence,
+                    },
+                    contents_ctx,
+                )
+                logger.info(log_event(
+                    contents_ctx,
+                    role="generator",
+                    event="contents_cache_written",
+                    module=logger.name,
+                    fields={"file_id": file.file_id, "cache_path": str(contents_cache_path)},
+                ))
         if contents_resp.has_contents:
             contents_page_number = contents_resp.page_number
             contents_heading = contents_resp.heading or ""
-            contents_preview = render_preview_service(
-                PreviewRequest(
-                    schema_version="1.1",
-                    pdf_path=local_pdf_path,
-                    out_dir=settings.output_dir,
-                    report_name=report_name,
-                    page_number=max(contents_resp.page_index, 0),
-                    variant="contents",
-                    dpi=settings.contents_preview_dpi,
-                    pdf_context=pdf_context,
-                ),
-                ctx,
-            )
-            if contents_preview.image_path:
-                contents_image = contents_preview.image_path
+            if settings.contents_preview_enabled:
+                contents_preview = render_preview_service(
+                    PreviewRequest(
+                        schema_version="1.1",
+                        pdf_path=local_pdf_path,
+                        out_dir=settings.output_dir,
+                        report_name=report_name,
+                        page_number=max(contents_resp.page_index, 0),
+                        variant="contents",
+                        dpi=settings.contents_preview_dpi,
+                        pdf_context=pdf_context,
+                    ),
+                    ctx,
+                )
+                if contents_preview.image_path:
+                    contents_image = contents_preview.image_path
+            else:
+                logger.info(log_event(
+                    contents_ctx,
+                    role="generator",
+                    event="contents_preview_skipped",
+                    module=logger.name,
+                    fields={"file_id": file.file_id, "reason": "preview_disabled"},
+                ))
         logger.info(log_event(
-            ctx,
+            contents_ctx,
             role="generator",
             event="contents_detection_result",
             module=logger.name,
@@ -442,6 +660,7 @@ def generate_report(
                 "has_contents": contents_resp.has_contents,
                 "page_number": contents_page_number,
                 "image_path": contents_image or "",
+                "cache_hit": contents_cache_hit,
             },
         ))
     except Exception as exc:
@@ -454,16 +673,69 @@ def generate_report(
         ))
 
     text_ctx = child_context(ctx, task_id=f"{ctx.task_id}:text")
-    text_resp = extract_pdf_text(
-        PdfTextExtractRequest(
-            schema_version="1.0",
-            path=local_pdf_path,
-            max_pages=settings.pdf_text_max_pages,
-            max_chars=settings.pdf_text_max_chars,
-            pdf_context=pdf_context,
-        ),
-        text_ctx,
-    )
+    text_resp = None
+    text_cache_hit = False
+    text_cache_key = ""
+    text_cache_path = None
+    if md5 and cache_root is not None:
+        text_cache_key = _text_cache_key(md5, settings)
+        text_cache_path = _cache_path(cache_root, "text", text_cache_key)
+        cached = _read_cache_json(text_cache_path, text_ctx)
+        if cached and cached.get("key") == text_cache_key:
+            text_resp = PdfTextExtractResponse(
+                schema_version="1.0",
+                text=str(cached.get("text") or ""),
+                pages_extracted=int(cached.get("pages_extracted") or 0),
+                char_count=int(cached.get("char_count") or 0),
+                text_density=float(cached.get("text_density") or 0.0),
+            )
+            text_cache_hit = True
+            logger.info(log_event(
+                text_ctx,
+                role="generator",
+                event="text_cache_hit",
+                module=logger.name,
+                fields={"file_id": file.file_id, "cache_path": str(text_cache_path)},
+            ))
+        else:
+            logger.info(log_event(
+                text_ctx,
+                role="generator",
+                event="text_cache_miss",
+                module=logger.name,
+                fields={"file_id": file.file_id, "cache_path": str(text_cache_path) if text_cache_path else ""},
+            ))
+    if text_resp is None:
+        text_resp = extract_pdf_text(
+            PdfTextExtractRequest(
+                schema_version="1.0",
+                path=local_pdf_path,
+                max_pages=settings.pdf_text_max_pages,
+                max_chars=settings.pdf_text_max_chars,
+                pdf_context=pdf_context,
+            ),
+            text_ctx,
+        )
+        if md5 and cache_root is not None and text_cache_path is not None:
+            _write_cache_json(
+                text_cache_path,
+                {
+                    "schema_version": "1.0",
+                    "key": text_cache_key,
+                    "text": text_resp.text,
+                    "pages_extracted": text_resp.pages_extracted,
+                    "char_count": text_resp.char_count,
+                    "text_density": text_resp.text_density,
+                },
+                text_ctx,
+            )
+            logger.info(log_event(
+                text_ctx,
+                role="generator",
+                event="text_cache_written",
+                module=logger.name,
+                fields={"file_id": file.file_id, "cache_path": str(text_cache_path)},
+            ))
     text_status = {
         "schema_version": "1.0",
         "text_density": float(text_resp.text_density or 0.0),
@@ -481,7 +753,7 @@ def generate_report(
         role="generator",
         event="text_density_evaluated",
         module=logger.name,
-        fields={"density": text_status["text_density"], "threshold": text_status["density_threshold"], "pages": text_status["pages_sampled"], "char_count": text_status["char_count"], "not_available": text_status["not_available"]},
+        fields={"density": text_status["text_density"], "threshold": text_status["density_threshold"], "pages": text_status["pages_sampled"], "char_count": text_status["char_count"], "not_available": text_status["not_available"], "cache_hit": text_cache_hit},
     ))
     sample_ctx = child_context(ctx, task_id=f"{ctx.task_id}:text_sample")
     sample_indices = _select_sample_pages(
@@ -513,7 +785,7 @@ def generate_report(
         return IngestOutcome(
             schema_version="1.0",
             file_id=file.file_id,
-            name=file.name,
+            name=file_name,
             md5=md5,
             html_path=None,
             status="error",
@@ -564,7 +836,7 @@ def generate_report(
         return IngestOutcome(
             schema_version="1.0",
             file_id=file.file_id,
-            name=file.name,
+            name=file_name,
             md5=md5,
             html_path=None,
             status="error",
@@ -573,7 +845,7 @@ def generate_report(
             text_validation_reason=text_validation_reason,
             text_validation_pages=text_validation_pages,
         )
-    report_title = _derive_title(file.name)
+    report_title = _derive_title(file_name)
     data = _base_payload(report_title, contents_page_number, contents_heading, contents_image)
     data._text_density = text_status["text_density"]
     data._text_pages_sampled = text_status["pages_sampled"]
@@ -922,6 +1194,7 @@ def generate_report(
             vector_store_id=vector_store_id,
             settings=settings,
             ctx=child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:evidence"),
+            md5=md5,
         )
     except AppError as exc:
         if exc.code == "doc_map_empty":
@@ -948,7 +1221,7 @@ def generate_report(
             return IngestOutcome(
                 schema_version="1.0",
                 file_id=file.file_id,
-                name=file.name,
+                name=file_name,
                 md5=md5,
                 html_path=None,
                 status="error",
@@ -1020,6 +1293,7 @@ def generate_report(
             vector_store_id=vector_store_id,
             source_status=text_status,
             ctx=child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:artifacts"),
+            md5=md5,
         )
         mode_evidence_paths["artifacts"] = _pack_paths(settings.output_dir, file.file_id, report_name, ["artifacts"])["artifacts"]
         _record_state_progress(
@@ -1061,6 +1335,7 @@ def generate_report(
             child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:validation"),
             pack_name=validation_pack_name,
             report_name=report_name,
+            md5=md5,
         )
         if validation_report.source_path:
             mode_evidence_paths[validation_pack_name] = validation_report.source_path
@@ -1104,6 +1379,7 @@ def generate_report(
                 fallback_report.to_dict(),
                 mode_ctx,
                 report_slug=report_name,
+                mirror_legacy=settings.mirror_legacy_packs,
             )
             fallback_report = ValidationReport(
                 schema_version=fallback_report.schema_version,
@@ -1146,6 +1422,7 @@ def generate_report(
         data_dict,
         mode_ctx,
         report_slug=report_name,
+        mirror_legacy=settings.mirror_legacy_packs,
     )
     mode_evidence_paths[snapshot_name] = snapshot_path
     primary_result = {
@@ -1168,18 +1445,90 @@ def generate_report(
     }
     primary_evidence_paths = dict(mode_evidence_paths)
 
-    render_resp = render_report_service(
-        RenderRequest(
-            schema_version="1.0",
-            data=primary_result["data_dict"],
-            doc_name=file.name,
-            file_id=file.file_id,
-            out_dir=settings.output_dir,
-            preview_png=preview_resp.image_path,
-        ),
-        ctx,
-    )
-    out_html = render_resp.html_path
+    doc_name = file_name
+    out_html = ""
+    html_cache_hit = False
+    html_cache_key = ""
+    html_cache_meta = None
+    template_sha = None
+    expected_html_path = Path(settings.output_dir) / f"{slugify(doc_name)}.html"
+    if md5:
+        template_path = Path(__file__).resolve().parents[2] / "templates" / "report.html.j2"
+        template_sha = _template_sha256(template_path, ctx)
+        if template_sha:
+            data_sha = sha256_json(primary_result["data_dict"])
+            html_cache_meta = {
+                "schema_version": "1.0",
+                "md5": md5,
+                "template_sha256": template_sha,
+                "data_sha256": data_sha,
+                "preview_png": preview_resp.image_path or "",
+                "doc_name": doc_name,
+            }
+            html_cache_key = _html_cache_key(
+                md5,
+                template_sha,
+                data_sha,
+                preview_resp.image_path or "",
+                doc_name,
+            )
+            html_cache_path = Path(f"{expected_html_path}.cache.json")
+            cached = _read_cache_json(html_cache_path, ctx)
+            if cached and cached.get("key") == html_cache_key:
+                html_stat = file_stat(FileStatRequest(schema_version="1.0", path=str(expected_html_path)), ctx)
+                if html_stat.exists:
+                    out_html = str(expected_html_path)
+                    html_cache_hit = True
+                    logger.info(log_event(
+                        ctx,
+                        role="generator",
+                        event="render_html_cache_hit",
+                        module=logger.name,
+                        fields={"file_id": file.file_id, "html_path": out_html},
+                    ))
+                else:
+                    logger.info(log_event(
+                        ctx,
+                        role="generator",
+                        event="render_html_cache_stale",
+                        module=logger.name,
+                        fields={"file_id": file.file_id, "html_path": str(expected_html_path)},
+                    ))
+            else:
+                logger.info(log_event(
+                    ctx,
+                    role="generator",
+                    event="render_html_cache_miss",
+                    module=logger.name,
+                    fields={"file_id": file.file_id, "cache_path": str(html_cache_path)},
+                ))
+    if not html_cache_hit:
+        render_resp = render_report_service(
+            RenderRequest(
+                schema_version="1.0",
+                data=primary_result["data_dict"],
+                doc_name=doc_name,
+                file_id=file.file_id,
+                out_dir=settings.output_dir,
+                preview_png=preview_resp.image_path,
+            ),
+            ctx,
+        )
+        out_html = render_resp.html_path
+        if md5 and template_sha and html_cache_meta and html_cache_key:
+            cache_path = Path(f"{out_html}.cache.json")
+            _write_cache_json(
+                cache_path,
+                {**html_cache_meta, "key": html_cache_key, "html_path": out_html},
+                ctx,
+            )
+            logger.info(log_event(
+                ctx,
+                role="generator",
+                event="render_html_cache_written",
+                module=logger.name,
+                fields={"file_id": file.file_id, "cache_path": str(cache_path)},
+            ))
 
     upsert_report_metadata(
         ReportMetadataUpsertRequest(
@@ -1285,7 +1634,7 @@ def generate_report(
     return IngestOutcome(
         schema_version="1.0",
         file_id=file.file_id,
-        name=file.name,
+        name=file_name,
         md5=md5,
         html_path=out_html,
         status="processed",

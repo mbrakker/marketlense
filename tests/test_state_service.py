@@ -6,13 +6,17 @@ from src.contracts.state import (
     StateCheckRequest,
     StateDbAccessRequest,
     StateGetRequest,
+    StateIngestCursorGetRequest,
+    StateIngestCursorSetRequest,
     StateRecordRequest,
 )
 from src.services.state_service import (
     already_processed,
     check_state_db_access,
     get,
+    get_ingest_cursor,
     record,
+    set_ingest_cursor,
 )
 
 
@@ -133,3 +137,27 @@ def test_state_db_access_allows_unlocked_db(tmp_path: Path) -> None:
     )
     assert resp.accessible is True
     assert resp.locked is False
+
+
+def test_ingest_cursor_roundtrip(tmp_path: Path) -> None:
+    db_path = tmp_path / "state.sqlite"
+    initial = get_ingest_cursor(
+        StateIngestCursorGetRequest(schema_version="1.0", state_db=str(db_path)),
+        _ctx(),
+    )
+    assert initial.last_successful_ingest_utc is None
+
+    ts = "2026-02-04T00:00:00Z"
+    set_ingest_cursor(
+        StateIngestCursorSetRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            last_successful_ingest_utc=ts,
+        ),
+        _ctx(),
+    )
+    updated = get_ingest_cursor(
+        StateIngestCursorGetRequest(schema_version="1.0", state_db=str(db_path)),
+        _ctx(),
+    )
+    assert updated.last_successful_ingest_utc == ts

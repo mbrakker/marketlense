@@ -5,14 +5,16 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from src.contracts.config import AppSettings
+from src.contracts.files import ReadTextRequest
 from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIResponseRequest
 from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.contracts.run_context import RunContext
-from src.services import openai_service, prompt_service, report_analysis_store_service
+from src.services import file_service, openai_service, prompt_service, report_analysis_store_service
 from src.utils.errors import AppError
 from src.utils.model_resolver import resolve_model
 from src.utils.logging import child_context, log_event, new_run_context
 from src.services.schema_validator_service import validate_schema
+from src.utils.cache_utils import sha256_json
 
 logger = logging.getLogger("market_lense.artifact_generator")
 
@@ -26,6 +28,7 @@ def generate_artifacts(
     settings: AppSettings,
     *,
     report_name: Optional[str] = None,
+    md5: Optional[str] = None,
     vector_store_id: Optional[str] = None,
     source_status: Optional[Dict[str, Any]] = None,
     ctx: Optional[RunContext] = None,
@@ -50,6 +53,36 @@ def generate_artifacts(
         availability["reason"] = availability["reason"] or "text_density_below_threshold"
     evidence_present = _has_evidence_content(safe_doc_map, safe_evidence)
     availability["evidence_present"] = evidence_present
+    cache_key = ""
+    cache_meta = None
+    if md5:
+        cache_meta = _artifact_cache_meta(
+            md5=md5,
+            doc_map=safe_doc_map,
+            evidence_packs=safe_evidence,
+            availability=availability,
+            settings=settings,
+            prompt_client=prompt_client,
+            ctx=ctx,
+        )
+        cache_key = sha256_json(cache_meta)
+        cached = _load_cached_artifacts(
+            output_dir=settings.output_dir,
+            report_id=report_id,
+            report_name=report_name,
+            cache_key=cache_key,
+            ctx=ctx,
+            analysis_store=analysis_store,
+        )
+        if cached is not None:
+            logger.info(log_event(
+                ctx,
+                role="generator",
+                event="artifact_cache_hit",
+                module=logger.name,
+                fields={"report_id": report_id},
+            ))
+            return cached
     fallback_reasons: List[str] = []
     if availability["not_available"] and availability["reason"]:
         fallback_reasons.append(availability["reason"])
@@ -59,6 +92,9 @@ def generate_artifacts(
         availability["not_available"] = True
         availability["reason"] = ",".join(sorted(set(fallback_reasons)))
         payload = _placeholder_artifacts(availability)
+        if cache_meta and isinstance(payload, dict):
+            payload = dict(payload)
+            payload["_cache"] = {**cache_meta, "key": cache_key}
         validate_schema(payload, "artifacts", ctx)
         analysis_store.store_pack(
             settings.output_dir,
@@ -67,6 +103,7 @@ def generate_artifacts(
             payload,
             ctx,
             report_slug=report_name,
+            mirror_legacy=settings.mirror_legacy_packs,
         )
         logger.info(log_event(
             ctx,
@@ -215,6 +252,8 @@ def generate_artifacts(
         "linkedin_post": linkedin_post,
         "source_status": availability,
     }
+    if cache_meta:
+        artifacts_payload["_cache"] = {**cache_meta, "key": cache_key}
 
     try:
         validate_schema(artifacts_payload, "artifacts", ctx)
@@ -235,6 +274,7 @@ def generate_artifacts(
         artifacts_payload,
         ctx,
         report_slug=report_name,
+        mirror_legacy=settings.mirror_legacy_packs,
     )
 
     logger.info(log_event(
@@ -489,6 +529,88 @@ def _has_evidence_content(doc_map: Dict[str, Any], evidence_packs: Dict[str, Any
         if pack.get("findings") or pack.get("quote_candidates") or pack.get("methods") or pack.get("scope") or pack.get("limitations"):
             return True
     return False
+
+
+def _artifact_cache_meta(
+    *,
+    md5: str,
+    doc_map: Dict[str, Any],
+    evidence_packs: Dict[str, Any],
+    availability: Dict[str, Any],
+    settings: AppSettings,
+    prompt_client,
+    ctx: RunContext,
+) -> Dict[str, Any]:
+    prompt_meta: Dict[str, Any] = {}
+    namespaces = [
+        "report_vs/artifacts/toc",
+        "report_vs/artifacts/summary",
+        "report_vs/artifacts/insights_candidates",
+        "report_vs/artifacts/insights_final",
+        "report_vs/artifacts/quotes",
+        "report_vs/artifacts/expert_comment",
+        "report_vs/artifacts/linkedin_post",
+    ]
+    for namespace in namespaces:
+        prompt_set = prompt_client.load_prompt_set(PromptLoadRequest(schema_version="1.0", namespace=namespace), ctx)
+        prompt_meta[namespace] = {
+            "prompt_system_sha256": prompt_set.system.sha256,
+            "prompt_user_sha256": prompt_set.user.sha256,
+            "model": resolve_model(namespace, getattr(settings, "openai_models", {}), settings.openai_model),
+        }
+    inputs_hash = sha256_json({
+        "doc_map": doc_map,
+        "evidence_packs": evidence_packs,
+        "availability": availability,
+    })
+    return {
+        "schema_version": "1.0",
+        "md5": md5,
+        "inputs_sha256": inputs_hash,
+        "prompts": prompt_meta,
+        "temperature": settings.temperature,
+        "seed": settings.openai_seed,
+    }
+
+
+def _load_cached_artifacts(
+    *,
+    output_dir: str,
+    report_id: str,
+    report_name: Optional[str],
+    cache_key: str,
+    ctx: RunContext,
+    analysis_store,
+) -> Optional[Dict[str, Any]]:
+    if not cache_key:
+        return None
+    if hasattr(analysis_store, "pack_path"):
+        path = str(analysis_store.pack_path(output_dir, report_id, "artifacts", report_slug=report_name))
+    else:
+        path = str(report_analysis_store_service.pack_path(output_dir, report_id, "artifacts", report_slug=report_name))
+    try:
+        resp = file_service.read_text(ReadTextRequest(schema_version="1.0", path=path), ctx)
+    except AppError as exc:
+        if exc.code == "file_not_found":
+            return None
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="artifact_cache_read_failed",
+            module=logger.name,
+            fields={"report_id": report_id, "error": exc.message},
+        ))
+        return None
+    try:
+        payload = json.loads(resp.content)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(payload, dict):
+        return None
+    cached = payload.get("_cache") if isinstance(payload.get("_cache"), dict) else {}
+    if cached.get("key") != cache_key:
+        return None
+    return payload
 
 
 def _placeholder_artifacts(status: Dict[str, Any]) -> Dict[str, Any]:

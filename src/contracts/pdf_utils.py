@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Optional
+
+from src.contracts.pdf_context import PdfContext
 
 
 @dataclass(frozen=True)
@@ -20,6 +23,7 @@ class PdfEofCheckResponse:
 class PdfInfoRequest:
     schema_version: str = field(metadata={"doc": "PDF info request schema version."})
     path: str = field(metadata={"doc": "Filesystem path to the PDF."})
+    pdf_context: Optional[PdfContext] = field(default=None, metadata={"doc": "Optional pre-opened PDF context for reuse."})
 
 
 @dataclass(frozen=True)

@@ -8,16 +8,18 @@ from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from src.contracts.config import AppSettings
+from src.contracts.files import ReadTextRequest
 from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIResponseRequest
 from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.contracts.report_models import ReportPayload
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationIssue, ValidationReport, ValidationRequest
-from src.services import openai_service, prompt_service, report_analysis_store_service
+from src.services import file_service, openai_service, prompt_service, report_analysis_store_service
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event, new_run_context
 from src.services.schema_validator_service import validate_schema
 from src.utils.model_resolver import resolve_model
+from src.utils.cache_utils import sha256_json
 
 logger = logging.getLogger("market_lense.validation_generator")
 
@@ -48,6 +50,7 @@ def validate_report(
     analysis_store=report_analysis_store_service,
     pack_name: str = "validation",
     report_name: Optional[str] = None,
+    md5: Optional[str] = None,
 ) -> ValidationReport:
     ctx = ctx or new_run_context(task_id=f"validation:{request.report_id}")
     logger.info(log_event(
@@ -62,6 +65,43 @@ def validate_report(
             "vector_store_id": request.vector_store_id or "",
         },
     ))
+    cache_key = ""
+    cache_meta = None
+    if md5:
+        cache_meta = _validation_cache_meta(
+            request=request,
+            settings=settings,
+            prompt_client=prompt_client,
+            ctx=ctx,
+            md5=md5,
+        )
+        cache_key = sha256_json(cache_meta)
+        cached = _load_cached_validation(
+            output_dir=settings.output_dir,
+            report_id=request.report_id,
+            pack_name=pack_name,
+            report_name=report_name,
+            cache_key=cache_key,
+            ctx=ctx,
+            analysis_store=analysis_store,
+        )
+        if cached is not None:
+            logger.info(log_event(
+                ctx,
+                role="generator",
+                event="validation_cache_hit",
+                module=logger.name,
+                fields={"report_id": request.report_id, "pack_name": pack_name},
+            ))
+            return cached
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="validation_cache_miss",
+            module=logger.name,
+            fields={"report_id": request.report_id, "pack_name": pack_name},
+        ))
+
     issues: List[ValidationIssue] = []
     insights = _ensure_list(request.artifacts.get("insights_final") if isinstance(request.artifacts, dict) else [])
     quotes = _extract_quotes(request, insights)
@@ -109,14 +149,26 @@ def validate_report(
         ))
         raise
 
+    payload = report.to_dict()
+    if cache_meta:
+        payload["_cache"] = {**cache_meta, "key": cache_key}
     stored_path = analysis_store.store_pack(
         settings.output_dir,
         request.report_id,
         pack_name,
-        report.to_dict(),
+        payload,
         ctx,
         report_slug=report_name,
+        mirror_legacy=settings.mirror_legacy_packs,
     )
+    if cache_meta:
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="validation_cache_written",
+            module=logger.name,
+            fields={"report_id": request.report_id, "pack_name": pack_name},
+        ))
     report = ValidationReport(
         schema_version=report.schema_version,
         status=report.status,
@@ -888,3 +940,106 @@ def _has_data_gap(artifacts: dict) -> bool:
     if isinstance(status, dict):
         return bool(status.get("not_available"))
     return False
+
+
+def _validation_cache_meta(
+    *,
+    request: ValidationRequest,
+    settings: AppSettings,
+    prompt_client,
+    ctx: RunContext,
+    md5: str,
+) -> Dict[str, Any]:
+    prompt_meta: Dict[str, Any] = {}
+    namespaces = [
+        "report_vs/validate/semantic",
+        "report_vs/validate/grounding",
+    ]
+    for namespace in namespaces:
+        prompt_set = prompt_client.load_prompt_set(PromptLoadRequest(schema_version="1.0", namespace=namespace), ctx)
+        prompt_meta[namespace] = {
+            "prompt_system_sha256": prompt_set.system.sha256,
+            "prompt_user_sha256": prompt_set.user.sha256,
+            "model": resolve_model(namespace, getattr(settings, "openai_models", {}), settings.openai_model),
+        }
+    inputs_hash = sha256_json({
+        "report": request.report.to_dict(),
+        "artifacts": request.artifacts,
+        "evidence_packs": request.evidence_packs,
+        "vector_store_id": request.vector_store_id or "",
+        "data_gap_policy": getattr(settings, "validation_data_gap_policy", "warn"),
+    })
+    return {
+        "schema_version": "1.0",
+        "md5": md5,
+        "inputs_sha256": inputs_hash,
+        "prompts": prompt_meta,
+        "temperature": settings.temperature,
+        "seed": settings.openai_seed,
+        "use_vector_store": bool(request.vector_store_id),
+    }
+
+
+def _resolve_pack_path(output_dir: str, report_id: str, pack_name: str, report_name: Optional[str], analysis_store) -> str:
+    if hasattr(analysis_store, "pack_path"):
+        return str(analysis_store.pack_path(output_dir, report_id, pack_name, report_slug=report_name))
+    return str(report_analysis_store_service.pack_path(output_dir, report_id, pack_name, report_slug=report_name))
+
+
+def _load_cached_validation(
+    *,
+    output_dir: str,
+    report_id: str,
+    pack_name: str,
+    report_name: Optional[str],
+    cache_key: str,
+    ctx: RunContext,
+    analysis_store,
+) -> Optional[ValidationReport]:
+    if not cache_key:
+        return None
+    path = _resolve_pack_path(output_dir, report_id, pack_name, report_name, analysis_store)
+    try:
+        resp = file_service.read_text(ReadTextRequest(schema_version="1.0", path=path), ctx)
+    except AppError as exc:
+        if exc.code == "file_not_found":
+            return None
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="validation_cache_read_failed",
+            module=logger.name,
+            fields={"report_id": report_id, "pack_name": pack_name, "error": exc.message},
+        ))
+        return None
+    try:
+        payload = json.loads(resp.content)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(payload, dict):
+        return None
+    cached = payload.get("_cache") if isinstance(payload.get("_cache"), dict) else {}
+    if cached.get("key") != cache_key:
+        return None
+    return _validation_report_from_payload(payload, path)
+
+
+def _validation_report_from_payload(payload: dict, path: str) -> ValidationReport:
+    issues_raw = payload.get("issues") if isinstance(payload.get("issues"), list) else []
+    issues: List[ValidationIssue] = []
+    for entry in issues_raw:
+        if not isinstance(entry, dict):
+            continue
+        issues.append(ValidationIssue(
+            schema_version=str(entry.get("schema_version") or "1.0"),
+            message=str(entry.get("message") or ""),
+            severity=str(entry.get("severity") or "warning"),
+            affected_section=str(entry.get("affected_section") or ""),
+        ))
+    return ValidationReport(
+        schema_version=str(payload.get("schema_version") or "1.0"),
+        status=str(payload.get("status") or "fail"),
+        severity=str(payload.get("severity") or "pass"),
+        issues=issues,
+        source_path=path,
+    )

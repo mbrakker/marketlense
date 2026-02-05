@@ -13,6 +13,9 @@ from src.contracts.state import (
     StateDbAccessResponse,
     StateGetRequest,
     StateGetResponse,
+    StateIngestCursorGetRequest,
+    StateIngestCursorGetResponse,
+    StateIngestCursorSetRequest,
     StatePublishCheckRequest,
     StatePublishGetResponse,
     StatePublishRecordRequest,
@@ -40,6 +43,12 @@ CREATE TABLE IF NOT EXISTS processed (
   text_validation_reason TEXT,
   text_validation_pages_json TEXT,
   doc_map_summary_json TEXT
+);
+
+CREATE TABLE IF NOT EXISTS ingest_state (
+  key TEXT PRIMARY KEY,
+  value TEXT,
+  updated_at INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS published (
@@ -212,6 +221,58 @@ def check_state_db_access(request: StateDbAccessRequest, ctx: RunContext) -> Sta
         },
     ))
     return response
+
+
+def get_ingest_cursor(request: StateIngestCursorGetRequest, ctx: RunContext) -> StateIngestCursorGetResponse:
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="ingest_cursor_get_start",
+        module=logger.name,
+        fields={"state_db": request.state_db},
+    ))
+    with _state_conn(request.state_db) as conn:
+        cur = conn.execute(
+            "SELECT value FROM ingest_state WHERE key=?",
+            ("last_successful_ingest_utc",),
+        )
+        row = cur.fetchone()
+    value = row[0] if row else None
+    response = StateIngestCursorGetResponse(
+        schema_version="1.0",
+        state_db=request.state_db,
+        last_successful_ingest_utc=value,
+    )
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="ingest_cursor_get_complete",
+        module=logger.name,
+        fields={"state_db": request.state_db, "last_successful_ingest_utc": value or ""},
+    ))
+    return response
+
+
+def set_ingest_cursor(request: StateIngestCursorSetRequest, ctx: RunContext) -> None:
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="ingest_cursor_set_start",
+        module=logger.name,
+        fields={"state_db": request.state_db, "last_successful_ingest_utc": request.last_successful_ingest_utc},
+    ))
+    with _state_conn(request.state_db) as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO ingest_state(key, value, updated_at) VALUES(?, ?, strftime('%s','now'))",
+            ("last_successful_ingest_utc", request.last_successful_ingest_utc),
+        )
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="ingest_cursor_set_complete",
+        module=logger.name,
+        fields={"state_db": request.state_db},
+    ))
 
 
 def already_processed(request: StateCheckRequest, ctx: RunContext) -> bool:

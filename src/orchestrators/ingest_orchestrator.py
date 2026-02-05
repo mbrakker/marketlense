@@ -4,19 +4,25 @@ import json
 import logging
 import os
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 
 from src.contracts.categories import UncategorizedTagsFlushRequest
 from src.contracts.pdf_utils import PdfEofCheckRequest
 from src.services.pdf_service import check_pdf_eof
-from src.contracts.drive import DriveDownloadToPathRequest, DriveListRequest, DriveFile
+from src.contracts.drive import (
+    DriveDownloadToPathRequest,
+    DriveFileMetadataRequest,
+    DriveListRequest,
+    DriveFile,
+)
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.lock import LockAcquireRequest, LockReleaseRequest
 from src.contracts.report_store import ReportMetadataDbAccessRequest, ReportMetadataGetRequest
 from src.contracts.run_context import RunContext
 from src.generators.report_generator import generate_report
-from src.services.drive_service import download_pdf_to_path, list_pdfs
+from src.services.drive_service import download_pdf_to_path, get_file_metadata, list_pdfs
 from src.services.file_service import (
     delete_file,
     file_stat,
@@ -32,9 +38,15 @@ from src.contracts.files import (
 from src.services.lock_service import acquire_lock, release_lock
 from src.services.report_store_service import check_report_db_access, get_metadata as get_report_metadata
 from src.services.state_service import already_processed as state_already_processed
-from src.services.state_service import check_state_db_access
+from src.services.state_service import check_state_db_access, get_ingest_cursor, set_ingest_cursor
 from src.services.state_service import record as state_record
-from src.contracts.state import StateCheckRequest, StateDbAccessRequest, StateRecordRequest
+from src.contracts.state import (
+    StateCheckRequest,
+    StateDbAccessRequest,
+    StateIngestCursorGetRequest,
+    StateIngestCursorSetRequest,
+    StateRecordRequest,
+)
 from src.services.category_mapping_service import flush_uncategorized_tags
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.errors import AppError
@@ -145,6 +157,42 @@ def _sidecar_md5_for_stat(payload: dict, size_bytes: Optional[int], mtime_utc: O
     if sidecar_mtime is None or stat_mtime is None or sidecar_mtime != stat_mtime:
         return None
     return md5
+
+
+def _ensure_file_name(file: DriveFile, settings: IngestSettings, ctx: RunContext) -> DriveFile:
+    if file.name:
+        return file
+    try:
+        meta = get_file_metadata(
+            DriveFileMetadataRequest(
+                schema_version="1.0",
+                file_id=file.file_id,
+                service_account_path=settings.google_sa_path,
+            ),
+            ctx,
+        ).file
+        return DriveFile(
+            schema_version="1.0",
+            file_id=file.file_id,
+            name=meta.name or file.file_id,
+            modified_time=meta.modified_time or file.modified_time,
+            md5_checksum=file.md5_checksum or meta.md5_checksum,
+        )
+    except AppError as exc:
+        logger.info(log_event(
+            ctx,
+            role="orchestrator",
+            event="drive_file_metadata_failed",
+            module=logger.name,
+            fields={"file_id": file.file_id, "error": exc.message},
+        ))
+        return DriveFile(
+            schema_version="1.0",
+            file_id=file.file_id,
+            name=file.file_id,
+            modified_time=file.modified_time,
+            md5_checksum=file.md5_checksum,
+        )
 
 
 def _write_md5_sidecar(
@@ -382,19 +430,78 @@ def run_ingest(
             fields={"folder_id": folder_id or settings.gdrive_folder_id, "limit": limit},
         ))
 
+        modified_after = None
+        if limit is None:
+            cursor_resp = get_ingest_cursor(
+                StateIngestCursorGetRequest(schema_version="1.0", state_db=settings.state_db),
+                root_ctx,
+            )
+            modified_after = cursor_resp.last_successful_ingest_utc
+            if modified_after:
+                logger.info(log_event(
+                    root_ctx,
+                    role="orchestrator",
+                    event="ingest_modified_after_loaded",
+                    module=logger.name,
+                    fields={"modified_after": modified_after},
+                ))
+        else:
+            logger.info(log_event(
+                root_ctx,
+                role="orchestrator",
+                event="ingest_modified_after_ignored",
+                module=logger.name,
+                fields={"reason": "limit_override", "limit": limit},
+            ))
+
+        max_n = limit if limit is not None else settings.batch_limit
+        page_size = min(max_n, 1000) if limit is not None else None
+        order_by = "modifiedTime desc" if limit is not None else None
         list_req = DriveListRequest(
             schema_version="1.0",
             folder_id=folder_id or settings.gdrive_folder_id,
             service_account_path=settings.google_sa_path,
+            page_size=page_size,
+            order_by=order_by,
+            modified_after=modified_after,
+            list_mode=settings.drive_list_mode,
+            supports_all_drives=settings.drive_supports_all_drives,
+            include_items_from_all_drives=settings.drive_include_items_from_all_drives,
+            drive_id=settings.drive_id,
         )
-        max_n = limit if limit is not None else settings.batch_limit
 
+        files_to_process: list[DriveFile] = []
         for file in list_pdfs(list_req, root_ctx):
+            drive_md5 = file.md5_checksum.strip() if file.md5_checksum else None
+            if drive_md5 and _should_skip(file, drive_md5, settings.state_db, root_ctx):
+                logger.info(log_event(
+                    root_ctx,
+                    role="orchestrator",
+                    event="drive_list_skip_processed",
+                    module=logger.name,
+                    fields={"file_id": file.file_id, "md5": drive_md5},
+                ))
+                continue
+            files_to_process.append(file)
+            if len(files_to_process) >= max_n:
+                break
+        logger.info(log_event(
+            root_ctx,
+            role="orchestrator",
+            event="drive_list_materialized",
+            module=logger.name,
+            fields={"count": len(files_to_process), "limit": max_n},
+        ))
+
+        had_errors = False
+
+        for file in files_to_process:
             if processed >= max_n:
                 break
 
             try:
                 file_ctx = child_context(root_ctx, task_id=file.file_id)
+                display_name = file.name or file.file_id
                 cache_path = _cache_pdf_path(settings, file)
                 sidecar_path = _md5_sidecar_path(cache_path)
                 md5 = None
@@ -413,7 +520,7 @@ def run_ingest(
                     outcomes.append(IngestOutcome(
                         schema_version="1.0",
                         file_id=file.file_id,
-                        name=file.name,
+                        name=display_name,
                         md5=drive_md5,
                         html_path=None,
                         status="skipped",
@@ -435,7 +542,7 @@ def run_ingest(
                         outcomes.append(IngestOutcome(
                             schema_version="1.0",
                             file_id=file.file_id,
-                            name=file.name,
+                            name=display_name,
                             md5=drive_md5,
                             html_path=existing_html,
                             status="skipped",
@@ -576,7 +683,7 @@ def run_ingest(
                     outcomes.append(IngestOutcome(
                         schema_version="1.0",
                         file_id=file.file_id,
-                        name=file.name,
+                        name=display_name,
                         md5=md5,
                         html_path=None,
                         status="skipped",
@@ -598,13 +705,16 @@ def run_ingest(
                         outcomes.append(IngestOutcome(
                             schema_version="1.0",
                             file_id=file.file_id,
-                            name=file.name,
+                            name=display_name,
                             md5=md5,
                             html_path=existing_html,
                             status="skipped",
                             error="html_exists",
                         ))
                         continue
+
+                file = _ensure_file_name(file, settings, file_ctx)
+                display_name = file.name or file.file_id
 
                 outcome = _run_step_with_retry(
                     "generate_report",
@@ -613,6 +723,8 @@ def run_ingest(
                     retries=2,
                 )
                 outcomes.append(outcome)
+                if outcome.status == "error":
+                    had_errors = True
                 if outcome.vector_store_id:
                     logger.info(log_event(
                         file_ctx,
@@ -701,6 +813,7 @@ def run_ingest(
                 )
                 processed += 1
             except Exception as exc:
+                had_errors = True
                 logger.info(log_event(
                     file_ctx,
                     role="orchestrator",
@@ -716,7 +829,7 @@ def run_ingest(
                 outcomes.append(IngestOutcome(
                     schema_version="1.0",
                     file_id=file.file_id,
-                    name=file.name,
+                    name=display_name,
                     md5=None,
                     html_path=None,
                     status="error",
@@ -731,6 +844,44 @@ def run_ingest(
             module=logger.name,
             fields={"processed": processed},
         ))
+        if not had_errors and processed > 0 and limit is None:
+            try:
+                now_utc = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+                set_ingest_cursor(
+                    StateIngestCursorSetRequest(
+                        schema_version="1.0",
+                        state_db=settings.state_db,
+                        last_successful_ingest_utc=now_utc,
+                    ),
+                    root_ctx,
+                )
+                logger.info(log_event(
+                    root_ctx,
+                    role="orchestrator",
+                    event="ingest_cursor_updated",
+                    module=logger.name,
+                    fields={"last_successful_ingest_utc": now_utc},
+                ))
+            except Exception as exc:
+                logger.info(log_event(
+                    root_ctx,
+                    role="orchestrator",
+                    event="ingest_cursor_update_failed",
+                    module=logger.name,
+                    fields={"error": str(exc)},
+                ))
+        else:
+            logger.info(log_event(
+                root_ctx,
+                role="orchestrator",
+                event="ingest_cursor_skipped",
+                module=logger.name,
+                fields={
+                    "reason": "errors_detected" if had_errors else "no_processed_or_limit_override",
+                    "processed": processed,
+                    "limit": limit,
+                },
+            ))
         return outcomes
     finally:
         try:

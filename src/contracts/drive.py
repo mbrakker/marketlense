@@ -8,10 +8,9 @@ from typing import Optional
 class DriveFile:
     schema_version: str = field(metadata={"doc": "Drive file schema version."})
     file_id: str = field(metadata={"doc": "Drive file ID."})
-    name: str = field(metadata={"doc": "Drive file name."})
+    name: Optional[str] = field(metadata={"doc": "Drive file name, if fetched."})
     modified_time: Optional[str] = field(metadata={"doc": "Drive modified time, if available."})
     md5_checksum: Optional[str] = field(metadata={"doc": "Drive MD5 checksum, if provided."})
-    version: Optional[str] = field(metadata={"doc": "Drive file version, if provided."})
 
 
 @dataclass(frozen=True)
@@ -19,6 +18,26 @@ class DriveListRequest:
     schema_version: str = field(metadata={"doc": "Drive list request schema version."})
     folder_id: str = field(metadata={"doc": "Drive folder ID to list PDFs from."})
     service_account_path: str = field(metadata={"doc": "Filesystem path to the Google service account JSON."})
+    page_size: Optional[int] = field(default=None, metadata={"doc": "Optional page size for Drive list calls."})
+    order_by: Optional[str] = field(default=None, metadata={"doc": "Optional orderBy for Drive list calls."})
+    modified_after: Optional[str] = field(default=None, metadata={"doc": "Optional modifiedTime lower bound (RFC3339)."})
+    list_mode: str = field(default="full", metadata={"doc": "List mode: full or metadata."})
+    supports_all_drives: bool = field(default=True, metadata={"doc": "Whether to set supportsAllDrives on list calls."})
+    include_items_from_all_drives: bool = field(default=True, metadata={"doc": "Whether to includeItemsFromAllDrives on list calls."})
+    drive_id: Optional[str] = field(default=None, metadata={"doc": "Optional shared Drive ID for corpora=drive scope."})
+
+
+@dataclass(frozen=True)
+class DriveFileMetadataRequest:
+    schema_version: str = field(metadata={"doc": "Drive file metadata request schema version."})
+    file_id: str = field(metadata={"doc": "Drive file ID."})
+    service_account_path: str = field(metadata={"doc": "Filesystem path to the Google service account JSON."})
+
+
+@dataclass(frozen=True)
+class DriveFileMetadataResponse:
+    schema_version: str = field(metadata={"doc": "Drive file metadata response schema version."})
+    file: DriveFile = field(metadata={"doc": "Drive file metadata."})
 
 
 @dataclass(frozen=True)

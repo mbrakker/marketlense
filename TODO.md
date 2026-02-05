@@ -139,3 +139,7 @@
   - Reports without extractable text are halted with a clear error message.
   - Logs & state database contain detailed information about the failure for debugging.
 
+# Completed
+
+- Acceleration pass (Drive listing + report caching from `todo-accel.md`) completed on 2026-02-04.
+

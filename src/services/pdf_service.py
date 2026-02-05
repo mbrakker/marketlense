@@ -140,48 +140,55 @@ def extract_pdf_info(request: PdfInfoRequest, ctx: RunContext) -> PdfInfoRespons
         role="service",
         event="pdf_info_extract_start",
         module=logger.name,
-        fields={"path": request.path},
+        fields={"path": request.path, "using_context": bool(request.pdf_context and request.pdf_context.pypdf_reader)},
     ))
+    reader = request.pdf_context.pypdf_reader if request.pdf_context else None
+    owns_reader = False
+    if reader is None:
+        try:
+            reader = PdfReader(request.path, strict=False)
+            owns_reader = True
+        except FileNotFoundError as exc:
+            raise AppError(
+                code="pdf_not_found",
+                message=f"PDF not found: {request.path}",
+                cause=exc,
+                retryable=False,
+            ) from exc
+        except (PdfReadError, PdfStreamError) as exc:
+            raise AppError(
+                code="pdf_info_read_failed",
+                message=f"Failed to read PDF for info: {request.path}",
+                cause=exc,
+                retryable=True,
+            ) from exc
+        except Exception as exc:
+            raise AppError(
+                code="pdf_info_read_failed",
+                message=f"Failed to read PDF for info: {request.path}",
+                cause=exc,
+                retryable=True,
+            ) from exc
     try:
-        reader = PdfReader(request.path, strict=False)
-    except FileNotFoundError as exc:
-        raise AppError(
-            code="pdf_not_found",
-            message=f"PDF not found: {request.path}",
-            cause=exc,
-            retryable=False,
-        ) from exc
-    except (PdfReadError, PdfStreamError) as exc:
-        raise AppError(
-            code="pdf_info_read_failed",
-            message=f"Failed to read PDF for info: {request.path}",
-            cause=exc,
-            retryable=True,
-        ) from exc
-    except Exception as exc:
-        raise AppError(
-            code="pdf_info_read_failed",
-            message=f"Failed to read PDF for info: {request.path}",
-            cause=exc,
-            retryable=True,
-        ) from exc
-
-    page_count = len(reader.pages)
-    metadata = _normalize_metadata(reader.metadata)
-    response = PdfInfoResponse(
-        schema_version="1.0",
-        path=request.path,
-        page_count=page_count,
-        metadata=metadata,
-    )
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="pdf_info_extract_complete",
-        module=logger.name,
-        fields={"path": request.path, "page_count": page_count, "metadata_keys": list(metadata.keys())},
-    ))
-    return response
+        page_count = len(reader.pages)
+        metadata = _normalize_metadata(reader.metadata)
+        response = PdfInfoResponse(
+            schema_version="1.0",
+            path=request.path,
+            page_count=page_count,
+            metadata=metadata,
+        )
+        logger.info(log_event(
+            ctx,
+            role="service",
+            event="pdf_info_extract_complete",
+            module=logger.name,
+            fields={"path": request.path, "page_count": page_count, "metadata_keys": list(metadata.keys())},
+        ))
+        return response
+    finally:
+        if owns_reader and reader is not None:
+            _close_pypdf_reader(reader)
 
 
 def extract_pdf_text(request: PdfTextExtractRequest, ctx: RunContext) -> PdfTextExtractResponse:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import io
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -16,6 +17,8 @@ from src.contracts.drive import (
     DriveDownloadToPathRequest,
     DriveDownloadToPathResponse,
     DriveFile,
+    DriveFileMetadataRequest,
+    DriveFileMetadataResponse,
     DriveListRequest,
 )
 from src.contracts.run_context import RunContext
@@ -23,6 +26,7 @@ from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.drive_service")
+_DRIVE_CLIENTS: dict[str, object] = {}
 
 
 class _HashingWriter:
@@ -67,13 +71,54 @@ def _build_drive_client(sa_path: str):
     return build("drive", "v3", credentials=creds, cache_discovery=False)
 
 
+def _get_drive_client(sa_path: str, ctx: RunContext):
+    if sa_path in _DRIVE_CLIENTS:
+        logger.info(log_event(
+            ctx,
+            role="service",
+            event="drive_client_reuse",
+            module=logger.name,
+            fields={"service_account_path": sa_path},
+        ))
+        return _DRIVE_CLIENTS[sa_path]
+    client = _build_drive_client(sa_path)
+    _DRIVE_CLIENTS[sa_path] = client
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="drive_client_created",
+        module=logger.name,
+        fields={"service_account_path": sa_path},
+    ))
+    return client
+
+
+def _parse_rfc3339(value: Optional[str]) -> Optional[datetime]:
+    if not value:
+        return None
+    try:
+        normalized = value.replace("Z", "+00:00")
+        return datetime.fromisoformat(normalized).astimezone(timezone.utc)
+    except Exception:
+        return None
+
+
 def list_pdfs(request: DriveListRequest, ctx: RunContext) -> Iterable[DriveFile]:
     logger.info(log_event(
         ctx,
         role="service",
         event="drive_list_start",
         module=logger.name,
-        fields={"folder_id": request.folder_id},
+        fields={
+            "folder_id": request.folder_id,
+            "page_size": request.page_size,
+            "order_by": request.order_by or "",
+            "modified_after": request.modified_after or "",
+            "list_mode": request.list_mode,
+            "supports_all_drives": request.supports_all_drives,
+            "include_items_from_all_drives": request.include_items_from_all_drives,
+            "drive_id": request.drive_id or "",
+        },
     ))
     if not request.service_account_path:
         raise AppError(
@@ -87,21 +132,37 @@ def list_pdfs(request: DriveListRequest, ctx: RunContext) -> Iterable[DriveFile]
             message="Drive folder ID is required to list PDFs",
             retryable=False,
         )
-    drive = _build_drive_client(request.service_account_path)
+    drive = _get_drive_client(request.service_account_path, ctx)
     q = f"'{request.folder_id}' in parents and mimeType='application/pdf' and trashed=false"
+    if request.modified_after:
+        q += f" and modifiedTime > '{request.modified_after}'"
+    list_mode = (request.list_mode or "full").strip().lower()
+    fields = "files(id,modifiedTime,md5Checksum),nextPageToken"
+    if list_mode == "full":
+        fields = "files(id,name,modifiedTime,md5Checksum),nextPageToken"
+    modified_after_dt = _parse_rfc3339(request.modified_after)
     page_token: Optional[str] = None
     total = 0
     completed = False
+    early_stop = False
     try:
         while True:
             try:
-                resp = drive.files().list(
-                    q=q,
-                    fields="files(id,name,modifiedTime,md5Checksum,version),nextPageToken",
-                    pageToken=page_token,
-                    supportsAllDrives=True,
-                    includeItemsFromAllDrives=True,
-                ).execute()
+                list_kwargs = {
+                    "q": q,
+                    "fields": fields,
+                    "pageToken": page_token,
+                    "supportsAllDrives": request.supports_all_drives,
+                    "includeItemsFromAllDrives": request.include_items_from_all_drives,
+                }
+                if request.page_size:
+                    list_kwargs["pageSize"] = int(request.page_size)
+                if request.order_by:
+                    list_kwargs["orderBy"] = request.order_by
+                if request.drive_id:
+                    list_kwargs["driveId"] = request.drive_id
+                    list_kwargs["corpora"] = "drive"
+                resp = drive.files().list(**list_kwargs).execute()
             except Exception as exc:
                 logger.info(log_event(
                     ctx,
@@ -119,15 +180,30 @@ def list_pdfs(request: DriveListRequest, ctx: RunContext) -> Iterable[DriveFile]
                 ) from exc
             files = resp.get("files", [])
             for f in files:
+                modified_time = f.get("modifiedTime")
+                if modified_after_dt and request.order_by and "modifiedtime desc" in request.order_by.lower():
+                    file_dt = _parse_rfc3339(modified_time)
+                    if file_dt and file_dt <= modified_after_dt:
+                        early_stop = True
+                        break
                 total += 1
                 yield DriveFile(
                     schema_version="1.0",
                     file_id=f.get("id", ""),
-                    name=f.get("name", ""),
-                    modified_time=f.get("modifiedTime"),
+                    name=f.get("name"),
+                    modified_time=modified_time,
                     md5_checksum=f.get("md5Checksum"),
-                    version=str(f.get("version")) if f.get("version") is not None else None,
                 )
+            if early_stop:
+                logger.info(log_event(
+                    ctx,
+                    role="service",
+                    event="drive_list_cutoff_reached",
+                    module=logger.name,
+                    fields={"modified_after": request.modified_after or ""},
+                ))
+                completed = True
+                break
             page_token = resp.get("nextPageToken")
             if not page_token:
                 completed = True
@@ -140,6 +216,61 @@ def list_pdfs(request: DriveListRequest, ctx: RunContext) -> Iterable[DriveFile]
             module=logger.name,
             fields={"count": total, "partial": not completed},
         ))
+
+
+def get_file_metadata(request: DriveFileMetadataRequest, ctx: RunContext) -> DriveFileMetadataResponse:
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="drive_file_metadata_start",
+        module=logger.name,
+        fields={"file_id": request.file_id},
+    ))
+    if not request.service_account_path:
+        raise AppError(
+            code="drive_sa_path_missing",
+            message="Service account path is required to fetch Drive metadata",
+            retryable=False,
+        )
+    if not request.file_id:
+        raise AppError(
+            code="drive_file_id_missing",
+            message="Drive file ID is required to fetch metadata",
+            retryable=False,
+        )
+    drive = _get_drive_client(request.service_account_path, ctx)
+    try:
+        resp = drive.files().get(fileId=request.file_id, fields="id,name,modifiedTime,md5Checksum").execute()
+    except Exception as exc:
+        logger.info(log_event(
+            ctx,
+            role="service",
+            event="drive_file_metadata_failed",
+            module=logger.name,
+            fields={"file_id": request.file_id, "error": str(exc)},
+        ))
+        raise AppError(
+            code="drive_metadata_failed",
+            message="Drive metadata fetch failed",
+            cause=exc,
+            retryable=True,
+            context={"file_id": request.file_id},
+        ) from exc
+    file = DriveFile(
+        schema_version="1.0",
+        file_id=resp.get("id", request.file_id),
+        name=resp.get("name"),
+        modified_time=resp.get("modifiedTime"),
+        md5_checksum=resp.get("md5Checksum"),
+    )
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="drive_file_metadata_complete",
+        module=logger.name,
+        fields={"file_id": file.file_id, "name": file.name or ""},
+    ))
+    return DriveFileMetadataResponse(schema_version="1.0", file=file)
 
 
 def _md5_for_bytes(data: bytes) -> str:
@@ -171,7 +302,7 @@ def download_pdf(request: DriveDownloadRequest, ctx: RunContext) -> DriveDownloa
             message="Drive file ID is required to download a PDF",
             retryable=False,
         )
-    drive = _build_drive_client(request.service_account_path)
+    drive = _get_drive_client(request.service_account_path, ctx)
     try:
         req = drive.files().get_media(fileId=file_meta.file_id)
         buffer = io.BytesIO()
@@ -246,7 +377,7 @@ def download_pdf_to_path(request: DriveDownloadToPathRequest, ctx: RunContext) -
     if request.make_parents:
         path.parent.mkdir(parents=True, exist_ok=True)
 
-    drive = _build_drive_client(request.service_account_path)
+    drive = _get_drive_client(request.service_account_path, ctx)
     size = 0
     md5 = None
     try:

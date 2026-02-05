@@ -33,7 +33,6 @@ class TestOrchestratorRetry(unittest.TestCase):
             name="name.pdf",
             modified_time=None,
             md5_checksum="md5",
-            version=None,
         )
         download_resp = DriveDownloadToPathResponse(
             schema_version="1.0",

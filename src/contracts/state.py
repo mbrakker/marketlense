@@ -46,6 +46,26 @@ class StateDbAccessResponse:
 
 
 @dataclass(frozen=True)
+class StateIngestCursorGetRequest:
+    schema_version: str = field(metadata={"doc": "Ingest cursor get request schema version."})
+    state_db: str = field(metadata={"doc": "SQLite path for processing state."})
+
+
+@dataclass(frozen=True)
+class StateIngestCursorGetResponse:
+    schema_version: str = field(metadata={"doc": "Ingest cursor get response schema version."})
+    state_db: str = field(metadata={"doc": "SQLite path for processing state."})
+    last_successful_ingest_utc: Optional[str] = field(default=None, metadata={"doc": "RFC3339 timestamp of last successful ingest run."})
+
+
+@dataclass(frozen=True)
+class StateIngestCursorSetRequest:
+    schema_version: str = field(metadata={"doc": "Ingest cursor set request schema version."})
+    state_db: str = field(metadata={"doc": "SQLite path for processing state."})
+    last_successful_ingest_utc: str = field(metadata={"doc": "RFC3339 timestamp of last successful ingest run."})
+
+
+@dataclass(frozen=True)
 class StateGetRequest:
     schema_version: str = field(metadata={"doc": "State get request schema version."})
     state_db: str = field(metadata={"doc": "SQLite path for processing state."})

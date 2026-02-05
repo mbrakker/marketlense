@@ -98,6 +98,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
 
     paths = data.get("paths", {}) or {}
     ingest = data.get("ingest", {}) or {}
+    drive_cfg = ingest.get("drive", {}) or {}
     pdf_text = ingest.get("pdf_text", {}) or {}
     rank = data.get("rank", {}) or {}
     validation_cfg = ingest.get("validation", {}) or {}
@@ -122,6 +123,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     temperature = float(temperature_raw) if not _is_missing(temperature_raw) else 1.0
     rank_model = rank.get("model") or openai_model
     rank_temperature = float(rank.get("temperature", temperature))
+    rank_max_candidates = int(rank.get("max_candidates", 40))
     openai_seed_raw = ingest.get("seed")
     rank_seed_raw = rank.get("seed")
     batch_limit_raw = ingest.get("batch_limit")
@@ -144,9 +146,11 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     contents_keywords = [str(k).strip() for k in contents_keywords_cfg if str(k).strip()]
     if not contents_keywords:
         contents_keywords = ["table of contents", "contents", "index"]
+    contents_preview_enabled = _as_bool(contents_page.get("preview_enabled"), default=True)
     contents_preview_dpi = int(contents_page.get("render_dpi", 144))
     pdf_text_min_density = float(pdf_text.get("min_density", 250.0))
     pdf_text_sample_pages = int(pdf_text.get("sample_pages", 3))
+    debug_candidate_gallery = _as_bool(ingest.get("debug_candidate_gallery"), default=False)
     data_gap_policy_raw = str(validation_cfg.get("data_gap_policy", "warn")).strip().lower()
     validation_data_gap_policy = data_gap_policy_raw if data_gap_policy_raw in {"warn", "fail"} else "warn"
 
@@ -173,14 +177,27 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     analysis_compare = False
     vector_store_keep_raw = env_vector_store_keep if env_vector_store_keep else analysis_cfg.get("vector_store_keep")
     vector_store_keep = _as_bool(vector_store_keep_raw, default=True)
+    mirror_legacy_packs = _as_bool(analysis_cfg.get("mirror_legacy_packs"), default=True)
     cost_ledger_path = str(env_cost_ledger_path or analysis_cfg.get("cost_ledger_path") or "./out/cost-ledger.jsonl")
     cost_daily_path = str(cost_cfg.get("daily_path") or "./out/cost-daily.json")
     model_pricing = cost_cfg.get("pricing") or {}
+    cover_cache_enabled = _as_bool(ingest.get("cover_cache_enabled"), default=True)
+
+    drive_supports_all_drives = _as_bool(drive_cfg.get("supports_all_drives"), default=True)
+    drive_include_items_from_all_drives = _as_bool(drive_cfg.get("include_items_from_all_drives"), default=True)
+    drive_id_raw = drive_cfg.get("drive_id")
+    drive_id = str(drive_id_raw).strip() if not _is_missing(drive_id_raw) else None
+    drive_list_mode_raw = str(drive_cfg.get("list_mode", "metadata")).strip().lower()
+    drive_list_mode = drive_list_mode_raw if drive_list_mode_raw in {"full", "metadata"} else "metadata"
 
     settings = AppSettings(
         schema_version=str(data.get("schema_version", "1.0")),
         google_sa_path=need(ingest, "google_sa_path", "ingest.google_sa_path", "GOOGLE_SERVICE_ACCOUNT_JSON"),
         gdrive_folder_id=need(ingest, "gdrive_folder_id", "ingest.gdrive_folder_id", "GDRIVE_FOLDER_ID"),
+        drive_supports_all_drives=drive_supports_all_drives,
+        drive_include_items_from_all_drives=drive_include_items_from_all_drives,
+        drive_id=drive_id,
+        drive_list_mode=drive_list_mode,
         openai_api_key=need_env("OPENAI_API_KEY"),
         openai_model=openai_model,
         openai_models=openai_models,
@@ -199,18 +216,23 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         pdf_text_max_chars=int(pdf_text.get("max_chars", 80_000)),
         pdf_text_min_density=pdf_text_min_density,
         pdf_text_sample_pages=pdf_text_sample_pages,
+        debug_candidate_gallery=debug_candidate_gallery,
         rank_model=rank_model,
         rank_temperature=rank_temperature,
         rank_seed=_opt_int(rank_seed_raw),
+        rank_max_candidates=rank_max_candidates,
         openai_timeout_seconds=openai_timeout_seconds,
         rank_timeout_seconds=rank_timeout_seconds,
         contents_max_pages=contents_max_pages,
         contents_min_headings=contents_min_headings,
         contents_keywords=contents_keywords,
+        contents_preview_enabled=contents_preview_enabled,
         contents_preview_dpi=contents_preview_dpi,
         analysis_mode=analysis_mode,
         use_vector_store=use_vector_store,
         vector_store_keep=vector_store_keep,
+        mirror_legacy_packs=mirror_legacy_packs,
+        cover_cache_enabled=cover_cache_enabled,
         analysis_compare=analysis_compare,
         cost_ledger_path=cost_ledger_path,
         cost_daily_path=cost_daily_path,
@@ -247,6 +269,10 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             "category_mapping_path": settings.category_mapping_path,
             "ingest_lock_path": settings.ingest_lock_path,
             "ingest_lock_ttl_seconds": settings.ingest_lock_ttl_seconds,
+            "drive_supports_all_drives": settings.drive_supports_all_drives,
+            "drive_include_items_from_all_drives": settings.drive_include_items_from_all_drives,
+            "drive_id": settings.drive_id or "",
+            "drive_list_mode": settings.drive_list_mode,
             "openai_model": settings.openai_model,
             "openai_models": settings.openai_models,
             "temperature": settings.temperature,
@@ -254,19 +280,24 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             "rank_model": settings.rank_model,
             "rank_temperature": settings.rank_temperature,
             "rank_seed": settings.rank_seed,
+            "rank_max_candidates": settings.rank_max_candidates,
             "pdf_text_max_pages": settings.pdf_text_max_pages,
             "pdf_text_max_chars": settings.pdf_text_max_chars,
             "pdf_text_min_density": settings.pdf_text_min_density,
             "pdf_text_sample_pages": settings.pdf_text_sample_pages,
+            "debug_candidate_gallery": settings.debug_candidate_gallery,
             "openai_timeout_seconds": settings.openai_timeout_seconds,
             "rank_timeout_seconds": settings.rank_timeout_seconds,
             "contents_max_pages": settings.contents_max_pages,
             "contents_min_headings": settings.contents_min_headings,
             "contents_keywords": settings.contents_keywords,
+            "contents_preview_enabled": settings.contents_preview_enabled,
             "contents_preview_dpi": settings.contents_preview_dpi,
             "analysis_mode": settings.analysis_mode,
             "use_vector_store": settings.use_vector_store,
             "vector_store_keep": settings.vector_store_keep,
+            "mirror_legacy_packs": settings.mirror_legacy_packs,
+            "cover_cache_enabled": settings.cover_cache_enabled,
             "analysis_compare": settings.analysis_compare,
             "cost_ledger_path": settings.cost_ledger_path,
             "cost_daily_path": settings.cost_daily_path,
