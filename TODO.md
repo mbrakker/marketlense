@@ -2,7 +2,7 @@
 
 1. Upgrade all prompts.
    - Prompt namespaces live under `src/prompts/**` (report_generation, report_vs/{doc_map,evidence_packs,artifacts,validate}, rank_candidates). Refresh wording, safety, and output formats; ensure variables match renderer usage in `prompt_service` and bump schema/version hashes for logging.
-2. Parallelize report processing.
+2. Parallelize report processing. (DONE)
    - `run_ingest` in `src/orchestrators/ingest_orchestrator.py` processes PDFs serially and blocks on OpenAI calls. Add bounded concurrency per file while keeping lock semantics, and preserve cost ledger/state-db writes without races.
 3. Create a GUI.
    - Only `src/cli.py` exists. Provide a minimal web/desktop UI to trigger ingest/publish, view progress logs, inspect artifacts, cost tables, and vector store status.
@@ -36,6 +36,7 @@
   - Updated prompt hashes appear in generator logs.
 
 ## 2. Parallelize report processing
+- **Status**: Completed.
 - **Context**: `run_ingest` in `src/orchestrators/ingest_orchestrator.py` iterates PDFs sequentially and blocks on network/model calls.
 - **Proposal**:
   - Add bounded concurrency (thread pool or asyncio) per file with a configurable limit in `IngestSettings`.
@@ -142,4 +143,5 @@
 # Completed
 
 - Acceleration pass (Drive listing + report caching from `todo-accel.md`) completed on 2026-02-04.
+- Parallelize report processing (bounded per-file concurrency + serialized shared writes) completed on 2026-02-05.
 

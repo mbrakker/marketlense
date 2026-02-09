@@ -4,6 +4,7 @@ import hashlib
 import json
 import logging
 import random
+from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from pathlib import Path
 from typing import Optional
@@ -437,6 +438,15 @@ def generate_report(
     md5: Optional[str],
     ctx: RunContext,
 ) -> IngestOutcome:
+    report_worker_limit = getattr(settings, "report_worker_limit", 1)
+    try:
+        report_worker_limit = int(report_worker_limit)
+    except (TypeError, ValueError):
+        report_worker_limit = 1
+    if report_worker_limit < 1:
+        report_worker_limit = 1
+    parallel_within_file = report_worker_limit > 1
+
     pdf_context = None
     analysis_mode = "vector_store"
     analysis_modes = [analysis_mode]
@@ -454,288 +464,323 @@ def generate_report(
     contents_image = ""
     contents_heading = ""
 
-    try:
-        ctx_pdf = child_context(ctx, task_id=f"{ctx.task_id}:pdf_context")
-        pdf_ctx_resp = build_pdf_context(
-            PdfContextBuildRequest(schema_version="1.0", path=local_pdf_path),
-            ctx_pdf,
-        )
-        pdf_context = pdf_ctx_resp.context
-        if pdf_ctx_resp.fitz_error or pdf_ctx_resp.pypdf_error:
-            logger.info(log_event(
-                ctx_pdf,
-                role="generator",
-                event="pdf_context_partial",
-                module=logger.name,
-                fields={
-                    "fitz_ready": pdf_ctx_resp.context.fitz_doc is not None,
-                    "pypdf_ready": pdf_ctx_resp.context.pypdf_reader is not None,
-                    "fitz_error": pdf_ctx_resp.fitz_error or "",
-                    "pypdf_error": pdf_ctx_resp.pypdf_error or "",
-                },
-            ))
-    except Exception as exc:
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="pdf_context_unavailable",
-            module=logger.name,
-            fields={"path": local_pdf_path, "error": str(exc)},
-        ))
-        pdf_context = None
-
-    info_ctx = child_context(ctx, task_id=f"{ctx.task_id}:pdf_info")
-    info_resp = None
-    info_cache_hit = False
-    info_cache_key = ""
-    info_cache_path = None
-    if md5 and cache_root is not None:
-        info_cache_key = _pdf_info_cache_key(md5)
-        info_cache_path = _cache_path(cache_root, "pdf_info", info_cache_key)
-        cached = _read_cache_json(info_cache_path, info_ctx)
-        if cached and cached.get("key") == info_cache_key:
-            page_count = int(cached.get("page_count") or 0)
-            metadata = cached.get("metadata") if isinstance(cached.get("metadata"), dict) else {}
-            info_resp = PdfInfoResponse(
-                schema_version="1.0",
-                path=local_pdf_path,
-                page_count=page_count,
-                metadata=metadata,
-            )
-            info_cache_hit = True
-            logger.info(log_event(
-                info_ctx,
-                role="generator",
-                event="pdf_info_cache_hit",
-                module=logger.name,
-                fields={"file_id": file.file_id, "cache_path": str(info_cache_path)},
-            ))
-        else:
-            logger.info(log_event(
-                info_ctx,
-                role="generator",
-                event="pdf_info_cache_miss",
-                module=logger.name,
-                fields={"file_id": file.file_id, "cache_path": str(info_cache_path) if info_cache_path else ""},
-            ))
-    if info_resp is None:
-        info_resp = extract_pdf_info(
-            PdfInfoRequest(schema_version="1.0", path=local_pdf_path, pdf_context=pdf_context),
-            info_ctx,
-        )
-        if md5 and cache_root is not None and info_cache_path is not None:
-            _write_cache_json(
-                info_cache_path,
-                {
-                    "schema_version": "1.0",
-                    "key": info_cache_key,
-                    "page_count": info_resp.page_count,
-                    "metadata": info_resp.metadata,
-                },
-                info_ctx,
-            )
-            logger.info(log_event(
-                info_ctx,
-                role="generator",
-                event="pdf_info_cache_written",
-                module=logger.name,
-                fields={"file_id": file.file_id, "cache_path": str(info_cache_path)},
-            ))
     logger.info(log_event(
-        info_ctx,
+        ctx,
         role="generator",
-        event="pdf_info_loaded",
+        event="report_parallel_config",
         module=logger.name,
-        fields={
-            "file_id": file.file_id,
-            "page_count": info_resp.page_count,
-            "metadata_keys": list(info_resp.metadata.keys()),
-            "cache_hit": info_cache_hit,
-        },
+        fields={"report_worker_limit": report_worker_limit, "parallel_within_file": parallel_within_file},
     ))
 
-    try:
-        contents_ctx = child_context(ctx, task_id=f"{ctx.task_id}:contents")
-        contents_resp = None
-        contents_cache_hit = False
-        contents_cache_key = ""
-        contents_cache_path = None
+    if not parallel_within_file:
+        try:
+            ctx_pdf = child_context(ctx, task_id=f"{ctx.task_id}:pdf_context")
+            pdf_ctx_resp = build_pdf_context(
+                PdfContextBuildRequest(schema_version="1.0", path=local_pdf_path),
+                ctx_pdf,
+            )
+            pdf_context = pdf_ctx_resp.context
+            if pdf_ctx_resp.fitz_error or pdf_ctx_resp.pypdf_error:
+                logger.info(log_event(
+                    ctx_pdf,
+                    role="generator",
+                    event="pdf_context_partial",
+                    module=logger.name,
+                    fields={
+                        "fitz_ready": pdf_ctx_resp.context.fitz_doc is not None,
+                        "pypdf_ready": pdf_ctx_resp.context.pypdf_reader is not None,
+                        "fitz_error": pdf_ctx_resp.fitz_error or "",
+                        "pypdf_error": pdf_ctx_resp.pypdf_error or "",
+                    },
+                ))
+        except Exception as exc:
+            logger.info(log_event(
+                ctx,
+                role="generator",
+                event="pdf_context_unavailable",
+                module=logger.name,
+                fields={"path": local_pdf_path, "error": str(exc)},
+            ))
+            pdf_context = None
+
+    pdf_context_for_tasks = pdf_context if not parallel_within_file else None
+
+    def _load_pdf_info_task() -> tuple[PdfInfoResponse, bool]:
+        info_ctx = child_context(ctx, task_id=f"{ctx.task_id}:pdf_info")
+        info_resp = None
+        info_cache_hit = False
+        info_cache_key = ""
+        info_cache_path = None
         if md5 and cache_root is not None:
-            contents_cache_key = _contents_cache_key(md5, settings)
-            contents_cache_path = _cache_path(cache_root, "contents", contents_cache_key)
-            cached = _read_cache_json(contents_cache_path, contents_ctx)
-            if cached and cached.get("key") == contents_cache_key:
-                contents_resp = PdfContentsDetectionResponse(
+            info_cache_key = _pdf_info_cache_key(md5)
+            info_cache_path = _cache_path(cache_root, "pdf_info", info_cache_key)
+            cached = _read_cache_json(info_cache_path, info_ctx)
+            if cached and cached.get("key") == info_cache_key:
+                page_count = int(cached.get("page_count") or 0)
+                metadata = cached.get("metadata") if isinstance(cached.get("metadata"), dict) else {}
+                info_resp = PdfInfoResponse(
                     schema_version="1.0",
                     path=local_pdf_path,
-                    has_contents=bool(cached.get("has_contents")),
-                    page_index=int(cached.get("page_index") or -1),
-                    page_number=int(cached.get("page_number") or 0),
-                    heading=str(cached.get("heading") or ""),
-                    confidence=float(cached.get("confidence") or 0.0),
+                    page_count=page_count,
+                    metadata=metadata,
                 )
-                contents_cache_hit = True
+                info_cache_hit = True
                 logger.info(log_event(
-                    contents_ctx,
+                    info_ctx,
                     role="generator",
-                    event="contents_cache_hit",
+                    event="pdf_info_cache_hit",
                     module=logger.name,
-                    fields={"file_id": file.file_id, "cache_path": str(contents_cache_path)},
+                    fields={"file_id": file.file_id, "cache_path": str(info_cache_path)},
                 ))
             else:
                 logger.info(log_event(
-                    contents_ctx,
+                    info_ctx,
                     role="generator",
-                    event="contents_cache_miss",
+                    event="pdf_info_cache_miss",
                     module=logger.name,
-                    fields={"file_id": file.file_id, "cache_path": str(contents_cache_path) if contents_cache_path else ""},
+                    fields={"file_id": file.file_id, "cache_path": str(info_cache_path) if info_cache_path else ""},
                 ))
-        if contents_resp is None:
-            contents_resp = detect_contents_page_service(
-                PdfContentsDetectionRequest(
-                    schema_version="1.0",
-                    path=local_pdf_path,
-                    max_pages=settings.contents_max_pages,
-                    min_headings=settings.contents_min_headings,
-                    keywords=settings.contents_keywords,
-                    pdf_context=pdf_context,
-                ),
-                contents_ctx,
+        if info_resp is None:
+            info_resp = extract_pdf_info(
+                PdfInfoRequest(schema_version="1.0", path=local_pdf_path, pdf_context=pdf_context_for_tasks),
+                info_ctx,
             )
-            if md5 and cache_root is not None and contents_cache_path is not None:
+            if md5 and cache_root is not None and info_cache_path is not None:
                 _write_cache_json(
-                    contents_cache_path,
+                    info_cache_path,
                     {
                         "schema_version": "1.0",
-                        "key": contents_cache_key,
-                        "has_contents": contents_resp.has_contents,
-                        "page_index": contents_resp.page_index,
-                        "page_number": contents_resp.page_number,
-                        "heading": contents_resp.heading,
-                        "confidence": contents_resp.confidence,
+                        "key": info_cache_key,
+                        "page_count": info_resp.page_count,
+                        "metadata": info_resp.metadata,
                     },
-                    contents_ctx,
+                    info_ctx,
                 )
                 logger.info(log_event(
-                    contents_ctx,
+                    info_ctx,
                     role="generator",
-                    event="contents_cache_written",
+                    event="pdf_info_cache_written",
                     module=logger.name,
-                    fields={"file_id": file.file_id, "cache_path": str(contents_cache_path)},
-                ))
-        if contents_resp.has_contents:
-            contents_page_number = contents_resp.page_number
-            contents_heading = contents_resp.heading or ""
-            if settings.contents_preview_enabled:
-                contents_preview = render_preview_service(
-                    PreviewRequest(
-                        schema_version="1.1",
-                        pdf_path=local_pdf_path,
-                        out_dir=settings.output_dir,
-                        report_name=report_name,
-                        page_number=max(contents_resp.page_index, 0),
-                        variant="contents",
-                        dpi=settings.contents_preview_dpi,
-                        pdf_context=pdf_context,
-                    ),
-                    ctx,
-                )
-                if contents_preview.image_path:
-                    contents_image = contents_preview.image_path
-            else:
-                logger.info(log_event(
-                    contents_ctx,
-                    role="generator",
-                    event="contents_preview_skipped",
-                    module=logger.name,
-                    fields={"file_id": file.file_id, "reason": "preview_disabled"},
+                    fields={"file_id": file.file_id, "cache_path": str(info_cache_path)},
                 ))
         logger.info(log_event(
-            contents_ctx,
+            info_ctx,
             role="generator",
-            event="contents_detection_result",
+            event="pdf_info_loaded",
             module=logger.name,
             fields={
                 "file_id": file.file_id,
-                "has_contents": contents_resp.has_contents,
-                "page_number": contents_page_number,
-                "image_path": contents_image or "",
-                "cache_hit": contents_cache_hit,
+                "page_count": info_resp.page_count,
+                "metadata_keys": list(info_resp.metadata.keys()),
+                "cache_hit": info_cache_hit,
             },
         ))
-    except Exception as exc:
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="contents_detection_failed",
-            module=logger.name,
-            fields={"file_id": file.file_id, "error": str(exc)},
-        ))
+        return info_resp, info_cache_hit
+
+    def _load_contents_task() -> tuple[int, str, str, bool]:
+        local_contents_page = 0
+        local_contents_heading = ""
+        local_contents_image = ""
+        contents_ctx = child_context(ctx, task_id=f"{ctx.task_id}:contents")
+        try:
+            contents_resp = None
+            contents_cache_hit = False
+            contents_cache_key = ""
+            contents_cache_path = None
+            if md5 and cache_root is not None:
+                contents_cache_key = _contents_cache_key(md5, settings)
+                contents_cache_path = _cache_path(cache_root, "contents", contents_cache_key)
+                cached = _read_cache_json(contents_cache_path, contents_ctx)
+                if cached and cached.get("key") == contents_cache_key:
+                    contents_resp = PdfContentsDetectionResponse(
+                        schema_version="1.0",
+                        path=local_pdf_path,
+                        has_contents=bool(cached.get("has_contents")),
+                        page_index=int(cached.get("page_index") or -1),
+                        page_number=int(cached.get("page_number") or 0),
+                        heading=str(cached.get("heading") or ""),
+                        confidence=float(cached.get("confidence") or 0.0),
+                    )
+                    contents_cache_hit = True
+                    logger.info(log_event(
+                        contents_ctx,
+                        role="generator",
+                        event="contents_cache_hit",
+                        module=logger.name,
+                        fields={"file_id": file.file_id, "cache_path": str(contents_cache_path)},
+                    ))
+                else:
+                    logger.info(log_event(
+                        contents_ctx,
+                        role="generator",
+                        event="contents_cache_miss",
+                        module=logger.name,
+                        fields={"file_id": file.file_id, "cache_path": str(contents_cache_path) if contents_cache_path else ""},
+                    ))
+            if contents_resp is None:
+                contents_resp = detect_contents_page_service(
+                    PdfContentsDetectionRequest(
+                        schema_version="1.0",
+                        path=local_pdf_path,
+                        max_pages=settings.contents_max_pages,
+                        min_headings=settings.contents_min_headings,
+                        keywords=settings.contents_keywords,
+                        pdf_context=pdf_context_for_tasks,
+                    ),
+                    contents_ctx,
+                )
+                if md5 and cache_root is not None and contents_cache_path is not None:
+                    _write_cache_json(
+                        contents_cache_path,
+                        {
+                            "schema_version": "1.0",
+                            "key": contents_cache_key,
+                            "has_contents": contents_resp.has_contents,
+                            "page_index": contents_resp.page_index,
+                            "page_number": contents_resp.page_number,
+                            "heading": contents_resp.heading,
+                            "confidence": contents_resp.confidence,
+                        },
+                        contents_ctx,
+                    )
+                    logger.info(log_event(
+                        contents_ctx,
+                        role="generator",
+                        event="contents_cache_written",
+                        module=logger.name,
+                        fields={"file_id": file.file_id, "cache_path": str(contents_cache_path)},
+                    ))
+            if contents_resp.has_contents:
+                local_contents_page = contents_resp.page_number
+                local_contents_heading = contents_resp.heading or ""
+                if settings.contents_preview_enabled:
+                    contents_preview = render_preview_service(
+                        PreviewRequest(
+                            schema_version="1.1",
+                            pdf_path=local_pdf_path,
+                            out_dir=settings.output_dir,
+                            report_name=report_name,
+                            page_number=max(contents_resp.page_index, 0),
+                            variant="contents",
+                            dpi=settings.contents_preview_dpi,
+                            pdf_context=pdf_context_for_tasks,
+                        ),
+                        ctx,
+                    )
+                    if contents_preview.image_path:
+                        local_contents_image = contents_preview.image_path
+                else:
+                    logger.info(log_event(
+                        contents_ctx,
+                        role="generator",
+                        event="contents_preview_skipped",
+                        module=logger.name,
+                        fields={"file_id": file.file_id, "reason": "preview_disabled"},
+                    ))
+            logger.info(log_event(
+                contents_ctx,
+                role="generator",
+                event="contents_detection_result",
+                module=logger.name,
+                fields={
+                    "file_id": file.file_id,
+                    "has_contents": contents_resp.has_contents,
+                    "page_number": local_contents_page,
+                    "image_path": local_contents_image or "",
+                    "cache_hit": contents_cache_hit,
+                },
+            ))
+            return local_contents_page, local_contents_heading, local_contents_image, contents_cache_hit
+        except Exception as exc:
+            logger.info(log_event(
+                ctx,
+                role="generator",
+                event="contents_detection_failed",
+                module=logger.name,
+                fields={"file_id": file.file_id, "error": str(exc)},
+            ))
+            return local_contents_page, local_contents_heading, local_contents_image, False
 
     text_ctx = child_context(ctx, task_id=f"{ctx.task_id}:text")
-    text_resp = None
-    text_cache_hit = False
-    text_cache_key = ""
-    text_cache_path = None
-    if md5 and cache_root is not None:
-        text_cache_key = _text_cache_key(md5, settings)
-        text_cache_path = _cache_path(cache_root, "text", text_cache_key)
-        cached = _read_cache_json(text_cache_path, text_ctx)
-        if cached and cached.get("key") == text_cache_key:
-            text_resp = PdfTextExtractResponse(
-                schema_version="1.0",
-                text=str(cached.get("text") or ""),
-                pages_extracted=int(cached.get("pages_extracted") or 0),
-                char_count=int(cached.get("char_count") or 0),
-                text_density=float(cached.get("text_density") or 0.0),
-            )
-            text_cache_hit = True
-            logger.info(log_event(
-                text_ctx,
-                role="generator",
-                event="text_cache_hit",
-                module=logger.name,
-                fields={"file_id": file.file_id, "cache_path": str(text_cache_path)},
-            ))
-        else:
-            logger.info(log_event(
-                text_ctx,
-                role="generator",
-                event="text_cache_miss",
-                module=logger.name,
-                fields={"file_id": file.file_id, "cache_path": str(text_cache_path) if text_cache_path else ""},
-            ))
-    if text_resp is None:
-        text_resp = extract_pdf_text(
-            PdfTextExtractRequest(
-                schema_version="1.0",
-                path=local_pdf_path,
-                max_pages=settings.pdf_text_max_pages,
-                max_chars=settings.pdf_text_max_chars,
-                pdf_context=pdf_context,
-            ),
-            text_ctx,
-        )
-        if md5 and cache_root is not None and text_cache_path is not None:
-            _write_cache_json(
-                text_cache_path,
-                {
-                    "schema_version": "1.0",
-                    "key": text_cache_key,
-                    "text": text_resp.text,
-                    "pages_extracted": text_resp.pages_extracted,
-                    "char_count": text_resp.char_count,
-                    "text_density": text_resp.text_density,
-                },
+
+    def _load_text_task() -> tuple[PdfTextExtractResponse, bool]:
+        text_resp = None
+        text_cache_hit = False
+        text_cache_key = ""
+        text_cache_path = None
+        if md5 and cache_root is not None:
+            text_cache_key = _text_cache_key(md5, settings)
+            text_cache_path = _cache_path(cache_root, "text", text_cache_key)
+            cached = _read_cache_json(text_cache_path, text_ctx)
+            if cached and cached.get("key") == text_cache_key:
+                text_resp = PdfTextExtractResponse(
+                    schema_version="1.0",
+                    text=str(cached.get("text") or ""),
+                    pages_extracted=int(cached.get("pages_extracted") or 0),
+                    char_count=int(cached.get("char_count") or 0),
+                    text_density=float(cached.get("text_density") or 0.0),
+                )
+                text_cache_hit = True
+                logger.info(log_event(
+                    text_ctx,
+                    role="generator",
+                    event="text_cache_hit",
+                    module=logger.name,
+                    fields={"file_id": file.file_id, "cache_path": str(text_cache_path)},
+                ))
+            else:
+                logger.info(log_event(
+                    text_ctx,
+                    role="generator",
+                    event="text_cache_miss",
+                    module=logger.name,
+                    fields={"file_id": file.file_id, "cache_path": str(text_cache_path) if text_cache_path else ""},
+                ))
+        if text_resp is None:
+            text_resp = extract_pdf_text(
+                PdfTextExtractRequest(
+                    schema_version="1.0",
+                    path=local_pdf_path,
+                    max_pages=settings.pdf_text_max_pages,
+                    max_chars=settings.pdf_text_max_chars,
+                    pdf_context=pdf_context_for_tasks,
+                ),
                 text_ctx,
             )
-            logger.info(log_event(
-                text_ctx,
-                role="generator",
-                event="text_cache_written",
-                module=logger.name,
-                fields={"file_id": file.file_id, "cache_path": str(text_cache_path)},
-            ))
+            if md5 and cache_root is not None and text_cache_path is not None:
+                _write_cache_json(
+                    text_cache_path,
+                    {
+                        "schema_version": "1.0",
+                        "key": text_cache_key,
+                        "text": text_resp.text,
+                        "pages_extracted": text_resp.pages_extracted,
+                        "char_count": text_resp.char_count,
+                        "text_density": text_resp.text_density,
+                    },
+                    text_ctx,
+                )
+                logger.info(log_event(
+                    text_ctx,
+                    role="generator",
+                    event="text_cache_written",
+                    module=logger.name,
+                    fields={"file_id": file.file_id, "cache_path": str(text_cache_path)},
+                ))
+        return text_resp, text_cache_hit
+
+    if parallel_within_file:
+        with ThreadPoolExecutor(max_workers=report_worker_limit) as executor:
+            info_future = executor.submit(_load_pdf_info_task)
+            contents_future = executor.submit(_load_contents_task)
+            text_future = executor.submit(_load_text_task)
+            info_resp, info_cache_hit = info_future.result()
+            contents_page_number, contents_heading, contents_image, contents_cache_hit = contents_future.result()
+            text_resp, text_cache_hit = text_future.result()
+    else:
+        info_resp, info_cache_hit = _load_pdf_info_task()
+        contents_page_number, contents_heading, contents_image, contents_cache_hit = _load_contents_task()
+        text_resp, text_cache_hit = _load_text_task()
     text_status = {
         "schema_version": "1.0",
         "text_density": float(text_resp.text_density or 0.0),
@@ -929,31 +974,44 @@ def generate_report(
             child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:metadata"),
         )
 
-    fig_resp = extract_best_figure_service(
-        FigureExtractRequest(
-            schema_version="1.0",
-            pdf_path=local_pdf_path,
-            out_dir=settings.output_dir,
-            report_name=report_name,
-            pdf_context=pdf_context,
-        ),
-        ctx,
-    )
+    def _extract_figure_task():
+        return extract_best_figure_service(
+            FigureExtractRequest(
+                schema_version="1.0",
+                pdf_path=local_pdf_path,
+                out_dir=settings.output_dir,
+                report_name=report_name,
+                pdf_context=pdf_context_for_tasks,
+            ),
+            ctx,
+        )
+
+    def _extract_candidates_task():
+        return collect_candidates_service(
+            ExtractCandidatesRequest(
+                schema_version="1.0",
+                pdf_path=local_pdf_path,
+                out_dir=settings.output_dir,
+                report_name=report_name,
+                pdf_context=pdf_context_for_tasks,
+            ),
+            ctx,
+        )
+
+    if parallel_within_file:
+        with ThreadPoolExecutor(max_workers=report_worker_limit) as executor:
+            fig_future = executor.submit(_extract_figure_task)
+            cands_future = executor.submit(_extract_candidates_task)
+            fig_resp = fig_future.result()
+            cands_resp = cands_future.result()
+    else:
+        fig_resp = _extract_figure_task()
+        cands_resp = _extract_candidates_task()
     if fig_resp.image_path:
         data._figure_image = fig_resp.image_path
         if fig_resp.caption and not (data.figure.evidence or "").strip():
             data.figure.evidence = fig_resp.caption
 
-    cands_resp = collect_candidates_service(
-        ExtractCandidatesRequest(
-            schema_version="1.0",
-            pdf_path=local_pdf_path,
-            out_dir=settings.output_dir,
-            report_name=report_name,
-            pdf_context=pdf_context,
-        ),
-        ctx,
-    )
     ranked = []
     rank_usage = None
     sliced_paths = []

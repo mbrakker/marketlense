@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, Optional, Tuple
 
 from src.contracts.config import AppSettings
 from src.contracts.files import ReadTextRequest
@@ -18,6 +18,7 @@ from src.services.schema_validator_service import validate_schema
 from src.utils.errors import AppError
 from src.utils.model_resolver import resolve_model
 from src.utils.cache_utils import sha256_json
+from src.utils.slugify import slugify
 
 logger = logging.getLogger("market_lense.evidence_pack_generator")
 
@@ -154,6 +155,32 @@ def _generate_pack(
                 analysis_store=analysis_store,
             )
             if cached is not None:
+                if schema_name == "doc_map":
+                    cached, normalization = _normalize_doc_map_payload(cached, report_id)
+                    if normalization["changed"]:
+                        analysis_store.store_pack(
+                            settings.output_dir,
+                            report_id,
+                            pack_name,
+                            cached,
+                            ctx,
+                            report_slug=report_name,
+                            mirror_legacy=settings.mirror_legacy_packs,
+                        )
+                        logger.info(log_event(
+                            ctx,
+                            role="generator",
+                            event="doc_map_cache_normalized",
+                            module=logger.name,
+                            fields={
+                                "report_id": report_id,
+                                "wrapper_key": normalization["wrapper_key"],
+                                "sections_with_ids": normalization["sections_with_ids"],
+                                "added_section_ids": normalization["added_section_ids"],
+                                "dropped_sections": normalization["dropped_sections"],
+                                "doc_id_filled": normalization["doc_id_filled"],
+                            },
+                        ))
                 logger.info(log_event(
                     ctx,
                     role="generator",
@@ -198,6 +225,23 @@ def _generate_pack(
             not_found_reason = "model_returned_no_json"
         else:
             try:
+                if schema_name == "doc_map" and isinstance(parsed_json, dict):
+                    parsed_json, normalization = _normalize_doc_map_payload(parsed_json, report_id)
+                    if normalization["changed"]:
+                        logger.info(log_event(
+                            ctx,
+                            role="generator",
+                            event="doc_map_normalized",
+                            module=logger.name,
+                            fields={
+                                "report_id": report_id,
+                                "wrapper_key": normalization["wrapper_key"],
+                                "sections_with_ids": normalization["sections_with_ids"],
+                                "added_section_ids": normalization["added_section_ids"],
+                                "dropped_sections": normalization["dropped_sections"],
+                                "doc_id_filled": normalization["doc_id_filled"],
+                            },
+                        ))
                 validate_schema(parsed_json, schema_name, ctx)
             except AppError as exc:
                 not_found_reason = f"schema_validation_failed:{exc.code}"
@@ -259,6 +303,56 @@ def _summarize_doc_map(payload: dict) -> dict:
         "doc_id_present": bool(doc_id),
         "summary_present": bool(summary_text),
         "not_found_reason": not_found_reason,
+    }
+
+
+def _normalize_doc_map_payload(payload: dict, report_id: str) -> Tuple[dict, dict]:
+    wrapper_key = ""
+    candidate = payload
+    if isinstance(payload.get("docmap"), dict):
+        wrapper_key = "docmap"
+        candidate = payload["docmap"]
+    elif isinstance(payload.get("doc_map"), dict):
+        wrapper_key = "doc_map"
+        candidate = payload["doc_map"]
+    normalized = dict(candidate) if isinstance(candidate, dict) else {}
+    cache_meta = payload.get("_cache") if isinstance(payload.get("_cache"), dict) else None
+    if cache_meta:
+        normalized["_cache"] = cache_meta
+    doc_id = str(normalized.get("doc_id") or "").strip()
+    doc_id_filled = False
+    if not doc_id:
+        normalized["doc_id"] = report_id
+        doc_id_filled = True
+    sections = normalized.get("sections")
+    sections_with_ids = 0
+    added_section_ids = 0
+    dropped_sections = 0
+    if isinstance(sections, list):
+        updated_sections = []
+        for idx, section in enumerate(sections):
+            if not isinstance(section, dict):
+                dropped_sections += 1
+                continue
+            sec = dict(section)
+            sec_id = str(sec.get("id") or "").strip()
+            if not sec_id:
+                title = str(sec.get("title") or "").strip()
+                slug = slugify(title) if title else ""
+                sec_id = slug or f"section_{idx + 1}"
+                sec["id"] = sec_id
+                added_section_ids += 1
+            sections_with_ids += 1 if sec.get("id") else 0
+            updated_sections.append(sec)
+        normalized["sections"] = updated_sections
+    changed = wrapper_key != "" or doc_id_filled or added_section_ids > 0 or dropped_sections > 0
+    return normalized, {
+        "changed": changed,
+        "wrapper_key": wrapper_key,
+        "sections_with_ids": sections_with_ids,
+        "added_section_ids": added_section_ids,
+        "dropped_sections": dropped_sections,
+        "doc_id_filled": doc_id_filled,
     }
 
 

@@ -127,3 +127,25 @@ def test_generate_evidence_packs_handles_missing_json(tmp_path):
     assert stored_report_id == "r1"
     assert stored_pack == "doc_map"
     assert stored_payload["not_found_reason"] == "model_returned_no_json"
+
+
+def test_generate_evidence_packs_normalizes_docmap_wrapper(tmp_path):
+    parsed = {"docmap": {"title": "Retail trends", "sections": [{"title": "Section A"}]}}
+    fake_openai = FakeOpenAIClient(parsed)
+    analysis_store = FakeAnalysisStore()
+    packs = generate_evidence_packs(
+        report_id="r1",
+        report_name="report",
+        vector_store_id="vs_1",
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=fake_openai,
+        prompt_client=FakePromptClient(),
+        analysis_store=analysis_store,
+    )
+    doc_map = packs["doc_map"]
+    assert doc_map["doc_id"] == "r1"
+    assert doc_map["title"] == "Retail trends"
+    assert isinstance(doc_map["sections"], list)
+    assert doc_map["sections"][0].get("id")
+    assert len(analysis_store.stored) == 6

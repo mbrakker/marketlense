@@ -130,6 +130,24 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     if _is_missing(batch_limit_raw):
         batch_limit_raw = _env_value("BATCH_LIMIT")
     batch_limit = int(batch_limit_raw) if not _is_missing(batch_limit_raw) else 20
+    worker_limit_raw = ingest.get("worker_limit")
+    if _is_missing(worker_limit_raw):
+        worker_limit_raw = _env_value("INGEST_WORKER_LIMIT")
+    try:
+        ingest_worker_limit = int(worker_limit_raw) if not _is_missing(worker_limit_raw) else 2
+    except (TypeError, ValueError):
+        ingest_worker_limit = 2
+    if ingest_worker_limit < 1:
+        ingest_worker_limit = 1
+    report_worker_limit_raw = ingest.get("report_worker_limit")
+    if _is_missing(report_worker_limit_raw):
+        report_worker_limit_raw = _env_value("INGEST_REPORT_WORKER_LIMIT")
+    try:
+        report_worker_limit = int(report_worker_limit_raw) if not _is_missing(report_worker_limit_raw) else 2
+    except (TypeError, ValueError):
+        report_worker_limit = 2
+    if report_worker_limit < 1:
+        report_worker_limit = 1
     timeout_raw = ingest.get("timeout_seconds")
     if _is_missing(timeout_raw):
         timeout_raw = _env_value("OPENAI_TIMEOUT_SECONDS")
@@ -202,6 +220,8 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         openai_model=openai_model,
         openai_models=openai_models,
         batch_limit=batch_limit,
+        ingest_worker_limit=ingest_worker_limit,
+        report_worker_limit=report_worker_limit,
         output_dir=output_dir,
         cache_dir=cache_dir,
         state_db=state_db,
@@ -276,6 +296,8 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             "openai_model": settings.openai_model,
             "openai_models": settings.openai_models,
             "temperature": settings.temperature,
+            "ingest_worker_limit": settings.ingest_worker_limit,
+            "report_worker_limit": settings.report_worker_limit,
             "openai_seed": settings.openai_seed,
             "rank_model": settings.rank_model,
             "rank_temperature": settings.rank_temperature,

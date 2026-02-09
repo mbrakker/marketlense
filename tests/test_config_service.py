@@ -80,6 +80,70 @@ class TestConfigService(unittest.TestCase):
         self.assertEqual("./out/cost-daily.json", settings.cost_daily_path)
         self.assertIsInstance(settings.model_pricing, dict)
 
+    def test_ingest_worker_limit_defaults_and_env_override(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_analysis=False)
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["ingest"]["worker_limit"] = 3
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
+
+            with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
+                settings = load_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                )
+                self.assertEqual(3, settings.ingest_worker_limit)
+
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["ingest"].pop("worker_limit", None)
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
+
+            with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
+                settings = load_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                )
+                self.assertEqual(2, settings.ingest_worker_limit)
+
+            with patch.dict(os.environ, {"OPENAI_API_KEY": "key", "INGEST_WORKER_LIMIT": "2"}, clear=True):
+                settings = load_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                )
+                self.assertEqual(2, settings.ingest_worker_limit)
+
+    def test_report_worker_limit_defaults_and_env_override(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_analysis=False)
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["ingest"]["report_worker_limit"] = 4
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
+
+            with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
+                settings = load_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                )
+                self.assertEqual(4, settings.report_worker_limit)
+
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["ingest"].pop("report_worker_limit", None)
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
+
+            with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
+                settings = load_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                )
+                self.assertEqual(2, settings.report_worker_limit)
+
+            with patch.dict(os.environ, {"OPENAI_API_KEY": "key", "INGEST_REPORT_WORKER_LIMIT": "2"}, clear=True):
+                settings = load_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                )
+                self.assertEqual(2, settings.report_worker_limit)
+
     def test_publish_settings_derive_site_url_from_admin(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(tmp_dir, include_publish=True)

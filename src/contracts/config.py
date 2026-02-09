@@ -26,6 +26,8 @@ class AppSettings:
     cover_style_path: str = field(metadata={"doc": "Filesystem path to cover style YAML."})
     ingest_lock_path: str = field(metadata={"doc": "Filesystem path for the ingest single-run lock file."})
     temperature: float = field(metadata={"doc": "Sampling temperature for report generation."})
+    ingest_worker_limit: int = field(default=2, metadata={"doc": "Max concurrent per-file ingest workers; 1 disables parallelism."})
+    report_worker_limit: int = field(default=2, metadata={"doc": "Max concurrent per-file report subtasks; 1 disables within-file parallelism."})
     drive_supports_all_drives: bool = field(default=True, metadata={"doc": "Whether to set supportsAllDrives for Drive list calls."})
     drive_include_items_from_all_drives: bool = field(default=True, metadata={"doc": "Whether to includeItemsFromAllDrives for Drive list calls."})
     drive_id: Optional[str] = field(default=None, metadata={"doc": "Optional shared Drive ID for corpora=drive scoping."})

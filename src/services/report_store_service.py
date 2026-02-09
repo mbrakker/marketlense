@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
+import threading
 from contextlib import contextmanager
 from pathlib import Path
 from typing import List, Optional
@@ -24,6 +25,7 @@ logger = logging.getLogger("market_lense.report_store_service")
 
 ACCESS_TIMEOUT_SECONDS = 0.0
 LOCK_ERROR_MARKERS = ("database is locked", "database is busy")
+_REPORT_CONN_LOCK = threading.Lock()
 
 DDL = """
 CREATE TABLE IF NOT EXISTS reports (
@@ -86,15 +88,16 @@ def _metadata_conn(path: str):
             severity="error",
         )
     Path(path).parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path)
-    try:
-        conn.executescript(DDL)
-        _ensure_schema(conn)
-        conn.commit()
-        yield conn
-        conn.commit()
-    finally:
-        conn.close()
+    with _REPORT_CONN_LOCK:
+        conn = sqlite3.connect(path)
+        try:
+            conn.executescript(DDL)
+            _ensure_schema(conn)
+            conn.commit()
+            yield conn
+            conn.commit()
+        finally:
+            conn.close()
 
 
 def _clean_list(values: List[str]) -> List[str]:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import io
 import logging
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable, Optional
@@ -26,7 +27,8 @@ from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.drive_service")
-_DRIVE_CLIENTS: dict[str, object] = {}
+_DRIVE_CLIENTS: dict[tuple[str, int], object] = {}
+_DRIVE_CLIENTS_LOCK = threading.Lock()
 
 
 class _HashingWriter:
@@ -72,23 +74,36 @@ def _build_drive_client(sa_path: str):
 
 
 def _get_drive_client(sa_path: str, ctx: RunContext):
-    if sa_path in _DRIVE_CLIENTS:
+    thread_id = threading.get_ident()
+    cache_key = (sa_path, thread_id)
+    if cache_key in _DRIVE_CLIENTS:
         logger.info(log_event(
             ctx,
             role="service",
             event="drive_client_reuse",
             module=logger.name,
-            fields={"service_account_path": sa_path},
+            fields={"service_account_path": sa_path, "thread_id": thread_id},
         ))
-        return _DRIVE_CLIENTS[sa_path]
-    client = _build_drive_client(sa_path)
-    _DRIVE_CLIENTS[sa_path] = client
+        return _DRIVE_CLIENTS[cache_key]
+    with _DRIVE_CLIENTS_LOCK:
+        cached = _DRIVE_CLIENTS.get(cache_key)
+        if cached is not None:
+            logger.info(log_event(
+                ctx,
+                role="service",
+                event="drive_client_reuse",
+                module=logger.name,
+                fields={"service_account_path": sa_path, "thread_id": thread_id},
+            ))
+            return cached
+        client = _build_drive_client(sa_path)
+        _DRIVE_CLIENTS[cache_key] = client
     logger.info(log_event(
         ctx,
         role="service",
         event="drive_client_created",
         module=logger.name,
-        fields={"service_account_path": sa_path},
+        fields={"service_account_path": sa_path, "thread_id": thread_id},
     ))
     return client
 

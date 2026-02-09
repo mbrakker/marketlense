@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
+import threading
 from contextlib import contextmanager
 from typing import Optional
 
@@ -28,6 +29,7 @@ logger = logging.getLogger("market_lense.state_service")
 
 ACCESS_TIMEOUT_SECONDS = 0.0
 LOCK_ERROR_MARKERS = ("database is locked", "database is busy")
+_STATE_CONN_LOCK = threading.Lock()
 
 DDL = """
 CREATE TABLE IF NOT EXISTS processed (
@@ -69,15 +71,16 @@ def _state_conn(path: str):
             message="State DB path is required",
             retryable=False,
         )
-    conn = sqlite3.connect(path)
-    try:
-        conn.executescript(DDL)
-        _migrate_schema(conn)
-        conn.commit()
-        yield conn
-        conn.commit()
-    finally:
-        conn.close()
+    with _STATE_CONN_LOCK:
+        conn = sqlite3.connect(path)
+        try:
+            conn.executescript(DDL)
+            _migrate_schema(conn)
+            conn.commit()
+            yield conn
+            conn.commit()
+        finally:
+            conn.close()
 
 
 def _migrate_schema(conn: sqlite3.Connection) -> None:

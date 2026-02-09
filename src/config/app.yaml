@@ -23,6 +23,8 @@ ingest:
   lock_ttl_seconds: 7200
   seed: null
   batch_limit: 20
+  worker_limit: 2
+  report_worker_limit: 2
   debug_candidate_gallery: false
   cover_cache_enabled: true
   pdf_text:
