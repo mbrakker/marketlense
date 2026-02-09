@@ -169,3 +169,33 @@
    - Keep `pytest` green; add perf/benchmark checks for ingest and cost-ledger growth.
    - Add regression tests for extraction fallback paths and metadata parsing helpers.
 
+## Test Suite Integrity Backlog (added 2026-02-09)
+
+### Findings to fix (anti-shortcuts / anti-cheats)
+1. Retry behavior test is weak.
+   - `tests/test_orchestrator_retry.py` currently asserts only final error outcome; it does not prove retries/backoff occurred.
+2. Parallel ingest test does not run real parallel work.
+   - `tests/test_ingest_parallel.py` uses a synchronous dummy executor, so concurrency/race behavior is not exercised.
+3. Vector-store wiring test collects call trace but does not assert it.
+   - `tests/test_vector_pipeline_wiring.py` records `vector_calls` but never validates expected create/upload/attach/wait sequence.
+4. Over-mocking in orchestrator wiring tests reduces regression detection.
+   - `tests/test_vector_pipeline_wiring.py`, `tests/test_publish_orchestrator.py`, and `tests/test_ingest_parallel.py` stub many boundaries and mostly validate mocked paths.
+5. Unsafe smoke script in repository root.
+   - `test_openai.py` prints API key prefix and performs a live API call at import-time if run directly.
+6. Brittle full-list UI snapshot.
+   - `tests/test_streamlit_navigation.py` hardcodes full nav order/text and may fail on low-risk copy/order updates.
+
+### Remediation plan
+1. Strengthen retry verification.
+   - Assert retry attempt count (`generate_report` call count), `time.sleep` calls, and bounded backoff progression in `tests/test_orchestrator_retry.py`.
+2. Add a real-concurrency ingest test.
+   - Keep one unit test with fake executor for determinism, plus one integration-style test using real `ThreadPoolExecutor` and synchronization primitives.
+3. Enforce vector pipeline call contract.
+   - Add explicit assertions for `vector_calls` sequence and key parameters in `tests/test_vector_pipeline_wiring.py`.
+4. Reduce over-mocking by adding service-level integration fixtures.
+   - Introduce temp-dir + sqlite + fixture PDF based tests that keep real file/state/report services and only mock external APIs.
+5. Convert `test_openai.py` into explicit opt-in integration smoke test.
+   - Move under `tests/integration/` (or `scripts/`), add marker/guard, remove API key echo, and prevent execution on import.
+6. Relax brittle UI snapshot checks.
+   - Assert required sections and invariants instead of exact full list ordering where ordering is not business-critical.
+
