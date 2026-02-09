@@ -380,6 +380,42 @@ CLI options summary:
 - `--limit`: optional integer across batch commands.
 - `--folder`: optional Drive folder override for ingest.
 
+## Streamlit Cockpit
+
+The repository now includes a full Streamlit admin/control panel at `src/streamlit_app.py`, aligned to the architecture in `GUI-ARCHITECTURE.md`.
+
+Run locally:
+
+```bash
+streamlit run src/streamlit_app.py
+```
+
+Primary sidebar navigation (14 sections):
+
+1. Cockpit Overview
+2. Ingest Control
+3. Candidate Extraction
+4. Report Command Center
+5. Cover Images
+6. Analysis & Evidence
+7. Validation Center
+8. Publishing Control
+9. Category Manager
+10. Cost & Usage
+11. Logs & Live Terminal
+12. Settings & Prompts
+13. System & Storage
+14. Developer & Test Tools (disabled stub)
+
+Design and behavior highlights:
+
+- One dominant task per page with a consistent shell: title + status chip + primary action + filters + main data region + right-side details panel.
+- Status chips are normalized to `success` / `warn` / `error` semantics for consistent operational feedback.
+- Accessibility/readability defaults: captions are rendered in black and action buttons use a light-blue background for consistent contrast in the main content area.
+- Interactive controls (navigation, actions, inputs, selectors) expose concise hover help with usage examples (capped at 1000 characters per tooltip).
+- Pages are wired to existing contracts/services/orchestrators as source-of-truth surfaces (DB, files, config, and logs).
+- The logs page supports structured filtering (`run_id`, `task_id`, `span_id`, `event`, `role`, `module`) and includes a terminal-style panel for UI-triggered run output history.
+ 
 ## Output Layout
 
 Default output structure:

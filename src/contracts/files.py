@@ -44,6 +44,34 @@ class ListHtmlResponse:
 
 
 @dataclass(frozen=True)
+class DirectoryEntry:
+    schema_version: str = field(metadata={"doc": "Directory entry schema version."})
+    path: str = field(metadata={"doc": "Absolute or relative path to the entry."})
+    name: str = field(metadata={"doc": "Base name of the entry."})
+    is_dir: bool = field(metadata={"doc": "True when the entry is a directory."})
+    size_bytes: Optional[int] = field(default=None, metadata={"doc": "File size in bytes when entry is a file."})
+    mtime_utc: Optional[float] = field(default=None, metadata={"doc": "Modified time (epoch seconds), if available."})
+
+
+@dataclass(frozen=True)
+class ListDirectoryRequest:
+    schema_version: str = field(metadata={"doc": "List directory request schema version."})
+    root_dir: str = field(metadata={"doc": "Root directory to list from."})
+    glob_pattern: str = field(default="*", metadata={"doc": "Glob pattern used for filtering."})
+    recursive: bool = field(default=False, metadata={"doc": "Whether to recurse into subdirectories."})
+    include_files: bool = field(default=True, metadata={"doc": "Include files in the response."})
+    include_dirs: bool = field(default=False, metadata={"doc": "Include directories in the response."})
+    limit: int = field(default=500, metadata={"doc": "Maximum number of entries to return."})
+
+
+@dataclass(frozen=True)
+class ListDirectoryResponse:
+    schema_version: str = field(metadata={"doc": "List directory response schema version."})
+    root_dir: str = field(metadata={"doc": "Root directory searched."})
+    entries: List[DirectoryEntry] = field(metadata={"doc": "Matching directory entries."})
+
+
+@dataclass(frozen=True)
 class FileExistsRequest:
     schema_version: str = field(metadata={"doc": "File exists request schema version."})
     path: str = field(metadata={"doc": "Filesystem path to check."})

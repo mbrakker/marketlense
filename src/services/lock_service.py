@@ -10,6 +10,8 @@ from typing import Optional
 from src.contracts.lock import (
     LockAcquireRequest,
     LockAcquireResponse,
+    LockGetRequest,
+    LockGetResponse,
     LockInfo,
     LockReleaseRequest,
     LockReleaseResponse,
@@ -36,6 +38,31 @@ def _read_lock(path: str) -> Optional[LockInfo]:
         )
     except Exception:
         return None
+
+
+def get_lock(request: LockGetRequest, ctx: RunContext) -> LockGetResponse:
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="lock_get_start",
+        module=logger.name,
+        fields={"lock_path": request.lock_path},
+    ))
+    info = _read_lock(request.lock_path)
+    response = LockGetResponse(schema_version="1.0", found=info is not None, lock=info)
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="lock_get_complete",
+        module=logger.name,
+        fields={
+            "lock_path": request.lock_path,
+            "found": response.found,
+            "owner_id": info.owner_id if info else "",
+            "pid": info.pid if info else None,
+        },
+    ))
+    return response
 
 
 def acquire_lock(request: LockAcquireRequest, ctx: RunContext) -> LockAcquireResponse:

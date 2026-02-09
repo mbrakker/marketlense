@@ -8,12 +8,15 @@ from typing import List
 from src.contracts.files import (
     DeleteFileRequest,
     DeleteFileResponse,
+    DirectoryEntry,
     FileExistsRequest,
     FileExistsResponse,
     FileHashRequest,
     FileHashResponse,
     FileStatRequest,
     FileStatResponse,
+    ListDirectoryRequest,
+    ListDirectoryResponse,
     ListHtmlRequest,
     ListHtmlResponse,
     ReadBytesRequest,
@@ -127,6 +130,66 @@ def list_html(request: ListHtmlRequest, ctx: RunContext) -> ListHtmlResponse:
         schema_version="1.0",
         root_dir=request.root_dir,
         html_paths=html_paths,
+    )
+
+
+def list_directory(request: ListDirectoryRequest, ctx: RunContext) -> ListDirectoryResponse:
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="list_directory_start",
+        module=logger.name,
+        fields={
+            "root_dir": request.root_dir,
+            "glob_pattern": request.glob_pattern,
+            "recursive": request.recursive,
+            "include_files": request.include_files,
+            "include_dirs": request.include_dirs,
+            "limit": request.limit,
+        },
+    ))
+    root = Path(request.root_dir)
+    if not root.exists():
+        raise AppError(
+            code="directory_not_found",
+            message=f"Directory not found: {request.root_dir}",
+            retryable=False,
+        )
+    pattern = request.glob_pattern.strip() if request.glob_pattern else "*"
+    if not pattern:
+        pattern = "*"
+    limit = request.limit if request.limit > 0 else 500
+    iterator = root.rglob(pattern) if request.recursive else root.glob(pattern)
+    entries: list[DirectoryEntry] = []
+    for entry in iterator:
+        is_dir = entry.is_dir()
+        if is_dir and not request.include_dirs:
+            continue
+        if (not is_dir) and not request.include_files:
+            continue
+        stat = entry.stat()
+        entries.append(DirectoryEntry(
+            schema_version="1.0",
+            path=str(entry),
+            name=entry.name,
+            is_dir=is_dir,
+            size_bytes=None if is_dir else int(stat.st_size),
+            mtime_utc=float(stat.st_mtime),
+        ))
+        if len(entries) >= limit:
+            break
+    entries.sort(key=lambda item: item.path)
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="list_directory_complete",
+        module=logger.name,
+        fields={"root_dir": request.root_dir, "count": len(entries)},
+    ))
+    return ListDirectoryResponse(
+        schema_version="1.0",
+        root_dir=request.root_dir,
+        entries=entries,
     )
 
 

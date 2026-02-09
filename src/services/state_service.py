@@ -17,8 +17,14 @@ from src.contracts.state import (
     StateIngestCursorGetRequest,
     StateIngestCursorGetResponse,
     StateIngestCursorSetRequest,
+    StateProcessedListRequest,
+    StateProcessedListResponse,
+    StateProcessedRow,
     StatePublishCheckRequest,
     StatePublishGetResponse,
+    StatePublishedListRequest,
+    StatePublishedListResponse,
+    StatePublishedRow,
     StatePublishRecordRequest,
     StateRecordRequest,
 )
@@ -106,6 +112,30 @@ def _migrate_schema(conn: sqlite3.Connection) -> None:
 def _is_lock_error(exc: Exception) -> bool:
     message = str(exc).lower()
     return any(marker in message for marker in LOCK_ERROR_MARKERS)
+
+
+def _parse_int_list(raw: Optional[str]) -> Optional[list[int]]:
+    if not raw:
+        return None
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    if isinstance(parsed, list) and all(isinstance(item, int) for item in parsed):
+        return parsed
+    return None
+
+
+def _parse_dict(raw: Optional[str]) -> Optional[dict]:
+    if not raw:
+        return None
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    if isinstance(parsed, dict):
+        return parsed
+    return None
 
 
 def check_state_db_access(request: StateDbAccessRequest, ctx: RunContext) -> StateDbAccessResponse:
@@ -377,22 +407,8 @@ def get(request: StateGetRequest, ctx: RunContext) -> Optional[StateGetResponse]
         text_validation_pages_json,
         doc_map_summary_json,
     ) = row
-    text_validation_pages = None
-    if text_validation_pages_json:
-        try:
-            parsed = json.loads(text_validation_pages_json)
-            if isinstance(parsed, list) and all(isinstance(item, int) for item in parsed):
-                text_validation_pages = parsed
-        except json.JSONDecodeError:
-            text_validation_pages = None
-    doc_map_summary = None
-    if doc_map_summary_json:
-        try:
-            parsed = json.loads(doc_map_summary_json)
-            if isinstance(parsed, dict):
-                doc_map_summary = parsed
-        except json.JSONDecodeError:
-            doc_map_summary = None
+    text_validation_pages = _parse_int_list(text_validation_pages_json)
+    doc_map_summary = _parse_dict(doc_map_summary_json)
     logger.info(log_event(
         ctx,
         role="service",
@@ -415,6 +431,65 @@ def get(request: StateGetRequest, ctx: RunContext) -> Optional[StateGetResponse]
         text_validation_pages=text_validation_pages,
         doc_map_summary=doc_map_summary,
     )
+
+
+def list_processed(request: StateProcessedListRequest, ctx: RunContext) -> StateProcessedListResponse:
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="state_processed_list_start",
+        module=logger.name,
+        fields={"state_db": request.state_db, "limit": request.limit},
+    ))
+    limit = int(request.limit) if isinstance(request.limit, int) else 200
+    if limit <= 0:
+        limit = 200
+    rows: list[StateProcessedRow] = []
+    with _state_conn(request.state_db) as conn:
+        cur = conn.execute(
+            "SELECT file_id, md5, processed_at, openai_file_id, vector_store_id, vector_store_status, indexed_at_utc, "
+            "last_error, text_validation_status, text_validation_reason, text_validation_pages_json, doc_map_summary_json "
+            "FROM processed ORDER BY processed_at DESC LIMIT ?",
+            (limit,),
+        )
+        for (
+            file_id,
+            md5,
+            processed_at,
+            openai_file_id,
+            vector_store_id,
+            vector_store_status,
+            indexed_at_utc,
+            last_error,
+            text_validation_status,
+            text_validation_reason,
+            text_validation_pages_json,
+            doc_map_summary_json,
+        ) in cur.fetchall():
+            rows.append(StateProcessedRow(
+                schema_version="1.0",
+                file_id=file_id,
+                md5=md5,
+                processed_at=int(processed_at),
+                openai_file_id=openai_file_id,
+                vector_store_id=vector_store_id,
+                vector_store_status=vector_store_status,
+                indexed_at_utc=indexed_at_utc,
+                last_error=last_error,
+                text_validation_status=text_validation_status,
+                text_validation_reason=text_validation_reason,
+                text_validation_pages=_parse_int_list(text_validation_pages_json),
+                doc_map_summary=_parse_dict(doc_map_summary_json),
+            ))
+    response = StateProcessedListResponse(schema_version="1.0", rows=rows)
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="state_processed_list_complete",
+        module=logger.name,
+        fields={"state_db": request.state_db, "count": len(rows)},
+    ))
+    return response
 
 
 def already_published(request: StatePublishCheckRequest, ctx: RunContext) -> bool:
@@ -502,3 +577,41 @@ def get_publish(request: StatePublishCheckRequest, ctx: RunContext) -> Optional[
         wp_post_id=wp_post_id,
         wp_post_url=wp_post_url,
     )
+
+
+def list_published(request: StatePublishedListRequest, ctx: RunContext) -> StatePublishedListResponse:
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="state_published_list_start",
+        module=logger.name,
+        fields={"state_db": request.state_db, "limit": request.limit},
+    ))
+    limit = int(request.limit) if isinstance(request.limit, int) else 200
+    if limit <= 0:
+        limit = 200
+    rows: list[StatePublishedRow] = []
+    with _state_conn(request.state_db) as conn:
+        cur = conn.execute(
+            "SELECT file_id, md5, published_at, wp_post_id, wp_post_url "
+            "FROM published ORDER BY published_at DESC LIMIT ?",
+            (limit,),
+        )
+        for file_id, md5, published_at, wp_post_id, wp_post_url in cur.fetchall():
+            rows.append(StatePublishedRow(
+                schema_version="1.0",
+                file_id=file_id,
+                md5=md5,
+                published_at=int(published_at),
+                wp_post_id=int(wp_post_id),
+                wp_post_url=wp_post_url,
+            ))
+    response = StatePublishedListResponse(schema_version="1.0", rows=rows)
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="state_published_list_complete",
+        module=logger.name,
+        fields={"state_db": request.state_db, "count": len(rows)},
+    ))
+    return response

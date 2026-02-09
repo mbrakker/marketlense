@@ -10,6 +10,9 @@ import yaml
 from jinja2 import Environment, StrictUndefined, TemplateSyntaxError, UndefinedError
 
 from src.contracts.prompts import (
+    PromptNamespaceListRequest,
+    PromptNamespaceListResponse,
+    PromptNamespaceSummary,
     PromptLoadRequest,
     PromptRenderRequest,
     PromptRenderResponse,
@@ -118,6 +121,51 @@ def load_prompt_set(request: PromptLoadRequest, ctx: RunContext) -> PromptSet:
         },
     ))
     return prompt_set
+
+
+def list_prompt_namespaces(request: PromptNamespaceListRequest, ctx: RunContext) -> PromptNamespaceListResponse:
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="prompt_namespace_list_start",
+        module=logger.name,
+        fields={
+            "reload_if_changed": request.reload_if_changed,
+            "force_reload": request.force_reload,
+        },
+    ))
+    namespaces: list[PromptNamespaceSummary] = []
+    for system_path in sorted(PROMPTS_ROOT.rglob("system.yaml")):
+        user_path = system_path.parent / "user.yaml"
+        if not user_path.exists():
+            continue
+        rel_namespace = str(system_path.parent.relative_to(PROMPTS_ROOT)).replace("\\", "/")
+        prompt_set = load_prompt_set(
+            PromptLoadRequest(
+                schema_version="1.0",
+                namespace=rel_namespace,
+                reload_if_changed=request.reload_if_changed,
+                force_reload=request.force_reload,
+            ),
+            ctx,
+        )
+        namespaces.append(PromptNamespaceSummary(
+            schema_version="1.0",
+            namespace=rel_namespace,
+            system_path=prompt_set.system.path,
+            user_path=prompt_set.user.path,
+            system_sha256=prompt_set.system.sha256,
+            user_sha256=prompt_set.user.sha256,
+        ))
+    response = PromptNamespaceListResponse(schema_version="1.0", namespaces=namespaces)
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="prompt_namespace_list_complete",
+        module=logger.name,
+        fields={"count": len(namespaces)},
+    ))
+    return response
 
 
 def render_prompt(request: PromptRenderRequest, ctx: RunContext) -> PromptRenderResponse:

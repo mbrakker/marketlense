@@ -8,6 +8,9 @@ from src.contracts.state import (
     StateGetRequest,
     StateIngestCursorGetRequest,
     StateIngestCursorSetRequest,
+    StateProcessedListRequest,
+    StatePublishedListRequest,
+    StatePublishRecordRequest,
     StateRecordRequest,
 )
 from src.services.state_service import (
@@ -15,7 +18,10 @@ from src.services.state_service import (
     check_state_db_access,
     get,
     get_ingest_cursor,
+    list_processed,
+    list_published,
     record,
+    record_publish,
     set_ingest_cursor,
 )
 
@@ -161,3 +167,53 @@ def test_ingest_cursor_roundtrip(tmp_path: Path) -> None:
         _ctx(),
     )
     assert updated.last_successful_ingest_utc == ts
+
+
+def test_list_processed_and_published_rows(tmp_path: Path) -> None:
+    db_path = tmp_path / "state.sqlite"
+    record(
+        StateRecordRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            file_id="file-1",
+            md5="md5-1",
+            vector_store_status="completed",
+        ),
+        _ctx(),
+    )
+    record(
+        StateRecordRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            file_id="file-2",
+            md5="md5-2",
+            text_validation_status="pass",
+            text_validation_pages=[1, 3, 5],
+        ),
+        _ctx(),
+    )
+    processed = list_processed(
+        StateProcessedListRequest(schema_version="1.0", state_db=str(db_path), limit=10),
+        _ctx(),
+    )
+    assert len(processed.rows) == 2
+    assert {row.file_id for row in processed.rows} == {"file-1", "file-2"}
+
+    record_publish(
+        StatePublishRecordRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            file_id="file-1",
+            md5="md5-1",
+            wp_post_id=123,
+            wp_post_url="https://example.com/post/123",
+        ),
+        _ctx(),
+    )
+    published = list_published(
+        StatePublishedListRequest(schema_version="1.0", state_db=str(db_path), limit=10),
+        _ctx(),
+    )
+    assert len(published.rows) == 1
+    assert published.rows[0].file_id == "file-1"
+    assert published.rows[0].wp_post_id == 123

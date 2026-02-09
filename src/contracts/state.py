@@ -114,3 +114,56 @@ class StatePublishGetResponse:
     published_at: int = field(metadata={"doc": "Unix timestamp of publish time."})
     wp_post_id: int = field(metadata={"doc": "WordPress post ID."})
     wp_post_url: str = field(metadata={"doc": "WordPress post URL."})
+
+
+@dataclass(frozen=True)
+class StateProcessedListRequest:
+    schema_version: str = field(metadata={"doc": "Processed-state list request schema version."})
+    state_db: str = field(metadata={"doc": "SQLite path for processing state."})
+    limit: int = field(default=200, metadata={"doc": "Maximum number of rows to return."})
+
+
+@dataclass(frozen=True)
+class StateProcessedRow:
+    schema_version: str = field(metadata={"doc": "Processed-state row schema version."})
+    file_id: str = field(metadata={"doc": "Drive file ID."})
+    md5: str = field(metadata={"doc": "MD5 checksum of the processed PDF."})
+    processed_at: int = field(metadata={"doc": "Unix timestamp when processing completed."})
+    openai_file_id: Optional[str] = field(default=None, metadata={"doc": "OpenAI file ID, if any."})
+    vector_store_id: Optional[str] = field(default=None, metadata={"doc": "Vector store ID, if any."})
+    vector_store_status: Optional[str] = field(default=None, metadata={"doc": "Vector store indexing status, if any."})
+    indexed_at_utc: Optional[str] = field(default=None, metadata={"doc": "Vector store indexed timestamp, if known."})
+    last_error: Optional[str] = field(default=None, metadata={"doc": "Last error recorded for this file, if any."})
+    text_validation_status: Optional[str] = field(default=None, metadata={"doc": "Extractable text validation status: pass|fail, if evaluated."})
+    text_validation_reason: Optional[str] = field(default=None, metadata={"doc": "Extractable text validation failure reason, if any."})
+    text_validation_pages: Optional[List[int]] = field(default=None, metadata={"doc": "Page numbers sampled for extractable text validation."})
+    doc_map_summary: Optional[Dict[str, object]] = field(default=None, metadata={"doc": "DocMap summary payload when processing halted on doc_map_empty, if any."})
+
+
+@dataclass(frozen=True)
+class StateProcessedListResponse:
+    schema_version: str = field(metadata={"doc": "Processed-state list response schema version."})
+    rows: List[StateProcessedRow] = field(metadata={"doc": "Processed-state rows ordered by recency."})
+
+
+@dataclass(frozen=True)
+class StatePublishedListRequest:
+    schema_version: str = field(metadata={"doc": "Published-state list request schema version."})
+    state_db: str = field(metadata={"doc": "SQLite path for publishing state."})
+    limit: int = field(default=200, metadata={"doc": "Maximum number of rows to return."})
+
+
+@dataclass(frozen=True)
+class StatePublishedRow:
+    schema_version: str = field(metadata={"doc": "Published-state row schema version."})
+    file_id: str = field(metadata={"doc": "Drive file ID."})
+    md5: str = field(metadata={"doc": "MD5 checksum recorded at publish time."})
+    published_at: int = field(metadata={"doc": "Unix timestamp when publishing completed."})
+    wp_post_id: int = field(metadata={"doc": "WordPress post ID."})
+    wp_post_url: str = field(metadata={"doc": "WordPress post URL."})
+
+
+@dataclass(frozen=True)
+class StatePublishedListResponse:
+    schema_version: str = field(metadata={"doc": "Published-state list response schema version."})
+    rows: List[StatePublishedRow] = field(metadata={"doc": "Published-state rows ordered by recency."})

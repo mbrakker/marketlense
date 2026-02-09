@@ -42,3 +42,16 @@ class LockReleaseRequest:
 class LockReleaseResponse:
     schema_version: str = field(metadata={"doc": "Lock release response schema version."})
     released: bool = field(metadata={"doc": "True when the lock file was removed by the requester."})
+
+
+@dataclass(frozen=True)
+class LockGetRequest:
+    schema_version: str = field(metadata={"doc": "Lock get request schema version."})
+    lock_path: str = field(metadata={"doc": "Filesystem path to the lock file."})
+
+
+@dataclass(frozen=True)
+class LockGetResponse:
+    schema_version: str = field(metadata={"doc": "Lock get response schema version."})
+    found: bool = field(metadata={"doc": "True when a valid lock file is present."})
+    lock: Optional[LockInfo] = field(default=None, metadata={"doc": "Lock details when found."})
