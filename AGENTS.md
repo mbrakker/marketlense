@@ -146,6 +146,11 @@ Generators implement **what should be produced and how**.
 
 Orchestrators define **when, in what order, and with what outcome** things run.
 
+**Architecture definition**
+
+An orchestrator is a control-plane module that coordinates services and generators for a workflow.
+It owns execution sequencing, branching, retries, and lifecycle/state transitions, while keeping domain semantics inside generators and external I/O inside services.
+
 **Responsibilities**
 
 * pipeline coordination
@@ -406,6 +411,36 @@ If an output cannot be reproduced from logs, it is a **bug**.
   * serialization round-trip tests
   * schema snapshots
 
+### 8.1 Test Integrity Rules (Anti-Cheat, Mandatory)
+
+Tests MUST detect real regressions, not validate mocked narratives.
+
+Hard constraints:
+
+* Tests MUST assert externally observable behavior:
+
+  * returned contracts
+  * persisted state (DB/files)
+  * emitted events/log fields
+  * side effects
+* A test is invalid if it still passes after removing the core logic it claims to verify.
+* Unit tests MAY mock only true external boundaries (network, external APIs, time, randomness, OS/process boundaries).
+* Tests MUST NOT mock or monkeypatch the primary logic path of the unit under test.
+* Patching private/internal helpers (`_private_fn`) is forbidden unless the test explicitly validates adapter glue and still asserts real behavior at module boundary.
+* Tautological assertions are forbidden (`assert True`, `assert 1 == 1`, "no exception" as sole assertion).
+* Over-mocking is forbidden: if all meaningful collaborators are mocked, at least one integration/pipeline test MUST cover the real path.
+* Retry/concurrency tests MUST assert attempt count and control behavior (backoff/sleep/order), not only final status.
+* Live API calls are forbidden in unit tests; integration tests MUST be explicitly marked and excluded from default CI.
+* Tests MUST NOT print or expose secrets/tokens (including partial keys).
+
+PR validation requirement:
+
+* Every new behavior change MUST include:
+
+  * at least one positive-path test
+  * at least one failure/edge-path test
+  * assertions on both output contract and one concrete side effect (when applicable)
+
 CI MUST enforce:
 
 * formatting
@@ -426,6 +461,8 @@ Violations:
 * Missing logs -> **incomplete implementation**
 * Prompt text in code -> **hard violation**
 * Unrecoverable errors without notification -> **bug**
+* Tests that rely on shortcuts/tautologies/over-mocking -> **invalid test design**
+* Unit tests with live external calls or secret exposure -> **hard violation**
 
 Coding agents:
 
