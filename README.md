@@ -48,6 +48,17 @@ src/
 - **Orchestrators**: Define when and in what order things happen, including retries and state transitions.
 - **Utils**: Pure deterministic functions (no I/O, no global state).
 
+Current control-plane modules in `src/orchestrators/` include:
+
+- `ingest_orchestrator.py`: batch-level ingest control (locking, DB access checks, worker fanout, cursor updates).
+- `ingest_file_orchestrator.py`: single-file ingest execution (cache/download/EOF checks, report pipeline call, state writes).
+- `report_pipeline_orchestrator.py`: report-generation pipeline boundary with retry-aware control around report generation.
+- `publish_orchestrator.py`: publish workflow and publish-state transitions.
+- `publish_queue_orchestrator.py`: publish queue snapshot assembly for UI/ops surfaces.
+- `cost_reporting_orchestrator.py`: filtered cost report + rollup orchestration.
+- `ops_dashboard_orchestrator.py`: dashboard snapshot aggregation (reports/state/lock/storage).
+- `candidate_extraction_orchestrator.py`, `cover_image_orchestrator.py`, `recategorize_orchestrator.py`, `wp_category_update_orchestrator.py`: feature-specific workflows.
+
 ---
 
 ## Configuration (YAML + .env)
@@ -100,7 +111,8 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
 
 2. **Pipeline orchestration**
    - Entry point: `src/cli.py`.
-   - `src/orchestrators/ingest_orchestrator.py` loads settings and coordinates the ingest flow.
+   - `src/orchestrators/ingest_orchestrator.py` coordinates run-level ingest flow (locks, DB checks, list/fanout, cursor transitions).
+   - `src/orchestrators/ingest_file_orchestrator.py` handles per-file execution inside the ingest worker pool.
    - Before doing any work, ingest probes `state_db` and `reports_db` for write access (SQLite `BEGIN IMMEDIATE`). If either DB is locked, the run exits early with `db_locked` to avoid partial outputs.
    - Per-file processing runs in a bounded worker pool controlled by `ingest.worker_limit` (default `2`).
 
@@ -125,7 +137,8 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
    - A separate ingest cursor (`last_successful_ingest_utc`) is recorded on successful runs and used to filter subsequent Drive listings.
 
 6. **Report generation (per file)**
-   - `src/generators/report_generator.py` runs the core pipeline:
+   - `src/orchestrators/report_pipeline_orchestrator.py` controls report-generation retries and delegates domain generation to `src/generators/report_generator.py`.
+   - `src/generators/report_generator.py` runs the core domain pipeline:
      - Optional within-file parallelism uses `ingest.report_worker_limit` to overlap PDF info/contents/text extraction and visual prep when enabled (default `2`).
      - **PDF info**: `pdf_service.extract_pdf_info` captures page count and sanitized PDF metadata for persistence (cached by md5 under `cache_dir/pdf_cache/`).
      - **PDF context**: `pdf_service.build_pdf_context` opens PyMuPDF and pypdf handles once; downstream services reuse them and fall back to local opens if unavailable.
@@ -359,6 +372,8 @@ python -m src.cli cost-report --date YYYY-MM-DD
 python -m src.cli cost-report --run-id <run_id>
 ```
 
+`cost-report` is routed through `src/orchestrators/cost_reporting_orchestrator.py`, which centralizes filtered report generation and daily rollup orchestration.
+
 Extract chart/table candidates without running LLM analysis (writes JSON + crops):
 
 ```bash
@@ -414,6 +429,7 @@ Design and behavior highlights:
 - Accessibility/readability defaults: captions are rendered in black and action buttons use a light-blue background for consistent contrast in the main content area.
 - Interactive controls (navigation, actions, inputs, selectors) expose concise hover help with usage examples (capped at 1000 characters per tooltip).
 - Pages are wired to existing contracts/services/orchestrators as source-of-truth surfaces (DB, files, config, and logs).
+- Cockpit overview and publish queue views now use dedicated orchestrators (`ops_dashboard_orchestrator`, `publish_queue_orchestrator`) so UI code stays presentation-focused.
 - The logs page supports structured filtering (`run_id`, `task_id`, `span_id`, `event`, `role`, `module`) and includes a terminal-style panel for UI-triggered run output history.
  
 ## Output Layout

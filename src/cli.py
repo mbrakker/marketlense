@@ -8,10 +8,11 @@ from rich.table import Table
 from rich import box
 
 from src.utils.errors import AppError
-from src.contracts.costs import CostReportRequest
+from src.contracts.costs import CostReportRequest, CostReportingRequest
 from src.contracts.categories import RecategorizeRequest
 from src.contracts.config import ConfigLoadRequest
 from src.contracts.cover_images import CoverImageOrchestratorRequest
+from src.orchestrators.cost_reporting_orchestrator import run_cost_reporting
 from src.orchestrators.ingest_orchestrator import run_ingest
 from src.orchestrators.candidate_extraction_orchestrator import run_candidate_extraction
 from src.orchestrators.cover_image_orchestrator import run_cover_image_generation
@@ -19,7 +20,6 @@ from src.orchestrators.publish_orchestrator import run_publish
 from src.orchestrators.recategorize_orchestrator import run_recategorize
 from src.orchestrators.wp_category_update_orchestrator import run_update_wp_categories
 from src.services.config_service import load_settings, load_publish_settings, to_ingest_settings
-from src.services.cost_ledger_service import generate_cost_report
 from src.services.logging_service import setup_logging
 from src.utils.logging import log_event, new_run_context
 
@@ -308,18 +308,25 @@ def cost_report(
     settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
 
     try:
-        report = generate_cost_report(
-            CostReportRequest(
+        reporting = run_cost_reporting(
+            CostReportingRequest(
                 schema_version="1.0",
-                ledger_path=settings.cost_ledger_path,
-                date_utc=date,
-                run_id=run_id,
-                top_n=top,
+                report_request=CostReportRequest(
+                    schema_version="1.0",
+                    ledger_path=settings.cost_ledger_path,
+                    date_utc=date,
+                    run_id=run_id,
+                    top_n=top,
+                ),
             ),
             ctx,
         )
     except ValueError as exc:
         console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1)
+    report = reporting.report
+    if report is None:
+        console.print("[red]Cost report was not generated.[/red]")
         raise typer.Exit(code=1)
 
     console.print(f"[cyan]Cost report for {report.filter_type}={report.filter_value}[/cyan]")

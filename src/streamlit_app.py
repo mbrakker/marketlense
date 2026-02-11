@@ -11,35 +11,38 @@ import streamlit as st
 
 from src.contracts.categories import CategoryMappingLoadRequest, RecategorizeRequest
 from src.contracts.config import ConfigLoadRequest
-from src.contracts.costs import CostReportRequest, CostRollupRequest
+from src.contracts.costs import CostReportRequest, CostReportingRequest, CostRollupRequest
 from src.contracts.cover_images import CoverImageOrchestratorRequest, CoverStyleLoadRequest
-from src.contracts.files import FileStatRequest, ListDirectoryRequest, ListHtmlRequest, ReadTextRequest
+from src.contracts.files import FileStatRequest, ListDirectoryRequest, ReadTextRequest
 from src.contracts.lock import LockGetRequest
+from src.contracts.ops import OpsDashboardSnapshotRequest
 from src.contracts.prompts import PromptNamespaceListRequest
+from src.contracts.publish import PublishQueueRequest
 from src.contracts.report_store import ReportMetadataListRequest
 from src.contracts.state import (
     StateGetRequest,
     StateProcessedListRequest,
-    StatePublishCheckRequest,
     StatePublishedListRequest,
 )
 from src.orchestrators.candidate_extraction_orchestrator import run_candidate_extraction
 from src.orchestrators.cover_image_orchestrator import run_cover_image_generation
+from src.orchestrators.cost_reporting_orchestrator import run_cost_reporting
 from src.orchestrators.ingest_orchestrator import run_ingest
+from src.orchestrators.ops_dashboard_orchestrator import collect_ops_dashboard_snapshot
 from src.orchestrators.publish_orchestrator import run_publish
+from src.orchestrators.publish_queue_orchestrator import build_publish_queue_snapshot
 from src.orchestrators.recategorize_orchestrator import run_recategorize
 from src.orchestrators.wp_category_update_orchestrator import run_update_wp_categories
 from src.services.category_mapping_service import load_mappings
 from src.services.config_service import load_publish_settings, load_settings, to_ingest_settings
-from src.services.cost_ledger_service import generate_cost_report, rollup_daily
 from src.services.cover_style_service import load_cover_styles
-from src.services.file_service import file_stat, list_directory, list_html, read_text
+from src.services.file_service import file_stat, list_directory, read_text
 from src.services.lock_service import get_lock
 from src.services.logging_service import DEFAULT_LOG_DIR, LOG_DIR_ENV, LOG_FILE_PREFIX, setup_logging
 from src.services.prompt_service import list_prompt_namespaces
 from src.services.report_store_service import list_metadata
 from src.services.state_service import get as get_state
-from src.services.state_service import get_publish, list_processed, list_published
+from src.services.state_service import list_processed, list_published
 from src.utils.errors import AppError
 from src.utils.gui_utils import (
     compute_task_duration_rollups,
@@ -49,7 +52,6 @@ from src.utils.gui_utils import (
     safe_json_loads,
     status_chip_level,
 )
-from src.utils.html_utils import extract_file_id
 from src.utils.logging import new_run_context
 from src.utils.slugify import slugify
 
@@ -521,11 +523,22 @@ def _lock_snapshot(lock_path: str) -> dict[str, Any]:
 
 
 def _render_cockpit_overview(settings: Any) -> None:
-    reports = _load_report_rows(settings)
-    processed = _load_processed_rows(settings)
-    published = _load_published_rows(settings)
-    lock = _lock_snapshot(settings.ingest_lock_path)
-    health = _storage_health(settings)
+    snapshot = collect_ops_dashboard_snapshot(
+        OpsDashboardSnapshotRequest(
+            schema_version="1.0",
+            output_dir=settings.output_dir,
+            cache_dir=settings.cache_dir,
+            state_db=settings.state_db,
+            reports_db=settings.reports_db,
+            ingest_lock_path=settings.ingest_lock_path,
+        ),
+        _ctx("ops_snapshot"),
+    )
+    reports = snapshot.reports
+    processed = snapshot.processed
+    published = snapshot.published
+    lock = asdict(snapshot.lock)
+    health = [asdict(item) for item in snapshot.storage_health]
     logs = _discover_log_files()
     recent_paths = [row["path"] for row in logs[:2]]
     events = _load_log_events(recent_paths)
@@ -1193,28 +1206,15 @@ def _render_publishing_control(settings: Any, publish_settings: Any | None, publ
 
     queue_rows: list[dict[str, Any]] = []
     try:
-        html_resp = list_html(ListHtmlRequest(schema_version="1.0", root_dir=settings.output_dir), _ctx("publish_queue"))
-        for html_path in html_resp.html_paths:
-            try:
-                html = read_text(ReadTextRequest(schema_version="1.0", path=html_path), _ctx("publish_html_read")).content
-            except AppError:
-                continue
-            file_id = extract_file_id(html)
-            publish_state = None
-            if file_id:
-                publish_state = get_publish(
-                    StatePublishCheckRequest(schema_version="1.0", state_db=settings.state_db, file_id=file_id),
-                    _ctx("publish_state"),
-                )
-            queue_rows.append(
-                {
-                    "html_path": html_path,
-                    "file_id": file_id or "",
-                    "published": bool(publish_state),
-                    "wp_post_id": getattr(publish_state, "wp_post_id", None) if publish_state else None,
-                    "wp_post_url": getattr(publish_state, "wp_post_url", None) if publish_state else None,
-                }
-            )
+        queue_snapshot = build_publish_queue_snapshot(
+            PublishQueueRequest(
+                schema_version="1.0",
+                output_dir=settings.output_dir,
+                state_db=settings.state_db,
+            ),
+            _ctx("publish_queue"),
+        )
+        queue_rows = _to_dicts(queue_snapshot.items)
     except AppError:
         queue_rows = []
 
@@ -1400,16 +1400,22 @@ def _render_cost_and_usage(settings: Any) -> None:
             st.warning("Enter a run_id before running the cost report.")
             return
         try:
-            report = generate_cost_report(
-                CostReportRequest(
+            reporting = run_cost_reporting(
+                CostReportingRequest(
                     schema_version="1.0",
-                    ledger_path=settings.cost_ledger_path,
-                    date_utc=filter_value if filter_mode == "date" else None,
-                    run_id=run_id_value if filter_mode == "run_id" else None,
-                    top_n=int(top_n),
+                    report_request=CostReportRequest(
+                        schema_version="1.0",
+                        ledger_path=settings.cost_ledger_path,
+                        date_utc=filter_value if filter_mode == "date" else None,
+                        run_id=run_id_value if filter_mode == "run_id" else None,
+                        top_n=int(top_n),
+                    ),
                 ),
                 _ctx("cost_report"),
             )
+            report = reporting.report
+            if report is None:
+                raise RuntimeError("Cost report was not generated.")
             st.session_state["last_cost_report"] = report
             _append_terminal(
                 f"Cost report generated: filter={report.filter_type}:{report.filter_value} entries={report.matched_entries}"
@@ -1423,10 +1429,18 @@ def _render_cost_and_usage(settings: Any) -> None:
     log_files = _discover_log_files()
     event_rows = _load_log_events([row["path"] for row in log_files[:3]], max_lines_per_file=4000)
     duration_rows = compute_task_duration_rollups(event_rows)
-    rollup = rollup_daily(
-        CostRollupRequest(schema_version="1.0", ledger_path=settings.cost_ledger_path, out_path=settings.cost_daily_path),
+    rollup_reporting = run_cost_reporting(
+        CostReportingRequest(
+            schema_version="1.0",
+            rollup_request=CostRollupRequest(
+                schema_version="1.0",
+                ledger_path=settings.cost_ledger_path,
+                out_path=settings.cost_daily_path,
+            ),
+        ),
         _ctx("cost_rollup"),
     )
+    rollup = rollup_reporting.rollup
 
     with main_col:
         st.subheader("Ledger Explorer")
@@ -1435,7 +1449,9 @@ def _render_cost_and_usage(settings: Any) -> None:
         else:
             st.info("No ledger entries found.")
         st.subheader("Daily Spend")
-        daily_points = [{"date": key, "usd": value.total_usd} for key, value in rollup.totals_by_date.items()]
+        daily_points = []
+        if rollup is not None:
+            daily_points = [{"date": key, "usd": value.total_usd} for key, value in rollup.totals_by_date.items()]
         if daily_points:
             st.line_chart(daily_points, x="date", y="usd")
         st.subheader("Processing Time Rollups")

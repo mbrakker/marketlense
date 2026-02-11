@@ -100,3 +100,29 @@ class CostReportResponse:
     totals: CostTotals = field(metadata={"doc": "Totals for the selected filter."})
     top_steps: List[StepCostTotal] = field(metadata={"doc": "Top steps by estimated cost for the filter."})
     matched_entries: int = field(metadata={"doc": "Number of ledger entries included in the report."})
+
+
+@dataclass(frozen=True)
+class CostReportingRequest:
+    schema_version: str = field(metadata={"doc": "Cost reporting orchestrator request schema version."})
+    report_request: Optional[CostReportRequest] = field(
+        default=None,
+        metadata={"doc": "Optional request for filtered cost reporting."},
+    )
+    rollup_request: Optional[CostRollupRequest] = field(
+        default=None,
+        metadata={"doc": "Optional request for daily rollup generation."},
+    )
+
+
+@dataclass(frozen=True)
+class CostReportingResponse:
+    schema_version: str = field(metadata={"doc": "Cost reporting orchestrator response schema version."})
+    report: Optional[CostReportResponse] = field(
+        default=None,
+        metadata={"doc": "Generated filtered cost report, when requested."},
+    )
+    rollup: Optional[CostRollupResponse] = field(
+        default=None,
+        metadata={"doc": "Generated daily rollup output, when requested."},
+    )

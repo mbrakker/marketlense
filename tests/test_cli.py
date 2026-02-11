@@ -145,12 +145,17 @@ class TestCli(unittest.TestCase):
         )
 
         with patch.object(cli, "load_settings", return_value=settings) as load_settings_mock:
-            with patch.object(cli, "generate_cost_report", return_value=response) as generate_mock:
+            with patch.object(
+                cli,
+                "run_cost_reporting",
+                return_value=type("CostReporting", (), {"report": response, "rollup": None})(),
+            ) as reporting_mock:
                 with patch.object(cli.console, "print"):
                     cli.cost_report(date="2026-01-01", run_id=None, top=1)
         load_settings_mock.assert_called_once()
-        generate_mock.assert_called_once()
-        request = generate_mock.call_args.args[0]
+        reporting_mock.assert_called_once()
+        request = reporting_mock.call_args.args[0].report_request
+        self.assertIsNotNone(request)
         self.assertEqual("2026-01-01", request.date_utc)
         self.assertEqual(1, request.top_n)
         self.assertIsNone(request.run_id)

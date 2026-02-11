@@ -35,3 +35,26 @@ class PublishOutcome:
     error: Optional[str] = field(default=None, metadata={"doc": "Error code/message when status=error or skipped."})
     validation_status: Optional[str] = field(default=None, metadata={"doc": "Validation result applied at publish time: pass|fail|missing|error."})
     validation_issues: List[str] = field(default_factory=list, metadata={"doc": "Validation issues summarised for the publish attempt, if any."})
+
+
+@dataclass(frozen=True)
+class PublishQueueRequest:
+    schema_version: str = field(metadata={"doc": "Publish queue orchestrator request schema version."})
+    output_dir: str = field(metadata={"doc": "Directory containing generated HTML files."})
+    state_db: str = field(metadata={"doc": "SQLite path storing publish state."})
+
+
+@dataclass(frozen=True)
+class PublishQueueItem:
+    schema_version: str = field(metadata={"doc": "Publish queue item schema version."})
+    html_path: str = field(metadata={"doc": "HTML file path queued for publish evaluation."})
+    file_id: str = field(metadata={"doc": "Extracted report file identifier, if present in HTML."})
+    published: bool = field(metadata={"doc": "True when publish state already exists for this file."})
+    wp_post_id: Optional[int] = field(default=None, metadata={"doc": "WordPress post ID when already published."})
+    wp_post_url: Optional[str] = field(default=None, metadata={"doc": "WordPress post URL when already published."})
+
+
+@dataclass(frozen=True)
+class PublishQueueResponse:
+    schema_version: str = field(metadata={"doc": "Publish queue orchestrator response schema version."})
+    items: List[PublishQueueItem] = field(metadata={"doc": "Resolved publish queue records."})
