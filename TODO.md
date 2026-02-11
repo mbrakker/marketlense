@@ -182,34 +182,25 @@ Remediation plan:
    - Add regression tests for extraction fallback and metadata parsing helpers.
    - Add benchmark checks for ingest throughput and cost-ledger growth.
 
-## Test Suite Integrity Backlog (still open)
+## Test Suite Integrity Backlog (completed 2026-02-11)
 
-Findings to fix:
+Completed:
 
-1. Retry behavior test is weak.
-   - `tests/test_orchestrator_retry.py` asserts final error but does not assert attempt count/backoff behavior.
-2. Parallel ingest test does not execute real parallel work.
-   - `tests/test_ingest_parallel.py` uses a synchronous dummy executor.
-3. Vector pipeline test gathers `vector_calls` but does not assert sequence/arguments.
-   - `tests/test_vector_pipeline_wiring.py` appends call trace but does not validate expected order.
-4. Over-mocking in orchestrator wiring tests reduces regression detection.
-   - `tests/test_vector_pipeline_wiring.py`, `tests/test_publish_orchestrator.py`, and `tests/test_ingest_parallel.py` stub most collaborators.
-5. Unsafe root smoke script remains.
-   - `test_openai.py` prints API key prefix and performs a live API call at module execution.
-6. UI navigation test is brittle.
-   - `tests/test_streamlit_navigation.py` hardcodes full nav list order/text.
+1. Strengthened retry verification.
+   - `tests/test_orchestrator_retry.py` now asserts retry attempt count (`3`) and backoff sleeps (`[1, 2]`).
+2. Added real-concurrency ingest coverage.
+   - `tests/test_ingest_parallel.py` now includes both deterministic executor-order test and integration-style real `ThreadPoolExecutor` concurrency test.
+3. Enforced vector pipeline call contract.
+   - `tests/test_vector_pipeline_wiring.py` now asserts exact `vector_calls` sequence and key request fields.
+4. Reduced over-mocking in orchestrator wiring tests.
+   - Added `tests/conftest.py` fixtures for temp dirs/sqlite settings; upgraded `tests/test_ingest_parallel.py`, `tests/test_publish_orchestrator.py`, and ingest-path vector wiring tests to use real local services and mock only external boundaries.
+5. Converted unsafe OpenAI smoke script to opt-in integration test.
+   - Removed root `test_openai.py`.
+   - Added `tests/integration/test_openai_smoke.py` with `integration` marker + env guard.
+   - Updated `pytest.ini` to exclude integration tests from default runs.
+6. Relaxed brittle UI navigation assertions.
+   - `tests/test_streamlit_navigation.py` now checks required invariants/anchors rather than strict full-list equality.
 
-Remediation plan:
+Validation:
 
-1. Strengthen retry verification.
-   - Assert retry call count and `sleep` backoff progression in `tests/test_orchestrator_retry.py`.
-2. Add one real-concurrency ingest test.
-   - Keep deterministic unit test plus integration-style test using real `ThreadPoolExecutor`.
-3. Enforce vector pipeline call contract.
-   - Assert exact `vector_calls` sequence and key request fields in `tests/test_vector_pipeline_wiring.py`.
-4. Reduce over-mocking with service-level integration fixtures.
-   - Use temp-dir + sqlite fixtures, mock only true external boundaries.
-5. Convert `test_openai.py` to explicit opt-in integration smoke test.
-   - Move under `tests/integration/` or `scripts/`, add marker/guard, and remove key-prefix output.
-6. Relax brittle UI snapshot checks.
-   - Assert required sections/invariants instead of full ordered equality when ordering is not business-critical.
+- `pytest` (2026-02-11): `90 passed, 1 deselected`.

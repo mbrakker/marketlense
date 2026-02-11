@@ -1,67 +1,60 @@
-import unittest
-from unittest.mock import patch
+from __future__ import annotations
+
+from dataclasses import replace
+from pathlib import Path
 
 from src.contracts.drive import DriveDownloadToPathResponse, DriveFile
-from src.contracts.ingest import IngestSettings
-from src.utils.errors import AppError
 from src.orchestrators import ingest_orchestrator as orch
+from src.utils.errors import AppError
 
 
-class TestOrchestratorRetry(unittest.TestCase):
-    def test_retry_on_retryable_app_error(self) -> None:
-        settings = IngestSettings(
-            schema_version="1.0",
-            google_sa_path="sa.json",
-            gdrive_folder_id="folder",
-            openai_api_key="key",
-            openai_model="gpt-5",
-            batch_limit=1,
-            output_dir="./out",
-            cache_dir="./cache",
-            state_db=":memory:",
-            reports_db=":memory:",
-            category_mapping_path="./src/config/category-mappings.yaml",
-            cover_style_path="./src/config/cover-styles.yaml",
-            ingest_lock_path="./state/ingest.lock",
-            ingest_lock_ttl_seconds=7200.0,
-            temperature=1.0,
-        )
+def _pdf_bytes() -> bytes:
+    return b"%PDF-1.4\n1 0 obj <</Type/Catalog>> endobj\n%%EOF\n"
 
-        drive_file = DriveFile(
+
+def test_retry_on_retryable_app_error(ingest_settings, monkeypatch) -> None:
+    settings = replace(ingest_settings, batch_limit=1, ingest_worker_limit=1)
+    drive_file = DriveFile(
+        schema_version="1.0",
+        file_id="file-1",
+        name="retry.pdf",
+        modified_time=None,
+        md5_checksum="md5",
+    )
+    retry_error = AppError(
+        code="openai_request_failed",
+        message="retry",
+        retryable=True,
+    )
+    attempt_count = {"value": 0}
+    sleep_calls: list[int] = []
+
+    def _download(req, ctx):
+        payload = _pdf_bytes()
+        out_path = Path(req.output_path)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_bytes(payload)
+        return DriveDownloadToPathResponse(
             schema_version="1.0",
-            file_id="file",
-            name="name.pdf",
-            modified_time=None,
-            md5_checksum="md5",
-        )
-        download_resp = DriveDownloadToPathResponse(
-            schema_version="1.0",
-            file=drive_file,
-            output_path="./cache/file.pdf",
+            file=req.file,
+            output_path=req.output_path,
             md5="md5",
-            size=9,
+            size=len(payload),
         )
 
-        retry_error = AppError(
-            code="openai_request_failed",
-            message="retry",
-            retryable=True,
-        )
+    def _generate_report(file, cache_path, settings, md5, ctx):
+        attempt_count["value"] += 1
+        raise retry_error
 
-        stat_missing = type("S", (), {"exists": False, "size_bytes": None, "mtime_utc": None, "md5": None})()
-        stat_present = type("S", (), {"exists": True, "size_bytes": 9, "mtime_utc": 1.0, "md5": None})()
+    monkeypatch.setattr(orch, "list_pdfs", lambda req, ctx: [drive_file])
+    monkeypatch.setattr(orch, "download_pdf_to_path", _download)
+    monkeypatch.setattr(orch, "generate_report", _generate_report)
+    monkeypatch.setattr(orch.time, "sleep", lambda seconds: sleep_calls.append(int(seconds)))
 
-        with patch.object(orch, "list_pdfs", return_value=[drive_file]):
-            with patch.object(orch, "download_pdf_to_path", return_value=download_resp):
-                with patch.object(orch, "file_stat", side_effect=[stat_missing, stat_present]):
-                    with patch.object(orch, "write_bytes", return_value=type("W", (), {"md5": "md5"})()):
-                        with patch.object(orch, "check_pdf_eof", return_value=type("X", (), {"has_eof": True})()):
-                            with patch.object(orch.time, "sleep", return_value=None):
-                                with patch.object(orch, "generate_report", side_effect=[retry_error, retry_error, retry_error]):
-                                    outcomes = orch.run_ingest(settings, limit=1)
-                                    self.assertEqual(1, len(outcomes))
-                                    self.assertEqual("error", outcomes[0].status)
+    outcomes = orch.run_ingest(settings, limit=1)
 
-
-if __name__ == "__main__":
-    unittest.main()
+    assert len(outcomes) == 1
+    assert outcomes[0].status == "error"
+    assert outcomes[0].file_id == "file-1"
+    assert attempt_count["value"] == 3
+    assert sleep_calls == [1, 2]

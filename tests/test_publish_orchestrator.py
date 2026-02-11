@@ -1,103 +1,136 @@
+from __future__ import annotations
+
 import json
-import unittest
-from unittest.mock import patch
+from pathlib import Path
 
-from src.contracts.publish import PublishOutcome, PublishSettings
-from src.contracts.wordpress import WordPressAuthSettings, WordPressPostLookupResponse
+from src.contracts.publish import PublishOutcome
+from src.contracts.state import StatePublishCheckRequest, StateRecordRequest
+from src.contracts.wordpress import WordPressPostLookupResponse
 from src.orchestrators import publish_orchestrator as orch
+from src.services.state_service import get_publish, record
 
 
-class TestPublishOrchestrator(unittest.TestCase):
-    def test_publish_runs_when_processed(self) -> None:
-        settings = PublishSettings(
+def test_publish_runs_when_processed(publish_settings_factory, run_context, monkeypatch) -> None:
+    settings = publish_settings_factory(validation_policy="warn")
+    html_path = Path(settings.output_dir) / "report.html"
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+    html_path.write_text("<html><body>Drive fileId: file123</body></html>", encoding="utf-8")
+
+    record(
+        StateRecordRequest(
             schema_version="1.0",
-            output_dir="./out",
-            state_db=":memory:",
-            reports_db=":memory:",
-            category_mapping_path="./src/config/category-mappings.yaml",
-            validation_policy="warn",
-            wp=WordPressAuthSettings(
-                schema_version="1.0",
-                site_url="https://example.com",
-                username="user",
-                app_password="pass",
-                bearer_token=None,
-                post_status="publish",
-            ),
-        )
-
-        html = "<html><body>Drive fileId: file123</body></html>"
-        outcome = PublishOutcome(
-            schema_version="1.0",
-            html_path="out/report.html",
+            state_db=settings.state_db,
             file_id="file123",
+            md5="md5",
+        ),
+        run_context,
+    )
+
+    publish_calls: list[str] = []
+
+    def _publish(req, current_settings, ctx):
+        publish_calls.append(req.file_id or "")
+        return PublishOutcome(
+            schema_version="1.0",
+            html_path=req.html_path,
+            file_id=req.file_id,
             status="published",
             post_id=10,
-            post_url="https://example.com/post",
+            post_url="https://example.com/post/10",
         )
 
-        with patch.object(orch, "list_html", return_value=type("X", (), {"html_paths": ["out/report.html"]})()):
-            with patch.object(orch, "read_text", return_value=type("Y", (), {"content": html})()):
-                with patch.object(orch, "state_get", return_value=type("Z", (), {"md5": "md5"})()):
-                    with patch.object(orch, "state_already_published", return_value=False):
-                        with patch.object(orch, "find_post_by_file_id", return_value=WordPressPostLookupResponse(
-                            schema_version="1.0",
-                            found=False,
-                        )):
-                            with patch.object(orch, "publish_html", return_value=outcome):
-                                with patch.object(orch, "state_record_publish") as record_mock:
-                                    results = orch.run_publish(settings, limit=1)
-                                    self.assertEqual(1, len(results))
-                                    self.assertEqual("published", results[0].status)
-                                    record_mock.assert_called_once()
+    monkeypatch.setattr(
+        orch,
+        "find_post_by_file_id",
+        lambda req, ctx: WordPressPostLookupResponse(schema_version="1.0", found=False),
+    )
+    monkeypatch.setattr(orch, "publish_html", _publish)
 
+    results = orch.run_publish(settings, limit=1)
 
-    def test_publish_blocks_when_validation_fails(self) -> None:
-        settings = PublishSettings(
+    assert len(results) == 1
+    assert results[0].status == "published"
+    assert results[0].file_id == "file123"
+    assert publish_calls == ["file123"]
+    publish_row = get_publish(
+        StatePublishCheckRequest(
             schema_version="1.0",
-            output_dir="./out",
-            state_db=":memory:",
-            reports_db=":memory:",
-            category_mapping_path="./src/config/category-mappings.yaml",
-            validation_policy="block",
-            wp=WordPressAuthSettings(
-                schema_version="1.0",
-                site_url="https://example.com",
-                username="user",
-                app_password="pass",
-                bearer_token=None,
-                post_status="publish",
-            ),
-        )
-        html = "<html><body>Drive fileId: file123</body></html>"
-        validation_payload = json.dumps({
-            "schema_version": "1.1",
-            "status": "fail",
-            "severity": "error",
-            "issues": [{"schema_version": "1.0", "message": "bad data", "severity": "error", "affected_section": "insights"}],
-        })
-
-        def _read_text(req, ctx):
-            content = html if str(req.path).endswith(".html") else validation_payload
-            return type("Y", (), {"content": content})()
-
-        with patch.object(orch, "list_html", return_value=type("X", (), {"html_paths": ["out/report.html"]})()):
-            with patch.object(orch, "read_text", side_effect=_read_text):
-                with patch.object(orch, "state_get", return_value=type("Z", (), {"md5": "md5"})()):
-                    with patch.object(orch, "state_already_published", return_value=False):
-                        with patch.object(orch, "find_post_by_file_id", return_value=WordPressPostLookupResponse(
-                            schema_version="1.0",
-                            found=False,
-                        )):
-                            with patch.object(orch, "publish_html") as publish_mock:
-                                results = orch.run_publish(settings, limit=1)
-                                publish_mock.assert_not_called()
-                                self.assertEqual(1, len(results))
-                                self.assertEqual("error", results[0].status)
-                                self.assertEqual("validation_failed", results[0].error)
-                                self.assertEqual("fail", results[0].validation_status)
-                                self.assertTrue(results[0].validation_issues)
+            state_db=settings.state_db,
+            file_id="file123",
+        ),
+        run_context,
+    )
+    assert publish_row is not None
+    assert publish_row.wp_post_id == 10
+    assert publish_row.wp_post_url == "https://example.com/post/10"
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_publish_blocks_when_validation_fails(publish_settings_factory, run_context, monkeypatch) -> None:
+    settings = publish_settings_factory(validation_policy="block")
+    html_path = Path(settings.output_dir) / "report.html"
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+    html_path.write_text("<html><body>Drive fileId: file123</body></html>", encoding="utf-8")
+
+    validation_path = Path(settings.output_dir) / "report" / "report_analysis" / "validation.json"
+    validation_path.parent.mkdir(parents=True, exist_ok=True)
+    validation_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.1",
+                "status": "fail",
+                "severity": "error",
+                "issues": [
+                    {
+                        "schema_version": "1.0",
+                        "message": "bad data",
+                        "severity": "error",
+                        "affected_section": "insights",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    record(
+        StateRecordRequest(
+            schema_version="1.0",
+            state_db=settings.state_db,
+            file_id="file123",
+            md5="md5",
+        ),
+        run_context,
+    )
+
+    find_calls: list[str] = []
+    publish_calls: list[str] = []
+    monkeypatch.setattr(
+        orch,
+        "find_post_by_file_id",
+        lambda req, ctx: find_calls.append(req.file_id)
+        or WordPressPostLookupResponse(schema_version="1.0", found=False),
+    )
+    monkeypatch.setattr(
+        orch,
+        "publish_html",
+        lambda req, current_settings, ctx: publish_calls.append(req.file_id or ""),
+    )
+
+    results = orch.run_publish(settings, limit=1)
+
+    assert len(results) == 1
+    assert results[0].status == "error"
+    assert results[0].error == "validation_failed"
+    assert results[0].validation_status == "fail"
+    assert results[0].validation_issues == ["bad data"]
+    assert find_calls == []
+    assert publish_calls == []
+    publish_row = get_publish(
+        StatePublishCheckRequest(
+            schema_version="1.0",
+            state_db=settings.state_db,
+            file_id="file123",
+        ),
+        run_context,
+    )
+    assert publish_row is None

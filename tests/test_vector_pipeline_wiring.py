@@ -13,9 +13,11 @@ from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationReport
 from src.contracts.report_assets import RenderResponse
 from src.contracts.pdf_text import PdfTextSample, PdfTextSampleResponse
+from src.contracts.state import StateGetRequest
 from src.generators import report_generator as rg
 from src.orchestrators import ingest_orchestrator as orch
 from src.contracts.taxonomy import TaxonomyExtractResponse
+from src.services.state_service import get as state_get
 from src.utils.slugify import slugify
 from src.utils.errors import AppError
 from pypdf import PdfWriter
@@ -58,6 +60,10 @@ def _ingest_settings(tmp_path):
         cost_daily_path=str(tmp_path / "cost-daily.json"),
         model_pricing={},
     )
+
+
+def _pdf_bytes() -> bytes:
+    return b"%PDF-1.4\n1 0 obj <</Type/Catalog>> endobj\n%%EOF\n"
 
 
 def test_ensure_vector_store_creates_and_waits(monkeypatch, tmp_path):
@@ -118,29 +124,17 @@ def test_ingest_orchestrator_records_vector_events(monkeypatch, tmp_path):
         vector_store_last_error=None,
     )
     events = []
-    state_records = []
 
-    monkeypatch.setattr(orch, "acquire_lock", lambda req, ctx: SimpleNamespace(acquired=True, lock=SimpleNamespace(lock_path=req.lock_path, owner_id=req.owner_id, pid=req.pid), conflict=None))
-    monkeypatch.setattr(orch, "release_lock", lambda req, ctx: None)
-    monkeypatch.setattr(orch, "flush_uncategorized_tags", lambda req, ctx: None)
+    def _download(req, ctx):
+        payload = _pdf_bytes()
+        path = Path(req.output_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(payload)
+        return SimpleNamespace(output_path=req.output_path, md5="md5", size=len(payload))
+
     monkeypatch.setattr(orch, "list_pdfs", lambda req, ctx: [file])
-    monkeypatch.setattr(orch, "download_pdf_to_path", lambda req, ctx: SimpleNamespace(output_path=req.output_path, md5="md5", size=9))
-    stat_calls = {"count": 0}
-    def _file_stat(req, ctx):
-        if stat_calls["count"] == 0:
-            stat_calls["count"] += 1
-            return SimpleNamespace(exists=False, size_bytes=None, mtime_utc=None, md5=None)
-        return SimpleNamespace(exists=True, size_bytes=9, mtime_utc=1.0, md5=None)
-    monkeypatch.setattr(orch, "file_stat", _file_stat)
-    monkeypatch.setattr(orch, "write_bytes", lambda req, ctx: SimpleNamespace(md5="md5"))
-    monkeypatch.setattr(orch, "check_pdf_eof", lambda req, ctx: SimpleNamespace(has_eof=True))
-    monkeypatch.setattr(orch, "state_already_processed", lambda req, ctx: False)
-    monkeypatch.setattr(orch, "generate_report", lambda file, cache_path, settings, md5, ctx: outcome)
-
-    def _record_state(req, ctx):
-        state_records.append(req)
-
-    monkeypatch.setattr(orch, "state_record", _record_state)
+    monkeypatch.setattr(orch, "download_pdf_to_path", _download)
+    monkeypatch.setattr(orch, "generate_report", lambda current_file, cache_path, current_settings, md5, ctx: outcome)
     monkeypatch.setattr(orch.logger, "info", lambda payload: events.append(payload))
 
     results = orch.run_ingest(settings, limit=1)
@@ -154,8 +148,11 @@ def test_ingest_orchestrator_records_vector_events(monkeypatch, tmp_path):
             continue
     assert any(e.get("event") == "VECTOR_STORE_CREATED" for e in decoded)
     assert any(e.get("event") == "EVIDENCE_READY" for e in decoded)
-    assert state_records, "state_record should be invoked"
-    rec = state_records[0]
+    rec = state_get(
+        StateGetRequest(schema_version="1.0", state_db=settings.state_db, file_id=file.file_id),
+        RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+    )
+    assert rec is not None
     assert rec.vector_store_id == "vs_1"
     assert rec.vector_store_status == "completed"
     assert rec.indexed_at_utc == "2024-01-01T00:00:00Z"
@@ -182,32 +179,27 @@ def test_ingest_orchestrator_records_doc_map_summary(monkeypatch, tmp_path):
         vector_store_last_error=None,
         doc_map_summary=summary,
     )
-    state_records = []
 
-    monkeypatch.setattr(orch, "acquire_lock", lambda req, ctx: SimpleNamespace(acquired=True, lock=SimpleNamespace(lock_path=req.lock_path, owner_id=req.owner_id, pid=req.pid), conflict=None))
-    monkeypatch.setattr(orch, "release_lock", lambda req, ctx: None)
-    monkeypatch.setattr(orch, "flush_uncategorized_tags", lambda req, ctx: None)
+    def _download(req, ctx):
+        payload = _pdf_bytes()
+        path = Path(req.output_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(payload)
+        return SimpleNamespace(output_path=req.output_path, md5="md5", size=len(payload))
+
     monkeypatch.setattr(orch, "list_pdfs", lambda req, ctx: [file])
-    monkeypatch.setattr(orch, "download_pdf_to_path", lambda req, ctx: SimpleNamespace(output_path=req.output_path, md5="md5", size=9))
-    stat_calls = {"count": 0}
-    def _file_stat(req, ctx):
-        if stat_calls["count"] == 0:
-            stat_calls["count"] += 1
-            return SimpleNamespace(exists=False, size_bytes=None, mtime_utc=None, md5=None)
-        return SimpleNamespace(exists=True, size_bytes=9, mtime_utc=1.0, md5=None)
-    monkeypatch.setattr(orch, "file_stat", _file_stat)
-    monkeypatch.setattr(orch, "write_bytes", lambda req, ctx: SimpleNamespace(md5="md5"))
-    monkeypatch.setattr(orch, "check_pdf_eof", lambda req, ctx: SimpleNamespace(has_eof=True))
-    monkeypatch.setattr(orch, "state_already_processed", lambda req, ctx: False)
-    monkeypatch.setattr(orch, "generate_report", lambda file, cache_path, settings, md5, ctx: outcome)
-    monkeypatch.setattr(orch, "state_record", lambda req, ctx: state_records.append(req))
-    monkeypatch.setattr(orch.logger, "info", lambda payload: None)
+    monkeypatch.setattr(orch, "download_pdf_to_path", _download)
+    monkeypatch.setattr(orch, "generate_report", lambda current_file, cache_path, current_settings, md5, ctx: outcome)
 
     results = orch.run_ingest(settings, limit=1)
 
     assert results[0].status == "error"
-    assert state_records, "state_record should be invoked"
-    assert state_records[0].doc_map_summary == summary
+    rec = state_get(
+        StateGetRequest(schema_version="1.0", state_db=settings.state_db, file_id=file.file_id),
+        RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+    )
+    assert rec is not None
+    assert rec.doc_map_summary == summary
 
 
 def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
@@ -222,14 +214,56 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
     file = DriveFile(schema_version="1.0", file_id="file_vs", name="vector.pdf", modified_time=None, md5_checksum="md5")
     validation_calls = []
     analysis_store = []
-    vector_calls = []
+    vector_calls: list[tuple[str, dict[str, object]]] = []
     ctx = RunContext(schema_version="1.0", run_id="run-vs", task_id="task-vs", span_id="span-vs")
 
     monkeypatch.setattr(rg.state_service, "get", lambda req, ctx: None)
-    monkeypatch.setattr(rg.vector_store_service, "create_vector_store", lambda req, ctx: SimpleNamespace(vector_store_id="vs_new") if vector_calls.append(("create", req.name)) is None else SimpleNamespace(vector_store_id="vs_new"))
-    monkeypatch.setattr(rg.vector_store_service, "upload_file", lambda req, ctx: SimpleNamespace(openai_file_id="file_upload") if vector_calls.append(("upload", req.vector_store_id, req.file_path)) is None else SimpleNamespace(openai_file_id="file_upload"))
-    monkeypatch.setattr(rg.vector_store_service, "attach_file", lambda req, ctx: vector_calls.append(("attach", req.vector_store_id, req.openai_file_id)))
-    monkeypatch.setattr(rg.vector_store_service, "wait_until_indexed", lambda req, ctx: vector_calls.append(("wait", req.timeout_s, req.poll_interval_s)) or SimpleNamespace(status="completed", indexed_at_utc="2024-01-01T00:00:00Z", last_error=None))
+
+    def _create_vector_store(req, ctx):
+        vector_calls.append((
+            "create",
+            {
+                "name": req.name,
+                "report_id": req.metadata.report_id,
+                "report_name": req.metadata.report_name,
+            },
+        ))
+        return SimpleNamespace(vector_store_id="vs_new")
+
+    def _upload_file(req, ctx):
+        vector_calls.append((
+            "upload",
+            {
+                "vector_store_id": req.vector_store_id,
+                "file_path": req.file_path,
+            },
+        ))
+        return SimpleNamespace(openai_file_id="file_upload")
+
+    def _attach_file(req, ctx):
+        vector_calls.append((
+            "attach",
+            {
+                "vector_store_id": req.vector_store_id,
+                "openai_file_id": req.openai_file_id,
+            },
+        ))
+
+    def _wait_until_indexed(req, ctx):
+        vector_calls.append((
+            "wait",
+            {
+                "vector_store_id": req.vector_store_id,
+                "timeout_s": req.timeout_s,
+                "poll_interval_s": req.poll_interval_s,
+            },
+        ))
+        return SimpleNamespace(status="completed", indexed_at_utc="2024-01-01T00:00:00Z", last_error=None)
+
+    monkeypatch.setattr(rg.vector_store_service, "create_vector_store", _create_vector_store)
+    monkeypatch.setattr(rg.vector_store_service, "upload_file", _upload_file)
+    monkeypatch.setattr(rg.vector_store_service, "attach_file", _attach_file)
+    monkeypatch.setattr(rg.vector_store_service, "wait_until_indexed", _wait_until_indexed)
     monkeypatch.setattr(rg, "extract_pdf_info", lambda req, ctx: SimpleNamespace(schema_version="1.0", path=req.path, page_count=1, metadata={"k": "v"}))
     monkeypatch.setattr(rg, "build_pdf_context", lambda req, ctx: SimpleNamespace(schema_version="1.0", context=SimpleNamespace(fitz_doc=None, pypdf_reader=None, close=lambda: None), fitz_error=None, pypdf_error=None))
     monkeypatch.setattr(rg, "detect_contents_page_service", lambda req, ctx: SimpleNamespace(schema_version="1.0", path=req.path, has_contents=False, page_index=-1, page_number=0, heading="", confidence=0.0))
@@ -316,6 +350,38 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
     assert "validation" in outcome.evidence_packs
     assert Path(outcome.html_path).exists()
     assert validation_calls == ["file_vs"]
+    assert vector_calls == [
+        (
+            "create",
+            {
+                "name": "file_vs",
+                "report_id": "file_vs",
+                "report_name": "vector.pdf",
+            },
+        ),
+        (
+            "upload",
+            {
+                "vector_store_id": "vs_new",
+                "file_path": str(pdf_path),
+            },
+        ),
+        (
+            "attach",
+            {
+                "vector_store_id": "vs_new",
+                "openai_file_id": "file_upload",
+            },
+        ),
+        (
+            "wait",
+            {
+                "vector_store_id": "vs_new",
+                "timeout_s": 3600,
+                "poll_interval_s": 5,
+            },
+        ),
+    ]
     assert ("artifacts", {"summary": {"tldr": "tldr", "executive_summary": "exec"}, "insights_final": [{"text": "insight"}], "quotes_final": [{"text": "qt", "speaker": "sp"}]}) in analysis_store
 
 

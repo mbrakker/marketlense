@@ -320,6 +320,13 @@ pytest
 ```
 
 `pytest.ini` sets `pythonpath = .` so `src.*` imports resolve without exporting `PYTHONPATH`.
+Default runs exclude `integration`-marked tests (`addopts = -m "not integration"`).
+
+Run the live OpenAI smoke test explicitly (opt-in):
+
+```bash
+RUN_OPENAI_SMOKE_TEST=1 OPENAI_API_KEY=... pytest -m integration tests/integration/test_openai_smoke.py
+```
 
 CI runs these tests via `.github/workflows/ci.yml`.
 
