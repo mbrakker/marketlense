@@ -1,201 +1,215 @@
 # TODO
 
-1. Upgrade all prompts.
-   - Prompt namespaces live under `src/prompts/**` (report_generation, report_vs/{doc_map,evidence_packs,artifacts,validate}, rank_candidates). Refresh wording, safety, and output formats; ensure variables match renderer usage in `prompt_service` and bump schema/version hashes for logging.
-2. Add vector store deletion support.
-    - No delete API in `vector_store_service`; flag `vector_store_keep` is unused for cleanup. Add delete/prune operations (vector store + files) and orchestrator hooks to avoid orphaned stores.
+Last reviewed: 2026-02-11
+
+## Active Priorities
+
+1. Upgrade and align prompts.
+   - Prompt namespaces live under `src/prompts/**` (`report_generation`, `report_vs/{doc_map,evidence_packs,artifacts,validate,taxonomy}`, `rank_candidates`).
+   - Refresh wording, safety, and output contracts; ensure variables match renderer usage in `prompt_service`.
+   - Keep prompt hash/version logging intact for every generator call.
+
+2. Add vector store deletion and lifecycle cleanup.
+   - `src/services/vector_store_service.py` still has no delete/prune API (create/upload/attach/status/wait/update only).
+   - `vector_store_keep` is used for reuse/caching, but not for cleanup of remote vector store assets.
+   - Add explicit delete operations (vector store and uploaded files) and orchestrator hooks when retention is disabled.
+
 3. Define and enforce cost limits.
-    - Costs are tracked (`cost_ledger_path`, `cost_daily_path`, pricing in `app.yaml`) but not enforced. Add config thresholds (per-run/day) and guardrails in orchestrators before OpenAI calls, with blocking/warning behavior and logging.
-4. Refine HTML and deduplicate repeated blocks.
-    - `templates/report.html.j2` contains repeated preview/figure handling and inline styling. Extract reusable blocks/macros, de-duplicate preview/gallery logic, and ensure consistent metadata rendering to reduce drift.
-5. Refine figure candidates and ranker to avoid low-data images.
-    - Current figure selection relies on extracted candidates and ranking (see `figure_service`, `rank_service`, and `candidate_extraction_service` plus cropping). Add an image analysis step (OCR/content density/heuristics) to filter low-text/low-chart pages, improve table/chart detection and cropping, and feed richer features into the ranker to reduce weak visuals.
-6. Add infographics creator for HTML design and LinkedIn posts.
-    - Beyond text rendering, there is no infographic generation pipeline. Add a generator/service to produce simple infographics/hero visuals for HTML and LinkedIn artifacts, wired into rendering and artifact generation flows.
-7. Support multiple prompts per process for variations/expert roles.
-    - Today each step uses a single prompt set per namespace. Add a mechanism to run multiple prompt variants per step (e.g., different expert personas or stylistic variants), collect outputs, and select/ensemble or expose them, while keeping prompt logging/versioning intact.
-8. Validate report text extractability.
-    - Before uploading to the vector store, check three random pages of the report for extractable text (no OCR required). If no text is found, log an error and halt further processing.
+   - Cost tracking exists (`cost_ledger_path`, `cost_daily_path`, pricing in `src/config/app.yaml`) but no run/day guardrails are enforced before model calls.
+   - Add configurable thresholds (warn/block), check them in orchestrators, and log decisions with current spend and limits.
 
-# Detailed Proposals
+4. Refactor HTML template and remove duplication.
+   - `templates/report.html.j2` still contains duplicated image rendering patterns and inline style fragments.
+   - Extract reusable blocks/macros, unify figure/preview rendering, and keep metadata rendering consistent.
 
-## 1. Upgrade all prompts
-- **Context**: Prompt namespaces live under `src/prompts/**` and are loaded via `prompt_service` contracts and `PromptLoadRequest`.
-- **Proposal**:
-  - Audit every namespace (report_generation, report_vs/{doc_map,evidence_packs,artifacts,validate}, rank_candidates) for clarity, safety, and schema alignment.
-  - Update prompt variables to match renderer usage (e.g., `PromptRenderRequest` variable names in generators).
-  - Bump prompt schema/version hashes and ensure logging is updated with new hashes.
-- **Acceptance**:
-  - All prompts render without missing variables.
-  - Updated prompt hashes appear in generator logs.
+5. Improve figure candidate quality and ranking.
+   - Current pipeline uses candidate extraction and ranking, but still lacks richer quality features (OCR density, chart/table confidence, low-information suppression) in rank inputs.
+   - Keep existing text extractability gate as-is, but improve candidate-level filtering/cropping before ranking.
 
-## 2. Add vector store deletion support
-- **Context**: No delete/prune API exists in `vector_store_service`; `vector_store_keep` is unused for cleanup.
-- **Proposal**:
-  - Add delete operations in `vector_store_service` and wire them into orchestrators when `vector_store_keep` is false.
-  - Ensure deletion covers vector store assets and related files.
-  - Log deletion decisions with run/task/span IDs.
-- **Acceptance**:
-  - Orphaned vector stores are cleaned up when configured.
-  - Logs confirm deletion operations with IDs.
+6. Add infographic asset generation for HTML and LinkedIn.
+   - Artifacts currently include text outputs (summary, insights, quotes, expert comment, LinkedIn post) but no generated infographic assets.
+   - Add generator/service flow for simple SVG/PNG infographics and wire output references into rendered HTML + publish artifacts.
 
-## 3. Define and enforce cost limits
-- **Context**: Costs are tracked in `cost_ledger_path`/`cost_daily_path` but there are no guardrails.
-- **Proposal**:
-  - Add config thresholds in `app.yaml` (per-run and per-day) and surface them in `AppSettings`.
-  - Add orchestrator checks before OpenAI calls to block or warn based on thresholds.
-  - Log decisions and include the threshold values in structured logs.
-- **Acceptance**:
-  - Runs stop or warn when crossing configured cost limits.
-  - Logs show thresholds and current spend when a block occurs.
+7. Support multi-prompt variants per step.
+   - Current generators load one prompt namespace per step.
+   - Add config-driven variants (for expert roles/styles), capture logs per variant, and add selection/ensemble logic.
 
-## 4. Refine HTML and deduplicate repeated blocks
-- **Context**: `templates/report.html.j2` has repeated preview/figure handling and inline styling.
-- **Proposal**:
-  - Extract Jinja macros/partials for repeated preview/figure blocks.
-  - Normalize metadata rendering and shared styles to reduce drift.
-  - Add a small fixture to confirm the output structure remains stable.
-- **Acceptance**:
-  - HTML template no longer duplicates preview/gallery logic.
-  - Metadata block renders consistently across sections.
+## Completed Recently (Removed from active TODO)
 
-## 5. Refine figure candidates and ranker to avoid low-data images
-- **Context**: Figure selection relies on `figure_service`, `rank_service`, and `candidate_extraction_service`, but low-signal images slip through.
-- **Proposal**:
-  - Add an image quality filter (OCR density, chart/table heuristics, minimum text coverage).
-  - Extend candidate metadata with quality scores and feed them into ranking inputs.
-  - Improve cropping for chart/table boundaries before ranking.
-- **Acceptance**:
-  - Candidate set excludes low-content images and prioritizes meaningful charts.
-  - Ranking inputs include explicit quality features.
+1. Report text extractability validation is implemented.
+   - Sampling + halt behavior exists in `src/generators/report_generator.py` with `sample_pdf_text` and `pdf_text_sample_pages` (default `3`) from `src/contracts/ingest.py` and `src/config/app.yaml`.
+   - On no extractable text in sampled pages, pipeline returns `pdf_text_unextractable` and stops.
 
-## 6. Add infographics creator for HTML design and LinkedIn posts
-- **Context**: No pipeline exists for generating infographic assets beyond text artifacts.
-- **Proposal**:
-  - Add a generator/service pair to create infographic assets (SVG/PNG) from report highlights.
-  - Wire into HTML rendering and LinkedIn artifact generation flows.
-  - Store artifacts alongside existing outputs with metadata for reuse.
-- **Acceptance**:
-  - Infographic assets are created and referenced in HTML/LinkedIn outputs.
-  - Artifacts are logged and stored with report metadata.
+## Detailed Proposals
 
-## 7. Support multiple prompts per process for variations/expert roles
-- **Context**: Each step uses one prompt namespace; no multi-prompt selection exists.
-- **Proposal**:
-  - Add configuration for multiple prompt variants per namespace.
-  - Generate outputs for each variant, then select/ensemble using a scoring heuristic or validation step.
-  - Preserve prompt logging/versioning for each variant.
-- **Acceptance**:
-  - Multiple prompt variants can be run per step and results are captured.
-  - Selection logic is logged with variant identifiers.
+### 1. Upgrade and align prompts
 
-## 8. Validate report text extractability
-- **Context**: Reports without extractable text may indicate issues with the input PDF or earlier processing steps, leading to wasted resources if uploaded to the vector store.
-- **Proposal**:
-  - Implement a validation step to randomly select three pages from the report and check for extractable text.
-  - If none of the selected pages contain text, log an error message and stop further processing for the current report.
-  - Ensure this validation step is integrated into the orchestrator pipeline before vector store upload.
-- **Acceptance**:
-  - Reports without extractable text are halted with a clear error message.
-  - Logs & state database contain detailed information about the failure for debugging.
+- Audit all namespaces for clarity/safety and schema alignment.
+- Ensure every rendered variable is present and typed in generator context.
+- Keep prompt hash logging (`prompt_system_sha256`, `prompt_user_sha256`) stable in generator logs.
 
-## Codebase Audit Backlog (added 2026-02-09)
+Acceptance:
 
-### Findings (ordered by impact)
+- No missing-variable prompt render failures.
+- Prompt hashes visible for each model call path.
+
+### 2. Add vector store deletion and lifecycle cleanup
+
+- Extend `vector_store_service` with delete APIs.
+- Add orchestrator-level cleanup policies (for completed, failed, and canceled runs).
+- Log cleanup decisions and results with run/task/span identifiers.
+
+Acceptance:
+
+- No orphaned vector stores/files when cleanup is enabled.
+- Cleanup operations are traceable in logs.
+
+### 3. Define and enforce cost limits
+
+- Add per-run and per-day thresholds in configuration.
+- Evaluate thresholds before OpenAI calls.
+- Add explicit actions: warn-only, soft-stop, hard-block.
+
+Acceptance:
+
+- Runs consistently stop/warn according to configured policy.
+- Logs contain threshold values, spend snapshot, and action taken.
+
+### 4. Refactor HTML template and remove duplication
+
+- Introduce Jinja macros/partials for repeated preview/figure blocks.
+- Move repeated inline image styles to shared CSS classes.
+- Keep deterministic output structure for stable rendering and tests.
+
+Acceptance:
+
+- No duplicated preview/figure branches.
+- Metadata and asset sections render consistently.
+
+### 5. Improve figure candidate quality and ranking
+
+- Add candidate-level quality signals (text density, chart/table confidence, visual entropy).
+- Feed these signals into rank payloads.
+- Improve crop bounds to reduce low-value fragments.
+
+Acceptance:
+
+- Lower rate of low-signal selected figures.
+- Ranking inputs explicitly include quality fields.
+
+### 6. Add infographic asset generation
+
+- Add generator/service pair to produce infographic assets from validated highlights.
+- Persist assets with metadata in report analysis outputs.
+- Render generated assets in HTML and make them available for publishing.
+
+Acceptance:
+
+- Generated infographic assets exist per report.
+- HTML and publishing paths can consume them.
+
+### 7. Support multi-prompt variants per step
+
+- Define variant config per namespace.
+- Run variants and score/select outputs.
+- Preserve per-variant prompt hashes, rendered prompts, and model metadata in logs.
+
+Acceptance:
+
+- Multiple variants can be executed and selected deterministically.
+- Logs clearly show variant IDs and selection rationale.
+
+## Codebase Audit Backlog (still open)
+
+Findings (ordered by impact):
+
 1. Monolithic generator with mixed responsibilities.
-   - `generate_report` is ~1275 lines and combines orchestration, caching, service coordination, rendering, persistence, and cleanup in one place (`src/generators/report_generator.py:434`).
+   - `src/generators/report_generator.py` is still very large and combines orchestration, caching, service coordination, rendering, and persistence.
 2. Candidate extraction service is oversized and exception-heavy.
-   - Single module is ~2248 lines with many broad `except Exception` handlers and branch-heavy logic (`src/services/candidate_extraction_service.py:1317`).
+   - `src/services/candidate_extraction_service.py` remains large and branch-dense with broad exception handling.
 3. Retry logic is duplicated and inconsistent.
-   - Separate retry implementations with no jitter and different retry semantics (`src/orchestrators/ingest_orchestrator.py:283`, `src/orchestrators/candidate_extraction_orchestrator.py:32`, `src/orchestrators/publish_orchestrator.py:329`).
-4. Redundant state checks in ingest.
-   - Same file can trigger multiple already-processed checks in one lifecycle (`src/orchestrators/ingest_orchestrator.py:830`, `src/orchestrators/ingest_orchestrator.py:329`, `src/orchestrators/ingest_orchestrator.py:490`).
-5. Global SQLite locks serialize work and cap throughput.
-   - Full DB operations run under process-wide locks (`src/services/state_service.py:73`, `src/services/report_store_service.py:82`).
-6. Cost rollup runs full aggregation per request.
-   - Every model call appends one ledger entry and re-rolls the full ledger file (`src/services/cost_ledger_service.py:121`, calls from `src/services/openai_service.py` and `src/services/rank_service.py`).
-7. OpenAI integration logic is duplicated.
-   - Similar request/parse/cost logging flow exists across `openai_service` and `rank_service`.
-8. WordPress term ensure logic is duplicated and N+1.
-   - `ensure_categories` and `ensure_tags` mirror each other and issue sequential GET/POST calls (`src/services/wordpress_service.py:252`, `src/services/wordpress_service.py:347`).
-9. Redundant slugify calls and no tag dedup before API calls.
-   - Tag slug generation is repeated and not deduplicated (`src/generators/publish_generator.py:107`).
-10. PDF reopened unnecessarily in candidate extraction path.
-   - Charts may reuse context; tables reopen docs independently (`src/services/candidate_extraction_service.py:2231`, `src/services/candidate_extraction_service.py:1538`, `src/services/candidate_extraction_service.py:1543`).
-11. O(n^2) table dedupe hotspot.
-   - Candidate dedupe compares each new item against kept list linearly (`src/services/candidate_extraction_service.py:2182`).
-12. Unused candidate crop output path.
-   - Candidate crop results are created but not consumed downstream (`src/generators/report_generator.py:1018`, `src/generators/report_generator.py:1060`).
-13. Dead/legacy config surface: `debug_candidate_gallery`.
-   - Present in config/contracts but not used by runtime execution flow.
-14. Legacy compare mode still exposed while forced off.
-   - `analysis_compare` surfaced in UI but effectively hard-disabled (`src/services/config_service.py:195`, `src/streamlit_app.py:1087`).
-15. Jinja environment recreated on each render call.
-   - `Environment(...)` built per request (`src/services/render_service.py:24`).
-16. Potential double-close FD path in lock handling.
-   - `os.fdopen` context plus manual `os.close(fd)` in exception branch (`src/services/lock_service.py:140`, `src/services/lock_service.py:143`).
-17. Repeated metadata JSON parsing logic.
-   - `get_metadata` and `list_metadata` duplicate parsing/cleanup code (`src/services/report_store_service.py:350`, `src/services/report_store_service.py:503`).
-18. Duplicate duration scripts with drift risk.
-   - `calculate_durations.py` and `scripts/calculate_durations.py` overlap with different behavior.
-19. Streamlit app is too large/highly coupled.
-   - `src/streamlit_app.py` is ~1807 lines with large page/render functions.
+   - Separate retry implementations remain in ingest/candidate-extraction/publish orchestrators with different behavior.
+4. Duplicate skip checks in ingest flow.
+   - Skip checks happen at list filtering and file-processing stages, causing repeated state checks in some paths.
+5. Global SQLite locks serialize work.
+   - `src/services/state_service.py` and `src/services/report_store_service.py` still use process-wide locks around DB access.
+6. Cost rollup recomputes from full ledger frequently.
+   - `src/services/openai_service.py` and `src/services/rank_service.py` append one entry and call full `rollup_daily`.
+7. OpenAI request/cost logic remains duplicated.
+   - Similar usage parsing and ledger write logic exists in both `openai_service` and `rank_service`.
+8. WordPress term ensure logic is duplicated.
+   - `ensure_categories` and `ensure_tags` follow similar N+1 request patterns in `src/services/wordpress_service.py`.
+9. Repeated slugify calls in publish flow.
+   - `src/generators/publish_generator.py` repeatedly slugifies tags in list comprehension.
+10. PDF context reuse is still uneven in candidate extraction path.
+11. O(n^2) table dedupe hotspot remains in candidate extraction.
+12. Candidate crop output path is still unused in report generator.
+13. `debug_candidate_gallery` config surface remains dead (not used by runtime).
+14. Legacy `analysis_compare` is still surfaced while effectively forced off.
+15. Jinja environment is recreated per render call in `src/services/render_service.py`.
+16. Lock service still has a potential double-close fd path in exception handling.
+17. Metadata JSON parsing logic is duplicated between `get_metadata` and `list_metadata` in `src/services/report_store_service.py`.
+18. Duplicate duration scripts remain (`calculate_durations.py`, `scripts/calculate_durations.py`).
+19. `src/streamlit_app.py` is still large and highly coupled.
 
-### Remediation plan
+Remediation plan:
+
 1. P0 quick wins (1-2 days)
    - Remove/guard unused candidate crop pass.
    - Deduplicate tag slugs and avoid repeated slugify.
    - Cache Jinja `Environment` at module scope.
-   - Fix lock FD handling.
+   - Fix lock fd handling.
    - Consolidate duration scripts.
 2. P1 throughput (2-4 days)
-   - Collapse ingest skip checks to a single state decision per file lifecycle.
+   - Collapse repeated ingest skip checks where safe.
    - Move SQLite to WAL + busy timeout and narrow lock scope.
-   - Change cost rollup to incremental/periodic (not per request).
+   - Make cost rollup incremental or scheduled (not per request).
 3. P1 reliability (2-3 days)
    - Add shared retry utility (bounded exponential backoff + jitter + typed retry policy).
-   - Reuse PDF context across candidate extraction stages.
+   - Reuse PDF context consistently across candidate extraction stages.
    - Replace broad exception catches with typed errors and explicit fallbacks.
 4. P2 architecture (4-7 days)
-   - Split `generate_report` into smaller generator steps with typed step contracts.
-   - Unify OpenAI call path so rank flow reuses shared service logic.
+   - Split `generate_report` into step-level generator modules with typed contracts.
+   - Unify OpenAI call path to remove duplicated request/cost plumbing.
    - Extract reusable WordPress term ensure helper.
    - Extract shared metadata row parser for report store.
 5. P2 cleanup/redundancy (1-2 days)
    - Remove or fully implement `debug_candidate_gallery`.
-   - Remove legacy `analysis_compare` UI/config surface or implement true compare mode.
+   - Remove legacy `analysis_compare` surface or implement real compare mode.
    - Normalize cache-key strategy across orchestrators.
 6. Validation gate
-   - Keep `pytest` green; add perf/benchmark checks for ingest and cost-ledger growth.
-   - Add regression tests for extraction fallback paths and metadata parsing helpers.
+   - Keep `pytest` green.
+   - Add regression tests for extraction fallback and metadata parsing helpers.
+   - Add benchmark checks for ingest throughput and cost-ledger growth.
 
-## Test Suite Integrity Backlog (added 2026-02-09)
+## Test Suite Integrity Backlog (still open)
 
-### Findings to fix (anti-shortcuts / anti-cheats)
+Findings to fix:
+
 1. Retry behavior test is weak.
-   - `tests/test_orchestrator_retry.py` currently asserts only final error outcome; it does not prove retries/backoff occurred.
-2. Parallel ingest test does not run real parallel work.
-   - `tests/test_ingest_parallel.py` uses a synchronous dummy executor, so concurrency/race behavior is not exercised.
-3. Vector-store wiring test collects call trace but does not assert it.
-   - `tests/test_vector_pipeline_wiring.py` records `vector_calls` but never validates expected create/upload/attach/wait sequence.
+   - `tests/test_orchestrator_retry.py` asserts final error but does not assert attempt count/backoff behavior.
+2. Parallel ingest test does not execute real parallel work.
+   - `tests/test_ingest_parallel.py` uses a synchronous dummy executor.
+3. Vector pipeline test gathers `vector_calls` but does not assert sequence/arguments.
+   - `tests/test_vector_pipeline_wiring.py` appends call trace but does not validate expected order.
 4. Over-mocking in orchestrator wiring tests reduces regression detection.
-   - `tests/test_vector_pipeline_wiring.py`, `tests/test_publish_orchestrator.py`, and `tests/test_ingest_parallel.py` stub many boundaries and mostly validate mocked paths.
-5. Unsafe smoke script in repository root.
-   - `test_openai.py` prints API key prefix and performs a live API call at import-time if run directly.
-6. Brittle full-list UI snapshot.
-   - `tests/test_streamlit_navigation.py` hardcodes full nav order/text and may fail on low-risk copy/order updates.
+   - `tests/test_vector_pipeline_wiring.py`, `tests/test_publish_orchestrator.py`, and `tests/test_ingest_parallel.py` stub most collaborators.
+5. Unsafe root smoke script remains.
+   - `test_openai.py` prints API key prefix and performs a live API call at module execution.
+6. UI navigation test is brittle.
+   - `tests/test_streamlit_navigation.py` hardcodes full nav list order/text.
 
-### Remediation plan
+Remediation plan:
+
 1. Strengthen retry verification.
-   - Assert retry attempt count (`generate_report` call count), `time.sleep` calls, and bounded backoff progression in `tests/test_orchestrator_retry.py`.
-2. Add a real-concurrency ingest test.
-   - Keep one unit test with fake executor for determinism, plus one integration-style test using real `ThreadPoolExecutor` and synchronization primitives.
+   - Assert retry call count and `sleep` backoff progression in `tests/test_orchestrator_retry.py`.
+2. Add one real-concurrency ingest test.
+   - Keep deterministic unit test plus integration-style test using real `ThreadPoolExecutor`.
 3. Enforce vector pipeline call contract.
-   - Add explicit assertions for `vector_calls` sequence and key parameters in `tests/test_vector_pipeline_wiring.py`.
-4. Reduce over-mocking by adding service-level integration fixtures.
-   - Introduce temp-dir + sqlite + fixture PDF based tests that keep real file/state/report services and only mock external APIs.
-5. Convert `test_openai.py` into explicit opt-in integration smoke test.
-   - Move under `tests/integration/` (or `scripts/`), add marker/guard, remove API key echo, and prevent execution on import.
+   - Assert exact `vector_calls` sequence and key request fields in `tests/test_vector_pipeline_wiring.py`.
+4. Reduce over-mocking with service-level integration fixtures.
+   - Use temp-dir + sqlite fixtures, mock only true external boundaries.
+5. Convert `test_openai.py` to explicit opt-in integration smoke test.
+   - Move under `tests/integration/` or `scripts/`, add marker/guard, and remove key-prefix output.
 6. Relax brittle UI snapshot checks.
-   - Assert required sections and invariants instead of exact full list ordering where ordering is not business-critical.
-
+   - Assert required sections/invariants instead of full ordered equality when ordering is not business-critical.

@@ -1,10 +1,10 @@
+# Agent Architecture & Coding Rules (Mandatory)
+
 Below is a **fully integrated, production-grade rewrite** of your document.
 I preserved your tone (hard constraints, enforceable), tightened definitions, and merged professional best practices **without bloating**.
 This is suitable to be treated as a **canonical engineering constitution** for agents.
 
 ---
-
-# Agent Architecture & Coding Rules (Mandatory)
 
 This document defines **non-negotiable architectural, coding, logging, and operational constraints** for all coding agents.
 
@@ -29,7 +29,7 @@ Any implementation that violates them is **invalid by design**.
   * context meaning
 * No implicit, undocumented, or ad-hoc fields are allowed.
 
-**Contract evolution rules**
+#### Contract evolution rules
 
 * Every contract MUST be versioned (`schema_version` or module-level version).
 * Breaking changes REQUIRE:
@@ -44,7 +44,7 @@ Any implementation that violates them is **invalid by design**.
 
 A Service is the **only** place where the system touches the outside world.
 
-**A service module:**
+#### A service module
 
 * Solves **exactly one external task**:
 
@@ -61,7 +61,7 @@ A Service is the **only** place where the system touches the outside world.
   * no business logic
   * no orchestration logic
 
-**Hard requirements**
+#### Hard requirements
 
 * Paths, credentials, constants:
 
@@ -74,7 +74,7 @@ A Service is the **only** place where the system touches the outside world.
   * external outputs
   * contract adherence
 
-**Logging (mandatory)**
+#### Logging (mandatory, services)
 
 * input parameters (sanitized)
 * resolved configuration
@@ -82,13 +82,13 @@ A Service is the **only** place where the system touches the outside world.
 * external response (sanitized)
 * adapted output dataclass
 
-**Services MUST NOT**
+#### Services MUST NOT
 
 * Decide *what* to generate
 * Decide *when* to retry
 * Combine multiple external systems
 
-**Service consolidation (mandatory)**
+#### Service consolidation (mandatory)
 
 * One external system = one service module. Splitting the same system across multiple service modules is forbidden.
 * Thin wrappers that merely delegate to another service for the same system are violations; consolidate into one module.
@@ -105,7 +105,7 @@ A Service is the **only** place where the system touches the outside world.
 
 Generators implement **what should be produced and how**.
 
-**Generators:**
+#### Generators
 
 * Accept fully-formed context `dataclass` objects
 * Call one or more services
@@ -121,14 +121,14 @@ Generators implement **what should be produced and how**.
   * completeness checks
   * semantic checks
 
-**Generators MUST NOT**
+#### Generators MUST NOT
 
 * Access infrastructure directly
 * Read files
 * Call APIs
 * Decide scheduling or retries
 
-**Logging (mandatory)**
+#### Logging (mandatory, generators)
 
 * input context (serialized)
 * intermediate decisions
@@ -146,12 +146,12 @@ Generators implement **what should be produced and how**.
 
 Orchestrators define **when, in what order, and with what outcome** things run.
 
-**Architecture definition**
+#### Architecture definition
 
 An orchestrator is a control-plane module that coordinates services and generators for a workflow.
 It owns execution sequencing, branching, retries, and lifecycle/state transitions, while keeping domain semantics inside generators and external I/O inside services.
 
-**Responsibilities**
+#### Responsibilities
 
 * pipeline coordination
 * task lifecycle management
@@ -159,20 +159,20 @@ It owns execution sequencing, branching, retries, and lifecycle/state transition
 * state transitions
 * notifications
 
-**Orchestrators MUST**
+#### Orchestrators MUST
 
 * Call generators and services
 * Track task/run/span IDs
 * Apply retry strategies based on error taxonomy
 * Be idempotent or enforce idempotency keys
 
-**Orchestrators MUST NOT**
+#### Orchestrators MUST NOT
 
 * Contain domain logic
 * Contain prompt text
 * Transform data beyond routing
 
-**Logging (mandatory)**
+#### Logging (mandatory, orchestrators)
 
 * pipeline start/end
 * task IDs and transitions
@@ -186,14 +186,14 @@ It owns execution sequencing, branching, retries, and lifecycle/state transition
 
 Utilities are **pure, deterministic helpers**.
 
-**Rules**
+#### Rules
 
 * Stateless
 * No I/O
 * No global state
 * Pure functions only
 
-**Input / Output**
+#### Input / Output
 
 * `dict`, `list`, primitives, or `DataFrame`
 
@@ -220,7 +220,7 @@ If a script fits **more than one role**, the design is **invalid**.
 
 ### 3.1 Canonical Structure
 
-```
+```text
 src/
   contracts/
   services/
@@ -230,7 +230,7 @@ src/
   prompts/
 ```
 
-**Import rules**
+#### Import rules
 
 * `services` -> contracts, utils
 * `generators` -> services, contracts, utils
@@ -268,7 +268,8 @@ src/
 
 ### 4.1 Global Rule
 
-**Every meaningful action MUST be logged.**
+#### Every meaningful action MUST be logged
+
 Errors are not special — they are just one event type.
 
 ### 4.2 Mandatory Logged Events
@@ -320,7 +321,7 @@ All errors MUST derive from a common base (e.g. `AppError`) with:
 * `severity`
 * `context`
 
-**Error categories**
+#### Error categories
 
 * Transient I/O (retryable)
 * Permanent I/O (non-retryable)
@@ -357,7 +358,7 @@ All errors MUST derive from a common base (e.g. `AppError`) with:
 
 Example:
 
-```
+```text
 prompts/
   post_generation/
     system.yaml
@@ -448,7 +449,9 @@ CI MUST enforce:
 * tests
 
 ---
+
 ## 9. Documentation Rules
+
 * Every meaningful change in code, architecture, settings options or setup must be documented in readme.
 
 ## 10. Enforcement Rules
