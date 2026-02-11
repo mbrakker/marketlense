@@ -34,12 +34,6 @@ Last reviewed: 2026-02-11
    - Current generators load one prompt namespace per step.
    - Add config-driven variants (for expert roles/styles), capture logs per variant, and add selection/ensemble logic.
 
-## Completed Recently (Removed from active TODO)
-
-1. Report text extractability validation is implemented.
-   - Sampling + halt behavior exists in `src/generators/report_generator.py` with `sample_pdf_text` and `pdf_text_sample_pages` (default `3`) from `src/contracts/ingest.py` and `src/config/app.yaml`.
-   - On no extractable text in sampled pages, pipeline returns `pdf_text_unextractable` and stops.
-
 ## Detailed Proposals
 
 ### 1. Upgrade and align prompts
@@ -181,26 +175,3 @@ Remediation plan:
    - Keep `pytest` green.
    - Add regression tests for extraction fallback and metadata parsing helpers.
    - Add benchmark checks for ingest throughput and cost-ledger growth.
-
-## Test Suite Integrity Backlog (completed 2026-02-11)
-
-Completed:
-
-1. Strengthened retry verification.
-   - `tests/test_orchestrator_retry.py` now asserts retry attempt count (`3`) and backoff sleeps (`[1, 2]`).
-2. Added real-concurrency ingest coverage.
-   - `tests/test_ingest_parallel.py` now includes both deterministic executor-order test and integration-style real `ThreadPoolExecutor` concurrency test.
-3. Enforced vector pipeline call contract.
-   - `tests/test_vector_pipeline_wiring.py` now asserts exact `vector_calls` sequence and key request fields.
-4. Reduced over-mocking in orchestrator wiring tests.
-   - Added `tests/conftest.py` fixtures for temp dirs/sqlite settings; upgraded `tests/test_ingest_parallel.py`, `tests/test_publish_orchestrator.py`, and ingest-path vector wiring tests to use real local services and mock only external boundaries.
-5. Converted unsafe OpenAI smoke script to opt-in integration test.
-   - Removed root `test_openai.py`.
-   - Added `tests/integration/test_openai_smoke.py` with `integration` marker + env guard.
-   - Updated `pytest.ini` to exclude integration tests from default runs.
-6. Relaxed brittle UI navigation assertions.
-   - `tests/test_streamlit_navigation.py` now checks required invariants/anchors rather than strict full-list equality.
-
-Validation:
-
-- `pytest` (2026-02-11): `90 passed, 1 deselected`.
