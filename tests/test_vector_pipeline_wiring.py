@@ -9,6 +9,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
+from src.contracts.report_analysis import AnalysisStorePackRequest
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationReport
 from src.contracts.report_assets import RenderResponse
@@ -305,12 +306,15 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
             "quotes_final": [{"text": "qt", "speaker": "sp"}],
         }
         rg.report_analysis_store_service.store_pack(
-            settings.output_dir,
-            report_id,
-            "artifacts",
-            payload,
+            AnalysisStorePackRequest(
+                schema_version="1.0",
+                output_dir=settings.output_dir,
+                report_id=report_id,
+                pack_name="artifacts",
+                payload=payload,
+                report_slug=report_name,
+            ),
             ctx,
-            report_slug=report_name,
         )
         return payload
 
@@ -318,8 +322,8 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
     monkeypatch.setattr(
         rg.report_analysis_store_service,
         "store_pack",
-        lambda output_dir, report_id, pack_name, payload, ctx, **kwargs: analysis_store.append((pack_name, payload))
-        or str(Path(output_dir) / slugify(kwargs.get("report_slug") or report_id) / "report_analysis" / f"{pack_name}.json"),
+        lambda request, ctx: analysis_store.append((request.pack_name, request.payload))
+        or SimpleNamespace(output_path=str(Path(request.output_dir) / slugify(request.report_slug or request.report_id) / "report_analysis" / f"{request.pack_name}.json")),
     )
 
     def _fake_validation(req, settings, ctx, pack_name="validation", **kwargs):

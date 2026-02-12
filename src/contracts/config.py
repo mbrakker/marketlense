@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
+from src.contracts.ingest import IngestSettings
+
 
 @dataclass(frozen=True)
 class ConfigLoadRequest:
@@ -64,3 +66,9 @@ class AppSettings:
     model_pricing: dict = field(default_factory=dict, metadata={"doc": "Per-model pricing table; keys are model IDs with per-1k token pricing."})
     analysis_compare: bool = field(default=False, metadata={"doc": "Legacy compare toggle (ignored; vector_store only)."})
     validation_data_gap_policy: str = field(default="warn", metadata={"doc": "Policy for data gaps: warn|fail controls validation severity when text evidence is missing."})
+
+
+@dataclass(frozen=True)
+class IngestSettingsBuildRequest:
+    schema_version: str = field(metadata={"doc": "Ingest settings build request schema version."})
+    app_settings: AppSettings = field(metadata={"doc": "App-level settings used to build ingest settings."})

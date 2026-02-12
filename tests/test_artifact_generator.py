@@ -6,6 +6,7 @@ from src.contracts.config import AppSettings
 from src.contracts.openai import OpenAIResponseResult
 from src.contracts.prompts import PromptSet, PromptTemplate
 from src.contracts.run_context import RunContext
+from src.contracts.schema_validation import SchemaValidateRequest
 from src.generators.artifact_generator import generate_artifacts
 from src.services.schema_validator_service import validate_schema
 from src.utils.slugify import slugify
@@ -170,7 +171,10 @@ def test_generate_artifacts_validates_schema_and_evidence_ids(tmp_path):
     assert all(item["evidence_id"] for item in payload["insights_candidates"])
     assert all(item["evidence_id"] for item in payload["insights_final"])
     assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 7
-    validate_schema(payload, "artifacts", _ctx())
+    validate_schema(
+        SchemaValidateRequest(schema_version="1.0", payload=payload, schema_name="artifacts"),
+        _ctx(),
+    )
     assert analysis_store.stored and analysis_store.stored[0][2] == "artifacts"
 
 
@@ -202,7 +206,10 @@ def test_generate_artifacts_backfills_missing_ids(tmp_path):
     assert len(payload["insights_final"]) == 5
     assert all(item["evidence_id"] for item in payload["insights_final"])
     assert payload["quotes_final"][0]["evidence_id"] == "quote_1"
-    validate_schema(payload, "artifacts", _ctx())
+    validate_schema(
+        SchemaValidateRequest(schema_version="1.0", payload=payload, schema_name="artifacts"),
+        _ctx(),
+    )
 
 
 def test_generate_artifacts_ignores_low_text_when_vector_store(tmp_path):
@@ -232,5 +239,8 @@ def test_generate_artifacts_ignores_low_text_when_vector_store(tmp_path):
     )
     assert payload["source_status"]["not_available"] is False
     assert fake_openai.requests and all(req[0] == "vector" for req in fake_openai.requests)
-    validate_schema(payload, "artifacts", _ctx())
+    validate_schema(
+        SchemaValidateRequest(schema_version="1.0", payload=payload, schema_name="artifacts"),
+        _ctx(),
+    )
     assert analysis_store.stored

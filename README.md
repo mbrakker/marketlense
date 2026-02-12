@@ -65,7 +65,7 @@ Current control-plane modules in `src/orchestrators/` include:
 
 Primary config: `src/config/app.yaml`. Missing values can be provided via `.env` (loaded by `config_service`). Secrets must come from environment variables.
 
-For dev wiring, use `src.services.config_service.to_ingest_settings` to adapt `AppSettings` into `IngestSettings` without hand-copying fields; new config keys are picked up automatically.
+For dev wiring, use `src.services.config_service.build_ingest_settings` with `IngestSettingsBuildRequest` to adapt `AppSettings` into `IngestSettings` without hand-copying fields; new config keys are picked up automatically.
 
 Key fields and env overrides:
 
@@ -157,11 +157,11 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
        - Results persist to `out/<report-slug>/report_analysis/validation*.json` (legacy copy at `out/report_analysis/<file_id>/`) and flow into HTML and publish policy decisions. When `ingest.validation.data_gap_policy` is `warn`, missing evidence/text downgrades to warnings. Schema validation is performed via `schema_validator_service`.
      - **Normalization**: `normalize_generator` enforces strict schema and list sizing.
      - **Categorization**: taxonomy tags are scored against `src/config/category-mappings.yaml`; top 3 categories are stored and rendered, and unmapped tags are appended under `uncategorized` in that YAML.
-     - **Figure selection**: `figure_service` selects a representative visual and caption.
-     - **Candidate extraction**: `candidate_extraction_service` finds chart/table regions.
+     - **Figure selection**: `pdf_service.extract_best_figure` selects a representative visual and caption.
+     - **Candidate extraction**: `pdf_service.collect_candidates` finds chart/table regions.
      - **Candidate ranking**: `rank_service` scores candidates via LLM (model resolves from `openai_models.rank_candidates` if set, else `rank.model`, then `ingest.openai_model`).
-     - **Cropping**: `crop_service` crops top-ranked regions.
-     - **Preview rendering**: `preview_service` renders the first page to PNG.
+     - **Cropping**: `pdf_service.crop_regions` crops top-ranked regions.
+     - **Preview rendering**: `pdf_service.render_preview` renders the first page to PNG.
      - **Cover image generation**: `cover_image_generator` resolves style from `cover-styles.yaml` using the report’s first category (falls back to `default` for styling only), while the rendered label text, title, publisher, time period, and region always come from report metadata in the DB. Renders via `cover_image_service` to `out/<report-slug>/<publisher>-<title>.png`, logging the resolved style and render path.
      - **HTML rendering**: `render_service` generates the final HTML digest.
    - If the reports DB already has `html_path` for the same `file_id` + md5 and the HTML exists on disk, the orchestrator skips report generation.

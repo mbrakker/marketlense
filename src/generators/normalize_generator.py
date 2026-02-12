@@ -5,6 +5,7 @@ from typing import Any, List
 
 from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.run_context import RunContext
+from src.contracts.schema_validation import SchemaValidateRequest
 from src.utils.logging import log_event
 from src.services.schema_validator_service import validate_schema
 
@@ -32,7 +33,10 @@ def normalize_report(payload: ReportPayload, ctx: RunContext) -> ReportPayload:
 
 def validate_with_schema(payload: dict, schema_name: str, ctx: RunContext) -> None:
     """Validate an arbitrary payload against a named schema."""
-    validate_schema(payload, schema_name, ctx)
+    validate_schema(
+        SchemaValidateRequest(schema_version="1.0", payload=payload, schema_name=schema_name),
+        ctx,
+    )
 
 
 def _s(value: Any) -> str:

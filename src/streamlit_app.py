@@ -10,11 +10,12 @@ from typing import Any, Iterable, Optional
 import streamlit as st
 
 from src.contracts.categories import CategoryMappingLoadRequest, RecategorizeRequest
-from src.contracts.config import ConfigLoadRequest
+from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
 from src.contracts.costs import CostReportRequest, CostReportingRequest, CostRollupRequest
 from src.contracts.cover_images import CoverImageOrchestratorRequest, CoverStyleLoadRequest
 from src.contracts.files import FileStatRequest, ListDirectoryRequest, ReadTextRequest
 from src.contracts.lock import LockGetRequest
+from src.contracts.logging import LoggingSetupRequest
 from src.contracts.ops import OpsDashboardSnapshotRequest
 from src.contracts.prompts import PromptNamespaceListRequest
 from src.contracts.publish import PublishQueueRequest
@@ -34,7 +35,7 @@ from src.orchestrators.publish_queue_orchestrator import build_publish_queue_sna
 from src.orchestrators.recategorize_orchestrator import run_recategorize
 from src.orchestrators.wp_category_update_orchestrator import run_update_wp_categories
 from src.services.category_mapping_service import load_mappings
-from src.services.config_service import load_publish_settings, load_settings, to_ingest_settings
+from src.services.config_service import build_ingest_settings, load_publish_settings, load_settings
 from src.services.cover_style_service import load_cover_styles
 from src.services.file_service import file_stat, list_directory, read_text
 from src.services.lock_service import get_lock
@@ -647,7 +648,10 @@ def _render_ingest_control(settings: Any) -> None:
         _append_terminal("Ingest requested from UI.")
         try:
             outcomes = run_ingest(
-                to_ingest_settings(settings),
+                build_ingest_settings(
+                    IngestSettingsBuildRequest(schema_version="1.0", app_settings=settings),
+                    _ctx("build_ingest_settings"),
+                ),
                 folder_id=folder_override.strip() or None,
                 limit=int(limit),
                 ctx=_ctx("run_ingest"),
@@ -766,7 +770,10 @@ def _render_candidate_extraction(settings: Any) -> None:
         _append_terminal("Candidate extraction requested from UI.")
         try:
             outcomes = run_candidate_extraction(
-                to_ingest_settings(settings),
+                build_ingest_settings(
+                    IngestSettingsBuildRequest(schema_version="1.0", app_settings=settings),
+                    _ctx("build_ingest_settings"),
+                ),
                 folder_id=folder_override.strip() or None,
                 limit=int(limit),
                 file_id=file_id.strip() or None,
@@ -1765,7 +1772,7 @@ def main() -> None:
     st.set_page_config(page_title="Market Lense Cockpit", page_icon="ML", layout="wide")
     _inject_theme()
     if not st.session_state.get("gui_logging_ready"):
-        setup_logging()
+        setup_logging(LoggingSetupRequest(schema_version="1.0"), _ctx("setup_logging"))
         st.session_state["gui_logging_ready"] = True
     st.session_state.setdefault("live_terminal_output", "")
 

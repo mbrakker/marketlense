@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 from src.contracts.run_context import RunContext
+from src.contracts.schema_validation import SchemaValidateRequest, SchemaValidateResponse
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -37,17 +38,17 @@ def _load_schema(name: str) -> dict:
     return data
 
 
-def validate_schema(payload: Any, schema_name: str, ctx: RunContext) -> None:
+def validate_schema(request: SchemaValidateRequest, ctx: RunContext) -> SchemaValidateResponse:
     logger.info(log_event(
         ctx,
         role="service",
         event="schema_validation_start",
         module=logger.name,
-        fields={"schema": schema_name},
+        fields={"schema": request.schema_name},
     ))
-    schema = _load_schema(schema_name)
+    schema = _load_schema(request.schema_name)
     try:
-        _validate(payload, schema, path="root")
+        _validate(request.payload, schema, path="root")
     except AppError:
         raise
     except Exception as exc:
@@ -56,15 +57,16 @@ def validate_schema(payload: Any, schema_name: str, ctx: RunContext) -> None:
             message=str(exc),
             cause=exc,
             retryable=False,
-            context={"schema": schema_name},
+            context={"schema": request.schema_name},
         ) from exc
     logger.info(log_event(
         ctx,
         role="service",
         event="schema_validation_complete",
         module=logger.name,
-        fields={"schema": schema_name},
+        fields={"schema": request.schema_name},
     ))
+    return SchemaValidateResponse(schema_version="1.0", schema_name=request.schema_name, valid=True)
 
 
 def _validate(value: Any, schema: dict, path: str) -> None:

@@ -8,7 +8,7 @@ from pathlib import Path
 from dotenv import load_dotenv, find_dotenv
 import yaml
 
-from src.contracts.config import AppSettings, ConfigLoadRequest
+from src.contracts.config import AppSettings, ConfigLoadRequest, IngestSettingsBuildRequest
 from src.contracts.ingest import IngestSettings
 from src.contracts.publish import PublishSettings
 from src.contracts.run_context import RunContext
@@ -64,9 +64,38 @@ class _ConfigResolver:
         return str(value)
 
 
-def to_ingest_settings(app_settings: AppSettings) -> IngestSettings:
-    """Convert AppSettings to IngestSettings without manual field mapping."""
+def _to_ingest_settings(app_settings: AppSettings) -> IngestSettings:
     return IngestSettings(**asdict(app_settings))
+
+
+def build_ingest_settings(request: IngestSettingsBuildRequest, ctx: RunContext) -> IngestSettings:
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="ingest_settings_build_start",
+        module=logger.name,
+        fields={
+            "output_dir": request.app_settings.output_dir,
+            "cache_dir": request.app_settings.cache_dir,
+            "state_db": request.app_settings.state_db,
+            "reports_db": request.app_settings.reports_db,
+        },
+    ))
+    settings = _to_ingest_settings(request.app_settings)
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="ingest_settings_build_complete",
+        module=logger.name,
+        fields={
+            "gdrive_folder_id": settings.gdrive_folder_id,
+            "openai_model": settings.openai_model,
+            "batch_limit": settings.batch_limit,
+            "ingest_worker_limit": settings.ingest_worker_limit,
+            "report_worker_limit": settings.report_worker_limit,
+        },
+    ))
+    return settings
 
 
 def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:

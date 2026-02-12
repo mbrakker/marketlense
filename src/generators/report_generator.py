@@ -20,6 +20,7 @@ from src.utils.slugify import slugify
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.files import FileStatRequest, ReadTextRequest, WriteBytesRequest
+from src.contracts.report_analysis import AnalysisPackPathRequest, AnalysisStorePackRequest
 from src.contracts.report_assets import (
     CropRequest,
     ExtractCandidatesRequest,
@@ -38,14 +39,18 @@ from src.generators.artifact_generator import generate_artifacts
 from src.generators.cover_image_generator import generate_cover_images
 from src.generators.taxonomy_generator import extract_taxonomy
 from src.generators.validation_generator import validate_report as run_validation
-from src.services.crop_service import crop_regions as crop_regions_service
-from src.services.candidate_extraction_service import collect_candidates as collect_candidates_service
-from src.services.figure_service import extract_best_figure as extract_best_figure_service
-from src.services.preview_service import render_preview as render_preview_service
+from src.services.pdf_service import (
+    build_pdf_context,
+    collect_candidates as collect_candidates_service,
+    crop_regions as crop_regions_service,
+    detect_contents_page as detect_contents_page_service,
+    extract_best_figure as extract_best_figure_service,
+    extract_pdf_info,
+    render_preview as render_preview_service,
+)
 from src.services.rank_service import rank_candidates as rank_candidates_service
 from src.services.render_service import render_report as render_report_service
 from src.services.prompt_service import load_prompt_set, render_prompt
-from src.services.pdf_service import detect_contents_page as detect_contents_page_service
 from src.services.file_service import file_stat, read_text, write_bytes
 from src.services.category_mapping_service import (
     load_mappings as load_category_mappings,
@@ -55,7 +60,6 @@ from src.services.report_store_service import (
     get_metadata as get_report_metadata,
     upsert_metadata as upsert_report_metadata,
 )
-from src.services.pdf_service import build_pdf_context, extract_pdf_info
 from src.services import vector_store_service, state_service, report_analysis_store_service
 from src.contracts.state import StateGetRequest, StateRecordRequest
 from src.contracts.validation import ValidationIssue, ValidationReport, ValidationRequest
@@ -94,14 +98,24 @@ def _select_sample_pages(file_id: str, md5: Optional[str], page_count: int, samp
     rng = random.Random(seed)
     return sorted(rng.sample(range(page_count), count))
 
-def _pack_paths(output_dir: str, report_id: str, report_name: str, pack_names: list[str]) -> dict[str, str]:
+def _pack_paths(
+    output_dir: str,
+    report_id: str,
+    report_name: str,
+    pack_names: list[str],
+    ctx: RunContext,
+) -> dict[str, str]:
     return {
-        name: str(report_analysis_store_service.pack_path(
-            output_dir,
-            report_id,
-            name,
-            report_slug=report_name,
-        ))
+        name: report_analysis_store_service.pack_path(
+            AnalysisPackPathRequest(
+                schema_version="1.0",
+                output_dir=output_dir,
+                report_id=report_id,
+                pack_name=name,
+                report_slug=report_name,
+            ),
+            child_context(ctx, task_id=f"{ctx.task_id}:analysis_pack_path:{name}"),
+        ).output_path
         for name in pack_names
     }
 
@@ -1297,7 +1311,7 @@ def generate_report(
         raise
     mode_evidence_packs = packs
     pack_names = list(packs.keys())
-    mode_evidence_paths = _pack_paths(settings.output_dir, file.file_id, report_name, pack_names)
+    mode_evidence_paths = _pack_paths(settings.output_dir, file.file_id, report_name, pack_names, mode_ctx)
     mode_data._vector_store_id = vector_store_id or ""
     mode_data._evidence_packs = mode_evidence_paths
     logger.info(log_event(
@@ -1353,7 +1367,13 @@ def generate_report(
             ctx=child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:artifacts"),
             md5=md5,
         )
-        mode_evidence_paths["artifacts"] = _pack_paths(settings.output_dir, file.file_id, report_name, ["artifacts"])["artifacts"]
+        mode_evidence_paths["artifacts"] = _pack_paths(
+            settings.output_dir,
+            file.file_id,
+            report_name,
+            ["artifacts"],
+            mode_ctx,
+        )["artifacts"]
         _record_state_progress(
             settings=settings,
             file_id=file.file_id,
@@ -1431,14 +1451,17 @@ def generate_report(
         )
         try:
             validation_path = report_analysis_store_service.store_pack(
-                settings.output_dir,
-                file.file_id,
-                validation_pack_name,
-                fallback_report.to_dict(),
+                AnalysisStorePackRequest(
+                    schema_version="1.0",
+                    output_dir=settings.output_dir,
+                    report_id=file.file_id,
+                    pack_name=validation_pack_name,
+                    payload=fallback_report.to_dict(),
+                    report_slug=report_name,
+                    mirror_legacy=settings.mirror_legacy_packs,
+                ),
                 mode_ctx,
-                report_slug=report_name,
-                mirror_legacy=settings.mirror_legacy_packs,
-            )
+            ).output_path
             fallback_report = ValidationReport(
                 schema_version=fallback_report.schema_version,
                 status=fallback_report.status,
@@ -1474,14 +1497,17 @@ def generate_report(
 
     snapshot_name = f"analysis_{analysis_mode}"
     snapshot_path = report_analysis_store_service.store_pack(
-        settings.output_dir,
-        file.file_id,
-        snapshot_name,
-        data_dict,
+        AnalysisStorePackRequest(
+            schema_version="1.0",
+            output_dir=settings.output_dir,
+            report_id=file.file_id,
+            pack_name=snapshot_name,
+            payload=data_dict,
+            report_slug=report_name,
+            mirror_legacy=settings.mirror_legacy_packs,
+        ),
         mode_ctx,
-        report_slug=report_name,
-        mirror_legacy=settings.mirror_legacy_packs,
-    )
+    ).output_path
     mode_evidence_paths[snapshot_name] = snapshot_path
     primary_result = {
         "data_dict": data_dict,

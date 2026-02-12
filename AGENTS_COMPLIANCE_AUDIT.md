@@ -1,65 +1,61 @@
 # AGENTS.md Compliance Audit
 
-Date: 2026-02-11
-Scope: `src/` and `tests/` repository structure and representative module checks.
+Date: 2026-02-12  
+Scope: `src/` and `tests/` repository architecture and service boundaries.
 
 ## Verdict
 
-The codebase is **partially compliant**, but **not fully compliant** with the AGENTS.md architecture constitution.
+The codebase is **fully compliant** with the enforced AGENTS.md rules covered by this audit.
 
-## What is compliant
+## Remediations Completed
 
-- Canonical role folders exist under `src/` (`contracts`, `services`, `generators`, `orchestrators`, `utils`, `prompts`).
-- Prompt templates are stored in namespaced directories under `src/prompts/` (not centralized in code).
-- Most service entry points follow `request dataclass + RunContext` signatures.
-- Structured logging helper usage (`log_event`) is widespread across services/generators/orchestrators.
-
-## Violations found
-
-### 1) Service consolidation rule violation (PDF stack split across multiple service modules)
-
-AGENTS.md requires one external system per service module and explicitly warns against splitting PDF handling across multiple service files.
-
-Evidence of PDF external-system logic in multiple services:
-- `src/services/pdf_service.py` imports and uses PDF libraries (`pymupdf`, `pypdf`).
-- `src/services/candidate_extraction_service.py` imports and uses PDF libraries (`pymupdf`, `pdfplumber`).
-- `src/services/crop_service.py` imports and uses `pymupdf`.
-- `src/services/preview_service.py` imports and uses `pymupdf`.
-
-Result: **Non-compliant** with strict service consolidation.
-
-### 2) Service I/O contract rule violation (non-request/dataclass public service APIs)
-
-AGENTS.md requires service inputs/outputs as dataclass contracts. Several public service functions accept primitives/non-request arguments instead of `*Request` contracts:
-
-- `src/services/logging_service.py::setup_logging(level: int) -> None`
-- `src/services/report_analysis_store_service.py::pack_path(output_dir: str, report_id: str, pack_name: str, ...) -> Path`
-- `src/services/report_analysis_store_service.py::store_pack(output_dir: str, report_id: str, pack_name: str, payload: dict, ...) -> str`
-- `src/services/schema_validator_service.py::validate_schema(payload: Any, schema_name: str, ...) -> None`
-- `src/services/config_service.py::to_ingest_settings(app_settings: AppSettings) -> IngestSettings`
-
-Result: **Non-compliant** with strict service contract policy.
-
-## Commands used for this audit
-
-- `rg --files -g 'AGENTS.md'`
-- `rg --files | head -n 200`
-- `python - <<'PY' ... (AST scan of service function signatures) ... PY`
-- `rg -n "Path\(|open\(|read_text\(|requests\.|http|os\.environ|yaml\.safe_load" src/generators src/orchestrators src/services | head -n 120`
-- `sed -n` inspections for representative files:
-  - `src/services/report_analysis_store_service.py`
-  - `src/services/pdf_service.py`
+1. Service consolidation (PDF stack)
+- Consolidated PDF external-system access into a single service module: `src/services/pdf_service.py`.
+- Removed split PDF service modules:
   - `src/services/candidate_extraction_service.py`
   - `src/services/crop_service.py`
   - `src/services/preview_service.py`
-  - `src/services/openai_service.py`
-  - `src/generators/taxonomy_generator.py`
+  - `src/services/figure_service.py`
+- Updated generators to consume PDF operations from `pdf_service` only.
 
-## Recommended remediation plan
+2. Service I/O contract enforcement
+- Converted non-contract public service APIs to request/response dataclass boundaries:
+  - `src/services/logging_service.py::setup_logging(request, ctx) -> LoggingSetupResponse`
+  - `src/services/report_analysis_store_service.py::pack_path(request, ctx) -> AnalysisPackPathResponse`
+  - `src/services/report_analysis_store_service.py::store_pack(request, ctx) -> AnalysisStorePackResponse`
+  - `src/services/schema_validator_service.py::validate_schema(request, ctx) -> SchemaValidateResponse`
+  - `src/services/config_service.py::build_ingest_settings(request, ctx) -> IngestSettings`
+- Added new contracts:
+  - `src/contracts/logging.py`
+  - `src/contracts/report_analysis.py`
+  - `src/contracts/schema_validation.py`
+  - `src/contracts/config.py` (`IngestSettingsBuildRequest`)
 
-1. Consolidate PDF external-system operations into a single `pdf_service.py` boundary.
-2. Convert non-contract public service APIs to request/response dataclasses.
-3. Move helper-only functions that are pure (e.g., path composition) to `utils/` if they are not service boundaries.
-4. Add a CI audit check to enforce:
-   - public service signatures (`request: *Request, ctx: RunContext`),
-   - one-module-per-external-system constraints (at minimum for PDF/OpenAI/VectorStore/WordPress).
+3. Call-site migration
+- Updated CLI and Streamlit wiring to contract-based logging/config APIs.
+- Updated generators/tests to contract-based schema validation and report-analysis store APIs.
+- Kept compatibility adapters in generators for injected test doubles while preserving strict service API shape.
+
+## Verification Commands and Results
+
+1. Public service signature audit (request-contract check)
+- Command: AST scan over `src/services/*.py` requiring first argument `request` with `*Request` annotation.
+- Result: `0` violations.
+
+2. PDF consolidation audit
+- Command: `rg -n "import pymupdf as fitz|import pdfplumber|from pypdf" src/services`
+- Result: PDF libraries are imported only in `src/services/pdf_service.py`.
+
+3. Compile checks
+- Commands:
+  - `compileall.compile_dir('src', quiet=1)`
+  - `compileall.compile_dir('tests', quiet=1)`
+- Result: both passed.
+
+4. Test suite
+- Command: `pytest -q`
+- Result: `90 passed, 1 deselected` (integration test deselected by `pytest.ini`), no failures.
+
+## Notes
+
+- This audit focuses on the hard architecture/service-boundary violations previously identified and verifies they are now resolved in code and tests.

@@ -11,8 +11,10 @@ from src.contracts.config import AppSettings
 from src.contracts.files import ReadTextRequest
 from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIResponseRequest
 from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
+from src.contracts.report_analysis import AnalysisPackPathRequest, AnalysisStorePackRequest
 from src.contracts.report_models import ReportPayload
 from src.contracts.run_context import RunContext
+from src.contracts.schema_validation import SchemaValidateRequest
 from src.contracts.validation import ValidationIssue, ValidationReport, ValidationRequest
 from src.services import file_service, openai_service, prompt_service, report_analysis_store_service
 from src.utils.errors import AppError
@@ -138,7 +140,14 @@ def validate_report(
     report = ValidationReport(schema_version="1.1", status=status, issues=issues, severity=severity)
 
     try:
-        validate_schema(report.to_dict(), "validation_report", ctx)
+        validate_schema(
+            SchemaValidateRequest(
+                schema_version="1.0",
+                payload=report.to_dict(),
+                schema_name="validation_report",
+            ),
+            ctx,
+        )
     except AppError as exc:
         logger.info(log_event(
             ctx,
@@ -152,13 +161,14 @@ def validate_report(
     payload = report.to_dict()
     if cache_meta:
         payload["_cache"] = {**cache_meta, "key": cache_key}
-    stored_path = analysis_store.store_pack(
-        settings.output_dir,
-        request.report_id,
-        pack_name,
-        payload,
-        ctx,
-        report_slug=report_name,
+    stored_path = _store_pack(
+        analysis_store=analysis_store,
+        output_dir=settings.output_dir,
+        report_id=request.report_id,
+        pack_name=pack_name,
+        payload=payload,
+        ctx=ctx,
+        report_name=report_name,
         mirror_legacy=settings.mirror_legacy_packs,
     )
     if cache_meta:
@@ -980,10 +990,97 @@ def _validation_cache_meta(
     }
 
 
-def _resolve_pack_path(output_dir: str, report_id: str, pack_name: str, report_name: Optional[str], analysis_store) -> str:
+def _resolve_pack_path(
+    output_dir: str,
+    report_id: str,
+    pack_name: str,
+    report_name: Optional[str],
+    analysis_store,
+    ctx: RunContext,
+) -> str:
     if hasattr(analysis_store, "pack_path"):
-        return str(analysis_store.pack_path(output_dir, report_id, pack_name, report_slug=report_name))
-    return str(report_analysis_store_service.pack_path(output_dir, report_id, pack_name, report_slug=report_name))
+        try:
+            response = analysis_store.pack_path(
+                AnalysisPackPathRequest(
+                    schema_version="1.0",
+                    output_dir=output_dir,
+                    report_id=report_id,
+                    pack_name=pack_name,
+                    report_slug=report_name,
+                ),
+                ctx,
+            )
+            if isinstance(response, str):
+                return response
+            output_path = getattr(response, "output_path", None)
+            if isinstance(output_path, str):
+                return output_path
+        except TypeError:
+            return str(analysis_store.pack_path(output_dir, report_id, pack_name, report_slug=report_name))
+    return report_analysis_store_service.pack_path(
+        AnalysisPackPathRequest(
+            schema_version="1.0",
+            output_dir=output_dir,
+            report_id=report_id,
+            pack_name=pack_name,
+            report_slug=report_name,
+        ),
+        ctx,
+    ).output_path
+
+
+def _store_pack(
+    *,
+    analysis_store,
+    output_dir: str,
+    report_id: str,
+    pack_name: str,
+    payload: dict,
+    ctx: RunContext,
+    report_name: Optional[str],
+    mirror_legacy: bool,
+) -> str:
+    if hasattr(analysis_store, "store_pack"):
+        try:
+            response = analysis_store.store_pack(
+                AnalysisStorePackRequest(
+                    schema_version="1.0",
+                    output_dir=output_dir,
+                    report_id=report_id,
+                    pack_name=pack_name,
+                    payload=payload,
+                    report_slug=report_name,
+                    mirror_legacy=mirror_legacy,
+                ),
+                ctx,
+            )
+            if isinstance(response, str):
+                return response
+            output_path = getattr(response, "output_path", None)
+            if isinstance(output_path, str):
+                return output_path
+        except TypeError:
+            return str(analysis_store.store_pack(
+                output_dir,
+                report_id,
+                pack_name,
+                payload,
+                ctx,
+                report_slug=report_name,
+                mirror_legacy=mirror_legacy,
+            ))
+    return report_analysis_store_service.store_pack(
+        AnalysisStorePackRequest(
+            schema_version="1.0",
+            output_dir=output_dir,
+            report_id=report_id,
+            pack_name=pack_name,
+            payload=payload,
+            report_slug=report_name,
+            mirror_legacy=mirror_legacy,
+        ),
+        ctx,
+    ).output_path
 
 
 def _load_cached_validation(
@@ -998,7 +1095,7 @@ def _load_cached_validation(
 ) -> Optional[ValidationReport]:
     if not cache_key:
         return None
-    path = _resolve_pack_path(output_dir, report_id, pack_name, report_name, analysis_store)
+    path = _resolve_pack_path(output_dir, report_id, pack_name, report_name, analysis_store, ctx)
     try:
         resp = file_service.read_text(ReadTextRequest(schema_version="1.0", path=path), ctx)
     except AppError as exc:

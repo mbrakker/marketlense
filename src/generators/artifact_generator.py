@@ -8,7 +8,9 @@ from src.contracts.config import AppSettings
 from src.contracts.files import ReadTextRequest
 from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIResponseRequest
 from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
+from src.contracts.report_analysis import AnalysisPackPathRequest, AnalysisStorePackRequest
 from src.contracts.run_context import RunContext
+from src.contracts.schema_validation import SchemaValidateRequest
 from src.services import file_service, openai_service, prompt_service, report_analysis_store_service
 from src.utils.errors import AppError
 from src.utils.model_resolver import resolve_model
@@ -95,13 +97,17 @@ def generate_artifacts(
         if cache_meta and isinstance(payload, dict):
             payload = dict(payload)
             payload["_cache"] = {**cache_meta, "key": cache_key}
-        validate_schema(payload, "artifacts", ctx)
-        analysis_store.store_pack(
-            settings.output_dir,
-            report_id,
-            "artifacts",
-            payload,
+        validate_schema(
+            SchemaValidateRequest(schema_version="1.0", payload=payload, schema_name="artifacts"),
             ctx,
+        )
+        _store_pack(
+            analysis_store=analysis_store,
+            output_dir=settings.output_dir,
+            report_id=report_id,
+            pack_name="artifacts",
+            payload=payload,
+            ctx=ctx,
             report_slug=report_name,
             mirror_legacy=settings.mirror_legacy_packs,
         )
@@ -256,7 +262,10 @@ def generate_artifacts(
         artifacts_payload["_cache"] = {**cache_meta, "key": cache_key}
 
     try:
-        validate_schema(artifacts_payload, "artifacts", ctx)
+        validate_schema(
+            SchemaValidateRequest(schema_version="1.0", payload=artifacts_payload, schema_name="artifacts"),
+            ctx,
+        )
     except AppError as exc:
         logger.info(log_event(
             ctx,
@@ -267,12 +276,13 @@ def generate_artifacts(
         ))
         raise
 
-    analysis_store.store_pack(
-        settings.output_dir,
-        report_id,
-        "artifacts",
-        artifacts_payload,
-        ctx,
+    _store_pack(
+        analysis_store=analysis_store,
+        output_dir=settings.output_dir,
+        report_id=report_id,
+        pack_name="artifacts",
+        payload=artifacts_payload,
+        ctx=ctx,
         report_slug=report_name,
         mirror_legacy=settings.mirror_legacy_packs,
     )
@@ -584,10 +594,14 @@ def _load_cached_artifacts(
 ) -> Optional[Dict[str, Any]]:
     if not cache_key:
         return None
-    if hasattr(analysis_store, "pack_path"):
-        path = str(analysis_store.pack_path(output_dir, report_id, "artifacts", report_slug=report_name))
-    else:
-        path = str(report_analysis_store_service.pack_path(output_dir, report_id, "artifacts", report_slug=report_name))
+    path = _resolve_pack_path(
+        analysis_store=analysis_store,
+        output_dir=output_dir,
+        report_id=report_id,
+        pack_name="artifacts",
+        ctx=ctx,
+        report_slug=report_name,
+    )
     try:
         resp = file_service.read_text(ReadTextRequest(schema_version="1.0", path=path), ctx)
     except AppError as exc:
@@ -611,6 +625,100 @@ def _load_cached_artifacts(
     if cached.get("key") != cache_key:
         return None
     return payload
+
+
+def _resolve_pack_path(
+    *,
+    analysis_store,
+    output_dir: str,
+    report_id: str,
+    pack_name: str,
+    ctx: RunContext,
+    report_slug: Optional[str],
+) -> str:
+    if hasattr(analysis_store, "pack_path"):
+        try:
+            response = analysis_store.pack_path(
+                AnalysisPackPathRequest(
+                    schema_version="1.0",
+                    output_dir=output_dir,
+                    report_id=report_id,
+                    pack_name=pack_name,
+                    report_slug=report_slug,
+                ),
+                ctx,
+            )
+            if isinstance(response, str):
+                return response
+            output_path = getattr(response, "output_path", None)
+            if isinstance(output_path, str):
+                return output_path
+        except TypeError:
+            return str(analysis_store.pack_path(output_dir, report_id, pack_name, report_slug=report_slug))
+    return report_analysis_store_service.pack_path(
+        AnalysisPackPathRequest(
+            schema_version="1.0",
+            output_dir=output_dir,
+            report_id=report_id,
+            pack_name=pack_name,
+            report_slug=report_slug,
+        ),
+        ctx,
+    ).output_path
+
+
+def _store_pack(
+    *,
+    analysis_store,
+    output_dir: str,
+    report_id: str,
+    pack_name: str,
+    payload: Dict[str, Any],
+    ctx: RunContext,
+    report_slug: Optional[str],
+    mirror_legacy: bool,
+) -> str:
+    if hasattr(analysis_store, "store_pack"):
+        try:
+            response = analysis_store.store_pack(
+                AnalysisStorePackRequest(
+                    schema_version="1.0",
+                    output_dir=output_dir,
+                    report_id=report_id,
+                    pack_name=pack_name,
+                    payload=payload,
+                    report_slug=report_slug,
+                    mirror_legacy=mirror_legacy,
+                ),
+                ctx,
+            )
+            if isinstance(response, str):
+                return response
+            output_path = getattr(response, "output_path", None)
+            if isinstance(output_path, str):
+                return output_path
+        except TypeError:
+            return str(analysis_store.store_pack(
+                output_dir,
+                report_id,
+                pack_name,
+                payload,
+                ctx,
+                report_slug=report_slug,
+                mirror_legacy=mirror_legacy,
+            ))
+    return report_analysis_store_service.store_pack(
+        AnalysisStorePackRequest(
+            schema_version="1.0",
+            output_dir=output_dir,
+            report_id=report_id,
+            pack_name=pack_name,
+            payload=payload,
+            report_slug=report_slug,
+            mirror_legacy=mirror_legacy,
+        ),
+        ctx,
+    ).output_path
 
 
 def _placeholder_artifacts(status: Dict[str, Any]) -> Dict[str, Any]:

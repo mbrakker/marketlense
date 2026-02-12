@@ -11,10 +11,8 @@ from src.contracts.pdf_context import PdfContextBuildRequest
 from src.contracts.report_assets import CropRequest, ExtractCandidatesRequest
 from src.contracts.report_models import CropItem
 from src.contracts.run_context import RunContext
-from src.services.crop_service import crop_regions as crop_regions_service
-from src.services.candidate_extraction_service import collect_candidates as collect_candidates_service
 from src.services.file_service import write_bytes
-from src.services.pdf_service import build_pdf_context
+from src.services.pdf_service import build_pdf_context, collect_candidates as collect_candidates_service, crop_regions as crop_regions_service
 from src.utils.logging import log_event
 from src.utils.validation import validate_candidate
 

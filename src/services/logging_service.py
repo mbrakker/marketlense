@@ -7,9 +7,14 @@ from datetime import datetime
 
 from rich.logging import RichHandler
 
+from src.contracts.logging import LoggingSetupRequest, LoggingSetupResponse
+from src.contracts.run_context import RunContext
+from src.utils.logging import log_event
+
 DEFAULT_LOG_DIR = "logs"
 LOG_DIR_ENV = "MARKET_LENSE_LOG_DIR"
 LOG_FILE_PREFIX = "market_lense"
+SERVICE_LOGGER_NAME = "market_lense.logging_service"
 
 
 def _force_utf8_stdio() -> None:
@@ -23,7 +28,16 @@ def _force_utf8_stdio() -> None:
             continue
 
 
-def setup_logging(level: int = logging.INFO) -> None:
+def setup_logging(request: LoggingSetupRequest, ctx: RunContext) -> LoggingSetupResponse:
+    logger = logging.getLogger(SERVICE_LOGGER_NAME)
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="logging_setup_start",
+        module=SERVICE_LOGGER_NAME,
+        fields={"level": request.level},
+    ))
+
     _force_utf8_stdio()
     root = logging.getLogger()
     for h in list(root.handlers):
@@ -50,8 +64,28 @@ def setup_logging(level: int = logging.INFO) -> None:
 
     handlers.append(logging.FileHandler(log_path, encoding="utf-8"))
     logging.basicConfig(
-        level=level,
+        level=request.level,
         format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
         datefmt="%H:%M:%S",
         handlers=handlers,
+    )
+    logger = logging.getLogger(SERVICE_LOGGER_NAME)
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="logging_setup_complete",
+        module=SERVICE_LOGGER_NAME,
+        fields={
+            "level": request.level,
+            "log_dir": log_dir,
+            "log_path": log_path,
+            "use_rich": use_rich,
+        },
+    ))
+    return LoggingSetupResponse(
+        schema_version="1.0",
+        level=request.level,
+        log_dir=log_dir,
+        log_path=log_path,
+        use_rich=use_rich,
     )

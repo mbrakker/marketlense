@@ -10,8 +10,9 @@ from rich import box
 from src.utils.errors import AppError
 from src.contracts.costs import CostReportRequest, CostReportingRequest
 from src.contracts.categories import RecategorizeRequest
-from src.contracts.config import ConfigLoadRequest
+from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
 from src.contracts.cover_images import CoverImageOrchestratorRequest
+from src.contracts.logging import LoggingSetupRequest
 from src.orchestrators.cost_reporting_orchestrator import run_cost_reporting
 from src.orchestrators.ingest_orchestrator import run_ingest
 from src.orchestrators.candidate_extraction_orchestrator import run_candidate_extraction
@@ -19,7 +20,7 @@ from src.orchestrators.cover_image_orchestrator import run_cover_image_generatio
 from src.orchestrators.publish_orchestrator import run_publish
 from src.orchestrators.recategorize_orchestrator import run_recategorize
 from src.orchestrators.wp_category_update_orchestrator import run_update_wp_categories
-from src.services.config_service import load_settings, load_publish_settings, to_ingest_settings
+from src.services.config_service import build_ingest_settings, load_settings, load_publish_settings
 from src.services.logging_service import setup_logging
 from src.utils.logging import log_event, new_run_context
 
@@ -34,9 +35,9 @@ def ingest(
     folder: str = typer.Option(None, help="Override Drive folder ID"),
     limit: int = typer.Option(None, help="Max PDFs to process this run"),
 ):
-    setup_logging()
-    console.print("[cyan]Loading settings...[/cyan]")
     ctx = new_run_context(task_id="cli_ingest")
+    setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
+    console.print("[cyan]Loading settings...[/cyan]")
     logger.info(log_event(
         ctx,
         role="orchestrator",
@@ -45,7 +46,10 @@ def ingest(
         fields={},
     ))
     s = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
-    settings = to_ingest_settings(s)
+    settings = build_ingest_settings(
+        IngestSettingsBuildRequest(schema_version="1.0", app_settings=s),
+        ctx,
+    )
 
     console.print("[cyan]Running ingest pipeline...[/cyan]")
     try:
@@ -83,9 +87,9 @@ def extract_candidates(
     pdf: str = typer.Option(None, help="Local PDF path to process instead of Drive"),
     report_id: str = typer.Option(None, help="Optional report ID override for local PDFs"),
 ):
-    setup_logging()
-    console.print("[cyan]Loading settings...[/cyan]")
     ctx = new_run_context(task_id="cli_extract_candidates")
+    setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
+    console.print("[cyan]Loading settings...[/cyan]")
     logger.info(log_event(
         ctx,
         role="orchestrator",
@@ -94,7 +98,10 @@ def extract_candidates(
         fields={"folder": folder or "", "limit": limit, "file_id": file_id or "", "pdf": pdf or ""},
     ))
     s = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
-    settings = to_ingest_settings(s)
+    settings = build_ingest_settings(
+        IngestSettingsBuildRequest(schema_version="1.0", app_settings=s),
+        ctx,
+    )
 
     console.print("[cyan]Running candidate extraction...[/cyan]")
     outcomes = run_candidate_extraction(
@@ -131,9 +138,9 @@ def extract_candidates(
 def publish_wp(
     limit: int = typer.Option(None, help="Max HTML reports to publish this run"),
 ):
-    setup_logging()
-    console.print("[cyan]Loading settings...[/cyan]")
     ctx = new_run_context(task_id="cli_publish")
+    setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
+    console.print("[cyan]Loading settings...[/cyan]")
     logger.info(log_event(
         ctx,
         role="orchestrator",
@@ -168,9 +175,9 @@ def publish_wp(
 
 @cli_app.command("recategorize")
 def recategorize():
-    setup_logging()
-    console.print("[cyan]Loading settings...[/cyan]")
     ctx = new_run_context(task_id="cli_recategorize")
+    setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
+    console.print("[cyan]Loading settings...[/cyan]")
     logger.info(log_event(
         ctx,
         role="orchestrator",
@@ -208,9 +215,9 @@ def generate_covers(
     limit: int = typer.Option(None, help="Max reports to process this run"),
     file_id: str = typer.Option(None, help="Optional report file ID to process"),
 ):
-    setup_logging()
-    console.print("[cyan]Loading settings...[/cyan]")
     ctx = new_run_context(task_id="cli_generate_covers")
+    setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
+    console.print("[cyan]Loading settings...[/cyan]")
     logger.info(log_event(
         ctx,
         role="orchestrator",
@@ -251,9 +258,9 @@ def generate_covers(
 
 @cli_app.command("update-wp-categories")
 def update_wp_categories():
-    setup_logging()
-    console.print("[cyan]Loading publish settings...[/cyan]")
     ctx = new_run_context(task_id="cli_update_wp_categories")
+    setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
+    console.print("[cyan]Loading publish settings...[/cyan]")
     logger.info(log_event(
         ctx,
         role="orchestrator",
@@ -290,7 +297,6 @@ def cost_report(
     run_id: str = typer.Option(None, help="Run identifier to summarize"),
     top: int = typer.Option(5, help="Number of top-cost steps to show"),
 ):
-    setup_logging()
     if (date and run_id) or (not date and not run_id):
         raise typer.BadParameter("Provide exactly one of --date or --run-id.")
     if top <= 0:
@@ -298,6 +304,7 @@ def cost_report(
 
     console.print("[cyan]Loading settings...[/cyan]")
     ctx = new_run_context(task_id="cli_cost_report")
+    setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
     logger.info(log_event(
         ctx,
         role="orchestrator",

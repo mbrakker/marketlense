@@ -8,6 +8,7 @@ from src.contracts.openai import OpenAIResponseRequest, OpenAIResponseResult
 from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.contracts.run_context import RunContext
 from src.contracts.categories import CategoryMappingLoadRequest
+from src.contracts.schema_validation import SchemaValidateRequest
 from src.contracts.taxonomy import TaxonomyExtractRequest, TaxonomyExtractResponse
 from src.services.category_mapping_service import load_mappings as load_category_mappings
 from src.services import openai_service, prompt_service
@@ -170,7 +171,10 @@ def extract_taxonomy(
 
     payload = parsed_json or _empty_payload(not_found_reason)
     try:
-        validate_schema(payload, "taxonomy", ctx)
+        validate_schema(
+            SchemaValidateRequest(schema_version="1.0", payload=payload, schema_name="taxonomy"),
+            ctx,
+        )
         logger.info(log_event(
             ctx,
             role="generator",

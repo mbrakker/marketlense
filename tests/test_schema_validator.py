@@ -1,6 +1,7 @@
 import pytest
 
 from src.contracts.run_context import RunContext
+from src.contracts.schema_validation import SchemaValidateRequest
 from src.services.schema_validator_service import validate_schema
 from src.utils.errors import AppError
 
@@ -17,11 +18,17 @@ def test_validate_schema_passes_for_doc_map():
             {"id": "s1", "title": "Intro", "summary": "text", "pages": [1, 2], "references": ["r1"]}
         ],
     }
-    validate_schema(payload, "doc_map", _ctx())
+    validate_schema(
+        SchemaValidateRequest(schema_version="1.0", payload=payload, schema_name="doc_map"),
+        _ctx(),
+    )
 
 
 def test_validate_schema_fails_missing_required():
     payload = {"title": "Missing sections"}
     with pytest.raises(AppError) as exc:
-        validate_schema(payload, "doc_map", _ctx())
+        validate_schema(
+            SchemaValidateRequest(schema_version="1.0", payload=payload, schema_name="doc_map"),
+            _ctx(),
+        )
     assert exc.value.code == "schema_missing_required"
