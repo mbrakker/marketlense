@@ -132,6 +132,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     rank = data.get("rank", {}) or {}
     validation_cfg = ingest.get("validation", {}) or {}
     contents_page = ingest.get("contents_page", {}) or {}
+    evidence_packs_cfg = ingest.get("evidence_packs", {}) or {}
     category_mapping_path = paths.get("category_mappings") or str(Path(__file__).resolve().parents[1] / "config" / "category-mappings.yaml")
     cover_style_path = paths.get("cover_styles") or str(Path(__file__).resolve().parents[1] / "config" / "cover-styles.yaml")
     analysis_cfg = data.get("analysis", {}) or {}
@@ -195,6 +196,33 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         contents_keywords = ["table of contents", "contents", "index"]
     contents_preview_enabled = _as_bool(contents_page.get("preview_enabled"), default=True)
     contents_preview_dpi = int(contents_page.get("render_dpi", 144))
+    evidence_pack_parallel_workers_raw = evidence_packs_cfg.get("parallel_workers")
+    if _is_missing(evidence_pack_parallel_workers_raw):
+        evidence_pack_parallel_workers_raw = _env_value("EVIDENCE_PACK_PARALLEL_WORKERS")
+    try:
+        evidence_pack_parallel_workers = int(evidence_pack_parallel_workers_raw) if not _is_missing(evidence_pack_parallel_workers_raw) else 3
+    except (TypeError, ValueError):
+        evidence_pack_parallel_workers = 3
+    if evidence_pack_parallel_workers < 1:
+        evidence_pack_parallel_workers = 1
+    evidence_pack_global_max_in_flight_raw = evidence_packs_cfg.get("global_max_in_flight")
+    if _is_missing(evidence_pack_global_max_in_flight_raw):
+        evidence_pack_global_max_in_flight_raw = _env_value("EVIDENCE_PACK_GLOBAL_MAX_IN_FLIGHT")
+    try:
+        evidence_pack_global_max_in_flight = int(evidence_pack_global_max_in_flight_raw) if not _is_missing(evidence_pack_global_max_in_flight_raw) else 2
+    except (TypeError, ValueError):
+        evidence_pack_global_max_in_flight = 2
+    if evidence_pack_global_max_in_flight < 1:
+        evidence_pack_global_max_in_flight = 1
+    evidence_pack_global_min_interval_ms_raw = evidence_packs_cfg.get("global_min_interval_ms")
+    if _is_missing(evidence_pack_global_min_interval_ms_raw):
+        evidence_pack_global_min_interval_ms_raw = _env_value("EVIDENCE_PACK_GLOBAL_MIN_INTERVAL_MS")
+    try:
+        evidence_pack_global_min_interval_ms = int(evidence_pack_global_min_interval_ms_raw) if not _is_missing(evidence_pack_global_min_interval_ms_raw) else 250
+    except (TypeError, ValueError):
+        evidence_pack_global_min_interval_ms = 250
+    if evidence_pack_global_min_interval_ms < 0:
+        evidence_pack_global_min_interval_ms = 0
     pdf_text_min_density = float(pdf_text.get("min_density", 250.0))
     pdf_text_sample_pages = int(pdf_text.get("sample_pages", 3))
     debug_candidate_gallery = _as_bool(ingest.get("debug_candidate_gallery"), default=False)
@@ -277,6 +305,9 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         contents_keywords=contents_keywords,
         contents_preview_enabled=contents_preview_enabled,
         contents_preview_dpi=contents_preview_dpi,
+        evidence_pack_parallel_workers=evidence_pack_parallel_workers,
+        evidence_pack_global_max_in_flight=evidence_pack_global_max_in_flight,
+        evidence_pack_global_min_interval_ms=evidence_pack_global_min_interval_ms,
         analysis_mode=analysis_mode,
         use_vector_store=use_vector_store,
         vector_store_keep=vector_store_keep,
@@ -344,6 +375,9 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             "contents_keywords": settings.contents_keywords,
             "contents_preview_enabled": settings.contents_preview_enabled,
             "contents_preview_dpi": settings.contents_preview_dpi,
+            "evidence_pack_parallel_workers": settings.evidence_pack_parallel_workers,
+            "evidence_pack_global_max_in_flight": settings.evidence_pack_global_max_in_flight,
+            "evidence_pack_global_min_interval_ms": settings.evidence_pack_global_min_interval_ms,
             "analysis_mode": settings.analysis_mode,
             "use_vector_store": settings.use_vector_store,
             "vector_store_keep": settings.vector_store_keep,

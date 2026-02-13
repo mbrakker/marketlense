@@ -43,6 +43,10 @@ ingest:
       - "index"
     preview_enabled: true
     render_dpi: 144
+  evidence_packs:
+    parallel_workers: 3
+    global_max_in_flight: 2
+    global_min_interval_ms: 250
 
 openai_models:
   report_vs/artifacts: "gpt-5"

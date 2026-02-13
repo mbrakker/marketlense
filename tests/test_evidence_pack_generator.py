@@ -1,4 +1,6 @@
-from types import SimpleNamespace
+import threading
+import time
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -43,6 +45,44 @@ class FakeAnalysisStore:
         slug = slugify(report_slug or report_id)
         self.stored.append((report_id, pack_name, payload))
         return f"{output_dir}/{slug}/report_analysis/{pack_name}.json"
+
+
+class TrackingOpenAIClient:
+    def __init__(self, sleep_s: float = 0.02):
+        self.sleep_s = sleep_s
+        self._lock = threading.Lock()
+        self._active = 0
+        self.max_active = 0
+        self.call_count = 0
+        self.started_at: list[float] = []
+
+    def openai_respond_with_vector_store(self, req, ctx):
+        with self._lock:
+            self.call_count += 1
+            call_number = self.call_count
+            self._active += 1
+            if self._active > self.max_active:
+                self.max_active = self._active
+            self.started_at.append(time.monotonic())
+        try:
+            if self.sleep_s > 0:
+                time.sleep(self.sleep_s)
+        finally:
+            with self._lock:
+                self._active -= 1
+        if call_number == 1:
+            payload = {"doc_id": "d1", "title": "title", "sections": [{"id": "s1", "title": "Overview"}]}
+        else:
+            payload = {"scope": "ok", "methods": [], "findings": [], "limitations": [], "quote_candidates": []}
+        return OpenAIResponseResult(
+            schema_version="1.0",
+            text="{}",
+            parsed_json=payload,
+            input_tokens=1,
+            output_tokens=1,
+            tool_calls=0,
+            model=req.model,
+        )
 
 
 def _settings(tmp_path):
@@ -149,3 +189,53 @@ def test_generate_evidence_packs_normalizes_docmap_wrapper(tmp_path):
     assert isinstance(doc_map["sections"], list)
     assert doc_map["sections"][0].get("id")
     assert len(analysis_store.stored) == 6
+
+
+def test_generate_evidence_packs_parallel_respects_global_in_flight_limit(tmp_path):
+    settings = replace(
+        _settings(tmp_path),
+        evidence_pack_parallel_workers=5,
+        evidence_pack_global_max_in_flight=2,
+        evidence_pack_global_min_interval_ms=0,
+    )
+    fake_openai = TrackingOpenAIClient(sleep_s=0.04)
+    analysis_store = FakeAnalysisStore()
+    packs = generate_evidence_packs(
+        report_id="r1",
+        report_name="report",
+        vector_store_id="vs_1",
+        settings=settings,
+        ctx=_ctx(),
+        openai_client=fake_openai,
+        prompt_client=FakePromptClient(),
+        analysis_store=analysis_store,
+    )
+    assert len(packs) == 6
+    assert fake_openai.call_count == 6
+    assert fake_openai.max_active <= 2
+    assert fake_openai.max_active >= 2
+
+
+def test_generate_evidence_packs_global_min_interval_throttles_call_starts(tmp_path):
+    settings = replace(
+        _settings(tmp_path),
+        evidence_pack_parallel_workers=5,
+        evidence_pack_global_max_in_flight=5,
+        evidence_pack_global_min_interval_ms=60,
+    )
+    fake_openai = TrackingOpenAIClient(sleep_s=0.005)
+    generate_evidence_packs(
+        report_id="r1",
+        report_name="report",
+        vector_store_id="vs_1",
+        settings=settings,
+        ctx=_ctx(),
+        openai_client=fake_openai,
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+    starts = sorted(fake_openai.started_at)
+    assert len(starts) == 6
+    deltas_ms = [(nxt - cur) * 1000.0 for cur, nxt in zip(starts, starts[1:])]
+    assert deltas_ms
+    assert min(deltas_ms) >= 45.0
