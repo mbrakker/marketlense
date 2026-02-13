@@ -216,11 +216,13 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
     validation_calls = []
     analysis_store = []
     vector_calls: list[tuple[str, dict[str, object]]] = []
+    execution_trace: list[str] = []
     ctx = RunContext(schema_version="1.0", run_id="run-vs", task_id="task-vs", span_id="span-vs")
 
     monkeypatch.setattr(rg.state_service, "get", lambda req, ctx: None)
 
     def _create_vector_store(req, ctx):
+        execution_trace.append("vector_create")
         vector_calls.append((
             "create",
             {
@@ -232,6 +234,7 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
         return SimpleNamespace(vector_store_id="vs_new")
 
     def _upload_file(req, ctx):
+        execution_trace.append("vector_upload")
         vector_calls.append((
             "upload",
             {
@@ -242,6 +245,7 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
         return SimpleNamespace(openai_file_id="file_upload")
 
     def _attach_file(req, ctx):
+        execution_trace.append("vector_attach")
         vector_calls.append((
             "attach",
             {
@@ -251,6 +255,7 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
         ))
 
     def _wait_until_indexed(req, ctx):
+        execution_trace.append("vector_wait")
         vector_calls.append((
             "wait",
             {
@@ -272,9 +277,21 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
     monkeypatch.setattr(rg, "load_category_mappings", lambda req, ctx: SimpleNamespace(mappings=SimpleNamespace(schema_version="1.0", categories=[], uncategorized=[])))
     monkeypatch.setattr(rg, "categorize_taxonomy", lambda taxonomy, mappings, ctx: SimpleNamespace(categories=["cat"], category_labels=["Category"], unmapped_tags=[]))
     monkeypatch.setattr(rg, "update_uncategorized_tags", lambda req, ctx: None)
-    monkeypatch.setattr(rg, "extract_best_figure_service", lambda req, ctx: SimpleNamespace(image_path=None, caption=None))
-    monkeypatch.setattr(rg, "collect_candidates_service", lambda req, ctx: SimpleNamespace(candidates=[]))
-    monkeypatch.setattr(rg, "render_preview_service", lambda req, ctx: SimpleNamespace(schema_version="1.1", image_path=str(tmp_path / "preview.png"), page_number=0))
+    def _extract_best_figure(req, ctx):
+        execution_trace.append("pdf_figure")
+        return SimpleNamespace(image_path=None, caption=None)
+
+    def _collect_candidates(req, ctx):
+        execution_trace.append("pdf_candidates")
+        return SimpleNamespace(candidates=[])
+
+    def _render_preview(req, ctx):
+        execution_trace.append("pdf_preview")
+        return SimpleNamespace(schema_version="1.1", image_path=str(tmp_path / "preview.png"), page_number=0)
+
+    monkeypatch.setattr(rg, "extract_best_figure_service", _extract_best_figure)
+    monkeypatch.setattr(rg, "collect_candidates_service", _collect_candidates)
+    monkeypatch.setattr(rg, "render_preview_service", _render_preview)
     monkeypatch.setattr(rg, "extract_taxonomy", lambda req, ctx: TaxonomyExtractResponse(schema_version="1.0", taxonomy=["tag"], region="US", time_period="2024"))
     monkeypatch.setattr(rg.vector_store_service, "update_metadata", lambda req, ctx: None)
     monkeypatch.setattr(
@@ -354,6 +371,9 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
     assert "validation" in outcome.evidence_packs
     assert Path(outcome.html_path).exists()
     assert validation_calls == ["file_vs"]
+    assert execution_trace.index("pdf_figure") < execution_trace.index("vector_wait")
+    assert execution_trace.index("pdf_candidates") < execution_trace.index("vector_wait")
+    assert execution_trace.index("pdf_preview") < execution_trace.index("vector_wait")
     assert vector_calls == [
         (
             "create",

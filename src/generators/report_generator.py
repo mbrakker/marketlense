@@ -6,6 +6,7 @@ import logging
 import random
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
@@ -81,6 +82,15 @@ from src.utils.model_resolver import resolve_model
 from src.utils.cache_utils import sha256_json
 
 logger = logging.getLogger("market_lense.report_generator")
+
+
+@dataclass(frozen=True)
+class _VectorStoreIndexingState:
+    vector_store_id: Optional[str]
+    openai_file_id: Optional[str]
+    vector_store_status: Optional[str]
+    indexed_at_utc: Optional[str]
+    last_error: Optional[str]
 
 
 def _derive_title(name: str) -> str:
@@ -318,12 +328,16 @@ def _record_state_progress(
         ))
 
 
-def _ensure_vector_store(
+def _is_vector_store_ready(status: Optional[str]) -> bool:
+    return str(status or "").strip().lower() in {"completed", "ready", "indexed"}
+
+
+def _start_vector_store_indexing(
     file: DriveFile,
     local_pdf_path: str,
     settings: IngestSettings,
     ctx: RunContext,
-):
+) -> _VectorStoreIndexingState:
     vector_store_id = None
     openai_file_id = None
     vector_store_status = None
@@ -362,19 +376,6 @@ def _ensure_vector_store(
         vector_store_status = status_resp.status
         indexed_at_utc = status_resp.indexed_at_utc
         last_error = status_resp.last_error
-        if vector_store_status != "completed":
-            status_resp = vector_store_service.wait_until_indexed(
-                VectorStoreWaitRequest(
-                    schema_version="1.0",
-                    vector_store_id=vector_store_id,
-                    timeout_s=int(settings.openai_timeout_seconds),
-                    poll_interval_s=5,
-                ),
-                ctx=ctx,
-            )
-            vector_store_status = status_resp.status
-            indexed_at_utc = status_resp.indexed_at_utc
-            last_error = status_resp.last_error
     if not vector_store_id:
         vs_resp = vector_store_service.create_vector_store(
             VectorStoreCreateRequest(
@@ -417,32 +418,118 @@ def _ensure_vector_store(
             ),
             ctx,
         )
-        status_resp = vector_store_service.wait_until_indexed(
-            VectorStoreWaitRequest(
-                schema_version="1.0",
-                vector_store_id=vector_store_id,
-                timeout_s=int(settings.openai_timeout_seconds),
-                poll_interval_s=5,
-            ),
-            ctx=ctx,
-        )
-        vector_store_status = status_resp.status
-        indexed_at_utc = status_resp.indexed_at_utc
-        last_error = status_resp.last_error
+        vector_store_status = "indexing"
 
+    logger.info(log_event(
+        ctx,
+        role="generator",
+        event="vector_store_indexing_started" if not _is_vector_store_ready(vector_store_status) else "vector_store_already_indexed",
+        module=logger.name,
+        fields={
+            "file_id": file.file_id,
+            "vector_store_id": vector_store_id,
+            "status": vector_store_status or "",
+            "indexed_at_utc": indexed_at_utc or "",
+        },
+    ))
+    return _VectorStoreIndexingState(
+        vector_store_id=vector_store_id,
+        openai_file_id=openai_file_id,
+        vector_store_status=vector_store_status,
+        indexed_at_utc=indexed_at_utc,
+        last_error=last_error,
+    )
+
+
+def _await_vector_store_indexing(
+    state: _VectorStoreIndexingState,
+    settings: IngestSettings,
+    ctx: RunContext,
+) -> _VectorStoreIndexingState:
+    vector_store_id = state.vector_store_id
+    if not vector_store_id:
+        raise AppError(
+            code="vector_store_missing",
+            message="vector_store_id is required before awaiting indexing",
+            retryable=False,
+        )
+    if _is_vector_store_ready(state.vector_store_status):
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="vector_store_wait_skipped",
+            module=logger.name,
+            fields={
+                "vector_store_id": vector_store_id,
+                "status": state.vector_store_status or "",
+                "indexed_at_utc": state.indexed_at_utc or "",
+            },
+        ))
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="vector_store_ready",
+            module=logger.name,
+            fields={
+                "vector_store_id": vector_store_id,
+                "status": state.vector_store_status,
+                "indexed_at_utc": state.indexed_at_utc or "",
+            },
+        ))
+        return state
+
+    logger.info(log_event(
+        ctx,
+        role="generator",
+        event="vector_store_wait_start",
+        module=logger.name,
+        fields={"vector_store_id": vector_store_id, "status": state.vector_store_status or ""},
+    ))
+    status_resp = vector_store_service.wait_until_indexed(
+        VectorStoreWaitRequest(
+            schema_version="1.0",
+            vector_store_id=vector_store_id,
+            timeout_s=int(settings.openai_timeout_seconds),
+            poll_interval_s=5,
+        ),
+        ctx=ctx,
+    )
+    ready_state = _VectorStoreIndexingState(
+        vector_store_id=vector_store_id,
+        openai_file_id=state.openai_file_id,
+        vector_store_status=status_resp.status,
+        indexed_at_utc=status_resp.indexed_at_utc,
+        last_error=status_resp.last_error,
+    )
     logger.info(log_event(
         ctx,
         role="generator",
         event="vector_store_ready",
         module=logger.name,
         fields={
-            "file_id": file.file_id,
-            "vector_store_id": vector_store_id,
-            "status": vector_store_status,
-            "indexed_at_utc": indexed_at_utc or "",
+            "vector_store_id": ready_state.vector_store_id,
+            "status": ready_state.vector_store_status,
+            "indexed_at_utc": ready_state.indexed_at_utc or "",
         },
     ))
-    return vector_store_id, openai_file_id, vector_store_status, indexed_at_utc, last_error
+    return ready_state
+
+
+def _ensure_vector_store(
+    file: DriveFile,
+    local_pdf_path: str,
+    settings: IngestSettings,
+    ctx: RunContext,
+):
+    indexing_state = _start_vector_store_indexing(file, local_pdf_path, settings, ctx)
+    ready_state = _await_vector_store_indexing(indexing_state, settings, ctx)
+    return (
+        ready_state.vector_store_id,
+        ready_state.openai_file_id,
+        ready_state.vector_store_status,
+        ready_state.indexed_at_utc,
+        ready_state.last_error,
+    )
 
 
 def generate_report(
@@ -920,72 +1007,29 @@ def generate_report(
     ))
 
     mode_ctx = child_context(ctx, task_id=f"{ctx.task_id}:vector_store")
-    vector_store_id, openai_file_id, vector_store_status, indexed_at_utc, last_error = _ensure_vector_store(
+    vector_state = _start_vector_store_indexing(
         file,
         local_pdf_path,
         settings,
         mode_ctx,
     )
-    _record_state_progress(
-        settings=settings,
-        file_id=file.file_id,
-        md5=md5,
-        ctx=mode_ctx,
-        stage="vector_store_ready",
-        vector_store_id=vector_store_id,
-        vector_store_status=vector_store_status,
-        indexed_at_utc=indexed_at_utc,
-        openai_file_id=openai_file_id,
-        last_error=last_error,
-    )
-
-    taxonomy_ctx = child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:taxonomy")
-    taxonomy_resp = extract_taxonomy(
-        TaxonomyExtractRequest(
-            schema_version="1.0",
-            report_id=file.file_id,
-            report_title=report_title,
-            vector_store_id=vector_store_id or "",
+    vector_store_id = vector_state.vector_store_id
+    openai_file_id = vector_state.openai_file_id
+    vector_store_status = vector_state.vector_store_status
+    indexed_at_utc = vector_state.indexed_at_utc
+    last_error = vector_state.last_error
+    if not _is_vector_store_ready(vector_store_status):
+        _record_state_progress(
             settings=settings,
-        ),
-        taxonomy_ctx,
-    )
-    data.taxonomy = taxonomy_resp.taxonomy
-    data.region = taxonomy_resp.region
-    data.time_period = taxonomy_resp.time_period
-
-    mappings_resp = load_category_mappings(
-        CategoryMappingLoadRequest(schema_version="1.0", path=settings.category_mapping_path, reload_if_changed=True),
-        ctx,
-    )
-    category_assignment = categorize_taxonomy(data.taxonomy, mappings_resp, ctx)
-    data.categories = category_assignment.categories
-    if category_assignment.unmapped_tags or mappings_resp.mappings.uncategorized:
-        update_uncategorized_tags(
-            UncategorizedTagsUpdateRequest(
-                schema_version="1.0",
-                path=settings.category_mapping_path,
-                report_title=report_title,
-                tags=category_assignment.unmapped_tags,
-            ),
-            ctx,
-        )
-    if vector_store_id:
-        vector_store_service.update_metadata(
-            VectorStoreUpdateMetadataRequest(
-                schema_version="1.0",
-                vector_store_id=vector_store_id,
-                metadata=VectorStoreMetadata(
-                    schema_version="1.0",
-                    report_id=file.file_id,
-                    report_name=report_title,
-                    taxonomy=data.taxonomy,
-                    categories=data.categories,
-                    region=data.region,
-                    time_period=data.time_period,
-                ),
-            ),
-            child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:metadata"),
+            file_id=file.file_id,
+            md5=md5,
+            ctx=mode_ctx,
+            stage="vector_store_indexing",
+            vector_store_id=vector_store_id,
+            vector_store_status=vector_store_status or "indexing",
+            indexed_at_utc=indexed_at_utc,
+            openai_file_id=openai_file_id,
+            last_error=last_error,
         )
 
     def _extract_figure_task():
@@ -1248,6 +1292,74 @@ def generate_report(
         ),
         preview_ctx,
     )
+
+    vector_state = _await_vector_store_indexing(vector_state, settings, mode_ctx)
+    vector_store_id = vector_state.vector_store_id
+    openai_file_id = vector_state.openai_file_id
+    vector_store_status = vector_state.vector_store_status
+    indexed_at_utc = vector_state.indexed_at_utc
+    last_error = vector_state.last_error
+    _record_state_progress(
+        settings=settings,
+        file_id=file.file_id,
+        md5=md5,
+        ctx=mode_ctx,
+        stage="vector_store_ready",
+        vector_store_id=vector_store_id,
+        vector_store_status=vector_store_status,
+        indexed_at_utc=indexed_at_utc,
+        openai_file_id=openai_file_id,
+        last_error=last_error,
+    )
+
+    taxonomy_ctx = child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:taxonomy")
+    taxonomy_resp = extract_taxonomy(
+        TaxonomyExtractRequest(
+            schema_version="1.0",
+            report_id=file.file_id,
+            report_title=report_title,
+            vector_store_id=vector_store_id or "",
+            settings=settings,
+        ),
+        taxonomy_ctx,
+    )
+    data.taxonomy = taxonomy_resp.taxonomy
+    data.region = taxonomy_resp.region
+    data.time_period = taxonomy_resp.time_period
+
+    mappings_resp = load_category_mappings(
+        CategoryMappingLoadRequest(schema_version="1.0", path=settings.category_mapping_path, reload_if_changed=True),
+        ctx,
+    )
+    category_assignment = categorize_taxonomy(data.taxonomy, mappings_resp, ctx)
+    data.categories = category_assignment.categories
+    if category_assignment.unmapped_tags or mappings_resp.mappings.uncategorized:
+        update_uncategorized_tags(
+            UncategorizedTagsUpdateRequest(
+                schema_version="1.0",
+                path=settings.category_mapping_path,
+                report_title=report_title,
+                tags=category_assignment.unmapped_tags,
+            ),
+            ctx,
+        )
+    if vector_store_id:
+        vector_store_service.update_metadata(
+            VectorStoreUpdateMetadataRequest(
+                schema_version="1.0",
+                vector_store_id=vector_store_id,
+                metadata=VectorStoreMetadata(
+                    schema_version="1.0",
+                    report_id=file.file_id,
+                    report_name=report_title,
+                    taxonomy=data.taxonomy,
+                    categories=data.categories,
+                    region=data.region,
+                    time_period=data.time_period,
+                ),
+            ),
+            child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:metadata"),
+        )
 
     data.contents_page_number = contents_page_number
     data.contents_heading = contents_heading
