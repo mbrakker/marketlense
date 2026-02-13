@@ -22,6 +22,7 @@ class PublishRequest:
     schema_version: str = field(metadata={"doc": "Publish request schema version."})
     html_path: str = field(metadata={"doc": "Filesystem path to HTML file."})
     file_id: Optional[str] = field(default=None, metadata={"doc": "Drive file ID, if known."})
+    html_text: Optional[str] = field(default=None, metadata={"doc": "Optional preloaded HTML content. When omitted, generator reads html_path."})
 
 
 @dataclass(frozen=True)
@@ -42,13 +43,14 @@ class PublishQueueRequest:
     schema_version: str = field(metadata={"doc": "Publish queue orchestrator request schema version."})
     output_dir: str = field(metadata={"doc": "Directory containing generated HTML files."})
     state_db: str = field(metadata={"doc": "SQLite path storing publish state."})
+    reports_db: str = field(default="", metadata={"doc": "Optional report metadata SQLite path used for html_path->file_id mapping."})
 
 
 @dataclass(frozen=True)
 class PublishQueueItem:
     schema_version: str = field(metadata={"doc": "Publish queue item schema version."})
     html_path: str = field(metadata={"doc": "HTML file path queued for publish evaluation."})
-    file_id: str = field(metadata={"doc": "Extracted report file identifier, if present in HTML."})
+    file_id: str = field(metadata={"doc": "Resolved report file identifier (reports DB mapping first, HTML fallback)."})
     published: bool = field(metadata={"doc": "True when publish state already exists for this file."})
     wp_post_id: Optional[int] = field(default=None, metadata={"doc": "WordPress post ID when already published."})
     wp_post_url: Optional[str] = field(default=None, metadata={"doc": "WordPress post URL when already published."})

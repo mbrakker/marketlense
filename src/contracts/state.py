@@ -13,6 +13,27 @@ class StateCheckRequest:
 
 
 @dataclass(frozen=True)
+class StateBatchCheckItem:
+    schema_version: str = field(metadata={"doc": "State batch-check item schema version."})
+    file_id: str = field(metadata={"doc": "Drive file ID."})
+    md5: str = field(metadata={"doc": "MD5 checksum of the PDF."})
+
+
+@dataclass(frozen=True)
+class StateBatchCheckRequest:
+    schema_version: str = field(metadata={"doc": "State batch-check request schema version."})
+    state_db: str = field(metadata={"doc": "SQLite path for processing state."})
+    items: List[StateBatchCheckItem] = field(metadata={"doc": "List of file_id+md5 pairs to check."})
+
+
+@dataclass(frozen=True)
+class StateBatchCheckResponse:
+    schema_version: str = field(metadata={"doc": "State batch-check response schema version."})
+    state_db: str = field(metadata={"doc": "SQLite path for processing state."})
+    processed_items: List[StateBatchCheckItem] = field(metadata={"doc": "Pairs found in processed state."})
+
+
+@dataclass(frozen=True)
 class StateRecordRequest:
     schema_version: str = field(metadata={"doc": "State record request schema version."})
     state_db: str = field(metadata={"doc": "SQLite path for processing state."})

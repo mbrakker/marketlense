@@ -1218,6 +1218,7 @@ def _render_publishing_control(settings: Any, publish_settings: Any | None, publ
                 schema_version="1.0",
                 output_dir=settings.output_dir,
                 state_db=settings.state_db,
+                reports_db=settings.reports_db,
             ),
             _ctx("publish_queue"),
         )

@@ -9,6 +9,9 @@ from typing import Optional
 
 from src.contracts.run_context import RunContext
 from src.contracts.state import (
+    StateBatchCheckItem,
+    StateBatchCheckRequest,
+    StateBatchCheckResponse,
     StateCheckRequest,
     StateDbAccessRequest,
     StateDbAccessResponse,
@@ -36,6 +39,7 @@ logger = logging.getLogger("market_lense.state_service")
 ACCESS_TIMEOUT_SECONDS = 0.0
 LOCK_ERROR_MARKERS = ("database is locked", "database is busy")
 _STATE_CONN_LOCK = threading.Lock()
+BATCH_STATE_CHECK_MAX_PAIRS = 200
 
 DDL = """
 CREATE TABLE IF NOT EXISTS processed (
@@ -136,6 +140,22 @@ def _parse_dict(raw: Optional[str]) -> Optional[dict]:
     if isinstance(parsed, dict):
         return parsed
     return None
+
+
+def _normalize_batch_items(items: list[StateBatchCheckItem]) -> list[StateBatchCheckItem]:
+    normalized: list[StateBatchCheckItem] = []
+    seen: set[tuple[str, str]] = set()
+    for item in items:
+        file_id = item.file_id.strip() if isinstance(item.file_id, str) else ""
+        md5 = item.md5.strip() if isinstance(item.md5, str) else ""
+        if not file_id or not md5:
+            continue
+        key = (file_id, md5)
+        if key in seen:
+            continue
+        seen.add(key)
+        normalized.append(StateBatchCheckItem(schema_version="1.0", file_id=file_id, md5=md5))
+    return normalized
 
 
 def check_state_db_access(request: StateDbAccessRequest, ctx: RunContext) -> StateDbAccessResponse:
@@ -329,6 +349,62 @@ def already_processed(request: StateCheckRequest, ctx: RunContext) -> bool:
         fields={"file_id": request.file_id, "already_processed": result},
     ))
     return result
+
+
+def already_processed_batch(request: StateBatchCheckRequest, ctx: RunContext) -> StateBatchCheckResponse:
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="state_check_batch_start",
+        module=logger.name,
+        fields={"state_db": request.state_db, "requested": len(request.items)},
+    ))
+    items = _normalize_batch_items(request.items)
+    if not items:
+        response = StateBatchCheckResponse(
+            schema_version="1.0",
+            state_db=request.state_db,
+            processed_items=[],
+        )
+        logger.info(log_event(
+            ctx,
+            role="service",
+            event="state_check_batch_complete",
+            module=logger.name,
+            fields={"state_db": request.state_db, "checked": 0, "matched": 0},
+        ))
+        return response
+
+    matched: list[StateBatchCheckItem] = []
+    with _state_conn(request.state_db) as conn:
+        for idx in range(0, len(items), BATCH_STATE_CHECK_MAX_PAIRS):
+            chunk = items[idx: idx + BATCH_STATE_CHECK_MAX_PAIRS]
+            where = " OR ".join("(file_id=? AND md5=?)" for _ in chunk)
+            params: list[str] = []
+            for item in chunk:
+                params.extend((item.file_id, item.md5))
+            cur = conn.execute(
+                f"SELECT file_id, md5 FROM processed WHERE {where}",
+                params,
+            )
+            for file_id, md5 in cur.fetchall():
+                matched.append(
+                    StateBatchCheckItem(schema_version="1.0", file_id=file_id, md5=md5)
+                )
+
+    response = StateBatchCheckResponse(
+        schema_version="1.0",
+        state_db=request.state_db,
+        processed_items=matched,
+    )
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="state_check_batch_complete",
+        module=logger.name,
+        fields={"state_db": request.state_db, "checked": len(items), "matched": len(matched)},
+    ))
+    return response
 
 
 def record(request: StateRecordRequest, ctx: RunContext) -> None:

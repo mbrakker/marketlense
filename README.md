@@ -19,9 +19,11 @@ Key traits:
 - Text extractability gate: before analysis, the pipeline samples deterministic pages and aborts early with `pdf_text_unextractable` when none contain extractable text.
 - DocMap validation gate: if the doc_map evidence pack is empty (no sections/title/doc_id/summary), processing halts for that PDF; the orchestrator logs a detailed summary and stores it in the state DB.
 - Cached execution: PDF info/contents/text extraction are cached by md5, and analysis outputs (evidence packs, artifacts, validation, HTML) are cached by md5 + prompt/template hashes to skip redundant work.
+- Batched state prefilter: Drive-list skip checks for `(file_id, md5)` are grouped into batch SQLite queries to reduce per-file DB round trips while preserving per-file fallback checks.
 - Low-text resilience: text density heuristics detect PDFs with little/no extractable text and emit explicit "not available from text" artifacts + HTML notices instead of blank sections.
 - Vector store is the default and only analysis path; legacy local_text prompt stuffing has been removed now that vector_store is validated.
 - Taxonomy extraction uses vector store retrieval and maps tags to categories; tags and categories are rendered in the HTML metadata block.
+- Publish file ID resolution is DB-first: publish/publish-queue resolve `file_id` from reports metadata (`html_path -> file_id`) and fall back to HTML parsing only when mapping is unavailable.
 
 ---
 
@@ -121,6 +123,7 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
    - Produces `DriveFile` contracts.
    - Supports shared-drive scoping (`drive_id` + `corpora=drive`) and configurable `supportsAllDrives`/`includeItemsFromAllDrives`.
    - Metadata-only listing (`ingest.drive.list_mode=metadata`) skips names until a file is actually processed.
+   - State skip prefiltering batches Drive metadata checks (`state_service.already_processed_batch`) for files that already include `md5Checksum`, reducing SQLite round trips during listing.
    - If an ingest cursor exists, listings filter on `modifiedTime > last_successful_ingest_utc` for full runs; limited runs ignore the cursor and instead scan newest-first until they find unprocessed PDFs.
 
 4. **Download + integrity check**
@@ -183,6 +186,7 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
 
 3. **HTML discovery**
    - `src/services/file_service.py` lists generated HTML files in `OUTPUT_DIR`.
+   - `file_id` is resolved from reports metadata (`reports.html_path -> reports.file_id`) when available; HTML parsing is used only as fallback.
 
 4. **State checks**
    - `src/services/state_service.py` verifies the report was processed and not already published.

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 from src.contracts.publish import PublishOutcome
 from src.contracts.state import StatePublishCheckRequest, StateRecordRequest
@@ -26,10 +27,10 @@ def test_publish_runs_when_processed(publish_settings_factory, run_context, monk
         run_context,
     )
 
-    publish_calls: list[str] = []
+    publish_calls: list[tuple[str, str | None]] = []
 
     def _publish(req, current_settings, ctx):
-        publish_calls.append(req.file_id or "")
+        publish_calls.append((req.file_id or "", req.html_text))
         return PublishOutcome(
             schema_version="1.0",
             html_path=req.html_path,
@@ -51,7 +52,10 @@ def test_publish_runs_when_processed(publish_settings_factory, run_context, monk
     assert len(results) == 1
     assert results[0].status == "published"
     assert results[0].file_id == "file123"
-    assert publish_calls == ["file123"]
+    assert len(publish_calls) == 1
+    assert publish_calls[0][0] == "file123"
+    assert publish_calls[0][1] is not None
+    assert "Drive fileId: file123" in (publish_calls[0][1] or "")
     publish_row = get_publish(
         StatePublishCheckRequest(
             schema_version="1.0",
@@ -134,3 +138,60 @@ def test_publish_blocks_when_validation_fails(publish_settings_factory, run_cont
         run_context,
     )
     assert publish_row is None
+
+
+def test_publish_prefers_reports_db_file_id_mapping(publish_settings_factory, run_context, monkeypatch) -> None:
+    settings = publish_settings_factory(validation_policy="warn")
+    html_path = Path(settings.output_dir) / "report.html"
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+    html_path.write_text("<html><body>No explicit file marker</body></html>", encoding="utf-8")
+
+    record(
+        StateRecordRequest(
+            schema_version="1.0",
+            state_db=settings.state_db,
+            file_id="file_from_db",
+            md5="md5",
+        ),
+        run_context,
+    )
+
+    monkeypatch.setattr(
+        orch,
+        "list_metadata",
+        lambda req, ctx: SimpleNamespace(
+            records=[SimpleNamespace(file_id="file_from_db", html_path=str(html_path), updated_at=100)]
+        ),
+    )
+    monkeypatch.setattr(
+        orch,
+        "extract_file_id",
+        lambda _html: (_ for _ in ()).throw(AssertionError("HTML parsing should not run when DB mapping is present")),
+    )
+    monkeypatch.setattr(
+        orch,
+        "find_post_by_file_id",
+        lambda req, ctx: WordPressPostLookupResponse(schema_version="1.0", found=False),
+    )
+    monkeypatch.setattr(
+        orch,
+        "publish_html",
+        lambda req, current_settings, ctx: (
+            (_ for _ in ()).throw(AssertionError("html_text should stay empty for DB-mapped items"))
+            if req.html_text is not None
+            else PublishOutcome(
+                schema_version="1.0",
+                html_path=req.html_path,
+                file_id=req.file_id,
+                status="published",
+                post_id=77,
+                post_url="https://example.com/post/77",
+            )
+        ),
+    )
+
+    results = orch.run_publish(settings, limit=1)
+
+    assert len(results) == 1
+    assert results[0].status == "published"
+    assert results[0].file_id == "file_from_db"

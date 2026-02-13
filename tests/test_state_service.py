@@ -3,6 +3,8 @@ from pathlib import Path
 
 from src.contracts.run_context import RunContext
 from src.contracts.state import (
+    StateBatchCheckItem,
+    StateBatchCheckRequest,
     StateCheckRequest,
     StateDbAccessRequest,
     StateGetRequest,
@@ -14,6 +16,7 @@ from src.contracts.state import (
     StateRecordRequest,
 )
 from src.services.state_service import (
+    already_processed_batch,
     already_processed,
     check_state_db_access,
     get,
@@ -99,6 +102,42 @@ def test_record_and_get_with_defaults(tmp_path: Path) -> None:
     assert resp.indexed_at_utc is None
     assert resp.last_error is None
     assert resp.doc_map_summary is None
+
+
+def test_already_processed_batch_returns_only_matched_pairs(tmp_path: Path) -> None:
+    db_path = tmp_path / "state.sqlite"
+    record(
+        StateRecordRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            file_id="file-1",
+            md5="md5-1",
+        ),
+        _ctx(),
+    )
+    record(
+        StateRecordRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            file_id="file-2",
+            md5="md5-2",
+        ),
+        _ctx(),
+    )
+    response = already_processed_batch(
+        StateBatchCheckRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            items=[
+                StateBatchCheckItem(schema_version="1.0", file_id="file-1", md5="md5-1"),
+                StateBatchCheckItem(schema_version="1.0", file_id="file-2", md5="no-match"),
+                StateBatchCheckItem(schema_version="1.0", file_id="file-1", md5="md5-1"),
+                StateBatchCheckItem(schema_version="1.0", file_id=" ", md5=" "),
+            ],
+        ),
+        _ctx(),
+    )
+    assert {(item.file_id, item.md5) for item in response.processed_items} == {("file-1", "md5-1")}
 
 
 def test_record_and_get_doc_map_summary(tmp_path: Path) -> None:

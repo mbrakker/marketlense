@@ -43,10 +43,13 @@ from src.contracts.files import (
 )
 from src.services.lock_service import acquire_lock, release_lock
 from src.services.report_store_service import check_report_db_access, get_metadata as get_report_metadata
+from src.services.state_service import already_processed_batch as state_already_processed_batch
 from src.services.state_service import already_processed as state_already_processed
 from src.services.state_service import check_state_db_access, get_ingest_cursor, set_ingest_cursor
 from src.services.state_service import record as state_record
 from src.contracts.state import (
+    StateBatchCheckItem,
+    StateBatchCheckRequest,
     StateCheckRequest,
     StateDbAccessRequest,
     StateIngestCursorGetRequest,
@@ -62,6 +65,7 @@ DB_ACCESS_TIMEOUT_SECONDS = 0.0
 MD5_SIDECAR_SUFFIX = ".md5.json"
 MD5_SIDECAR_SCHEMA = "1.0"
 EOF_RETRY_LIMIT = 1
+STATE_PREFILTER_BATCH_SIZE = 200
 
 
 def _should_skip(file: DriveFile, md5: Optional[str], state_db: str, ctx: RunContext) -> bool:
@@ -74,6 +78,42 @@ def _should_skip(file: DriveFile, md5: Optional[str], state_db: str, ctx: RunCon
         md5=md5,
     )
     return state_already_processed(req, ctx)
+
+
+def _batch_should_skip(
+    files: list[DriveFile],
+    state_db: str,
+    ctx: RunContext,
+) -> dict[tuple[str, str], bool]:
+    items = []
+    for file in files:
+        md5 = file.md5_checksum.strip() if file.md5_checksum else ""
+        if not md5:
+            continue
+        items.append(StateBatchCheckItem(schema_version="1.0", file_id=file.file_id, md5=md5))
+    if not items:
+        return {}
+    response = state_already_processed_batch(
+        StateBatchCheckRequest(
+            schema_version="1.0",
+            state_db=state_db,
+            items=items,
+        ),
+        ctx,
+    )
+    processed = {(item.file_id, item.md5) for item in response.processed_items}
+    lookup: dict[tuple[str, str], bool] = {}
+    for item in items:
+        key = (item.file_id, item.md5)
+        lookup[key] = key in processed
+    logger.info(log_event(
+        ctx,
+        role="orchestrator",
+        event="drive_list_state_batch_checked",
+        module=logger.name,
+        fields={"checked": len(items), "matched": len(processed)},
+    ))
+    return lookup
 
 
 def _cache_pdf_path(settings: IngestSettings, file: DriveFile) -> str:
@@ -520,20 +560,44 @@ def run_ingest(
         )
 
         files_to_process: list[DriveFile] = []
+        pending_md5_files: list[DriveFile] = []
+
+        def _flush_pending_md5_files() -> None:
+            nonlocal pending_md5_files
+            if not pending_md5_files:
+                return
+            lookup = _batch_should_skip(pending_md5_files, settings.state_db, root_ctx)
+            for pending in pending_md5_files:
+                drive_md5 = pending.md5_checksum.strip() if pending.md5_checksum else ""
+                if drive_md5 and lookup.get((pending.file_id, drive_md5), False):
+                    logger.info(log_event(
+                        root_ctx,
+                        role="orchestrator",
+                        event="drive_list_skip_processed",
+                        module=logger.name,
+                        fields={"file_id": pending.file_id, "md5": drive_md5},
+                    ))
+                    continue
+                files_to_process.append(pending)
+                if len(files_to_process) >= max_n:
+                    break
+            pending_md5_files = []
+
         for file in list_pdfs(list_req, root_ctx):
             drive_md5 = file.md5_checksum.strip() if file.md5_checksum else None
-            if drive_md5 and _should_skip(file, drive_md5, settings.state_db, root_ctx):
-                logger.info(log_event(
-                    root_ctx,
-                    role="orchestrator",
-                    event="drive_list_skip_processed",
-                    module=logger.name,
-                    fields={"file_id": file.file_id, "md5": drive_md5},
-                ))
+            if drive_md5:
+                pending_md5_files.append(file)
+                if len(pending_md5_files) >= STATE_PREFILTER_BATCH_SIZE:
+                    _flush_pending_md5_files()
+                    if len(files_to_process) >= max_n:
+                        break
                 continue
             files_to_process.append(file)
             if len(files_to_process) >= max_n:
                 break
+
+        if len(files_to_process) < max_n:
+            _flush_pending_md5_files()
         logger.info(log_event(
             root_ctx,
             role="orchestrator",

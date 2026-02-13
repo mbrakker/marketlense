@@ -4,11 +4,9 @@
 
 1. Reuse contents-page preview output when it overlaps with general preview rendering.
 2. Pre-filter/compress candidate payload before LLM ranking to cut cost and prompt size.
-3. Batch state checks where safe to reduce per-file DB round trips.
-4. Avoid HTML parsing for `file_id` when DB/report metadata already provides a mapping.
-5. Pass/propagate WordPress auth header from orchestrator to generator to remove duplicate auth-derivation logic.
-6. Parallelize WordPress media uploads for image-heavy reports.
-7. Extract publish-time validation JSON parsing into a shared helper/service.
+4. Pass/propagate WordPress auth header from orchestrator to generator to remove duplicate auth-derivation logic.
+5. Parallelize WordPress media uploads for image-heavy reports.
+6. Extract publish-time validation JSON parsing into a shared helper/service.
 
 ## High-Impact (No Effort Limits)
 

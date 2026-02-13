@@ -50,8 +50,19 @@ def publish_html(
         fields={"html_path": request.html_path},
     ))
 
-    html_resp = read_text(ReadTextRequest(schema_version="1.0", path=request.html_path), ctx)
-    html_text = html_resp.content
+    if request.html_text is None:
+        html_text = read_text(ReadTextRequest(schema_version="1.0", path=request.html_path), ctx).content
+        html_source = "path"
+    else:
+        html_text = request.html_text
+        html_source = "request"
+    logger.info(log_event(
+        ctx,
+        role="generator",
+        event="publish_html_source",
+        module=logger.name,
+        fields={"html_path": request.html_path, "source": html_source, "length": len(html_text)},
+    ))
     file_id = request.file_id or extract_file_id(html_text)
     if not file_id:
         logger.info(log_event(

@@ -7,7 +7,10 @@ from threading import Barrier, Lock, get_ident
 
 from src.contracts.drive import DriveDownloadToPathResponse, DriveFile
 from src.contracts.ingest import IngestOutcome
-from src.contracts.state import StateProcessedListRequest
+from src.contracts.state import (
+    StateBatchCheckResponse,
+    StateProcessedListRequest,
+)
 from src.orchestrators import ingest_orchestrator as orch
 from src.services.state_service import list_processed
 
@@ -127,3 +130,50 @@ def test_parallel_executor_uses_real_concurrency(ingest_settings, run_context, m
         run_context,
     ).rows
     assert {row.file_id for row in state_rows} == {"file_a", "file_b"}
+
+
+def test_ingest_uses_batch_state_prefilter(ingest_settings, monkeypatch) -> None:
+    settings = replace(ingest_settings, batch_limit=2, ingest_worker_limit=1)
+    files = [
+        DriveFile(schema_version="1.0", file_id="file_a", name="a.pdf", modified_time=None, md5_checksum="md5a"),
+        DriveFile(schema_version="1.0", file_id="file_b", name="b.pdf", modified_time=None, md5_checksum="md5b"),
+        DriveFile(schema_version="1.0", file_id="file_c", name="c.pdf", modified_time=None, md5_checksum="md5c"),
+    ]
+    batch_calls = {"count": 0}
+
+    def _batch_check(request, ctx):
+        batch_calls["count"] += 1
+        processed = [item for item in request.items if item.file_id == "file_a"]
+        return StateBatchCheckResponse(
+            schema_version="1.0",
+            state_db=request.state_db,
+            processed_items=processed,
+        )
+
+    def _unexpected_single_check(_request, _ctx):
+        raise AssertionError("expected drive-list filtering to use batch state checks")
+
+    def _fake_process(file, index, current_settings, root_ctx):
+        return orch._FileProcessResult(
+            index=index,
+            outcome=IngestOutcome(
+                schema_version="1.0",
+                file_id=file.file_id,
+                name=file.name or file.file_id,
+                md5=file.md5_checksum,
+                html_path=f"out/{file.file_id}.html",
+                status="processed",
+            ),
+            processed=1,
+            had_error=False,
+        )
+
+    monkeypatch.setattr(orch, "list_pdfs", lambda req, ctx: files)
+    monkeypatch.setattr(orch, "state_already_processed_batch", _batch_check)
+    monkeypatch.setattr(orch, "state_already_processed", _unexpected_single_check)
+    monkeypatch.setattr(orch, "_process_file", _fake_process)
+
+    results = orch.run_ingest(settings, limit=2)
+
+    assert batch_calls["count"] == 1
+    assert [row.file_id for row in results] == ["file_b", "file_c"]

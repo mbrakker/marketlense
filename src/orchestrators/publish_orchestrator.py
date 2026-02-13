@@ -8,10 +8,13 @@ from typing import List, Optional
 
 from src.contracts.files import ListHtmlRequest, ReadTextRequest
 from src.contracts.publish import PublishOutcome, PublishRequest, PublishSettings
+from src.contracts.report_store import ReportMetadataListRequest
+from src.contracts.run_context import RunContext
 from src.contracts.state import StateGetRequest, StatePublishCheckRequest, StatePublishRecordRequest
 from src.contracts.validation import ValidationIssue, ValidationReport
 from src.contracts.wordpress import WordPressPostLookupRequest
 from src.services.file_service import list_html, read_text
+from src.services.report_store_service import list_metadata
 from src.services.state_service import already_published as state_already_published
 from src.services.state_service import get as state_get
 from src.services.state_service import record_publish as state_record_publish
@@ -23,6 +26,44 @@ from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.wp_auth import build_auth_header
 
 logger = logging.getLogger("market_lense.publish_orchestrator")
+
+
+def _canonical_html_path(path: str) -> str:
+    try:
+        return str(Path(path).expanduser().resolve())
+    except Exception:
+        return str(Path(path))
+
+
+def _load_html_file_id_map(reports_db: str, ctx: RunContext) -> dict[str, str]:
+    if not reports_db.strip():
+        return {}
+    response = list_metadata(
+        ReportMetadataListRequest(schema_version="1.1", db_path=reports_db),
+        ctx,
+    )
+    mapping: dict[str, str] = {}
+    records = sorted(
+        response.records,
+        key=lambda row: int(getattr(row, "updated_at", 0) or 0),
+        reverse=True,
+    )
+    for row in records:
+        html_path = (row.html_path or "").strip()
+        file_id = (row.file_id or "").strip()
+        if not html_path or not file_id:
+            continue
+        key = _canonical_html_path(html_path)
+        if key not in mapping:
+            mapping[key] = file_id
+    logger.info(log_event(
+        ctx,
+        role="orchestrator",
+        event="publish_html_file_id_map_loaded",
+        module=logger.name,
+        fields={"reports_db": reports_db, "rows": len(response.records), "mapped": len(mapping)},
+    ))
+    return mapping
 
 
 def _validation_paths(output_dir: str, file_id: str, html_path: str) -> list[Path]:
@@ -132,14 +173,47 @@ def run_publish(
         app_password=settings.wp.app_password,
         bearer_token=settings.wp.bearer_token,
     )
+    html_file_id_map: dict[str, str] = {}
+    mapping_ctx = child_context(ctx, task_id="publish_file_id_map")
+    try:
+        html_file_id_map = _load_html_file_id_map(settings.reports_db, mapping_ctx)
+    except Exception as exc:
+        logger.info(log_event(
+            mapping_ctx,
+            role="orchestrator",
+            event="publish_html_file_id_map_failed",
+            module=logger.name,
+            fields={"reports_db": settings.reports_db, "error": str(exc)},
+        ))
+        html_file_id_map = {}
 
     for html_path in list_resp.html_paths:
         if processed >= max_n:
             break
 
         file_ctx = child_context(ctx, task_id=html_path)
-        html_resp = read_text(ReadTextRequest(schema_version="1.0", path=html_path), file_ctx)
-        file_id = extract_file_id(html_resp.content)
+        preloaded_html: Optional[str] = None
+        file_id = html_file_id_map.get(_canonical_html_path(html_path), "")
+        if file_id:
+            logger.info(log_event(
+                file_ctx,
+                role="orchestrator",
+                event="publish_file_id_resolved",
+                module=logger.name,
+                fields={"html_path": html_path, "file_id": file_id, "source": "reports_db"},
+            ))
+        else:
+            html_resp = read_text(ReadTextRequest(schema_version="1.0", path=html_path), file_ctx)
+            preloaded_html = html_resp.content
+            file_id = extract_file_id(preloaded_html) or ""
+            if file_id:
+                logger.info(log_event(
+                    file_ctx,
+                    role="orchestrator",
+                    event="publish_file_id_resolved",
+                    module=logger.name,
+                    fields={"html_path": html_path, "file_id": file_id, "source": "html"},
+                ))
 
         if not file_id:
             logger.info(log_event(
@@ -283,7 +357,12 @@ def run_publish(
                     break
 
                 outcome = publish_html(
-                    PublishRequest(schema_version="1.0", html_path=html_path, file_id=file_id),
+                    PublishRequest(
+                        schema_version="1.0",
+                        html_path=html_path,
+                        file_id=file_id,
+                        html_text=preloaded_html,
+                    ),
                     settings,
                     file_ctx,
                 )
