@@ -1,162 +1,705 @@
+{% set art = data.artifacts if data.artifacts is defined else {} %}
+{% set summary = art.summary if art.summary is defined else {} %}
+{% set source_status = art.source_status if art.source_status is defined else {} %}
+{% set report_title = report_title if report_title is defined and report_title else (data.title if data.title is defined and data.title else doc_name) %}
+{% set report_title = report_title|string|trim %}
+{% set publisher = data.publisher if data.publisher is defined and data.publisher else "" %}
+{% set publisher = publisher|string|trim %}
+{% set region = data.region if data.region is defined and data.region else "" %}
+{% set region = region|string|trim %}
+{% set report_year = data.time_period if data.time_period is defined and data.time_period else "" %}
+{% set report_year = report_year|string|trim %}
+{% set source_url = data.source if data.source is defined and data.source else "" %}
+{% set source_url = source_url|string|trim %}
+{% set canonical_url = data.canonical_url if data.canonical_url is defined and data.canonical_url else source_url %}
+{% set canonical_url = canonical_url|string|trim %}
+{% set fallback_reason = source_status.reason if source_status.reason is defined and source_status.reason else "" %}
+{% set fallback_reason = fallback_reason|string|trim %}
+{% set not_available = source_status.not_available if source_status.not_available is defined else (data._text_not_available if data._text_not_available is defined else False) %}
+{% set tldr_text = summary.tldr if summary.tldr is defined and summary.tldr else (data.tldr if data.tldr is defined and data.tldr else "") %}
+{% set tldr_text = tldr_text|string|trim %}
+{% if not tldr_text and not_available %}
+  {% set tldr_text = "Not available from text." %}
+{% endif %}
+{% set exec_summary = summary.executive_summary if summary.executive_summary is defined and summary.executive_summary else (data.commentary if data.commentary is defined else "") %}
+{% set exec_summary = exec_summary|string|trim %}
+{% set claim_map = summary.claim_evidence_map if summary.claim_evidence_map is defined and summary.claim_evidence_map else [] %}
+{% set insights_list = art.insights_final if art.insights_final is defined and art.insights_final else (data.insights if data.insights is defined else []) %}
+{% set quotes_list = art.quotes_final if art.quotes_final is defined and art.quotes_final else [] %}
+{% if not quotes_list and data.quote %}
+  {% set quotes_list = [{"text": data.quote.text, "speaker": data.quote.author, "citation": "", "page": data.contents_page_number or 0}] %}
+{% endif %}
+{% set expert_comment = art.expert_comment if art.expert_comment is defined else None %}
+{% set linkedin_post = art.linkedin_post if art.linkedin_post is defined else "" %}
+{% set commentary = data.commentary if data.commentary is defined else "" %}
+{% set commentary = commentary|string|trim %}
+{% set topics_list = art.toc_topics if art.toc_topics is defined and art.toc_topics else [] %}
+{% set categories_list = data.categories_display if data.categories_display is defined and data.categories_display else (data.categories if data.categories is defined else []) %}
+{% set tags_list = data.taxonomy if data.taxonomy is defined and data.taxonomy else [] %}
+{% set primary_figure = data._figure_top if data._figure_top is defined and data._figure_top else (data._figure_image if data._figure_image is defined else "") %}
+{% set primary_figure = primary_figure|string|trim %}
+{% set figure_gallery = data._figure_gallery if data._figure_gallery is defined and data._figure_gallery else [] %}
+{% set figure_caption = "" %}
+{% if data.figure is defined and data.figure %}
+  {% if data.figure.title is defined and data.figure.title %}
+    {% set figure_caption = data.figure.title|string|trim %}
+  {% elif data.figure.evidence is defined and data.figure.evidence %}
+    {% set figure_caption = data.figure.evidence|string|trim %}
+  {% endif %}
+{% endif %}
+{% set has_metadata = publisher or region or report_year or (categories_list|length > 0) or (tags_list|length > 0) %}
+{% set has_topics = topics_list|length > 0 %}
+{% set has_contents_preview = data.contents_page_number is defined and data.contents_page_number and data.contents_page_number > 0 and data._contents_image is defined and data._contents_image %}
+{% set has_primary_figure = primary_figure %}
+{% set has_claim_map = claim_map|length > 0 %}
+{% set has_expert_comment = expert_comment and (expert_comment|string|trim) %}
+{% set has_linkedin_post = linkedin_post and (linkedin_post|string|trim) %}
+{% set has_commentary = commentary and not has_expert_comment %}
+{% set insights_ns = namespace(count=0) %}
+{% for insight in insights_list %}
+  {% if insight.text is defined %}
+    {% set insight_text = insight.text|string|trim %}
+  {% else %}
+    {% set insight_text = insight|string|trim %}
+  {% endif %}
+  {% if insight_text %}
+    {% set insights_ns.count = insights_ns.count + 1 %}
+  {% endif %}
+{% endfor %}
+{% set has_insights = insights_ns.count > 0 %}
+{% set quotes_ns = namespace(count=0) %}
+{% for quote in quotes_list %}
+  {% if quote.text is defined %}
+    {% set quote_text = quote.text|string|trim %}
+  {% else %}
+    {% set quote_text = quote|string|trim %}
+  {% endif %}
+  {% if quote_text %}
+    {% set quotes_ns.count = quotes_ns.count + 1 %}
+  {% endif %}
+{% endfor %}
+{% set has_quotes = quotes_ns.count > 0 %}
+{% set has_substantive_content = (tldr_text and tldr_text|lower != "not available from text.") or has_insights or has_quotes or exec_summary %}
+{% set seo_description = tldr_text if tldr_text else (exec_summary if exec_summary else ("Digest for " ~ report_title)) %}
+{% set seo_description = seo_description|string|trim %}
+{% set seo_description = seo_description[:180] ~ ("..." if seo_description|length > 180 else "") %}
+{% set base_title = report_title %}
+{% if report_year %}
+  {% set base_title = base_title ~ " " ~ report_year %}
+{% endif %}
+{% set seo_title = base_title ~ (" | " ~ publisher if publisher else "") ~ " | Digest" %}
+{% set primary_image = preview_png if preview_png else primary_figure %}
+{% set primary_image = primary_image|string|trim %}
+{% set robots_content = data.robots if data.robots is defined and data.robots else ("index,follow" if has_substantive_content and not not_available else "noindex,nofollow") %}
+{% set robots_content = robots_content|string|trim %}
+{% set ld_keywords = tags_list if tags_list|length > 0 else categories_list %}
+{% set json_ld = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": report_title,
+  "description": seo_description,
+  "author": {"@type": "Organization", "name": publisher} if publisher else None,
+  "publisher": {"@type": "Organization", "name": publisher} if publisher else None,
+  "mainEntityOfPage": canonical_url if canonical_url else None,
+  "image": [primary_image] if primary_image else [],
+  "articleSection": topics_list,
+  "keywords": ld_keywords
+} %}
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>{{ title }}</title>
+<title>{{ seo_title }}</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="{{ seo_description }}">
+<meta name="robots" content="{{ robots_content }}">
 <meta name="drive-file-id" content="{{ file_id }}">
+<meta property="og:type" content="article">
+<meta property="og:title" content="{{ seo_title }}">
+<meta property="og:description" content="{{ seo_description }}">
+{% if canonical_url %}<meta property="og:url" content="{{ canonical_url }}">{% endif %}
+{% if primary_image %}<meta property="og:image" content="{{ primary_image }}">{% endif %}
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ seo_title }}">
+<meta name="twitter:description" content="{{ seo_description }}">
+{% if primary_image %}<meta name="twitter:image" content="{{ primary_image }}">{% endif %}
+{% if canonical_url %}<link rel="canonical" href="{{ canonical_url }}">{% endif %}
+{% if preview_png %}<link rel="preload" as="image" href="{{ preview_png }}">{% endif %}
+<script type="application/ld+json">{{ json_ld|tojson }}</script>
 <style>
-body{font-family:system-ui,Arial,sans-serif;max-width:760px;margin:40px auto;padding:0 20px;line-height:1.55}
-h1,h2{line-height:1.25}
-.insights li{margin-bottom:.4rem}
-blockquote{margin:.6rem 0;padding:.6rem .8rem;border-left:4px solid #DDD;background:#FAFAFA}
-.footer{margin-top:2rem;color:#666;font-size:.9rem}
-code{background:#f5f5f5;padding:.1rem .3rem;border-radius:4px}
-.preview{margin:1rem 0}
-.preview img{max-width:100%;height:auto;border:1px solid #EEE;border-radius:8px}
-.topics{display:flex;flex-wrap:wrap;gap:.4rem;margin:0;padding:0;list-style:none}
-.topics li{background:#f2f4f7;border:1px solid #e3e7ed;border-radius:12px;padding:.25rem .6rem;font-size:.95rem}
-.metadata p{margin:.2rem 0}
-.notice{border:1px solid #f0c36d;background:#fff6e5;padding:.6rem .8rem;border-radius:8px;margin:.8rem 0}
-.muted{color:#666}
+:root{
+  --bg:#f3f5f8;
+  --panel:#ffffff;
+  --ink:#192231;
+  --muted:#566074;
+  --accent:#135ea7;
+  --accent-soft:#eaf2fb;
+  --border:#d9e1ec;
+  --shadow:0 16px 42px rgba(15,34,63,.08);
+  --radius-lg:18px;
+  --radius-md:12px;
+  --radius-sm:8px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  color:var(--ink);
+  background:
+    radial-gradient(circle at 5% 5%, #ffffff 0%, rgba(255,255,255,0) 40%),
+    linear-gradient(180deg, #eef2f8 0%, var(--bg) 100%);
+  font-family:"Palatino Linotype","Book Antiqua",Palatino,Georgia,serif;
+  line-height:1.62;
+}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+.page-shell{max-width:1040px;margin:28px auto 56px;padding:0 20px}
+.report{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--shadow);
+  overflow:hidden;
+}
+.hero{
+  padding:28px 30px 22px;
+  border-bottom:1px solid var(--border);
+  background:linear-gradient(140deg,#f8fbff 0%,#f3f8ff 52%,#eef5ff 100%);
+}
+.eyebrow{
+  margin:0 0 10px;
+  color:var(--muted);
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  font-size:.76rem;
+  font-family:"Trebuchet MS","Segoe UI",Tahoma,sans-serif;
+  font-weight:700;
+}
+h1{
+  margin:.1rem 0 .55rem;
+  line-height:1.18;
+  font-size:2.05rem;
+}
+.hero-subtitle{
+  margin:0;
+  color:var(--muted);
+  font-size:1.02rem;
+}
+.section-nav{
+  padding:14px 30px;
+  border-bottom:1px solid var(--border);
+  background:#fcfdff;
+}
+.nav-list{
+  margin:0;
+  padding:0;
+  list-style:none;
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.nav-list a{
+  display:inline-block;
+  border:1px solid var(--border);
+  background:#fff;
+  border-radius:999px;
+  padding:6px 12px;
+  font-size:.88rem;
+  font-family:"Trebuchet MS","Segoe UI",Tahoma,sans-serif;
+  color:#1f4f84;
+}
+.content{padding:24px 30px 30px}
+.panel{
+  border:1px solid var(--border);
+  border-radius:var(--radius-md);
+  background:#fff;
+  padding:18px 18px 16px;
+  margin:0 0 16px;
+}
+h2{
+  margin:0 0 .72rem;
+  font-size:1.3rem;
+  line-height:1.24;
+}
+h3{
+  margin:0;
+  font-size:1rem;
+  line-height:1.35;
+  font-family:"Trebuchet MS","Segoe UI",Tahoma,sans-serif;
+}
+.notice{
+  border:1px solid #e8b863;
+  background:#fff4df;
+  border-radius:var(--radius-md);
+  padding:12px 14px;
+}
+.muted{color:var(--muted)}
+.meta-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+  gap:10px;
+}
+.meta-card{
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  background:#fcfdff;
+  padding:10px 11px;
+}
+.meta-label{
+  display:block;
+  margin:0 0 3px;
+  color:#2f3d53;
+  font-size:.78rem;
+  letter-spacing:.03em;
+  text-transform:uppercase;
+  font-family:"Trebuchet MS","Segoe UI",Tahoma,sans-serif;
+}
+.meta-value{margin:0;color:var(--ink)}
+.chip-list{
+  margin:0;
+  padding:0;
+  list-style:none;
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.chip{
+  border:1px solid #ced9e8;
+  border-radius:999px;
+  background:var(--accent-soft);
+  color:#1e4a7b;
+  padding:6px 10px;
+  font-size:.86rem;
+  font-family:"Trebuchet MS","Segoe UI",Tahoma,sans-serif;
+}
+.summary-copy{
+  margin:0;
+  white-space:pre-line;
+}
+.claim-list{
+  margin:12px 0 0;
+  padding-left:18px;
+}
+.claim-list li{margin-bottom:8px}
+.insight-grid{
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:grid;
+  gap:10px;
+}
+.insight-card{
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  background:#fcfdff;
+  padding:11px 12px;
+}
+.insight-head{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+}
+.insight-index{
+  flex:0 0 auto;
+  min-width:30px;
+  height:30px;
+  border-radius:50%;
+  border:1px solid #b9c9df;
+  background:#fff;
+  text-align:center;
+  line-height:29px;
+  font-family:"Trebuchet MS","Segoe UI",Tahoma,sans-serif;
+  font-size:.82rem;
+  color:#2a4d78;
+}
+.insight-text{margin:1px 0 0}
+.badge-row{
+  margin-top:8px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+}
+.badge{
+  display:inline-block;
+  border:1px solid #c5d4e8;
+  border-radius:999px;
+  padding:4px 9px;
+  background:#fff;
+  font-size:.8rem;
+  color:#2c4d74;
+  font-family:"Trebuchet MS","Segoe UI",Tahoma,sans-serif;
+}
+.preview-block{
+  margin:0 0 16px;
+}
+.media-figure{
+  margin:0;
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  overflow:hidden;
+  background:#fff;
+}
+.media-figure img{
+  width:100%;
+  height:auto;
+  display:block;
+}
+.media-figure figcaption{
+  padding:8px 10px;
+  border-top:1px solid var(--border);
+  color:var(--muted);
+  font-size:.88rem;
+}
+.media-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+  gap:10px;
+  margin-top:10px;
+}
+.quote-grid{
+  margin:0;
+  padding:0;
+  list-style:none;
+  display:grid;
+  gap:10px;
+}
+.quote-card{
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:12px 13px;
+  margin:0;
+  background:#fcfdff;
+}
+.quote-card blockquote{
+  margin:0 0 10px;
+  padding:0;
+  border:none;
+}
+.quote-card blockquote p{
+  margin:0;
+  font-size:1.02rem;
+}
+.quote-byline{
+  color:var(--muted);
+  font-size:.9rem;
+  font-family:"Trebuchet MS","Segoe UI",Tahoma,sans-serif;
+}
+.prose-block{
+  margin:0;
+  white-space:pre-line;
+  overflow-wrap:anywhere;
+}
+.resource-list{
+  margin:0;
+  padding-left:18px;
+}
+.resource-list li{margin-bottom:6px}
+.footer{
+  border-top:1px solid var(--border);
+  padding:14px 30px 20px;
+  color:var(--muted);
+  font-size:.84rem;
+}
+@media (max-width:800px){
+  .page-shell{padding:0 12px}
+  .hero,.content,.section-nav,.footer{padding-left:16px;padding-right:16px}
+  h1{font-size:1.58rem}
+}
+@media print{
+  body{background:#fff}
+  .page-shell{max-width:none;margin:0;padding:0}
+  .report{border:none;box-shadow:none;border-radius:0}
+  .section-nav{display:none}
+  .panel{break-inside:avoid}
+}
 </style>
 </head>
 <body>
-  <h1>{{ report_title }}</h1>
-  {% set art = data.artifacts if data.artifacts is defined else {} %}
-  {% set summary = art.summary if art.summary is defined else {} %}
-  {% set tldr_text = summary.tldr if summary.tldr is defined else data.tldr %}
-  {% set exec_summary = summary.executive_summary if summary.executive_summary is defined else data.commentary %}
-  {% set claim_map = summary.claim_evidence_map if summary.claim_evidence_map is defined else [] %}
-  {% set insights_list = art.insights_final if art.insights_final is defined and art.insights_final else data.insights %}
-  {% set quotes_list = art.quotes_final if art.quotes_final is defined and art.quotes_final else [] %}
-  {% if not quotes_list and data.quote %}
-    {% set quotes_list = [{"text": data.quote.text, "speaker": data.quote.author, "citation": "", "page": data.contents_page_number or 0}] %}
-  {% endif %}
-  {% set expert_comment = art.expert_comment if art.expert_comment is defined else None %}
-  {% set linkedin_post = art.linkedin_post if art.linkedin_post is defined else "" %}
-  {% set source_status = art.source_status if art.source_status is defined else {} %}
-  {% set not_available = source_status.not_available if source_status.not_available is defined else False %}
-  {% set fallback_reason = source_status.reason if source_status.reason is defined else "" %}
+  <div class="page-shell">
+    <article class="report">
+      <header class="hero">
+        <p class="eyebrow">Market Lense report digest</p>
+        <h1>{{ report_title }}</h1>
+        <p class="hero-subtitle">
+          {% if publisher %}{{ publisher }}{% else %}Unknown publisher{% endif %}
+          {% if report_year %} | {{ report_year }}{% endif %}
+          {% if region %} | {{ region }}{% endif %}
+        </p>
+      </header>
 
-  {% if not_available %}
-  <div class="notice">Content not available from text{% if fallback_reason %}: {{ fallback_reason }}{% endif %}</div>
-  {% endif %}
+      <nav class="section-nav" aria-label="Digest sections">
+        <ul class="nav-list">
+          <li><a href="#section-summary">TL;DR</a></li>
+          {% if exec_summary %}<li><a href="#section-executive">Executive summary</a></li>{% endif %}
+          <li><a href="#section-insights">Key data insights</a></li>
+          {% if has_primary_figure or has_contents_preview %}<li><a href="#section-figures">Figure</a></li>{% endif %}
+          <li><a href="#section-quotes">Key quotes</a></li>
+          {% if has_topics %}<li><a href="#section-topics">Covered topics / TOC</a></li>{% endif %}
+          {% if has_metadata %}<li><a href="#section-metadata">Report metadata</a></li>{% endif %}
+          {% if has_expert_comment %}<li><a href="#section-expert">Expert comment</a></li>{% endif %}
+          {% if has_linkedin_post %}<li><a href="#section-linkedin">LinkedIn post</a></li>{% endif %}
+        </ul>
+      </nav>
 
-  {% if preview_png %}
-  <div class="preview">
-    <h2>Preview</h2>
-    <img src="{{ preview_png }}" alt="Page 1 preview of {{ doc_name }}">
-  </div>
-  {% endif %}
-
-  {% if data.contents_page_number and data.contents_page_number > 0 and data._contents_image %}
-  <div class="preview">
-    <h2>Contents page (page {{ data.contents_page_number }}){% if data.contents_heading %}: {{ data.contents_heading }}{% endif %}</h2>
-    <img src="{{ data._contents_image }}" alt="Contents page screenshot of {{ doc_name }}">
-  </div>
-  {% endif %}
-
-  {% if data.publisher or (data.taxonomy and data.taxonomy|length > 0) or data.region or data.time_period %}
-  <h2>Report metadata</h2>
-  <div class="metadata">
-  {% if data.publisher %}
-  <p><strong>Publisher:</strong> {{ data.publisher }}</p>
-  {% endif %}
-  {% if data.region %}
-  <p><strong>Region:</strong> {{ data.region }}</p>
-  {% endif %}
-  {% if data.time_period %}
-  <p><strong>Time period:</strong> {{ data.time_period }}</p>
-  {% endif %}
-  {% if data.categories_display is defined and data.categories_display %}
-  <p><strong>Categories:</strong> {{ data.categories_display | join(", ") }}</p>
-  {% elif data.categories and data.categories|length > 0 %}
-  <p><strong>Categories:</strong> {{ data.categories | join(", ") }}</p>
-  {% endif %}
-  {% if data.taxonomy and data.taxonomy|length > 0 %}
-  <p><strong>Tags:</strong> {{ data.taxonomy | join(", ") }}</p>
-  {% endif %}
-  </div>
-  {% endif %}
-
-  {% if art.toc_topics is defined and art.toc_topics %}
-  <h2>Covered topics / TOC</h2>
-  <ul class="topics">
-    {% for topic in art.toc_topics %}<li>{{ topic }}</li>{% endfor %}
-  </ul>
-  {% elif not_available %}
-  <h2>Covered topics / TOC</h2>
-  <p class="muted">Not available from text.</p>
-  {% endif %}
-
-  <h2>TL;DR</h2>
-  <p>{{ tldr_text }}</p>
-
-  {% if exec_summary %}
-    <h2>Executive summary</h2>
-    <p>{{ exec_summary }}</p>
-    {% if claim_map %}
-    <ul>
-      {% for claim in claim_map %}
-        <li><strong>{{ claim.claim }}</strong>{% if claim.evidence %}: {{ claim.evidence }}{% endif %}</li>
-      {% endfor %}
-    </ul>
-    {% endif %}
-  {% endif %}
-
-  <h2>Key data insights</h2>
-  {% if insights_list %}
-    <ol class="insights">
-      {% for insight in insights_list %}
-        {% if insight.text is defined %}
-          <li>{{ insight.text }}
-            {% if insight.metric is defined and (insight.metric.value or insight.metric.unit or insight.metric.timeframe) %}
-              <div><em>{{ insight.metric.value }} {{ insight.metric.unit }} {{ insight.metric.timeframe }}</em></div>
-            {% endif %}
-          </li>
-        {% else %}
-          <li>{{ insight }}</li>
+      <main class="content">
+        {% if not_available %}
+        <section class="panel notice" id="section-notice" aria-label="Source status">
+          Content not available from text{% if fallback_reason %}: {{ fallback_reason }}{% endif %}
+        </section>
         {% endif %}
-      {% endfor %}
-    </ol>
-  {% else %}
-    <p class="muted">Not available from text.</p>
-  {% endif %}
 
-  <h2>Figure</h2>
-{% if data._figure_top %}
-  <p><img src="{{ data._figure_top }}" alt="Selected figure" style="max-width:100%;height:auto;border:1px solid #EEE;border-radius:8px"></p>
-{% elif data._figure_image %}
-  <p><img src="{{ data._figure_image }}" alt="Selected figure" style="max-width:100%;height:auto;border:1px solid #EEE;border-radius:8px"></p>
-{% endif %}
+        {% if preview_png %}
+        <section class="panel preview-block" id="section-preview" aria-label="Document preview">
+          <h2>Preview</h2>
+          <figure class="media-figure">
+            <img src="{{ preview_png }}" alt="Page 1 preview of {{ doc_name }}" loading="eager" fetchpriority="high" decoding="async">
+            <figcaption>First page preview used as social and report thumbnail.</figcaption>
+          </figure>
+        </section>
+        {% endif %}
 
-{% if data._figure_gallery and data._figure_gallery|length > 1 %}
-{% endif %}
+        {% if has_contents_preview %}
+        <section class="panel preview-block" id="section-contents-preview" aria-label="Contents page preview">
+          <h2>Contents page (page {{ data.contents_page_number }}){% if data.contents_heading %}: {{ data.contents_heading }}{% endif %}</h2>
+          <figure class="media-figure">
+            <img src="{{ data._contents_image }}" alt="Contents page screenshot of {{ doc_name }}" loading="lazy" decoding="async">
+            <figcaption>Detected table of contents preview.</figcaption>
+          </figure>
+        </section>
+        {% endif %}
 
+        {% if has_metadata %}
+        <section class="panel" id="section-metadata" aria-label="Report metadata">
+          <h2>Report metadata</h2>
+          <div class="meta-grid">
+            {% if publisher %}
+            <article class="meta-card">
+              <span class="meta-label">Publisher</span>
+              <p class="meta-value">{{ publisher }}</p>
+            </article>
+            {% endif %}
+            {% if region %}
+            <article class="meta-card">
+              <span class="meta-label">Region</span>
+              <p class="meta-value">{{ region }}</p>
+            </article>
+            {% endif %}
+            {% if report_year %}
+            <article class="meta-card">
+              <span class="meta-label">Time period</span>
+              <p class="meta-value">{{ report_year }}</p>
+            </article>
+            {% endif %}
+            {% if categories_list and categories_list|length > 0 %}
+            <article class="meta-card">
+              <span class="meta-label">Categories</span>
+              <ul class="chip-list">
+                {% for category in categories_list %}
+                  {% set category_value = category|string|trim %}
+                  {% if category_value %}
+                  <li><span class="chip">{{ category_value }}</span></li>
+                  {% endif %}
+                {% endfor %}
+              </ul>
+            </article>
+            {% endif %}
+            {% if tags_list and tags_list|length > 0 %}
+            <article class="meta-card">
+              <span class="meta-label">Tags</span>
+              <ul class="chip-list">
+                {% for tag in tags_list %}
+                  {% set tag_value = tag|string|trim %}
+                  {% if tag_value %}
+                  <li><span class="chip">{{ tag_value }}</span></li>
+                  {% endif %}
+                {% endfor %}
+              </ul>
+            </article>
+            {% endif %}
+          </div>
+        </section>
+        {% endif %}
 
-  <h2>Key quotes</h2>
-  {% if quotes_list %}
-    {% for quote in quotes_list %}
-      <blockquote>"{{ quote.text }}" - <em>{{ quote.speaker if quote.speaker is defined else quote.author }}</em>{% if quote.citation %} ({{ quote.citation }}){% endif %}</blockquote>
-    {% endfor %}
-  {% else %}
-    <p class="muted">Not available from text.</p>
-  {% endif %}
+        <section class="panel" id="section-summary" aria-label="TL;DR">
+          <h2>TL;DR</h2>
+          {% if tldr_text %}
+            <p class="summary-copy">{{ tldr_text }}</p>
+          {% else %}
+            <p class="muted">Not available from text.</p>
+          {% endif %}
+        </section>
 
-  {% if expert_comment %}
-  <h2>Expert comment (generated)</h2>
-  <p>{{ expert_comment }}</p>
-  {% endif %}
+        {% if exec_summary %}
+        <section class="panel" id="section-executive" aria-label="Executive summary">
+          <h2>Executive summary</h2>
+          <p class="summary-copy">{{ exec_summary }}</p>
+          {% if has_claim_map %}
+          <ul class="claim-list">
+            {% for claim in claim_map %}
+              {% set claim_text = claim.claim if claim.claim is defined else "" %}
+              {% set claim_text = claim_text|string|trim %}
+              {% set claim_evidence = claim.evidence if claim.evidence is defined else "" %}
+              {% set claim_evidence = claim_evidence|string|trim %}
+              {% if claim_text %}
+              <li><strong>{{ claim_text }}</strong>{% if claim_evidence %}: {{ claim_evidence }}{% endif %}</li>
+              {% endif %}
+            {% endfor %}
+          </ul>
+          {% endif %}
+        </section>
+        {% endif %}
 
-  {% if linkedin_post %}
-  <h2>LinkedIn post</h2>
-  <p>{{ linkedin_post }}</p>
-  {% endif %}
+        {% if has_topics or not_available %}
+        <section class="panel" id="section-topics" aria-label="Covered topics">
+          <h2>Covered topics / TOC</h2>
+          {% if has_topics %}
+          <ul class="chip-list">
+            {% for topic in topics_list %}
+              {% set topic_value = topic|string|trim %}
+              {% if topic_value %}
+              <li><span class="chip">{{ topic_value }}</span></li>
+              {% endif %}
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p class="muted">Not available from text.</p>
+          {% endif %}
+        </section>
+        {% endif %}
 
-  {% if data.commentary and not expert_comment %}
-  <h2>Commentary</h2>
-  <p>{{ data.commentary }}</p>
-  {% endif %}
+        <section class="panel" id="section-insights" aria-label="Key data insights">
+          <h2>Key data insights</h2>
+          {% if has_insights %}
+          <ol class="insight-grid">
+            {% for insight in insights_list %}
+              {% if insight.text is defined %}
+                {% set insight_text = insight.text|string|trim %}
+              {% else %}
+                {% set insight_text = insight|string|trim %}
+              {% endif %}
+              {% if insight_text %}
+              <li class="insight-card">
+                <div class="insight-head">
+                  <span class="insight-index">{{ loop.index }}</span>
+                  <p class="insight-text">{{ insight_text }}</p>
+                </div>
+                {% if insight.metric is defined and insight.metric %}
+                  {% set metric_value = insight.metric.value if insight.metric.value is defined else "" %}
+                  {% set metric_value = metric_value|string|trim %}
+                  {% set metric_unit = insight.metric.unit if insight.metric.unit is defined else "" %}
+                  {% set metric_unit = metric_unit|string|trim %}
+                  {% set metric_timeframe = insight.metric.timeframe if insight.metric.timeframe is defined else "" %}
+                  {% set metric_timeframe = metric_timeframe|string|trim %}
+                  {% set metric_text = (metric_value ~ " " ~ metric_unit ~ " " ~ metric_timeframe)|replace("  ", " ")|trim %}
+                  {% set metric_source = insight.source if insight.source is defined else (insight.citation if insight.citation is defined else "") %}
+                  {% set metric_source = metric_source|string|trim %}
+                  {% if metric_text or metric_source %}
+                  <div class="badge-row">
+                    {% if metric_text %}<span class="badge">{{ metric_text }}</span>{% endif %}
+                    {% if metric_source %}<span class="badge">Source: {{ metric_source }}</span>{% endif %}
+                  </div>
+                  {% endif %}
+                {% endif %}
+              </li>
+              {% endif %}
+            {% endfor %}
+          </ol>
+          {% else %}
+          <p class="muted">Not available from text.</p>
+          {% endif %}
+        </section>
+
+        {% if has_primary_figure or has_contents_preview %}
+        <section class="panel" id="section-figures" aria-label="Figure">
+          <h2>Figure</h2>
+          {% if has_primary_figure %}
+          <figure class="media-figure">
+            <img src="{{ primary_figure }}" alt="Selected figure from {{ report_title }}" loading="lazy" decoding="async">
+            <figcaption>{% if figure_caption %}{{ figure_caption }}{% else %}Representative figure from the source report.{% endif %}</figcaption>
+          </figure>
+          {% endif %}
+          {% if figure_gallery and figure_gallery|length > 1 %}
+          <div class="media-grid">
+            {% for fig in figure_gallery %}
+              {% set figure_path = fig|string|trim %}
+              {% if figure_path and figure_path != primary_figure %}
+              <figure class="media-figure">
+                <img src="{{ figure_path }}" alt="Additional figure {{ loop.index }} from {{ report_title }}" loading="lazy" decoding="async">
+                <figcaption>Additional figure {{ loop.index }}</figcaption>
+              </figure>
+              {% endif %}
+            {% endfor %}
+          </div>
+          {% endif %}
+        </section>
+        {% endif %}
+
+        <section class="panel" id="section-quotes" aria-label="Key quotes">
+          <h2>Key quotes</h2>
+          {% if has_quotes %}
+          <ul class="quote-grid">
+            {% for quote in quotes_list %}
+              {% if quote.text is defined %}
+                {% set quote_text = quote.text|string|trim %}
+              {% else %}
+                {% set quote_text = quote|string|trim %}
+              {% endif %}
+              {% if quote_text %}
+                {% set quote_author = quote.speaker if quote.speaker is defined and quote.speaker else (quote.author if quote.author is defined else "Unknown") %}
+                {% set quote_author = quote_author|string|trim %}
+                {% set quote_citation = quote.citation if quote.citation is defined else "" %}
+                {% set quote_citation = quote_citation|string|trim %}
+                <li>
+                  <figure class="quote-card">
+                    <blockquote><p>"{{ quote_text }}"</p></blockquote>
+                    <figcaption class="quote-byline">{{ quote_author }}{% if quote_citation %} ({{ quote_citation }}){% endif %}</figcaption>
+                  </figure>
+                </li>
+              {% endif %}
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p class="muted">Not available from text.</p>
+          {% endif %}
+        </section>
+
+        {% if has_expert_comment %}
+        <section class="panel" id="section-expert" aria-label="Expert comment">
+          <h2>Expert comment (generated)</h2>
+          <div class="prose-block">{{ expert_comment }}</div>
+        </section>
+        {% endif %}
+
+        {% if has_linkedin_post %}
+        <section class="panel" id="section-linkedin" aria-label="LinkedIn post">
+          <h2>LinkedIn post</h2>
+          <div class="prose-block">{{ linkedin_post }}</div>
+        </section>
+        {% endif %}
+
+        {% if has_commentary %}
+        <section class="panel" id="section-commentary" aria-label="Commentary">
+          <h2>Commentary</h2>
+          <div class="prose-block">{{ commentary }}</div>
+        </section>
+        {% endif %}
+
+        {% if canonical_url or source_url %}
+        <section class="panel" id="section-resources" aria-label="Related resources">
+          <h2>Related resources</h2>
+          <ul class="resource-list">
+            {% if canonical_url %}<li><a href="{{ canonical_url }}" rel="noopener" target="_blank">Canonical/source URL</a></li>{% endif %}
+            {% if source_url and source_url != canonical_url %}<li><a href="{{ source_url }}" rel="noopener" target="_blank">Original source link</a></li>{% endif %}
+            <li><a href="#section-summary">Back to TL;DR</a></li>
+            <li><a href="#section-insights">Jump to key insights</a></li>
+          </ul>
+        </section>
+        {% endif %}
+      </main>
+
+      <footer class="footer">
+        Generated by Market Lense. File ID: <code>{{ file_id }}</code>.
+      </footer>
+    </article>
+  </div>
 </body>
 </html>

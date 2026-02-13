@@ -21,6 +21,8 @@ Key traits:
 - Cached execution: PDF info/contents/text extraction are cached by md5, and analysis outputs (evidence packs, artifacts, validation, HTML) are cached by md5 + prompt/template hashes to skip redundant work.
 - Batched state prefilter: Drive-list skip checks for `(file_id, md5)` are grouped into batch SQLite queries to reduce per-file DB round trips while preserving per-file fallback checks.
 - Low-text resilience: text density heuristics detect PDFs with little/no extractable text and emit explicit "not available from text" artifacts + HTML notices instead of blank sections.
+- HTML digest quality: rendered HTML now uses semantic sections (`header/main/section`), guarded empty states (no blank insights/quotes), internal section navigation anchors, and enhanced readability styling for long-form generated text.
+- SEO-ready HTML: rendered digests include `meta description`, Open Graph/Twitter cards, optional canonical URL, JSON-LD (`Article`) structured data, and automatic `noindex,nofollow` on low-content fallback pages.
 - Vector store is the default and only analysis path; legacy local_text prompt stuffing has been removed now that vector_store is validated.
 - Taxonomy extraction uses vector store retrieval and maps tags to categories; tags and categories are rendered in the HTML metadata block.
 - Publish file ID resolution is DB-first: publish/publish-queue resolve `file_id` from reports metadata (`html_path -> file_id`) and fall back to HTML parsing only when mapping is unavailable.
@@ -166,7 +168,7 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
      - **Cropping**: `pdf_service.crop_regions` crops top-ranked regions.
      - **Preview rendering**: `pdf_service.render_preview` renders the first page to PNG.
      - **Cover image generation**: `cover_image_generator` resolves style from `cover-styles.yaml` using the report’s first category (falls back to `default` for styling only), while the rendered label text, title, publisher, time period, and region always come from report metadata in the DB. Renders via `cover_image_service` to `out/<report-slug>/<publisher>-<title>.png`, logging the resolved style and render path.
-     - **HTML rendering**: `render_service` generates the final HTML digest.
+     - **HTML rendering**: `render_service` generates the final HTML digest with semantic layout, section anchors, metadata cards/chips, figure/quote cards, and SEO metadata (OG/Twitter/canonical/JSON-LD).
    - If the reports DB already has `html_path` for the same `file_id` + md5 and the HTML exists on disk, the orchestrator skips report generation.
 
 7. **State record**
