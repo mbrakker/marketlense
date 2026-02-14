@@ -1013,6 +1013,66 @@ def _resolve_publisher(payload: ReportPayload, pdf_metadata: dict[str, str]) -> 
     return ""
 
 
+def _pick_non_empty_text(*values: Any) -> str:
+    for value in values:
+        candidate = str(value or "").strip()
+        if candidate:
+            return candidate
+    return ""
+
+
+def _resolve_doc_map_metadata(doc_map_pack: dict[str, Any]) -> tuple[str, str, str, str]:
+    candidate = doc_map_pack
+    candidate_prefix = "doc_map"
+    for key in ("doc_map", "docmap", "docMap"):
+        wrapped = doc_map_pack.get(key)
+        if isinstance(wrapped, dict):
+            candidate = wrapped
+            candidate_prefix = key
+            break
+    document = candidate.get("document") if isinstance(candidate.get("document"), dict) else {}
+
+    title = _pick_non_empty_text(
+        candidate.get("title"),
+        document.get("title"),
+        document.get("name"),
+    )
+    publisher = _pick_non_empty_text(
+        candidate.get("publisher"),
+        candidate.get("organization"),
+        candidate.get("organisation"),
+        document.get("publisher"),
+        document.get("organization"),
+        document.get("organisation"),
+    )
+
+    title_source = ""
+    if title:
+        if str(candidate.get("title") or "").strip():
+            title_source = f"{candidate_prefix}.title"
+        elif str(document.get("title") or "").strip():
+            title_source = f"{candidate_prefix}.document.title"
+        else:
+            title_source = f"{candidate_prefix}.document.name"
+
+    publisher_source = ""
+    if publisher:
+        if str(candidate.get("publisher") or "").strip():
+            publisher_source = f"{candidate_prefix}.publisher"
+        elif str(candidate.get("organization") or "").strip():
+            publisher_source = f"{candidate_prefix}.organization"
+        elif str(candidate.get("organisation") or "").strip():
+            publisher_source = f"{candidate_prefix}.organisation"
+        elif str(document.get("publisher") or "").strip():
+            publisher_source = f"{candidate_prefix}.document.publisher"
+        elif str(document.get("organization") or "").strip():
+            publisher_source = f"{candidate_prefix}.document.organization"
+        else:
+            publisher_source = f"{candidate_prefix}.document.organisation"
+
+    return title, publisher, title_source, publisher_source
+
+
 def _record_state_progress(
     *,
     settings: IngestSettings,
@@ -2313,12 +2373,9 @@ def generate_report(
     )
     doc_map_pack = packs.get("doc_map", {})
     if isinstance(doc_map_pack, dict):
-        doc_map_title = str(doc_map_pack.get("title") or "").strip()
+        doc_map_title, resolved_doc_map_publisher, title_source, publisher_source = _resolve_doc_map_metadata(doc_map_pack)
         if doc_map_title:
             data.title = doc_map_title
-        doc_map_publisher = str(doc_map_pack.get("publisher") or "").strip()
-        doc_map_organization = str(doc_map_pack.get("organization") or "").strip()
-        resolved_doc_map_publisher = doc_map_publisher or doc_map_organization
         if resolved_doc_map_publisher:
             data.publisher = resolved_doc_map_publisher
         if doc_map_title or resolved_doc_map_publisher:
@@ -2331,12 +2388,8 @@ def generate_report(
                     "file_id": file.file_id,
                     "title": data.title,
                     "publisher": data.publisher,
-                    "title_source": "doc_map.title" if doc_map_title else "ingest_payload",
-                    "publisher_source": (
-                        "doc_map.publisher"
-                        if doc_map_publisher
-                        else ("doc_map.organization" if doc_map_organization else "unset")
-                    ),
+                    "title_source": title_source or "ingest_payload",
+                    "publisher_source": publisher_source or "unset",
                 },
             ))
     try:
@@ -2642,6 +2695,7 @@ def generate_report(
                 file_id=file.file_id,
                 out_dir=settings.output_dir,
                 preview_png=preview_resp.image_path,
+                tag_acronyms=settings.html_tag_acronyms,
             ),
             ctx,
         )

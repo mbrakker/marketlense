@@ -12,13 +12,28 @@ from src.utils.slugify import slugify
 logger = logging.getLogger("market_lense.render_service")
 
 
+def _build_tag_acronym_map(acronyms: list[str]) -> dict[str, str]:
+    mapped: dict[str, str] = {}
+    for raw in acronyms:
+        token = str(raw).strip()
+        if not token:
+            continue
+        mapped[token.lower()] = token
+    return mapped
+
+
 def render_report(request: RenderRequest, ctx: RunContext) -> RenderResponse:
+    tag_acronym_map = _build_tag_acronym_map(request.tag_acronyms)
     logger.info(log_event(
         ctx,
         role="service",
         event="render_html_start",
         module=logger.name,
-        fields={"doc_name": request.doc_name, "file_id": request.file_id},
+        fields={
+            "doc_name": request.doc_name,
+            "file_id": request.file_id,
+            "tag_acronyms_count": len(tag_acronym_map),
+        },
     ))
     templates_dir = (Path(__file__).resolve().parents[2] / "templates")
     env = Environment(
@@ -33,6 +48,7 @@ def render_report(request: RenderRequest, ctx: RunContext) -> RenderResponse:
         title=f"{report_title} - Digest",
         report_title=report_title,
         preview_png=request.preview_png,
+        tag_acronym_map=tag_acronym_map,
     )
     report_name = slugify(request.doc_name)
     out_path = Path(request.out_dir) / f"{report_name}.html"

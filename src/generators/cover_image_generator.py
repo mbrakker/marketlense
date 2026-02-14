@@ -16,9 +16,9 @@ from src.contracts.cover_images import (
 from src.contracts.run_context import RunContext
 from src.services.cover_image_service import render_cover_image
 from src.services.cover_style_service import load_cover_styles
+from src.utils.cover_path_utils import build_cover_asset_path
 from src.utils.errors import AppError
 from src.utils.logging import log_event
-from src.utils.slugify import slugify
 
 logger = logging.getLogger("market_lense.cover_image_generator")
 
@@ -155,12 +155,14 @@ def generate_cover_images(request: CoverImageGenerationRequest, ctx: RunContext)
             ))
             continue
 
-        # Align cover output directory with other report assets (HTML, evidence packs) which use the slugified PDF name (includes "-pdf").
-        report_slug = slugify(f"{normalized.title}.pdf")
-        filename_slug = slugify(f"{normalized.publisher} {normalized.title}")
-        assets_dir = Path(request.output_dir) / report_slug / "assets"
-        assets_dir.mkdir(parents=True, exist_ok=True)
-        output_path = str(assets_dir / f"{filename_slug}.png")
+        output_path_obj = build_cover_asset_path(
+            request.output_dir,
+            normalized.file_id,
+            normalized.title,
+            normalized.publisher,
+        )
+        output_path_obj.parent.mkdir(parents=True, exist_ok=True)
+        output_path = str(output_path_obj)
 
         try:
             render_cover_image(

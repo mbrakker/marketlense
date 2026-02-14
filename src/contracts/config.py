@@ -80,6 +80,10 @@ class AppSettings:
     cost_ledger_path: str = field(default="./out/cost-ledger.jsonl", metadata={"doc": "Filesystem path for the cost ledger JSONL output."})
     cost_daily_path: str = field(default="./out/cost-daily.json", metadata={"doc": "Filesystem path for daily cost rollups JSON."})
     model_pricing: dict = field(default_factory=dict, metadata={"doc": "Per-model pricing table; keys are model IDs with per-1k token pricing."})
+    html_tag_acronyms: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Acronyms preserved in uppercase when formatting HTML metadata chips (e.g., AI, ROI)."},
+    )
     analysis_compare: bool = field(default=False, metadata={"doc": "Legacy compare toggle (ignored; vector_store only)."})
     validation_data_gap_policy: str = field(default="warn", metadata={"doc": "Policy for data gaps: warn|fail controls validation severity when text evidence is missing."})
 

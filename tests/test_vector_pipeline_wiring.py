@@ -217,6 +217,7 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
     file = DriveFile(schema_version="1.0", file_id="file_vs", name="vector.pdf", modified_time=None, md5_checksum="md5")
     validation_calls = []
     analysis_store = []
+    metadata_upserts = []
     vector_calls: list[tuple[str, dict[str, object]]] = []
     execution_trace: list[str] = []
     taxonomy_started = threading.Event()
@@ -322,7 +323,14 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
         overlap_flags["evidence_saw_taxonomy"] = taxonomy_started.wait(1.0)
         assert settings.openai_timeout_seconds == 3600.0
         return {
-            "doc_map": {"doc_id": "d"},
+            "doc_map": {
+                "docMap": {
+                    "title": "DocMap Title",
+                    "publisher": "DocMap Publisher",
+                    "sections": [{"title": "Overview"}],
+                },
+                "doc_id": "d",
+            },
             "scope": {},
             "methods": {},
             "findings": {},
@@ -382,7 +390,7 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
         return RenderResponse(schema_version="1.0", html_path=str(html_path))
 
     monkeypatch.setattr(rg, "render_report_service", _fake_render_report)
-    monkeypatch.setattr(rg, "upsert_report_metadata", lambda req, ctx: None)
+    monkeypatch.setattr(rg, "upsert_report_metadata", lambda req, ctx: metadata_upserts.append(req))
     monkeypatch.setattr(
         rg,
         "get_report_metadata",
@@ -417,6 +425,8 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
     assert "doc_map" in outcome.evidence_packs
     assert "validation" in outcome.evidence_packs
     assert Path(outcome.html_path).exists()
+    assert metadata_upserts[0].title == "DocMap Title"
+    assert metadata_upserts[0].publisher == "DocMap Publisher"
     assert validation_calls == ["file_vs"]
     assert overlap_flags["taxonomy_saw_evidence"] is True
     assert overlap_flags["evidence_saw_taxonomy"] is True

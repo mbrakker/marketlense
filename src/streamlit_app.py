@@ -53,6 +53,7 @@ from src.utils.gui_utils import (
     safe_json_loads,
     status_chip_level,
 )
+from src.utils.cover_path_utils import build_cover_asset_path
 from src.utils.logging import new_run_context
 from src.utils.slugify import slugify
 
@@ -917,10 +918,19 @@ def _render_report_command_center(settings: Any) -> None:
             st.code(html_path)
         publisher = str(report.get("publisher") or "").strip()
         title = str(report.get("title") or "").strip()
-        if title:
-            cover_path = Path(settings.output_dir) / slugify(f"{title}.pdf") / "assets" / f"{slugify(f'{publisher} {title}')}.png"
+        file_id = str(report.get("file_id") or "").strip()
+        if title and file_id:
+            cover_path = build_cover_asset_path(
+                settings.output_dir,
+                file_id=file_id,
+                title=title,
+                publisher=publisher,
+            )
+            legacy_cover_path = Path(settings.output_dir) / slugify(f"{title}.pdf") / "assets" / f"{slugify(f'{publisher} {title}')}.png"
             if cover_path.exists():
                 st.image(str(cover_path), caption="Cover preview", use_container_width=True)
+            elif legacy_cover_path.exists():
+                st.image(str(legacy_cover_path), caption="Cover preview", use_container_width=True)
 
 
 def _render_cover_images(settings: Any) -> None:

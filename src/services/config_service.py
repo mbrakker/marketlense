@@ -18,6 +18,7 @@ from src.utils.logging import log_event
 logger = logging.getLogger("market_lense.config_service")
 
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "config" / "app.yaml"
+DEFAULT_HTML_TAG_ACRONYMS_PATH = Path(__file__).resolve().parents[1] / "config" / "html-tag-acronyms.yaml"
 
 
 def _is_missing(value: object) -> bool:
@@ -30,6 +31,39 @@ def _is_missing(value: object) -> bool:
 
 def _env_value(key: str) -> str:
     return os.getenv(key, "").strip()
+
+
+def _normalize_html_tag_acronyms(values: object) -> list[str]:
+    if not isinstance(values, list):
+        return []
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        token = str(value).strip()
+        if not token:
+            continue
+        key = token.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        normalized.append(token)
+    return normalized
+
+
+def _load_html_tag_acronyms(path: str) -> list[str]:
+    cfg_path = Path(path)
+    if not cfg_path.exists():
+        raise RuntimeError(f"HTML acronym YAML not found: {path}")
+    try:
+        payload = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError as exc:
+        raise RuntimeError(f"HTML acronym YAML invalid: {path}") from exc
+    if not isinstance(payload, dict):
+        raise RuntimeError(f"HTML acronym YAML must be a mapping: {path}")
+    acronyms = _normalize_html_tag_acronyms(payload.get("html_tag_acronyms"))
+    if not acronyms:
+        raise RuntimeError(f"HTML acronym YAML must contain a non-empty 'html_tag_acronyms' list: {path}")
+    return acronyms
 
 
 def _load_config(path: str) -> dict:
@@ -135,6 +169,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     evidence_packs_cfg = ingest.get("evidence_packs", {}) or {}
     artifacts_cfg = ingest.get("artifacts", {}) or {}
     category_mapping_path = paths.get("category_mappings") or str(Path(__file__).resolve().parents[1] / "config" / "category-mappings.yaml")
+    html_tag_acronyms_path = paths.get("html_tag_acronyms") or str(DEFAULT_HTML_TAG_ACRONYMS_PATH)
     cover_style_path = paths.get("cover_styles") or str(Path(__file__).resolve().parents[1] / "config" / "cover-styles.yaml")
     analysis_cfg = data.get("analysis", {}) or {}
     cost_cfg = data.get("cost", {}) or {}
@@ -297,6 +332,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     cost_daily_path = str(cost_cfg.get("daily_path") or "./out/cost-daily.json")
     model_pricing = cost_cfg.get("pricing") or {}
     cover_cache_enabled = _as_bool(ingest.get("cover_cache_enabled"), default=True)
+    html_tag_acronyms = _load_html_tag_acronyms(html_tag_acronyms_path)
 
     drive_supports_all_drives = _as_bool(drive_cfg.get("supports_all_drives"), default=True)
     drive_include_items_from_all_drives = _as_bool(drive_cfg.get("include_items_from_all_drives"), default=True)
@@ -370,6 +406,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         cost_ledger_path=cost_ledger_path,
         cost_daily_path=cost_daily_path,
         model_pricing=model_pricing,
+        html_tag_acronyms=html_tag_acronyms,
         validation_data_gap_policy=validation_data_gap_policy,
     )
 
@@ -400,6 +437,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             "state_db": settings.state_db,
             "reports_db": settings.reports_db,
             "category_mapping_path": settings.category_mapping_path,
+            "html_tag_acronyms_path": html_tag_acronyms_path,
             "ingest_lock_path": settings.ingest_lock_path,
             "ingest_lock_ttl_seconds": settings.ingest_lock_ttl_seconds,
             "drive_supports_all_drives": settings.drive_supports_all_drives,
@@ -452,6 +490,8 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             "analysis_compare": settings.analysis_compare,
             "cost_ledger_path": settings.cost_ledger_path,
             "cost_daily_path": settings.cost_daily_path,
+            "html_tag_acronyms": settings.html_tag_acronyms,
+            "html_tag_acronyms_count": len(settings.html_tag_acronyms),
             "validation_data_gap_policy": settings.validation_data_gap_policy,
         },
     ))

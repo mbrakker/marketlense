@@ -15,6 +15,7 @@ categories:
   - pinduoduo
   - douyin
   - wechat_mini_programs
+  - wechat
   - alibaba
   - taobao
   - crossborder_from_china
@@ -33,6 +34,7 @@ categories:
   - international_shipping
   - customs
   - global_logistics
+  - crossborder_from_china
 - id: tiktok_shop
   label: TikTok Shop
   description: TikTok-native commerce including shoppable video, creator-led selling,
@@ -47,6 +49,8 @@ categories:
   - in_app_checkout
   - short_video_commerce
   - shop_tab
+  - creator_economy
+  - vertical_video
 - id: social_commerce
   label: Social Commerce
   description: Shopping experiences embedded in social platforms, including live shopping,
@@ -62,6 +66,7 @@ categories:
   - shop_tab
   - link_in_bio
   - tiktok_shop
+  - creator_economy
 - id: online_marketplaces
   label: Online Marketplaces & Platforms
   description: Multi-seller marketplaces, platform operations, and marketplace growth
@@ -141,7 +146,7 @@ categories:
   - home_automation
   - domestic_robots
   - physical_ai
-  - Innovation and experimentation
+  - innovation
 - id: retail_logistics
   label: Retail Logistics & Fulfillment
   description: Inventory, warehousing, last-mile delivery, and omnichannel fulfillment
@@ -155,6 +160,9 @@ categories:
   - order_orchestration
   - delivery_experience
   - returns_management
+  - global_logistics
+  - international_shipping
+  - crossborder_ecommerce
 - id: digital_payments
   label: Digital Payments & Wallets
   description: Online payments, mobile wallets, checkout experience, and payment security.
@@ -169,6 +177,7 @@ categories:
   - payment_security
   - payments_and_verification
   - subscriptions
+  - identity
 - id: consumer_behavior
   label: Consumer Behavior & Insights
   description: Consumer attitudes, decision drivers, and shopping behaviors across
@@ -222,7 +231,6 @@ categories:
   - astrology_tarot
   - awe_and_wonder
   - family_life
-  - 'Consumer trend: treatonomics'
   - government_sentiment
 - id: business_performance
   label: Business Performance & Growth
@@ -246,6 +254,10 @@ categories:
   - consumer_reach_points
   - retail_sales
   - fmcg
+  - fast_moving_consumer_goods
+  - shopper_penetration
+  - shopper_recruitment
+  - brand_growth_strategy
 - id: macroeconomics
   label: Macroeconomics & Regional Outlooks
   description: Macro indicators, regional outlooks, and policy-driven market dynamics.
@@ -278,7 +290,10 @@ categories:
   - risk_factors
   - international_benchmarking
   - population_health
+  - health_workforce
+  - ageing_and_long-term_care
   - quality_of_care
+  - risk_assessment
 - id: agentic_commerce
   label: Agentic Commerce & Shopping Automation
   description: Autonomous shopping agents, AI-assisted buying journeys, and automated
@@ -292,7 +307,10 @@ categories:
   - personalized_journeys
   - conversational_commerce
   - in_cart_optimization
-- id: OMNI-Channel
+  - ai_agents
+  - agentic_ai
+  - automation
+- id: omni_channel
   label: Omni-Channel Marketing
   description: Unified planning and activation across digital, physical, and owned
     channels.
@@ -306,7 +324,9 @@ categories:
   - unified_messaging
   - online_offline
   - holistic_measurement
-- id: Advertising
+  - omnichannel_commerce
+  - shopper_journey
+- id: advertising_media
   label: Advertising Strategy & Media
   description: Cross-channel advertising strategy, media planning, buying, and optimization.
   tags:
@@ -344,12 +364,13 @@ categories:
   - cultural_polarization
   - ai_in_marketing
   - inclusive_marketing
-  - Inclusive marketing and brand inclusion
   - engagement
   - engagement_strategy
   - contextual_offers
-  - Creative optimisation with AI
   - data_activation
+  - Digital_Out_of_Home
+  - DOOH
+  - Generative_AI_in_advertising
 - id: retail_media
   label: Retail & Commerce Media
   description: Retailer-owned ad networks and commerce monetization.
@@ -361,7 +382,12 @@ categories:
   - onsite_ads
   - offsite_media
   - retail_data
-  - Retail media networks and shoppable ads
+  - retail_media_networks
+  - shoppable_ads
+  - RMN
+  - retail_media_advertising
+  - marketplace_ads
+  - advertising_revenue
 - id: connected_tv
   label: Connected TV & Streaming
   description: CTV, streaming video, and ad-supported OTT/FAST inventory.
@@ -387,6 +413,7 @@ categories:
   - svod
   - podcasting
   - digital_video
+  - Video and streaming advertising
 - id: measurement_attribution
   label: Measurement & Attribution
   description: Performance measurement, incrementality, and optimization.
@@ -407,6 +434,9 @@ categories:
   - forecasts
   - growth_forecast
   - data_optimization
+  - Data Collection and Panel Methodology
+  - Ad equity and brand lift measurement
+  - Media channels performance
 - id: privacy_identity
   label: Privacy, Identity & Data
   description: Identity resolution, data collaboration, and compliance.
@@ -475,6 +505,8 @@ categories:
   - supply_path_optimization
   - spo
   - programmatic_advertising
+  - clean_room
+  - advertising_identity
 - id: social_video_creator
   label: Social, Short Video & Creator
   description: Social platforms, creator economy, and short-form video.
@@ -503,6 +535,7 @@ categories:
   - Micro-communities and social engagement
   - vertical_video
   - game_development
+  - Social media advertising
 - id: search_performance
   label: Search & Performance Marketing
   description: Paid search, performance media, and optimization tactics.
@@ -533,31 +566,115 @@ categories:
   - traffic_acquisition
   - web_traffic
   - app_downloads
-uncategorized:
-- title: WORLDPANEL - Brand-footprint-2025 - ACIG
+- id: cpg
+  label: Consumer Packed Goods (CPG)
+  description: Packaged household and personal consumables sold through retail and
+    ecommerce channels.
   tags:
-  - Fast-Moving Consumer Goods (FMCG)
-  - Brand Footprint and Global Brand Ranking
-  - Consumer Reach Points (CRP) metric
-  - Penetration and Shopper Recruitment
-  - Brand Growth Strategy
-  - Product Innovation and Occasion Expansion
-  - Regional Market Performance Analysis
-  - Top 50 Most Chosen Brands
-  - Data Collection and Panel Methodology
-- title: KANTAR - Media Reactions 2025 APAC Webinar Deck_ACIG
+  - cpg
+  - consumer_packed_goods
+  - consumer_packaged_goods
+  - packaged_goods
+  - household_consumables
+  - personal_care_products
+  - packaged_foods
+  - cpg_brands
+  - cpg_marketing
+  - cpg_distribution
+  - fmcg
+- id: fmcg
+  label: Fast Moving Consumer Goods (FMCG)
+  description: High-frequency, low-cost consumer products with rapid inventory turnover
+    across channels.
   tags:
-  - Ad equity and brand lift measurement
-  - Media channels performance
-  - Media brand ad equity
-  - Consumer ad receptivity
-  - Marketer preferences and budget allocation
-  - Digital Out of Home (DOOH)
-  - Video and streaming advertising
-  - Social media advertising
-  - E-commerce and retail media advertising
-  - Generative AI in advertising
-- title: OECD - Health at a Glance 2025_ACIG
+  - fmcg
+  - fast_moving_consumer_goods
+  - fast_turnover_goods
+  - everyday_essentials
+  - grocery_staples
+  - household_essentials
+  - volume_driven_growth
+  - route_to_market
+  - traditional_trade
+  - modern_trade
+  - cpg
+- id: luxury_premium
+  label: Luxury & Premium
+  description: Premium and luxury positioning, pricing, and demand dynamics across
+    categories.
   tags:
-  - health_workforce
-  - ageing_and_long-term_care
+  - luxury_premium
+  - luxury
+  - premiumization
+  - premium_brands
+  - prestige_brands
+  - high_end_retail
+  - affluent_consumers
+  - aspirational_consumers
+  - exclusivity
+  - premium_pricing
+  - luxury_spending
+- id: beauty
+  label: Beauty
+  description: Beauty and personal care categories, including skincare, haircare,
+    and cosmetics.
+  tags:
+  - beauty
+  - beauty_and_personal_care
+  - cosmetics
+  - skincare
+  - haircare
+  - makeup
+  - fragrance
+  - dermocosmetics
+  - beauty_brands
+  - beauty_retail
+  - personal_care_products
+- id: e_grocery
+  label: eGrocery
+  description: Online grocery shopping, fulfillment, and quick-commerce models.
+  tags:
+  - egrocery
+  - e_grocery
+  - online_grocery
+  - grocery_delivery
+  - quick_commerce
+  - q_commerce
+  - dark_stores
+  - fresh_food_delivery
+  - digital_grocery_basket
+  - grocery_fulfillment
+  - last_mile
+- id: fashion
+  label: Fashion
+  description: Apparel, footwear, and accessories trends, merchandising, and commerce
+    performance.
+  tags:
+  - fashion
+  - apparel
+  - footwear
+  - fashion_accessories
+  - fashion_ecommerce
+  - fast_fashion
+  - premium_fashion
+  - seasonal_collections
+  - size_and_fit
+  - apparel_returns
+  - mens_fashion
+- id: electronics
+  label: Electronics
+  description: Consumer electronics categories, product innovation cycles, and retail
+    demand.
+  tags:
+  - electronics
+  - consumer_electronics
+  - smartphones
+  - laptops
+  - tablets
+  - wearables
+  - home_electronics
+  - smart_devices
+  - electronics_retail
+  - device_upgrade_cycles
+  - smart_home
+uncategorized: []

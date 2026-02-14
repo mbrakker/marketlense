@@ -214,6 +214,10 @@ class RenderRequest:
     file_id: str = field(metadata={"doc": "Drive file ID."})
     out_dir: str = field(metadata={"doc": "Output directory for rendered HTML."})
     preview_png: Optional[str] = field(default=None, metadata={"doc": "Relative preview image path, if any."})
+    tag_acronyms: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Acronyms preserved in uppercase while formatting HTML taxonomy/category/topic chip labels."},
+    )
 
 
 @dataclass(frozen=True)

@@ -103,6 +103,29 @@
 {% set robots_content = data.robots if data.robots is defined and data.robots else ("index,follow" if has_substantive_content and not not_available else "noindex,nofollow") %}
 {% set robots_content = robots_content|string|trim %}
 {% set ld_keywords = tags_list if tags_list|length > 0 else categories_list %}
+{% set acronym_map = tag_acronym_map if tag_acronym_map is defined and tag_acronym_map else {} %}
+{% set lowercase_connectors = ["a", "an", "and", "as", "at", "by", "for", "from", "in", "of", "on", "or", "the", "to", "vs", "via", "with"] %}
+{% macro format_chip_label(raw_label) -%}
+  {%- set label = raw_label|string|trim -%}
+  {%- if not label -%}
+    {{- "" -}}
+  {%- else -%}
+    {%- set normalized = label|replace("_", " ")|replace("-", " ") -%}
+    {%- set words_ns = namespace(parts=[]) -%}
+    {%- for token in normalized.split() -%}
+      {%- set token_lower = token|lower -%}
+      {%- if token_lower in acronym_map -%}
+        {%- set pretty = acronym_map[token_lower] -%}
+      {%- elif loop.index0 > 0 and token_lower in lowercase_connectors -%}
+        {%- set pretty = token_lower -%}
+      {%- else -%}
+        {%- set pretty = token[:1]|upper ~ token[1:]|lower -%}
+      {%- endif -%}
+      {%- set words_ns.parts = words_ns.parts + [pretty] -%}
+    {%- endfor -%}
+    {{- words_ns.parts|join(" ") -}}
+  {%- endif -%}
+{%- endmacro %}
 {% set json_ld = {
   "@context": "https://schema.org",
   "@type": "Article",
@@ -599,7 +622,7 @@ h2{
   font-weight:700;
 }
 .summary-copy{
-  max-width:72ch;
+  max-width:100%;
   font-size:1.03rem;
 }
 .insight-grid{
@@ -791,7 +814,7 @@ h2{
 }
 .prose-block .prose-paragraph{
   margin:0;
-  max-width:72ch;
+  max-width:100%;
 }
 .lightbox{
   position:fixed;
@@ -1008,7 +1031,7 @@ h2{
                 {% for category in categories_list %}
                   {% set category_value = category|string|trim %}
                   {% if category_value %}
-                  <li><span class="chip">{{ category_value }}</span></li>
+                  <li><span class="chip">{{ format_chip_label(category_value) }}</span></li>
                   {% endif %}
                 {% endfor %}
               </ul>
@@ -1021,7 +1044,7 @@ h2{
                 {% for tag in tags_list %}
                   {% set tag_value = tag|string|trim %}
                   {% if tag_value %}
-                  <li><span class="chip">{{ tag_value }}</span></li>
+                  <li><span class="chip">{{ format_chip_label(tag_value) }}</span></li>
                   {% endif %}
                 {% endfor %}
               </ul>
@@ -1071,7 +1094,7 @@ h2{
             {% for topic in topics_list %}
               {% set topic_value = topic|string|trim %}
               {% if topic_value %}
-              <li><span class="chip">{{ topic_value }}</span></li>
+              <li><span class="chip">{{ format_chip_label(topic_value) }}</span></li>
               {% endif %}
             {% endfor %}
           </ul>

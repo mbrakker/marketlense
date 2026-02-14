@@ -13,6 +13,16 @@ from src.services.config_service import load_settings, load_publish_settings
 class TestConfigService(unittest.TestCase):
     def _write_config(self, tmp_dir: str, include_analysis: bool = False, include_publish: bool = False) -> str:
         config_path = Path(tmp_dir) / "app.yaml"
+        acronyms_path = Path(tmp_dir) / "html-tag-acronyms.yaml"
+        acronyms_path.write_text(
+            yaml.safe_dump(
+                {
+                    "schema_version": "1.0",
+                    "html_tag_acronyms": ["AI", "ROI", "CPC"],
+                }
+            ),
+            encoding="utf-8",
+        )
         config = {
             "schema_version": "1.0",
             "paths": {
@@ -20,6 +30,7 @@ class TestConfigService(unittest.TestCase):
                 "cache_dir": str(Path(tmp_dir, "cache")),
                 "state_db": str(Path(tmp_dir, "state", "index.sqlite")),
                 "reports_db": str(Path(tmp_dir, "state", "reports.sqlite")),
+                "html_tag_acronyms": str(acronyms_path),
             },
             "ingest": {
                 "google_sa_path": str(Path(tmp_dir, "sa.json")),
@@ -57,6 +68,33 @@ class TestConfigService(unittest.TestCase):
         self.assertTrue(settings.use_vector_store)
         self.assertTrue(settings.vector_store_keep)
         self.assertEqual("./out/cost-ledger.jsonl", settings.cost_ledger_path)
+        self.assertIn("AI", settings.html_tag_acronyms)
+        self.assertIn("ROI", settings.html_tag_acronyms)
+
+    def test_html_tag_acronyms_can_be_configured(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_analysis=False)
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            acronyms_path = Path(tmp_dir) / "custom-html-tag-acronyms.yaml"
+            acronyms_path.write_text(
+                yaml.safe_dump(
+                    {
+                        "schema_version": "1.0",
+                        "html_tag_acronyms": ["AI", "ROI", "CPC", "ai", ""],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            cfg_data["paths"]["html_tag_acronyms"] = str(acronyms_path)
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
+
+            with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
+                settings = load_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                )
+
+        self.assertEqual(["AI", "ROI", "CPC"], settings.html_tag_acronyms)
 
     def test_env_overrides_analysis_mode_and_flags(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

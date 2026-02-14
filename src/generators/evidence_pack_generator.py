@@ -467,6 +467,45 @@ def _empty_payload(schema_name: str, reason: str) -> dict:
     return {"scope": "", "methods": [], "findings": [], "limitations": [], "quote_candidates": [], "not_found_reason": reason}
 
 
+def _text(value: object) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _first_non_empty_text(*values: object) -> str:
+    for value in values:
+        candidate = _text(value)
+        if candidate:
+            return candidate
+    return ""
+
+
+def _coerce_pages(value: object) -> list[int]:
+    items = value if isinstance(value, list) else [value]
+    pages: list[int] = []
+    seen: set[int] = set()
+    for item in items:
+        if isinstance(item, bool):
+            continue
+        if isinstance(item, (int, float)):
+            page_num = int(item)
+            if page_num > 0 and page_num not in seen:
+                seen.add(page_num)
+                pages.append(page_num)
+            continue
+        tokenized = _text(item).replace(";", ",").replace("|", ",")
+        for token in tokenized.split(","):
+            token_text = token.strip()
+            if not token_text or not token_text.isdigit():
+                continue
+            page_num = int(token_text)
+            if page_num > 0 and page_num not in seen:
+                seen.add(page_num)
+                pages.append(page_num)
+    return pages
+
+
 def _summarize_doc_map(payload: dict) -> dict:
     if not isinstance(payload, dict):
         return {
@@ -496,22 +535,72 @@ def _summarize_doc_map(payload: dict) -> dict:
 def _normalize_doc_map_payload(payload: dict, report_id: str) -> Tuple[dict, dict]:
     wrapper_key = ""
     candidate = payload
-    if isinstance(payload.get("docmap"), dict):
-        wrapper_key = "docmap"
-        candidate = payload["docmap"]
-    elif isinstance(payload.get("doc_map"), dict):
-        wrapper_key = "doc_map"
-        candidate = payload["doc_map"]
+    for key in ("docmap", "doc_map", "docMap"):
+        wrapped = payload.get(key)
+        if isinstance(wrapped, dict):
+            wrapper_key = key
+            candidate = wrapped
+            break
     normalized = dict(candidate) if isinstance(candidate, dict) else {}
+    changed = bool(wrapper_key)
     cache_meta = payload.get("_cache") if isinstance(payload.get("_cache"), dict) else None
     if cache_meta:
         normalized["_cache"] = cache_meta
-    doc_id = str(normalized.get("doc_id") or "").strip()
+    doc_meta = normalized.get("document") if isinstance(normalized.get("document"), dict) else {}
+
+    normalized_title = _text(normalized.get("title"))
+    resolved_title = _first_non_empty_text(
+        normalized_title,
+        normalized.get("report_title"),
+        doc_meta.get("title"),
+        doc_meta.get("name"),
+    )
+    if resolved_title and resolved_title != normalized_title:
+        normalized["title"] = resolved_title
+        changed = True
+
+    normalized_publisher = _text(normalized.get("publisher"))
+    resolved_publisher = _first_non_empty_text(
+        normalized_publisher,
+        normalized.get("organization"),
+        normalized.get("organisation"),
+        doc_meta.get("publisher"),
+        doc_meta.get("organization"),
+        doc_meta.get("organisation"),
+    )
+    if resolved_publisher and resolved_publisher != normalized_publisher:
+        normalized["publisher"] = resolved_publisher
+        changed = True
+
+    normalized_summary = _text(normalized.get("summary"))
+    resolved_summary = _first_non_empty_text(
+        normalized_summary,
+        normalized.get("description"),
+        doc_meta.get("summary"),
+        doc_meta.get("description"),
+    )
+    if resolved_summary and resolved_summary != normalized_summary:
+        normalized["summary"] = resolved_summary
+        changed = True
+
+    doc_id = _text(normalized.get("doc_id"))
     doc_id_filled = False
     if not doc_id:
         normalized["doc_id"] = report_id
         doc_id_filled = True
+        changed = True
+    elif normalized.get("doc_id") != doc_id:
+        normalized["doc_id"] = doc_id
+        changed = True
+
     sections = normalized.get("sections")
+    if not isinstance(sections, list):
+        structure = normalized.get("structure")
+        if isinstance(structure, list):
+            normalized["sections"] = structure
+            sections = normalized["sections"]
+            changed = True
+
     sections_with_ids = 0
     added_section_ids = 0
     dropped_sections = 0
@@ -522,17 +611,57 @@ def _normalize_doc_map_payload(payload: dict, report_id: str) -> Tuple[dict, dic
                 dropped_sections += 1
                 continue
             sec = dict(section)
+            sec_title = _first_non_empty_text(
+                sec.get("title"),
+                sec.get("heading"),
+                sec.get("name"),
+                sec.get("section"),
+                sec.get("label"),
+            )
+            if not sec_title:
+                sec_title = f"Section {idx + 1}"
+            if _text(sec.get("title")) != sec_title:
+                sec["title"] = sec_title
+                changed = True
+
             sec_id = str(sec.get("id") or "").strip()
             if not sec_id:
-                title = str(sec.get("title") or "").strip()
-                slug = slugify(title) if title else ""
+                slug = slugify(sec_title) if sec_title else ""
                 sec_id = slug or f"section_{idx + 1}"
                 sec["id"] = sec_id
                 added_section_ids += 1
+                changed = True
+
+            sec_summary = _text(sec.get("summary"))
+            resolved_sec_summary = _first_non_empty_text(sec_summary, sec.get("description"), sec.get("text"), sec.get("finding"))
+            if resolved_sec_summary and resolved_sec_summary != sec_summary:
+                sec["summary"] = resolved_sec_summary
+                changed = True
+
+            existing_pages = _coerce_pages(sec.get("pages"))
+            resolved_pages = existing_pages or _coerce_pages(sec.get("page"))
+            if resolved_pages and resolved_pages != existing_pages:
+                sec["pages"] = resolved_pages
+                changed = True
+
+            refs = sec.get("references")
+            if not isinstance(refs, list):
+                refs = []
+            normalized_refs = [_text(ref) for ref in refs if _text(ref)]
+            if not normalized_refs:
+                source_ref = _text(sec.get("source"))
+                if source_ref:
+                    normalized_refs = [source_ref]
+            if normalized_refs and normalized_refs != refs:
+                sec["references"] = normalized_refs
+                changed = True
+
             sections_with_ids += 1 if sec.get("id") else 0
             updated_sections.append(sec)
         normalized["sections"] = updated_sections
-    changed = wrapper_key != "" or doc_id_filled or added_section_ids > 0 or dropped_sections > 0
+        if dropped_sections > 0:
+            changed = True
+
     return normalized, {
         "changed": changed,
         "wrapper_key": wrapper_key,

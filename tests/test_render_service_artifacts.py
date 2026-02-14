@@ -124,3 +124,39 @@ def test_render_hides_figure_sections_when_disabled(tmp_path):
 
     assert 'id="section-figures"' not in html
     assert 'id="section-contents-preview"' not in html
+
+
+def test_render_formats_slug_chips_with_acronyms(tmp_path):
+    data = {
+        "title": "Chip Format Report",
+        "tldr": "TLDR",
+        "insights": ["Insight A", "Insight B", "Insight C", "Insight D", "Insight E"],
+        "quote": {"text": "Quote", "author": "Author"},
+        "commentary": "Commentary",
+        "publisher": "Publisher",
+        "categories_display": ["ai-in-retail", "private_label"],
+        "taxonomy": ["fmcg", "consumer_trends", "roi"],
+        "region": "US",
+        "time_period": "2024",
+        "contents_page_number": 0,
+        "artifacts": {"toc_topics": ["ai", "consumer_trends"]},
+    }
+    req = RenderRequest(
+        schema_version="1.0",
+        data=data,
+        doc_name="chips.pdf",
+        file_id="file_chip",
+        out_dir=str(tmp_path),
+        preview_png=None,
+        tag_acronyms=["AI", "FMCG", "ROI"],
+    )
+    resp = render_report(req, _ctx())
+    html = Path(resp.html_path).read_text(encoding="utf-8")
+
+    assert "AI in Retail" in html
+    assert "Private Label" in html
+    assert "FMCG" in html
+    assert "Consumer Trends" in html
+    assert "ROI" in html
+    assert "ai-in-retail" not in html
+    assert "private_label" not in html

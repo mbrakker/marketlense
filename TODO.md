@@ -175,3 +175,105 @@ Remediation plan:
    - Keep `pytest` green.
    - Add regression tests for extraction fallback and metadata parsing helpers.
    - Add benchmark checks for ingest throughput and cost-ledger growth.
+
+## Output Quality Improvements (Schemas + Contracts)
+
+1. Replace custom schema validation with a standards-compliant JSON Schema engine (`jsonschema`).
+   - Reasoning: Current validator only enforces a subset (`type`, `required`, `enum`) and ignores many JSON Schema keywords.
+   - Pros: Stronger contract enforcement; fewer malformed outputs crossing boundaries.
+   - Cons: Adds dependency and may initially increase validation failures until prompts/normalizers are adjusted.
+
+2. Fix union-type handling (e.g., `["string", "null"]`) in schema validation.
+   - Reasoning: Existing implementation takes the first type and can mis-handle nullable fields.
+   - Pros: Correct validation of optional/null output fields.
+   - Cons: Exposes latent data issues currently hidden by permissive behavior.
+
+3. Add `additionalProperties: false` for strict output schemas (root and nested objects where appropriate).
+   - Reasoning: Hallucinated/extra keys currently pass and can leak into downstream logic.
+   - Pros: Cleaner payload contracts and safer consumers.
+   - Cons: Requires explicit schema updates for intentional field additions.
+
+4. Enforce strict `schema_version` via schema enums and explicit evolution policy.
+   - Reasoning: Versions exist but are not uniformly constrained.
+   - Pros: Safer migrations and clearer compatibility boundaries.
+   - Cons: Version bumps and adapters become mandatory for breaking changes.
+
+5. Add non-empty text constraints (`minLength`, trimmed text checks) for key fields.
+   - Reasoning: Empty strings often pass schema but degrade output quality.
+   - Pros: Better minimum content quality in generated artifacts.
+   - Cons: More outputs may require fallback/retry handling.
+
+6. Add numeric bounds for page/citation fields (`minimum`, explicit 0 policy).
+   - Reasoning: Page values can be ambiguous or invalid without bounds.
+   - Pros: Better citation integrity and less broken UI linking.
+   - Cons: Legacy payload normalization may be required.
+
+7. Add cardinality constraints (`minItems`/`maxItems`) for arrays such as insights, quotes, topics.
+   - Reasoning: Shape drift causes inconsistent rendering and validation noise.
+   - Pros: Stable output shape for templates and downstream consumers.
+   - Cons: Requires explicit policy for truncation/padding behavior.
+
+8. Replace free-form metric strings with typed metric fields.
+   - Reasoning: Value/unit/confidence as plain strings are hard to validate and compare.
+   - Pros: Higher-quality metric semantics and stronger validation.
+   - Cons: Larger schema + prompt migration effort.
+
+9. Enforce referential integrity for `evidence_id` across artifacts and evidence packs.
+   - Reasoning: IDs are present but not guaranteed to map to real evidence entries.
+   - Pros: Stronger grounding and traceability.
+   - Cons: Requires cross-pack validation logic and clearer failure handling.
+
+10. Split `evidence_pack.schema.json` into per-pack schemas.
+    - Reasoning: A single permissive schema hides pack-specific quality failures.
+    - Pros: Precise validation per pack (`doc_map`, `scope`, `methods`, `findings`, `limitations`, `quote_candidates`).
+    - Cons: More schema files and maintenance overhead.
+
+11. Replace placeholder textual artifacts with explicit fallback envelope/status.
+    - Reasoning: Placeholder prose can be mistaken as real analysis content.
+    - Pros: Clear downstream handling for degraded/no-text states.
+    - Cons: Requires renderer/publisher adjustments to new fallback semantics.
+
+12. Remove default blank-padding for insights; preserve truthful output count.
+    - Reasoning: Padding with empty entries passes shape checks but lowers real output quality.
+    - Pros: More honest and interpretable outputs.
+    - Cons: Some UI/template assumptions for fixed-length lists need updates.
+
+13. Re-validate cached payloads against current schema before returning cache hits.
+    - Reasoning: Cache key match does not guarantee payload validity under updated schemas.
+    - Pros: Prevents stale invalid outputs from persisting.
+    - Cons: Extra read/validation cost on cache retrieval.
+
+14. Add publish/render quality gates beyond schema validity.
+    - Reasoning: Schema-valid outputs can still be weakly grounded or low quality.
+    - Pros: Higher trust in published deliverables.
+    - Cons: More reports may be blocked or downgraded and require operator override policy.
+
+15. Tighten taxonomy normalization and allowed-tag enforcement.
+    - Reasoning: Taxonomy outputs are permissive and can drift from category mappings.
+    - Pros: Better category consistency and cleaner analytics.
+    - Cons: Risk of lower recall for novel tags unless uncategorized workflow is maintained.
+
+16. Add conditional schema rules for fallback semantics.
+    - Reasoning: Empty taxonomy/evidence should require explicit `not_found_reason`.
+    - Pros: Better observability and deterministic troubleshooting.
+    - Cons: Stricter constraints may increase fallback-only outputs initially.
+
+17. Extend validation issue schema with machine-readable fields (`code`, `evidence_id`, `confidence`).
+    - Reasoning: Free-text issue messages are harder to automate/policy-gate.
+    - Pros: Better filtering, reporting, and automated decisioning.
+    - Cons: Requires coordinated changes in generators, schemas, and tests.
+
+18. Improve report-level severity semantics to preserve info-only signal.
+    - Reasoning: Current aggregation can collapse informative checks into plain `pass`.
+    - Pros: Better quality monitoring without over-blocking.
+    - Cons: Requires policy updates in UI/publish logic.
+
+19. Align doc map schema, generator usage, and README field definitions.
+    - Reasoning: Current docs/usage mention fields not fully represented in schema.
+    - Pros: Reduced contract ambiguity and easier maintenance.
+    - Cons: Documentation and contract updates must be coordinated.
+
+20. Expand schema-focused test coverage (negative and edge paths).
+    - Reasoning: Existing tests validate only a narrow subset of schema behavior.
+    - Pros: Better regression protection for output quality guarantees.
+    - Cons: Larger test suite and additional CI runtime.

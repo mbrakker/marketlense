@@ -4,6 +4,7 @@ import base64
 import json
 import logging
 import mimetypes
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict
@@ -73,6 +74,56 @@ def _validate_payload(data: dict) -> None:
         raise ValueError("`region` is required")
     if "time_period" not in data:
         raise ValueError("`time_period` is required")
+
+
+def _extract_unsupported_parameter(exc: Exception) -> str | None:
+    message = str(exc)
+    match = re.search(r"Unsupported parameter:\s*'([^']+)'", message)
+    if match:
+        return str(match.group(1))
+    param = getattr(exc, "param", None)
+    if isinstance(param, str) and param.strip():
+        return param.strip()
+    body = getattr(exc, "body", None)
+    if isinstance(body, dict):
+        error_obj = body.get("error")
+        if isinstance(error_obj, dict):
+            body_param = error_obj.get("param")
+            if isinstance(body_param, str) and body_param.strip():
+                return body_param.strip()
+    return None
+
+
+def _responses_create_with_unsupported_param_retry(
+    *,
+    client: Any,
+    payload_args: dict,
+    fallback_params: tuple[str, ...],
+    ctx: RunContext,
+    event_name: str,
+    model: str,
+) -> Any:
+    attempt_args = dict(payload_args)
+    while True:
+        try:
+            return client.responses.create(**attempt_args)
+        except Exception as exc:
+            unsupported_param = _extract_unsupported_parameter(exc)
+            if unsupported_param not in fallback_params or unsupported_param not in attempt_args:
+                raise
+            attempt_args.pop(unsupported_param, None)
+            logger.info(log_event(
+                ctx,
+                role="service",
+                event=event_name,
+                module=logger.name,
+                fields={
+                    "model": model,
+                    "dropped_param": unsupported_param,
+                    "error_type": type(exc).__name__,
+                    "error": str(exc),
+                },
+            ))
 
 
 def _legacy_chat_completion(request: OpenAIAnalyzeRequest) -> Dict[str, Any]:
@@ -503,15 +554,23 @@ def openai_chat_json_with_images(request: OpenAIJSONImagePromptRequest, ctx: Run
         user_content.extend({"type": "input_image", "image_url": image_url} for image_url in image_urls)
         payload_args = {
             "model": request.model,
-            "temperature": request.temperature,
             "input": [
                 {"role": "system", "content": [{"type": "input_text", "text": request.system_prompt}]},
                 {"role": "user", "content": user_content},
             ],
         }
+        if request.temperature is not None:
+            payload_args["temperature"] = request.temperature
         if request.seed is not None:
             payload_args["seed"] = request.seed
-        resp = client.responses.create(**payload_args)
+        resp = _responses_create_with_unsupported_param_retry(
+            client=client,
+            payload_args=payload_args,
+            fallback_params=("temperature", "seed"),
+            ctx=ctx,
+            event_name="openai_chat_json_with_images_retry_without_param",
+            model=request.model,
+        )
     except TypeError as exc:
         raise AppError(
             code="openai_client_unavailable",
@@ -521,6 +580,17 @@ def openai_chat_json_with_images(request: OpenAIJSONImagePromptRequest, ctx: Run
             context={"model": request.model},
         ) from exc
     except Exception as exc:
+        logger.info(log_event(
+            ctx,
+            role="service",
+            event="openai_chat_json_with_images_error",
+            module=logger.name,
+            fields={
+                "model": request.model,
+                "error_type": type(exc).__name__,
+                "error": str(exc),
+            },
+        ))
         raise AppError(
             code="openai_chat_images_failed",
             message="OpenAI JSON+images request failed",

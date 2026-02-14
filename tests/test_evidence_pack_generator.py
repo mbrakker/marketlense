@@ -191,6 +191,68 @@ def test_generate_evidence_packs_normalizes_docmap_wrapper(tmp_path):
     assert len(analysis_store.stored) == 6
 
 
+def test_generate_evidence_packs_normalizes_docmap_camelcase_wrapper(tmp_path):
+    parsed = {
+        "docMap": {
+            "title": "THE 2026 INDUSTRY PULSE REPORT",
+            "publisher": "Integral Ad Science",
+            "sections": [{"title": "Top media challenges and opportunities", "page": 5}],
+        }
+    }
+    fake_openai = FakeOpenAIClient(parsed)
+    analysis_store = FakeAnalysisStore()
+    packs = generate_evidence_packs(
+        report_id="r1",
+        report_name="report",
+        vector_store_id="vs_1",
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=fake_openai,
+        prompt_client=FakePromptClient(),
+        analysis_store=analysis_store,
+    )
+    doc_map = packs["doc_map"]
+    assert doc_map["doc_id"] == "r1"
+    assert doc_map["title"] == "THE 2026 INDUSTRY PULSE REPORT"
+    assert doc_map["publisher"] == "Integral Ad Science"
+    assert isinstance(doc_map["sections"], list)
+    assert doc_map["sections"][0]["id"] == "top-media-challenges-and-opportunities"
+    assert doc_map["sections"][0]["pages"] == [5]
+    assert len(analysis_store.stored) == 6
+
+
+def test_generate_evidence_packs_normalizes_document_structure_shape(tmp_path):
+    parsed = {
+        "docmap_version": "1.0",
+        "document": {
+            "title": "Six Predictions for 2026 from AI to Gaming",
+            "publisher": "Sensor Tower",
+            "description": "Executive summary and six predictions.",
+        },
+        "structure": [{"title": "Executive Summary", "summary": "Overview of six predictions."}],
+    }
+    fake_openai = FakeOpenAIClient(parsed)
+    analysis_store = FakeAnalysisStore()
+    packs = generate_evidence_packs(
+        report_id="r1",
+        report_name="report",
+        vector_store_id="vs_1",
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=fake_openai,
+        prompt_client=FakePromptClient(),
+        analysis_store=analysis_store,
+    )
+    doc_map = packs["doc_map"]
+    assert doc_map["doc_id"] == "r1"
+    assert doc_map["title"] == "Six Predictions for 2026 from AI to Gaming"
+    assert doc_map["publisher"] == "Sensor Tower"
+    assert doc_map["summary"] == "Executive summary and six predictions."
+    assert isinstance(doc_map["sections"], list)
+    assert doc_map["sections"][0]["id"] == "executive-summary"
+    assert len(analysis_store.stored) == 6
+
+
 def test_generate_evidence_packs_parallel_respects_global_in_flight_limit(tmp_path):
     settings = replace(
         _settings(tmp_path),
