@@ -154,17 +154,18 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
      - **Text extraction**: `pdf_service.extract_pdf_text` extracts text from the first N pages (reusing the shared context when present) and computes text density (cached by md5 + extraction settings); if density falls below `ingest.pdf_text.min_density`, downstream artifacts short-circuit to explicit “not available from text” placeholders with HTML notices.
      - **Text extractability check**: deterministically samples `ingest.pdf_text.sample_pages` pages (seeded by file id + hash) via `pdf_service.sample_pdf_text`; if none contain extractable text, the run aborts early with `pdf_text_unextractable` before any vector store or LLM work.
      - **LLM analysis**:
-      - `vector_store` mode (only path): Ensures a vector store exists (create -> upload PDF -> attach) and starts provider-side indexing first.
-      - While indexing runs, the generator continues PDF-only work (figure/candidate extraction, ranking, preview).
-      - It waits for indexing only right before vector-dependent stages (taxonomy/evidence/artifacts) via `vector_store_service.wait_until_indexed`.
-      - After indexing is ready, taxonomy/category resolution and evidence-pack generation run concurrently when `ingest.report_worker_limit > 1` (serial when `= 1`).
-      - Evidence packs are generated via `src/generators/evidence_pack_generator.py` (doc_map, scope, methods, findings, limitations, quote_candidates), where `doc_map` runs first as a hard gate and the remaining packs run in parallel (`ingest.evidence_packs.parallel_workers`) under a process-wide limiter (`ingest.evidence_packs.global_max_in_flight` + `ingest.evidence_packs.global_min_interval_ms`).
-      - Artifacts are generated via `src/generators/artifact_generator.py` using a dependency-aware parallel DAG: `toc` + `summary` + `insights_candidates` + `quotes` in parallel, then `insights_final`, then `expert_comment` + `linkedin_post` in parallel. Independent steps use `ingest.artifacts.parallel_workers` and a process-wide limiter (`ingest.artifacts.global_max_in_flight` + `ingest.artifacts.global_min_interval_ms`).
-      - Packs are stored under `out/<report-slug>/report_analysis/*.json` (mirrored to `out/report_analysis/<file_id>/` for backward compatibility unless `analysis.mirror_legacy_packs=false`), and persisted in the metadata DB (`reports` table columns `vector_store_id`, `evidence_packs_json`; state DB stores `vector_store_status`, `indexed_at_utc`, `openai_file_id`, `last_error`).
-      - Orchestrator logs `VECTOR_STORE_CREATED`, `VECTOR_STORE_INDEXED`, `EVIDENCE_READY`.
+       - `vector_store` mode (only path): Ensures a vector store exists (create -> upload PDF -> attach) and starts provider-side indexing first.
+       - While indexing runs, the generator continues PDF-only work (figure/candidate extraction, ranking, preview).
+       - It waits for indexing only right before vector-dependent stages (taxonomy/evidence/artifacts) via `vector_store_service.wait_until_indexed`.
+       - After indexing is ready, taxonomy/category resolution and evidence-pack generation run concurrently when `ingest.report_worker_limit > 1` (serial when `= 1`).
+       - Evidence packs are generated via `src/generators/evidence_pack_generator.py` (doc_map, scope, methods, findings, limitations, quote_candidates), where `doc_map` runs first as a hard gate and the remaining packs run in parallel (`ingest.evidence_packs.parallel_workers`) under a process-wide limiter (`ingest.evidence_packs.global_max_in_flight` + `ingest.evidence_packs.global_min_interval_ms`).
+       - Artifacts are generated via `src/generators/artifact_generator.py` using a dependency-aware parallel DAG: `toc` + `summary` + `insights_candidates` + `quotes` in parallel, then `insights_final`, then `expert_comment` + `linkedin_post` in parallel. Independent steps use `ingest.artifacts.parallel_workers` and a process-wide limiter (`ingest.artifacts.global_max_in_flight` + `ingest.artifacts.global_min_interval_ms`).
+       - Packs are stored under `out/<report-slug>/report_analysis/*.json` (mirrored to `out/report_analysis/<file_id>/` for backward compatibility unless `analysis.mirror_legacy_packs=false`), and persisted in the metadata DB (`reports` table columns `vector_store_id`, `evidence_packs_json`; state DB stores `vector_store_status`, `indexed_at_utc`, `openai_file_id`, `last_error`).
+       - Orchestrator logs `VECTOR_STORE_CREATED`, `VECTOR_STORE_INDEXED`, `EVIDENCE_READY`.
        - Evidence packs, artifacts, validation reports, and HTML are cached by md5 + prompt/template hashes to skip repeat LLM and rendering work when inputs are unchanged.
        - DocMap validation: if the `doc_map` pack is empty (no sections/title/doc_id/summary), the report is halted for that PDF and the error is logged/recorded with a summary persisted to the state DB.
        - DocMap normalization: responses wrapped under `docmap`/`doc_map` are unwrapped, missing `doc_id` is filled with the report ID, and section `id`s are auto-generated before schema validation.
+       - Reports DB metadata sourcing: `reports.title` is written from `doc_map.title` (fallback to file-derived title only when doc_map title is empty), `reports.publisher` is sourced from `doc_map.publisher` or `doc_map.organization`, `reports.file_name` stores the source PDF filename, and `reports.time_period` is normalized to canonical year / quarter-year / month-year forms (including ranges like `2025-2026`, `Q1-Q3 2026`, `June-November 2023`). During HTML render, `title`/`publisher`/`time_period` are read from `reports` DB metadata only.
        - Taxonomy extraction: `src/generators/taxonomy_generator.py` uses `src/prompts/report_vs/taxonomy/` to extract tags/regions/time_period from the vector store; tags map to categories and persist to the reports DB and HTML.
      - **Validation**: `src/generators/validation_generator.py` now does a two-pass check:
        - Exact: numeric match, token presence, verbatim quotes, and “new numbers” in expert/LinkedIn text.
@@ -457,7 +458,7 @@ Design and behavior highlights:
 - Pages are wired to existing contracts/services/orchestrators as source-of-truth surfaces (DB, files, config, and logs).
 - Cockpit overview and publish queue views now use dedicated orchestrators (`ops_dashboard_orchestrator`, `publish_queue_orchestrator`) so UI code stays presentation-focused.
 - The logs page supports structured filtering (`run_id`, `task_id`, `span_id`, `event`, `role`, `module`) and includes a terminal-style panel for UI-triggered run output history.
- 
+
 ## Output Layout
 
 Default output structure:

@@ -1,7 +1,7 @@
 # Reports DB Data Sources
 
 | field | first choice source if available | fallback option if first choice not available |
-|---|---|---|
+| --- | --- | --- |
 | `file_id` | `DriveFile.file_id` from ingest pipeline | No fallback (required) |
 | `title` | `_derive_title(file_name)` where `file_name` is Drive file name | If name missing: fetch name from Drive metadata, else use `file_id` |
 | `publisher` | `doc_map.publisher` (set into `data.publisher` when present) | Empty string -> stored as `NULL` |
@@ -24,7 +24,7 @@
 # HTML Output Data Sources
 
 | field | first choice source if available | fallback option if first choice not available |
-|---|---|---|
+| --- | --- | --- |
 | `html_path` | Cached HTML at `output/<slug(doc_name)>.html` when cache key matches | Fresh render output from `render_report` |
 | `report_title` (`<h1>`, SEO title base) | `request.data["title"]` passed to template as `report_title` | `doc_name` |
 | `publisher` (hero/meta) | `data.publisher` | Empty -> UI shows `Unknown publisher` |
@@ -62,7 +62,7 @@
 Use one resolved object before rendering (for example `EditorialHtmlViewModel`) and keep the template display-only.
 
 | field | first choice | fallback 1 | fallback 2 |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `headline` | `doc_map.title` | cleaned file name | `file_id` |
 | `publisher` | `doc_map.publisher` | existing DB publisher | `"Unknown publisher"` |
 | `time_period` | taxonomy `time_period` | `doc_map.time_period` | empty |

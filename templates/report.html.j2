@@ -2,7 +2,7 @@
 {% set art = data.artifacts if data.artifacts is defined else {} %}
 {% set summary = art.summary if art.summary is defined else {} %}
 {% set source_status = art.source_status if art.source_status is defined else {} %}
-{% set report_title = report_title if report_title is defined and report_title else (data.title if data.title is defined and data.title else doc_name) %}
+{% set report_title = data.title if data.title is defined and data.title else "" %}
 {% set report_title = report_title|string|trim %}
 {% set publisher = data.publisher if data.publisher is defined and data.publisher else "" %}
 {% set publisher = publisher|string|trim %}

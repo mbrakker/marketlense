@@ -71,6 +71,7 @@ def run_recategorize(request: RecategorizeRequest) -> List[RecategorizeOutcome]:
                         db_path=request.db_path,
                         file_id=record.file_id,
                         title=record.title,
+                        file_name=record.file_name,
                         publisher=record.publisher,
                         taxonomy=record.taxonomy,
                         categories=assignment.categories,

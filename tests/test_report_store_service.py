@@ -30,10 +30,11 @@ class TestReportStoreService(unittest.TestCase):
                     db_path=db_path,
                     file_id="file-1",
                     title="Sample Report",
+                    file_name="source-report.pdf",
                     publisher="Publisher Inc",
                     taxonomy=["Ads", "  Measurement", ""],
                     region="US",
-                    time_period="2024-2028",
+                    time_period="Q1 to Q3 2026",
                     source_url="https://example.com/report",
                     html_path="/tmp/report.html",
                     md5="abc123",
@@ -48,10 +49,11 @@ class TestReportStoreService(unittest.TestCase):
             self.assertIsNotNone(first)
             assert first is not None
             self.assertEqual("Sample Report", first.title)
+            self.assertEqual("source-report.pdf", first.file_name)
             self.assertEqual(["Ads", "Measurement"], first.taxonomy)
             self.assertEqual("Publisher Inc", first.publisher)
             self.assertEqual("US", first.region)
-            self.assertEqual("2024-2028", first.time_period)
+            self.assertEqual("Q1-Q3 2026", first.time_period)
             self.assertEqual("https://example.com/report", first.source_url)
             self.assertEqual("/tmp/report.html", first.html_path)
             self.assertEqual("abc123", first.md5)
@@ -68,7 +70,7 @@ class TestReportStoreService(unittest.TestCase):
                     publisher=None,
                     taxonomy=["Measurement", "Attribution"],
                     region="North America",
-                    time_period="2025",
+                    time_period="june to novemeber 2023",
                     source_url=None,
                     html_path="/tmp/report-v2.html",
                     md5="def456",
@@ -87,10 +89,11 @@ class TestReportStoreService(unittest.TestCase):
             self.assertGreaterEqual(second.updated_at, second.created_at)
             self.assertEqual("def456", second.md5)
             self.assertEqual("/tmp/report-v2.html", second.html_path)
+            self.assertEqual("source-report.pdf", second.file_name)
             self.assertIsNone(second.publisher)
             self.assertIsNone(second.source_url)
             self.assertEqual("North America", second.region)
-            self.assertEqual("2025", second.time_period)
+            self.assertEqual("June-November 2023", second.time_period)
             self.assertEqual(0, second.contents_page_number)
 
     def test_missing_record_returns_none(self) -> None:

@@ -20,6 +20,7 @@ from src.contracts.report_store import (
 from src.contracts.run_context import RunContext
 from src.utils.errors import AppError
 from src.utils.logging import log_event
+from src.utils.time_period import normalize_time_period
 
 logger = logging.getLogger("market_lense.report_store_service")
 
@@ -30,6 +31,7 @@ _REPORT_CONN_LOCK = threading.Lock()
 DDL = """
 CREATE TABLE IF NOT EXISTS reports (
   file_id TEXT PRIMARY KEY,
+  file_name TEXT,
   title TEXT NOT NULL,
   publisher TEXT,
   taxonomy_json TEXT NOT NULL,
@@ -57,6 +59,8 @@ CREATE INDEX IF NOT EXISTS idx_reports_publisher ON reports(publisher);
 def _ensure_schema(conn: sqlite3.Connection) -> None:
     cur = conn.execute("PRAGMA table_info(reports)")
     cols = {row[1] for row in cur.fetchall()}
+    if "file_name" not in cols:
+        conn.execute("ALTER TABLE reports ADD COLUMN file_name TEXT")
     if "region" not in cols:
         conn.execute("ALTER TABLE reports ADD COLUMN region TEXT")
     if "time_period" not in cols:
@@ -75,6 +79,7 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE reports ADD COLUMN vector_store_id TEXT")
     if "evidence_packs_json" not in cols:
         conn.execute("ALTER TABLE reports ADD COLUMN evidence_packs_json TEXT")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_reports_file_name ON reports(file_name)")
     conn.commit()
 
 
@@ -258,6 +263,8 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
             severity="error",
         )
 
+    title = request.title.strip()
+    file_name = request.file_name.strip() if request.file_name and request.file_name.strip() else None
     publisher = request.publisher.strip() if request.publisher and request.publisher.strip() else None
     source_url = request.source_url.strip() if request.source_url and request.source_url.strip() else None
     html_path = request.html_path.strip() if request.html_path and request.html_path.strip() else None
@@ -269,7 +276,8 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
     categories = _clean_list(request.categories)
     categories_json = json.dumps(categories, ensure_ascii=True)
     region = request.region.strip() if request.region and request.region.strip() else None
-    time_period = request.time_period.strip() if request.time_period and request.time_period.strip() else None
+    raw_time_period = request.time_period.strip() if request.time_period and request.time_period.strip() else None
+    time_period = normalize_time_period(raw_time_period)
     metadata_clean = _clean_metadata(request.pdf_metadata)
     metadata_json = json.dumps(metadata_clean, ensure_ascii=True)
     analysis_mode = request.analysis_mode.strip() if request.analysis_mode else "vector_store"
@@ -285,11 +293,13 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
         fields={
             "file_id": request.file_id,
             "db_path": request.db_path,
-            "title": request.title,
+            "file_name": file_name,
+            "title": title,
             "publisher": publisher,
             "taxonomy_count": len(taxonomy),
             "region": region,
             "time_period": time_period,
+            "raw_time_period": raw_time_period,
             "categories_count": len(categories),
             "page_count": page_count,
             "contents_page": contents_page,
@@ -299,9 +309,10 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
     with _metadata_conn(request.db_path) as conn:
         conn.execute(
             """
-            INSERT INTO reports(file_id, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, created_at, updated_at)
-            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%s','now'), strftime('%s','now'))
+            INSERT INTO reports(file_id, file_name, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, created_at, updated_at)
+            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%s','now'), strftime('%s','now'))
             ON CONFLICT(file_id) DO UPDATE SET
+                file_name=COALESCE(excluded.file_name, reports.file_name),
                 title=excluded.title,
                 publisher=excluded.publisher,
                 taxonomy_json=excluded.taxonomy_json,
@@ -321,7 +332,8 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
             """,
             (
                 request.file_id,
-                request.title,
+                file_name,
+                title,
                 publisher,
                 taxonomy_json,
                 categories_json,
@@ -358,7 +370,7 @@ def get_metadata(request: ReportMetadataGetRequest, ctx: RunContext) -> Optional
     with _metadata_conn(request.db_path) as conn:
         cur = conn.execute(
             """
-            SELECT file_id, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, created_at, updated_at
+            SELECT file_id, file_name, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, created_at, updated_at
             FROM reports
             WHERE file_id=?
             """,
@@ -376,16 +388,16 @@ def get_metadata(request: ReportMetadataGetRequest, ctx: RunContext) -> Optional
         ))
         return None
 
-    taxonomy_json = row[3] or "[]"
-    categories_json = row[4] or "[]"
-    page_count_raw = row[10]
-    contents_page_raw = row[11]
-    metadata_json = row[12] or "{}"
-    analysis_mode = row[13] or "vector_store"
-    vector_store_id = row[14]
-    evidence_packs_json = row[15] or "{}"
-    created_at = int(row[16])
-    updated_at = int(row[17])
+    taxonomy_json = row[4] or "[]"
+    categories_json = row[5] or "[]"
+    page_count_raw = row[11]
+    contents_page_raw = row[12]
+    metadata_json = row[13] or "{}"
+    analysis_mode = row[14] or "vector_store"
+    vector_store_id = row[15]
+    evidence_packs_json = row[16] or "{}"
+    created_at = int(row[17])
+    updated_at = int(row[18])
     taxonomy: List[str] = []
     categories: List[str] = []
     pdf_metadata: dict[str, str] = {}
@@ -472,17 +484,18 @@ def get_metadata(request: ReportMetadataGetRequest, ctx: RunContext) -> Optional
     response = ReportMetadataGetResponse(
         schema_version="1.1",
         file_id=row[0],
-        title=row[1],
+        title=row[2],
         created_at=created_at,
         updated_at=updated_at,
-        publisher=row[2],
+        file_name=row[1],
+        publisher=row[3],
         taxonomy=taxonomy,
         categories=categories,
-        region=row[5],
-        time_period=row[6],
-        source_url=row[7],
-        html_path=row[8],
-        md5=row[9],
+        region=row[6],
+        time_period=row[7],
+        source_url=row[8],
+        html_path=row[9],
+        md5=row[10],
         page_count=page_count,
         contents_page_number=contents_page_number,
         pdf_metadata=pdf_metadata,
@@ -512,20 +525,20 @@ def list_metadata(request: ReportMetadataListRequest, ctx: RunContext) -> Report
     with _metadata_conn(request.db_path) as conn:
         cur = conn.execute(
             """
-            SELECT file_id, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, created_at, updated_at
+            SELECT file_id, file_name, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, created_at, updated_at
             FROM reports
             ORDER BY created_at ASC
             """
         )
         for row in cur.fetchall():
-            taxonomy_json = row[3] or "[]"
-            categories_json = row[4] or "[]"
-            page_count_raw = row[10]
-            contents_page_raw = row[11]
-            metadata_json = row[12] or "{}"
-            analysis_mode = row[13] or "vector_store"
-            vector_store_id = row[14]
-            evidence_packs_json = row[15] or "{}"
+            taxonomy_json = row[4] or "[]"
+            categories_json = row[5] or "[]"
+            page_count_raw = row[11]
+            contents_page_raw = row[12]
+            metadata_json = row[13] or "{}"
+            analysis_mode = row[14] or "vector_store"
+            vector_store_id = row[15]
+            evidence_packs_json = row[16] or "{}"
             taxonomy: List[str] = []
             categories: List[str] = []
             pdf_metadata: dict[str, str] = {}
@@ -609,17 +622,18 @@ def list_metadata(request: ReportMetadataListRequest, ctx: RunContext) -> Report
             rows.append(ReportMetadataGetResponse(
                 schema_version="1.1",
                 file_id=row[0],
-                title=row[1],
-                created_at=int(row[16]),
-                updated_at=int(row[17]),
-                publisher=row[2],
+                title=row[2],
+                created_at=int(row[17]),
+                updated_at=int(row[18]),
+                file_name=row[1],
+                publisher=row[3],
                 taxonomy=taxonomy,
                 categories=categories,
-                region=row[5],
-                time_period=row[6],
-                source_url=row[7],
-                html_path=row[8],
-                md5=row[9],
+                region=row[6],
+                time_period=row[7],
+                source_url=row[8],
+                html_path=row[9],
+                md5=row[10],
                 page_count=page_count,
                 contents_page_number=contents_page_number,
                 pdf_metadata=pdf_metadata,

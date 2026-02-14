@@ -13,6 +13,7 @@ from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.report_analysis import AnalysisStorePackRequest
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationReport
+from src.contracts.report_store import ReportMetadataGetResponse
 from src.contracts.report_assets import RenderResponse
 from src.contracts.pdf_text import PdfTextSample, PdfTextSampleResponse
 from src.contracts.state import StateGetRequest
@@ -373,12 +374,41 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
         assert req.data.get("_figure_section_enabled") is False
         assert req.data.get("_figure_gallery") in ([], None)
         assert req.data.get("_figure_top", "") == ""
+        assert req.data.get("title") == "DB Title"
+        assert req.data.get("publisher") == "DB Publisher"
+        assert req.data.get("time_period") == "Q1-Q3 2026"
         html_path = tmp_path / "out.html"
         html_path.write_text("<html></html>", encoding="utf-8")
         return RenderResponse(schema_version="1.0", html_path=str(html_path))
 
     monkeypatch.setattr(rg, "render_report_service", _fake_render_report)
     monkeypatch.setattr(rg, "upsert_report_metadata", lambda req, ctx: None)
+    monkeypatch.setattr(
+        rg,
+        "get_report_metadata",
+        lambda req, ctx: ReportMetadataGetResponse(
+            schema_version="1.1",
+            file_id="file_vs",
+            title="DB Title",
+            created_at=1,
+            updated_at=2,
+            file_name="vector.pdf",
+            publisher="DB Publisher",
+            taxonomy=["tag"],
+            categories=[],
+            region="US",
+            time_period="Q1-Q3 2026",
+            source_url=None,
+            html_path=None,
+            md5="md5",
+            page_count=1,
+            contents_page_number=0,
+            pdf_metadata={},
+            analysis_mode="vector_store",
+            vector_store_id="vs_new",
+            evidence_pack_paths={},
+        ),
+    )
 
     outcome = rg.generate_report(file, str(pdf_path), settings, md5="md5", ctx=ctx)
 

@@ -2317,9 +2317,11 @@ def generate_report(
         if doc_map_title:
             data.title = doc_map_title
         doc_map_publisher = str(doc_map_pack.get("publisher") or "").strip()
-        if doc_map_publisher and not data.publisher:
-            data.publisher = doc_map_publisher
-        if doc_map_title or doc_map_publisher:
+        doc_map_organization = str(doc_map_pack.get("organization") or "").strip()
+        resolved_doc_map_publisher = doc_map_publisher or doc_map_organization
+        if resolved_doc_map_publisher:
+            data.publisher = resolved_doc_map_publisher
+        if doc_map_title or resolved_doc_map_publisher:
             logger.info(log_event(
                 mode_ctx,
                 role="generator",
@@ -2330,7 +2332,11 @@ def generate_report(
                     "title": data.title,
                     "publisher": data.publisher,
                     "title_source": "doc_map.title" if doc_map_title else "ingest_payload",
-                    "publisher_source": "doc_map.publisher" if doc_map_publisher else "unset",
+                    "publisher_source": (
+                        "doc_map.publisher"
+                        if doc_map_publisher
+                        else ("doc_map.organization" if doc_map_organization else "unset")
+                    ),
                 },
             ))
     try:
@@ -2507,6 +2513,69 @@ def generate_report(
     }
     primary_evidence_paths = dict(mode_evidence_paths)
 
+    def _build_metadata_upsert_request(html_path_value: Optional[str]) -> ReportMetadataUpsertRequest:
+        return ReportMetadataUpsertRequest(
+            schema_version="1.1",
+            db_path=settings.reports_db,
+            file_id=file.file_id,
+            title=data.title or report_title,
+            file_name=file_name,
+            publisher=data.publisher or None,
+            taxonomy=data.taxonomy,
+            categories=data.categories,
+            region=data.region or None,
+            time_period=data.time_period or None,
+            source_url=data.source,
+            html_path=html_path_value,
+            md5=md5,
+            page_count=info_resp.page_count,
+            pdf_metadata=info_resp.metadata,
+            contents_page_number=contents_page_number,
+            analysis_mode=analysis_mode,
+            vector_store_id=vector_info_for_outcome["vector_store_id"],
+            evidence_pack_paths=primary_evidence_paths,
+        )
+
+    # Persist metadata before rendering so HTML title/publisher/time_period is sourced from DB.
+    upsert_report_metadata(_build_metadata_upsert_request(html_path_value=None), ctx)
+    render_meta = get_report_metadata(
+        ReportMetadataGetRequest(
+            schema_version="1.1",
+            db_path=settings.reports_db,
+            file_id=file.file_id,
+        ),
+        child_context(ctx, task_id=f"{ctx.task_id}:render_metadata"),
+    )
+    render_data_dict = deepcopy(primary_result["data_dict"])
+    if render_meta is None:
+        render_data_dict["title"] = ""
+        render_data_dict["publisher"] = ""
+        render_data_dict["time_period"] = ""
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="render_metadata_missing",
+            module=logger.name,
+            fields={"file_id": file.file_id},
+        ))
+    else:
+        render_data_dict["title"] = str(render_meta.title or "").strip()
+        render_data_dict["publisher"] = str(render_meta.publisher or "").strip()
+        render_data_dict["time_period"] = str(render_meta.time_period or "").strip()
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="render_metadata_sourced_from_db",
+            module=logger.name,
+            fields={
+                "file_id": file.file_id,
+                "title": render_data_dict["title"],
+                "publisher": render_data_dict["publisher"],
+                "time_period": render_data_dict["time_period"],
+                "source": "reports_db",
+            },
+        ))
+
     doc_name = file_name
     out_html = ""
     html_cache_hit = False
@@ -2518,7 +2587,7 @@ def generate_report(
         template_path = Path(__file__).resolve().parents[2] / "templates" / "report.html.j2"
         template_sha = _template_sha256(template_path, ctx)
         if template_sha:
-            data_sha = sha256_json(primary_result["data_dict"])
+            data_sha = sha256_json(render_data_dict)
             html_cache_meta = {
                 "schema_version": "1.0",
                 "md5": md5,
@@ -2568,7 +2637,7 @@ def generate_report(
         render_resp = render_report_service(
             RenderRequest(
                 schema_version="1.0",
-                data=primary_result["data_dict"],
+                data=render_data_dict,
                 doc_name=doc_name,
                 file_id=file.file_id,
                 out_dir=settings.output_dir,
@@ -2592,29 +2661,7 @@ def generate_report(
                 fields={"file_id": file.file_id, "cache_path": str(cache_path)},
             ))
 
-    upsert_report_metadata(
-        ReportMetadataUpsertRequest(
-            schema_version="1.1",
-            db_path=settings.reports_db,
-            file_id=file.file_id,
-            title=report_title,
-            publisher=data.publisher or None,
-            taxonomy=data.taxonomy,
-            categories=data.categories,
-            region=data.region or None,
-            time_period=data.time_period or None,
-            source_url=data.source,
-            html_path=out_html,
-            md5=md5,
-            page_count=info_resp.page_count,
-            pdf_metadata=info_resp.metadata,
-            contents_page_number=contents_page_number,
-            analysis_mode=analysis_mode,
-            vector_store_id=vector_info_for_outcome["vector_store_id"],
-            evidence_pack_paths=primary_evidence_paths,
-        ),
-        ctx,
-    )
+    upsert_report_metadata(_build_metadata_upsert_request(html_path_value=out_html), ctx)
 
     cover_meta = get_report_metadata(
         ReportMetadataGetRequest(

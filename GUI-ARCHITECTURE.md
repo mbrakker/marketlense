@@ -1,9 +1,11 @@
 # Market Lense Streamlit Admin & Control Panel Architecture
 
 ## Purpose
+
 Design a Streamlit-based admin/control panel that exposes every **existing** Market Lense capability with clear actions, diagnostics, and operational guardrails. The UI is a thin, transparent shell over the current **contracts -> services -> generators -> orchestrators** architecture and storage layout.
 
 This cockpit must surface all CLI workflows as guided UI actions:
+
 - `ingest`
 - `extract-candidates`
 - `generate-covers`
@@ -19,6 +21,7 @@ The UI must make inputs, outputs, logs, and artifact locations visible without i
 ## Information Architecture (Navigation)
 
 **Primary navigation (sidebar):**
+
 1. **Cockpit Overview** - system health, current locks, recent runs
 2. **Ingest Control** - Drive ingest pipeline control center
 3. **Candidate Extraction** - charts/tables candidate pack generation
@@ -43,6 +46,7 @@ This layout keeps the UI minimal: one dominant task per page with a clear, inspe
 **Goal:** One-glance operational status.
 
 **Core widgets (mapped to code/artifacts):**
+
 - **Active run/last run summary**: show `run_id`, task counts, and success/error totals from structured log events.
 - **Recent reports**: latest entries from the reports DB (title, publisher, HTML path, analysis mode).
 - **Ingest lock**: display lock file path and owner to confirm concurrency control.
@@ -57,16 +61,19 @@ This layout keeps the UI minimal: one dominant task per page with a clear, inspe
 **Goal:** A full operational console for ingest and report generation.
 
 **Inputs & switches:**
+
 - **Folder override** and **limit** (mapped to CLI `--folder` and `--limit`).
 - **Read-only settings**: OpenAI model, temperature, timeout, batch limit, PDF text settings (from config).
 - **Mode display**: vector_store analysis and compare toggle (legacy/ignored).
 
 **Pipeline timeline:**
+
 - Stepper view showing:
   - Drive list -> cache hit/miss -> download -> EOF check -> skip check -> report generation -> state record.
 - **Cover image creation** is part of report generation and should appear as a pipeline stage with output path details.
 
 **Controls & safeguards:**
+
 - **Run ingest** button triggers `run_ingest`.
 - If lock conflict is detected, display a blocking alert with owner/TTL.
 
@@ -79,13 +86,16 @@ This layout keeps the UI minimal: one dominant task per page with a clear, inspe
 **Goal:** Generate and inspect candidate packs for charts/tables.
 
 **Inputs:**
+
 - **Folder override** and **limit**, plus optional **file_id** for a single report (mapped to CLI `extract-candidates`).
 - **Local PDF path** with optional `report_id` override (supported by the orchestrator for non-Drive sources).
 
 **Pipeline view:**
+
 - Drive list -> cache hit/miss -> download -> EOF check -> candidate pack generation.
 
 **Outputs:**
+
 - Show `candidates.json` path, candidate count, chart/table counts, and crop count. Candidate packs are written under `output_dir/<report_name>/candidates/candidates.json` with crops under `output_dir/<report_name>/candidates/` (where `report_name` is the slugified PDF filename).
 - Provide a viewer for the saved JSON and cropped image paths (if present).
 **Admin value:** supports visual QA and asset harvesting without leaving Streamlit.
@@ -97,9 +107,11 @@ This layout keeps the UI minimal: one dominant task per page with a clear, inspe
 **Goal:** A single report-focused workspace where an operator can select a report and see all related data and artifacts.
 
 **Core report selector:**
+
 - Use the `reports` DB as the source of truth for selecting a report (title, file_id).
 
 **Report detail sections:**
+
 - **Metadata**: title, publisher, region, time period, taxonomy, categories, HTML path, md5, analysis mode.
 - **Processing provenance**:
   - vector_store_id and evidence pack paths (for vector mode).
@@ -118,6 +130,7 @@ This layout keeps the UI minimal: one dominant task per page with a clear, inspe
 **Goal:** Generate or regenerate report cover images and inspect outputs.
 
 **Features:**
+
 - **Generate covers** action (CLI `generate-covers`) with optional `style_config`, `limit`, and `file_id` overrides.
 - **Cover generation pipeline** backed by the cover image orchestrator and generator.
 - **Style config visibility**: display configured cover style YAML path from settings (`paths.cover_styles`).
@@ -132,6 +145,7 @@ This layout keeps the UI minimal: one dominant task per page with a clear, inspe
 **Goal:** Inspect the evidence layer behind a report.
 
 **Features:**
+
 - **Vector store status**: show `vector_store_id`, `vector_store_status`, indexing timestamp from state DB.
 - **Evidence pack explorer**: open JSON from stored pack paths (doc_map, scope, methods, findings, limitations, quote_candidates) plus artifacts/validation when present.
 - **Vector store actions**: status refresh only. Create/upload/attach/wait occur within ingest; there is no separate delete/reindex endpoint exposed today.
@@ -146,6 +160,7 @@ This layout keeps the UI minimal: one dominant task per page with a clear, inspe
 **Goal:** Ensure outputs meet validation policies and surface failures.
 
 **Features:**
+
 - **Validation policy panel**:
   - `ingest.validation.data_gap_policy` (warn/fail).
   - `publish.validation.policy` (block/warn).
@@ -161,6 +176,7 @@ This layout keeps the UI minimal: one dominant task per page with a clear, inspe
 **Goal:** Controlled publishing and category syncing.
 
 **Features:**
+
 - **Publish queue**: HTML files found under `output_dir`, with publish state from `state_db`.
 - **Publish action**: trigger `run_publish` (CLI `publish-wp`).
 - **Settings summary**: site URL, username, post status, publish policy (read-only).
@@ -175,6 +191,7 @@ This layout keeps the UI minimal: one dominant task per page with a clear, inspe
 **Goal:** Manage and re-apply taxonomy mappings.
 
 **Features:**
+
 - **Mapping viewer**: render `src/config/category-mappings.yaml` categories/tags. Path is in config.
 - **Recategorize action**: trigger CLI `recategorize` to re-score all reports.
 - **WP category sync**: trigger `update-wp-categories` to align WordPress taxonomy.
@@ -188,6 +205,7 @@ This layout keeps the UI minimal: one dominant task per page with a clear, inspe
 **Goal:** Govern spend and performance with trend summaries.
 
 **Features:**
+
 - **Ledger explorer**: open `cost-ledger.jsonl` and rollups `cost-daily.json` from config.
 - **Cost report**: run by date or run_id (mirrors `cost-report` CLI).
 - **Usage summaries**:
@@ -204,6 +222,7 @@ This layout keeps the UI minimal: one dominant task per page with a clear, inspe
 **Goal:** Full observability console with live run output.
 
 **Features:**
+
 - **Log file discovery**: list the current log file based on `MARKET_LENSE_LOG_DIR` and naming convention.
 - **Structured log filters**: filter by `run_id`, `task_id`, `span_id`, `event`, `role`, `module`.
 - **Live run output**: when the UI triggers a CLI workflow, stream stdout/stderr into a live panel so operators can see real-time progress for ingest/publish/covers/candidates.
@@ -219,11 +238,13 @@ This layout keeps the UI minimal: one dominant task per page with a clear, inspe
 **Goal:** Provide visibility into configuration without leaking secrets.
 
 **Features:**
+
 - **Config summary**: read-only view of `app.yaml` (paths, ingest, analysis, publish, cost).
 - **Env overrides status**: display which values are coming from env vs YAML, mirroring config service behavior.
 - **Prompt namespaces**: list prompt namespaces under `src/prompts` and show each prompt's SHA256 hash as computed by prompt service.
 
 **Not displayed:**
+
 - Secrets (OpenAI keys, WP tokens, etc.) remain strictly in environment variables and are not exposed in UI.
 
 **Admin value:** configuration and prompt transparency without credential exposure.
@@ -235,6 +256,7 @@ This layout keeps the UI minimal: one dominant task per page with a clear, inspe
 **Goal:** Direct visibility into system state and file outputs.
 
 **Features:**
+
 - **State DB explorer**: show `processed` + `published` rows, including vector store status.
 - **Reports DB explorer**: show `reports` rows with metadata and analysis mode.
 - **Lock status**: display ingest lock path/owner to help resolve stuck runs.
@@ -284,7 +306,7 @@ This layout keeps the UI minimal: one dominant task per page with a clear, inspe
 
 ## Minimal Streamlit Layout Sketch
 
-```
+```text
 [Sidebar]
 - Cockpit Overview
 - Ingest Control

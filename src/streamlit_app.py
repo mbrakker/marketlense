@@ -860,6 +860,7 @@ def _render_report_command_center(settings: Any) -> None:
         st.dataframe(
             [{
                 "file_id": report.get("file_id"),
+                "file_name": report.get("file_name"),
                 "title": report.get("title"),
                 "publisher": report.get("publisher"),
                 "analysis_mode": report.get("analysis_mode"),
@@ -889,6 +890,7 @@ def _render_report_command_center(settings: Any) -> None:
         st.json(
             {
                 "file_id": report.get("file_id"),
+                "file_name": report.get("file_name"),
                 "title": report.get("title"),
                 "publisher": report.get("publisher"),
                 "region": report.get("region"),
