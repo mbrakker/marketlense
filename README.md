@@ -174,9 +174,9 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
      - **Normalization**: `normalize_generator` enforces strict schema and list sizing.
      - **Categorization**: taxonomy tags are scored against `src/config/category-mappings.yaml`; top 3 categories are stored and rendered, and unmapped tags are appended under `uncategorized` in that YAML.
      - **Figure selection**: `pdf_service.extract_best_figure` selects a representative visual and caption.
-     - **Candidate extraction**: `pdf_service.collect_candidates` finds chart/table regions.
+     - **Candidate extraction**: `pdf_service.collect_candidates` finds chart/table regions and now parallelizes page-level chart/table extraction (bounded by `ingest.report_worker_limit`) for faster ingest on large PDFs.
      - **Candidate prefilter + ranking**: deterministic prefilter removes obvious low/no-data fragments, then `rank_service` scores candidates via LLM (overall + quality + insight + data + keep/reject_reason; model resolves from `openai_models.rank_candidates` if set, else `rank.model`, then `ingest.openai_model`).
-     - **Adaptive crop refinement**: ambiguous candidates call `rank_candidates/crop_refine` with page image context; obvious pass/reject candidates skip LLM. Processing stops once `rank.selected_max` accepted visuals are finalized.
+     - **Adaptive crop refinement**: ambiguous candidates call `rank_candidates/crop_refine` with page image context; obvious pass/reject candidates skip LLM. Ambiguous page renders are pre-rendered in parallel and ambiguous LLM refinement calls run in bounded parallel mode (still adaptive + early-stop at `rank.selected_max`).
      - **Strict cropping**: `pdf_service.crop_regions(..., mode=\"figure_strict\")` outputs clean final crops (infographic/table + title + attached note when present; unrelated blocks excluded).
      - **Zero-pass behavior**: if no final candidate passes, the HTML figure section (including contents-preview section) is disabled.
      - **Preview rendering**: `pdf_service.render_preview` renders the first page to PNG.

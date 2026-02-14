@@ -15,6 +15,7 @@ class ExtractCandidatesRequest:
     out_dir: str = field(metadata={"doc": "Output directory for any extracted assets."})
     report_name: str = field(metadata={"doc": "Normalized report name for asset paths."})
     pdf_context: Optional[PdfContext] = field(default=None, metadata={"doc": "Optional pre-opened PDF context to reuse handles."})
+    parallel_workers: int = field(default=0, metadata={"doc": "Optional extraction worker count. Values <=0 use service defaults."})
 
 
 @dataclass(frozen=True)

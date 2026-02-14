@@ -3,8 +3,10 @@ from __future__ import annotations
 import io
 import logging
 import math
+import os
 import re
 import statistics
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
@@ -1846,12 +1848,13 @@ def _nearby_text(page: fitz.Page, rect: fitz.Rect, max_dist: float = 90) -> str:
     return best[0]
 
 
-def _extract_charts(
+def _extract_charts_sequential(
     pdf_path: str,
     thumbs_dir: str,
     report_name: str,
     save_thumbs: bool = False,
     doc: Optional[fitz.Document] = None,
+    pages: Optional[List[int]] = None,
 ) -> Tuple[List[Candidate], Dict[str, object]]:
     out: List[Candidate] = []
     stats: Dict[str, object] = {"raw": 0, "kept": 0, "rejected": 0, "reasons": {}}
@@ -1859,7 +1862,10 @@ def _extract_charts(
     local_doc = doc or fitz.open(pdf_path)
     try:
         thumb_index = 0
-        for pno in range(len(local_doc)):
+        page_numbers = pages if pages is not None else list(range(len(local_doc)))
+        for pno in page_numbers:
+            if pno < 0 or pno >= len(local_doc):
+                continue
             page = local_doc[pno]
             if pno not in page_text_cache:
                 try:
@@ -2053,7 +2059,123 @@ def _extract_charts(
     return out, stats
 
 
-def _extract_tables(pdf_path: str, max_candidates: int = 10) -> Tuple[List[Candidate], Dict[str, object]]:
+def _candidate_index_from_id(candidate_id: str) -> int:
+    try:
+        return int(str(candidate_id).rsplit("-", 1)[-1])
+    except (TypeError, ValueError):
+        return 0
+
+
+def _merge_stats(base: Dict[str, object], extra: Dict[str, object]) -> Dict[str, object]:
+    merged = dict(base)
+    for key, value in extra.items():
+        if key == "reasons":
+            reasons = value if isinstance(value, dict) else {}
+            for reason, count in reasons.items():
+                for _ in range(max(0, int(count))):
+                    _tally_reason(merged, str(reason))
+            continue
+        try:
+            merged[key] = int(merged.get(key, 0)) + int(value)
+        except (TypeError, ValueError):
+            continue
+    return merged
+
+
+def _split_even_chunks(values: List[int], chunk_count: int) -> List[List[int]]:
+    if not values:
+        return []
+    chunk_count = max(1, min(int(chunk_count), len(values)))
+    chunks: List[List[int]] = [[] for _ in range(chunk_count)]
+    for idx, value in enumerate(values):
+        chunks[idx % chunk_count].append(value)
+    return [chunk for chunk in chunks if chunk]
+
+
+def _resolve_candidate_parallel_workers(requested_workers: int, unit_count: int) -> int:
+    if unit_count <= 1:
+        return 1
+    workers = 0
+    try:
+        workers = int(requested_workers)
+    except (TypeError, ValueError):
+        workers = 0
+    if workers <= 0:
+        env_value = os.getenv("INGEST_REPORT_WORKER_LIMIT")
+        if env_value:
+            try:
+                workers = int(env_value)
+            except (TypeError, ValueError):
+                workers = 0
+    if workers <= 0:
+        workers = max(2, min(6, (os.cpu_count() or 2)))
+    return max(1, min(workers, unit_count, 8))
+
+
+def _extract_charts(
+    pdf_path: str,
+    thumbs_dir: str,
+    report_name: str,
+    save_thumbs: bool = False,
+    doc: Optional[fitz.Document] = None,
+    parallel_workers: int = 1,
+) -> Tuple[List[Candidate], Dict[str, object]]:
+    # Thumb generation relies on stable global naming order; keep it single-threaded.
+    if save_thumbs:
+        return _extract_charts_sequential(
+            pdf_path,
+            thumbs_dir,
+            report_name,
+            save_thumbs=save_thumbs,
+            doc=doc,
+        )
+    page_count = 0
+    if doc is not None:
+        page_count = len(doc)
+    else:
+        temp_doc = fitz.open(pdf_path)
+        try:
+            page_count = len(temp_doc)
+        finally:
+            temp_doc.close()
+    worker_count = _resolve_candidate_parallel_workers(parallel_workers, page_count)
+    if worker_count <= 1 or page_count <= 1:
+        return _extract_charts_sequential(
+            pdf_path,
+            thumbs_dir,
+            report_name,
+            save_thumbs=save_thumbs,
+            doc=doc,
+        )
+    chunks = _split_even_chunks(list(range(page_count)), worker_count)
+    merged_stats: Dict[str, object] = {"raw": 0, "kept": 0, "rejected": 0, "reasons": {}}
+    merged_candidates: List[Candidate] = []
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        futures = {
+            executor.submit(
+                _extract_charts_sequential,
+                pdf_path,
+                thumbs_dir,
+                report_name,
+                False,
+                None,
+                chunk,
+            ): chunk
+            for chunk in chunks
+        }
+        for future in as_completed(futures):
+            chunk_candidates, chunk_stats = future.result()
+            merged_candidates.extend(chunk_candidates)
+            merged_stats = _merge_stats(merged_stats, chunk_stats)
+    merged_candidates.sort(key=lambda cand: (cand.page, _candidate_index_from_id(cand.id)))
+    return merged_candidates, merged_stats
+
+
+def _extract_tables_sequential(
+    pdf_path: str,
+    max_candidates: int = 10,
+    pages: Optional[List[int]] = None,
+) -> Tuple[List[Candidate], Dict[str, object]]:
     out: List[Candidate] = []
     stats: Dict[str, object] = {
         "raw_lattice": 0,
@@ -2073,7 +2195,11 @@ def _extract_tables(pdf_path: str, max_candidates: int = 10) -> Tuple[List[Candi
 
     try:
         with pdfplumber.open(pdf_path) as pdf:
-            for pno, p in enumerate(pdf.pages):
+            page_numbers = pages if pages is not None else list(range(len(pdf.pages)))
+            for pno in page_numbers:
+                if pno < 0 or pno >= len(pdf.pages):
+                    continue
+                p = pdf.pages[pno]
                 fitz_page = None
                 if fitz_doc is not None and pno < len(fitz_doc):
                     try:
@@ -2135,10 +2261,10 @@ def _extract_tables(pdf_path: str, max_candidates: int = 10) -> Tuple[List[Candi
                             "aspect": round(cand.aspect, 2),
                         },
                     ))
-                    if len(out) >= max_candidates:
+                    if max_candidates > 0 and len(out) >= max_candidates:
                         break
 
-                if len(out) >= max_candidates:
+                if max_candidates > 0 and len(out) >= max_candidates:
                     break
     finally:
         if fitz_doc is not None:
@@ -2148,6 +2274,47 @@ def _extract_tables(pdf_path: str, max_candidates: int = 10) -> Tuple[List[Candi
                 pass
 
     return out, stats
+
+
+def _extract_tables(
+    pdf_path: str,
+    max_candidates: int = 10,
+    parallel_workers: int = 1,
+) -> Tuple[List[Candidate], Dict[str, object]]:
+    try:
+        temp_doc = fitz.open(pdf_path)
+        try:
+            page_count = len(temp_doc)
+        finally:
+            temp_doc.close()
+    except Exception:
+        return _extract_tables_sequential(pdf_path, max_candidates=max_candidates)
+    worker_count = _resolve_candidate_parallel_workers(parallel_workers, page_count)
+    if worker_count <= 1 or page_count <= 1:
+        return _extract_tables_sequential(pdf_path, max_candidates=max_candidates)
+    chunks = _split_even_chunks(list(range(page_count)), worker_count)
+    merged_stats: Dict[str, object] = {
+        "raw_lattice": 0,
+        "raw_stream": 0,
+        "validated": 0,
+        "deduped": 0,
+        "rejected": 0,
+        "reasons": {},
+    }
+    merged_candidates: List[Candidate] = []
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        futures = {
+            executor.submit(_extract_tables_sequential, pdf_path, 0, chunk): chunk
+            for chunk in chunks
+        }
+        for future in as_completed(futures):
+            chunk_candidates, chunk_stats = future.result()
+            merged_candidates.extend(chunk_candidates)
+            merged_stats = _merge_stats(merged_stats, chunk_stats)
+    merged_candidates.sort(key=lambda cand: (cand.page, _candidate_index_from_id(cand.id)))
+    if max_candidates > 0:
+        merged_candidates = merged_candidates[:max_candidates]
+    return merged_candidates, merged_stats
 
 
 def _find_tables_safe(page: pdfplumber.page.Page, settings: Dict[str, object]):
@@ -2744,6 +2911,7 @@ def _suppress_pdfminer_warnings() -> None:
 
 
 def collect_candidates(request: ExtractCandidatesRequest, ctx: RunContext) -> ExtractCandidatesResponse:
+    parallel_workers = _resolve_candidate_parallel_workers(request.parallel_workers, 8)
     candidate_logger.info(log_event(
         ctx,
         role="service",
@@ -2752,6 +2920,7 @@ def collect_candidates(request: ExtractCandidatesRequest, ctx: RunContext) -> Ex
         fields={
             "pdf_path": request.pdf_path,
             "using_context": bool(request.pdf_context and request.pdf_context.fitz_doc),
+            "parallel_workers": parallel_workers,
         },
     ))
     thumbs = Path(request.out_dir) / request.report_name / "thumbs"
@@ -2760,9 +2929,13 @@ def collect_candidates(request: ExtractCandidatesRequest, ctx: RunContext) -> Ex
         thumbs.as_posix(),
         request.report_name,
         save_thumbs=False,
-        doc=request.pdf_context.fitz_doc if request.pdf_context else None,
+        doc=request.pdf_context.fitz_doc if request.pdf_context and parallel_workers <= 1 else None,
+        parallel_workers=parallel_workers,
     )
-    tables, table_stats = _extract_tables(request.pdf_path)
+    tables, table_stats = _extract_tables(
+        request.pdf_path,
+        parallel_workers=parallel_workers,
+    )
     candidates = charts + tables
     candidate_logger.info(log_event(
         ctx,

@@ -4,7 +4,7 @@ import hashlib
 import json
 import logging
 import random
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
@@ -227,6 +227,14 @@ def _rank_threshold_pass(row, settings: IngestSettings) -> tuple[bool, str]:
     if data_score < int(settings.rank_min_data_score):
         return False, "data_below_threshold"
     return True, ""
+
+
+def _crop_refine_parallel_workers(settings: IngestSettings, selected_max: int) -> int:
+    configured = _to_int(getattr(settings, "report_worker_limit", 1), 1)
+    if configured < 1:
+        configured = 1
+    # Keep this bounded to avoid uncontrolled cost bursts on ambiguous pages.
+    return max(1, min(configured, max(1, selected_max), 3))
 
 
 def _crop_refine_profile_key(
@@ -465,10 +473,211 @@ def _select_refined_candidate_items(
     else:
         resolved_crop_refine_model = fallback_model
 
+    plan_rows: list[dict[str, Any]] = []
+    llm_pending_indices: list[int] = []
+    llm_pages: set[int] = set()
+    for idx, (_, candidate) in enumerate(thresholded):
+        reject_now, reject_reason = _candidate_is_obvious_reject(candidate)
+        obvious_pass = False
+        use_llm = False
+        if not reject_now:
+            if crop_refine_enabled and crop_refine_mode == "always":
+                use_llm = True
+            elif crop_refine_enabled and crop_refine_mode == "adaptive":
+                obvious_pass = _candidate_is_obvious_pass(candidate)
+                use_llm = not obvious_pass
+        entry_key = ""
+        cached_row = None
+        if use_llm and crop_refine_prompt_set and crop_refine_system_render and md5:
+            entry_key = _crop_refine_entry_key(
+                md5,
+                candidate,
+                model=resolved_crop_refine_model,
+                temperature=float(getattr(settings, "crop_refine_temperature", 0.0)),
+                seed=settings.rank_seed,
+                mode=crop_refine_mode,
+                prompt_system_sha256=crop_refine_prompt_set.system.sha256,
+                prompt_user_sha256=crop_refine_prompt_set.user.sha256,
+            )
+            cached_row = crop_refine_cache_rows.get(entry_key) if entry_key else None
+        if use_llm and cached_row is None:
+            llm_pending_indices.append(idx)
+            llm_pages.add(candidate.page)
+        plan_rows.append({
+            "reject_now": reject_now,
+            "reject_reason": reject_reason,
+            "obvious_pass": obvious_pass,
+            "use_llm": use_llm,
+            "entry_key": entry_key,
+            "cached_row": cached_row,
+        })
+
     page_render_cache: dict[int, Any] = {}
+
+    def _render_refine_page(page_number: int) -> Any:
+        return render_page_for_crop_refine_service(
+            CropRefinePageRenderRequest(
+                schema_version="1.0",
+                pdf_path=local_pdf_path,
+                out_dir=settings.output_dir,
+                report_name=report_name,
+                page=page_number,
+                dpi=int(getattr(settings, "crop_refine_page_dpi", 110)),
+                pdf_context=pdf_context,
+            ),
+            ctx,
+        )
+
+    if llm_pages:
+        page_numbers = sorted(llm_pages)
+        refine_workers = _crop_refine_parallel_workers(settings, selected_max)
+        page_worker_limit = max(1, min(refine_workers, len(page_numbers)))
+        can_parallel_page_render = page_worker_limit > 1 and not bool(pdf_context and getattr(pdf_context, "fitz_doc", None))
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="crop_refine_page_prerender_start",
+            module=logger.name,
+            fields={
+                "page_count": len(page_numbers),
+                "workers": page_worker_limit,
+                "parallel": can_parallel_page_render,
+            },
+        ))
+        if can_parallel_page_render:
+            with ThreadPoolExecutor(max_workers=page_worker_limit) as executor:
+                futures = {executor.submit(_render_refine_page, page): page for page in page_numbers}
+                for future in as_completed(futures):
+                    page = futures[future]
+                    page_render_cache[page] = future.result()
+        else:
+            for page in page_numbers:
+                page_render_cache[page] = _render_refine_page(page)
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="crop_refine_page_prerender_complete",
+            module=logger.name,
+            fields={
+                "page_count": len(page_render_cache),
+                "workers": page_worker_limit,
+                "parallel": can_parallel_page_render,
+            },
+        ))
+
+    def _run_crop_refine_llm(plan_index: int) -> dict[str, Any]:
+        _, candidate = thresholded[plan_index]
+        page_render = page_render_cache.get(candidate.page)
+        if page_render is None:
+            page_render = _render_refine_page(candidate.page)
+        llm_candidate_payload = [{
+            "id": candidate.id,
+            "type": candidate.kind,
+            "page": candidate.page,
+            "bbox": [float(value) for value in candidate.bbox],
+            "caption": (candidate.caption or "")[:400],
+            "preview_text": (candidate.preview_text or "")[:600],
+            "meta": candidate.meta or {},
+        }]
+        crop_refine_user_render = render_prompt(
+            PromptRenderRequest(
+                schema_version="1.0",
+                template=crop_refine_prompt_set.user,
+                variables={
+                    "page_width": page_render.page_width,
+                    "page_height": page_render.page_height,
+                    "candidates_json": json.dumps(llm_candidate_payload, ensure_ascii=True),
+                },
+            ),
+            ctx,
+        )
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="crop_refine_llm_request",
+            module=logger.name,
+            fields={"candidate_id": candidate.id, "page": candidate.page},
+        ))
+        crop_refine_resp = refine_candidate_crops_service(
+            CropRefineRequest(
+                schema_version="1.0",
+                system_prompt=crop_refine_system_render.text,
+                user_prompt=crop_refine_user_render.text,
+                prompt_system_sha256=crop_refine_prompt_set.system.sha256,
+                prompt_user_sha256=crop_refine_prompt_set.user.sha256,
+                model=resolved_crop_refine_model,
+                temperature=float(getattr(settings, "crop_refine_temperature", 0.0)),
+                api_key=settings.openai_api_key,
+                page_image_path=str(Path(settings.output_dir) / page_render.image_path),
+                page=candidate.page,
+                page_width=page_render.page_width,
+                page_height=page_render.page_height,
+                candidates=[
+                    CropRefineCandidate(
+                        schema_version="1.0",
+                        id=candidate.id,
+                        type=candidate.kind,
+                        page=candidate.page,
+                        bbox=candidate.bbox,
+                        caption=candidate.caption or "",
+                        preview_text=candidate.preview_text or "",
+                        meta=candidate.meta or {},
+                    ),
+                ],
+                seed=settings.rank_seed,
+                timeout_seconds=float(getattr(settings, "crop_refine_timeout_seconds", settings.rank_timeout_seconds)),
+                cost_ledger_path=settings.cost_ledger_path,
+                cost_daily_path=settings.cost_daily_path,
+                model_pricing=settings.model_pricing,
+            ),
+            ctx,
+        )
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="crop_refine_llm_response_raw",
+            module=logger.name,
+            fields={"candidate_id": candidate.id, "content": crop_refine_resp.raw_content},
+        ))
+        decision = None
+        for result_item in crop_refine_resp.results:
+            if result_item.id == candidate.id:
+                decision = result_item
+                break
+        if decision is None:
+            return {
+                "is_valid_candidate": False,
+                "reason": "missing_decision",
+                "refined_bbox": [float(value) for value in candidate.bbox],
+            }
+        return {
+            "is_valid_candidate": bool(decision.is_valid_candidate),
+            "reason": decision.reason or ("valid" if bool(decision.is_valid_candidate) else "rejected"),
+            "refined_bbox": [float(value) for value in decision.refined_bbox],
+        }
+
+    refine_workers = _crop_refine_parallel_workers(settings, selected_max)
+    llm_executor: Optional[ThreadPoolExecutor] = None
+    llm_inflight: dict[int, Any] = {}
+    llm_cursor = 0
+
+    def _submit_llm_jobs() -> None:
+        nonlocal llm_cursor
+        if llm_executor is None:
+            return
+        while llm_cursor < len(llm_pending_indices) and len(llm_inflight) < refine_workers:
+            plan_index = llm_pending_indices[llm_cursor]
+            if plan_index not in llm_inflight:
+                llm_inflight[plan_index] = llm_executor.submit(_run_crop_refine_llm, plan_index)
+            llm_cursor += 1
+
+    if llm_pending_indices and refine_workers > 1:
+        llm_executor = ThreadPoolExecutor(max_workers=refine_workers)
+        _submit_llm_jobs()
+
     accepted_items: list[CropItem] = []
     accepted_candidates: list[Candidate] = []
-    for row, candidate in thresholded:
+    for idx, (row, candidate) in enumerate(thresholded):
         if len(accepted_items) >= selected_max:
             break
         logger.info(log_event(
@@ -483,8 +692,9 @@ def _select_refined_candidate_items(
                 "score": row.score,
             },
         ))
-        reject_now, reject_reason = _candidate_is_obvious_reject(candidate)
-        if reject_now:
+        plan = plan_rows[idx]
+        if bool(plan["reject_now"]):
+            reject_reason = str(plan["reject_reason"] or "deterministic_reject")
             logger.info(log_event(
                 ctx,
                 role="generator",
@@ -500,140 +710,41 @@ def _select_refined_candidate_items(
                 fields={"candidate_id": candidate.id, "reason": reject_reason},
             ))
             continue
-        use_llm = False
-        if crop_refine_enabled and crop_refine_mode == "always":
-            use_llm = True
-        elif crop_refine_enabled and crop_refine_mode == "adaptive":
-            if _candidate_is_obvious_pass(candidate):
-                logger.info(log_event(
-                    ctx,
-                    role="generator",
-                    event="crop_refine_skipped_deterministic_pass",
-                    module=logger.name,
-                    fields={"candidate_id": candidate.id},
-                ))
-            else:
-                use_llm = True
+        if crop_refine_enabled and crop_refine_mode == "adaptive" and bool(plan["obvious_pass"]):
+            logger.info(log_event(
+                ctx,
+                role="generator",
+                event="crop_refine_skipped_deterministic_pass",
+                module=logger.name,
+                fields={"candidate_id": candidate.id},
+            ))
         refined_bbox = tuple(float(v) for v in candidate.bbox)
         llm_valid = True
         llm_reason = "deterministic_pass"
-        if use_llm and crop_refine_prompt_set and crop_refine_system_render:
-            if md5:
-                entry_key = _crop_refine_entry_key(
-                    md5,
-                    candidate,
-                    model=resolved_crop_refine_model,
-                    temperature=float(getattr(settings, "crop_refine_temperature", 0.0)),
-                    seed=settings.rank_seed,
-                    mode=crop_refine_mode,
-                    prompt_system_sha256=crop_refine_prompt_set.system.sha256,
-                    prompt_user_sha256=crop_refine_prompt_set.user.sha256,
-                )
-            else:
-                entry_key = ""
-            cached_row = crop_refine_cache_rows.get(entry_key) if entry_key else None
-            if cached_row:
+        use_llm = bool(plan["use_llm"]) and crop_refine_prompt_set is not None and crop_refine_system_render is not None
+        if use_llm:
+            cached_row = plan.get("cached_row")
+            if isinstance(cached_row, dict):
                 llm_valid = bool(cached_row.get("is_valid_candidate"))
                 llm_reason = str(cached_row.get("reason") or "cache")
-                refined_bbox = tuple(cached_row.get("refined_bbox") or list(candidate.bbox))
+                cached_bbox = cached_row.get("refined_bbox")
+                if isinstance(cached_bbox, (list, tuple)) and len(cached_bbox) == 4:
+                    refined_bbox = tuple(float(value) for value in cached_bbox)
             else:
-                page_render = page_render_cache.get(candidate.page)
-                if page_render is None:
-                    page_render = render_page_for_crop_refine_service(
-                        CropRefinePageRenderRequest(
-                            schema_version="1.0",
-                            pdf_path=local_pdf_path,
-                            out_dir=settings.output_dir,
-                            report_name=report_name,
-                            page=candidate.page,
-                            dpi=int(getattr(settings, "crop_refine_page_dpi", 110)),
-                            pdf_context=pdf_context,
-                        ),
-                        ctx,
-                    )
-                    page_render_cache[candidate.page] = page_render
-                llm_candidate_payload = [{
-                    "id": candidate.id,
-                    "type": candidate.kind,
-                    "page": candidate.page,
-                    "bbox": [float(value) for value in candidate.bbox],
-                    "caption": (candidate.caption or "")[:400],
-                    "preview_text": (candidate.preview_text or "")[:600],
-                    "meta": candidate.meta or {},
-                }]
-                crop_refine_user_render = render_prompt(
-                    PromptRenderRequest(
-                        schema_version="1.0",
-                        template=crop_refine_prompt_set.user,
-                        variables={
-                            "page_width": page_render.page_width,
-                            "page_height": page_render.page_height,
-                            "candidates_json": json.dumps(llm_candidate_payload, ensure_ascii=True),
-                        },
-                    ),
-                    ctx,
-                )
-                logger.info(log_event(
-                    ctx,
-                    role="generator",
-                    event="crop_refine_llm_request",
-                    module=logger.name,
-                    fields={"candidate_id": candidate.id, "page": candidate.page},
-                ))
-                crop_refine_resp = refine_candidate_crops_service(
-                    CropRefineRequest(
-                        schema_version="1.0",
-                        system_prompt=crop_refine_system_render.text,
-                        user_prompt=crop_refine_user_render.text,
-                        prompt_system_sha256=crop_refine_prompt_set.system.sha256,
-                        prompt_user_sha256=crop_refine_prompt_set.user.sha256,
-                        model=resolved_crop_refine_model,
-                        temperature=float(getattr(settings, "crop_refine_temperature", 0.0)),
-                        api_key=settings.openai_api_key,
-                        page_image_path=str(Path(settings.output_dir) / page_render.image_path),
-                        page=candidate.page,
-                        page_width=page_render.page_width,
-                        page_height=page_render.page_height,
-                        candidates=[
-                            CropRefineCandidate(
-                                schema_version="1.0",
-                                id=candidate.id,
-                                type=candidate.kind,
-                                page=candidate.page,
-                                bbox=candidate.bbox,
-                                caption=candidate.caption or "",
-                                preview_text=candidate.preview_text or "",
-                                meta=candidate.meta or {},
-                            ),
-                        ],
-                        seed=settings.rank_seed,
-                        timeout_seconds=float(getattr(settings, "crop_refine_timeout_seconds", settings.rank_timeout_seconds)),
-                        cost_ledger_path=settings.cost_ledger_path,
-                        cost_daily_path=settings.cost_daily_path,
-                        model_pricing=settings.model_pricing,
-                    ),
-                    ctx,
-                )
-                logger.info(log_event(
-                    ctx,
-                    role="generator",
-                    event="crop_refine_llm_response_raw",
-                    module=logger.name,
-                    fields={"candidate_id": candidate.id, "content": crop_refine_resp.raw_content},
-                ))
-                decision = None
-                for result_item in crop_refine_resp.results:
-                    if result_item.id == candidate.id:
-                        decision = result_item
-                        break
-                if decision is None:
-                    llm_valid = False
-                    llm_reason = "missing_decision"
-                    refined_bbox = tuple(float(value) for value in candidate.bbox)
+                if llm_executor is not None:
+                    future = llm_inflight.pop(idx, None)
+                    if future is None:
+                        future = llm_executor.submit(_run_crop_refine_llm, idx)
+                    llm_result = future.result()
+                    _submit_llm_jobs()
                 else:
-                    llm_valid = bool(decision.is_valid_candidate)
-                    llm_reason = decision.reason or ("valid" if llm_valid else "rejected")
-                    refined_bbox = tuple(float(value) for value in decision.refined_bbox)
+                    llm_result = _run_crop_refine_llm(idx)
+                llm_valid = bool(llm_result.get("is_valid_candidate"))
+                llm_reason = str(llm_result.get("reason") or ("valid" if llm_valid else "rejected"))
+                result_bbox = llm_result.get("refined_bbox")
+                if isinstance(result_bbox, (list, tuple)) and len(result_bbox) == 4:
+                    refined_bbox = tuple(float(value) for value in result_bbox)
+                entry_key = str(plan.get("entry_key") or "")
                 if entry_key:
                     crop_refine_cache_rows[entry_key] = {
                         "candidate_id": candidate.id,
@@ -717,6 +828,13 @@ def _select_refined_candidate_items(
             module=logger.name,
             fields={"candidate_id": candidate.id, "accepted_count": len(accepted_items)},
         ))
+    if llm_executor is not None:
+        for future in llm_inflight.values():
+            future.cancel()
+        try:
+            llm_executor.shutdown(wait=False, cancel_futures=True)
+        except TypeError:
+            llm_executor.shutdown(wait=False)
     if crop_refine_profile and md5:
         _write_crop_refine_cache(
             settings,
@@ -1731,6 +1849,7 @@ def generate_report(
                 out_dir=settings.output_dir,
                 report_name=report_name,
                 pdf_context=pdf_context_for_tasks,
+                parallel_workers=report_worker_limit,
             ),
             ctx,
         )

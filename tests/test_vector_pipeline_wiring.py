@@ -287,6 +287,7 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
 
     def _collect_candidates(req, ctx):
         execution_trace.append("pdf_candidates")
+        assert req.parallel_workers == settings.report_worker_limit
         return SimpleNamespace(candidates=[])
 
     def _render_preview(req, ctx):
