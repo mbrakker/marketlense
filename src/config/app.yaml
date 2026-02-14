@@ -17,7 +17,7 @@ ingest:
     include_items_from_all_drives: true
     drive_id: ""
     list_mode: "metadata"
-  openai_model: "gpt-5"
+  openai_model: "gpt-5-mini"
   temperature: 1.0
   timeout_seconds: 7200
   lock_ttl_seconds: 7200
@@ -53,27 +53,27 @@ ingest:
     global_min_interval_ms: 250
 
 openai_models:
-  report_vs/artifacts: "gpt-5"
-  report_vs/artifacts/toc: "gpt-5"
-  report_vs/artifacts/summary: "gpt-5"
+  report_vs/artifacts: "gpt-5-mini"
+  report_vs/artifacts/toc: "gpt-5-mini"
+  report_vs/artifacts/summary: "gpt-5-mini"
   report_vs/artifacts/insights_candidates: "gpt-5-mini"
-  report_vs/artifacts/insights_final: "gpt-5"
+  report_vs/artifacts/insights_final: "gpt-5-mini"
   report_vs/artifacts/quotes: "gpt-5-mini"
-  report_vs/artifacts/expert_comment: "gpt-5"
-  report_vs/artifacts/linkedin_post: "gpt-5"
-  report_vs/doc_map: "gpt-5"
-  report_vs/evidence_packs: "o3"
+  report_vs/artifacts/expert_comment: "gpt-5-mini"
+  report_vs/artifacts/linkedin_post: "gpt-5-mini"
+  report_vs/doc_map: "gpt-5-mini"
+  report_vs/evidence_packs: "gpt-5-mini"
   report_vs/evidence_packs/scope: "gpt-5-mini"
-  report_vs/evidence_packs/findings: "o3"
-  report_vs/evidence_packs/limitations: "o3"
-  report_vs/evidence_packs/methods: "o3"
+  report_vs/evidence_packs/findings: "gpt-5-mini"
+  report_vs/evidence_packs/limitations: "gpt-5-mini"
+  report_vs/evidence_packs/methods: "gpt-5-mini"
   report_vs/evidence_packs/quote_candidates: "gpt-5-mini"
-  report_vs/validate/grounding: "o3"
+  report_vs/validate/grounding: "gpt-5-mini"
   report_vs/taxonomy: "gpt-5-mini"
-  rank_candidates: "gpt-5"
+  rank_candidates: "gpt-5-mini"
 
 rank:
-  model: "gpt-5"
+  model: "gpt-5-mini"
   temperature: 1.0
   timeout_seconds: 7200
   seed: null
