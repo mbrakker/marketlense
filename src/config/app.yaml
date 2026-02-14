@@ -71,6 +71,7 @@ openai_models:
   report_vs/validate/grounding: "gpt-5-mini"
   report_vs/taxonomy: "gpt-5-mini"
   rank_candidates: "gpt-5-mini"
+  rank_candidates/crop_refine: "gpt-5-mini"
 
 rank:
   model: "gpt-5-mini"
@@ -78,6 +79,16 @@ rank:
   timeout_seconds: 7200
   seed: null
   max_candidates: 40
+  selected_max: 5
+  min_overall_score: 78
+  min_quality_score: 75
+  min_insight_score: 75
+  min_data_score: 70
+  crop_refine_enabled: true
+  crop_refine_mode: "adaptive"
+  crop_refine_page_dpi: 110
+  crop_refine_temperature: 0.0
+  crop_refine_timeout_seconds: 7200
 
 publish:
   wp:

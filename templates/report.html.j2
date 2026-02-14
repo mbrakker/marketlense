@@ -40,6 +40,7 @@
 {% set primary_figure = data._figure_top if data._figure_top is defined and data._figure_top else (data._figure_image if data._figure_image is defined else "") %}
 {% set primary_figure = primary_figure|string|trim %}
 {% set figure_gallery = data._figure_gallery if data._figure_gallery is defined and data._figure_gallery else [] %}
+{% set figure_section_enabled = data._figure_section_enabled if data._figure_section_enabled is defined else True %}
 {% set figure_caption = "" %}
 {% if data.figure is defined and data.figure %}
   {% if data.figure.title is defined and data.figure.title %}
@@ -56,8 +57,8 @@
 {% set thumb_height = 180 %}
 {% set has_metadata = publisher or region or report_year or (categories_list|length > 0) or (tags_list|length > 0) %}
 {% set has_topics = topics_list|length > 0 %}
-{% set has_contents_preview = data.contents_page_number is defined and data.contents_page_number and data.contents_page_number > 0 and data._contents_image is defined and data._contents_image %}
-{% set has_primary_figure = primary_figure %}
+{% set has_contents_preview = figure_section_enabled and data.contents_page_number is defined and data.contents_page_number and data.contents_page_number > 0 and data._contents_image is defined and data._contents_image %}
+{% set has_primary_figure = figure_section_enabled and primary_figure %}
 {% set has_claim_map = claim_map|length > 0 %}
 {% set has_expert_comment = expert_comment and (expert_comment|string|trim) %}
 {% set has_linkedin_post = linkedin_post and (linkedin_post|string|trim) %}

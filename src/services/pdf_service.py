@@ -27,6 +27,10 @@ from src.contracts.pdf_text import (
 )
 from src.contracts.pdf_utils import PdfEofCheckRequest, PdfEofCheckResponse, PdfInfoRequest, PdfInfoResponse
 from src.contracts.report_assets import (
+    CropRefineBBoxApplyRequest,
+    CropRefineBBoxApplyResponse,
+    CropRefinePageRenderRequest,
+    CropRefinePageRenderResponse,
     CropRequest,
     CropResponse,
     ExtractCandidatesRequest,
@@ -2893,6 +2897,7 @@ def crop_regions(request: CropRequest, ctx: RunContext) -> CropResponse:
             "pdf_path": request.pdf_path,
             "count": len(request.items),
             "subdir": request.subdir,
+            "mode": request.mode,
             "using_context": bool(request.pdf_context and request.pdf_context.fitz_doc),
         },
     ))
@@ -2903,6 +2908,7 @@ def crop_regions(request: CropRequest, ctx: RunContext) -> CropResponse:
         request.subdir,
         request.items,
         pad=request.pad,
+        mode=request.mode,
         doc=request.pdf_context.fitz_doc if request.pdf_context else None,
     )
     crop_logger.info(log_event(
@@ -2922,6 +2928,7 @@ def _crop_regions(
     subdir: str,
     items: Iterable[CropItem],
     pad: int = 8,
+    mode: str = "legacy",
     doc: Optional[fitz.Document] = None,
 ) -> List[str]:
     safe_subdir = subdir or "slices"
@@ -2940,7 +2947,19 @@ def _crop_regions(
                 continue
             pix = page.get_pixmap(matrix=fitz.Matrix(2, 2), clip=r, alpha=False)
             img = None
-            if it.type == "chart":
+            if mode == "figure_strict":
+                try:
+                    img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+                    img = _trim_uniform_border(
+                        img,
+                        allow_top=True,
+                        allow_bottom=True,
+                        allow_left=True,
+                        allow_right=True,
+                    )
+                except Exception:
+                    img = None
+            elif it.type == "chart":
                 try:
                     img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
                     img = _trim_uniform_border(img, allow_bottom=False, allow_right=False)
@@ -2961,6 +2980,125 @@ def _crop_regions(
         if doc is None:
             local_doc.close()
     return paths
+
+
+def render_page_for_crop_refine(request: CropRefinePageRenderRequest, ctx: RunContext) -> CropRefinePageRenderResponse:
+    crop_logger.info(log_event(
+        ctx,
+        role="service",
+        event="crop_refine_page_render_start",
+        module=crop_logger.name,
+        fields={
+            "pdf_path": request.pdf_path,
+            "report_name": request.report_name,
+            "page": request.page,
+            "dpi": request.dpi,
+            "using_context": bool(request.pdf_context and request.pdf_context.fitz_doc),
+        },
+    ))
+    local_doc = request.pdf_context.fitz_doc if request.pdf_context else None
+    owns_doc = local_doc is None
+    if local_doc is None:
+        local_doc = fitz.open(request.pdf_path)
+    try:
+        if request.page < 0 or request.page >= local_doc.page_count:
+            raise AppError(
+                code="crop_refine_page_out_of_range",
+                message=f"Crop refine page out of range: {request.page}",
+                retryable=False,
+                context={"page_count": local_doc.page_count},
+            )
+        page = local_doc[request.page]
+        zoom = max(float(request.dpi), 72.0) / 72.0
+        pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
+        out_dir = Path(request.out_dir) / request.report_name / "crop_refine_pages"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        filename = f"page-{request.page}.png"
+        abs_path = out_dir / filename
+        pix.save(abs_path.as_posix())
+        rel = (Path(request.report_name) / "crop_refine_pages" / filename).as_posix()
+        page_width = float(page.rect.width)
+        page_height = float(page.rect.height)
+        scale_x = (float(pix.width) / page_width) if page_width > 0 else 0.0
+        scale_y = (float(pix.height) / page_height) if page_height > 0 else 0.0
+        response = CropRefinePageRenderResponse(
+            schema_version="1.0",
+            image_path=rel,
+            page=request.page,
+            image_width=int(pix.width),
+            image_height=int(pix.height),
+            page_width=page_width,
+            page_height=page_height,
+            scale_x=scale_x,
+            scale_y=scale_y,
+        )
+    finally:
+        if owns_doc and local_doc is not None:
+            local_doc.close()
+    crop_logger.info(log_event(
+        ctx,
+        role="service",
+        event="crop_refine_page_render_complete",
+        module=crop_logger.name,
+        fields={
+            "page": response.page,
+            "image_path": response.image_path,
+            "image_width": response.image_width,
+            "image_height": response.image_height,
+        },
+    ))
+    return response
+
+
+def apply_crop_refine_bbox(request: CropRefineBBoxApplyRequest, ctx: RunContext) -> CropRefineBBoxApplyResponse:
+    crop_logger.info(log_event(
+        ctx,
+        role="service",
+        event="crop_refine_bbox_apply_start",
+        module=crop_logger.name,
+        fields={
+            "pdf_path": request.pdf_path,
+            "page": request.page,
+            "using_context": bool(request.pdf_context and request.pdf_context.fitz_doc),
+        },
+    ))
+    local_doc = request.pdf_context.fitz_doc if request.pdf_context else None
+    owns_doc = local_doc is None
+    if local_doc is None:
+        local_doc = fitz.open(request.pdf_path)
+    try:
+        if request.page < 0 or request.page >= local_doc.page_count:
+            raise AppError(
+                code="crop_refine_page_out_of_range",
+                message=f"Crop refine page out of range: {request.page}",
+                retryable=False,
+                context={"page_count": local_doc.page_count},
+            )
+        page = local_doc[request.page]
+        x0, y0, x1, y1 = request.bbox
+        rect = fitz.Rect(float(x0), float(y0), float(x1), float(y1)) & page.rect
+        if rect.is_empty:
+            rect = page.rect
+        if rect.width < 1:
+            rect = fitz.Rect(rect.x0, rect.y0, min(page.rect.x1, rect.x0 + 1), rect.y1)
+        if rect.height < 1:
+            rect = fitz.Rect(rect.x0, rect.y0, rect.x1, min(page.rect.y1, rect.y0 + 1))
+        response = CropRefineBBoxApplyResponse(
+            schema_version="1.0",
+            page=request.page,
+            bbox=(float(rect.x0), float(rect.y0), float(rect.x1), float(rect.y1)),
+        )
+    finally:
+        if owns_doc and local_doc is not None:
+            local_doc.close()
+    crop_logger.info(log_event(
+        ctx,
+        role="service",
+        event="crop_refine_bbox_apply_complete",
+        module=crop_logger.name,
+        fields={"page": response.page, "bbox": response.bbox},
+    ))
+    return response
 
 
 # BEGIN PDF PREVIEW

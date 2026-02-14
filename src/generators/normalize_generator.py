@@ -100,6 +100,7 @@ def _normalize_report_payload(data: ReportPayload) -> ReportPayload:
     _figure_gallery = data._figure_gallery or []
     _figure_top = _s(data._figure_top)
     _figure_image = _s(data._figure_image)
+    _figure_section_enabled = bool(getattr(data, "_figure_section_enabled", True))
     _contents_image = _s(data._contents_image)
 
     if not _figure_top and _figure_image:
@@ -121,6 +122,7 @@ def _normalize_report_payload(data: ReportPayload) -> ReportPayload:
         _figure_image=_figure_image,
         _figure_gallery=_figure_gallery,
         _figure_top=_figure_top,
+        _figure_section_enabled=_figure_section_enabled,
         contents_page_number=contents_page_number,
         contents_heading=contents_heading,
         _contents_image=_contents_image,

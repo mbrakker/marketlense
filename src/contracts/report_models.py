@@ -37,6 +37,7 @@ class ReportPayload:
     _figure_image: str = field(default="", metadata={"doc": "Relative path to primary figure image."})
     _figure_gallery: List[str] = field(default_factory=list, metadata={"doc": "Relative paths to figure gallery images."})
     _figure_top: str = field(default="", metadata={"doc": "Relative path to top-ranked figure image."})
+    _figure_section_enabled: bool = field(default=True, metadata={"doc": "Whether the figure section should be rendered in HTML output."})
     _contents_image: str = field(default="", metadata={"doc": "Relative path to contents/index page screenshot, if any."})
     _vector_store_id: str = field(default="", metadata={"doc": "Vector store ID used for analysis, if any."})
     _evidence_packs: dict = field(default_factory=dict, metadata={"doc": "Mapping of evidence pack names to stored JSON paths, if any."})
@@ -58,6 +59,11 @@ class RankedCandidate:
     id: str = field(metadata={"doc": "Candidate identifier."})
     type: str = field(metadata={"doc": "Candidate type: chart|table."})
     score: int = field(metadata={"doc": "Ranking score (0-100)."})
+    quality_score: int = field(default=0, metadata={"doc": "Visual quality score (0-100)."})
+    insight_score: int = field(default=0, metadata={"doc": "Insightfulness score (0-100)."})
+    data_score: int = field(default=0, metadata={"doc": "Data density score (0-100)."})
+    keep: bool = field(default=True, metadata={"doc": "Whether the candidate passed model-level keep/reject decision."})
+    reject_reason: str = field(default="", metadata={"doc": "Model-provided reason when keep=false or low quality."})
     schema_version: str = field(default="1.0", metadata={"doc": "Ranked candidate schema version."})
 
 

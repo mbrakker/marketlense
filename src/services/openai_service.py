@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import base64
 import json
 import logging
+import mimetypes
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict
 
 import openai as openai_legacy
@@ -16,6 +19,7 @@ from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.openai import (
     OpenAIAnalyzeRequest,
     OpenAIAnalyzeResponse,
+    OpenAIJSONImagePromptRequest,
     OpenAIJSONPromptRequest,
     OpenAIResponseRequest,
     OpenAIResponseResult,
@@ -29,6 +33,30 @@ from src.utils.logging import log_event
 logger = logging.getLogger("market_lense.openai_service")
 
 REQUIRED_KEYS = ("tldr", "title", "insights", "quote", "figure", "commentary", "source", "publisher", "taxonomy", "region", "time_period")
+
+
+def _image_path_to_data_url(path: str) -> str:
+    img_path = Path(path)
+    try:
+        raw = img_path.read_bytes()
+    except FileNotFoundError as exc:
+        raise AppError(
+            code="image_not_found",
+            message=f"Image not found: {path}",
+            cause=exc,
+            retryable=False,
+        ) from exc
+    except Exception as exc:
+        raise AppError(
+            code="image_read_failed",
+            message=f"Failed to read image: {path}",
+            cause=exc,
+            retryable=False,
+        ) from exc
+    mime, _ = mimetypes.guess_type(path)
+    mime = mime or "image/png"
+    encoded = base64.b64encode(raw).decode("ascii")
+    return f"data:{mime};base64,{encoded}"
 
 
 def _validate_payload(data: dict) -> None:
@@ -438,6 +466,146 @@ def openai_chat_json(request: OpenAIJSONPromptRequest, ctx: RunContext) -> OpenA
         parsed_json=parsed_json if isinstance(parsed_json, dict) else None,
         input_tokens=prompt_tokens,
         output_tokens=completion_tokens,
+        tool_calls=tool_calls,
+        model=request.model,
+    )
+
+
+def openai_chat_json_with_images(request: OpenAIJSONImagePromptRequest, ctx: RunContext) -> OpenAIResponseResult:
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="openai_chat_json_with_images_start",
+        module=logger.name,
+        fields={
+            "model": request.model,
+            "temperature": request.temperature,
+            "seed": request.seed,
+            "timeout_seconds": request.timeout_seconds,
+            "image_count": len(request.image_paths or []),
+        },
+    ))
+    if not request.image_paths:
+        raise AppError(
+            code="openai_images_missing",
+            message="openai_chat_json_with_images requires at least one image path",
+            retryable=False,
+        )
+    image_urls = [_image_path_to_data_url(path) for path in request.image_paths]
+    client_kwargs: dict = {"api_key": request.api_key}
+    if request.timeout_seconds is not None:
+        client_kwargs["timeout"] = request.timeout_seconds
+    try:
+        if OpenAI is None:
+            raise TypeError("OpenAI client not available")
+        client = OpenAI(**client_kwargs)
+        user_content = [{"type": "input_text", "text": request.user_prompt}]
+        user_content.extend({"type": "input_image", "image_url": image_url} for image_url in image_urls)
+        payload_args = {
+            "model": request.model,
+            "temperature": request.temperature,
+            "input": [
+                {"role": "system", "content": [{"type": "input_text", "text": request.system_prompt}]},
+                {"role": "user", "content": user_content},
+            ],
+        }
+        if request.seed is not None:
+            payload_args["seed"] = request.seed
+        resp = client.responses.create(**payload_args)
+    except TypeError as exc:
+        raise AppError(
+            code="openai_client_unavailable",
+            message="OpenAI client not available",
+            cause=exc,
+            retryable=False,
+            context={"model": request.model},
+        ) from exc
+    except Exception as exc:
+        raise AppError(
+            code="openai_chat_images_failed",
+            message="OpenAI JSON+images request failed",
+            cause=exc,
+            retryable=True,
+            context={"model": request.model},
+        ) from exc
+
+    text = getattr(resp, "output_text", "") or ""
+    usage = getattr(resp, "usage", None) or {}
+    input_tokens = getattr(usage, "input_tokens", None) if usage else None
+    output_tokens = getattr(usage, "output_tokens", None) if usage else None
+    if isinstance(usage, dict):
+        input_tokens = usage.get("input_tokens")
+        output_tokens = usage.get("output_tokens")
+    tool_calls = 0
+    if isinstance(usage, dict):
+        tool_calls = usage.get("total_tool_calls") or usage.get("tool_calls") or 0
+    parsed_json = None
+    if text:
+        try:
+            parsed_json = json.loads(text)
+        except json.JSONDecodeError:
+            parsed_json = None
+    request_id = getattr(resp, "id", None)
+    estimated_cost = estimate_cost_usd(
+        request.model,
+        int(input_tokens or 0),
+        int(output_tokens or 0),
+        int(tool_calls or 0),
+        pricing=request.model_pricing or {},
+    )
+    try:
+        entry = CostLedgerEntry(
+            schema_version="1.0",
+            timestamp_utc=datetime.now(timezone.utc).isoformat(),
+            run_id=ctx.run_id,
+            task_id=ctx.task_id,
+            span_id=ctx.span_id,
+            step_name="openai_chat_json_with_images",
+            model=request.model,
+            input_tokens=int(input_tokens or 0),
+            output_tokens=int(output_tokens or 0),
+            cached_input_tokens=None,
+            tool_calls=int(tool_calls or 0),
+            estimated_cost_usd=estimated_cost,
+            extra={"request_id": str(request_id) if request_id else None},
+        )
+        append_cost_entry(
+            CostLedgerAppendRequest(schema_version="1.0", path=request.cost_ledger_path, entry=entry),
+            ctx,
+        )
+        rollup_daily(
+            CostRollupRequest(schema_version="1.0", ledger_path=request.cost_ledger_path, out_path=request.cost_daily_path),
+            ctx,
+        )
+    except Exception as exc:  # pragma: no cover
+        logger.info(log_event(
+            ctx,
+            role="service",
+            event="cost_ledger_write_failed",
+            module=logger.name,
+            fields={"error": str(exc)},
+        ))
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="openai_chat_json_with_images_complete",
+        module=logger.name,
+        fields={
+            "model": request.model,
+            "request_id": request_id or "",
+            "image_count": len(request.image_paths or []),
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "tool_calls": tool_calls,
+            "parsed_json": isinstance(parsed_json, dict),
+        },
+    ))
+    return OpenAIResponseResult(
+        schema_version="1.0",
+        text=text,
+        parsed_json=parsed_json if isinstance(parsed_json, dict) else None,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
         tool_calls=tool_calls,
         model=request.model,
     )

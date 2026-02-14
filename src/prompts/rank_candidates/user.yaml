@@ -1,7 +1,23 @@
 text: |
-  Task: select the most interesting charts/tables (0-100).
-  Criteria: percentages, deltas, KPIs, strong insights.
-  Return STRICT JSON of the form: {"results":[{"id":"chart-0-1","type":"chart","score":0-100}]}.
+  Task: select the strongest chart/table candidates for final HTML.
+  Prioritize high data density, clear metrics, and insightfulness.
+  Reject decorative, low-data, or likely-fragment visuals.
+
+  Return STRICT JSON:
+  {
+    "results": [
+      {
+        "id": "chart-0-1",
+        "type": "chart|table",
+        "score": 0-100,
+        "quality_score": 0-100,
+        "insight_score": 0-100,
+        "data_score": 0-100,
+        "keep": true,
+        "reject_reason": ""
+      }
+    ]
+  }
   No extra keys or commentary.
 
   [CANDIDATES]

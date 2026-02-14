@@ -171,6 +171,45 @@ class TestConfigService(unittest.TestCase):
                 self.assertEqual(1, settings.artifact_global_max_in_flight)
                 self.assertEqual(0, settings.artifact_global_min_interval_ms)
 
+    def test_rank_and_crop_refine_settings_load(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_analysis=False)
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["rank"] = {
+                "model": "gpt-5-mini",
+                "temperature": 0.2,
+                "timeout_seconds": 120.0,
+                "max_candidates": 30,
+                "selected_max": 5,
+                "min_overall_score": 79,
+                "min_quality_score": 76,
+                "min_insight_score": 77,
+                "min_data_score": 71,
+                "crop_refine_enabled": True,
+                "crop_refine_mode": "invalid-mode",
+                "crop_refine_page_dpi": 111,
+                "crop_refine_temperature": 0.0,
+            }
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
+
+            with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
+                settings = load_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                )
+
+        self.assertEqual(30, settings.rank_max_candidates)
+        self.assertEqual(5, settings.rank_selected_max)
+        self.assertEqual(79, settings.rank_min_overall_score)
+        self.assertEqual(76, settings.rank_min_quality_score)
+        self.assertEqual(77, settings.rank_min_insight_score)
+        self.assertEqual(71, settings.rank_min_data_score)
+        self.assertTrue(settings.crop_refine_enabled)
+        self.assertEqual("adaptive", settings.crop_refine_mode)
+        self.assertEqual(111, settings.crop_refine_page_dpi)
+        self.assertEqual(0.0, settings.crop_refine_temperature)
+        self.assertEqual(settings.rank_timeout_seconds, settings.crop_refine_timeout_seconds)
+
     def test_publish_settings_derive_site_url_from_admin(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(tmp_dir, include_publish=True)

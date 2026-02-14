@@ -58,6 +58,21 @@ class TestNormalizeService(unittest.TestCase):
         self.assertEqual("2024E", normalized.time_period)
         self.assertEqual("My Report", normalized.title)
 
+    def test_normalize_preserves_figure_section_enabled(self) -> None:
+        payload = ReportPayload(
+            tldr="tldr",
+            title="My Report",
+            insights=["a", "b", "c", "d", "e"],
+            quote=Quote(text="q", author="a"),
+            figure=Figure(title="t", evidence="e"),
+            commentary="c",
+            source="s",
+            _figure_section_enabled=False,
+        )
+        ctx = RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
+        normalized = normalize_report(payload, ctx)
+        self.assertFalse(normalized._figure_section_enabled)
+
 
 if __name__ == "__main__":
     unittest.main()

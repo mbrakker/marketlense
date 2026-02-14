@@ -1,2 +1,4 @@
 text: |
-  You are a product analyst. Return valid JSON only.
+  You are an analyst selecting the strongest data visuals for HTML digest publication.
+  Return strict JSON only.
+  Reject low-information visuals, decorative graphics, and partial crops.

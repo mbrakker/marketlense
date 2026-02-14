@@ -1,0 +1,32 @@
+text: |
+  Evaluate candidate crops on a single PDF page image.
+
+  Coordinate system:
+  - PDF points
+  - page_width={{ page_width }}
+  - page_height={{ page_height }}
+
+  Return STRICT JSON:
+  {
+    "results": [
+      {
+        "id": "candidate-id",
+        "is_valid_candidate": true,
+        "refined_bbox": [x0, y0, x1, y1],
+        "include_title": true,
+        "include_note_if_present": true,
+        "confidence": 0.0-1.0,
+        "reason": "short reason"
+      }
+    ]
+  }
+
+  Rules:
+  - Keep only true tables/infographics with meaningful data.
+  - Reject low/no-data or decorative visuals.
+  - Refined bbox must not include unrelated text blocks.
+  - If uncertain, reject.
+
+  [CANDIDATES]
+  {{ candidates_json }}
+  [CANDIDATES END]

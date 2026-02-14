@@ -155,6 +155,16 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     rank_model = rank.get("model") or openai_model
     rank_temperature = float(rank.get("temperature", temperature))
     rank_max_candidates = int(rank.get("max_candidates", 40))
+    rank_selected_max = int(rank.get("selected_max", 5))
+    rank_min_overall_score = int(rank.get("min_overall_score", 78))
+    rank_min_quality_score = int(rank.get("min_quality_score", 75))
+    rank_min_insight_score = int(rank.get("min_insight_score", 75))
+    rank_min_data_score = int(rank.get("min_data_score", 70))
+    crop_refine_enabled = _as_bool(rank.get("crop_refine_enabled"), default=True)
+    crop_refine_mode_raw = str(rank.get("crop_refine_mode", "adaptive")).strip().lower()
+    crop_refine_mode = crop_refine_mode_raw if crop_refine_mode_raw in {"adaptive", "always", "off"} else "adaptive"
+    crop_refine_page_dpi = int(rank.get("crop_refine_page_dpi", 110))
+    crop_refine_temperature = float(rank.get("crop_refine_temperature", 0.0))
     openai_seed_raw = ingest.get("seed")
     rank_seed_raw = rank.get("seed")
     batch_limit_raw = ingest.get("batch_limit")
@@ -185,6 +195,8 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     openai_timeout_seconds = float(timeout_raw) if not _is_missing(timeout_raw) else 600.0
     rank_timeout_raw = rank.get("timeout_seconds")
     rank_timeout_seconds = float(rank_timeout_raw) if not _is_missing(rank_timeout_raw) else openai_timeout_seconds
+    crop_refine_timeout_raw = rank.get("crop_refine_timeout_seconds")
+    crop_refine_timeout_seconds = float(crop_refine_timeout_raw) if not _is_missing(crop_refine_timeout_raw) else rank_timeout_seconds
     lock_ttl_raw = ingest.get("lock_ttl_seconds")
     if _is_missing(lock_ttl_raw):
         lock_ttl_raw = _env_value("INGEST_LOCK_TTL_SECONDS")
@@ -326,6 +338,16 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         rank_temperature=rank_temperature,
         rank_seed=_opt_int(rank_seed_raw),
         rank_max_candidates=rank_max_candidates,
+        rank_selected_max=rank_selected_max,
+        rank_min_overall_score=rank_min_overall_score,
+        rank_min_quality_score=rank_min_quality_score,
+        rank_min_insight_score=rank_min_insight_score,
+        rank_min_data_score=rank_min_data_score,
+        crop_refine_enabled=crop_refine_enabled,
+        crop_refine_mode=crop_refine_mode,
+        crop_refine_page_dpi=crop_refine_page_dpi,
+        crop_refine_temperature=crop_refine_temperature,
+        crop_refine_timeout_seconds=crop_refine_timeout_seconds,
         openai_timeout_seconds=openai_timeout_seconds,
         rank_timeout_seconds=rank_timeout_seconds,
         contents_max_pages=contents_max_pages,
@@ -394,6 +416,16 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             "rank_temperature": settings.rank_temperature,
             "rank_seed": settings.rank_seed,
             "rank_max_candidates": settings.rank_max_candidates,
+            "rank_selected_max": settings.rank_selected_max,
+            "rank_min_overall_score": settings.rank_min_overall_score,
+            "rank_min_quality_score": settings.rank_min_quality_score,
+            "rank_min_insight_score": settings.rank_min_insight_score,
+            "rank_min_data_score": settings.rank_min_data_score,
+            "crop_refine_enabled": settings.crop_refine_enabled,
+            "crop_refine_mode": settings.crop_refine_mode,
+            "crop_refine_page_dpi": settings.crop_refine_page_dpi,
+            "crop_refine_temperature": settings.crop_refine_temperature,
+            "crop_refine_timeout_seconds": settings.crop_refine_timeout_seconds,
             "pdf_text_max_pages": settings.pdf_text_max_pages,
             "pdf_text_max_chars": settings.pdf_text_max_chars,
             "pdf_text_min_density": settings.pdf_text_min_density,

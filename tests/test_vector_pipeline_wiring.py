@@ -369,6 +369,9 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
 
     monkeypatch.setattr(rg, "run_validation", _fake_validation)
     def _fake_render_report(req, ctx):
+        assert req.data.get("_figure_section_enabled") is False
+        assert req.data.get("_figure_gallery") in ([], None)
+        assert req.data.get("_figure_top", "") == ""
         html_path = tmp_path / "out.html"
         html_path.write_text("<html></html>", encoding="utf-8")
         return RenderResponse(schema_version="1.0", html_path=str(html_path))

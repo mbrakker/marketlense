@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import List, Optional
 
 from src.contracts.report_models import ReportPayload
 
@@ -75,6 +75,22 @@ class OpenAIJSONPromptRequest:
     model: str = field(metadata={"doc": "OpenAI model ID."})
     temperature: float = field(metadata={"doc": "Sampling temperature."})
     api_key: str = field(metadata={"doc": "OpenAI API key (secret, loaded from env)."})
+    seed: Optional[int] = field(default=None, metadata={"doc": "Optional seed for deterministic sampling."})
+    timeout_seconds: Optional[float] = field(default=None, metadata={"doc": "Request timeout in seconds, if set."})
+    cost_ledger_path: str = field(default="./out/cost-ledger.jsonl", metadata={"doc": "Filesystem path for the cost ledger JSONL output."})
+    cost_daily_path: str = field(default="./out/cost-daily.json", metadata={"doc": "Filesystem path for daily cost rollups."})
+    model_pricing: dict = field(default_factory=dict, metadata={"doc": "Per-model pricing table for cost estimation."})
+
+
+@dataclass(frozen=True)
+class OpenAIJSONImagePromptRequest:
+    schema_version: str = field(metadata={"doc": "OpenAI JSON+image prompt request schema version."})
+    system_prompt: str = field(metadata={"doc": "Rendered system prompt text."})
+    user_prompt: str = field(metadata={"doc": "Rendered user prompt text."})
+    model: str = field(metadata={"doc": "OpenAI model ID."})
+    temperature: float = field(metadata={"doc": "Sampling temperature."})
+    api_key: str = field(metadata={"doc": "OpenAI API key (secret, loaded from env)."})
+    image_paths: List[str] = field(metadata={"doc": "Filesystem paths to images provided as visual context."})
     seed: Optional[int] = field(default=None, metadata={"doc": "Optional seed for deterministic sampling."})
     timeout_seconds: Optional[float] = field(default=None, metadata={"doc": "Request timeout in seconds, if set."})
     cost_ledger_path: str = field(default="./out/cost-ledger.jsonl", metadata={"doc": "Filesystem path for the cost ledger JSONL output."})
