@@ -31,7 +31,7 @@ from src.contracts.report_assets import (
     RenderRequest,
 )
 from src.contracts.run_context import RunContext
-from src.contracts.categories import CategoryMappingLoadRequest, UncategorizedTagsUpdateRequest
+from src.contracts.categories import CategoryAssignment, CategoryMappingLoadRequest, UncategorizedTagsUpdateRequest
 from src.contracts.pdf_utils import PdfInfoRequest, PdfInfoResponse
 from src.generators.categorize_generator import categorize_taxonomy
 from src.generators.normalize_generator import normalize_report
@@ -91,6 +91,14 @@ class _VectorStoreIndexingState:
     vector_store_status: Optional[str]
     indexed_at_utc: Optional[str]
     last_error: Optional[str]
+
+
+@dataclass(frozen=True)
+class _TaxonomyCategoryState:
+    taxonomy: list[str]
+    region: str
+    time_period: str
+    category_assignment: CategoryAssignment
 
 
 def _derive_title(name: str) -> str:
@@ -529,6 +537,65 @@ def _ensure_vector_store(
         ready_state.vector_store_status,
         ready_state.indexed_at_utc,
         ready_state.last_error,
+    )
+
+
+def _resolve_taxonomy_and_categories(
+    *,
+    file: DriveFile,
+    report_title: str,
+    vector_store_id: Optional[str],
+    settings: IngestSettings,
+    mode_ctx: RunContext,
+) -> _TaxonomyCategoryState:
+    taxonomy_ctx = child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:taxonomy")
+    taxonomy_resp = extract_taxonomy(
+        TaxonomyExtractRequest(
+            schema_version="1.0",
+            report_id=file.file_id,
+            report_title=report_title,
+            vector_store_id=vector_store_id or "",
+            settings=settings,
+        ),
+        taxonomy_ctx,
+    )
+    mappings_resp = load_category_mappings(
+        CategoryMappingLoadRequest(schema_version="1.0", path=settings.category_mapping_path, reload_if_changed=True),
+        taxonomy_ctx,
+    )
+    category_assignment = categorize_taxonomy(taxonomy_resp.taxonomy, mappings_resp, taxonomy_ctx)
+    if category_assignment.unmapped_tags or mappings_resp.mappings.uncategorized:
+        update_uncategorized_tags(
+            UncategorizedTagsUpdateRequest(
+                schema_version="1.0",
+                path=settings.category_mapping_path,
+                report_title=report_title,
+                tags=category_assignment.unmapped_tags,
+            ),
+            taxonomy_ctx,
+        )
+    if vector_store_id:
+        vector_store_service.update_metadata(
+            VectorStoreUpdateMetadataRequest(
+                schema_version="1.0",
+                vector_store_id=vector_store_id,
+                metadata=VectorStoreMetadata(
+                    schema_version="1.0",
+                    report_id=file.file_id,
+                    report_name=report_title,
+                    taxonomy=taxonomy_resp.taxonomy,
+                    categories=category_assignment.categories,
+                    region=taxonomy_resp.region,
+                    time_period=taxonomy_resp.time_period,
+                ),
+            ),
+            child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:metadata"),
+        )
+    return _TaxonomyCategoryState(
+        taxonomy=taxonomy_resp.taxonomy,
+        region=taxonomy_resp.region,
+        time_period=taxonomy_resp.time_period,
+        category_assignment=category_assignment,
     )
 
 
@@ -1312,58 +1379,72 @@ def generate_report(
         last_error=last_error,
     )
 
-    taxonomy_ctx = child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:taxonomy")
-    taxonomy_resp = extract_taxonomy(
-        TaxonomyExtractRequest(
-            schema_version="1.0",
-            report_id=file.file_id,
-            report_title=report_title,
-            vector_store_id=vector_store_id or "",
-            settings=settings,
-        ),
-        taxonomy_ctx,
-    )
-    data.taxonomy = taxonomy_resp.taxonomy
-    data.region = taxonomy_resp.region
-    data.time_period = taxonomy_resp.time_period
-
-    mappings_resp = load_category_mappings(
-        CategoryMappingLoadRequest(schema_version="1.0", path=settings.category_mapping_path, reload_if_changed=True),
-        ctx,
-    )
-    category_assignment = categorize_taxonomy(data.taxonomy, mappings_resp, ctx)
-    data.categories = category_assignment.categories
-    if category_assignment.unmapped_tags or mappings_resp.mappings.uncategorized:
-        update_uncategorized_tags(
-            UncategorizedTagsUpdateRequest(
-                schema_version="1.0",
-                path=settings.category_mapping_path,
-                report_title=report_title,
-                tags=category_assignment.unmapped_tags,
-            ),
-            ctx,
-        )
-    if vector_store_id:
-        vector_store_service.update_metadata(
-            VectorStoreUpdateMetadataRequest(
-                schema_version="1.0",
-                vector_store_id=vector_store_id,
-                metadata=VectorStoreMetadata(
-                    schema_version="1.0",
-                    report_id=file.file_id,
-                    report_name=report_title,
-                    taxonomy=data.taxonomy,
-                    categories=data.categories,
-                    region=data.region,
-                    time_period=data.time_period,
-                ),
-            ),
-            child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:metadata"),
-        )
-
     data.contents_page_number = contents_page_number
     data.contents_heading = contents_heading
     data._contents_image = contents_image
+    evidence_ctx = child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:evidence")
+    taxonomy_state: _TaxonomyCategoryState
+    evidence_error: Optional[Exception] = None
+    packs: dict[str, dict] = {}
+    if parallel_within_file:
+        logger.info(log_event(
+            mode_ctx,
+            role="generator",
+            event="post_vector_store_parallel_start",
+            module=logger.name,
+            fields={
+                "file_id": file.file_id,
+                "tasks": ["taxonomy_categories", "evidence_packs"],
+                "max_workers": min(report_worker_limit, 2),
+            },
+        ))
+        with ThreadPoolExecutor(max_workers=min(report_worker_limit, 2)) as executor:
+            taxonomy_future = executor.submit(
+                _resolve_taxonomy_and_categories,
+                file=file,
+                report_title=report_title,
+                vector_store_id=vector_store_id,
+                settings=settings,
+                mode_ctx=mode_ctx,
+            )
+            evidence_future = executor.submit(
+                generate_evidence_packs,
+                report_id=file.file_id,
+                report_name=report_name,
+                vector_store_id=vector_store_id,
+                settings=settings,
+                ctx=evidence_ctx,
+                md5=md5,
+            )
+            taxonomy_state = taxonomy_future.result()
+            try:
+                packs = evidence_future.result()
+            except Exception as exc:
+                evidence_error = exc
+        logger.info(log_event(
+            mode_ctx,
+            role="generator",
+            event="post_vector_store_parallel_complete",
+            module=logger.name,
+            fields={
+                "file_id": file.file_id,
+                "tasks": ["taxonomy_categories", "evidence_packs"],
+                "evidence_failed": evidence_error is not None,
+            },
+        ))
+    else:
+        taxonomy_state = _resolve_taxonomy_and_categories(
+            file=file,
+            report_title=report_title,
+            vector_store_id=vector_store_id,
+            settings=settings,
+            mode_ctx=mode_ctx,
+        )
+    data.taxonomy = taxonomy_state.taxonomy
+    data.region = taxonomy_state.region
+    data.time_period = taxonomy_state.time_period
+    category_assignment = taxonomy_state.category_assignment
+    data.categories = category_assignment.categories
     base_payload = normalize_report(data, ctx)
 
     mode_data = deepcopy(base_payload)
@@ -1372,14 +1453,17 @@ def generate_report(
     validation_report: ValidationReport | None = None
     artifacts_payload: dict | None = None
     try:
-        packs = generate_evidence_packs(
-            report_id=file.file_id,
-            report_name=report_name,
-            vector_store_id=vector_store_id,
-            settings=settings,
-            ctx=child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:evidence"),
-            md5=md5,
-        )
+        if not parallel_within_file:
+            packs = generate_evidence_packs(
+                report_id=file.file_id,
+                report_name=report_name,
+                vector_store_id=vector_store_id,
+                settings=settings,
+                ctx=evidence_ctx,
+                md5=md5,
+            )
+        elif evidence_error is not None:
+            raise evidence_error
     except AppError as exc:
         if exc.code == "doc_map_empty":
             doc_map_summary = exc.context if isinstance(exc.context, dict) else None
