@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 import json
+import threading
 from pathlib import Path
 
 from src.contracts.config import AppSettings
@@ -23,18 +24,28 @@ class FakePromptClient:
 
 
 class FakeOpenAI:
-    def __init__(self, *payloads):
+    def __init__(self, *payloads, semantic_payload=None, grounding_payload=None):
         self.payloads = list(payloads) or [{}]
+        self.semantic_payload = semantic_payload
+        self.grounding_payload = grounding_payload
         self.requests = []
+        self._lock = threading.Lock()
 
-    def _next_payload(self):
-        if self.payloads:
-            return self.payloads.pop(0)
-        return {}
+    def _next_payload(self, ctx):
+        task_id = str(getattr(ctx, "task_id", ""))
+        if task_id.endswith(":semantic") and isinstance(self.semantic_payload, dict):
+            return self.semantic_payload
+        if task_id.endswith(":grounding") and isinstance(self.grounding_payload, dict):
+            return self.grounding_payload
+        with self._lock:
+            if self.payloads:
+                return self.payloads.pop(0)
+            return {}
 
     def openai_chat_json(self, req, ctx):
-        payload = self._next_payload()
-        self.requests.append(("chat", req.model))
+        payload = self._next_payload(ctx)
+        with self._lock:
+            self.requests.append(("chat", req.model, str(getattr(ctx, "task_id", ""))))
         return OpenAIResponseResult(
             schema_version="1.0",
             text=json.dumps(payload),
@@ -46,7 +57,8 @@ class FakeOpenAI:
         )
 
     def openai_respond_with_vector_store(self, req, ctx):
-        self.requests.append(("vector", req.vector_store_id))
+        with self._lock:
+            self.requests.append(("vector", req.vector_store_id, str(getattr(ctx, "task_id", ""))))
         return self.openai_chat_json(req, ctx)
 
 
@@ -173,7 +185,7 @@ def test_validation_accepts_paraphrased_metrics_and_quotes(tmp_path):
         "quotes": [{"id": "q1", "supported": True, "confidence": 0.81, "reason": "Meaning preserved"}],
     }
     grounding_payload = {"unsupported": []}
-    fake_openai = FakeOpenAI(semantic_payload, grounding_payload)
+    fake_openai = FakeOpenAI(semantic_payload=semantic_payload, grounding_payload=grounding_payload)
     analysis_store = FakeAnalysisStore()
     result = validate_report(
         ValidationRequest(
@@ -204,8 +216,8 @@ def test_validation_detects_new_numbers_and_grounding(tmp_path):
         "expert_comment": "We expect revenue to reach 99 soon.",
     }
     fake_openai = FakeOpenAI(
-        {"metrics": [], "quotes": []},
-        {"unsupported": [{"section": "expert_comment", "text": "We expect", "reason": "No evidence"}]},
+        semantic_payload={"metrics": [], "quotes": []},
+        grounding_payload={"unsupported": [{"section": "expert_comment", "text": "We expect", "reason": "No evidence"}]},
     )
     analysis_store = FakeAnalysisStore()
     result = validate_report(
@@ -240,8 +252,8 @@ def test_commentary_numbers_allowed_when_in_report_or_evidence(tmp_path):
     }
     evidence_packs = {"pack": {"findings": [{"id": "f1", "evidence": "Revenue grew 42% year over year"}]}}
     fake_openai = FakeOpenAI(
-        {"metrics": [], "quotes": []},
-        {"unsupported": []},
+        semantic_payload={"metrics": [], "quotes": []},
+        grounding_payload={"unsupported": []},
     )
     analysis_store = FakeAnalysisStore()
     result = validate_report(
@@ -289,3 +301,47 @@ def test_validation_warns_on_data_gap(tmp_path):
     assert result.status == "pass"
     assert result.severity == "warning"
     assert any(issue.severity == "warning" for issue in result.issues)
+
+
+def test_validation_issue_order_preserved_with_parallel_checks(tmp_path):
+    settings = _settings(tmp_path)
+    artifacts = {
+        "insights_final": [
+            {"id": "i1", "text": "Insight text", "evidence_id": "e1", "evidence": "Growth was 5%", "metric": {"value": "10", "unit": "%", "timeframe": "2024"}},
+        ],
+        "quotes_final": [{"id": "q1", "text": "Outside quote", "speaker": "CEO", "citation": ""}],
+        "expert_comment": "We expect revenue to reach 99 soon.",
+    }
+    fake_openai = FakeOpenAI(
+        semantic_payload={
+            "metrics": [{"id": "i1", "supported": False, "confidence": 0.9, "reason": "Not grounded"}],
+            "quotes": [{"id": "q1", "supported": False, "confidence": 0.9, "reason": "Not grounded"}],
+        },
+        grounding_payload={"unsupported": [{"section": "expert_comment", "text": "We expect", "reason": "No evidence"}]},
+    )
+    analysis_store = FakeAnalysisStore()
+    result = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="r-order",
+            report=_report(),
+            artifacts=artifacts,
+            evidence_packs={},
+            vector_store_id=None,
+        ),
+        settings,
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=fake_openai,
+        analysis_store=analysis_store,
+    )
+
+    messages = [issue.message for issue in result.issues]
+    idx_semantic_metric = next(i for i, message in enumerate(messages) if "Semantic check: metric for i1 not supported" in message)
+    idx_metric_exact = next(i for i, message in enumerate(messages) if "Metric value '10' not found in evidence" in message)
+    idx_quote_exact = next(i for i, message in enumerate(messages) if "Quote not verbatim in evidence" in message)
+    idx_number = next(i for i, message in enumerate(messages) if "Number 99.0 not present in report or evidence" in message)
+    idx_grounding = next(i for i, message in enumerate(messages) if "No evidence: We expect" in message)
+
+    assert idx_semantic_metric < idx_metric_exact < idx_quote_exact < idx_number < idx_grounding
+    assert len([req for req in fake_openai.requests if req[0] == "chat"]) == 2

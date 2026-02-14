@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 import json
 import logging
 import re
@@ -108,21 +109,109 @@ def validate_report(
     insights = _ensure_list(request.artifacts.get("insights_final") if isinstance(request.artifacts, dict) else [])
     quotes = _extract_quotes(request, insights)
     evidence_texts, evidence_map = _collect_evidence_texts(request.artifacts, request.evidence_packs)
-    semantic_outcome = _run_semantic_validation(
-        insights,
-        quotes,
-        evidence_texts,
-        settings,
-        prompt_client,
-        openai_client,
-        ctx,
-    )
+    parallel_workers = _validation_parallel_workers(settings)
+    semantic_outcome: _SemanticCheckOutcome
+    metric_issues: List[ValidationIssue] = []
+    quote_issues: List[ValidationIssue] = []
+    number_issues: List[ValidationIssue] = []
+    grounding_issues: List[ValidationIssue] = []
+    if parallel_workers > 1:
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="validation_parallel_start",
+            module=logger.name,
+            fields={
+                "report_id": request.report_id,
+                "workers": parallel_workers,
+                "tasks": ["semantic", "grounding", "metrics", "quotes", "numbers"],
+            },
+        ))
+        with ThreadPoolExecutor(max_workers=min(parallel_workers, 3)) as executor:
+            semantic_future = executor.submit(
+                _run_semantic_validation,
+                insights,
+                quotes,
+                evidence_texts,
+                settings,
+                prompt_client,
+                openai_client,
+                ctx,
+            )
+            grounding_future = executor.submit(
+                _run_grounding_check,
+                request,
+                settings,
+                evidence_texts,
+                prompt_client,
+                openai_client,
+                ctx,
+            )
+            number_future = executor.submit(
+                _validate_new_numbers,
+                request.artifacts,
+                insights,
+                request.report,
+                evidence_texts,
+            )
+            try:
+                semantic_outcome = semantic_future.result()
+            except Exception:
+                grounding_future.cancel()
+                number_future.cancel()
+                raise
+            metric_future = executor.submit(
+                _validate_insight_metrics,
+                insights,
+                evidence_map,
+                semantic_outcome.metric_support,
+            )
+            quote_future = executor.submit(
+                _validate_quotes,
+                quotes,
+                evidence_texts,
+                semantic_outcome.quote_support,
+            )
+            metric_issues = metric_future.result()
+            quote_issues = quote_future.result()
+            number_issues = number_future.result()
+            grounding_issues = grounding_future.result()
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="validation_parallel_complete",
+            module=logger.name,
+            fields={
+                "report_id": request.report_id,
+                "workers": parallel_workers,
+                "semantic_issues": len(semantic_outcome.issues),
+                "metric_issues": len(metric_issues),
+                "quote_issues": len(quote_issues),
+                "number_issues": len(number_issues),
+                "grounding_issues": len(grounding_issues),
+            },
+        ))
+    else:
+        semantic_outcome = _run_semantic_validation(
+            insights,
+            quotes,
+            evidence_texts,
+            settings,
+            prompt_client,
+            openai_client,
+            ctx,
+        )
+        metric_issues = _validate_insight_metrics(insights, evidence_map, semantic_outcome.metric_support)
+        quote_issues = _validate_quotes(quotes, evidence_texts, semantic_outcome.quote_support)
+        number_issues = _validate_new_numbers(request.artifacts, insights, request.report, evidence_texts)
+        grounding_issues = _run_grounding_check(request, settings, evidence_texts, prompt_client, openai_client, ctx)
 
+    # Preserve deterministic issue ordering even when checks execute in parallel.
     issues.extend(semantic_outcome.issues)
-    issues.extend(_validate_insight_metrics(insights, evidence_map, semantic_outcome.metric_support))
-    issues.extend(_validate_quotes(quotes, evidence_texts, semantic_outcome.quote_support))
-    issues.extend(_validate_new_numbers(request.artifacts, insights, request.report, evidence_texts))
-    issues.extend(_run_grounding_check(request, settings, evidence_texts, prompt_client, openai_client, ctx))
+    issues.extend(metric_issues)
+    issues.extend(quote_issues)
+    issues.extend(number_issues)
+    issues.extend(grounding_issues)
 
     data_gap = _has_data_gap(request.artifacts)
     if data_gap and getattr(settings, "validation_data_gap_policy", "warn") == "warn":
@@ -950,6 +1039,17 @@ def _has_data_gap(artifacts: dict) -> bool:
     if isinstance(status, dict):
         return bool(status.get("not_available"))
     return False
+
+
+def _validation_parallel_workers(settings: AppSettings) -> int:
+    raw = getattr(settings, "report_worker_limit", 1)
+    try:
+        workers = int(raw)
+    except (TypeError, ValueError):
+        workers = 1
+    if workers < 1:
+        return 1
+    return workers
 
 
 def _validation_cache_meta(
