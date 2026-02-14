@@ -1,3 +1,4 @@
+<!doctype html>
 {% set art = data.artifacts if data.artifacts is defined else {} %}
 {% set summary = art.summary if art.summary is defined else {} %}
 {% set source_status = art.source_status if art.source_status is defined else {} %}
@@ -47,6 +48,12 @@
     {% set figure_caption = data.figure.evidence|string|trim %}
   {% endif %}
 {% endif %}
+{% set preview_width = 1400 %}
+{% set preview_height = 1980 %}
+{% set figure_width = 1600 %}
+{% set figure_height = 900 %}
+{% set thumb_width = 320 %}
+{% set thumb_height = 180 %}
 {% set has_metadata = publisher or region or report_year or (categories_list|length > 0) or (tags_list|length > 0) %}
 {% set has_topics = topics_list|length > 0 %}
 {% set has_contents_preview = data.contents_page_number is defined and data.contents_page_number and data.contents_page_number > 0 and data._contents_image is defined and data._contents_image %}
@@ -83,11 +90,13 @@
 {% set seo_description = tldr_text if tldr_text else (exec_summary if exec_summary else ("Digest for " ~ report_title)) %}
 {% set seo_description = seo_description|string|trim %}
 {% set seo_description = seo_description[:180] ~ ("..." if seo_description|length > 180 else "") %}
-{% set base_title = report_title %}
+{% set short_title = report_title[:72] ~ ("..." if report_title|length > 72 else "") %}
+{% set base_title = short_title %}
 {% if report_year %}
   {% set base_title = base_title ~ " " ~ report_year %}
 {% endif %}
-{% set seo_title = base_title ~ (" | " ~ publisher if publisher else "") ~ " | Digest" %}
+{% set publisher_short = publisher[:40] ~ ("..." if publisher|length > 40 else "") %}
+{% set seo_title = base_title ~ (" | " ~ publisher_short if publisher_short else "") ~ " | Market Lense" %}
 {% set primary_image = preview_png if preview_png else primary_figure %}
 {% set primary_image = primary_image|string|trim %}
 {% set robots_content = data.robots if data.robots is defined and data.robots else ("index,follow" if has_substantive_content and not not_available else "noindex,nofollow") %}
@@ -105,7 +114,6 @@
   "articleSection": topics_list,
   "keywords": ld_keywords
 } %}
-<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -114,6 +122,8 @@
 <meta name="description" content="{{ seo_description }}">
 <meta name="robots" content="{{ robots_content }}">
 <meta name="drive-file-id" content="{{ file_id }}">
+<meta name="theme-color" content="#0d3b66">
+<meta property="og:site_name" content="Market Lense">
 <meta property="og:type" content="article">
 <meta property="og:title" content="{{ seo_title }}">
 <meta property="og:description" content="{{ seo_description }}">
@@ -399,16 +409,486 @@ h3{
   color:var(--muted);
   font-size:.84rem;
 }
+:root{
+  --bg:#f0f4fb;
+  --panel:#ffffff;
+  --ink:#162339;
+  --muted:#4f6078;
+  --accent:#0d3b66;
+  --accent-2:#f4b942;
+  --border:#d6e0ed;
+  --shadow:0 18px 44px rgba(11,31,56,.12);
+}
+body{
+  font-family:"Iowan Old Style","Baskerville","Times New Roman",serif;
+  color:var(--ink);
+}
+.page-shell{max-width:1180px;margin:24px auto 58px}
+.report{
+  position:relative;
+  border:1px solid #cdd9ea;
+  box-shadow:var(--shadow);
+}
+.hero{
+  padding:0;
+  border-bottom:1px solid var(--border);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(255,255,255,.95) 0%, rgba(255,255,255,0) 32%),
+    linear-gradient(130deg,#f7fbff 0%,#ebf2ff 52%,#f7efe3 100%);
+}
+.hero-split{
+  display:grid;
+  grid-template-columns:1.2fr .8fr;
+  gap:22px;
+  padding:28px 30px 22px;
+}
+.hero-copy{
+  align-self:center;
+}
+.hero .eyebrow{
+  letter-spacing:.08em;
+  color:#2c4f77;
+}
+.hero h1{
+  font-size:clamp(1.85rem,3.2vw,2.7rem);
+  line-height:1.1;
+  margin:0 0 .62rem;
+}
+.hero-subtitle{
+  margin:0 0 1rem;
+  font-size:1.02rem;
+  max-width:58ch;
+}
+.hero-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin:0;
+  padding:0;
+  list-style:none;
+}
+.hero-meta li{
+  border:1px solid #bfd1e8;
+  border-radius:999px;
+  padding:5px 11px;
+  font-size:.78rem;
+  color:#20456d;
+  background:rgba(255,255,255,.7);
+  font-family:"Avenir Next","Segoe UI",Tahoma,sans-serif;
+}
+.hero-media{
+  display:flex;
+  align-items:stretch;
+}
+.hero-card{
+  margin:0;
+  width:100%;
+  border:1px solid #bfd1e8;
+  border-radius:14px;
+  overflow:hidden;
+  background:#fff;
+  box-shadow:0 10px 26px rgba(13,59,102,.14);
+}
+.hero-card img{
+  width:100%;
+  height:100%;
+  min-height:220px;
+  max-height:340px;
+  object-fit:cover;
+  display:block;
+}
+.hero-card figcaption{
+  padding:8px 10px;
+  font-size:.82rem;
+  color:#4f6078;
+  border-top:1px solid #d8e3f0;
+}
+.reading-progress{
+  position:sticky;
+  top:0;
+  z-index:50;
+  height:3px;
+  background:rgba(13,59,102,.1);
+}
+.reading-progress span{
+  display:block;
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg,#0d3b66 0%,#f4b942 100%);
+  transition:width .2s linear;
+}
+.section-nav{
+  position:sticky;
+  top:3px;
+  z-index:40;
+  padding:10px 24px;
+  border-bottom:1px solid var(--border);
+  background:rgba(255,255,255,.72);
+  backdrop-filter:blur(12px);
+}
+.nav-scroll{
+  overflow-x:auto;
+  padding:4px 0;
+  scrollbar-width:thin;
+}
+.nav-list{
+  flex-wrap:nowrap;
+  gap:7px;
+  min-width:max-content;
+}
+.nav-list a{
+  scroll-snap-align:start;
+  border-color:#c4d6ea;
+  background:rgba(255,255,255,.86);
+  color:#1c446f;
+  font-family:"Avenir Next","Segoe UI",Tahoma,sans-serif;
+  font-weight:600;
+  transition:all .24s ease;
+}
+.nav-list a:hover{
+  text-decoration:none;
+  border-color:#86a8ca;
+  transform:translateY(-1px);
+}
+.nav-list a.is-active{
+  color:#fff;
+  border-color:#0d3b66;
+  background:linear-gradient(140deg,#0d3b66 0%,#245c92 100%);
+  box-shadow:0 6px 16px rgba(13,59,102,.28);
+}
+.content{padding:24px 30px 30px}
+.panel{
+  position:relative;
+  border:1px solid #d6e0ed;
+  border-radius:16px;
+  padding:20px 20px 18px;
+  background:#fff;
+  margin:0 0 16px;
+}
+.panel::before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:0;
+  bottom:0;
+  width:4px;
+  border-top-left-radius:15px;
+  border-bottom-left-radius:15px;
+  background:#b2c7de;
+}
+.panel[data-tone="summary"]::before{background:linear-gradient(180deg,#0d3b66 0%,#3877b3 100%)}
+.panel[data-tone="insights"]::before{background:linear-gradient(180deg,#1a6f4f 0%,#38a169 100%)}
+.panel[data-tone="figures"]::before{background:linear-gradient(180deg,#6a4ea1 0%,#8b73bc 100%)}
+.panel[data-tone="quotes"]::before{background:linear-gradient(180deg,#915019 0%,#d18a44 100%)}
+h2{
+  margin:0 0 .72rem;
+  font-size:1.48rem;
+  line-height:1.18;
+  letter-spacing:.01em;
+  font-family:"Avenir Next","Segoe UI",Tahoma,sans-serif;
+}
+.section-kicker{
+  display:block;
+  margin:0 0 7px;
+  letter-spacing:.09em;
+  text-transform:uppercase;
+  font-size:.69rem;
+  color:#607791;
+  font-family:"Avenir Next","Segoe UI",Tahoma,sans-serif;
+  font-weight:700;
+}
+.summary-copy{
+  max-width:72ch;
+  font-size:1.03rem;
+}
+.insight-grid{
+  gap:12px;
+}
+.insight-card{
+  background:linear-gradient(180deg,#f8fbff 0%,#f1f7ff 100%);
+  border:1px solid #d4e1f1;
+  padding:14px;
+}
+.insight-index{
+  border:none;
+  background:#0d3b66;
+  color:#fff;
+  font-weight:700;
+}
+.insight-metric{
+  margin-top:10px;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  border:1px solid #b9d5c8;
+  border-radius:999px;
+  background:#e9f7f1;
+  color:#1b5d45;
+  padding:5px 10px;
+  font-size:.82rem;
+  font-family:"Avenir Next","Segoe UI",Tahoma,sans-serif;
+  font-weight:700;
+}
+.badge{
+  background:#fff;
+  border-color:#b9cbe2;
+}
+.quote-grid{
+  gap:12px;
+}
+.quote-card{
+  border:1px solid #e3d2bb;
+  border-radius:14px;
+  padding:16px 16px 12px;
+  background:
+    radial-gradient(circle at 100% 0%, #fff5e8 0%, rgba(255,245,232,0) 40%),
+    #fffcf8;
+}
+.quote-card blockquote{
+  position:relative;
+  margin:0;
+}
+.quote-card blockquote::before{
+  content:"\201C";
+  position:absolute;
+  left:-4px;
+  top:-17px;
+  font-size:3.2rem;
+  line-height:1;
+  color:#d9b38b;
+}
+.quote-card blockquote p{
+  margin:0 0 12px;
+  padding-left:24px;
+  font-size:1.07rem;
+  line-height:1.55;
+}
+.quote-byline{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:6px;
+  font-size:.85rem;
+}
+.quote-byline .quote-author{
+  color:#4a2b15;
+  font-weight:700;
+}
+.quote-citation{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  border:1px solid #e7c69f;
+  border-radius:999px;
+  padding:3px 8px;
+  background:#fff7eb;
+  color:#7c4a1e;
+  font-family:"Avenir Next","Segoe UI",Tahoma,sans-serif;
+}
+.figure-carousel{
+  display:grid;
+  gap:11px;
+}
+.carousel-shell{
+  position:relative;
+  border:1px solid #d6dff0;
+  border-radius:14px;
+  background:#f9fbff;
+  overflow:hidden;
+}
+.carousel-slides{
+  position:relative;
+}
+.carousel-slide{
+  margin:0;
+  display:none;
+}
+.carousel-slide.is-active{
+  display:block;
+}
+.carousel-slide img{
+  width:100%;
+  height:auto;
+  max-height:540px;
+  object-fit:contain;
+  background:#f5f8fd;
+  display:block;
+}
+.carousel-caption{
+  padding:8px 11px 10px;
+  color:#4f6078;
+  border-top:1px solid #d8e3f0;
+  font-size:.9rem;
+}
+.carousel-btn{
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  width:38px;
+  height:38px;
+  border:1px solid #b6c8df;
+  border-radius:50%;
+  background:rgba(255,255,255,.94);
+  color:#0d3b66;
+  font-size:1.2rem;
+  line-height:1;
+  cursor:pointer;
+  z-index:3;
+}
+.carousel-btn:hover{background:#fff}
+.carousel-btn[disabled]{opacity:.45;cursor:default}
+.carousel-btn.prev{left:12px}
+.carousel-btn.next{right:12px}
+.carousel-toolbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+.carousel-count{
+  font-size:.84rem;
+  color:#4f6078;
+  font-family:"Avenir Next","Segoe UI",Tahoma,sans-serif;
+}
+.lightbox-open{
+  border:1px solid #c2d3e8;
+  border-radius:999px;
+  background:#fff;
+  color:#0d3b66;
+  font-family:"Avenir Next","Segoe UI",Tahoma,sans-serif;
+  font-size:.82rem;
+  padding:5px 11px;
+  cursor:pointer;
+}
+.carousel-thumbs{
+  display:flex;
+  gap:8px;
+  overflow-x:auto;
+  padding-bottom:3px;
+}
+.carousel-thumb{
+  border:1px solid #bfd0e6;
+  border-radius:8px;
+  padding:2px;
+  background:#fff;
+  cursor:pointer;
+}
+.carousel-thumb img{
+  display:block;
+  width:110px;
+  height:68px;
+  object-fit:cover;
+  border-radius:6px;
+}
+.carousel-thumb.is-active{
+  border-color:#0d3b66;
+  box-shadow:0 0 0 2px rgba(13,59,102,.18);
+}
+.prose-block{
+  display:grid;
+  gap:11px;
+}
+.prose-block .prose-paragraph{
+  margin:0;
+  max-width:72ch;
+}
+.lightbox{
+  position:fixed;
+  inset:0;
+  z-index:120;
+  background:rgba(7,15,26,.9);
+  display:grid;
+  grid-template-rows:auto 1fr;
+  padding:14px;
+}
+.lightbox[hidden]{display:none}
+.lightbox-top{
+  display:flex;
+  justify-content:flex-end;
+  margin-bottom:8px;
+}
+.lightbox-close{
+  border:1px solid rgba(255,255,255,.32);
+  border-radius:999px;
+  background:rgba(255,255,255,.1);
+  color:#fff;
+  padding:5px 12px;
+  font-size:.84rem;
+  cursor:pointer;
+}
+.lightbox figure{
+  margin:0;
+  display:grid;
+  place-items:center;
+  gap:10px;
+}
+.lightbox img{
+  max-width:min(95vw,1400px);
+  max-height:78vh;
+  width:auto;
+  height:auto;
+}
+.lightbox figcaption{
+  color:#d8e2f1;
+  text-align:center;
+  max-width:90ch;
+}
+.panel[data-reveal]{
+  opacity:0;
+  transform:translateY(18px);
+}
+.panel.is-visible{
+  opacity:1;
+  transform:none;
+  transition:opacity .45s ease, transform .45s ease;
+}
+@media (prefers-reduced-motion:reduce){
+  *{
+    animation:none!important;
+    transition:none!important;
+    scroll-behavior:auto!important;
+  }
+  .panel[data-reveal]{
+    opacity:1;
+    transform:none;
+  }
+}
 @media (max-width:800px){
   .page-shell{padding:0 12px}
-  .hero,.content,.section-nav,.footer{padding-left:16px;padding-right:16px}
+  .content,.section-nav,.footer{padding-left:16px;padding-right:16px}
+  .hero-split{
+    grid-template-columns:1fr;
+    gap:12px;
+    padding:20px 16px 18px;
+  }
+  .hero-card img{
+    max-height:260px;
+  }
+  .section-nav{
+    top:3px;
+    padding:8px 10px;
+  }
+  .content{
+    padding:18px 16px 22px;
+  }
+  .panel{
+    padding:16px 14px 14px;
+  }
+  .carousel-btn{
+    width:34px;
+    height:34px;
+  }
+  .carousel-thumb img{
+    width:84px;
+    height:56px;
+  }
   h1{font-size:1.58rem}
 }
 @media print{
   body{background:#fff}
   .page-shell{max-width:none;margin:0;padding:0}
   .report{border:none;box-shadow:none;border-radius:0}
-  .section-nav{display:none}
+  .section-nav,.reading-progress,.lightbox{display:none}
   .panel{break-inside:avoid}
 }
 </style>
@@ -417,58 +897,89 @@ h3{
   <div class="page-shell">
     <article class="report">
       <header class="hero">
-        <p class="eyebrow">Market Lense report digest</p>
-        <h1>{{ report_title }}</h1>
-        <p class="hero-subtitle">
-          {% if publisher %}{{ publisher }}{% else %}Unknown publisher{% endif %}
-          {% if report_year %} | {{ report_year }}{% endif %}
-          {% if region %} | {{ region }}{% endif %}
-        </p>
+        <div class="hero-split">
+          <div class="hero-copy">
+            <p class="eyebrow">Market Lense report digest</p>
+            <h1>{{ report_title }}</h1>
+            <p class="hero-subtitle">
+              {% if publisher %}{{ publisher }}{% else %}Unknown publisher{% endif %}
+              {% if report_year %} | {{ report_year }}{% endif %}
+              {% if region %} | {{ region }}{% endif %}
+            </p>
+            <ul class="hero-meta">
+              {% if has_insights %}<li>{{ insights_ns.count }} insight{% if insights_ns.count != 1 %}s{% endif %}</li>{% endif %}
+              {% if has_quotes %}<li>{{ quotes_ns.count }} quote{% if quotes_ns.count != 1 %}s{% endif %}</li>{% endif %}
+              {% if has_topics %}<li>{{ topics_list|length }} topic{% if topics_list|length != 1 %}s{% endif %}</li>{% endif %}
+              {% if canonical_url %}<li>Source linked</li>{% endif %}
+            </ul>
+          </div>
+          <div class="hero-media">
+            {% set hero_image = preview_png if preview_png else (primary_figure if primary_figure else "") %}
+            {% if hero_image %}
+            <div class="preview">
+              <figure class="hero-card">
+                <img src="{{ hero_image }}"
+                  srcset="{{ hero_image }} 1x, {{ hero_image }} 2x"
+                  sizes="(max-width: 800px) 100vw, 38vw"
+                  alt="Report preview visual for {{ report_title }}"
+                  loading="eager"
+                  fetchpriority="high"
+                  decoding="async"
+                  width="{{ preview_width }}"
+                  height="{{ preview_height }}">
+                <figcaption>Preview panel for the source report.</figcaption>
+              </figure>
+            </div>
+            {% endif %}
+          </div>
+        </div>
       </header>
 
+      <div class="reading-progress" aria-hidden="true"><span id="reading-progress-bar"></span></div>
       <nav class="section-nav" aria-label="Digest sections">
-        <ul class="nav-list">
-          <li><a href="#section-summary">TL;DR</a></li>
-          {% if exec_summary %}<li><a href="#section-executive">Executive summary</a></li>{% endif %}
-          <li><a href="#section-insights">Key data insights</a></li>
-          {% if has_primary_figure or has_contents_preview %}<li><a href="#section-figures">Figure</a></li>{% endif %}
-          <li><a href="#section-quotes">Key quotes</a></li>
-          {% if has_topics %}<li><a href="#section-topics">Covered topics / TOC</a></li>{% endif %}
-          {% if has_metadata %}<li><a href="#section-metadata">Report metadata</a></li>{% endif %}
-          {% if has_expert_comment %}<li><a href="#section-expert">Expert comment</a></li>{% endif %}
-          {% if has_linkedin_post %}<li><a href="#section-linkedin">LinkedIn post</a></li>{% endif %}
-        </ul>
+        <div class="nav-scroll">
+          <ul class="nav-list">
+            <li><a href="#section-summary" data-section-link>TL;DR</a></li>
+            {% if exec_summary %}<li><a href="#section-executive" data-section-link>Executive summary</a></li>{% endif %}
+            <li><a href="#section-insights" data-section-link>Key data insights</a></li>
+            {% if has_primary_figure or has_contents_preview %}<li><a href="#section-figures" data-section-link>Figures</a></li>{% endif %}
+            <li><a href="#section-quotes" data-section-link>Key quotes</a></li>
+            {% if has_topics %}<li><a href="#section-topics" data-section-link>Covered topics</a></li>{% endif %}
+            {% if has_metadata %}<li><a href="#section-metadata" data-section-link>Report metadata</a></li>{% endif %}
+            {% if has_expert_comment %}<li><a href="#section-expert" data-section-link>Expert comment</a></li>{% endif %}
+            {% if has_linkedin_post %}<li><a href="#section-linkedin" data-section-link>LinkedIn post</a></li>{% endif %}
+          </ul>
+        </div>
       </nav>
 
-      <main class="content">
+      <main class="content" id="digest-content">
         {% if not_available %}
-        <section class="panel notice" id="section-notice" aria-label="Source status">
+        <section class="panel notice" id="section-notice" data-reveal aria-label="Source status">
           Content not available from text{% if fallback_reason %}: {{ fallback_reason }}{% endif %}
         </section>
         {% endif %}
 
-        {% if preview_png %}
-        <section class="panel preview-block" id="section-preview" aria-label="Document preview">
-          <h2>Preview</h2>
-          <figure class="media-figure">
-            <img src="{{ preview_png }}" alt="Page 1 preview of {{ doc_name }}" loading="eager" fetchpriority="high" decoding="async">
-            <figcaption>First page preview used as social and report thumbnail.</figcaption>
-          </figure>
-        </section>
-        {% endif %}
-
         {% if has_contents_preview %}
-        <section class="panel preview-block" id="section-contents-preview" aria-label="Contents page preview">
+        <section class="panel preview-block" id="section-contents-preview" data-reveal aria-label="Contents page preview">
+          <span class="section-kicker">Navigation map</span>
           <h2>Contents page (page {{ data.contents_page_number }}){% if data.contents_heading %}: {{ data.contents_heading }}{% endif %}</h2>
           <figure class="media-figure">
-            <img src="{{ data._contents_image }}" alt="Contents page screenshot of {{ doc_name }}" loading="lazy" decoding="async">
+            <img src="{{ data._contents_image }}"
+              srcset="{{ data._contents_image }} 1x, {{ data._contents_image }} 2x"
+              sizes="(max-width: 800px) 100vw, 900px"
+              alt="Contents page screenshot of {{ doc_name }}"
+              loading="lazy"
+              decoding="async"
+              width="{{ preview_width }}"
+              height="{{ preview_height }}">
             <figcaption>Detected table of contents preview.</figcaption>
           </figure>
         </section>
         {% endif %}
 
         {% if has_metadata %}
-        <section class="panel" id="section-metadata" aria-label="Report metadata">
+        <section class="panel" id="section-metadata" data-reveal data-section aria-label="Report metadata">
+          <span class="section-kicker">Context</span>
           <h2>Report metadata</h2>
           <div class="meta-grid">
             {% if publisher %}
@@ -519,7 +1030,8 @@ h3{
         </section>
         {% endif %}
 
-        <section class="panel" id="section-summary" aria-label="TL;DR">
+        <section class="panel" id="section-summary" data-reveal data-section data-tone="summary" aria-label="TL;DR">
+          <span class="section-kicker">Section 1</span>
           <h2>TL;DR</h2>
           {% if tldr_text %}
             <p class="summary-copy">{{ tldr_text }}</p>
@@ -529,7 +1041,8 @@ h3{
         </section>
 
         {% if exec_summary %}
-        <section class="panel" id="section-executive" aria-label="Executive summary">
+        <section class="panel" id="section-executive" data-reveal data-section data-tone="summary" aria-label="Executive summary">
+          <span class="section-kicker">Section 2</span>
           <h2>Executive summary</h2>
           <p class="summary-copy">{{ exec_summary }}</p>
           {% if has_claim_map %}
@@ -549,7 +1062,8 @@ h3{
         {% endif %}
 
         {% if has_topics or not_available %}
-        <section class="panel" id="section-topics" aria-label="Covered topics">
+        <section class="panel" id="section-topics" data-reveal data-section aria-label="Covered topics">
+          <span class="section-kicker">Coverage</span>
           <h2>Covered topics / TOC</h2>
           {% if has_topics %}
           <ul class="chip-list">
@@ -566,7 +1080,8 @@ h3{
         </section>
         {% endif %}
 
-        <section class="panel" id="section-insights" aria-label="Key data insights">
+        <section class="panel" id="section-insights" data-reveal data-section data-tone="insights" aria-label="Key data insights">
+          <span class="section-kicker">Section 3</span>
           <h2>Key data insights</h2>
           {% if has_insights %}
           <ol class="insight-grid">
@@ -592,10 +1107,12 @@ h3{
                   {% set metric_text = (metric_value ~ " " ~ metric_unit ~ " " ~ metric_timeframe)|replace("  ", " ")|trim %}
                   {% set metric_source = insight.source if insight.source is defined else (insight.citation if insight.citation is defined else "") %}
                   {% set metric_source = metric_source|string|trim %}
-                  {% if metric_text or metric_source %}
+                  {% if metric_text %}
+                  <div class="insight-metric">Key metric: {{ metric_text }}</div>
+                  {% endif %}
+                  {% if metric_source %}
                   <div class="badge-row">
-                    {% if metric_text %}<span class="badge">{{ metric_text }}</span>{% endif %}
-                    {% if metric_source %}<span class="badge">Source: {{ metric_source }}</span>{% endif %}
+                    <span class="badge">Source: {{ metric_source }}</span>
                   </div>
                   {% endif %}
                 {% endif %}
@@ -609,31 +1126,114 @@ h3{
         </section>
 
         {% if has_primary_figure or has_contents_preview %}
-        <section class="panel" id="section-figures" aria-label="Figure">
-          <h2>Figure</h2>
-          {% if has_primary_figure %}
-          <figure class="media-figure">
-            <img src="{{ primary_figure }}" alt="Selected figure from {{ report_title }}" loading="lazy" decoding="async">
-            <figcaption>{% if figure_caption %}{{ figure_caption }}{% else %}Representative figure from the source report.{% endif %}</figcaption>
-          </figure>
-          {% endif %}
+        <section class="panel" id="section-figures" data-reveal data-section data-tone="figures" aria-label="Figure carousel">
+          <span class="section-kicker">Section 4</span>
+          <h2>Figures</h2>
+          {% set slide_count = namespace(total=0) %}
+          {% if has_primary_figure %}{% set slide_count.total = slide_count.total + 1 %}{% endif %}
           {% if figure_gallery and figure_gallery|length > 1 %}
-          <div class="media-grid">
             {% for fig in figure_gallery %}
               {% set figure_path = fig|string|trim %}
               {% if figure_path and figure_path != primary_figure %}
-              <figure class="media-figure">
-                <img src="{{ figure_path }}" alt="Additional figure {{ loop.index }} from {{ report_title }}" loading="lazy" decoding="async">
-                <figcaption>Additional figure {{ loop.index }}</figcaption>
-              </figure>
+                {% set slide_count.total = slide_count.total + 1 %}
               {% endif %}
             {% endfor %}
-          </div>
           {% endif %}
+          {% if has_contents_preview %}{% set slide_count.total = slide_count.total + 1 %}{% endif %}
+
+          <div class="figure-carousel" data-carousel>
+            <div class="carousel-shell">
+              <button type="button" class="carousel-btn prev" aria-label="Previous figure" data-carousel-prev>&lsaquo;</button>
+              <div class="carousel-slides" tabindex="0">
+                {% set slide_ns = namespace(index=0) %}
+                {% if has_primary_figure %}
+                {% set slide_ns.index = slide_ns.index + 1 %}
+                <figure class="carousel-slide{% if slide_ns.index == 1 %} is-active{% endif %}" data-carousel-slide="{{ slide_ns.index }}">
+                  <img src="{{ primary_figure }}"
+                    srcset="{{ primary_figure }} 1x, {{ primary_figure }} 2x"
+                    sizes="(max-width: 800px) 100vw, 980px"
+                    alt="Selected figure from {{ report_title }}"
+                    loading="lazy"
+                    decoding="async"
+                    width="{{ figure_width }}"
+                    height="{{ figure_height }}">
+                  <figcaption class="carousel-caption">{% if figure_caption %}{{ figure_caption }}{% else %}Representative figure from the source report.{% endif %}</figcaption>
+                </figure>
+                {% endif %}
+                {% if figure_gallery and figure_gallery|length > 1 %}
+                  {% for fig in figure_gallery %}
+                    {% set figure_path = fig|string|trim %}
+                    {% if figure_path and figure_path != primary_figure %}
+                    {% set slide_ns.index = slide_ns.index + 1 %}
+                    <figure class="carousel-slide{% if slide_ns.index == 1 %} is-active{% endif %}" data-carousel-slide="{{ slide_ns.index }}">
+                      <img src="{{ figure_path }}"
+                        srcset="{{ figure_path }} 1x, {{ figure_path }} 2x"
+                        sizes="(max-width: 800px) 100vw, 980px"
+                        alt="Additional figure {{ slide_ns.index }} from {{ report_title }}"
+                        loading="lazy"
+                        decoding="async"
+                        width="{{ figure_width }}"
+                        height="{{ figure_height }}">
+                      <figcaption class="carousel-caption">Additional figure {{ slide_ns.index }}</figcaption>
+                    </figure>
+                    {% endif %}
+                  {% endfor %}
+                {% endif %}
+                {% if has_contents_preview %}
+                {% set slide_ns.index = slide_ns.index + 1 %}
+                <figure class="carousel-slide{% if slide_ns.index == 1 %} is-active{% endif %}" data-carousel-slide="{{ slide_ns.index }}">
+                  <img src="{{ data._contents_image }}"
+                    srcset="{{ data._contents_image }} 1x, {{ data._contents_image }} 2x"
+                    sizes="(max-width: 800px) 100vw, 980px"
+                    alt="Contents page screenshot of {{ report_title }}"
+                    loading="lazy"
+                    decoding="async"
+                    width="{{ preview_width }}"
+                    height="{{ preview_height }}">
+                  <figcaption class="carousel-caption">Detected table of contents preview.</figcaption>
+                </figure>
+                {% endif %}
+              </div>
+              <button type="button" class="carousel-btn next" aria-label="Next figure" data-carousel-next>&rsaquo;</button>
+            </div>
+            <div class="carousel-toolbar">
+              <span class="carousel-count" data-carousel-count>1 / {{ slide_count.total }}</span>
+              <button type="button" class="lightbox-open" data-lightbox-open>Open fullscreen</button>
+            </div>
+            {% if slide_count.total > 1 %}
+            <div class="carousel-thumbs" role="tablist" aria-label="Figure thumbnails">
+              {% set thumb_ns = namespace(index=0) %}
+              {% if has_primary_figure %}
+              {% set thumb_ns.index = thumb_ns.index + 1 %}
+              <button type="button" class="carousel-thumb{% if thumb_ns.index == 1 %} is-active{% endif %}" data-carousel-thumb="{{ thumb_ns.index }}" aria-label="Open figure {{ thumb_ns.index }}">
+                <img src="{{ primary_figure }}" alt="Figure thumbnail {{ thumb_ns.index }}" loading="lazy" decoding="async" width="{{ thumb_width }}" height="{{ thumb_height }}">
+              </button>
+              {% endif %}
+              {% if figure_gallery and figure_gallery|length > 1 %}
+                {% for fig in figure_gallery %}
+                  {% set figure_path = fig|string|trim %}
+                  {% if figure_path and figure_path != primary_figure %}
+                  {% set thumb_ns.index = thumb_ns.index + 1 %}
+                  <button type="button" class="carousel-thumb{% if thumb_ns.index == 1 %} is-active{% endif %}" data-carousel-thumb="{{ thumb_ns.index }}" aria-label="Open figure {{ thumb_ns.index }}">
+                    <img src="{{ figure_path }}" alt="Figure thumbnail {{ thumb_ns.index }}" loading="lazy" decoding="async" width="{{ thumb_width }}" height="{{ thumb_height }}">
+                  </button>
+                  {% endif %}
+                {% endfor %}
+              {% endif %}
+              {% if has_contents_preview %}
+              {% set thumb_ns.index = thumb_ns.index + 1 %}
+              <button type="button" class="carousel-thumb{% if thumb_ns.index == 1 %} is-active{% endif %}" data-carousel-thumb="{{ thumb_ns.index }}" aria-label="Open figure {{ thumb_ns.index }}">
+                <img src="{{ data._contents_image }}" alt="Contents preview thumbnail" loading="lazy" decoding="async" width="{{ thumb_width }}" height="{{ thumb_height }}">
+              </button>
+              {% endif %}
+            </div>
+            {% endif %}
+          </div>
         </section>
         {% endif %}
 
-        <section class="panel" id="section-quotes" aria-label="Key quotes">
+        <section class="panel" id="section-quotes" data-reveal data-section data-tone="quotes" aria-label="Key quotes">
+          <span class="section-kicker">Section 5</span>
           <h2>Key quotes</h2>
           {% if has_quotes %}
           <ul class="quote-grid">
@@ -651,7 +1251,10 @@ h3{
                 <li>
                   <figure class="quote-card">
                     <blockquote><p>"{{ quote_text }}"</p></blockquote>
-                    <figcaption class="quote-byline">{{ quote_author }}{% if quote_citation %} ({{ quote_citation }}){% endif %}</figcaption>
+                    <figcaption class="quote-byline">
+                      <span class="quote-author">{{ quote_author }}</span>
+                      {% if quote_citation %}<span class="quote-citation">{{ quote_citation }}</span>{% endif %}
+                    </figcaption>
                   </figure>
                 </li>
               {% endif %}
@@ -663,28 +1266,32 @@ h3{
         </section>
 
         {% if has_expert_comment %}
-        <section class="panel" id="section-expert" aria-label="Expert comment">
+        <section class="panel" id="section-expert" data-reveal data-section aria-label="Expert comment">
+          <span class="section-kicker">Generated analysis</span>
           <h2>Expert comment (generated)</h2>
-          <div class="prose-block">{{ expert_comment }}</div>
+          <div class="prose-block" data-chunk-prose>{{ expert_comment }}</div>
         </section>
         {% endif %}
 
         {% if has_linkedin_post %}
-        <section class="panel" id="section-linkedin" aria-label="LinkedIn post">
+        <section class="panel" id="section-linkedin" data-reveal data-section aria-label="LinkedIn post">
+          <span class="section-kicker">Distribution draft</span>
           <h2>LinkedIn post</h2>
-          <div class="prose-block">{{ linkedin_post }}</div>
+          <div class="prose-block" data-chunk-prose>{{ linkedin_post }}</div>
         </section>
         {% endif %}
 
         {% if has_commentary %}
-        <section class="panel" id="section-commentary" aria-label="Commentary">
+        <section class="panel" id="section-commentary" data-reveal data-section aria-label="Commentary">
+          <span class="section-kicker">Narrative</span>
           <h2>Commentary</h2>
-          <div class="prose-block">{{ commentary }}</div>
+          <div class="prose-block" data-chunk-prose>{{ commentary }}</div>
         </section>
         {% endif %}
 
         {% if canonical_url or source_url %}
-        <section class="panel" id="section-resources" aria-label="Related resources">
+        <section class="panel" id="section-resources" data-reveal data-section aria-label="Related resources">
+          <span class="section-kicker">References</span>
           <h2>Related resources</h2>
           <ul class="resource-list">
             {% if canonical_url %}<li><a href="{{ canonical_url }}" rel="noopener" target="_blank">Canonical/source URL</a></li>{% endif %}
@@ -696,10 +1303,239 @@ h3{
         {% endif %}
       </main>
 
+      <div class="lightbox" id="figure-lightbox" hidden aria-hidden="true">
+        <div class="lightbox-top">
+          <button type="button" class="lightbox-close" data-lightbox-close>Close</button>
+        </div>
+        <figure>
+          <img src="" alt="" id="lightbox-image" width="{{ figure_width }}" height="{{ figure_height }}">
+          <figcaption id="lightbox-caption"></figcaption>
+        </figure>
+      </div>
+
       <footer class="footer">
         Generated by Market Lense. File ID: <code>{{ file_id }}</code>.
       </footer>
     </article>
   </div>
+  <script>
+  (function () {
+    var progressBar = document.getElementById("reading-progress-bar");
+    var navLinks = Array.prototype.slice.call(document.querySelectorAll("[data-section-link]"));
+    var sections = Array.prototype.slice.call(document.querySelectorAll("[data-section]"));
+    var revealPanels = Array.prototype.slice.call(document.querySelectorAll("[data-reveal]"));
+    var lightbox = document.getElementById("figure-lightbox");
+    var lightboxImage = document.getElementById("lightbox-image");
+    var lightboxCaption = document.getElementById("lightbox-caption");
+    var lightboxClose = document.querySelector("[data-lightbox-close]");
+
+    var updateProgress = function () {
+      if (!progressBar) {
+        return;
+      }
+      var top = window.scrollY || window.pageYOffset || 0;
+      var total = Math.max((document.documentElement.scrollHeight || 0) - window.innerHeight, 1);
+      var pct = Math.max(0, Math.min(100, (top / total) * 100));
+      progressBar.style.width = pct + "%";
+    };
+
+    var activateLink = function (id) {
+      navLinks.forEach(function (link) {
+        var active = link.getAttribute("href") === "#" + id;
+        link.classList.toggle("is-active", active);
+      });
+    };
+
+    var openLightbox = function (slide) {
+      if (!slide || !lightbox || !lightboxImage || !lightboxCaption) {
+        return;
+      }
+      var img = slide.querySelector("img");
+      var caption = slide.querySelector("figcaption");
+      if (!img) {
+        return;
+      }
+      lightboxImage.src = img.currentSrc || img.src || "";
+      lightboxImage.alt = img.alt || "Figure";
+      lightboxCaption.textContent = caption ? caption.textContent : "";
+      lightbox.hidden = false;
+      lightbox.setAttribute("aria-hidden", "false");
+      document.body.style.overflow = "hidden";
+    };
+
+    var closeLightbox = function () {
+      if (!lightbox) {
+        return;
+      }
+      lightbox.hidden = true;
+      lightbox.setAttribute("aria-hidden", "true");
+      if (lightboxImage) {
+        lightboxImage.src = "";
+      }
+      document.body.style.overflow = "";
+    };
+
+    if (lightboxClose) {
+      lightboxClose.addEventListener("click", closeLightbox);
+    }
+    if (lightbox) {
+      lightbox.addEventListener("click", function (event) {
+        if (event.target === lightbox) {
+          closeLightbox();
+        }
+      });
+    }
+
+    var chunkTextBlock = function (element) {
+      var text = (element.textContent || "").trim();
+      if (!text || text.length < 320) {
+        return;
+      }
+      var parts = [];
+      var lines = text.split(/\n+/).map(function (line) { return line.trim(); }).filter(Boolean);
+      if (lines.length > 1) {
+        parts = lines;
+      } else {
+        var sentences = text.match(/[^.!?]+[.!?]*/g) || [text];
+        var bucket = "";
+        sentences.forEach(function (sentence) {
+          if ((bucket + " " + sentence).trim().length > 260 && bucket) {
+            parts.push(bucket.trim());
+            bucket = sentence;
+          } else {
+            bucket = (bucket ? bucket + " " : "") + sentence;
+          }
+        });
+        if (bucket.trim()) {
+          parts.push(bucket.trim());
+        }
+      }
+      if (parts.length < 2) {
+        return;
+      }
+      element.innerHTML = "";
+      parts.forEach(function (part) {
+        var paragraph = document.createElement("p");
+        paragraph.className = "prose-paragraph";
+        paragraph.textContent = part;
+        element.appendChild(paragraph);
+      });
+    };
+
+    document.querySelectorAll("[data-chunk-prose]").forEach(chunkTextBlock);
+
+    if ("IntersectionObserver" in window) {
+      var sectionObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            activateLink(entry.target.id);
+          }
+        });
+      }, { rootMargin: "-35% 0px -45% 0px", threshold: 0.01 });
+      sections.forEach(function (section) { sectionObserver.observe(section); });
+
+      var revealObserver = new IntersectionObserver(function (entries, observer) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { rootMargin: "0px 0px -10% 0px", threshold: 0.1 });
+      revealPanels.forEach(function (panel) { revealObserver.observe(panel); });
+    } else {
+      revealPanels.forEach(function (panel) { panel.classList.add("is-visible"); });
+    }
+
+    var initCarousel = function (carousel) {
+      var slides = Array.prototype.slice.call(carousel.querySelectorAll("[data-carousel-slide]"));
+      var thumbs = Array.prototype.slice.call(carousel.querySelectorAll("[data-carousel-thumb]"));
+      var prev = carousel.querySelector("[data-carousel-prev]");
+      var next = carousel.querySelector("[data-carousel-next]");
+      var count = carousel.querySelector("[data-carousel-count]");
+      var open = carousel.querySelector("[data-lightbox-open]");
+      var stage = carousel.querySelector(".carousel-slides");
+      var index = 0;
+
+      var setSlide = function (target) {
+        if (!slides.length) {
+          return;
+        }
+        index = ((target % slides.length) + slides.length) % slides.length;
+        slides.forEach(function (slide, i) {
+          slide.classList.toggle("is-active", i === index);
+        });
+        thumbs.forEach(function (thumb, i) {
+          thumb.classList.toggle("is-active", i === index);
+        });
+        if (count) {
+          count.textContent = (index + 1) + " / " + slides.length;
+        }
+        if (prev) {
+          prev.disabled = slides.length <= 1;
+        }
+        if (next) {
+          next.disabled = slides.length <= 1;
+        }
+      };
+
+      if (prev) {
+        prev.addEventListener("click", function () { setSlide(index - 1); });
+      }
+      if (next) {
+        next.addEventListener("click", function () { setSlide(index + 1); });
+      }
+      thumbs.forEach(function (thumb, i) {
+        thumb.addEventListener("click", function () { setSlide(i); });
+      });
+      slides.forEach(function (slide, i) {
+        slide.addEventListener("click", function () { setSlide(i); openLightbox(slides[index]); });
+      });
+      if (open) {
+        open.addEventListener("click", function () { openLightbox(slides[index]); });
+      }
+      if (stage) {
+        stage.addEventListener("keydown", function (event) {
+          if (event.key === "ArrowLeft") {
+            event.preventDefault();
+            setSlide(index - 1);
+          } else if (event.key === "ArrowRight") {
+            event.preventDefault();
+            setSlide(index + 1);
+          }
+        });
+        var touchStartX = null;
+        stage.addEventListener("touchstart", function (event) {
+          touchStartX = event.changedTouches[0].clientX;
+        }, { passive: true });
+        stage.addEventListener("touchend", function (event) {
+          if (touchStartX === null) {
+            return;
+          }
+          var delta = event.changedTouches[0].clientX - touchStartX;
+          if (Math.abs(delta) > 45) {
+            setSlide(index + (delta < 0 ? 1 : -1));
+          }
+          touchStartX = null;
+        }, { passive: true });
+      }
+
+      setSlide(0);
+    };
+
+    document.querySelectorAll("[data-carousel]").forEach(initCarousel);
+
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") {
+        closeLightbox();
+      }
+    });
+    window.addEventListener("scroll", updateProgress, { passive: true });
+    updateProgress();
+    if (sections.length > 0) {
+      activateLink(sections[0].id);
+    }
+  })();
+  </script>
 </body>
 </html>
