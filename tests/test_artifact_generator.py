@@ -1,4 +1,6 @@
 import json
+import threading
+import time
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -23,18 +25,65 @@ class FakePromptClient:
 
 
 class FakeOpenAI:
-    def __init__(self, responses):
-        self.responses = list(responses)
+    def __init__(self, responses, *, sleep_seconds=0.0, prerequisites=None):
+        self.responses = responses if isinstance(responses, dict) else list(responses)
+        self.sleep_seconds = float(sleep_seconds)
+        self.prerequisites = prerequisites or {}
         self.requests = []
+        self._events = {}
+        self._lock = threading.Lock()
+        self._in_flight = 0
+        self.max_in_flight = 0
 
-    def _next(self):
+    def _step(self, ctx):
+        task_id = getattr(ctx, "task_id", "")
+        return task_id.rsplit(":", 1)[-1] if ":" in task_id else task_id
+
+    def _next(self, step):
+        if isinstance(self.responses, dict):
+            return self.responses.get(step, {})
         if not self.responses:
             return {}
         return self.responses.pop(0)
 
+    def _mark_started(self):
+        with self._lock:
+            self._in_flight += 1
+            if self._in_flight > self.max_in_flight:
+                self.max_in_flight = self._in_flight
+
+    def _mark_completed(self, step):
+        with self._lock:
+            self._in_flight = max(0, self._in_flight - 1)
+            event = self._events.get(step)
+            if event is None:
+                event = threading.Event()
+                self._events[step] = event
+            event.set()
+
+    def _check_dependencies(self, step):
+        for dep in self.prerequisites.get(step, []):
+            event = self._events.get(dep)
+            if event is None:
+                event = threading.Event()
+                self._events[dep] = event
+            if not event.is_set():
+                raise AssertionError(f"{step} called before dependency {dep}")
+
+    def _payload_for_step(self, step):
+        self._check_dependencies(step)
+        self._mark_started()
+        try:
+            if self.sleep_seconds > 0:
+                time.sleep(self.sleep_seconds)
+            return self._next(step)
+        finally:
+            self._mark_completed(step)
+
     def openai_chat_json(self, req, ctx):
-        self.requests.append(("chat", req))
-        payload = self._next()
+        step = self._step(ctx)
+        self.requests.append(("chat", req, step))
+        payload = self._payload_for_step(step)
         return OpenAIResponseResult(
             schema_version="1.0",
             text="{}",
@@ -46,8 +95,9 @@ class FakeOpenAI:
         )
 
     def openai_respond_with_vector_store(self, req, ctx):
-        self.requests.append(("vector", req.vector_store_id))
-        payload = self._next()
+        step = self._step(ctx)
+        self.requests.append(("vector", req.vector_store_id, step))
+        payload = self._payload_for_step(step)
         return OpenAIResponseResult(
             schema_version="1.0",
             text="{}",
@@ -99,6 +149,9 @@ def _settings(tmp_path):
         contents_min_headings=1,
         contents_keywords=["contents"],
         contents_preview_dpi=72,
+        artifact_parallel_workers=4,
+        artifact_global_max_in_flight=4,
+        artifact_global_min_interval_ms=0,
         analysis_mode="vector_store",
         use_vector_store=True,
         vector_store_keep=True,
@@ -129,10 +182,10 @@ def _low_text_status():
 
 
 def test_generate_artifacts_validates_schema_and_evidence_ids(tmp_path):
-    responses = [
-        {"toc_topics": ["Topic 1", "Topic 2"]},
-        {"summary": {"tldr": "TLDR", "executive_summary": "Exec", "claim_evidence_map": [{"claim": "Claim", "evidence_id": "f1", "evidence": "Revenue +10%", "pages": [2]}]}},
-        {
+    responses = {
+        "toc": {"toc_topics": ["Topic 1", "Topic 2"]},
+        "summary": {"summary": {"tldr": "TLDR", "executive_summary": "Exec", "claim_evidence_map": [{"claim": "Claim", "evidence_id": "f1", "evidence": "Revenue +10%", "pages": [2]}]}},
+        "insights_candidates": {
             "insights_candidates": [
                 {"id": "c1", "text": "Insight 1", "evidence_id": "f1", "evidence": "E1", "metric": {"value": "10", "unit": "%", "trend": "+", "timeframe": "2024", "geography": "US", "segment": "", "sample_size": "", "confidence": ""}, "pages": [2], "score": 0.9},
                 {"id": "c2", "text": "Insight 2", "evidence_id": "f2", "evidence": "E2", "metric": {"value": "5", "unit": "%", "trend": "-", "timeframe": "2023", "geography": "EU", "segment": "", "sample_size": "", "confidence": ""}, "pages": [3], "score": 0.8},
@@ -141,7 +194,7 @@ def test_generate_artifacts_validates_schema_and_evidence_ids(tmp_path):
                 {"id": "c5", "text": "Insight 5", "evidence_id": "f5", "evidence": "E5", "metric": {"value": "3", "unit": "%", "trend": "+", "timeframe": "2024", "geography": "", "segment": "", "sample_size": "", "confidence": ""}, "pages": [6], "score": 0.5},
             ]
         },
-        {
+        "insights_final": {
             "insights_final": [
                 {"id": "f1", "text": "Top 1", "evidence_id": "f1", "evidence": "E1", "metric": {}, "pages": [2]},
                 {"id": "f2", "text": "Top 2", "evidence_id": "f2", "evidence": "E2", "metric": {}, "pages": [3]},
@@ -150,10 +203,10 @@ def test_generate_artifacts_validates_schema_and_evidence_ids(tmp_path):
                 {"id": "f5", "text": "Top 5", "evidence_id": "f5", "evidence": "E5", "metric": {}, "pages": [6]},
             ]
         },
-        {"quotes_final": [{"text": "We are expanding rapidly", "speaker": "CEO", "citation": "Earnings call", "page": 3, "evidence_id": "q1"}]},
-        {"expert_comment": "Grounded comment"},
-        {"linkedin_post": "Post summary"},
-    ]
+        "quotes": {"quotes_final": [{"text": "We are expanding rapidly", "speaker": "CEO", "citation": "Earnings call", "page": 3, "evidence_id": "q1"}]},
+        "expert_comment": {"expert_comment": "Grounded comment"},
+        "linkedin_post": {"linkedin_post": "Post summary"},
+    }
     fake_openai = FakeOpenAI(responses)
     analysis_store = FakeAnalysisStore()
     payload = generate_artifacts(
@@ -179,15 +232,15 @@ def test_generate_artifacts_validates_schema_and_evidence_ids(tmp_path):
 
 
 def test_generate_artifacts_backfills_missing_ids(tmp_path):
-    responses = [
-        {"toc_topics": ["Topic"]},
-        {"summary": {"tldr": "", "executive_summary": "", "claim_evidence_map": [{"claim": "Claim", "evidence": "Support"}]}},
-        {"insights_candidates": [{"id": "c1", "text": "Candidate 1", "metric": {}, "pages": []}]},
-        {"insights_final": []},
-        {"quotes_final": [{"text": "Quote", "speaker": "Analyst", "citation": "", "page": 1}]},
-        {"expert_comment": "Comment"},
-        {"linkedin_post": "Post"},
-    ]
+    responses = {
+        "toc": {"toc_topics": ["Topic"]},
+        "summary": {"summary": {"tldr": "", "executive_summary": "", "claim_evidence_map": [{"claim": "Claim", "evidence": "Support"}]}},
+        "insights_candidates": {"insights_candidates": [{"id": "c1", "text": "Candidate 1", "metric": {}, "pages": []}]},
+        "insights_final": {"insights_final": []},
+        "quotes": {"quotes_final": [{"text": "Quote", "speaker": "Analyst", "citation": "", "page": 1}]},
+        "expert_comment": {"expert_comment": "Comment"},
+        "linkedin_post": {"linkedin_post": "Post"},
+    }
     fake_openai = FakeOpenAI(responses)
     payload = generate_artifacts(
         report_id="r2",
@@ -214,15 +267,15 @@ def test_generate_artifacts_backfills_missing_ids(tmp_path):
 
 def test_generate_artifacts_ignores_low_text_when_vector_store(tmp_path):
     analysis_store = FakeAnalysisStore()
-    responses = [
-        {"toc_topics": ["Topic 1"]},
-        {"summary": {"tldr": "TLDR", "executive_summary": "Exec", "claim_evidence_map": [{"claim": "Claim", "evidence_id": "f1", "evidence": "E", "pages": [1]}]}},
-        {"insights_candidates": [{"id": "c1", "text": "Insight", "evidence_id": "f1", "evidence": "E", "metric": {}, "pages": [1], "score": 0.9}]},
-        {"insights_final": [{"id": "f1", "text": "Final", "evidence_id": "f1", "evidence": "E", "metric": {}, "pages": [1]}]},
-        {"quotes_final": [{"text": "Quote", "speaker": "Analyst", "citation": "", "page": 1, "evidence_id": "q1"}]},
-        {"expert_comment": "Comment"},
-        {"linkedin_post": "Post"},
-    ]
+    responses = {
+        "toc": {"toc_topics": ["Topic 1"]},
+        "summary": {"summary": {"tldr": "TLDR", "executive_summary": "Exec", "claim_evidence_map": [{"claim": "Claim", "evidence_id": "f1", "evidence": "E", "pages": [1]}]}},
+        "insights_candidates": {"insights_candidates": [{"id": "c1", "text": "Insight", "evidence_id": "f1", "evidence": "E", "metric": {}, "pages": [1], "score": 0.9}]},
+        "insights_final": {"insights_final": [{"id": "f1", "text": "Final", "evidence_id": "f1", "evidence": "E", "metric": {}, "pages": [1]}]},
+        "quotes": {"quotes_final": [{"text": "Quote", "speaker": "Analyst", "citation": "", "page": 1, "evidence_id": "q1"}]},
+        "expert_comment": {"expert_comment": "Comment"},
+        "linkedin_post": {"linkedin_post": "Post"},
+    }
     fake_openai = FakeOpenAI(responses)
     payload = generate_artifacts(
         report_id="low_text",
@@ -244,3 +297,37 @@ def test_generate_artifacts_ignores_low_text_when_vector_store(tmp_path):
         _ctx(),
     )
     assert analysis_store.stored
+
+
+def test_generate_artifacts_parallelizes_with_dependency_order(tmp_path):
+    responses = {
+        "toc": {"toc_topics": ["Topic 1", "Topic 2"]},
+        "summary": {"summary": {"tldr": "TLDR", "executive_summary": "Exec", "claim_evidence_map": [{"claim": "Claim", "evidence_id": "f1", "evidence": "E", "pages": [1]}]}},
+        "insights_candidates": {"insights_candidates": [{"id": "c1", "text": "Insight", "evidence_id": "f1", "evidence": "E", "metric": {}, "pages": [1], "score": 0.9}]},
+        "insights_final": {"insights_final": [{"id": "f1", "text": "Final", "evidence_id": "f1", "evidence": "E", "metric": {}, "pages": [1]}]},
+        "quotes": {"quotes_final": [{"text": "Quote", "speaker": "Analyst", "citation": "", "page": 1, "evidence_id": "q1"}]},
+        "expert_comment": {"expert_comment": "Grounded comment"},
+        "linkedin_post": {"linkedin_post": "Post summary"},
+    }
+    prerequisites = {
+        "insights_final": ["insights_candidates"],
+        "expert_comment": ["summary", "insights_final", "quotes"],
+        "linkedin_post": ["summary", "insights_final"],
+    }
+    fake_openai = FakeOpenAI(responses, sleep_seconds=0.05, prerequisites=prerequisites)
+    payload = generate_artifacts(
+        report_id="parallel",
+        report_name="report",
+        doc_map=_doc_map(),
+        evidence_packs=_evidence_packs(),
+        settings=_settings(tmp_path),
+        vector_store_id="vs_1",
+        ctx=_ctx(),
+        openai_client=fake_openai,
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+    assert payload["expert_comment"] == "Grounded comment"
+    assert payload["linkedin_post"] == "Post summary"
+    assert fake_openai.max_in_flight >= 2
+    assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 7

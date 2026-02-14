@@ -2,6 +2,11 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from contextlib import contextmanager
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 from src.contracts.config import AppSettings
@@ -21,6 +26,92 @@ from src.utils.cache_utils import sha256_json
 logger = logging.getLogger("market_lense.artifact_generator")
 
 METRIC_FIELDS = ("value", "unit", "trend", "timeframe", "geography", "segment", "sample_size", "confidence")
+
+
+@dataclass
+class _GlobalArtifactLimiter:
+    max_in_flight: int
+    min_interval_s: float
+    semaphore: threading.BoundedSemaphore
+    gate_lock: threading.Lock
+    next_allowed_monotonic: float
+
+
+_GLOBAL_ARTIFACT_LIMITER_LOCK = threading.Lock()
+_GLOBAL_ARTIFACT_LIMITER: Optional[_GlobalArtifactLimiter] = None
+
+
+def _safe_int(value: object, default: int, *, min_value: int = 0) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        parsed = default
+    if parsed < min_value:
+        return min_value
+    return parsed
+
+
+def _artifact_parallel_workers(settings: AppSettings, step_count: int) -> int:
+    configured = _safe_int(getattr(settings, "artifact_parallel_workers", 4), 4, min_value=1)
+    return max(1, min(configured, step_count))
+
+
+def _get_artifact_global_limiter(settings: AppSettings) -> _GlobalArtifactLimiter:
+    global _GLOBAL_ARTIFACT_LIMITER
+    max_in_flight = _safe_int(getattr(settings, "artifact_global_max_in_flight", 2), 2, min_value=1)
+    min_interval_ms = _safe_int(getattr(settings, "artifact_global_min_interval_ms", 250), 250, min_value=0)
+    min_interval_s = float(min_interval_ms) / 1000.0
+    with _GLOBAL_ARTIFACT_LIMITER_LOCK:
+        if (
+            _GLOBAL_ARTIFACT_LIMITER is None
+            or _GLOBAL_ARTIFACT_LIMITER.max_in_flight != max_in_flight
+            or abs(_GLOBAL_ARTIFACT_LIMITER.min_interval_s - min_interval_s) > 1e-9
+        ):
+            _GLOBAL_ARTIFACT_LIMITER = _GlobalArtifactLimiter(
+                max_in_flight=max_in_flight,
+                min_interval_s=min_interval_s,
+                semaphore=threading.BoundedSemaphore(max_in_flight),
+                gate_lock=threading.Lock(),
+                next_allowed_monotonic=0.0,
+            )
+        return _GLOBAL_ARTIFACT_LIMITER
+
+
+@contextmanager
+def _acquire_artifact_rate_limit(settings: AppSettings, ctx: RunContext, namespace: str):
+    limiter = _get_artifact_global_limiter(settings)
+    wait_start = time.monotonic()
+    limiter.semaphore.acquire()
+    acquired_at = time.monotonic()
+    in_flight_wait_ms = int((acquired_at - wait_start) * 1000)
+    rate_wait_ms = 0
+    try:
+        if limiter.min_interval_s > 0:
+            with limiter.gate_lock:
+                now = time.monotonic()
+                scheduled = max(now, limiter.next_allowed_monotonic)
+                limiter.next_allowed_monotonic = scheduled + limiter.min_interval_s
+            sleep_for = max(0.0, scheduled - time.monotonic())
+            if sleep_for > 0:
+                time.sleep(sleep_for)
+            rate_wait_ms = int((time.monotonic() - acquired_at) * 1000)
+        if in_flight_wait_ms > 0 or rate_wait_ms > 0:
+            logger.info(log_event(
+                ctx,
+                role="generator",
+                event="artifact_rate_limiter_wait",
+                module=logger.name,
+                fields={
+                    "namespace": namespace,
+                    "in_flight_wait_ms": in_flight_wait_ms,
+                    "rate_wait_ms": rate_wait_ms,
+                    "global_max_in_flight": limiter.max_in_flight,
+                    "global_min_interval_ms": int(round(limiter.min_interval_s * 1000)),
+                },
+            ))
+        yield
+    finally:
+        limiter.semaphore.release()
 
 
 def generate_artifacts(
@@ -125,44 +216,89 @@ def generate_artifacts(
         "evidence_json": _dump_json(safe_evidence),
     }
 
-    toc_ctx = child_context(ctx, task_id=f"{ctx.task_id}:toc")
-    toc_result = _call_json_model(
-        namespace="report_vs/artifacts/toc",
-        variables=base_vars,
-        settings=settings,
-        ctx=toc_ctx,
-        openai_client=openai_client,
-        prompt_client=prompt_client,
-        allow_vector_store=bool(vector_store_id),
-        vector_store_id=vector_store_id,
-    )
-    toc_topics = _normalize_topics(toc_result.get("toc_topics"))
+    insights_final_ctx = child_context(ctx, task_id=f"{ctx.task_id}:insights_final")
 
-    summary_ctx = child_context(ctx, task_id=f"{ctx.task_id}:summary")
-    summary_result = _call_json_model(
-        namespace="report_vs/artifacts/summary",
-        variables=base_vars,
-        settings=settings,
-        ctx=summary_ctx,
-        openai_client=openai_client,
-        prompt_client=prompt_client,
-        allow_vector_store=bool(vector_store_id),
-        vector_store_id=vector_store_id,
-    )
-    summary = _normalize_summary(summary_result.get("summary"))
+    quote_candidates = []
+    quote_pack = safe_evidence.get("quote_candidates")
+    if isinstance(quote_pack, dict):
+        quote_candidates = quote_pack.get("quote_candidates") or []
+    elif isinstance(quote_pack, list):
+        quote_candidates = quote_pack
 
-    insights_ctx = child_context(ctx, task_id=f"{ctx.task_id}:insights_candidates")
-    insights_candidates_result = _call_json_model(
-        namespace="report_vs/artifacts/insights_candidates",
-        variables=base_vars,
-        settings=settings,
-        ctx=insights_ctx,
-        openai_client=openai_client,
-        prompt_client=prompt_client,
-        allow_vector_store=bool(vector_store_id),
-        vector_store_id=vector_store_id,
-    )
-    insights_candidates = _normalize_insights(insights_candidates_result.get("insights_candidates"), prefix="candidate")
+    stage_one_steps = [
+        ("toc", "report_vs/artifacts/toc", base_vars),
+        ("summary", "report_vs/artifacts/summary", base_vars),
+        ("insights_candidates", "report_vs/artifacts/insights_candidates", base_vars),
+        ("quotes", "report_vs/artifacts/quotes", {**base_vars, "quote_candidates_json": _dump_json(quote_candidates)}),
+    ]
+    parallel_workers = _artifact_parallel_workers(settings, len(stage_one_steps))
+    limiter = _get_artifact_global_limiter(settings)
+    logger.info(log_event(
+        ctx,
+        role="generator",
+        event="artifact_parallel_config",
+        module=logger.name,
+        fields={
+            "parallel_workers": parallel_workers,
+            "global_max_in_flight": limiter.max_in_flight,
+            "global_min_interval_ms": int(round(limiter.min_interval_s * 1000)),
+            "parallel_step_count": len(stage_one_steps),
+        },
+    ))
+    stage_one_results: Dict[str, Dict[str, Any]] = {}
+    if parallel_workers > 1 and len(stage_one_steps) > 1:
+        with ThreadPoolExecutor(max_workers=parallel_workers) as executor:
+            futures = {}
+            for step_name, namespace, variables in stage_one_steps:
+                step_ctx = child_context(ctx, task_id=f"{ctx.task_id}:{step_name}")
+                future = executor.submit(
+                    _call_json_model,
+                    namespace=namespace,
+                    variables=variables,
+                    settings=settings,
+                    ctx=step_ctx,
+                    openai_client=openai_client,
+                    prompt_client=prompt_client,
+                    allow_vector_store=bool(vector_store_id),
+                    vector_store_id=vector_store_id,
+                )
+                futures[future] = step_name
+            first_error: Optional[Exception] = None
+            for future in as_completed(futures):
+                step_name = futures[future]
+                try:
+                    stage_one_results[step_name] = future.result()
+                except Exception as exc:  # pragma: no cover - defensive fallback
+                    if first_error is None:
+                        first_error = exc
+                    logger.info(log_event(
+                        ctx,
+                        role="generator",
+                        event="artifact_parallel_step_failed",
+                        module=logger.name,
+                        fields={"step": step_name, "error": str(exc)},
+                    ))
+            if first_error is not None:
+                for future in futures:
+                    future.cancel()
+                raise first_error
+    else:
+        for step_name, namespace, variables in stage_one_steps:
+            step_ctx = child_context(ctx, task_id=f"{ctx.task_id}:{step_name}")
+            stage_one_results[step_name] = _call_json_model(
+                namespace=namespace,
+                variables=variables,
+                settings=settings,
+                ctx=step_ctx,
+                openai_client=openai_client,
+                prompt_client=prompt_client,
+                allow_vector_store=bool(vector_store_id),
+                vector_store_id=vector_store_id,
+            )
+
+    toc_topics = _normalize_topics(stage_one_results.get("toc", {}).get("toc_topics"))
+    summary = _normalize_summary(stage_one_results.get("summary", {}).get("summary"))
+    insights_candidates = _normalize_insights(stage_one_results.get("insights_candidates", {}).get("insights_candidates"), prefix="candidate")
     if not insights_candidates:
         logger.info(log_event(
             ctx,
@@ -171,8 +307,8 @@ def generate_artifacts(
             module=logger.name,
             fields={},
         ))
+    quotes_final = _normalize_quotes(stage_one_results.get("quotes", {}).get("quotes_final"))
 
-    insights_final_ctx = child_context(ctx, task_id=f"{ctx.task_id}:insights_final")
     insights_final_vars = {
         **base_vars,
         "insights_candidates_json": _dump_json(insights_candidates),
@@ -189,62 +325,66 @@ def generate_artifacts(
     )
     insights_final = _pad_insights(_normalize_insights(insights_final_result.get("insights_final"), prefix="insight"), insights_candidates)
 
-    quote_candidates = []
-    quote_pack = safe_evidence.get("quote_candidates")
-    if isinstance(quote_pack, dict):
-        quote_candidates = quote_pack.get("quote_candidates") or []
-    elif isinstance(quote_pack, list):
-        quote_candidates = quote_pack
-    quotes_ctx = child_context(ctx, task_id=f"{ctx.task_id}:quotes")
-    quotes_vars = {
-        **base_vars,
-        "quote_candidates_json": _dump_json(quote_candidates),
-    }
-    quotes_result = _call_json_model(
-        namespace="report_vs/artifacts/quotes",
-        variables=quotes_vars,
-        settings=settings,
-        ctx=quotes_ctx,
-        openai_client=openai_client,
-        prompt_client=prompt_client,
-        allow_vector_store=bool(vector_store_id),
-        vector_store_id=vector_store_id,
-    )
-    quotes_final = _normalize_quotes(quotes_result.get("quotes_final"))
-
     expert_ctx = child_context(ctx, task_id=f"{ctx.task_id}:expert_comment")
     expert_vars = {
         "summary_json": _dump_json(summary),
         "insights_final_json": _dump_json(insights_final),
         "quotes_json": _dump_json(quotes_final),
     }
-    expert_result = _call_json_model(
-        namespace="report_vs/artifacts/expert_comment",
-        variables=expert_vars,
-        settings=settings,
-        ctx=expert_ctx,
-        openai_client=openai_client,
-        prompt_client=prompt_client,
-        allow_vector_store=bool(vector_store_id),
-        vector_store_id=vector_store_id,
-    )
-    expert_comment = _s(expert_result.get("expert_comment"))
 
     linkedin_ctx = child_context(ctx, task_id=f"{ctx.task_id}:linkedin_post")
     linkedin_vars = {
         "summary_json": _dump_json(summary),
         "insights_final_json": _dump_json(insights_final),
     }
-    linkedin_result = _call_json_model(
-        namespace="report_vs/artifacts/linkedin_post",
-        variables=linkedin_vars,
-        settings=settings,
-        ctx=linkedin_ctx,
-        openai_client=openai_client,
-        prompt_client=prompt_client,
-        allow_vector_store=bool(vector_store_id),
-        vector_store_id=vector_store_id,
-    )
+    if parallel_workers > 1:
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            expert_future = executor.submit(
+                _call_json_model,
+                namespace="report_vs/artifacts/expert_comment",
+                variables=expert_vars,
+                settings=settings,
+                ctx=expert_ctx,
+                openai_client=openai_client,
+                prompt_client=prompt_client,
+                allow_vector_store=bool(vector_store_id),
+                vector_store_id=vector_store_id,
+            )
+            linkedin_future = executor.submit(
+                _call_json_model,
+                namespace="report_vs/artifacts/linkedin_post",
+                variables=linkedin_vars,
+                settings=settings,
+                ctx=linkedin_ctx,
+                openai_client=openai_client,
+                prompt_client=prompt_client,
+                allow_vector_store=bool(vector_store_id),
+                vector_store_id=vector_store_id,
+            )
+            expert_result = expert_future.result()
+            linkedin_result = linkedin_future.result()
+    else:
+        expert_result = _call_json_model(
+            namespace="report_vs/artifacts/expert_comment",
+            variables=expert_vars,
+            settings=settings,
+            ctx=expert_ctx,
+            openai_client=openai_client,
+            prompt_client=prompt_client,
+            allow_vector_store=bool(vector_store_id),
+            vector_store_id=vector_store_id,
+        )
+        linkedin_result = _call_json_model(
+            namespace="report_vs/artifacts/linkedin_post",
+            variables=linkedin_vars,
+            settings=settings,
+            ctx=linkedin_ctx,
+            openai_client=openai_client,
+            prompt_client=prompt_client,
+            allow_vector_store=bool(vector_store_id),
+            vector_store_id=vector_store_id,
+        )
+    expert_comment = _s(expert_result.get("expert_comment"))
     linkedin_post = _s(linkedin_result.get("linkedin_post"))
 
     artifacts_payload: Dict[str, Any] = {
@@ -334,41 +474,42 @@ def _call_json_model(
             "default_model": settings.openai_model,
         },
     ))
-    if allow_vector_store and vector_store_id:
-        resp = openai_client.openai_respond_with_vector_store(
-            OpenAIResponseRequest(
-                schema_version="1.0",
-                system_prompt=system_rendered.text,
-                user_prompt=user_rendered.text,
-                vector_store_id=vector_store_id,
-                model=resolved_model,
-                temperature=settings.temperature,
-                api_key=settings.openai_api_key,
-                seed=settings.openai_seed,
-                timeout_seconds=settings.openai_timeout_seconds,
-                cost_ledger_path=settings.cost_ledger_path,
-                cost_daily_path=settings.cost_daily_path,
-                model_pricing=settings.model_pricing,
-            ),
-            ctx,
-        )
-    else:
-        resp = openai_client.openai_chat_json(
-            OpenAIJSONPromptRequest(
-                schema_version="1.0",
-                system_prompt=system_rendered.text,
-                user_prompt=user_rendered.text,
-                model=resolved_model,
-                temperature=settings.temperature,
-                api_key=settings.openai_api_key,
-                seed=settings.openai_seed,
-                timeout_seconds=settings.openai_timeout_seconds,
-                cost_ledger_path=settings.cost_ledger_path,
-                cost_daily_path=settings.cost_daily_path,
-                model_pricing=settings.model_pricing,
-            ),
-            ctx,
-        )
+    with _acquire_artifact_rate_limit(settings, ctx, namespace):
+        if allow_vector_store and vector_store_id:
+            resp = openai_client.openai_respond_with_vector_store(
+                OpenAIResponseRequest(
+                    schema_version="1.0",
+                    system_prompt=system_rendered.text,
+                    user_prompt=user_rendered.text,
+                    vector_store_id=vector_store_id,
+                    model=resolved_model,
+                    temperature=settings.temperature,
+                    api_key=settings.openai_api_key,
+                    seed=settings.openai_seed,
+                    timeout_seconds=settings.openai_timeout_seconds,
+                    cost_ledger_path=settings.cost_ledger_path,
+                    cost_daily_path=settings.cost_daily_path,
+                    model_pricing=settings.model_pricing,
+                ),
+                ctx,
+            )
+        else:
+            resp = openai_client.openai_chat_json(
+                OpenAIJSONPromptRequest(
+                    schema_version="1.0",
+                    system_prompt=system_rendered.text,
+                    user_prompt=user_rendered.text,
+                    model=resolved_model,
+                    temperature=settings.temperature,
+                    api_key=settings.openai_api_key,
+                    seed=settings.openai_seed,
+                    timeout_seconds=settings.openai_timeout_seconds,
+                    cost_ledger_path=settings.cost_ledger_path,
+                    cost_daily_path=settings.cost_daily_path,
+                    model_pricing=settings.model_pricing,
+                ),
+                ctx,
+            )
     parsed = resp.parsed_json if isinstance(resp.parsed_json, dict) else {}
     logger.info(log_event(
         ctx,

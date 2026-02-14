@@ -23,8 +23,8 @@ ingest:
   lock_ttl_seconds: 7200
   seed: null
   batch_limit: 20
-  worker_limit: 2
-  report_worker_limit: 2
+  worker_limit: 5
+  report_worker_limit: 5
   debug_candidate_gallery: false
   cover_cache_enabled: true
   pdf_text:
@@ -44,8 +44,12 @@ ingest:
     preview_enabled: true
     render_dpi: 144
   evidence_packs:
-    parallel_workers: 3
-    global_max_in_flight: 2
+    parallel_workers: 10
+    global_max_in_flight: 5
+    global_min_interval_ms: 250
+  artifacts:
+    parallel_workers: 10
+    global_max_in_flight: 5
     global_min_interval_ms: 250
 
 openai_models:

@@ -2,6 +2,7 @@ from types import SimpleNamespace
 from pathlib import Path
 import sys
 import json
+import threading
 
 import pytest
 
@@ -217,6 +218,9 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
     analysis_store = []
     vector_calls: list[tuple[str, dict[str, object]]] = []
     execution_trace: list[str] = []
+    taxonomy_started = threading.Event()
+    evidence_started = threading.Event()
+    overlap_flags = {"taxonomy_saw_evidence": False, "evidence_saw_taxonomy": False}
     ctx = RunContext(schema_version="1.0", run_id="run-vs", task_id="task-vs", span_id="span-vs")
 
     monkeypatch.setattr(rg.state_service, "get", lambda req, ctx: None)
@@ -292,7 +296,13 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
     monkeypatch.setattr(rg, "extract_best_figure_service", _extract_best_figure)
     monkeypatch.setattr(rg, "collect_candidates_service", _collect_candidates)
     monkeypatch.setattr(rg, "render_preview_service", _render_preview)
-    monkeypatch.setattr(rg, "extract_taxonomy", lambda req, ctx: TaxonomyExtractResponse(schema_version="1.0", taxonomy=["tag"], region="US", time_period="2024"))
+    def _extract_taxonomy(req, ctx):
+        execution_trace.append("taxonomy_start")
+        taxonomy_started.set()
+        overlap_flags["taxonomy_saw_evidence"] = evidence_started.wait(1.0)
+        return TaxonomyExtractResponse(schema_version="1.0", taxonomy=["tag"], region="US", time_period="2024")
+
+    monkeypatch.setattr(rg, "extract_taxonomy", _extract_taxonomy)
     monkeypatch.setattr(rg.vector_store_service, "update_metadata", lambda req, ctx: None)
     monkeypatch.setattr(
         rg,
@@ -305,6 +315,9 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
     )
 
     def _fake_evidence(report_id, vector_store_id, settings, ctx, **kwargs):
+        execution_trace.append("evidence_start")
+        evidence_started.set()
+        overlap_flags["evidence_saw_taxonomy"] = taxonomy_started.wait(1.0)
         assert settings.openai_timeout_seconds == 3600.0
         return {
             "doc_map": {"doc_id": "d"},
@@ -371,6 +384,8 @@ def test_generate_report_vector_store_with_validation(monkeypatch, tmp_path):
     assert "validation" in outcome.evidence_packs
     assert Path(outcome.html_path).exists()
     assert validation_calls == ["file_vs"]
+    assert overlap_flags["taxonomy_saw_evidence"] is True
+    assert overlap_flags["evidence_saw_taxonomy"] is True
     assert execution_trace.index("pdf_figure") < execution_trace.index("vector_wait")
     assert execution_trace.index("pdf_candidates") < execution_trace.index("vector_wait")
     assert execution_trace.index("pdf_preview") < execution_trace.index("vector_wait")

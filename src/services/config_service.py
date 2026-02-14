@@ -133,6 +133,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     validation_cfg = ingest.get("validation", {}) or {}
     contents_page = ingest.get("contents_page", {}) or {}
     evidence_packs_cfg = ingest.get("evidence_packs", {}) or {}
+    artifacts_cfg = ingest.get("artifacts", {}) or {}
     category_mapping_path = paths.get("category_mappings") or str(Path(__file__).resolve().parents[1] / "config" / "category-mappings.yaml")
     cover_style_path = paths.get("cover_styles") or str(Path(__file__).resolve().parents[1] / "config" / "cover-styles.yaml")
     analysis_cfg = data.get("analysis", {}) or {}
@@ -223,6 +224,33 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         evidence_pack_global_min_interval_ms = 250
     if evidence_pack_global_min_interval_ms < 0:
         evidence_pack_global_min_interval_ms = 0
+    artifact_parallel_workers_raw = artifacts_cfg.get("parallel_workers")
+    if _is_missing(artifact_parallel_workers_raw):
+        artifact_parallel_workers_raw = _env_value("ARTIFACT_PARALLEL_WORKERS")
+    try:
+        artifact_parallel_workers = int(artifact_parallel_workers_raw) if not _is_missing(artifact_parallel_workers_raw) else 4
+    except (TypeError, ValueError):
+        artifact_parallel_workers = 4
+    if artifact_parallel_workers < 1:
+        artifact_parallel_workers = 1
+    artifact_global_max_in_flight_raw = artifacts_cfg.get("global_max_in_flight")
+    if _is_missing(artifact_global_max_in_flight_raw):
+        artifact_global_max_in_flight_raw = _env_value("ARTIFACT_GLOBAL_MAX_IN_FLIGHT")
+    try:
+        artifact_global_max_in_flight = int(artifact_global_max_in_flight_raw) if not _is_missing(artifact_global_max_in_flight_raw) else 2
+    except (TypeError, ValueError):
+        artifact_global_max_in_flight = 2
+    if artifact_global_max_in_flight < 1:
+        artifact_global_max_in_flight = 1
+    artifact_global_min_interval_ms_raw = artifacts_cfg.get("global_min_interval_ms")
+    if _is_missing(artifact_global_min_interval_ms_raw):
+        artifact_global_min_interval_ms_raw = _env_value("ARTIFACT_GLOBAL_MIN_INTERVAL_MS")
+    try:
+        artifact_global_min_interval_ms = int(artifact_global_min_interval_ms_raw) if not _is_missing(artifact_global_min_interval_ms_raw) else 250
+    except (TypeError, ValueError):
+        artifact_global_min_interval_ms = 250
+    if artifact_global_min_interval_ms < 0:
+        artifact_global_min_interval_ms = 0
     pdf_text_min_density = float(pdf_text.get("min_density", 250.0))
     pdf_text_sample_pages = int(pdf_text.get("sample_pages", 3))
     debug_candidate_gallery = _as_bool(ingest.get("debug_candidate_gallery"), default=False)
@@ -308,6 +336,9 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         evidence_pack_parallel_workers=evidence_pack_parallel_workers,
         evidence_pack_global_max_in_flight=evidence_pack_global_max_in_flight,
         evidence_pack_global_min_interval_ms=evidence_pack_global_min_interval_ms,
+        artifact_parallel_workers=artifact_parallel_workers,
+        artifact_global_max_in_flight=artifact_global_max_in_flight,
+        artifact_global_min_interval_ms=artifact_global_min_interval_ms,
         analysis_mode=analysis_mode,
         use_vector_store=use_vector_store,
         vector_store_keep=vector_store_keep,
@@ -378,6 +409,9 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             "evidence_pack_parallel_workers": settings.evidence_pack_parallel_workers,
             "evidence_pack_global_max_in_flight": settings.evidence_pack_global_max_in_flight,
             "evidence_pack_global_min_interval_ms": settings.evidence_pack_global_min_interval_ms,
+            "artifact_parallel_workers": settings.artifact_parallel_workers,
+            "artifact_global_max_in_flight": settings.artifact_global_max_in_flight,
+            "artifact_global_min_interval_ms": settings.artifact_global_min_interval_ms,
             "analysis_mode": settings.analysis_mode,
             "use_vector_store": settings.use_vector_store,
             "vector_store_keep": settings.vector_store_keep,

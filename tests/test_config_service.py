@@ -144,6 +144,33 @@ class TestConfigService(unittest.TestCase):
                 )
                 self.assertEqual(2, settings.report_worker_limit)
 
+    def test_artifact_parallel_settings_defaults_and_env_override(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_analysis=False)
+            with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
+                settings = load_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                )
+                self.assertEqual(4, settings.artifact_parallel_workers)
+                self.assertEqual(2, settings.artifact_global_max_in_flight)
+                self.assertEqual(250, settings.artifact_global_min_interval_ms)
+
+            env = {
+                "OPENAI_API_KEY": "key",
+                "ARTIFACT_PARALLEL_WORKERS": "3",
+                "ARTIFACT_GLOBAL_MAX_IN_FLIGHT": "1",
+                "ARTIFACT_GLOBAL_MIN_INTERVAL_MS": "0",
+            }
+            with patch.dict(os.environ, env, clear=True):
+                settings = load_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                )
+                self.assertEqual(3, settings.artifact_parallel_workers)
+                self.assertEqual(1, settings.artifact_global_max_in_flight)
+                self.assertEqual(0, settings.artifact_global_min_interval_ms)
+
     def test_publish_settings_derive_site_url_from_admin(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(tmp_dir, include_publish=True)
