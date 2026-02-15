@@ -79,6 +79,7 @@ class CoverImageReport:
     file_id: str = field(metadata={"doc": "Report file identifier."})
     title: str = field(metadata={"doc": "Report title."})
     publisher: Optional[str] = field(metadata={"doc": "Report publisher (optional)."})
+    report_slug: Optional[str] = field(default=None, metadata={"doc": "Optional report output slug for storing the cover under out/<report-slug>/assets."})
     categories: List[str] = field(default_factory=list, metadata={"doc": "Assigned category identifiers."})
     time_period: Optional[str] = field(default=None, metadata={"doc": "Optional time period label."})
     region: Optional[str] = field(default=None, metadata={"doc": "Optional region label."})

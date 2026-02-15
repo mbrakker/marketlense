@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import List, Optional
 
 from src.contracts.cover_images import (
@@ -13,9 +14,24 @@ from src.contracts.report_store import ReportMetadataGetRequest, ReportMetadataL
 from src.contracts.run_context import RunContext
 from src.generators.cover_image_generator import generate_cover_images
 from src.services.report_store_service import get_metadata, list_metadata
+from src.utils.slugify import slugify
 from src.utils.logging import child_context, log_event, new_run_context
 
 logger = logging.getLogger("market_lense.cover_image_orchestrator")
+
+
+def _report_slug_from_metadata(metadata) -> str:
+    html_path = str(getattr(metadata, "html_path", "") or "").strip()
+    if html_path:
+        stem = Path(html_path).stem.strip()
+        if stem:
+            return stem
+    file_name = str(getattr(metadata, "file_name", "") or "").strip()
+    if file_name:
+        file_slug = slugify(file_name)
+        if file_slug:
+            return file_slug
+    return slugify(f"{str(metadata.title or '').strip()}.pdf")
 
 
 def _report_from_metadata(metadata) -> CoverImageReport:
@@ -24,6 +40,7 @@ def _report_from_metadata(metadata) -> CoverImageReport:
         file_id=metadata.file_id,
         title=metadata.title,
         publisher=metadata.publisher or "",
+        report_slug=_report_slug_from_metadata(metadata),
         categories=list(metadata.categories or []),
         time_period=metadata.time_period,
         region=metadata.region,

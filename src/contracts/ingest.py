@@ -67,7 +67,6 @@ class IngestSettings:
     analysis_mode: str = field(default="vector_store", metadata={"doc": "Analysis mode to use (vector_store)."})
     use_vector_store: bool = field(default=True, metadata={"doc": "Always true; vector_store is the only supported analysis path."})
     vector_store_keep: bool = field(default=True, metadata={"doc": "Whether to keep the vector store cache after runs."})
-    mirror_legacy_packs: bool = field(default=True, metadata={"doc": "Whether to mirror analysis packs to the legacy output layout."})
     cover_cache_enabled: bool = field(default=True, metadata={"doc": "Whether to skip cover generation when cached output is up-to-date."})
     cost_ledger_path: str = field(default="./out/cost-ledger.jsonl", metadata={"doc": "Filesystem path for cost ledger JSONL output."})
     cost_daily_path: str = field(default="./out/cost-daily.json", metadata={"doc": "Filesystem path for daily cost rollup JSON."})

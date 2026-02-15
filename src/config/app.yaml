@@ -101,7 +101,6 @@ publish:
 
 analysis:
   vector_store_keep: true
-  mirror_legacy_packs: true
   compare: false
   cost_ledger_path: "./out/cost-ledger.jsonl"
 

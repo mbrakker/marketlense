@@ -66,7 +66,7 @@ class FakeAnalysisStore:
     def __init__(self):
         self.stored = []
 
-    def store_pack(self, output_dir, report_id, pack_name, payload, ctx, report_slug=None, mirror_legacy=True):
+    def store_pack(self, output_dir, report_id, pack_name, payload, ctx, report_slug=None):
         slug = slugify(report_slug or report_id)
         path = Path(output_dir) / slug / "report_analysis" / f"{pack_name}.json"
         self.stored.append((output_dir, report_id, pack_name, payload))

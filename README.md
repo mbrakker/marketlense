@@ -90,7 +90,7 @@ Per-step model selection (new):
 
 - Set `openai_models` entries to pin specific prompt calls to specific models (e.g., `report_vs/artifacts/summary`, `report_vs/evidence_packs/findings`, `report_vs/validate/grounding`, `rank_candidates`, `rank_candidates/crop_refine`).
 - Prefix keys apply to all nested namespaces unless a more specific key exists (e.g., `report_vs/evidence_packs` covers all evidence packs).
-- Vector store: `analysis.vector_store_keep` (`VECTOR_STORE_KEEP`, default `true`) controls whether to retain caches between runs (including evidence pack reuse). Analysis always uses the vector_store path; compare toggles are legacy/ignored. `analysis.mirror_legacy_packs` toggles legacy pack mirroring to `out/report_analysis/<file_id>/`.
+- Vector store: `analysis.vector_store_keep` (`VECTOR_STORE_KEEP`, default `true`) controls whether to retain caches between runs (including evidence pack reuse). Analysis always uses the vector_store path; compare toggles are legacy/ignored. Evidence/validation JSONs are written only to `out/<report-slug>/report_analysis/`.
 - Cost tracking: `analysis.cost_ledger_path` (`COST_LEDGER_PATH`, default `./out/cost-ledger.jsonl`), `cost.daily_path` (default `./out/cost-daily.json`), `cost.pricing` (per-model pricing map used by `utils.costing`).
 - Validation: `ingest.validation.data_gap_policy` (default `warn`) controls whether missing evidence/text gaps downgrade errors to warnings; `publish.validation.policy` (`PUBLISH_VALIDATION_POLICY`, default `block`; set to `warn` to allow publish with issues).
 - Taxonomy extraction: set `openai_models.report_vs/taxonomy` to override the tag/region/time period extractor.
@@ -164,7 +164,7 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
        - After indexing is ready, taxonomy/category resolution and evidence-pack generation run concurrently when `ingest.report_worker_limit > 1` (serial when `= 1`).
        - Evidence packs are generated via `src/generators/evidence_pack_generator.py` (doc_map, scope, methods, findings, limitations, quote_candidates), where `doc_map` runs first as a hard gate and the remaining packs run in parallel (`ingest.evidence_packs.parallel_workers`) under a process-wide limiter (`ingest.evidence_packs.global_max_in_flight` + `ingest.evidence_packs.global_min_interval_ms`).
        - Artifacts are generated via `src/generators/artifact_generator.py` using a dependency-aware parallel DAG: `toc` + `summary` + `insights_candidates` + `quotes` in parallel, then `insights_final`, then `expert_comment` + `linkedin_post` in parallel. Independent steps use `ingest.artifacts.parallel_workers` and a process-wide limiter (`ingest.artifacts.global_max_in_flight` + `ingest.artifacts.global_min_interval_ms`).
-       - Packs are stored under `out/<report-slug>/report_analysis/*.json` (mirrored to `out/report_analysis/<file_id>/` for backward compatibility unless `analysis.mirror_legacy_packs=false`), and persisted in the metadata DB (`reports` table columns `vector_store_id`, `evidence_packs_json`; state DB stores `vector_store_status`, `indexed_at_utc`, `openai_file_id`, `last_error`).
+       - Packs are stored under `out/<report-slug>/report_analysis/*.json` and persisted in the metadata DB (`reports` table columns `vector_store_id`, `evidence_packs_json`; state DB stores `vector_store_status`, `indexed_at_utc`, `openai_file_id`, `last_error`).
        - Orchestrator logs `VECTOR_STORE_CREATED`, `VECTOR_STORE_INDEXED`, `EVIDENCE_READY`.
        - Evidence packs, artifacts, validation reports, and HTML are cached by md5 + prompt/template hashes to skip repeat LLM and rendering work when inputs are unchanged.
        - DocMap validation: if the `doc_map` pack is empty (no sections/title/doc_id/summary), the report is halted for that PDF and the error is logged/recorded with a summary persisted to the state DB.
@@ -175,7 +175,7 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
        - Exact: numeric match, token presence, verbatim quotes, and “new numbers” in expert/LinkedIn text.
        - Semantic: LLM re-check via `src/prompts/report_vs/validate/semantic/{system,user}.yaml` (model resolved via `openai_models` longest-prefix match) that scores metric/quote support against evidence snippets and logs prompt hashes + evidence/metric/quote SHA-256. Semantic “supported” adds `info` issues; “unsupported” raises `warning|error`. Grounding still runs (`report_vs/validate/grounding`) for unsupported sentences end-to-end.
        - Parallel execution: when `ingest.report_worker_limit > 1`, semantic, grounding, and new-number checks run concurrently; metric/quote exact checks run immediately after semantic completes. Issue merge order remains deterministic as `semantic -> metrics -> quotes -> new_numbers -> grounding` to prevent behavioral drift.
-       - Results persist to `out/<report-slug>/report_analysis/validation*.json` (legacy copy at `out/report_analysis/<file_id>/`) and flow into HTML and publish policy decisions. When `ingest.validation.data_gap_policy` is `warn`, missing evidence/text downgrades to warnings. Schema validation is performed via `schema_validator_service`.
+       - Results persist to `out/<report-slug>/report_analysis/validation*.json` and flow into HTML and publish policy decisions. When `ingest.validation.data_gap_policy` is `warn`, missing evidence/text downgrades to warnings. Schema validation is performed via `schema_validator_service`.
      - **Normalization**: `normalize_generator` enforces strict schema and list sizing.
      - **Categorization**: taxonomy tags are scored against `src/config/category-mappings.yaml`; top 3 categories are stored and rendered, and unmapped tags are appended under `uncategorized` in that YAML.
      - **Figure selection**: `pdf_service.extract_best_figure` selects a representative visual and caption.
@@ -185,7 +185,7 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
      - **Strict cropping**: `pdf_service.crop_regions(..., mode=\"figure_strict\")` outputs clean final crops (infographic/table + title + attached note when present; unrelated blocks excluded).
     - **Zero-pass behavior**: if no final candidate passes, the HTML figure section is disabled.
      - **Preview rendering**: `pdf_service.render_preview` renders the first page to PNG.
-      - **Cover image generation**: `cover_image_generator` resolves style from `cover-styles.yaml` using the report’s first category (falls back to `default` for styling only), while the rendered label text, title, publisher, time period, and region always come from report metadata in the DB. Cover asset paths are now length-bounded and file-id-suffixed (for Windows-safe paths) via `src/utils/cover_path_utils.py`, and Streamlit preview lookup follows the same path logic with legacy-path fallback.
+      - **Cover image generation**: `cover_image_generator` resolves style from `cover-styles.yaml` using the report’s first category (falls back to `default` for styling only), while the rendered label text, title, publisher, time period, and region always come from report metadata in the DB. Cover assets are now written into the canonical report folder (`out/<report-slug>/assets/`) with length-bounded, file-id-suffixed filenames via `src/utils/cover_path_utils.py`; Streamlit preview lookup follows the same path logic with legacy-path fallback.
      - **HTML rendering**: `render_service` generates the final HTML digest with premium template UX (split hero, sticky nav + progress, section accents, signal cards, editorial quotes, figure carousel/lightbox), plus SEO metadata (OG/Twitter/canonical/JSON-LD) and explicit image dimensions.
    - If the reports DB already has `html_path` for the same `file_id` + md5 and the HTML exists on disk, the orchestrator skips report generation.
 
@@ -421,7 +421,7 @@ Vector-store ingest mode:
 ANALYSIS_MODE=vector_store python -m src.cli ingest --limit 1
 ```
 
-This reuses existing vector stores when `VECTOR_STORE_KEEP=true`, otherwise creates/attaches/waits per file and writes packs to `out/<report-slug>/report_analysis/` (plus a legacy mirror under `out/report_analysis/<file_id>/`).
+This reuses existing vector stores when `VECTOR_STORE_KEEP=true`, otherwise creates/attaches/waits per file and writes packs to `out/<report-slug>/report_analysis/`.
 
 CLI options summary:
 
@@ -527,6 +527,6 @@ To extend the system:
 
 - Vector stores: `src/services/vector_store_service.py` handles create/upload/attach/status/wait using OpenAI vector stores; used by vector-mode generators.
 - Analysis uses vector_store only; `ANALYSIS_MODE`/`USE_VECTOR_STORE` toggles are no longer needed.
-- Evidence packs: `src/generators/evidence_pack_generator.py` uses `src/prompts/report_vs/**` and writes packs to `out/<report-slug>/report_analysis/*.json` (with a legacy mirror under `out/report_analysis/<report_id>/`); `doc_map` runs first, and remaining packs run in parallel with process-wide rate limiting via `ingest.evidence_packs.*`; validation uses `src/schemas/evidence_pack.schema.json` (permissive for empty fields).
+- Evidence packs: `src/generators/evidence_pack_generator.py` uses `src/prompts/report_vs/**` and writes packs to `out/<report-slug>/report_analysis/*.json`; `doc_map` runs first, and remaining packs run in parallel with process-wide rate limiting via `ingest.evidence_packs.*`; validation uses `src/schemas/evidence_pack.schema.json` (permissive for empty fields).
 - Artifacts: `src/generators/artifact_generator.py` writes `artifacts.json` under the same analysis path, parallelizing independent steps with dependency ordering and process-wide rate limiting via `ingest.artifacts.*`.
 - Cost ledger: `src/services/cost_ledger_service.py` appends JSONL entries for every LLM call and writes daily rollups (`./out/cost-ledger.jsonl`, `./out/cost-daily.json`) using per-model pricing from config.

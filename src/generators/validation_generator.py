@@ -258,7 +258,6 @@ def validate_report(
         payload=payload,
         ctx=ctx,
         report_name=report_name,
-        mirror_legacy=settings.mirror_legacy_packs,
     )
     if cache_meta:
         logger.info(log_event(
@@ -1138,7 +1137,6 @@ def _store_pack(
     payload: dict,
     ctx: RunContext,
     report_name: Optional[str],
-    mirror_legacy: bool,
 ) -> str:
     if hasattr(analysis_store, "store_pack"):
         try:
@@ -1150,7 +1148,6 @@ def _store_pack(
                     pack_name=pack_name,
                     payload=payload,
                     report_slug=report_name,
-                    mirror_legacy=mirror_legacy,
                 ),
                 ctx,
             )
@@ -1167,7 +1164,6 @@ def _store_pack(
                 payload,
                 ctx,
                 report_slug=report_name,
-                mirror_legacy=mirror_legacy,
             ))
     return report_analysis_store_service.store_pack(
         AnalysisStorePackRequest(
@@ -1177,7 +1173,6 @@ def _store_pack(
             pack_name=pack_name,
             payload=payload,
             report_slug=report_name,
-            mirror_legacy=mirror_legacy,
         ),
         ctx,
     ).output_path

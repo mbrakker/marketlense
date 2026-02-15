@@ -920,17 +920,27 @@ def _render_report_command_center(settings: Any) -> None:
         title = str(report.get("title") or "").strip()
         file_id = str(report.get("file_id") or "").strip()
         if title and file_id:
+            report_slug = Path(html_path).stem if html_path else None
             cover_path = build_cover_asset_path(
                 settings.output_dir,
                 file_id=file_id,
                 title=title,
                 publisher=publisher,
+                report_slug=report_slug,
             )
-            legacy_cover_path = Path(settings.output_dir) / slugify(f"{title}.pdf") / "assets" / f"{slugify(f'{publisher} {title}')}.png"
+            legacy_cover_path = build_cover_asset_path(
+                settings.output_dir,
+                file_id=file_id,
+                title=title,
+                publisher=publisher,
+            )
+            legacy_cover_path_older = Path(settings.output_dir) / slugify(f"{title}.pdf") / "assets" / f"{slugify(f'{publisher} {title}')}.png"
             if cover_path.exists():
                 st.image(str(cover_path), caption="Cover preview", use_container_width=True)
             elif legacy_cover_path.exists():
                 st.image(str(legacy_cover_path), caption="Cover preview", use_container_width=True)
+            elif legacy_cover_path_older.exists():
+                st.image(str(legacy_cover_path_older), caption="Cover preview", use_container_width=True)
 
 
 def _render_cover_images(settings: Any) -> None:

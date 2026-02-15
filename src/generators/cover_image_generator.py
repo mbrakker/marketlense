@@ -26,6 +26,7 @@ logger = logging.getLogger("market_lense.cover_image_generator")
 def _normalize_report(report: CoverImageReport) -> CoverImageReport:
     title = str(report.title or "").strip()
     publisher = str(report.publisher or "").strip()
+    report_slug = str(report.report_slug or "").strip() or None
     categories = [str(cat).strip() for cat in report.categories if str(cat).strip()]
     time_period = str(report.time_period).strip() if report.time_period else None
     region = str(report.region).strip() if report.region else None
@@ -34,6 +35,7 @@ def _normalize_report(report: CoverImageReport) -> CoverImageReport:
         file_id=str(report.file_id).strip(),
         title=title,
         publisher=publisher,
+        report_slug=report_slug,
         categories=categories,
         time_period=time_period,
         region=region,
@@ -160,6 +162,7 @@ def generate_cover_images(request: CoverImageGenerationRequest, ctx: RunContext)
             normalized.file_id,
             normalized.title,
             normalized.publisher,
+            normalized.report_slug,
         )
         output_path_obj.parent.mkdir(parents=True, exist_ok=True)
         output_path = str(output_path_obj)

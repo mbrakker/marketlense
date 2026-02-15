@@ -355,7 +355,6 @@ def _write_crop_refine_cache(
                 "results": rows,
             },
             report_slug=report_name,
-            mirror_legacy=settings.mirror_legacy_packs,
         ),
         child_context(ctx, task_id=f"{ctx.task_id}:crop_refine_cache_write"),
     )
@@ -2518,7 +2517,6 @@ def generate_report(
                     pack_name=validation_pack_name,
                     payload=fallback_report.to_dict(),
                     report_slug=report_name,
-                    mirror_legacy=settings.mirror_legacy_packs,
                 ),
                 mode_ctx,
             ).output_path
@@ -2564,7 +2562,6 @@ def generate_report(
             pack_name=snapshot_name,
             payload=data_dict,
             report_slug=report_name,
-            mirror_legacy=settings.mirror_legacy_packs,
         ),
         mode_ctx,
     ).output_path
@@ -2766,6 +2763,7 @@ def generate_report(
                         file_id=file.file_id,
                         title=cover_title,
                         publisher=cover_publisher,
+                        report_slug=report_name,
                         categories=list(data.categories),
                         time_period=cover_time_period,
                         region=cover_region,

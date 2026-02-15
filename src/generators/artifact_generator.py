@@ -205,7 +205,6 @@ def generate_artifacts(
             payload=payload,
             ctx=ctx,
             report_slug=report_name,
-            mirror_legacy=settings.mirror_legacy_packs,
         )
         logger.info(log_event(
             ctx,
@@ -429,7 +428,6 @@ def generate_artifacts(
         payload=artifacts_payload,
         ctx=ctx,
         report_slug=report_name,
-        mirror_legacy=settings.mirror_legacy_packs,
     )
 
     logger.info(log_event(
@@ -833,7 +831,6 @@ def _store_pack(
     payload: Dict[str, Any],
     ctx: RunContext,
     report_slug: Optional[str],
-    mirror_legacy: bool,
 ) -> str:
     if hasattr(analysis_store, "store_pack"):
         try:
@@ -845,7 +842,6 @@ def _store_pack(
                     pack_name=pack_name,
                     payload=payload,
                     report_slug=report_slug,
-                    mirror_legacy=mirror_legacy,
                 ),
                 ctx,
             )
@@ -862,7 +858,6 @@ def _store_pack(
                 payload,
                 ctx,
                 report_slug=report_slug,
-                mirror_legacy=mirror_legacy,
             ))
     return report_analysis_store_service.store_pack(
         AnalysisStorePackRequest(
@@ -872,7 +867,6 @@ def _store_pack(
             pack_name=pack_name,
             payload=payload,
             report_slug=report_slug,
-            mirror_legacy=mirror_legacy,
         ),
         ctx,
     ).output_path

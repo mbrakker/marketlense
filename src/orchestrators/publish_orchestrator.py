@@ -69,15 +69,11 @@ def _load_html_file_id_map(reports_db: str, ctx: RunContext) -> dict[str, str]:
 
 def _validation_paths(output_dir: str, file_id: str, html_path: str) -> list[Path]:
     """
-    Preferred path: per-report folder (out/<report-slug>/report_analysis/validation.json).
-    Fallback: legacy path (out/report_analysis/<file_id>/validation.json).
+    Validation path in the per-report folder: out/<report-slug>/report_analysis/validation.json.
     """
+    _ = file_id
     html_slug = Path(html_path).stem
-    primary = Path(output_dir) / html_slug / "report_analysis" / "validation.json"
-    legacy = Path(output_dir) / "report_analysis" / file_id / "validation.json"
-    if primary == legacy:
-        return [primary]
-    return [primary, legacy]
+    return [Path(output_dir) / html_slug / "report_analysis" / "validation.json"]
 
 
 def _load_validation_report(file_id: str, html_path: str, settings: PublishSettings, ctx) -> Optional[ValidationReport]:

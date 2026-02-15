@@ -121,10 +121,6 @@ Findings (ordered by impact):
    - `src/generators/report_generator.py` is still very large and combines orchestration, caching, service coordination, rendering, and persistence.
 2. Candidate extraction service is oversized and exception-heavy.
    - `src/services/candidate_extraction_service.py` remains large and branch-dense with broad exception handling.
-3. Retry logic is duplicated and inconsistent.
-   - Separate retry implementations remain in ingest/candidate-extraction/publish orchestrators with different behavior.
-4. Duplicate skip checks in ingest flow.
-   - Skip checks happen at list filtering and file-processing stages, causing repeated state checks in some paths.
 5. Global SQLite locks serialize work.
    - `src/services/state_service.py` and `src/services/report_store_service.py` still use process-wide locks around DB access.
 6. Cost rollup recomputes from full ledger frequently.

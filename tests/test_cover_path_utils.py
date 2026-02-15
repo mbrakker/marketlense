@@ -27,3 +27,16 @@ def test_build_cover_asset_path_uses_file_id_suffix():
     path_text = path.as_posix()
     assert "-file-123/" in path_text
     assert "-file-123.png" in path_text
+
+
+def test_build_cover_asset_path_uses_report_slug_when_provided():
+    path = build_cover_asset_path(
+        "out",
+        file_id="file_123",
+        title="Retail trends 2026",
+        publisher="Capgemini",
+        report_slug="attest-uk-consumer-trends-report-2026-acig-pdf",
+    )
+    path_text = path.as_posix()
+    assert "/attest-uk-consumer-trends-report-2026-acig-pdf/assets/" in path_text
+    assert path_text.endswith("-file-123.png")

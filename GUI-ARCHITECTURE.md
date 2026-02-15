@@ -118,8 +118,8 @@ This layout keeps the UI minimal: one dominant task per page with a clear, inspe
   - state DB status including vector store indexing status and errors (if any).
 - **Artifacts panel**:
   - HTML output link/button (from `html_path`).
-  - Evidence pack JSON view (doc_map, scope, methods, findings, limitations, quote_candidates) plus artifacts/validation if present. Packs live under `output_dir/<report_name>/report_analysis/*.json` and are mirrored to `output_dir/report_analysis/<file_id>/` when `analysis.mirror_legacy_packs` is enabled.
-  - **Cover image preview** if present under `output_dir/<slugified_title>.pdf/assets/<slugified_publisher>-<slugified_title>.png`.
+  - Evidence pack JSON view (doc_map, scope, methods, findings, limitations, quote_candidates) plus artifacts/validation if present. Packs live under `output_dir/<report_name>/report_analysis/*.json`.
+  - **Cover image preview** if present under `output_dir/<report_slug>/assets/<bounded-publisher-title>-<file-id>.png`.
 
 **Admin value:** a true report-centric cockpit that answers "everything about this report" in one place.
 

@@ -327,7 +327,6 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     analysis_compare = False
     vector_store_keep_raw = env_vector_store_keep if env_vector_store_keep else analysis_cfg.get("vector_store_keep")
     vector_store_keep = _as_bool(vector_store_keep_raw, default=True)
-    mirror_legacy_packs = _as_bool(analysis_cfg.get("mirror_legacy_packs"), default=True)
     cost_ledger_path = str(env_cost_ledger_path or analysis_cfg.get("cost_ledger_path") or "./out/cost-ledger.jsonl")
     cost_daily_path = str(cost_cfg.get("daily_path") or "./out/cost-daily.json")
     model_pricing = cost_cfg.get("pricing") or {}
@@ -400,7 +399,6 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         analysis_mode=analysis_mode,
         use_vector_store=use_vector_store,
         vector_store_keep=vector_store_keep,
-        mirror_legacy_packs=mirror_legacy_packs,
         cover_cache_enabled=cover_cache_enabled,
         analysis_compare=analysis_compare,
         cost_ledger_path=cost_ledger_path,
@@ -485,7 +483,6 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             "analysis_mode": settings.analysis_mode,
             "use_vector_store": settings.use_vector_store,
             "vector_store_keep": settings.vector_store_keep,
-            "mirror_legacy_packs": settings.mirror_legacy_packs,
             "cover_cache_enabled": settings.cover_cache_enabled,
             "analysis_compare": settings.analysis_compare,
             "cost_ledger_path": settings.cost_ledger_path,
