@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -26,6 +27,10 @@ from src.utils.cache_utils import sha256_json
 logger = logging.getLogger("market_lense.artifact_generator")
 
 METRIC_FIELDS = ("value", "unit", "trend", "timeframe", "geography", "segment", "sample_size", "confidence")
+INLINE_REFERENCE_TOKEN_RE = r"[A-Z]{1,4}-\d{1,4}"
+INLINE_REFERENCE_GROUP_RE = re.compile(
+    rf"[\(\[]\s*{INLINE_REFERENCE_TOKEN_RE}(?:\s*[/,;|]\s*{INLINE_REFERENCE_TOKEN_RE})*\s*[\)\]]"
+)
 
 
 @dataclass
@@ -385,7 +390,7 @@ def generate_artifacts(
             vector_store_id=vector_store_id,
         )
     expert_comment = _s(expert_result.get("expert_comment"))
-    linkedin_post = _s(linkedin_result.get("linkedin_post"))
+    linkedin_post = _strip_inline_reference_ids(_s(linkedin_result.get("linkedin_post")))
 
     artifacts_payload: Dict[str, Any] = {
         "schema_version": "1.0",
@@ -541,9 +546,20 @@ def _normalize_summary(value: Any) -> Dict[str, Any]:
     claim_map = data.get("claim_evidence_map") if isinstance(data.get("claim_evidence_map"), list) else []
     return {
         "tldr": _s(data.get("tldr")),
-        "executive_summary": _s(data.get("executive_summary")),
+        "executive_summary": _strip_inline_reference_ids(_s(data.get("executive_summary"))),
         "claim_evidence_map": _normalize_claims(claim_map),
     }
+
+
+def _strip_inline_reference_ids(text: str) -> str:
+    if not text:
+        return ""
+    cleaned = INLINE_REFERENCE_GROUP_RE.sub("", text)
+    cleaned = re.sub(r"\s{2,}", " ", cleaned)
+    cleaned = re.sub(r"\s+([,.;:!?])", r"\1", cleaned)
+    cleaned = re.sub(r"([(\[])\s+", r"\1", cleaned)
+    cleaned = re.sub(r"\s+([)\]])", r"\1", cleaned)
+    return cleaned.strip()
 
 
 def _normalize_claims(items: Any) -> List[Dict[str, Any]]:

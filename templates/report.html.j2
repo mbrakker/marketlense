@@ -55,9 +55,8 @@
 {% set figure_height = 900 %}
 {% set thumb_width = 320 %}
 {% set thumb_height = 180 %}
-{% set has_metadata = publisher or region or report_year or (categories_list|length > 0) or (tags_list|length > 0) %}
+{% set has_metadata = (categories_list|length > 0) or (tags_list|length > 0) %}
 {% set has_topics = topics_list|length > 0 %}
-{% set has_contents_preview = figure_section_enabled and data.contents_page_number is defined and data.contents_page_number and data.contents_page_number > 0 and data._contents_image is defined and data._contents_image %}
 {% set has_primary_figure = figure_section_enabled and primary_figure %}
 {% set has_claim_map = claim_map|length > 0 %}
 {% set has_expert_comment = expert_comment and (expert_comment|string|trim) %}
@@ -192,7 +191,7 @@ a:hover{text-decoration:underline}
   border:1px solid var(--border);
   border-radius:var(--radius-lg);
   box-shadow:var(--shadow);
-  overflow:hidden;
+  overflow:visible;
 }
 .hero{
   padding:28px 30px 22px;
@@ -272,6 +271,16 @@ h3{
   grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
   gap:10px;
 }
+.meta-stack{
+  display:grid;
+  gap:12px;
+}
+.meta-row{
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  background:#fcfdff;
+  padding:10px 11px;
+}
 .meta-card{
   border:1px solid var(--border);
   border-radius:var(--radius-sm);
@@ -295,6 +304,16 @@ h3{
   display:flex;
   flex-wrap:wrap;
   gap:8px;
+}
+.chip-list.horizontal-strip{
+  flex-wrap:nowrap;
+  overflow-x:auto;
+  overflow-y:hidden;
+  padding-bottom:4px;
+  scrollbar-width:thin;
+}
+.chip-list.horizontal-strip li{
+  flex:0 0 auto;
 }
 .chip{
   border:1px solid #ced9e8;
@@ -483,6 +502,13 @@ body{
   font-size:1.02rem;
   max-width:58ch;
 }
+.hero-subtitle-line{
+  display:block;
+  margin:0 0 2px;
+}
+.hero-subtitle-label{
+  font-weight:700;
+}
 .hero-meta{
   display:flex;
   flex-wrap:wrap;
@@ -543,8 +569,8 @@ body{
 }
 .section-nav{
   position:sticky;
-  top:3px;
-  z-index:40;
+  top:0;
+  z-index:90;
   padding:10px 24px;
   border-bottom:1px solid var(--border);
   background:rgba(255,255,255,.72);
@@ -611,16 +637,6 @@ h2{
   letter-spacing:.01em;
   font-family:"Avenir Next","Segoe UI",Tahoma,sans-serif;
 }
-.section-kicker{
-  display:block;
-  margin:0 0 7px;
-  letter-spacing:.09em;
-  text-transform:uppercase;
-  font-size:.69rem;
-  color:#607791;
-  font-family:"Avenir Next","Segoe UI",Tahoma,sans-serif;
-  font-weight:700;
-}
 .summary-copy{
   max-width:100%;
   font-size:1.03rem;
@@ -637,20 +653,6 @@ h2{
   border:none;
   background:#0d3b66;
   color:#fff;
-  font-weight:700;
-}
-.insight-metric{
-  margin-top:10px;
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  border:1px solid #b9d5c8;
-  border-radius:999px;
-  background:#e9f7f1;
-  color:#1b5d45;
-  padding:5px 10px;
-  font-size:.82rem;
-  font-family:"Avenir Next","Segoe UI",Tahoma,sans-serif;
   font-weight:700;
 }
 .badge{
@@ -889,7 +891,7 @@ h2{
     max-height:260px;
   }
   .section-nav{
-    top:3px;
+    top:0;
     padding:8px 10px;
   }
   .content{
@@ -926,9 +928,9 @@ h2{
             <p class="eyebrow">Market Lense report digest</p>
             <h1>{{ report_title }}</h1>
             <p class="hero-subtitle">
-              {% if publisher %}{{ publisher }}{% else %}Unknown publisher{% endif %}
-              {% if report_year %} | {{ report_year }}{% endif %}
-              {% if region %} | {{ region }}{% endif %}
+              <span class="hero-subtitle-line"><span class="hero-subtitle-label">Publisher:</span> {% if publisher %}{{ publisher }}{% else %}Unknown publisher{% endif %}</span>
+              <span class="hero-subtitle-line"><span class="hero-subtitle-label">Time Period:</span> {% if report_year %}{{ report_year }}{% else %}Not specified{% endif %}</span>
+              <span class="hero-subtitle-line"><span class="hero-subtitle-label">Geography:</span> {% if region %}{{ region }}{% else %}Not specified{% endif %}</span>
             </p>
             <ul class="hero-meta">
               {% if has_insights %}<li>{{ insights_ns.count }} insight{% if insights_ns.count != 1 %}s{% endif %}</li>{% endif %}
@@ -964,11 +966,11 @@ h2{
         <div class="nav-scroll">
           <ul class="nav-list">
             <li><a href="#section-summary" data-section-link>TL;DR</a></li>
+            {% if has_topics %}<li><a href="#section-topics" data-section-link>Covered topics</a></li>{% endif %}
             {% if exec_summary %}<li><a href="#section-executive" data-section-link>Executive summary</a></li>{% endif %}
             <li><a href="#section-insights" data-section-link>Key data insights</a></li>
-            {% if has_primary_figure or has_contents_preview %}<li><a href="#section-figures" data-section-link>Figures</a></li>{% endif %}
+            {% if has_primary_figure %}<li><a href="#section-figures" data-section-link>Figures</a></li>{% endif %}
             <li><a href="#section-quotes" data-section-link>Key quotes</a></li>
-            {% if has_topics %}<li><a href="#section-topics" data-section-link>Covered topics</a></li>{% endif %}
             {% if has_metadata %}<li><a href="#section-metadata" data-section-link>Report metadata</a></li>{% endif %}
             {% if has_expert_comment %}<li><a href="#section-expert" data-section-link>Expert comment</a></li>{% endif %}
             {% if has_linkedin_post %}<li><a href="#section-linkedin" data-section-link>LinkedIn post</a></li>{% endif %}
@@ -983,51 +985,14 @@ h2{
         </section>
         {% endif %}
 
-        {% if has_contents_preview %}
-        <section class="panel preview-block" id="section-contents-preview" data-reveal aria-label="Contents page preview">
-          <span class="section-kicker">Navigation map</span>
-          <h2>Contents page (page {{ data.contents_page_number }}){% if data.contents_heading %}: {{ data.contents_heading }}{% endif %}</h2>
-          <figure class="media-figure">
-            <img src="{{ data._contents_image }}"
-              srcset="{{ data._contents_image }} 1x, {{ data._contents_image }} 2x"
-              sizes="(max-width: 800px) 100vw, 900px"
-              alt="Contents page screenshot of {{ doc_name }}"
-              loading="lazy"
-              decoding="async"
-              width="{{ preview_width }}"
-              height="{{ preview_height }}">
-            <figcaption>Detected table of contents preview.</figcaption>
-          </figure>
-        </section>
-        {% endif %}
-
         {% if has_metadata %}
         <section class="panel" id="section-metadata" data-reveal data-section aria-label="Report metadata">
-          <span class="section-kicker">Context</span>
           <h2>Report metadata</h2>
-          <div class="meta-grid">
-            {% if publisher %}
-            <article class="meta-card">
-              <span class="meta-label">Publisher</span>
-              <p class="meta-value">{{ publisher }}</p>
-            </article>
-            {% endif %}
-            {% if region %}
-            <article class="meta-card">
-              <span class="meta-label">Region</span>
-              <p class="meta-value">{{ region }}</p>
-            </article>
-            {% endif %}
-            {% if report_year %}
-            <article class="meta-card">
-              <span class="meta-label">Time period</span>
-              <p class="meta-value">{{ report_year }}</p>
-            </article>
-            {% endif %}
+          <div class="meta-stack">
             {% if categories_list and categories_list|length > 0 %}
-            <article class="meta-card">
+            <article class="meta-row">
               <span class="meta-label">Categories</span>
-              <ul class="chip-list">
+              <ul class="chip-list horizontal-strip">
                 {% for category in categories_list %}
                   {% set category_value = category|string|trim %}
                   {% if category_value %}
@@ -1038,9 +1003,9 @@ h2{
             </article>
             {% endif %}
             {% if tags_list and tags_list|length > 0 %}
-            <article class="meta-card">
+            <article class="meta-row">
               <span class="meta-label">Tags</span>
-              <ul class="chip-list">
+              <ul class="chip-list horizontal-strip">
                 {% for tag in tags_list %}
                   {% set tag_value = tag|string|trim %}
                   {% if tag_value %}
@@ -1055,7 +1020,6 @@ h2{
         {% endif %}
 
         <section class="panel" id="section-summary" data-reveal data-section data-tone="summary" aria-label="TL;DR">
-          <span class="section-kicker">Section 1</span>
           <h2>TL;DR</h2>
           {% if tldr_text %}
             <p class="summary-copy">{{ tldr_text }}</p>
@@ -1064,9 +1028,26 @@ h2{
           {% endif %}
         </section>
 
+        {% if has_topics or not_available %}
+        <section class="panel" id="section-topics" data-reveal data-section aria-label="Covered topics">
+          <h2>Covered topics</h2>
+          {% if has_topics %}
+          <ul class="chip-list">
+            {% for topic in topics_list %}
+              {% set topic_value = topic|string|trim %}
+              {% if topic_value %}
+              <li><span class="chip">{{ format_chip_label(topic_value) }}</span></li>
+              {% endif %}
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p class="muted">Not available from text.</p>
+          {% endif %}
+        </section>
+        {% endif %}
+
         {% if exec_summary %}
         <section class="panel" id="section-executive" data-reveal data-section data-tone="summary" aria-label="Executive summary">
-          <span class="section-kicker">Section 2</span>
           <h2>Executive summary</h2>
           <p class="summary-copy">{{ exec_summary }}</p>
           {% if has_claim_map %}
@@ -1085,27 +1066,7 @@ h2{
         </section>
         {% endif %}
 
-        {% if has_topics or not_available %}
-        <section class="panel" id="section-topics" data-reveal data-section aria-label="Covered topics">
-          <span class="section-kicker">Coverage</span>
-          <h2>Covered topics / TOC</h2>
-          {% if has_topics %}
-          <ul class="chip-list">
-            {% for topic in topics_list %}
-              {% set topic_value = topic|string|trim %}
-              {% if topic_value %}
-              <li><span class="chip">{{ format_chip_label(topic_value) }}</span></li>
-              {% endif %}
-            {% endfor %}
-          </ul>
-          {% else %}
-          <p class="muted">Not available from text.</p>
-          {% endif %}
-        </section>
-        {% endif %}
-
         <section class="panel" id="section-insights" data-reveal data-section data-tone="insights" aria-label="Key data insights">
-          <span class="section-kicker">Section 3</span>
           <h2>Key data insights</h2>
           {% if has_insights %}
           <ol class="insight-grid">
@@ -1132,7 +1093,7 @@ h2{
                   {% set metric_source = insight.source if insight.source is defined else (insight.citation if insight.citation is defined else "") %}
                   {% set metric_source = metric_source|string|trim %}
                   {% if metric_text %}
-                  <div class="insight-metric">Key metric: {{ metric_text }}</div>
+                  <div>Key metric: {{ metric_text }}</div>
                   {% endif %}
                   {% if metric_source %}
                   <div class="badge-row">
@@ -1149,9 +1110,8 @@ h2{
           {% endif %}
         </section>
 
-        {% if has_primary_figure or has_contents_preview %}
+        {% if has_primary_figure %}
         <section class="panel" id="section-figures" data-reveal data-section data-tone="figures" aria-label="Figure carousel">
-          <span class="section-kicker">Section 4</span>
           <h2>Figures</h2>
           {% set slide_count = namespace(total=0) %}
           {% if has_primary_figure %}{% set slide_count.total = slide_count.total + 1 %}{% endif %}
@@ -1163,7 +1123,6 @@ h2{
               {% endif %}
             {% endfor %}
           {% endif %}
-          {% if has_contents_preview %}{% set slide_count.total = slide_count.total + 1 %}{% endif %}
 
           <div class="figure-carousel" data-carousel>
             <div class="carousel-shell">
@@ -1203,20 +1162,6 @@ h2{
                     {% endif %}
                   {% endfor %}
                 {% endif %}
-                {% if has_contents_preview %}
-                {% set slide_ns.index = slide_ns.index + 1 %}
-                <figure class="carousel-slide{% if slide_ns.index == 1 %} is-active{% endif %}" data-carousel-slide="{{ slide_ns.index }}">
-                  <img src="{{ data._contents_image }}"
-                    srcset="{{ data._contents_image }} 1x, {{ data._contents_image }} 2x"
-                    sizes="(max-width: 800px) 100vw, 980px"
-                    alt="Contents page screenshot of {{ report_title }}"
-                    loading="lazy"
-                    decoding="async"
-                    width="{{ preview_width }}"
-                    height="{{ preview_height }}">
-                  <figcaption class="carousel-caption">Detected table of contents preview.</figcaption>
-                </figure>
-                {% endif %}
               </div>
               <button type="button" class="carousel-btn next" aria-label="Next figure" data-carousel-next>&rsaquo;</button>
             </div>
@@ -1244,12 +1189,6 @@ h2{
                   {% endif %}
                 {% endfor %}
               {% endif %}
-              {% if has_contents_preview %}
-              {% set thumb_ns.index = thumb_ns.index + 1 %}
-              <button type="button" class="carousel-thumb{% if thumb_ns.index == 1 %} is-active{% endif %}" data-carousel-thumb="{{ thumb_ns.index }}" aria-label="Open figure {{ thumb_ns.index }}">
-                <img src="{{ data._contents_image }}" alt="Contents preview thumbnail" loading="lazy" decoding="async" width="{{ thumb_width }}" height="{{ thumb_height }}">
-              </button>
-              {% endif %}
             </div>
             {% endif %}
           </div>
@@ -1257,7 +1196,6 @@ h2{
         {% endif %}
 
         <section class="panel" id="section-quotes" data-reveal data-section data-tone="quotes" aria-label="Key quotes">
-          <span class="section-kicker">Section 5</span>
           <h2>Key quotes</h2>
           {% if has_quotes %}
           <ul class="quote-grid">
@@ -1291,7 +1229,6 @@ h2{
 
         {% if has_expert_comment %}
         <section class="panel" id="section-expert" data-reveal data-section aria-label="Expert comment">
-          <span class="section-kicker">Generated analysis</span>
           <h2>Expert comment (generated)</h2>
           <div class="prose-block" data-chunk-prose>{{ expert_comment }}</div>
         </section>
@@ -1299,7 +1236,6 @@ h2{
 
         {% if has_linkedin_post %}
         <section class="panel" id="section-linkedin" data-reveal data-section aria-label="LinkedIn post">
-          <span class="section-kicker">Distribution draft</span>
           <h2>LinkedIn post</h2>
           <div class="prose-block" data-chunk-prose>{{ linkedin_post }}</div>
         </section>
@@ -1307,7 +1243,6 @@ h2{
 
         {% if has_commentary %}
         <section class="panel" id="section-commentary" data-reveal data-section aria-label="Commentary">
-          <span class="section-kicker">Narrative</span>
           <h2>Commentary</h2>
           <div class="prose-block" data-chunk-prose>{{ commentary }}</div>
         </section>
@@ -1315,7 +1250,6 @@ h2{
 
         {% if canonical_url or source_url %}
         <section class="panel" id="section-resources" data-reveal data-section aria-label="Related resources">
-          <span class="section-kicker">References</span>
           <h2>Related resources</h2>
           <ul class="resource-list">
             {% if canonical_url %}<li><a href="{{ canonical_url }}" rel="noopener" target="_blank">Canonical/source URL</a></li>{% endif %}

@@ -16,6 +16,10 @@ class ExtractCandidatesRequest:
     report_name: str = field(metadata={"doc": "Normalized report name for asset paths."})
     pdf_context: Optional[PdfContext] = field(default=None, metadata={"doc": "Optional pre-opened PDF context to reuse handles."})
     parallel_workers: int = field(default=0, metadata={"doc": "Optional extraction worker count. Values <=0 use service defaults."})
+    exclude_page_indices: List[int] = field(
+        default_factory=list,
+        metadata={"doc": "Zero-based PDF page indices to skip during candidate selection output filtering."},
+    )
 
 
 @dataclass(frozen=True)

@@ -331,3 +331,37 @@ def test_generate_artifacts_parallelizes_with_dependency_order(tmp_path):
     assert payload["linkedin_post"] == "Post summary"
     assert fake_openai.max_in_flight >= 2
     assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 7
+
+
+def test_generate_artifacts_strips_inline_reference_tokens_from_summary_and_linkedin(tmp_path):
+    responses = {
+        "toc": {"toc_topics": ["Topic 1"]},
+        "summary": {
+            "summary": {
+                "tldr": "TLDR",
+                "executive_summary": "Growth accelerated (F-001 / IC-004), especially in Q4.",
+                "claim_evidence_map": [{"claim": "Claim", "evidence_id": "f1", "evidence": "E", "pages": [1]}],
+            }
+        },
+        "insights_candidates": {"insights_candidates": [{"id": "c1", "text": "Insight", "evidence_id": "f1", "evidence": "E", "metric": {}, "pages": [1], "score": 0.9}]},
+        "insights_final": {"insights_final": [{"id": "f1", "text": "Final", "evidence_id": "f1", "evidence": "E", "metric": {}, "pages": [1]}]},
+        "quotes": {"quotes_final": [{"text": "Quote", "speaker": "Analyst", "citation": "", "page": 1, "evidence_id": "q1"}]},
+        "expert_comment": {"expert_comment": "Comment"},
+        "linkedin_post": {"linkedin_post": "Leader takeaway (F-002 / IC-001): invest in omnichannel."},
+    }
+    payload = generate_artifacts(
+        report_id="strip_refs",
+        report_name="report",
+        doc_map=_doc_map(),
+        evidence_packs=_evidence_packs(),
+        settings=_settings(tmp_path),
+        vector_store_id="vs_1",
+        ctx=_ctx(),
+        openai_client=FakeOpenAI(responses),
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+    assert "(F-001 / IC-004)" not in payload["summary"]["executive_summary"]
+    assert "(F-002 / IC-001)" not in payload["linkedin_post"]
+    assert payload["summary"]["executive_summary"] == "Growth accelerated, especially in Q4."
+    assert payload["linkedin_post"] == "Leader takeaway: invest in omnichannel."

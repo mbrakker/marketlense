@@ -570,7 +570,7 @@ def _select_refined_candidate_items(
         page_render = page_render_cache.get(candidate.page)
         if page_render is None:
             page_render = _render_refine_page(candidate.page)
-        llm_candidate_payload = [{
+        base_payload = {
             "id": candidate.id,
             "type": candidate.kind,
             "page": candidate.page,
@@ -578,82 +578,101 @@ def _select_refined_candidate_items(
             "caption": (candidate.caption or "")[:400],
             "preview_text": (candidate.preview_text or "")[:600],
             "meta": candidate.meta or {},
-        }]
-        crop_refine_user_render = render_prompt(
-            PromptRenderRequest(
-                schema_version="1.0",
-                template=crop_refine_prompt_set.user,
-                variables={
-                    "page_width": page_render.page_width,
-                    "page_height": page_render.page_height,
-                    "candidates_json": json.dumps(llm_candidate_payload, ensure_ascii=True),
-                },
-            ),
-            ctx,
-        )
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="crop_refine_llm_request",
-            module=logger.name,
-            fields={"candidate_id": candidate.id, "page": candidate.page},
-        ))
-        crop_refine_resp = refine_candidate_crops_service(
-            CropRefineRequest(
-                schema_version="1.0",
-                system_prompt=crop_refine_system_render.text,
-                user_prompt=crop_refine_user_render.text,
-                prompt_system_sha256=crop_refine_prompt_set.system.sha256,
-                prompt_user_sha256=crop_refine_prompt_set.user.sha256,
-                model=resolved_crop_refine_model,
-                temperature=float(getattr(settings, "crop_refine_temperature", 0.0)),
-                api_key=settings.openai_api_key,
-                page_image_path=str(Path(settings.output_dir) / page_render.image_path),
-                page=candidate.page,
-                page_width=page_render.page_width,
-                page_height=page_render.page_height,
-                candidates=[
-                    CropRefineCandidate(
-                        schema_version="1.0",
-                        id=candidate.id,
-                        type=candidate.kind,
-                        page=candidate.page,
-                        bbox=candidate.bbox,
-                        caption=candidate.caption or "",
-                        preview_text=candidate.preview_text or "",
-                        meta=candidate.meta or {},
-                    ),
-                ],
-                seed=settings.rank_seed,
-                timeout_seconds=float(getattr(settings, "crop_refine_timeout_seconds", settings.rank_timeout_seconds)),
-                cost_ledger_path=settings.cost_ledger_path,
-                cost_daily_path=settings.cost_daily_path,
-                model_pricing=settings.model_pricing,
-            ),
-            ctx,
-        )
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="crop_refine_llm_response_raw",
-            module=logger.name,
-            fields={"candidate_id": candidate.id, "content": crop_refine_resp.raw_content},
-        ))
-        decision = None
-        for result_item in crop_refine_resp.results:
-            if result_item.id == candidate.id:
-                decision = result_item
+        }
+        current_bbox = tuple(float(value) for value in candidate.bbox)
+        current_reason = "missing_decision"
+        is_valid = False
+        for phase in ("coarse", "finalize"):
+            payload_item = dict(base_payload)
+            if phase == "finalize":
+                payload_item["proposed_bbox"] = [float(value) for value in current_bbox]
+            crop_refine_user_render = render_prompt(
+                PromptRenderRequest(
+                    schema_version="1.0",
+                    template=crop_refine_prompt_set.user,
+                    variables={
+                        "page_width": page_render.page_width,
+                        "page_height": page_render.page_height,
+                        "phase": phase,
+                        "candidates_json": json.dumps([payload_item], ensure_ascii=True),
+                    },
+                ),
+                ctx,
+            )
+            logger.info(log_event(
+                ctx,
+                role="generator",
+                event="crop_refine_llm_request",
+                module=logger.name,
+                fields={"candidate_id": candidate.id, "page": candidate.page, "phase": phase},
+            ))
+            crop_refine_resp = refine_candidate_crops_service(
+                CropRefineRequest(
+                    schema_version="1.0",
+                    system_prompt=crop_refine_system_render.text,
+                    user_prompt=crop_refine_user_render.text,
+                    prompt_system_sha256=crop_refine_prompt_set.system.sha256,
+                    prompt_user_sha256=crop_refine_prompt_set.user.sha256,
+                    model=resolved_crop_refine_model,
+                    temperature=float(getattr(settings, "crop_refine_temperature", 0.0)),
+                    api_key=settings.openai_api_key,
+                    page_image_path=str(Path(settings.output_dir) / page_render.image_path),
+                    page=candidate.page,
+                    page_width=page_render.page_width,
+                    page_height=page_render.page_height,
+                    candidates=[
+                        CropRefineCandidate(
+                            schema_version="1.0",
+                            id=candidate.id,
+                            type=candidate.kind,
+                            page=candidate.page,
+                            bbox=current_bbox,
+                            caption=candidate.caption or "",
+                            preview_text=candidate.preview_text or "",
+                            meta=candidate.meta or {},
+                        ),
+                    ],
+                    seed=settings.rank_seed,
+                    timeout_seconds=float(getattr(settings, "crop_refine_timeout_seconds", settings.rank_timeout_seconds)),
+                    cost_ledger_path=settings.cost_ledger_path,
+                    cost_daily_path=settings.cost_daily_path,
+                    model_pricing=settings.model_pricing,
+                ),
+                ctx,
+            )
+            logger.info(log_event(
+                ctx,
+                role="generator",
+                event="crop_refine_llm_response_raw",
+                module=logger.name,
+                fields={"candidate_id": candidate.id, "phase": phase, "content": crop_refine_resp.raw_content},
+            ))
+            decision = None
+            for result_item in crop_refine_resp.results:
+                if result_item.id == candidate.id:
+                    decision = result_item
+                    break
+            if decision is None:
+                is_valid = False
+                current_reason = f"missing_decision:{phase}"
                 break
-        if decision is None:
-            return {
-                "is_valid_candidate": False,
-                "reason": "missing_decision",
-                "refined_bbox": [float(value) for value in candidate.bbox],
-            }
+            is_valid = bool(decision.is_valid_candidate)
+            current_reason = decision.reason or ("valid" if is_valid else "rejected")
+            current_bbox = tuple(float(value) for value in decision.refined_bbox)
+            if not is_valid:
+                break
+            if phase == "coarse":
+                logger.info(log_event(
+                    ctx,
+                    role="generator",
+                    event="crop_refine_second_pass_start",
+                    module=logger.name,
+                    fields={"candidate_id": candidate.id, "bbox": list(current_bbox)},
+                ))
         return {
-            "is_valid_candidate": bool(decision.is_valid_candidate),
-            "reason": decision.reason or ("valid" if bool(decision.is_valid_candidate) else "rejected"),
-            "refined_bbox": [float(value) for value in decision.refined_bbox],
+            "is_valid_candidate": is_valid,
+            "reason": current_reason,
+            "refined_bbox": [float(value) for value in current_bbox],
         }
 
     refine_workers = _crop_refine_parallel_workers(settings, selected_max)
@@ -1902,6 +1921,9 @@ def generate_report(
         )
 
     def _extract_candidates_task():
+        exclude_page_indices: list[int] = []
+        if contents_page_number > 0:
+            exclude_page_indices = [int(contents_page_number) - 1]
         return collect_candidates_service(
             ExtractCandidatesRequest(
                 schema_version="1.0",
@@ -1910,6 +1932,7 @@ def generate_report(
                 report_name=report_name,
                 pdf_context=pdf_context_for_tasks,
                 parallel_workers=report_worker_limit,
+                exclude_page_indices=exclude_page_indices,
             ),
             ctx,
         )

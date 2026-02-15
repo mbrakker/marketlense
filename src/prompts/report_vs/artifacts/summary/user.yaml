@@ -7,7 +7,7 @@ text: |
   {
     "summary": {
       "tldr": "<one-sentence TLDR>",
-      "executive_summary": "<3-5 sentence executive summary grounded in evidence>",
+      "executive_summary": "<5-7 sentence executive summary grounded in evidence, include key conclusions and insights>",
       "claim_evidence_map": [
         {"claim": "<concise claim>", "evidence_id": "<evidence id from findings/quotes/doc map>", "evidence": "<supporting excerpt or paraphrase>", "pages": [<page numbers if known>]}
       ]

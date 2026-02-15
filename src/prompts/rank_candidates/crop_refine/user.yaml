@@ -1,6 +1,10 @@
 text: |
   Evaluate candidate crops on a single PDF page image.
 
+  Phase: {{ phase | default("single_pass") }}
+  - In `coarse` phase: find the full visual (chart/table/infographic) with safe surrounding margin.
+  - In `finalize` phase: if `proposed_bbox` is provided, only adjust edges to avoid clipped letters/words/axis labels/title/legend and remove tiny accidental fragments.
+
   Coordinate system:
   - PDF points
   - page_width={{ page_width }}
@@ -25,6 +29,9 @@ text: |
   - Keep only true tables/infographics with meaningful data.
   - Reject low/no-data or decorative visuals.
   - Refined bbox must not include unrelated text blocks.
+  - Never cut through letters/words/lines. If an edge intersects text, expand to include the full text line/block.
+  - Include axis labels, legend, title, and source/note when attached to the visual.
+  - Add a small safety margin around kept content (about 2-4% of box size) unless that would include clearly unrelated blocks.
   - If uncertain, reject.
 
   [CANDIDATES]

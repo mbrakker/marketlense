@@ -589,6 +589,14 @@ CHART_LABEL_PARAGRAPH_MAX_AVG_LINE_LEN = 32
 CHART_LABEL_MAX_LINES = 6
 CHART_LABEL_MAX_AVG_LINE_LEN = 40
 CHART_LABEL_MAX_HEIGHT_FRAC = 0.5
+CROP_REFINE_BBOX_PAD_X_FRAC = 0.012
+CROP_REFINE_BBOX_PAD_Y_FRAC = 0.015
+CROP_REFINE_BBOX_PAD_MIN = 4.0
+CROP_REFINE_BBOX_PAD_MAX = 20.0
+CROP_REFINE_EDGE_TOUCH_TOL = 1.5
+CROP_REFINE_EDGE_MIN_OVERLAP = 0.2
+CROP_REFINE_EDGE_INCLUDE_OVERLAP_RATIO = 0.35
+CROP_REFINE_EDGE_TRIM_OVERLAP_RATIO = 0.1
 CHART_EDGE_TEXT_MIN_GAP_FRAC = 0.08
 CHART_EDGE_TEXT_MAX_PAD_FRAC = 0.12
 CHART_EDGE_TEXT_MIN_GAP_X_FRAC = 0.04
@@ -2912,6 +2920,7 @@ def _suppress_pdfminer_warnings() -> None:
 
 def collect_candidates(request: ExtractCandidatesRequest, ctx: RunContext) -> ExtractCandidatesResponse:
     parallel_workers = _resolve_candidate_parallel_workers(request.parallel_workers, 8)
+    excluded_pages = {int(page) for page in (request.exclude_page_indices or []) if isinstance(page, int) and page >= 0}
     candidate_logger.info(log_event(
         ctx,
         role="service",
@@ -2921,6 +2930,7 @@ def collect_candidates(request: ExtractCandidatesRequest, ctx: RunContext) -> Ex
             "pdf_path": request.pdf_path,
             "using_context": bool(request.pdf_context and request.pdf_context.fitz_doc),
             "parallel_workers": parallel_workers,
+            "exclude_page_indices": sorted(excluded_pages),
         },
     ))
     thumbs = Path(request.out_dir) / request.report_name / "thumbs"
@@ -2937,6 +2947,13 @@ def collect_candidates(request: ExtractCandidatesRequest, ctx: RunContext) -> Ex
         parallel_workers=parallel_workers,
     )
     candidates = charts + tables
+    excluded_count = 0
+    if excluded_pages:
+        before_count = len(candidates)
+        candidates = [candidate for candidate in candidates if int(candidate.page) not in excluded_pages]
+        excluded_count = max(0, before_count - len(candidates))
+    chart_count = sum(1 for candidate in candidates if candidate.kind == "chart")
+    table_count = sum(1 for candidate in candidates if candidate.kind == "table")
     candidate_logger.info(log_event(
         ctx,
         role="service",
@@ -2944,10 +2961,11 @@ def collect_candidates(request: ExtractCandidatesRequest, ctx: RunContext) -> Ex
         module=candidate_logger.name,
         fields={
             "count": len(candidates),
-            "chart_count": len(charts),
-            "table_count": len(tables),
+            "chart_count": chart_count,
+            "table_count": table_count,
             "chart_stats": chart_stats,
             "table_stats": table_stats,
+            "excluded_count": excluded_count,
         },
     ))
     return ExtractCandidatesResponse(schema_version="1.0", candidates=candidates)
@@ -3249,9 +3267,11 @@ def apply_crop_refine_bbox(request: CropRefineBBoxApplyRequest, ctx: RunContext)
             )
         page = local_doc[request.page]
         x0, y0, x1, y1 = request.bbox
-        rect = fitz.Rect(float(x0), float(y0), float(x1), float(y1)) & page.rect
+        input_rect = fitz.Rect(float(x0), float(y0), float(x1), float(y1))
+        rect = input_rect & page.rect
         if rect.is_empty:
             rect = page.rect
+        rect = _crop_refine_edge_guard_rect(page, rect)
         if rect.width < 1:
             rect = fitz.Rect(rect.x0, rect.y0, min(page.rect.x1, rect.x0 + 1), rect.y1)
         if rect.height < 1:
@@ -3269,9 +3289,107 @@ def apply_crop_refine_bbox(request: CropRefineBBoxApplyRequest, ctx: RunContext)
         role="service",
         event="crop_refine_bbox_apply_complete",
         module=crop_logger.name,
-        fields={"page": response.page, "bbox": response.bbox},
+        fields={
+            "page": response.page,
+            "bbox": response.bbox,
+            "input_bbox": (float(input_rect.x0), float(input_rect.y0), float(input_rect.x1), float(input_rect.y1)),
+        },
     ))
     return response
+
+
+def _crop_refine_text_blocks(page: fitz.Page) -> list[fitz.Rect]:
+    blocks: list[fitz.Rect] = []
+    try:
+        raw_blocks = page.get_text("blocks")
+    except Exception:
+        return blocks
+    for x0, y0, x1, y1, text, *_ in raw_blocks:
+        text_str = str(text or "").strip()
+        if not text_str:
+            continue
+        if _is_page_number_text(text_str):
+            continue
+        blocks.append(fitz.Rect(float(x0), float(y0), float(x1), float(y1)))
+    return blocks
+
+
+def _crop_refine_edge_guard_rect(page: fitz.Page, rect: fitz.Rect) -> fitz.Rect:
+    page_rect = page.rect
+    pad_x = min(max(page_rect.width * CROP_REFINE_BBOX_PAD_X_FRAC, CROP_REFINE_BBOX_PAD_MIN), CROP_REFINE_BBOX_PAD_MAX)
+    pad_y = min(max(page_rect.height * CROP_REFINE_BBOX_PAD_Y_FRAC, CROP_REFINE_BBOX_PAD_MIN), CROP_REFINE_BBOX_PAD_MAX)
+    adjusted = fitz.Rect(rect.x0 - pad_x, rect.y0 - pad_y, rect.x1 + pad_x, rect.y1 + pad_y) & page_rect
+    blocks = _crop_refine_text_blocks(page)
+    if not blocks:
+        return adjusted
+
+    def _edge_cross(block: fitz.Rect, target: fitz.Rect) -> tuple[bool, bool, bool, bool]:
+        tol = CROP_REFINE_EDGE_TOUCH_TOL
+        v_overlap = _vertical_overlap_ratio(block, target)
+        h_overlap = _horizontal_overlap_ratio(block, target)
+        crosses_left = (
+            block.x0 < target.x0 - tol
+            and block.x1 > target.x0 + tol
+            and v_overlap >= CROP_REFINE_EDGE_MIN_OVERLAP
+        )
+        crosses_right = (
+            block.x0 < target.x1 - tol
+            and block.x1 > target.x1 + tol
+            and v_overlap >= CROP_REFINE_EDGE_MIN_OVERLAP
+        )
+        crosses_top = (
+            block.y0 < target.y0 - tol
+            and block.y1 > target.y0 + tol
+            and h_overlap >= CROP_REFINE_EDGE_MIN_OVERLAP
+        )
+        crosses_bottom = (
+            block.y0 < target.y1 - tol
+            and block.y1 > target.y1 + tol
+            and h_overlap >= CROP_REFINE_EDGE_MIN_OVERLAP
+        )
+        return crosses_left, crosses_right, crosses_top, crosses_bottom
+
+    # Pass 1: if a text block is meaningfully intersected, expand to include full text.
+    for block in blocks:
+        inter = adjusted & block
+        if inter.is_empty:
+            continue
+        overlap_ratio = inter.get_area() / max(block.get_area(), 1.0)
+        if overlap_ratio < CROP_REFINE_EDGE_INCLUDE_OVERLAP_RATIO:
+            continue
+        crosses_left, crosses_right, crosses_top, crosses_bottom = _edge_cross(block, adjusted)
+        if crosses_left:
+            adjusted.x0 = min(adjusted.x0, block.x0)
+        if crosses_right:
+            adjusted.x1 = max(adjusted.x1, block.x1)
+        if crosses_top:
+            adjusted.y0 = min(adjusted.y0, block.y0)
+        if crosses_bottom:
+            adjusted.y1 = max(adjusted.y1, block.y1)
+    adjusted &= page_rect
+
+    # Pass 2: if only a tiny fraction of a text block is clipped at the edge, trim it away.
+    for block in blocks:
+        inter = adjusted & block
+        if inter.is_empty:
+            continue
+        overlap_ratio = inter.get_area() / max(block.get_area(), 1.0)
+        if overlap_ratio > CROP_REFINE_EDGE_TRIM_OVERLAP_RATIO:
+            continue
+        crosses_left, crosses_right, crosses_top, crosses_bottom = _edge_cross(block, adjusted)
+        if crosses_left:
+            adjusted.x0 = max(adjusted.x0, block.x1)
+        if crosses_right:
+            adjusted.x1 = min(adjusted.x1, block.x0)
+        if crosses_top:
+            adjusted.y0 = max(adjusted.y0, block.y1)
+        if crosses_bottom:
+            adjusted.y1 = min(adjusted.y1, block.y0)
+    adjusted &= page_rect
+
+    if adjusted.width < 1 or adjusted.height < 1:
+        return rect & page_rect
+    return adjusted
 
 
 # BEGIN PDF PREVIEW
