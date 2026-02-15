@@ -1,0 +1,420 @@
+# Consolidated TODO
+
+Last compiled: 2026-02-15
+
+This file combines all TODOs found in the repository (from `TODO.md`, `html_todo.md`, and `potential-TODO.md`). Items are grouped by theme. Duplicates were merged. Each task includes: title, explanation (what & why), pros & cons, and acceptance criteria.
+
+---
+
+## 1. Prompts & Prompting
+
+- **Title:** Upgrade and align prompts
+  - Explanation: Audit and refresh prompt namespaces under `src/prompts/**` to ensure variables match renderer usage, improve wording and safety, and maintain prompt-hash/version logging so outputs are reproducible.
+  - Pros: Better output quality, safer generation, clearer audit trail.
+  - Cons: Requires careful migration and retesting; may surface transient failures.
+  - Acceptance Criteria:
+    - All prompt renders succeed without missing variables.
+    - Prompt hash/version logged for each generator call.
+    - No regression in key generator tests.
+
+- **Title:** Support multi-prompt variants per step
+  - Explanation: Add config-driven prompt variants (expert roles/styles) for generators, capture logs per variant, and provide selection/ensemble logic to pick best output.
+  - Pros: Higher-quality outputs via ensemble, easier A/B testing.
+  - Cons: Increases cost and logging volume; requires selection policy.
+  - Acceptance Criteria:
+    - Config accepts multiple variants per namespace.
+    - Per-variant hashes and rendered prompts logged.
+    - Deterministic selection mechanism implemented and covered by tests.
+
+---
+
+## 2. Cost, Billing & Resource Cleanup
+
+- **Title:** Define and enforce cost limits
+  - Explanation: Add per-run and per-day thresholds and enforce them in orchestrators (warn/block), logging decisions and spend snapshots.
+  - Pros: Prevent runaway spend; operational safety.
+  - Cons: May block valid runs; needs tuning.
+  - Acceptance Criteria:
+    - Configurable thresholds present in `src/config/app.yaml`.
+    - Orchestrators check thresholds before model calls.
+    - Tests cover warn/soft-stop/hard-block behaviors.
+
+- **Title:** Add vector store deletion and lifecycle cleanup
+  - Explanation: Extend `vector_store_service` with delete/prune APIs and add orchestrator hooks to remove remote assets when retention is disabled.
+  - Pros: Avoids orphaned storage and repeated costs.
+  - Cons: Risk of removing needed artifacts if misconfigured; needs idempotency.
+  - Acceptance Criteria:
+    - Delete API implemented and exercised by cleanup policies.
+    - Cleanup logs include run/task/span identifiers and outcomes.
+    - No orphaned vector assets after cleanup runs (when enabled).
+
+---
+
+## 3. HTML, Rendering & Assets
+
+- **Title:** Refactor HTML template, remove duplication, and externalize styles
+  - Explanation: Extract repeated blocks into Jinja macros/partials, move stable CSS to a shared file (keeping critical CSS inline), and unify image rendering patterns in `templates/report.html.j2`.
+  - Pros: Easier maintenance, smaller templates, clearer tests.
+  - Cons: Slight work to change rendering consumers; must preserve relative asset path conventions.
+  - Acceptance Criteria:
+    - No duplicated preview/figure branches in template.
+    - Templates use shared CSS and macros; rendered output unchanged for canonical tests.
+    - Relative asset paths remain stable for existing outputs.
+
+- **Title:** Wire real image dimensions & responsive image pipeline
+  - Explanation: Pass actual image dimensions from generation/crop pipeline into template context and generate responsive variants (webp + multiple widths) for `srcset`/`sizes`.
+  - Pros: Reduces CLS, improves Core Web Vitals and mobile bandwidth.
+  - Cons: Increased storage and generation complexity.
+  - Acceptance Criteria:
+    - Templates receive `width`/`height` and render them.
+    - Generated responsive assets exist and `srcset` is present.
+    - Measured decrease in CLS in sample reports (manual verification).
+
+- **Title:** Add infographic asset generation for HTML and LinkedIn
+  - Explanation: Create a generator/service pair that produces simple infographic SVG/PNG assets from highlights; persist assets and expose them to HTML and publishing flows.
+  - Pros: Richer publishable artifacts; supports social sharing.
+  - Cons: Additional generation cost and pipeline complexity.
+  - Acceptance Criteria:
+    - Infographic assets generated per report and stored with metadata.
+    - HTML rendering includes generated infographic references where available.
+    - Publish artifacts contain the asset links.
+
+### HTML Editorial Improvements (readability + report data visibility)
+
+- **Title:** Publisher attribution and report identity
+  - Explanation: Replace `Unknown publisher` with `doc_map.publisher` attribution and add a compact "Report identity" line under the title (title, publisher, year, author).
+  - Pros: Clearer source attribution and faster reader orientation.
+  - Cons: Requires mapping fields from evidence packs and graceful fallbacks.
+  - Acceptance Criteria:
+    - `Unknown publisher` no longer appears when metadata is available.
+    - Report identity line displays when at least one of the fields exists.
+
+- **Title:** Split and present time-period fields
+  - Explanation: Split current time-period copy into `Report focus year` and `Fieldwork dates` so readers can parse scope quickly.
+  - Pros: Better clarity on when data was collected and what period it covers.
+  - Cons: Requires source normalization in `doc_map`.
+  - Acceptance Criteria:
+    - Both fields available in template when source data exists.
+
+- **Title:** Convert TOC chips to ordered chapter list with start pages
+  - Explanation: Render covered topics / TOC as an ordered chapter list, include `doc_map.sections.start_page`, and sort by page number.
+  - Pros: Improved navigation and faithful reading order.
+  - Cons: Extra template logic and small data normalization step.
+  - Acceptance Criteria:
+    - Chapters show start pages and are sorted by page number.
+
+- **Title:** Replace generic section kickers with semantic labels
+  - Explanation: Replace placeholder section labels like "Section 1" with semantic, human-readable labels sourced from `doc_map.sections` or prompt-generated labels.
+  - Pros: Improves reader orientation and accessibility.
+  - Cons: Requires mapping or fallback rules for missing labels.
+  - Acceptance Criteria:
+    - Template uses semantic labels when available and falls back to numbered sections.
+
+- **Title:** Explicit note when source URL missing
+  - Explanation: If the source URL is unavailable, render an explicit note in the report instead of silently omitting reference links.
+  - Pros: Clearer provenance for readers and fewer ambiguous missing links.
+  - Cons: Minor UI copy decision and template change.
+  - Acceptance Criteria:
+    - Reports show a visible note when source URL is absent.
+
+- **Title:** Methodology & digest coverage blocks
+  - Explanation: Add "Methodology at a glance" (population, sample size, sponsor) and "What this digest covers" blocks sourced from scope objectives.
+  - Pros: Readers quickly understand how findings were produced and the digest scope.
+  - Cons: Requires extraction from `scope`/`doc_map` and fallback text.
+  - Acceptance Criteria:
+    - Both blocks render when data present; explicit "None extracted" when empty.
+
+- **Title:** Key findings, limitations, and contact visibility
+  - Explanation: Surface `findings.json` titles + descriptions, add a visible "Known limitations" block (explicitly state 'none' if empty), and surface `doc_map.contact` info.
+  - Pros: Improves transparency and traceability.
+  - Cons: Template changes and small content-mapping work.
+  - Acceptance Criteria:
+    - Findings, limitations, and contact lines appear where data exists.
+
+- **Title:** TL;DR prioritization and executive summary improvements
+  - Explanation: Move metadata below TL;DR, break executive summary into short bullets, keep each key insight to one sentence and move extended framing to a secondary line.
+  - Pros: Faster reader scanning and better UX.
+  - Cons: May require editing generated summary outputs for structure.
+  - Acceptance Criteria:
+    - Metadata appears below TL;DR.
+    - Executive summary renders as short bullets with concise insights.
+
+- **Title:** Citation micro-lines, quotes, and metric formatting
+  - Explanation: Add citation micro-lines under insights (evidence id + page), replace `Unknown` quote speaker label with `Unattributed in report`, and reformat metric strings to natural language.
+  - Pros: Stronger grounding and clearer citation UX.
+  - Cons: Requires small changes in rendering and normalization logic.
+  - Acceptance Criteria:
+    - Citation micro-lines and improved quote labels appear when data exists.
+    - Metric formatting follows natural-language pattern in examples.
+
+- **Title:** Optional appendix for generated social/expert copy
+  - Explanation: Move generated "Expert comment" and "LinkedIn post" into an appendix-style optional section so the digest stays report-first.
+  - Pros: Keeps primary content focused while preserving generated assets.
+  - Cons: Template additions and UI/UX decision.
+  - Acceptance Criteria:
+    - Expert comment and LinkedIn post appear only in appendix when present.
+
+---
+
+## 4. Candidate Extraction, Ranking & Quality
+
+- **Title:** Improve figure candidate quality signals
+  - Explanation: Add richer candidate signals (OCR density, chart/table confidence, visual entropy) and include them in rank payloads; tighten crop bounds to remove low-value fragments.
+  - Pros: Higher-quality selected figures; fewer low-information assets.
+  - Cons: Extra compute and feature engineering; ranking payloads grow.
+  - Acceptance Criteria:
+    - Candidate objects include new quality fields.
+    - Ranking inputs include these fields and scoring improves on a validation set.
+    - Reduced rate of low-signal selected figures in sample reports.
+
+- **Title:** Pre-filter / compress candidate payload before LLM ranking
+  - Explanation: Reduce prompt size and cost by pre-filtering unpromising candidates and compressing payloads prior to model calls.
+  - Pros: Lower cost and faster ranking.
+  - Cons: Risk of discarding rare but valuable candidates; needs conservative thresholds.
+  - Acceptance Criteria:
+    - A pre-filter step implemented with safe defaults.
+    - Cost per ranking call measurably reduced in benchmarks.
+    - No regression in ranking quality on held-out set.
+
+---
+
+## 5. Orchestration, Durability & Performance
+
+- **Title:** Introduce durable, checkpointed pipeline stages
+  - Explanation: Make pipeline stages durable and checkpointed so runs can resume mid-run and reprocess selective stages.
+  - Pros: Faster recovery, selective reprocessing, operator convenience.
+  - Cons: Requires state modeling and migration in DB.
+  - Acceptance Criteria:
+    - Stage-level checkpoints stored in state DB with artifact references.
+    - A run can resume from a checkpoint and produce consistent results.
+
+- **Title:** Centralize LLM orchestration with retry/backoff/circuit-breaker
+  - Explanation: Provide a shared LLM orchestration layer to handle retries, backoff, timeouts, and circuit-breaking logic for all model calls.
+  - Pros: Consistent error handling and simpler generator code.
+  - Cons: One centralized layer must be robust and well-tested.
+  - Acceptance Criteria:
+    - New orchestration layer used by generators and services.
+    - Retries and backoff are exercised in unit/integration tests.
+
+- **Title:** Pool PDF resources and reuse `fitz.Document` where safe
+  - Explanation: Reuse PDF contexts across extraction steps to reduce I/O and memory thrash, honoring thread/process safety.
+  - Pros: Performance and IO reduction.
+  - Cons: Must ensure safe reuse; possible concurrency pitfalls.
+  - Acceptance Criteria:
+    - Document reuse implemented with clear doc/open/close lifecycle.
+    - No PDF-corruption or concurrency failures in tests.
+
+- **Title:** Stream LLM responses with early validation / fail-fast
+  - Explanation: Support streaming model responses and implement early validation to fail fast on invalid shapes or low-confidence content during generation.
+  - Pros: Faster feedback, reduced wasted compute on clearly invalid outputs.
+  - Cons: More complex streaming handlers and validation logic.
+  - Acceptance Criteria:
+    - Streaming path implemented for key generators.
+    - Early validation hooks can abort and surface clear errors.
+
+- **Title:** Model pipeline as a DAG for parallelism
+  - Explanation: Represent pipeline stages as a DAG to parallelize independent tasks and make dependencies explicit.
+  - Pros: Higher throughput and clearer stage dependencies.
+  - Cons: Non-trivial orchestration changes and state tracking.
+  - Acceptance Criteria:
+    - Pipeline DAG representation exists and is used in at least one orchestrator.
+    - Independent stages execute in parallel where safe.
+
+---
+
+## 6. Publishing & WordPress
+
+- **Title:** Parallelize WordPress media uploads & pass auth header from orchestrator
+  - Explanation: Speed up publishing by parallelizing uploads and propagate auth header from orchestrator to generator to avoid duplicate auth derivation.
+  - Pros: Faster publish time; simpler auth flows.
+  - Cons: Concurrency and API rate-limit handling required.
+  - Acceptance Criteria:
+    - Media uploads run in parallel and respect rate limits.
+    - Orchestrator passes required auth to publishers; no duplicate auth logic remains.
+
+- **Title:** Move publishing to a durable queue with retry/backoff/idempotency
+  - Explanation: Make publish operations durable by pushing publish tasks into a queue with retries, backoff, and idempotency to handle transient failures gracefully.
+  - Pros: More reliable publishing and easier retry handling.
+  - Cons: Operational overhead and queue infrastructure.
+  - Acceptance Criteria:
+    - Publish tasks can be enqueued and retried with idempotency keys.
+    - Publish failures are retried with backoff and logged.
+
+---
+
+## 7. Schema, Validation & Output Quality
+
+- **Title:** Replace/augment current validation with `jsonschema` and stricter rules
+  - Explanation: Migrate to a standards-compliant JSON Schema engine; add `additionalProperties: false`, `minLength`, numeric bounds, and cardinality constraints where appropriate.
+  - Pros: Stronger contract enforcement and fewer downstream errors.
+  - Cons: More schema maintenance and initial failures until prompts/normalizers updated.
+  - Acceptance Criteria:
+    - `jsonschema`-based validation integrated and used on generator outputs.
+    - Key schemas include stricter constraints; tests updated.
+
+- **Title:** Enforce referential integrity and per-pack schemas for evidence packs
+  - Explanation: Add validation that `evidence_id` references exist and split pack schemas into per-pack variants for precise checks.
+  - Pros: Better grounding and traceability.
+  - Cons: Extra validation complexity.
+  - Acceptance Criteria:
+    - Cross-pack referential checks implemented.
+    - Per-pack schemas in place and validated in CI.
+
+- **Title:** Re-validate cached payloads against current schema before returning cache hits
+  - Explanation: Prevent stale invalid payloads from being served by validating cached payloads against the active schema.
+  - Pros: Ensures cache correctness under schema changes.
+  - Cons: Adds validation cost on cache reads.
+  - Acceptance Criteria:
+    - Cache read path validates payloads and invalidates stale ones.
+    - Tests cover migration scenarios.
+
+---
+
+## 8. Codebase Audit: High-Impact Refactors
+
+- **Title:** Split monolithic `report_generator` into step-level generators
+  - Explanation: Break the large generator into smaller, testable step-level modules with typed contracts (generators call services; orchestrators sequence them).
+  - Pros: Easier testing, isolation, and maintenance.
+  - Cons: Non-trivial refactor; requires careful integration testing.
+  - Acceptance Criteria:
+    - `report_generator` responsibilities split and covered by unit tests.
+    - No behavior regression in end-to-end ingest runs (smoke tests).
+
+- **Title:** Cache Jinja `Environment` at module scope and unify render service
+  - Explanation: Avoid recreating Jinja environment per render; centralize render service to return deterministic outputs and reduce overhead.
+  - Pros: Performance and fewer subtle diffs.
+  - Cons: Cache invalidation considerations for template changes.
+  - Acceptance Criteria:
+    - Jinja environment is cached and tests confirm deterministic output.
+
+- **Title:** SQLite: adopt WAL and narrow lock scopes
+  - Explanation: Reduce global SQLite locking by using WAL, setting busy timeouts, and minimizing critical sections for state updates.
+  - Pros: Higher concurrency and throughput.
+  - Cons: Requires migration and careful testing on Windows file systems.
+  - Acceptance Criteria:
+    - WAL mode enabled with safe busy timeouts.
+    - Concurrency tests show reduced contention.
+
+- **Title:** Deduplicate and remove small hotspots (slugify, duration scripts)
+  - Explanation: Consolidate repeated slugify calls, merge duplicate duration scripts, and remove dead config flags (e.g., `debug_candidate_gallery` if unused).
+  - Pros: Cleaner codebase and smaller attack surface.
+  - Cons: Low risk changes but requires tests to ensure behavior preserved.
+  - Acceptance Criteria:
+    - Duplicate scripts consolidated; related tests updated.
+    - No functional change in publish flows.
+
+### Additional Code Audit Items (explicit)
+
+- **Title:** Refactor `candidate_extraction_service` and tighten exceptions
+  - Explanation: Split oversized `candidate_extraction_service` into smaller, focused modules, remove broad exception catches, and implement clear error types and fallbacks.
+  - Pros: Easier testing, clearer error handling, fewer swallowed failures.
+  - Cons: Refactor effort and integration testing required.
+  - Acceptance Criteria:
+    - Service split into smaller modules with targeted responsibilities.
+    - Broad exception handlers replaced with typed errors and explicit fallbacks.
+
+- **Title:** Build a document-processing service with memoized outputs
+  - Explanation: Create a dedicated document-processing service that memoizes heavy outputs (PDF info, extracted text, candidate lists) to avoid repeated work across runs.
+  - Pros: Significant IO and CPU savings; easier reuse across orchestrators.
+  - Cons: State management and cache invalidation complexity.
+  - Acceptance Criteria:
+    - Document-processing service implemented with memoization and clear invalidation rules.
+    - Upstream callers reuse memoized outputs and show performance improvements in benchmarks.
+
+- **Title:** Unify OpenAI call path and cost plumbing
+  - Explanation: Consolidate duplicated request/cost logic across `openai_service`, `rank_service`, and others into a single OpenAI orchestration layer.
+  - Pros: Less duplication, consistent ledger writes, easier cost controls.
+  - Cons: Centralization risk; requires careful rollout.
+  - Acceptance Criteria:
+    - Generators and services use unified OpenAI orchestration API.
+    - Ledger writes and cost rollups are consistent and de-duplicated.
+
+- **Title:** Extract WordPress term helpers (`ensure_categories` / `ensure_tags`)
+  - Explanation: Consolidate duplicated WordPress term-ensure logic into a shared helper to avoid N+1 patterns and simplify publish flows.
+  - Pros: Removes duplication and reduces API calls.
+  - Cons: Small refactor; requires publish integration tests.
+  - Acceptance Criteria:
+    - Term ensure logic consolidated and reused by publishing paths.
+    - No functional regression in published posts/tags.
+
+- **Title:** Fix O(n^2) table dedupe hotspot
+  - Explanation: Replace the O(n^2) table dedupe algorithm in candidate extraction with a more efficient approach (hashing/indexing) to improve performance on large documents.
+  - Pros: Better performance on large reports.
+  - Cons: Requires careful correctness tests to avoid false merges.
+  - Acceptance Criteria:
+    - Dedupe algorithm updated and benchmarked with large PDFs.
+    - No regressions in deduplication correctness tests.
+
+- **Title:** Reuse candidate crop output path / guard unused crop pass
+  - Explanation: Ensure candidate crop output paths are used or guard/remove the unused crop pass to avoid wasted computation and confusion.
+  - Pros: Removes wasted I/O and clarifies pipeline.
+  - Cons: Requires auditing downstream consumers.
+  - Acceptance Criteria:
+    - Unused crop pass removed or guarded behind config.
+    - Crop output paths are consumed by report generator or persisted for debug.
+
+- **Title:** Remove or implement `analysis_compare` and `debug_candidate_gallery` surfaces
+  - Explanation: Either remove legacy `analysis_compare` and dead `debug_candidate_gallery` config surfaces or fully implement them to avoid dead code and confusion.
+  - Pros: Cleaner codebase and fewer maintenance surprises.
+  - Cons: Possible loss of legacy debugging features if removed; require migration notes.
+  - Acceptance Criteria:
+    - Dead config flags removed or implemented and tested.
+
+- **Title:** Fix lock service double-close fd path and other minor fd issues
+  - Explanation: Address potential double-close and FD-handling bugs in lock service and related code paths to avoid resource leaks and errors.
+  - Pros: Reliability and fewer low-level crashes.
+  - Cons: Low-level changes need careful testing.
+  - Acceptance Criteria:
+    - Lock service no longer has double-close paths (validated by code review and tests).
+
+- **Title:** Refactor `src/streamlit_app.py` to reduce coupling
+  - Explanation: Break up the large `streamlit_app.py` into smaller components and move business logic into generators/services to reduce UI coupling.
+  - Pros: Easier maintenance and testability.
+  - Cons: Refactor effort and UI testing.
+  - Acceptance Criteria:
+    - UI code minimal; core logic moved to services/generators and covered by unit tests.
+
+- **Title:** Add per-stage feature flags for controlled rollout
+  - Explanation: Add feature-flagging at the stage level to enable controlled rollouts, A/B tests, and emergency disable switches for costly steps.
+  - Pros: Safer deployments and cost governance.
+  - Cons: Adds configuration surface and flag management.
+  - Acceptance Criteria:
+    - Per-stage flags configurable and respected by orchestrators.
+    - Tests validate enabling/disabling stages.
+
+---
+
+## 9. Low-Effort / High-Impact Opportunities (Quick Wins)
+
+- **Title:** Reuse contents-page preview when it overlaps with general preview rendering
+  - Explanation: Detect when the contents-page preview output overlaps or duplicates the main preview and reuse the same rendered asset instead of generating a second one.
+  - Pros: Saves CPU and I/O; reduces storage duplication; faster report generation.
+  - Cons: Requires a small dedupe check and coordination in preview generation logic; small risk of edge-case layout mismatch.
+  - Acceptance Criteria:
+    - Preview generation detects overlap and reuses existing contents-page preview.
+    - No visual regressions in sample reports.
+
+- **Title:** Extract publish-time JSON parsing to a shared helper
+  - Explanation: Centralize JSON parsing/validation used at publish time into a single helper/service to avoid duplicated parsing code and inconsistent error handling.
+  - Pros: Less duplicated code; consistent error messages; simpler testing.
+  - Cons: Small refactor and coordination across publish paths.
+  - Acceptance Criteria:
+    - A shared helper/service exists and is imported by publish flows.
+    - All publish-time parsing uses the new helper and tests cover parsing edge cases.
+
+- **Title:** Cache incremental cost rollups instead of recomputing full ledger per write
+  - Explanation: Maintain an incremental cache or rolling aggregate for daily cost totals so each new ledger entry updates the aggregate instead of recomputing across the full ledger file on every write.
+  - Pros: Significant CPU and I/O savings for high-volume runs; simpler thresholds checks.
+  - Cons: Need correct invalidation/repair logic if ledger entries are backfilled or amended.
+  - Acceptance Criteria:
+    - Daily cost rollup updated incrementally on ledger writes.
+    - Tests covering backfill/amend scenarios ensure aggregates remain correct.
+
+Each quick-win should be documented with a short task when prioritized.
+
+---
+
+## Next Steps
+
+- Review and prioritize tasks above; assign owners and estimated effort.
+- I can (if you want): open a PR with this file, split top-priority tasks into tracked issues, or implement the highest-priority quick-win.
