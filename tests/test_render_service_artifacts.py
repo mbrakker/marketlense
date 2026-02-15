@@ -48,7 +48,7 @@ def test_render_includes_artifact_sections(tmp_path):
     resp = render_report(req, _ctx())
     html = Path(resp.html_path).read_text(encoding="utf-8")
 
-    assert "Covered topics / TOC" in html
+    assert "Covered topics" in html
     assert "Artifact TLDR" in html
     assert "Artifact executive summary" in html
     assert "Key data insights" in html

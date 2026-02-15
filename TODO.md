@@ -1,6 +1,6 @@
 # TODO
 
-Last reviewed: 2026-02-11
+Last reviewed: 2026-02-15
 
 ## Active Priorities
 
@@ -183,10 +183,10 @@ Remediation plan:
    - Pros: Stronger contract enforcement; fewer malformed outputs crossing boundaries.
    - Cons: Adds dependency and may initially increase validation failures until prompts/normalizers are adjusted.
 
-2. Fix union-type handling (e.g., `["string", "null"]`) in schema validation.
-   - Reasoning: Existing implementation takes the first type and can mis-handle nullable fields.
-   - Pros: Correct validation of optional/null output fields.
-   - Cons: Exposes latent data issues currently hidden by permissive behavior.
+2. Done (2026-02-15): Fix union-type handling (e.g., `["string", "null"]`) in schema validation.
+   - Implemented in `src/services/schema_validator_service.py`: validator now checks all declared types (including `null`) instead of taking only the first type.
+   - Added regression tests in `tests/test_schema_validator.py` for nullable union pass/fail paths.
+   - Impact: nullable contract fields are validated correctly; invalid union values now fail deterministically.
 
 3. Add `additionalProperties: false` for strict output schemas (root and nested objects where appropriate).
    - Reasoning: Hallucinated/extra keys currently pass and can leak into downstream logic.

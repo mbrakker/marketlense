@@ -70,10 +70,25 @@ def validate_schema(request: SchemaValidateRequest, ctx: RunContext) -> SchemaVa
 
 
 def _validate(value: Any, schema: dict, path: str) -> None:
-    expected_type = schema.get("type")
-    if isinstance(expected_type, list):
-        expected_type = expected_type[0]
-    if expected_type == "object":
+    expected_types = schema.get("type")
+    if isinstance(expected_types, str):
+        expected_types = [expected_types]
+    elif not isinstance(expected_types, list):
+        expected_types = []
+
+    if expected_types:
+        if not _matches_any_type(value, expected_types):
+            expected = ", ".join(expected_types)
+            raise AppError(
+                code="schema_type_mismatch",
+                message=f"{path} should be one of [{expected}]",
+                retryable=False,
+            )
+        if value is None:
+            # Nothing else to validate for null values once type is satisfied.
+            return
+
+    if "object" in expected_types:
         if not isinstance(value, dict):
             raise AppError(
                 code="schema_type_mismatch",
@@ -92,7 +107,7 @@ def _validate(value: Any, schema: dict, path: str) -> None:
         for k, v in value.items():
             if k in props:
                 _validate(v, props[k], f"{path}.{k}")
-    elif expected_type == "array":
+    elif "array" in expected_types:
         if not isinstance(value, list):
             raise AppError(
                 code="schema_type_mismatch",
@@ -102,7 +117,7 @@ def _validate(value: Any, schema: dict, path: str) -> None:
         item_schema = schema.get("items", {})
         for idx, item in enumerate(value):
             _validate(item, item_schema, f"{path}[{idx}]")
-    elif expected_type == "string":
+    elif "string" in expected_types:
         if not isinstance(value, str):
             raise AppError(
                 code="schema_type_mismatch",
@@ -116,21 +131,21 @@ def _validate(value: Any, schema: dict, path: str) -> None:
                 message=f"{path} must be one of {enum}",
                 retryable=False,
             )
-    elif expected_type == "integer":
+    elif "integer" in expected_types:
         if not isinstance(value, int):
             raise AppError(
                 code="schema_type_mismatch",
                 message=f"{path} should be integer",
                 retryable=False,
             )
-    elif expected_type == "number":
+    elif "number" in expected_types:
         if not isinstance(value, (int, float)):
             raise AppError(
                 code="schema_type_mismatch",
                 message=f"{path} should be number",
                 retryable=False,
             )
-    elif expected_type == "boolean":
+    elif "boolean" in expected_types:
         if not isinstance(value, bool):
             raise AppError(
                 code="schema_type_mismatch",
@@ -140,3 +155,22 @@ def _validate(value: Any, schema: dict, path: str) -> None:
     else:
         # Unknown types are treated as pass-through.
         return
+
+
+def _matches_any_type(value: Any, expected_types: list[str]) -> bool:
+    for expected_type in expected_types:
+        if expected_type == "null" and value is None:
+            return True
+        if expected_type == "object" and isinstance(value, dict):
+            return True
+        if expected_type == "array" and isinstance(value, list):
+            return True
+        if expected_type == "string" and isinstance(value, str):
+            return True
+        if expected_type == "integer" and isinstance(value, int):
+            return True
+        if expected_type == "number" and isinstance(value, (int, float)):
+            return True
+        if expected_type == "boolean" and isinstance(value, bool):
+            return True
+    return False

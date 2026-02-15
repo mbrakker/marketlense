@@ -32,3 +32,30 @@ def test_validate_schema_fails_missing_required():
             _ctx(),
         )
     assert exc.value.code == "schema_missing_required"
+
+
+def test_validate_schema_allows_nullable_union_fields():
+    payload = {
+        "taxonomy": ["Retail", "FMCG"],
+        "region": None,
+        "time_period": None,
+        "not_found_reason": None,
+    }
+    validate_schema(
+        SchemaValidateRequest(schema_version="1.0", payload=payload, schema_name="taxonomy"),
+        _ctx(),
+    )
+
+
+def test_validate_schema_rejects_invalid_union_type():
+    payload = {
+        "taxonomy": ["Retail"],
+        "region": 123,
+        "time_period": "2025",
+    }
+    with pytest.raises(AppError) as exc:
+        validate_schema(
+            SchemaValidateRequest(schema_version="1.0", payload=payload, schema_name="taxonomy"),
+            _ctx(),
+        )
+    assert exc.value.code == "schema_type_mismatch"

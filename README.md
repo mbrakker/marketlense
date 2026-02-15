@@ -320,8 +320,9 @@ Location: `src/schemas/`
 - `artifacts.schema.json`: artifacts/toc/summary/insights/quotes/expert_comment/linkedin payload shape.
 - `validation_report.schema.json`: structure for validation results.
 - `taxonomy.schema.json`: taxonomy extractor response schema for tags/regions/time_period.
+- Union `type` arrays are validated as true unions (for example `["string", "null"]` now accepts either a string or `null` and rejects other types).
 
-Schema validation is performed by `src/utils/schema_validator.py` and logged per pack.
+Schema validation is performed by `src/services/schema_validator_service.py` and logged per pack.
 
 ---
 

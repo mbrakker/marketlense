@@ -198,7 +198,8 @@ def test_refine_selection_adaptive_ambiguous_calls_llm(monkeypatch, tmp_path):
         fallback_model="gpt-5-mini",
     )
 
-    assert llm_calls == [1]
+    # Adaptive LLM refine runs a two-pass sequence: coarse + finalize.
+    assert llm_calls == [1, 1]
     assert len(items) == 1
     assert len(accepted) == 1
     assert tuple(items[0].bbox) == refined_bbox
