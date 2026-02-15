@@ -141,8 +141,7 @@ Findings (ordered by impact):
 13. `debug_candidate_gallery` config surface remains dead (not used by runtime).
 14. Legacy `analysis_compare` is still surfaced while effectively forced off.
 15. Jinja environment is recreated per render call in `src/services/render_service.py`.
-16. Lock service still has a potential double-close fd path in exception handling.
-17. Metadata JSON parsing logic is duplicated between `get_metadata` and `list_metadata` in `src/services/report_store_service.py`.
+16. Lock service still has a potential double-close fd path in exception handling
 18. Duplicate duration scripts remain (`calculate_durations.py`, `scripts/calculate_durations.py`).
 19. `src/streamlit_app.py` is still large and highly coupled.
 

@@ -129,6 +129,122 @@ def _is_lock_error(exc: Exception) -> bool:
     return any(marker in message for marker in LOCK_ERROR_MARKERS)
 
 
+def _row_to_metadata_response(row: tuple, ctx: RunContext) -> ReportMetadataGetResponse:
+    file_id = row[0]
+    taxonomy_json = row[4] or "[]"
+    categories_json = row[5] or "[]"
+    page_count_raw = row[11]
+    contents_page_raw = row[12]
+    metadata_json = row[13] or "{}"
+    analysis_mode = row[14] or "vector_store"
+    vector_store_id = row[15]
+    evidence_packs_json = row[16] or "{}"
+    taxonomy: List[str] = []
+    categories: List[str] = []
+    pdf_metadata: dict[str, str] = {}
+    page_count: Optional[int] = None
+    contents_page_number = 0
+    evidence_pack_paths: dict[str, str] = {}
+
+    try:
+        parsed = json.loads(taxonomy_json)
+        if isinstance(parsed, list):
+            taxonomy = _clean_list([str(item) for item in parsed])
+    except json.JSONDecodeError:
+        logger.info(log_event(
+            ctx,
+            role="service",
+            event="report_metadata_taxonomy_parse_failed",
+            module=logger.name,
+            fields={"file_id": file_id},
+        ))
+    try:
+        parsed_cats = json.loads(categories_json)
+        if isinstance(parsed_cats, list):
+            categories = _clean_list([str(item) for item in parsed_cats])
+    except json.JSONDecodeError:
+        logger.info(log_event(
+            ctx,
+            role="service",
+            event="report_metadata_categories_parse_failed",
+            module=logger.name,
+            fields={"file_id": file_id},
+        ))
+    try:
+        parsed_meta = json.loads(metadata_json)
+        if isinstance(parsed_meta, dict):
+            pdf_metadata = _clean_metadata({str(k): v for k, v in parsed_meta.items()})
+    except json.JSONDecodeError:
+        logger.info(log_event(
+            ctx,
+            role="service",
+            event="report_metadata_pdf_metadata_parse_failed",
+            module=logger.name,
+            fields={"file_id": file_id},
+        ))
+    try:
+        if page_count_raw is not None:
+            page_int = int(page_count_raw)
+            if page_int >= 0:
+                page_count = page_int
+    except Exception:
+        logger.info(log_event(
+            ctx,
+            role="service",
+            event="report_metadata_page_count_invalid",
+            module=logger.name,
+            fields={"file_id": file_id, "raw": page_count_raw},
+        ))
+    try:
+        if contents_page_raw is not None:
+            page_int = int(contents_page_raw)
+            if page_int >= 0:
+                contents_page_number = page_int
+    except Exception:
+        logger.info(log_event(
+            ctx,
+            role="service",
+            event="report_metadata_contents_page_invalid",
+            module=logger.name,
+            fields={"file_id": file_id, "raw": contents_page_raw},
+        ))
+    try:
+        parsed_packs = json.loads(evidence_packs_json)
+        if isinstance(parsed_packs, dict):
+            evidence_pack_paths = {str(k): str(v) for k, v in parsed_packs.items()}
+    except json.JSONDecodeError:
+        logger.info(log_event(
+            ctx,
+            role="service",
+            event="report_metadata_evidence_packs_parse_failed",
+            module=logger.name,
+            fields={"file_id": file_id},
+        ))
+
+    return ReportMetadataGetResponse(
+        schema_version="1.1",
+        file_id=file_id,
+        title=row[2],
+        created_at=int(row[17]),
+        updated_at=int(row[18]),
+        file_name=row[1],
+        publisher=row[3],
+        taxonomy=taxonomy,
+        categories=categories,
+        region=row[6],
+        time_period=row[7],
+        source_url=row[8],
+        html_path=row[9],
+        md5=row[10],
+        page_count=page_count,
+        contents_page_number=contents_page_number,
+        pdf_metadata=pdf_metadata,
+        analysis_mode=str(analysis_mode),
+        vector_store_id=vector_store_id,
+        evidence_pack_paths=evidence_pack_paths,
+    )
+
+
 def check_report_db_access(request: ReportMetadataDbAccessRequest, ctx: RunContext) -> ReportMetadataDbAccessResponse:
     logger.info(log_event(
         ctx,
@@ -388,121 +504,7 @@ def get_metadata(request: ReportMetadataGetRequest, ctx: RunContext) -> Optional
         ))
         return None
 
-    taxonomy_json = row[4] or "[]"
-    categories_json = row[5] or "[]"
-    page_count_raw = row[11]
-    contents_page_raw = row[12]
-    metadata_json = row[13] or "{}"
-    analysis_mode = row[14] or "vector_store"
-    vector_store_id = row[15]
-    evidence_packs_json = row[16] or "{}"
-    created_at = int(row[17])
-    updated_at = int(row[18])
-    taxonomy: List[str] = []
-    categories: List[str] = []
-    pdf_metadata: dict[str, str] = {}
-    page_count: Optional[int] = None
-    try:
-        parsed = json.loads(taxonomy_json)
-        if isinstance(parsed, list):
-            taxonomy = _clean_list([str(item) for item in parsed])
-    except json.JSONDecodeError:
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="report_metadata_taxonomy_parse_failed",
-            module=logger.name,
-            fields={"file_id": request.file_id},
-        ))
-    try:
-        parsed_cats = json.loads(categories_json)
-        if isinstance(parsed_cats, list):
-            categories = _clean_list([str(item) for item in parsed_cats])
-    except json.JSONDecodeError:
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="report_metadata_categories_parse_failed",
-            module=logger.name,
-            fields={"file_id": request.file_id},
-        ))
-    try:
-        parsed_meta = json.loads(metadata_json)
-        if isinstance(parsed_meta, dict):
-            pdf_metadata = _clean_metadata({str(k): v for k, v in parsed_meta.items()})
-    except json.JSONDecodeError:
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="report_metadata_pdf_metadata_parse_failed",
-            module=logger.name,
-            fields={"file_id": request.file_id},
-        ))
-    try:
-        if page_count_raw is not None:
-            page_int = int(page_count_raw)
-            if page_int >= 0:
-                page_count = page_int
-    except Exception:
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="report_metadata_page_count_invalid",
-            module=logger.name,
-            fields={"file_id": request.file_id, "raw": page_count_raw},
-        ))
-
-    contents_page_number = 0
-    try:
-        if contents_page_raw is not None:
-            page_int = int(contents_page_raw)
-            if page_int >= 0:
-                contents_page_number = page_int
-    except Exception:
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="report_metadata_contents_page_invalid",
-            module=logger.name,
-            fields={"file_id": request.file_id, "raw": contents_page_raw},
-        ))
-
-    evidence_pack_paths: dict[str, str] = {}
-    try:
-        parsed_packs = json.loads(evidence_packs_json)
-        if isinstance(parsed_packs, dict):
-            evidence_pack_paths = {str(k): str(v) for k, v in parsed_packs.items()}
-    except json.JSONDecodeError:
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="report_metadata_evidence_packs_parse_failed",
-            module=logger.name,
-            fields={"file_id": request.file_id},
-        ))
-
-    response = ReportMetadataGetResponse(
-        schema_version="1.1",
-        file_id=row[0],
-        title=row[2],
-        created_at=created_at,
-        updated_at=updated_at,
-        file_name=row[1],
-        publisher=row[3],
-        taxonomy=taxonomy,
-        categories=categories,
-        region=row[6],
-        time_period=row[7],
-        source_url=row[8],
-        html_path=row[9],
-        md5=row[10],
-        page_count=page_count,
-        contents_page_number=contents_page_number,
-        pdf_metadata=pdf_metadata,
-        analysis_mode=str(analysis_mode),
-        vector_store_id=vector_store_id,
-        evidence_pack_paths=evidence_pack_paths,
-    )
+    response = _row_to_metadata_response(row, ctx)
     logger.info(log_event(
         ctx,
         role="service",
@@ -531,116 +533,7 @@ def list_metadata(request: ReportMetadataListRequest, ctx: RunContext) -> Report
             """
         )
         for row in cur.fetchall():
-            taxonomy_json = row[4] or "[]"
-            categories_json = row[5] or "[]"
-            page_count_raw = row[11]
-            contents_page_raw = row[12]
-            metadata_json = row[13] or "{}"
-            analysis_mode = row[14] or "vector_store"
-            vector_store_id = row[15]
-            evidence_packs_json = row[16] or "{}"
-            taxonomy: List[str] = []
-            categories: List[str] = []
-            pdf_metadata: dict[str, str] = {}
-            page_count: Optional[int] = None
-            contents_page_number = 0
-            evidence_pack_paths: dict[str, str] = {}
-            try:
-                parsed = json.loads(taxonomy_json)
-                if isinstance(parsed, list):
-                    taxonomy = _clean_list([str(item) for item in parsed])
-            except json.JSONDecodeError:
-                logger.info(log_event(
-                    ctx,
-                    role="service",
-                    event="report_metadata_taxonomy_parse_failed",
-                    module=logger.name,
-                    fields={"file_id": row[0]},
-                ))
-            try:
-                parsed_cats = json.loads(categories_json)
-                if isinstance(parsed_cats, list):
-                    categories = _clean_list([str(item) for item in parsed_cats])
-            except json.JSONDecodeError:
-                logger.info(log_event(
-                    ctx,
-                    role="service",
-                    event="report_metadata_categories_parse_failed",
-                    module=logger.name,
-                    fields={"file_id": row[0]},
-                ))
-            try:
-                parsed_meta = json.loads(metadata_json)
-                if isinstance(parsed_meta, dict):
-                    pdf_metadata = _clean_metadata({str(k): v for k, v in parsed_meta.items()})
-            except json.JSONDecodeError:
-                logger.info(log_event(
-                    ctx,
-                    role="service",
-                    event="report_metadata_pdf_metadata_parse_failed",
-                    module=logger.name,
-                    fields={"file_id": row[0]},
-                ))
-            try:
-                if page_count_raw is not None:
-                    page_int = int(page_count_raw)
-                    if page_int >= 0:
-                        page_count = page_int
-            except Exception:
-                logger.info(log_event(
-                    ctx,
-                    role="service",
-                    event="report_metadata_page_count_invalid",
-                    module=logger.name,
-                    fields={"file_id": row[0], "raw": page_count_raw},
-                ))
-            try:
-                if contents_page_raw is not None:
-                    page_int = int(contents_page_raw)
-                    if page_int >= 0:
-                        contents_page_number = page_int
-            except Exception:
-                logger.info(log_event(
-                    ctx,
-                    role="service",
-                    event="report_metadata_contents_page_invalid",
-                    module=logger.name,
-                    fields={"file_id": row[0], "raw": contents_page_raw},
-                ))
-            try:
-                parsed_packs = json.loads(evidence_packs_json)
-                if isinstance(parsed_packs, dict):
-                    evidence_pack_paths = {str(k): str(v) for k, v in parsed_packs.items()}
-            except json.JSONDecodeError:
-                logger.info(log_event(
-                    ctx,
-                    role="service",
-                    event="report_metadata_evidence_packs_parse_failed",
-                    module=logger.name,
-                    fields={"file_id": row[0]},
-                ))
-            rows.append(ReportMetadataGetResponse(
-                schema_version="1.1",
-                file_id=row[0],
-                title=row[2],
-                created_at=int(row[17]),
-                updated_at=int(row[18]),
-                file_name=row[1],
-                publisher=row[3],
-                taxonomy=taxonomy,
-                categories=categories,
-                region=row[6],
-                time_period=row[7],
-                source_url=row[8],
-                html_path=row[9],
-                md5=row[10],
-                page_count=page_count,
-                contents_page_number=contents_page_number,
-                pdf_metadata=pdf_metadata,
-                analysis_mode=str(analysis_mode),
-                vector_store_id=vector_store_id,
-                evidence_pack_paths=evidence_pack_paths,
-            ))
+            rows.append(_row_to_metadata_response(row, ctx))
     logger.info(log_event(
         ctx,
         role="service",
