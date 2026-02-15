@@ -19,6 +19,7 @@ from src.services.state_service import already_published as state_already_publis
 from src.services.state_service import get as state_get
 from src.services.state_service import record_publish as state_record_publish
 from src.generators.publish_generator import publish_html
+from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
 from src.services.wordpress_service import find_post_by_file_id
 from src.utils.html_utils import extract_file_id
 from src.utils.errors import AppError
@@ -312,117 +313,123 @@ def run_publish(
                 },
             ))
 
-        retries = 2
         outcome: Optional[PublishOutcome] = None
-        for attempt in range(retries + 1):
-            try:
-                lookup_resp = find_post_by_file_id(
-                    WordPressPostLookupRequest(
-                        schema_version="1.0",
-                        base_url=base_url,
-                        auth_header=auth_header,
-                        file_id=file_id,
-                    ),
-                    file_ctx,
-                )
-                if lookup_resp.found and lookup_resp.post_id and lookup_resp.link:
-                    logger.info(log_event(
-                        file_ctx,
-                        role="orchestrator",
-                        event="publish_existing_post",
-                        module=logger.name,
-                        fields={"file_id": file_id, "post_id": lookup_resp.post_id},
-                    ))
-                    state_record_publish(
-                        StatePublishRecordRequest(
-                            schema_version="1.0",
-                            state_db=settings.state_db,
-                            file_id=file_id,
-                            md5=state_row.md5,
-                            wp_post_id=lookup_resp.post_id,
-                            wp_post_url=lookup_resp.link,
-                        ),
-                        file_ctx,
-                    )
-                    outcome = PublishOutcome(
-                        schema_version="1.0",
-                        html_path=html_path,
-                        file_id=file_id,
-                        status="skipped",
-                        post_id=lookup_resp.post_id,
-                        post_url=lookup_resp.link,
-                        error="already_exists",
-                    )
-                    outcome = _with_validation(outcome, validation_status, validation_issues)
-                    break
 
-                outcome = publish_html(
-                    PublishRequest(
+        def _publish_attempt() -> PublishOutcome:
+            nonlocal outcome
+            lookup_resp = find_post_by_file_id(
+                WordPressPostLookupRequest(
+                    schema_version="1.0",
+                    base_url=base_url,
+                    auth_header=auth_header,
+                    file_id=file_id,
+                ),
+                file_ctx,
+            )
+            if lookup_resp.found and lookup_resp.post_id and lookup_resp.link:
+                logger.info(log_event(
+                    file_ctx,
+                    role="orchestrator",
+                    event="publish_existing_post",
+                    module=logger.name,
+                    fields={"file_id": file_id, "post_id": lookup_resp.post_id},
+                ))
+                state_record_publish(
+                    StatePublishRecordRequest(
                         schema_version="1.0",
-                        html_path=html_path,
+                        state_db=settings.state_db,
                         file_id=file_id,
-                        html_text=preloaded_html,
+                        md5=state_row.md5,
+                        wp_post_id=lookup_resp.post_id,
+                        wp_post_url=lookup_resp.link,
                     ),
-                    settings,
                     file_ctx,
                 )
-                outcome = _with_validation(outcome, validation_status, validation_issues)
-                if outcome.status == "published" and outcome.post_id and outcome.post_url:
-                    state_record_publish(
-                        StatePublishRecordRequest(
-                            schema_version="1.0",
-                            state_db=settings.state_db,
-                            file_id=file_id,
-                            md5=state_row.md5,
-                            wp_post_id=outcome.post_id,
-                            wp_post_url=outcome.post_url,
-                        ),
-                        file_ctx,
-                    )
-                break
-            except AppError as exc:
-                if not exc.retryable or attempt >= retries:
-                    logger.info(log_event(
-                        file_ctx,
-                        role="orchestrator",
-                        event="publish_error",
-                        module=logger.name,
-                        fields={"file_id": file_id, "error": exc.message, "code": exc.code},
-                    ))
-                    outcome = PublishOutcome(
-                        schema_version="1.0",
-                        html_path=html_path,
-                        file_id=file_id,
-                        status="error",
-                        error=exc.message,
-                    )
-                    outcome = _with_validation(outcome, validation_status, validation_issues)
-                    break
-                logger.info(log_event(
-                    file_ctx,
-                    role="orchestrator",
-                    event="publish_retry",
-                    module=logger.name,
-                    fields={"file_id": file_id, "attempt": attempt + 1, "code": exc.code},
-                ))
-                time.sleep(1 + attempt)
-            except Exception as exc:
-                logger.info(log_event(
-                    file_ctx,
-                    role="orchestrator",
-                    event="publish_error",
-                    module=logger.name,
-                    fields={"file_id": file_id, "error": str(exc)},
-                ))
                 outcome = PublishOutcome(
                     schema_version="1.0",
                     html_path=html_path,
                     file_id=file_id,
-                    status="error",
-                    error=str(exc),
+                    status="skipped",
+                    post_id=lookup_resp.post_id,
+                    post_url=lookup_resp.link,
+                    error="already_exists",
                 )
-                outcome = _with_validation(outcome, validation_status, validation_issues)
-                break
+                return _with_validation(outcome, validation_status, validation_issues)
+
+            outcome = publish_html(
+                PublishRequest(
+                    schema_version="1.0",
+                    html_path=html_path,
+                    file_id=file_id,
+                    html_text=preloaded_html,
+                ),
+                settings,
+                file_ctx,
+            )
+            outcome = _with_validation(outcome, validation_status, validation_issues)
+            if outcome.status == "published" and outcome.post_id and outcome.post_url:
+                state_record_publish(
+                    StatePublishRecordRequest(
+                        schema_version="1.0",
+                        state_db=settings.state_db,
+                        file_id=file_id,
+                        md5=state_row.md5,
+                        wp_post_id=outcome.post_id,
+                        wp_post_url=outcome.post_url,
+                    ),
+                    file_ctx,
+                )
+            return outcome
+
+        try:
+            outcome = run_with_retry(
+                step_name="publish_html",
+                operation=_publish_attempt,
+                ctx=file_ctx,
+                logger=logger,
+                module_name=logger.name,
+                policy=RetryPolicy(retries=2, base_delay_seconds=1.0, backoff_step_seconds=1.0),
+                retry_event="publish_retry",
+                retry_fields_builder=lambda exc, attempt: {
+                    "file_id": file_id,
+                    "attempt": attempt + 1,
+                    "code": exc.code if isinstance(exc, AppError) else "",
+                },
+                is_retryable=lambda exc: isinstance(exc, AppError) and exc.retryable,
+                sleep_fn=time.sleep,
+            )
+        except AppError as exc:
+            logger.info(log_event(
+                file_ctx,
+                role="orchestrator",
+                event="publish_error",
+                module=logger.name,
+                fields={"file_id": file_id, "error": exc.message, "code": exc.code},
+            ))
+            outcome = PublishOutcome(
+                schema_version="1.0",
+                html_path=html_path,
+                file_id=file_id,
+                status="error",
+                error=exc.message,
+            )
+            outcome = _with_validation(outcome, validation_status, validation_issues)
+        except Exception as exc:
+            logger.info(log_event(
+                file_ctx,
+                role="orchestrator",
+                event="publish_error",
+                module=logger.name,
+                fields={"file_id": file_id, "error": str(exc)},
+            ))
+            outcome = PublishOutcome(
+                schema_version="1.0",
+                html_path=html_path,
+                file_id=file_id,
+                status="error",
+                error=str(exc),
+            )
+            outcome = _with_validation(outcome, validation_status, validation_issues)
 
         if outcome is not None:
             outcomes.append(outcome)

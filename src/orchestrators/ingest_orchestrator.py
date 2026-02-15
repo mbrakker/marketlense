@@ -26,6 +26,7 @@ from src.orchestrators.ingest_file_orchestrator import (
     IngestFileDependencies,
     run_ingest_file,
 )
+from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
 from src.orchestrators.report_pipeline_orchestrator import (
     run_report_pipeline as run_report_pipeline_orchestrator,
 )
@@ -324,22 +325,22 @@ def _existing_report_html(
 
 
 def _run_step_with_retry(step_name: str, ctx: RunContext, func, retries: int = 2):
-    attempt = 0
-    while True:
-        try:
-            return func()
-        except AppError as exc:
-            if not exc.retryable or attempt >= retries:
-                raise
-            logger.info(log_event(
-                ctx,
-                role="orchestrator",
-                event="step_retry",
-                module=logger.name,
-                fields={"step": step_name, "attempt": attempt + 1, "code": exc.code},
-            ))
-            time.sleep(1 + attempt)
-            attempt += 1
+    return run_with_retry(
+        step_name=step_name,
+        operation=func,
+        ctx=ctx,
+        logger=logger,
+        module_name=logger.name,
+        policy=RetryPolicy(retries=retries, base_delay_seconds=1.0, backoff_step_seconds=1.0),
+        retry_event="step_retry",
+        retry_fields_builder=lambda exc, attempt: {
+            "step": step_name,
+            "attempt": attempt + 1,
+            "code": exc.code if isinstance(exc, AppError) else "",
+        },
+        is_retryable=lambda exc: isinstance(exc, AppError) and exc.retryable,
+        sleep_fn=time.sleep,
+    )
 
 
 def _process_file(

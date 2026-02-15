@@ -257,7 +257,7 @@ All external I/O services raise `AppError` with attributes:
 - `severity`
 - `context`
 
-The orchestrator retries report generation when a retryable `AppError` is raised, with bounded attempts and backoff.
+Retry behavior is centralized in `src/orchestrators/retry_orchestrator.py` and reused by ingest, candidate-extraction, publish, and report-pipeline orchestrators: only retryable `AppError` instances are retried, with bounded attempts and linear backoff (`1s`, `2s`, ... by default, plus optional jitter support).
 
 ---
 

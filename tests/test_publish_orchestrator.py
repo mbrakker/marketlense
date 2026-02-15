@@ -9,6 +9,7 @@ from src.contracts.state import StatePublishCheckRequest, StateRecordRequest
 from src.contracts.wordpress import WordPressPostLookupResponse
 from src.orchestrators import publish_orchestrator as orch
 from src.services.state_service import get_publish, record
+from src.utils.errors import AppError
 
 
 def test_publish_runs_when_processed(publish_settings_factory, run_context, monkeypatch) -> None:
@@ -195,3 +196,52 @@ def test_publish_prefers_reports_db_file_id_mapping(publish_settings_factory, ru
     assert len(results) == 1
     assert results[0].status == "published"
     assert results[0].file_id == "file_from_db"
+
+
+def test_publish_retries_retryable_app_error(publish_settings_factory, run_context, monkeypatch) -> None:
+    settings = publish_settings_factory(validation_policy="warn")
+    html_path = Path(settings.output_dir) / "report.html"
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+    html_path.write_text("<html><body>Drive fileId: file123</body></html>", encoding="utf-8")
+
+    record(
+        StateRecordRequest(
+            schema_version="1.0",
+            state_db=settings.state_db,
+            file_id="file123",
+            md5="md5",
+        ),
+        run_context,
+    )
+
+    calls = {"count": 0}
+    sleep_calls: list[int] = []
+    monkeypatch.setattr(
+        orch,
+        "find_post_by_file_id",
+        lambda req, ctx: WordPressPostLookupResponse(schema_version="1.0", found=False),
+    )
+
+    def _publish(req, current_settings, ctx):
+        calls["count"] += 1
+        if calls["count"] < 3:
+            raise AppError(code="wordpress_http_error", message="retry", retryable=True)
+        return PublishOutcome(
+            schema_version="1.0",
+            html_path=req.html_path,
+            file_id=req.file_id,
+            status="published",
+            post_id=33,
+            post_url="https://example.com/post/33",
+        )
+
+    monkeypatch.setattr(orch, "publish_html", _publish)
+    monkeypatch.setattr(orch.time, "sleep", lambda seconds: sleep_calls.append(int(seconds)))
+
+    results = orch.run_publish(settings, limit=1)
+
+    assert len(results) == 1
+    assert results[0].status == "published"
+    assert results[0].file_id == "file123"
+    assert calls["count"] == 3
+    assert sleep_calls == [1, 2]
