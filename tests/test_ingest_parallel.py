@@ -177,3 +177,56 @@ def test_ingest_uses_batch_state_prefilter(ingest_settings, monkeypatch) -> None
 
     assert batch_calls["count"] == 1
     assert [row.file_id for row in results] == ["file_b", "file_c"]
+
+
+def test_ingest_does_not_repeat_drive_md5_single_state_check(ingest_settings, monkeypatch) -> None:
+    settings = replace(ingest_settings, batch_limit=1, ingest_worker_limit=1)
+    file = DriveFile(schema_version="1.0", file_id="file_a", name="a.pdf", modified_time=None, md5_checksum="md5a")
+    single_calls = {"count": 0}
+
+    def _batch_check(request, ctx):
+        return StateBatchCheckResponse(
+            schema_version="1.0",
+            state_db=request.state_db,
+            processed_items=[],
+        )
+
+    def _single_check(_request, _ctx):
+        single_calls["count"] += 1
+        return False
+
+    def _download(req, ctx):
+        payload = _pdf_bytes()
+        out_path = Path(req.output_path)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_bytes(payload)
+        return DriveDownloadToPathResponse(
+            schema_version="1.0",
+            file=req.file,
+            output_path=req.output_path,
+            md5=req.file.md5_checksum,
+            size=len(payload),
+        )
+
+    def _generate_report(file, cache_path, current_settings, md5, ctx):
+        html_path = Path(current_settings.output_dir) / f"{file.file_id}.html"
+        html_path.write_text("<html>ok</html>", encoding="utf-8")
+        return IngestOutcome(
+            schema_version="1.0",
+            file_id=file.file_id,
+            name=file.name or file.file_id,
+            md5=md5,
+            html_path=str(html_path),
+            status="processed",
+        )
+
+    monkeypatch.setattr(orch, "list_pdfs", lambda req, ctx: [file])
+    monkeypatch.setattr(orch, "state_already_processed_batch", _batch_check)
+    monkeypatch.setattr(orch, "state_already_processed", _single_check)
+    monkeypatch.setattr(orch, "download_pdf_to_path", _download)
+    monkeypatch.setattr(orch, "generate_report", _generate_report)
+
+    results = orch.run_ingest(settings, limit=1)
+
+    assert [row.status for row in results] == ["processed"]
+    assert single_calls["count"] == 0

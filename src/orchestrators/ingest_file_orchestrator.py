@@ -57,33 +57,14 @@ def run_ingest_file(
     sidecar_path = dependencies.md5_sidecar_path(cache_path)
     md5 = None
     drive_md5 = file.md5_checksum.strip() if file.md5_checksum else None
-    state_checked_md5 = None
+    state_checked_md5 = drive_md5
     report_checked_md5 = None
 
     def _result(outcome: IngestOutcome, processed: int = 0, had_error: bool = False) -> FileProcessResult:
         return FileProcessResult(index=index, outcome=outcome, processed=processed, had_error=had_error)
 
     try:
-        if drive_md5 and dependencies.should_skip(file, drive_md5, settings.state_db, file_ctx):
-            logger.info(log_event(
-                file_ctx,
-                role="orchestrator",
-                event="already_processed_skip",
-                module=logger_name,
-                fields={"file_id": file.file_id, "md5": drive_md5},
-            ))
-            return _result(IngestOutcome(
-                schema_version="1.0",
-                file_id=file.file_id,
-                name=display_name,
-                md5=drive_md5,
-                html_path=None,
-                status="skipped",
-                error="already_processed",
-            ))
-
         if drive_md5:
-            state_checked_md5 = drive_md5
             existing_html = dependencies.existing_report_html(file, drive_md5, settings, file_ctx)
             report_checked_md5 = drive_md5
             if existing_html:
