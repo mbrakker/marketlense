@@ -72,7 +72,7 @@ class CropRequest:
     items: List[CropItem] = field(metadata={"doc": "Crop targets."})
     subdir: str = field(default="slices", metadata={"doc": "Report subdirectory for cropped assets (e.g., slices, candidates)."})
     pad: int = field(default=8, metadata={"doc": "Padding applied around crop boxes."})
-    mode: str = field(default="legacy", metadata={"doc": "Crop mode: legacy|figure_strict."})
+    mode: str = field(default="legacy", metadata={"doc": "Crop mode: legacy|figure_strict|table_strict|chart_strict."})
     pdf_context: Optional[PdfContext] = field(default=None, metadata={"doc": "Optional pre-opened PDF context to reuse handles."})
 
 

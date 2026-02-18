@@ -109,6 +109,7 @@ def test_refine_selection_adaptive_obvious_pass_skips_llm(monkeypatch, tmp_path)
         ctx=_ctx(),
         pdf_context=None,
         fallback_model="gpt-5-mini",
+        selected_kind_max=max(1, int(settings.rank_selected_max)),
     )
 
     assert llm_calls == []
@@ -196,6 +197,7 @@ def test_refine_selection_adaptive_ambiguous_calls_llm(monkeypatch, tmp_path):
         ctx=_ctx(),
         pdf_context=None,
         fallback_model="gpt-5-mini",
+        selected_kind_max=max(1, int(settings.rank_selected_max)),
     )
 
     # Adaptive LLM refine runs a two-pass sequence: coarse + finalize.
@@ -257,8 +259,51 @@ def test_refine_selection_early_stops_at_selected_max(monkeypatch, tmp_path):
         ctx=_ctx(),
         pdf_context=None,
         fallback_model="gpt-5-mini",
+        selected_kind_max=max(1, int(settings.rank_selected_max)),
     )
 
     assert len(items) == 5
     assert len(accepted) == 5
     assert len(apply_calls) == 5
+
+
+def test_refine_selection_enforces_per_kind_limit(monkeypatch, tmp_path):
+    settings = _settings(tmp_path, crop_refine_enabled=False, crop_refine_mode="off", rank_selected_max=1)
+    _patch_prompts(monkeypatch)
+
+    monkeypatch.setattr(
+        rg,
+        "apply_crop_refine_bbox_service",
+        lambda req, ctx: SimpleNamespace(schema_version="1.0", page=req.page, bbox=req.bbox),
+    )
+
+    candidates = [
+        _candidate(cid="table_a", kind="table", page=0, meta={"rows": 6, "cols": 4, "numeric_ratio": 0.3, "area_frac": 0.2}),
+        _candidate(cid="table_b", kind="table", page=1, meta={"rows": 6, "cols": 4, "numeric_ratio": 0.3, "area_frac": 0.2}),
+        _candidate(cid="chart_a", kind="chart", page=2, caption="Figure 1", meta={"area_frac": 0.2, "text_ratio": 0.2}),
+        _candidate(cid="chart_b", kind="chart", page=3, caption="Figure 2", meta={"area_frac": 0.2, "text_ratio": 0.2}),
+    ]
+    ranked_rows = [
+        RankedCandidate(id="table_a", type="table", score=99, quality_score=99, insight_score=99, data_score=99, keep=True),
+        RankedCandidate(id="table_b", type="table", score=98, quality_score=98, insight_score=98, data_score=98, keep=True),
+        RankedCandidate(id="chart_a", type="chart", score=97, quality_score=97, insight_score=97, data_score=97, keep=True),
+        RankedCandidate(id="chart_b", type="chart", score=96, quality_score=96, insight_score=96, data_score=96, keep=True),
+    ]
+
+    items, accepted = rg._select_refined_candidate_items(
+        ranked_rows=ranked_rows,
+        ranked_candidates=candidates,
+        settings=settings,
+        local_pdf_path=str(tmp_path / "dummy.pdf"),
+        report_name="report",
+        file_id="file",
+        md5=None,
+        ctx=_ctx(),
+        pdf_context=None,
+        fallback_model="gpt-5-mini",
+        selected_kind_max=1,
+    )
+
+    assert len(items) == 2
+    assert len(accepted) == 2
+    assert {item.type for item in items} == {"table", "chart"}

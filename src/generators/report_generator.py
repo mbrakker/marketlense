@@ -108,6 +108,12 @@ class _TaxonomyCategoryState:
     category_assignment: CategoryAssignment
 
 
+@dataclass(frozen=True)
+class _RankBatchResult:
+    ranked: list[Any]
+    usage: dict[str, Optional[int]]
+
+
 def _derive_title(name: str) -> str:
     base = name.rsplit(".", 1)[0]
     cleaned = base.strip()
@@ -227,6 +233,144 @@ def _rank_threshold_pass(row, settings: IngestSettings) -> tuple[bool, str]:
     if data_score < int(settings.rank_min_data_score):
         return False, "data_below_threshold"
     return True, ""
+
+
+def _split_candidates_by_kind(candidates: list[Candidate]) -> tuple[list[Candidate], list[Candidate]]:
+    tables = [candidate for candidate in candidates if candidate.kind == "table"]
+    charts = [candidate for candidate in candidates if candidate.kind == "chart"]
+    return tables, charts
+
+
+def _rank_candidates_batch(
+    *,
+    candidates: list[Candidate],
+    kind: str,
+    settings: IngestSettings,
+    ctx: RunContext,
+) -> _RankBatchResult:
+    if not candidates:
+        return _RankBatchResult(
+            ranked=[],
+            usage={"prompt_tokens": None, "completion_tokens": None, "total_tokens": None},
+        )
+    rank_model = settings.rank_model or settings.openai_model
+    resolved_rank_model = resolve_model("rank_candidates", getattr(settings, "openai_models", {}), rank_model)
+    rows = [{
+        "id": c.id,
+        "type": c.kind,
+        "page": c.page,
+        "meta": c.meta or {},
+        "title_or_caption": (c.caption or "")[:300],
+        "table_preview": c.preview_text[:400] if c.kind == "table" else "",
+    } for c in candidates]
+    candidates_json = json.dumps(rows, ensure_ascii=True)
+    rank_prompt_set = load_prompt_set(
+        PromptLoadRequest(schema_version="1.0", namespace="rank_candidates", reload_if_changed=True),
+        ctx,
+    )
+    logger.info(log_event(
+        ctx,
+        role="generator",
+        event="prompt_selected",
+        module=logger.name,
+        fields={
+            "namespace": "rank_candidates",
+            "candidate_kind": kind,
+            "system_path": rank_prompt_set.system.path,
+            "system_sha256": rank_prompt_set.system.sha256,
+            "user_path": rank_prompt_set.user.path,
+            "user_sha256": rank_prompt_set.user.sha256,
+        },
+    ))
+    rank_system_render = render_prompt(
+        PromptRenderRequest(
+            schema_version="1.0",
+            template=rank_prompt_set.system,
+            variables={},
+        ),
+        ctx,
+    )
+    rank_user_render = render_prompt(
+        PromptRenderRequest(
+            schema_version="1.0",
+            template=rank_prompt_set.user,
+            variables={"candidates_json": candidates_json},
+        ),
+        ctx,
+    )
+    logger.info(log_event(
+        ctx,
+        role="generator",
+        event="prompt_rendered",
+        module=logger.name,
+        fields={
+            "candidate_kind": kind,
+            "system_prompt": rank_system_render.text,
+            "user_prompt": rank_user_render.text,
+        },
+    ))
+    logger.info(log_event(
+        ctx,
+        role="generator",
+        event="rank_request_config",
+        module=logger.name,
+        fields={
+            "candidate_kind": kind,
+            "model": resolved_rank_model,
+            "temperature": settings.rank_temperature,
+            "seed": settings.rank_seed,
+            "candidate_count": len(candidates),
+        },
+    ))
+    ranked_resp = rank_candidates_service(
+        RankRequest(
+            schema_version="1.0",
+            system_prompt=rank_system_render.text,
+            user_prompt=rank_user_render.text,
+            prompt_system_sha256=rank_prompt_set.system.sha256,
+            prompt_user_sha256=rank_prompt_set.user.sha256,
+            model=resolved_rank_model,
+            temperature=settings.rank_temperature,
+            api_key=settings.openai_api_key,
+            seed=settings.rank_seed,
+            candidate_count=len(candidates),
+            timeout_seconds=settings.rank_timeout_seconds,
+            cost_ledger_path=settings.cost_ledger_path,
+            cost_daily_path=settings.cost_daily_path,
+            model_pricing=settings.model_pricing,
+        ),
+        ctx,
+    )
+    logger.info(log_event(
+        ctx,
+        role="generator",
+        event="rank_raw_response",
+        module=logger.name,
+        fields={"candidate_kind": kind, "request_id": ranked_resp.request_id or "", "content": ranked_resp.raw_content},
+    ))
+    return _RankBatchResult(
+        ranked=ranked_resp.results,
+        usage={
+            "prompt_tokens": ranked_resp.prompt_tokens,
+            "completion_tokens": ranked_resp.completion_tokens,
+            "total_tokens": ranked_resp.total_tokens,
+        },
+    )
+
+
+def _merge_rank_usage(usage_rows: list[dict[str, Optional[int]]]) -> dict[str, Optional[int]]:
+    totals: dict[str, Optional[int]] = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+    has_any = False
+    for row in usage_rows:
+        for key in ("prompt_tokens", "completion_tokens", "total_tokens"):
+            value = row.get(key)
+            if value is None:
+                continue
+            totals[key] = int(totals[key] or 0) + int(value)
+            has_any = True
+    if not has_any:
+        return {"prompt_tokens": None, "completion_tokens": None, "total_tokens": None}
+    return totals
 
 
 def _crop_refine_parallel_workers(settings: IngestSettings, selected_max: int) -> int:
@@ -372,6 +516,7 @@ def _select_refined_candidate_items(
     ctx: RunContext,
     pdf_context: Any,
     fallback_model: str,
+    selected_kind_max: int,
 ) -> tuple[list[CropItem], list[Candidate]]:
     id2cand = {candidate.id: candidate for candidate in ranked_candidates}
     thresholded: list[tuple[Any, Candidate]] = []
@@ -404,7 +549,8 @@ def _select_refined_candidate_items(
     if crop_refine_mode not in {"adaptive", "always", "off"}:
         crop_refine_mode = "adaptive"
     crop_refine_enabled = bool(getattr(settings, "crop_refine_enabled", True)) and crop_refine_mode != "off"
-    selected_max = max(1, int(getattr(settings, "rank_selected_max", 5)))
+    selected_max = max(1, int(selected_kind_max)) * 2
+    selected_per_kind = max(1, int(selected_kind_max))
 
     crop_refine_prompt_set = None
     crop_refine_system_render = None
@@ -695,9 +841,19 @@ def _select_refined_candidate_items(
 
     accepted_items: list[CropItem] = []
     accepted_candidates: list[Candidate] = []
+    accepted_by_kind: dict[str, int] = {"table": 0, "chart": 0}
     for idx, (row, candidate) in enumerate(thresholded):
         if len(accepted_items) >= selected_max:
             break
+        if accepted_by_kind.get(candidate.kind, 0) >= selected_per_kind:
+            logger.info(log_event(
+                ctx,
+                role="generator",
+                event="crop_refine_skipped_kind_limit",
+                module=logger.name,
+                fields={"candidate_id": candidate.id, "candidate_type": candidate.kind, "selected_per_kind": selected_per_kind},
+            ))
+            continue
         logger.info(log_event(
             ctx,
             role="generator",
@@ -839,6 +995,7 @@ def _select_refined_candidate_items(
             bbox=refined_bbox,
         ))
         accepted_candidates.append(candidate)
+        accepted_by_kind[candidate.kind] = int(accepted_by_kind.get(candidate.kind, 0)) + 1
         logger.info(log_event(
             ctx,
             role="generator",
@@ -2040,108 +2197,34 @@ def generate_report(
                     module=logger.name,
                     fields={"error": str(exc), "subdir": "candidates"},
                 ))
-        rank_model = settings.rank_model or settings.openai_model
-        resolved_rank_model = resolve_model("rank_candidates", getattr(settings, "openai_models", {}), rank_model)
         rank_usage = {"prompt_tokens": None, "completion_tokens": None, "total_tokens": None}
         ranked = []
         if prefiltered_candidates:
-            rows = [{
-                "id": c.id,
-                "type": c.kind,
-                "page": c.page,
-                "meta": c.meta or {},
-                "title_or_caption": (c.caption or "")[:300],
-                "table_preview": c.preview_text[:400] if c.kind == "table" else "",
-            } for c in prefiltered_candidates]
-            candidates_json = json.dumps(rows, ensure_ascii=True)
-            rank_prompt_set = load_prompt_set(
-                PromptLoadRequest(schema_version="1.0", namespace="rank_candidates", reload_if_changed=True),
-                ctx,
-            )
+            table_candidates, chart_candidates = _split_candidates_by_kind(prefiltered_candidates)
+            per_kind_limit = max(1, int(settings.rank_selected_max))
             logger.info(log_event(
                 ctx,
                 role="generator",
-                event="prompt_selected",
+                event="candidate_rank_split",
                 module=logger.name,
                 fields={
-                    "namespace": "rank_candidates",
-                    "system_path": rank_prompt_set.system.path,
-                    "system_sha256": rank_prompt_set.system.sha256,
-                    "user_path": rank_prompt_set.user.path,
-                    "user_sha256": rank_prompt_set.user.sha256,
+                    "table_candidates": len(table_candidates),
+                    "chart_candidates": len(chart_candidates),
+                    "per_kind_limit": per_kind_limit,
                 },
             ))
-            rank_system_render = render_prompt(
-                PromptRenderRequest(
-                    schema_version="1.0",
-                    template=rank_prompt_set.system,
-                    variables={},
-                ),
-                ctx,
-            )
-            rank_user_render = render_prompt(
-                PromptRenderRequest(
-                    schema_version="1.0",
-                    template=rank_prompt_set.user,
-                    variables={"candidates_json": candidates_json},
-                ),
-                ctx,
-            )
-            logger.info(log_event(
-                ctx,
-                role="generator",
-                event="prompt_rendered",
-                module=logger.name,
-                fields={
-                    "system_prompt": rank_system_render.text,
-                    "user_prompt": rank_user_render.text,
-                },
-            ))
-            logger.info(log_event(
-                ctx,
-                role="generator",
-                event="rank_request_config",
-                module=logger.name,
-                fields={
-                    "model": resolved_rank_model,
-                    "temperature": settings.rank_temperature,
-                    "seed": settings.rank_seed,
-                    "candidate_count": len(prefiltered_candidates),
-                },
-            ))
+            usage_rows: list[dict[str, Optional[int]]] = []
             try:
-                ranked_resp = rank_candidates_service(
-                    RankRequest(
-                        schema_version="1.0",
-                        system_prompt=rank_system_render.text,
-                        user_prompt=rank_user_render.text,
-                        prompt_system_sha256=rank_prompt_set.system.sha256,
-                        prompt_user_sha256=rank_prompt_set.user.sha256,
-                        model=resolved_rank_model,
-                        temperature=settings.rank_temperature,
-                        api_key=settings.openai_api_key,
-                        seed=settings.rank_seed,
-                        candidate_count=len(prefiltered_candidates),
-                        timeout_seconds=settings.rank_timeout_seconds,
-                        cost_ledger_path=settings.cost_ledger_path,
-                        cost_daily_path=settings.cost_daily_path,
-                        model_pricing=settings.model_pricing,
-                    ),
-                    ctx,
-                )
-                ranked = ranked_resp.results
-                rank_usage = {
-                    "prompt_tokens": ranked_resp.prompt_tokens,
-                    "completion_tokens": ranked_resp.completion_tokens,
-                    "total_tokens": ranked_resp.total_tokens,
-                }
-                logger.info(log_event(
-                    ctx,
-                    role="generator",
-                    event="rank_raw_response",
-                    module=logger.name,
-                    fields={"request_id": ranked_resp.request_id or "", "content": ranked_resp.raw_content},
-                ))
+                for kind, batch in (("table", table_candidates), ("chart", chart_candidates)):
+                    batch_result = _rank_candidates_batch(
+                        candidates=batch,
+                        kind=kind,
+                        settings=settings,
+                        ctx=ctx,
+                    )
+                    ranked.extend(batch_result.ranked)
+                    usage_rows.append(batch_result.usage)
+                rank_usage = _merge_rank_usage(usage_rows)
             except Exception as exc:
                 logger.info(log_event(
                     ctx,
@@ -2170,22 +2253,40 @@ def generate_report(
             md5=md5,
             ctx=ctx,
             pdf_context=pdf_context,
-            fallback_model=resolved_rank_model,
+            fallback_model=(settings.rank_model or settings.openai_model),
+            selected_kind_max=max(1, int(settings.rank_selected_max)),
         )
         if selected_items:
-            crop_resp = crop_regions_service(
-                CropRequest(
-                    schema_version="1.0",
-                    pdf_path=local_pdf_path,
-                    out_dir=settings.output_dir,
-                    report_name=report_name,
-                    items=selected_items,
-                    mode="figure_strict",
-                    pdf_context=pdf_context,
-                ),
-                ctx,
-            )
-            sliced_paths = crop_resp.paths
+            table_items = [item for item in selected_items if item.type == "table"]
+            chart_items = [item for item in selected_items if item.type == "chart"]
+            if table_items:
+                table_crop_resp = crop_regions_service(
+                    CropRequest(
+                        schema_version="1.0",
+                        pdf_path=local_pdf_path,
+                        out_dir=settings.output_dir,
+                        report_name=report_name,
+                        items=table_items,
+                        mode="table_strict",
+                        pdf_context=pdf_context,
+                    ),
+                    ctx,
+                )
+                sliced_paths.extend(table_crop_resp.paths)
+            if chart_items:
+                chart_crop_resp = crop_regions_service(
+                    CropRequest(
+                        schema_version="1.0",
+                        pdf_path=local_pdf_path,
+                        out_dir=settings.output_dir,
+                        report_name=report_name,
+                        items=chart_items,
+                        mode="chart_strict",
+                        pdf_context=pdf_context,
+                    ),
+                    ctx,
+                )
+                sliced_paths.extend(chart_crop_resp.paths)
         if selected_candidates:
             top_cand = selected_candidates[0]
             caption = (top_cand.caption or "").strip()

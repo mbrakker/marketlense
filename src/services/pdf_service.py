@@ -1634,8 +1634,8 @@ def _nearest_heading_above(page: fitz.Page, rect: fitz.Rect) -> Optional[fitz.Re
     return best_rect
 
 
-def _note_block_bottom(page: fitz.Page, rect: fitz.Rect) -> Optional[float]:
-    min_y0 = rect.y0 + rect.height * 0.45
+def _note_block_bottom(page: fitz.Page, rect: fitz.Rect, *, min_y0_frac: float = 0.45) -> Optional[float]:
+    min_y0 = rect.y0 + rect.height * min_y0_frac
     best: Optional[float] = None
     page_rect = page.rect
     max_gap_x = page_rect.width * CHART_NOTE_MAX_GAP_X_FRAC
@@ -2978,6 +2978,11 @@ CROP_TRIM_KEEP_PX = 8
 CROP_TRIM_TOLERANCE = 8
 CROP_TRIM_MIN_BG_FRAC = 0.9995
 CROP_TRIM_SAMPLES = 60
+CROP_STRICT_EDGE_TOUCH_TOL = 1.0
+CROP_STRICT_EDGE_MIN_OVERLAP = 0.2
+CROP_STRICT_EDGE_TRIM_OVERLAP_RATIO = 0.25
+CROP_STRICT_EDGE_TRIM_MARGIN = 1.0
+CROP_FILENAME_ID_MAX_LEN = 96
 
 
 def _dominant_border_color(img: Image.Image, box: int = 4) -> tuple[int, int, int]:
@@ -3078,6 +3083,59 @@ def _trim_uniform_border(
     return img.crop((new_left, new_top, new_right, new_bottom))
 
 
+def _tighten_crop_rect_for_strict_mode(page: fitz.Page, rect: fitz.Rect, *, mode: str) -> fitz.Rect:
+    adjusted = fitz.Rect(rect)
+    page_rect = page.rect
+    blocks = _crop_refine_text_blocks(page)
+
+    if blocks:
+        for _ in range(2):
+            changed = False
+            for block in blocks:
+                inter = adjusted & block
+                if inter.is_empty:
+                    continue
+                overlap_ratio = inter.get_area() / max(block.get_area(), 1.0)
+                if overlap_ratio > CROP_STRICT_EDGE_TRIM_OVERLAP_RATIO:
+                    continue
+                h_overlap = _horizontal_overlap_ratio(block, adjusted)
+                crosses_bottom = (
+                    block.y0 < adjusted.y1 - CROP_STRICT_EDGE_TOUCH_TOL
+                    and block.y1 > adjusted.y1 + CROP_STRICT_EDGE_TOUCH_TOL
+                    and h_overlap >= CROP_STRICT_EDGE_MIN_OVERLAP
+                )
+                if not crosses_bottom:
+                    continue
+                new_bottom = min(adjusted.y1, block.y0 - CROP_STRICT_EDGE_TRIM_MARGIN)
+                if new_bottom > adjusted.y0 + 1:
+                    adjusted.y1 = new_bottom
+                    changed = True
+            adjusted &= page_rect
+            if not changed:
+                break
+
+    # For strict table/chart crops keep note/source/statlink lines but
+    # clamp away the next prose section that often follows immediately.
+    if mode in {"table_strict", "chart_strict"}:
+        note_min_y0_frac = 0.25 if mode == "table_strict" else 0.35
+        note_bottom = _note_block_bottom(page, adjusted, min_y0_frac=note_min_y0_frac)
+        if note_bottom is not None:
+            adjusted = _clamp_bottom_to_note(page, adjusted, note_bottom, page_rect) & page_rect
+
+    if adjusted.width < 1 or adjusted.height < 1:
+        return rect & page_rect
+    return adjusted
+
+
+def _crop_output_filename(report_name: str, item: CropItem, idx: int) -> str:
+    item_slug = slugify(str(item.id or ""))
+    if not item_slug:
+        item_slug = f"item-{idx}"
+    if len(item_slug) > CROP_FILENAME_ID_MAX_LEN:
+        item_slug = item_slug[:CROP_FILENAME_ID_MAX_LEN]
+    return f"{report_name}-{item_slug}.png"
+
+
 def crop_regions(request: CropRequest, ctx: RunContext) -> CropResponse:
     crop_logger.info(log_event(
         ctx,
@@ -3134,6 +3192,12 @@ def _crop_regions(
             page = local_doc[pno]
             r = fitz.Rect(x0 - pad, y0 - pad, x1 + pad, y1 + pad)
             r = r & page.rect
+            if mode in {"table_strict", "chart_strict", "figure_strict"}:
+                r = _tighten_crop_rect_for_strict_mode(
+                    page,
+                    r,
+                    mode=mode,
+                )
             if r.is_empty:
                 continue
             pix = page.get_pixmap(matrix=fitz.Matrix(2, 2), clip=r, alpha=False)
@@ -3150,16 +3214,28 @@ def _crop_regions(
                     )
                 except Exception:
                     img = None
-            elif it.type == "chart":
+            elif mode == "table_strict":
                 try:
                     img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
-                    img = _trim_uniform_border(img, allow_bottom=False, allow_right=False)
+                    img = _trim_uniform_border(img, allow_top=False, allow_bottom=True, allow_left=True, allow_right=True)
                 except Exception:
                     img = None
-            if idx == 0:
-                filename = f"{report_name}.png"
-            else:
-                filename = f"{report_name}{idx}.png"
+            elif mode == "chart_strict" or it.type == "chart":
+                try:
+                    img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+                    if mode == "chart_strict":
+                        img = _trim_uniform_border(
+                            img,
+                            allow_top=True,
+                            allow_bottom=True,
+                            allow_left=True,
+                            allow_right=True,
+                        )
+                    else:
+                        img = _trim_uniform_border(img, allow_bottom=False, allow_right=False)
+                except Exception:
+                    img = None
+            filename = _crop_output_filename(report_name, it, idx)
             op = output_dir / filename
             if img is not None:
                 img.save(op.as_posix())
