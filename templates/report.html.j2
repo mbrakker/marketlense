@@ -553,10 +553,16 @@ body{
   color:#4f6078;
   border-top:1px solid #d8e3f0;
 }
-.reading-progress{
+.sticky-nav{
   position:sticky;
   top:0;
-  z-index:50;
+  z-index:90;
+  border-bottom:1px solid var(--border);
+  background:rgba(255,255,255,.72);
+  backdrop-filter:blur(12px);
+}
+.reading-progress{
+  position:relative;
   height:3px;
   background:rgba(13,59,102,.1);
 }
@@ -568,13 +574,11 @@ body{
   transition:width .2s linear;
 }
 .section-nav{
-  position:sticky;
-  top:0;
-  z-index:90;
+  position:relative;
   padding:10px 24px;
-  border-bottom:1px solid var(--border);
-  background:rgba(255,255,255,.72);
-  backdrop-filter:blur(12px);
+  border-bottom:none;
+  background:transparent;
+  backdrop-filter:none;
 }
 .nav-scroll{
   overflow-x:auto;
@@ -891,7 +895,7 @@ h2{
     max-height:260px;
   }
   .section-nav{
-    top:0;
+    top:auto;
     padding:8px 10px;
   }
   .content{
@@ -914,7 +918,7 @@ h2{
   body{background:#fff}
   .page-shell{max-width:none;margin:0;padding:0}
   .report{border:none;box-shadow:none;border-radius:0}
-  .section-nav,.reading-progress,.lightbox{display:none}
+  .sticky-nav,.section-nav,.reading-progress,.lightbox{display:none}
   .panel{break-inside:avoid}
 }
 </style>
@@ -961,22 +965,24 @@ h2{
         </div>
       </header>
 
-      <div class="reading-progress" aria-hidden="true"><span id="reading-progress-bar"></span></div>
-      <nav class="section-nav" aria-label="Digest sections">
-        <div class="nav-scroll">
-          <ul class="nav-list">
-            <li><a href="#section-summary" data-section-link>TL;DR</a></li>
-            {% if has_topics %}<li><a href="#section-topics" data-section-link>Covered topics</a></li>{% endif %}
-            {% if exec_summary %}<li><a href="#section-executive" data-section-link>Executive summary</a></li>{% endif %}
-            <li><a href="#section-insights" data-section-link>Key data insights</a></li>
-            {% if has_primary_figure %}<li><a href="#section-figures" data-section-link>Figures</a></li>{% endif %}
-            <li><a href="#section-quotes" data-section-link>Key quotes</a></li>
-            {% if has_metadata %}<li><a href="#section-metadata" data-section-link>Report metadata</a></li>{% endif %}
-            {% if has_expert_comment %}<li><a href="#section-expert" data-section-link>Expert comment</a></li>{% endif %}
-            {% if has_linkedin_post %}<li><a href="#section-linkedin" data-section-link>LinkedIn post</a></li>{% endif %}
-          </ul>
-        </div>
-      </nav>
+      <div class="sticky-nav">
+        <div class="reading-progress" aria-hidden="true"><span id="reading-progress-bar"></span></div>
+        <nav class="section-nav" aria-label="Digest sections">
+          <div class="nav-scroll">
+            <ul class="nav-list">
+              {% if has_metadata %}<li><a href="#section-metadata" data-section-link>Report snapshot</a></li>{% endif %}
+              <li><a href="#section-summary" data-section-link>TL;DR</a></li>
+              {% if has_topics %}<li><a href="#section-topics" data-section-link>Covered topics</a></li>{% endif %}
+              {% if exec_summary %}<li><a href="#section-executive" data-section-link>Executive summary</a></li>{% endif %}
+              <li><a href="#section-insights" data-section-link>Key data insights</a></li>
+              {% if has_primary_figure %}<li><a href="#section-figures" data-section-link>Figures</a></li>{% endif %}
+              <li><a href="#section-quotes" data-section-link>Key quotes</a></li>
+              {% if has_expert_comment %}<li><a href="#section-expert" data-section-link>Expert comment</a></li>{% endif %}
+              {% if has_linkedin_post %}<li><a href="#section-linkedin" data-section-link>LinkedIn post</a></li>{% endif %}
+            </ul>
+          </div>
+        </nav>
+      </div>
 
       <main class="content" id="digest-content">
         {% if not_available %}
@@ -986,8 +992,8 @@ h2{
         {% endif %}
 
         {% if has_metadata %}
-        <section class="panel" id="section-metadata" data-reveal data-section aria-label="Report metadata">
-          <h2>Report metadata</h2>
+        <section class="panel" id="section-metadata" data-reveal data-section aria-label="Report snapshot">
+          <h2>Report snapshot</h2>
           <div class="meta-stack">
             {% if categories_list and categories_list|length > 0 %}
             <article class="meta-row">
