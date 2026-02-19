@@ -1,6 +1,6 @@
 # Consolidated TODO
 
-Last compiled: 2026-02-15
+Last compiled: 2026-02-18
 
 This file combines all TODOs found in the repository (from `TODO.md`, `html_todo.md`, and `potential-TODO.md`). Items are grouped by theme. Duplicates were merged. Each task includes: title, explanation (what & why), pros & cons, and acceptance criteria.
 
@@ -367,12 +367,16 @@ This file combines all TODOs found in the repository (from `TODO.md`, `html_todo
   - Acceptance Criteria:
     - Lock service no longer has double-close paths (validated by code review and tests).
 
-- **Title:** Refactor `src/streamlit_app.py` to reduce coupling
+- **Title:** [Done 2026-02-19] Refactor `src/streamlit_app.py` to reduce coupling
   - Explanation: Break up the large `streamlit_app.py` into smaller components and move business logic into generators/services to reduce UI coupling.
   - Pros: Easier maintenance and testability.
   - Cons: Refactor effort and UI testing.
   - Acceptance Criteria:
     - UI code minimal; core logic moved to services/generators and covered by unit tests.
+  - Completion Notes:
+    - `src/streamlit_app.py` reduced to a thin entrypoint that delegates to `src/ui/streamlit_pages.py`.
+    - Dashboard data/processing logic moved into `src/generators/streamlit_dashboard_generator.py` with contracts in `src/contracts/streamlit_dashboard.py`.
+    - Unit coverage added in `tests/test_streamlit_dashboard_generator.py`.
 
 - **Title:** Add per-stage feature flags for controlled rollout
   - Explanation: Add feature-flagging at the stage level to enable controlled rollouts, A/B tests, and emergency disable switches for costly steps.
@@ -411,6 +415,54 @@ This file combines all TODOs found in the repository (from `TODO.md`, `html_todo
     - Tests covering backfill/amend scenarios ensure aggregates remain correct.
 
 Each quick-win should be documented with a short task when prioritized.
+
+---
+
+
+## 10. Architecture-Fit Additions (Incremental)
+
+- **Title:** Enforce schema-version parity for all dataclass contracts
+  - Explanation: Add a contract linter/test that fails when any dataclass in `src/contracts/**` lacks a `schema_version` field. Current audit found classes such as `PdfTextSample`, `CategoryDefinition`, and `UncategorizedTagsEntry` without explicit schema versioning.
+  - Pros: Consistent contract evolution and safer migrations.
+  - Cons: Small refactor burden for existing contracts and fixtures.
+  - Acceptance Criteria:
+    - Linter/test added and wired into CI.
+    - All contracts include explicit `schema_version` (or documented exemption list with rationale).
+
+- **Title:** Propagate CLI/GUI run context into publish pipeline
+  - Explanation: Standardize `run_id/task_id/span_id` propagation from entry points into `run_publish` and downstream calls so publish logs correlate to the triggering command/session instead of creating a fresh top-level context per call.
+  - Pros: Better traceability, easier incident debugging, consistent observability.
+  - Cons: Requires small signature changes across orchestrator boundaries.
+  - Acceptance Criteria:
+    - `run_publish` accepts external context and uses it when provided.
+    - Publish logs for CLI/GUI flows share the initiating `run_id`.
+    - Tests assert context continuity in emitted log fields.
+
+- **Title:** Replace `unittest discover` CI path with pytest + quality gates
+  - Explanation: Update CI to run `pytest` (respecting marks like `integration`) and add mandatory format/type gates (e.g., Ruff/Black + mypy/pyright) to match architecture and test integrity requirements.
+  - Pros: Higher signal in CI, catches typing/style drift, better alignment with local test suite.
+  - Cons: Initial setup/annotation effort and possible first-pass failures.
+  - Acceptance Criteria:
+    - CI workflow runs `pytest` for default suite and excludes live integrations by default.
+    - Formatting and typing checks run in CI and block merges on failure.
+
+- **Title:** Harden config portability by removing environment-specific defaults from tracked YAML
+  - Explanation: Move concrete deployment values (e.g., Drive folder IDs, site URLs, usernames) out of committed defaults into environment overlays (`app.example.yaml` + env vars) and document profile-based config loading.
+  - Pros: Safer repo defaults, easier onboarding across environments, lower risk of accidental prod coupling.
+  - Cons: Requires migration docs and bootstrap scripts for current deployments.
+  - Acceptance Criteria:
+    - `src/config/app.yaml` contains environment-neutral defaults only.
+    - Example/local override pattern documented in README.
+    - Bootstrapping tests verify env/profile overrides resolve correctly.
+
+- **Title:** Add architecture boundary checks (import + I/O role linting)
+  - Explanation: Introduce automated checks that enforce layer dependency rules (`services -> contracts/utils`, etc.) and flag direct filesystem/network usage in generators and utilities that should remain pure.
+  - Pros: Prevents architectural drift and role leakage over time.
+  - Cons: Requires curating false-positive exemptions for legitimate edge cases.
+  - Acceptance Criteria:
+    - Boundary linter runs in CI.
+    - Violations report exact module and forbidden dependency/API usage.
+    - Existing violations are fixed or explicitly documented with expiry dates.
 
 ---
 

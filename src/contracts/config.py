@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from src.contracts.ingest import IngestSettings
 
@@ -91,3 +91,37 @@ class AppSettings:
 class IngestSettingsBuildRequest:
     schema_version: str = field(metadata={"doc": "Ingest settings build request schema version."})
     app_settings: AppSettings = field(metadata={"doc": "App-level settings used to build ingest settings."})
+
+
+@dataclass(frozen=True)
+class AppConfigReadRequest:
+    schema_version: str = field(metadata={"doc": "App config read request schema version."})
+    path: str = field(metadata={"doc": "Absolute or workspace-relative config path; empty uses default app.yaml."})
+
+
+@dataclass(frozen=True)
+class AppConfigReadResponse:
+    schema_version: str = field(metadata={"doc": "App config read response schema version."})
+    path: str = field(metadata={"doc": "Resolved config path that was read."})
+    content: str = field(metadata={"doc": "Raw YAML content."})
+    payload: dict[str, Any] = field(metadata={"doc": "Decoded YAML mapping payload."})
+    size_bytes: int = field(metadata={"doc": "File size in bytes."})
+    modified_utc: Optional[float] = field(default=None, metadata={"doc": "Last-modified time in epoch seconds."})
+
+
+@dataclass(frozen=True)
+class AppConfigWriteRequest:
+    schema_version: str = field(metadata={"doc": "App config write request schema version."})
+    path: str = field(metadata={"doc": "Absolute or workspace-relative config path; empty uses default app.yaml."})
+    content: str = field(metadata={"doc": "Raw YAML content to validate and write."})
+    make_backup: bool = field(default=True, metadata={"doc": "Whether to write a timestamped backup before overwriting."})
+
+
+@dataclass(frozen=True)
+class AppConfigWriteResponse:
+    schema_version: str = field(metadata={"doc": "App config write response schema version."})
+    path: str = field(metadata={"doc": "Resolved config path that was written."})
+    bytes_written: int = field(metadata={"doc": "Number of bytes written to disk."})
+    modified_utc: Optional[float] = field(default=None, metadata={"doc": "Last-modified time in epoch seconds."})
+    top_level_keys: list[str] = field(default_factory=list, metadata={"doc": "Top-level YAML keys discovered during validation."})
+    backup_path: Optional[str] = field(default=None, metadata={"doc": "Backup file path when backup was created."})

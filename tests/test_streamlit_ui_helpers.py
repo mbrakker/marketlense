@@ -26,7 +26,13 @@ def test_inject_theme_has_black_captions_and_light_blue_buttons(monkeypatch) -> 
     streamlit_app._inject_theme()
 
     body = str(captured.get("body") or "")
-    assert "[data-testid=\"stCaptionContainer\"]" in body
+    assert "[data-testid=\"stAppViewContainer\"] [data-testid=\"stMain\"] {" in body
+    assert "--text-color: #000000 !important;" in body
+    assert "[data-testid=\"stAppViewContainer\"] [data-testid=\"stMain\"] [data-testid=\"stCaptionContainer\"]" in body
+    assert "[data-testid=\"stAppViewContainer\"] [data-testid=\"stMain\"] [data-testid=\"stMetricLabel\"]" in body
+    assert "[data-testid=\"stAppViewContainer\"] [data-testid=\"stMain\"] [data-testid=\"stWidgetLabel\"]" in body
+    assert "[data-testid=\"stAppViewContainer\"] [data-testid=\"stMain\"] [data-testid=\"stHeadingWithActionElements\"]" in body
+    assert "-webkit-text-fill-color: #000000 !important;" in body
     assert "color: #000000 !important;" in body
     assert "background: #d7ecff !important;" in body
     assert captured.get("unsafe") is True

@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 from src.utils.gui_utils import (
+    coerce_editor_records,
     compute_task_duration_rollups,
     extract_log_date_from_filename,
     filter_log_events,
+    mapping_from_editor_records,
+    normalize_text_lines,
     parse_structured_log_line,
+    pricing_from_editor_records,
     safe_json_loads,
     status_chip_level,
 )
@@ -57,3 +61,42 @@ def test_compute_task_duration_rollups_groups_rows() -> None:
 def test_safe_json_loads_returns_none_on_invalid_input() -> None:
     assert safe_json_loads("{") is None
     assert safe_json_loads('{"ok":1}') == {"ok": 1}
+
+
+def test_normalize_text_lines_deduplicates_and_trims() -> None:
+    lines = normalize_text_lines("  one\n\nTWO\n two \nthree")
+    assert lines == ["one", "TWO", "three"]
+
+
+def test_coerce_editor_records_supports_list_of_dicts() -> None:
+    rows = coerce_editor_records([{"a": 1}, {"b": 2}, "skip"])
+    assert rows == [{"a": 1}, {"b": 2}]
+
+
+def test_mapping_from_editor_records_builds_clean_map() -> None:
+    rows = [
+        {"namespace": " a ", "model": " gpt-5-mini "},
+        {"namespace": "", "model": "skip"},
+    ]
+    mapped = mapping_from_editor_records(rows, key_field="namespace", value_field="model")
+    assert mapped == {"a": "gpt-5-mini"}
+
+
+def test_pricing_from_editor_records_parses_and_reports_errors() -> None:
+    rows = [
+        {
+            "model": "gpt-5-mini",
+            "input_tokens_per_1k_usd": 0.00025,
+            "output_tokens_per_1k_usd": 0.002,
+            "tool_call_usd": 0.0025,
+        },
+        {
+            "model": "broken",
+            "input_tokens_per_1k_usd": "x",
+            "output_tokens_per_1k_usd": 0.1,
+            "tool_call_usd": 0.1,
+        },
+    ]
+    pricing, errors = pricing_from_editor_records(rows)
+    assert pricing["gpt-5-mini"]["input_tokens_per_1k_usd"] == 0.00025
+    assert len(errors) == 1

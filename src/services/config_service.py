@@ -3,16 +3,26 @@ from __future__ import annotations
 import os
 import logging
 from dataclasses import asdict
+from datetime import datetime, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv, find_dotenv
 import yaml
 
-from src.contracts.config import AppSettings, ConfigLoadRequest, IngestSettingsBuildRequest
+from src.contracts.config import (
+    AppConfigReadRequest,
+    AppConfigReadResponse,
+    AppConfigWriteRequest,
+    AppConfigWriteResponse,
+    AppSettings,
+    ConfigLoadRequest,
+    IngestSettingsBuildRequest,
+)
 from src.contracts.ingest import IngestSettings
 from src.contracts.publish import PublishSettings
 from src.contracts.run_context import RunContext
 from src.contracts.wordpress import WordPressAuthSettings
+from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.config_service")
@@ -74,6 +84,159 @@ def _load_config(path: str) -> dict:
         return yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
     except yaml.YAMLError as exc:
         raise RuntimeError(f"Config YAML invalid: {path}") from exc
+
+
+def _resolve_config_path(path: str) -> Path:
+    raw_path = path.strip()
+    if raw_path:
+        return Path(raw_path)
+    return CONFIG_PATH
+
+
+def read_app_config(request: AppConfigReadRequest, ctx: RunContext) -> AppConfigReadResponse:
+    cfg_path = _resolve_config_path(request.path)
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="app_config_read_start",
+        module=logger.name,
+        fields={"path": str(cfg_path)},
+    ))
+    if not cfg_path.exists():
+        raise AppError(
+            code="config_file_not_found",
+            message=f"Config file not found: {cfg_path}",
+            retryable=False,
+            context={"path": str(cfg_path)},
+        )
+    try:
+        content = cfg_path.read_text(encoding="utf-8")
+    except Exception as exc:
+        raise AppError(
+            code="config_read_failed",
+            message=f"Failed to read config file: {cfg_path}",
+            cause=exc,
+            retryable=False,
+            context={"path": str(cfg_path)},
+        ) from exc
+    try:
+        payload = yaml.safe_load(content) or {}
+    except yaml.YAMLError as exc:
+        raise AppError(
+            code="config_yaml_invalid",
+            message=f"Config YAML invalid: {cfg_path}",
+            cause=exc,
+            retryable=False,
+            context={"path": str(cfg_path)},
+        ) from exc
+    if not isinstance(payload, dict):
+        raise AppError(
+            code="config_yaml_root_invalid",
+            message=f"Config YAML root must be a mapping: {cfg_path}",
+            retryable=False,
+            context={"path": str(cfg_path), "root_type": type(payload).__name__},
+        )
+    stat = cfg_path.stat()
+    response = AppConfigReadResponse(
+        schema_version="1.0",
+        path=str(cfg_path),
+        content=content,
+        payload=payload,
+        size_bytes=int(stat.st_size),
+        modified_utc=float(stat.st_mtime),
+    )
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="app_config_read_complete",
+        module=logger.name,
+        fields={
+            "path": response.path,
+            "size_bytes": response.size_bytes,
+            "modified_utc": response.modified_utc,
+            "top_level_keys": list(payload.keys()),
+        },
+    ))
+    return response
+
+
+def write_app_config(request: AppConfigWriteRequest, ctx: RunContext) -> AppConfigWriteResponse:
+    cfg_path = _resolve_config_path(request.path)
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="app_config_write_start",
+        module=logger.name,
+        fields={
+            "path": str(cfg_path),
+            "make_backup": request.make_backup,
+            "content_length": len(request.content),
+        },
+    ))
+    normalized_content = request.content.replace("\r\n", "\n")
+    if normalized_content and not normalized_content.endswith("\n"):
+        normalized_content = f"{normalized_content}\n"
+    try:
+        payload = yaml.safe_load(normalized_content) or {}
+    except yaml.YAMLError as exc:
+        raise AppError(
+            code="config_yaml_invalid",
+            message=f"Config YAML invalid: {cfg_path}",
+            cause=exc,
+            retryable=False,
+            context={"path": str(cfg_path)},
+        ) from exc
+    if not isinstance(payload, dict):
+        raise AppError(
+            code="config_yaml_root_invalid",
+            message=f"Config YAML root must be a mapping: {cfg_path}",
+            retryable=False,
+            context={"path": str(cfg_path), "root_type": type(payload).__name__},
+        )
+
+    cfg_path.parent.mkdir(parents=True, exist_ok=True)
+    backup_path: str | None = None
+    if request.make_backup and cfg_path.exists():
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        backup = cfg_path.with_name(f"{cfg_path.name}.{stamp}.bak")
+        backup.write_text(cfg_path.read_text(encoding="utf-8"), encoding="utf-8")
+        backup_path = str(backup)
+
+    try:
+        cfg_path.write_text(normalized_content, encoding="utf-8")
+    except Exception as exc:
+        raise AppError(
+            code="config_write_failed",
+            message=f"Failed to write config file: {cfg_path}",
+            cause=exc,
+            retryable=False,
+            context={"path": str(cfg_path)},
+        ) from exc
+
+    stat = cfg_path.stat()
+    top_level_keys = [str(key) for key in payload.keys()]
+    response = AppConfigWriteResponse(
+        schema_version="1.0",
+        path=str(cfg_path),
+        bytes_written=len(normalized_content.encode("utf-8")),
+        modified_utc=float(stat.st_mtime),
+        top_level_keys=top_level_keys,
+        backup_path=backup_path,
+    )
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="app_config_write_complete",
+        module=logger.name,
+        fields={
+            "path": response.path,
+            "bytes_written": response.bytes_written,
+            "modified_utc": response.modified_utc,
+            "backup_path": response.backup_path or "",
+            "top_level_keys": response.top_level_keys,
+        },
+    ))
+    return response
 
 
 class _ConfigResolver:

@@ -432,7 +432,13 @@ CLI options summary:
 
 ## Streamlit Cockpit
 
-The repository now includes a full Streamlit admin/control panel at `src/streamlit_app.py`, aligned to the architecture in `GUI-ARCHITECTURE.md`.
+The repository includes a full Streamlit admin/control panel aligned to `GUI-ARCHITECTURE.md`.
+The entrypoint is intentionally thin and now delegates into dedicated UI + generator modules:
+
+- `src/streamlit_app.py`: entrypoint only (page config + handoff).
+- `src/ui/streamlit_pages.py`: Streamlit presentation/rendering for sidebar sections.
+- `src/generators/streamlit_dashboard_generator.py`: dashboard data assembly and normalization (logs, JSON payloads, validation summaries, lock/state/report snapshots, ledger parsing, directory counts).
+- `src/contracts/streamlit_dashboard.py`: dataclass contracts for Streamlit dashboard generator I/O.
 
 Run locally:
 
@@ -466,6 +472,10 @@ Design and behavior highlights:
 - Pages are wired to existing contracts/services/orchestrators as source-of-truth surfaces (DB, files, config, and logs).
 - Cockpit overview and publish queue views now use dedicated orchestrators (`ops_dashboard_orchestrator`, `publish_queue_orchestrator`) so UI code stays presentation-focused.
 - The logs page supports structured filtering (`run_id`, `task_id`, `span_id`, `event`, `role`, `module`) and includes a terminal-style panel for UI-triggered run output history.
+- The **Settings & Prompts** page now includes a full `app.yaml` editor with direct save support (optional timestamped backups), so every config key in `src/config/app.yaml` can be changed from the Streamlit UI.
+- The same page now also provides a **Structured Form** tab with field-by-field widgets for all `app.yaml` sections (paths, ingest, rank, publish, analysis, cost, and model maps), designed for non-technical config editing.
+- If runtime config validation fails, the UI still opens directly into **Settings & Prompts** so `app.yaml` can be fixed without leaving Streamlit.
+- Extracted dashboard business logic is unit-tested in `tests/test_streamlit_dashboard_generator.py`.
 
 ## Output Layout
 

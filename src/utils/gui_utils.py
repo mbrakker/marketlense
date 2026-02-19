@@ -147,3 +147,66 @@ def safe_json_loads(value: str) -> dict[str, Any] | list[Any] | None:
     if isinstance(parsed, (dict, list)):
         return parsed
     return None
+
+
+def normalize_text_lines(value: str) -> list[str]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for raw in value.splitlines():
+        token = str(raw).strip()
+        if not token:
+            continue
+        key = token.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        normalized.append(token)
+    return normalized
+
+
+def coerce_editor_records(value: Any) -> list[dict[str, Any]]:
+    if isinstance(value, list):
+        return [dict(row) for row in value if isinstance(row, dict)]
+    if hasattr(value, "to_dict"):
+        try:
+            rows = value.to_dict(orient="records")
+        except Exception:
+            return []
+        if isinstance(rows, list):
+            return [dict(row) for row in rows if isinstance(row, dict)]
+    return []
+
+
+def mapping_from_editor_records(value: Any, *, key_field: str, value_field: str) -> dict[str, str]:
+    rows = coerce_editor_records(value)
+    mapped: dict[str, str] = {}
+    for row in rows:
+        key = str(row.get(key_field) or "").strip()
+        mapped_value = str(row.get(value_field) or "").strip()
+        if not key or not mapped_value:
+            continue
+        mapped[key] = mapped_value
+    return mapped
+
+
+def pricing_from_editor_records(value: Any) -> tuple[dict[str, dict[str, float]], list[str]]:
+    rows = coerce_editor_records(value)
+    pricing: dict[str, dict[str, float]] = {}
+    errors: list[str] = []
+    for idx, row in enumerate(rows, start=1):
+        model = str(row.get("model") or "").strip()
+        if not model:
+            continue
+        try:
+            input_cost = float(row.get("input_tokens_per_1k_usd"))
+            output_cost = float(row.get("output_tokens_per_1k_usd"))
+            tool_cost = float(row.get("tool_call_usd"))
+        except (TypeError, ValueError):
+            errors.append(f"Row {idx} ({model}) has invalid numeric pricing values.")
+            continue
+        pricing[model] = {
+            "input_tokens_per_1k_usd": input_cost,
+            "output_tokens_per_1k_usd": output_cost,
+            "tool_call_usd": tool_cost,
+        }
+    return pricing, errors
