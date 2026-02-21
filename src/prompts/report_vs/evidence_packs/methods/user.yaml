@@ -1,2 +1,7 @@
 text: |
-  Return JSON with methods array; adhere to EvidencePack schema.
+  Extract the report's methodology signals using file_search:
+  - study design or research approach
+  - data sources
+  - sample descriptions
+  - modeling/forecasting or validation approach
+  Output only a JSON object with one top-level key: "methods".

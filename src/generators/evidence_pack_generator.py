@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from src.contracts.config import AppSettings
 from src.contracts.files import ReadTextRequest
@@ -54,12 +54,16 @@ def _strip_json_fence(text: str) -> str:
     return "\n".join(lines[1:-1]).strip()
 
 
-def _extract_json_object(text: str) -> str:
+def _extract_json_value(text: str) -> str:
     source = (text or "").strip()
-    start = source.find("{")
+    start = -1
+    for idx, ch in enumerate(source):
+        if ch in {"{", "["}:
+            start = idx
+            break
     if start < 0:
         return ""
-    depth = 0
+    stack: list[str] = []
     in_string = False
     escaped = False
     for idx in range(start, len(source)):
@@ -76,16 +80,21 @@ def _extract_json_object(text: str) -> str:
             in_string = True
             continue
         if ch == "{":
-            depth += 1
+            stack.append("}")
             continue
-        if ch == "}":
-            depth -= 1
-            if depth == 0:
+        if ch == "[":
+            stack.append("]")
+            continue
+        if ch in {"}", "]"}:
+            if not stack or ch != stack[-1]:
+                return ""
+            stack.pop()
+            if not stack:
                 return source[start:idx + 1]
     return ""
 
 
-def _parse_json_object_from_text(text: str) -> Optional[dict]:
+def _parse_json_payload_from_text(text: str) -> Optional[object]:
     normalized = (text or "").strip()
     if not normalized:
         return None
@@ -98,16 +107,16 @@ def _parse_json_object_from_text(text: str) -> Optional[dict]:
             parsed = json.loads(candidate)
         except json.JSONDecodeError:
             parsed = None
-        if isinstance(parsed, dict):
+        if isinstance(parsed, (dict, list)):
             return parsed
-        extracted = _extract_json_object(candidate)
+        extracted = _extract_json_value(candidate)
         if not extracted:
             continue
         try:
             parsed_extracted = json.loads(extracted)
         except json.JSONDecodeError:
             parsed_extracted = None
-        if isinstance(parsed_extracted, dict):
+        if isinstance(parsed_extracted, (dict, list)):
             return parsed_extracted
     return None
 
@@ -308,6 +317,7 @@ def _generate_pack(
     if md5:
         cache_meta = {
             "schema_version": "1.0",
+            "adapter_version": "2",
             "md5": md5,
             "pack_name": pack_name,
             "schema_name": schema_name,
@@ -355,6 +365,33 @@ def _generate_pack(
                                 "doc_id_filled": normalization["doc_id_filled"],
                             },
                         ))
+                    summary = _summarize_doc_map(cached)
+                    if not summary["has_content"]:
+                        logger.info(log_event(
+                            ctx,
+                            role="generator",
+                            event="evidence_pack_cache_rejected",
+                            module=logger.name,
+                            fields={
+                                "report_id": report_id,
+                                "pack": pack_name,
+                                "reason": summary["not_found_reason"] or "doc_map_no_content",
+                            },
+                        ))
+                        cached = None
+                elif isinstance(cached, dict):
+                    normalized_cached = _normalize_evidence_pack_payload(cached, pack_name)
+                    if normalized_cached != cached:
+                        _store_pack(
+                            analysis_store=analysis_store,
+                            output_dir=settings.output_dir,
+                            report_id=report_id,
+                            pack_name=pack_name,
+                            payload=normalized_cached,
+                            ctx=ctx,
+                            report_name=report_name,
+                        )
+                        cached = normalized_cached
                 logger.info(log_event(
                     ctx,
                     role="generator",
@@ -362,7 +399,8 @@ def _generate_pack(
                     module=logger.name,
                     fields={"report_id": report_id, "pack": pack_name},
                 ))
-                return cached
+                if cached is not None:
+                    return cached
     logger.info(log_event(
         ctx,
         role="generator",
@@ -396,10 +434,10 @@ def _generate_pack(
             ),
             ctx,
         )
-        parsed_json = resp.parsed_json if isinstance(resp.parsed_json, dict) else None
-        if parsed_json is None:
-            parsed_json = _parse_json_object_from_text(resp.text or "")
-            if parsed_json is not None:
+        parsed_payload: Optional[object] = resp.parsed_json if isinstance(resp.parsed_json, (dict, list)) else None
+        if parsed_payload is None:
+            parsed_payload = _parse_json_payload_from_text(resp.text or "")
+            if parsed_payload is not None:
                 logger.info(log_event(
                     ctx,
                     role="generator",
@@ -411,12 +449,18 @@ def _generate_pack(
                         "attempt": 1,
                     },
                 ))
-        if parsed_json is None:
+        if parsed_payload is None:
             not_found_reason = "model_returned_no_json"
         else:
             try:
                 if schema_name == "doc_map":
-                    parsed_json, normalization = _normalize_doc_map_payload(parsed_json, report_id)
+                    if not isinstance(parsed_payload, dict):
+                        raise AppError(
+                            code="schema_type_mismatch",
+                            message="doc_map payload must be a JSON object",
+                            retryable=False,
+                        )
+                    parsed_json, normalization = _normalize_doc_map_payload(parsed_payload, report_id)
                     if normalization["changed"]:
                         logger.info(log_event(
                             ctx,
@@ -432,6 +476,8 @@ def _generate_pack(
                                 "doc_id_filled": normalization["doc_id_filled"],
                             },
                         ))
+                else:
+                    parsed_json = _normalize_evidence_pack_payload(parsed_payload, pack_name)
                 validate_schema(
                     SchemaValidateRequest(schema_version="1.0", payload=parsed_json, schema_name=schema_name),
                     ctx,
@@ -521,6 +567,240 @@ def _coerce_pages(value: object) -> list[int]:
     return pages
 
 
+def _coerce_pack_items(value: object) -> list[object]:
+    if isinstance(value, list):
+        return value
+    if value is None:
+        return []
+    return [value]
+
+
+def _to_dict(value: object) -> dict:
+    if isinstance(value, dict):
+        return value
+    return {}
+
+
+def _extract_evidence_text(value: object) -> str:
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, list):
+        for item in value:
+            if isinstance(item, str) and item.strip():
+                return item.strip()
+            if isinstance(item, dict):
+                candidate = _first_non_empty_text(
+                    item.get("snippet"),
+                    item.get("text"),
+                    item.get("quote"),
+                    item.get("evidence"),
+                    item.get("description"),
+                )
+                if candidate:
+                    return candidate
+        return ""
+    if isinstance(value, dict):
+        return _first_non_empty_text(
+            value.get("snippet"),
+            value.get("text"),
+            value.get("quote"),
+            value.get("evidence"),
+            value.get("description"),
+        )
+    return ""
+
+
+def _coerce_confidence(value: object) -> str:
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return str(value)
+    return _text(value)
+
+
+def _normalize_findings(raw_findings: object) -> list[dict]:
+    normalized: list[dict] = []
+    for idx, entry in enumerate(_coerce_pack_items(raw_findings)):
+        if isinstance(entry, str):
+            text_value = entry.strip()
+            if not text_value:
+                continue
+            normalized.append({
+                "id": f"finding_{idx + 1}",
+                "text": text_value,
+                "evidence": "",
+                "confidence": "",
+                "pages": [],
+            })
+            continue
+        if not isinstance(entry, dict):
+            continue
+        item = _to_dict(entry)
+        text_value = _first_non_empty_text(
+            item.get("text"),
+            item.get("summary"),
+            item.get("finding"),
+            item.get("claim"),
+            item.get("title"),
+        )
+        evidence_value = _first_non_empty_text(
+            _extract_evidence_text(item.get("evidence")),
+            _extract_evidence_text(item.get("supporting_evidence")),
+            item.get("rationale"),
+        )
+        pages = _coerce_pages(item.get("pages"))
+        if not pages:
+            pages = _coerce_pages(item.get("page"))
+        if not (text_value or evidence_value or pages):
+            continue
+        normalized.append({
+            "id": _first_non_empty_text(item.get("id"), f"finding_{idx + 1}"),
+            "text": text_value,
+            "evidence": evidence_value,
+            "confidence": _coerce_confidence(item.get("confidence")),
+            "pages": pages,
+        })
+    return normalized
+
+
+def _normalize_limitations(raw_limitations: object) -> list[str]:
+    limitations: list[str] = []
+    for entry in _coerce_pack_items(raw_limitations):
+        if isinstance(entry, str):
+            text_value = entry.strip()
+            if text_value:
+                limitations.append(text_value)
+            continue
+        if not isinstance(entry, dict):
+            continue
+        item = _to_dict(entry)
+        description = _first_non_empty_text(
+            item.get("description"),
+            item.get("text"),
+            item.get("summary"),
+            item.get("limitation"),
+            item.get("title"),
+            item.get("type"),
+        )
+        mitigation = _text(item.get("mitigation"))
+        if description and mitigation:
+            limitations.append(f"{description} Mitigation: {mitigation}")
+            continue
+        if description:
+            limitations.append(description)
+            continue
+        if mitigation:
+            limitations.append(f"Mitigation: {mitigation}")
+    return limitations
+
+
+def _normalize_quote_candidates(raw_quotes: object) -> list[dict]:
+    quotes: list[dict] = []
+    for entry in _coerce_pack_items(raw_quotes):
+        if isinstance(entry, str):
+            text_value = entry.strip()
+            if text_value:
+                quotes.append({"text": text_value, "source": "", "page": None})
+            continue
+        if not isinstance(entry, dict):
+            continue
+        item = _to_dict(entry)
+        text_value = _first_non_empty_text(
+            item.get("text"),
+            item.get("quote"),
+            item.get("snippet"),
+            item.get("excerpt"),
+            item.get("content"),
+        )
+        if not text_value:
+            continue
+        source_value = _first_non_empty_text(
+            item.get("source"),
+            item.get("citation"),
+            item.get("speaker"),
+            item.get("author"),
+            item.get("evidence_id"),
+        )
+        pages = _coerce_pages(item.get("page"))
+        if not pages:
+            pages = _coerce_pages(item.get("pages"))
+        page_value: Optional[int] = pages[0] if pages else None
+        quotes.append({
+            "text": text_value,
+            "source": source_value,
+            "page": page_value,
+        })
+    return quotes
+
+
+def _normalize_methods(raw_methods: object) -> list[object]:
+    methods: list[object] = []
+    for entry in _coerce_pack_items(raw_methods):
+        if isinstance(entry, dict):
+            methods.append(entry)
+            continue
+        text_value = _text(entry)
+        if text_value:
+            methods.append(text_value)
+    return methods
+
+
+def _normalize_evidence_pack_payload(payload: object, pack_name: str) -> dict:
+    cache_meta = None
+    source = payload
+    if isinstance(payload, dict):
+        cache_meta = payload.get("_cache") if isinstance(payload.get("_cache"), dict) else None
+        wrapped = payload.get(pack_name)
+        if wrapped is None:
+            wrapped = payload.get("evidence_pack")
+        if wrapped is None:
+            wrapped = payload.get("evidencePack")
+        if wrapped is not None:
+            source = wrapped
+
+    root = _to_dict(source)
+    normalized = _empty_payload("evidence_pack", "")
+
+    if pack_name == "scope":
+        scope_value = root.get("scope") if isinstance(source, dict) else source
+        if scope_value is None:
+            scope_value = ""
+        if isinstance(scope_value, (str, dict)):
+            normalized["scope"] = scope_value
+        else:
+            normalized["scope"] = _text(scope_value)
+    elif pack_name == "methods":
+        raw_methods = root.get("methods") if isinstance(source, dict) else source
+        if raw_methods is None:
+            raw_methods = root.get("methodology")
+        if raw_methods is None:
+            raw_methods = root.get("approach")
+        normalized["methods"] = _normalize_methods(raw_methods)
+    elif pack_name == "findings":
+        raw_findings = root.get("findings") if isinstance(source, dict) else source
+        if raw_findings is None:
+            raw_findings = root.get("insights")
+        if raw_findings is None:
+            raw_findings = root.get("claims")
+        normalized["findings"] = _normalize_findings(raw_findings)
+    elif pack_name == "limitations":
+        raw_limitations = root.get("limitations") if isinstance(source, dict) else source
+        if raw_limitations is None:
+            raw_limitations = root.get("risks")
+        if raw_limitations is None:
+            raw_limitations = root.get("challenges")
+        normalized["limitations"] = _normalize_limitations(raw_limitations)
+    elif pack_name == "quote_candidates":
+        raw_quotes = root.get("quote_candidates") if isinstance(source, dict) else source
+        if raw_quotes is None:
+            raw_quotes = root.get("quotes")
+        if raw_quotes is None:
+            raw_quotes = root.get("quoteCandidates")
+        normalized["quote_candidates"] = _normalize_quote_candidates(raw_quotes)
+
+    if cache_meta:
+        normalized["_cache"] = cache_meta
+    return normalized
+
+
 def _summarize_doc_map(payload: dict) -> dict:
     if not isinstance(payload, dict):
         return {
@@ -537,8 +817,11 @@ def _summarize_doc_map(payload: dict) -> dict:
     sections = payload.get("sections")
     sections_count = len(sections) if isinstance(sections, list) else 0
     not_found_reason = str(payload.get("not_found_reason") or "").strip()
+    has_substantive_content = bool(title or summary_text or sections_count)
     return {
-        "has_content": bool(title or doc_id or summary_text or sections_count),
+        # `doc_id` is auto-filled during normalization and must not be treated
+        # as evidence that the doc_map is substantively populated.
+        "has_content": has_substantive_content,
         "sections_count": sections_count,
         "title_present": bool(title),
         "doc_id_present": bool(doc_id),
@@ -816,6 +1099,16 @@ def _load_cached_pack(
             event="evidence_pack_cache_miss",
             module=logger.name,
             fields={"report_id": report_id, "pack": pack_name},
+        ))
+        return None
+    not_found_reason = _text(payload.get("not_found_reason"))
+    if not_found_reason:
+        logger.info(log_event(
+            ctx,
+            role="generator",
+            event="evidence_pack_cache_rejected",
+            module=logger.name,
+            fields={"report_id": report_id, "pack": pack_name, "reason": not_found_reason},
         ))
         return None
     return payload

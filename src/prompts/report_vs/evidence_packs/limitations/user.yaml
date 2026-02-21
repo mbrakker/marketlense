@@ -1,2 +1,5 @@
 text: |
-  Return JSON with limitations array; adhere to EvidencePack schema.
+  Identify methodological or evidence limitations explicitly present in the report.
+  Use file_search and extract only grounded limitations.
+  Output only a JSON object with one top-level key: "limitations".
+  Each item must be a plain string.

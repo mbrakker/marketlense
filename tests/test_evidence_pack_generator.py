@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -30,6 +31,33 @@ class FakeOpenAIClient:
             parsed_json=self._parsed,
             input_tokens=10,
             output_tokens=20,
+            tool_calls=0,
+            model=req.model,
+        )
+
+
+class RoutedOpenAIClient:
+    def __init__(self, payloads_by_pack, text_by_pack=None):
+        self._payloads_by_pack = payloads_by_pack
+        self._text_by_pack = text_by_pack or {}
+
+    def openai_respond_with_vector_store(self, req, ctx):
+        task_id = getattr(ctx, "task_id", "")
+        pack = ""
+        for candidate in ("doc_map", "scope", "methods", "findings", "limitations", "quote_candidates"):
+            if task_id.endswith(f":{candidate}"):
+                pack = candidate
+                break
+        parsed = self._payloads_by_pack.get(pack)
+        text = self._text_by_pack.get(pack, "")
+        if not text and isinstance(parsed, (dict, list)):
+            text = json.dumps(parsed)
+        return OpenAIResponseResult(
+            schema_version="1.0",
+            text=text,
+            parsed_json=parsed,
+            input_tokens=1,
+            output_tokens=1,
             tool_calls=0,
             model=req.model,
         )
@@ -182,6 +210,30 @@ def test_generate_evidence_packs_handles_missing_json(tmp_path):
     assert stored_payload["not_found_reason"] == "model_returned_no_json"
 
 
+def test_generate_evidence_packs_rejects_doc_map_with_only_doc_id(tmp_path):
+    # `doc_id` can be present while the pack is still semantically empty.
+    parsed = {"doc_id": "d1", "title": "", "sections": []}
+    fake_openai = FakeOpenAIClient(parsed=parsed)
+    analysis_store = FakeAnalysisStore()
+    with pytest.raises(AppError) as exc_info:
+        generate_evidence_packs(
+            report_id="r1",
+            report_name="report",
+            vector_store_id="vs_1",
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            openai_client=fake_openai,
+            prompt_client=FakePromptClient(),
+            analysis_store=analysis_store,
+        )
+    assert exc_info.value.code == "doc_map_empty"
+    assert exc_info.value.context["has_content"] is False
+    assert exc_info.value.context["doc_id_present"] is True
+    assert exc_info.value.context["title_present"] is False
+    assert exc_info.value.context["sections_count"] == 0
+    assert len(analysis_store.stored) == 1
+
+
 def test_generate_evidence_packs_does_not_retry_doc_map_inside_generator(tmp_path):
     fake_openai = RetryingDocMapClient()
     analysis_store = FakeAnalysisStore()
@@ -300,3 +352,92 @@ def test_generate_evidence_packs_normalizes_document_structure_shape(tmp_path):
     assert isinstance(doc_map["sections"], list)
     assert doc_map["sections"][0]["id"] == "executive-summary"
     assert len(analysis_store.stored) == 6
+
+
+def test_generate_evidence_packs_normalizes_legacy_findings_shape(tmp_path):
+    fake_openai = RoutedOpenAIClient(
+        payloads_by_pack={
+            "doc_map": {"doc_id": "d1", "title": "title", "sections": [{"title": "Overview"}]},
+            "findings": {
+                "findings": [
+                    {
+                        "id": "finding-1",
+                        "title": "Finding title",
+                        "summary": "Finding summary",
+                        "confidence": 0.88,
+                        "evidence": [{"snippet": "Supported by evidence"}],
+                        "page": "3",
+                    }
+                ]
+            },
+        }
+    )
+    packs = generate_evidence_packs(
+        report_id="r1",
+        report_name="report",
+        vector_store_id="vs_1",
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=fake_openai,
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+    finding = packs["findings"]["findings"][0]
+    assert packs["findings"]["not_found_reason"] == ""
+    assert finding["id"] == "finding-1"
+    assert finding["text"] == "Finding summary"
+    assert finding["evidence"] == "Supported by evidence"
+    assert finding["confidence"] == "0.88"
+    assert finding["pages"] == [3]
+
+
+def test_generate_evidence_packs_parses_limitations_json_array_from_text(tmp_path):
+    fake_openai = RoutedOpenAIClient(
+        payloads_by_pack={
+            "doc_map": {"doc_id": "d1", "title": "title", "sections": [{"title": "Overview"}]},
+            "limitations": None,
+        },
+        text_by_pack={
+            "limitations": '["Preliminary sample", "Regional bias"]',
+        },
+    )
+    packs = generate_evidence_packs(
+        report_id="r1",
+        report_name="report",
+        vector_store_id="vs_1",
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=fake_openai,
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+    assert packs["limitations"]["not_found_reason"] == ""
+    assert packs["limitations"]["limitations"] == ["Preliminary sample", "Regional bias"]
+
+
+def test_generate_evidence_packs_normalizes_quote_candidates_shape(tmp_path):
+    fake_openai = RoutedOpenAIClient(
+        payloads_by_pack={
+            "doc_map": {"doc_id": "d1", "title": "title", "sections": [{"title": "Overview"}]},
+            "quote_candidates": {
+                "quotes": [
+                    {"quote": "The industry is shifting.", "citation": "Section 2", "pages": ["5"]},
+                ]
+            },
+        }
+    )
+    packs = generate_evidence_packs(
+        report_id="r1",
+        report_name="report",
+        vector_store_id="vs_1",
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=fake_openai,
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+    quote = packs["quote_candidates"]["quote_candidates"][0]
+    assert packs["quote_candidates"]["not_found_reason"] == ""
+    assert quote["text"] == "The industry is shifting."
+    assert quote["source"] == "Section 2"
+    assert quote["page"] == 5

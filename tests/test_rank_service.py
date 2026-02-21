@@ -1,9 +1,12 @@
 import json
-from types import SimpleNamespace
 
+import pytest
+
+from src.contracts.openai import OpenAIResponseResult
 from src.contracts.report_assets import RankRequest
 from src.contracts.run_context import RunContext
 from src.services import rank_service
+from src.utils.errors import AppError
 
 
 def _ctx() -> RunContext:
@@ -29,43 +32,42 @@ def _request(tmp_path, *, user_prompt: str = "[]") -> RankRequest:
     )
 
 
-def _patch_openai(monkeypatch, payload: object) -> None:
-    response = SimpleNamespace(
-        id="req_1",
-        choices=[SimpleNamespace(message=SimpleNamespace(content=json.dumps(payload)))],
-        usage=SimpleNamespace(prompt_tokens=12, completion_tokens=8, total_tokens=20),
-    )
+def _patch_openai_chat_json(monkeypatch, *, text: str, parsed_json: dict | None) -> None:
+    def _fake_openai_chat_json(req, ctx):
+        return OpenAIResponseResult(
+            schema_version="1.0",
+            text=text,
+            parsed_json=parsed_json,
+            input_tokens=12,
+            output_tokens=8,
+            tool_calls=0,
+            model=req.model,
+            total_tokens=20,
+            request_id="req_1",
+        )
 
-    class _FakeCompletions:
-        def create(self, **kwargs):
-            return response
-
-    class _FakeOpenAI:
-        def __init__(self, **kwargs):
-            self.chat = SimpleNamespace(completions=_FakeCompletions())
-
-    monkeypatch.setattr(rank_service, "OpenAI", _FakeOpenAI)
-    monkeypatch.setattr(rank_service, "append_cost_entry", lambda req, ctx: None)
-    monkeypatch.setattr(rank_service, "rollup_daily", lambda req, ctx: None)
+    monkeypatch.setattr(rank_service, "openai_chat_json", _fake_openai_chat_json)
 
 
 def test_rank_candidates_parses_extended_schema(monkeypatch, tmp_path):
-    _patch_openai(
+    payload = {
+        "results": [
+            {
+                "id": "c1",
+                "type": "chart",
+                "score": 92,
+                "quality_score": 90,
+                "insight_score": 88,
+                "data_score": 86,
+                "keep": True,
+                "reject_reason": "",
+            }
+        ]
+    }
+    _patch_openai_chat_json(
         monkeypatch,
-        {
-            "results": [
-                {
-                    "id": "c1",
-                    "type": "chart",
-                    "score": 92,
-                    "quality_score": 90,
-                    "insight_score": 88,
-                    "data_score": 86,
-                    "keep": True,
-                    "reject_reason": "",
-                }
-            ]
-        },
+        text=json.dumps(payload),
+        parsed_json=payload,
     )
     resp = rank_service.rank_candidates(_request(tmp_path), _ctx())
 
@@ -81,15 +83,17 @@ def test_rank_candidates_parses_extended_schema(monkeypatch, tmp_path):
 
 
 def test_rank_candidates_legacy_score_only_defaults_subscores(monkeypatch, tmp_path):
-    _patch_openai(
+    payload = [
+        {
+            "id": "legacy_1",
+            "type": "table",
+            "score": 83,
+        }
+    ]
+    _patch_openai_chat_json(
         monkeypatch,
-        [
-            {
-                "id": "legacy_1",
-                "type": "table",
-                "score": 83,
-            }
-        ],
+        text=json.dumps(payload),
+        parsed_json=None,
     )
     resp = rank_service.rank_candidates(_request(tmp_path), _ctx())
 
@@ -101,3 +105,22 @@ def test_rank_candidates_legacy_score_only_defaults_subscores(monkeypatch, tmp_p
     assert row.insight_score == 83
     assert row.data_score == 83
     assert row.keep is True
+
+
+def test_rank_candidates_maps_openai_errors(monkeypatch, tmp_path):
+    def _raise_openai_error(req, ctx):
+        raise AppError(
+            code="openai_chat_failed",
+            message="request failed",
+            retryable=True,
+            severity="warning",
+        )
+
+    monkeypatch.setattr(rank_service, "openai_chat_json", _raise_openai_error)
+
+    with pytest.raises(AppError) as exc:
+        rank_service.rank_candidates(_request(tmp_path), _ctx())
+
+    assert exc.value.code == "rank_request_failed"
+    assert exc.value.retryable is True
+    assert exc.value.severity == "warning"

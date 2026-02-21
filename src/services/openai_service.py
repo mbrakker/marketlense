@@ -24,6 +24,16 @@ from src.contracts.openai import (
     OpenAIJSONPromptRequest,
     OpenAIResponseRequest,
     OpenAIResponseResult,
+    OpenAIVectorStoreAttachFileRequest,
+    OpenAIVectorStoreAttachFileResponse,
+    OpenAIVectorStoreCreateRequest,
+    OpenAIVectorStoreCreateResponse,
+    OpenAIVectorStoreFileUploadRequest,
+    OpenAIVectorStoreFileUploadResponse,
+    OpenAIVectorStoreStatusRequest,
+    OpenAIVectorStoreStatusResponse,
+    OpenAIVectorStoreUpdateMetadataRequest,
+    OpenAIVectorStoreUpdateMetadataResponse,
 )
 from src.contracts.run_context import RunContext
 from src.services.cost_ledger_service import append_entry as append_cost_entry, rollup_daily
@@ -519,6 +529,8 @@ def openai_chat_json(request: OpenAIJSONPromptRequest, ctx: RunContext) -> OpenA
         output_tokens=completion_tokens,
         tool_calls=tool_calls,
         model=request.model,
+        total_tokens=total_tokens,
+        request_id=str(request_id) if request_id else None,
     )
 
 
@@ -678,6 +690,8 @@ def openai_chat_json_with_images(request: OpenAIJSONImagePromptRequest, ctx: Run
         output_tokens=output_tokens,
         tool_calls=tool_calls,
         model=request.model,
+        total_tokens=(int(input_tokens or 0) + int(output_tokens or 0)),
+        request_id=str(request_id) if request_id else None,
     )
 
 
@@ -762,6 +776,7 @@ def openai_respond_with_vector_store(request: OpenAIResponseRequest, ctx: RunCon
     if text is None:
         text = getattr(resp, "text", "") or ""
 
+    request_id = getattr(resp, "id", None)
     usage = getattr(resp, "usage", None) or {}
     input_tokens = getattr(usage, "input_tokens", None) if usage else None
     output_tokens = getattr(usage, "output_tokens", None) if usage else None
@@ -799,7 +814,7 @@ def openai_respond_with_vector_store(request: OpenAIResponseRequest, ctx: RunCon
             cached_input_tokens=None,
             tool_calls=int(tool_calls or 0),
             estimated_cost_usd=estimated_cost,
-            extra={},
+            extra={"request_id": str(request_id) if request_id else None},
         )
         append_cost_entry(
             CostLedgerAppendRequest(schema_version="1.0", path=request.cost_ledger_path, entry=entry),
@@ -825,6 +840,7 @@ def openai_respond_with_vector_store(request: OpenAIResponseRequest, ctx: RunCon
         module=logger.name,
         fields={
             "model": request.model,
+            "request_id": request_id or "",
             "input_tokens": input_tokens,
             "output_tokens": output_tokens,
             "tool_calls": tool_calls,
@@ -839,4 +855,317 @@ def openai_respond_with_vector_store(request: OpenAIResponseRequest, ctx: RunCon
         output_tokens=output_tokens,
         tool_calls=tool_calls,
         model=request.model,
+        total_tokens=(int(input_tokens or 0) + int(output_tokens or 0)),
+        request_id=str(request_id) if request_id else None,
     )
+
+
+def _require_api_key(api_key: str, *, operation: str) -> str:
+    key = str(api_key or "").strip()
+    if not key:
+        raise AppError(
+            code="openai_missing_api_key",
+            message="OPENAI_API_KEY is required",
+            retryable=False,
+            context={"operation": operation},
+        )
+    return key
+
+
+def _build_openai_client(*, api_key: str, timeout_seconds: float | None, operation: str) -> Any:
+    client_kwargs: dict[str, Any] = {"api_key": _require_api_key(api_key, operation=operation)}
+    if timeout_seconds is not None:
+        client_kwargs["timeout"] = timeout_seconds
+    try:
+        if OpenAI is None:
+            raise TypeError("OpenAI client not available")
+        return OpenAI(**client_kwargs)
+    except TypeError as exc:
+        raise AppError(
+            code="openai_client_unavailable",
+            message="OpenAI client not available",
+            cause=exc,
+            retryable=False,
+            context={"operation": operation},
+        ) from exc
+    except Exception as exc:
+        raise AppError(
+            code="openai_client_init_failed",
+            message="Failed to initialize OpenAI client",
+            cause=exc,
+            retryable=True,
+            context={"operation": operation},
+        ) from exc
+
+
+def _value_from_response(response: Any, field: str) -> Any:
+    value = getattr(response, field, None)
+    if value is None and isinstance(response, dict):
+        return response.get(field)
+    return value
+
+
+def _require_openai_id(response: Any, *, code: str, message: str) -> str:
+    response_id = _value_from_response(response, "id")
+    if not response_id:
+        raise AppError(code=code, message=message, retryable=True)
+    return str(response_id)
+
+
+def openai_vector_store_create(request: OpenAIVectorStoreCreateRequest, ctx: RunContext) -> OpenAIVectorStoreCreateResponse:
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="openai_vector_store_create_start",
+        module=logger.name,
+        fields={
+            "name": request.name,
+            "metadata_keys": list((request.metadata or {}).keys()),
+            "timeout_seconds": request.timeout_seconds,
+        },
+    ))
+    try:
+        client = _build_openai_client(
+            api_key=request.api_key,
+            timeout_seconds=request.timeout_seconds,
+            operation="vector_store_create",
+        )
+        resp = client.vector_stores.create(name=request.name, metadata=request.metadata or {})
+        vector_store_id = _require_openai_id(
+            resp,
+            code="openai_vector_store_create_failed",
+            message="OpenAI vector store create did not return an id",
+        )
+    except AppError:
+        raise
+    except Exception as exc:
+        raise AppError(
+            code="openai_vector_store_create_failed",
+            message="OpenAI vector store create request failed",
+            cause=exc,
+            retryable=True,
+        ) from exc
+
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="openai_vector_store_create_complete",
+        module=logger.name,
+        fields={"name": request.name, "vector_store_id": vector_store_id},
+    ))
+    return OpenAIVectorStoreCreateResponse(schema_version="1.0", vector_store_id=vector_store_id)
+
+
+def openai_vector_store_upload_file(
+    request: OpenAIVectorStoreFileUploadRequest,
+    ctx: RunContext,
+) -> OpenAIVectorStoreFileUploadResponse:
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="openai_vector_store_upload_start",
+        module=logger.name,
+        fields={
+            "file_path": request.file_path,
+            "purpose": request.purpose,
+            "timeout_seconds": request.timeout_seconds,
+        },
+    ))
+    try:
+        client = _build_openai_client(
+            api_key=request.api_key,
+            timeout_seconds=request.timeout_seconds,
+            operation="vector_store_upload_file",
+        )
+        with open(request.file_path, "rb") as file_handle:
+            resp = client.files.create(file=file_handle, purpose=request.purpose)
+        openai_file_id = _require_openai_id(
+            resp,
+            code="openai_vector_store_upload_failed",
+            message="OpenAI file upload did not return an id",
+        )
+    except FileNotFoundError as exc:
+        raise AppError(
+            code="openai_file_missing",
+            message=f"File not found: {request.file_path}",
+            cause=exc,
+            retryable=False,
+        ) from exc
+    except OSError as exc:
+        raise AppError(
+            code="openai_file_open_failed",
+            message=f"Unable to read file: {request.file_path}",
+            cause=exc,
+            retryable=False,
+        ) from exc
+    except AppError:
+        raise
+    except Exception as exc:
+        raise AppError(
+            code="openai_vector_store_upload_failed",
+            message="OpenAI file upload request failed",
+            cause=exc,
+            retryable=True,
+        ) from exc
+
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="openai_vector_store_upload_complete",
+        module=logger.name,
+        fields={"file_path": request.file_path, "openai_file_id": openai_file_id},
+    ))
+    return OpenAIVectorStoreFileUploadResponse(schema_version="1.0", openai_file_id=openai_file_id)
+
+
+def openai_vector_store_attach_file(
+    request: OpenAIVectorStoreAttachFileRequest,
+    ctx: RunContext,
+) -> OpenAIVectorStoreAttachFileResponse:
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="openai_vector_store_attach_start",
+        module=logger.name,
+        fields={
+            "vector_store_id": request.vector_store_id,
+            "openai_file_id": request.openai_file_id,
+            "timeout_seconds": request.timeout_seconds,
+        },
+    ))
+    try:
+        client = _build_openai_client(
+            api_key=request.api_key,
+            timeout_seconds=request.timeout_seconds,
+            operation="vector_store_attach_file",
+        )
+        resp = client.vector_stores.files.create(
+            vector_store_id=request.vector_store_id,
+            file_id=request.openai_file_id,
+        )
+        attached_id = _require_openai_id(
+            resp,
+            code="openai_vector_store_attach_failed",
+            message="OpenAI vector store attach did not return an id",
+        )
+    except AppError:
+        raise
+    except Exception as exc:
+        raise AppError(
+            code="openai_vector_store_attach_failed",
+            message="OpenAI vector store attach request failed",
+            cause=exc,
+            retryable=True,
+        ) from exc
+
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="openai_vector_store_attach_complete",
+        module=logger.name,
+        fields={"vector_store_id": request.vector_store_id, "openai_file_id": attached_id},
+    ))
+    return OpenAIVectorStoreAttachFileResponse(
+        schema_version="1.0",
+        vector_store_id=request.vector_store_id,
+        openai_file_id=attached_id,
+    )
+
+
+def openai_vector_store_status(
+    request: OpenAIVectorStoreStatusRequest,
+    ctx: RunContext,
+) -> OpenAIVectorStoreStatusResponse:
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="openai_vector_store_status_start",
+        module=logger.name,
+        fields={"vector_store_id": request.vector_store_id, "timeout_seconds": request.timeout_seconds},
+    ))
+    try:
+        client = _build_openai_client(
+            api_key=request.api_key,
+            timeout_seconds=request.timeout_seconds,
+            operation="vector_store_status",
+        )
+        resp = client.vector_stores.retrieve(request.vector_store_id)
+        status = _value_from_response(resp, "status")
+        indexed_at = _value_from_response(resp, "created_at")
+        last_error = _value_from_response(resp, "last_error")
+    except AppError:
+        raise
+    except Exception as exc:
+        raise AppError(
+            code="openai_vector_store_status_failed",
+            message="OpenAI vector store status request failed",
+            cause=exc,
+            retryable=True,
+            context={"vector_store_id": request.vector_store_id},
+        ) from exc
+
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="openai_vector_store_status_complete",
+        module=logger.name,
+        fields={"vector_store_id": request.vector_store_id, "status": status},
+    ))
+    return OpenAIVectorStoreStatusResponse(
+        schema_version="1.0",
+        vector_store_id=request.vector_store_id,
+        status=str(status or ""),
+        indexed_at_utc=str(indexed_at) if indexed_at is not None else None,
+        last_error=str(last_error) if last_error else None,
+    )
+
+
+def openai_vector_store_update_metadata(
+    request: OpenAIVectorStoreUpdateMetadataRequest,
+    ctx: RunContext,
+) -> OpenAIVectorStoreUpdateMetadataResponse:
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="openai_vector_store_update_metadata_start",
+        module=logger.name,
+        fields={
+            "vector_store_id": request.vector_store_id,
+            "metadata_keys": list((request.metadata or {}).keys()),
+            "timeout_seconds": request.timeout_seconds,
+        },
+    ))
+    try:
+        client = _build_openai_client(
+            api_key=request.api_key,
+            timeout_seconds=request.timeout_seconds,
+            operation="vector_store_update_metadata",
+        )
+        resp = client.vector_stores.update(
+            vector_store_id=request.vector_store_id,
+            metadata=request.metadata or {},
+        )
+        updated_id = _require_openai_id(
+            resp,
+            code="openai_vector_store_update_metadata_failed",
+            message="OpenAI vector store metadata update did not return an id",
+        )
+    except AppError:
+        raise
+    except Exception as exc:
+        raise AppError(
+            code="openai_vector_store_update_metadata_failed",
+            message="OpenAI vector store metadata update request failed",
+            cause=exc,
+            retryable=True,
+            context={"vector_store_id": request.vector_store_id},
+        ) from exc
+
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="openai_vector_store_update_metadata_complete",
+        module=logger.name,
+        fields={"vector_store_id": updated_id},
+    ))
+    return OpenAIVectorStoreUpdateMetadataResponse(schema_version="1.0", vector_store_id=updated_id)

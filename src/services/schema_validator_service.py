@@ -70,6 +70,21 @@ def validate_schema(request: SchemaValidateRequest, ctx: RunContext) -> SchemaVa
 
 
 def _validate(value: Any, schema: dict, path: str) -> None:
+    one_of = schema.get("oneOf")
+    if isinstance(one_of, list) and one_of:
+        first_error: AppError | None = None
+        for candidate_schema in one_of:
+            if not isinstance(candidate_schema, dict):
+                continue
+            try:
+                _validate(value, candidate_schema, path)
+                return
+            except AppError as exc:
+                if first_error is None:
+                    first_error = exc
+        if first_error is not None:
+            raise first_error
+
     expected_types = schema.get("type")
     if isinstance(expected_types, str):
         expected_types = [expected_types]
@@ -88,13 +103,9 @@ def _validate(value: Any, schema: dict, path: str) -> None:
             # Nothing else to validate for null values once type is satisfied.
             return
 
-    if "object" in expected_types:
-        if not isinstance(value, dict):
-            raise AppError(
-                code="schema_type_mismatch",
-                message=f"{path} should be object",
-                retryable=False,
-            )
+    if isinstance(value, dict):
+        if "object" not in expected_types:
+            return
         required = schema.get("required", [])
         for key in required:
             if key not in value:
@@ -107,23 +118,15 @@ def _validate(value: Any, schema: dict, path: str) -> None:
         for k, v in value.items():
             if k in props:
                 _validate(v, props[k], f"{path}.{k}")
-    elif "array" in expected_types:
-        if not isinstance(value, list):
-            raise AppError(
-                code="schema_type_mismatch",
-                message=f"{path} should be array",
-                retryable=False,
-            )
+    elif isinstance(value, list):
+        if "array" not in expected_types:
+            return
         item_schema = schema.get("items", {})
         for idx, item in enumerate(value):
             _validate(item, item_schema, f"{path}[{idx}]")
-    elif "string" in expected_types:
-        if not isinstance(value, str):
-            raise AppError(
-                code="schema_type_mismatch",
-                message=f"{path} should be string",
-                retryable=False,
-            )
+    elif isinstance(value, str):
+        if "string" not in expected_types:
+            return
         enum = schema.get("enum")
         if enum and value not in enum:
             raise AppError(
@@ -131,27 +134,12 @@ def _validate(value: Any, schema: dict, path: str) -> None:
                 message=f"{path} must be one of {enum}",
                 retryable=False,
             )
-    elif "integer" in expected_types:
-        if not isinstance(value, int):
-            raise AppError(
-                code="schema_type_mismatch",
-                message=f"{path} should be integer",
-                retryable=False,
-            )
-    elif "number" in expected_types:
-        if not isinstance(value, (int, float)):
-            raise AppError(
-                code="schema_type_mismatch",
-                message=f"{path} should be number",
-                retryable=False,
-            )
-    elif "boolean" in expected_types:
-        if not isinstance(value, bool):
-            raise AppError(
-                code="schema_type_mismatch",
-                message=f"{path} should be boolean",
-                retryable=False,
-            )
+    elif isinstance(value, bool):
+        return
+    elif isinstance(value, int):
+        return
+    elif isinstance(value, float):
+        return
     else:
         # Unknown types are treated as pass-through.
         return
@@ -167,9 +155,9 @@ def _matches_any_type(value: Any, expected_types: list[str]) -> bool:
             return True
         if expected_type == "string" and isinstance(value, str):
             return True
-        if expected_type == "integer" and isinstance(value, int):
+        if expected_type == "integer" and isinstance(value, int) and not isinstance(value, bool):
             return True
-        if expected_type == "number" and isinstance(value, (int, float)):
+        if expected_type == "number" and isinstance(value, (int, float)) and not isinstance(value, bool):
             return True
         if expected_type == "boolean" and isinstance(value, bool):
             return True

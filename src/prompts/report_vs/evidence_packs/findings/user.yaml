@@ -1,2 +1,10 @@
 text: |
-  Return JSON with findings array; adhere to EvidencePack schema.
+  Extract the most important report findings for an executive summary.
+  Use file_search over the provided report.
+  For each finding:
+  - id: F001, F002, ...
+  - text: one clear sentence
+  - evidence: short quote/paraphrase from source text
+  - confidence: low, medium, or high
+  - pages: list of page numbers when available, else []
+  Output only a JSON object with a single top-level key: "findings".

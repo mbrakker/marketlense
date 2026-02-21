@@ -1,10 +1,16 @@
 import json
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
-from src.contracts.openai import OpenAIJSONImagePromptRequest, OpenAIResponseRequest
+from src.contracts.openai import (
+    OpenAIJSONImagePromptRequest,
+    OpenAIResponseRequest,
+    OpenAIVectorStoreCreateRequest,
+    OpenAIVectorStoreFileUploadRequest,
+    OpenAIVectorStoreStatusRequest,
+    OpenAIVectorStoreUpdateMetadataRequest,
+)
 from src.contracts.run_context import RunContext
 from src.services import openai_service as svc
 from src.utils.errors import AppError
@@ -12,6 +18,7 @@ from src.utils.errors import AppError
 
 class FakeResponse:
     def __init__(self, text: str):
+        self.id = "resp_1"
         self.output_text = text
         self.usage = {"input_tokens": 10, "output_tokens": 20, "total_tool_calls": 2}
 
@@ -64,6 +71,8 @@ def test_openai_response_with_vector_store_writes_ledger(tmp_path, monkeypatch):
     resp = svc.openai_respond_with_vector_store(req, _ctx())
     assert resp.text
     assert resp.parsed_json == {"result": "ok"}
+    assert resp.request_id == "resp_1"
+    assert resp.total_tokens == 30
     assert ledger_path.exists()
     assert daily_path.exists()
     ledger_lines = ledger_path.read_text(encoding="utf-8").strip().splitlines()
@@ -127,3 +136,77 @@ def test_openai_chat_json_with_images_retries_without_temperature(tmp_path, monk
     assert len(responses.calls) == 2
     assert "temperature" in responses.calls[0]
     assert "temperature" not in responses.calls[1]
+
+
+def test_openai_vector_store_create_success(monkeypatch):
+    client = SimpleNamespace(
+        vector_stores=SimpleNamespace(create=lambda **kwargs: {"id": "vs_123"}),
+    )
+    monkeypatch.setattr(svc, "OpenAI", lambda **kwargs: client)
+    resp = svc.openai_vector_store_create(
+        OpenAIVectorStoreCreateRequest(
+            schema_version="1.0",
+            api_key="key",
+            name="report",
+            metadata={"report_id": "r1"},
+        ),
+        _ctx(),
+    )
+    assert resp.vector_store_id == "vs_123"
+
+
+def test_openai_vector_store_upload_missing_file(monkeypatch, tmp_path):
+    client = SimpleNamespace(files=SimpleNamespace(create=lambda **kwargs: {"id": "file_123"}))
+    monkeypatch.setattr(svc, "OpenAI", lambda **kwargs: client)
+
+    with pytest.raises(AppError) as exc:
+        svc.openai_vector_store_upload_file(
+            OpenAIVectorStoreFileUploadRequest(
+                schema_version="1.0",
+                api_key="key",
+                file_path=str(tmp_path / "missing.pdf"),
+            ),
+            _ctx(),
+        )
+    assert exc.value.code == "openai_file_missing"
+
+
+def test_openai_vector_store_status_reads_dict_response(monkeypatch):
+    client = SimpleNamespace(
+        vector_stores=SimpleNamespace(
+            retrieve=lambda _vector_store_id: {
+                "status": "completed",
+                "created_at": "2026-01-07T00:00:00Z",
+                "last_error": None,
+            }
+        )
+    )
+    monkeypatch.setattr(svc, "OpenAI", lambda **kwargs: client)
+
+    resp = svc.openai_vector_store_status(
+        OpenAIVectorStoreStatusRequest(
+            schema_version="1.0",
+            api_key="key",
+            vector_store_id="vs_123",
+        ),
+        _ctx(),
+    )
+    assert resp.status == "completed"
+    assert resp.indexed_at_utc == "2026-01-07T00:00:00Z"
+
+
+def test_openai_vector_store_update_metadata_missing_id(monkeypatch):
+    client = SimpleNamespace(vector_stores=SimpleNamespace(update=lambda **kwargs: {}))
+    monkeypatch.setattr(svc, "OpenAI", lambda **kwargs: client)
+
+    with pytest.raises(AppError) as exc:
+        svc.openai_vector_store_update_metadata(
+            OpenAIVectorStoreUpdateMetadataRequest(
+                schema_version="1.0",
+                api_key="key",
+                vector_store_id="vs_123",
+                metadata={"report_id": "r1"},
+            ),
+            _ctx(),
+        )
+    assert exc.value.code == "openai_vector_store_update_metadata_failed"

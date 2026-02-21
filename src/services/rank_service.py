@@ -2,19 +2,20 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Dict, List
+from typing import Any
 
-from datetime import datetime, timezone
-from openai import OpenAI
-
-from src.contracts.costs import CostLedgerAppendRequest, CostLedgerEntry, CostRollupRequest
-from src.contracts.openai import OpenAIJSONImagePromptRequest
-from src.contracts.report_assets import CropRefineRequest, CropRefineResponse, CropRefineResult, RankRequest, RankResponse
+from src.contracts.openai import OpenAIJSONImagePromptRequest, OpenAIJSONPromptRequest
+from src.contracts.report_assets import (
+    CropRefineCandidate,
+    CropRefineRequest,
+    CropRefineResponse,
+    CropRefineResult,
+    RankRequest,
+    RankResponse,
+)
 from src.contracts.report_models import RankedCandidate
 from src.contracts.run_context import RunContext
-from src.services.cost_ledger_service import append_entry as append_cost_entry, rollup_daily
-from src.services.openai_service import openai_chat_json_with_images
-from src.utils.costing import estimate_cost_usd
+from src.services.openai_service import openai_chat_json, openai_chat_json_with_images
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -49,6 +50,78 @@ def _to_bbox(value: Any, fallback: tuple[float, float, float, float]) -> tuple[f
             return fallback
     return fallback
 
+
+def _parse_rank_items(*, content: str, parsed_json: Any, model: str) -> list[dict[str, Any]]:
+    parsed = parsed_json
+    if parsed is None:
+        try:
+            parsed = json.loads(content)
+        except json.JSONDecodeError as exc:
+            raise AppError(
+                code="rank_response_invalid_json",
+                message="Ranking response JSON parsing failed",
+                cause=exc,
+                retryable=False,
+                context={"model": model},
+            ) from exc
+
+    if isinstance(parsed, list):
+        return [item for item in parsed if isinstance(item, dict)]
+    if isinstance(parsed, dict):
+        for candidate_key in ("results", "data", "items"):
+            raw_items = parsed.get(candidate_key)
+            if isinstance(raw_items, list):
+                return [item for item in raw_items if isinstance(item, dict)]
+
+    raise AppError(
+        code="rank_response_invalid_format",
+        message="Ranking response did not return a JSON list of objects",
+        retryable=False,
+        context={"model": model},
+    )
+
+
+def _to_ranked_candidate(item: dict[str, Any]) -> RankedCandidate | None:
+    try:
+        score_value = _to_int(item.get("score"), 0)
+        return RankedCandidate(
+            id=item.get("id", ""),
+            type=item.get("type", ""),
+            score=score_value,
+            quality_score=_to_int(item.get("quality_score"), score_value),
+            insight_score=_to_int(item.get("insight_score"), score_value),
+            data_score=_to_int(item.get("data_score"), score_value),
+            keep=_to_bool(item.get("keep"), True),
+            reject_reason=str(item.get("reject_reason") or ""),
+        )
+    except (ValueError, TypeError):
+        return None
+
+
+def _total_tokens(input_tokens: int | None, output_tokens: int | None, total_tokens: int | None) -> int | None:
+    if total_tokens is not None:
+        return total_tokens
+    if input_tokens is None and output_tokens is None:
+        return None
+    return int(input_tokens or 0) + int(output_tokens or 0)
+
+
+def _fallback_crop_refine_results(candidates: list[CropRefineCandidate]) -> list[CropRefineResult]:
+    return [
+        CropRefineResult(
+            schema_version="1.0",
+            id=candidate.id,
+            is_valid_candidate=False,
+            refined_bbox=candidate.bbox,
+            include_title=True,
+            include_note_if_present=True,
+            confidence=0.0,
+            reason="no_valid_response",
+        )
+        for candidate in candidates
+    ]
+
+
 def rank_candidates(request: RankRequest, ctx: RunContext) -> RankResponse:
     logger.info(log_event(
         ctx,
@@ -65,133 +138,45 @@ def rank_candidates(request: RankRequest, ctx: RunContext) -> RankResponse:
             "prompt_user_sha256": request.prompt_user_sha256,
         },
     ))
-    client_kwargs: dict = {"api_key": request.api_key}
-    if request.timeout_seconds is not None:
-        client_kwargs["timeout"] = request.timeout_seconds
-    client = OpenAI(**client_kwargs)
-    payload_args = {
-        "model": request.model,
-        "messages": [
-            {"role": "system", "content": request.system_prompt},
-            {"role": "user", "content": request.user_prompt},
-        ],
-        "response_format": {"type": "json_object"},
-        "temperature": request.temperature,
-    }
-    if request.seed is not None:
-        payload_args["seed"] = request.seed
     try:
-        resp = client.chat.completions.create(**payload_args)
-        content = resp.choices[0].message.content
-        parsed = json.loads(content)
-    except json.JSONDecodeError as exc:
-        raise AppError(
-            code="rank_response_invalid_json",
-            message="Ranking response JSON parsing failed",
-            cause=exc,
-            retryable=False,
-            context={"model": request.model},
-        ) from exc
-    except Exception as exc:
+        response = openai_chat_json(
+            OpenAIJSONPromptRequest(
+                schema_version="1.0",
+                system_prompt=request.system_prompt,
+                user_prompt=request.user_prompt,
+                model=request.model,
+                temperature=request.temperature,
+                api_key=request.api_key,
+                seed=request.seed,
+                timeout_seconds=request.timeout_seconds,
+                cost_ledger_path=request.cost_ledger_path,
+                cost_daily_path=request.cost_daily_path,
+                model_pricing=request.model_pricing,
+            ),
+            ctx,
+        )
+    except AppError as exc:
         raise AppError(
             code="rank_request_failed",
             message="Ranking request failed",
             cause=exc,
-            retryable=True,
+            retryable=exc.retryable,
+            severity=exc.severity,
             context={"model": request.model},
         ) from exc
 
-    try:
-        items: List[Dict[str, Any]]
-        if isinstance(parsed, list):
-            items = parsed
-        elif isinstance(parsed, dict):
-            if "results" in parsed and isinstance(parsed["results"], list):
-                items = parsed["results"]
-            else:
-                found = False
-                for candidate_key in ("data", "items", "results"):
-                    if candidate_key in parsed and isinstance(parsed[candidate_key], list):
-                        items = parsed[candidate_key]
-                        found = True
-                        break
-                if not found:
-                    raise ValueError("Ranking response did not return a JSON list of objects")
-        else:
-            raise ValueError("Ranking response did not return a JSON list of objects")
-    except ValueError as exc:
-        raise AppError(
-            code="rank_response_invalid_format",
-            message=str(exc),
-            cause=exc,
-            retryable=False,
-            context={"model": request.model},
-        ) from exc
-
-    result: List[RankedCandidate] = []
+    content = response.text or ""
+    items = _parse_rank_items(content=content, parsed_json=response.parsed_json, model=request.model)
+    result: list[RankedCandidate] = []
     for item in items:
-        if not isinstance(item, dict):
-            continue
-        try:
-            score_value = _to_int(item.get("score"), 0)
-            ranked = RankedCandidate(
-                id=item.get("id", ""),
-                type=item.get("type", ""),
-                score=score_value,
-                quality_score=_to_int(item.get("quality_score"), score_value),
-                insight_score=_to_int(item.get("insight_score"), score_value),
-                data_score=_to_int(item.get("data_score"), score_value),
-                keep=_to_bool(item.get("keep"), True),
-                reject_reason=str(item.get("reject_reason") or ""),
-            )
+        ranked = _to_ranked_candidate(item)
+        if ranked is not None:
             result.append(ranked)
-        except (ValueError, TypeError):
-            continue
 
-    request_id = getattr(resp, "id", None)
-    usage = getattr(resp, "usage", None)
-    prompt_tokens = getattr(usage, "prompt_tokens", None) if usage is not None else None
-    completion_tokens = getattr(usage, "completion_tokens", None) if usage is not None else None
-    total_tokens = getattr(usage, "total_tokens", None) if usage is not None else None
-    estimated_cost = estimate_cost_usd(
-        request.model,
-        int(prompt_tokens or 0),
-        int(completion_tokens or 0),
-        int(request.tool_calls or 0),
-        pricing=request.model_pricing or {},
-    )
-    try:
-        entry = CostLedgerEntry(
-            schema_version="1.0",
-            timestamp_utc=datetime.now(timezone.utc).isoformat(),
-            run_id=ctx.run_id,
-            task_id=ctx.task_id,
-            span_id=ctx.span_id,
-            step_name="rank_candidates",
-            model=request.model,
-            input_tokens=int(prompt_tokens or 0),
-            output_tokens=int(completion_tokens or 0),
-            cached_input_tokens=None,
-            tool_calls=int(request.tool_calls or 0),
-            estimated_cost_usd=estimated_cost,
-            extra={"request_id": str(request_id) if request_id else None},
-        )
-        append_cost_entry(
-            CostLedgerAppendRequest(schema_version="1.0", path=request.cost_ledger_path, entry=entry),
-            ctx,
-        )
-        rollup_daily(
-            CostRollupRequest(schema_version="1.0", ledger_path=request.cost_ledger_path, out_path=request.cost_daily_path),
-            ctx,
-        )
-    except Exception as exc:  # pragma: no cover - ledger failures must not break main flow
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="cost_ledger_write_failed",
-            module=logger.name,
-            fields={"error": str(exc)},
-        ))
+    request_id = response.request_id
+    prompt_tokens = response.input_tokens
+    completion_tokens = response.output_tokens
+    total_tokens = _total_tokens(prompt_tokens, completion_tokens, response.total_tokens)
     logger.info(log_event(
         ctx,
         role="service",
@@ -212,7 +197,7 @@ def rank_candidates(request: RankRequest, ctx: RunContext) -> RankResponse:
         prompt_tokens=prompt_tokens,
         completion_tokens=completion_tokens,
         total_tokens=total_tokens,
-        request_id=str(request_id) if request_id else None,
+        request_id=request_id,
     )
 
 
@@ -276,17 +261,7 @@ def refine_candidate_crops(request: CropRefineRequest, ctx: RunContext) -> CropR
         except (TypeError, ValueError):
             continue
     if not results:
-        for candidate in request.candidates:
-            results.append(CropRefineResult(
-                schema_version="1.0",
-                id=candidate.id,
-                is_valid_candidate=False,
-                refined_bbox=candidate.bbox,
-                include_title=True,
-                include_note_if_present=True,
-                confidence=0.0,
-                reason="no_valid_response",
-            ))
+        results = _fallback_crop_refine_results(request.candidates)
     logger.info(log_event(
         ctx,
         role="service",

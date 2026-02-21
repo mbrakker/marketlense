@@ -1,2 +1,6 @@
 text: |
-  Return JSON with scope filled; other fields optional. Follow EvidencePack schema.
+  Summarize the report scope using file_search:
+  - primary subject/domain
+  - geographic coverage (if stated)
+  - time horizon (if stated)
+  Output only a JSON object with one top-level key: "scope".

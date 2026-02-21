@@ -1,7 +1,13 @@
-from unittest.mock import MagicMock
+from __future__ import annotations
 
 import pytest
 
+from src.contracts.openai import (
+    OpenAIVectorStoreAttachFileResponse,
+    OpenAIVectorStoreCreateResponse,
+    OpenAIVectorStoreFileUploadResponse,
+    OpenAIVectorStoreStatusResponse,
+)
 from src.contracts.vector_store import (
     VectorStoreAttachFileRequest,
     VectorStoreAttachFileResponse,
@@ -17,22 +23,17 @@ from src.services import vector_store_service as svc
 from src.utils.errors import AppError
 
 
-def _mock_client():
-    client = MagicMock()
-    client.vector_stores.create.return_value = {"id": "vs_123"}
-    client.files.create.return_value = {"id": "file_123"}
-    client.vector_stores.files.create.return_value = {"id": "file_123"}
-    client.vector_stores.retrieve.return_value = {"status": "completed", "created_at": "2026-01-07T00:00:00Z"}
-    return client
-
-
-def _install_openai_client(monkeypatch: pytest.MonkeyPatch, client: MagicMock) -> None:
+def _install_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
-    monkeypatch.setattr(svc, "OpenAI", lambda api_key: client)
 
 
 def test_create_vector_store(monkeypatch: pytest.MonkeyPatch):
-    _install_openai_client(monkeypatch, _mock_client())
+    _install_api_key(monkeypatch)
+
+    def _create(req, ctx):
+        return OpenAIVectorStoreCreateResponse(schema_version="1.0", vector_store_id="vs_123")
+
+    monkeypatch.setattr(svc.openai_service, "openai_vector_store_create", _create)
     resp = svc.create_vector_store(
         VectorStoreCreateRequest(
             schema_version="1.0",
@@ -53,7 +54,12 @@ def test_create_vector_store(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_upload_file(monkeypatch: pytest.MonkeyPatch, tmp_path):
-    _install_openai_client(monkeypatch, _mock_client())
+    _install_api_key(monkeypatch)
+
+    def _upload(req, ctx):
+        return OpenAIVectorStoreFileUploadResponse(schema_version="1.0", openai_file_id="file_123")
+
+    monkeypatch.setattr(svc.openai_service, "openai_vector_store_upload_file", _upload)
     pdf = tmp_path / "f.pdf"
     pdf.write_bytes(b"hello")
     resp = svc.upload_file(
@@ -68,7 +74,16 @@ def test_upload_file(monkeypatch: pytest.MonkeyPatch, tmp_path):
 
 
 def test_attach_file(monkeypatch: pytest.MonkeyPatch):
-    _install_openai_client(monkeypatch, _mock_client())
+    _install_api_key(monkeypatch)
+
+    def _attach(req, ctx):
+        return OpenAIVectorStoreAttachFileResponse(
+            schema_version="1.0",
+            vector_store_id="vs_123",
+            openai_file_id="file_123",
+        )
+
+    monkeypatch.setattr(svc.openai_service, "openai_vector_store_attach_file", _attach)
     resp = svc.attach_file(
         VectorStoreAttachFileRequest(
             schema_version="1.0",
@@ -81,8 +96,18 @@ def test_attach_file(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_wait_until_indexed_success(monkeypatch: pytest.MonkeyPatch):
-    client = _mock_client()
-    _install_openai_client(monkeypatch, client)
+    _install_api_key(monkeypatch)
+
+    def _status(req, ctx):
+        return OpenAIVectorStoreStatusResponse(
+            schema_version="1.0",
+            vector_store_id=req.vector_store_id,
+            status="completed",
+            indexed_at_utc="2026-01-07T00:00:00Z",
+            last_error=None,
+        )
+
+    monkeypatch.setattr(svc.openai_service, "openai_vector_store_status", _status)
     resp = svc.wait_until_indexed(
         VectorStoreWaitRequest(
             schema_version="1.0",
@@ -96,12 +121,27 @@ def test_wait_until_indexed_success(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_wait_until_indexed_timeout(monkeypatch: pytest.MonkeyPatch):
-    client = _mock_client()
-    client.vector_stores.retrieve.side_effect = [
-        {"status": "in_progress"},
-        {"status": "in_progress"},
-    ]
-    _install_openai_client(monkeypatch, client)
+    _install_api_key(monkeypatch)
+    statuses = iter(
+        [
+            OpenAIVectorStoreStatusResponse(
+                schema_version="1.0",
+                vector_store_id="vs_123",
+                status="in_progress",
+                indexed_at_utc=None,
+                last_error=None,
+            ),
+            OpenAIVectorStoreStatusResponse(
+                schema_version="1.0",
+                vector_store_id="vs_123",
+                status="in_progress",
+                indexed_at_utc=None,
+                last_error=None,
+            ),
+        ]
+    )
+
+    monkeypatch.setattr(svc.openai_service, "openai_vector_store_status", lambda req, ctx: next(statuses))
     tick = iter([0.0, 0.1, 0.2, 1.1])
     monkeypatch.setattr(svc.time, "time", lambda: next(tick))
     monkeypatch.setattr(svc.time, "sleep", lambda _seconds: None)

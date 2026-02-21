@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from src.contracts.report_models import ReportPayload
 
@@ -65,6 +65,8 @@ class OpenAIResponseResult:
     output_tokens: Optional[int] = field(default=None, metadata={"doc": "Provider output token count, if available."})
     tool_calls: Optional[int] = field(default=None, metadata={"doc": "Number of tool calls billed, if available."})
     model: str = field(default="", metadata={"doc": "Model ID used."})
+    total_tokens: Optional[int] = field(default=None, metadata={"doc": "Provider total token count, if available."})
+    request_id: Optional[str] = field(default=None, metadata={"doc": "Provider request ID, if available."})
 
 
 @dataclass(frozen=True)
@@ -96,3 +98,81 @@ class OpenAIJSONImagePromptRequest:
     cost_ledger_path: str = field(default="./out/cost-ledger.jsonl", metadata={"doc": "Filesystem path for the cost ledger JSONL output."})
     cost_daily_path: str = field(default="./out/cost-daily.json", metadata={"doc": "Filesystem path for daily cost rollups."})
     model_pricing: dict = field(default_factory=dict, metadata={"doc": "Per-model pricing table for cost estimation."})
+
+
+@dataclass(frozen=True)
+class OpenAIVectorStoreCreateRequest:
+    schema_version: str = field(metadata={"doc": "OpenAI vector store create request schema version."})
+    api_key: str = field(metadata={"doc": "OpenAI API key (secret, loaded from env)."})
+    name: str = field(metadata={"doc": "Human-readable vector store name."})
+    metadata: Dict[str, str] = field(default_factory=dict, metadata={"doc": "Metadata map stored on the vector store."})
+    timeout_seconds: Optional[float] = field(default=None, metadata={"doc": "Request timeout in seconds, if set."})
+
+
+@dataclass(frozen=True)
+class OpenAIVectorStoreCreateResponse:
+    schema_version: str = field(metadata={"doc": "OpenAI vector store create response schema version."})
+    vector_store_id: str = field(metadata={"doc": "Created vector store ID."})
+
+
+@dataclass(frozen=True)
+class OpenAIVectorStoreFileUploadRequest:
+    schema_version: str = field(metadata={"doc": "OpenAI file upload request schema version."})
+    api_key: str = field(metadata={"doc": "OpenAI API key (secret, loaded from env)."})
+    file_path: str = field(metadata={"doc": "Filesystem path to the file that should be uploaded."})
+    purpose: str = field(default="assistants", metadata={"doc": "OpenAI file purpose parameter."})
+    timeout_seconds: Optional[float] = field(default=None, metadata={"doc": "Request timeout in seconds, if set."})
+
+
+@dataclass(frozen=True)
+class OpenAIVectorStoreFileUploadResponse:
+    schema_version: str = field(metadata={"doc": "OpenAI file upload response schema version."})
+    openai_file_id: str = field(metadata={"doc": "Uploaded OpenAI file ID."})
+
+
+@dataclass(frozen=True)
+class OpenAIVectorStoreAttachFileRequest:
+    schema_version: str = field(metadata={"doc": "OpenAI vector store attach file request schema version."})
+    api_key: str = field(metadata={"doc": "OpenAI API key (secret, loaded from env)."})
+    vector_store_id: str = field(metadata={"doc": "Target vector store identifier."})
+    openai_file_id: str = field(metadata={"doc": "OpenAI file identifier to attach."})
+    timeout_seconds: Optional[float] = field(default=None, metadata={"doc": "Request timeout in seconds, if set."})
+
+
+@dataclass(frozen=True)
+class OpenAIVectorStoreAttachFileResponse:
+    schema_version: str = field(metadata={"doc": "OpenAI vector store attach file response schema version."})
+    vector_store_id: str = field(metadata={"doc": "Target vector store identifier."})
+    openai_file_id: str = field(metadata={"doc": "OpenAI file identifier that is now attached."})
+
+
+@dataclass(frozen=True)
+class OpenAIVectorStoreStatusRequest:
+    schema_version: str = field(metadata={"doc": "OpenAI vector store status request schema version."})
+    api_key: str = field(metadata={"doc": "OpenAI API key (secret, loaded from env)."})
+    vector_store_id: str = field(metadata={"doc": "Vector store identifier."})
+    timeout_seconds: Optional[float] = field(default=None, metadata={"doc": "Request timeout in seconds, if set."})
+
+
+@dataclass(frozen=True)
+class OpenAIVectorStoreStatusResponse:
+    schema_version: str = field(metadata={"doc": "OpenAI vector store status response schema version."})
+    vector_store_id: str = field(metadata={"doc": "Vector store identifier."})
+    status: str = field(metadata={"doc": "Provider status for the vector store."})
+    indexed_at_utc: Optional[str] = field(default=None, metadata={"doc": "Provider timestamp for creation/indexing, if available."})
+    last_error: Optional[str] = field(default=None, metadata={"doc": "Provider error text, if available."})
+
+
+@dataclass(frozen=True)
+class OpenAIVectorStoreUpdateMetadataRequest:
+    schema_version: str = field(metadata={"doc": "OpenAI vector store metadata update request schema version."})
+    api_key: str = field(metadata={"doc": "OpenAI API key (secret, loaded from env)."})
+    vector_store_id: str = field(metadata={"doc": "Vector store identifier to update."})
+    metadata: Dict[str, str] = field(default_factory=dict, metadata={"doc": "Metadata map that replaces/updates provider metadata."})
+    timeout_seconds: Optional[float] = field(default=None, metadata={"doc": "Request timeout in seconds, if set."})
+
+
+@dataclass(frozen=True)
+class OpenAIVectorStoreUpdateMetadataResponse:
+    schema_version: str = field(metadata={"doc": "OpenAI vector store metadata update response schema version."})
+    vector_store_id: str = field(metadata={"doc": "Updated vector store identifier."})

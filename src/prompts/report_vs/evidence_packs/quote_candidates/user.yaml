@@ -1,2 +1,5 @@
 text: |
-  Return JSON with quote_candidates array; adhere to EvidencePack schema.
+  Extract strong quote candidates from the report with file_search.
+  Prefer statements that are specific, attributable, and reusable in summaries.
+  Output only a JSON object with one top-level key: "quote_candidates".
+  Each item must include: text, source, page.

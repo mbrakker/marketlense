@@ -59,3 +59,33 @@ def test_validate_schema_rejects_invalid_union_type():
             _ctx(),
         )
     assert exc.value.code == "schema_type_mismatch"
+
+
+def test_validate_schema_allows_string_variant_in_object_union():
+    payload = {
+        "scope": "Report scope text",
+        "methods": [],
+        "findings": [],
+        "limitations": [],
+        "quote_candidates": [],
+    }
+    validate_schema(
+        SchemaValidateRequest(schema_version="1.0", payload=payload, schema_name="evidence_pack"),
+        _ctx(),
+    )
+
+
+def test_validate_schema_enforces_one_of_for_methods_items():
+    payload = {
+        "scope": "",
+        "methods": [42],
+        "findings": [],
+        "limitations": [],
+        "quote_candidates": [],
+    }
+    with pytest.raises(AppError) as exc:
+        validate_schema(
+            SchemaValidateRequest(schema_version="1.0", payload=payload, schema_name="evidence_pack"),
+            _ctx(),
+        )
+    assert exc.value.code == "schema_type_mismatch"

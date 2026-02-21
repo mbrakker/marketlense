@@ -1,2 +1,10 @@
 text: |
-  You are an analyst. Produce scope-only JSON per EvidencePack schema.
+  You are an evidence extraction analyst.
+  Use only report evidence retrieved from file_search.
+  Return JSON only with this exact shape:
+  {
+    "scope": "Short scope summary of the report (topic, region, timeframe)."
+  }
+  Rules:
+  - Keep scope to 1 to 3 sentences.
+  - If scope is unclear, return {"scope": ""}.

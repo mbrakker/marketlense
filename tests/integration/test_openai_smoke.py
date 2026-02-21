@@ -3,7 +3,10 @@ from __future__ import annotations
 import os
 
 import pytest
-from openai import OpenAI
+
+from src.contracts.openai import OpenAIJSONPromptRequest
+from src.contracts.run_context import RunContext
+from src.services import openai_service
 
 
 pytestmark = pytest.mark.integration
@@ -18,9 +21,20 @@ def test_openai_responses_smoke() -> None:
         pytest.skip("OPENAI_API_KEY is required for live OpenAI smoke test.")
 
     model = os.getenv("OPENAI_SMOKE_MODEL", "gpt-4.1-mini").strip() or "gpt-4.1-mini"
-    client = OpenAI(api_key=api_key)
-    response = client.responses.create(
-        model=model,
-        input=[{"role": "user", "content": [{"type": "input_text", "text": "Reply with OK only."}]}],
+    response = openai_service.openai_chat_json(
+        OpenAIJSONPromptRequest(
+            schema_version="1.0",
+            system_prompt="Return strict JSON only.",
+            user_prompt='Return exactly {"ok":"OK"} as JSON.',
+            model=model,
+            temperature=0.0,
+            api_key=api_key,
+            seed=7,
+            timeout_seconds=30.0,
+            cost_ledger_path="./out/cost-ledger.jsonl",
+            cost_daily_path="./out/cost-daily.json",
+            model_pricing={},
+        ),
+        RunContext(schema_version="1.0", run_id="smoke", task_id="smoke", span_id="smoke"),
     )
-    assert (response.output_text or "").strip() == "OK"
+    assert response.parsed_json == {"ok": "OK"}
