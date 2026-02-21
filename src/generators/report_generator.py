@@ -86,6 +86,7 @@ from src.utils.logging import child_context, log_event
 from src.utils.validation import validate_candidate
 from src.utils.errors import AppError
 from src.utils.model_resolver import resolve_model
+from src.utils.coercion import coerce_float, coerce_int
 from src.utils.cache_utils import sha256_json
 
 logger = logging.getLogger("market_lense.report_generator")
@@ -130,23 +131,9 @@ def _select_sample_pages(file_id: str, md5: Optional[str], page_count: int, samp
     return sorted(rng.sample(range(page_count), count))
 
 
-def _to_float(value: Any, default: float = 0.0) -> float:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return default
-
-
-def _to_int(value: Any, default: int = 0) -> int:
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return default
-
-
 def _candidate_meta(candidate: Candidate, key: str, default: float = 0.0) -> float:
     meta = candidate.meta if isinstance(candidate.meta, dict) else {}
-    return _to_float(meta.get(key), default)
+    return coerce_float(meta.get(key), default)
 
 
 def _candidate_prefilter_reject_reason(candidate: Candidate) -> str:
@@ -154,8 +141,8 @@ def _candidate_prefilter_reject_reason(candidate: Candidate) -> str:
     if area <= 0.0:
         return "missing_area"
     if candidate.kind == "table":
-        rows = _to_int((candidate.meta or {}).get("rows"), 0)
-        cols = _to_int((candidate.meta or {}).get("cols"), 0)
+        rows = coerce_int((candidate.meta or {}).get("rows"), 0)
+        cols = coerce_int((candidate.meta or {}).get("cols"), 0)
         numeric_ratio = _candidate_meta(candidate, "numeric_ratio", 0.0)
         if rows < 2 or cols < 2:
             return "table_low_structure"
@@ -177,8 +164,8 @@ def _candidate_prefilter_reject_reason(candidate: Candidate) -> str:
 def _candidate_prefilter_priority(candidate: Candidate) -> float:
     area = _candidate_meta(candidate, "area_frac", 0.0)
     if candidate.kind == "table":
-        rows = _to_int((candidate.meta or {}).get("rows"), 0)
-        cols = _to_int((candidate.meta or {}).get("cols"), 0)
+        rows = coerce_int((candidate.meta or {}).get("rows"), 0)
+        cols = coerce_int((candidate.meta or {}).get("cols"), 0)
         numeric_ratio = _candidate_meta(candidate, "numeric_ratio", 0.0)
         return area * 100.0 + rows * 2.5 + cols * 1.5 + numeric_ratio * 50.0
     caption_bonus = 12.0 if (candidate.caption or "").strip() else 0.0
@@ -191,8 +178,8 @@ def _candidate_is_obvious_reject(candidate: Candidate) -> tuple[bool, str]:
     if reason:
         return True, reason
     if candidate.kind == "table":
-        rows = _to_int((candidate.meta or {}).get("rows"), 0)
-        cols = _to_int((candidate.meta or {}).get("cols"), 0)
+        rows = coerce_int((candidate.meta or {}).get("rows"), 0)
+        cols = coerce_int((candidate.meta or {}).get("cols"), 0)
         numeric_ratio = _candidate_meta(candidate, "numeric_ratio", 0.0)
         if rows < 3 and cols < 3 and numeric_ratio < 0.1:
             return True, "table_ambiguous_low_data"
@@ -206,8 +193,8 @@ def _candidate_is_obvious_reject(candidate: Candidate) -> tuple[bool, str]:
 
 def _candidate_is_obvious_pass(candidate: Candidate) -> bool:
     if candidate.kind == "table":
-        rows = _to_int((candidate.meta or {}).get("rows"), 0)
-        cols = _to_int((candidate.meta or {}).get("cols"), 0)
+        rows = coerce_int((candidate.meta or {}).get("rows"), 0)
+        cols = coerce_int((candidate.meta or {}).get("cols"), 0)
         numeric_ratio = _candidate_meta(candidate, "numeric_ratio", 0.0)
         area = _candidate_meta(candidate, "area_frac", 0.0)
         return rows >= 4 and cols >= 3 and numeric_ratio >= 0.15 and area >= 0.05
@@ -220,10 +207,10 @@ def _candidate_is_obvious_pass(candidate: Candidate) -> bool:
 def _rank_threshold_pass(row, settings: IngestSettings) -> tuple[bool, str]:
     if not bool(getattr(row, "keep", True)):
         return False, str(getattr(row, "reject_reason", "") or "model_reject")
-    score = _to_int(getattr(row, "score", 0), 0)
-    quality = _to_int(getattr(row, "quality_score", score), score)
-    insight = _to_int(getattr(row, "insight_score", score), score)
-    data_score = _to_int(getattr(row, "data_score", score), score)
+    score = coerce_int(getattr(row, "score", 0), 0)
+    quality = coerce_int(getattr(row, "quality_score", score), score)
+    insight = coerce_int(getattr(row, "insight_score", score), score)
+    data_score = coerce_int(getattr(row, "data_score", score), score)
     if score < int(settings.rank_min_overall_score):
         return False, "overall_below_threshold"
     if quality < int(settings.rank_min_quality_score):
@@ -374,7 +361,7 @@ def _merge_rank_usage(usage_rows: list[dict[str, Optional[int]]]) -> dict[str, O
 
 
 def _crop_refine_parallel_workers(settings: IngestSettings, selected_max: int) -> int:
-    configured = _to_int(getattr(settings, "report_worker_limit", 1), 1)
+    configured = coerce_int(getattr(settings, "report_worker_limit", 1), 1)
     if configured < 1:
         configured = 1
     # Keep this bounded to avoid uncontrolled cost bursts on ambiguous pages.

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import itertools
+
 import pytest
 
 from src.contracts.openai import (
@@ -142,7 +144,7 @@ def test_wait_until_indexed_timeout(monkeypatch: pytest.MonkeyPatch):
     )
 
     monkeypatch.setattr(svc.openai_service, "openai_vector_store_status", lambda req, ctx: next(statuses))
-    tick = iter([0.0, 0.1, 0.2, 1.1])
+    tick = itertools.chain([0.0, 0.1, 0.2, 1.1], itertools.repeat(1.1))
     monkeypatch.setattr(svc.time, "time", lambda: next(tick))
     monkeypatch.setattr(svc.time, "sleep", lambda _seconds: None)
     with pytest.raises(AppError) as exc:

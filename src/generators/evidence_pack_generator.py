@@ -20,24 +20,15 @@ from src.utils.logging import child_context, log_event, new_run_context
 from src.services.schema_validator_service import validate_schema
 from src.utils.errors import AppError
 from src.utils.model_resolver import resolve_model
+from src.utils.coercion import coerce_int
 from src.utils.cache_utils import sha256_json
 from src.utils.slugify import slugify
 
 logger = logging.getLogger("market_lense.evidence_pack_generator")
 
 
-def _safe_int(value: object, default: int, *, min_value: int = 0) -> int:
-    try:
-        parsed = int(value)
-    except (TypeError, ValueError):
-        parsed = default
-    if parsed < min_value:
-        return min_value
-    return parsed
-
-
 def _pack_parallel_workers(settings: AppSettings, step_count: int) -> int:
-    configured = _safe_int(getattr(settings, "evidence_pack_parallel_workers", 3), 3, min_value=1)
+    configured = coerce_int(getattr(settings, "evidence_pack_parallel_workers", 3), 3, min_value=1)
     return max(1, min(configured, step_count))
 
 

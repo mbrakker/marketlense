@@ -18,6 +18,7 @@ from src.contracts.report_store import (
     ReportMetadataUpsertRequest,
 )
 from src.contracts.run_context import RunContext
+from src.utils.coercion import clean_string_list
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.time_period import normalize_time_period
@@ -105,10 +106,6 @@ def _metadata_conn(path: str):
             conn.close()
 
 
-def _clean_list(values: List[str]) -> List[str]:
-    return [v.strip() for v in values if isinstance(v, str) and v.strip()]
-
-
 def _clean_metadata(metadata: dict[str, str]) -> dict[str, str]:
     if not metadata:
         return {}
@@ -149,7 +146,7 @@ def _row_to_metadata_response(row: tuple, ctx: RunContext) -> ReportMetadataGetR
     try:
         parsed = json.loads(taxonomy_json)
         if isinstance(parsed, list):
-            taxonomy = _clean_list([str(item) for item in parsed])
+            taxonomy = clean_string_list([str(item) for item in parsed])
     except json.JSONDecodeError:
         logger.info(log_event(
             ctx,
@@ -161,7 +158,7 @@ def _row_to_metadata_response(row: tuple, ctx: RunContext) -> ReportMetadataGetR
     try:
         parsed_cats = json.loads(categories_json)
         if isinstance(parsed_cats, list):
-            categories = _clean_list([str(item) for item in parsed_cats])
+            categories = clean_string_list([str(item) for item in parsed_cats])
     except json.JSONDecodeError:
         logger.info(log_event(
             ctx,
@@ -387,9 +384,9 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
     md5 = request.md5.strip() if request.md5 and request.md5.strip() else None
     page_count = request.page_count if isinstance(request.page_count, int) and request.page_count >= 0 else None
     contents_page = request.contents_page_number if isinstance(request.contents_page_number, int) and request.contents_page_number >= 0 else 0
-    taxonomy = _clean_list(request.taxonomy)
+    taxonomy = clean_string_list(request.taxonomy)
     taxonomy_json = json.dumps(taxonomy, ensure_ascii=True)
-    categories = _clean_list(request.categories)
+    categories = clean_string_list(request.categories)
     categories_json = json.dumps(categories, ensure_ascii=True)
     region = request.region.strip() if request.region and request.region.strip() else None
     raw_time_period = request.time_period.strip() if request.time_period and request.time_period.strip() else None

@@ -111,3 +111,33 @@ def run_with_retry(
             ))
             sleep_fn(_retry_delay_seconds(policy, attempt))
             attempt += 1
+
+
+def run_step_with_default_policy(
+    *,
+    step_name: str,
+    operation: Callable[[], T],
+    ctx: RunContext,
+    logger: logging.Logger,
+    module_name: str,
+    retries: int,
+    include_error_text: bool = False,
+    sleep_fn: SleepFn = time.sleep,
+) -> T:
+    return run_with_retry(
+        step_name=step_name,
+        operation=operation,
+        ctx=ctx,
+        logger=logger,
+        module_name=module_name,
+        policy=RetryPolicy(retries=retries, base_delay_seconds=1.0, backoff_step_seconds=1.0, jitter_seconds=0.25),
+        retry_event="step_retry",
+        retry_fields_builder=lambda exc, attempt: {
+            "step": step_name,
+            "attempt": attempt + 1,
+            "code": exc.code if isinstance(exc, AppError) else "",
+            **({"error": str(exc)} if include_error_text else {}),
+        },
+        is_retryable=lambda exc: isinstance(exc, AppError) and exc.retryable,
+        sleep_fn=sleep_fn,
+    )

@@ -29,6 +29,7 @@ from src.contracts.vector_store import (
     VectorStoreWaitRequest,
 )
 from src.services import openai_service
+from src.utils.coercion import clean_string_list
 from src.utils.errors import AppError
 from src.utils.logging import log_event, new_run_context
 
@@ -86,26 +87,11 @@ def _require_response_id(value: str, *, code: str, message: str) -> str:
     return resolved
 
 
-def _clean_list(values: list[str]) -> list[str]:
-    cleaned = []
-    seen = set()
-    for item in values or []:
-        item_s = str(item or "").strip()
-        if not item_s:
-            continue
-        key = item_s.lower()
-        if key in seen:
-            continue
-        seen.add(key)
-        cleaned.append(item_s)
-    return cleaned
-
-
 def _serialize_metadata(metadata: VectorStoreMetadata) -> Dict[str, str]:
     report_id = _require_non_empty(metadata.report_id, "metadata.report_id")
     report_name = _require_non_empty(metadata.report_name, "metadata.report_name")
-    taxonomy = _clean_list(metadata.taxonomy)
-    categories = _clean_list(metadata.categories)
+    taxonomy = clean_string_list(metadata.taxonomy or [], dedupe_casefold=True)
+    categories = clean_string_list(metadata.categories or [], dedupe_casefold=True)
     payload = {
         "schema_version": str(metadata.schema_version or "1.0").strip() or "1.0",
         "report_id": report_id,

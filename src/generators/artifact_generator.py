@@ -17,6 +17,7 @@ from src.services import file_service, openai_service, prompt_service, report_an
 from src.utils.errors import AppError
 from src.utils.model_resolver import resolve_model
 from src.utils.logging import child_context, log_event, new_run_context
+from src.utils.coercion import coerce_int
 from src.services.schema_validator_service import validate_schema
 from src.utils.cache_utils import sha256_json
 
@@ -29,18 +30,8 @@ INLINE_REFERENCE_GROUP_RE = re.compile(
 )
 
 
-def _safe_int(value: object, default: int, *, min_value: int = 0) -> int:
-    try:
-        parsed = int(value)
-    except (TypeError, ValueError):
-        parsed = default
-    if parsed < min_value:
-        return min_value
-    return parsed
-
-
 def _artifact_parallel_workers(settings: AppSettings, step_count: int) -> int:
-    configured = _safe_int(getattr(settings, "artifact_parallel_workers", 4), 4, min_value=1)
+    configured = coerce_int(getattr(settings, "artifact_parallel_workers", 4), 4, min_value=1)
     return max(1, min(configured, step_count))
 
 

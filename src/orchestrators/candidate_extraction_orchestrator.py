@@ -15,7 +15,7 @@ from src.generators.candidate_extraction_generator import generate_candidate_pac
 from src.services.drive_service import download_pdf, list_pdfs
 from src.services.file_service import file_exists, file_md5, write_bytes
 from src.services.pdf_service import check_pdf_eof
-from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
+from src.orchestrators.retry_orchestrator import run_step_with_default_policy
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.path_utils import safe_pdf_name
@@ -33,21 +33,14 @@ def _resolve_report_name(file: DriveFile, pdf_path: str | None = None) -> str:
 
 
 def _run_step_with_retry(step_name: str, ctx: RunContext, func, retries: int = 1):
-    return run_with_retry(
+    return run_step_with_default_policy(
         step_name=step_name,
         operation=func,
         ctx=ctx,
         logger=logger,
         module_name=logger.name,
-        policy=RetryPolicy(retries=retries, base_delay_seconds=1.0, backoff_step_seconds=1.0, jitter_seconds=0.25),
-        retry_event="step_retry",
-        retry_fields_builder=lambda exc, attempt: {
-            "step": step_name,
-            "attempt": attempt + 1,
-            "code": exc.code if isinstance(exc, AppError) else "",
-            "error": str(exc),
-        },
-        is_retryable=lambda exc: isinstance(exc, AppError) and exc.retryable,
+        retries=retries,
+        include_error_text=True,
         sleep_fn=time.sleep,
     )
 

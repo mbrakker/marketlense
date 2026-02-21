@@ -14,7 +14,6 @@ from src.contracts.wordpress import (
     WordPressPostCreateResponse,
     WordPressCategoryEnsureRequest,
     WordPressCategoryEnsureResponse,
-    WordPressCategoryTerm,
     WordPressPostLookupRequest,
     WordPressPostLookupResponse,
     WordPressPostUpdateRequest,
@@ -249,54 +248,64 @@ def find_post_by_file_id(request: WordPressPostLookupRequest, ctx: RunContext) -
     )
 
 
-def ensure_categories(request: WordPressCategoryEnsureRequest, ctx: RunContext) -> WordPressCategoryEnsureResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="wp_category_ensure_start",
-        module=logger.name,
-        fields={"count": len(request.categories)},
-    ))
-    base_url = f"{request.base_url.rstrip('/')}/wp-json/wp/v2/categories"
+def _ensure_terms(
+    *,
+    base_url: str,
+    auth_header: str,
+    terms: list[tuple[str, str]],
+    lookup_failed_code: str,
+    lookup_failed_message: str,
+    lookup_server_code: str,
+    lookup_server_prefix: str,
+    lookup_client_code: str,
+    lookup_client_prefix: str,
+    create_failed_code: str,
+    create_failed_message: str,
+    create_server_code: str,
+    create_server_prefix: str,
+    create_client_code: str,
+    create_client_prefix: str,
+    invalid_code: str,
+    invalid_message: str,
+) -> Dict[str, int]:
     slug_to_id: Dict[str, int] = {}
     headers = {
-        "Authorization": request.auth_header,
+        "Authorization": auth_header,
         "Content-Type": "application/json",
     }
-    for term in request.categories:
-        slug = term.slug
-        name = term.name or term.slug
+    for slug, name in terms:
         try:
-            resp = requests.get(base_url, headers={"Authorization": request.auth_header}, params={"slug": slug}, timeout=DEFAULT_TIMEOUT)
+            resp = requests.get(base_url, headers={"Authorization": auth_header}, params={"slug": slug}, timeout=DEFAULT_TIMEOUT)
         except requests.RequestException as exc:
             raise AppError(
-                code="wp_category_lookup_failed",
-                message="Failed to lookup WordPress category",
+                code=lookup_failed_code,
+                message=lookup_failed_message,
                 cause=exc,
                 retryable=True,
             ) from exc
 
         if resp.status_code >= 500:
             raise AppError(
-                code="wp_category_lookup_server_error",
-                message=f"Category lookup server error: {resp.status_code}",
+                code=lookup_server_code,
+                message=f"{lookup_server_prefix}: {resp.status_code}",
                 retryable=True,
             )
         if resp.status_code >= 400:
             raise AppError(
-                code="wp_category_lookup_client_error",
-                message=f"Category lookup client error: {resp.status_code}",
+                code=lookup_client_code,
+                message=f"{lookup_client_prefix}: {resp.status_code}",
                 retryable=False,
             )
 
-        cat_id: Optional[int] = None
+        term_id: Optional[int] = None
         try:
             payload = json.loads(resp.text)
         except Exception:
             payload = []
         if isinstance(payload, list) and payload:
-            cat_id = payload[0].get("id")
-        if not cat_id:
+            term_id = payload[0].get("id")
+
+        if not term_id:
             try:
                 create_resp = requests.post(
                     base_url,
@@ -306,33 +315,65 @@ def ensure_categories(request: WordPressCategoryEnsureRequest, ctx: RunContext) 
                 )
             except requests.RequestException as exc:
                 raise AppError(
-                    code="wp_category_create_failed",
-                    message="Failed to create WordPress category",
+                    code=create_failed_code,
+                    message=create_failed_message,
                     cause=exc,
                     retryable=True,
                 ) from exc
 
             if create_resp.status_code >= 500:
                 raise AppError(
-                    code="wp_category_create_server_error",
-                    message=f"Category create server error: {create_resp.status_code}",
+                    code=create_server_code,
+                    message=f"{create_server_prefix}: {create_resp.status_code}",
                     retryable=True,
                 )
             if create_resp.status_code >= 400:
                 raise AppError(
-                    code="wp_category_create_client_error",
-                    message=f"Category create client error: {create_resp.status_code}",
+                    code=create_client_code,
+                    message=f"{create_client_prefix}: {create_resp.status_code}",
                     retryable=False,
                 )
             data = _safe_json(create_resp.text)
-            cat_id = data.get("id")
-        if not cat_id:
+            term_id = data.get("id")
+
+        if not term_id:
             raise AppError(
-                code="wp_category_invalid_response",
-                message="Category ensure returned invalid response",
+                code=invalid_code,
+                message=invalid_message,
                 retryable=False,
             )
-        slug_to_id[slug] = int(cat_id)
+        slug_to_id[slug] = int(term_id)
+    return slug_to_id
+
+
+def ensure_categories(request: WordPressCategoryEnsureRequest, ctx: RunContext) -> WordPressCategoryEnsureResponse:
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="wp_category_ensure_start",
+        module=logger.name,
+        fields={"count": len(request.categories)},
+    ))
+    base_url = f"{request.base_url.rstrip('/')}/wp-json/wp/v2/categories"
+    slug_to_id = _ensure_terms(
+        base_url=base_url,
+        auth_header=request.auth_header,
+        terms=[(term.slug, term.name or term.slug) for term in request.categories],
+        lookup_failed_code="wp_category_lookup_failed",
+        lookup_failed_message="Failed to lookup WordPress category",
+        lookup_server_code="wp_category_lookup_server_error",
+        lookup_server_prefix="Category lookup server error",
+        lookup_client_code="wp_category_lookup_client_error",
+        lookup_client_prefix="Category lookup client error",
+        create_failed_code="wp_category_create_failed",
+        create_failed_message="Failed to create WordPress category",
+        create_server_code="wp_category_create_server_error",
+        create_server_prefix="Category create server error",
+        create_client_code="wp_category_create_client_error",
+        create_client_prefix="Category create client error",
+        invalid_code="wp_category_invalid_response",
+        invalid_message="Category ensure returned invalid response",
+    )
 
     logger.info(log_event(
         ctx,
@@ -353,76 +394,25 @@ def ensure_tags(request: WordPressTagEnsureRequest, ctx: RunContext) -> WordPres
         fields={"count": len(request.tags)},
     ))
     base_url = f"{request.base_url.rstrip('/')}/wp-json/wp/v2/tags"
-    slug_to_id: Dict[str, int] = {}
-    headers = {
-        "Authorization": request.auth_header,
-        "Content-Type": "application/json",
-    }
-    for slug in request.tags:
-        try:
-            resp = requests.get(base_url, headers={"Authorization": request.auth_header}, params={"slug": slug}, timeout=DEFAULT_TIMEOUT)
-        except requests.RequestException as exc:
-            raise AppError(
-                code="wp_tag_lookup_failed",
-                message="Failed to lookup WordPress tag",
-                cause=exc,
-                retryable=True,
-            ) from exc
-        if resp.status_code >= 500:
-            raise AppError(
-                code="wp_tag_lookup_server_error",
-                message=f"Tag lookup server error: {resp.status_code}",
-                retryable=True,
-            )
-        if resp.status_code >= 400:
-            raise AppError(
-                code="wp_tag_lookup_client_error",
-                message=f"Tag lookup client error: {resp.status_code}",
-                retryable=False,
-            )
-        tag_id: Optional[int] = None
-        try:
-            payload = json.loads(resp.text)
-        except Exception:
-            payload = []
-        if isinstance(payload, list) and payload:
-            tag_id = payload[0].get("id")
-        if not tag_id:
-            try:
-                create_resp = requests.post(
-                    base_url,
-                    headers=headers,
-                    data=json.dumps({"name": slug, "slug": slug}),
-                    timeout=DEFAULT_TIMEOUT,
-                )
-            except requests.RequestException as exc:
-                raise AppError(
-                    code="wp_tag_create_failed",
-                    message="Failed to create WordPress tag",
-                    cause=exc,
-                    retryable=True,
-                ) from exc
-            if create_resp.status_code >= 500:
-                raise AppError(
-                    code="wp_tag_create_server_error",
-                    message=f"Tag create server error: {create_resp.status_code}",
-                    retryable=True,
-                )
-            if create_resp.status_code >= 400:
-                raise AppError(
-                    code="wp_tag_create_client_error",
-                    message=f"Tag create client error: {create_resp.status_code}",
-                    retryable=False,
-                )
-            data = _safe_json(create_resp.text)
-            tag_id = data.get("id")
-        if not tag_id:
-            raise AppError(
-                code="wp_tag_invalid_response",
-                message="Tag ensure returned invalid response",
-                retryable=False,
-            )
-        slug_to_id[slug] = int(tag_id)
+    slug_to_id = _ensure_terms(
+        base_url=base_url,
+        auth_header=request.auth_header,
+        terms=[(slug, slug) for slug in request.tags],
+        lookup_failed_code="wp_tag_lookup_failed",
+        lookup_failed_message="Failed to lookup WordPress tag",
+        lookup_server_code="wp_tag_lookup_server_error",
+        lookup_server_prefix="Tag lookup server error",
+        lookup_client_code="wp_tag_lookup_client_error",
+        lookup_client_prefix="Tag lookup client error",
+        create_failed_code="wp_tag_create_failed",
+        create_failed_message="Failed to create WordPress tag",
+        create_server_code="wp_tag_create_server_error",
+        create_server_prefix="Tag create server error",
+        create_client_code="wp_tag_create_client_error",
+        create_client_prefix="Tag create client error",
+        invalid_code="wp_tag_invalid_response",
+        invalid_message="Tag ensure returned invalid response",
+    )
 
     logger.info(log_event(
         ctx,

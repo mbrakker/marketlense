@@ -16,17 +16,11 @@ from src.contracts.report_assets import (
 from src.contracts.report_models import RankedCandidate
 from src.contracts.run_context import RunContext
 from src.services.openai_service import openai_chat_json, openai_chat_json_with_images
+from src.utils.coercion import coerce_int
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.rank_service")
-
-
-def _to_int(value: Any, default: int = 0) -> int:
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return default
 
 
 def _to_bool(value: Any, default: bool = False) -> bool:
@@ -83,14 +77,14 @@ def _parse_rank_items(*, content: str, parsed_json: Any, model: str) -> list[dic
 
 def _to_ranked_candidate(item: dict[str, Any]) -> RankedCandidate | None:
     try:
-        score_value = _to_int(item.get("score"), 0)
+        score_value = coerce_int(item.get("score"), 0)
         return RankedCandidate(
             id=item.get("id", ""),
             type=item.get("type", ""),
             score=score_value,
-            quality_score=_to_int(item.get("quality_score"), score_value),
-            insight_score=_to_int(item.get("insight_score"), score_value),
-            data_score=_to_int(item.get("data_score"), score_value),
+            quality_score=coerce_int(item.get("quality_score"), score_value),
+            insight_score=coerce_int(item.get("insight_score"), score_value),
+            data_score=coerce_int(item.get("data_score"), score_value),
             keep=_to_bool(item.get("keep"), True),
             reject_reason=str(item.get("reject_reason") or ""),
         )

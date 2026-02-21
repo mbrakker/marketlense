@@ -15,6 +15,7 @@ from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
 from src.services import openai_service
 from src.utils.errors import AppError
 from src.utils.logging import log_event
+from src.utils.coercion import coerce_int
 
 logger = logging.getLogger("market_lense.report_pipeline_orchestrator")
 
@@ -30,16 +31,6 @@ class _GlobalOpenAIRateLimiter:
 
 _GLOBAL_OPENAI_LIMITERS_LOCK = threading.Lock()
 _GLOBAL_OPENAI_LIMITERS: dict[str, _GlobalOpenAIRateLimiter] = {}
-
-
-def _safe_int(value: object, default: int, *, min_value: int = 0) -> int:
-    try:
-        parsed = int(value)
-    except (TypeError, ValueError):
-        parsed = default
-    if parsed < min_value:
-        return min_value
-    return parsed
 
 
 def _get_openai_rate_limiter(scope: str, max_in_flight: int, min_interval_ms: int) -> _GlobalOpenAIRateLimiter:
@@ -191,12 +182,12 @@ def run_report_pipeline(
     openai_client_override=None,
 ) -> IngestOutcome:
     report_fn = generate_report_fn or generate_report_generator
-    evidence_max_in_flight = _safe_int(getattr(settings, "evidence_pack_global_max_in_flight", 2), 2, min_value=1)
-    evidence_min_interval_ms = _safe_int(getattr(settings, "evidence_pack_global_min_interval_ms", 250), 250, min_value=0)
-    artifact_max_in_flight = _safe_int(getattr(settings, "artifact_global_max_in_flight", 2), 2, min_value=1)
-    artifact_min_interval_ms = _safe_int(getattr(settings, "artifact_global_min_interval_ms", 250), 250, min_value=0)
-    doc_map_max_attempts = _safe_int(getattr(settings, "evidence_pack_doc_map_max_attempts", 3), 3, min_value=1)
-    doc_map_retry_delay_ms = _safe_int(getattr(settings, "evidence_pack_doc_map_retry_delay_ms", 500), 500, min_value=0)
+    evidence_max_in_flight = coerce_int(getattr(settings, "evidence_pack_global_max_in_flight", 2), 2, min_value=1)
+    evidence_min_interval_ms = coerce_int(getattr(settings, "evidence_pack_global_min_interval_ms", 250), 250, min_value=0)
+    artifact_max_in_flight = coerce_int(getattr(settings, "artifact_global_max_in_flight", 2), 2, min_value=1)
+    artifact_min_interval_ms = coerce_int(getattr(settings, "artifact_global_min_interval_ms", 250), 250, min_value=0)
+    doc_map_max_attempts = coerce_int(getattr(settings, "evidence_pack_doc_map_max_attempts", 3), 3, min_value=1)
+    doc_map_retry_delay_ms = coerce_int(getattr(settings, "evidence_pack_doc_map_retry_delay_ms", 500), 500, min_value=0)
     configured_retries = max(0, int(retries))
     base_delay_seconds = 1.0
     jitter_seconds = 0.25
