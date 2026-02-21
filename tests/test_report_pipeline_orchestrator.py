@@ -8,10 +8,13 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from types import SimpleNamespace
 
+import pytest
+
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.run_context import RunContext
 from src.orchestrators import report_pipeline_orchestrator as orch
+from src.orchestrators import retry_orchestrator as retry_orch
 from src.utils.errors import AppError
 
 
@@ -51,7 +54,10 @@ def _events(caplog) -> list[dict]:
     return parsed
 
 
-def test_run_report_pipeline_retries_retryable(monkeypatch) -> None:
+def test_run_report_pipeline_retries_retryable(
+    caplog, monkeypatch, assert_logs_have_required_fields
+) -> None:
+    caplog.set_level(logging.INFO, logger="market_lense.report_pipeline_orchestrator")
     file = DriveFile(schema_version="1.0", file_id="f1", name="a.pdf", modified_time=None, md5_checksum="md5")
     outcome = IngestOutcome(
         schema_version="1.0",
@@ -62,6 +68,7 @@ def test_run_report_pipeline_retries_retryable(monkeypatch) -> None:
         status="processed",
     )
     calls = {"count": 0}
+    sleep_calls: list[float] = []
 
     def _gen(file, local_pdf_path, settings, md5, ctx):
         calls["count"] += 1
@@ -69,7 +76,8 @@ def test_run_report_pipeline_retries_retryable(monkeypatch) -> None:
             raise AppError(code="openai_request_failed", message="retry", retryable=True)
         return outcome
 
-    monkeypatch.setattr(orch.time, "sleep", lambda _: None)
+    monkeypatch.setattr(retry_orch.random, "uniform", lambda _a, _b: 0.0)
+    monkeypatch.setattr(orch.time, "sleep", lambda seconds: sleep_calls.append(float(seconds)))
     response = orch.run_report_pipeline(
         file,
         local_pdf_path="./cache/a.pdf",
@@ -80,7 +88,86 @@ def test_run_report_pipeline_retries_retryable(monkeypatch) -> None:
         generate_report_fn=_gen,
     )
     assert calls["count"] == 3
+    assert sleep_calls == [1.0, 2.0]
     assert response.status == "processed"
+
+    events = _events(caplog)
+    retry_events = [event for event in events if event.get("event") == "report_pipeline_retry"]
+    complete_events = [event for event in events if event.get("event") == "report_pipeline_complete"]
+    start_events = [event for event in events if event.get("event") == "report_pipeline_start"]
+    transition_events = [event for event in events if event.get("event") == "report_pipeline_doc_map_retry_transition"]
+
+    assert len(start_events) == 1
+    assert len(retry_events) == 2
+    assert len(complete_events) == 1
+    assert len(transition_events) == 0
+    assert_logs_have_required_fields(start_events + retry_events + complete_events)
+
+    retry_fields = [event["fields"] for event in retry_events]
+    assert [fields["attempt"] for fields in retry_fields] == [1, 2]
+    assert all(fields["code"] == "openai_request_failed" for fields in retry_fields)
+
+    complete_fields = complete_events[0]["fields"]
+    assert complete_fields["attempt"] == 2
+    assert complete_fields["status"] == "processed"
+    assert complete_fields["retry_transition"] is False
+
+
+def test_run_report_pipeline_surfaces_retryable_error_after_retry_exhaustion(
+    caplog,
+    monkeypatch,
+    assert_app_error,
+    assert_logs_have_required_fields,
+) -> None:
+    caplog.set_level(logging.INFO, logger="market_lense.report_pipeline_orchestrator")
+    file = DriveFile(schema_version="1.0", file_id="f1", name="a.pdf", modified_time=None, md5_checksum="md5")
+    calls = {"count": 0}
+    sleep_calls: list[float] = []
+
+    def _gen(file, local_pdf_path, settings, md5, ctx):
+        calls["count"] += 1
+        raise AppError(code="openai_request_failed", message="retry", retryable=True)
+
+    monkeypatch.setattr(retry_orch.random, "uniform", lambda _a, _b: 0.0)
+    monkeypatch.setattr(orch.time, "sleep", lambda seconds: sleep_calls.append(float(seconds)))
+
+    with pytest.raises(AppError) as exc_info:
+        orch.run_report_pipeline(
+            file,
+            local_pdf_path="./cache/a.pdf",
+            settings=_settings(),
+            md5="md5",
+            ctx=_ctx(),
+            retries=1,
+            generate_report_fn=_gen,
+        )
+    assert_app_error(
+        exc_info.value,
+        code="openai_request_failed",
+        retryable=True,
+        severity="error",
+    )
+    assert calls["count"] == 2
+    assert sleep_calls == [1.0]
+
+    events = _events(caplog)
+    retry_events = [event for event in events if event.get("event") == "report_pipeline_retry"]
+    failure_events = [event for event in events if event.get("event") == "report_pipeline_failed"]
+    complete_events = [event for event in events if event.get("event") == "report_pipeline_complete"]
+
+    assert len(retry_events) == 1
+    assert len(failure_events) == 1
+    assert len(complete_events) == 0
+    assert_logs_have_required_fields(retry_events + failure_events)
+
+    retry_fields = retry_events[0]["fields"]
+    failure_fields = failure_events[0]["fields"]
+    assert retry_fields["attempt"] == 1
+    assert retry_fields["code"] == "openai_request_failed"
+    assert failure_fields["attempt"] == 1
+    assert failure_fields["code"] == "openai_request_failed"
+    assert failure_fields["retryable"] is True
+    assert failure_fields["error"] == "retry"
 
 
 def test_run_report_pipeline_retries_doc_map_transition_with_logs(caplog, monkeypatch) -> None:

@@ -152,6 +152,16 @@ class TextFallbackDocMapClient:
         )
 
 
+class RetryableErrorOpenAIClient:
+    def __init__(self, code="openai_request_failed"):
+        self.code = code
+        self.call_count = 0
+
+    def openai_respond_with_vector_store(self, req, ctx):
+        self.call_count += 1
+        raise AppError(code=self.code, message="retry", retryable=True)
+
+
 class FakeAnalysisStore:
     def __init__(self):
         self.stored = []
@@ -269,6 +279,32 @@ def test_generate_evidence_packs_handles_missing_json(tmp_path):
     assert stored_report_id == "r1"
     assert stored_pack == "doc_map"
     assert stored_payload["not_found_reason"] == "model_returned_no_json"
+
+
+def test_generate_evidence_packs_propagates_retryable_app_error(
+    tmp_path, assert_app_error
+):
+    fake_openai = RetryableErrorOpenAIClient()
+    analysis_store = FakeAnalysisStore()
+    with pytest.raises(AppError) as exc_info:
+        generate_evidence_packs(
+            report_id="r1",
+            report_name="report",
+            vector_store_id="vs_1",
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            openai_client=fake_openai,
+            prompt_client=FakePromptClient(),
+            analysis_store=analysis_store,
+        )
+    assert_app_error(
+        exc_info.value,
+        code="openai_request_failed",
+        retryable=True,
+        severity="error",
+    )
+    assert fake_openai.call_count == 1
+    assert len(analysis_store.stored) == 0
 
 
 def test_generate_evidence_packs_rejects_doc_map_with_only_doc_id(tmp_path):

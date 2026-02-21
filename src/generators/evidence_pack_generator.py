@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any, Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 from src.contracts.config import AppSettings
 from src.contracts.files import ReadTextRequest
@@ -620,9 +620,43 @@ def _generate_pack(
                         ctx,
                     )
             except AppError as exc:
+                if exc.retryable:
+                    logger.info(
+                        log_event(
+                            ctx,
+                            role="generator",
+                            event="evidence_pack_retryable_error_propagated",
+                            module=logger.name,
+                            fields={
+                                "report_id": report_id,
+                                "pack": pack_name,
+                                "code": exc.code,
+                                "message": exc.message,
+                                "source": "schema_validation",
+                            },
+                        )
+                    )
+                    raise
                 not_found_reason = f"schema_validation_failed:{exc.code}"
                 parsed_json = None
     except AppError as exc:
+        if exc.retryable:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="evidence_pack_retryable_error_propagated",
+                    module=logger.name,
+                    fields={
+                        "report_id": report_id,
+                        "pack": pack_name,
+                        "code": exc.code,
+                        "message": exc.message,
+                        "source": "model_call",
+                    },
+                )
+            )
+            raise
         if exc.code in {
             "openai_response_empty",
             "openai_response_invalid_json",
@@ -631,8 +665,6 @@ def _generate_pack(
             not_found_reason = "model_returned_no_json"
         else:
             not_found_reason = exc.code
-        if schema_name == "doc_map" and exc.retryable:
-            not_found_reason = f"retryable_error:{exc.code}"
         parsed_json = None
     result_payload = parsed_json or _empty_payload(pack_name, not_found_reason)
     if cache_meta and isinstance(result_payload, dict):
