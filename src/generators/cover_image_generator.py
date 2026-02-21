@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import List
 
 from src.contracts.cover_images import (
@@ -57,7 +56,8 @@ def _merge_style(defaults: CoverImageStyle, overrides) -> CoverImageStyle:
         category_label=overrides.category_label or defaults.category_label,
         font_regular_path=overrides.font_regular_path or defaults.font_regular_path,
         font_bold_path=overrides.font_bold_path or defaults.font_bold_path,
-        background_image_path=overrides.background_image_path or defaults.background_image_path,
+        background_image_path=overrides.background_image_path
+        or defaults.background_image_path,
     )
 
 
@@ -66,24 +66,36 @@ def _category_label(category: str) -> str:
 
 
 def _footer_label(time_period: str | None, region: str | None) -> str:
-    pieces = [str(piece).strip() for piece in (region, time_period) if piece and str(piece).strip()]
+    pieces = [
+        str(piece).strip()
+        for piece in (region, time_period)
+        if piece and str(piece).strip()
+    ]
     return " • ".join(pieces)
 
 
-def generate_cover_images(request: CoverImageGenerationRequest, ctx: RunContext) -> List[CoverImageGenerationOutcome]:
+def generate_cover_images(
+    request: CoverImageGenerationRequest, ctx: RunContext
+) -> List[CoverImageGenerationOutcome]:
     if not str(request.output_dir).strip():
-        raise AppError(code="cover_output_missing", message="Output directory is required", retryable=False)
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="cover_generate_start",
-        module=logger.name,
-        fields={
-            "report_count": len(request.reports),
-            "output_dir": request.output_dir,
-            "style_config_path": request.style_config_path,
-        },
-    ))
+        raise AppError(
+            code="cover_output_missing",
+            message="Output directory is required",
+            retryable=False,
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="cover_generate_start",
+            module=logger.name,
+            fields={
+                "report_count": len(request.reports),
+                "output_dir": request.output_dir,
+                "style_config_path": request.style_config_path,
+            },
+        )
+    )
     style_response = load_cover_styles(
         CoverStyleLoadRequest(schema_version="1.0", path=request.style_config_path),
         ctx,
@@ -99,62 +111,82 @@ def generate_cover_images(request: CoverImageGenerationRequest, ctx: RunContext)
             overrides = config.categories.get("default")
         overrides = overrides or CoverImageStyleOverrides(schema_version="1.0")
         style = _merge_style(config.defaults, overrides)
-        label_text = _category_label(normalized.categories[0]) if normalized.categories else ""
-        label_origin = "report.categories[0]" if normalized.categories else "report.categories[0] (empty)"
-        category_origin = "report.categories[0]" if normalized.categories else "report.categories (empty)"
+        label_text = (
+            _category_label(normalized.categories[0]) if normalized.categories else ""
+        )
+        label_origin = (
+            "report.categories[0]"
+            if normalized.categories
+            else "report.categories[0] (empty)"
+        )
+        category_origin = (
+            "report.categories[0]"
+            if normalized.categories
+            else "report.categories (empty)"
+        )
         footer_label = _footer_label(normalized.time_period, normalized.region)
 
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="cover_generate_resolve_style",
-            module=logger.name,
-            fields={
-                "file_id": normalized.file_id,
-                "category": style_category,
-                "label_text": label_text,
-            },
-        ))
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="cover_generate_text_sources",
-            module=logger.name,
-            fields={
-                "file_id": normalized.file_id,
-                "title": normalized.title,
-                "title_source": "CoverImageReport.title",
-                "publisher": normalized.publisher,
-                "publisher_source": "CoverImageReport.publisher",
-                "category": normalized.categories[0] if normalized.categories else "",
-                "category_source": category_origin,
-                "category_label": label_text,
-                "category_label_source": label_origin,
-                "time_period": normalized.time_period or "",
-                "time_period_source": "CoverImageReport.time_period",
-                "region": normalized.region or "",
-                "region_source": "CoverImageReport.region",
-                "footer_label": footer_label,
-            },
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="cover_generate_resolve_style",
+                module=logger.name,
+                fields={
+                    "file_id": normalized.file_id,
+                    "category": style_category,
+                    "label_text": label_text,
+                },
+            )
+        )
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="cover_generate_text_sources",
+                module=logger.name,
+                fields={
+                    "file_id": normalized.file_id,
+                    "title": normalized.title,
+                    "title_source": "CoverImageReport.title",
+                    "publisher": normalized.publisher,
+                    "publisher_source": "CoverImageReport.publisher",
+                    "category": normalized.categories[0]
+                    if normalized.categories
+                    else "",
+                    "category_source": category_origin,
+                    "category_label": label_text,
+                    "category_label_source": label_origin,
+                    "time_period": normalized.time_period or "",
+                    "time_period_source": "CoverImageReport.time_period",
+                    "region": normalized.region or "",
+                    "region_source": "CoverImageReport.region",
+                    "footer_label": footer_label,
+                },
+            )
+        )
 
         if not normalized.title:
             error = "Report title is required"
-            logger.info(log_event(
-                ctx,
-                role="generator",
-                event="cover_generate_validation_failed",
-                module=logger.name,
-                fields={"file_id": normalized.file_id, "error": error},
-            ))
-            outcomes.append(CoverImageGenerationOutcome(
-                schema_version="1.0",
-                file_id=normalized.file_id,
-                title=normalized.title,
-                output_path=None,
-                status="error",
-                error=error,
-            ))
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="cover_generate_validation_failed",
+                    module=logger.name,
+                    fields={"file_id": normalized.file_id, "error": error},
+                )
+            )
+            outcomes.append(
+                CoverImageGenerationOutcome(
+                    schema_version="1.0",
+                    file_id=normalized.file_id,
+                    title=normalized.title,
+                    output_path=None,
+                    status="error",
+                    error=error,
+                )
+            )
             continue
 
         output_path_obj = build_cover_asset_path(
@@ -164,7 +196,6 @@ def generate_cover_images(request: CoverImageGenerationRequest, ctx: RunContext)
             normalized.publisher,
             normalized.report_slug,
         )
-        output_path_obj.parent.mkdir(parents=True, exist_ok=True)
         output_path = str(output_path_obj)
 
         try:
@@ -182,37 +213,52 @@ def generate_cover_images(request: CoverImageGenerationRequest, ctx: RunContext)
                 ctx,
             )
         except AppError as exc:
-            logger.info(log_event(
-                ctx,
-                role="generator",
-                event="cover_generate_failed",
-                module=logger.name,
-                fields={"file_id": normalized.file_id, "error": exc.message, "code": exc.code},
-            ))
-            outcomes.append(CoverImageGenerationOutcome(
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="cover_generate_failed",
+                    module=logger.name,
+                    fields={
+                        "file_id": normalized.file_id,
+                        "error": exc.message,
+                        "code": exc.code,
+                    },
+                )
+            )
+            outcomes.append(
+                CoverImageGenerationOutcome(
+                    schema_version="1.0",
+                    file_id=normalized.file_id,
+                    title=normalized.title,
+                    output_path=None,
+                    status="error",
+                    error=exc.message,
+                )
+            )
+            continue
+
+        outcomes.append(
+            CoverImageGenerationOutcome(
                 schema_version="1.0",
                 file_id=normalized.file_id,
                 title=normalized.title,
-                output_path=None,
-                status="error",
-                error=exc.message,
-            ))
-            continue
+                output_path=output_path,
+                status="generated",
+                error=None,
+            )
+        )
 
-        outcomes.append(CoverImageGenerationOutcome(
-            schema_version="1.0",
-            file_id=normalized.file_id,
-            title=normalized.title,
-            output_path=output_path,
-            status="generated",
-            error=None,
-        ))
-
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="cover_generate_complete",
-        module=logger.name,
-        fields={"generated": len([o for o in outcomes if o.status == "generated"]), "total": len(outcomes)},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="cover_generate_complete",
+            module=logger.name,
+            fields={
+                "generated": len([o for o in outcomes if o.status == "generated"]),
+                "total": len(outcomes),
+            },
+        )
+    )
     return outcomes

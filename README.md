@@ -357,6 +357,7 @@ Test suites live under `tests/` (unit + contract + integration marker support):
 - `test_publish_orchestrator.py`: publish orchestration
 - `test_html_utils.py`: HTML parsing helpers
 - `test_artifact_generator.py`: artifact JSON generation/validation
+- `test_io_boundaries.py`: AST boundary gate that fails on direct filesystem/network I/O usage in `src/generators/*` and `src/utils/*`
 - `test_render_service_artifacts.py`: HTML sections for artifact rendering
 - `contracts/test_contract_roundtrip.py`: dataclass serialization/deserialization round-trip gate for `src/contracts/*`
 
@@ -386,7 +387,7 @@ CI gates (see `.github/workflows/ci.yml`):
 - `python scripts/ci/check_formatting.py` (format gate, `ruff format --check` over changed Python files under `src`, `tests`, `scripts`; skips when no Python files changed unless `FORMAT_PATHS` is set)
 - `python scripts/ci/run_type_check.py` (type gate, `mypy` over changed Python files under `src`, `tests`, `scripts/ci`; skips when no Python files changed unless `TYPECHECK_PATHS` is set)
 - `python scripts/ci/check_forbidden_patching.py` (fails on private-helper/dataclass-constructor patching patterns in tests)
-- `python -m pytest --cov=src --cov-report=xml --cov-report=term-missing` (default suite excludes integration tests)
+- `python -m pytest --cov=src --cov-report=xml --cov-report=term-missing` (default suite excludes integration tests and includes the direct-I/O boundary gate in `tests/test_io_boundaries.py`)
 - `python scripts/ci/check_coverage.py --coverage-xml coverage.xml` (global + per-critical-package thresholds)
 - `python scripts/ci/run_mutation_gate.py --json-out mutation_results.json` (mutation score gate for critical generators/services/orchestrators)
 - `python scripts/ci/check_quality_regression.py --baseline docs/quality/baseline_2026-02-21.json --coverage-xml coverage.xml --mutation-json mutation_results.json --docpack-root tests/fixtures/docpacks/golden` (baseline non-regression gate)
