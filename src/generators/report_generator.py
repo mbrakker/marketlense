@@ -1510,6 +1510,8 @@ def _resolve_taxonomy_and_categories(
     file: DriveFile,
     report_title: str,
     vector_store_id: Optional[str],
+    md5: Optional[str],
+    report_slug: str,
     settings: IngestSettings,
     mode_ctx: RunContext,
 ) -> _TaxonomyCategoryState:
@@ -1521,6 +1523,8 @@ def _resolve_taxonomy_and_categories(
             report_title=report_title,
             vector_store_id=vector_store_id or "",
             settings=settings,
+            md5=md5,
+            report_slug=report_slug,
         ),
         taxonomy_ctx,
     )
@@ -2369,6 +2373,8 @@ def generate_report(
                 file=file,
                 report_title=report_title,
                 vector_store_id=vector_store_id,
+                md5=md5,
+                report_slug=report_name,
                 settings=settings,
                 mode_ctx=mode_ctx,
             )
@@ -2402,6 +2408,8 @@ def generate_report(
             file=file,
             report_title=report_title,
             vector_store_id=vector_store_id,
+            md5=md5,
+            report_slug=report_name,
             settings=settings,
             mode_ctx=mode_ctx,
         )

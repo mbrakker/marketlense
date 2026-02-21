@@ -146,6 +146,18 @@ def generate_artifacts(
     safe_evidence = evidence_packs or {}
     has_density_input = isinstance(source_status, dict) and ("text_density" in source_status or "density_threshold" in source_status)
     availability = _normalize_source_status(source_status, settings, has_density=has_density_input, vector_store_id=vector_store_id)
+    artifact_use_vector_store = _resolve_artifact_vector_store_mode(settings=settings, vector_store_id=vector_store_id)
+    logger.info(log_event(
+        ctx,
+        role="generator",
+        event="artifact_vector_store_mode",
+        module=logger.name,
+        fields={
+            "enabled": artifact_use_vector_store,
+            "vector_store_id_present": bool(vector_store_id),
+            "setting_enabled": bool(getattr(settings, "artifacts_use_vector_store", False)),
+        },
+    ))
     if has_density_input and availability["density_threshold"] and availability["text_density"] < availability["density_threshold"]:
         availability["not_available"] = True
         availability["reason"] = availability["reason"] or "text_density_below_threshold"
@@ -159,6 +171,7 @@ def generate_artifacts(
             doc_map=safe_doc_map,
             evidence_packs=safe_evidence,
             availability=availability,
+            retrieval_mode=_artifact_retrieval_mode(artifact_use_vector_store),
             settings=settings,
             prompt_client=prompt_client,
             ctx=ctx,
@@ -263,7 +276,7 @@ def generate_artifacts(
                     ctx=step_ctx,
                     openai_client=openai_client,
                     prompt_client=prompt_client,
-                    allow_vector_store=bool(vector_store_id),
+                    allow_vector_store=artifact_use_vector_store,
                     vector_store_id=vector_store_id,
                 )
                 futures[future] = step_name
@@ -296,7 +309,7 @@ def generate_artifacts(
                 ctx=step_ctx,
                 openai_client=openai_client,
                 prompt_client=prompt_client,
-                allow_vector_store=bool(vector_store_id),
+                allow_vector_store=artifact_use_vector_store,
                 vector_store_id=vector_store_id,
             )
 
@@ -324,7 +337,7 @@ def generate_artifacts(
         ctx=insights_final_ctx,
         openai_client=openai_client,
         prompt_client=prompt_client,
-        allow_vector_store=bool(vector_store_id),
+        allow_vector_store=artifact_use_vector_store,
         vector_store_id=vector_store_id,
     )
     insights_final = _pad_insights(_normalize_insights(insights_final_result.get("insights_final"), prefix="insight"), insights_candidates)
@@ -351,7 +364,7 @@ def generate_artifacts(
                 ctx=expert_ctx,
                 openai_client=openai_client,
                 prompt_client=prompt_client,
-                allow_vector_store=bool(vector_store_id),
+                allow_vector_store=artifact_use_vector_store,
                 vector_store_id=vector_store_id,
             )
             linkedin_future = executor.submit(
@@ -362,7 +375,7 @@ def generate_artifacts(
                 ctx=linkedin_ctx,
                 openai_client=openai_client,
                 prompt_client=prompt_client,
-                allow_vector_store=bool(vector_store_id),
+                allow_vector_store=artifact_use_vector_store,
                 vector_store_id=vector_store_id,
             )
             expert_result = expert_future.result()
@@ -375,7 +388,7 @@ def generate_artifacts(
             ctx=expert_ctx,
             openai_client=openai_client,
             prompt_client=prompt_client,
-            allow_vector_store=bool(vector_store_id),
+            allow_vector_store=artifact_use_vector_store,
             vector_store_id=vector_store_id,
         )
         linkedin_result = _call_json_model(
@@ -385,7 +398,7 @@ def generate_artifacts(
             ctx=linkedin_ctx,
             openai_client=openai_client,
             prompt_client=prompt_client,
-            allow_vector_store=bool(vector_store_id),
+            allow_vector_store=artifact_use_vector_store,
             vector_store_id=vector_store_id,
         )
     expert_comment = _s(expert_result.get("expert_comment"))
@@ -681,6 +694,14 @@ def _normalize_source_status(
     return status
 
 
+def _resolve_artifact_vector_store_mode(*, settings: AppSettings, vector_store_id: Optional[str]) -> bool:
+    return bool(vector_store_id) and bool(getattr(settings, "artifacts_use_vector_store", False))
+
+
+def _artifact_retrieval_mode(use_vector_store: bool) -> str:
+    return "vector_store" if use_vector_store else "chat_json"
+
+
 def _has_evidence_content(doc_map: Dict[str, Any], evidence_packs: Dict[str, Any]) -> bool:
     if isinstance(doc_map, dict):
         sections = doc_map.get("sections")
@@ -702,6 +723,7 @@ def _artifact_cache_meta(
     doc_map: Dict[str, Any],
     evidence_packs: Dict[str, Any],
     availability: Dict[str, Any],
+    retrieval_mode: str,
     settings: AppSettings,
     prompt_client,
     ctx: RunContext,
@@ -735,6 +757,7 @@ def _artifact_cache_meta(
         "prompts": prompt_meta,
         "temperature": settings.temperature,
         "seed": settings.openai_seed,
+        "retrieval_mode": retrieval_mode,
     }
 
 

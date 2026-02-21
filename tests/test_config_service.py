@@ -73,6 +73,8 @@ class TestConfigService(unittest.TestCase):
         self.assertEqual("vector_store", settings.analysis_mode)
         self.assertTrue(settings.use_vector_store)
         self.assertTrue(settings.vector_store_keep)
+        self.assertFalse(settings.artifacts_use_vector_store)
+        self.assertFalse(settings.validation_grounding_use_vector_store)
         self.assertEqual("./out/cost-ledger.jsonl", settings.cost_ledger_path)
         self.assertIn("AI", settings.html_tag_acronyms)
         self.assertIn("ROI", settings.html_tag_acronyms)
@@ -109,6 +111,8 @@ class TestConfigService(unittest.TestCase):
                 "OPENAI_API_KEY": "key",
                 "ANALYSIS_MODE": "vector_store",
                 "VECTOR_STORE_KEEP": "false",
+                "ARTIFACTS_USE_VECTOR_STORE": "true",
+                "VALIDATION_GROUNDING_USE_VECTOR_STORE": "true",
                 "COST_LEDGER_PATH": f"{tmp_dir}/ledger.jsonl",
             }
             with patch.dict(os.environ, env, clear=True):
@@ -120,6 +124,8 @@ class TestConfigService(unittest.TestCase):
         self.assertEqual("vector_store", settings.analysis_mode)
         self.assertTrue(settings.use_vector_store)
         self.assertFalse(settings.vector_store_keep)
+        self.assertTrue(settings.artifacts_use_vector_store)
+        self.assertTrue(settings.validation_grounding_use_vector_store)
         self.assertEqual(f"{tmp_dir}/ledger.jsonl", settings.cost_ledger_path)
         self.assertEqual("./out/cost-daily.json", settings.cost_daily_path)
         self.assertIsInstance(settings.model_pricing, dict)

@@ -506,12 +506,26 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         return int(value)
 
     env_vector_store_keep = _env_value("VECTOR_STORE_KEEP")
+    env_artifacts_use_vector_store = _env_value("ARTIFACTS_USE_VECTOR_STORE")
+    env_validation_grounding_use_vector_store = _env_value("VALIDATION_GROUNDING_USE_VECTOR_STORE")
     env_cost_ledger_path = _env_value("COST_LEDGER_PATH")
     analysis_mode = "vector_store"
     use_vector_store = True
     analysis_compare = False
     vector_store_keep_raw = env_vector_store_keep if env_vector_store_keep else analysis_cfg.get("vector_store_keep")
     vector_store_keep = _as_bool(vector_store_keep_raw, default=True)
+    artifacts_use_vector_store_raw = (
+        env_artifacts_use_vector_store
+        if env_artifacts_use_vector_store
+        else analysis_cfg.get("artifacts_use_vector_store")
+    )
+    artifacts_use_vector_store = _as_bool(artifacts_use_vector_store_raw, default=False)
+    validation_grounding_use_vector_store_raw = (
+        env_validation_grounding_use_vector_store
+        if env_validation_grounding_use_vector_store
+        else analysis_cfg.get("validation_grounding_use_vector_store")
+    )
+    validation_grounding_use_vector_store = _as_bool(validation_grounding_use_vector_store_raw, default=False)
     cost_ledger_path = str(env_cost_ledger_path or analysis_cfg.get("cost_ledger_path") or "./out/cost-ledger.jsonl")
     cost_daily_path = str(cost_cfg.get("daily_path") or "./out/cost-daily.json")
     model_pricing = cost_cfg.get("pricing") or {}
@@ -586,6 +600,8 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         analysis_mode=analysis_mode,
         use_vector_store=use_vector_store,
         vector_store_keep=vector_store_keep,
+        artifacts_use_vector_store=artifacts_use_vector_store,
+        validation_grounding_use_vector_store=validation_grounding_use_vector_store,
         cover_cache_enabled=cover_cache_enabled,
         analysis_compare=analysis_compare,
         cost_ledger_path=cost_ledger_path,
@@ -672,6 +688,8 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             "analysis_mode": settings.analysis_mode,
             "use_vector_store": settings.use_vector_store,
             "vector_store_keep": settings.vector_store_keep,
+            "artifacts_use_vector_store": settings.artifacts_use_vector_store,
+            "validation_grounding_use_vector_store": settings.validation_grounding_use_vector_store,
             "cover_cache_enabled": settings.cover_cache_enabled,
             "analysis_compare": settings.analysis_compare,
             "cost_ledger_path": settings.cost_ledger_path,

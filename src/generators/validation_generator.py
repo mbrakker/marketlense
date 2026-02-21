@@ -129,6 +129,8 @@ def validate_report(
             "vector_store_id": request.vector_store_id or "",
         },
     ))
+    grounding_use_vector_store = _resolve_grounding_vector_store_mode(request=request, settings=settings)
+    grounding_retrieval_mode = _grounding_retrieval_mode(grounding_use_vector_store)
     cache_key = ""
     cache_meta = None
     if md5:
@@ -138,6 +140,7 @@ def validate_report(
             prompt_client=prompt_client,
             ctx=ctx,
             md5=md5,
+            grounding_retrieval_mode=grounding_retrieval_mode,
         )
         cache_key = sha256_json(cache_meta)
         cached = _load_cached_validation(
@@ -224,6 +227,7 @@ def validate_report(
                 _run_grounding_check,
                 request,
                 settings,
+                grounding_use_vector_store,
                 evidence_texts,
                 evidence_windows,
                 prompt_client,
@@ -293,6 +297,7 @@ def validate_report(
         grounding_issues = _run_grounding_check(
             request,
             settings,
+            grounding_use_vector_store,
             evidence_texts,
             evidence_windows,
             prompt_client,
@@ -711,6 +716,7 @@ def _run_semantic_validation(
 def _run_grounding_check(
     request: ValidationRequest,
     settings: AppSettings,
+    grounding_use_vector_store: bool,
     evidence_texts: Sequence[str],
     evidence_windows: Sequence[_EvidenceWindow],
     prompt_client,
@@ -765,7 +771,6 @@ def _run_grounding_check(
             "default_model": settings.openai_model,
         },
     ))
-    use_vector_store = bool(request.vector_store_id)
     logger.info(log_event(
         prompt_ctx,
         role="generator",
@@ -774,12 +779,15 @@ def _run_grounding_check(
         fields={
             "model": resolved_model,
             "temperature": settings.temperature,
-            "vector_store": use_vector_store,
+            "vector_store_id_present": bool(request.vector_store_id),
+            "setting_enabled": bool(getattr(settings, "validation_grounding_use_vector_store", False)),
+            "grounding_use_vector_store": grounding_use_vector_store,
+            "retrieval_mode": _grounding_retrieval_mode(grounding_use_vector_store),
             "seed": settings.openai_seed,
         },
     ))
     try:
-        if use_vector_store:
+        if grounding_use_vector_store:
             resp = openai_client.openai_respond_with_vector_store(
             OpenAIResponseRequest(
                 schema_version="1.0",
@@ -1814,6 +1822,14 @@ def _validation_parallel_workers(settings: AppSettings) -> int:
     return workers
 
 
+def _resolve_grounding_vector_store_mode(*, request: ValidationRequest, settings: AppSettings) -> bool:
+    return bool(request.vector_store_id) and bool(getattr(settings, "validation_grounding_use_vector_store", False))
+
+
+def _grounding_retrieval_mode(use_vector_store: bool) -> str:
+    return "vector_store" if use_vector_store else "chat_json"
+
+
 def _validation_cache_meta(
     *,
     request: ValidationRequest,
@@ -1821,6 +1837,7 @@ def _validation_cache_meta(
     prompt_client,
     ctx: RunContext,
     md5: str,
+    grounding_retrieval_mode: str,
 ) -> Dict[str, Any]:
     prompt_meta: Dict[str, Any] = {}
     namespaces = [
@@ -1849,6 +1866,7 @@ def _validation_cache_meta(
         "temperature": settings.temperature,
         "seed": settings.openai_seed,
         "use_vector_store": bool(request.vector_store_id),
+        "grounding_retrieval_mode": grounding_retrieval_mode,
     }
 
 

@@ -14,6 +14,8 @@ class TaxonomyExtractRequest:
     vector_store_id: str = field(metadata={"doc": "Vector store identifier to query for taxonomy extraction."})
     settings: AppSettings = field(metadata={"doc": "Resolved application settings for model configuration."})
     prompt_namespace: str = field(default="report_vs/taxonomy", metadata={"doc": "Prompt namespace for taxonomy extraction."})
+    md5: Optional[str] = field(default=None, metadata={"doc": "Report source MD5 used for taxonomy cache keys."})
+    report_slug: Optional[str] = field(default=None, metadata={"doc": "Report slug used to resolve taxonomy cache path."})
 
 
 @dataclass(frozen=True)

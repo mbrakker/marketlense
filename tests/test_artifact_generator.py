@@ -120,7 +120,12 @@ class FakeAnalysisStore:
         return str(path)
 
 
-def _settings(tmp_path):
+def _settings(
+    tmp_path,
+    *,
+    artifacts_use_vector_store: bool = False,
+    validation_grounding_use_vector_store: bool = False,
+):
     return AppSettings(
         schema_version="1.0",
         google_sa_path="sa.json",
@@ -155,6 +160,8 @@ def _settings(tmp_path):
         analysis_mode="vector_store",
         use_vector_store=True,
         vector_store_keep=True,
+        artifacts_use_vector_store=artifacts_use_vector_store,
+        validation_grounding_use_vector_store=validation_grounding_use_vector_store,
         cost_ledger_path=str(tmp_path / "cost-ledger.jsonl"),
         cost_daily_path=str(tmp_path / "cost-daily.json"),
         model_pricing={"gpt-4.1-mini": {"input_tokens_per_1k_usd": 0.003, "output_tokens_per_1k_usd": 0.006, "tool_call_usd": 0.0}},
@@ -223,7 +230,8 @@ def test_generate_artifacts_validates_schema_and_evidence_ids(tmp_path):
     )
     assert all(item["evidence_id"] for item in payload["insights_candidates"])
     assert all(item["evidence_id"] for item in payload["insights_final"])
-    assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 7
+    assert len([req for req in fake_openai.requests if req[0] == "chat"]) == 7
+    assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 0
     validate_schema(
         SchemaValidateRequest(schema_version="1.0", payload=payload, schema_name="artifacts"),
         _ctx(),
@@ -282,7 +290,7 @@ def test_generate_artifacts_ignores_low_text_when_vector_store(tmp_path):
         report_name="report",
         doc_map=_doc_map(),
         evidence_packs=_evidence_packs(),
-        settings=_settings(tmp_path),
+        settings=_settings(tmp_path, artifacts_use_vector_store=True),
         vector_store_id="vs_1",
         source_status=_low_text_status(),
         ctx=_ctx(),
@@ -320,7 +328,7 @@ def test_generate_artifacts_parallelizes_with_dependency_order(tmp_path):
         report_name="report",
         doc_map=_doc_map(),
         evidence_packs=_evidence_packs(),
-        settings=_settings(tmp_path),
+        settings=_settings(tmp_path, artifacts_use_vector_store=True),
         vector_store_id="vs_1",
         ctx=_ctx(),
         openai_client=fake_openai,
@@ -365,3 +373,79 @@ def test_generate_artifacts_strips_inline_reference_tokens_from_summary_and_link
     assert "(F-002 / IC-001)" not in payload["linkedin_post"]
     assert payload["summary"]["executive_summary"] == "Growth accelerated, especially in Q4."
     assert payload["linkedin_post"] == "Leader takeaway: invest in omnichannel."
+
+
+def test_generate_artifacts_uses_vector_path_when_flag_enabled(tmp_path):
+    responses = {
+        "toc": {"toc_topics": ["Topic 1"]},
+        "summary": {"summary": {"tldr": "TLDR", "executive_summary": "Exec", "claim_evidence_map": [{"claim": "Claim", "evidence_id": "f1", "evidence": "E", "pages": [1]}]}},
+        "insights_candidates": {"insights_candidates": [{"id": "c1", "text": "Insight", "evidence_id": "f1", "evidence": "E", "metric": {}, "pages": [1], "score": 0.9}]},
+        "insights_final": {"insights_final": [{"id": "f1", "text": "Final", "evidence_id": "f1", "evidence": "E", "metric": {}, "pages": [1]}]},
+        "quotes": {"quotes_final": [{"text": "Quote", "speaker": "Analyst", "citation": "", "page": 1, "evidence_id": "q1"}]},
+        "expert_comment": {"expert_comment": "Comment"},
+        "linkedin_post": {"linkedin_post": "Post"},
+    }
+    fake_openai = FakeOpenAI(responses)
+    generate_artifacts(
+        report_id="vector_enabled",
+        report_name="report",
+        doc_map=_doc_map(),
+        evidence_packs=_evidence_packs(),
+        settings=_settings(tmp_path, artifacts_use_vector_store=True),
+        vector_store_id="vs_1",
+        ctx=_ctx(),
+        openai_client=fake_openai,
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+    assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 7
+    assert len([req for req in fake_openai.requests if req[0] == "chat"]) == 0
+
+
+def test_artifact_cache_isolated_by_retrieval_mode(tmp_path):
+    responses = {
+        "toc": {"toc_topics": ["Topic"]},
+        "summary": {"summary": {"tldr": "TLDR", "executive_summary": "Exec", "claim_evidence_map": [{"claim": "Claim", "evidence_id": "f1", "evidence": "Support", "pages": [1]}]}},
+        "insights_candidates": {"insights_candidates": [{"id": "c1", "text": "Candidate 1", "evidence_id": "f1", "evidence": "Support", "metric": {}, "pages": [1], "score": 0.9}]},
+        "insights_final": {"insights_final": [{"id": "f1", "text": "Final", "evidence_id": "f1", "evidence": "Support", "metric": {}, "pages": [1]}]},
+        "quotes": {"quotes_final": [{"text": "Quote", "speaker": "Analyst", "citation": "", "page": 1, "evidence_id": "q1"}]},
+        "expert_comment": {"expert_comment": "Comment"},
+        "linkedin_post": {"linkedin_post": "Post"},
+    }
+    report_id = "cache_mode_report"
+    report_name = "cache mode report"
+    md5 = "md5-cache-mode"
+
+    chat_settings = _settings(tmp_path, artifacts_use_vector_store=False)
+    chat_openai = FakeOpenAI(responses)
+    generate_artifacts(
+        report_id=report_id,
+        report_name=report_name,
+        doc_map=_doc_map(),
+        evidence_packs=_evidence_packs(),
+        settings=chat_settings,
+        vector_store_id="vs_1",
+        ctx=_ctx(),
+        openai_client=chat_openai,
+        prompt_client=FakePromptClient(),
+        md5=md5,
+    )
+    assert len(chat_openai.requests) == 7
+    assert len([req for req in chat_openai.requests if req[0] == "chat"]) == 7
+
+    vector_settings = _settings(tmp_path, artifacts_use_vector_store=True)
+    vector_openai = FakeOpenAI(responses)
+    generate_artifacts(
+        report_id=report_id,
+        report_name=report_name,
+        doc_map=_doc_map(),
+        evidence_packs=_evidence_packs(),
+        settings=vector_settings,
+        vector_store_id="vs_1",
+        ctx=_ctx(),
+        openai_client=vector_openai,
+        prompt_client=FakePromptClient(),
+        md5=md5,
+    )
+    assert len(vector_openai.requests) == 7
+    assert len([req for req in vector_openai.requests if req[0] == "vector"]) == 7

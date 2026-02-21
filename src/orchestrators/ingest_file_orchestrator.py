@@ -249,6 +249,49 @@ def run_ingest_file(
 
         file = dependencies.ensure_file_name(file, settings, file_ctx)
         display_name = file.name or file.file_id
+        if not md5:
+            md5_stat = dependencies.file_stat(
+                FileStatRequest(schema_version="1.0", path=cache_path, compute_md5=True),
+                file_ctx,
+            )
+            if md5_stat.exists and md5_stat.md5:
+                md5 = md5_stat.md5
+                dependencies.write_md5_sidecar(
+                    sidecar_path,
+                    file,
+                    md5,
+                    md5_stat.size_bytes,
+                    md5_stat.mtime_utc,
+                    file_ctx,
+                )
+                logger.info(log_event(
+                    file_ctx,
+                    role="orchestrator",
+                    event="report_cache_md5_computed",
+                    module=logger_name,
+                    fields={"file_id": file.file_id, "md5": md5, "path": cache_path},
+                ))
+        cache_eligible = bool(md5) and bool(settings.vector_store_keep)
+        logger.info(log_event(
+            file_ctx,
+            role="orchestrator",
+            event="report_cache_prereq",
+            module=logger_name,
+            fields={
+                "file_id": file.file_id,
+                "md5_present": bool(md5),
+                "vector_store_keep": bool(settings.vector_store_keep),
+                "eligible": cache_eligible,
+            },
+        ))
+        if not settings.vector_store_keep:
+            logger.info(log_event(
+                file_ctx,
+                role="orchestrator",
+                event="report_cache_disabled_vector_store_keep_false",
+                module=logger_name,
+                fields={"file_id": file.file_id},
+            ))
 
         outcome = dependencies.run_step_with_retry(
             "generate_report",

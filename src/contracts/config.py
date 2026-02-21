@@ -77,6 +77,8 @@ class AppSettings:
     analysis_mode: str = field(default="vector_store", metadata={"doc": "Analysis mode to use: vector_store (default)."})
     use_vector_store: bool = field(default=True, metadata={"doc": "Always true; vector_store is the only supported analysis path."})
     vector_store_keep: bool = field(default=True, metadata={"doc": "Whether to keep the vector store cache after runs."})
+    artifacts_use_vector_store: bool = field(default=False, metadata={"doc": "Whether artifact generation model calls should use vector store retrieval."})
+    validation_grounding_use_vector_store: bool = field(default=False, metadata={"doc": "Whether validation grounding model calls should use vector store retrieval."})
     cover_cache_enabled: bool = field(default=True, metadata={"doc": "Whether to skip cover generation when cached output is up-to-date."})
     cost_ledger_path: str = field(default="./out/cost-ledger.jsonl", metadata={"doc": "Filesystem path for the cost ledger JSONL output."})
     cost_daily_path: str = field(default="./out/cost-daily.json", metadata={"doc": "Filesystem path for daily cost rollups JSON."})

@@ -73,7 +73,11 @@ class FakeAnalysisStore:
         return str(path)
 
 
-def _settings(tmp_path):
+def _settings(
+    tmp_path,
+    *,
+    validation_grounding_use_vector_store: bool = False,
+):
     return AppSettings(
         schema_version="1.0",
         google_sa_path="sa.json",
@@ -105,6 +109,7 @@ def _settings(tmp_path):
         analysis_mode="vector_store",
         use_vector_store=True,
         vector_store_keep=True,
+        validation_grounding_use_vector_store=validation_grounding_use_vector_store,
         cost_ledger_path=str(tmp_path / "cost-ledger.jsonl"),
         cost_daily_path=str(tmp_path / "cost-daily.json"),
         model_pricing={"gpt-4.1-mini": {"input_tokens_per_1k_usd": 0.003, "output_tokens_per_1k_usd": 0.006, "tool_call_usd": 0.0}},
@@ -571,3 +576,100 @@ def test_validation_issue_order_preserved_with_parallel_checks(tmp_path):
 
     assert idx_semantic_metric < idx_metric_exact < idx_quote_exact < idx_number < idx_grounding
     assert len([req for req in fake_openai.requests if req[0] == "chat"]) == 2
+
+
+def test_validation_grounding_uses_chat_path_when_flag_disabled(tmp_path):
+    settings = _settings(tmp_path, validation_grounding_use_vector_store=False)
+    fake_openai = FakeOpenAI(
+        semantic_payload={"metrics": [], "quotes": []},
+        grounding_payload={"unsupported": []},
+    )
+    validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="r-grounding-chat",
+            report=_report(),
+            artifacts={"insights_final": []},
+            evidence_packs={},
+            vector_store_id="vs_1",
+        ),
+        settings,
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=fake_openai,
+        analysis_store=FakeAnalysisStore(),
+    )
+    grounding_calls = [req for req in fake_openai.requests if req[2].endswith(":grounding")]
+    assert grounding_calls
+    assert grounding_calls[0][0] == "chat"
+
+
+def test_validation_grounding_uses_vector_path_when_flag_enabled(tmp_path):
+    settings = _settings(tmp_path, validation_grounding_use_vector_store=True)
+    fake_openai = FakeOpenAI(
+        semantic_payload={"metrics": [], "quotes": []},
+        grounding_payload={"unsupported": []},
+    )
+    validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="r-grounding-vector",
+            report=_report(),
+            artifacts={"insights_final": []},
+            evidence_packs={},
+            vector_store_id="vs_1",
+        ),
+        settings,
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=fake_openai,
+        analysis_store=FakeAnalysisStore(),
+    )
+    grounding_calls = [req for req in fake_openai.requests if req[2].endswith(":grounding")]
+    assert grounding_calls
+    assert grounding_calls[0][0] == "vector"
+
+
+def test_validation_cache_isolated_by_grounding_retrieval_mode(tmp_path):
+    artifacts = {"insights_final": []}
+    request = ValidationRequest(
+        schema_version="1.0",
+        report_id="r-cache-mode",
+        report=_report(),
+        artifacts=artifacts,
+        evidence_packs={},
+        vector_store_id="vs_1",
+    )
+    chat_openai = FakeOpenAI(
+        semantic_payload={"metrics": [], "quotes": []},
+        grounding_payload={"unsupported": []},
+    )
+    validate_report(
+        request,
+        _settings(tmp_path, validation_grounding_use_vector_store=False),
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=chat_openai,
+        md5="md5-cache-mode",
+        report_name="cache-mode-report",
+    )
+    chat_grounding_calls = [req for req in chat_openai.requests if req[2].endswith(":grounding")]
+    assert chat_grounding_calls
+    assert chat_grounding_calls[0][0] == "chat"
+
+    vector_openai = FakeOpenAI(
+        semantic_payload={"metrics": [], "quotes": []},
+        grounding_payload={"unsupported": []},
+    )
+    validate_report(
+        request,
+        _settings(tmp_path, validation_grounding_use_vector_store=True),
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=vector_openai,
+        md5="md5-cache-mode",
+        report_name="cache-mode-report",
+    )
+    vector_grounding_calls = [req for req in vector_openai.requests if req[2].endswith(":grounding")]
+    assert vector_grounding_calls
+    assert vector_grounding_calls[0][0] == "vector"
