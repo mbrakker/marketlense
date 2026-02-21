@@ -69,6 +69,8 @@ class AppSettings:
     evidence_pack_parallel_workers: int = field(default=3, metadata={"doc": "Max parallel evidence-pack generation workers per report; 1 disables pack-level parallelism."})
     evidence_pack_global_max_in_flight: int = field(default=2, metadata={"doc": "Global process-wide cap for concurrent evidence-pack model calls."})
     evidence_pack_global_min_interval_ms: int = field(default=250, metadata={"doc": "Global minimum interval in milliseconds between evidence-pack model call starts."})
+    evidence_pack_doc_map_max_attempts: int = field(default=3, metadata={"doc": "Maximum attempts for doc_map generation before halting the pipeline."})
+    evidence_pack_doc_map_retry_delay_ms: int = field(default=500, metadata={"doc": "Delay in milliseconds between doc_map retry attempts."})
     artifact_parallel_workers: int = field(default=4, metadata={"doc": "Max parallel artifact generation workers per report for independent artifact steps; 1 disables step-level parallelism."})
     artifact_global_max_in_flight: int = field(default=2, metadata={"doc": "Global process-wide cap for concurrent artifact model calls."})
     artifact_global_min_interval_ms: int = field(default=250, metadata={"doc": "Global minimum interval in milliseconds between artifact model call starts."})

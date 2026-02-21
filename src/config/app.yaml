@@ -48,6 +48,8 @@ ingest:
     parallel_workers: 10
     global_max_in_flight: 5
     global_min_interval_ms: 250
+    doc_map_max_attempts: 3
+    doc_map_retry_delay_ms: 500
   artifacts:
     parallel_workers: 10
     global_max_in_flight: 5

@@ -26,12 +26,66 @@ class FakeOpenAIClient:
         self._parsed = parsed
 
     def openai_respond_with_vector_store(self, req, ctx):
+        text = "{}" if isinstance(self._parsed, dict) else ""
         return OpenAIResponseResult(
             schema_version="1.0",
-            text="{}",
+            text=text,
             parsed_json=self._parsed,
             input_tokens=10,
             output_tokens=20,
+            tool_calls=0,
+            model=req.model,
+        )
+
+
+class RetryingDocMapClient:
+    def __init__(self):
+        self.call_count = 0
+
+    def openai_respond_with_vector_store(self, req, ctx):
+        self.call_count += 1
+        if self.call_count == 1:
+            payload = None
+            text = "not json"
+        elif self.call_count == 2:
+            payload = {"doc_id": "d1", "title": "title", "sections": [{"title": "Overview"}]}
+            text = "{}"
+        else:
+            payload = {"scope": "ok", "methods": [], "findings": [], "limitations": [], "quote_candidates": []}
+            text = "{}"
+        return OpenAIResponseResult(
+            schema_version="1.0",
+            text=text,
+            parsed_json=payload,
+            input_tokens=1,
+            output_tokens=1,
+            tool_calls=0,
+            model=req.model,
+        )
+
+
+class TextFallbackDocMapClient:
+    def __init__(self):
+        self.call_count = 0
+
+    def openai_respond_with_vector_store(self, req, ctx):
+        self.call_count += 1
+        if self.call_count == 1:
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text="```json\n{\"doc_id\":\"d1\",\"title\":\"title\",\"sections\":[{\"title\":\"Overview\"}]}\n```",
+                parsed_json=None,
+                input_tokens=1,
+                output_tokens=1,
+                tool_calls=0,
+                model=req.model,
+            )
+        return OpenAIResponseResult(
+            schema_version="1.0",
+            text="{}",
+            parsed_json={"scope": "ok", "methods": [], "findings": [], "limitations": [], "quote_candidates": []},
+            input_tokens=1,
+            output_tokens=1,
             tool_calls=0,
             model=req.model,
         )
@@ -167,6 +221,51 @@ def test_generate_evidence_packs_handles_missing_json(tmp_path):
     assert stored_report_id == "r1"
     assert stored_pack == "doc_map"
     assert stored_payload["not_found_reason"] == "model_returned_no_json"
+
+
+def test_generate_evidence_packs_retries_doc_map_missing_json_then_succeeds(tmp_path):
+    settings = replace(
+        _settings(tmp_path),
+        evidence_pack_doc_map_max_attempts=2,
+        evidence_pack_doc_map_retry_delay_ms=0,
+    )
+    fake_openai = RetryingDocMapClient()
+    analysis_store = FakeAnalysisStore()
+    packs = generate_evidence_packs(
+        report_id="r1",
+        report_name="report",
+        vector_store_id="vs_1",
+        settings=settings,
+        ctx=_ctx(),
+        openai_client=fake_openai,
+        prompt_client=FakePromptClient(),
+        analysis_store=analysis_store,
+    )
+    assert packs["doc_map"]["doc_id"] == "d1"
+    assert fake_openai.call_count == 7
+    assert len(analysis_store.stored) == 6
+
+
+def test_generate_evidence_packs_parses_doc_map_json_from_text_fallback(tmp_path):
+    settings = replace(
+        _settings(tmp_path),
+        evidence_pack_doc_map_max_attempts=1,
+        evidence_pack_doc_map_retry_delay_ms=0,
+    )
+    fake_openai = TextFallbackDocMapClient()
+    packs = generate_evidence_packs(
+        report_id="r1",
+        report_name="report",
+        vector_store_id="vs_1",
+        settings=settings,
+        ctx=_ctx(),
+        openai_client=fake_openai,
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+    assert packs["doc_map"]["doc_id"] == "d1"
+    assert packs["doc_map"]["title"] == "title"
+    assert fake_openai.call_count == 6
 
 
 def test_generate_evidence_packs_normalizes_docmap_wrapper(tmp_path):

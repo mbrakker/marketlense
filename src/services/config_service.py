@@ -434,6 +434,28 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         evidence_pack_global_min_interval_ms = 250
     if evidence_pack_global_min_interval_ms < 0:
         evidence_pack_global_min_interval_ms = 0
+    evidence_pack_doc_map_max_attempts_raw = evidence_packs_cfg.get("doc_map_max_attempts")
+    if _is_missing(evidence_pack_doc_map_max_attempts_raw):
+        evidence_pack_doc_map_max_attempts_raw = _env_value("EVIDENCE_PACK_DOC_MAP_MAX_ATTEMPTS")
+    try:
+        evidence_pack_doc_map_max_attempts = (
+            int(evidence_pack_doc_map_max_attempts_raw) if not _is_missing(evidence_pack_doc_map_max_attempts_raw) else 3
+        )
+    except (TypeError, ValueError):
+        evidence_pack_doc_map_max_attempts = 3
+    if evidence_pack_doc_map_max_attempts < 1:
+        evidence_pack_doc_map_max_attempts = 1
+    evidence_pack_doc_map_retry_delay_ms_raw = evidence_packs_cfg.get("doc_map_retry_delay_ms")
+    if _is_missing(evidence_pack_doc_map_retry_delay_ms_raw):
+        evidence_pack_doc_map_retry_delay_ms_raw = _env_value("EVIDENCE_PACK_DOC_MAP_RETRY_DELAY_MS")
+    try:
+        evidence_pack_doc_map_retry_delay_ms = (
+            int(evidence_pack_doc_map_retry_delay_ms_raw) if not _is_missing(evidence_pack_doc_map_retry_delay_ms_raw) else 500
+        )
+    except (TypeError, ValueError):
+        evidence_pack_doc_map_retry_delay_ms = 500
+    if evidence_pack_doc_map_retry_delay_ms < 0:
+        evidence_pack_doc_map_retry_delay_ms = 0
     artifact_parallel_workers_raw = artifacts_cfg.get("parallel_workers")
     if _is_missing(artifact_parallel_workers_raw):
         artifact_parallel_workers_raw = _env_value("ARTIFACT_PARALLEL_WORKERS")
@@ -556,6 +578,8 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         evidence_pack_parallel_workers=evidence_pack_parallel_workers,
         evidence_pack_global_max_in_flight=evidence_pack_global_max_in_flight,
         evidence_pack_global_min_interval_ms=evidence_pack_global_min_interval_ms,
+        evidence_pack_doc_map_max_attempts=evidence_pack_doc_map_max_attempts,
+        evidence_pack_doc_map_retry_delay_ms=evidence_pack_doc_map_retry_delay_ms,
         artifact_parallel_workers=artifact_parallel_workers,
         artifact_global_max_in_flight=artifact_global_max_in_flight,
         artifact_global_min_interval_ms=artifact_global_min_interval_ms,
@@ -640,6 +664,8 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             "evidence_pack_parallel_workers": settings.evidence_pack_parallel_workers,
             "evidence_pack_global_max_in_flight": settings.evidence_pack_global_max_in_flight,
             "evidence_pack_global_min_interval_ms": settings.evidence_pack_global_min_interval_ms,
+            "evidence_pack_doc_map_max_attempts": settings.evidence_pack_doc_map_max_attempts,
+            "evidence_pack_doc_map_retry_delay_ms": settings.evidence_pack_doc_map_retry_delay_ms,
             "artifact_parallel_workers": settings.artifact_parallel_workers,
             "artifact_global_max_in_flight": settings.artifact_global_max_in_flight,
             "artifact_global_min_interval_ms": settings.artifact_global_min_interval_ms,

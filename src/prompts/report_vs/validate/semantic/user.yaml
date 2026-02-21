@@ -10,6 +10,7 @@ text: |
 
   Instructions:
   - For each metric, verify whether its value (and unit/timeframe if present) is supported by any evidence snippet, allowing paraphrases and numeric equivalents.
+  - Accept equivalent numeric formatting where meaning is preserved (for example 37.0 vs 37%, or >10 vs more than $10B when context indicates billions).
   - For each quote, check whether its meaning is supported even if wording differs.
   - Use `confidence` 0.0 (no support) to 1.0 (direct textual support). Lower confidence indicates uncertainty.
   - Prefer `supported: false` if evidence is missing or conflicting.

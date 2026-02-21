@@ -116,6 +116,100 @@ def _pack_parallel_workers(settings: AppSettings, step_count: int) -> int:
     return max(1, min(configured, step_count))
 
 
+def _doc_map_retry_policy(settings: AppSettings) -> tuple[int, float]:
+    max_attempts = _safe_int(getattr(settings, "evidence_pack_doc_map_max_attempts", 3), 3, min_value=1)
+    retry_delay_ms = _safe_int(getattr(settings, "evidence_pack_doc_map_retry_delay_ms", 500), 500, min_value=0)
+    return max_attempts, float(retry_delay_ms) / 1000.0
+
+
+def _should_retry_doc_map_generation(
+    *,
+    schema_name: str,
+    attempt: int,
+    max_attempts: int,
+    reason: str,
+    retryable_error: bool,
+) -> bool:
+    if schema_name != "doc_map" or attempt >= max_attempts:
+        return False
+    if retryable_error:
+        return True
+    if reason == "model_returned_no_json":
+        return True
+    return reason.startswith("schema_validation_failed:")
+
+
+def _strip_json_fence(text: str) -> str:
+    stripped = (text or "").strip()
+    if not stripped.startswith("```"):
+        return stripped
+    lines = stripped.splitlines()
+    if len(lines) < 2 or lines[-1].strip() != "```":
+        return stripped
+    first_line = lines[0].strip().lower()
+    if first_line not in {"```", "```json", "```jsonc", "```javascript", "```js"}:
+        return stripped
+    return "\n".join(lines[1:-1]).strip()
+
+
+def _extract_json_object(text: str) -> str:
+    source = (text or "").strip()
+    start = source.find("{")
+    if start < 0:
+        return ""
+    depth = 0
+    in_string = False
+    escaped = False
+    for idx in range(start, len(source)):
+        ch = source[idx]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == "\"":
+                in_string = False
+            continue
+        if ch == "\"":
+            in_string = True
+            continue
+        if ch == "{":
+            depth += 1
+            continue
+        if ch == "}":
+            depth -= 1
+            if depth == 0:
+                return source[start:idx + 1]
+    return ""
+
+
+def _parse_json_object_from_text(text: str) -> Optional[dict]:
+    normalized = (text or "").strip()
+    if not normalized:
+        return None
+    candidates = [normalized]
+    stripped_fence = _strip_json_fence(normalized)
+    if stripped_fence and stripped_fence != normalized:
+        candidates.append(stripped_fence)
+    for candidate in candidates:
+        try:
+            parsed = json.loads(candidate)
+        except json.JSONDecodeError:
+            parsed = None
+        if isinstance(parsed, dict):
+            return parsed
+        extracted = _extract_json_object(candidate)
+        if not extracted:
+            continue
+        try:
+            parsed_extracted = json.loads(extracted)
+        except json.JSONDecodeError:
+            parsed_extracted = None
+        if isinstance(parsed_extracted, dict):
+            return parsed_extracted
+    return None
+
+
 def generate_evidence_packs(
     report_id: str,
     report_name: str,
@@ -383,56 +477,112 @@ def _generate_pack(
     ))
     parsed_json = None
     not_found_reason = ""
-    try:
-        with _acquire_rate_limit(settings, ctx, pack_name):
-            resp: OpenAIResponseResult = openai_client.openai_respond_with_vector_store(
-                OpenAIResponseRequest(
-                    schema_version="1.0",
-                    system_prompt=system_prompt,
-                    user_prompt=user_prompt,
-                    vector_store_id=vector_store_id,
-                    model=resolved_model,
-                    temperature=settings.temperature,
-                    api_key=settings.openai_api_key,
-                    seed=settings.openai_seed,
-                    timeout_seconds=settings.openai_timeout_seconds,
-                    cost_ledger_path=settings.cost_ledger_path,
-                    cost_daily_path=settings.cost_daily_path,
-                    model_pricing=settings.model_pricing,
-                ),
-                ctx,
-            )
-        parsed_json = resp.parsed_json
-        if parsed_json is None:
-            not_found_reason = "model_returned_no_json"
-        else:
-            try:
-                if schema_name == "doc_map" and isinstance(parsed_json, dict):
-                    parsed_json, normalization = _normalize_doc_map_payload(parsed_json, report_id)
-                    if normalization["changed"]:
-                        logger.info(log_event(
-                            ctx,
-                            role="generator",
-                            event="doc_map_normalized",
-                            module=logger.name,
-                            fields={
-                                "report_id": report_id,
-                                "wrapper_key": normalization["wrapper_key"],
-                                "sections_with_ids": normalization["sections_with_ids"],
-                                "added_section_ids": normalization["added_section_ids"],
-                                "dropped_sections": normalization["dropped_sections"],
-                                "doc_id_filled": normalization["doc_id_filled"],
-                            },
-                        ))
-                validate_schema(
-                    SchemaValidateRequest(schema_version="1.0", payload=parsed_json, schema_name=schema_name),
+    max_attempts = 1
+    retry_delay_seconds = 0.0
+    if schema_name == "doc_map":
+        max_attempts, retry_delay_seconds = _doc_map_retry_policy(settings)
+    attempts_used = 0
+    for attempt in range(1, max_attempts + 1):
+        attempts_used = attempt
+        retryable_error = False
+        attempt_reason = ""
+        try:
+            with _acquire_rate_limit(settings, ctx, pack_name):
+                resp: OpenAIResponseResult = openai_client.openai_respond_with_vector_store(
+                    OpenAIResponseRequest(
+                        schema_version="1.0",
+                        system_prompt=system_prompt,
+                        user_prompt=user_prompt,
+                        vector_store_id=vector_store_id,
+                        model=resolved_model,
+                        temperature=settings.temperature,
+                        api_key=settings.openai_api_key,
+                        seed=settings.openai_seed,
+                        timeout_seconds=settings.openai_timeout_seconds,
+                        cost_ledger_path=settings.cost_ledger_path,
+                        cost_daily_path=settings.cost_daily_path,
+                        model_pricing=settings.model_pricing,
+                    ),
                     ctx,
                 )
-            except AppError as exc:
-                not_found_reason = f"schema_validation_failed:{exc.code}"
-    except AppError as exc:
-        not_found_reason = exc.code
-        parsed_json = None
+            parsed_json = resp.parsed_json if isinstance(resp.parsed_json, dict) else None
+            if parsed_json is None:
+                parsed_json = _parse_json_object_from_text(resp.text or "")
+                if parsed_json is not None:
+                    logger.info(log_event(
+                        ctx,
+                        role="generator",
+                        event="evidence_pack_json_text_fallback",
+                        module=logger.name,
+                        fields={
+                            "report_id": report_id,
+                            "pack": pack_name,
+                            "attempt": attempt,
+                        },
+                    ))
+            if parsed_json is None:
+                attempt_reason = "model_returned_no_json"
+            else:
+                try:
+                    if schema_name == "doc_map":
+                        parsed_json, normalization = _normalize_doc_map_payload(parsed_json, report_id)
+                        if normalization["changed"]:
+                            logger.info(log_event(
+                                ctx,
+                                role="generator",
+                                event="doc_map_normalized",
+                                module=logger.name,
+                                fields={
+                                    "report_id": report_id,
+                                    "wrapper_key": normalization["wrapper_key"],
+                                    "sections_with_ids": normalization["sections_with_ids"],
+                                    "added_section_ids": normalization["added_section_ids"],
+                                    "dropped_sections": normalization["dropped_sections"],
+                                    "doc_id_filled": normalization["doc_id_filled"],
+                                },
+                            ))
+                    validate_schema(
+                        SchemaValidateRequest(schema_version="1.0", payload=parsed_json, schema_name=schema_name),
+                        ctx,
+                    )
+                except AppError as exc:
+                    attempt_reason = f"schema_validation_failed:{exc.code}"
+                    parsed_json = None
+        except AppError as exc:
+            attempt_reason = exc.code
+            retryable_error = bool(exc.retryable)
+            parsed_json = None
+
+        if parsed_json is not None:
+            not_found_reason = ""
+            break
+
+        not_found_reason = attempt_reason
+        if _should_retry_doc_map_generation(
+            schema_name=schema_name,
+            attempt=attempt,
+            max_attempts=max_attempts,
+            reason=attempt_reason,
+            retryable_error=retryable_error,
+        ):
+            logger.info(log_event(
+                ctx,
+                role="generator",
+                event="doc_map_generation_retry",
+                module=logger.name,
+                fields={
+                    "report_id": report_id,
+                    "pack": pack_name,
+                    "attempt": attempt,
+                    "max_attempts": max_attempts,
+                    "reason": attempt_reason,
+                    "retry_delay_ms": int(round(retry_delay_seconds * 1000)),
+                },
+            ))
+            if retry_delay_seconds > 0:
+                time.sleep(retry_delay_seconds)
+            continue
+        break
     result_payload = parsed_json or _empty_payload(schema_name, not_found_reason)
     if cache_meta and isinstance(result_payload, dict):
         result_payload = dict(result_payload)
@@ -454,7 +604,13 @@ def _generate_pack(
         role="generator",
         event="evidence_pack_step_complete",
         module=logger.name,
-        fields={"report_id": report_id, "pack": pack_name, "not_found_reason": not_found_reason},
+        fields={
+            "report_id": report_id,
+            "pack": pack_name,
+            "not_found_reason": not_found_reason,
+            "attempts": attempts_used,
+            "max_attempts": max_attempts,
+        },
     ))
     return result_payload
 

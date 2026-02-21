@@ -7,5 +7,12 @@ text: |
 
   Task:
   - Review each sentence in the artifacts (insights, quotes, summaries, expert comment, LinkedIn post).
-  - Mark a sentence unsupported if the evidence snippets do not contain the facts, numbers, or wording needed to justify it.
-  - Keep the response as JSON with `unsupported` array; omit any additional prose.
+  - Distinguish factual claims vs interpretation vs recommendations.
+  - In `expert_comment` and `linkedin_post`, interpretation/recommendation text is allowed unless it introduces unsupported facts or numbers.
+  - Mark unsupported only when one of these applies:
+    1) hallucinated entity/event or unsupported factual assertion,
+    2) unsupported number/new metric not present in evidence,
+    3) misattributed quote,
+    4) sentence claims the report instructed/recommended something that the report did not state.
+  - Provide `classification`, `violation_type`, and a short `reason` for each unsupported sentence.
+  - Keep the response as JSON with `unsupported` array only; omit additional prose.
