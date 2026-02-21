@@ -26,7 +26,6 @@ ingest:
   batch_limit: 20
   worker_limit: 5
   report_worker_limit: 5
-  debug_candidate_gallery: false
   cover_cache_enabled: true
   pdf_text:
     max_pages: 5
@@ -114,7 +113,6 @@ analysis:
   artifacts_use_vector_store: false
   validation_grounding_use_vector_store: false
   strict_schema_validation: true
-  compare: false
   cost_ledger_path: "./out/cost-ledger.jsonl"
 
 quality:

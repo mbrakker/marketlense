@@ -582,9 +582,6 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         artifact_global_min_interval_ms = 0
     pdf_text_min_density = _to_float(pdf_text.get("min_density"), 250.0)
     pdf_text_sample_pages = _to_int(pdf_text.get("sample_pages"), 3)
-    debug_candidate_gallery = _as_bool(
-        ingest.get("debug_candidate_gallery"), default=False
-    )
     data_gap_policy_raw = (
         str(validation_cfg.get("data_gap_policy", "warn")).strip().lower()
     )
@@ -621,7 +618,6 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     env_quality_baseline_path = _env_value("QUALITY_BASELINE_PATH")
     analysis_mode = "vector_store"
     use_vector_store = True
-    analysis_compare = False
     vector_store_keep_raw = (
         env_vector_store_keep
         if env_vector_store_keep
@@ -714,7 +710,6 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         pdf_text_max_chars=_to_int(pdf_text.get("max_chars"), 80_000),
         pdf_text_min_density=pdf_text_min_density,
         pdf_text_sample_pages=pdf_text_sample_pages,
-        debug_candidate_gallery=debug_candidate_gallery,
         rank_model=rank_model,
         rank_temperature=rank_temperature,
         rank_seed=_opt_int(rank_seed_raw),
@@ -753,7 +748,6 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         validation_grounding_use_vector_store=validation_grounding_use_vector_store,
         strict_schema_validation=strict_schema_validation,
         cover_cache_enabled=cover_cache_enabled,
-        analysis_compare=analysis_compare,
         cost_ledger_path=cost_ledger_path,
         cost_daily_path=cost_daily_path,
         model_pricing=model_pricing,
@@ -825,7 +819,6 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
                 "pdf_text_max_chars": settings.pdf_text_max_chars,
                 "pdf_text_min_density": settings.pdf_text_min_density,
                 "pdf_text_sample_pages": settings.pdf_text_sample_pages,
-                "debug_candidate_gallery": settings.debug_candidate_gallery,
                 "openai_timeout_seconds": settings.openai_timeout_seconds,
                 "rank_timeout_seconds": settings.rank_timeout_seconds,
                 "contents_max_pages": settings.contents_max_pages,
@@ -850,7 +843,6 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
                 "validation_grounding_use_vector_store": settings.validation_grounding_use_vector_store,
                 "strict_schema_validation": settings.strict_schema_validation,
                 "cover_cache_enabled": settings.cover_cache_enabled,
-                "analysis_compare": settings.analysis_compare,
                 "cost_ledger_path": settings.cost_ledger_path,
                 "cost_daily_path": settings.cost_daily_path,
                 "quality_baseline_path": settings.quality_baseline_path,
@@ -891,7 +883,6 @@ def load_publish_settings(
     data = _load_config(request.path or str(CONFIG_PATH))
     resolver = _ConfigResolver()
     need = resolver.need
-    need_env = resolver.need_env
     missing = resolver.missing
 
     paths = data.get("paths", {}) or {}

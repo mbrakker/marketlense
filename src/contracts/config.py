@@ -3,9 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from src.contracts.ingest import IngestSettings
-
-
 @dataclass(frozen=True)
 class ConfigLoadRequest:
     schema_version: str = field(metadata={"doc": "Config request schema version."})
@@ -103,10 +100,6 @@ class AppSettings:
     pdf_text_sample_pages: int = field(
         default=3,
         metadata={"doc": "Number of pages to sample when validating extractable text."},
-    )
-    debug_candidate_gallery: bool = field(
-        default=False,
-        metadata={"doc": "Whether to render the full candidate gallery crop set."},
     )
     rank_model: str = field(
         default="",
@@ -331,10 +324,6 @@ class AppSettings:
         metadata={
             "doc": "Acronyms preserved in uppercase when formatting HTML metadata chips (e.g., AI, ROI)."
         },
-    )
-    analysis_compare: bool = field(
-        default=False,
-        metadata={"doc": "Legacy compare toggle (ignored; vector_store only)."},
     )
     validation_data_gap_policy: str = field(
         default="warn",

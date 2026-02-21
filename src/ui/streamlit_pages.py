@@ -748,7 +748,7 @@ def _render_ingest_control(settings: Any) -> None:
                 ),
             )
         st.caption(
-            f"Model `{settings.openai_model}` | temperature `{settings.temperature}` | timeout `{settings.openai_timeout_seconds}`s | compare `{settings.analysis_compare}`"
+            f"Model `{settings.openai_model}` | temperature `{settings.temperature}` | timeout `{settings.openai_timeout_seconds}`s"
         )
 
     if clicked:
@@ -799,7 +799,6 @@ def _render_ingest_control(settings: Any) -> None:
                 "timeout_seconds": settings.openai_timeout_seconds,
                 "batch_limit": settings.batch_limit,
                 "analysis_mode": settings.analysis_mode,
-                "analysis_compare": settings.analysis_compare,
             }
         )
 
@@ -1231,11 +1230,8 @@ def _render_analysis_and_evidence(settings: Any) -> None:
             st.info("No evidence packs recorded for this report.")
 
     with detail_col:
-        st.subheader("Compare Mode")
-        if settings.analysis_compare:
-            st.success("Compare mode is enabled.")
-        else:
-            st.info("Compare mode is disabled in settings (`analysis.compare=false`).")
+        st.subheader("Analysis Mode")
+        st.info(f"`{settings.analysis_mode}`")
         if state_row:
             st.subheader("State Snapshot")
             st.json(asdict(state_row))
@@ -1848,10 +1844,6 @@ def _render_structured_config_form(config_payload: dict[str, Any], *, editor_key
                     "Ingest Seed (blank for null)",
                     value="" if ingest.get("seed") in {None, ""} else _as_str(ingest.get("seed")),
                 )
-                ingest_debug_candidate_gallery = st.checkbox(
-                    "Debug Candidate Gallery",
-                    value=_as_bool(ingest.get("debug_candidate_gallery"), False),
-                )
                 ingest_cover_cache_enabled = st.checkbox(
                     "Cover Cache Enabled",
                     value=_as_bool(ingest.get("cover_cache_enabled"), True),
@@ -2015,10 +2007,6 @@ def _render_structured_config_form(config_payload: dict[str, Any], *, editor_key
                     "Vector Store Keep",
                     value=_as_bool(analysis.get("vector_store_keep"), True),
                 )
-                analysis_compare = st.checkbox(
-                    "Analysis Compare (legacy)",
-                    value=_as_bool(analysis.get("compare"), False),
-                )
                 analysis_cost_ledger_path = st.text_input(
                     "Cost Ledger Path",
                     value=_as_str(analysis.get("cost_ledger_path"), "./out/cost-ledger.jsonl"),
@@ -2087,7 +2075,7 @@ def _render_structured_config_form(config_payload: dict[str, Any], *, editor_key
     ingest["batch_limit"] = int(ingest_batch_limit)
     ingest["worker_limit"] = int(ingest_worker_limit)
     ingest["report_worker_limit"] = int(ingest_report_worker_limit)
-    ingest["debug_candidate_gallery"] = bool(ingest_debug_candidate_gallery)
+    ingest.pop("debug_candidate_gallery", None)
     ingest["cover_cache_enabled"] = bool(ingest_cover_cache_enabled)
 
     drive["supports_all_drives"] = bool(drive_supports_all_drives)
@@ -2150,8 +2138,8 @@ def _render_structured_config_form(config_payload: dict[str, Any], *, editor_key
     publish["validation"] = publish_validation
     working["publish"] = publish
 
+    analysis.pop("compare", None)
     analysis["vector_store_keep"] = bool(analysis_vector_store_keep)
-    analysis["compare"] = bool(analysis_compare)
     analysis["cost_ledger_path"] = analysis_cost_ledger_path.strip()
     working["analysis"] = analysis
 

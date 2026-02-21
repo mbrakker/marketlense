@@ -96,10 +96,6 @@ class IngestSettings:
         default=3,
         metadata={"doc": "Number of pages to sample when validating extractable text."},
     )
-    debug_candidate_gallery: bool = field(
-        default=False,
-        metadata={"doc": "Whether to render the full candidate gallery crop set."},
-    )
     rank_model: str = field(
         default="",
         metadata={"doc": "OpenAI model ID for candidate ranking (optional override)."},
@@ -322,10 +318,6 @@ class IngestSettings:
         metadata={
             "doc": "Acronyms preserved in uppercase when formatting HTML metadata chips (e.g., AI, ROI)."
         },
-    )
-    analysis_compare: bool = field(
-        default=False,
-        metadata={"doc": "Legacy compare toggle (ignored; vector_store only)."},
     )
     validation_data_gap_policy: str = field(
         default="warn",
