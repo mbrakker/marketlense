@@ -240,14 +240,6 @@ This file combines all TODOs found in the repository (from `TODO.md`, `html_todo
 
 ## 8. Codebase Audit: High-Impact Refactors
 
-- **Title:** Split monolithic `report_generator` into step-level generators
-  - Explanation: Break the large generator into smaller, testable step-level modules with typed contracts (generators call services; orchestrators sequence them).
-  - Pros: Easier testing, isolation, and maintenance.
-  - Cons: Non-trivial refactor; requires careful integration testing.
-  - Acceptance Criteria:
-    - `report_generator` responsibilities split and covered by unit tests.
-    - No behavior regression in end-to-end ingest runs (smoke tests).
-
 - **Title:** Cache Jinja `Environment` at module scope and unify render service
   - Explanation: Avoid recreating Jinja environment per render; centralize render service to return deterministic outputs and reduce overhead.
   - Pros: Performance and fewer subtle diffs.
@@ -264,7 +256,7 @@ This file combines all TODOs found in the repository (from `TODO.md`, `html_todo
     - Concurrency tests show reduced contention.
 
 - **Title:** Deduplicate and remove small hotspots (slugify, duration scripts)
-  - Explanation: Consolidate repeated slugify calls, merge duplicate duration scripts, and remove dead config flags (e.g., `debug_candidate_gallery` if unused).
+  - Explanation: Consolidate repeated slugify calls and merge duplicate duration scripts.
   - Pros: Cleaner codebase and smaller attack surface.
   - Cons: Low risk changes but requires tests to ensure behavior preserved.
   - Acceptance Criteria:
