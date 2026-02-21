@@ -6,8 +6,12 @@ import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
-import fitz
 import pytest
+
+try:
+    import fitz
+except ModuleNotFoundError:  # pragma: no cover - depends on PyMuPDF packaging alias
+    import pymupdf as fitz
 
 from src.contracts.drive import DriveListRequest
 from src.contracts.openai import OpenAIJSONPromptRequest

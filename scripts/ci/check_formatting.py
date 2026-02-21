@@ -83,7 +83,14 @@ def main() -> int:
     configured_paths = os.getenv("FORMAT_PATHS", "").strip().split()
     targets = configured_paths or ["src", "tests", "scripts"]
     changed_paths = _git_changed_python_files(targets) if not configured_paths else []
-    format_targets = changed_paths or targets
+
+    if configured_paths:
+        format_targets = targets
+    elif changed_paths:
+        format_targets = changed_paths
+    else:
+        print("Format gate: no changed Python files detected; skipping.")
+        return 0
 
     print("Format gate files:")
     for path in format_targets:

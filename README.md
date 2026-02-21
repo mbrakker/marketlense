@@ -383,8 +383,8 @@ RUN_OPENAI_SMOKE_TEST=1 OPENAI_API_KEY=... pytest -m integration tests/integrati
 
 CI gates (see `.github/workflows/ci.yml`):
 
-- `python scripts/ci/check_formatting.py` (format gate, `ruff format --check` for CI scripts/contract tests)
-- `python scripts/ci/run_type_check.py` (type gate, `mypy` over changed files under `src`, `tests`, `scripts/ci`)
+- `python scripts/ci/check_formatting.py` (format gate, `ruff format --check` over changed Python files under `src`, `tests`, `scripts`; skips when no Python files changed unless `FORMAT_PATHS` is set)
+- `python scripts/ci/run_type_check.py` (type gate, `mypy` over changed Python files under `src`, `tests`, `scripts/ci`; skips when no Python files changed unless `TYPECHECK_PATHS` is set)
 - `python scripts/ci/check_forbidden_patching.py` (fails on private-helper/dataclass-constructor patching patterns in tests)
 - `python -m pytest --cov=src --cov-report=xml --cov-report=term-missing` (default suite excludes integration tests)
 - `python scripts/ci/check_coverage.py --coverage-xml coverage.xml` (global + per-critical-package thresholds)

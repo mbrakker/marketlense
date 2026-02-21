@@ -84,7 +84,14 @@ def main() -> int:
     configured_paths = os.getenv("TYPECHECK_PATHS", "").strip().split()
     targets = configured_paths or ["src", "tests", "scripts/ci"]
     changed_paths = _git_changed_python_files(targets) if not configured_paths else []
-    typecheck_targets = changed_paths or targets
+
+    if configured_paths:
+        typecheck_targets = targets
+    elif changed_paths:
+        typecheck_targets = changed_paths
+    else:
+        print("Type gate: no changed Python files detected; skipping.")
+        return 0
 
     print("Type gate files:")
     for path in typecheck_targets:
