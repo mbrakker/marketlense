@@ -115,9 +115,6 @@ analysis:
   strict_schema_validation: true
   cost_ledger_path: "./out/cost-ledger.jsonl"
 
-quality:
-  baseline_path: "./docs/quality/baseline_2026-02-21.json"
-
 cost:
   daily_path: "./out/cost-daily.json"
   pricing:

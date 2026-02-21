@@ -262,15 +262,6 @@ class IngestSettings:
             "doc": "Global minimum interval in milliseconds between artifact model call starts."
         },
     )
-    analysis_mode: str = field(
-        default="vector_store", metadata={"doc": "Analysis mode to use (vector_store)."}
-    )
-    use_vector_store: bool = field(
-        default=True,
-        metadata={
-            "doc": "Always true; vector_store is the only supported analysis path."
-        },
-    )
     vector_store_keep: bool = field(
         default=True,
         metadata={"doc": "Whether to keep the vector store cache after runs."},
@@ -323,12 +314,6 @@ class IngestSettings:
         default="warn",
         metadata={
             "doc": "Policy for data gaps: warn|fail controls validation severity when text evidence is missing."
-        },
-    )
-    quality_baseline_path: str = field(
-        default="./docs/quality/baseline_2026-02-21.json",
-        metadata={
-            "doc": "Path to non-regression quality baseline snapshot used by CI checks."
         },
     )
 

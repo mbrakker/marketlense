@@ -68,6 +68,11 @@ REQUIRED_KEYS = (
     "time_period",
 )
 
+_RESPONSES_IMAGE_UNSUPPORTED_PARAM_PREFIXES: dict[str, tuple[str, ...]] = {
+    # GPT-5 image calls via Responses API reject temperature/seed.
+    "gpt-5": ("temperature", "seed"),
+}
+
 
 def _image_path_to_data_url(path: str) -> str:
     img_path = Path(path)
@@ -245,6 +250,15 @@ def _responses_create_with_unsupported_param_retry(
                     },
                 )
             )
+
+
+def _known_unsupported_image_params(model: str) -> set[str]:
+    normalized = str(model or "").strip().lower()
+    unsupported: set[str] = set()
+    for prefix, params in _RESPONSES_IMAGE_UNSUPPORTED_PARAM_PREFIXES.items():
+        if normalized.startswith(prefix):
+            unsupported.update(params)
+    return unsupported
 
 
 def _legacy_chat_completion(request: OpenAIAnalyzeRequest) -> Dict[str, Any]:
@@ -743,10 +757,24 @@ def openai_chat_json_with_images(
                 {"role": "user", "content": user_content},
             ],
         }
-        if request.temperature is not None:
+        known_unsupported = _known_unsupported_image_params(request.model)
+        if request.temperature is not None and "temperature" not in known_unsupported:
             payload_args["temperature"] = request.temperature
-        if request.seed is not None:
+        if request.seed is not None and "seed" not in known_unsupported:
             payload_args["seed"] = request.seed
+        if known_unsupported:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="openai_chat_json_with_images_skip_known_unsupported_params",
+                    module=logger.name,
+                    fields={
+                        "model": request.model,
+                        "skipped_params": sorted(known_unsupported),
+                    },
+                )
+            )
         resp = _responses_create_with_unsupported_param_retry(
             client=client,
             payload_args=payload_args,

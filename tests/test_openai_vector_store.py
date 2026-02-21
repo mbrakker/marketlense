@@ -158,7 +158,49 @@ def test_openai_response_with_vector_store_parses_fenced_json(monkeypatch):
     assert result.parsed_json == {"result": "ok"}
 
 
-def test_openai_chat_json_with_images_retries_without_temperature(
+def test_openai_chat_json_with_images_skips_known_unsupported_params(
+    tmp_path, monkeypatch
+):
+    class _Responses:
+        def __init__(self):
+            self.calls = []
+
+        def create(self, **kwargs):
+            self.calls.append(kwargs)
+            return FakeResponse(json.dumps({"results": []}))
+
+    responses = _Responses()
+
+    def _fake_client(**kwargs):
+        return SimpleNamespace(responses=responses)
+
+    monkeypatch.setattr(svc, "OpenAI", _fake_client)
+    image_path = tmp_path / "test.png"
+    image_path.write_bytes(b"fake-image")
+    req = OpenAIJSONImagePromptRequest(
+        schema_version="1.0",
+        system_prompt="return json",
+        user_prompt="return json",
+        model="gpt-5-mini",
+        temperature=0.0,
+        api_key="key",
+        image_paths=[str(image_path)],
+        seed=123,
+        timeout_seconds=5.0,
+        cost_ledger_path=str(tmp_path / "ledger.jsonl"),
+        cost_daily_path=str(tmp_path / "daily.json"),
+        model_pricing={},
+    )
+
+    result = svc.openai_chat_json_with_images(req, _ctx())
+
+    assert result.parsed_json == {"results": []}
+    assert len(responses.calls) == 1
+    assert "temperature" not in responses.calls[0]
+    assert "seed" not in responses.calls[0]
+
+
+def test_openai_chat_json_with_images_retries_unknown_unsupported_param(
     tmp_path, monkeypatch
 ):
     class _Responses:
@@ -185,7 +227,7 @@ def test_openai_chat_json_with_images_retries_without_temperature(
         schema_version="1.0",
         system_prompt="return json",
         user_prompt="return json",
-        model="gpt-5-mini",
+        model="custom-image-model",
         temperature=0.0,
         api_key="key",
         image_paths=[str(image_path)],

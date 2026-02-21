@@ -5,7 +5,10 @@ import time
 from pathlib import Path
 from typing import List, Optional
 
-from src.contracts.candidate_extraction import CandidateExtractOutcome, CandidateExtractRequest
+from src.contracts.candidate_extraction import (
+    CandidateExtractOutcome,
+    CandidateExtractRequest,
+)
 from src.contracts.drive import DriveDownloadRequest, DriveListRequest, DriveFile
 from src.contracts.files import FileExistsRequest, FileHashRequest, WriteBytesRequest
 from src.contracts.ingest import IngestSettings
@@ -24,11 +27,15 @@ from src.utils.slugify import slugify
 logger = logging.getLogger("market_lense.candidate_extraction_orchestrator")
 
 
+def _slugify_pdf_name(pdf_path: str) -> str:
+    return slugify(Path(pdf_path).name)
+
+
 def _resolve_report_name(file: DriveFile, pdf_path: str | None = None) -> str:
     if file.name:
         return slugify(file.name)
     if pdf_path:
-        return slugify(Path(pdf_path).name)
+        return _slugify_pdf_name(pdf_path)
     return file.file_id
 
 
@@ -45,47 +52,69 @@ def _run_step_with_retry(step_name: str, ctx: RunContext, func, retries: int = 1
     )
 
 
-def _download_if_needed(file: DriveFile, settings: IngestSettings, ctx: RunContext) -> tuple[str, Optional[str]]:
+def _download_if_needed(
+    file: DriveFile, settings: IngestSettings, ctx: RunContext
+) -> tuple[str, Optional[str]]:
     cache_name = safe_pdf_name(file.name or f"{file.file_id}.pdf")
     cache_path = str(Path(settings.cache_dir) / cache_name)
     md5 = None
-    exists_resp = file_exists(FileExistsRequest(schema_version="1.0", path=cache_path), ctx)
+    exists_resp = file_exists(
+        FileExistsRequest(schema_version="1.0", path=cache_path), ctx
+    )
     if exists_resp.exists and file.md5_checksum:
         md5_resp = file_md5(FileHashRequest(schema_version="1.0", path=cache_path), ctx)
         if md5_resp.md5 == file.md5_checksum:
             md5 = md5_resp.md5
-            logger.info(log_event(
-                ctx,
-                role="orchestrator",
-                event="pdf_cache_hit",
-                module=logger.name,
-                fields={"file_id": file.file_id, "path": cache_path, "md5": md5},
-            ))
+            logger.info(
+                log_event(
+                    ctx,
+                    role="orchestrator",
+                    event="pdf_cache_hit",
+                    module=logger.name,
+                    fields={"file_id": file.file_id, "path": cache_path, "md5": md5},
+                )
+            )
             return cache_path, md5
 
-    logger.info(log_event(
-        ctx,
-        role="orchestrator",
-        event="pdf_cache_miss",
-        module=logger.name,
-        fields={"file_id": file.file_id, "path": cache_path},
-    ))
-    dl_req = DriveDownloadRequest(schema_version="1.0", file=file, service_account_path=settings.google_sa_path)
-    dl_resp = _run_step_with_retry("download_pdf", ctx, lambda: download_pdf(dl_req, ctx))
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="pdf_cache_miss",
+            module=logger.name,
+            fields={"file_id": file.file_id, "path": cache_path},
+        )
+    )
+    dl_req = DriveDownloadRequest(
+        schema_version="1.0", file=file, service_account_path=settings.google_sa_path
+    )
+    dl_resp = _run_step_with_retry(
+        "download_pdf", ctx, lambda: download_pdf(dl_req, ctx)
+    )
     write_resp = write_bytes(
-        WriteBytesRequest(schema_version="1.0", path=cache_path, content=dl_resp.content),
+        WriteBytesRequest(
+            schema_version="1.0", path=cache_path, content=dl_resp.content
+        ),
         ctx,
     )
     md5 = write_resp.md5
-    eof_check = check_pdf_eof(PdfEofCheckRequest(schema_version="1.0", path=cache_path), ctx)
+    eof_check = check_pdf_eof(
+        PdfEofCheckRequest(schema_version="1.0", path=cache_path), ctx
+    )
     if not eof_check.has_eof:
-        logger.info(log_event(
-            ctx,
-            role="orchestrator",
-            event="pdf_missing_eof",
-            module=logger.name,
-            fields={"file_id": file.file_id, "path": cache_path, "proceeding": True},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="pdf_missing_eof",
+                module=logger.name,
+                fields={
+                    "file_id": file.file_id,
+                    "path": cache_path,
+                    "proceeding": True,
+                },
+            )
+        )
     return cache_path, md5
 
 
@@ -102,46 +131,56 @@ def run_candidate_extraction(
     root_ctx = ctx or new_run_context()
     outcomes: List[CandidateExtractOutcome] = []
 
-    logger.info(log_event(
-        root_ctx,
-        role="orchestrator",
-        event="candidate_extract_start",
-        module=logger.name,
-        fields={
-            "folder_id": folder_id or settings.gdrive_folder_id,
-            "limit": limit,
-            "file_id": file_id or "",
-            "pdf_path": pdf_path or "",
-        },
-    ))
+    logger.info(
+        log_event(
+            root_ctx,
+            role="orchestrator",
+            event="candidate_extract_start",
+            module=logger.name,
+            fields={
+                "folder_id": folder_id or settings.gdrive_folder_id,
+                "limit": limit,
+                "file_id": file_id or "",
+                "pdf_path": pdf_path or "",
+            },
+        )
+    )
 
     if pdf_path:
         file_ctx = child_context(root_ctx, task_id="candidate_extract_local")
-        name = slugify(Path(pdf_path).name)
-        exists_resp = file_exists(FileExistsRequest(schema_version="1.0", path=pdf_path), file_ctx)
+        name = _slugify_pdf_name(pdf_path)
+        exists_resp = file_exists(
+            FileExistsRequest(schema_version="1.0", path=pdf_path), file_ctx
+        )
         if not exists_resp.exists:
-            logger.info(log_event(
-                file_ctx,
-                role="orchestrator",
-                event="candidate_extract_failed",
-                module=logger.name,
-                fields={"pdf_path": pdf_path, "error": "file_not_found"},
-            ))
-            outcomes.append(CandidateExtractOutcome(
-                schema_version="1.0",
-                report_id=report_id or name,
-                report_name=name,
-                pdf_path=pdf_path,
-                candidates_path="",
-                candidate_count=0,
-                chart_count=0,
-                table_count=0,
-                crop_count=0,
-                crop_paths=[],
-                error="file_not_found",
-            ))
+            logger.info(
+                log_event(
+                    file_ctx,
+                    role="orchestrator",
+                    event="candidate_extract_failed",
+                    module=logger.name,
+                    fields={"pdf_path": pdf_path, "error": "file_not_found"},
+                )
+            )
+            outcomes.append(
+                CandidateExtractOutcome(
+                    schema_version="1.0",
+                    report_id=report_id or name,
+                    report_name=name,
+                    pdf_path=pdf_path,
+                    candidates_path="",
+                    candidate_count=0,
+                    chart_count=0,
+                    table_count=0,
+                    crop_count=0,
+                    crop_paths=[],
+                    error="file_not_found",
+                )
+            )
             return outcomes
-        md5_resp = file_md5(FileHashRequest(schema_version="1.0", path=pdf_path), file_ctx)
+        md5_resp = file_md5(
+            FileHashRequest(schema_version="1.0", path=pdf_path), file_ctx
+        )
         resolved_report_id = report_id or f"{name}-{md5_resp.md5[:8]}"
         try:
             outcome = generate_candidate_pack(
@@ -156,26 +195,30 @@ def run_candidate_extraction(
             )
             outcomes.append(outcome)
         except Exception as exc:
-            logger.info(log_event(
-                file_ctx,
-                role="orchestrator",
-                event="candidate_extract_failed",
-                module=logger.name,
-                fields={"pdf_path": pdf_path, "error": str(exc)},
-            ))
-            outcomes.append(CandidateExtractOutcome(
-                schema_version="1.0",
-                report_id=resolved_report_id,
-                report_name=name,
-                pdf_path=pdf_path,
-                candidates_path="",
-                candidate_count=0,
-                chart_count=0,
-                table_count=0,
-                crop_count=0,
-                crop_paths=[],
-                error=str(exc),
-            ))
+            logger.info(
+                log_event(
+                    file_ctx,
+                    role="orchestrator",
+                    event="candidate_extract_failed",
+                    module=logger.name,
+                    fields={"pdf_path": pdf_path, "error": str(exc)},
+                )
+            )
+            outcomes.append(
+                CandidateExtractOutcome(
+                    schema_version="1.0",
+                    report_id=resolved_report_id,
+                    report_name=name,
+                    pdf_path=pdf_path,
+                    candidates_path="",
+                    candidate_count=0,
+                    chart_count=0,
+                    table_count=0,
+                    crop_count=0,
+                    crop_paths=[],
+                    error=str(exc),
+                )
+            )
         return outcomes
 
     max_n = limit if limit is not None else settings.batch_limit
@@ -214,33 +257,39 @@ def run_candidate_extraction(
             outcomes.append(outcome)
             processed += 1
         except Exception as exc:
-            logger.info(log_event(
-                file_ctx,
-                role="orchestrator",
-                event="candidate_extract_failed",
-                module=logger.name,
-                fields={"file_id": file.file_id, "error": str(exc)},
-            ))
-            outcomes.append(CandidateExtractOutcome(
-                schema_version="1.0",
-                report_id=file.file_id,
-                report_name=file.name or file.file_id,
-                pdf_path="",
-                candidates_path="",
-                candidate_count=0,
-                chart_count=0,
-                table_count=0,
-                crop_count=0,
-                crop_paths=[],
-                error=str(exc),
-            ))
+            logger.info(
+                log_event(
+                    file_ctx,
+                    role="orchestrator",
+                    event="candidate_extract_failed",
+                    module=logger.name,
+                    fields={"file_id": file.file_id, "error": str(exc)},
+                )
+            )
+            outcomes.append(
+                CandidateExtractOutcome(
+                    schema_version="1.0",
+                    report_id=file.file_id,
+                    report_name=file.name or file.file_id,
+                    pdf_path="",
+                    candidates_path="",
+                    candidate_count=0,
+                    chart_count=0,
+                    table_count=0,
+                    crop_count=0,
+                    crop_paths=[],
+                    error=str(exc),
+                )
+            )
             processed += 1
 
-    logger.info(log_event(
-        root_ctx,
-        role="orchestrator",
-        event="candidate_extract_complete",
-        module=logger.name,
-        fields={"processed": processed},
-    ))
+    logger.info(
+        log_event(
+            root_ctx,
+            role="orchestrator",
+            event="candidate_extract_complete",
+            module=logger.name,
+            fields={"processed": processed},
+        )
+    )
     return outcomes

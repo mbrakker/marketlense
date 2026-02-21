@@ -12,8 +12,18 @@ from src.generators.taxonomy_generator import extract_taxonomy
 
 class FakePromptClient:
     def load_prompt_set(self, request, ctx):
-        system = PromptTemplate(schema_version="1.0", path=f"{request.namespace}/system", text="system", sha256="sys-sha")
-        user = PromptTemplate(schema_version="1.0", path=f"{request.namespace}/user", text="user {{ report_title }} {{ allowed_tags_json }}", sha256="user-sha")
+        system = PromptTemplate(
+            schema_version="1.0",
+            path=f"{request.namespace}/system",
+            text="system",
+            sha256="sys-sha",
+        )
+        user = PromptTemplate(
+            schema_version="1.0",
+            path=f"{request.namespace}/user",
+            text="user {{ report_title }} {{ allowed_tags_json }}",
+            sha256="user-sha",
+        )
         return PromptSet(schema_version="1.0", system=system, user=user)
 
     def render_prompt(self, request, ctx):
@@ -44,7 +54,9 @@ class FailIfCalledOpenAI:
 
     def openai_respond_with_vector_store(self, req, ctx):
         self.calls += 1
-        raise AssertionError("openai_respond_with_vector_store should not be called on cache hit")
+        raise AssertionError(
+            "openai_respond_with_vector_store should not be called on cache hit"
+        )
 
 
 def _ctx() -> RunContext:
@@ -71,7 +83,9 @@ def _write_mapping(path: Path) -> None:
     )
 
 
-def _settings(tmp_path: Path, mapping_path: Path, *, vector_store_keep: bool = True) -> AppSettings:
+def _settings(
+    tmp_path: Path, mapping_path: Path, *, vector_store_keep: bool = True
+) -> AppSettings:
     return AppSettings(
         schema_version="1.0",
         google_sa_path="sa.json",
@@ -84,7 +98,9 @@ def _settings(tmp_path: Path, mapping_path: Path, *, vector_store_keep: bool = T
         state_db=str(tmp_path / "state.sqlite"),
         reports_db=str(tmp_path / "reports.sqlite"),
         category_mapping_path=str(mapping_path),
-        cover_style_path=str(Path(__file__).resolve().parents[1] / "src" / "config" / "cover-styles.yaml"),
+        cover_style_path=str(
+            Path(__file__).resolve().parents[1] / "src" / "config" / "cover-styles.yaml"
+        ),
         ingest_lock_path=str(tmp_path / "lock"),
         ingest_lock_ttl_seconds=1.0,
         temperature=0.1,
@@ -95,12 +111,16 @@ def _settings(tmp_path: Path, mapping_path: Path, *, vector_store_keep: bool = T
         contents_min_headings=1,
         contents_keywords=["contents"],
         contents_preview_dpi=72,
-        analysis_mode="vector_store",
-        use_vector_store=True,
         vector_store_keep=vector_store_keep,
         cost_ledger_path=str(tmp_path / "cost-ledger.jsonl"),
         cost_daily_path=str(tmp_path / "cost-daily.json"),
-        model_pricing={"gpt-4.1-mini": {"input_tokens_per_1k_usd": 0.003, "output_tokens_per_1k_usd": 0.006, "tool_call_usd": 0.0}},
+        model_pricing={
+            "gpt-4.1-mini": {
+                "input_tokens_per_1k_usd": 0.003,
+                "output_tokens_per_1k_usd": 0.006,
+                "tool_call_usd": 0.0,
+            }
+        },
     )
 
 
@@ -117,7 +137,12 @@ def _request(settings: AppSettings) -> TaxonomyExtractRequest:
 
 
 def _cache_path(settings: AppSettings) -> Path:
-    return Path(settings.output_dir) / "report-1-slug" / "report_analysis" / "taxonomy.json"
+    return (
+        Path(settings.output_dir)
+        / "report-1-slug"
+        / "report_analysis"
+        / "taxonomy.json"
+    )
 
 
 def test_taxonomy_cache_miss_calls_openai_and_writes_cache(tmp_path):

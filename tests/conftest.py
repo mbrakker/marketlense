@@ -64,8 +64,6 @@ def ingest_settings(app_paths: dict[str, str]) -> IngestSettings:
         openai_timeout_seconds=30.0,
         rank_timeout_seconds=30.0,
         contents_preview_dpi=72,
-        analysis_mode="vector_store",
-        use_vector_store=True,
         vector_store_keep=True,
         cost_ledger_path=str(Path(app_paths["output_dir"]) / "cost-ledger.jsonl"),
         cost_daily_path=str(Path(app_paths["output_dir"]) / "cost-daily.json"),

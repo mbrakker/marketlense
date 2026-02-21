@@ -23,11 +23,20 @@ def build_cover_asset_path(
 ) -> Path:
     file_slug = _bounded_slug(file_id, _FILE_ID_MAX)
     filename_base = _bounded_slug(f"{publisher} {title}", _FILENAME_SLUG_MAX)
-    if report_slug and slugify(report_slug):
-        report_slug_final = slugify(report_slug)
+    normalized_report_slug = slugify(report_slug) if report_slug else ""
+    if normalized_report_slug:
+        report_slug_final = normalized_report_slug
     else:
         report_base = _bounded_slug(f"{title}.pdf", _REPORT_SLUG_MAX)
-        report_slug_final = f"{report_base}-{file_slug}" if not report_base.endswith(file_slug) else report_base
-    filename_slug = f"{filename_base}-{file_slug}" if not filename_base.endswith(file_slug) else filename_base
+        report_slug_final = (
+            f"{report_base}-{file_slug}"
+            if not report_base.endswith(file_slug)
+            else report_base
+        )
+    filename_slug = (
+        f"{filename_base}-{file_slug}"
+        if not filename_base.endswith(file_slug)
+        else filename_base
+    )
 
     return Path(output_dir) / report_slug_final / "assets" / f"{filename_slug}.png"

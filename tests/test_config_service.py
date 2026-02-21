@@ -5,7 +5,11 @@ from pathlib import Path
 from unittest.mock import patch
 import yaml
 
-from src.contracts.config import AppConfigReadRequest, AppConfigWriteRequest, ConfigLoadRequest
+from src.contracts.config import (
+    AppConfigReadRequest,
+    AppConfigWriteRequest,
+    ConfigLoadRequest,
+)
 from src.contracts.run_context import RunContext
 from src.services.config_service import (
     load_publish_settings,
@@ -17,7 +21,12 @@ from src.utils.errors import AppError
 
 
 class TestConfigService(unittest.TestCase):
-    def _write_config(self, tmp_dir: str, include_analysis: bool = False, include_publish: bool = False) -> str:
+    def _write_config(
+        self,
+        tmp_dir: str,
+        include_analysis: bool = False,
+        include_publish: bool = False,
+    ) -> str:
         config_path = Path(tmp_dir) / "app.yaml"
         acronyms_path = Path(tmp_dir) / "html-tag-acronyms.yaml"
         acronyms_path.write_text(
@@ -47,8 +56,6 @@ class TestConfigService(unittest.TestCase):
         }
         if include_analysis:
             config["analysis"] = {
-                "mode": "vector_store",
-                "use_vector_store": True,
                 "vector_store_keep": True,
                 "cost_ledger_path": "./out/cost-ledger.jsonl",
             }
@@ -67,11 +74,11 @@ class TestConfigService(unittest.TestCase):
             with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
                 settings = load_settings(
                     ConfigLoadRequest(schema_version="1.0", path=cfg_path),
-                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
                 )
 
-        self.assertEqual("vector_store", settings.analysis_mode)
-        self.assertTrue(settings.use_vector_store)
         self.assertTrue(settings.vector_store_keep)
         self.assertFalse(settings.artifacts_use_vector_store)
         self.assertFalse(settings.validation_grounding_use_vector_store)
@@ -99,17 +106,18 @@ class TestConfigService(unittest.TestCase):
             with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
                 settings = load_settings(
                     ConfigLoadRequest(schema_version="1.0", path=cfg_path),
-                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
                 )
 
         self.assertEqual(["AI", "ROI", "CPC"], settings.html_tag_acronyms)
 
-    def test_env_overrides_analysis_mode_and_flags(self) -> None:
+    def test_env_overrides_analysis_flags(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(tmp_dir, include_analysis=True)
             env = {
                 "OPENAI_API_KEY": "key",
-                "ANALYSIS_MODE": "vector_store",
                 "VECTOR_STORE_KEEP": "false",
                 "ARTIFACTS_USE_VECTOR_STORE": "true",
                 "VALIDATION_GROUNDING_USE_VECTOR_STORE": "true",
@@ -118,11 +126,11 @@ class TestConfigService(unittest.TestCase):
             with patch.dict(os.environ, env, clear=True):
                 settings = load_settings(
                     ConfigLoadRequest(schema_version="1.0", path=cfg_path),
-                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
                 )
 
-        self.assertEqual("vector_store", settings.analysis_mode)
-        self.assertTrue(settings.use_vector_store)
         self.assertFalse(settings.vector_store_keep)
         self.assertTrue(settings.artifacts_use_vector_store)
         self.assertTrue(settings.validation_grounding_use_vector_store)
@@ -140,7 +148,9 @@ class TestConfigService(unittest.TestCase):
             with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
                 settings = load_settings(
                     ConfigLoadRequest(schema_version="1.0", path=cfg_path),
-                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
                 )
                 self.assertEqual(3, settings.ingest_worker_limit)
 
@@ -151,14 +161,22 @@ class TestConfigService(unittest.TestCase):
             with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
                 settings = load_settings(
                     ConfigLoadRequest(schema_version="1.0", path=cfg_path),
-                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
                 )
                 self.assertEqual(2, settings.ingest_worker_limit)
 
-            with patch.dict(os.environ, {"OPENAI_API_KEY": "key", "INGEST_WORKER_LIMIT": "2"}, clear=True):
+            with patch.dict(
+                os.environ,
+                {"OPENAI_API_KEY": "key", "INGEST_WORKER_LIMIT": "2"},
+                clear=True,
+            ):
                 settings = load_settings(
                     ConfigLoadRequest(schema_version="1.0", path=cfg_path),
-                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
                 )
                 self.assertEqual(2, settings.ingest_worker_limit)
 
@@ -172,7 +190,9 @@ class TestConfigService(unittest.TestCase):
             with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
                 settings = load_settings(
                     ConfigLoadRequest(schema_version="1.0", path=cfg_path),
-                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
                 )
                 self.assertEqual(4, settings.report_worker_limit)
 
@@ -183,14 +203,22 @@ class TestConfigService(unittest.TestCase):
             with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
                 settings = load_settings(
                     ConfigLoadRequest(schema_version="1.0", path=cfg_path),
-                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
                 )
                 self.assertEqual(2, settings.report_worker_limit)
 
-            with patch.dict(os.environ, {"OPENAI_API_KEY": "key", "INGEST_REPORT_WORKER_LIMIT": "2"}, clear=True):
+            with patch.dict(
+                os.environ,
+                {"OPENAI_API_KEY": "key", "INGEST_REPORT_WORKER_LIMIT": "2"},
+                clear=True,
+            ):
                 settings = load_settings(
                     ConfigLoadRequest(schema_version="1.0", path=cfg_path),
-                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
                 )
                 self.assertEqual(2, settings.report_worker_limit)
 
@@ -200,7 +228,9 @@ class TestConfigService(unittest.TestCase):
             with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
                 settings = load_settings(
                     ConfigLoadRequest(schema_version="1.0", path=cfg_path),
-                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
                 )
                 self.assertEqual(4, settings.artifact_parallel_workers)
                 self.assertEqual(2, settings.artifact_global_max_in_flight)
@@ -215,7 +245,9 @@ class TestConfigService(unittest.TestCase):
             with patch.dict(os.environ, env, clear=True):
                 settings = load_settings(
                     ConfigLoadRequest(schema_version="1.0", path=cfg_path),
-                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
                 )
                 self.assertEqual(3, settings.artifact_parallel_workers)
                 self.assertEqual(1, settings.artifact_global_max_in_flight)
@@ -227,7 +259,9 @@ class TestConfigService(unittest.TestCase):
             with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
                 settings = load_settings(
                     ConfigLoadRequest(schema_version="1.0", path=cfg_path),
-                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
                 )
                 self.assertEqual(3, settings.evidence_pack_doc_map_max_attempts)
                 self.assertEqual(500, settings.evidence_pack_doc_map_retry_delay_ms)
@@ -241,7 +275,9 @@ class TestConfigService(unittest.TestCase):
             with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
                 settings = load_settings(
                     ConfigLoadRequest(schema_version="1.0", path=cfg_path),
-                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
                 )
                 self.assertEqual(4, settings.evidence_pack_doc_map_max_attempts)
                 self.assertEqual(250, settings.evidence_pack_doc_map_retry_delay_ms)
@@ -257,7 +293,9 @@ class TestConfigService(unittest.TestCase):
             with patch.dict(os.environ, env, clear=True):
                 settings = load_settings(
                     ConfigLoadRequest(schema_version="1.0", path=cfg_path),
-                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
                 )
                 self.assertEqual(2, settings.evidence_pack_doc_map_max_attempts)
                 self.assertEqual(0, settings.evidence_pack_doc_map_retry_delay_ms)
@@ -286,7 +324,9 @@ class TestConfigService(unittest.TestCase):
             with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
                 settings = load_settings(
                     ConfigLoadRequest(schema_version="1.0", path=cfg_path),
-                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
                 )
 
         self.assertEqual(30, settings.rank_max_candidates)
@@ -299,7 +339,9 @@ class TestConfigService(unittest.TestCase):
         self.assertEqual("adaptive", settings.crop_refine_mode)
         self.assertEqual(111, settings.crop_refine_page_dpi)
         self.assertEqual(0.0, settings.crop_refine_temperature)
-        self.assertEqual(settings.rank_timeout_seconds, settings.crop_refine_timeout_seconds)
+        self.assertEqual(
+            settings.rank_timeout_seconds, settings.crop_refine_timeout_seconds
+        )
 
     def test_publish_settings_derive_site_url_from_admin(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -313,7 +355,9 @@ class TestConfigService(unittest.TestCase):
             with patch.dict(os.environ, env, clear=True):
                 settings = load_publish_settings(
                     ConfigLoadRequest(schema_version="1.0", path=cfg_path),
-                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
                 )
 
         self.assertEqual("https://example.com", settings.wp.site_url)
@@ -334,7 +378,9 @@ class TestConfigService(unittest.TestCase):
                 with self.assertRaises(RuntimeError) as ctx:
                     load_publish_settings(
                         ConfigLoadRequest(schema_version="1.0", path=cfg_path),
-                        RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                        RunContext(
+                            schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                        ),
                     )
         self.assertIn("publish.wp.site_url", str(ctx.exception))
 
@@ -350,13 +396,17 @@ class TestConfigService(unittest.TestCase):
                 with self.assertRaises(RuntimeError) as ctx:
                     load_publish_settings(
                         ConfigLoadRequest(schema_version="1.0", path=cfg_path),
-                        RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                        RunContext(
+                            schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                        ),
                     )
         self.assertIn("WP_APP_PASSWORD", str(ctx.exception))
 
     def test_read_and_write_app_config_round_trip(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
-            cfg_path = self._write_config(tmp_dir, include_analysis=True, include_publish=True)
+            cfg_path = self._write_config(
+                tmp_dir, include_analysis=True, include_publish=True
+            )
             ctx = RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
             read_response = read_app_config(
                 AppConfigReadRequest(schema_version="1.0", path=cfg_path),
@@ -398,7 +448,9 @@ class TestConfigService(unittest.TestCase):
                         content="- one\n- two\n",
                         make_backup=False,
                     ),
-                    RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
                 )
             self.assertIn("mapping", str(ctx.exception).lower())
 

@@ -11,18 +11,31 @@ from pathlib import Path
 from typing import Any, Optional
 
 from src.contracts.candidates import Candidate
-from src.contracts.pdf_text import PdfTextExtractRequest, PdfTextExtractResponse, PdfTextSampleRequest
-from src.contracts.report_store import ReportMetadataGetRequest, ReportMetadataUpsertRequest
+from src.contracts.pdf_text import (
+    PdfTextExtractRequest,
+    PdfTextExtractResponse,
+    PdfTextSampleRequest,
+)
+from src.contracts.report_store import (
+    ReportMetadataGetRequest,
+    ReportMetadataUpsertRequest,
+)
 from src.contracts.report_models import CropItem, Figure, Quote, ReportPayload
 from src.contracts.pdf_context import PdfContextBuildRequest
-from src.contracts.pdf_contents import PdfContentsDetectionRequest, PdfContentsDetectionResponse
+from src.contracts.pdf_contents import (
+    PdfContentsDetectionRequest,
+    PdfContentsDetectionResponse,
+)
 from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.services.pdf_service import extract_pdf_text, sample_pdf_text
 from src.utils.slugify import slugify
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.files import FileStatRequest, ReadTextRequest, WriteBytesRequest
-from src.contracts.report_analysis import AnalysisPackPathRequest, AnalysisStorePackRequest
+from src.contracts.report_analysis import (
+    AnalysisPackPathRequest,
+    AnalysisStorePackRequest,
+)
 from src.contracts.report_assets import (
     CropRefineBBoxApplyRequest,
     CropRefineCandidate,
@@ -36,7 +49,11 @@ from src.contracts.report_assets import (
     RenderRequest,
 )
 from src.contracts.run_context import RunContext
-from src.contracts.categories import CategoryAssignment, CategoryMappingLoadRequest, UncategorizedTagsUpdateRequest
+from src.contracts.categories import (
+    CategoryAssignment,
+    CategoryMappingLoadRequest,
+    UncategorizedTagsUpdateRequest,
+)
 from src.contracts.pdf_utils import PdfInfoRequest, PdfInfoResponse
 from src.generators.categorize_generator import categorize_taxonomy
 from src.generators.normalize_generator import normalize_report
@@ -56,7 +73,10 @@ from src.services.pdf_service import (
     render_page_for_crop_refine as render_page_for_crop_refine_service,
     render_preview as render_preview_service,
 )
-from src.services.rank_service import rank_candidates as rank_candidates_service, refine_candidate_crops as refine_candidate_crops_service
+from src.services.rank_service import (
+    rank_candidates as rank_candidates_service,
+    refine_candidate_crops as refine_candidate_crops_service,
+)
 from src.services.render_service import render_report as render_report_service
 from src.services.prompt_service import load_prompt_set, render_prompt
 from src.services.file_service import file_stat, read_text, write_bytes
@@ -68,9 +88,17 @@ from src.services.report_store_service import (
     get_metadata as get_report_metadata,
     upsert_metadata as upsert_report_metadata,
 )
-from src.services import vector_store_service, state_service, report_analysis_store_service
+from src.services import (
+    vector_store_service,
+    state_service,
+    report_analysis_store_service,
+)
 from src.contracts.state import StateGetRequest, StateRecordRequest
-from src.contracts.validation import ValidationIssue, ValidationReport, ValidationRequest
+from src.contracts.validation import (
+    ValidationIssue,
+    ValidationReport,
+    ValidationRequest,
+)
 from src.contracts.taxonomy import TaxonomyExtractRequest
 from src.contracts.cover_images import CoverImageGenerationRequest, CoverImageReport
 from src.contracts.vector_store import (
@@ -121,7 +149,9 @@ def _derive_title(name: str) -> str:
     return cleaned or name
 
 
-def _select_sample_pages(file_id: str, md5: Optional[str], page_count: int, sample_count: int) -> list[int]:
+def _select_sample_pages(
+    file_id: str, md5: Optional[str], page_count: int, sample_count: int
+) -> list[int]:
     if page_count <= 0 or sample_count <= 0:
         return []
     count = min(sample_count, page_count)
@@ -222,7 +252,9 @@ def _rank_threshold_pass(row, settings: IngestSettings) -> tuple[bool, str]:
     return True, ""
 
 
-def _split_candidates_by_kind(candidates: list[Candidate]) -> tuple[list[Candidate], list[Candidate]]:
+def _split_candidates_by_kind(
+    candidates: list[Candidate],
+) -> tuple[list[Candidate], list[Candidate]]:
     tables = [candidate for candidate in candidates if candidate.kind == "table"]
     charts = [candidate for candidate in candidates if candidate.kind == "chart"]
     return tables, charts
@@ -238,37 +270,50 @@ def _rank_candidates_batch(
     if not candidates:
         return _RankBatchResult(
             ranked=[],
-            usage={"prompt_tokens": None, "completion_tokens": None, "total_tokens": None},
+            usage={
+                "prompt_tokens": None,
+                "completion_tokens": None,
+                "total_tokens": None,
+            },
         )
     rank_model = settings.rank_model or settings.openai_model
-    resolved_rank_model = resolve_model("rank_candidates", getattr(settings, "openai_models", {}), rank_model)
-    rows = [{
-        "id": c.id,
-        "type": c.kind,
-        "page": c.page,
-        "meta": c.meta or {},
-        "title_or_caption": (c.caption or "")[:300],
-        "table_preview": c.preview_text[:400] if c.kind == "table" else "",
-    } for c in candidates]
+    resolved_rank_model = resolve_model(
+        "rank_candidates", getattr(settings, "openai_models", {}), rank_model
+    )
+    rows = [
+        {
+            "id": c.id,
+            "type": c.kind,
+            "page": c.page,
+            "meta": c.meta or {},
+            "title_or_caption": (c.caption or "")[:300],
+            "table_preview": c.preview_text[:400] if c.kind == "table" else "",
+        }
+        for c in candidates
+    ]
     candidates_json = json.dumps(rows, ensure_ascii=True)
     rank_prompt_set = load_prompt_set(
-        PromptLoadRequest(schema_version="1.0", namespace="rank_candidates", reload_if_changed=True),
+        PromptLoadRequest(
+            schema_version="1.0", namespace="rank_candidates", reload_if_changed=True
+        ),
         ctx,
     )
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="prompt_selected",
-        module=logger.name,
-        fields={
-            "namespace": "rank_candidates",
-            "candidate_kind": kind,
-            "system_path": rank_prompt_set.system.path,
-            "system_sha256": rank_prompt_set.system.sha256,
-            "user_path": rank_prompt_set.user.path,
-            "user_sha256": rank_prompt_set.user.sha256,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="prompt_selected",
+            module=logger.name,
+            fields={
+                "namespace": "rank_candidates",
+                "candidate_kind": kind,
+                "system_path": rank_prompt_set.system.path,
+                "system_sha256": rank_prompt_set.system.sha256,
+                "user_path": rank_prompt_set.user.path,
+                "user_sha256": rank_prompt_set.user.sha256,
+            },
+        )
+    )
     rank_system_render = render_prompt(
         PromptRenderRequest(
             schema_version="1.0",
@@ -285,30 +330,34 @@ def _rank_candidates_batch(
         ),
         ctx,
     )
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="prompt_rendered",
-        module=logger.name,
-        fields={
-            "candidate_kind": kind,
-            "system_prompt": rank_system_render.text,
-            "user_prompt": rank_user_render.text,
-        },
-    ))
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="rank_request_config",
-        module=logger.name,
-        fields={
-            "candidate_kind": kind,
-            "model": resolved_rank_model,
-            "temperature": settings.rank_temperature,
-            "seed": settings.rank_seed,
-            "candidate_count": len(candidates),
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="prompt_rendered",
+            module=logger.name,
+            fields={
+                "candidate_kind": kind,
+                "system_prompt": rank_system_render.text,
+                "user_prompt": rank_user_render.text,
+            },
+        )
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="rank_request_config",
+            module=logger.name,
+            fields={
+                "candidate_kind": kind,
+                "model": resolved_rank_model,
+                "temperature": settings.rank_temperature,
+                "seed": settings.rank_seed,
+                "candidate_count": len(candidates),
+            },
+        )
+    )
     ranked_resp = rank_candidates_service(
         RankRequest(
             schema_version="1.0",
@@ -328,13 +377,19 @@ def _rank_candidates_batch(
         ),
         ctx,
     )
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="rank_raw_response",
-        module=logger.name,
-        fields={"candidate_kind": kind, "request_id": ranked_resp.request_id or "", "content": ranked_resp.raw_content},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="rank_raw_response",
+            module=logger.name,
+            fields={
+                "candidate_kind": kind,
+                "request_id": ranked_resp.request_id or "",
+                "content": ranked_resp.raw_content,
+            },
+        )
+    )
     return _RankBatchResult(
         ranked=ranked_resp.results,
         usage={
@@ -345,8 +400,14 @@ def _rank_candidates_batch(
     )
 
 
-def _merge_rank_usage(usage_rows: list[dict[str, Optional[int]]]) -> dict[str, Optional[int]]:
-    totals: dict[str, Optional[int]] = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+def _merge_rank_usage(
+    usage_rows: list[dict[str, Optional[int]]],
+) -> dict[str, Optional[int]]:
+    totals: dict[str, Optional[int]] = {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+    }
     has_any = False
     for row in usage_rows:
         for key in ("prompt_tokens", "completion_tokens", "total_tokens"):
@@ -378,16 +439,18 @@ def _crop_refine_profile_key(
     prompt_system_sha256: str,
     prompt_user_sha256: str,
 ) -> str:
-    return sha256_json({
-        "schema_version": "1.0",
-        "md5": md5,
-        "model": model,
-        "temperature": temperature,
-        "seed": seed,
-        "mode": mode,
-        "prompt_system_sha256": prompt_system_sha256,
-        "prompt_user_sha256": prompt_user_sha256,
-    })
+    return sha256_json(
+        {
+            "schema_version": "1.0",
+            "md5": md5,
+            "model": model,
+            "temperature": temperature,
+            "seed": seed,
+            "mode": mode,
+            "prompt_system_sha256": prompt_system_sha256,
+            "prompt_user_sha256": prompt_user_sha256,
+        }
+    )
 
 
 def _crop_refine_entry_key(
@@ -401,25 +464,29 @@ def _crop_refine_entry_key(
     prompt_system_sha256: str,
     prompt_user_sha256: str,
 ) -> str:
-    return sha256_json({
-        "schema_version": "1.0",
-        "md5": md5,
-        "candidate_id": candidate.id,
-        "page": candidate.page,
-        "bbox": list(candidate.bbox),
-        "meta": candidate.meta or {},
-        "caption": candidate.caption or "",
-        "preview_text": candidate.preview_text or "",
-        "model": model,
-        "temperature": temperature,
-        "seed": seed,
-        "mode": mode,
-        "prompt_system_sha256": prompt_system_sha256,
-        "prompt_user_sha256": prompt_user_sha256,
-    })
+    return sha256_json(
+        {
+            "schema_version": "1.0",
+            "md5": md5,
+            "candidate_id": candidate.id,
+            "page": candidate.page,
+            "bbox": list(candidate.bbox),
+            "meta": candidate.meta or {},
+            "caption": candidate.caption or "",
+            "preview_text": candidate.preview_text or "",
+            "model": model,
+            "temperature": temperature,
+            "seed": seed,
+            "mode": mode,
+            "prompt_system_sha256": prompt_system_sha256,
+            "prompt_user_sha256": prompt_user_sha256,
+        }
+    )
 
 
-def _crop_refine_cache_path(settings: IngestSettings, file_id: str, report_name: str, ctx: RunContext) -> str:
+def _crop_refine_cache_path(
+    settings: IngestSettings, file_id: str, report_name: str, ctx: RunContext
+) -> str:
     return report_analysis_store_service.pack_path(
         AnalysisPackPathRequest(
             schema_version="1.0",
@@ -517,25 +584,34 @@ def _select_refined_candidate_items(
             threshold_reasons[reason] = int(threshold_reasons.get(reason, 0)) + 1
             continue
         thresholded.append((row, candidate))
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="rank_threshold_gate_complete",
-        module=logger.name,
-        fields={
-            "ranked_count": len(ranked_rows),
-            "thresholded_count": len(thresholded),
-            "rejected_count": sum(threshold_reasons.values()),
-            "reasons": threshold_reasons,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="rank_threshold_gate_complete",
+            module=logger.name,
+            fields={
+                "ranked_count": len(ranked_rows),
+                "thresholded_count": len(thresholded),
+                "rejected_count": sum(threshold_reasons.values()),
+                "reasons": threshold_reasons,
+            },
+        )
+    )
     if not thresholded:
         return [], []
 
-    crop_refine_mode = str(getattr(settings, "crop_refine_mode", "adaptive") or "adaptive").strip().lower()
+    crop_refine_mode = (
+        str(getattr(settings, "crop_refine_mode", "adaptive") or "adaptive")
+        .strip()
+        .lower()
+    )
     if crop_refine_mode not in {"adaptive", "always", "off"}:
         crop_refine_mode = "adaptive"
-    crop_refine_enabled = bool(getattr(settings, "crop_refine_enabled", True)) and crop_refine_mode != "off"
+    crop_refine_enabled = (
+        bool(getattr(settings, "crop_refine_enabled", True))
+        and crop_refine_mode != "off"
+    )
     selected_max = max(1, int(selected_kind_max)) * 2
     selected_per_kind = max(1, int(selected_kind_max))
 
@@ -545,22 +621,28 @@ def _select_refined_candidate_items(
     crop_refine_cache_rows: dict[str, dict] = {}
     if crop_refine_enabled:
         crop_refine_prompt_set = load_prompt_set(
-            PromptLoadRequest(schema_version="1.0", namespace="rank_candidates/crop_refine", reload_if_changed=True),
+            PromptLoadRequest(
+                schema_version="1.0",
+                namespace="rank_candidates/crop_refine",
+                reload_if_changed=True,
+            ),
             ctx,
         )
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="prompt_selected",
-            module=logger.name,
-            fields={
-                "namespace": "rank_candidates/crop_refine",
-                "system_path": crop_refine_prompt_set.system.path,
-                "system_sha256": crop_refine_prompt_set.system.sha256,
-                "user_path": crop_refine_prompt_set.user.path,
-                "user_sha256": crop_refine_prompt_set.user.sha256,
-            },
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="prompt_selected",
+                module=logger.name,
+                fields={
+                    "namespace": "rank_candidates/crop_refine",
+                    "system_path": crop_refine_prompt_set.system.path,
+                    "system_sha256": crop_refine_prompt_set.system.sha256,
+                    "user_path": crop_refine_prompt_set.user.path,
+                    "user_sha256": crop_refine_prompt_set.user.sha256,
+                },
+            )
+        )
         crop_refine_system_render = render_prompt(
             PromptRenderRequest(
                 schema_version="1.0",
@@ -635,14 +717,16 @@ def _select_refined_candidate_items(
         if use_llm and cached_row is None:
             llm_pending_indices.append(idx)
             llm_pages.add(candidate.page)
-        plan_rows.append({
-            "reject_now": reject_now,
-            "reject_reason": reject_reason,
-            "obvious_pass": obvious_pass,
-            "use_llm": use_llm,
-            "entry_key": entry_key,
-            "cached_row": cached_row,
-        })
+        plan_rows.append(
+            {
+                "reject_now": reject_now,
+                "reject_reason": reject_reason,
+                "obvious_pass": obvious_pass,
+                "use_llm": use_llm,
+                "entry_key": entry_key,
+                "cached_row": cached_row,
+            }
+        )
 
     page_render_cache: dict[int, Any] = {}
 
@@ -664,38 +748,47 @@ def _select_refined_candidate_items(
         page_numbers = sorted(llm_pages)
         refine_workers = _crop_refine_parallel_workers(settings, selected_max)
         page_worker_limit = max(1, min(refine_workers, len(page_numbers)))
-        can_parallel_page_render = page_worker_limit > 1 and not bool(pdf_context and getattr(pdf_context, "fitz_doc", None))
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="crop_refine_page_prerender_start",
-            module=logger.name,
-            fields={
-                "page_count": len(page_numbers),
-                "workers": page_worker_limit,
-                "parallel": can_parallel_page_render,
-            },
-        ))
+        can_parallel_page_render = page_worker_limit > 1 and not bool(
+            pdf_context and getattr(pdf_context, "fitz_doc", None)
+        )
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="crop_refine_page_prerender_start",
+                module=logger.name,
+                fields={
+                    "page_count": len(page_numbers),
+                    "workers": page_worker_limit,
+                    "parallel": can_parallel_page_render,
+                },
+            )
+        )
         if can_parallel_page_render:
             with ThreadPoolExecutor(max_workers=page_worker_limit) as executor:
-                futures = {executor.submit(_render_refine_page, page): page for page in page_numbers}
+                futures = {
+                    executor.submit(_render_refine_page, page): page
+                    for page in page_numbers
+                }
                 for future in as_completed(futures):
                     page = futures[future]
                     page_render_cache[page] = future.result()
         else:
             for page in page_numbers:
                 page_render_cache[page] = _render_refine_page(page)
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="crop_refine_page_prerender_complete",
-            module=logger.name,
-            fields={
-                "page_count": len(page_render_cache),
-                "workers": page_worker_limit,
-                "parallel": can_parallel_page_render,
-            },
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="crop_refine_page_prerender_complete",
+                module=logger.name,
+                fields={
+                    "page_count": len(page_render_cache),
+                    "workers": page_worker_limit,
+                    "parallel": can_parallel_page_render,
+                },
+            )
+        )
 
     def _run_crop_refine_llm(plan_index: int) -> dict[str, Any]:
         _, candidate = thresholded[plan_index]
@@ -726,18 +819,26 @@ def _select_refined_candidate_items(
                         "page_width": page_render.page_width,
                         "page_height": page_render.page_height,
                         "phase": phase,
-                        "candidates_json": json.dumps([payload_item], ensure_ascii=True),
+                        "candidates_json": json.dumps(
+                            [payload_item], ensure_ascii=True
+                        ),
                     },
                 ),
                 ctx,
             )
-            logger.info(log_event(
-                ctx,
-                role="generator",
-                event="crop_refine_llm_request",
-                module=logger.name,
-                fields={"candidate_id": candidate.id, "page": candidate.page, "phase": phase},
-            ))
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="crop_refine_llm_request",
+                    module=logger.name,
+                    fields={
+                        "candidate_id": candidate.id,
+                        "page": candidate.page,
+                        "phase": phase,
+                    },
+                )
+            )
             crop_refine_resp = refine_candidate_crops_service(
                 CropRefineRequest(
                     schema_version="1.0",
@@ -746,9 +847,13 @@ def _select_refined_candidate_items(
                     prompt_system_sha256=crop_refine_prompt_set.system.sha256,
                     prompt_user_sha256=crop_refine_prompt_set.user.sha256,
                     model=resolved_crop_refine_model,
-                    temperature=float(getattr(settings, "crop_refine_temperature", 0.0)),
+                    temperature=float(
+                        getattr(settings, "crop_refine_temperature", 0.0)
+                    ),
                     api_key=settings.openai_api_key,
-                    page_image_path=str(Path(settings.output_dir) / page_render.image_path),
+                    page_image_path=str(
+                        Path(settings.output_dir) / page_render.image_path
+                    ),
                     page=candidate.page,
                     page_width=page_render.page_width,
                     page_height=page_render.page_height,
@@ -765,20 +870,32 @@ def _select_refined_candidate_items(
                         ),
                     ],
                     seed=settings.rank_seed,
-                    timeout_seconds=float(getattr(settings, "crop_refine_timeout_seconds", settings.rank_timeout_seconds)),
+                    timeout_seconds=float(
+                        getattr(
+                            settings,
+                            "crop_refine_timeout_seconds",
+                            settings.rank_timeout_seconds,
+                        )
+                    ),
                     cost_ledger_path=settings.cost_ledger_path,
                     cost_daily_path=settings.cost_daily_path,
                     model_pricing=settings.model_pricing,
                 ),
                 ctx,
             )
-            logger.info(log_event(
-                ctx,
-                role="generator",
-                event="crop_refine_llm_response_raw",
-                module=logger.name,
-                fields={"candidate_id": candidate.id, "phase": phase, "content": crop_refine_resp.raw_content},
-            ))
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="crop_refine_llm_response_raw",
+                    module=logger.name,
+                    fields={
+                        "candidate_id": candidate.id,
+                        "phase": phase,
+                        "content": crop_refine_resp.raw_content,
+                    },
+                )
+            )
             decision = None
             for result_item in crop_refine_resp.results:
                 if result_item.id == candidate.id:
@@ -794,13 +911,18 @@ def _select_refined_candidate_items(
             if not is_valid:
                 break
             if phase == "coarse":
-                logger.info(log_event(
-                    ctx,
-                    role="generator",
-                    event="crop_refine_second_pass_start",
-                    module=logger.name,
-                    fields={"candidate_id": candidate.id, "bbox": list(current_bbox)},
-                ))
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="generator",
+                        event="crop_refine_second_pass_start",
+                        module=logger.name,
+                        fields={
+                            "candidate_id": candidate.id,
+                            "bbox": list(current_bbox),
+                        },
+                    )
+                )
         return {
             "is_valid_candidate": is_valid,
             "reason": current_reason,
@@ -816,10 +938,14 @@ def _select_refined_candidate_items(
         nonlocal llm_cursor
         if llm_executor is None:
             return
-        while llm_cursor < len(llm_pending_indices) and len(llm_inflight) < refine_workers:
+        while (
+            llm_cursor < len(llm_pending_indices) and len(llm_inflight) < refine_workers
+        ):
             plan_index = llm_pending_indices[llm_cursor]
             if plan_index not in llm_inflight:
-                llm_inflight[plan_index] = llm_executor.submit(_run_crop_refine_llm, plan_index)
+                llm_inflight[plan_index] = llm_executor.submit(
+                    _run_crop_refine_llm, plan_index
+                )
             llm_cursor += 1
 
     if llm_pending_indices and refine_workers > 1:
@@ -833,56 +959,78 @@ def _select_refined_candidate_items(
         if len(accepted_items) >= selected_max:
             break
         if accepted_by_kind.get(candidate.kind, 0) >= selected_per_kind:
-            logger.info(log_event(
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="crop_refine_skipped_kind_limit",
+                    module=logger.name,
+                    fields={
+                        "candidate_id": candidate.id,
+                        "candidate_type": candidate.kind,
+                        "selected_per_kind": selected_per_kind,
+                    },
+                )
+            )
+            continue
+        logger.info(
+            log_event(
                 ctx,
                 role="generator",
-                event="crop_refine_skipped_kind_limit",
+                event="crop_refine_candidate_start",
                 module=logger.name,
-                fields={"candidate_id": candidate.id, "candidate_type": candidate.kind, "selected_per_kind": selected_per_kind},
-            ))
-            continue
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="crop_refine_candidate_start",
-            module=logger.name,
-            fields={
-                "candidate_id": candidate.id,
-                "candidate_type": candidate.kind,
-                "page": candidate.page,
-                "score": row.score,
-            },
-        ))
+                fields={
+                    "candidate_id": candidate.id,
+                    "candidate_type": candidate.kind,
+                    "page": candidate.page,
+                    "score": row.score,
+                },
+            )
+        )
         plan = plan_rows[idx]
         if bool(plan["reject_now"]):
             reject_reason = str(plan["reject_reason"] or "deterministic_reject")
-            logger.info(log_event(
-                ctx,
-                role="generator",
-                event="crop_refine_skipped_deterministic_reject",
-                module=logger.name,
-                fields={"candidate_id": candidate.id, "reason": reject_reason},
-            ))
-            logger.info(log_event(
-                ctx,
-                role="generator",
-                event="crop_refine_candidate_rejected",
-                module=logger.name,
-                fields={"candidate_id": candidate.id, "reason": reject_reason},
-            ))
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="crop_refine_skipped_deterministic_reject",
+                    module=logger.name,
+                    fields={"candidate_id": candidate.id, "reason": reject_reason},
+                )
+            )
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="crop_refine_candidate_rejected",
+                    module=logger.name,
+                    fields={"candidate_id": candidate.id, "reason": reject_reason},
+                )
+            )
             continue
-        if crop_refine_enabled and crop_refine_mode == "adaptive" and bool(plan["obvious_pass"]):
-            logger.info(log_event(
-                ctx,
-                role="generator",
-                event="crop_refine_skipped_deterministic_pass",
-                module=logger.name,
-                fields={"candidate_id": candidate.id},
-            ))
+        if (
+            crop_refine_enabled
+            and crop_refine_mode == "adaptive"
+            and bool(plan["obvious_pass"])
+        ):
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="crop_refine_skipped_deterministic_pass",
+                    module=logger.name,
+                    fields={"candidate_id": candidate.id},
+                )
+            )
         refined_bbox = tuple(float(v) for v in candidate.bbox)
         llm_valid = True
         llm_reason = "deterministic_pass"
-        use_llm = bool(plan["use_llm"]) and crop_refine_prompt_set is not None and crop_refine_system_render is not None
+        use_llm = (
+            bool(plan["use_llm"])
+            and crop_refine_prompt_set is not None
+            and crop_refine_system_render is not None
+        )
         if use_llm:
             cached_row = plan.get("cached_row")
             if isinstance(cached_row, dict):
@@ -901,7 +1049,9 @@ def _select_refined_candidate_items(
                 else:
                     llm_result = _run_crop_refine_llm(idx)
                 llm_valid = bool(llm_result.get("is_valid_candidate"))
-                llm_reason = str(llm_result.get("reason") or ("valid" if llm_valid else "rejected"))
+                llm_reason = str(
+                    llm_result.get("reason") or ("valid" if llm_valid else "rejected")
+                )
                 result_bbox = llm_result.get("refined_bbox")
                 if isinstance(result_bbox, (list, tuple)) and len(result_bbox) == 4:
                     refined_bbox = tuple(float(value) for value in result_bbox)
@@ -915,13 +1065,15 @@ def _select_refined_candidate_items(
                         "page": candidate.page,
                     }
             if not llm_valid:
-                logger.info(log_event(
-                    ctx,
-                    role="generator",
-                    event="crop_refine_candidate_rejected",
-                    module=logger.name,
-                    fields={"candidate_id": candidate.id, "reason": llm_reason},
-                ))
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="generator",
+                        event="crop_refine_candidate_rejected",
+                        module=logger.name,
+                        fields={"candidate_id": candidate.id, "reason": llm_reason},
+                    )
+                )
                 continue
         bbox_resp = apply_crop_refine_bbox_service(
             CropRefineBBoxApplyRequest(
@@ -934,62 +1086,91 @@ def _select_refined_candidate_items(
             ctx,
         )
         refined_bbox = bbox_resp.bbox
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="crop_refine_bbox_applied",
-            module=logger.name,
-            fields={"candidate_id": candidate.id, "bbox": list(refined_bbox)},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="crop_refine_bbox_applied",
+                module=logger.name,
+                fields={"candidate_id": candidate.id, "bbox": list(refined_bbox)},
+            )
+        )
         width = max(0.0, refined_bbox[2] - refined_bbox[0])
         height = max(0.0, refined_bbox[3] - refined_bbox[1])
         page_render = page_render_cache.get(candidate.page)
-        page_area = (page_render.page_width * page_render.page_height) if page_render else 0.0
-        area_frac = ((width * height) / page_area) if page_area > 0 else _candidate_meta(candidate, "area_frac", 0.0)
+        page_area = (
+            (page_render.page_width * page_render.page_height) if page_render else 0.0
+        )
+        area_frac = (
+            ((width * height) / page_area)
+            if page_area > 0
+            else _candidate_meta(candidate, "area_frac", 0.0)
+        )
         aspect = (width / height) if height > 0 else 0.0
         if width < 12 or height < 12:
-            logger.info(log_event(
-                ctx,
-                role="generator",
-                event="crop_refine_candidate_rejected",
-                module=logger.name,
-                fields={"candidate_id": candidate.id, "reason": "bbox_too_small"},
-            ))
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="crop_refine_candidate_rejected",
+                    module=logger.name,
+                    fields={"candidate_id": candidate.id, "reason": "bbox_too_small"},
+                )
+            )
             continue
         if area_frac < 0.01:
-            logger.info(log_event(
-                ctx,
-                role="generator",
-                event="crop_refine_candidate_rejected",
-                module=logger.name,
-                fields={"candidate_id": candidate.id, "reason": "bbox_area_too_small"},
-            ))
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="crop_refine_candidate_rejected",
+                    module=logger.name,
+                    fields={
+                        "candidate_id": candidate.id,
+                        "reason": "bbox_area_too_small",
+                    },
+                )
+            )
             continue
         if aspect < 0.12 or aspect > 8.0:
-            logger.info(log_event(
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="crop_refine_candidate_rejected",
+                    module=logger.name,
+                    fields={
+                        "candidate_id": candidate.id,
+                        "reason": "bbox_aspect_out_of_range",
+                    },
+                )
+            )
+            continue
+        accepted_items.append(
+            CropItem(
+                id=candidate.id,
+                type=candidate.kind,
+                score=float(row.score),
+                page=candidate.page,
+                bbox=refined_bbox,
+            )
+        )
+        accepted_candidates.append(candidate)
+        accepted_by_kind[candidate.kind] = (
+            int(accepted_by_kind.get(candidate.kind, 0)) + 1
+        )
+        logger.info(
+            log_event(
                 ctx,
                 role="generator",
-                event="crop_refine_candidate_rejected",
+                event="crop_refine_candidate_accepted",
                 module=logger.name,
-                fields={"candidate_id": candidate.id, "reason": "bbox_aspect_out_of_range"},
-            ))
-            continue
-        accepted_items.append(CropItem(
-            id=candidate.id,
-            type=candidate.kind,
-            score=float(row.score),
-            page=candidate.page,
-            bbox=refined_bbox,
-        ))
-        accepted_candidates.append(candidate)
-        accepted_by_kind[candidate.kind] = int(accepted_by_kind.get(candidate.kind, 0)) + 1
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="crop_refine_candidate_accepted",
-            module=logger.name,
-            fields={"candidate_id": candidate.id, "accepted_count": len(accepted_items)},
-        ))
+                fields={
+                    "candidate_id": candidate.id,
+                    "accepted_count": len(accepted_items),
+                },
+            )
+        )
     if llm_executor is not None:
         for future in llm_inflight.values():
             future.cancel()
@@ -1007,6 +1188,7 @@ def _select_refined_candidate_items(
             ctx=ctx,
         )
     return accepted_items[:selected_max], accepted_candidates[:selected_max]
+
 
 def _pack_paths(
     output_dir: str,
@@ -1044,13 +1226,15 @@ def _read_cache_json(path: Path, ctx: RunContext) -> Optional[dict]:
     except AppError as exc:
         if exc.code == "file_not_found":
             return None
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="cache_read_failed",
-            module=logger.name,
-            fields={"path": str(path), "error": exc.message},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="cache_read_failed",
+                module=logger.name,
+                fields={"path": str(path), "error": exc.message},
+            )
+        )
         return None
     try:
         payload = json.loads(resp.content)
@@ -1062,7 +1246,9 @@ def _read_cache_json(path: Path, ctx: RunContext) -> Optional[dict]:
 def _write_cache_json(path: Path, payload: dict, ctx: RunContext) -> None:
     data = json.dumps(payload, ensure_ascii=True)
     write_bytes(
-        WriteBytesRequest(schema_version="1.0", path=str(path), content=data.encode("utf-8")),
+        WriteBytesRequest(
+            schema_version="1.0", path=str(path), content=data.encode("utf-8")
+        ),
         ctx,
     )
 
@@ -1072,22 +1258,26 @@ def _pdf_info_cache_key(md5: str) -> str:
 
 
 def _contents_cache_key(md5: str, settings: IngestSettings) -> str:
-    return sha256_json({
-        "schema_version": "1.0",
-        "md5": md5,
-        "max_pages": settings.contents_max_pages,
-        "min_headings": settings.contents_min_headings,
-        "keywords": settings.contents_keywords,
-    })
+    return sha256_json(
+        {
+            "schema_version": "1.0",
+            "md5": md5,
+            "max_pages": settings.contents_max_pages,
+            "min_headings": settings.contents_min_headings,
+            "keywords": settings.contents_keywords,
+        }
+    )
 
 
 def _text_cache_key(md5: str, settings: IngestSettings) -> str:
-    return sha256_json({
-        "schema_version": "1.0",
-        "md5": md5,
-        "max_pages": settings.pdf_text_max_pages,
-        "max_chars": settings.pdf_text_max_chars,
-    })
+    return sha256_json(
+        {
+            "schema_version": "1.0",
+            "md5": md5,
+            "max_pages": settings.pdf_text_max_pages,
+            "max_chars": settings.pdf_text_max_chars,
+        }
+    )
 
 
 def _cache_path(cache_root: Path, prefix: str, cache_key: str) -> Path:
@@ -1098,29 +1288,37 @@ def _template_sha256(path: Path, ctx: RunContext) -> Optional[str]:
     try:
         resp = read_text(ReadTextRequest(schema_version="1.0", path=str(path)), ctx)
     except AppError as exc:
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="template_hash_failed",
-            module=logger.name,
-            fields={"path": str(path), "error": exc.message},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="template_hash_failed",
+                module=logger.name,
+                fields={"path": str(path), "error": exc.message},
+            )
+        )
         return None
     return hashlib.sha256(resp.content.encode("utf-8")).hexdigest()
 
 
-def _html_cache_key(md5: str, template_sha256: str, data_sha256: str, preview_png: str, doc_name: str) -> str:
-    return sha256_json({
-        "schema_version": "1.0",
-        "md5": md5,
-        "template_sha256": template_sha256,
-        "data_sha256": data_sha256,
-        "preview_png": preview_png,
-        "doc_name": doc_name,
-    })
+def _html_cache_key(
+    md5: str, template_sha256: str, data_sha256: str, preview_png: str, doc_name: str
+) -> str:
+    return sha256_json(
+        {
+            "schema_version": "1.0",
+            "md5": md5,
+            "template_sha256": template_sha256,
+            "data_sha256": data_sha256,
+            "preview_png": preview_png,
+            "doc_name": doc_name,
+        }
+    )
 
 
-def _base_payload(title: str, contents_page_number: int, contents_heading: str, contents_image: str) -> ReportPayload:
+def _base_payload(
+    title: str, contents_page_number: int, contents_heading: str, contents_image: str
+) -> ReportPayload:
     return ReportPayload(
         tldr="Not available from text",
         title=title,
@@ -1140,17 +1338,27 @@ def _base_payload(title: str, contents_page_number: int, contents_heading: str, 
     )
 
 
-def _merge_artifacts_into_payload(payload: ReportPayload, artifacts: dict) -> ReportPayload:
+def _merge_artifacts_into_payload(
+    payload: ReportPayload, artifacts: dict
+) -> ReportPayload:
     if not isinstance(artifacts, dict):
         return payload
-    summary = artifacts.get("summary") if isinstance(artifacts.get("summary"), dict) else {}
+    summary = (
+        artifacts.get("summary") if isinstance(artifacts.get("summary"), dict) else {}
+    )
     tldr = summary.get("tldr") if isinstance(summary, dict) else None
-    exec_summary = summary.get("executive_summary") if isinstance(summary, dict) else None
+    exec_summary = (
+        summary.get("executive_summary") if isinstance(summary, dict) else None
+    )
     if tldr:
         payload.tldr = str(tldr)
     if exec_summary:
         payload.commentary = str(exec_summary)
-    insights_final = artifacts.get("insights_final") if isinstance(artifacts.get("insights_final"), list) else []
+    insights_final = (
+        artifacts.get("insights_final")
+        if isinstance(artifacts.get("insights_final"), list)
+        else []
+    )
     if insights_final:
         normalized = []
         for item in insights_final[:5]:
@@ -1161,11 +1369,20 @@ def _merge_artifacts_into_payload(payload: ReportPayload, artifacts: dict) -> Re
         while len(normalized) < 5:
             normalized.append("")
         payload.insights = normalized
-    quotes_final = artifacts.get("quotes_final") if isinstance(artifacts.get("quotes_final"), list) else []
+    quotes_final = (
+        artifacts.get("quotes_final")
+        if isinstance(artifacts.get("quotes_final"), list)
+        else []
+    )
     if quotes_final:
         first_quote = quotes_final[0] if quotes_final else {}
         if isinstance(first_quote, dict):
-            payload.quote = Quote(text=str(first_quote.get("text") or ""), author=str(first_quote.get("speaker") or first_quote.get("author") or "Unknown"))
+            payload.quote = Quote(
+                text=str(first_quote.get("text") or ""),
+                author=str(
+                    first_quote.get("speaker") or first_quote.get("author") or "Unknown"
+                ),
+            )
     return payload
 
 
@@ -1183,7 +1400,9 @@ def _pick_non_empty_text(*values: Any) -> str:
     return ""
 
 
-def _resolve_doc_map_metadata(doc_map_pack: dict[str, Any]) -> tuple[str, str, str, str]:
+def _resolve_doc_map_metadata(
+    doc_map_pack: dict[str, Any],
+) -> tuple[str, str, str, str]:
     candidate = doc_map_pack
     candidate_prefix = "doc_map"
     for key in ("doc_map", "docmap", "docMap"):
@@ -1192,7 +1411,9 @@ def _resolve_doc_map_metadata(doc_map_pack: dict[str, Any]) -> tuple[str, str, s
             candidate = wrapped
             candidate_prefix = key
             break
-    document = candidate.get("document") if isinstance(candidate.get("document"), dict) else {}
+    document = (
+        candidate.get("document") if isinstance(candidate.get("document"), dict) else {}
+    )
 
     title = _pick_non_empty_text(
         candidate.get("title"),
@@ -1265,27 +1486,31 @@ def _record_state_progress(
             ),
             ctx,
         )
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="state_progress_recorded",
-            module=logger.name,
-            fields={
-                "file_id": file_id,
-                "stage": stage,
-                "vector_store_id": vector_store_id or "",
-                "vector_store_status": vector_store_status or "",
-                "indexed_at_utc": indexed_at_utc or "",
-            },
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="state_progress_recorded",
+                module=logger.name,
+                fields={
+                    "file_id": file_id,
+                    "stage": stage,
+                    "vector_store_id": vector_store_id or "",
+                    "vector_store_status": vector_store_status or "",
+                    "indexed_at_utc": indexed_at_utc or "",
+                },
+            )
+        )
     except Exception as exc:  # pragma: no cover - best-effort state tracking
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="state_progress_failed",
-            module=logger.name,
-            fields={"file_id": file_id, "stage": stage, "error": str(exc)},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="state_progress_failed",
+                module=logger.name,
+                fields={"file_id": file_id, "stage": stage, "error": str(exc)},
+            )
+        )
 
 
 def _is_vector_store_ready(status: Optional[str]) -> bool:
@@ -1304,17 +1529,21 @@ def _start_vector_store_indexing(
     indexed_at_utc = None
     last_error = None
 
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="vector_store_prepare_start",
-        module=logger.name,
-        fields={"file_id": file.file_id, "analysis_mode": settings.analysis_mode},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="vector_store_prepare_start",
+            module=logger.name,
+            fields={"file_id": file.file_id, "analysis_mode": "vector_store"},
+        )
+    )
     existing = None
     try:
         existing = state_service.get(
-            StateGetRequest(schema_version="1.0", state_db=settings.state_db, file_id=file.file_id),
+            StateGetRequest(
+                schema_version="1.0", state_db=settings.state_db, file_id=file.file_id
+            ),
             ctx,
         )
     except Exception:
@@ -1322,15 +1551,19 @@ def _start_vector_store_indexing(
     if existing and settings.vector_store_keep and existing.vector_store_id:
         vector_store_id = existing.vector_store_id
         openai_file_id = existing.openai_file_id
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="vector_store_reuse",
-            module=logger.name,
-            fields={"file_id": file.file_id, "vector_store_id": vector_store_id},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="vector_store_reuse",
+                module=logger.name,
+                fields={"file_id": file.file_id, "vector_store_id": vector_store_id},
+            )
+        )
         status_resp = vector_store_service.get_vector_store_status(
-            VectorStoreStatusRequest(schema_version="1.0", vector_store_id=vector_store_id),
+            VectorStoreStatusRequest(
+                schema_version="1.0", vector_store_id=vector_store_id
+            ),
             ctx=ctx,
         )
         vector_store_status = status_resp.status
@@ -1354,13 +1587,15 @@ def _start_vector_store_indexing(
             ctx,
         )
         vector_store_id = vs_resp.vector_store_id
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="vector_store_created",
-            module=logger.name,
-            fields={"file_id": file.file_id, "vector_store_id": vector_store_id},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="vector_store_created",
+                module=logger.name,
+                fields={"file_id": file.file_id, "vector_store_id": vector_store_id},
+            )
+        )
         upload_resp = vector_store_service.upload_file(
             VectorStoreUploadFileRequest(
                 schema_version="1.0",
@@ -1380,18 +1615,22 @@ def _start_vector_store_indexing(
         )
         vector_store_status = "indexing"
 
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="vector_store_indexing_started" if not _is_vector_store_ready(vector_store_status) else "vector_store_already_indexed",
-        module=logger.name,
-        fields={
-            "file_id": file.file_id,
-            "vector_store_id": vector_store_id,
-            "status": vector_store_status or "",
-            "indexed_at_utc": indexed_at_utc or "",
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="vector_store_indexing_started"
+            if not _is_vector_store_ready(vector_store_status)
+            else "vector_store_already_indexed",
+            module=logger.name,
+            fields={
+                "file_id": file.file_id,
+                "vector_store_id": vector_store_id,
+                "status": vector_store_status or "",
+                "indexed_at_utc": indexed_at_utc or "",
+            },
+        )
+    )
     return _VectorStoreIndexingState(
         vector_store_id=vector_store_id,
         openai_file_id=openai_file_id,
@@ -1414,37 +1653,46 @@ def _await_vector_store_indexing(
             retryable=False,
         )
     if _is_vector_store_ready(state.vector_store_status):
-        logger.info(log_event(
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="vector_store_wait_skipped",
+                module=logger.name,
+                fields={
+                    "vector_store_id": vector_store_id,
+                    "status": state.vector_store_status or "",
+                    "indexed_at_utc": state.indexed_at_utc or "",
+                },
+            )
+        )
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="vector_store_ready",
+                module=logger.name,
+                fields={
+                    "vector_store_id": vector_store_id,
+                    "status": state.vector_store_status,
+                    "indexed_at_utc": state.indexed_at_utc or "",
+                },
+            )
+        )
+        return state
+
+    logger.info(
+        log_event(
             ctx,
             role="generator",
-            event="vector_store_wait_skipped",
+            event="vector_store_wait_start",
             module=logger.name,
             fields={
                 "vector_store_id": vector_store_id,
                 "status": state.vector_store_status or "",
-                "indexed_at_utc": state.indexed_at_utc or "",
             },
-        ))
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="vector_store_ready",
-            module=logger.name,
-            fields={
-                "vector_store_id": vector_store_id,
-                "status": state.vector_store_status,
-                "indexed_at_utc": state.indexed_at_utc or "",
-            },
-        ))
-        return state
-
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="vector_store_wait_start",
-        module=logger.name,
-        fields={"vector_store_id": vector_store_id, "status": state.vector_store_status or ""},
-    ))
+        )
+    )
     status_resp = vector_store_service.wait_until_indexed(
         VectorStoreWaitRequest(
             schema_version="1.0",
@@ -1461,17 +1709,19 @@ def _await_vector_store_indexing(
         indexed_at_utc=status_resp.indexed_at_utc,
         last_error=status_resp.last_error,
     )
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="vector_store_ready",
-        module=logger.name,
-        fields={
-            "vector_store_id": ready_state.vector_store_id,
-            "status": ready_state.vector_store_status,
-            "indexed_at_utc": ready_state.indexed_at_utc or "",
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="vector_store_ready",
+            module=logger.name,
+            fields={
+                "vector_store_id": ready_state.vector_store_id,
+                "status": ready_state.vector_store_status,
+                "indexed_at_utc": ready_state.indexed_at_utc or "",
+            },
+        )
+    )
     return ready_state
 
 
@@ -1516,10 +1766,16 @@ def _resolve_taxonomy_and_categories(
         taxonomy_ctx,
     )
     mappings_resp = load_category_mappings(
-        CategoryMappingLoadRequest(schema_version="1.0", path=settings.category_mapping_path, reload_if_changed=True),
+        CategoryMappingLoadRequest(
+            schema_version="1.0",
+            path=settings.category_mapping_path,
+            reload_if_changed=True,
+        ),
         taxonomy_ctx,
     )
-    category_assignment = categorize_taxonomy(taxonomy_resp.taxonomy, mappings_resp, taxonomy_ctx)
+    category_assignment = categorize_taxonomy(
+        taxonomy_resp.taxonomy, mappings_resp, taxonomy_ctx
+    )
     if category_assignment.unmapped_tags or mappings_resp.mappings.uncategorized:
         update_uncategorized_tags(
             UncategorizedTagsUpdateRequest(
@@ -1584,26 +1840,37 @@ def generate_report(
         evidence_pack_generate_kwargs["openai_client"] = evidence_pack_openai_client
     if artifact_openai_client is not None:
         artifact_generate_kwargs["openai_client"] = artifact_openai_client
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="report_generate_start",
-        module=logger.name,
-        fields={"file_id": file.file_id, "name": file_name, "modes": analysis_modes},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="report_generate_start",
+            module=logger.name,
+            fields={
+                "file_id": file.file_id,
+                "name": file_name,
+                "modes": analysis_modes,
+            },
+        )
+    )
     report_name = _report_slug(file)
     cache_root = _cache_dir(settings, md5) if md5 else None
     contents_page_number = 0
     contents_image = ""
     contents_heading = ""
 
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="report_parallel_config",
-        module=logger.name,
-        fields={"report_worker_limit": report_worker_limit, "parallel_within_file": parallel_within_file},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="report_parallel_config",
+            module=logger.name,
+            fields={
+                "report_worker_limit": report_worker_limit,
+                "parallel_within_file": parallel_within_file,
+            },
+        )
+    )
 
     if not parallel_within_file:
         try:
@@ -1614,26 +1881,31 @@ def generate_report(
             )
             pdf_context = pdf_ctx_resp.context
             if pdf_ctx_resp.fitz_error or pdf_ctx_resp.pypdf_error:
-                logger.info(log_event(
-                    ctx_pdf,
-                    role="generator",
-                    event="pdf_context_partial",
-                    module=logger.name,
-                    fields={
-                        "fitz_ready": pdf_ctx_resp.context.fitz_doc is not None,
-                        "pypdf_ready": pdf_ctx_resp.context.pypdf_reader is not None,
-                        "fitz_error": pdf_ctx_resp.fitz_error or "",
-                        "pypdf_error": pdf_ctx_resp.pypdf_error or "",
-                    },
-                ))
+                logger.info(
+                    log_event(
+                        ctx_pdf,
+                        role="generator",
+                        event="pdf_context_partial",
+                        module=logger.name,
+                        fields={
+                            "fitz_ready": pdf_ctx_resp.context.fitz_doc is not None,
+                            "pypdf_ready": pdf_ctx_resp.context.pypdf_reader
+                            is not None,
+                            "fitz_error": pdf_ctx_resp.fitz_error or "",
+                            "pypdf_error": pdf_ctx_resp.pypdf_error or "",
+                        },
+                    )
+                )
         except Exception as exc:
-            logger.info(log_event(
-                ctx,
-                role="generator",
-                event="pdf_context_unavailable",
-                module=logger.name,
-                fields={"path": local_pdf_path, "error": str(exc)},
-            ))
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="pdf_context_unavailable",
+                    module=logger.name,
+                    fields={"path": local_pdf_path, "error": str(exc)},
+                )
+            )
             pdf_context = None
 
     pdf_context_for_tasks = pdf_context if not parallel_within_file else None
@@ -1650,7 +1922,11 @@ def generate_report(
             cached = _read_cache_json(info_cache_path, info_ctx)
             if cached and cached.get("key") == info_cache_key:
                 page_count = int(cached.get("page_count") or 0)
-                metadata = cached.get("metadata") if isinstance(cached.get("metadata"), dict) else {}
+                metadata = (
+                    cached.get("metadata")
+                    if isinstance(cached.get("metadata"), dict)
+                    else {}
+                )
                 info_resp = PdfInfoResponse(
                     schema_version="1.0",
                     path=local_pdf_path,
@@ -1658,24 +1934,40 @@ def generate_report(
                     metadata=metadata,
                 )
                 info_cache_hit = True
-                logger.info(log_event(
-                    info_ctx,
-                    role="generator",
-                    event="pdf_info_cache_hit",
-                    module=logger.name,
-                    fields={"file_id": file.file_id, "cache_path": str(info_cache_path)},
-                ))
+                logger.info(
+                    log_event(
+                        info_ctx,
+                        role="generator",
+                        event="pdf_info_cache_hit",
+                        module=logger.name,
+                        fields={
+                            "file_id": file.file_id,
+                            "cache_path": str(info_cache_path),
+                        },
+                    )
+                )
             else:
-                logger.info(log_event(
-                    info_ctx,
-                    role="generator",
-                    event="pdf_info_cache_miss",
-                    module=logger.name,
-                    fields={"file_id": file.file_id, "cache_path": str(info_cache_path) if info_cache_path else ""},
-                ))
+                logger.info(
+                    log_event(
+                        info_ctx,
+                        role="generator",
+                        event="pdf_info_cache_miss",
+                        module=logger.name,
+                        fields={
+                            "file_id": file.file_id,
+                            "cache_path": str(info_cache_path)
+                            if info_cache_path
+                            else "",
+                        },
+                    )
+                )
         if info_resp is None:
             info_resp = extract_pdf_info(
-                PdfInfoRequest(schema_version="1.0", path=local_pdf_path, pdf_context=pdf_context_for_tasks),
+                PdfInfoRequest(
+                    schema_version="1.0",
+                    path=local_pdf_path,
+                    pdf_context=pdf_context_for_tasks,
+                ),
                 info_ctx,
             )
             if md5 and cache_root is not None and info_cache_path is not None:
@@ -1689,25 +1981,32 @@ def generate_report(
                     },
                     info_ctx,
                 )
-                logger.info(log_event(
-                    info_ctx,
-                    role="generator",
-                    event="pdf_info_cache_written",
-                    module=logger.name,
-                    fields={"file_id": file.file_id, "cache_path": str(info_cache_path)},
-                ))
-        logger.info(log_event(
-            info_ctx,
-            role="generator",
-            event="pdf_info_loaded",
-            module=logger.name,
-            fields={
-                "file_id": file.file_id,
-                "page_count": info_resp.page_count,
-                "metadata_keys": list(info_resp.metadata.keys()),
-                "cache_hit": info_cache_hit,
-            },
-        ))
+                logger.info(
+                    log_event(
+                        info_ctx,
+                        role="generator",
+                        event="pdf_info_cache_written",
+                        module=logger.name,
+                        fields={
+                            "file_id": file.file_id,
+                            "cache_path": str(info_cache_path),
+                        },
+                    )
+                )
+        logger.info(
+            log_event(
+                info_ctx,
+                role="generator",
+                event="pdf_info_loaded",
+                module=logger.name,
+                fields={
+                    "file_id": file.file_id,
+                    "page_count": info_resp.page_count,
+                    "metadata_keys": list(info_resp.metadata.keys()),
+                    "cache_hit": info_cache_hit,
+                },
+            )
+        )
         return info_resp, info_cache_hit
 
     def _load_contents_task() -> tuple[int, str, str, bool]:
@@ -1722,7 +2021,9 @@ def generate_report(
             contents_cache_path = None
             if md5 and cache_root is not None:
                 contents_cache_key = _contents_cache_key(md5, settings)
-                contents_cache_path = _cache_path(cache_root, "contents", contents_cache_key)
+                contents_cache_path = _cache_path(
+                    cache_root, "contents", contents_cache_key
+                )
                 cached = _read_cache_json(contents_cache_path, contents_ctx)
                 if cached and cached.get("key") == contents_cache_key:
                     contents_resp = PdfContentsDetectionResponse(
@@ -1735,21 +2036,33 @@ def generate_report(
                         confidence=float(cached.get("confidence") or 0.0),
                     )
                     contents_cache_hit = True
-                    logger.info(log_event(
-                        contents_ctx,
-                        role="generator",
-                        event="contents_cache_hit",
-                        module=logger.name,
-                        fields={"file_id": file.file_id, "cache_path": str(contents_cache_path)},
-                    ))
+                    logger.info(
+                        log_event(
+                            contents_ctx,
+                            role="generator",
+                            event="contents_cache_hit",
+                            module=logger.name,
+                            fields={
+                                "file_id": file.file_id,
+                                "cache_path": str(contents_cache_path),
+                            },
+                        )
+                    )
                 else:
-                    logger.info(log_event(
-                        contents_ctx,
-                        role="generator",
-                        event="contents_cache_miss",
-                        module=logger.name,
-                        fields={"file_id": file.file_id, "cache_path": str(contents_cache_path) if contents_cache_path else ""},
-                    ))
+                    logger.info(
+                        log_event(
+                            contents_ctx,
+                            role="generator",
+                            event="contents_cache_miss",
+                            module=logger.name,
+                            fields={
+                                "file_id": file.file_id,
+                                "cache_path": str(contents_cache_path)
+                                if contents_cache_path
+                                else "",
+                            },
+                        )
+                    )
             if contents_resp is None:
                 contents_resp = detect_contents_page_service(
                     PdfContentsDetectionRequest(
@@ -1776,13 +2089,18 @@ def generate_report(
                         },
                         contents_ctx,
                     )
-                    logger.info(log_event(
-                        contents_ctx,
-                        role="generator",
-                        event="contents_cache_written",
-                        module=logger.name,
-                        fields={"file_id": file.file_id, "cache_path": str(contents_cache_path)},
-                    ))
+                    logger.info(
+                        log_event(
+                            contents_ctx,
+                            role="generator",
+                            event="contents_cache_written",
+                            module=logger.name,
+                            fields={
+                                "file_id": file.file_id,
+                                "cache_path": str(contents_cache_path),
+                            },
+                        )
+                    )
             if contents_resp.has_contents:
                 local_contents_page = contents_resp.page_number
                 local_contents_heading = contents_resp.heading or ""
@@ -1803,36 +2121,55 @@ def generate_report(
                     if contents_preview.image_path:
                         local_contents_image = contents_preview.image_path
                 else:
-                    logger.info(log_event(
-                        contents_ctx,
-                        role="generator",
-                        event="contents_preview_skipped",
-                        module=logger.name,
-                        fields={"file_id": file.file_id, "reason": "preview_disabled"},
-                    ))
-            logger.info(log_event(
-                contents_ctx,
-                role="generator",
-                event="contents_detection_result",
-                module=logger.name,
-                fields={
-                    "file_id": file.file_id,
-                    "has_contents": contents_resp.has_contents,
-                    "page_number": local_contents_page,
-                    "image_path": local_contents_image or "",
-                    "cache_hit": contents_cache_hit,
-                },
-            ))
-            return local_contents_page, local_contents_heading, local_contents_image, contents_cache_hit
+                    logger.info(
+                        log_event(
+                            contents_ctx,
+                            role="generator",
+                            event="contents_preview_skipped",
+                            module=logger.name,
+                            fields={
+                                "file_id": file.file_id,
+                                "reason": "preview_disabled",
+                            },
+                        )
+                    )
+            logger.info(
+                log_event(
+                    contents_ctx,
+                    role="generator",
+                    event="contents_detection_result",
+                    module=logger.name,
+                    fields={
+                        "file_id": file.file_id,
+                        "has_contents": contents_resp.has_contents,
+                        "page_number": local_contents_page,
+                        "image_path": local_contents_image or "",
+                        "cache_hit": contents_cache_hit,
+                    },
+                )
+            )
+            return (
+                local_contents_page,
+                local_contents_heading,
+                local_contents_image,
+                contents_cache_hit,
+            )
         except Exception as exc:
-            logger.info(log_event(
-                ctx,
-                role="generator",
-                event="contents_detection_failed",
-                module=logger.name,
-                fields={"file_id": file.file_id, "error": str(exc)},
-            ))
-            return local_contents_page, local_contents_heading, local_contents_image, False
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="contents_detection_failed",
+                    module=logger.name,
+                    fields={"file_id": file.file_id, "error": str(exc)},
+                )
+            )
+            return (
+                local_contents_page,
+                local_contents_heading,
+                local_contents_image,
+                False,
+            )
 
     text_ctx = child_context(ctx, task_id=f"{ctx.task_id}:text")
 
@@ -1854,21 +2191,33 @@ def generate_report(
                     text_density=float(cached.get("text_density") or 0.0),
                 )
                 text_cache_hit = True
-                logger.info(log_event(
-                    text_ctx,
-                    role="generator",
-                    event="text_cache_hit",
-                    module=logger.name,
-                    fields={"file_id": file.file_id, "cache_path": str(text_cache_path)},
-                ))
+                logger.info(
+                    log_event(
+                        text_ctx,
+                        role="generator",
+                        event="text_cache_hit",
+                        module=logger.name,
+                        fields={
+                            "file_id": file.file_id,
+                            "cache_path": str(text_cache_path),
+                        },
+                    )
+                )
             else:
-                logger.info(log_event(
-                    text_ctx,
-                    role="generator",
-                    event="text_cache_miss",
-                    module=logger.name,
-                    fields={"file_id": file.file_id, "cache_path": str(text_cache_path) if text_cache_path else ""},
-                ))
+                logger.info(
+                    log_event(
+                        text_ctx,
+                        role="generator",
+                        event="text_cache_miss",
+                        module=logger.name,
+                        fields={
+                            "file_id": file.file_id,
+                            "cache_path": str(text_cache_path)
+                            if text_cache_path
+                            else "",
+                        },
+                    )
+                )
         if text_resp is None:
             text_resp = extract_pdf_text(
                 PdfTextExtractRequest(
@@ -1893,13 +2242,18 @@ def generate_report(
                     },
                     text_ctx,
                 )
-                logger.info(log_event(
-                    text_ctx,
-                    role="generator",
-                    event="text_cache_written",
-                    module=logger.name,
-                    fields={"file_id": file.file_id, "cache_path": str(text_cache_path)},
-                ))
+                logger.info(
+                    log_event(
+                        text_ctx,
+                        role="generator",
+                        event="text_cache_written",
+                        module=logger.name,
+                        fields={
+                            "file_id": file.file_id,
+                            "cache_path": str(text_cache_path),
+                        },
+                    )
+                )
         return text_resp, text_cache_hit
 
     if parallel_within_file:
@@ -1908,11 +2262,18 @@ def generate_report(
             contents_future = executor.submit(_load_contents_task)
             text_future = executor.submit(_load_text_task)
             info_resp, info_cache_hit = info_future.result()
-            contents_page_number, contents_heading, contents_image, contents_cache_hit = contents_future.result()
+            (
+                contents_page_number,
+                contents_heading,
+                contents_image,
+                contents_cache_hit,
+            ) = contents_future.result()
             text_resp, text_cache_hit = text_future.result()
     else:
         info_resp, info_cache_hit = _load_pdf_info_task()
-        contents_page_number, contents_heading, contents_image, contents_cache_hit = _load_contents_task()
+        contents_page_number, contents_heading, contents_image, contents_cache_hit = (
+            _load_contents_task()
+        )
         text_resp, text_cache_hit = _load_text_task()
     text_status = {
         "schema_version": "1.0",
@@ -1923,16 +2284,28 @@ def generate_report(
         "not_available": False,
         "reason": "",
     }
-    if text_status["density_threshold"] and text_status["text_density"] < text_status["density_threshold"]:
+    if (
+        text_status["density_threshold"]
+        and text_status["text_density"] < text_status["density_threshold"]
+    ):
         text_status["not_available"] = True
         text_status["reason"] = "text_density_below_threshold"
-    logger.info(log_event(
-        text_ctx,
-        role="generator",
-        event="text_density_evaluated",
-        module=logger.name,
-        fields={"density": text_status["text_density"], "threshold": text_status["density_threshold"], "pages": text_status["pages_sampled"], "char_count": text_status["char_count"], "not_available": text_status["not_available"], "cache_hit": text_cache_hit},
-    ))
+    logger.info(
+        log_event(
+            text_ctx,
+            role="generator",
+            event="text_density_evaluated",
+            module=logger.name,
+            fields={
+                "density": text_status["text_density"],
+                "threshold": text_status["density_threshold"],
+                "pages": text_status["pages_sampled"],
+                "char_count": text_status["char_count"],
+                "not_available": text_status["not_available"],
+                "cache_hit": text_cache_hit,
+            },
+        )
+    )
     sample_ctx = child_context(ctx, task_id=f"{ctx.task_id}:text_sample")
     sample_indices = _select_sample_pages(
         file_id=file.file_id,
@@ -1946,18 +2319,20 @@ def generate_report(
     if not sample_indices:
         text_validation_status = "fail"
         text_validation_reason = "no_pages_to_sample"
-        logger.info(log_event(
-            sample_ctx,
-            role="generator",
-            event="text_extractability_failed",
-            module=logger.name,
-            fields={
-                "file_id": file.file_id,
-                "reason": text_validation_reason,
-                "page_count": info_resp.page_count,
-                "sample_pages": text_validation_pages,
-            },
-        ))
+        logger.info(
+            log_event(
+                sample_ctx,
+                role="generator",
+                event="text_extractability_failed",
+                module=logger.name,
+                fields={
+                    "file_id": file.file_id,
+                    "reason": text_validation_reason,
+                    "page_count": info_resp.page_count,
+                    "sample_pages": text_validation_pages,
+                },
+            )
+        )
         if pdf_context is not None:
             pdf_context.close()
         return IngestOutcome(
@@ -1981,34 +2356,40 @@ def generate_report(
         ),
         sample_ctx,
     )
-    sample_chars = {sample.page_number: sample.char_count for sample in sample_resp.samples}
-    logger.info(log_event(
-        sample_ctx,
-        role="generator",
-        event="text_extractability_checked",
-        module=logger.name,
-        fields={
-            "file_id": file.file_id,
-            "sample_pages": text_validation_pages,
-            "any_text": sample_resp.any_text,
-            "char_counts": sample_chars,
-        },
-    ))
-    if not sample_resp.any_text:
-        text_validation_status = "fail"
-        text_validation_reason = "no_text_in_sampled_pages"
-        logger.info(log_event(
+    sample_chars = {
+        sample.page_number: sample.char_count for sample in sample_resp.samples
+    }
+    logger.info(
+        log_event(
             sample_ctx,
             role="generator",
-            event="text_extractability_failed",
+            event="text_extractability_checked",
             module=logger.name,
             fields={
                 "file_id": file.file_id,
-                "reason": text_validation_reason,
                 "sample_pages": text_validation_pages,
+                "any_text": sample_resp.any_text,
                 "char_counts": sample_chars,
             },
-        ))
+        )
+    )
+    if not sample_resp.any_text:
+        text_validation_status = "fail"
+        text_validation_reason = "no_text_in_sampled_pages"
+        logger.info(
+            log_event(
+                sample_ctx,
+                role="generator",
+                event="text_extractability_failed",
+                module=logger.name,
+                fields={
+                    "file_id": file.file_id,
+                    "reason": text_validation_reason,
+                    "sample_pages": text_validation_pages,
+                    "char_counts": sample_chars,
+                },
+            )
+        )
         if pdf_context is not None:
             pdf_context.close()
         return IngestOutcome(
@@ -2024,19 +2405,23 @@ def generate_report(
             text_validation_pages=text_validation_pages,
         )
     report_title = _derive_title(file_name)
-    data = _base_payload(report_title, contents_page_number, contents_heading, contents_image)
+    data = _base_payload(
+        report_title, contents_page_number, contents_heading, contents_image
+    )
     data._text_density = text_status["text_density"]
     data._text_pages_sampled = text_status["pages_sampled"]
     data._text_char_count = text_status["char_count"]
     data._text_not_available = text_status["not_available"]
     data.publisher = _resolve_publisher(data, info_resp.metadata)
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="publisher_resolved",
-        module=logger.name,
-        fields={"file_id": file.file_id, "publisher": data.publisher},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="publisher_resolved",
+            module=logger.name,
+            fields={"file_id": file.file_id, "publisher": data.publisher},
+        )
+    )
 
     mode_ctx = child_context(ctx, task_id=f"{ctx.task_id}:vector_store")
     vector_state = _start_vector_store_indexing(
@@ -2115,13 +2500,15 @@ def generate_report(
     if cands_resp.candidates:
         for cand in cands_resp.candidates:
             validate_candidate(cand)
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="candidate_validation_complete",
-            module=logger.name,
-            fields={"count": len(cands_resp.candidates)},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="candidate_validation_complete",
+                module=logger.name,
+                fields={"count": len(cands_resp.candidates)},
+            )
+        )
         prefiltered_candidates: list[Candidate] = []
         prefilter_reasons: dict[str, int] = {}
         for cand in cands_resp.candidates:
@@ -2136,20 +2523,24 @@ def generate_report(
             reverse=True,
         )
         if settings.rank_max_candidates > 0:
-            prefiltered_candidates = prefiltered_candidates[: int(settings.rank_max_candidates)]
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="candidate_prefilter_complete",
-            module=logger.name,
-            fields={
-                "raw_count": len(cands_resp.candidates),
-                "kept_count": len(prefiltered_candidates),
-                "rejected_count": sum(prefilter_reasons.values()),
-                "reasons": prefilter_reasons,
-                "rank_max_candidates": settings.rank_max_candidates,
-            },
-        ))
+            prefiltered_candidates = prefiltered_candidates[
+                : int(settings.rank_max_candidates)
+            ]
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="candidate_prefilter_complete",
+                module=logger.name,
+                fields={
+                    "raw_count": len(cands_resp.candidates),
+                    "kept_count": len(prefiltered_candidates),
+                    "rejected_count": sum(prefilter_reasons.values()),
+                    "reasons": prefilter_reasons,
+                    "rank_max_candidates": settings.rank_max_candidates,
+                },
+            )
+        )
         all_items = [
             CropItem(
                 id=c.id,
@@ -2161,13 +2552,15 @@ def generate_report(
             for c in cands_resp.candidates
         ]
         if all_items:
-            logger.info(log_event(
-                ctx,
-                role="generator",
-                event="candidate_crops_start",
-                module=logger.name,
-                fields={"count": len(all_items), "subdir": "candidates"},
-            ))
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="candidate_crops_start",
+                    module=logger.name,
+                    fields={"count": len(all_items), "subdir": "candidates"},
+                )
+            )
             try:
                 candidate_crop_resp = crop_regions_service(
                     CropRequest(
@@ -2182,40 +2575,55 @@ def generate_report(
                     ctx,
                 )
                 candidate_paths = candidate_crop_resp.paths
-                logger.info(log_event(
-                    ctx,
-                    role="generator",
-                    event="candidate_crops_complete",
-                    module=logger.name,
-                    fields={"count": len(candidate_paths), "subdir": "candidates"},
-                ))
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="generator",
+                        event="candidate_crops_complete",
+                        module=logger.name,
+                        fields={"count": len(candidate_paths), "subdir": "candidates"},
+                    )
+                )
             except Exception as exc:
-                logger.info(log_event(
-                    ctx,
-                    role="generator",
-                    event="candidate_crops_failed",
-                    module=logger.name,
-                    fields={"error": str(exc), "subdir": "candidates"},
-                ))
-        rank_usage = {"prompt_tokens": None, "completion_tokens": None, "total_tokens": None}
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="generator",
+                        event="candidate_crops_failed",
+                        module=logger.name,
+                        fields={"error": str(exc), "subdir": "candidates"},
+                    )
+                )
+        rank_usage = {
+            "prompt_tokens": None,
+            "completion_tokens": None,
+            "total_tokens": None,
+        }
         ranked = []
         if prefiltered_candidates:
-            table_candidates, chart_candidates = _split_candidates_by_kind(prefiltered_candidates)
+            table_candidates, chart_candidates = _split_candidates_by_kind(
+                prefiltered_candidates
+            )
             per_kind_limit = max(1, int(settings.rank_selected_max))
-            logger.info(log_event(
-                ctx,
-                role="generator",
-                event="candidate_rank_split",
-                module=logger.name,
-                fields={
-                    "table_candidates": len(table_candidates),
-                    "chart_candidates": len(chart_candidates),
-                    "per_kind_limit": per_kind_limit,
-                },
-            ))
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="candidate_rank_split",
+                    module=logger.name,
+                    fields={
+                        "table_candidates": len(table_candidates),
+                        "chart_candidates": len(chart_candidates),
+                        "per_kind_limit": per_kind_limit,
+                    },
+                )
+            )
             usage_rows: list[dict[str, Optional[int]]] = []
             try:
-                for kind, batch in (("table", table_candidates), ("chart", chart_candidates)):
+                for kind, batch in (
+                    ("table", table_candidates),
+                    ("chart", chart_candidates),
+                ):
                     batch_result = _rank_candidates_batch(
                         candidates=batch,
                         kind=kind,
@@ -2226,22 +2634,26 @@ def generate_report(
                     usage_rows.append(batch_result.usage)
                 rank_usage = _merge_rank_usage(usage_rows)
             except Exception as exc:
-                logger.info(log_event(
-                    ctx,
-                    role="generator",
-                    event="rank_failed",
-                    module=logger.name,
-                    fields={"file_id": file.file_id, "error": str(exc)},
-                ))
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="generator",
+                        event="rank_failed",
+                        module=logger.name,
+                        fields={"file_id": file.file_id, "error": str(exc)},
+                    )
+                )
                 ranked = []
         else:
-            logger.info(log_event(
-                ctx,
-                role="generator",
-                event="rank_skipped_no_prefilter_candidates",
-                module=logger.name,
-                fields={"file_id": file.file_id},
-            ))
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="rank_skipped_no_prefilter_candidates",
+                    module=logger.name,
+                    fields={"file_id": file.file_id},
+                )
+            )
 
         selected_items, selected_candidates = _select_refined_candidate_items(
             ranked_rows=ranked,
@@ -2305,13 +2717,15 @@ def generate_report(
         data._figure_gallery = []
         data._figure_top = ""
         data._figure_section_enabled = False
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="figure_section_disabled_zero_candidates",
-            module=logger.name,
-            fields={"file_id": file.file_id},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="figure_section_disabled_zero_candidates",
+                module=logger.name,
+                fields={"file_id": file.file_id},
+            )
+        )
 
     preview_ctx = child_context(ctx, task_id=f"{ctx.task_id}:preview")
     preview_resp = render_preview_service(
@@ -2352,17 +2766,19 @@ def generate_report(
     evidence_error: Optional[Exception] = None
     packs: dict[str, dict] = {}
     if parallel_within_file:
-        logger.info(log_event(
-            mode_ctx,
-            role="generator",
-            event="post_vector_store_parallel_start",
-            module=logger.name,
-            fields={
-                "file_id": file.file_id,
-                "tasks": ["taxonomy_categories", "evidence_packs"],
-                "max_workers": min(report_worker_limit, 2),
-            },
-        ))
+        logger.info(
+            log_event(
+                mode_ctx,
+                role="generator",
+                event="post_vector_store_parallel_start",
+                module=logger.name,
+                fields={
+                    "file_id": file.file_id,
+                    "tasks": ["taxonomy_categories", "evidence_packs"],
+                    "max_workers": min(report_worker_limit, 2),
+                },
+            )
+        )
         with ThreadPoolExecutor(max_workers=min(report_worker_limit, 2)) as executor:
             taxonomy_future = executor.submit(
                 _resolve_taxonomy_and_categories,
@@ -2389,17 +2805,19 @@ def generate_report(
                 packs = evidence_future.result()
             except Exception as exc:
                 evidence_error = exc
-        logger.info(log_event(
-            mode_ctx,
-            role="generator",
-            event="post_vector_store_parallel_complete",
-            module=logger.name,
-            fields={
-                "file_id": file.file_id,
-                "tasks": ["taxonomy_categories", "evidence_packs"],
-                "evidence_failed": evidence_error is not None,
-            },
-        ))
+        logger.info(
+            log_event(
+                mode_ctx,
+                role="generator",
+                event="post_vector_store_parallel_complete",
+                module=logger.name,
+                fields={
+                    "file_id": file.file_id,
+                    "tasks": ["taxonomy_categories", "evidence_packs"],
+                    "evidence_failed": evidence_error is not None,
+                },
+            )
+        )
     else:
         taxonomy_state = _resolve_taxonomy_and_categories(
             file=file,
@@ -2438,23 +2856,37 @@ def generate_report(
     except AppError as exc:
         if exc.code == "doc_map_empty":
             doc_map_summary = exc.context if isinstance(exc.context, dict) else None
-            logger.info(log_event(
-                mode_ctx,
-                role="generator",
-                event="doc_map_validation_halt",
-                module=logger.name,
-                fields={
-                    "file_id": file.file_id,
-                    "code": exc.code,
-                    "message": exc.message,
-                    "has_content": doc_map_summary.get("has_content") if doc_map_summary else None,
-                    "sections_count": doc_map_summary.get("sections_count") if doc_map_summary else None,
-                    "title_present": doc_map_summary.get("title_present") if doc_map_summary else None,
-                    "doc_id_present": doc_map_summary.get("doc_id_present") if doc_map_summary else None,
-                    "summary_present": doc_map_summary.get("summary_present") if doc_map_summary else None,
-                    "not_found_reason": doc_map_summary.get("not_found_reason") if doc_map_summary else "",
-                },
-            ))
+            logger.info(
+                log_event(
+                    mode_ctx,
+                    role="generator",
+                    event="doc_map_validation_halt",
+                    module=logger.name,
+                    fields={
+                        "file_id": file.file_id,
+                        "code": exc.code,
+                        "message": exc.message,
+                        "has_content": doc_map_summary.get("has_content")
+                        if doc_map_summary
+                        else None,
+                        "sections_count": doc_map_summary.get("sections_count")
+                        if doc_map_summary
+                        else None,
+                        "title_present": doc_map_summary.get("title_present")
+                        if doc_map_summary
+                        else None,
+                        "doc_id_present": doc_map_summary.get("doc_id_present")
+                        if doc_map_summary
+                        else None,
+                        "summary_present": doc_map_summary.get("summary_present")
+                        if doc_map_summary
+                        else None,
+                        "not_found_reason": doc_map_summary.get("not_found_reason")
+                        if doc_map_summary
+                        else "",
+                    },
+                )
+            )
             if pdf_context is not None:
                 pdf_context.close()
             return IngestOutcome(
@@ -2478,16 +2910,24 @@ def generate_report(
         raise
     mode_evidence_packs = packs
     pack_names = list(packs.keys())
-    mode_evidence_paths = _pack_paths(settings.output_dir, file.file_id, report_name, pack_names, mode_ctx)
+    mode_evidence_paths = _pack_paths(
+        settings.output_dir, file.file_id, report_name, pack_names, mode_ctx
+    )
     mode_data._vector_store_id = vector_store_id or ""
     mode_data._evidence_packs = mode_evidence_paths
-    logger.info(log_event(
-        mode_ctx,
-        role="generator",
-        event="evidence_packs_ready",
-        module=logger.name,
-        fields={"file_id": file.file_id, "vector_store_id": vector_store_id, "pack_count": len(mode_evidence_paths)},
-    ))
+    logger.info(
+        log_event(
+            mode_ctx,
+            role="generator",
+            event="evidence_packs_ready",
+            module=logger.name,
+            fields={
+                "file_id": file.file_id,
+                "vector_store_id": vector_store_id,
+                "pack_count": len(mode_evidence_paths),
+            },
+        )
+    )
     _record_state_progress(
         settings=settings,
         file_id=file.file_id,
@@ -2502,25 +2942,29 @@ def generate_report(
     )
     doc_map_pack = packs.get("doc_map", {})
     if isinstance(doc_map_pack, dict):
-        doc_map_title, resolved_doc_map_publisher, title_source, publisher_source = _resolve_doc_map_metadata(doc_map_pack)
+        doc_map_title, resolved_doc_map_publisher, title_source, publisher_source = (
+            _resolve_doc_map_metadata(doc_map_pack)
+        )
         if doc_map_title:
             data.title = doc_map_title
         if resolved_doc_map_publisher:
             data.publisher = resolved_doc_map_publisher
         if doc_map_title or resolved_doc_map_publisher:
-            logger.info(log_event(
-                mode_ctx,
-                role="generator",
-                event="doc_map_resolved_metadata",
-                module=logger.name,
-                fields={
-                    "file_id": file.file_id,
-                    "title": data.title,
-                    "publisher": data.publisher,
-                    "title_source": title_source or "ingest_payload",
-                    "publisher_source": publisher_source or "unset",
-                },
-            ))
+            logger.info(
+                log_event(
+                    mode_ctx,
+                    role="generator",
+                    event="doc_map_resolved_metadata",
+                    module=logger.name,
+                    fields={
+                        "file_id": file.file_id,
+                        "title": data.title,
+                        "publisher": data.publisher,
+                        "title_source": title_source or "ingest_payload",
+                        "publisher_source": publisher_source or "unset",
+                    },
+                )
+            )
     try:
         artifacts_payload = generate_artifacts(
             report_id=file.file_id,
@@ -2554,13 +2998,15 @@ def generate_report(
             last_error=last_error,
         )
     except Exception as exc:
-        logger.info(log_event(
-            mode_ctx,
-            role="generator",
-            event="artifacts_generation_failed",
-            module=logger.name,
-            fields={"file_id": file.file_id, "error": str(exc)},
-        ))
+        logger.info(
+            log_event(
+                mode_ctx,
+                role="generator",
+                event="artifacts_generation_failed",
+                module=logger.name,
+                fields={"file_id": file.file_id, "error": str(exc)},
+            )
+        )
 
     mode_data = _merge_artifacts_into_payload(mode_data, artifacts_payload or {})
 
@@ -2597,13 +3043,19 @@ def generate_report(
             last_error=last_error,
         )
     except Exception as exc:
-        logger.info(log_event(
-            mode_ctx,
-            role="generator",
-            event="validation_failed",
-            module=logger.name,
-            fields={"file_id": file.file_id, "error": str(exc), "mode": analysis_mode},
-        ))
+        logger.info(
+            log_event(
+                mode_ctx,
+                role="generator",
+                event="validation_failed",
+                module=logger.name,
+                fields={
+                    "file_id": file.file_id,
+                    "error": str(exc),
+                    "mode": analysis_mode,
+                },
+            )
+        )
         fallback_issue = ValidationIssue(
             schema_version="1.0",
             message=f"Validation error: {exc}",
@@ -2637,13 +3089,19 @@ def generate_report(
             )
             mode_evidence_paths[validation_pack_name] = validation_path
         except Exception as store_exc:  # pragma: no cover - best-effort fallback
-            logger.info(log_event(
-                mode_ctx,
-                role="generator",
-                event="validation_store_failed",
-                module=logger.name,
-                fields={"file_id": file.file_id, "error": str(store_exc), "mode": analysis_mode},
-            ))
+            logger.info(
+                log_event(
+                    mode_ctx,
+                    role="generator",
+                    event="validation_store_failed",
+                    module=logger.name,
+                    fields={
+                        "file_id": file.file_id,
+                        "error": str(store_exc),
+                        "mode": analysis_mode,
+                    },
+                )
+            )
         validation_report = fallback_report
 
     data_dict = mode_data.to_dict()
@@ -2653,13 +3111,15 @@ def generate_report(
         data_dict["validation_report"] = validation_report.to_dict()
     data_dict["categories_display"] = category_assignment.category_labels
     data_dict["analysis_mode"] = analysis_mode
-    logger.info(log_event(
-        mode_ctx,
-        role="generator",
-        event="report_payload_ready",
-        module=logger.name,
-        fields={"payload": data_dict},
-    ))
+    logger.info(
+        log_event(
+            mode_ctx,
+            role="generator",
+            event="report_payload_ready",
+            module=logger.name,
+            fields={"payload": data_dict},
+        )
+    )
 
     snapshot_name = f"analysis_{analysis_mode}"
     snapshot_path = report_analysis_store_service.store_pack(
@@ -2694,7 +3154,9 @@ def generate_report(
     }
     primary_evidence_paths = dict(mode_evidence_paths)
 
-    def _build_metadata_upsert_request(html_path_value: Optional[str]) -> ReportMetadataUpsertRequest:
+    def _build_metadata_upsert_request(
+        html_path_value: Optional[str],
+    ) -> ReportMetadataUpsertRequest:
         return ReportMetadataUpsertRequest(
             schema_version="1.1",
             db_path=settings.reports_db,
@@ -2732,30 +3194,34 @@ def generate_report(
         render_data_dict["title"] = ""
         render_data_dict["publisher"] = ""
         render_data_dict["time_period"] = ""
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="render_metadata_missing",
-            module=logger.name,
-            fields={"file_id": file.file_id},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="render_metadata_missing",
+                module=logger.name,
+                fields={"file_id": file.file_id},
+            )
+        )
     else:
         render_data_dict["title"] = str(render_meta.title or "").strip()
         render_data_dict["publisher"] = str(render_meta.publisher or "").strip()
         render_data_dict["time_period"] = str(render_meta.time_period or "").strip()
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="render_metadata_sourced_from_db",
-            module=logger.name,
-            fields={
-                "file_id": file.file_id,
-                "title": render_data_dict["title"],
-                "publisher": render_data_dict["publisher"],
-                "time_period": render_data_dict["time_period"],
-                "source": "reports_db",
-            },
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="render_metadata_sourced_from_db",
+                module=logger.name,
+                fields={
+                    "file_id": file.file_id,
+                    "title": render_data_dict["title"],
+                    "publisher": render_data_dict["publisher"],
+                    "time_period": render_data_dict["time_period"],
+                    "source": "reports_db",
+                },
+            )
+        )
 
     doc_name = file_name
     out_html = ""
@@ -2765,7 +3231,9 @@ def generate_report(
     template_sha = None
     expected_html_path = Path(settings.output_dir) / f"{slugify(doc_name)}.html"
     if md5:
-        template_path = Path(__file__).resolve().parents[2] / "templates" / "report.html.j2"
+        template_path = (
+            Path(__file__).resolve().parents[2] / "templates" / "report.html.j2"
+        )
         template_sha = _template_sha256(template_path, ctx)
         if template_sha:
             data_sha = sha256_json(render_data_dict)
@@ -2787,33 +3255,48 @@ def generate_report(
             html_cache_path = Path(f"{expected_html_path}.cache.json")
             cached = _read_cache_json(html_cache_path, ctx)
             if cached and cached.get("key") == html_cache_key:
-                html_stat = file_stat(FileStatRequest(schema_version="1.0", path=str(expected_html_path)), ctx)
+                html_stat = file_stat(
+                    FileStatRequest(schema_version="1.0", path=str(expected_html_path)),
+                    ctx,
+                )
                 if html_stat.exists:
                     out_html = str(expected_html_path)
                     html_cache_hit = True
-                    logger.info(log_event(
-                        ctx,
-                        role="generator",
-                        event="render_html_cache_hit",
-                        module=logger.name,
-                        fields={"file_id": file.file_id, "html_path": out_html},
-                    ))
+                    logger.info(
+                        log_event(
+                            ctx,
+                            role="generator",
+                            event="render_html_cache_hit",
+                            module=logger.name,
+                            fields={"file_id": file.file_id, "html_path": out_html},
+                        )
+                    )
                 else:
-                    logger.info(log_event(
+                    logger.info(
+                        log_event(
+                            ctx,
+                            role="generator",
+                            event="render_html_cache_stale",
+                            module=logger.name,
+                            fields={
+                                "file_id": file.file_id,
+                                "html_path": str(expected_html_path),
+                            },
+                        )
+                    )
+            else:
+                logger.info(
+                    log_event(
                         ctx,
                         role="generator",
-                        event="render_html_cache_stale",
+                        event="render_html_cache_miss",
                         module=logger.name,
-                        fields={"file_id": file.file_id, "html_path": str(expected_html_path)},
-                    ))
-            else:
-                logger.info(log_event(
-                    ctx,
-                    role="generator",
-                    event="render_html_cache_miss",
-                    module=logger.name,
-                    fields={"file_id": file.file_id, "cache_path": str(html_cache_path)},
-                ))
+                        fields={
+                            "file_id": file.file_id,
+                            "cache_path": str(html_cache_path),
+                        },
+                    )
+                )
     if not html_cache_hit:
         render_resp = render_report_service(
             RenderRequest(
@@ -2835,15 +3318,19 @@ def generate_report(
                 {**html_cache_meta, "key": html_cache_key, "html_path": out_html},
                 ctx,
             )
-            logger.info(log_event(
-                ctx,
-                role="generator",
-                event="render_html_cache_written",
-                module=logger.name,
-                fields={"file_id": file.file_id, "cache_path": str(cache_path)},
-            ))
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="render_html_cache_written",
+                    module=logger.name,
+                    fields={"file_id": file.file_id, "cache_path": str(cache_path)},
+                )
+            )
 
-    upsert_report_metadata(_build_metadata_upsert_request(html_path_value=out_html), ctx)
+    upsert_report_metadata(
+        _build_metadata_upsert_request(html_path_value=out_html), ctx
+    )
 
     cover_meta = get_report_metadata(
         ReportMetadataGetRequest(
@@ -2854,8 +3341,12 @@ def generate_report(
         child_context(ctx, task_id=f"{ctx.task_id}:cover_metadata"),
     )
     cover_title = (cover_meta.title if cover_meta else report_title).strip()
-    cover_publisher = (cover_meta.publisher or "").strip() if cover_meta else (data.publisher or "")
-    cover_time_period = cover_meta.time_period if cover_meta else (data.time_period or None)
+    cover_publisher = (
+        (cover_meta.publisher or "").strip() if cover_meta else (data.publisher or "")
+    )
+    cover_time_period = (
+        cover_meta.time_period if cover_meta else (data.time_period or None)
+    )
     cover_region = cover_meta.region if cover_meta else (data.region or None)
 
     cover_ctx = child_context(ctx, task_id=f"{ctx.task_id}:cover_image")
@@ -2881,44 +3372,60 @@ def generate_report(
             cover_ctx,
         )
         cover_outcome = cover_outcomes[0] if cover_outcomes else None
-        logger.info(log_event(
-            cover_ctx,
+        logger.info(
+            log_event(
+                cover_ctx,
+                role="generator",
+                event="cover_image_generation_complete",
+                module=logger.name,
+                fields={
+                    "file_id": file.file_id,
+                    "status": cover_outcome.status if cover_outcome else "skipped",
+                    "output_path": cover_outcome.output_path if cover_outcome else "",
+                    "error": cover_outcome.error if cover_outcome else "",
+                },
+            )
+        )
+    except AppError as exc:
+        logger.info(
+            log_event(
+                cover_ctx,
+                role="generator",
+                event="cover_image_generation_failed",
+                module=logger.name,
+                fields={
+                    "file_id": file.file_id,
+                    "code": exc.code,
+                    "error": exc.message,
+                },
+            )
+        )
+
+    logger.info(
+        log_event(
+            ctx,
             role="generator",
-            event="cover_image_generation_complete",
+            event="token_usage_summary",
+            module=logger.name,
+            fields={
+                "report_generation": None,
+                "rank_candidates": rank_usage if cands_resp.candidates else None,
+            },
+        )
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="report_generate_complete",
             module=logger.name,
             fields={
                 "file_id": file.file_id,
-                "status": cover_outcome.status if cover_outcome else "skipped",
-                "output_path": cover_outcome.output_path if cover_outcome else "",
-                "error": cover_outcome.error if cover_outcome else "",
+                "html_path": out_html,
+                "modes": analysis_modes,
             },
-        ))
-    except AppError as exc:
-        logger.info(log_event(
-            cover_ctx,
-            role="generator",
-            event="cover_image_generation_failed",
-            module=logger.name,
-            fields={"file_id": file.file_id, "code": exc.code, "error": exc.message},
-        ))
-
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="token_usage_summary",
-        module=logger.name,
-        fields={
-            "report_generation": None,
-            "rank_candidates": rank_usage if cands_resp.candidates else None,
-        },
-    ))
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="report_generate_complete",
-        module=logger.name,
-        fields={"file_id": file.file_id, "html_path": out_html, "modes": analysis_modes},
-    ))
+        )
+    )
 
     if pdf_context is not None:
         pdf_context.close()

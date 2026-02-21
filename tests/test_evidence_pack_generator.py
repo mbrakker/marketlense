@@ -210,8 +210,6 @@ def _settings(
         contents_min_headings=1,
         contents_keywords=["contents"],
         contents_preview_dpi=72,
-        analysis_mode="vector_store",
-        use_vector_store=True,
         vector_store_keep=True,
         evidence_pack_registry=evidence_pack_registry
         or [

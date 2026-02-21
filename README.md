@@ -23,9 +23,10 @@ Key traits:
 - Low-text resilience: text density heuristics detect PDFs with little/no extractable text and emit explicit "not available from text" artifacts + HTML notices instead of blank sections.
 - HTML digest quality: rendered HTML now uses semantic sections (`header/main/section`), premium split hero layout, sticky glass navigation with scrollspy + reading progress, reveal animations (with reduced-motion fallback), signal-style insight cards, editorial quote cards, and long-text chunking for generated prose.
 - Figure UX: rendered digests now include a template-native figure carousel with prev/next controls, keyboard and swipe support, thumbnail rail, slide counter, and fullscreen lightbox.
-- OpenAI image-call compatibility: crop-refine image requests to the Responses API automatically retry without unsupported parameters (e.g., `temperature`/`seed`) when a model rejects them, preserving full crop-refine functionality.
+- OpenAI image-call compatibility: crop-refine image requests to the Responses API now omit known unsupported params (e.g., `temperature`/`seed` on `gpt-5*`) preflight and still retain fallback retry-without-param handling for unknown model/param mismatches.
 - OpenAI service consolidation: `src/services/openai_service.py` is the single OpenAI client boundary (request/response parsing, cost ledger writes, and provider error normalization). Other modules route OpenAI calls through it.
 - Refactor simplification layer: shared coercion/list-normalization helpers now live in `src/utils/coercion.py`, orchestrator retry wrappers are centralized through `retry_orchestrator.run_step_with_default_policy`, and duplicate WordPress term ensure logic is consolidated into a shared internal helper.
+- Ops tooling cleanup: duration diagnostics now share one implementation in `scripts/duration_tools.py` (legacy entry scripts delegate to it), and legacy Streamlit config cleanup flags (`ingest.debug_candidate_gallery`, `analysis.compare`) were removed from the structured editor path.
 - Figure quality gate: candidate visuals now pass deterministic prefilters plus LLM thresholds (overall + quality + insight + data), kind-split ranking (tables and charts ranked independently), adaptive GPT crop refinement, and strict final cropping. Per-kind caps now ensure balanced outputs (up to `rank.selected_max` tables and `rank.selected_max` charts). If none pass, the figure section is hidden.
 - Crop-refine edge guard: final LLM-refined bboxes now apply conservative padding plus text-edge correction so partial cut letters/lines at crop borders are automatically expanded (or trimmed if only tiny accidental overlap), reducing visibly clipped figure outputs.
 - Strict crop output safety: final crop filenames are now candidate-ID based, preventing table/chart overwrite collisions when strict table and strict chart crops are written to the same `slices/` directory.
@@ -99,7 +100,6 @@ Per-step model selection (new):
 - Validation grounding retrieval mode: `analysis.validation_grounding_use_vector_store` (`VALIDATION_GROUNDING_USE_VECTOR_STORE`, default `false`) controls whether grounding checks use vector-store retrieval. Default is closed-context JSON chat; set to `true` to restore legacy vector retrieval behavior.
 - Strict schema validation: `analysis.strict_schema_validation` (`STRICT_SCHEMA_VALIDATION`, default `true`) enables hard-fail schema enforcement for evidence/docpack payloads.
 - Cost tracking: `analysis.cost_ledger_path` (`COST_LEDGER_PATH`, default `./out/cost-ledger.jsonl`), `cost.daily_path` (default `./out/cost-daily.json`), `cost.pricing` (per-model pricing map used by `utils.costing`).
-- Quality baseline path: `quality.baseline_path` (`QUALITY_BASELINE_PATH`, default `./docs/quality/baseline_2026-02-21.json`) used by non-regression checks.
 - Validation: `ingest.validation.data_gap_policy` (default `warn`) controls whether missing evidence/text gaps downgrade errors to warnings; `publish.validation.policy` (`PUBLISH_VALIDATION_POLICY`, default `block`; set to `warn` to allow publish with issues).
 - Taxonomy extraction: set `openai_models.report_vs/taxonomy` to override the tag/region/time period extractor.
 - Cover images: `paths.cover_styles` points to `src/config/cover-styles.yaml` (defaults to that path). Fonts are local files; the default config uses `templates/GOTHICB.TTF` for both regular/bold. Ensure the font file exists on the host; otherwise cover rendering will fail with `cover_font_invalid`. Background image is optional; leave blank for a solid background.
@@ -404,7 +404,6 @@ CI gates (see `.github/workflows/ci.yml`):
   - `ingest.evidence_packs.registry`
   - `ingest.evidence_packs.enable_new_variety_packs`
   - `analysis.strict_schema_validation`
-  - `quality.baseline_path`
 - Recommended rollout progression for strict schema/new variety packs: `10% -> 50% -> 100%` corpus canary.
 
 See:
@@ -474,13 +473,7 @@ python -m src.cli extract-candidates --file-id <drive_file_id>
 python -m src.cli extract-candidates --pdf "C:\\path\\report.pdf"
 ```
 
-Vector-store ingest mode:
-
-```bash
-ANALYSIS_MODE=vector_store python -m src.cli ingest --limit 1
-```
-
-This reuses existing vector stores when `VECTOR_STORE_KEEP=true`, otherwise creates/attaches/waits per file and writes packs to `out/<report-slug>/report_analysis/`.
+Vector-store ingest is the default mode. This reuses existing vector stores when `VECTOR_STORE_KEEP=true`, otherwise creates/attaches/waits per file and writes packs to `out/<report-slug>/report_analysis/`.
 
 CLI options summary:
 

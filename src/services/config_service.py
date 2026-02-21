@@ -615,9 +615,6 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     )
     env_cost_ledger_path = _env_value("COST_LEDGER_PATH")
     env_strict_schema_validation = _env_value("STRICT_SCHEMA_VALIDATION")
-    env_quality_baseline_path = _env_value("QUALITY_BASELINE_PATH")
-    analysis_mode = "vector_store"
-    use_vector_store = True
     vector_store_keep_raw = (
         env_vector_store_keep
         if env_vector_store_keep
@@ -651,12 +648,6 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     )
     cost_daily_path = str(cost_cfg.get("daily_path") or "./out/cost-daily.json")
     model_pricing = cost_cfg.get("pricing") or {}
-    quality_cfg = data.get("quality", {}) or {}
-    quality_baseline_path = str(
-        env_quality_baseline_path
-        or quality_cfg.get("baseline_path")
-        or "./docs/quality/baseline_2026-02-21.json"
-    )
     cover_cache_enabled = _as_bool(ingest.get("cover_cache_enabled"), default=True)
     html_tag_acronyms = _load_html_tag_acronyms(html_tag_acronyms_path)
 
@@ -741,8 +732,6 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         artifact_parallel_workers=artifact_parallel_workers,
         artifact_global_max_in_flight=artifact_global_max_in_flight,
         artifact_global_min_interval_ms=artifact_global_min_interval_ms,
-        analysis_mode=analysis_mode,
-        use_vector_store=use_vector_store,
         vector_store_keep=vector_store_keep,
         artifacts_use_vector_store=artifacts_use_vector_store,
         validation_grounding_use_vector_store=validation_grounding_use_vector_store,
@@ -753,7 +742,6 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         model_pricing=model_pricing,
         html_tag_acronyms=html_tag_acronyms,
         validation_data_gap_policy=validation_data_gap_policy,
-        quality_baseline_path=quality_baseline_path,
     )
 
     if resolver.missing:
@@ -836,8 +824,6 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
                 "artifact_parallel_workers": settings.artifact_parallel_workers,
                 "artifact_global_max_in_flight": settings.artifact_global_max_in_flight,
                 "artifact_global_min_interval_ms": settings.artifact_global_min_interval_ms,
-                "analysis_mode": settings.analysis_mode,
-                "use_vector_store": settings.use_vector_store,
                 "vector_store_keep": settings.vector_store_keep,
                 "artifacts_use_vector_store": settings.artifacts_use_vector_store,
                 "validation_grounding_use_vector_store": settings.validation_grounding_use_vector_store,
@@ -845,7 +831,6 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
                 "cover_cache_enabled": settings.cover_cache_enabled,
                 "cost_ledger_path": settings.cost_ledger_path,
                 "cost_daily_path": settings.cost_daily_path,
-                "quality_baseline_path": settings.quality_baseline_path,
                 "html_tag_acronyms": settings.html_tag_acronyms,
                 "html_tag_acronyms_count": len(settings.html_tag_acronyms),
                 "validation_data_gap_policy": settings.validation_data_gap_policy,

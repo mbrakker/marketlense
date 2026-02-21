@@ -17,10 +17,17 @@ from src.contracts.wordpress import (
     WordPressTagEnsureRequest,
 )
 from src.contracts.categories import CategoryMappingLoadRequest
-from src.services.category_mapping_service import load_mappings as load_category_mappings
+from src.services.category_mapping_service import (
+    load_mappings as load_category_mappings,
+)
 from src.services.file_service import file_exists, read_bytes, read_text
 from src.services.report_store_service import get_metadata
-from src.services.wordpress_service import create_post, ensure_categories, ensure_tags, upload_media
+from src.services.wordpress_service import (
+    create_post,
+    ensure_categories,
+    ensure_tags,
+    upload_media,
+)
 from src.utils.errors import AppError
 from src.utils.html_utils import (
     extract_body_html,
@@ -42,36 +49,48 @@ def publish_html(
     settings: PublishSettings,
     ctx: RunContext,
 ) -> PublishOutcome:
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="publish_start",
-        module=logger.name,
-        fields={"html_path": request.html_path},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="publish_start",
+            module=logger.name,
+            fields={"html_path": request.html_path},
+        )
+    )
 
     if request.html_text is None:
-        html_text = read_text(ReadTextRequest(schema_version="1.0", path=request.html_path), ctx).content
+        html_text = read_text(
+            ReadTextRequest(schema_version="1.0", path=request.html_path), ctx
+        ).content
         html_source = "path"
     else:
         html_text = request.html_text
         html_source = "request"
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="publish_html_source",
-        module=logger.name,
-        fields={"html_path": request.html_path, "source": html_source, "length": len(html_text)},
-    ))
-    file_id = request.file_id or extract_file_id(html_text)
-    if not file_id:
-        logger.info(log_event(
+    logger.info(
+        log_event(
             ctx,
             role="generator",
-            event="publish_missing_file_id",
+            event="publish_html_source",
             module=logger.name,
-            fields={"html_path": request.html_path},
-        ))
+            fields={
+                "html_path": request.html_path,
+                "source": html_source,
+                "length": len(html_text),
+            },
+        )
+    )
+    file_id = request.file_id or extract_file_id(html_text)
+    if not file_id:
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="publish_missing_file_id",
+                module=logger.name,
+                fields={"html_path": request.html_path},
+            )
+        )
         return PublishOutcome(
             schema_version="1.0",
             html_path=request.html_path,
@@ -84,19 +103,29 @@ def publish_html(
     base_url = settings.wp.site_url.rstrip("/")
 
     metadata = get_metadata(
-        ReportMetadataGetRequest(schema_version="1.1", db_path=settings.reports_db, file_id=file_id),
+        ReportMetadataGetRequest(
+            schema_version="1.1", db_path=settings.reports_db, file_id=file_id
+        ),
         ctx,
     )
     category_ids_for_wp: list[int] = []
     tag_ids_for_wp: list[int] = []
     if metadata and metadata.categories:
         mappings_resp = load_category_mappings(
-            CategoryMappingLoadRequest(schema_version="1.0", path=settings.category_mapping_path, reload_if_changed=True),
+            CategoryMappingLoadRequest(
+                schema_version="1.0",
+                path=settings.category_mapping_path,
+                reload_if_changed=True,
+            ),
             ctx,
         )
-        id_to_label = {cat.id: cat.label or cat.id for cat in mappings_resp.mappings.categories}
+        id_to_label = {
+            cat.id: cat.label or cat.id for cat in mappings_resp.mappings.categories
+        }
         terms = [
-            WordPressCategoryTerm(schema_version="1.0", slug=cat_id, name=id_to_label.get(cat_id, cat_id))
+            WordPressCategoryTerm(
+                schema_version="1.0", slug=cat_id, name=id_to_label.get(cat_id, cat_id)
+            )
             for cat_id in metadata.categories
         ]
         if terms:
@@ -115,7 +144,11 @@ def publish_html(
                 if term.slug in ensure_resp.slug_to_id
             ]
     if metadata and metadata.taxonomy:
-        tag_slugs = [slugify(tag) for tag in metadata.taxonomy if slugify(tag)]
+        tag_slugs: list[str] = []
+        for tag in metadata.taxonomy:
+            slug = slugify(tag)
+            if slug:
+                tag_slugs.append(slug)
         if tag_slugs:
             ensure_tags_resp = ensure_tags(
                 WordPressTagEnsureRequest(
@@ -139,13 +172,15 @@ def publish_html(
         auth_header,
         ctx,
     )
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="publish_images_uploaded",
-        module=logger.name,
-        fields={"count": len(image_map), "featured_media": featured_media_id or 0},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="publish_images_uploaded",
+            module=logger.name,
+            fields={"count": len(image_map), "featured_media": featured_media_id or 0},
+        )
+    )
     rendered_html = replace_image_sources(html_text, image_map)
     body_html = extract_body_html(rendered_html)
 
@@ -168,13 +203,19 @@ def publish_html(
         ctx,
     )
 
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="publish_complete",
-        module=logger.name,
-        fields={"file_id": file_id, "post_id": post_resp.post_id, "post_url": post_resp.link},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="publish_complete",
+            module=logger.name,
+            fields={
+                "file_id": file_id,
+                "post_id": post_resp.post_id,
+                "post_url": post_resp.link,
+            },
+        )
+    )
 
     return PublishOutcome(
         schema_version="1.0",
@@ -200,13 +241,15 @@ def _resolve_auth_header(settings: PublishSettings, ctx: RunContext) -> str:
             retryable=False,
         ) from exc
     source = "bearer_token" if settings.wp.bearer_token else "app_password"
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="publish_auth_source",
-        module=logger.name,
-        fields={"source": source},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="publish_auth_source",
+            module=logger.name,
+            fields={"source": source},
+        )
+    )
     return header
 
 
@@ -232,13 +275,15 @@ def _upload_images(
         local_path = _resolve_local_path(src, output_dir, ctx)
         if not local_path:
             if not src.startswith("http://") and not src.startswith("https://"):
-                logger.info(log_event(
-                    ctx,
-                    role="generator",
-                    event="publish_image_missing",
-                    module=logger.name,
-                    fields={"src": src},
-                ))
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="generator",
+                        event="publish_image_missing",
+                        module=logger.name,
+                        fields={"src": src},
+                    )
+                )
             continue
         upload_resp = upload_media(
             _media_upload_request(local_path, src, base_url, auth_header, ctx),
@@ -283,7 +328,9 @@ def _resolve_local_path(src: str, output_dir: str, ctx: RunContext) -> Optional[
     if rel.startswith("http://") or rel.startswith("https://"):
         return None
     path = Path(output_dir) / rel
-    exists_resp = file_exists(FileExistsRequest(schema_version="1.0", path=str(path)), ctx)
+    exists_resp = file_exists(
+        FileExistsRequest(schema_version="1.0", path=str(path)), ctx
+    )
     if not exists_resp.exists:
         return None
     return str(path)

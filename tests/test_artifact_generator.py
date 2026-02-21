@@ -171,8 +171,6 @@ def _settings(
         artifact_parallel_workers=4,
         artifact_global_max_in_flight=4,
         artifact_global_min_interval_ms=0,
-        analysis_mode="vector_store",
-        use_vector_store=True,
         vector_store_keep=True,
         artifacts_use_vector_store=artifacts_use_vector_store,
         validation_grounding_use_vector_store=validation_grounding_use_vector_store,

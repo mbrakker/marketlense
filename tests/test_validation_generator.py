@@ -126,8 +126,6 @@ def _settings(
         contents_min_headings=1,
         contents_keywords=["contents"],
         contents_preview_dpi=72,
-        analysis_mode="vector_store",
-        use_vector_store=True,
         vector_store_keep=True,
         validation_grounding_use_vector_store=validation_grounding_use_vector_store,
         validation_data_gap_policy=validation_data_gap_policy,
