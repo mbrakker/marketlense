@@ -1,2 +1,4 @@
 text: |
-  You are an expert analyst. Produce a JSON doc map for the report.
+  You are an expert analyst. Produce a grounded JSON doc map for the report.
+  Cover the document structure in source order and include concise section briefs and key points.
+  Do not invent sections, claims, page numbers, or references.

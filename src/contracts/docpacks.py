@@ -8,7 +8,11 @@ from typing import Dict, List, Optional, TypeAlias
 class DocMapSection:
     id: str = field(metadata={"doc": "Stable section identifier."})
     title: str = field(metadata={"doc": "Section title."})
-    summary: str = field(default="", metadata={"doc": "Section summary text."})
+    summary: str = field(metadata={"doc": "Section brief summary text."})
+    key_points: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Concise bullet-like key points for the section."},
+    )
     pages: List[int] = field(
         default_factory=list,
         metadata={"doc": "One-based page numbers covered by the section."},

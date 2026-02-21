@@ -22,6 +22,7 @@ def test_validate_schema_passes_for_doc_map():
                 "id": "s1",
                 "title": "Intro",
                 "summary": "text",
+                "key_points": ["Point 1"],
                 "pages": [1, 2],
                 "references": ["r1"],
             }
@@ -37,6 +38,22 @@ def test_validate_schema_passes_for_doc_map():
 
 def test_validate_schema_fails_missing_required():
     payload = {"title": "Missing sections"}
+    with pytest.raises(AppError) as exc:
+        validate_schema(
+            SchemaValidateRequest(
+                schema_version="1.0", payload=payload, schema_name="doc_map"
+            ),
+            _ctx(),
+        )
+    assert exc.value.code == "schema_missing_required"
+
+
+def test_validate_schema_fails_when_doc_map_section_missing_summary_or_key_points():
+    payload = {
+        "doc_id": "doc-1",
+        "title": "Doc Title",
+        "sections": [{"id": "s1", "title": "Intro"}],
+    }
     with pytest.raises(AppError) as exc:
         validate_schema(
             SchemaValidateRequest(

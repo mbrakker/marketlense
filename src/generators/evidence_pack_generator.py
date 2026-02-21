@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, Optional, Tuple
 
@@ -242,6 +243,30 @@ def generate_evidence_packs(
         analysis_store=analysis_store,
         pack_name=step_name,
     )
+    completeness = _summarize_doc_map_completeness(results[step_name])
+    if completeness["warn"]:
+        logger.warning(
+            log_event(
+                step_ctx,
+                role="generator",
+                event="doc_map_completeness_warning",
+                module=logger.name,
+                fields={
+                    "report_id": report_id,
+                    "vector_store_id": vector_store_id,
+                    "sections_count": completeness["sections_count"],
+                    "sections_with_summary": completeness["sections_with_summary"],
+                    "sections_missing_summary": completeness["sections_missing_summary"],
+                    "summary_coverage_ratio": completeness["summary_coverage_ratio"],
+                    "sections_with_key_points": completeness[
+                        "sections_with_key_points"
+                    ],
+                    "key_points_coverage_ratio": completeness[
+                        "key_points_coverage_ratio"
+                    ],
+                },
+            )
+        )
     summary = _summarize_doc_map(results[step_name])
     if not summary["has_content"]:
         reason = summary["not_found_reason"] or "no_content"
@@ -438,7 +463,7 @@ def _generate_pack(
             if cached is not None:
                 if schema_name == "doc_map":
                     cached, normalization = _normalize_doc_map_payload(
-                        cached, report_id
+                        cached, report_id, report_name
                     )
                     if normalization["changed"]:
                         _store_pack(
@@ -581,7 +606,7 @@ def _generate_pack(
                             retryable=False,
                         )
                     parsed_json, normalization = _normalize_doc_map_payload(
-                        parsed_payload, report_id
+                        parsed_payload, report_id, report_name
                     )
                     if normalization["changed"]:
                         logger.info(
@@ -718,6 +743,15 @@ def _empty_payload(pack_name: str, reason: str) -> dict:
 
 
 def _text(value: object) -> str:
+    if isinstance(value, dict):
+        for key in ("text", "value", "title", "name", "summary", "brief", "label"):
+            candidate = value.get(key)
+            if candidate is None:
+                continue
+            token = str(candidate).strip()
+            if token:
+                return token
+        return ""
     if value is None:
         return ""
     return str(value).strip()
@@ -728,6 +762,49 @@ def _first_non_empty_text(*values: object) -> str:
         candidate = _text(value)
         if candidate:
             return candidate
+    return ""
+
+
+def _normalize_report_name(report_name: str) -> str:
+    token = _text(report_name).replace("\\", "/").split("/")[-1]
+    token = re.sub(r"\.pdf$", "", token, flags=re.IGNORECASE).strip()
+    token = re.sub(r"[_-]?acig$", "", token, flags=re.IGNORECASE).strip()
+    token = re.sub(r"\s+", " ", token)
+    return token
+
+
+def _clean_publisher_token(raw_value: object) -> str:
+    token = _text(raw_value)
+    if not token:
+        return ""
+    token = re.sub(r"\b(?:19|20)\d{2}\b.*$", "", token).strip()
+    token = token.strip(" -_—–|,:;")
+    token = re.sub(r"\s+", " ", token)
+    if not token or re.fullmatch(r"\d+", token):
+        return ""
+    return token
+
+
+def _derive_publisher_from_document_title(document_title: object) -> str:
+    title = _text(document_title)
+    if not title:
+        return ""
+    parts = re.split(r"\s+[—–-]\s+", title)
+    if len(parts) < 2:
+        return ""
+    return _clean_publisher_token(parts[-1])
+
+
+def _derive_publisher_from_report_name(report_name: str) -> str:
+    normalized_name = _normalize_report_name(report_name)
+    if not normalized_name:
+        return ""
+    for separator in (" - ", " — ", " – "):
+        if separator in normalized_name:
+            head, _ = normalized_name.split(separator, 1)
+            candidate = _clean_publisher_token(head)
+            if candidate:
+                return candidate
     return ""
 
 
@@ -754,6 +831,30 @@ def _coerce_pages(value: object) -> list[int]:
                 seen.add(page_num)
                 pages.append(page_num)
     return pages
+
+
+def _coerce_text_list(value: object) -> list[str]:
+    items = value if isinstance(value, list) else [value]
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        token = ""
+        if isinstance(item, dict):
+            token = _first_non_empty_text(
+                item.get("text"),
+                item.get("point"),
+                item.get("title"),
+                item.get("label"),
+                item.get("name"),
+                item.get("summary"),
+            )
+        else:
+            token = _text(item)
+        if not token or token in seen:
+            continue
+        seen.add(token)
+        normalized.append(token)
+    return normalized
 
 
 def _coerce_pack_items(value: object) -> list[object]:
@@ -1268,7 +1369,42 @@ def _summarize_doc_map(payload: dict) -> dict:
     }
 
 
-def _normalize_doc_map_payload(payload: dict, report_id: str) -> Tuple[dict, dict]:
+def _summarize_doc_map_completeness(payload: dict) -> dict:
+    sections = payload.get("sections") if isinstance(payload, dict) else []
+    if not isinstance(sections, list):
+        sections = []
+    sections_count = 0
+    sections_with_summary = 0
+    sections_with_key_points = 0
+    for section in sections:
+        if not isinstance(section, dict):
+            continue
+        sections_count += 1
+        if _text(section.get("summary")):
+            sections_with_summary += 1
+        if _coerce_text_list(section.get("key_points")):
+            sections_with_key_points += 1
+    sections_missing_summary = max(0, sections_count - sections_with_summary)
+    summary_coverage_ratio = (
+        round(sections_with_summary / sections_count, 4) if sections_count else 0.0
+    )
+    key_points_coverage_ratio = (
+        round(sections_with_key_points / sections_count, 4) if sections_count else 0.0
+    )
+    return {
+        "sections_count": sections_count,
+        "sections_with_summary": sections_with_summary,
+        "sections_missing_summary": sections_missing_summary,
+        "summary_coverage_ratio": summary_coverage_ratio,
+        "sections_with_key_points": sections_with_key_points,
+        "key_points_coverage_ratio": key_points_coverage_ratio,
+        "warn": sections_count > 0 and sections_missing_summary > 0,
+    }
+
+
+def _normalize_doc_map_payload(
+    payload: dict, report_id: str, report_name: str = ""
+) -> Tuple[dict, dict]:
     wrapper_key = ""
     candidate = payload
     for key in ("docmap", "doc_map", "docMap"):
@@ -1286,38 +1422,70 @@ def _normalize_doc_map_payload(payload: dict, report_id: str) -> Tuple[dict, dic
         normalized["_cache"] = cache_meta
     doc_meta = _to_dict(normalized.get("document"))
 
-    normalized_title = _text(normalized.get("title"))
+    raw_title = normalized.get("title")
+    normalized_title = _text(raw_title)
     resolved_title = _first_non_empty_text(
         normalized_title,
         normalized.get("report_title"),
+        normalized.get("document_title"),
+        normalized.get("document_name"),
+        normalized.get("name"),
         doc_meta.get("title"),
         doc_meta.get("name"),
     )
-    if resolved_title and resolved_title != normalized_title:
+    if raw_title != resolved_title or "title" not in normalized:
         normalized["title"] = resolved_title
         changed = True
 
-    normalized_publisher = _text(normalized.get("publisher"))
+    derived_publisher_from_title = _derive_publisher_from_document_title(
+        _first_non_empty_text(
+            normalized.get("document_title"),
+            normalized.get("title"),
+            normalized.get("report_title"),
+            doc_meta.get("title"),
+        )
+    )
+    derived_publisher_from_report_name = _derive_publisher_from_report_name(report_name)
+    raw_publisher = normalized.get("publisher")
+    normalized_publisher = _text(raw_publisher)
     resolved_publisher = _first_non_empty_text(
         normalized_publisher,
+        normalized.get("document_publisher"),
+        normalized.get("document_organization"),
+        normalized.get("document_organisation"),
         normalized.get("organization"),
         normalized.get("organisation"),
+        normalized.get("publisher_name"),
         doc_meta.get("publisher"),
         doc_meta.get("organization"),
         doc_meta.get("organisation"),
+        derived_publisher_from_title,
+        derived_publisher_from_report_name,
     )
-    if resolved_publisher and resolved_publisher != normalized_publisher:
+    if raw_publisher != resolved_publisher or "publisher" not in normalized:
         normalized["publisher"] = resolved_publisher
         changed = True
 
-    normalized_summary = _text(normalized.get("summary"))
+    raw_summary = normalized.get("summary")
+    normalized_summary = _text(raw_summary)
     resolved_summary = _first_non_empty_text(
         normalized_summary,
+        normalized.get("document_summary"),
+        normalized.get("document_brief"),
+        normalized.get("document_overview"),
+        normalized.get("document_abstract"),
+        normalized.get("document_description"),
+        normalized.get("brief"),
+        normalized.get("overview"),
+        normalized.get("abstract"),
         normalized.get("description"),
         doc_meta.get("summary"),
+        doc_meta.get("brief"),
+        doc_meta.get("overview"),
+        doc_meta.get("abstract"),
         doc_meta.get("description"),
     )
-    if resolved_summary and resolved_summary != normalized_summary:
+    if raw_summary != resolved_summary or "summary" not in normalized:
         normalized["summary"] = resolved_summary
         changed = True
 
@@ -1336,6 +1504,10 @@ def _normalize_doc_map_payload(payload: dict, report_id: str) -> Tuple[dict, dic
         structure = normalized.get("structure")
         if isinstance(structure, list):
             normalized["sections"] = structure
+            sections = normalized["sections"]
+            changed = True
+        else:
+            normalized["sections"] = []
             sections = normalized["sections"]
             changed = True
 
@@ -1370,29 +1542,55 @@ def _normalize_doc_map_payload(payload: dict, report_id: str) -> Tuple[dict, dic
                 added_section_ids += 1
                 changed = True
 
-            sec_summary = _text(sec.get("summary"))
+            raw_sec_summary = sec.get("summary")
+            sec_summary = _text(raw_sec_summary)
             resolved_sec_summary = _first_non_empty_text(
-                sec_summary, sec.get("description"), sec.get("text"), sec.get("finding")
+                sec_summary,
+                sec.get("brief"),
+                sec.get("overview"),
+                sec.get("abstract"),
+                sec.get("description"),
+                sec.get("text"),
+                sec.get("finding"),
             )
-            if resolved_sec_summary and resolved_sec_summary != sec_summary:
+            if raw_sec_summary != resolved_sec_summary or "summary" not in sec:
                 sec["summary"] = resolved_sec_summary
                 changed = True
 
-            existing_pages = _coerce_pages(sec.get("pages"))
+            raw_key_points = sec.get("key_points")
+            existing_key_points = _coerce_text_list(raw_key_points)
+            resolved_key_points = list(existing_key_points)
+            if not resolved_key_points:
+                resolved_key_points = _coerce_text_list(sec.get("keyPoints"))
+            if not resolved_key_points:
+                resolved_key_points = _coerce_text_list(sec.get("highlights"))
+            if not resolved_key_points:
+                resolved_key_points = _coerce_text_list(sec.get("bullets"))
+            if not resolved_key_points:
+                resolved_key_points = _coerce_text_list(sec.get("points"))
+            if not resolved_key_points:
+                resolved_key_points = _coerce_text_list(sec.get("key_findings"))
+            if raw_key_points != resolved_key_points or "key_points" not in sec:
+                sec["key_points"] = resolved_key_points
+                changed = True
+
+            raw_pages = sec.get("pages")
+            existing_pages = _coerce_pages(raw_pages)
             resolved_pages = existing_pages or _coerce_pages(sec.get("page"))
-            if resolved_pages and resolved_pages != existing_pages:
+            if raw_pages != resolved_pages or ("pages" not in sec and resolved_pages):
                 sec["pages"] = resolved_pages
                 changed = True
 
-            refs = sec.get("references")
-            if not isinstance(refs, list):
-                refs = []
+            raw_refs = sec.get("references")
+            refs = raw_refs if isinstance(raw_refs, list) else []
             normalized_refs = [_text(ref) for ref in refs if _text(ref)]
             if not normalized_refs:
                 source_ref = _text(sec.get("source"))
                 if source_ref:
                     normalized_refs = [source_ref]
-            if normalized_refs and normalized_refs != refs:
+            if raw_refs != normalized_refs or (
+                "references" not in sec and normalized_refs
+            ):
                 sec["references"] = normalized_refs
                 changed = True
 

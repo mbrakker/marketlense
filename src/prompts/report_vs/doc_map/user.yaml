@@ -1,2 +1,20 @@
 text: |
-  Return a JSON object matching the DocMap schema. Be concise. No new data, only use provided report content.
+  Return a JSON object matching the DocMap schema.
+  Use only the provided report content.
+
+  Requirements:
+  - Include document-level metadata in canonical schema fields:
+    - title
+    - publisher
+    - summary (document-level brief)
+  - Capture all major report sections in source order.
+  - For each section, include:
+    - id
+    - title
+    - summary (a brief of the section: 1-2 sentences, concise but specific)
+    - key_points (2-4 short bullet-like strings when available)
+    - pages (when explicit in the source)
+    - references (when explicit in the source)
+  - Use schema field names exactly (for example `title`, not `document_title`).
+  - If a field is unknown, use an empty string or empty array (do not invent values).
+  - Output JSON only (no markdown, no commentary).

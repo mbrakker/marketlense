@@ -6,7 +6,8 @@ text: |
   Task: Return a JSON object with `insights_candidates` as an array of 6-8 grounded items. Each item must include:
   - id: stable identifier
   - text: concise sentence capturing the data-backed insight
-  - evidence_id: id that maps to the evidence/findings you relied on
+  - evidence_id: exactly one existing evidence ID from the provided context.
+    Do not output arrays or comma-separated IDs; if uncertain, use an empty string.
   - evidence: short supporting quote/number
   - metric: object with fields {value, unit, trend, timeframe, geography, segment, sample_size, confidence} (empty strings allowed but keep present)
   - pages: page numbers if available

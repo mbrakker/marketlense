@@ -34,6 +34,13 @@ Typed contracts live in:
 
 `doc_map` is always enforced as the first pack step.
 
+`doc_map.sections[]` requires:
+
+- `id`
+- `title`
+- `summary` (brief section synopsis)
+- `key_points` (array of concise supporting bullets; may be empty when source is sparse)
+
 ## Referential Integrity
 
 Cross-pack checks require `artifacts` evidence references to resolve to known IDs extracted from:

@@ -12,11 +12,15 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "title"],
+        "required": ["id", "title", "summary", "key_points"],
         "properties": {
           "id": { "type": "string" },
           "title": { "type": "string" },
           "summary": { "type": "string" },
+          "key_points": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
           "pages": {
             "type": "array",
             "items": { "type": "integer" }

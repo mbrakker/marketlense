@@ -1417,11 +1417,17 @@ def _resolve_doc_map_metadata(
 
     title = _pick_non_empty_text(
         candidate.get("title"),
+        candidate.get("document_title"),
+        candidate.get("document_name"),
+        candidate.get("name"),
         document.get("title"),
         document.get("name"),
     )
     publisher = _pick_non_empty_text(
         candidate.get("publisher"),
+        candidate.get("document_publisher"),
+        candidate.get("document_organization"),
+        candidate.get("document_organisation"),
         candidate.get("organization"),
         candidate.get("organisation"),
         document.get("publisher"),
@@ -1433,6 +1439,12 @@ def _resolve_doc_map_metadata(
     if title:
         if str(candidate.get("title") or "").strip():
             title_source = f"{candidate_prefix}.title"
+        elif str(candidate.get("document_title") or "").strip():
+            title_source = f"{candidate_prefix}.document_title"
+        elif str(candidate.get("document_name") or "").strip():
+            title_source = f"{candidate_prefix}.document_name"
+        elif str(candidate.get("name") or "").strip():
+            title_source = f"{candidate_prefix}.name"
         elif str(document.get("title") or "").strip():
             title_source = f"{candidate_prefix}.document.title"
         else:
@@ -1442,6 +1454,12 @@ def _resolve_doc_map_metadata(
     if publisher:
         if str(candidate.get("publisher") or "").strip():
             publisher_source = f"{candidate_prefix}.publisher"
+        elif str(candidate.get("document_publisher") or "").strip():
+            publisher_source = f"{candidate_prefix}.document_publisher"
+        elif str(candidate.get("document_organization") or "").strip():
+            publisher_source = f"{candidate_prefix}.document_organization"
+        elif str(candidate.get("document_organisation") or "").strip():
+            publisher_source = f"{candidate_prefix}.document_organisation"
         elif str(candidate.get("organization") or "").strip():
             publisher_source = f"{candidate_prefix}.organization"
         elif str(candidate.get("organisation") or "").strip():

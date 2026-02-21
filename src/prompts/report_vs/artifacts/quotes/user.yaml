@@ -9,5 +9,6 @@ text: |
   - speaker: who said it if known, else "Unknown"
   - citation: short location (section title or source)
   - page: page number if known, else omit or set 0
-  - evidence_id: identifier you derive (reuse source ids or create stable labels like quote_1)
+  - evidence_id: exactly one existing evidence identifier from the provided context (for example q1, F3, or s2). Do not invent IDs, and do not output arrays or comma-separated IDs.
+    If no valid ID can be determined, set it to an empty string.
   Quotes must come from the provided context; do not paraphrase.

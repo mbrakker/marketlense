@@ -48,6 +48,8 @@ INLINE_REFERENCE_TOKEN_RE = r"[A-Z]{1,4}-\d{1,4}"
 INLINE_REFERENCE_GROUP_RE = re.compile(
     rf"[\(\[]\s*{INLINE_REFERENCE_TOKEN_RE}(?:\s*[/,;|]\s*{INLINE_REFERENCE_TOKEN_RE})*\s*[\)\]]"
 )
+EVIDENCE_TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z0-9_-]*")
+QUOTE_ALIAS_RE = re.compile(r"^quote[-_]?(\d+)$", re.IGNORECASE)
 
 
 def _artifact_parallel_workers(settings: AppSettings, step_count: int) -> int:
@@ -328,6 +330,24 @@ def generate_artifacts(
         ),
         insights_candidates,
     )
+    evidence_id_stats = _normalize_artifact_evidence_ids(
+        summary=summary,
+        insights_candidates=insights_candidates,
+        insights_final=insights_final,
+        quotes_final=quotes_final,
+        doc_map=safe_doc_map,
+        evidence_packs=safe_evidence,
+    )
+    if evidence_id_stats.get("normalized_count", 0) > 0:
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="artifact_evidence_ids_normalized",
+                module=logger.name,
+                fields=evidence_id_stats,
+            )
+        )
 
     expert_ctx = child_context(ctx, task_id=f"{ctx.task_id}:expert_comment")
     expert_vars = {
@@ -597,6 +617,164 @@ def _strip_inline_reference_ids(text: str) -> str:
     cleaned = re.sub(r"([(\[])\s+", r"\1", cleaned)
     cleaned = re.sub(r"\s+([)\]])", r"\1", cleaned)
     return cleaned.strip()
+
+
+def _collect_known_evidence_ids(
+    *, doc_map: Dict[str, Any], evidence_packs: Dict[str, Any]
+) -> tuple[set[str], Dict[str, str]]:
+    known_ids: set[str] = set()
+    alias_to_id: Dict[str, str] = {}
+
+    def _register(value: Any) -> str:
+        evidence_id = _s(value).strip()
+        if not evidence_id:
+            return ""
+        known_ids.add(evidence_id)
+        alias_to_id.setdefault(evidence_id.lower(), evidence_id)
+        return evidence_id
+
+    findings_pack = evidence_packs.get("findings")
+    if isinstance(findings_pack, dict):
+        for finding in findings_pack.get("findings") or []:
+            if isinstance(finding, dict):
+                _register(finding.get("id"))
+
+    quote_pack = evidence_packs.get("quote_candidates")
+    quote_candidates: list[Any]
+    if isinstance(quote_pack, dict):
+        quote_candidates = quote_pack.get("quote_candidates") or []
+    elif isinstance(quote_pack, list):
+        quote_candidates = quote_pack
+    else:
+        quote_candidates = []
+    for idx, quote in enumerate(quote_candidates, start=1):
+        if not isinstance(quote, dict):
+            continue
+        quote_id = _register(quote.get("id"))
+        if quote_id:
+            alias_to_id.setdefault(f"quote_{idx}", quote_id)
+            alias_to_id.setdefault(f"quote-{idx}", quote_id)
+            alias_to_id.setdefault(f"quote{idx}", quote_id)
+
+    if isinstance(doc_map, dict):
+        for section in doc_map.get("sections") or []:
+            if isinstance(section, dict):
+                _register(section.get("id"))
+
+    for evidence_id in list(known_ids):
+        match = re.match(r"^q(\d+)$", evidence_id, flags=re.IGNORECASE)
+        if not match:
+            continue
+        quote_num = match.group(1)
+        alias_to_id.setdefault(f"quote_{quote_num}", evidence_id)
+        alias_to_id.setdefault(f"quote-{quote_num}", evidence_id)
+        alias_to_id.setdefault(f"quote{quote_num}", evidence_id)
+
+    return known_ids, alias_to_id
+
+
+def _extract_evidence_id_candidates(raw_evidence_id: Any) -> List[str]:
+    raw = _s(raw_evidence_id).strip()
+    if not raw:
+        return []
+
+    candidates: List[str] = [raw]
+    split_candidates = re.split(r"[,;|/]", raw)
+    if len(split_candidates) > 1:
+        candidates.extend(split_candidates)
+    if raw.startswith("[") and raw.endswith("]"):
+        candidates.extend(EVIDENCE_TOKEN_RE.findall(raw))
+    if " " in raw:
+        candidates.extend(EVIDENCE_TOKEN_RE.findall(raw))
+
+    normalized: List[str] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        token = _s(candidate).strip()
+        token = token.strip("\"'`")
+        token = token.strip("[](){}")
+        token = token.strip()
+        if not token or token in seen:
+            continue
+        seen.add(token)
+        normalized.append(token)
+    return normalized
+
+
+def _canonicalize_evidence_id(
+    evidence_id: Any,
+    *,
+    known_ids: set[str],
+    alias_to_id: Dict[str, str],
+) -> str:
+    raw = _s(evidence_id).strip()
+    if not raw:
+        return ""
+    for candidate in _extract_evidence_id_candidates(raw):
+        if not candidate:
+            continue
+        canonical = alias_to_id.get(candidate.lower())
+        if canonical:
+            return canonical
+        quote_alias = QUOTE_ALIAS_RE.match(candidate)
+        if quote_alias:
+            alias_candidate = f"quote_{quote_alias.group(1)}"
+            canonical = alias_to_id.get(alias_candidate)
+            if canonical:
+                return canonical
+        if candidate in known_ids:
+            return candidate
+    return ""
+
+
+def _normalize_artifact_evidence_ids(
+    *,
+    summary: Dict[str, Any],
+    insights_candidates: List[Dict[str, Any]],
+    insights_final: List[Dict[str, Any]],
+    quotes_final: List[Dict[str, Any]],
+    doc_map: Dict[str, Any],
+    evidence_packs: Dict[str, Any],
+) -> Dict[str, int]:
+    known_ids, alias_to_id = _collect_known_evidence_ids(
+        doc_map=doc_map, evidence_packs=evidence_packs
+    )
+    normalized_count = 0
+    cleared_count = 0
+    checked_count = 0
+
+    def _normalize_item(item: Any) -> None:
+        nonlocal normalized_count, cleared_count, checked_count
+        if not isinstance(item, dict):
+            return
+        original = _s(item.get("evidence_id")).strip()
+        checked_count += 1
+        normalized = _canonicalize_evidence_id(
+            original, known_ids=known_ids, alias_to_id=alias_to_id
+        )
+        if normalized != original:
+            normalized_count += 1
+            if not normalized:
+                cleared_count += 1
+        item["evidence_id"] = normalized
+
+    claim_map = summary.get("claim_evidence_map")
+    if isinstance(claim_map, list):
+        for claim in claim_map:
+            _normalize_item(claim)
+    for item in insights_candidates:
+        _normalize_item(item)
+    for item in insights_final:
+        _normalize_item(item)
+    for item in quotes_final:
+        _normalize_item(item)
+
+    return {
+        "known_reference_count": len(known_ids),
+        "checked_count": checked_count,
+        "normalized_count": normalized_count,
+        "cleared_count": cleared_count,
+    }
 
 
 def _normalize_claims(items: Any) -> List[Dict[str, Any]]:
