@@ -1,5 +1,6 @@
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import MagicMock, patch
 
 from src.contracts.vector_store import (
     VectorStoreAttachFileRequest,
@@ -25,9 +26,13 @@ def _mock_client():
     return client
 
 
-@patch.object(svc, "_client")
-def test_create_vector_store(mock_client_factory):
-    mock_client_factory.return_value = _mock_client()
+def _install_openai_client(monkeypatch: pytest.MonkeyPatch, client: MagicMock) -> None:
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setattr(svc, "OpenAI", lambda api_key: client)
+
+
+def test_create_vector_store(monkeypatch: pytest.MonkeyPatch):
+    _install_openai_client(monkeypatch, _mock_client())
     resp = svc.create_vector_store(
         VectorStoreCreateRequest(
             schema_version="1.0",
@@ -47,9 +52,8 @@ def test_create_vector_store(mock_client_factory):
     assert resp.vector_store_id == "vs_123"
 
 
-@patch.object(svc, "_client")
-def test_upload_file(mock_client_factory, tmp_path):
-    mock_client_factory.return_value = _mock_client()
+def test_upload_file(monkeypatch: pytest.MonkeyPatch, tmp_path):
+    _install_openai_client(monkeypatch, _mock_client())
     pdf = tmp_path / "f.pdf"
     pdf.write_bytes(b"hello")
     resp = svc.upload_file(
@@ -63,9 +67,8 @@ def test_upload_file(mock_client_factory, tmp_path):
     assert resp.openai_file_id == "file_123"
 
 
-@patch.object(svc, "_client")
-def test_attach_file(mock_client_factory):
-    mock_client_factory.return_value = _mock_client()
+def test_attach_file(monkeypatch: pytest.MonkeyPatch):
+    _install_openai_client(monkeypatch, _mock_client())
     resp = svc.attach_file(
         VectorStoreAttachFileRequest(
             schema_version="1.0",
@@ -77,10 +80,9 @@ def test_attach_file(mock_client_factory):
     assert resp.openai_file_id == "file_123"
 
 
-@patch.object(svc, "_client")
-def test_wait_until_indexed_success(mock_client_factory):
+def test_wait_until_indexed_success(monkeypatch: pytest.MonkeyPatch):
     client = _mock_client()
-    mock_client_factory.return_value = client
+    _install_openai_client(monkeypatch, client)
     resp = svc.wait_until_indexed(
         VectorStoreWaitRequest(
             schema_version="1.0",
@@ -93,14 +95,16 @@ def test_wait_until_indexed_success(mock_client_factory):
     assert resp.status == "completed"
 
 
-@patch.object(svc, "_client")
-def test_wait_until_indexed_timeout(mock_client_factory):
+def test_wait_until_indexed_timeout(monkeypatch: pytest.MonkeyPatch):
     client = _mock_client()
     client.vector_stores.retrieve.side_effect = [
         {"status": "in_progress"},
         {"status": "in_progress"},
     ]
-    mock_client_factory.return_value = client
+    _install_openai_client(monkeypatch, client)
+    tick = iter([0.0, 0.1, 0.2, 1.1])
+    monkeypatch.setattr(svc.time, "time", lambda: next(tick))
+    monkeypatch.setattr(svc.time, "sleep", lambda _seconds: None)
     with pytest.raises(AppError) as exc:
         svc.wait_until_indexed(
             VectorStoreWaitRequest(

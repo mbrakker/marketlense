@@ -8,12 +8,25 @@ def test_drive_client_is_thread_local(monkeypatch):
     drive_service._DRIVE_CLIENTS = {}
     created = []
 
-    def _fake_build(sa_path: str):
+    def _fake_credentials_from_file(_sa_path: str, scopes):
+        assert scopes == ["https://www.googleapis.com/auth/drive.readonly"]
+        return object()
+
+    def _fake_build(service_name: str, version: str, credentials, cache_discovery: bool):
+        assert service_name == "drive"
+        assert version == "v3"
+        assert credentials is not None
+        assert cache_discovery is False
         obj = object()
         created.append(obj)
         return obj
 
-    monkeypatch.setattr(drive_service, "_build_drive_client", _fake_build)
+    monkeypatch.setattr(
+        drive_service.Credentials,
+        "from_service_account_file",
+        staticmethod(_fake_credentials_from_file),
+    )
+    monkeypatch.setattr(drive_service, "build", _fake_build)
     ctx = RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
 
     main_client_1 = drive_service._get_drive_client("sa.json", ctx)

@@ -466,17 +466,6 @@ Each quick-win should be documented with a short task when prioritized.
 
 ### AGENTS.md Compliance Backlog (Audit 2026-02-21)
 
-- **Title:** Fix CI test runner and enforce mandatory AGENTS quality gates
-  - Explanation: Replace `unittest discover` with `pytest`, add missing test dependencies, and enforce required CI gates (coverage by critical package, mutation testing for orchestrators/generators, forbidden patching checks, contract round-trip checks, plus format/type checks).
-  - Pros: Restores trust in CI and blocks regressions/invalid test patterns.
-  - Cons: Initial setup and baseline hardening effort; may fail early until tests are fixed.
-  - Acceptance Criteria:
-    - CI runs `pytest` for default suite and excludes integrations by default.
-    - Coverage thresholds enforced globally and for `src/orchestrators/*`, `src/generators/*`, `src/services/*`.
-    - Mutation gate active for critical business logic packages.
-    - Static gate fails on forbidden monkeypatch/private-helper patching patterns.
-    - Contract round-trip tests required for changed/added dataclasses.
-
 - **Title:** Move retry/backoff/rate-limiting control out of generators into orchestrators
   - Explanation: Remove retry loops, sleeps, and backoff decisions from generators and handle them only in orchestrators, with bounded policy + jitter and explicit logging.
   - Pros: Restores strict role separation and predictable failure handling.

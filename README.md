@@ -342,7 +342,7 @@ Schema validation is performed by `src/services/schema_validator_service.py` and
 
 ## Testing
 
-Minimal unit tests exist under `tests/`:
+Test suites live under `tests/` (unit + contract + integration marker support):
 
 - `test_validation.py`: contract validation helpers
 - `test_normalize_service.py`: normalization behavior
@@ -352,6 +352,13 @@ Minimal unit tests exist under `tests/`:
 - `test_html_utils.py`: HTML parsing helpers
 - `test_artifact_generator.py`: artifact JSON generation/validation
 - `test_render_service_artifacts.py`: HTML sections for artifact rendering
+- `contracts/test_contract_roundtrip.py`: dataclass serialization/deserialization round-trip gate for `src/contracts/*`
+
+Install dev/test tooling:
+
+```bash
+pip install -r requirements-dev.txt
+```
 
 Run tests locally:
 
@@ -368,7 +375,14 @@ Run the live OpenAI smoke test explicitly (opt-in):
 RUN_OPENAI_SMOKE_TEST=1 OPENAI_API_KEY=... pytest -m integration tests/integration/test_openai_smoke.py
 ```
 
-CI runs these tests via `.github/workflows/ci.yml`.
+CI gates (see `.github/workflows/ci.yml`):
+
+- `python scripts/ci/check_formatting.py` (format gate, `ruff format --check` for CI scripts/contract tests)
+- `python scripts/ci/run_type_check.py` (type gate, `mypy` for `src/contracts` + CI scripts)
+- `python scripts/ci/check_forbidden_patching.py` (fails on private-helper/dataclass-constructor patching patterns in tests)
+- `python -m pytest --cov=src --cov-report=xml --cov-report=term-missing` (default suite excludes integration tests)
+- `python scripts/ci/check_coverage.py --coverage-xml coverage.xml` (global + per-critical-package thresholds)
+- `python scripts/ci/run_mutation_gate.py` (mutation score gate for one orchestrator + one generator target)
 
 ---
 

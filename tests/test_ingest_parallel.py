@@ -65,12 +65,16 @@ def test_parallel_executor_orders_results(ingest_settings, monkeypatch) -> None:
     ]
     captured: dict[str, int] = {}
 
-    def _fake_process(file, index, current_settings, root_ctx):
+    def _fake_run_ingest_file(*, file, index, settings, root_ctx, dependencies, logger_name):
+        assert settings == current_settings
+        assert dependencies is not None
+        assert logger_name
         return orch._FileProcessResult(index=index, outcome=outcomes[index], processed=1, had_error=False)
 
+    current_settings = settings
     monkeypatch.setattr(orch, "list_pdfs", lambda req, ctx: files)
     monkeypatch.setattr(orch, "ThreadPoolExecutor", lambda max_workers: _DummyExecutor(max_workers, captured))
-    monkeypatch.setattr(orch, "_process_file", _fake_process)
+    monkeypatch.setattr(orch, "run_ingest_file", _fake_run_ingest_file)
 
     results = orch.run_ingest(settings, limit=2)
 
@@ -153,7 +157,10 @@ def test_ingest_uses_batch_state_prefilter(ingest_settings, monkeypatch) -> None
     def _unexpected_single_check(_request, _ctx):
         raise AssertionError("expected drive-list filtering to use batch state checks")
 
-    def _fake_process(file, index, current_settings, root_ctx):
+    def _fake_run_ingest_file(*, file, index, settings, root_ctx, dependencies, logger_name):
+        assert settings == current_settings
+        assert dependencies is not None
+        assert logger_name
         return orch._FileProcessResult(
             index=index,
             outcome=IngestOutcome(
@@ -168,10 +175,11 @@ def test_ingest_uses_batch_state_prefilter(ingest_settings, monkeypatch) -> None
             had_error=False,
         )
 
+    current_settings = settings
     monkeypatch.setattr(orch, "list_pdfs", lambda req, ctx: files)
     monkeypatch.setattr(orch, "state_already_processed_batch", _batch_check)
     monkeypatch.setattr(orch, "state_already_processed", _unexpected_single_check)
-    monkeypatch.setattr(orch, "_process_file", _fake_process)
+    monkeypatch.setattr(orch, "run_ingest_file", _fake_run_ingest_file)
 
     results = orch.run_ingest(settings, limit=2)
 
