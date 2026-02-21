@@ -3,11 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-import threading
-import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from contextlib import contextmanager
-from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 from src.contracts.config import AppSettings
@@ -33,19 +29,6 @@ INLINE_REFERENCE_GROUP_RE = re.compile(
 )
 
 
-@dataclass
-class _GlobalArtifactLimiter:
-    max_in_flight: int
-    min_interval_s: float
-    semaphore: threading.BoundedSemaphore
-    gate_lock: threading.Lock
-    next_allowed_monotonic: float
-
-
-_GLOBAL_ARTIFACT_LIMITER_LOCK = threading.Lock()
-_GLOBAL_ARTIFACT_LIMITER: Optional[_GlobalArtifactLimiter] = None
-
-
 def _safe_int(value: object, default: int, *, min_value: int = 0) -> int:
     try:
         parsed = int(value)
@@ -59,64 +42,6 @@ def _safe_int(value: object, default: int, *, min_value: int = 0) -> int:
 def _artifact_parallel_workers(settings: AppSettings, step_count: int) -> int:
     configured = _safe_int(getattr(settings, "artifact_parallel_workers", 4), 4, min_value=1)
     return max(1, min(configured, step_count))
-
-
-def _get_artifact_global_limiter(settings: AppSettings) -> _GlobalArtifactLimiter:
-    global _GLOBAL_ARTIFACT_LIMITER
-    max_in_flight = _safe_int(getattr(settings, "artifact_global_max_in_flight", 2), 2, min_value=1)
-    min_interval_ms = _safe_int(getattr(settings, "artifact_global_min_interval_ms", 250), 250, min_value=0)
-    min_interval_s = float(min_interval_ms) / 1000.0
-    with _GLOBAL_ARTIFACT_LIMITER_LOCK:
-        if (
-            _GLOBAL_ARTIFACT_LIMITER is None
-            or _GLOBAL_ARTIFACT_LIMITER.max_in_flight != max_in_flight
-            or abs(_GLOBAL_ARTIFACT_LIMITER.min_interval_s - min_interval_s) > 1e-9
-        ):
-            _GLOBAL_ARTIFACT_LIMITER = _GlobalArtifactLimiter(
-                max_in_flight=max_in_flight,
-                min_interval_s=min_interval_s,
-                semaphore=threading.BoundedSemaphore(max_in_flight),
-                gate_lock=threading.Lock(),
-                next_allowed_monotonic=0.0,
-            )
-        return _GLOBAL_ARTIFACT_LIMITER
-
-
-@contextmanager
-def _acquire_artifact_rate_limit(settings: AppSettings, ctx: RunContext, namespace: str):
-    limiter = _get_artifact_global_limiter(settings)
-    wait_start = time.monotonic()
-    limiter.semaphore.acquire()
-    acquired_at = time.monotonic()
-    in_flight_wait_ms = int((acquired_at - wait_start) * 1000)
-    rate_wait_ms = 0
-    try:
-        if limiter.min_interval_s > 0:
-            with limiter.gate_lock:
-                now = time.monotonic()
-                scheduled = max(now, limiter.next_allowed_monotonic)
-                limiter.next_allowed_monotonic = scheduled + limiter.min_interval_s
-            sleep_for = max(0.0, scheduled - time.monotonic())
-            if sleep_for > 0:
-                time.sleep(sleep_for)
-            rate_wait_ms = int((time.monotonic() - acquired_at) * 1000)
-        if in_flight_wait_ms > 0 or rate_wait_ms > 0:
-            logger.info(log_event(
-                ctx,
-                role="generator",
-                event="artifact_rate_limiter_wait",
-                module=logger.name,
-                fields={
-                    "namespace": namespace,
-                    "in_flight_wait_ms": in_flight_wait_ms,
-                    "rate_wait_ms": rate_wait_ms,
-                    "global_max_in_flight": limiter.max_in_flight,
-                    "global_min_interval_ms": int(round(limiter.min_interval_s * 1000)),
-                },
-            ))
-        yield
-    finally:
-        limiter.semaphore.release()
 
 
 def generate_artifacts(
@@ -249,7 +174,6 @@ def generate_artifacts(
         ("quotes", "report_vs/artifacts/quotes", {**base_vars, "quote_candidates_json": _dump_json(quote_candidates)}),
     ]
     parallel_workers = _artifact_parallel_workers(settings, len(stage_one_steps))
-    limiter = _get_artifact_global_limiter(settings)
     logger.info(log_event(
         ctx,
         role="generator",
@@ -257,8 +181,6 @@ def generate_artifacts(
         module=logger.name,
         fields={
             "parallel_workers": parallel_workers,
-            "global_max_in_flight": limiter.max_in_flight,
-            "global_min_interval_ms": int(round(limiter.min_interval_s * 1000)),
             "parallel_step_count": len(stage_one_steps),
         },
     ))
@@ -490,42 +412,41 @@ def _call_json_model(
             "default_model": settings.openai_model,
         },
     ))
-    with _acquire_artifact_rate_limit(settings, ctx, namespace):
-        if allow_vector_store and vector_store_id:
-            resp = openai_client.openai_respond_with_vector_store(
-                OpenAIResponseRequest(
-                    schema_version="1.0",
-                    system_prompt=system_rendered.text,
-                    user_prompt=user_rendered.text,
-                    vector_store_id=vector_store_id,
-                    model=resolved_model,
-                    temperature=settings.temperature,
-                    api_key=settings.openai_api_key,
-                    seed=settings.openai_seed,
-                    timeout_seconds=settings.openai_timeout_seconds,
-                    cost_ledger_path=settings.cost_ledger_path,
-                    cost_daily_path=settings.cost_daily_path,
-                    model_pricing=settings.model_pricing,
-                ),
-                ctx,
-            )
-        else:
-            resp = openai_client.openai_chat_json(
-                OpenAIJSONPromptRequest(
-                    schema_version="1.0",
-                    system_prompt=system_rendered.text,
-                    user_prompt=user_rendered.text,
-                    model=resolved_model,
-                    temperature=settings.temperature,
-                    api_key=settings.openai_api_key,
-                    seed=settings.openai_seed,
-                    timeout_seconds=settings.openai_timeout_seconds,
-                    cost_ledger_path=settings.cost_ledger_path,
-                    cost_daily_path=settings.cost_daily_path,
-                    model_pricing=settings.model_pricing,
-                ),
-                ctx,
-            )
+    if allow_vector_store and vector_store_id:
+        resp = openai_client.openai_respond_with_vector_store(
+            OpenAIResponseRequest(
+                schema_version="1.0",
+                system_prompt=system_rendered.text,
+                user_prompt=user_rendered.text,
+                vector_store_id=vector_store_id,
+                model=resolved_model,
+                temperature=settings.temperature,
+                api_key=settings.openai_api_key,
+                seed=settings.openai_seed,
+                timeout_seconds=settings.openai_timeout_seconds,
+                cost_ledger_path=settings.cost_ledger_path,
+                cost_daily_path=settings.cost_daily_path,
+                model_pricing=settings.model_pricing,
+            ),
+            ctx,
+        )
+    else:
+        resp = openai_client.openai_chat_json(
+            OpenAIJSONPromptRequest(
+                schema_version="1.0",
+                system_prompt=system_rendered.text,
+                user_prompt=user_rendered.text,
+                model=resolved_model,
+                temperature=settings.temperature,
+                api_key=settings.openai_api_key,
+                seed=settings.openai_seed,
+                timeout_seconds=settings.openai_timeout_seconds,
+                cost_ledger_path=settings.cost_ledger_path,
+                cost_daily_path=settings.cost_daily_path,
+                model_pricing=settings.model_pricing,
+            ),
+            ctx,
+        )
     parsed = resp.parsed_json if isinstance(resp.parsed_json, dict) else {}
     logger.info(log_event(
         ctx,

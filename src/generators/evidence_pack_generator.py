@@ -2,11 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-import threading
-import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from contextlib import contextmanager
-from dataclasses import dataclass
 from typing import Dict, Optional, Tuple
 
 from src.contracts.config import AppSettings
@@ -30,19 +26,6 @@ from src.utils.slugify import slugify
 logger = logging.getLogger("market_lense.evidence_pack_generator")
 
 
-@dataclass
-class _GlobalEvidencePackLimiter:
-    max_in_flight: int
-    min_interval_s: float
-    semaphore: threading.BoundedSemaphore
-    gate_lock: threading.Lock
-    next_allowed_monotonic: float
-
-
-_GLOBAL_LIMITER_LOCK = threading.Lock()
-_GLOBAL_LIMITER: Optional[_GlobalEvidencePackLimiter] = None
-
-
 def _safe_int(value: object, default: int, *, min_value: int = 0) -> int:
     try:
         parsed = int(value)
@@ -53,90 +36,9 @@ def _safe_int(value: object, default: int, *, min_value: int = 0) -> int:
     return parsed
 
 
-def _get_global_limiter(settings: AppSettings) -> _GlobalEvidencePackLimiter:
-    global _GLOBAL_LIMITER
-    max_in_flight = _safe_int(getattr(settings, "evidence_pack_global_max_in_flight", 2), 2, min_value=1)
-    min_interval_ms = _safe_int(getattr(settings, "evidence_pack_global_min_interval_ms", 250), 250, min_value=0)
-    min_interval_s = float(min_interval_ms) / 1000.0
-    with _GLOBAL_LIMITER_LOCK:
-        if (
-            _GLOBAL_LIMITER is None
-            or _GLOBAL_LIMITER.max_in_flight != max_in_flight
-            or abs(_GLOBAL_LIMITER.min_interval_s - min_interval_s) > 1e-9
-        ):
-            _GLOBAL_LIMITER = _GlobalEvidencePackLimiter(
-                max_in_flight=max_in_flight,
-                min_interval_s=min_interval_s,
-                semaphore=threading.BoundedSemaphore(max_in_flight),
-                gate_lock=threading.Lock(),
-                next_allowed_monotonic=0.0,
-            )
-        return _GLOBAL_LIMITER
-
-
-@contextmanager
-def _acquire_rate_limit(settings: AppSettings, ctx: RunContext, pack_name: str):
-    limiter = _get_global_limiter(settings)
-    wait_start = time.monotonic()
-    limiter.semaphore.acquire()
-    acquired_at = time.monotonic()
-    in_flight_wait_ms = int((acquired_at - wait_start) * 1000)
-    rate_wait_ms = 0
-    try:
-        if limiter.min_interval_s > 0:
-            with limiter.gate_lock:
-                now = time.monotonic()
-                scheduled = max(now, limiter.next_allowed_monotonic)
-                limiter.next_allowed_monotonic = scheduled + limiter.min_interval_s
-            sleep_for = max(0.0, scheduled - time.monotonic())
-            if sleep_for > 0:
-                time.sleep(sleep_for)
-            rate_wait_ms = int((time.monotonic() - acquired_at) * 1000)
-        if in_flight_wait_ms > 0 or rate_wait_ms > 0:
-            logger.info(log_event(
-                ctx,
-                role="generator",
-                event="evidence_pack_rate_limiter_wait",
-                module=logger.name,
-                fields={
-                    "pack": pack_name,
-                    "in_flight_wait_ms": in_flight_wait_ms,
-                    "rate_wait_ms": rate_wait_ms,
-                    "global_max_in_flight": limiter.max_in_flight,
-                    "global_min_interval_ms": int(round(limiter.min_interval_s * 1000)),
-                },
-            ))
-        yield
-    finally:
-        limiter.semaphore.release()
-
-
 def _pack_parallel_workers(settings: AppSettings, step_count: int) -> int:
     configured = _safe_int(getattr(settings, "evidence_pack_parallel_workers", 3), 3, min_value=1)
     return max(1, min(configured, step_count))
-
-
-def _doc_map_retry_policy(settings: AppSettings) -> tuple[int, float]:
-    max_attempts = _safe_int(getattr(settings, "evidence_pack_doc_map_max_attempts", 3), 3, min_value=1)
-    retry_delay_ms = _safe_int(getattr(settings, "evidence_pack_doc_map_retry_delay_ms", 500), 500, min_value=0)
-    return max_attempts, float(retry_delay_ms) / 1000.0
-
-
-def _should_retry_doc_map_generation(
-    *,
-    schema_name: str,
-    attempt: int,
-    max_attempts: int,
-    reason: str,
-    retryable_error: bool,
-) -> bool:
-    if schema_name != "doc_map" or attempt >= max_attempts:
-        return False
-    if retryable_error:
-        return True
-    if reason == "model_returned_no_json":
-        return True
-    return reason.startswith("schema_validation_failed:")
 
 
 def _strip_json_fence(text: str) -> str:
@@ -239,7 +141,6 @@ def generate_evidence_packs(
         ("quote_candidates", "evidence_packs/quote_candidates", "evidence_pack"),
     ]
     results: Dict[str, dict] = {}
-    limiter = _get_global_limiter(settings)
     parallel_workers = _pack_parallel_workers(settings, max(0, len(steps) - 1))
     logger.info(log_event(
         ctx,
@@ -249,8 +150,6 @@ def generate_evidence_packs(
         fields={
             "report_id": report_id,
             "parallel_workers": parallel_workers,
-            "global_max_in_flight": limiter.max_in_flight,
-            "global_min_interval_ms": int(round(limiter.min_interval_s * 1000)),
             "parallel_step_count": max(0, len(steps) - 1),
         },
     ))
@@ -475,114 +374,76 @@ def _generate_pack(
             "default_model": settings.openai_model,
         },
     ))
-    parsed_json = None
+    parsed_json: Optional[dict] = None
     not_found_reason = ""
     max_attempts = 1
-    retry_delay_seconds = 0.0
-    if schema_name == "doc_map":
-        max_attempts, retry_delay_seconds = _doc_map_retry_policy(settings)
-    attempts_used = 0
-    for attempt in range(1, max_attempts + 1):
-        attempts_used = attempt
-        retryable_error = False
-        attempt_reason = ""
-        try:
-            with _acquire_rate_limit(settings, ctx, pack_name):
-                resp: OpenAIResponseResult = openai_client.openai_respond_with_vector_store(
-                    OpenAIResponseRequest(
-                        schema_version="1.0",
-                        system_prompt=system_prompt,
-                        user_prompt=user_prompt,
-                        vector_store_id=vector_store_id,
-                        model=resolved_model,
-                        temperature=settings.temperature,
-                        api_key=settings.openai_api_key,
-                        seed=settings.openai_seed,
-                        timeout_seconds=settings.openai_timeout_seconds,
-                        cost_ledger_path=settings.cost_ledger_path,
-                        cost_daily_path=settings.cost_daily_path,
-                        model_pricing=settings.model_pricing,
-                    ),
+    attempts_used = 1
+    try:
+        resp: OpenAIResponseResult = openai_client.openai_respond_with_vector_store(
+            OpenAIResponseRequest(
+                schema_version="1.0",
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                vector_store_id=vector_store_id,
+                model=resolved_model,
+                temperature=settings.temperature,
+                api_key=settings.openai_api_key,
+                seed=settings.openai_seed,
+                timeout_seconds=settings.openai_timeout_seconds,
+                cost_ledger_path=settings.cost_ledger_path,
+                cost_daily_path=settings.cost_daily_path,
+                model_pricing=settings.model_pricing,
+            ),
+            ctx,
+        )
+        parsed_json = resp.parsed_json if isinstance(resp.parsed_json, dict) else None
+        if parsed_json is None:
+            parsed_json = _parse_json_object_from_text(resp.text or "")
+            if parsed_json is not None:
+                logger.info(log_event(
+                    ctx,
+                    role="generator",
+                    event="evidence_pack_json_text_fallback",
+                    module=logger.name,
+                    fields={
+                        "report_id": report_id,
+                        "pack": pack_name,
+                        "attempt": 1,
+                    },
+                ))
+        if parsed_json is None:
+            not_found_reason = "model_returned_no_json"
+        else:
+            try:
+                if schema_name == "doc_map":
+                    parsed_json, normalization = _normalize_doc_map_payload(parsed_json, report_id)
+                    if normalization["changed"]:
+                        logger.info(log_event(
+                            ctx,
+                            role="generator",
+                            event="doc_map_normalized",
+                            module=logger.name,
+                            fields={
+                                "report_id": report_id,
+                                "wrapper_key": normalization["wrapper_key"],
+                                "sections_with_ids": normalization["sections_with_ids"],
+                                "added_section_ids": normalization["added_section_ids"],
+                                "dropped_sections": normalization["dropped_sections"],
+                                "doc_id_filled": normalization["doc_id_filled"],
+                            },
+                        ))
+                validate_schema(
+                    SchemaValidateRequest(schema_version="1.0", payload=parsed_json, schema_name=schema_name),
                     ctx,
                 )
-            parsed_json = resp.parsed_json if isinstance(resp.parsed_json, dict) else None
-            if parsed_json is None:
-                parsed_json = _parse_json_object_from_text(resp.text or "")
-                if parsed_json is not None:
-                    logger.info(log_event(
-                        ctx,
-                        role="generator",
-                        event="evidence_pack_json_text_fallback",
-                        module=logger.name,
-                        fields={
-                            "report_id": report_id,
-                            "pack": pack_name,
-                            "attempt": attempt,
-                        },
-                    ))
-            if parsed_json is None:
-                attempt_reason = "model_returned_no_json"
-            else:
-                try:
-                    if schema_name == "doc_map":
-                        parsed_json, normalization = _normalize_doc_map_payload(parsed_json, report_id)
-                        if normalization["changed"]:
-                            logger.info(log_event(
-                                ctx,
-                                role="generator",
-                                event="doc_map_normalized",
-                                module=logger.name,
-                                fields={
-                                    "report_id": report_id,
-                                    "wrapper_key": normalization["wrapper_key"],
-                                    "sections_with_ids": normalization["sections_with_ids"],
-                                    "added_section_ids": normalization["added_section_ids"],
-                                    "dropped_sections": normalization["dropped_sections"],
-                                    "doc_id_filled": normalization["doc_id_filled"],
-                                },
-                            ))
-                    validate_schema(
-                        SchemaValidateRequest(schema_version="1.0", payload=parsed_json, schema_name=schema_name),
-                        ctx,
-                    )
-                except AppError as exc:
-                    attempt_reason = f"schema_validation_failed:{exc.code}"
-                    parsed_json = None
-        except AppError as exc:
-            attempt_reason = exc.code
-            retryable_error = bool(exc.retryable)
-            parsed_json = None
-
-        if parsed_json is not None:
-            not_found_reason = ""
-            break
-
-        not_found_reason = attempt_reason
-        if _should_retry_doc_map_generation(
-            schema_name=schema_name,
-            attempt=attempt,
-            max_attempts=max_attempts,
-            reason=attempt_reason,
-            retryable_error=retryable_error,
-        ):
-            logger.info(log_event(
-                ctx,
-                role="generator",
-                event="doc_map_generation_retry",
-                module=logger.name,
-                fields={
-                    "report_id": report_id,
-                    "pack": pack_name,
-                    "attempt": attempt,
-                    "max_attempts": max_attempts,
-                    "reason": attempt_reason,
-                    "retry_delay_ms": int(round(retry_delay_seconds * 1000)),
-                },
-            ))
-            if retry_delay_seconds > 0:
-                time.sleep(retry_delay_seconds)
-            continue
-        break
+            except AppError as exc:
+                not_found_reason = f"schema_validation_failed:{exc.code}"
+                parsed_json = None
+    except AppError as exc:
+        not_found_reason = exc.code
+        if schema_name == "doc_map" and exc.retryable:
+            not_found_reason = f"retryable_error:{exc.code}"
+        parsed_json = None
     result_payload = parsed_json or _empty_payload(schema_name, not_found_reason)
     if cache_meta and isinstance(result_payload, dict):
         result_payload = dict(result_payload)

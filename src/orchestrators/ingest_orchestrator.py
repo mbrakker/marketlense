@@ -331,7 +331,7 @@ def _run_step_with_retry(step_name: str, ctx: RunContext, func, retries: int = 2
         ctx=ctx,
         logger=logger,
         module_name=logger.name,
-        policy=RetryPolicy(retries=retries, base_delay_seconds=1.0, backoff_step_seconds=1.0),
+        policy=RetryPolicy(retries=retries, base_delay_seconds=1.0, backoff_step_seconds=1.0, jitter_seconds=0.25),
         retry_event="step_retry",
         retry_fields_builder=lambda exc, attempt: {
             "step": step_name,
@@ -370,7 +370,7 @@ def _process_file(
                 current_settings,
                 current_md5,
                 current_ctx,
-                retries=0,
+                retries=2,
                 generate_report_fn=generate_report,
             )
         ),

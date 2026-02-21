@@ -1574,6 +1574,9 @@ def generate_report(
     settings: IngestSettings,
     md5: Optional[str],
     ctx: RunContext,
+    *,
+    evidence_pack_openai_client=None,
+    artifact_openai_client=None,
 ) -> IngestOutcome:
     report_worker_limit = getattr(settings, "report_worker_limit", 1)
     try:
@@ -1588,6 +1591,12 @@ def generate_report(
     analysis_mode = "vector_store"
     analysis_modes = [analysis_mode]
     file_name = file.name or file.file_id
+    evidence_pack_generate_kwargs: dict[str, Any] = {}
+    artifact_generate_kwargs: dict[str, Any] = {}
+    if evidence_pack_openai_client is not None:
+        evidence_pack_generate_kwargs["openai_client"] = evidence_pack_openai_client
+    if artifact_openai_client is not None:
+        artifact_generate_kwargs["openai_client"] = artifact_openai_client
     logger.info(log_event(
         ctx,
         role="generator",
@@ -2386,6 +2395,7 @@ def generate_report(
                 settings=settings,
                 ctx=evidence_ctx,
                 md5=md5,
+                **evidence_pack_generate_kwargs,
             )
             taxonomy_state = taxonomy_future.result()
             try:
@@ -2434,6 +2444,7 @@ def generate_report(
                 settings=settings,
                 ctx=evidence_ctx,
                 md5=md5,
+                **evidence_pack_generate_kwargs,
             )
         elif evidence_error is not None:
             raise evidence_error
@@ -2534,6 +2545,7 @@ def generate_report(
             source_status=text_status,
             ctx=child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:artifacts"),
             md5=md5,
+            **artifact_generate_kwargs,
         )
         mode_evidence_paths["artifacts"] = _pack_paths(
             settings.output_dir,

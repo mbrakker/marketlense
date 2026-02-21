@@ -1,6 +1,3 @@
-import threading
-import time
-from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -101,44 +98,6 @@ class FakeAnalysisStore:
         return f"{output_dir}/{slug}/report_analysis/{pack_name}.json"
 
 
-class TrackingOpenAIClient:
-    def __init__(self, sleep_s: float = 0.02):
-        self.sleep_s = sleep_s
-        self._lock = threading.Lock()
-        self._active = 0
-        self.max_active = 0
-        self.call_count = 0
-        self.started_at: list[float] = []
-
-    def openai_respond_with_vector_store(self, req, ctx):
-        with self._lock:
-            self.call_count += 1
-            call_number = self.call_count
-            self._active += 1
-            if self._active > self.max_active:
-                self.max_active = self._active
-            self.started_at.append(time.monotonic())
-        try:
-            if self.sleep_s > 0:
-                time.sleep(self.sleep_s)
-        finally:
-            with self._lock:
-                self._active -= 1
-        if call_number == 1:
-            payload = {"doc_id": "d1", "title": "title", "sections": [{"id": "s1", "title": "Overview"}]}
-        else:
-            payload = {"scope": "ok", "methods": [], "findings": [], "limitations": [], "quote_candidates": []}
-        return OpenAIResponseResult(
-            schema_version="1.0",
-            text="{}",
-            parsed_json=payload,
-            input_tokens=1,
-            output_tokens=1,
-            tool_calls=0,
-            model=req.model,
-        )
-
-
 def _settings(tmp_path):
     return AppSettings(
         schema_version="1.0",
@@ -223,41 +182,32 @@ def test_generate_evidence_packs_handles_missing_json(tmp_path):
     assert stored_payload["not_found_reason"] == "model_returned_no_json"
 
 
-def test_generate_evidence_packs_retries_doc_map_missing_json_then_succeeds(tmp_path):
-    settings = replace(
-        _settings(tmp_path),
-        evidence_pack_doc_map_max_attempts=2,
-        evidence_pack_doc_map_retry_delay_ms=0,
-    )
+def test_generate_evidence_packs_does_not_retry_doc_map_inside_generator(tmp_path):
     fake_openai = RetryingDocMapClient()
     analysis_store = FakeAnalysisStore()
-    packs = generate_evidence_packs(
-        report_id="r1",
-        report_name="report",
-        vector_store_id="vs_1",
-        settings=settings,
-        ctx=_ctx(),
-        openai_client=fake_openai,
-        prompt_client=FakePromptClient(),
-        analysis_store=analysis_store,
-    )
-    assert packs["doc_map"]["doc_id"] == "d1"
-    assert fake_openai.call_count == 7
-    assert len(analysis_store.stored) == 6
+    with pytest.raises(AppError) as exc_info:
+        generate_evidence_packs(
+            report_id="r1",
+            report_name="report",
+            vector_store_id="vs_1",
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            openai_client=fake_openai,
+            prompt_client=FakePromptClient(),
+            analysis_store=analysis_store,
+        )
+    assert exc_info.value.code == "doc_map_empty"
+    assert fake_openai.call_count == 1
+    assert len(analysis_store.stored) == 1
 
 
 def test_generate_evidence_packs_parses_doc_map_json_from_text_fallback(tmp_path):
-    settings = replace(
-        _settings(tmp_path),
-        evidence_pack_doc_map_max_attempts=1,
-        evidence_pack_doc_map_retry_delay_ms=0,
-    )
     fake_openai = TextFallbackDocMapClient()
     packs = generate_evidence_packs(
         report_id="r1",
         report_name="report",
         vector_store_id="vs_1",
-        settings=settings,
+        settings=_settings(tmp_path),
         ctx=_ctx(),
         openai_client=fake_openai,
         prompt_client=FakePromptClient(),
@@ -350,53 +300,3 @@ def test_generate_evidence_packs_normalizes_document_structure_shape(tmp_path):
     assert isinstance(doc_map["sections"], list)
     assert doc_map["sections"][0]["id"] == "executive-summary"
     assert len(analysis_store.stored) == 6
-
-
-def test_generate_evidence_packs_parallel_respects_global_in_flight_limit(tmp_path):
-    settings = replace(
-        _settings(tmp_path),
-        evidence_pack_parallel_workers=5,
-        evidence_pack_global_max_in_flight=2,
-        evidence_pack_global_min_interval_ms=0,
-    )
-    fake_openai = TrackingOpenAIClient(sleep_s=0.04)
-    analysis_store = FakeAnalysisStore()
-    packs = generate_evidence_packs(
-        report_id="r1",
-        report_name="report",
-        vector_store_id="vs_1",
-        settings=settings,
-        ctx=_ctx(),
-        openai_client=fake_openai,
-        prompt_client=FakePromptClient(),
-        analysis_store=analysis_store,
-    )
-    assert len(packs) == 6
-    assert fake_openai.call_count == 6
-    assert fake_openai.max_active <= 2
-    assert fake_openai.max_active >= 2
-
-
-def test_generate_evidence_packs_global_min_interval_throttles_call_starts(tmp_path):
-    settings = replace(
-        _settings(tmp_path),
-        evidence_pack_parallel_workers=5,
-        evidence_pack_global_max_in_flight=5,
-        evidence_pack_global_min_interval_ms=60,
-    )
-    fake_openai = TrackingOpenAIClient(sleep_s=0.005)
-    generate_evidence_packs(
-        report_id="r1",
-        report_name="report",
-        vector_store_id="vs_1",
-        settings=settings,
-        ctx=_ctx(),
-        openai_client=fake_openai,
-        prompt_client=FakePromptClient(),
-        analysis_store=FakeAnalysisStore(),
-    )
-    starts = sorted(fake_openai.started_at)
-    assert len(starts) == 6
-    deltas_ms = [(nxt - cur) * 1000.0 for cur, nxt in zip(starts, starts[1:])]
-    assert deltas_ms
-    assert min(deltas_ms) >= 45.0

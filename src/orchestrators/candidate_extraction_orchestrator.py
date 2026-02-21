@@ -39,7 +39,7 @@ def _run_step_with_retry(step_name: str, ctx: RunContext, func, retries: int = 1
         ctx=ctx,
         logger=logger,
         module_name=logger.name,
-        policy=RetryPolicy(retries=retries, base_delay_seconds=1.0, backoff_step_seconds=1.0),
+        policy=RetryPolicy(retries=retries, base_delay_seconds=1.0, backoff_step_seconds=1.0, jitter_seconds=0.25),
         retry_event="step_retry",
         retry_fields_builder=lambda exc, attempt: {
             "step": step_name,

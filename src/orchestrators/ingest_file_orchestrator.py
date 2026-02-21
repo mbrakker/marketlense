@@ -297,7 +297,7 @@ def run_ingest_file(
             "generate_report",
             file_ctx,
             lambda: dependencies.run_report_pipeline(file, cache_path, settings, md5, file_ctx),
-            2,
+            0,
         )
         had_errors = outcome.status == "error"
         if outcome.vector_store_id:
