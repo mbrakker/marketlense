@@ -1,6 +1,6 @@
 # Consolidated TODO
 
-Last compiled: 2026-02-18
+Last compiled: 2026-02-21
 
 This file combines all TODOs found in the repository (from `TODO.md`, `html_todo.md`, and `potential-TODO.md`). Items are grouped by theme. Duplicates were merged. Each task includes: title, explanation (what & why), pros & cons, and acceptance criteria.
 
@@ -463,6 +463,109 @@ Each quick-win should be documented with a short task when prioritized.
     - Boundary linter runs in CI.
     - Violations report exact module and forbidden dependency/API usage.
     - Existing violations are fixed or explicitly documented with expiry dates.
+
+### AGENTS.md Compliance Backlog (Audit 2026-02-21)
+
+- **Title:** Fix CI test runner and enforce mandatory AGENTS quality gates
+  - Explanation: Replace `unittest discover` with `pytest`, add missing test dependencies, and enforce required CI gates (coverage by critical package, mutation testing for orchestrators/generators, forbidden patching checks, contract round-trip checks, plus format/type checks).
+  - Pros: Restores trust in CI and blocks regressions/invalid test patterns.
+  - Cons: Initial setup and baseline hardening effort; may fail early until tests are fixed.
+  - Acceptance Criteria:
+    - CI runs `pytest` for default suite and excludes integrations by default.
+    - Coverage thresholds enforced globally and for `src/orchestrators/*`, `src/generators/*`, `src/services/*`.
+    - Mutation gate active for critical business logic packages.
+    - Static gate fails on forbidden monkeypatch/private-helper patching patterns.
+    - Contract round-trip tests required for changed/added dataclasses.
+
+- **Title:** Move retry/backoff/rate-limiting control out of generators into orchestrators
+  - Explanation: Remove retry loops, sleeps, and backoff decisions from generators and handle them only in orchestrators, with bounded policy + jitter and explicit logging.
+  - Pros: Restores strict role separation and predictable failure handling.
+  - Cons: Requires orchestration API changes and retry-policy refactor.
+  - Acceptance Criteria:
+    - No generator contains retry loops/backoff/sleep-based retry control.
+    - Orchestrators own retry decisions with jitter-enabled policies.
+    - Retry attempt counts and transition logs are asserted in tests.
+
+- **Title:** Remove placeholder/sentinel production outputs and fail explicitly
+  - Explanation: Replace placeholder payloads/default-filled semantic fields with explicit typed `AppError` failures when required data cannot be produced.
+  - Pros: Prevents silent quality degradation and improves correctness guarantees.
+  - Cons: More hard-fail scenarios may require upstream handling and UX messaging.
+  - Acceptance Criteria:
+    - Placeholder text/sentinel payload paths removed from production generators.
+    - Missing required contract fields cause typed `AppError` with context.
+    - Tests verify no default/sentinel-filled required contract fields.
+
+- **Title:** Ensure retryable `AppError` propagation from generators
+  - Explanation: Remove generator-side swallowing of retryable failures and propagate retryable `AppError` to orchestrators for policy-driven retry.
+  - Pros: Correct error taxonomy behavior and cleaner resilience model.
+  - Cons: Requires revisiting existing fallback behavior and negative-path tests.
+  - Acceptance Criteria:
+    - Generators do not suppress retryable `AppError`.
+    - Orchestrator tests verify retries/backoff/state transitions for propagated errors.
+    - Error taxonomy assertions (`code`, `retryable`, `severity`) added for failure paths.
+
+- **Title:** Enforce role-bound import rules and remove cross-role coupling
+  - Explanation: Eliminate forbidden imports and coupling (service-to-service orchestration logic, generator-to-generator orchestration dependencies) to match AGENTS dependency boundaries.
+  - Pros: Cleaner architecture and easier isolation testing.
+  - Cons: Requires extracting shared behavior into proper utility/service boundaries.
+  - Acceptance Criteria:
+    - Services import only contracts/utils (and approved low-level primitives).
+    - Generators import services/contracts/utils only; orchestration lives in orchestrators.
+    - Boundary checks prevent regressions.
+
+- **Title:** Consolidate OpenAI access through `openai_service.py` only
+  - Explanation: Remove direct OpenAI client usage from non-OpenAI services and route all provider calls through `openai_service.py`.
+  - Pros: Single integration boundary, consistent cost/error/log behavior.
+  - Cons: Requires service API redesign and migration of call sites.
+  - Acceptance Criteria:
+    - No direct OpenAI client construction outside `src/services/openai_service.py`.
+    - Shared request/response/cost/error logic centralized and covered by tests.
+
+- **Title:** Enforce prompt immutability outside prompt service and complete prompt observability
+  - Explanation: Ban runtime prompt text mutation/concatenation outside prompt service and ensure every model call logs prompt namespace, file paths, prompt hashes, exact rendered prompts, model params, and raw response.
+  - Pros: Reproducibility and auditability of model behavior.
+  - Cons: Larger logs and redaction policy tuning.
+  - Acceptance Criteria:
+    - No runtime prompt string concatenation outside prompt service.
+    - Generator logs include required prompt and model metadata for every model call.
+    - Raw model response logging present with redaction safeguards.
+
+- **Title:** Remove direct file/network I/O from generators and pure utilities
+  - Explanation: Replace direct filesystem operations in generators with service calls and keep utilities deterministic/pure without I/O.
+  - Pros: Stronger layering and testability.
+  - Cons: Refactor touches multiple cache/read paths.
+  - Acceptance Criteria:
+    - Generators perform no direct file reads/writes outside service interfaces.
+    - Utility modules remain stateless and I/O-free.
+    - Boundary lint/tests catch prohibited I/O usage.
+
+- **Title:** Split monolithic generator/service modules to single-responsibility units
+  - Explanation: Break oversized mixed-responsibility modules (starting with `report_generator` and large PDF extraction/service surfaces) into role-appropriate, single-purpose modules wired by orchestrators.
+  - Pros: Easier maintenance, lower regression risk, clearer ownership.
+  - Cons: Large refactor with broad test impact.
+  - Acceptance Criteria:
+    - `report_generator` reduced to focused domain responsibilities.
+    - Cross-cutting orchestration and I/O concerns extracted to proper layers.
+    - Equivalent behavior validated by pipeline tests.
+
+- **Title:** Harden test integrity and required AGENTS fixtures
+  - Explanation: Add mandatory shared fixtures (`assert_logs_have_required_fields`, `assert_no_defaulted_required_fields`, `assert_app_error`, `external_boundary_mocks_only`, `idempotency_guard`) and refactor tests to avoid private-helper monkeypatching and over-mocked narratives.
+  - Pros: Higher confidence that tests validate real behavior.
+  - Cons: Test rewrite effort, especially around orchestration-heavy paths.
+  - Acceptance Criteria:
+    - Required fixtures implemented in shared test infrastructure.
+    - Private/helper patching removed from tests.
+    - Orchestrator and service tests assert required structured log fields.
+    - Idempotency behavior asserted where applicable.
+
+- **Title:** Meet minimum integration-test coverage per service module
+  - Explanation: Add at least one marked integration test per service module and keep live API calls out of unit tests.
+  - Pros: Better boundary confidence and fewer production surprises.
+  - Cons: More test runtime and environment setup complexity.
+  - Acceptance Criteria:
+    - `tests/integration/` includes at least one integration test per service module.
+    - Integration tests are explicitly marked and excluded from default CI unit run.
+    - Unit tests avoid live external calls.
 
 ---
 
