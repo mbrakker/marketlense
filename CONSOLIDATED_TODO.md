@@ -196,14 +196,6 @@ This file combines all TODOs found in the repository (from `TODO.md`, `html_todo
     - New orchestration layer used by generators and services.
     - Retries and backoff are exercised in unit/integration tests.
 
-- **Title:** Pool PDF resources and reuse `fitz.Document` where safe
-  - Explanation: Reuse PDF contexts across extraction steps to reduce I/O and memory thrash, honoring thread/process safety.
-  - Pros: Performance and IO reduction.
-  - Cons: Must ensure safe reuse; possible concurrency pitfalls.
-  - Acceptance Criteria:
-    - Document reuse implemented with clear doc/open/close lifecycle.
-    - No PDF-corruption or concurrency failures in tests.
-
 - **Title:** Stream LLM responses with early validation / fail-fast
   - Explanation: Support streaming model responses and implement early validation to fail fast on invalid shapes or low-confidence content during generation.
   - Pros: Faster feedback, reduced wasted compute on clearly invalid outputs.
@@ -211,14 +203,6 @@ This file combines all TODOs found in the repository (from `TODO.md`, `html_todo
   - Acceptance Criteria:
     - Streaming path implemented for key generators.
     - Early validation hooks can abort and surface clear errors.
-
-- **Title:** Model pipeline as a DAG for parallelism
-  - Explanation: Represent pipeline stages as a DAG to parallelize independent tasks and make dependencies explicit.
-  - Pros: Higher throughput and clearer stage dependencies.
-  - Cons: Non-trivial orchestration changes and state tracking.
-  - Acceptance Criteria:
-    - Pipeline DAG representation exists and is used in at least one orchestrator.
-    - Independent stages execute in parallel where safe.
 
 ---
 
@@ -243,22 +227,6 @@ This file combines all TODOs found in the repository (from `TODO.md`, `html_todo
 ---
 
 ## 7. Schema, Validation & Output Quality
-
-- **Title:** Replace/augment current validation with `jsonschema` and stricter rules
-  - Explanation: Migrate to a standards-compliant JSON Schema engine; add `additionalProperties: false`, `minLength`, numeric bounds, and cardinality constraints where appropriate.
-  - Pros: Stronger contract enforcement and fewer downstream errors.
-  - Cons: More schema maintenance and initial failures until prompts/normalizers updated.
-  - Acceptance Criteria:
-    - `jsonschema`-based validation integrated and used on generator outputs.
-    - Key schemas include stricter constraints; tests updated.
-
-- **Title:** Enforce referential integrity and per-pack schemas for evidence packs
-  - Explanation: Add validation that `evidence_id` references exist and split pack schemas into per-pack variants for precise checks.
-  - Pros: Better grounding and traceability.
-  - Cons: Extra validation complexity.
-  - Acceptance Criteria:
-    - Cross-pack referential checks implemented.
-    - Per-pack schemas in place and validated in CI.
 
 - **Title:** Re-validate cached payloads against current schema before returning cache hits
   - Explanation: Prevent stale invalid payloads from being served by validating cached payloads against the active schema.
@@ -305,38 +273,6 @@ This file combines all TODOs found in the repository (from `TODO.md`, `html_todo
 
 ### Additional Code Audit Items (explicit)
 
-- **Title:** Refactor `candidate_extraction_service` and tighten exceptions
-  - Explanation: Split oversized `candidate_extraction_service` into smaller, focused modules, remove broad exception catches, and implement clear error types and fallbacks.
-  - Pros: Easier testing, clearer error handling, fewer swallowed failures.
-  - Cons: Refactor effort and integration testing required.
-  - Acceptance Criteria:
-    - Service split into smaller modules with targeted responsibilities.
-    - Broad exception handlers replaced with typed errors and explicit fallbacks.
-
-- **Title:** Build a document-processing service with memoized outputs
-  - Explanation: Create a dedicated document-processing service that memoizes heavy outputs (PDF info, extracted text, candidate lists) to avoid repeated work across runs.
-  - Pros: Significant IO and CPU savings; easier reuse across orchestrators.
-  - Cons: State management and cache invalidation complexity.
-  - Acceptance Criteria:
-    - Document-processing service implemented with memoization and clear invalidation rules.
-    - Upstream callers reuse memoized outputs and show performance improvements in benchmarks.
-
-- **Title:** Unify OpenAI call path and cost plumbing
-  - Explanation: Consolidate duplicated request/cost logic across `openai_service`, `rank_service`, and others into a single OpenAI orchestration layer.
-  - Pros: Less duplication, consistent ledger writes, easier cost controls.
-  - Cons: Centralization risk; requires careful rollout.
-  - Acceptance Criteria:
-    - Generators and services use unified OpenAI orchestration API.
-    - Ledger writes and cost rollups are consistent and de-duplicated.
-
-- **Title:** Extract WordPress term helpers (`ensure_categories` / `ensure_tags`)
-  - Explanation: Consolidate duplicated WordPress term-ensure logic into a shared helper to avoid N+1 patterns and simplify publish flows.
-  - Pros: Removes duplication and reduces API calls.
-  - Cons: Small refactor; requires publish integration tests.
-  - Acceptance Criteria:
-    - Term ensure logic consolidated and reused by publishing paths.
-    - No functional regression in published posts/tags.
-
 - **Title:** Fix O(n^2) table dedupe hotspot
   - Explanation: Replace the O(n^2) table dedupe algorithm in candidate extraction with a more efficient approach (hashing/indexing) to improve performance on large documents.
   - Pros: Better performance on large reports.
@@ -366,17 +302,6 @@ This file combines all TODOs found in the repository (from `TODO.md`, `html_todo
   - Cons: Low-level changes need careful testing.
   - Acceptance Criteria:
     - Lock service no longer has double-close paths (validated by code review and tests).
-
-- **Title:** [Done 2026-02-19] Refactor `src/streamlit_app.py` to reduce coupling
-  - Explanation: Break up the large `streamlit_app.py` into smaller components and move business logic into generators/services to reduce UI coupling.
-  - Pros: Easier maintenance and testability.
-  - Cons: Refactor effort and UI testing.
-  - Acceptance Criteria:
-    - UI code minimal; core logic moved to services/generators and covered by unit tests.
-  - Completion Notes:
-    - `src/streamlit_app.py` reduced to a thin entrypoint that delegates to `src/ui/streamlit_pages.py`.
-    - Dashboard data/processing logic moved into `src/generators/streamlit_dashboard_generator.py` with contracts in `src/contracts/streamlit_dashboard.py`.
-    - Unit coverage added in `tests/test_streamlit_dashboard_generator.py`.
 
 - **Title:** Add per-stage feature flags for controlled rollout
   - Explanation: Add feature-flagging at the stage level to enable controlled rollouts, A/B tests, and emergency disable switches for costly steps.
@@ -417,8 +342,6 @@ This file combines all TODOs found in the repository (from `TODO.md`, `html_todo
 Each quick-win should be documented with a short task when prioritized.
 
 ---
-
-
 ## 10. Architecture-Fit Additions (Incremental)
 
 - **Title:** Enforce schema-version parity for all dataclass contracts
@@ -437,14 +360,6 @@ Each quick-win should be documented with a short task when prioritized.
     - `run_publish` accepts external context and uses it when provided.
     - Publish logs for CLI/GUI flows share the initiating `run_id`.
     - Tests assert context continuity in emitted log fields.
-
-- **Title:** Replace `unittest discover` CI path with pytest + quality gates
-  - Explanation: Update CI to run `pytest` (respecting marks like `integration`) and add mandatory format/type gates (e.g., Ruff/Black + mypy/pyright) to match architecture and test integrity requirements.
-  - Pros: Higher signal in CI, catches typing/style drift, better alignment with local test suite.
-  - Cons: Initial setup/annotation effort and possible first-pass failures.
-  - Acceptance Criteria:
-    - CI workflow runs `pytest` for default suite and excludes live integrations by default.
-    - Formatting and typing checks run in CI and block merges on failure.
 
 - **Title:** Harden config portability by removing environment-specific defaults from tracked YAML
   - Explanation: Move concrete deployment values (e.g., Drive folder IDs, site URLs, usernames) out of committed defaults into environment overlays (`app.example.yaml` + env vars) and document profile-based config loading.
@@ -466,7 +381,7 @@ Each quick-win should be documented with a short task when prioritized.
 
 ### AGENTS.md Compliance Backlog (Audit 2026-02-21)
 
--- **Title:** Remove placeholder/sentinel production outputs and fail explicitly
+- **Title:** Remove placeholder/sentinel production outputs and fail explicitly
   - Explanation: Replace placeholder payloads/default-filled semantic fields with explicit typed `AppError` failures when required data cannot be produced.
   - Pros: Prevents silent quality degradation and improves correctness guarantees.
   - Cons: More hard-fail scenarios may require upstream handling and UX messaging.
@@ -492,8 +407,6 @@ Each quick-win should be documented with a short task when prioritized.
     - Services import only contracts/utils (and approved low-level primitives).
     - Generators import services/contracts/utils only; orchestration lives in orchestrators.
     - Boundary checks prevent regressions.
-
-
 
 - **Title:** Enforce prompt immutability outside prompt service and complete prompt observability
   - Explanation: Ban runtime prompt text mutation/concatenation outside prompt service and ensure every model call logs prompt namespace, file paths, prompt hashes, exact rendered prompts, model params, and raw response.
