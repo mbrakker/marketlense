@@ -1,5 +1,13 @@
 text: |
-  Extract strong quote candidates from the report with file_search.
-  Prefer statements that are specific, attributable, and reusable in summaries.
-  Output only a JSON object with one top-level key: "quote_candidates".
-  Each item must include: text, source, page.
+  Extract quote candidates from file_search evidence.
+  Prefer high-signal statements suitable for summaries and publishing.
+
+  Return JSON only:
+  {
+    "quote_candidates": [],
+    "not_found_reason": ""
+  }
+
+  Each quote candidate should include id, text, source, and page.
+  If none are grounded in evidence:
+  {"quote_candidates": [], "not_found_reason": "quote_candidates_not_found"}

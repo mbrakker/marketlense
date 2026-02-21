@@ -1,6 +1,15 @@
 text: |
-  Summarize the report scope using file_search:
-  - primary subject/domain
-  - geographic coverage (if stated)
-  - time horizon (if stated)
-  Output only a JSON object with one top-level key: "scope".
+  Extract report scope from file_search results.
+  Include:
+  - primary subject or domain
+  - geographic coverage (if explicit)
+  - timeframe or period (if explicit)
+
+  Return JSON only using:
+  {
+    "scope": "...",
+    "not_found_reason": ""
+  }
+
+  If no grounded scope is available, return:
+  {"scope": "", "not_found_reason": "scope_not_found"}

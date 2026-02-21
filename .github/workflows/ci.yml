@@ -29,4 +29,6 @@ jobs:
       - name: Coverage gate
         run: python scripts/ci/check_coverage.py --coverage-xml coverage.xml
       - name: Mutation gate
-        run: python scripts/ci/run_mutation_gate.py
+        run: python scripts/ci/run_mutation_gate.py --json-out mutation_results.json
+      - name: Quality non-regression gate
+        run: python scripts/ci/check_quality_regression.py --baseline docs/quality/baseline_2026-02-21.json --coverage-xml coverage.xml --mutation-json mutation_results.json --docpack-root tests/fixtures/docpacks/golden

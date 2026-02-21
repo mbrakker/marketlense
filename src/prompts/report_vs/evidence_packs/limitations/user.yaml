@@ -1,5 +1,11 @@
 text: |
-  Identify methodological or evidence limitations explicitly present in the report.
-  Use file_search and extract only grounded limitations.
-  Output only a JSON object with one top-level key: "limitations".
-  Each item must be a plain string.
+  Extract explicit report limitations from file_search evidence.
+
+  Return JSON only:
+  {
+    "limitations": [],
+    "not_found_reason": ""
+  }
+
+  If no limitations are found:
+  {"limitations": [], "not_found_reason": "limitations_not_found"}

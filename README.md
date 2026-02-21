@@ -83,7 +83,7 @@ For dev wiring, use `src.services.config_service.build_ingest_settings` with `In
 Key fields and env overrides:
 
 - Paths: `paths.output_dir` (`OUTPUT_DIR`, default `./out`), `paths.cache_dir` (`CACHE_DIR`, default `./cache`), `paths.state_db` (`STATE_DB`), `paths.reports_db` (`REPORTS_DB`), `paths.category_mappings` (defaults to `src/config/category-mappings.yaml`), `paths.html_tag_acronyms` (defaults to `src/config/html-tag-acronyms.yaml`).
-- Ingest: `ingest.google_sa_path` (`GOOGLE_SERVICE_ACCOUNT_JSON`), `ingest.gdrive_folder_id` (`GDRIVE_FOLDER_ID`), `ingest.openai_model` (`OPENAI_MODEL`), `ingest.batch_limit` (`BATCH_LIMIT`, default 20), `ingest.worker_limit` (`INGEST_WORKER_LIMIT`, default 2), `ingest.report_worker_limit` (`INGEST_REPORT_WORKER_LIMIT`, default 2), `ingest.temperature` (`TEMPERATURE`, default 1.0), `ingest.timeout_seconds` (`OPENAI_TIMEOUT_SECONDS`, default 600), `ingest.lock_ttl_seconds` (`INGEST_LOCK_TTL_SECONDS`, default 7200), `ingest.contents_page.*` (keywords, max_pages, min_headings, render_dpi, preview_enabled), `ingest.evidence_packs.parallel_workers` (`EVIDENCE_PACK_PARALLEL_WORKERS`, default 3), `ingest.evidence_packs.global_max_in_flight` (`EVIDENCE_PACK_GLOBAL_MAX_IN_FLIGHT`, default 2), `ingest.evidence_packs.global_min_interval_ms` (`EVIDENCE_PACK_GLOBAL_MIN_INTERVAL_MS`, default 250), `ingest.evidence_packs.doc_map_max_attempts` (`EVIDENCE_PACK_DOC_MAP_MAX_ATTEMPTS`, default 3), `ingest.evidence_packs.doc_map_retry_delay_ms` (`EVIDENCE_PACK_DOC_MAP_RETRY_DELAY_MS`, default 500), `ingest.artifacts.parallel_workers` (`ARTIFACT_PARALLEL_WORKERS`, default 4), `ingest.artifacts.global_max_in_flight` (`ARTIFACT_GLOBAL_MAX_IN_FLIGHT`, default 2), `ingest.artifacts.global_min_interval_ms` (`ARTIFACT_GLOBAL_MIN_INTERVAL_MS`, default 250).
+- Ingest: `ingest.google_sa_path` (`GOOGLE_SERVICE_ACCOUNT_JSON`), `ingest.gdrive_folder_id` (`GDRIVE_FOLDER_ID`), `ingest.openai_model` (`OPENAI_MODEL`), `ingest.batch_limit` (`BATCH_LIMIT`, default 20), `ingest.worker_limit` (`INGEST_WORKER_LIMIT`, default 2), `ingest.report_worker_limit` (`INGEST_REPORT_WORKER_LIMIT`, default 2), `ingest.temperature` (`TEMPERATURE`, default 1.0), `ingest.timeout_seconds` (`OPENAI_TIMEOUT_SECONDS`, default 600), `ingest.lock_ttl_seconds` (`INGEST_LOCK_TTL_SECONDS`, default 7200), `ingest.contents_page.*` (keywords, max_pages, min_headings, render_dpi, preview_enabled), `ingest.evidence_packs.parallel_workers` (`EVIDENCE_PACK_PARALLEL_WORKERS`, default 3), `ingest.evidence_packs.global_max_in_flight` (`EVIDENCE_PACK_GLOBAL_MAX_IN_FLIGHT`, default 2), `ingest.evidence_packs.global_min_interval_ms` (`EVIDENCE_PACK_GLOBAL_MIN_INTERVAL_MS`, default 250), `ingest.evidence_packs.doc_map_max_attempts` (`EVIDENCE_PACK_DOC_MAP_MAX_ATTEMPTS`, default 3), `ingest.evidence_packs.doc_map_retry_delay_ms` (`EVIDENCE_PACK_DOC_MAP_RETRY_DELAY_MS`, default 500), `ingest.evidence_packs.registry` (`EVIDENCE_PACK_REGISTRY`, comma-separated), `ingest.evidence_packs.enable_new_variety_packs` (`EVIDENCE_PACK_ENABLE_NEW_VARIETY_PACKS`, default `false`), `ingest.artifacts.parallel_workers` (`ARTIFACT_PARALLEL_WORKERS`, default 4), `ingest.artifacts.global_max_in_flight` (`ARTIFACT_GLOBAL_MAX_IN_FLIGHT`, default 2), `ingest.artifacts.global_min_interval_ms` (`ARTIFACT_GLOBAL_MIN_INTERVAL_MS`, default 250).
 - Ranking/crop refinement: `rank.max_candidates`, `rank.selected_max` (default `5`), `rank.min_overall_score`, `rank.min_quality_score`, `rank.min_insight_score`, `rank.min_data_score`, `rank.crop_refine_enabled`, `rank.crop_refine_mode` (`adaptive|always|off`), `rank.crop_refine_page_dpi`, `rank.crop_refine_temperature`, `rank.crop_refine_timeout_seconds` (defaults to `rank.timeout_seconds` when omitted).
 - Drive listing: `ingest.drive.supports_all_drives`, `ingest.drive.include_items_from_all_drives` (shared drive flags), `ingest.drive.drive_id` (shared drive scope), and `ingest.drive.list_mode` (`full` vs `metadata` to omit names until needed).
 - PDF text extraction: `ingest.pdf_text.max_pages` and `ingest.pdf_text.max_chars` cap how much text is sampled per PDF; `ingest.pdf_text.min_density` (default `250` chars/page) triggers "not available from text" fallbacks when extraction is sparse; `ingest.pdf_text.sample_pages` (default `3`) controls the deterministic sample used to validate extractability before analysis.
@@ -97,7 +97,9 @@ Per-step model selection (new):
 - Vector store: `analysis.vector_store_keep` (`VECTOR_STORE_KEEP`, default `true`) controls whether to retain caches between runs (including evidence pack reuse). Analysis always uses the vector_store path; compare toggles are legacy/ignored. Evidence/validation JSONs are written only to `out/<report-slug>/report_analysis/`.
 - Artifact retrieval mode: `analysis.artifacts_use_vector_store` (`ARTIFACTS_USE_VECTOR_STORE`, default `false`) controls whether artifact model calls use vector-store retrieval. Default is closed-context JSON chat; set to `true` to restore legacy vector retrieval behavior.
 - Validation grounding retrieval mode: `analysis.validation_grounding_use_vector_store` (`VALIDATION_GROUNDING_USE_VECTOR_STORE`, default `false`) controls whether grounding checks use vector-store retrieval. Default is closed-context JSON chat; set to `true` to restore legacy vector retrieval behavior.
+- Strict schema validation: `analysis.strict_schema_validation` (`STRICT_SCHEMA_VALIDATION`, default `true`) enables hard-fail schema enforcement for evidence/docpack payloads.
 - Cost tracking: `analysis.cost_ledger_path` (`COST_LEDGER_PATH`, default `./out/cost-ledger.jsonl`), `cost.daily_path` (default `./out/cost-daily.json`), `cost.pricing` (per-model pricing map used by `utils.costing`).
+- Quality baseline path: `quality.baseline_path` (`QUALITY_BASELINE_PATH`, default `./docs/quality/baseline_2026-02-21.json`) used by non-regression checks.
 - Validation: `ingest.validation.data_gap_policy` (default `warn`) controls whether missing evidence/text gaps downgrade errors to warnings; `publish.validation.policy` (`PUBLISH_VALIDATION_POLICY`, default `block`; set to `warn` to allow publish with issues).
 - Taxonomy extraction: set `openai_models.report_vs/taxonomy` to override the tag/region/time period extractor.
 - Cover images: `paths.cover_styles` points to `src/config/cover-styles.yaml` (defaults to that path). Fonts are local files; the default config uses `templates/GOTHICB.TTF` for both regular/bold. Ensure the font file exists on the host; otherwise cover rendering will fail with `cover_font_invalid`. Background image is optional; leave blank for a solid background.
@@ -110,7 +112,7 @@ Secrets (env only):
 
 Prompt locations:
 
-- Vector store evidence packs: `src/prompts/report_vs/**` (`doc_map/`, `evidence_packs/{scope,methods,findings,limitations,quote_candidates}/`)
+- Vector store evidence packs: `src/prompts/report_vs/**` (`doc_map/`, `evidence_packs/{scope,methods,findings,limitations,quote_candidates,key_metrics,risk_register,recommendations,contradictions}/`)
 - Artifact generation: `src/prompts/report_vs/artifacts/**` (toc, summary, insights candidates/final, quotes, expert comment, LinkedIn post)
 - Taxonomy extraction: `src/prompts/report_vs/taxonomy/`
 
@@ -170,7 +172,7 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
        - While indexing runs, the generator continues PDF-only work (figure/candidate extraction, ranking, preview).
        - It waits for indexing only right before vector-dependent stages (taxonomy/evidence/artifacts) via `vector_store_service.wait_until_indexed`.
        - After indexing is ready, taxonomy/category resolution and evidence-pack generation run concurrently when `ingest.report_worker_limit > 1` (serial when `= 1`).
-      - Evidence packs are generated via `src/generators/evidence_pack_generator.py` (doc_map, scope, methods, findings, limitations, quote_candidates), where `doc_map` runs first as a hard gate and the remaining packs run in parallel (`ingest.evidence_packs.parallel_workers`). Global evidence-pack rate limiting is applied at the orchestrator boundary (`src/orchestrators/report_pipeline_orchestrator.py`) using `ingest.evidence_packs.global_max_in_flight` + `ingest.evidence_packs.global_min_interval_ms`.
+      - Evidence packs are generated via `src/generators/evidence_pack_generator.py` with a config-driven registry (`ingest.evidence_packs.registry`) and optional variety expansion (`ingest.evidence_packs.enable_new_variety_packs`): `doc_map`, `scope`, `methods`, `findings`, `limitations`, `quote_candidates`, and optional `key_metrics`, `risk_register`, `recommendations`, `contradictions`. `doc_map` runs first as a hard gate; remaining packs run in parallel (`ingest.evidence_packs.parallel_workers`). Global evidence-pack rate limiting is applied at the orchestrator boundary (`src/orchestrators/report_pipeline_orchestrator.py`) using `ingest.evidence_packs.global_max_in_flight` + `ingest.evidence_packs.global_min_interval_ms`.
       - Artifacts are generated via `src/generators/artifact_generator.py` using a dependency-aware parallel DAG: `toc` + `summary` + `insights_candidates` + `quotes` in parallel, then `insights_final`, then `expert_comment` + `linkedin_post` in parallel. Independent steps use `ingest.artifacts.parallel_workers`. Global artifact rate limiting is applied at the orchestrator boundary (`src/orchestrators/report_pipeline_orchestrator.py`) using `ingest.artifacts.global_max_in_flight` + `ingest.artifacts.global_min_interval_ms`. By default these artifact model calls run closed-context (`chat_json`); vector retrieval is opt-in via `analysis.artifacts_use_vector_store`.
        - Packs are stored under `out/<report-slug>/report_analysis/*.json` and persisted in the metadata DB (`reports` table columns `vector_store_id`, `evidence_packs_json`; state DB stores `vector_store_status`, `indexed_at_utc`, `openai_file_id`, `last_error`).
        - Orchestrator logs `VECTOR_STORE_CREATED`, `VECTOR_STORE_INDEXED`, `EVIDENCE_READY`.
@@ -283,7 +285,7 @@ Prompts are stored in YAML by namespace:
 
 ```text
 src/prompts/report_vs/doc_map/          # vector_store doc map
-src/prompts/report_vs/evidence_packs/   # vector_store packs (scope/methods/findings/limitations/quote_candidates)
+src/prompts/report_vs/evidence_packs/   # vector_store packs (scope/methods/findings/limitations/quote_candidates/key_metrics/risk_register/recommendations/contradictions)
 src/prompts/report_vs/artifacts/        # artifact sections (toc, summary, insights, quotes, expert comment, LinkedIn)
 ```
 
@@ -324,6 +326,7 @@ Key contracts live under `src/contracts/`:
 - `pdf_utils.py`: EOF check and PDF info (page count + metadata) contracts
 - `report_store.py`: report metadata upsert/get/list contracts, including page count and flattened PDF metadata
 - `validation.py`: validation requests, issues, and reports (persisted per report)
+- `docpacks.py`: typed contracts for core/variety docpack payloads and map aliases
 
 ---
 
@@ -332,7 +335,8 @@ Key contracts live under `src/contracts/`:
 Location: `src/schemas/`
 
 - `doc_map.schema.json`: required fields for DocMap outputs (id/title/publisher/year/figures, etc.).
-- `evidence_pack.schema.json`: permissive; accepts optional/empty `scope`, `methods`, `findings`, `limitations`, and `quote_candidates` with nullable fields and extra properties.
+- `scope_pack.schema.json`, `methods_pack.schema.json`, `findings_pack.schema.json`, `limitations_pack.schema.json`, `quote_candidates_pack.schema.json`: strict per-pack schemas for core evidence packs.
+- `key_metrics_pack.schema.json`, `risk_register_pack.schema.json`, `recommendations_pack.schema.json`, `contradictions_pack.schema.json`: strict schemas for variety packs.
 - `artifacts.schema.json`: artifacts/toc/summary/insights/quotes/expert_comment/linkedin payload shape.
 - `validation_report.schema.json`: structure for validation results.
 - `taxonomy.schema.json`: taxonomy extractor response schema for tags/regions/time_period.
@@ -380,11 +384,35 @@ RUN_OPENAI_SMOKE_TEST=1 OPENAI_API_KEY=... pytest -m integration tests/integrati
 CI gates (see `.github/workflows/ci.yml`):
 
 - `python scripts/ci/check_formatting.py` (format gate, `ruff format --check` for CI scripts/contract tests)
-- `python scripts/ci/run_type_check.py` (type gate, `mypy` for `src/contracts` + CI scripts)
+- `python scripts/ci/run_type_check.py` (type gate, `mypy` over changed files under `src`, `tests`, `scripts/ci`)
 - `python scripts/ci/check_forbidden_patching.py` (fails on private-helper/dataclass-constructor patching patterns in tests)
 - `python -m pytest --cov=src --cov-report=xml --cov-report=term-missing` (default suite excludes integration tests)
 - `python scripts/ci/check_coverage.py --coverage-xml coverage.xml` (global + per-critical-package thresholds)
-- `python scripts/ci/run_mutation_gate.py` (mutation score gate for one orchestrator + one generator target)
+- `python scripts/ci/run_mutation_gate.py --json-out mutation_results.json` (mutation score gate for critical generators/services/orchestrators)
+- `python scripts/ci/check_quality_regression.py --baseline docs/quality/baseline_2026-02-21.json --coverage-xml coverage.xml --mutation-json mutation_results.json --docpack-root tests/fixtures/docpacks/golden` (baseline non-regression gate)
+
+---
+
+## Quality Non-Regression
+
+- Baseline snapshot: `docs/quality/baseline_2026-02-21.json`
+- Baseline builder: `python scripts/quality/build_baseline.py --copy-golden --baseline-out docs/quality/baseline_2026-02-21.json`
+- Golden corpus: `tests/fixtures/docpacks/golden/` (copied from `out/1/*/report_analysis`)
+- Comparator: `scripts/ci/check_quality_regression.py` blocks merge if coverage, mutation, or docpack metrics drop below baseline.
+- Feature controls:
+  - `ingest.evidence_packs.registry`
+  - `ingest.evidence_packs.enable_new_variety_packs`
+  - `analysis.strict_schema_validation`
+  - `quality.baseline_path`
+- Recommended rollout progression for strict schema/new variety packs: `10% -> 50% -> 100%` corpus canary.
+
+See:
+
+- `docs/quality/non-regression-policy.md`
+- `docs/docpacks/pack-specs.md`
+- `docs/docpacks/prompt-authoring.md`
+- `docs/architecture/role-boundaries.md`
+- `docs/testing/integrity-rules.md`
 
 ---
 
@@ -534,6 +562,12 @@ Default output structure:
       findings.json
       limitations.json
       quote_candidates.json
+      key_metrics.json                  # optional (flagged)
+      risk_register.json                # optional (flagged)
+      recommendations.json              # optional (flagged)
+      contradictions.json               # optional (flagged)
+      artifacts.json
+      validation.json
 ```
 
 ---
@@ -568,6 +602,6 @@ To extend the system:
 - OpenAI boundary: only `src/services/openai_service.py` constructs `OpenAI(...)` clients; all provider request/response and shared error/cost behaviors are centralized there.
 - Vector stores: `src/services/vector_store_service.py` handles create/upload/attach/status/wait orchestration and metadata shaping, delegating provider API calls to `openai_service`; used by vector-mode generators.
 - Analysis uses vector_store only; `ANALYSIS_MODE`/`USE_VECTOR_STORE` toggles are no longer needed.
-- Evidence packs: `src/generators/evidence_pack_generator.py` uses `src/prompts/report_vs/**` and writes packs to `out/<report-slug>/report_analysis/*.json`; `doc_map` runs first, and remaining packs run in parallel with process-wide rate limiting via `ingest.evidence_packs.*`; validation uses `src/schemas/evidence_pack.schema.json` (permissive for empty fields).
+- Evidence packs: `src/generators/evidence_pack_generator.py` uses `src/prompts/report_vs/**` and writes packs to `out/<report-slug>/report_analysis/*.json`; `doc_map` runs first and remaining packs run in parallel with process-wide rate limiting via `ingest.evidence_packs.*`. Validation uses strict per-pack schemas (`scope_pack`, `methods_pack`, `findings_pack`, `limitations_pack`, `quote_candidates_pack`) plus optional variety-pack schemas (`key_metrics_pack`, `risk_register_pack`, `recommendations_pack`, `contradictions_pack`).
 - Artifacts: `src/generators/artifact_generator.py` writes `artifacts.json` under the same analysis path, parallelizing independent steps with dependency ordering and process-wide rate limiting via `ingest.artifacts.*`.
 - Cost ledger: `src/services/cost_ledger_service.py` appends JSONL entries for every LLM call and writes daily rollups (`./out/cost-ledger.jsonl`, `./out/cost-daily.json`) using per-model pricing from config.

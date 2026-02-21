@@ -1,0 +1,12 @@
+text: |
+  Extract a risk register from file_search evidence.
+
+  Return JSON only:
+  {
+    "risk_register": [],
+    "not_found_reason": ""
+  }
+
+  Include id, risk, impact, likelihood, mitigation, and evidence_id when available.
+  If none are found:
+  {"risk_register": [], "not_found_reason": "risk_register_not_found"}

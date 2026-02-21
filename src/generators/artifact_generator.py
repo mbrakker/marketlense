@@ -10,20 +10,40 @@ from src.contracts.config import AppSettings
 from src.contracts.files import ReadTextRequest
 from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIResponseRequest
 from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
-from src.contracts.report_analysis import AnalysisPackPathRequest, AnalysisStorePackRequest
+from src.contracts.report_analysis import (
+    AnalysisPackPathRequest,
+    AnalysisStorePackRequest,
+)
 from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
-from src.services import file_service, openai_service, prompt_service, report_analysis_store_service
+from src.services import (
+    file_service,
+    openai_service,
+    prompt_service,
+    report_analysis_store_service,
+)
 from src.utils.errors import AppError
 from src.utils.model_resolver import resolve_model
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.coercion import coerce_int
-from src.services.schema_validator_service import validate_schema
+from src.services.schema_validator_service import (
+    validate_evidence_references,
+    validate_schema,
+)
 from src.utils.cache_utils import sha256_json
 
 logger = logging.getLogger("market_lense.artifact_generator")
 
-METRIC_FIELDS = ("value", "unit", "trend", "timeframe", "geography", "segment", "sample_size", "confidence")
+METRIC_FIELDS = (
+    "value",
+    "unit",
+    "trend",
+    "timeframe",
+    "geography",
+    "segment",
+    "sample_size",
+    "confidence",
+)
 INLINE_REFERENCE_TOKEN_RE = r"[A-Z]{1,4}-\d{1,4}"
 INLINE_REFERENCE_GROUP_RE = re.compile(
     rf"[\(\[]\s*{INLINE_REFERENCE_TOKEN_RE}(?:\s*[/,;|]\s*{INLINE_REFERENCE_TOKEN_RE})*\s*[\)\]]"
@@ -31,7 +51,9 @@ INLINE_REFERENCE_GROUP_RE = re.compile(
 
 
 def _artifact_parallel_workers(settings: AppSettings, step_count: int) -> int:
-    configured = coerce_int(getattr(settings, "artifact_parallel_workers", 4), 4, min_value=1)
+    configured = coerce_int(
+        getattr(settings, "artifact_parallel_workers", 4), 4, min_value=1
+    )
     return max(1, min(configured, step_count))
 
 
@@ -51,32 +73,53 @@ def generate_artifacts(
     analysis_store=report_analysis_store_service,
 ) -> Dict[str, Any]:
     ctx = ctx or new_run_context(task_id=f"artifacts:{report_id}")
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="artifact_generate_start",
-        module=logger.name,
-        fields={"report_id": report_id, "has_vector_store": bool(vector_store_id)},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="artifact_generate_start",
+            module=logger.name,
+            fields={"report_id": report_id, "has_vector_store": bool(vector_store_id)},
+        )
+    )
     safe_doc_map = doc_map or {}
     safe_evidence = evidence_packs or {}
-    has_density_input = isinstance(source_status, dict) and ("text_density" in source_status or "density_threshold" in source_status)
-    availability = _normalize_source_status(source_status, settings, has_density=has_density_input, vector_store_id=vector_store_id)
-    artifact_use_vector_store = _resolve_artifact_vector_store_mode(settings=settings, vector_store_id=vector_store_id)
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="artifact_vector_store_mode",
-        module=logger.name,
-        fields={
-            "enabled": artifact_use_vector_store,
-            "vector_store_id_present": bool(vector_store_id),
-            "setting_enabled": bool(getattr(settings, "artifacts_use_vector_store", False)),
-        },
-    ))
-    if has_density_input and availability["density_threshold"] and availability["text_density"] < availability["density_threshold"]:
+    has_density_input = isinstance(source_status, dict) and (
+        "text_density" in source_status or "density_threshold" in source_status
+    )
+    availability = _normalize_source_status(
+        source_status,
+        settings,
+        has_density=has_density_input,
+        vector_store_id=vector_store_id,
+    )
+    artifact_use_vector_store = _resolve_artifact_vector_store_mode(
+        settings=settings, vector_store_id=vector_store_id
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="artifact_vector_store_mode",
+            module=logger.name,
+            fields={
+                "enabled": artifact_use_vector_store,
+                "vector_store_id_present": bool(vector_store_id),
+                "setting_enabled": bool(
+                    getattr(settings, "artifacts_use_vector_store", False)
+                ),
+            },
+        )
+    )
+    if (
+        has_density_input
+        and availability["density_threshold"]
+        and availability["text_density"] < availability["density_threshold"]
+    ):
         availability["not_available"] = True
-        availability["reason"] = availability["reason"] or "text_density_below_threshold"
+        availability["reason"] = (
+            availability["reason"] or "text_density_below_threshold"
+        )
     evidence_present = _has_evidence_content(safe_doc_map, safe_evidence)
     availability["evidence_present"] = evidence_present
     cache_key = ""
@@ -102,13 +145,15 @@ def generate_artifacts(
             analysis_store=analysis_store,
         )
         if cached is not None:
-            logger.info(log_event(
-                ctx,
-                role="generator",
-                event="artifact_cache_hit",
-                module=logger.name,
-                fields={"report_id": report_id},
-            ))
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="artifact_cache_hit",
+                    module=logger.name,
+                    fields={"report_id": report_id},
+                )
+            )
             return cached
     fallback_reasons: List[str] = []
     if availability["not_available"] and availability["reason"]:
@@ -123,7 +168,9 @@ def generate_artifacts(
             payload = dict(payload)
             payload["_cache"] = {**cache_meta, "key": cache_key}
         validate_schema(
-            SchemaValidateRequest(schema_version="1.0", payload=payload, schema_name="artifacts"),
+            SchemaValidateRequest(
+                schema_version="1.0", payload=payload, schema_name="artifacts"
+            ),
             ctx,
         )
         _store_pack(
@@ -135,13 +182,20 @@ def generate_artifacts(
             ctx=ctx,
             report_slug=report_name,
         )
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="artifact_short_circuit",
-            module=logger.name,
-            fields={"report_id": report_id, "reason": availability["reason"], "text_density": availability["text_density"], "evidence_present": evidence_present},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="artifact_short_circuit",
+                module=logger.name,
+                fields={
+                    "report_id": report_id,
+                    "reason": availability["reason"],
+                    "text_density": availability["text_density"],
+                    "evidence_present": evidence_present,
+                },
+            )
+        )
         return payload
 
     base_vars = {
@@ -151,7 +205,7 @@ def generate_artifacts(
 
     insights_final_ctx = child_context(ctx, task_id=f"{ctx.task_id}:insights_final")
 
-    quote_candidates = []
+    quote_candidates: list[Any] = []
     quote_pack = safe_evidence.get("quote_candidates")
     if isinstance(quote_pack, dict):
         quote_candidates = quote_pack.get("quote_candidates") or []
@@ -162,19 +216,25 @@ def generate_artifacts(
         ("toc", "report_vs/artifacts/toc", base_vars),
         ("summary", "report_vs/artifacts/summary", base_vars),
         ("insights_candidates", "report_vs/artifacts/insights_candidates", base_vars),
-        ("quotes", "report_vs/artifacts/quotes", {**base_vars, "quote_candidates_json": _dump_json(quote_candidates)}),
+        (
+            "quotes",
+            "report_vs/artifacts/quotes",
+            {**base_vars, "quote_candidates_json": _dump_json(quote_candidates)},
+        ),
     ]
     parallel_workers = _artifact_parallel_workers(settings, len(stage_one_steps))
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="artifact_parallel_config",
-        module=logger.name,
-        fields={
-            "parallel_workers": parallel_workers,
-            "parallel_step_count": len(stage_one_steps),
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="artifact_parallel_config",
+            module=logger.name,
+            fields={
+                "parallel_workers": parallel_workers,
+                "parallel_step_count": len(stage_one_steps),
+            },
+        )
+    )
     stage_one_results: Dict[str, Dict[str, Any]] = {}
     if parallel_workers > 1 and len(stage_one_steps) > 1:
         with ThreadPoolExecutor(max_workers=parallel_workers) as executor:
@@ -201,13 +261,15 @@ def generate_artifacts(
                 except Exception as exc:  # pragma: no cover - defensive fallback
                     if first_error is None:
                         first_error = exc
-                    logger.info(log_event(
-                        ctx,
-                        role="generator",
-                        event="artifact_parallel_step_failed",
-                        module=logger.name,
-                        fields={"step": step_name, "error": str(exc)},
-                    ))
+                    logger.info(
+                        log_event(
+                            ctx,
+                            role="generator",
+                            event="artifact_parallel_step_failed",
+                            module=logger.name,
+                            fields={"step": step_name, "error": str(exc)},
+                        )
+                    )
             if first_error is not None:
                 for future in futures:
                     future.cancel()
@@ -228,16 +290,23 @@ def generate_artifacts(
 
     toc_topics = _normalize_topics(stage_one_results.get("toc", {}).get("toc_topics"))
     summary = _normalize_summary(stage_one_results.get("summary", {}).get("summary"))
-    insights_candidates = _normalize_insights(stage_one_results.get("insights_candidates", {}).get("insights_candidates"), prefix="candidate")
+    insights_candidates = _normalize_insights(
+        stage_one_results.get("insights_candidates", {}).get("insights_candidates"),
+        prefix="candidate",
+    )
     if not insights_candidates:
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="artifact_insights_candidates_empty",
-            module=logger.name,
-            fields={},
-        ))
-    quotes_final = _normalize_quotes(stage_one_results.get("quotes", {}).get("quotes_final"))
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="artifact_insights_candidates_empty",
+                module=logger.name,
+                fields={},
+            )
+        )
+    quotes_final = _normalize_quotes(
+        stage_one_results.get("quotes", {}).get("quotes_final")
+    )
 
     insights_final_vars = {
         **base_vars,
@@ -253,7 +322,12 @@ def generate_artifacts(
         allow_vector_store=artifact_use_vector_store,
         vector_store_id=vector_store_id,
     )
-    insights_final = _pad_insights(_normalize_insights(insights_final_result.get("insights_final"), prefix="insight"), insights_candidates)
+    insights_final = _pad_insights(
+        _normalize_insights(
+            insights_final_result.get("insights_final"), prefix="insight"
+        ),
+        insights_candidates,
+    )
 
     expert_ctx = child_context(ctx, task_id=f"{ctx.task_id}:expert_comment")
     expert_vars = {
@@ -315,7 +389,9 @@ def generate_artifacts(
             vector_store_id=vector_store_id,
         )
     expert_comment = _s(expert_result.get("expert_comment"))
-    linkedin_post = _strip_inline_reference_ids(_s(linkedin_result.get("linkedin_post")))
+    linkedin_post = _strip_inline_reference_ids(
+        _s(linkedin_result.get("linkedin_post"))
+    )
 
     artifacts_payload: Dict[str, Any] = {
         "schema_version": "1.0",
@@ -333,17 +409,22 @@ def generate_artifacts(
 
     try:
         validate_schema(
-            SchemaValidateRequest(schema_version="1.0", payload=artifacts_payload, schema_name="artifacts"),
+            SchemaValidateRequest(
+                schema_version="1.0", payload=artifacts_payload, schema_name="artifacts"
+            ),
             ctx,
         )
+        validate_evidence_references(artifacts_payload, safe_evidence, ctx)
     except AppError as exc:
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="artifact_schema_validation_failed",
-            module=logger.name,
-            fields={"code": exc.code, "message": exc.message},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="artifact_schema_validation_failed",
+                module=logger.name,
+                fields={"code": exc.code, "message": exc.message},
+            )
+        )
         raise
 
     _store_pack(
@@ -356,13 +437,20 @@ def generate_artifacts(
         report_slug=report_name,
     )
 
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="artifact_generate_complete",
-        module=logger.name,
-        fields={"report_id": report_id, "topics": len(toc_topics), "insight_candidates": len(insights_candidates), "insights_final": len(insights_final)},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="artifact_generate_complete",
+            module=logger.name,
+            fields={
+                "report_id": report_id,
+                "topics": len(toc_topics),
+                "insight_candidates": len(insights_candidates),
+                "insights_final": len(insights_final),
+            },
+        )
+    )
     return artifacts_payload
 
 
@@ -377,32 +465,50 @@ def _call_json_model(
     allow_vector_store: bool,
     vector_store_id: Optional[str],
 ) -> Dict[str, Any]:
-    prompt_set = prompt_client.load_prompt_set(PromptLoadRequest(schema_version="1.0", namespace=namespace), ctx)
-    system_rendered = prompt_client.render_prompt(PromptRenderRequest(schema_version="1.0", template=prompt_set.system, variables=variables), ctx)
-    user_rendered = prompt_client.render_prompt(PromptRenderRequest(schema_version="1.0", template=prompt_set.user, variables=variables), ctx)
-    logger.info(log_event(
+    prompt_set = prompt_client.load_prompt_set(
+        PromptLoadRequest(schema_version="1.0", namespace=namespace), ctx
+    )
+    system_rendered = prompt_client.render_prompt(
+        PromptRenderRequest(
+            schema_version="1.0", template=prompt_set.system, variables=variables
+        ),
         ctx,
-        role="generator",
-        event="artifact_prompt_rendered",
-        module=logger.name,
-        fields={
-            "namespace": namespace,
-            "prompt_system_sha256": prompt_set.system.sha256,
-            "prompt_user_sha256": prompt_set.user.sha256,
-        },
-    ))
-    resolved_model = resolve_model(namespace, getattr(settings, "openai_models", {}), settings.openai_model)
-    logger.info(log_event(
+    )
+    user_rendered = prompt_client.render_prompt(
+        PromptRenderRequest(
+            schema_version="1.0", template=prompt_set.user, variables=variables
+        ),
         ctx,
-        role="generator",
-        event="model_resolved",
-        module=logger.name,
-        fields={
-            "namespace": namespace,
-            "resolved_model": resolved_model,
-            "default_model": settings.openai_model,
-        },
-    ))
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="artifact_prompt_rendered",
+            module=logger.name,
+            fields={
+                "namespace": namespace,
+                "prompt_system_sha256": prompt_set.system.sha256,
+                "prompt_user_sha256": prompt_set.user.sha256,
+            },
+        )
+    )
+    resolved_model = resolve_model(
+        namespace, getattr(settings, "openai_models", {}), settings.openai_model
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="model_resolved",
+            module=logger.name,
+            fields={
+                "namespace": namespace,
+                "resolved_model": resolved_model,
+                "default_model": settings.openai_model,
+            },
+        )
+    )
     if allow_vector_store and vector_store_id:
         resp = openai_client.openai_respond_with_vector_store(
             OpenAIResponseRequest(
@@ -439,17 +545,19 @@ def _call_json_model(
             ctx,
         )
     parsed = resp.parsed_json if isinstance(resp.parsed_json, dict) else {}
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="artifact_model_complete",
-        module=logger.name,
-        fields={
-            "namespace": namespace,
-            "model": getattr(resp, "model", resolved_model),
-            "has_json": bool(resp.parsed_json),
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="artifact_model_complete",
+            module=logger.name,
+            fields={
+                "namespace": namespace,
+                "model": getattr(resp, "model", resolved_model),
+                "has_json": bool(resp.parsed_json),
+            },
+        )
+    )
     return parsed
 
 
@@ -466,10 +574,16 @@ def _normalize_topics(value: Any) -> List[str]:
 
 def _normalize_summary(value: Any) -> Dict[str, Any]:
     data = value if isinstance(value, dict) else {}
-    claim_map = data.get("claim_evidence_map") if isinstance(data.get("claim_evidence_map"), list) else []
+    claim_map = (
+        data.get("claim_evidence_map")
+        if isinstance(data.get("claim_evidence_map"), list)
+        else []
+    )
     return {
         "tldr": _s(data.get("tldr")),
-        "executive_summary": _strip_inline_reference_ids(_s(data.get("executive_summary"))),
+        "executive_summary": _strip_inline_reference_ids(
+            _s(data.get("executive_summary"))
+        ),
         "claim_evidence_map": _normalize_claims(claim_map),
     }
 
@@ -489,18 +603,21 @@ def _normalize_claims(items: Any) -> List[Dict[str, Any]]:
     normalized: List[Dict[str, Any]] = []
     if not isinstance(items, list):
         return normalized
-    for idx, item in enumerate(items):
+    for item in items:
         if not isinstance(item, dict):
             continue
-        pages_raw = item.get("pages") if isinstance(item.get("pages"), list) else []
+        pages_raw_obj = item.get("pages")
+        pages_raw = pages_raw_obj if isinstance(pages_raw_obj, list) else []
         pages = [int(p) for p in pages_raw if isinstance(p, int)]
-        evidence_id = _s(item.get("evidence_id") or f"claim_{idx + 1}")
-        normalized.append({
-            "claim": _s(item.get("claim")),
-            "evidence_id": evidence_id or f"claim_{idx + 1}",
-            "evidence": _s(item.get("evidence")),
-            "pages": pages,
-        })
+        evidence_id = _s(item.get("evidence_id"))
+        normalized.append(
+            {
+                "claim": _s(item.get("claim")),
+                "evidence_id": evidence_id,
+                "evidence": _s(item.get("evidence")),
+                "pages": pages,
+            }
+        )
     return normalized
 
 
@@ -511,16 +628,17 @@ def _normalize_insights(items: Any, *, prefix: str) -> List[Dict[str, Any]]:
     for idx, item in enumerate(items):
         if not isinstance(item, dict):
             continue
-        metric_raw = item.get("metric") if isinstance(item.get("metric"), dict) else {}
+        metric_raw = _to_dict(item.get("metric"))
         metric = {key: _s(metric_raw.get(key, "")) for key in METRIC_FIELDS}
-        pages_raw = item.get("pages") if isinstance(item.get("pages"), list) else []
+        pages_raw_obj = item.get("pages")
+        pages_raw = pages_raw_obj if isinstance(pages_raw_obj, list) else []
         pages = [int(p) for p in pages_raw if isinstance(p, int)]
-        evidence_id = _s(item.get("evidence_id") or item.get("id") or f"{prefix}_{idx + 1}")
+        evidence_id = _s(item.get("evidence_id"))
         score_val = item.get("score")
         insight: Dict[str, Any] = {
             "id": _s(item.get("id") or f"{prefix}_{idx + 1}"),
             "text": _s(item.get("text")),
-            "evidence_id": evidence_id or f"{prefix}_{idx + 1}",
+            "evidence_id": evidence_id,
             "evidence": _s(item.get("evidence")),
             "metric": metric,
             "pages": pages,
@@ -531,21 +649,32 @@ def _normalize_insights(items: Any, *, prefix: str) -> List[Dict[str, Any]]:
     return normalized
 
 
-def _pad_insights(insights_final: List[Dict[str, Any]], insights_candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def _pad_insights(
+    insights_final: List[Dict[str, Any]], insights_candidates: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
     padded = list(insights_final)[:5]
     idx = 0
     while len(padded) < 5 and insights_candidates:
         source = insights_candidates[idx % len(insights_candidates)]
-        metric_raw = source.get("metric") if isinstance(source.get("metric"), dict) else {}
-        padded.append({
-            "id": _s(source.get("id") or f"insight_{len(padded) + 1}"),
-            "text": _s(source.get("text")),
-            "evidence_id": _s(source.get("evidence_id") or source.get("id") or f"insight_{len(padded) + 1}"),
-            "evidence": _s(source.get("evidence")),
-            "metric": {key: _s(metric_raw.get(key, "")) for key in METRIC_FIELDS},
-            "pages": [int(p) for p in source.get("pages") or [] if isinstance(p, int)],
-            **({"score": float(source.get("score"))} if isinstance(source.get("score"), (int, float)) else {}),
-        })
+        metric_raw = _to_dict(source.get("metric"))
+        source_pages_raw = source.get("pages")
+        source_pages = source_pages_raw if isinstance(source_pages_raw, list) else []
+        source_score = source.get("score")
+        padded.append(
+            {
+                "id": _s(source.get("id") or f"insight_{len(padded) + 1}"),
+                "text": _s(source.get("text")),
+                "evidence_id": _s(source.get("evidence_id")),
+                "evidence": _s(source.get("evidence")),
+                "metric": {key: _s(metric_raw.get(key, "")) for key in METRIC_FIELDS},
+                "pages": [int(p) for p in source_pages if isinstance(p, int)],
+                **(
+                    {"score": float(source_score)}
+                    if isinstance(source_score, (int, float))
+                    else {}
+                ),
+            }
+        )
         idx += 1
     while len(padded) < 5:
         padded.append(_empty_insight(len(padded) + 1))
@@ -556,7 +685,7 @@ def _empty_insight(idx: int) -> Dict[str, Any]:
     return {
         "id": f"insight_{idx}",
         "text": "",
-        "evidence_id": f"insight_{idx}",
+        "evidence_id": "",
         "evidence": "",
         "metric": {key: "" for key in METRIC_FIELDS},
         "pages": [],
@@ -572,14 +701,16 @@ def _normalize_quotes(items: Any) -> List[Dict[str, Any]]:
             continue
         page_val = item.get("page")
         page = page_val if isinstance(page_val, int) else 0
-        evidence_id = _s(item.get("evidence_id") or f"quote_{idx + 1}")
-        normalized.append({
-            "text": _s(item.get("text")),
-            "speaker": _s(item.get("speaker") or "Unknown"),
-            "citation": _s(item.get("citation")),
-            "page": page,
-            "evidence_id": evidence_id or f"quote_{idx + 1}",
-        })
+        evidence_id = _s(item.get("evidence_id"))
+        normalized.append(
+            {
+                "text": _s(item.get("text")),
+                "speaker": _s(item.get("speaker") or "Unknown"),
+                "citation": _s(item.get("citation")),
+                "page": page,
+                "evidence_id": evidence_id,
+            }
+        )
     return normalized
 
 
@@ -593,7 +724,10 @@ def _normalize_source_status(
     status = source_status.copy() if isinstance(source_status, dict) else {}
     status.setdefault("schema_version", "1.0")
     status.setdefault("text_density", 0.0)
-    status.setdefault("density_threshold", float(getattr(settings, "pdf_text_min_density", 0.0)) if has_density else 0.0)
+    status.setdefault(
+        "density_threshold",
+        float(getattr(settings, "pdf_text_min_density", 0.0)) if has_density else 0.0,
+    )
     status.setdefault("pages_sampled", 0)
     status.setdefault("char_count", 0)
     status.setdefault("not_available", False)
@@ -606,15 +740,21 @@ def _normalize_source_status(
     return status
 
 
-def _resolve_artifact_vector_store_mode(*, settings: AppSettings, vector_store_id: Optional[str]) -> bool:
-    return bool(vector_store_id) and bool(getattr(settings, "artifacts_use_vector_store", False))
+def _resolve_artifact_vector_store_mode(
+    *, settings: AppSettings, vector_store_id: Optional[str]
+) -> bool:
+    return bool(vector_store_id) and bool(
+        getattr(settings, "artifacts_use_vector_store", False)
+    )
 
 
 def _artifact_retrieval_mode(use_vector_store: bool) -> str:
     return "vector_store" if use_vector_store else "chat_json"
 
 
-def _has_evidence_content(doc_map: Dict[str, Any], evidence_packs: Dict[str, Any]) -> bool:
+def _has_evidence_content(
+    doc_map: Dict[str, Any], evidence_packs: Dict[str, Any]
+) -> bool:
     if isinstance(doc_map, dict):
         sections = doc_map.get("sections")
         if isinstance(sections, list) and len(sections) > 0:
@@ -624,7 +764,17 @@ def _has_evidence_content(doc_map: Dict[str, Any], evidence_packs: Dict[str, Any
     for pack in evidence_packs.values():
         if not isinstance(pack, dict):
             continue
-        if pack.get("findings") or pack.get("quote_candidates") or pack.get("methods") or pack.get("scope") or pack.get("limitations"):
+        if (
+            pack.get("findings")
+            or pack.get("quote_candidates")
+            or pack.get("methods")
+            or pack.get("scope")
+            or pack.get("limitations")
+            or pack.get("key_metrics")
+            or pack.get("risk_register")
+            or pack.get("recommendations")
+            or pack.get("contradictions")
+        ):
             return True
     return False
 
@@ -651,17 +801,23 @@ def _artifact_cache_meta(
         "report_vs/artifacts/linkedin_post",
     ]
     for namespace in namespaces:
-        prompt_set = prompt_client.load_prompt_set(PromptLoadRequest(schema_version="1.0", namespace=namespace), ctx)
+        prompt_set = prompt_client.load_prompt_set(
+            PromptLoadRequest(schema_version="1.0", namespace=namespace), ctx
+        )
         prompt_meta[namespace] = {
             "prompt_system_sha256": prompt_set.system.sha256,
             "prompt_user_sha256": prompt_set.user.sha256,
-            "model": resolve_model(namespace, getattr(settings, "openai_models", {}), settings.openai_model),
+            "model": resolve_model(
+                namespace, getattr(settings, "openai_models", {}), settings.openai_model
+            ),
         }
-    inputs_hash = sha256_json({
-        "doc_map": doc_map,
-        "evidence_packs": evidence_packs,
-        "availability": availability,
-    })
+    inputs_hash = sha256_json(
+        {
+            "doc_map": doc_map,
+            "evidence_packs": evidence_packs,
+            "availability": availability,
+        }
+    )
     return {
         "schema_version": "1.0",
         "md5": md5,
@@ -693,17 +849,21 @@ def _load_cached_artifacts(
         report_slug=report_name,
     )
     try:
-        resp = file_service.read_text(ReadTextRequest(schema_version="1.0", path=path), ctx)
+        resp = file_service.read_text(
+            ReadTextRequest(schema_version="1.0", path=path), ctx
+        )
     except AppError as exc:
         if exc.code == "file_not_found":
             return None
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="artifact_cache_read_failed",
-            module=logger.name,
-            fields={"report_id": report_id, "error": exc.message},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="artifact_cache_read_failed",
+                module=logger.name,
+                fields={"report_id": report_id, "error": exc.message},
+            )
+        )
         return None
     try:
         payload = json.loads(resp.content)
@@ -711,7 +871,7 @@ def _load_cached_artifacts(
         return None
     if not isinstance(payload, dict):
         return None
-    cached = payload.get("_cache") if isinstance(payload.get("_cache"), dict) else {}
+    cached = _to_dict(payload.get("_cache"))
     if cached.get("key") != cache_key:
         return None
     return payload
@@ -744,7 +904,11 @@ def _resolve_pack_path(
             if isinstance(output_path, str):
                 return output_path
         except TypeError:
-            return str(analysis_store.pack_path(output_dir, report_id, pack_name, report_slug=report_slug))
+            return str(
+                analysis_store.pack_path(
+                    output_dir, report_id, pack_name, report_slug=report_slug
+                )
+            )
     return report_analysis_store_service.pack_path(
         AnalysisPackPathRequest(
             schema_version="1.0",
@@ -786,14 +950,16 @@ def _store_pack(
             if isinstance(output_path, str):
                 return output_path
         except TypeError:
-            return str(analysis_store.store_pack(
-                output_dir,
-                report_id,
-                pack_name,
-                payload,
-                ctx,
-                report_slug=report_slug,
-            ))
+            return str(
+                analysis_store.store_pack(
+                    output_dir,
+                    report_id,
+                    pack_name,
+                    payload,
+                    ctx,
+                    report_slug=report_slug,
+                )
+            )
     return report_analysis_store_service.store_pack(
         AnalysisStorePackRequest(
             schema_version="1.0",
@@ -816,37 +982,45 @@ def _placeholder_artifacts(status: Dict[str, Any]) -> Dict[str, Any]:
         "summary": {
             "tldr": placeholder_text,
             "executive_summary": placeholder_text,
-            "claim_evidence_map": [{
-                "claim": placeholder_text,
+            "claim_evidence_map": [
+                {
+                    "claim": placeholder_text,
+                    "evidence_id": "not_available",
+                    "evidence": placeholder_text,
+                    "pages": [],
+                }
+            ],
+        },
+        "insights_candidates": [
+            {
+                "id": "candidate_1",
+                "text": placeholder_text,
                 "evidence_id": "not_available",
                 "evidence": placeholder_text,
+                "metric": {key: "" for key in METRIC_FIELDS},
                 "pages": [],
-            }],
-        },
-        "insights_candidates": [{
-            "id": "candidate_1",
-            "text": placeholder_text,
-            "evidence_id": "not_available",
-            "evidence": placeholder_text,
-            "metric": {key: "" for key in METRIC_FIELDS},
-            "pages": [],
-            "score": 0.0,
-        }],
-        "insights_final": [{
-            "id": "insight_1",
-            "text": placeholder_text,
-            "evidence_id": "not_available",
-            "evidence": placeholder_text,
-            "metric": {key: "" for key in METRIC_FIELDS},
-            "pages": [],
-        }],
-        "quotes_final": [{
-            "text": placeholder_text,
-            "speaker": "Unknown",
-            "citation": reason.replace("_", " "),
-            "page": 0,
-            "evidence_id": "not_available",
-        }],
+                "score": 0.0,
+            }
+        ],
+        "insights_final": [
+            {
+                "id": "insight_1",
+                "text": placeholder_text,
+                "evidence_id": "not_available",
+                "evidence": placeholder_text,
+                "metric": {key: "" for key in METRIC_FIELDS},
+                "pages": [],
+            }
+        ],
+        "quotes_final": [
+            {
+                "text": placeholder_text,
+                "speaker": "Unknown",
+                "citation": reason.replace("_", " "),
+                "page": 0,
+                "evidence_id": "not_available",
+            }
+        ],
         "expert_comment": placeholder_text,
         "linkedin_post": placeholder_text,
         "source_status": {
@@ -869,3 +1043,7 @@ def _s(value: Any) -> str:
     if value is None:
         return ""
     return value if isinstance(value, str) else str(value)
+
+
+def _to_dict(value: Any) -> Dict[str, Any]:
+    return value if isinstance(value, dict) else {}

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ContradictionsPack",
+  "type": "object",
+  "required": ["contradictions"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string" },
+    "contradictions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "statement_a", "statement_b"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "statement_a": { "type": "string" },
+          "statement_b": { "type": "string" },
+          "explanation": { "type": "string" },
+          "evidence_ids": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "not_found_reason": { "type": "string" },
+    "_cache": { "type": "object", "additionalProperties": true }
+  }
+}

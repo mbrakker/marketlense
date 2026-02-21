@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RiskRegisterPack",
+  "type": "object",
+  "required": ["risk_register"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string" },
+    "risk_register": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "risk"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "risk": { "type": "string" },
+          "impact": { "type": "string" },
+          "likelihood": { "type": "string" },
+          "mitigation": { "type": "string" },
+          "evidence_id": { "type": "string" }
+        }
+      }
+    },
+    "not_found_reason": { "type": "string" },
+    "_cache": { "type": "object", "additionalProperties": true }
+  }
+}

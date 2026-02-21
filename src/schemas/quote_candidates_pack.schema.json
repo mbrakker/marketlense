@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "QuoteCandidatesPack",
+  "type": "object",
+  "required": ["quote_candidates"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string" },
+    "quote_candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["text"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "text": { "type": "string" },
+          "source": { "type": "string" },
+          "page": { "type": ["integer", "null"] }
+        }
+      }
+    },
+    "not_found_reason": { "type": "string" },
+    "_cache": { "type": "object", "additionalProperties": true }
+  }
+}

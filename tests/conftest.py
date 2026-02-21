@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import json
+from dataclasses import MISSING, fields, is_dataclass
 from pathlib import Path
+from typing import Any, Callable, Iterable
 
 import pytest
 
@@ -8,11 +11,17 @@ from src.contracts.ingest import IngestSettings
 from src.contracts.publish import PublishSettings
 from src.contracts.run_context import RunContext
 from src.contracts.wordpress import WordPressAuthSettings
+from src.utils.errors import AppError
 
 
 @pytest.fixture
 def run_context() -> RunContext:
-    return RunContext(schema_version="1.0", run_id="test-run", task_id="test-task", span_id="test-span")
+    return RunContext(
+        schema_version="1.0",
+        run_id="test-run",
+        task_id="test-task",
+        span_id="test-span",
+    )
 
 
 @pytest.fixture
@@ -88,3 +97,98 @@ def publish_settings_factory(app_paths: dict[str, str]):
         )
 
     return _factory
+
+
+@pytest.fixture
+def assert_logs_have_required_fields():
+    required = {"run_id", "task_id", "span_id", "role", "module", "event"}
+
+    def _assert(records: Iterable[Any]) -> None:
+        for idx, record in enumerate(records):
+            payload: Any
+            if isinstance(record, dict):
+                payload = record
+            elif hasattr(record, "message"):
+                payload = getattr(record, "message")
+            else:
+                payload = record
+            if isinstance(payload, str):
+                try:
+                    payload = json.loads(payload)
+                except json.JSONDecodeError as exc:
+                    raise AssertionError(f"log[{idx}] is not valid JSON") from exc
+            if not isinstance(payload, dict):
+                raise AssertionError(f"log[{idx}] must be a JSON object")
+            fields_present = payload.get("fields")
+            if isinstance(fields_present, dict):
+                merged = {**payload, **fields_present}
+            else:
+                merged = payload
+            missing = sorted(key for key in required if key not in merged)
+            if missing:
+                raise AssertionError(f"log[{idx}] missing required fields: {missing}")
+
+    return _assert
+
+
+@pytest.fixture
+def assert_no_defaulted_required_fields():
+    def _is_empty(value: Any) -> bool:
+        if value is None:
+            return True
+        if isinstance(value, str):
+            return value.strip() == ""
+        if isinstance(value, (list, tuple, dict, set)):
+            return len(value) == 0
+        return False
+
+    def _assert(obj: Any) -> None:
+        if not is_dataclass(obj):
+            raise AssertionError("expected dataclass instance")
+        for field_def in fields(obj):
+            is_required = (
+                field_def.default is MISSING and field_def.default_factory is MISSING
+            )
+            if not is_required:
+                continue
+            value = getattr(obj, field_def.name)
+            if _is_empty(value):
+                raise AssertionError(
+                    f"required field defaulted/empty: {field_def.name}"
+                )
+
+    return _assert
+
+
+@pytest.fixture
+def assert_app_error():
+    def _assert(
+        err: Exception, *, code: str, retryable: bool, severity: str = "error"
+    ) -> None:
+        if not isinstance(err, AppError):
+            raise AssertionError(f"expected AppError, got {type(err).__name__}")
+        assert err.code == code
+        assert err.retryable is retryable
+        assert err.severity == severity
+
+    return _assert
+
+
+@pytest.fixture
+def idempotency_guard():
+    def _guard(
+        run_once: Callable[[], Any],
+        *,
+        side_effect_count: Callable[[], int],
+    ) -> tuple[Any, Any]:
+        first = run_once()
+        first_count = int(side_effect_count())
+        second = run_once()
+        second_count = int(side_effect_count())
+        if second_count != first_count:
+            raise AssertionError(
+                f"idempotency check failed: first_count={first_count}, second_count={second_count}"
+            )
+        return first, second
+
+    return _guard

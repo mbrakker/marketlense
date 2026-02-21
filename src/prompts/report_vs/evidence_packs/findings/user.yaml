@@ -1,10 +1,17 @@
 text: |
-  Extract the most important report findings for an executive summary.
-  Use file_search over the provided report.
-  For each finding:
-  - id: F001, F002, ...
-  - text: one clear sentence
-  - evidence: short quote/paraphrase from source text
-  - confidence: low, medium, or high
-  - pages: list of page numbers when available, else []
-  Output only a JSON object with a single top-level key: "findings".
+  Extract the top findings from file_search evidence.
+  For each finding include:
+  - id
+  - text
+  - evidence
+  - confidence
+  - pages
+
+  Return JSON only:
+  {
+    "findings": [],
+    "not_found_reason": ""
+  }
+
+  If no findings are supported by evidence:
+  {"findings": [], "not_found_reason": "findings_not_found"}

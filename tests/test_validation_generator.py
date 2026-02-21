@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 import json
+import logging
 import threading
 from pathlib import Path
 
@@ -15,8 +16,18 @@ from src.utils.slugify import slugify
 
 class FakePromptClient:
     def load_prompt_set(self, request, ctx):
-        tmpl = PromptTemplate(schema_version="1.0", path=f"{request.namespace}/system", text="system", sha256="s")
-        user = PromptTemplate(schema_version="1.0", path=f"{request.namespace}/user", text="user {{ report_json }}", sha256="u")
+        tmpl = PromptTemplate(
+            schema_version="1.0",
+            path=f"{request.namespace}/system",
+            text="system",
+            sha256="s",
+        )
+        user = PromptTemplate(
+            schema_version="1.0",
+            path=f"{request.namespace}/user",
+            text="user {{ report_json }}",
+            sha256="u",
+        )
         return PromptSet(schema_version="1.0", system=tmpl, user=user)
 
     def render_prompt(self, request, ctx):
@@ -58,7 +69,9 @@ class FakeOpenAI:
 
     def openai_respond_with_vector_store(self, req, ctx):
         with self._lock:
-            self.requests.append(("vector", req.vector_store_id, str(getattr(ctx, "task_id", ""))))
+            self.requests.append(
+                ("vector", req.vector_store_id, str(getattr(ctx, "task_id", "")))
+            )
         return self.openai_chat_json(req, ctx)
 
 
@@ -66,7 +79,9 @@ class FakeAnalysisStore:
     def __init__(self):
         self.stored = []
 
-    def store_pack(self, output_dir, report_id, pack_name, payload, ctx, report_slug=None):
+    def store_pack(
+        self, output_dir, report_id, pack_name, payload, ctx, report_slug=None
+    ):
         slug = slugify(report_slug or report_id)
         path = Path(output_dir) / slug / "report_analysis" / f"{pack_name}.json"
         self.stored.append((output_dir, report_id, pack_name, payload))
@@ -77,6 +92,8 @@ def _settings(
     tmp_path,
     *,
     validation_grounding_use_vector_store: bool = False,
+    report_worker_limit: int = 2,
+    validation_data_gap_policy: str = "warn",
 ):
     return AppSettings(
         schema_version="1.0",
@@ -90,7 +107,9 @@ def _settings(
         state_db=str(tmp_path / "state.sqlite"),
         reports_db=str(tmp_path / "reports.sqlite"),
         category_mapping_path="cats.yaml",
-        cover_style_path=str(Path(__file__).resolve().parents[1] / "src" / "config" / "cover-styles.yaml"),
+        cover_style_path=str(
+            Path(__file__).resolve().parents[1] / "src" / "config" / "cover-styles.yaml"
+        ),
         ingest_lock_path=str(tmp_path / "lock"),
         ingest_lock_ttl_seconds=1.0,
         temperature=0.1,
@@ -100,6 +119,7 @@ def _settings(
         rank_model="",
         rank_temperature=0.1,
         rank_seed=None,
+        report_worker_limit=report_worker_limit,
         openai_timeout_seconds=5.0,
         rank_timeout_seconds=5.0,
         contents_max_pages=1,
@@ -110,9 +130,16 @@ def _settings(
         use_vector_store=True,
         vector_store_keep=True,
         validation_grounding_use_vector_store=validation_grounding_use_vector_store,
+        validation_data_gap_policy=validation_data_gap_policy,
         cost_ledger_path=str(tmp_path / "cost-ledger.jsonl"),
         cost_daily_path=str(tmp_path / "cost-daily.json"),
-        model_pricing={"gpt-4.1-mini": {"input_tokens_per_1k_usd": 0.003, "output_tokens_per_1k_usd": 0.006, "tool_call_usd": 0.0}},
+        model_pricing={
+            "gpt-4.1-mini": {
+                "input_tokens_per_1k_usd": 0.003,
+                "output_tokens_per_1k_usd": 0.006,
+                "tool_call_usd": 0.0,
+            }
+        },
     )
 
 
@@ -141,7 +168,13 @@ def test_validation_flags_metric_and_quote_mismatches(tmp_path):
     settings = _settings(tmp_path)
     artifacts = {
         "insights_final": [
-            {"id": "i1", "text": "Insight text", "evidence_id": "e1", "evidence": "Growth was 5%", "metric": {"value": "10", "unit": "%", "timeframe": "2024"}},
+            {
+                "id": "i1",
+                "text": "Insight text",
+                "evidence_id": "e1",
+                "evidence": "Growth was 5%",
+                "metric": {"value": "10", "unit": "%", "timeframe": "2024"},
+            },
         ],
         "quotes_final": [{"text": "Outside quote", "speaker": "CEO", "citation": ""}],
     }
@@ -192,11 +225,27 @@ def test_validation_accepts_paraphrased_metrics_and_quotes(tmp_path):
         ],
     }
     semantic_payload = {
-        "metrics": [{"id": "i1", "supported": True, "confidence": 0.82, "reason": "Paraphrase matches evidence"}],
-        "quotes": [{"id": "q1", "supported": True, "confidence": 0.81, "reason": "Meaning preserved"}],
+        "metrics": [
+            {
+                "id": "i1",
+                "supported": True,
+                "confidence": 0.82,
+                "reason": "Paraphrase matches evidence",
+            }
+        ],
+        "quotes": [
+            {
+                "id": "q1",
+                "supported": True,
+                "confidence": 0.81,
+                "reason": "Meaning preserved",
+            }
+        ],
     }
     grounding_payload = {"unsupported": []}
-    fake_openai = FakeOpenAI(semantic_payload=semantic_payload, grounding_payload=grounding_payload)
+    fake_openai = FakeOpenAI(
+        semantic_payload=semantic_payload, grounding_payload=grounding_payload
+    )
     analysis_store = FakeAnalysisStore()
     result = validate_report(
         ValidationRequest(
@@ -223,12 +272,28 @@ def test_validation_accepts_paraphrased_metrics_and_quotes(tmp_path):
 def test_validation_detects_new_numbers_and_grounding(tmp_path):
     settings = _settings(tmp_path)
     artifacts = {
-        "insights_final": [{"id": "i1", "text": "Insight 1", "evidence_id": "e1", "evidence": "Revenue up 5%", "metric": {"value": "5", "unit": "%", "timeframe": "2024"}}],
+        "insights_final": [
+            {
+                "id": "i1",
+                "text": "Insight 1",
+                "evidence_id": "e1",
+                "evidence": "Revenue up 5%",
+                "metric": {"value": "5", "unit": "%", "timeframe": "2024"},
+            }
+        ],
         "expert_comment": "We expect revenue to reach 99 soon.",
     }
     fake_openai = FakeOpenAI(
         semantic_payload={"metrics": [], "quotes": []},
-        grounding_payload={"unsupported": [{"section": "expert_comment", "text": "We expect", "reason": "No evidence"}]},
+        grounding_payload={
+            "unsupported": [
+                {
+                    "section": "expert_comment",
+                    "text": "We expect",
+                    "reason": "No evidence",
+                }
+            ]
+        },
     )
     analysis_store = FakeAnalysisStore()
     result = validate_report(
@@ -255,13 +320,28 @@ def test_validation_detects_new_numbers_and_grounding(tmp_path):
 def test_commentary_numbers_allowed_when_in_report_or_evidence(tmp_path):
     settings = _settings(tmp_path)
     artifacts = {
-        "summary": {"tldr": "TLDR", "executive_summary": "Exec 42%", "claim_evidence_map": []},
+        "summary": {
+            "tldr": "TLDR",
+            "executive_summary": "Exec 42%",
+            "claim_evidence_map": [],
+        },
         "insights_final": [],
-        "quotes_final": [{"text": "Revenue grew 42% year over year", "speaker": "CEO", "citation": "Revenue grew 42% year over year", "evidence_id": "f1"}],
+        "quotes_final": [
+            {
+                "text": "Revenue grew 42% year over year",
+                "speaker": "CEO",
+                "citation": "Revenue grew 42% year over year",
+                "evidence_id": "f1",
+            }
+        ],
         "expert_comment": "We expect revenue to stay around 42% growth.",
         "linkedin_post": "Analysts noted 42% expansion.",
     }
-    evidence_packs = {"pack": {"findings": [{"id": "f1", "evidence": "Revenue grew 42% year over year"}]}}
+    evidence_packs = {
+        "pack": {
+            "findings": [{"id": "f1", "evidence": "Revenue grew 42% year over year"}]
+        }
+    }
     fake_openai = FakeOpenAI(
         semantic_payload={"metrics": [], "quotes": []},
         grounding_payload={"unsupported": []},
@@ -286,11 +366,28 @@ def test_commentary_numbers_allowed_when_in_report_or_evidence(tmp_path):
     assert not any("Number" in issue.message for issue in result.issues)
 
 
-def test_validation_allows_interpretation_and_recommendation_in_allowed_sections(tmp_path):
+def test_validation_allows_interpretation_and_recommendation_in_allowed_sections(
+    tmp_path,
+):
     settings = _settings(tmp_path)
     artifacts = {
-        "insights_final": [{"id": "i1", "text": "Evidence baseline 42%", "evidence_id": "e1", "evidence": "Baseline metric is 42%"}],
-        "quotes_final": [{"id": "q1", "text": "Baseline metric is 42%", "speaker": "Analyst", "citation": "Baseline metric is 42%", "evidence_id": "e1"}],
+        "insights_final": [
+            {
+                "id": "i1",
+                "text": "Evidence baseline 42%",
+                "evidence_id": "e1",
+                "evidence": "Baseline metric is 42%",
+            }
+        ],
+        "quotes_final": [
+            {
+                "id": "q1",
+                "text": "Baseline metric is 42%",
+                "speaker": "Analyst",
+                "citation": "Baseline metric is 42%",
+                "evidence_id": "e1",
+            }
+        ],
         "expert_comment": "This likely indicates teams should prioritize cross-platform governance.",
         "linkedin_post": "Recommendation: focus on governance and phased rollout.",
     }
@@ -331,7 +428,14 @@ def test_validation_allows_interpretation_and_recommendation_in_allowed_sections
 def test_validation_fails_on_report_directive_misattribution(tmp_path):
     settings = _settings(tmp_path)
     artifacts = {
-        "insights_final": [{"id": "i1", "text": "Evidence baseline 42%", "evidence_id": "e1", "evidence": "Baseline metric is 42%"}],
+        "insights_final": [
+            {
+                "id": "i1",
+                "text": "Evidence baseline 42%",
+                "evidence_id": "e1",
+                "evidence": "Baseline metric is 42%",
+            }
+        ],
         "expert_comment": "The report instructs brands to double investment immediately.",
     }
     fake_openai = FakeOpenAI(
@@ -362,7 +466,9 @@ def test_validation_fails_on_report_directive_misattribution(tmp_path):
         analysis_store=FakeAnalysisStore(),
     )
     assert result.status == "fail"
-    assert any("report_directive_misattribution" in issue.message for issue in result.issues)
+    assert any(
+        "report_directive_misattribution" in issue.message for issue in result.issues
+    )
     assert any(issue.severity == "error" for issue in result.issues)
 
 
@@ -377,7 +483,15 @@ def test_validation_number_matching_normalizes_percent_and_billions(tmp_path):
                 "evidence": "Revenue is more than $10B while conversion reached 37%.",
             }
         ],
-        "quotes_final": [{"id": "q1", "text": "Revenue is more than $10B while conversion reached 37%.", "speaker": "Analyst", "citation": "Revenue is more than $10B while conversion reached 37%.", "evidence_id": "e1"}],
+        "quotes_final": [
+            {
+                "id": "q1",
+                "text": "Revenue is more than $10B while conversion reached 37%.",
+                "speaker": "Analyst",
+                "citation": "Revenue is more than $10B while conversion reached 37%.",
+                "evidence_id": "e1",
+            }
+        ],
         "expert_comment": "Market size is >10 in annual USD billions and conversion reached 37.0.",
         "linkedin_post": "Leaders should plan around >10 USD bn scale and a 37.0 conversion baseline.",
     }
@@ -450,7 +564,9 @@ def test_validation_number_check_ignores_units_and_matches_numeric_value(tmp_pat
     assert not any("Number" in issue.message for issue in result.issues)
 
 
-def test_grounding_unsupported_number_is_downgraded_when_numeric_value_matches(tmp_path):
+def test_grounding_unsupported_number_is_downgraded_when_numeric_value_matches(
+    tmp_path,
+):
     settings = _settings(tmp_path)
     artifacts = {
         "insights_final": [
@@ -502,14 +618,24 @@ def test_grounding_unsupported_number_is_downgraded_when_numeric_value_matches(t
         analysis_store=FakeAnalysisStore(),
     )
     assert result.status == "pass"
-    assert any("normalized_quantity_supported" in issue.message for issue in result.issues)
+    assert any(
+        "normalized_quantity_supported" in issue.message for issue in result.issues
+    )
     assert not any(issue.severity == "error" for issue in result.issues)
 
 
 def test_validation_warns_on_data_gap(tmp_path):
     settings = _settings(tmp_path)
     artifacts = {
-        "insights_final": [{"id": "i1", "text": "Insight text", "evidence_id": "e1", "evidence": "", "metric": {"value": "10", "unit": "%", "timeframe": "2024"}}],
+        "insights_final": [
+            {
+                "id": "i1",
+                "text": "Insight text",
+                "evidence_id": "e1",
+                "evidence": "",
+                "metric": {"value": "10", "unit": "%", "timeframe": "2024"},
+            }
+        ],
         "source_status": _low_text_status(),
     }
     fake_openai = FakeOpenAI({"unsupported": []})
@@ -538,17 +664,47 @@ def test_validation_issue_order_preserved_with_parallel_checks(tmp_path):
     settings = _settings(tmp_path)
     artifacts = {
         "insights_final": [
-            {"id": "i1", "text": "Insight text", "evidence_id": "e1", "evidence": "Growth was 5%", "metric": {"value": "10", "unit": "%", "timeframe": "2024"}},
+            {
+                "id": "i1",
+                "text": "Insight text",
+                "evidence_id": "e1",
+                "evidence": "Growth was 5%",
+                "metric": {"value": "10", "unit": "%", "timeframe": "2024"},
+            },
         ],
-        "quotes_final": [{"id": "q1", "text": "Outside quote", "speaker": "CEO", "citation": ""}],
+        "quotes_final": [
+            {"id": "q1", "text": "Outside quote", "speaker": "CEO", "citation": ""}
+        ],
         "expert_comment": "We expect revenue to reach 99 soon.",
     }
     fake_openai = FakeOpenAI(
         semantic_payload={
-            "metrics": [{"id": "i1", "supported": False, "confidence": 0.9, "reason": "Not grounded"}],
-            "quotes": [{"id": "q1", "supported": False, "confidence": 0.9, "reason": "Not grounded"}],
+            "metrics": [
+                {
+                    "id": "i1",
+                    "supported": False,
+                    "confidence": 0.9,
+                    "reason": "Not grounded",
+                }
+            ],
+            "quotes": [
+                {
+                    "id": "q1",
+                    "supported": False,
+                    "confidence": 0.9,
+                    "reason": "Not grounded",
+                }
+            ],
         },
-        grounding_payload={"unsupported": [{"section": "expert_comment", "text": "We expect", "reason": "No evidence"}]},
+        grounding_payload={
+            "unsupported": [
+                {
+                    "section": "expert_comment",
+                    "text": "We expect",
+                    "reason": "No evidence",
+                }
+            ]
+        },
     )
     analysis_store = FakeAnalysisStore()
     result = validate_report(
@@ -568,13 +724,37 @@ def test_validation_issue_order_preserved_with_parallel_checks(tmp_path):
     )
 
     messages = [issue.message for issue in result.issues]
-    idx_semantic_metric = next(i for i, message in enumerate(messages) if "Semantic check: metric for i1 not supported" in message)
-    idx_metric_exact = next(i for i, message in enumerate(messages) if "Metric value '10' not found in evidence" in message)
-    idx_quote_exact = next(i for i, message in enumerate(messages) if "Quote not verbatim in evidence" in message)
-    idx_number = next(i for i, message in enumerate(messages) if "Number 99.0 not present in report or evidence" in message)
-    idx_grounding = next(i for i, message in enumerate(messages) if "No evidence: We expect" in message)
+    idx_semantic_metric = next(
+        i
+        for i, message in enumerate(messages)
+        if "Semantic check: metric for i1 not supported" in message
+    )
+    idx_metric_exact = next(
+        i
+        for i, message in enumerate(messages)
+        if "Metric value '10' not found in evidence" in message
+    )
+    idx_quote_exact = next(
+        i
+        for i, message in enumerate(messages)
+        if "Quote not verbatim in evidence" in message
+    )
+    idx_number = next(
+        i
+        for i, message in enumerate(messages)
+        if "Number 99.0 not present in report or evidence" in message
+    )
+    idx_grounding = next(
+        i for i, message in enumerate(messages) if "No evidence: We expect" in message
+    )
 
-    assert idx_semantic_metric < idx_metric_exact < idx_quote_exact < idx_number < idx_grounding
+    assert (
+        idx_semantic_metric
+        < idx_metric_exact
+        < idx_quote_exact
+        < idx_number
+        < idx_grounding
+    )
     assert len([req for req in fake_openai.requests if req[0] == "chat"]) == 2
 
 
@@ -599,7 +779,9 @@ def test_validation_grounding_uses_chat_path_when_flag_disabled(tmp_path):
         openai_client=fake_openai,
         analysis_store=FakeAnalysisStore(),
     )
-    grounding_calls = [req for req in fake_openai.requests if req[2].endswith(":grounding")]
+    grounding_calls = [
+        req for req in fake_openai.requests if req[2].endswith(":grounding")
+    ]
     assert grounding_calls
     assert grounding_calls[0][0] == "chat"
 
@@ -625,7 +807,9 @@ def test_validation_grounding_uses_vector_path_when_flag_enabled(tmp_path):
         openai_client=fake_openai,
         analysis_store=FakeAnalysisStore(),
     )
-    grounding_calls = [req for req in fake_openai.requests if req[2].endswith(":grounding")]
+    grounding_calls = [
+        req for req in fake_openai.requests if req[2].endswith(":grounding")
+    ]
     assert grounding_calls
     assert grounding_calls[0][0] == "vector"
 
@@ -653,7 +837,9 @@ def test_validation_cache_isolated_by_grounding_retrieval_mode(tmp_path):
         md5="md5-cache-mode",
         report_name="cache-mode-report",
     )
-    chat_grounding_calls = [req for req in chat_openai.requests if req[2].endswith(":grounding")]
+    chat_grounding_calls = [
+        req for req in chat_openai.requests if req[2].endswith(":grounding")
+    ]
     assert chat_grounding_calls
     assert chat_grounding_calls[0][0] == "chat"
 
@@ -670,6 +856,77 @@ def test_validation_cache_isolated_by_grounding_retrieval_mode(tmp_path):
         md5="md5-cache-mode",
         report_name="cache-mode-report",
     )
-    vector_grounding_calls = [req for req in vector_openai.requests if req[2].endswith(":grounding")]
+    vector_grounding_calls = [
+        req for req in vector_openai.requests if req[2].endswith(":grounding")
+    ]
     assert vector_grounding_calls
     assert vector_grounding_calls[0][0] == "vector"
+
+
+def test_validation_parallel_branch_with_auto_context_logs_parallel_event(
+    tmp_path, caplog
+):
+    settings = _settings(tmp_path, report_worker_limit=2)
+    fake_openai = FakeOpenAI(
+        semantic_payload={"metrics": [], "quotes": []},
+        grounding_payload={"unsupported": []},
+    )
+    with caplog.at_level(logging.INFO, logger="market_lense.validation_generator"):
+        validate_report(
+            ValidationRequest(
+                schema_version="1.0",
+                report_id="r-parallel-auto",
+                report=_report(),
+                artifacts={"insights_final": []},
+                evidence_packs={},
+                vector_store_id=None,
+            ),
+            settings,
+            ctx=None,
+            prompt_client=FakePromptClient(),
+            openai_client=fake_openai,
+            analysis_store=FakeAnalysisStore(),
+        )
+    events: list[str] = []
+    for record in caplog.records:
+        try:
+            payload = json.loads(record.getMessage())
+        except json.JSONDecodeError:
+            continue
+        event = payload.get("event")
+        if isinstance(event, str):
+            events.append(event)
+    assert "validation_parallel_start" in events
+
+
+def test_validation_warn_policy_keeps_errors_without_data_gap(tmp_path):
+    settings = _settings(tmp_path, validation_data_gap_policy="warn")
+    artifacts = {
+        "insights_final": [
+            {
+                "id": "i1",
+                "text": "Insight text",
+                "evidence_id": "e1",
+                "evidence": "Growth was 5%",
+                "metric": {"value": "10", "unit": "%", "timeframe": "2024"},
+            }
+        ],
+        "quotes_final": [{"text": "Outside quote", "speaker": "CEO", "citation": ""}],
+    }
+    result = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="r-no-data-gap",
+            report=_report(),
+            artifacts=artifacts,
+            evidence_packs={},
+            vector_store_id=None,
+        ),
+        settings,
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAI({"unsupported": []}),
+        analysis_store=FakeAnalysisStore(),
+    )
+    assert result.status == "fail"
+    assert any(issue.severity == "error" for issue in result.issues)

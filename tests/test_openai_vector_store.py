@@ -49,9 +49,7 @@ def test_openai_response_with_vector_store_writes_ledger(tmp_path, monkeypatch):
     daily_path = tmp_path / "daily.json"
 
     def _fake_client(**kwargs):
-        return SimpleNamespace(
-            responses=FakeResponsesAPI(json.dumps({"result": "ok"}))
-        )
+        return SimpleNamespace(responses=FakeResponsesAPI(json.dumps({"result": "ok"})))
 
     monkeypatch.setattr(svc, "OpenAI", _fake_client)
     req = OpenAIResponseRequest(
@@ -66,7 +64,13 @@ def test_openai_response_with_vector_store_writes_ledger(tmp_path, monkeypatch):
         timeout_seconds=5.0,
         cost_ledger_path=str(ledger_path),
         cost_daily_path=str(daily_path),
-        model_pricing={"gpt-4.1-mini": {"input_tokens_per_1k_usd": 0.003, "output_tokens_per_1k_usd": 0.006, "tool_call_usd": 0.0}},
+        model_pricing={
+            "gpt-4.1-mini": {
+                "input_tokens_per_1k_usd": 0.003,
+                "output_tokens_per_1k_usd": 0.006,
+                "tool_call_usd": 0.0,
+            }
+        },
     )
     resp = svc.openai_respond_with_vector_store(req, _ctx())
     assert resp.text
@@ -94,7 +98,69 @@ def test_openai_response_with_vector_store_requires_vector_store_id():
     assert exc.value.code == "vector_store_missing"
 
 
-def test_openai_chat_json_with_images_retries_without_temperature(tmp_path, monkeypatch):
+def test_openai_response_with_vector_store_rejects_non_json(monkeypatch):
+    def _fake_client(**kwargs):
+        return SimpleNamespace(responses=FakeResponsesAPI("not-json"))
+
+    monkeypatch.setattr(svc, "OpenAI", _fake_client)
+    req = OpenAIResponseRequest(
+        schema_version="1.0",
+        system_prompt="system",
+        user_prompt="user",
+        vector_store_id="vs_123",
+        model="gpt-4.1-mini",
+        temperature=0.1,
+        api_key="key",
+    )
+    with pytest.raises(AppError) as exc:
+        svc.openai_respond_with_vector_store(req, _ctx())
+    assert exc.value.code == "openai_response_invalid_json"
+
+
+def test_openai_response_with_vector_store_rejects_json_arrays(monkeypatch):
+    def _fake_client(**kwargs):
+        return SimpleNamespace(
+            responses=FakeResponsesAPI(json.dumps([{"result": "ok"}]))
+        )
+
+    monkeypatch.setattr(svc, "OpenAI", _fake_client)
+    req = OpenAIResponseRequest(
+        schema_version="1.0",
+        system_prompt="system",
+        user_prompt="user",
+        vector_store_id="vs_123",
+        model="gpt-4.1-mini",
+        temperature=0.1,
+        api_key="key",
+    )
+    with pytest.raises(AppError) as exc:
+        svc.openai_respond_with_vector_store(req, _ctx())
+    assert exc.value.code == "openai_response_json_type_invalid"
+
+
+def test_openai_response_with_vector_store_parses_fenced_json(monkeypatch):
+    def _fake_client(**kwargs):
+        return SimpleNamespace(
+            responses=FakeResponsesAPI('```json\n{"result":"ok"}\n```')
+        )
+
+    monkeypatch.setattr(svc, "OpenAI", _fake_client)
+    req = OpenAIResponseRequest(
+        schema_version="1.0",
+        system_prompt="system",
+        user_prompt="user",
+        vector_store_id="vs_123",
+        model="gpt-4.1-mini",
+        temperature=0.1,
+        api_key="key",
+    )
+    result = svc.openai_respond_with_vector_store(req, _ctx())
+    assert result.parsed_json == {"result": "ok"}
+
+
+def test_openai_chat_json_with_images_retries_without_temperature(
+    tmp_path, monkeypatch
+):
     class _Responses:
         def __init__(self):
             self.calls = []
@@ -156,7 +222,9 @@ def test_openai_vector_store_create_success(monkeypatch):
 
 
 def test_openai_vector_store_upload_missing_file(monkeypatch, tmp_path):
-    client = SimpleNamespace(files=SimpleNamespace(create=lambda **kwargs: {"id": "file_123"}))
+    client = SimpleNamespace(
+        files=SimpleNamespace(create=lambda **kwargs: {"id": "file_123"})
+    )
     monkeypatch.setattr(svc, "OpenAI", lambda **kwargs: client)
 
     with pytest.raises(AppError) as exc:
@@ -210,3 +278,20 @@ def test_openai_vector_store_update_metadata_missing_id(monkeypatch):
             _ctx(),
         )
     assert exc.value.code == "openai_vector_store_update_metadata_failed"
+
+
+def test_image_path_to_data_url_defaults_png_for_unknown_extension(tmp_path):
+    image_path = tmp_path / "raw-image"
+    image_path.write_bytes(b"png-bytes")
+    data_url = svc._image_path_to_data_url(str(image_path))
+    assert data_url.startswith("data:image/png;base64,")
+
+
+def test_openai_strip_json_fence_requires_closing_fence():
+    raw = '```json\n{"key":1}\n'
+    assert svc._strip_json_fence(raw) == raw.strip()
+
+
+def test_openai_strip_json_fence_strips_allowed_json_fence():
+    raw = '```json\n{"key":1}\n```'
+    assert svc._strip_json_fence(raw) == '{"key":1}'

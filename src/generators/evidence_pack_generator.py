@@ -9,7 +9,10 @@ from src.contracts.config import AppSettings
 from src.contracts.files import ReadTextRequest
 from src.contracts.openai import OpenAIResponseRequest, OpenAIResponseResult
 from src.contracts.prompts import PromptLoadRequest
-from src.contracts.report_analysis import AnalysisPackPathRequest, AnalysisStorePackRequest
+from src.contracts.report_analysis import (
+    AnalysisPackPathRequest,
+    AnalysisStorePackRequest,
+)
 from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.services import file_service
@@ -26,10 +29,79 @@ from src.utils.slugify import slugify
 
 logger = logging.getLogger("market_lense.evidence_pack_generator")
 
+_DEFAULT_PACK_REGISTRY: tuple[str, ...] = (
+    "doc_map",
+    "scope",
+    "methods",
+    "findings",
+    "limitations",
+    "quote_candidates",
+)
+_VARIETY_PACKS: tuple[str, ...] = (
+    "key_metrics",
+    "risk_register",
+    "recommendations",
+    "contradictions",
+)
+_PACK_DEFINITIONS: dict[str, tuple[str, str]] = {
+    "doc_map": ("doc_map", "doc_map"),
+    "scope": ("evidence_packs/scope", "scope_pack"),
+    "methods": ("evidence_packs/methods", "methods_pack"),
+    "findings": ("evidence_packs/findings", "findings_pack"),
+    "limitations": ("evidence_packs/limitations", "limitations_pack"),
+    "quote_candidates": ("evidence_packs/quote_candidates", "quote_candidates_pack"),
+    "key_metrics": ("evidence_packs/key_metrics", "key_metrics_pack"),
+    "risk_register": ("evidence_packs/risk_register", "risk_register_pack"),
+    "recommendations": ("evidence_packs/recommendations", "recommendations_pack"),
+    "contradictions": ("evidence_packs/contradictions", "contradictions_pack"),
+}
+
+_PACK_PAYLOAD_KEY_BY_NAME: dict[str, str] = {
+    "scope": "scope",
+    "methods": "methods",
+    "findings": "findings",
+    "limitations": "limitations",
+    "quote_candidates": "quote_candidates",
+    "key_metrics": "key_metrics",
+    "risk_register": "risk_register",
+    "recommendations": "recommendations",
+    "contradictions": "contradictions",
+}
+
 
 def _pack_parallel_workers(settings: AppSettings, step_count: int) -> int:
-    configured = coerce_int(getattr(settings, "evidence_pack_parallel_workers", 3), 3, min_value=1)
+    configured = coerce_int(
+        getattr(settings, "evidence_pack_parallel_workers", 3), 3, min_value=1
+    )
     return max(1, min(configured, step_count))
+
+
+def _resolve_pack_steps(settings: AppSettings) -> list[tuple[str, str, str]]:
+    raw_registry = getattr(settings, "evidence_pack_registry", None)
+    enable_variety = bool(
+        getattr(settings, "evidence_pack_enable_new_variety_packs", False)
+    )
+    registry: list[str] = []
+    if isinstance(raw_registry, list):
+        for value in raw_registry:
+            token = str(value).strip()
+            if token and token in _PACK_DEFINITIONS and token not in registry:
+                registry.append(token)
+    if not registry:
+        registry = list(_DEFAULT_PACK_REGISTRY)
+    if enable_variety:
+        for pack_name in _VARIETY_PACKS:
+            if pack_name not in registry:
+                registry.append(pack_name)
+    if "doc_map" not in registry:
+        registry = ["doc_map", *registry]
+    elif registry[0] != "doc_map":
+        registry = ["doc_map"] + [item for item in registry if item != "doc_map"]
+    steps: list[tuple[str, str, str]] = []
+    for pack_name in registry:
+        namespace_suffix, schema_name = _PACK_DEFINITIONS[pack_name]
+        steps.append((pack_name, namespace_suffix, schema_name))
+    return steps
 
 
 def _strip_json_fence(text: str) -> str:
@@ -64,10 +136,10 @@ def _extract_json_value(text: str) -> str:
                 escaped = False
             elif ch == "\\":
                 escaped = True
-            elif ch == "\"":
+            elif ch == '"':
                 in_string = False
             continue
-        if ch == "\"":
+        if ch == '"':
             in_string = True
             continue
         if ch == "{":
@@ -81,7 +153,7 @@ def _extract_json_value(text: str) -> str:
                 return ""
             stack.pop()
             if not stack:
-                return source[start:idx + 1]
+                return source[start : idx + 1]
     return ""
 
 
@@ -125,34 +197,32 @@ def generate_evidence_packs(
     analysis_store=report_analysis_store_service,
 ) -> Dict[str, dict]:
     ctx = ctx or new_run_context(task_id=f"evidence_pack:{report_id}")
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="evidence_pack_start",
-        module=logger.name,
-        fields={"report_id": report_id, "vector_store_id": vector_store_id},
-    ))
-    steps = [
-        ("doc_map", "doc_map", "doc_map"),
-        ("scope", "evidence_packs/scope", "evidence_pack"),
-        ("methods", "evidence_packs/methods", "evidence_pack"),
-        ("findings", "evidence_packs/findings", "evidence_pack"),
-        ("limitations", "evidence_packs/limitations", "evidence_pack"),
-        ("quote_candidates", "evidence_packs/quote_candidates", "evidence_pack"),
-    ]
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="evidence_pack_start",
+            module=logger.name,
+            fields={"report_id": report_id, "vector_store_id": vector_store_id},
+        )
+    )
+    steps = _resolve_pack_steps(settings)
     results: Dict[str, dict] = {}
     parallel_workers = _pack_parallel_workers(settings, max(0, len(steps) - 1))
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="evidence_pack_parallel_config",
-        module=logger.name,
-        fields={
-            "report_id": report_id,
-            "parallel_workers": parallel_workers,
-            "parallel_step_count": max(0, len(steps) - 1),
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="evidence_pack_parallel_config",
+            module=logger.name,
+            fields={
+                "report_id": report_id,
+                "parallel_workers": parallel_workers,
+                "parallel_step_count": max(0, len(steps) - 1),
+                "pack_registry": [step[0] for step in steps],
+            },
+        )
+    )
 
     # `doc_map` is a hard gate; other packs depend on it being non-empty.
     doc_step = steps[0]
@@ -163,7 +233,7 @@ def generate_evidence_packs(
         report_name=report_name,
         vector_store_id=vector_store_id,
         prompt_namespace=f"report_vs/{prompt_ns}",
-        schema_name="doc_map" if schema == "doc_map" else "evidence_pack",
+        schema_name=schema,
         settings=settings,
         ctx=step_ctx,
         md5=md5,
@@ -175,21 +245,23 @@ def generate_evidence_packs(
     summary = _summarize_doc_map(results[step_name])
     if not summary["has_content"]:
         reason = summary["not_found_reason"] or "no_content"
-        logger.info(log_event(
-            step_ctx,
-            role="generator",
-            event="doc_map_validation_failed",
-            module=logger.name,
-            fields={
-                "report_id": report_id,
-                "vector_store_id": vector_store_id,
-                "sections_count": summary["sections_count"],
-                "title_present": summary["title_present"],
-                "doc_id_present": summary["doc_id_present"],
-                "summary_present": summary["summary_present"],
-                "not_found_reason": summary["not_found_reason"],
-            },
-        ))
+        logger.info(
+            log_event(
+                step_ctx,
+                role="generator",
+                event="doc_map_validation_failed",
+                module=logger.name,
+                fields={
+                    "report_id": report_id,
+                    "vector_store_id": vector_store_id,
+                    "sections_count": summary["sections_count"],
+                    "title_present": summary["title_present"],
+                    "doc_id_present": summary["doc_id_present"],
+                    "summary_present": summary["summary_present"],
+                    "not_found_reason": summary["not_found_reason"],
+                },
+            )
+        )
         raise AppError(
             code="doc_map_empty",
             message=f"doc_map_empty:{reason}",
@@ -210,7 +282,7 @@ def generate_evidence_packs(
                     report_name=report_name,
                     vector_store_id=vector_store_id,
                     prompt_namespace=f"report_vs/{prompt_ns}",
-                    schema_name="doc_map" if schema == "doc_map" else "evidence_pack",
+                    schema_name=schema,
                     settings=settings,
                     ctx=step_ctx,
                     md5=md5,
@@ -228,26 +300,32 @@ def generate_evidence_packs(
                 except Exception as exc:  # pragma: no cover - defensive fallback
                     if first_error is None:
                         first_error = (current_step, exc)
-                    logger.info(log_event(
-                        ctx,
-                        role="generator",
-                        event="evidence_pack_parallel_step_failed",
-                        module=logger.name,
-                        fields={"report_id": report_id, "pack": current_step, "error": str(exc)},
-                    ))
+                    logger.info(
+                        log_event(
+                            ctx,
+                            role="generator",
+                            event="evidence_pack_parallel_step_failed",
+                            module=logger.name,
+                            fields={
+                                "report_id": report_id,
+                                "pack": current_step,
+                                "error": str(exc),
+                            },
+                        )
+                    )
             if first_error is not None:
                 for future in futures:
                     future.cancel()
-                failed_step, exc = first_error
-                if isinstance(exc, AppError):
-                    raise exc
+                failed_step, first_exc = first_error
+                if isinstance(first_exc, AppError):
+                    raise first_exc
                 raise AppError(
                     code="evidence_pack_step_failed",
                     message=f"Evidence pack step failed: {failed_step}",
-                    cause=exc,
+                    cause=first_exc,
                     retryable=True,
                     context={"report_id": report_id, "pack": failed_step},
-                ) from exc
+                ) from first_exc
     else:
         for step_name, prompt_ns, schema in parallel_steps:
             step_ctx = child_context(ctx, task_id=f"{ctx.task_id}:{step_name}")
@@ -256,7 +334,7 @@ def generate_evidence_packs(
                 report_name=report_name,
                 vector_store_id=vector_store_id,
                 prompt_namespace=f"report_vs/{prompt_ns}",
-                schema_name="doc_map" if schema == "doc_map" else "evidence_pack",
+                schema_name=schema,
                 settings=settings,
                 ctx=step_ctx,
                 md5=md5,
@@ -267,13 +345,15 @@ def generate_evidence_packs(
             )
     for step_name, _, _ in parallel_steps:
         results[step_name] = parallel_results[step_name]
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="evidence_pack_complete",
-        module=logger.name,
-        fields={"report_id": report_id, "packs": list(results.keys())},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="evidence_pack_complete",
+            module=logger.name,
+            fields={"report_id": report_id, "packs": list(results.keys())},
+        )
+    )
     return results
 
 
@@ -292,17 +372,43 @@ def _generate_pack(
     analysis_store,
     pack_name: str,
 ) -> dict:
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="evidence_pack_step_start",
-        module=logger.name,
-        fields={"report_id": report_id, "pack": pack_name, "prompt_namespace": prompt_namespace},
-    ))
-    prompt_set = prompt_client.load_prompt_set(PromptLoadRequest(schema_version="1.0", namespace=prompt_namespace), ctx)
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="evidence_pack_step_start",
+            module=logger.name,
+            fields={
+                "report_id": report_id,
+                "pack": pack_name,
+                "prompt_namespace": prompt_namespace,
+            },
+        )
+    )
+    prompt_set = prompt_client.load_prompt_set(
+        PromptLoadRequest(schema_version="1.0", namespace=prompt_namespace), ctx
+    )
     system_prompt = prompt_set.system.text
     user_prompt = prompt_set.user.text
-    resolved_model = resolve_model(prompt_namespace, getattr(settings, "openai_models", {}), settings.openai_model)
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="evidence_pack_prompt_rendered",
+            module=logger.name,
+            fields={
+                "pack": pack_name,
+                "namespace": prompt_namespace,
+                "prompt_system_sha256": prompt_set.system.sha256,
+                "prompt_user_sha256": prompt_set.user.sha256,
+                "system_prompt": system_prompt,
+                "user_prompt": user_prompt,
+            },
+        )
+    )
+    resolved_model = resolve_model(
+        prompt_namespace, getattr(settings, "openai_models", {}), settings.openai_model
+    )
     cache_meta = None
     cache_key = ""
     if md5:
@@ -331,7 +437,9 @@ def _generate_pack(
             )
             if cached is not None:
                 if schema_name == "doc_map":
-                    cached, normalization = _normalize_doc_map_payload(cached, report_id)
+                    cached, normalization = _normalize_doc_map_payload(
+                        cached, report_id
+                    )
                     if normalization["changed"]:
                         _store_pack(
                             analysis_store=analysis_store,
@@ -342,36 +450,49 @@ def _generate_pack(
                             ctx=ctx,
                             report_name=report_name,
                         )
-                        logger.info(log_event(
-                            ctx,
-                            role="generator",
-                            event="doc_map_cache_normalized",
-                            module=logger.name,
-                            fields={
-                                "report_id": report_id,
-                                "wrapper_key": normalization["wrapper_key"],
-                                "sections_with_ids": normalization["sections_with_ids"],
-                                "added_section_ids": normalization["added_section_ids"],
-                                "dropped_sections": normalization["dropped_sections"],
-                                "doc_id_filled": normalization["doc_id_filled"],
-                            },
-                        ))
+                        logger.info(
+                            log_event(
+                                ctx,
+                                role="generator",
+                                event="doc_map_cache_normalized",
+                                module=logger.name,
+                                fields={
+                                    "report_id": report_id,
+                                    "wrapper_key": normalization["wrapper_key"],
+                                    "sections_with_ids": normalization[
+                                        "sections_with_ids"
+                                    ],
+                                    "added_section_ids": normalization[
+                                        "added_section_ids"
+                                    ],
+                                    "dropped_sections": normalization[
+                                        "dropped_sections"
+                                    ],
+                                    "doc_id_filled": normalization["doc_id_filled"],
+                                },
+                            )
+                        )
                     summary = _summarize_doc_map(cached)
                     if not summary["has_content"]:
-                        logger.info(log_event(
-                            ctx,
-                            role="generator",
-                            event="evidence_pack_cache_rejected",
-                            module=logger.name,
-                            fields={
-                                "report_id": report_id,
-                                "pack": pack_name,
-                                "reason": summary["not_found_reason"] or "doc_map_no_content",
-                            },
-                        ))
+                        logger.info(
+                            log_event(
+                                ctx,
+                                role="generator",
+                                event="evidence_pack_cache_rejected",
+                                module=logger.name,
+                                fields={
+                                    "report_id": report_id,
+                                    "pack": pack_name,
+                                    "reason": summary["not_found_reason"]
+                                    or "doc_map_no_content",
+                                },
+                            )
+                        )
                         cached = None
                 elif isinstance(cached, dict):
-                    normalized_cached = _normalize_evidence_pack_payload(cached, pack_name)
+                    normalized_cached = _normalize_evidence_pack_payload(
+                        cached, pack_name
+                    )
                     if normalized_cached != cached:
                         _store_pack(
                             analysis_store=analysis_store,
@@ -383,26 +504,30 @@ def _generate_pack(
                             report_name=report_name,
                         )
                         cached = normalized_cached
-                logger.info(log_event(
-                    ctx,
-                    role="generator",
-                    event="evidence_pack_cache_hit",
-                    module=logger.name,
-                    fields={"report_id": report_id, "pack": pack_name},
-                ))
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="generator",
+                        event="evidence_pack_cache_hit",
+                        module=logger.name,
+                        fields={"report_id": report_id, "pack": pack_name},
+                    )
+                )
                 if cached is not None:
                     return cached
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="model_resolved",
-        module=logger.name,
-        fields={
-            "namespace": prompt_namespace,
-            "resolved_model": resolved_model,
-            "default_model": settings.openai_model,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="model_resolved",
+            module=logger.name,
+            fields={
+                "namespace": prompt_namespace,
+                "resolved_model": resolved_model,
+                "default_model": settings.openai_model,
+            },
+        )
+    )
     parsed_json: Optional[dict] = None
     not_found_reason = ""
     max_attempts = 1
@@ -425,21 +550,25 @@ def _generate_pack(
             ),
             ctx,
         )
-        parsed_payload: Optional[object] = resp.parsed_json if isinstance(resp.parsed_json, (dict, list)) else None
+        parsed_payload: Optional[object] = (
+            resp.parsed_json if isinstance(resp.parsed_json, (dict, list)) else None
+        )
         if parsed_payload is None:
             parsed_payload = _parse_json_payload_from_text(resp.text or "")
             if parsed_payload is not None:
-                logger.info(log_event(
-                    ctx,
-                    role="generator",
-                    event="evidence_pack_json_text_fallback",
-                    module=logger.name,
-                    fields={
-                        "report_id": report_id,
-                        "pack": pack_name,
-                        "attempt": 1,
-                    },
-                ))
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="generator",
+                        event="evidence_pack_json_text_fallback",
+                        module=logger.name,
+                        fields={
+                            "report_id": report_id,
+                            "pack": pack_name,
+                            "attempt": 1,
+                        },
+                    )
+                )
         if parsed_payload is None:
             not_found_reason = "model_returned_no_json"
         else:
@@ -451,37 +580,61 @@ def _generate_pack(
                             message="doc_map payload must be a JSON object",
                             retryable=False,
                         )
-                    parsed_json, normalization = _normalize_doc_map_payload(parsed_payload, report_id)
+                    parsed_json, normalization = _normalize_doc_map_payload(
+                        parsed_payload, report_id
+                    )
                     if normalization["changed"]:
-                        logger.info(log_event(
-                            ctx,
-                            role="generator",
-                            event="doc_map_normalized",
-                            module=logger.name,
-                            fields={
-                                "report_id": report_id,
-                                "wrapper_key": normalization["wrapper_key"],
-                                "sections_with_ids": normalization["sections_with_ids"],
-                                "added_section_ids": normalization["added_section_ids"],
-                                "dropped_sections": normalization["dropped_sections"],
-                                "doc_id_filled": normalization["doc_id_filled"],
-                            },
-                        ))
+                        logger.info(
+                            log_event(
+                                ctx,
+                                role="generator",
+                                event="doc_map_normalized",
+                                module=logger.name,
+                                fields={
+                                    "report_id": report_id,
+                                    "wrapper_key": normalization["wrapper_key"],
+                                    "sections_with_ids": normalization[
+                                        "sections_with_ids"
+                                    ],
+                                    "added_section_ids": normalization[
+                                        "added_section_ids"
+                                    ],
+                                    "dropped_sections": normalization[
+                                        "dropped_sections"
+                                    ],
+                                    "doc_id_filled": normalization["doc_id_filled"],
+                                },
+                            )
+                        )
                 else:
-                    parsed_json = _normalize_evidence_pack_payload(parsed_payload, pack_name)
-                validate_schema(
-                    SchemaValidateRequest(schema_version="1.0", payload=parsed_json, schema_name=schema_name),
-                    ctx,
-                )
+                    parsed_json = _normalize_evidence_pack_payload(
+                        parsed_payload, pack_name
+                    )
+                if getattr(settings, "strict_schema_validation", True):
+                    validate_schema(
+                        SchemaValidateRequest(
+                            schema_version="1.0",
+                            payload=parsed_json,
+                            schema_name=schema_name,
+                        ),
+                        ctx,
+                    )
             except AppError as exc:
                 not_found_reason = f"schema_validation_failed:{exc.code}"
                 parsed_json = None
     except AppError as exc:
-        not_found_reason = exc.code
+        if exc.code in {
+            "openai_response_empty",
+            "openai_response_invalid_json",
+            "openai_response_json_type_invalid",
+        }:
+            not_found_reason = "model_returned_no_json"
+        else:
+            not_found_reason = exc.code
         if schema_name == "doc_map" and exc.retryable:
             not_found_reason = f"retryable_error:{exc.code}"
         parsed_json = None
-    result_payload = parsed_json or _empty_payload(schema_name, not_found_reason)
+    result_payload = parsed_json or _empty_payload(pack_name, not_found_reason)
     if cache_meta and isinstance(result_payload, dict):
         result_payload = dict(result_payload)
         result_payload["_cache"] = {
@@ -497,26 +650,39 @@ def _generate_pack(
         ctx=ctx,
         report_name=report_name,
     )
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="evidence_pack_step_complete",
-        module=logger.name,
-        fields={
-            "report_id": report_id,
-            "pack": pack_name,
-            "not_found_reason": not_found_reason,
-            "attempts": attempts_used,
-            "max_attempts": max_attempts,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="evidence_pack_step_complete",
+            module=logger.name,
+            fields={
+                "report_id": report_id,
+                "pack": pack_name,
+                "not_found_reason": not_found_reason,
+                "attempts": attempts_used,
+                "max_attempts": max_attempts,
+            },
+        )
+    )
     return result_payload
 
 
-def _empty_payload(schema_name: str, reason: str) -> dict:
-    if schema_name == "doc_map":
-        return {"doc_id": "", "title": "", "sections": [], "not_found_reason": reason}
-    return {"scope": "", "methods": [], "findings": [], "limitations": [], "quote_candidates": [], "not_found_reason": reason}
+def _empty_payload(pack_name: str, reason: str) -> dict:
+    payload: dict[str, object] = {"schema_version": "1.0", "not_found_reason": reason}
+    if pack_name == "doc_map":
+        payload.update(
+            {"doc_id": "", "title": "", "summary": "", "publisher": "", "sections": []}
+        )
+        return payload
+    key = _PACK_PAYLOAD_KEY_BY_NAME.get(pack_name)
+    if key is None:
+        return payload
+    if key == "scope":
+        payload[key] = ""
+    else:
+        payload[key] = []
+    return payload
 
 
 def _text(value: object) -> str:
@@ -614,13 +780,15 @@ def _normalize_findings(raw_findings: object) -> list[dict]:
             text_value = entry.strip()
             if not text_value:
                 continue
-            normalized.append({
-                "id": f"finding_{idx + 1}",
-                "text": text_value,
-                "evidence": "",
-                "confidence": "",
-                "pages": [],
-            })
+            normalized.append(
+                {
+                    "id": f"finding_{idx + 1}",
+                    "text": text_value,
+                    "evidence": "",
+                    "confidence": "",
+                    "pages": [],
+                }
+            )
             continue
         if not isinstance(entry, dict):
             continue
@@ -642,13 +810,15 @@ def _normalize_findings(raw_findings: object) -> list[dict]:
             pages = _coerce_pages(item.get("page"))
         if not (text_value or evidence_value or pages):
             continue
-        normalized.append({
-            "id": _first_non_empty_text(item.get("id"), f"finding_{idx + 1}"),
-            "text": text_value,
-            "evidence": evidence_value,
-            "confidence": _coerce_confidence(item.get("confidence")),
-            "pages": pages,
-        })
+        normalized.append(
+            {
+                "id": _first_non_empty_text(item.get("id"), f"finding_{idx + 1}"),
+                "text": text_value,
+                "evidence": evidence_value,
+                "confidence": _coerce_confidence(item.get("confidence")),
+                "pages": pages,
+            }
+        )
     return normalized
 
 
@@ -685,11 +855,18 @@ def _normalize_limitations(raw_limitations: object) -> list[str]:
 
 def _normalize_quote_candidates(raw_quotes: object) -> list[dict]:
     quotes: list[dict] = []
-    for entry in _coerce_pack_items(raw_quotes):
+    for idx, entry in enumerate(_coerce_pack_items(raw_quotes)):
         if isinstance(entry, str):
             text_value = entry.strip()
             if text_value:
-                quotes.append({"text": text_value, "source": "", "page": None})
+                quotes.append(
+                    {
+                        "id": f"quote_{idx + 1}",
+                        "text": text_value,
+                        "source": "",
+                        "page": None,
+                    }
+                )
             continue
         if not isinstance(entry, dict):
             continue
@@ -714,11 +891,16 @@ def _normalize_quote_candidates(raw_quotes: object) -> list[dict]:
         if not pages:
             pages = _coerce_pages(item.get("pages"))
         page_value: Optional[int] = pages[0] if pages else None
-        quotes.append({
-            "text": text_value,
-            "source": source_value,
-            "page": page_value,
-        })
+        quotes.append(
+            {
+                "id": _first_non_empty_text(
+                    item.get("id"), item.get("evidence_id"), f"quote_{idx + 1}"
+                ),
+                "text": text_value,
+                "source": source_value,
+                "page": page_value,
+            }
+        )
     return quotes
 
 
@@ -734,11 +916,216 @@ def _normalize_methods(raw_methods: object) -> list[object]:
     return methods
 
 
+def _normalize_key_metrics(raw_metrics: object) -> list[dict]:
+    metrics: list[dict] = []
+    for idx, entry in enumerate(_coerce_pack_items(raw_metrics)):
+        if isinstance(entry, str):
+            text_value = entry.strip()
+            if not text_value:
+                continue
+            metrics.append(
+                {
+                    "id": f"metric_{idx + 1}",
+                    "metric": text_value,
+                    "value": "",
+                    "unit": "",
+                    "evidence_id": "",
+                    "pages": [],
+                }
+            )
+            continue
+        if not isinstance(entry, dict):
+            continue
+        item = _to_dict(entry)
+        metric = _first_non_empty_text(
+            item.get("metric"),
+            item.get("name"),
+            item.get("label"),
+            item.get("title"),
+        )
+        value = _first_non_empty_text(
+            item.get("value"), item.get("amount"), item.get("measure")
+        )
+        unit = _first_non_empty_text(item.get("unit"), item.get("units"))
+        evidence_id = _first_non_empty_text(
+            item.get("evidence_id"),
+            item.get("finding_id"),
+            item.get("reference_id"),
+        )
+        pages = _coerce_pages(item.get("pages")) or _coerce_pages(item.get("page"))
+        if not (metric or value or evidence_id or pages):
+            continue
+        metrics.append(
+            {
+                "id": _first_non_empty_text(item.get("id"), f"metric_{idx + 1}"),
+                "metric": metric,
+                "value": value,
+                "unit": unit,
+                "evidence_id": evidence_id,
+                "pages": pages,
+            }
+        )
+    return metrics
+
+
+def _normalize_risk_register(raw_risks: object) -> list[dict]:
+    risks: list[dict] = []
+    for idx, entry in enumerate(_coerce_pack_items(raw_risks)):
+        if isinstance(entry, str):
+            text_value = entry.strip()
+            if not text_value:
+                continue
+            risks.append(
+                {
+                    "id": f"risk_{idx + 1}",
+                    "risk": text_value,
+                    "impact": "",
+                    "likelihood": "",
+                    "mitigation": "",
+                    "evidence_id": "",
+                }
+            )
+            continue
+        if not isinstance(entry, dict):
+            continue
+        item = _to_dict(entry)
+        risk = _first_non_empty_text(
+            item.get("risk"), item.get("title"), item.get("description")
+        )
+        impact = _first_non_empty_text(item.get("impact"), item.get("severity"))
+        likelihood = _first_non_empty_text(
+            item.get("likelihood"), item.get("probability")
+        )
+        mitigation = _first_non_empty_text(item.get("mitigation"), item.get("response"))
+        evidence_id = _first_non_empty_text(
+            item.get("evidence_id"),
+            item.get("reference_id"),
+            item.get("finding_id"),
+        )
+        if not (risk or impact or likelihood or mitigation or evidence_id):
+            continue
+        risks.append(
+            {
+                "id": _first_non_empty_text(item.get("id"), f"risk_{idx + 1}"),
+                "risk": risk,
+                "impact": impact,
+                "likelihood": likelihood,
+                "mitigation": mitigation,
+                "evidence_id": evidence_id,
+            }
+        )
+    return risks
+
+
+def _normalize_recommendations(raw_recommendations: object) -> list[dict]:
+    recommendations: list[dict] = []
+    for idx, entry in enumerate(_coerce_pack_items(raw_recommendations)):
+        if isinstance(entry, str):
+            text_value = entry.strip()
+            if not text_value:
+                continue
+            recommendations.append(
+                {
+                    "id": f"recommendation_{idx + 1}",
+                    "recommendation": text_value,
+                    "rationale": "",
+                    "evidence_id": "",
+                }
+            )
+            continue
+        if not isinstance(entry, dict):
+            continue
+        item = _to_dict(entry)
+        recommendation = _first_non_empty_text(
+            item.get("recommendation"),
+            item.get("action"),
+            item.get("text"),
+            item.get("title"),
+        )
+        rationale = _first_non_empty_text(
+            item.get("rationale"), item.get("reason"), item.get("evidence")
+        )
+        evidence_id = _first_non_empty_text(
+            item.get("evidence_id"),
+            item.get("reference_id"),
+            item.get("finding_id"),
+        )
+        if not (recommendation or rationale or evidence_id):
+            continue
+        recommendations.append(
+            {
+                "id": _first_non_empty_text(
+                    item.get("id"), f"recommendation_{idx + 1}"
+                ),
+                "recommendation": recommendation,
+                "rationale": rationale,
+                "evidence_id": evidence_id,
+            }
+        )
+    return recommendations
+
+
+def _normalize_contradictions(raw_contradictions: object) -> list[dict]:
+    contradictions: list[dict] = []
+    for idx, entry in enumerate(_coerce_pack_items(raw_contradictions)):
+        if isinstance(entry, str):
+            text_value = entry.strip()
+            if not text_value:
+                continue
+            contradictions.append(
+                {
+                    "id": f"contradiction_{idx + 1}",
+                    "statement_a": text_value,
+                    "statement_b": "",
+                    "explanation": "",
+                    "evidence_ids": [],
+                }
+            )
+            continue
+        if not isinstance(entry, dict):
+            continue
+        item = _to_dict(entry)
+        statement_a = _first_non_empty_text(
+            item.get("statement_a"),
+            item.get("claim_a"),
+            item.get("point_a"),
+        )
+        statement_b = _first_non_empty_text(
+            item.get("statement_b"),
+            item.get("claim_b"),
+            item.get("point_b"),
+        )
+        explanation = _first_non_empty_text(
+            item.get("explanation"), item.get("context"), item.get("reason")
+        )
+        evidence_ids = [
+            token
+            for token in (
+                _coerce_pack_items(item.get("evidence_ids") or item.get("evidence_id"))
+            )
+            if isinstance(token, str) and token.strip()
+        ]
+        if not (statement_a or statement_b or explanation or evidence_ids):
+            continue
+        contradictions.append(
+            {
+                "id": _first_non_empty_text(item.get("id"), f"contradiction_{idx + 1}"),
+                "statement_a": statement_a,
+                "statement_b": statement_b,
+                "explanation": explanation,
+                "evidence_ids": evidence_ids,
+            }
+        )
+    return contradictions
+
+
 def _normalize_evidence_pack_payload(payload: object, pack_name: str) -> dict:
     cache_meta = None
     source = payload
     if isinstance(payload, dict):
-        cache_meta = payload.get("_cache") if isinstance(payload.get("_cache"), dict) else None
+        cache_meta = (
+            payload.get("_cache") if isinstance(payload.get("_cache"), dict) else None
+        )
         wrapped = payload.get(pack_name)
         if wrapped is None:
             wrapped = payload.get("evidence_pack")
@@ -748,7 +1135,7 @@ def _normalize_evidence_pack_payload(payload: object, pack_name: str) -> dict:
             source = wrapped
 
     root = _to_dict(source)
-    normalized = _empty_payload("evidence_pack", "")
+    normalized = _empty_payload(pack_name, "")
 
     if pack_name == "scope":
         scope_value = root.get("scope") if isinstance(source, dict) else source
@@ -773,19 +1160,47 @@ def _normalize_evidence_pack_payload(payload: object, pack_name: str) -> dict:
             raw_findings = root.get("claims")
         normalized["findings"] = _normalize_findings(raw_findings)
     elif pack_name == "limitations":
-        raw_limitations = root.get("limitations") if isinstance(source, dict) else source
+        raw_limitations = (
+            root.get("limitations") if isinstance(source, dict) else source
+        )
         if raw_limitations is None:
             raw_limitations = root.get("risks")
         if raw_limitations is None:
             raw_limitations = root.get("challenges")
         normalized["limitations"] = _normalize_limitations(raw_limitations)
     elif pack_name == "quote_candidates":
-        raw_quotes = root.get("quote_candidates") if isinstance(source, dict) else source
+        raw_quotes = (
+            root.get("quote_candidates") if isinstance(source, dict) else source
+        )
         if raw_quotes is None:
             raw_quotes = root.get("quotes")
         if raw_quotes is None:
             raw_quotes = root.get("quoteCandidates")
         normalized["quote_candidates"] = _normalize_quote_candidates(raw_quotes)
+    elif pack_name == "key_metrics":
+        raw_metrics = root.get("key_metrics") if isinstance(source, dict) else source
+        if raw_metrics is None:
+            raw_metrics = root.get("metrics")
+        normalized["key_metrics"] = _normalize_key_metrics(raw_metrics)
+    elif pack_name == "risk_register":
+        raw_risks = root.get("risk_register") if isinstance(source, dict) else source
+        if raw_risks is None:
+            raw_risks = root.get("risks")
+        normalized["risk_register"] = _normalize_risk_register(raw_risks)
+    elif pack_name == "recommendations":
+        raw_recommendations = (
+            root.get("recommendations") if isinstance(source, dict) else source
+        )
+        if raw_recommendations is None:
+            raw_recommendations = root.get("actions")
+        normalized["recommendations"] = _normalize_recommendations(raw_recommendations)
+    elif pack_name == "contradictions":
+        raw_contradictions = (
+            root.get("contradictions") if isinstance(source, dict) else source
+        )
+        if raw_contradictions is None:
+            raw_contradictions = root.get("conflicts")
+        normalized["contradictions"] = _normalize_contradictions(raw_contradictions)
 
     if cache_meta:
         normalized["_cache"] = cache_meta
@@ -832,10 +1247,12 @@ def _normalize_doc_map_payload(payload: dict, report_id: str) -> Tuple[dict, dic
             break
     normalized = dict(candidate) if isinstance(candidate, dict) else {}
     changed = bool(wrapper_key)
-    cache_meta = payload.get("_cache") if isinstance(payload.get("_cache"), dict) else None
+    cache_meta = (
+        payload.get("_cache") if isinstance(payload.get("_cache"), dict) else None
+    )
     if cache_meta:
         normalized["_cache"] = cache_meta
-    doc_meta = normalized.get("document") if isinstance(normalized.get("document"), dict) else {}
+    doc_meta = _to_dict(normalized.get("document"))
 
     normalized_title = _text(normalized.get("title"))
     resolved_title = _first_non_empty_text(
@@ -922,7 +1339,9 @@ def _normalize_doc_map_payload(payload: dict, report_id: str) -> Tuple[dict, dic
                 changed = True
 
             sec_summary = _text(sec.get("summary"))
-            resolved_sec_summary = _first_non_empty_text(sec_summary, sec.get("description"), sec.get("text"), sec.get("finding"))
+            resolved_sec_summary = _first_non_empty_text(
+                sec_summary, sec.get("description"), sec.get("text"), sec.get("finding")
+            )
             if resolved_sec_summary and resolved_sec_summary != sec_summary:
                 sec["summary"] = resolved_sec_summary
                 changed = True
@@ -987,7 +1406,11 @@ def _resolve_pack_path(
             if isinstance(output_path, str):
                 return output_path
         except TypeError:
-            return str(analysis_store.pack_path(output_dir, report_id, pack_name, report_slug=report_name))
+            return str(
+                analysis_store.pack_path(
+                    output_dir, report_id, pack_name, report_slug=report_name
+                )
+            )
     return report_analysis_store_service.pack_path(
         AnalysisPackPathRequest(
             schema_version="1.0",
@@ -1029,14 +1452,16 @@ def _store_pack(
             if isinstance(output_path, str):
                 return output_path
         except TypeError:
-            return str(analysis_store.store_pack(
-                output_dir,
-                report_id,
-                pack_name,
-                payload,
-                ctx,
-                report_slug=report_name,
-            ))
+            return str(
+                analysis_store.store_pack(
+                    output_dir,
+                    report_id,
+                    pack_name,
+                    payload,
+                    ctx,
+                    report_slug=report_name,
+                )
+            )
     return report_analysis_store_service.store_pack(
         AnalysisStorePackRequest(
             schema_version="1.0",
@@ -1062,19 +1487,29 @@ def _load_cached_pack(
 ) -> Optional[dict]:
     if not cache_key:
         return None
-    path = _resolve_pack_path(output_dir, report_id, pack_name, report_name, analysis_store, ctx)
+    path = _resolve_pack_path(
+        output_dir, report_id, pack_name, report_name, analysis_store, ctx
+    )
     try:
-        resp = file_service.read_text(ReadTextRequest(schema_version="1.0", path=path), ctx)
+        resp = file_service.read_text(
+            ReadTextRequest(schema_version="1.0", path=path), ctx
+        )
     except AppError as exc:
         if exc.code == "file_not_found":
             return None
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="evidence_pack_cache_read_failed",
-            module=logger.name,
-            fields={"report_id": report_id, "pack": pack_name, "error": exc.message},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="evidence_pack_cache_read_failed",
+                module=logger.name,
+                fields={
+                    "report_id": report_id,
+                    "pack": pack_name,
+                    "error": exc.message,
+                },
+            )
+        )
         return None
     try:
         payload = json.loads(resp.content)
@@ -1082,24 +1517,32 @@ def _load_cached_pack(
         return None
     if not isinstance(payload, dict):
         return None
-    cached = payload.get("_cache") if isinstance(payload.get("_cache"), dict) else {}
+    cached = _to_dict(payload.get("_cache"))
     if cached.get("key") != cache_key:
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="evidence_pack_cache_miss",
-            module=logger.name,
-            fields={"report_id": report_id, "pack": pack_name},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="evidence_pack_cache_miss",
+                module=logger.name,
+                fields={"report_id": report_id, "pack": pack_name},
+            )
+        )
         return None
     not_found_reason = _text(payload.get("not_found_reason"))
     if not_found_reason:
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="evidence_pack_cache_rejected",
-            module=logger.name,
-            fields={"report_id": report_id, "pack": pack_name, "reason": not_found_reason},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="evidence_pack_cache_rejected",
+                module=logger.name,
+                fields={
+                    "report_id": report_id,
+                    "pack": pack_name,
+                    "reason": not_found_reason,
+                },
+            )
+        )
         return None
     return payload

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MethodsPack",
+  "type": "object",
+  "required": ["methods"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string" },
+    "methods": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "type": "string" },
+          { "type": "object", "additionalProperties": true }
+        ]
+      }
+    },
+    "not_found_reason": { "type": "string" },
+    "_cache": { "type": "object", "additionalProperties": true }
+  }
+}

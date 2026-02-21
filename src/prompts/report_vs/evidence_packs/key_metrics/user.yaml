@@ -1,0 +1,12 @@
+text: |
+  Extract key numeric metrics from file_search evidence.
+
+  Return JSON only:
+  {
+    "key_metrics": [],
+    "not_found_reason": ""
+  }
+
+  Include id, metric, value, unit, evidence_id, and pages for each metric.
+  If none are found:
+  {"key_metrics": [], "not_found_reason": "key_metrics_not_found"}

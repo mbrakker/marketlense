@@ -466,16 +466,7 @@ Each quick-win should be documented with a short task when prioritized.
 
 ### AGENTS.md Compliance Backlog (Audit 2026-02-21)
 
-- **Title:** Move retry/backoff/rate-limiting control out of generators into orchestrators
-  - Explanation: Remove retry loops, sleeps, and backoff decisions from generators and handle them only in orchestrators, with bounded policy + jitter and explicit logging.
-  - Pros: Restores strict role separation and predictable failure handling.
-  - Cons: Requires orchestration API changes and retry-policy refactor.
-  - Acceptance Criteria:
-    - No generator contains retry loops/backoff/sleep-based retry control.
-    - Orchestrators own retry decisions with jitter-enabled policies.
-    - Retry attempt counts and transition logs are asserted in tests.
-
-- **Title:** Remove placeholder/sentinel production outputs and fail explicitly
+-- **Title:** Remove placeholder/sentinel production outputs and fail explicitly
   - Explanation: Replace placeholder payloads/default-filled semantic fields with explicit typed `AppError` failures when required data cannot be produced.
   - Pros: Prevents silent quality degradation and improves correctness guarantees.
   - Cons: More hard-fail scenarios may require upstream handling and UX messaging.
@@ -502,13 +493,7 @@ Each quick-win should be documented with a short task when prioritized.
     - Generators import services/contracts/utils only; orchestration lives in orchestrators.
     - Boundary checks prevent regressions.
 
-- **Title:** Consolidate OpenAI access through `openai_service.py` only
-  - Explanation: Remove direct OpenAI client usage from non-OpenAI services and route all provider calls through `openai_service.py`.
-  - Pros: Single integration boundary, consistent cost/error/log behavior.
-  - Cons: Requires service API redesign and migration of call sites.
-  - Acceptance Criteria:
-    - No direct OpenAI client construction outside `src/services/openai_service.py`.
-    - Shared request/response/cost/error logic centralized and covered by tests.
+
 
 - **Title:** Enforce prompt immutability outside prompt service and complete prompt observability
   - Explanation: Ban runtime prompt text mutation/concatenation outside prompt service and ensure every model call logs prompt namespace, file paths, prompt hashes, exact rendered prompts, model params, and raw response.
@@ -555,10 +540,3 @@ Each quick-win should be documented with a short task when prioritized.
     - `tests/integration/` includes at least one integration test per service module.
     - Integration tests are explicitly marked and excluded from default CI unit run.
     - Unit tests avoid live external calls.
-
----
-
-## Next Steps
-
-- Review and prioritize tasks above; assign owners and estimated effort.
-- I can (if you want): open a PR with this file, split top-priority tasks into tracked issues, or implement the highest-priority quick-win.

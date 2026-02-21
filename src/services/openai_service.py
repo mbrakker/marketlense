@@ -10,12 +10,20 @@ from pathlib import Path
 from typing import Any, Dict
 
 import openai as openai_legacy
-try:
-    from openai import OpenAI
-except Exception:  # pragma: no cover - compatibility fallback
-    OpenAI = None  # type: ignore[assignment]
 
-from src.contracts.costs import CostLedgerAppendRequest, CostLedgerEntry, CostRollupRequest
+OpenAI: Any | None = None
+try:
+    from openai import OpenAI as _OpenAI
+
+    OpenAI = _OpenAI
+except Exception:  # pragma: no cover - compatibility fallback
+    OpenAI = None
+
+from src.contracts.costs import (
+    CostLedgerAppendRequest,
+    CostLedgerEntry,
+    CostRollupRequest,
+)
 from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.openai import (
     OpenAIAnalyzeRequest,
@@ -36,14 +44,29 @@ from src.contracts.openai import (
     OpenAIVectorStoreUpdateMetadataResponse,
 )
 from src.contracts.run_context import RunContext
-from src.services.cost_ledger_service import append_entry as append_cost_entry, rollup_daily
+from src.services.cost_ledger_service import (
+    append_entry as append_cost_entry,
+    rollup_daily,
+)
 from src.utils.costing import estimate_cost_usd
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.openai_service")
 
-REQUIRED_KEYS = ("tldr", "title", "insights", "quote", "figure", "commentary", "source", "publisher", "taxonomy", "region", "time_period")
+REQUIRED_KEYS = (
+    "tldr",
+    "title",
+    "insights",
+    "quote",
+    "figure",
+    "commentary",
+    "source",
+    "publisher",
+    "taxonomy",
+    "region",
+    "time_period",
+)
 
 
 def _image_path_to_data_url(path: str) -> str:
@@ -104,6 +127,89 @@ def _extract_unsupported_parameter(exc: Exception) -> str | None:
     return None
 
 
+def _strip_json_fence(text: str) -> str:
+    stripped = (text or "").strip()
+    if not stripped.startswith("```"):
+        return stripped
+    lines = stripped.splitlines()
+    if len(lines) < 2 or lines[-1].strip() != "```":
+        return stripped
+    first_line = lines[0].strip().lower()
+    if first_line not in {"```", "```json", "```jsonc", "```javascript", "```js"}:
+        return stripped
+    return "\n".join(lines[1:-1]).strip()
+
+
+def _extract_json_value(text: str) -> str:
+    source = (text or "").strip()
+    start = -1
+    for idx, ch in enumerate(source):
+        if ch in {"{", "["}:
+            start = idx
+            break
+    if start < 0:
+        return ""
+    stack: list[str] = []
+    in_string = False
+    escaped = False
+    for idx in range(start, len(source)):
+        ch = source[idx]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+            continue
+        if ch == "{":
+            stack.append("}")
+            continue
+        if ch == "[":
+            stack.append("]")
+            continue
+        if ch in {"}", "]"}:
+            if not stack or ch != stack[-1]:
+                return ""
+            stack.pop()
+            if not stack:
+                return source[start : idx + 1]
+    return ""
+
+
+def _parse_json_object_from_text(text: str) -> tuple[dict | None, str]:
+    raw = (text or "").strip()
+    if not raw:
+        return None, "empty"
+    candidates: list[tuple[str, str]] = [("direct", raw)]
+    stripped = _strip_json_fence(raw)
+    if stripped and stripped != raw:
+        candidates.append(("fence", stripped))
+    for strategy, candidate in candidates:
+        try:
+            parsed = json.loads(candidate)
+        except json.JSONDecodeError:
+            parsed = None
+        if isinstance(parsed, dict):
+            return parsed, strategy
+        if parsed is not None:
+            return None, "json_non_object"
+        extracted = _extract_json_value(candidate)
+        if not extracted:
+            continue
+        try:
+            parsed_extracted = json.loads(extracted)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed_extracted, dict):
+            return parsed_extracted, f"{strategy}_extracted"
+        return None, "json_non_object"
+    return None, "invalid_json"
+
+
 def _responses_create_with_unsupported_param_retry(
     *,
     client: Any,
@@ -119,21 +225,26 @@ def _responses_create_with_unsupported_param_retry(
             return client.responses.create(**attempt_args)
         except Exception as exc:
             unsupported_param = _extract_unsupported_parameter(exc)
-            if unsupported_param not in fallback_params or unsupported_param not in attempt_args:
+            if (
+                unsupported_param not in fallback_params
+                or unsupported_param not in attempt_args
+            ):
                 raise
             attempt_args.pop(unsupported_param, None)
-            logger.info(log_event(
-                ctx,
-                role="service",
-                event=event_name,
-                module=logger.name,
-                fields={
-                    "model": model,
-                    "dropped_param": unsupported_param,
-                    "error_type": type(exc).__name__,
-                    "error": str(exc),
-                },
-            ))
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event=event_name,
+                    module=logger.name,
+                    fields={
+                        "model": model,
+                        "dropped_param": unsupported_param,
+                        "error_type": type(exc).__name__,
+                        "error": str(exc),
+                    },
+                )
+            )
 
 
 def _legacy_chat_completion(request: OpenAIAnalyzeRequest) -> Dict[str, Any]:
@@ -198,21 +309,25 @@ def _legacy_chat_json(request: OpenAIJSONPromptRequest) -> Dict[str, Any]:
     }
 
 
-def analyze_report(request: OpenAIAnalyzeRequest, ctx: RunContext) -> OpenAIAnalyzeResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="openai_analyze_start",
-        module=logger.name,
-        fields={
-            "model": request.model,
-            "temperature": request.temperature,
-            "seed": request.seed,
-            "timeout_seconds": request.timeout_seconds,
-            "prompt_system_sha256": request.prompt_system_sha256,
-            "prompt_user_sha256": request.prompt_user_sha256,
-        },
-    ))
+def analyze_report(
+    request: OpenAIAnalyzeRequest, ctx: RunContext
+) -> OpenAIAnalyzeResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="openai_analyze_start",
+            module=logger.name,
+            fields={
+                "model": request.model,
+                "temperature": request.temperature,
+                "seed": request.seed,
+                "timeout_seconds": request.timeout_seconds,
+                "prompt_system_sha256": request.prompt_system_sha256,
+                "prompt_user_sha256": request.prompt_user_sha256,
+            },
+        )
+    )
 
     client_kwargs: dict = {"api_key": request.api_key}
     if request.timeout_seconds is not None:
@@ -245,9 +360,15 @@ def analyze_report(request: OpenAIAnalyzeRequest, ctx: RunContext) -> OpenAIAnal
         payload = resp.choices[0].message.content
         request_id = getattr(resp, "id", None)
         usage = getattr(resp, "usage", None)
-        prompt_tokens = getattr(usage, "prompt_tokens", None) if usage is not None else None
-        completion_tokens = getattr(usage, "completion_tokens", None) if usage is not None else None
-        total_tokens = getattr(usage, "total_tokens", None) if usage is not None else None
+        prompt_tokens = (
+            getattr(usage, "prompt_tokens", None) if usage is not None else None
+        )
+        completion_tokens = (
+            getattr(usage, "completion_tokens", None) if usage is not None else None
+        )
+        total_tokens = (
+            getattr(usage, "total_tokens", None) if usage is not None else None
+        )
 
     try:
         _do_modern_call()
@@ -267,8 +388,17 @@ def analyze_report(request: OpenAIAnalyzeRequest, ctx: RunContext) -> OpenAIAnal
             context={"model": request.model},
         ) from exc
 
+    payload_text = payload if isinstance(payload, str) else ""
+    if not payload_text:
+        raise AppError(
+            code="openai_response_empty",
+            message="OpenAI response payload is empty",
+            retryable=False,
+            context={"model": request.model},
+        )
+
     try:
-        data = json.loads(payload)
+        data = json.loads(payload_text)
         _validate_payload(data)
     except json.JSONDecodeError as exc:
         raise AppError(
@@ -305,42 +435,56 @@ def analyze_report(request: OpenAIAnalyzeRequest, ctx: RunContext) -> OpenAIAnal
             model=request.model,
             input_tokens=int(prompt_tokens or 0),
             output_tokens=int(completion_tokens or 0),
-            cached_input_tokens=int(cached_tokens) if cached_tokens is not None else None,
+            cached_input_tokens=int(cached_tokens)
+            if cached_tokens is not None
+            else None,
             tool_calls=int(tool_calls or 0),
             estimated_cost_usd=estimated_cost,
             extra={"request_id": str(request_id) if request_id else None},
         )
         append_cost_entry(
-            CostLedgerAppendRequest(schema_version="1.0", path=request.cost_ledger_path, entry=entry),
+            CostLedgerAppendRequest(
+                schema_version="1.0", path=request.cost_ledger_path, entry=entry
+            ),
             ctx,
         )
         rollup_daily(
-            CostRollupRequest(schema_version="1.0", ledger_path=request.cost_ledger_path, out_path=request.cost_daily_path),
+            CostRollupRequest(
+                schema_version="1.0",
+                ledger_path=request.cost_ledger_path,
+                out_path=request.cost_daily_path,
+            ),
             ctx,
         )
-    except Exception as exc:  # pragma: no cover - ledger failures must not break main flow
-        logger.info(log_event(
+    except (
+        Exception
+    ) as exc:  # pragma: no cover - ledger failures must not break main flow
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="cost_ledger_write_failed",
+                module=logger.name,
+                fields={"error": str(exc)},
+            )
+        )
+
+    logger.info(
+        log_event(
             ctx,
             role="service",
-            event="cost_ledger_write_failed",
+            event="openai_analyze_complete",
             module=logger.name,
-            fields={"error": str(exc)},
-        ))
-
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="openai_analyze_complete",
-        module=logger.name,
-        fields={
-            "request_id": request_id or "",
-            "prompt_system_sha256": request.prompt_system_sha256,
-            "prompt_user_sha256": request.prompt_user_sha256,
-            "prompt_tokens": prompt_tokens,
-            "completion_tokens": completion_tokens,
-            "total_tokens": total_tokens,
-        },
-    ))
+            fields={
+                "request_id": request_id or "",
+                "prompt_system_sha256": request.prompt_system_sha256,
+                "prompt_user_sha256": request.prompt_user_sha256,
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": total_tokens,
+            },
+        )
+    )
 
     quote = Quote(
         text=data.get("quote", {}).get("text", ""),
@@ -375,7 +519,6 @@ def analyze_report(request: OpenAIAnalyzeRequest, ctx: RunContext) -> OpenAIAnal
         time_period=time_period,
         commentary=data.get("commentary", ""),
         source=data.get("source", ""),
-        _openai_file_id="",
     )
 
     return OpenAIAnalyzeResponse(
@@ -385,7 +528,7 @@ def analyze_report(request: OpenAIAnalyzeRequest, ctx: RunContext) -> OpenAIAnal
         prompt_user_sha256=request.prompt_user_sha256,
         model=request.model,
         temperature=request.temperature,
-        raw_content=payload,
+        raw_content=payload_text,
         prompt_tokens=prompt_tokens,
         completion_tokens=completion_tokens,
         total_tokens=total_tokens,
@@ -393,19 +536,23 @@ def analyze_report(request: OpenAIAnalyzeRequest, ctx: RunContext) -> OpenAIAnal
     )
 
 
-def openai_chat_json(request: OpenAIJSONPromptRequest, ctx: RunContext) -> OpenAIResponseResult:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="openai_chat_json_start",
-        module=logger.name,
-        fields={
-            "model": request.model,
-            "temperature": request.temperature,
-            "seed": request.seed,
-            "timeout_seconds": request.timeout_seconds,
-        },
-    ))
+def openai_chat_json(
+    request: OpenAIJSONPromptRequest, ctx: RunContext
+) -> OpenAIResponseResult:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="openai_chat_json_start",
+            module=logger.name,
+            fields={
+                "model": request.model,
+                "temperature": request.temperature,
+                "seed": request.seed,
+                "timeout_seconds": request.timeout_seconds,
+            },
+        )
+    )
     client_kwargs: dict = {"api_key": request.api_key}
     if request.timeout_seconds is not None:
         client_kwargs["timeout"] = request.timeout_seconds
@@ -436,9 +583,15 @@ def openai_chat_json(request: OpenAIJSONPromptRequest, ctx: RunContext) -> OpenA
         text = resp.choices[0].message.content or ""
         request_id = getattr(resp, "id", None)
         usage = getattr(resp, "usage", None)
-        prompt_tokens = getattr(usage, "prompt_tokens", None) if usage is not None else None
-        completion_tokens = getattr(usage, "completion_tokens", None) if usage is not None else None
-        total_tokens = getattr(usage, "total_tokens", None) if usage is not None else None
+        prompt_tokens = (
+            getattr(usage, "prompt_tokens", None) if usage is not None else None
+        )
+        completion_tokens = (
+            getattr(usage, "completion_tokens", None) if usage is not None else None
+        )
+        total_tokens = (
+            getattr(usage, "total_tokens", None) if usage is not None else None
+        )
 
     try:
         try:
@@ -490,36 +643,46 @@ def openai_chat_json(request: OpenAIJSONPromptRequest, ctx: RunContext) -> OpenA
             extra={"request_id": str(request_id) if request_id else None},
         )
         append_cost_entry(
-            CostLedgerAppendRequest(schema_version="1.0", path=request.cost_ledger_path, entry=entry),
+            CostLedgerAppendRequest(
+                schema_version="1.0", path=request.cost_ledger_path, entry=entry
+            ),
             ctx,
         )
         rollup_daily(
-            CostRollupRequest(schema_version="1.0", ledger_path=request.cost_ledger_path, out_path=request.cost_daily_path),
+            CostRollupRequest(
+                schema_version="1.0",
+                ledger_path=request.cost_ledger_path,
+                out_path=request.cost_daily_path,
+            ),
             ctx,
         )
     except Exception as exc:  # pragma: no cover
-        logger.info(log_event(
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="cost_ledger_write_failed",
+                module=logger.name,
+                fields={"error": str(exc)},
+            )
+        )
+
+    logger.info(
+        log_event(
             ctx,
             role="service",
-            event="cost_ledger_write_failed",
+            event="openai_chat_json_complete",
             module=logger.name,
-            fields={"error": str(exc)},
-        ))
-
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="openai_chat_json_complete",
-        module=logger.name,
-        fields={
-            "model": request.model,
-            "request_id": request_id or "",
-            "prompt_tokens": prompt_tokens,
-            "completion_tokens": completion_tokens,
-            "total_tokens": total_tokens,
-            "parsed_json": isinstance(parsed_json, dict),
-        },
-    ))
+            fields={
+                "model": request.model,
+                "request_id": request_id or "",
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": total_tokens,
+                "parsed_json": isinstance(parsed_json, dict),
+            },
+        )
+    )
 
     return OpenAIResponseResult(
         schema_version="1.0",
@@ -534,20 +697,24 @@ def openai_chat_json(request: OpenAIJSONPromptRequest, ctx: RunContext) -> OpenA
     )
 
 
-def openai_chat_json_with_images(request: OpenAIJSONImagePromptRequest, ctx: RunContext) -> OpenAIResponseResult:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="openai_chat_json_with_images_start",
-        module=logger.name,
-        fields={
-            "model": request.model,
-            "temperature": request.temperature,
-            "seed": request.seed,
-            "timeout_seconds": request.timeout_seconds,
-            "image_count": len(request.image_paths or []),
-        },
-    ))
+def openai_chat_json_with_images(
+    request: OpenAIJSONImagePromptRequest, ctx: RunContext
+) -> OpenAIResponseResult:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="openai_chat_json_with_images_start",
+            module=logger.name,
+            fields={
+                "model": request.model,
+                "temperature": request.temperature,
+                "seed": request.seed,
+                "timeout_seconds": request.timeout_seconds,
+                "image_count": len(request.image_paths or []),
+            },
+        )
+    )
     if not request.image_paths:
         raise AppError(
             code="openai_images_missing",
@@ -563,11 +730,16 @@ def openai_chat_json_with_images(request: OpenAIJSONImagePromptRequest, ctx: Run
             raise TypeError("OpenAI client not available")
         client = OpenAI(**client_kwargs)
         user_content = [{"type": "input_text", "text": request.user_prompt}]
-        user_content.extend({"type": "input_image", "image_url": image_url} for image_url in image_urls)
+        user_content.extend(
+            {"type": "input_image", "image_url": image_url} for image_url in image_urls
+        )
         payload_args = {
             "model": request.model,
             "input": [
-                {"role": "system", "content": [{"type": "input_text", "text": request.system_prompt}]},
+                {
+                    "role": "system",
+                    "content": [{"type": "input_text", "text": request.system_prompt}],
+                },
                 {"role": "user", "content": user_content},
             ],
         }
@@ -592,17 +764,19 @@ def openai_chat_json_with_images(request: OpenAIJSONImagePromptRequest, ctx: Run
             context={"model": request.model},
         ) from exc
     except Exception as exc:
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="openai_chat_json_with_images_error",
-            module=logger.name,
-            fields={
-                "model": request.model,
-                "error_type": type(exc).__name__,
-                "error": str(exc),
-            },
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="openai_chat_json_with_images_error",
+                module=logger.name,
+                fields={
+                    "model": request.model,
+                    "error_type": type(exc).__name__,
+                    "error": str(exc),
+                },
+            )
+        )
         raise AppError(
             code="openai_chat_images_failed",
             message="OpenAI JSON+images request failed",
@@ -652,36 +826,46 @@ def openai_chat_json_with_images(request: OpenAIJSONImagePromptRequest, ctx: Run
             extra={"request_id": str(request_id) if request_id else None},
         )
         append_cost_entry(
-            CostLedgerAppendRequest(schema_version="1.0", path=request.cost_ledger_path, entry=entry),
+            CostLedgerAppendRequest(
+                schema_version="1.0", path=request.cost_ledger_path, entry=entry
+            ),
             ctx,
         )
         rollup_daily(
-            CostRollupRequest(schema_version="1.0", ledger_path=request.cost_ledger_path, out_path=request.cost_daily_path),
+            CostRollupRequest(
+                schema_version="1.0",
+                ledger_path=request.cost_ledger_path,
+                out_path=request.cost_daily_path,
+            ),
             ctx,
         )
     except Exception as exc:  # pragma: no cover
-        logger.info(log_event(
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="cost_ledger_write_failed",
+                module=logger.name,
+                fields={"error": str(exc)},
+            )
+        )
+    logger.info(
+        log_event(
             ctx,
             role="service",
-            event="cost_ledger_write_failed",
+            event="openai_chat_json_with_images_complete",
             module=logger.name,
-            fields={"error": str(exc)},
-        ))
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="openai_chat_json_with_images_complete",
-        module=logger.name,
-        fields={
-            "model": request.model,
-            "request_id": request_id or "",
-            "image_count": len(request.image_paths or []),
-            "input_tokens": input_tokens,
-            "output_tokens": output_tokens,
-            "tool_calls": tool_calls,
-            "parsed_json": isinstance(parsed_json, dict),
-        },
-    ))
+            fields={
+                "model": request.model,
+                "request_id": request_id or "",
+                "image_count": len(request.image_paths or []),
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "tool_calls": tool_calls,
+                "parsed_json": isinstance(parsed_json, dict),
+            },
+        )
+    )
     return OpenAIResponseResult(
         schema_version="1.0",
         text=text,
@@ -695,19 +879,23 @@ def openai_chat_json_with_images(request: OpenAIJSONImagePromptRequest, ctx: Run
     )
 
 
-def openai_respond_with_vector_store(request: OpenAIResponseRequest, ctx: RunContext) -> OpenAIResponseResult:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="openai_response_start",
-        module=logger.name,
-        fields={
-            "model": request.model,
-            "temperature": request.temperature,
-            "vector_store_id": request.vector_store_id,
-            "timeout_seconds": request.timeout_seconds,
-        },
-    ))
+def openai_respond_with_vector_store(
+    request: OpenAIResponseRequest, ctx: RunContext
+) -> OpenAIResponseResult:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="openai_response_start",
+            module=logger.name,
+            fields={
+                "model": request.model,
+                "temperature": request.temperature,
+                "vector_store_id": request.vector_store_id,
+                "timeout_seconds": request.timeout_seconds,
+            },
+        )
+    )
     if not request.vector_store_id:
         raise AppError(
             code="vector_store_missing",
@@ -725,7 +913,9 @@ def openai_respond_with_vector_store(request: OpenAIResponseRequest, ctx: RunCon
         "instructions": request.system_prompt,
         "input": [{"role": "user", "content": user_prompt}],
         "temperature": request.temperature,
-        "tools": [{"type": "file_search", "vector_store_ids": [request.vector_store_id]}],
+        "tools": [
+            {"type": "file_search", "vector_store_ids": [request.vector_store_id]}
+        ],
     }
     if request.seed is not None:
         payload_args["seed"] = request.seed
@@ -743,34 +933,48 @@ def openai_respond_with_vector_store(request: OpenAIResponseRequest, ctx: RunCon
             context={"model": request.model},
         ) from exc
     except Exception as exc:
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="openai_response_error",
-            module=logger.name,
-            fields={
-                "model": request.model,
-                "vector_store_id": request.vector_store_id,
-                "error": str(exc),
-                "error_type": type(exc).__name__,
-            },
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="openai_response_error",
+                module=logger.name,
+                fields={
+                    "model": request.model,
+                    "vector_store_id": request.vector_store_id,
+                    "error": str(exc),
+                    "error_type": type(exc).__name__,
+                },
+            )
+        )
         raise AppError(
             code="openai_response_failed",
             message="OpenAI responses request failed",
             cause=exc,
             retryable=True,
-            context={"model": request.model, "vector_store_id": request.vector_store_id, "error": str(exc)},
+            context={
+                "model": request.model,
+                "vector_store_id": request.vector_store_id,
+                "error": str(exc),
+            },
         ) from exc
 
     text = getattr(resp, "output_text", None)
     if text is None:
-        output = getattr(resp, "output", None) or getattr(resp, "choices", None) or getattr(resp, "data", None)
+        output = (
+            getattr(resp, "output", None)
+            or getattr(resp, "choices", None)
+            or getattr(resp, "data", None)
+        )
         if output and isinstance(output, list):
             first = output[0]
-            content = getattr(first, "content", None) or (first.get("content") if isinstance(first, dict) else None)
+            content = getattr(first, "content", None) or (
+                first.get("content") if isinstance(first, dict) else None
+            )
             if content and isinstance(content, list):
-                maybe_text = getattr(content[0], "text", None) or (content[0].get("text") if isinstance(content[0], dict) else None)
+                maybe_text = getattr(content[0], "text", None) or (
+                    content[0].get("text") if isinstance(content[0], dict) else None
+                )
                 if maybe_text:
                     text = maybe_text
     if text is None:
@@ -786,12 +990,19 @@ def openai_respond_with_vector_store(request: OpenAIResponseRequest, ctx: RunCon
     tool_calls = 0
     if isinstance(usage, dict):
         tool_calls = usage.get("total_tool_calls") or usage.get("tool_calls") or 0
-    parsed_json = None
-    if text:
-        try:
-            parsed_json = json.loads(text)
-        except json.JSONDecodeError:
-            parsed_json = None
+    parsed_json, parse_strategy = _parse_json_object_from_text(text)
+    parse_error_code = ""
+    parse_error_message = ""
+    if parsed_json is None:
+        if parse_strategy == "empty":
+            parse_error_code = "openai_response_empty"
+            parse_error_message = "OpenAI response from vector store is empty"
+        elif parse_strategy == "json_non_object":
+            parse_error_code = "openai_response_json_type_invalid"
+            parse_error_message = "OpenAI response JSON must be an object"
+        else:
+            parse_error_code = "openai_response_invalid_json"
+            parse_error_message = "OpenAI response is not valid JSON"
 
     estimated_cost = estimate_cost_usd(
         request.model,
@@ -817,36 +1028,60 @@ def openai_respond_with_vector_store(request: OpenAIResponseRequest, ctx: RunCon
             extra={"request_id": str(request_id) if request_id else None},
         )
         append_cost_entry(
-            CostLedgerAppendRequest(schema_version="1.0", path=request.cost_ledger_path, entry=entry),
+            CostLedgerAppendRequest(
+                schema_version="1.0", path=request.cost_ledger_path, entry=entry
+            ),
             ctx,
         )
         rollup_daily(
-            CostRollupRequest(schema_version="1.0", ledger_path=request.cost_ledger_path, out_path=request.cost_daily_path),
+            CostRollupRequest(
+                schema_version="1.0",
+                ledger_path=request.cost_ledger_path,
+                out_path=request.cost_daily_path,
+            ),
             ctx,
         )
     except Exception as exc:  # pragma: no cover
-        logger.info(log_event(
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="cost_ledger_write_failed",
+                module=logger.name,
+                fields={"error": str(exc)},
+            )
+        )
+
+    logger.info(
+        log_event(
             ctx,
             role="service",
-            event="cost_ledger_write_failed",
+            event="openai_response_complete",
             module=logger.name,
-            fields={"error": str(exc)},
-        ))
-
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="openai_response_complete",
-        module=logger.name,
-        fields={
-            "model": request.model,
-            "request_id": request_id or "",
-            "input_tokens": input_tokens,
-            "output_tokens": output_tokens,
-            "tool_calls": tool_calls,
-            "parsed_json": parsed_json is not None,
-        },
-    ))
+            fields={
+                "model": request.model,
+                "request_id": request_id or "",
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "tool_calls": tool_calls,
+                "parsed_json": parsed_json is not None,
+                "parse_strategy": parse_strategy,
+                "parse_error_code": parse_error_code,
+            },
+        )
+    )
+    if parse_error_code:
+        raise AppError(
+            code=parse_error_code,
+            message=parse_error_message,
+            retryable=False,
+            context={
+                "model": request.model,
+                "vector_store_id": request.vector_store_id,
+                "parse_strategy": parse_strategy,
+                "response_text_preview": text[:240],
+            },
+        )
     return OpenAIResponseResult(
         schema_version="1.0",
         text=text,
@@ -872,8 +1107,12 @@ def _require_api_key(api_key: str, *, operation: str) -> str:
     return key
 
 
-def _build_openai_client(*, api_key: str, timeout_seconds: float | None, operation: str) -> Any:
-    client_kwargs: dict[str, Any] = {"api_key": _require_api_key(api_key, operation=operation)}
+def _build_openai_client(
+    *, api_key: str, timeout_seconds: float | None, operation: str
+) -> Any:
+    client_kwargs: dict[str, Any] = {
+        "api_key": _require_api_key(api_key, operation=operation)
+    }
     if timeout_seconds is not None:
         client_kwargs["timeout"] = timeout_seconds
     try:
@@ -912,25 +1151,31 @@ def _require_openai_id(response: Any, *, code: str, message: str) -> str:
     return str(response_id)
 
 
-def openai_vector_store_create(request: OpenAIVectorStoreCreateRequest, ctx: RunContext) -> OpenAIVectorStoreCreateResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="openai_vector_store_create_start",
-        module=logger.name,
-        fields={
-            "name": request.name,
-            "metadata_keys": list((request.metadata or {}).keys()),
-            "timeout_seconds": request.timeout_seconds,
-        },
-    ))
+def openai_vector_store_create(
+    request: OpenAIVectorStoreCreateRequest, ctx: RunContext
+) -> OpenAIVectorStoreCreateResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="openai_vector_store_create_start",
+            module=logger.name,
+            fields={
+                "name": request.name,
+                "metadata_keys": list((request.metadata or {}).keys()),
+                "timeout_seconds": request.timeout_seconds,
+            },
+        )
+    )
     try:
         client = _build_openai_client(
             api_key=request.api_key,
             timeout_seconds=request.timeout_seconds,
             operation="vector_store_create",
         )
-        resp = client.vector_stores.create(name=request.name, metadata=request.metadata or {})
+        resp = client.vector_stores.create(
+            name=request.name, metadata=request.metadata or {}
+        )
         vector_store_id = _require_openai_id(
             resp,
             code="openai_vector_store_create_failed",
@@ -946,31 +1191,37 @@ def openai_vector_store_create(request: OpenAIVectorStoreCreateRequest, ctx: Run
             retryable=True,
         ) from exc
 
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="openai_vector_store_create_complete",
-        module=logger.name,
-        fields={"name": request.name, "vector_store_id": vector_store_id},
-    ))
-    return OpenAIVectorStoreCreateResponse(schema_version="1.0", vector_store_id=vector_store_id)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="openai_vector_store_create_complete",
+            module=logger.name,
+            fields={"name": request.name, "vector_store_id": vector_store_id},
+        )
+    )
+    return OpenAIVectorStoreCreateResponse(
+        schema_version="1.0", vector_store_id=vector_store_id
+    )
 
 
 def openai_vector_store_upload_file(
     request: OpenAIVectorStoreFileUploadRequest,
     ctx: RunContext,
 ) -> OpenAIVectorStoreFileUploadResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="openai_vector_store_upload_start",
-        module=logger.name,
-        fields={
-            "file_path": request.file_path,
-            "purpose": request.purpose,
-            "timeout_seconds": request.timeout_seconds,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="openai_vector_store_upload_start",
+            module=logger.name,
+            fields={
+                "file_path": request.file_path,
+                "purpose": request.purpose,
+                "timeout_seconds": request.timeout_seconds,
+            },
+        )
+    )
     try:
         client = _build_openai_client(
             api_key=request.api_key,
@@ -1008,31 +1259,37 @@ def openai_vector_store_upload_file(
             retryable=True,
         ) from exc
 
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="openai_vector_store_upload_complete",
-        module=logger.name,
-        fields={"file_path": request.file_path, "openai_file_id": openai_file_id},
-    ))
-    return OpenAIVectorStoreFileUploadResponse(schema_version="1.0", openai_file_id=openai_file_id)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="openai_vector_store_upload_complete",
+            module=logger.name,
+            fields={"file_path": request.file_path, "openai_file_id": openai_file_id},
+        )
+    )
+    return OpenAIVectorStoreFileUploadResponse(
+        schema_version="1.0", openai_file_id=openai_file_id
+    )
 
 
 def openai_vector_store_attach_file(
     request: OpenAIVectorStoreAttachFileRequest,
     ctx: RunContext,
 ) -> OpenAIVectorStoreAttachFileResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="openai_vector_store_attach_start",
-        module=logger.name,
-        fields={
-            "vector_store_id": request.vector_store_id,
-            "openai_file_id": request.openai_file_id,
-            "timeout_seconds": request.timeout_seconds,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="openai_vector_store_attach_start",
+            module=logger.name,
+            fields={
+                "vector_store_id": request.vector_store_id,
+                "openai_file_id": request.openai_file_id,
+                "timeout_seconds": request.timeout_seconds,
+            },
+        )
+    )
     try:
         client = _build_openai_client(
             api_key=request.api_key,
@@ -1058,13 +1315,18 @@ def openai_vector_store_attach_file(
             retryable=True,
         ) from exc
 
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="openai_vector_store_attach_complete",
-        module=logger.name,
-        fields={"vector_store_id": request.vector_store_id, "openai_file_id": attached_id},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="openai_vector_store_attach_complete",
+            module=logger.name,
+            fields={
+                "vector_store_id": request.vector_store_id,
+                "openai_file_id": attached_id,
+            },
+        )
+    )
     return OpenAIVectorStoreAttachFileResponse(
         schema_version="1.0",
         vector_store_id=request.vector_store_id,
@@ -1076,13 +1338,18 @@ def openai_vector_store_status(
     request: OpenAIVectorStoreStatusRequest,
     ctx: RunContext,
 ) -> OpenAIVectorStoreStatusResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="openai_vector_store_status_start",
-        module=logger.name,
-        fields={"vector_store_id": request.vector_store_id, "timeout_seconds": request.timeout_seconds},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="openai_vector_store_status_start",
+            module=logger.name,
+            fields={
+                "vector_store_id": request.vector_store_id,
+                "timeout_seconds": request.timeout_seconds,
+            },
+        )
+    )
     try:
         client = _build_openai_client(
             api_key=request.api_key,
@@ -1104,13 +1371,15 @@ def openai_vector_store_status(
             context={"vector_store_id": request.vector_store_id},
         ) from exc
 
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="openai_vector_store_status_complete",
-        module=logger.name,
-        fields={"vector_store_id": request.vector_store_id, "status": status},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="openai_vector_store_status_complete",
+            module=logger.name,
+            fields={"vector_store_id": request.vector_store_id, "status": status},
+        )
+    )
     return OpenAIVectorStoreStatusResponse(
         schema_version="1.0",
         vector_store_id=request.vector_store_id,
@@ -1124,17 +1393,19 @@ def openai_vector_store_update_metadata(
     request: OpenAIVectorStoreUpdateMetadataRequest,
     ctx: RunContext,
 ) -> OpenAIVectorStoreUpdateMetadataResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="openai_vector_store_update_metadata_start",
-        module=logger.name,
-        fields={
-            "vector_store_id": request.vector_store_id,
-            "metadata_keys": list((request.metadata or {}).keys()),
-            "timeout_seconds": request.timeout_seconds,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="openai_vector_store_update_metadata_start",
+            module=logger.name,
+            fields={
+                "vector_store_id": request.vector_store_id,
+                "metadata_keys": list((request.metadata or {}).keys()),
+                "timeout_seconds": request.timeout_seconds,
+            },
+        )
+    )
     try:
         client = _build_openai_client(
             api_key=request.api_key,
@@ -1161,11 +1432,15 @@ def openai_vector_store_update_metadata(
             context={"vector_store_id": request.vector_store_id},
         ) from exc
 
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="openai_vector_store_update_metadata_complete",
-        module=logger.name,
-        fields={"vector_store_id": updated_id},
-    ))
-    return OpenAIVectorStoreUpdateMetadataResponse(schema_version="1.0", vector_store_id=updated_id)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="openai_vector_store_update_metadata_complete",
+            module=logger.name,
+            fields={"vector_store_id": updated_id},
+        )
+    )
+    return OpenAIVectorStoreUpdateMetadataResponse(
+        schema_version="1.0", vector_store_id=updated_id
+    )

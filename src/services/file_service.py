@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 from pathlib import Path
 from typing import List
@@ -19,6 +20,8 @@ from src.contracts.files import (
     ListDirectoryResponse,
     ListHtmlRequest,
     ListHtmlResponse,
+    PdfCacheTextReadRequest,
+    PdfCacheTextReadResponse,
     ReadBytesRequest,
     ReadBytesResponse,
     ReadTextRequest,
@@ -34,13 +37,15 @@ logger = logging.getLogger("market_lense.file_service")
 
 
 def read_text(request: ReadTextRequest, ctx: RunContext) -> ReadTextResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="read_text_start",
-        module=logger.name,
-        fields={"path": request.path},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="read_text_start",
+            module=logger.name,
+            fields={"path": request.path},
+        )
+    )
     try:
         content = Path(request.path).read_text(encoding="utf-8")
     except FileNotFoundError as exc:
@@ -58,24 +63,28 @@ def read_text(request: ReadTextRequest, ctx: RunContext) -> ReadTextResponse:
             retryable=False,
         ) from exc
 
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="read_text_complete",
-        module=logger.name,
-        fields={"path": request.path, "length": len(content)},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="read_text_complete",
+            module=logger.name,
+            fields={"path": request.path, "length": len(content)},
+        )
+    )
     return ReadTextResponse(schema_version="1.0", path=request.path, content=content)
 
 
 def read_bytes(request: ReadBytesRequest, ctx: RunContext) -> ReadBytesResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="read_bytes_start",
-        module=logger.name,
-        fields={"path": request.path},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="read_bytes_start",
+            module=logger.name,
+            fields={"path": request.path},
+        )
+    )
     try:
         content = Path(request.path).read_bytes()
     except FileNotFoundError as exc:
@@ -93,24 +102,28 @@ def read_bytes(request: ReadBytesRequest, ctx: RunContext) -> ReadBytesResponse:
             retryable=False,
         ) from exc
 
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="read_bytes_complete",
-        module=logger.name,
-        fields={"path": request.path, "length": len(content)},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="read_bytes_complete",
+            module=logger.name,
+            fields={"path": request.path, "length": len(content)},
+        )
+    )
     return ReadBytesResponse(schema_version="1.0", path=request.path, content=content)
 
 
 def list_html(request: ListHtmlRequest, ctx: RunContext) -> ListHtmlResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="list_html_start",
-        module=logger.name,
-        fields={"root_dir": request.root_dir},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="list_html_start",
+            module=logger.name,
+            fields={"root_dir": request.root_dir},
+        )
+    )
     root = Path(request.root_dir)
     if not root.exists():
         raise AppError(
@@ -119,13 +132,15 @@ def list_html(request: ListHtmlRequest, ctx: RunContext) -> ListHtmlResponse:
             retryable=False,
         )
     html_paths: List[str] = [str(p) for p in sorted(root.glob("*.html"))]
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="list_html_complete",
-        module=logger.name,
-        fields={"count": len(html_paths)},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="list_html_complete",
+            module=logger.name,
+            fields={"count": len(html_paths)},
+        )
+    )
     return ListHtmlResponse(
         schema_version="1.0",
         root_dir=request.root_dir,
@@ -133,21 +148,25 @@ def list_html(request: ListHtmlRequest, ctx: RunContext) -> ListHtmlResponse:
     )
 
 
-def list_directory(request: ListDirectoryRequest, ctx: RunContext) -> ListDirectoryResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="list_directory_start",
-        module=logger.name,
-        fields={
-            "root_dir": request.root_dir,
-            "glob_pattern": request.glob_pattern,
-            "recursive": request.recursive,
-            "include_files": request.include_files,
-            "include_dirs": request.include_dirs,
-            "limit": request.limit,
-        },
-    ))
+def list_directory(
+    request: ListDirectoryRequest, ctx: RunContext
+) -> ListDirectoryResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="list_directory_start",
+            module=logger.name,
+            fields={
+                "root_dir": request.root_dir,
+                "glob_pattern": request.glob_pattern,
+                "recursive": request.recursive,
+                "include_files": request.include_files,
+                "include_dirs": request.include_dirs,
+                "limit": request.limit,
+            },
+        )
+    )
     root = Path(request.root_dir)
     if not root.exists():
         raise AppError(
@@ -168,24 +187,28 @@ def list_directory(request: ListDirectoryRequest, ctx: RunContext) -> ListDirect
         if (not is_dir) and not request.include_files:
             continue
         stat = entry.stat()
-        entries.append(DirectoryEntry(
-            schema_version="1.0",
-            path=str(entry),
-            name=entry.name,
-            is_dir=is_dir,
-            size_bytes=None if is_dir else int(stat.st_size),
-            mtime_utc=float(stat.st_mtime),
-        ))
+        entries.append(
+            DirectoryEntry(
+                schema_version="1.0",
+                path=str(entry),
+                name=entry.name,
+                is_dir=is_dir,
+                size_bytes=None if is_dir else int(stat.st_size),
+                mtime_utc=float(stat.st_mtime),
+            )
+        )
         if len(entries) >= limit:
             break
     entries.sort(key=lambda item: item.path)
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="list_directory_complete",
-        module=logger.name,
-        fields={"root_dir": request.root_dir, "count": len(entries)},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="list_directory_complete",
+            module=logger.name,
+            fields={"root_dir": request.root_dir, "count": len(entries)},
+        )
+    )
     return ListDirectoryResponse(
         schema_version="1.0",
         root_dir=request.root_dir,
@@ -194,32 +217,38 @@ def list_directory(request: ListDirectoryRequest, ctx: RunContext) -> ListDirect
 
 
 def file_exists(request: FileExistsRequest, ctx: RunContext) -> FileExistsResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="file_exists_start",
-        module=logger.name,
-        fields={"path": request.path},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="file_exists_start",
+            module=logger.name,
+            fields={"path": request.path},
+        )
+    )
     exists = Path(request.path).exists()
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="file_exists_complete",
-        module=logger.name,
-        fields={"path": request.path, "exists": exists},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="file_exists_complete",
+            module=logger.name,
+            fields={"path": request.path, "exists": exists},
+        )
+    )
     return FileExistsResponse(schema_version="1.0", path=request.path, exists=exists)
 
 
 def write_bytes(request: WriteBytesRequest, ctx: RunContext) -> WriteBytesResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="write_bytes_start",
-        module=logger.name,
-        fields={"path": request.path, "size": len(request.content)},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="write_bytes_start",
+            module=logger.name,
+            fields={"path": request.path, "size": len(request.content)},
+        )
+    )
     path = Path(request.path)
     if request.make_parents:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -233,13 +262,15 @@ def write_bytes(request: WriteBytesRequest, ctx: RunContext) -> WriteBytesRespon
             retryable=False,
         ) from exc
     md5 = _md5_bytes(request.content)
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="write_bytes_complete",
-        module=logger.name,
-        fields={"path": request.path, "md5": md5},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="write_bytes_complete",
+            module=logger.name,
+            fields={"path": request.path, "md5": md5},
+        )
+    )
     return WriteBytesResponse(
         schema_version="1.0",
         path=request.path,
@@ -249,13 +280,15 @@ def write_bytes(request: WriteBytesRequest, ctx: RunContext) -> WriteBytesRespon
 
 
 def file_md5(request: FileHashRequest, ctx: RunContext) -> FileHashResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="file_md5_start",
-        module=logger.name,
-        fields={"path": request.path},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="file_md5_start",
+            module=logger.name,
+            fields={"path": request.path},
+        )
+    )
     path = Path(request.path)
     if not path.exists():
         raise AppError(
@@ -272,24 +305,28 @@ def file_md5(request: FileHashRequest, ctx: RunContext) -> FileHashResponse:
             cause=exc,
             retryable=False,
         ) from exc
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="file_md5_complete",
-        module=logger.name,
-        fields={"path": request.path, "md5": md5},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="file_md5_complete",
+            module=logger.name,
+            fields={"path": request.path, "md5": md5},
+        )
+    )
     return FileHashResponse(schema_version="1.0", path=request.path, md5=md5)
 
 
 def file_stat(request: FileStatRequest, ctx: RunContext) -> FileStatResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="file_stat_start",
-        module=logger.name,
-        fields={"path": request.path, "compute_md5": request.compute_md5},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="file_stat_start",
+            module=logger.name,
+            fields={"path": request.path, "compute_md5": request.compute_md5},
+        )
+    )
     path = Path(request.path)
     if not path.exists():
         response = FileStatResponse(
@@ -300,13 +337,15 @@ def file_stat(request: FileStatRequest, ctx: RunContext) -> FileStatResponse:
             mtime_utc=None,
             md5=None,
         )
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="file_stat_complete",
-            module=logger.name,
-            fields={"path": request.path, "exists": False},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="file_stat_complete",
+                module=logger.name,
+                fields={"path": request.path, "exists": False},
+            )
+        )
         return response
     try:
         stat = path.stat()
@@ -336,30 +375,34 @@ def file_stat(request: FileStatRequest, ctx: RunContext) -> FileStatResponse:
         mtime_utc=stat.st_mtime,
         md5=md5,
     )
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="file_stat_complete",
-        module=logger.name,
-        fields={
-            "path": request.path,
-            "exists": True,
-            "size_bytes": response.size_bytes,
-            "mtime_utc": response.mtime_utc,
-            "md5": response.md5,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="file_stat_complete",
+            module=logger.name,
+            fields={
+                "path": request.path,
+                "exists": True,
+                "size_bytes": response.size_bytes,
+                "mtime_utc": response.mtime_utc,
+                "md5": response.md5,
+            },
+        )
+    )
     return response
 
 
 def delete_file(request: DeleteFileRequest, ctx: RunContext) -> DeleteFileResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="delete_file_start",
-        module=logger.name,
-        fields={"path": request.path},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="delete_file_start",
+            module=logger.name,
+            fields={"path": request.path},
+        )
+    )
     path = Path(request.path)
     deleted = False
     if path.exists():
@@ -379,14 +422,100 @@ def delete_file(request: DeleteFileRequest, ctx: RunContext) -> DeleteFileRespon
             message=f"File not found: {request.path}",
             retryable=False,
         )
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="delete_file_complete",
-        module=logger.name,
-        fields={"path": request.path, "deleted": deleted},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="delete_file_complete",
+            module=logger.name,
+            fields={"path": request.path, "deleted": deleted},
+        )
+    )
     return DeleteFileResponse(schema_version="1.0", path=request.path, deleted=deleted)
+
+
+def read_latest_pdf_cache_text(
+    request: PdfCacheTextReadRequest, ctx: RunContext
+) -> PdfCacheTextReadResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="pdf_cache_text_read_start",
+            module=logger.name,
+            fields={"cache_dir": request.cache_dir, "md5": request.md5},
+        )
+    )
+    root = Path(request.cache_dir) / "pdf_cache" / request.md5
+    if not root.exists() or not root.is_dir():
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="pdf_cache_text_read_complete",
+                module=logger.name,
+                fields={
+                    "md5": request.md5,
+                    "hit": False,
+                    "reason": "cache_dir_missing",
+                },
+            )
+        )
+        return PdfCacheTextReadResponse(schema_version="1.0", text="", source_path="")
+
+    candidates = sorted(
+        root.glob("text_*.json"), key=lambda path: path.stat().st_mtime, reverse=True
+    )
+    if not candidates:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="pdf_cache_text_read_complete",
+                module=logger.name,
+                fields={
+                    "md5": request.md5,
+                    "hit": False,
+                    "reason": "no_text_cache_files",
+                },
+            )
+        )
+        return PdfCacheTextReadResponse(schema_version="1.0", text="", source_path="")
+
+    source_path = candidates[0]
+    try:
+        payload = json.loads(source_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="pdf_cache_text_read_failed",
+                module=logger.name,
+                fields={"path": str(source_path), "error": str(exc)},
+            )
+        )
+        return PdfCacheTextReadResponse(schema_version="1.0", text="", source_path="")
+    text = payload.get("text") if isinstance(payload, dict) else ""
+    if not isinstance(text, str):
+        text = ""
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="pdf_cache_text_read_complete",
+            module=logger.name,
+            fields={
+                "md5": request.md5,
+                "hit": bool(text),
+                "source_path": str(source_path),
+                "length": len(text),
+            },
+        )
+    )
+    return PdfCacheTextReadResponse(
+        schema_version="1.0", text=text, source_path=str(source_path)
+    )
 
 
 def _md5_bytes(data: bytes) -> str:

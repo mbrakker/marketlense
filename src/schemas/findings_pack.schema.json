@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FindingsPack",
+  "type": "object",
+  "required": ["findings"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string" },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "text"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "text": { "type": "string" },
+          "evidence": { "type": "string" },
+          "confidence": { "type": "string" },
+          "pages": {
+            "type": "array",
+            "items": { "type": "integer" }
+          }
+        }
+      }
+    },
+    "not_found_reason": { "type": "string" },
+    "_cache": { "type": "object", "additionalProperties": true }
+  }
+}

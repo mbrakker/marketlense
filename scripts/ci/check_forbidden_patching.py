@@ -51,18 +51,34 @@ def _is_contract_constructor_target(path: str) -> bool:
     return bool(target and target[0].isupper())
 
 
+def _is_generator_orchestrator_target(path: str) -> bool:
+    return path.startswith("src.generators.") or path.startswith("src.orchestrators.")
+
+
 def _check_call(path: Path, node: ast.Call) -> list[Violation]:
     violations: list[Violation] = []
     call_name = _call_name(node.func)
 
     if call_name.endswith("monkeypatch.setattr"):
         attr_name: str | None = None
+        target_expr: str | None = None
         if len(node.args) >= 2:
             attr_name = _constant_str(node.args[1])
             if attr_name is None:
                 target_expr = _constant_str(node.args[0])
                 if target_expr and "." in target_expr:
                     attr_name = target_expr.rsplit(".", 1)[-1]
+            else:
+                target_expr = _constant_str(node.args[0])
+        if target_expr and _is_generator_orchestrator_target(target_expr):
+            violations.append(
+                Violation(
+                    path=path,
+                    line=node.lineno,
+                    column=node.col_offset + 1,
+                    message=f"forbidden generator/orchestrator monkeypatch target: {target_expr}",
+                )
+            )
         if _is_private_attr(attr_name):
             violations.append(
                 Violation(
@@ -82,6 +98,15 @@ def _check_call(path: Path, node: ast.Call) -> list[Violation]:
     if is_patch_call and node.args:
         target = _constant_str(node.args[0])
         if target:
+            if _is_generator_orchestrator_target(target):
+                violations.append(
+                    Violation(
+                        path=path,
+                        line=node.lineno,
+                        column=node.col_offset + 1,
+                        message=f"forbidden generator/orchestrator patch target: {target}",
+                    )
+                )
             attr_name = target.rsplit(".", 1)[-1]
             if _is_private_attr(attr_name):
                 violations.append(

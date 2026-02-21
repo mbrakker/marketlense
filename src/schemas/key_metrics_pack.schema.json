@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "KeyMetricsPack",
+  "type": "object",
+  "required": ["key_metrics"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string" },
+    "key_metrics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "metric", "value"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "metric": { "type": "string" },
+          "value": { "type": "string" },
+          "unit": { "type": "string" },
+          "evidence_id": { "type": "string" },
+          "pages": {
+            "type": "array",
+            "items": { "type": "integer" }
+          }
+        }
+      }
+    },
+    "not_found_reason": { "type": "string" },
+    "_cache": { "type": "object", "additionalProperties": true }
+  }
+}

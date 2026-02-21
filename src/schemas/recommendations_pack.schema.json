@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RecommendationsPack",
+  "type": "object",
+  "required": ["recommendations"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string" },
+    "recommendations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "recommendation"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "recommendation": { "type": "string" },
+          "rationale": { "type": "string" },
+          "evidence_id": { "type": "string" }
+        }
+      }
+    },
+    "not_found_reason": { "type": "string" },
+    "_cache": { "type": "object", "additionalProperties": true }
+  }
+}

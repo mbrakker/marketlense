@@ -12,3 +12,4 @@ pdfplumber>=0.11.8
 PyYAML>=6.0.1
 requests>=2.31.0
 streamlit>=1.41.0
+jsonschema>=4.23.0

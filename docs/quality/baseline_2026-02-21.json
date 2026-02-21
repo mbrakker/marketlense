@@ -1,0 +1,154 @@
+{
+  "coverage": {
+    "global": 61.115,
+    "src/generators": 73.784,
+    "src/orchestrators": 71.5439,
+    "src/services": 44.6556
+  },
+  "docpacks": {
+    "evidence_reference_integrity_rate": 0.333333,
+    "expected_packs": [
+      "doc_map",
+      "scope",
+      "methods",
+      "findings",
+      "limitations",
+      "quote_candidates",
+      "artifacts",
+      "validation"
+    ],
+    "pack_non_empty_rate": 0.81746,
+    "pack_presence_rate": 0.984375,
+    "packs": {
+      "artifacts": {
+        "non_empty": 15,
+        "non_empty_rate": 1.0,
+        "present": 15,
+        "present_rate": 0.9375,
+        "schema_valid": 15,
+        "schema_valid_rate": 1.0
+      },
+      "doc_map": {
+        "non_empty": 12,
+        "non_empty_rate": 0.75,
+        "present": 16,
+        "present_rate": 1.0,
+        "schema_valid": 3,
+        "schema_valid_rate": 0.1875
+      },
+      "findings": {
+        "non_empty": 13,
+        "non_empty_rate": 0.8125,
+        "present": 16,
+        "present_rate": 1.0,
+        "schema_valid": 3,
+        "schema_valid_rate": 0.1875
+      },
+      "limitations": {
+        "non_empty": 12,
+        "non_empty_rate": 0.75,
+        "present": 16,
+        "present_rate": 1.0,
+        "schema_valid": 4,
+        "schema_valid_rate": 0.25
+      },
+      "methods": {
+        "non_empty": 13,
+        "non_empty_rate": 0.8125,
+        "present": 16,
+        "present_rate": 1.0,
+        "schema_valid": 16,
+        "schema_valid_rate": 1.0
+      },
+      "quote_candidates": {
+        "non_empty": 10,
+        "non_empty_rate": 0.625,
+        "present": 16,
+        "present_rate": 1.0,
+        "schema_valid": 1,
+        "schema_valid_rate": 0.0625
+      },
+      "scope": {
+        "non_empty": 13,
+        "non_empty_rate": 0.8125,
+        "present": 16,
+        "present_rate": 1.0,
+        "schema_valid": 12,
+        "schema_valid_rate": 0.75
+      },
+      "validation": {
+        "non_empty": 15,
+        "non_empty_rate": 1.0,
+        "present": 15,
+        "present_rate": 0.9375,
+        "schema_valid": 15,
+        "schema_valid_rate": 1.0
+      }
+    },
+    "report_count": 16,
+    "schema_valid_rate": 0.547619
+  },
+  "generated_at_utc": "2026-02-21T18:00:18.578116+00:00",
+  "mutation": {
+    "src/generators/artifact_generator.py": {
+      "killed": 2.0,
+      "min_score": 60.0,
+      "score": 66.6667,
+      "total": 3.0
+    },
+    "src/generators/evidence_pack_generator.py": {
+      "killed": 3.0,
+      "min_score": 60.0,
+      "score": 100.0,
+      "total": 3.0
+    },
+    "src/generators/taxonomy_generator.py": {
+      "killed": 3.0,
+      "min_score": 75.0,
+      "score": 75.0,
+      "total": 4.0
+    },
+    "src/generators/validation_generator.py": {
+      "killed": 3.0,
+      "min_score": 60.0,
+      "score": 100.0,
+      "total": 3.0
+    },
+    "src/orchestrators/publish_queue_orchestrator.py": {
+      "killed": 3.0,
+      "min_score": 50.0,
+      "score": 75.0,
+      "total": 4.0
+    },
+    "src/orchestrators/report_pipeline_orchestrator.py": {
+      "killed": 3.0,
+      "min_score": 60.0,
+      "score": 100.0,
+      "total": 3.0
+    },
+    "src/services/drive_service.py": {
+      "killed": 2.0,
+      "min_score": 60.0,
+      "score": 100.0,
+      "total": 2.0
+    },
+    "src/services/openai_service.py": {
+      "killed": 3.0,
+      "min_score": 60.0,
+      "score": 100.0,
+      "total": 3.0
+    },
+    "src/services/wordpress_service.py": {
+      "killed": 2.0,
+      "min_score": 60.0,
+      "score": 66.6667,
+      "total": 3.0
+    }
+  },
+  "paths": {
+    "coverage_xml": "coverage.xml",
+    "golden_docpack_root": "tests\\fixtures\\docpacks\\golden",
+    "mutation_json": "mutation_results.json"
+  },
+  "schema_version": "1.0"
+}

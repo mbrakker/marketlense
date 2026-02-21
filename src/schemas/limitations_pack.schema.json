@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LimitationsPack",
+  "type": "object",
+  "required": ["limitations"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string" },
+    "limitations": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "not_found_reason": { "type": "string" },
+    "_cache": { "type": "object", "additionalProperties": true }
+  }
+}

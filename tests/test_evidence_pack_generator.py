@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -7,15 +8,23 @@ from src.contracts.config import AppSettings
 from src.contracts.openai import OpenAIResponseResult
 from src.contracts.prompts import PromptSet, PromptTemplate
 from src.contracts.run_context import RunContext
-from src.generators.evidence_pack_generator import generate_evidence_packs
+from src.generators.evidence_pack_generator import (
+    _resolve_pack_steps,
+    _strip_json_fence,
+    generate_evidence_packs,
+)
 from src.utils.errors import AppError
 from src.utils.slugify import slugify
 
 
 class FakePromptClient:
     def load_prompt_set(self, request, ctx):
-        tmpl = PromptTemplate(schema_version="1.0", path="system", text="sys", sha256="s")
-        user = PromptTemplate(schema_version="1.0", path="user", text="user", sha256="u")
+        tmpl = PromptTemplate(
+            schema_version="1.0", path="system", text="sys", sha256="s"
+        )
+        user = PromptTemplate(
+            schema_version="1.0", path="user", text="user", sha256="u"
+        )
         return PromptSet(schema_version="1.0", system=tmpl, user=user)
 
 
@@ -44,7 +53,18 @@ class RoutedOpenAIClient:
     def openai_respond_with_vector_store(self, req, ctx):
         task_id = getattr(ctx, "task_id", "")
         pack = ""
-        for candidate in ("doc_map", "scope", "methods", "findings", "limitations", "quote_candidates"):
+        for candidate in (
+            "doc_map",
+            "scope",
+            "methods",
+            "findings",
+            "limitations",
+            "quote_candidates",
+            "key_metrics",
+            "risk_register",
+            "recommendations",
+            "contradictions",
+        ):
             if task_id.endswith(f":{candidate}"):
                 pack = candidate
                 break
@@ -73,10 +93,20 @@ class RetryingDocMapClient:
             payload = None
             text = "not json"
         elif self.call_count == 2:
-            payload = {"doc_id": "d1", "title": "title", "sections": [{"title": "Overview"}]}
+            payload = {
+                "doc_id": "d1",
+                "title": "title",
+                "sections": [{"title": "Overview"}],
+            }
             text = "{}"
         else:
-            payload = {"scope": "ok", "methods": [], "findings": [], "limitations": [], "quote_candidates": []}
+            payload = {
+                "scope": "ok",
+                "methods": [],
+                "findings": [],
+                "limitations": [],
+                "quote_candidates": [],
+            }
             text = "{}"
         return OpenAIResponseResult(
             schema_version="1.0",
@@ -98,7 +128,7 @@ class TextFallbackDocMapClient:
         if self.call_count == 1:
             return OpenAIResponseResult(
                 schema_version="1.0",
-                text="```json\n{\"doc_id\":\"d1\",\"title\":\"title\",\"sections\":[{\"title\":\"Overview\"}]}\n```",
+                text='```json\n{"doc_id":"d1","title":"title","sections":[{"title":"Overview"}]}\n```',
                 parsed_json=None,
                 input_tokens=1,
                 output_tokens=1,
@@ -108,7 +138,13 @@ class TextFallbackDocMapClient:
         return OpenAIResponseResult(
             schema_version="1.0",
             text="{}",
-            parsed_json={"scope": "ok", "methods": [], "findings": [], "limitations": [], "quote_candidates": []},
+            parsed_json={
+                "scope": "ok",
+                "methods": [],
+                "findings": [],
+                "limitations": [],
+                "quote_candidates": [],
+            },
             input_tokens=1,
             output_tokens=1,
             tool_calls=0,
@@ -120,13 +156,20 @@ class FakeAnalysisStore:
     def __init__(self):
         self.stored = []
 
-    def store_pack(self, output_dir, report_id, pack_name, payload, ctx, report_slug=None):
+    def store_pack(
+        self, output_dir, report_id, pack_name, payload, ctx, report_slug=None
+    ):
         slug = slugify(report_slug or report_id)
         self.stored.append((report_id, pack_name, payload))
         return f"{output_dir}/{slug}/report_analysis/{pack_name}.json"
 
 
-def _settings(tmp_path):
+def _settings(
+    tmp_path,
+    *,
+    evidence_pack_registry=None,
+    evidence_pack_enable_new_variety_packs=False,
+):
     return AppSettings(
         schema_version="1.0",
         google_sa_path="sa.json",
@@ -139,7 +182,9 @@ def _settings(tmp_path):
         state_db=str(tmp_path / "state.sqlite"),
         reports_db=str(tmp_path / "reports.sqlite"),
         category_mapping_path="cats.yaml",
-        cover_style_path=str(Path(__file__).resolve().parents[1] / "src" / "config" / "cover-styles.yaml"),
+        cover_style_path=str(
+            Path(__file__).resolve().parents[1] / "src" / "config" / "cover-styles.yaml"
+        ),
         ingest_lock_path=str(tmp_path / "lock"),
         temperature=0.1,
         ingest_lock_ttl_seconds=1.0,
@@ -158,9 +203,25 @@ def _settings(tmp_path):
         analysis_mode="vector_store",
         use_vector_store=True,
         vector_store_keep=True,
+        evidence_pack_registry=evidence_pack_registry
+        or [
+            "doc_map",
+            "scope",
+            "methods",
+            "findings",
+            "limitations",
+            "quote_candidates",
+        ],
+        evidence_pack_enable_new_variety_packs=evidence_pack_enable_new_variety_packs,
         cost_ledger_path=str(tmp_path / "cost-ledger.jsonl"),
         cost_daily_path=str(tmp_path / "cost-daily.json"),
-        model_pricing={"gpt-4.1-mini": {"input_tokens_per_1k_usd": 0.003, "output_tokens_per_1k_usd": 0.006, "tool_call_usd": 0.0}},
+        model_pricing={
+            "gpt-4.1-mini": {
+                "input_tokens_per_1k_usd": 0.003,
+                "output_tokens_per_1k_usd": 0.006,
+                "tool_call_usd": 0.0,
+            }
+        },
     )
 
 
@@ -271,7 +332,9 @@ def test_generate_evidence_packs_parses_doc_map_json_from_text_fallback(tmp_path
 
 
 def test_generate_evidence_packs_normalizes_docmap_wrapper(tmp_path):
-    parsed = {"docmap": {"title": "Retail trends", "sections": [{"title": "Section A"}]}}
+    parsed = {
+        "docmap": {"title": "Retail trends", "sections": [{"title": "Section A"}]}
+    }
     fake_openai = FakeOpenAIClient(parsed)
     analysis_store = FakeAnalysisStore()
     packs = generate_evidence_packs(
@@ -297,7 +360,9 @@ def test_generate_evidence_packs_normalizes_docmap_camelcase_wrapper(tmp_path):
         "docMap": {
             "title": "THE 2026 INDUSTRY PULSE REPORT",
             "publisher": "Integral Ad Science",
-            "sections": [{"title": "Top media challenges and opportunities", "page": 5}],
+            "sections": [
+                {"title": "Top media challenges and opportunities", "page": 5}
+            ],
         }
     }
     fake_openai = FakeOpenAIClient(parsed)
@@ -330,7 +395,9 @@ def test_generate_evidence_packs_normalizes_document_structure_shape(tmp_path):
             "publisher": "Sensor Tower",
             "description": "Executive summary and six predictions.",
         },
-        "structure": [{"title": "Executive Summary", "summary": "Overview of six predictions."}],
+        "structure": [
+            {"title": "Executive Summary", "summary": "Overview of six predictions."}
+        ],
     }
     fake_openai = FakeOpenAIClient(parsed)
     analysis_store = FakeAnalysisStore()
@@ -357,7 +424,11 @@ def test_generate_evidence_packs_normalizes_document_structure_shape(tmp_path):
 def test_generate_evidence_packs_normalizes_legacy_findings_shape(tmp_path):
     fake_openai = RoutedOpenAIClient(
         payloads_by_pack={
-            "doc_map": {"doc_id": "d1", "title": "title", "sections": [{"title": "Overview"}]},
+            "doc_map": {
+                "doc_id": "d1",
+                "title": "title",
+                "sections": [{"title": "Overview"}],
+            },
             "findings": {
                 "findings": [
                     {
@@ -394,7 +465,11 @@ def test_generate_evidence_packs_normalizes_legacy_findings_shape(tmp_path):
 def test_generate_evidence_packs_parses_limitations_json_array_from_text(tmp_path):
     fake_openai = RoutedOpenAIClient(
         payloads_by_pack={
-            "doc_map": {"doc_id": "d1", "title": "title", "sections": [{"title": "Overview"}]},
+            "doc_map": {
+                "doc_id": "d1",
+                "title": "title",
+                "sections": [{"title": "Overview"}],
+            },
             "limitations": None,
         },
         text_by_pack={
@@ -412,16 +487,27 @@ def test_generate_evidence_packs_parses_limitations_json_array_from_text(tmp_pat
         analysis_store=FakeAnalysisStore(),
     )
     assert packs["limitations"]["not_found_reason"] == ""
-    assert packs["limitations"]["limitations"] == ["Preliminary sample", "Regional bias"]
+    assert packs["limitations"]["limitations"] == [
+        "Preliminary sample",
+        "Regional bias",
+    ]
 
 
 def test_generate_evidence_packs_normalizes_quote_candidates_shape(tmp_path):
     fake_openai = RoutedOpenAIClient(
         payloads_by_pack={
-            "doc_map": {"doc_id": "d1", "title": "title", "sections": [{"title": "Overview"}]},
+            "doc_map": {
+                "doc_id": "d1",
+                "title": "title",
+                "sections": [{"title": "Overview"}],
+            },
             "quote_candidates": {
                 "quotes": [
-                    {"quote": "The industry is shifting.", "citation": "Section 2", "pages": ["5"]},
+                    {
+                        "quote": "The industry is shifting.",
+                        "citation": "Section 2",
+                        "pages": ["5"],
+                    },
                 ]
             },
         }
@@ -441,3 +527,167 @@ def test_generate_evidence_packs_normalizes_quote_candidates_shape(tmp_path):
     assert quote["text"] == "The industry is shifting."
     assert quote["source"] == "Section 2"
     assert quote["page"] == 5
+
+
+def test_generate_evidence_packs_uses_registry_subset(tmp_path):
+    fake_openai = RoutedOpenAIClient(
+        payloads_by_pack={
+            "doc_map": {
+                "doc_id": "d1",
+                "title": "title",
+                "sections": [{"title": "Overview"}],
+            },
+            "findings": {
+                "findings": [{"id": "f1", "text": "Finding", "evidence": "Evidence"}]
+            },
+        }
+    )
+    packs = generate_evidence_packs(
+        report_id="r1",
+        report_name="report",
+        vector_store_id="vs_1",
+        settings=_settings(tmp_path, evidence_pack_registry=["doc_map", "findings"]),
+        ctx=_ctx(),
+        openai_client=fake_openai,
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+    assert list(packs.keys()) == ["doc_map", "findings"]
+    assert packs["findings"]["findings"][0]["id"] == "f1"
+
+
+def test_generate_evidence_packs_generates_variety_packs_when_enabled(tmp_path):
+    fake_openai = RoutedOpenAIClient(
+        payloads_by_pack={
+            "doc_map": {
+                "doc_id": "d1",
+                "title": "title",
+                "sections": [{"title": "Overview"}],
+            },
+            "scope": {"scope": "Scope summary"},
+            "methods": {"methods": ["Survey"]},
+            "findings": {
+                "findings": [{"id": "f1", "text": "Finding", "evidence": "Evidence"}]
+            },
+            "limitations": {"limitations": ["Small sample"]},
+            "quote_candidates": {
+                "quote_candidates": [
+                    {"id": "q1", "text": "Quote", "source": "CEO", "page": 2}
+                ]
+            },
+            "key_metrics": {
+                "key_metrics": [
+                    {
+                        "id": "m1",
+                        "metric": "Growth",
+                        "value": "10",
+                        "unit": "%",
+                        "evidence_id": "f1",
+                        "pages": [2],
+                    }
+                ]
+            },
+            "risk_register": {
+                "risk_register": [
+                    {
+                        "id": "r1",
+                        "risk": "Churn risk",
+                        "impact": "Revenue",
+                        "likelihood": "Medium",
+                        "mitigation": "Retention",
+                        "evidence_id": "f1",
+                    }
+                ]
+            },
+            "recommendations": {
+                "recommendations": [
+                    {
+                        "id": "rec1",
+                        "recommendation": "Invest in retention",
+                        "rationale": "Churn pressure",
+                        "evidence_id": "f1",
+                    }
+                ]
+            },
+            "contradictions": {
+                "contradictions": [
+                    {
+                        "id": "c1",
+                        "statement_a": "Demand up",
+                        "statement_b": "Conversion down",
+                        "explanation": "Segment split",
+                        "evidence_ids": ["f1"],
+                    }
+                ]
+            },
+        }
+    )
+    packs = generate_evidence_packs(
+        report_id="r1",
+        report_name="report",
+        vector_store_id="vs_1",
+        settings=_settings(tmp_path, evidence_pack_enable_new_variety_packs=True),
+        ctx=_ctx(),
+        openai_client=fake_openai,
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+    assert "key_metrics" in packs
+    assert "risk_register" in packs
+    assert "recommendations" in packs
+    assert "contradictions" in packs
+    assert packs["key_metrics"]["key_metrics"][0]["id"] == "m1"
+    assert packs["risk_register"]["risk_register"][0]["id"] == "r1"
+    assert packs["recommendations"]["recommendations"][0]["id"] == "rec1"
+    assert packs["contradictions"]["contradictions"][0]["id"] == "c1"
+
+
+def test_generate_evidence_packs_variety_pack_non_json_falls_back_with_reason(tmp_path):
+    fake_openai = RoutedOpenAIClient(
+        payloads_by_pack={
+            "doc_map": {
+                "doc_id": "d1",
+                "title": "title",
+                "sections": [{"title": "Overview"}],
+            },
+            "key_metrics": None,
+        },
+        text_by_pack={
+            "key_metrics": "not-json",
+        },
+    )
+    packs = generate_evidence_packs(
+        report_id="r1",
+        report_name="report",
+        vector_store_id="vs_1",
+        settings=_settings(
+            tmp_path,
+            evidence_pack_registry=["doc_map", "key_metrics"],
+            evidence_pack_enable_new_variety_packs=True,
+        ),
+        ctx=_ctx(),
+        openai_client=fake_openai,
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+    assert packs["key_metrics"]["key_metrics"] == []
+    assert packs["key_metrics"]["not_found_reason"] == "model_returned_no_json"
+
+
+def test_strip_json_fence_requires_closing_fence():
+    raw = '```json\n{"key":1}\n'
+    assert _strip_json_fence(raw) == raw.strip()
+
+
+def test_strip_json_fence_strips_allowed_json_fence():
+    raw = '```json\n{"key":1}\n```'
+    assert _strip_json_fence(raw) == '{"key":1}'
+
+
+def test_resolve_pack_steps_prepends_doc_map_when_missing():
+    settings = SimpleNamespace(
+        evidence_pack_registry=["scope", "methods"],
+        evidence_pack_enable_new_variety_packs=False,
+    )
+    steps = _resolve_pack_steps(settings)
+    assert [name for name, _, _ in steps][:3] == ["doc_map", "scope", "methods"]

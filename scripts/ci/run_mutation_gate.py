@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+import argparse
 import ast
 import copy
+import json
 import os
 import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Sequence
+from tempfile import TemporaryDirectory
+from typing import Iterable, Sequence, cast
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -18,12 +21,15 @@ class MutationTarget:
     module_path: Path
     test_paths: tuple[str, ...]
     max_mutants: int
+    min_score: float
 
 
 @dataclass(frozen=True)
 class MutationCandidate:
     start: int
     end: int
+    start_line: int
+    end_line: int
     replacement: str
     description: str
 
@@ -41,6 +47,25 @@ class MutationResult:
         return (self.killed / self.total) * 100.0
 
 
+@dataclass(frozen=True)
+class MutationReport:
+    schema_version: str
+    min_score_default: float
+    targets: list[dict[str, object]]
+
+    def to_json(self) -> str:
+        return json.dumps(
+            {
+                "schema_version": self.schema_version,
+                "min_score_default": self.min_score_default,
+                "targets": self.targets,
+            },
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+        )
+
+
 def _threshold(env_name: str, default: float) -> float:
     raw = os.getenv(env_name, "").strip()
     if not raw:
@@ -49,6 +74,16 @@ def _threshold(env_name: str, default: float) -> float:
         return float(raw)
     except ValueError as exc:
         raise SystemExit(f"Invalid float for {env_name}: {raw}") from exc
+
+
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Run targeted mutation testing gate.")
+    parser.add_argument(
+        "--json-out",
+        default="mutation_results.json",
+        help="Path to write mutation summary JSON.",
+    )
+    return parser.parse_args()
 
 
 def _line_col_to_index(source: str, line: int, col: int) -> int:
@@ -65,12 +100,21 @@ def _candidate_from_node(
     end_col = getattr(node, "end_col_offset", None)
     if not all(isinstance(v, int) for v in [start_line, end_line, start_col, end_col]):
         return None
-    start = _line_col_to_index(source, start_line, start_col)  # type: ignore[arg-type]
-    end = _line_col_to_index(source, end_line, end_col)  # type: ignore[arg-type]
+    start_line_int = cast(int, start_line)
+    end_line_int = cast(int, end_line)
+    start_col_int = cast(int, start_col)
+    end_col_int = cast(int, end_col)
+    start = _line_col_to_index(source, start_line_int, start_col_int)
+    end = _line_col_to_index(source, end_line_int, end_col_int)
     if start >= end:
         return None
     return MutationCandidate(
-        start=start, end=end, replacement=replacement, description=description
+        start=start,
+        end=end,
+        start_line=start_line_int,
+        end_line=end_line_int,
+        replacement=replacement,
+        description=description,
     )
 
 
@@ -146,9 +190,108 @@ def _run_tests(test_paths: Sequence[str]) -> bool:
     return result.returncode != 0
 
 
+def _target_module_coverage_lines(target: MutationTarget) -> set[int]:
+    module_rel = target.module_path.relative_to(ROOT).as_posix().lower()
+    with TemporaryDirectory(prefix="mutation_cov_", dir=ROOT) as tmp_dir:
+        tmp_path = Path(tmp_dir)
+        data_path = tmp_path / ".coverage"
+        json_path = tmp_path / "coverage.json"
+        run_cmd = [
+            sys.executable,
+            "-m",
+            "coverage",
+            "run",
+            "--data-file",
+            str(data_path),
+            "--source",
+            "src",
+            "-m",
+            "pytest",
+            "-m",
+            "not integration",
+            "-q",
+            *target.test_paths,
+        ]
+        run_result = subprocess.run(
+            run_cmd,
+            cwd=ROOT,
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        if run_result.returncode != 0:
+            print(
+                f"  - warning: coverage probe failed for {module_rel}; "
+                "using unfiltered mutation candidates"
+            )
+            return set()
+        json_cmd = [
+            sys.executable,
+            "-m",
+            "coverage",
+            "json",
+            "--data-file",
+            str(data_path),
+            "-o",
+            str(json_path),
+        ]
+        json_result = subprocess.run(
+            json_cmd,
+            cwd=ROOT,
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        if json_result.returncode != 0 or not json_path.exists():
+            print(
+                f"  - warning: coverage json export failed for {module_rel}; "
+                "using unfiltered mutation candidates"
+            )
+            return set()
+        try:
+            payload = json.loads(json_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            return set()
+    files = payload.get("files", {})
+    if not isinstance(files, dict):
+        return set()
+    for file_path, details in files.items():
+        normalized_file = str(file_path).replace("\\", "/").lower()
+        if not normalized_file.endswith(module_rel):
+            continue
+        if not isinstance(details, dict):
+            return set()
+        executed = details.get("executed_lines")
+        if not isinstance(executed, list):
+            return set()
+        return {int(line) for line in executed if isinstance(line, int)}
+    return set()
+
+
+def _filter_candidates_by_coverage(
+    candidates: list[MutationCandidate], covered_lines: set[int]
+) -> list[MutationCandidate]:
+    if not covered_lines:
+        return candidates
+    filtered = [
+        candidate
+        for candidate in candidates
+        if any(
+            line_no in covered_lines
+            for line_no in range(candidate.start_line, candidate.end_line + 1)
+        )
+    ]
+    return filtered or candidates
+
+
 def _run_target(target: MutationTarget) -> MutationResult:
     source = target.module_path.read_text(encoding="utf-8")
-    candidates = _collect_candidates(source)[: target.max_mutants]
+    candidates = _collect_candidates(source)
+    covered_lines = _target_module_coverage_lines(target)
+    candidates = _filter_candidates_by_coverage(candidates, covered_lines)
+    candidates = candidates[: target.max_mutants]
     if not candidates:
         return MutationResult(target=target, total=0, killed=0)
 
@@ -165,7 +308,7 @@ def _run_target(target: MutationTarget) -> MutationResult:
             status = "killed" if is_killed else "survived"
             print(
                 f"  - {target.module_path.as_posix()} mutant {index}/{len(candidates)} "
-                f"[{candidate.description}] => {status}"
+                f"[{candidate.description} @L{candidate.start_line}-L{candidate.end_line}] => {status}"
             )
             if is_killed:
                 killed += 1
@@ -184,30 +327,98 @@ def _targets() -> Iterable[MutationTarget]:
             / "publish_queue_orchestrator.py",
             test_paths=("tests/test_publish_queue_orchestrator.py",),
             max_mutants=4,
+            min_score=50.0,
         ),
         MutationTarget(
             module_path=ROOT / "src" / "generators" / "taxonomy_generator.py",
             test_paths=("tests/test_taxonomy_generator.py",),
             max_mutants=4,
+            min_score=75.0,
+        ),
+        MutationTarget(
+            module_path=ROOT / "src" / "generators" / "evidence_pack_generator.py",
+            test_paths=("tests/test_evidence_pack_generator.py",),
+            max_mutants=3,
+            min_score=60.0,
+        ),
+        MutationTarget(
+            module_path=ROOT / "src" / "generators" / "artifact_generator.py",
+            test_paths=("tests/test_artifact_generator.py",),
+            max_mutants=3,
+            min_score=60.0,
+        ),
+        MutationTarget(
+            module_path=ROOT / "src" / "generators" / "validation_generator.py",
+            test_paths=("tests/test_validation_generator.py",),
+            max_mutants=3,
+            min_score=60.0,
+        ),
+        MutationTarget(
+            module_path=ROOT / "src" / "services" / "openai_service.py",
+            test_paths=("tests/test_openai_vector_store.py",),
+            max_mutants=3,
+            min_score=60.0,
+        ),
+        MutationTarget(
+            module_path=ROOT / "src" / "services" / "drive_service.py",
+            test_paths=("tests/test_drive_service_threading.py",),
+            max_mutants=3,
+            min_score=60.0,
+        ),
+        MutationTarget(
+            module_path=ROOT / "src" / "services" / "wordpress_service.py",
+            test_paths=("tests/test_wordpress_service.py",),
+            max_mutants=3,
+            min_score=60.0,
+        ),
+        MutationTarget(
+            module_path=ROOT
+            / "src"
+            / "orchestrators"
+            / "report_pipeline_orchestrator.py",
+            test_paths=("tests/test_report_pipeline_orchestrator.py",),
+            max_mutants=3,
+            min_score=60.0,
         ),
     ]
 
 
 def main() -> int:
+    args = _parse_args()
     min_score = _threshold("MUTATION_MIN_SCORE", 50.0)
     print(f"Mutation gate: min score {min_score:.2f}%")
-    results = [_run_target(target) for target in _targets()]
+    targets = list(_targets())
+    results = [_run_target(target) for target in targets]
 
     failed = []
+    report_targets: list[dict[str, object]] = []
     print("Mutation summary:")
     for result in results:
         rel = result.target.module_path.relative_to(ROOT).as_posix()
         print(f"  - {rel}: {result.killed}/{result.total} killed ({result.score:.2f}%)")
+        required_score = max(min_score, result.target.min_score)
+        report_targets.append(
+            {
+                "module": rel,
+                "killed": result.killed,
+                "total": result.total,
+                "score": round(result.score, 4),
+                "min_score": required_score,
+            }
+        )
         if result.total <= 0:
             failed.append(f"{rel}: no mutation candidates generated")
             continue
-        if result.score < min_score:
-            failed.append(f"{rel}: score {result.score:.2f}% < {min_score:.2f}%")
+        if result.score < required_score:
+            failed.append(f"{rel}: score {result.score:.2f}% < {required_score:.2f}%")
+
+    report = MutationReport(
+        schema_version="1.0",
+        min_score_default=min_score,
+        targets=report_targets,
+    )
+    Path(args.json_out).write_text(report.to_json(), encoding="utf-8")
+    print(f"Mutation report written: {args.json_out}")
 
     if failed:
         print("\nMutation gate failed:")
