@@ -1145,25 +1145,6 @@ h2{
                   <span class="insight-index">{{ loop.index }}</span>
                   <p class="insight-text">{{ insight_text }}</p>
                 </div>
-                {% if insight.metric is defined and insight.metric %}
-                  {% set metric_value = insight.metric.value if insight.metric.value is defined else "" %}
-                  {% set metric_value = metric_value|string|trim %}
-                  {% set metric_unit = insight.metric.unit if insight.metric.unit is defined else "" %}
-                  {% set metric_unit = metric_unit|string|trim %}
-                  {% set metric_timeframe = insight.metric.timeframe if insight.metric.timeframe is defined else "" %}
-                  {% set metric_timeframe = metric_timeframe|string|trim %}
-                  {% set metric_text = (metric_value ~ " " ~ metric_unit ~ " " ~ metric_timeframe)|replace("  ", " ")|trim %}
-                  {% set metric_source = insight.source if insight.source is defined else (insight.citation if insight.citation is defined else "") %}
-                  {% set metric_source = metric_source|string|trim %}
-                  {% if metric_text %}
-                  <div>Key metric: {{ metric_text }}</div>
-                  {% endif %}
-                  {% if metric_source %}
-                  <div class="badge-row">
-                    <span class="badge">Source: {{ metric_source }}</span>
-                  </div>
-                  {% endif %}
-                {% endif %}
               </li>
               {% endif %}
             {% endfor %}

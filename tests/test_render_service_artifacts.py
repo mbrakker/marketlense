@@ -53,6 +53,7 @@ def test_render_includes_artifact_sections(tmp_path):
     assert "Artifact executive summary" in html
     assert "Key data insights" in html
     assert "Artifact insight 1" in html
+    assert "Key metric:" not in html
     assert "Key quotes" in html
     assert "Artifact quote" in html
     assert "Expert comment (generated)" in html
