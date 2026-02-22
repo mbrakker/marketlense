@@ -59,6 +59,54 @@ def test_render_includes_artifact_sections(tmp_path):
     assert "LinkedIn post" in html
 
 
+def test_render_expands_covered_topics_with_briefs(tmp_path):
+    data = {
+        "title": "Topic Brief Report",
+        "tldr": "TLDR",
+        "insights": ["Insight A"] * 5,
+        "quote": {"text": "Quote", "author": "Author"},
+        "commentary": "Commentary",
+        "publisher": "Publisher",
+        "taxonomy": ["tag"],
+        "region": "US",
+        "time_period": "2024",
+        "contents_page_number": 0,
+        "artifacts": {
+            "toc_topics": ["Demand outlook", "Margin resilience"],
+            "toc_topics_expanded": [
+                {
+                    "topic": "Demand outlook",
+                    "summary": "Demand is strongest in APAC and improving in North America.",
+                    "key_points": [
+                        "APAC growth leads at +12%",
+                        "North America recovered in Q4",
+                    ],
+                },
+                {
+                    "topic": "Margin resilience",
+                    "summary": "Margins stabilized in H2 as input costs eased.",
+                    "key_points": [],
+                },
+            ],
+        },
+    }
+    req = RenderRequest(
+        schema_version="1.0",
+        data=data,
+        doc_name="topics.pdf",
+        file_id="file_topics",
+        out_dir=str(tmp_path),
+        preview_png=None,
+    )
+    resp = render_report(req, _ctx())
+    html = Path(resp.html_path).read_text(encoding="utf-8")
+
+    assert "Demand is strongest in APAC and improving in North America." in html
+    assert "APAC growth leads at +12%" in html
+    assert "North America recovered in Q4" in html
+    assert "Margins stabilized in H2 as input costs eased." in html
+
+
 def test_render_fallbacks_without_artifacts(tmp_path):
     data = {
         "title": "Legacy Report",

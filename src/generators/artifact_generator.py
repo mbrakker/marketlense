@@ -50,6 +50,25 @@ INLINE_REFERENCE_GROUP_RE = re.compile(
 )
 EVIDENCE_TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z0-9_-]*")
 QUOTE_ALIAS_RE = re.compile(r"^quote[-_]?(\d+)$", re.IGNORECASE)
+TOPIC_TOKEN_STOPWORDS = {
+    "a",
+    "an",
+    "and",
+    "as",
+    "at",
+    "by",
+    "for",
+    "from",
+    "in",
+    "into",
+    "of",
+    "on",
+    "or",
+    "the",
+    "to",
+    "with",
+}
+TOPIC_BRIEF_MAX_KEY_POINTS = 4
 
 
 def _artifact_parallel_workers(settings: AppSettings, step_count: int) -> int:
@@ -330,6 +349,39 @@ def generate_artifacts(
         ),
         insights_candidates,
     )
+    topic_briefs = _expand_topics_with_briefs(
+        toc_topics=toc_topics,
+        doc_map=safe_doc_map,
+        summary=summary,
+        insights_final=insights_final,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="artifact_topic_briefs_built",
+            module=logger.name,
+            fields={
+                "topic_count": len(toc_topics),
+                "brief_count": len(topic_briefs),
+                "briefs_with_summary": len(
+                    [
+                        item
+                        for item in topic_briefs
+                        if _s(item.get("summary")).strip()
+                    ]
+                ),
+                "briefs_with_key_points": len(
+                    [
+                        item
+                        for item in topic_briefs
+                        if isinstance(item.get("key_points"), list)
+                        and len(item.get("key_points") or []) > 0
+                    ]
+                ),
+            },
+        )
+    )
     evidence_id_stats = _normalize_artifact_evidence_ids(
         summary=summary,
         insights_candidates=insights_candidates,
@@ -416,6 +468,7 @@ def generate_artifacts(
     artifacts_payload: Dict[str, Any] = {
         "schema_version": "1.0",
         "toc_topics": toc_topics,
+        "toc_topics_expanded": topic_briefs,
         "summary": summary,
         "insights_candidates": insights_candidates,
         "insights_final": insights_final,
@@ -590,6 +643,296 @@ def _normalize_topics(value: Any) -> List[str]:
         if text:
             topics.append(text)
     return topics
+
+
+def _normalize_topic_lookup_text(value: Any) -> str:
+    text = _s(value).strip().lower()
+    if not text:
+        return ""
+    collapsed = re.sub(r"[^a-z0-9]+", " ", text)
+    return re.sub(r"\s+", " ", collapsed).strip()
+
+
+def _topic_tokens(value: Any) -> List[str]:
+    normalized = _normalize_topic_lookup_text(value)
+    if not normalized:
+        return []
+    return [
+        token
+        for token in normalized.split(" ")
+        if token and token not in TOPIC_TOKEN_STOPWORDS
+    ]
+
+
+def _coerce_topic_key_points(value: Any) -> List[str]:
+    if not isinstance(value, list):
+        return []
+    points: List[str] = []
+    for item in value:
+        if isinstance(item, dict):
+            text = _s(
+                item.get("text")
+                or item.get("point")
+                or item.get("summary")
+                or item.get("value")
+            ).strip()
+        else:
+            text = _s(item).strip()
+        if text and text not in points:
+            points.append(text)
+    return points
+
+
+def _coerce_topic_pages(value: Any) -> List[int]:
+    if not isinstance(value, list):
+        return []
+    pages: List[int] = []
+    for page in value:
+        if isinstance(page, int):
+            pages.append(page)
+    return pages
+
+
+def _doc_map_sections_for_topics(doc_map: Dict[str, Any]) -> List[Dict[str, Any]]:
+    if not isinstance(doc_map, dict):
+        return []
+    candidate = doc_map
+    for key in ("doc_map", "docmap", "docMap"):
+        wrapped = doc_map.get(key)
+        if isinstance(wrapped, dict):
+            candidate = wrapped
+            break
+    sections_raw = candidate.get("sections")
+    if not isinstance(sections_raw, list):
+        return []
+    sections: List[Dict[str, Any]] = []
+    for idx, raw_section in enumerate(sections_raw):
+        if not isinstance(raw_section, dict):
+            continue
+        title = _s(
+            raw_section.get("title")
+            or raw_section.get("heading")
+            or raw_section.get("name")
+        ).strip()
+        section_id = _s(raw_section.get("id")).strip()
+        summary = _s(raw_section.get("summary")).strip()
+        key_points = _coerce_topic_key_points(raw_section.get("key_points"))
+        pages = _coerce_topic_pages(raw_section.get("pages"))
+        sections.append(
+            {
+                "section_id": section_id,
+                "title": title,
+                "summary": summary,
+                "key_points": key_points,
+                "pages": pages,
+                "title_norm": _normalize_topic_lookup_text(title),
+                "id_norm": _normalize_topic_lookup_text(section_id),
+                "title_tokens": _topic_tokens(title),
+                "index": idx,
+            }
+        )
+    return sections
+
+
+def _topic_match_score(
+    *,
+    topic_norm: str,
+    topic_tokens: List[str],
+    section: Dict[str, Any],
+    prefer_index: int,
+) -> int:
+    score = 0
+    title_norm = _s(section.get("title_norm")).strip()
+    id_norm = _s(section.get("id_norm")).strip()
+    if topic_norm and (topic_norm == title_norm or topic_norm == id_norm):
+        score += 100
+    elif topic_norm and (
+        (topic_norm in title_norm and title_norm)
+        or (title_norm in topic_norm and topic_norm)
+        or (topic_norm in id_norm and id_norm)
+    ):
+        score += 75
+
+    title_tokens = set(section.get("title_tokens") or [])
+    topic_tokens_set = set(topic_tokens)
+    if topic_tokens_set and title_tokens:
+        overlap = len(topic_tokens_set & title_tokens)
+        coverage = overlap / max(1, len(topic_tokens_set))
+        score += int(round(coverage * 45))
+    if prefer_index == int(section.get("index", -1)):
+        score += 12
+    if _s(section.get("summary")).strip():
+        score += 3
+    return score
+
+
+def _select_topic_section(
+    *,
+    topic: str,
+    topic_index: int,
+    sections: List[Dict[str, Any]],
+    used_indexes: set[int],
+) -> Optional[Dict[str, Any]]:
+    if not sections:
+        return None
+    topic_norm = _normalize_topic_lookup_text(topic)
+    tokens = _topic_tokens(topic)
+    preferred_indexes = [
+        idx for idx in range(len(sections)) if idx not in used_indexes
+    ] or list(range(len(sections)))
+    best_idx = -1
+    best_score = -1
+    for idx in preferred_indexes:
+        section = sections[idx]
+        score = _topic_match_score(
+            topic_norm=topic_norm,
+            topic_tokens=tokens,
+            section=section,
+            prefer_index=topic_index,
+        )
+        if score > best_score:
+            best_score = score
+            best_idx = idx
+    if best_idx < 0:
+        return None
+    if best_score >= 35:
+        used_indexes.add(best_idx)
+        return sections[best_idx]
+    if topic_index < len(sections) and topic_index not in used_indexes:
+        used_indexes.add(topic_index)
+        return sections[topic_index]
+    return None
+
+
+def _text_matches_topic(text: str, topic: str) -> bool:
+    text_norm = _normalize_topic_lookup_text(text)
+    topic_norm = _normalize_topic_lookup_text(topic)
+    if not text_norm or not topic_norm:
+        return False
+    if topic_norm in text_norm:
+        return True
+    topic_tokens = set(_topic_tokens(topic))
+    text_tokens = set(_topic_tokens(text))
+    if not topic_tokens or not text_tokens:
+        return False
+    overlap = len(topic_tokens & text_tokens)
+    required = max(1, min(2, len(topic_tokens)))
+    return overlap >= required
+
+
+def _dedupe_non_empty_text(values: List[str], *, limit: int) -> List[str]:
+    deduped: List[str] = []
+    seen: set[str] = set()
+    for value in values:
+        text = _s(value).strip()
+        if not text:
+            continue
+        key = _normalize_topic_lookup_text(text)
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        deduped.append(text)
+        if len(deduped) >= limit:
+            break
+    return deduped
+
+
+def _topic_brief_from_claims(topic: str, summary: Dict[str, Any]) -> tuple[str, List[str]]:
+    claim_map = summary.get("claim_evidence_map")
+    if not isinstance(claim_map, list):
+        return "", []
+    matching_claims: List[str] = []
+    claim_points: List[str] = []
+    for claim in claim_map:
+        if not isinstance(claim, dict):
+            continue
+        claim_text = _s(claim.get("claim")).strip()
+        evidence_text = _s(claim.get("evidence")).strip()
+        if not _text_matches_topic(f"{claim_text} {evidence_text}", topic):
+            continue
+        if claim_text:
+            matching_claims.append(claim_text)
+        if evidence_text:
+            claim_points.append(evidence_text)
+    summary_text = matching_claims[0] if matching_claims else ""
+    points = _dedupe_non_empty_text(claim_points, limit=TOPIC_BRIEF_MAX_KEY_POINTS)
+    return summary_text, points
+
+
+def _topic_points_from_insights(topic: str, insights_final: List[Dict[str, Any]]) -> List[str]:
+    if not isinstance(insights_final, list):
+        return []
+    matched: List[str] = []
+    for insight in insights_final:
+        if not isinstance(insight, dict):
+            continue
+        insight_text = _s(insight.get("text")).strip()
+        if insight_text and _text_matches_topic(insight_text, topic):
+            matched.append(insight_text)
+    return _dedupe_non_empty_text(matched, limit=TOPIC_BRIEF_MAX_KEY_POINTS)
+
+
+def _expand_topics_with_briefs(
+    *,
+    toc_topics: List[str],
+    doc_map: Dict[str, Any],
+    summary: Dict[str, Any],
+    insights_final: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    if not toc_topics:
+        return []
+    sections = _doc_map_sections_for_topics(doc_map)
+    used_indexes: set[int] = set()
+    expanded: List[Dict[str, Any]] = []
+    for index, raw_topic in enumerate(toc_topics):
+        topic = _s(raw_topic).strip()
+        if not topic:
+            continue
+        section = _select_topic_section(
+            topic=topic,
+            topic_index=index,
+            sections=sections,
+            used_indexes=used_indexes,
+        )
+        section_summary = _s(section.get("summary")).strip() if section else ""
+        section_points = (
+            section.get("key_points")
+            if section and isinstance(section.get("key_points"), list)
+            else []
+        )
+        key_points = _dedupe_non_empty_text(
+            [_s(point) for point in section_points], limit=TOPIC_BRIEF_MAX_KEY_POINTS
+        )
+        summary_text = section_summary
+
+        claim_summary, claim_points = _topic_brief_from_claims(topic, summary)
+        if not summary_text:
+            summary_text = claim_summary
+        key_points = _dedupe_non_empty_text(
+            key_points + claim_points, limit=TOPIC_BRIEF_MAX_KEY_POINTS
+        )
+
+        insight_points = _topic_points_from_insights(topic, insights_final)
+        if not summary_text and insight_points:
+            summary_text = insight_points[0]
+        key_points = _dedupe_non_empty_text(
+            key_points + insight_points, limit=TOPIC_BRIEF_MAX_KEY_POINTS
+        )
+
+        if not summary_text and key_points:
+            summary_text = key_points[0]
+
+        expanded.append(
+            {
+                "topic": topic,
+                "summary": summary_text,
+                "key_points": key_points,
+                "section_id": _s(section.get("section_id")).strip() if section else "",
+                "section_title": _s(section.get("title")).strip() if section else "",
+                "pages": section.get("pages") if section else [],
+            }
+        )
+    return expanded
 
 
 def _normalize_summary(value: Any) -> Dict[str, Any]:
@@ -1157,6 +1500,7 @@ def _placeholder_artifacts(status: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "schema_version": "1.0",
         "toc_topics": [placeholder_text],
+        "toc_topics_expanded": [],
         "summary": {
             "tldr": placeholder_text,
             "executive_summary": placeholder_text,

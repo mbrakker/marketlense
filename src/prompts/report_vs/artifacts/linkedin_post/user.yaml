@@ -11,9 +11,9 @@ text: |
   - Expert, strategic, and insight-led (written for senior ecommerce / digital leaders)
   - Start with a strong, concrete insight or implication, not a generic hook
   - Focus on "what this means" for the market or decision-makers
-  - Use a confident, human tone (no AI patterns, no em dashes, no clichés)
+  - Use a confident, human tone (no AI patterns, no em dashes, no clichés, never use "—")
   - No emojis
-  - Avoid hashtags except 2–3 highly relevant industry hashtags at the end
+  - Avoid hashtags except 2–3 highly relevant industry hashtags as a part of generated text
   - Use data points from the report to back up claims (no vague generalities) - put them in bulletpoints if needed
 
   Content constraints (strict):
@@ -21,6 +21,7 @@ text: |
   - Do not introduce new metrics, benchmarks, projections, or assumptions
   - Do not generalize beyond what the report explicitly supports
   - If something is not clearly supported, omit it
+  - Do not reference report peges, sections, evedence packs, or any internal document structure
 
   Output:
   - Valid JSON only

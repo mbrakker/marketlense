@@ -35,6 +35,7 @@
 {% set commentary = data.commentary if data.commentary is defined else "" %}
 {% set commentary = commentary|string|trim %}
 {% set topics_list = art.toc_topics if art.toc_topics is defined and art.toc_topics else [] %}
+{% set topics_expanded = art.toc_topics_expanded if art.toc_topics_expanded is defined and art.toc_topics_expanded else [] %}
 {% set categories_list = data.categories_display if data.categories_display is defined and data.categories_display else (data.categories if data.categories is defined else []) %}
 {% set tags_list = data.taxonomy if data.taxonomy is defined and data.taxonomy else [] %}
 {% set primary_figure = data._figure_top if data._figure_top is defined and data._figure_top else (data._figure_image if data._figure_image is defined else "") %}
@@ -57,6 +58,7 @@
 {% set thumb_height = 180 %}
 {% set has_metadata = (categories_list|length > 0) or (tags_list|length > 0) %}
 {% set has_topics = topics_list|length > 0 %}
+{% set has_topic_briefs = topics_expanded|length > 0 %}
 {% set has_primary_figure = figure_section_enabled and primary_figure %}
 {% set has_claim_map = claim_map|length > 0 %}
 {% set has_expert_comment = expert_comment and (expert_comment|string|trim) %}
@@ -323,6 +325,32 @@ h3{
   padding:6px 10px;
   font-size:.86rem;
   font-family:"Trebuchet MS","Segoe UI",Tahoma,sans-serif;
+}
+.topic-brief-grid{
+  margin-top:12px;
+  display:grid;
+  gap:10px;
+}
+.topic-brief-card{
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  background:#fcfdff;
+  padding:11px 12px;
+}
+.topic-brief-card h3{
+  margin:0 0 7px;
+}
+.topic-brief-summary{
+  margin:0;
+  color:var(--ink);
+  white-space:pre-line;
+}
+.topic-brief-points{
+  margin:8px 0 0;
+  padding-left:18px;
+}
+.topic-brief-points li{
+  margin-bottom:6px;
 }
 .summary-copy{
   margin:0;
@@ -1046,6 +1074,35 @@ h2{
               {% endif %}
             {% endfor %}
           </ul>
+          {% if has_topic_briefs %}
+          <div class="topic-brief-grid">
+            {% for item in topics_expanded %}
+              {% set topic_label = item.topic if item.topic is defined else "" %}
+              {% set topic_label = topic_label|string|trim %}
+              {% set topic_summary = item.summary if item.summary is defined else "" %}
+              {% set topic_summary = topic_summary|string|trim %}
+              {% set topic_points = item.key_points if item.key_points is defined and item.key_points is sequence and item.key_points is not string else [] %}
+              {% if topic_label and (topic_summary or topic_points|length > 0) %}
+              <article class="topic-brief-card">
+                <h3>{{ format_chip_label(topic_label) }}</h3>
+                {% if topic_summary %}
+                <p class="topic-brief-summary">{{ topic_summary }}</p>
+                {% endif %}
+                {% if topic_points|length > 0 %}
+                <ul class="topic-brief-points">
+                  {% for point in topic_points %}
+                    {% set point_text = point|string|trim %}
+                    {% if point_text %}
+                    <li>{{ point_text }}</li>
+                    {% endif %}
+                  {% endfor %}
+                </ul>
+                {% endif %}
+              </article>
+              {% endif %}
+            {% endfor %}
+          </div>
+          {% endif %}
           {% else %}
           <p class="muted">Not available from text.</p>
           {% endif %}

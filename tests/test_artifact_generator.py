@@ -448,6 +448,136 @@ def test_generate_artifacts_validates_schema_and_evidence_ids(tmp_path):
     assert analysis_store.stored and analysis_store.stored[0][2] == "artifacts"
 
 
+def test_generate_artifacts_expands_topic_briefs_from_doc_map(tmp_path):
+    responses = {
+        "toc": {
+            "toc_topics": [
+                "Demand outlook",
+                "Margin resilience",
+                "Operating leverage",
+            ]
+        },
+        "summary": {
+            "summary": {
+                "tldr": "TLDR",
+                "executive_summary": "Exec",
+                "claim_evidence_map": [
+                    {
+                        "claim": "Operating leverage improved through automation.",
+                        "evidence_id": "f3",
+                        "evidence": "Automation lifted leverage by 3 points.",
+                        "pages": [4],
+                    }
+                ],
+            }
+        },
+        "insights_candidates": {
+            "insights_candidates": [
+                {
+                    "id": "c1",
+                    "text": "Demand is strongest in APAC.",
+                    "evidence_id": "f1",
+                    "evidence": "APAC demand up 12%.",
+                    "metric": {},
+                    "pages": [2],
+                    "score": 0.9,
+                }
+            ]
+        },
+        "insights_final": {
+            "insights_final": [
+                {
+                    "id": "i1",
+                    "text": "Demand is strongest in APAC.",
+                    "evidence_id": "f1",
+                    "evidence": "APAC demand up 12%.",
+                    "metric": {},
+                    "pages": [2],
+                },
+                {
+                    "id": "i2",
+                    "text": "Margins stabilized in H2 as input costs eased.",
+                    "evidence_id": "f2",
+                    "evidence": "Input cost pressure moderated.",
+                    "metric": {},
+                    "pages": [3],
+                },
+                {
+                    "id": "i3",
+                    "text": "Operating leverage improved through automation.",
+                    "evidence_id": "f3",
+                    "evidence": "Automation lifted leverage by 3 points.",
+                    "metric": {},
+                    "pages": [4],
+                },
+            ]
+        },
+        "quotes": {
+            "quotes_final": [
+                {
+                    "text": "Quote",
+                    "speaker": "Analyst",
+                    "citation": "",
+                    "page": 1,
+                    "evidence_id": "q1",
+                }
+            ]
+        },
+        "expert_comment": {"expert_comment": "Comment"},
+        "linkedin_post": {"linkedin_post": "Post"},
+    }
+    payload = generate_artifacts(
+        report_id="r_topic_briefs",
+        report_name="report",
+        doc_map={
+            "doc_id": "r1",
+            "title": "Report",
+            "sections": [
+                {
+                    "id": "demand-outlook",
+                    "title": "Demand outlook",
+                    "summary": (
+                        "Demand is strongest in APAC and improving in North America."
+                    ),
+                    "key_points": [
+                        "APAC growth leads at +12%",
+                        "North America recovered in Q4",
+                    ],
+                    "pages": [2],
+                },
+                {
+                    "id": "margin-resilience",
+                    "title": "Margin resilience",
+                    "summary": "Margins stabilized in H2 as input costs eased.",
+                    "key_points": [
+                        "Input cost pressure moderated",
+                        "Promotions remained disciplined",
+                    ],
+                    "pages": [3],
+                },
+            ],
+        },
+        evidence_packs=_evidence_packs(),
+        settings=_settings(tmp_path),
+        vector_store_id="vs_1",
+        ctx=_ctx(),
+        openai_client=FakeOpenAI(responses),
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    topic_briefs = payload["toc_topics_expanded"]
+    assert len(topic_briefs) == 3
+    assert topic_briefs[0]["topic"] == "Demand outlook"
+    assert topic_briefs[0]["summary"] == (
+        "Demand is strongest in APAC and improving in North America."
+    )
+    assert topic_briefs[0]["key_points"][0] == "APAC growth leads at +12%"
+    assert topic_briefs[1]["section_id"] == "margin-resilience"
+    assert topic_briefs[2]["summary"] == "Operating leverage improved through automation."
+    assert "Automation lifted leverage by 3 points." in topic_briefs[2]["key_points"]
+
+
 def test_generate_artifacts_normalizes_malformed_evidence_ids(tmp_path):
     responses = {
         "toc": {"toc_topics": ["Topic 1"]},

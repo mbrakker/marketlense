@@ -48,3 +48,10 @@ Cross-pack checks require `artifacts` evidence references to resolve to known ID
 - `doc_map.sections[].id`
 - `findings.findings[].id`
 - `quote_candidates.quote_candidates[].id`
+
+`artifacts.toc_topics_expanded[]` is an optional enriched view keyed by normalized `toc_topics`, with:
+
+- `topic`
+- `summary`
+- `key_points`
+- optional `section_id`, `section_title`, `pages`

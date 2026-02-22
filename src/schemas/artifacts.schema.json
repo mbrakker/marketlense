@@ -9,6 +9,27 @@
       "type": "array",
       "items": { "type": "string" }
     },
+    "toc_topics_expanded": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["topic", "summary", "key_points"],
+        "properties": {
+          "topic": { "type": "string" },
+          "summary": { "type": "string" },
+          "key_points": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "section_id": { "type": "string" },
+          "section_title": { "type": "string" },
+          "pages": {
+            "type": "array",
+            "items": { "type": "integer" }
+          }
+        }
+      }
+    },
     "summary": {
       "type": "object",
       "required": ["tldr", "executive_summary", "claim_evidence_map"],
