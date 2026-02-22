@@ -142,6 +142,8 @@ def _row_to_metadata_response(row: tuple, ctx: RunContext) -> ReportMetadataGetR
     page_count: Optional[int] = None
     contents_page_number = 0
     evidence_pack_paths: dict[str, str] = {}
+    raw_time_period = row[7] if isinstance(row[7], str) else None
+    time_period = normalize_time_period(raw_time_period)
 
     try:
         parsed = json.loads(taxonomy_json)
@@ -229,7 +231,7 @@ def _row_to_metadata_response(row: tuple, ctx: RunContext) -> ReportMetadataGetR
         taxonomy=taxonomy,
         categories=categories,
         region=row[6],
-        time_period=row[7],
+        time_period=time_period,
         source_url=row[8],
         html_path=row[9],
         md5=row[10],
