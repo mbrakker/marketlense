@@ -88,6 +88,7 @@ def generate_artifacts(
     md5: Optional[str] = None,
     vector_store_id: Optional[str] = None,
     source_status: Optional[Dict[str, Any]] = None,
+    categories: Optional[List[str]] = None,
     ctx: Optional[RunContext] = None,
     openai_client=openai_service,
     prompt_client=prompt_service,
@@ -143,6 +144,7 @@ def generate_artifacts(
         )
     evidence_present = _has_evidence_content(safe_doc_map, safe_evidence)
     availability["evidence_present"] = evidence_present
+    expert_domain = _normalize_expert_domain(categories)
     cache_key = ""
     cache_meta = None
     if md5:
@@ -151,6 +153,7 @@ def generate_artifacts(
             doc_map=safe_doc_map,
             evidence_packs=safe_evidence,
             availability=availability,
+            expert_domain=expert_domain,
             retrieval_mode=_artifact_retrieval_mode(artifact_use_vector_store),
             settings=settings,
             prompt_client=prompt_client,
@@ -406,6 +409,7 @@ def generate_artifacts(
         "summary_json": _dump_json(summary),
         "insights_final_json": _dump_json(insights_final),
         "quotes_json": _dump_json(quotes_final),
+        "expert_domain": expert_domain,
     }
 
     linkedin_ctx = child_context(ctx, task_id=f"{ctx.task_id}:linkedin_post")
@@ -1306,6 +1310,7 @@ def _artifact_cache_meta(
     doc_map: Dict[str, Any],
     evidence_packs: Dict[str, Any],
     availability: Dict[str, Any],
+    expert_domain: str,
     retrieval_mode: str,
     settings: AppSettings,
     prompt_client,
@@ -1337,6 +1342,7 @@ def _artifact_cache_meta(
             "doc_map": doc_map,
             "evidence_packs": evidence_packs,
             "availability": availability,
+            "expert_domain": expert_domain,
         }
     )
     return {
@@ -1348,6 +1354,27 @@ def _artifact_cache_meta(
         "seed": settings.openai_seed,
         "retrieval_mode": retrieval_mode,
     }
+
+
+def _normalize_expert_domain(categories: Optional[List[str]]) -> str:
+    if not isinstance(categories, (list, tuple)):
+        return "industry"
+    normalized: List[str] = []
+    seen: set[str] = set()
+    for raw in categories:
+        value = _s(raw).strip()
+        if not value:
+            continue
+        value_key = value.casefold()
+        if value_key in seen:
+            continue
+        seen.add(value_key)
+        normalized.append(value)
+        if len(normalized) == 3:
+            break
+    if not normalized:
+        return "industry"
+    return ", ".join(normalized)
 
 
 def _load_cached_artifacts(

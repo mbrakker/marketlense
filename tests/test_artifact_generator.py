@@ -34,6 +34,23 @@ class FakePromptClient:
         return SimpleNamespace(text=request.template.text)
 
 
+class CapturingPromptClient(FakePromptClient):
+    def __init__(self):
+        self.render_calls = []
+
+    def render_prompt(self, request, ctx):
+        self.render_calls.append(
+            {"path": request.template.path, "variables": dict(request.variables)}
+        )
+        return super().render_prompt(request, ctx)
+
+    def variables_for_namespace(self, namespace):
+        for call in self.render_calls:
+            if call["path"] == f"{namespace}/system":
+                return call["variables"]
+        return {}
+
+
 class FakeOpenAI:
     def __init__(self, responses, *, sleep_seconds=0.0, prerequisites=None):
         self.responses = responses if isinstance(responses, dict) else list(responses)
@@ -902,6 +919,7 @@ def test_generate_artifacts_parallelizes_with_dependency_order(tmp_path):
         "linkedin_post": ["summary", "insights_final"],
     }
     fake_openai = FakeOpenAI(responses, sleep_seconds=0.05, prerequisites=prerequisites)
+    prompt_client = CapturingPromptClient()
     payload = generate_artifacts(
         report_id="parallel",
         report_name="report",
@@ -909,13 +927,27 @@ def test_generate_artifacts_parallelizes_with_dependency_order(tmp_path):
         evidence_packs=_evidence_packs(),
         settings=_settings(tmp_path, artifacts_use_vector_store=True),
         vector_store_id="vs_1",
+        categories=[
+            " Consumer Behavior & Insights ",
+            "Beauty",
+            "Fashion",
+            "Retail",
+            "beauty",
+        ],
         ctx=_ctx(),
         openai_client=fake_openai,
-        prompt_client=FakePromptClient(),
+        prompt_client=prompt_client,
         analysis_store=FakeAnalysisStore(),
+    )
+    expert_vars = prompt_client.variables_for_namespace(
+        "report_vs/artifacts/expert_comment"
     )
     assert payload["expert_comment"] == "Grounded comment"
     assert payload["linkedin_post"] == "Post summary"
+    assert (
+        expert_vars.get("expert_domain")
+        == "Consumer Behavior & Insights, Beauty, Fashion"
+    )
     assert fake_openai.max_in_flight >= 2
     assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 7
 

@@ -2992,6 +2992,7 @@ def generate_report(
             settings=settings,
             vector_store_id=vector_store_id,
             source_status=text_status,
+            categories=category_assignment.category_labels,
             ctx=child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:artifacts"),
             md5=md5,
             **artifact_generate_kwargs,
