@@ -50,6 +50,7 @@ def test_wp_category_update_skips_when_no_categories():
         categories=[],
         base_url="https://example.com",
         auth_header="Bearer token",
+        post_type="ml_report",
         mappings=_mappings(),
         ctx=_ctx(),
     )
@@ -67,13 +68,11 @@ def test_wp_category_update_applies_categories(monkeypatch):
             slug_to_id={"digital_payments": 101, "consumer_behavior": 102},
         ),
     )
-    monkeypatch.setattr(
-        gen,
-        "update_post_categories",
-        lambda req, ctx: WordPressPostUpdateResponse(
-            schema_version="1.0", post_id=req.post_id
-        ),
-    )
+    def _update(req, ctx):
+        assert req.post_type == "ml_report"
+        return WordPressPostUpdateResponse(schema_version="1.0", post_id=req.post_id)
+
+    monkeypatch.setattr(gen, "update_post_categories", _update)
 
     outcome = gen.update_post_categories_for_record(
         file_id="file-1",
@@ -81,6 +80,7 @@ def test_wp_category_update_applies_categories(monkeypatch):
         categories=["digital_payments", "consumer_behavior"],
         base_url="https://example.com",
         auth_header="Bearer token",
+        post_type="ml_report",
         mappings=_mappings(),
         ctx=_ctx(),
     )
@@ -112,6 +112,7 @@ def test_wp_category_update_skips_when_no_term_ids(monkeypatch):
         categories=["digital_payments"],
         base_url="https://example.com",
         auth_header="Bearer token",
+        post_type="ml_report",
         mappings=_mappings(),
         ctx=_ctx(),
     )

@@ -199,6 +199,7 @@ def publish_html(
             featured_media=featured_media_id,
             categories=category_ids_for_wp if category_ids_for_wp else None,
             tags=tag_ids_for_wp if tag_ids_for_wp else None,
+            post_type=settings.wp.post_type,
         ),
         ctx,
     )

@@ -58,6 +58,30 @@ def test_create_post_success(monkeypatch):
     assert captured["payload"]["tags"] == [3]
 
 
+def test_create_post_custom_post_type_endpoint(monkeypatch):
+    captured = {}
+
+    def _post(url, headers, data, timeout):
+        captured["url"] = url
+        return _response(
+            201, {"id": 10, "link": "https://site/r/10", "status": "publish"}
+        )
+
+    monkeypatch.setattr(svc.requests, "post", _post)
+    request = WordPressPostCreateRequest(
+        schema_version="1.0",
+        base_url="https://site",
+        auth_header="Bearer token",
+        title="T",
+        content_html="<p>x</p>",
+        status="publish",
+        post_type="ml_report",
+    )
+    response = svc.create_post(request, _ctx())
+    assert response.post_id == 10
+    assert captured["url"].endswith("/wp-json/wp/v2/ml_report")
+
+
 def test_create_post_client_error(monkeypatch):
     monkeypatch.setattr(
         svc.requests, "post", lambda *args, **kwargs: _response(400, {"message": "bad"})

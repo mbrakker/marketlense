@@ -29,6 +29,11 @@ logger = logging.getLogger("market_lense.wordpress_service")
 DEFAULT_TIMEOUT = 30
 
 
+def _post_type_endpoint(post_type: str) -> str:
+    token = str(post_type).strip().strip("/")
+    return token or "posts"
+
+
 def upload_media(request: WordPressMediaUploadRequest, ctx: RunContext) -> WordPressMediaUploadResponse:
     logger.info(log_event(
         ctx,
@@ -99,6 +104,7 @@ def upload_media(request: WordPressMediaUploadRequest, ctx: RunContext) -> WordP
 
 
 def create_post(request: WordPressPostCreateRequest, ctx: RunContext) -> WordPressPostCreateResponse:
+    post_type_endpoint = _post_type_endpoint(request.post_type)
     logger.info(log_event(
         ctx,
         role="service",
@@ -108,11 +114,12 @@ def create_post(request: WordPressPostCreateRequest, ctx: RunContext) -> WordPre
             "title": request.title,
             "status": request.status,
             "slug": request.slug,
+            "post_type": post_type_endpoint,
             "categories_count": len(request.categories or []),
             "tags_count": len(request.tags or []),
         },
     ))
-    url = f"{request.base_url.rstrip('/')}/wp-json/wp/v2/posts"
+    url = f"{request.base_url.rstrip('/')}/wp-json/wp/v2/{post_type_endpoint}"
     headers = {
         "Authorization": request.auth_header,
         "Content-Type": "application/json",
@@ -181,14 +188,15 @@ def create_post(request: WordPressPostCreateRequest, ctx: RunContext) -> WordPre
 
 
 def find_post_by_file_id(request: WordPressPostLookupRequest, ctx: RunContext) -> WordPressPostLookupResponse:
+    post_type_endpoint = _post_type_endpoint(request.post_type)
     logger.info(log_event(
         ctx,
         role="service",
         event="wp_post_lookup_start",
         module=logger.name,
-        fields={"file_id": request.file_id},
+        fields={"file_id": request.file_id, "post_type": post_type_endpoint},
     ))
-    url = f"{request.base_url.rstrip('/')}/wp-json/wp/v2/posts"
+    url = f"{request.base_url.rstrip('/')}/wp-json/wp/v2/{post_type_endpoint}"
     params = {
         "search": f"Drive fileId: {request.file_id}",
         "per_page": request.per_page,
@@ -425,14 +433,19 @@ def ensure_tags(request: WordPressTagEnsureRequest, ctx: RunContext) -> WordPres
 
 
 def update_post_categories(request: WordPressPostUpdateRequest, ctx: RunContext) -> WordPressPostUpdateResponse:
+    post_type_endpoint = _post_type_endpoint(request.post_type)
     logger.info(log_event(
         ctx,
         role="service",
         event="wp_post_update_start",
         module=logger.name,
-        fields={"post_id": request.post_id, "categories": request.categories},
+        fields={
+            "post_id": request.post_id,
+            "categories": request.categories,
+            "post_type": post_type_endpoint,
+        },
     ))
-    url = f"{request.base_url.rstrip('/')}/wp-json/wp/v2/posts/{request.post_id}"
+    url = f"{request.base_url.rstrip('/')}/wp-json/wp/v2/{post_type_endpoint}/{request.post_id}"
     headers = {
         "Authorization": request.auth_header,
         "Content-Type": "application/json",

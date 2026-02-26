@@ -1,0 +1,41 @@
+<!-- wp:template-part {"slug":"header","theme":"marketlense","tagName":"header"} /-->
+
+<!-- wp:group {"tagName":"main","anchor":"main-content","className":"ml-shell ml-page-frame","layout":{"type":"constrained"}} -->
+<main id="main-content" class="wp-block-group ml-shell ml-page-frame">
+  <!-- wp:group {"className":"ml-taxonomy-header","layout":{"type":"constrained"}} -->
+  <div class="wp-block-group ml-taxonomy-header">
+    <!-- wp:paragraph {"className":"ml-eyebrow"} -->
+    <p class="ml-eyebrow">Privacy</p>
+    <!-- /wp:paragraph -->
+    <!-- wp:heading {"level":1} -->
+    <h1 class="wp-block-heading">Privacy notice</h1>
+    <!-- /wp:heading -->
+    <!-- wp:paragraph {"className":"ml-page-lead"} -->
+    <p class="ml-page-lead">Market Lense stores operational metadata required to ingest reports, validate artifacts, and publish approved digests to WordPress.</p>
+    <!-- /wp:paragraph -->
+  </div>
+  <!-- /wp:group -->
+
+  <!-- wp:heading {"level":2} -->
+  <h2 class="wp-block-heading">Data we process</h2>
+  <!-- /wp:heading -->
+  <!-- wp:list -->
+  <ul>
+    <li>Report source metadata (file identifiers, hashes, publish states).</li>
+    <li>Generated content artifacts (summaries, metrics, quote candidates, rendered HTML).</li>
+    <li>Operational telemetry (structured run/task/span logs and validation outputs).</li>
+  </ul>
+  <!-- /wp:list -->
+
+  <!-- wp:heading {"level":2} -->
+  <h2 class="wp-block-heading">Security controls</h2>
+  <!-- /wp:heading -->
+  <!-- wp:paragraph -->
+  <p>Secrets are loaded from environment variables, not from committed theme code. Logs are structured and must redact sensitive tokens and private credentials before storage.</p>
+  <!-- /wp:paragraph -->
+
+  <!-- wp:post-content {"layout":{"type":"constrained"}} /-->
+</main>
+<!-- /wp:group -->
+
+<!-- wp:template-part {"slug":"footer","theme":"marketlense","tagName":"footer"} /-->

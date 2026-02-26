@@ -1,77 +1,135 @@
-# WordPress Subproject (Current State)
+# WordPress Rendering Subproject
 
-This document reflects the actual WordPress scope in this repository.
+This folder contains the WordPress rendering layer for Market Lense:
+
+- Block theme: `wp-content/themes/marketlense`
+- Core domain plugin: `wp-content/plugins/marketlense-core`
+- Packaging and smoke scripts: `Wordpress/scripts/*`
 
 ## Scope
 
-`Wordpress/` currently contains only the WordPress theme source used by Market Lense publishing outputs.
+Included:
 
-- No Docker runtime is maintained in this folder.
-- No plugin/CPT layer is maintained in this folder.
+- FSE block theme templates/parts/patterns for editorial rendering
+- WordPress plugin for `ml_report` CPT + taxonomy/meta domain model
+- Zip packaging scripts for backoffice installation
+- `wp-cli` smoke test script
+
+Excluded:
+
+- Docker runtime stack
+- Python publish/orchestration logic in `src/`
 
 ## Current Structure
 
-Existing files:
+```text
+Wordpress/
+  wp-content/
+    themes/
+      marketlense/
+        style.css
+        theme.json
+        functions.php
+        screenshot.png
+        assets/{css,js}
+        templates/*
+        parts/*
+        patterns/*
+    plugins/
+      marketlense-core/
+        marketlense-core.php
+        uninstall.php
+        readme.txt
+        includes/*
+  scripts/
+    build-theme-zip.sh
+    build-plugin-zip.sh
+    smoke-test.sh
+  dist/
+```
 
-- `Wordpress/.gitignore`
-- `Wordpress/README_WORDPRESS.md`
-- `Wordpress/wp-content/themes/marketlense-theme/*`
+## Plugin Contract (`marketlense-core`)
 
-Theme type:
+Plugin slug: `marketlense-core`  
+Primary responsibilities:
 
-- Classic theme scaffold (PHP templates + CSS)
+- Registers custom post type `ml_report` (`show_in_rest=true`, REST base `ml_report`)
+- Registers taxonomies:
+  - `ml_topic`
+  - `ml_publisher`
+- Registers and exposes report metadata keys:
+  - `ml_file_id`
+  - `ml_publisher_name`
+  - `ml_time_period`
+  - `ml_region`
+- Synchronizes metadata/taxonomy projections from published digest content and existing tags/categories on save.
 
-Core files:
+## Build ZIPs For WP Admin Upload
 
-- `functions.php`
-- `header.php`
-- `footer.php`
-- `front-page.php`
-- `index.php`
-- `template-parts/content.php`
-- `style.css`
-- `assets/css/main.css`
+From repo root:
 
-## Not Included
+```bash
+bash Wordpress/scripts/build-plugin-zip.sh
+bash Wordpress/scripts/build-theme-zip.sh
+```
 
-These are intentionally not present right now:
+Build scripts use `zip` when available and automatically fall back to Python (`python`/`python3`/`py`) or local virtualenv interpreters (`../.venv/Scripts/python.exe`, `../.venv/bin/python`) when `zip` is not installed.
 
-- Docker Compose stack
-- `Wordpress/.env.example`
-- WordPress plugin code (`wp-content/plugins/marketlense-core/`)
-- `theme.json`
-- `single-ml_report.html`
-- `Wordpress/scripts/*`
+Outputs:
 
-## Environment Strategy
+```text
+Wordpress/dist/marketlense-core.zip
+Wordpress/dist/marketlense.zip
+```
 
-Use the root project `.env` (`c:\Programing\Market lense\.env`) as the single source for publish-related configuration.
+Install order in WordPress Admin:
 
-Relevant keys:
+1. `Plugins -> Add New -> Upload Plugin` -> upload `marketlense-core.zip` -> activate.
+2. `Appearance -> Themes -> Add New -> Upload Theme` -> upload `marketlense.zip` -> activate.
 
-- `WP_SITE_URL`
-- `WP_USERNAME`
-- `WP_APP_PASSWORD` (or `WP_BEARER_TOKEN`)
+## Smoke Test
 
-Do not maintain a separate WordPress-only `.env` in this subproject unless you explicitly need one.
+If `wp-cli` is available:
+
+```bash
+bash Wordpress/scripts/smoke-test.sh
+```
+
+What it validates:
+
+- Plugin `marketlense-core` is installed and can activate.
+- Theme `marketlense` is installed and can activate.
+- Required theme templates exist.
+- Front page returns HTTP `200`.
+- A published `ml_report` URL returns HTTP `200` (seeded if missing).
+
+Optional environment controls:
+
+- `WP_CLI_BIN` (default: `wp`)
+- `WP_CLI_FLAGS` (example: `--path=/var/www/html --allow-root`)
+
+If `wp-cli` is unavailable, smoke test exits with a skip message.
 
 ## Pipeline Integration
 
-Publishing is handled by Python code in `src/` and targets a WordPress site over REST.
-
-Commands:
+Publishing remains controlled by Python orchestration in `src/`:
 
 ```powershell
 python -m src.cli publish-wp
 python -m src.cli update-wp-categories
 ```
 
-Current behavior:
+WordPress credentials and publish controls come from root `.env`/`app.yaml`:
 
-- Publishes to standard WordPress posts endpoint.
-- Uploads report images to WordPress media.
-- Records publish state (`file_id -> wp_post_id/wp_post_url`) in the pipeline state DB.
+- `WP_SITE_URL`
+- `WP_USERNAME`
+- `WP_APP_PASSWORD` or `WP_BEARER_TOKEN`
+- `WP_POST_STATUS` (optional override)
+- `WP_POST_TYPE` (optional override, default `ml_report`)
 
 ## Maintenance Rule
 
-If you add runtime tooling (local WordPress server, plugin layer, scripts), update this file and root `README.md` in the same commit.
+Any WordPress change in this subproject must update:
+
+- `Wordpress/README_WORDPRESS.md`
+- Root `README.md` WordPress section

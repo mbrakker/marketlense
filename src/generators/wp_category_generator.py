@@ -24,6 +24,7 @@ def update_post_categories_for_record(
     categories: List[str],
     base_url: str,
     auth_header: str,
+    post_type: str,
     mappings: CategoryMappingLoadResponse,
     ctx: RunContext,
 ) -> WordPressCategoryUpdateOutcome:
@@ -86,6 +87,7 @@ def update_post_categories_for_record(
             auth_header=auth_header,
             post_id=post_id,
             categories=category_ids,
+            post_type=post_type,
         ),
         ctx,
     )

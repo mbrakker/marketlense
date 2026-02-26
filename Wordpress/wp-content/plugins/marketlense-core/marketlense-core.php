@@ -1,0 +1,42 @@
+<?php
+/**
+ * Plugin Name: Market Lense Core
+ * Plugin URI: https://marketlense.local
+ * Description: Core WordPress domain layer for Market Lense reports (CPT, taxonomies, and metadata synchronization).
+ * Version: 1.0.0
+ * Author: Market Lense
+ * Author URI: https://marketlense.local
+ * Requires at least: 6.6
+ * Requires PHP: 8.2
+ * Text Domain: marketlense-core
+ * License: GPLv2 or later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ *
+ * @package MarketLenseCore
+ */
+
+declare(strict_types=1);
+
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+define('MARKETLENSE_CORE_VERSION', '1.0.0');
+define('MARKETLENSE_CORE_PATH', plugin_dir_path(__FILE__));
+define('MARKETLENSE_CORE_URL', plugin_dir_url(__FILE__));
+
+require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-plugin.php';
+require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-post-type.php';
+require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-taxonomies.php';
+require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-content-parser.php';
+require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-meta.php';
+
+register_activation_hook(__FILE__, ['\\MarketLense\\Core\\Plugin', 'activate']);
+register_deactivation_hook(__FILE__, ['\\MarketLense\\Core\\Plugin', 'deactivate']);
+
+add_action(
+    'plugins_loaded',
+    static function (): void {
+        \MarketLense\Core\Plugin::instance()->boot();
+    }
+);

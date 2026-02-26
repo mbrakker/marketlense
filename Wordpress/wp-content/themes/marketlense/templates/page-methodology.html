@@ -1,0 +1,40 @@
+<!-- wp:template-part {"slug":"header","theme":"marketlense","tagName":"header"} /-->
+
+<!-- wp:group {"tagName":"main","anchor":"main-content","className":"ml-shell ml-page-frame","layout":{"type":"constrained"}} -->
+<main id="main-content" class="wp-block-group ml-shell ml-page-frame">
+  <!-- wp:group {"className":"ml-taxonomy-header","layout":{"type":"constrained"}} -->
+  <div class="wp-block-group ml-taxonomy-header">
+    <!-- wp:paragraph {"className":"ml-eyebrow"} -->
+    <p class="ml-eyebrow">Methodology</p>
+    <!-- /wp:paragraph -->
+    <!-- wp:heading {"level":1} -->
+    <h1 class="wp-block-heading">How Market Lense creates each report digest</h1>
+    <!-- /wp:heading -->
+    <!-- wp:paragraph {"className":"ml-page-lead"} -->
+    <p class="ml-page-lead">Our publishing pipeline uses deterministic extraction, schema validation, and structured prompting so every published digest is reproducible and auditable.</p>
+    <!-- /wp:paragraph -->
+  </div>
+  <!-- /wp:group -->
+
+  <!-- wp:list {"ordered":true} -->
+  <ol>
+    <li><strong>Source ingestion:</strong> reports are imported from configured sources and fingerprinted by content hash.</li>
+    <li><strong>Evidence extraction:</strong> document structure, claims, metrics, and figure candidates are extracted and normalized into typed contracts.</li>
+    <li><strong>Validation:</strong> generated artifacts pass schema and grounding checks before publication is allowed.</li>
+    <li><strong>Digest rendering:</strong> output is rendered as executive-friendly HTML with section navigation, figure surfaces, and citation-aware summaries.</li>
+    <li><strong>WordPress publishing:</strong> digests, media, and taxonomy mappings are pushed via controlled publish orchestration.</li>
+  </ol>
+  <!-- /wp:list -->
+
+  <!-- wp:heading {"level":2} -->
+  <h2 class="wp-block-heading">Quality controls</h2>
+  <!-- /wp:heading -->
+  <!-- wp:paragraph -->
+  <p>Every run is logged with run/task/span identifiers, prompt hashes, and validation outcomes. Reports that fail extractability or evidence integrity gates are explicitly blocked from publishing.</p>
+  <!-- /wp:paragraph -->
+
+  <!-- wp:post-content {"layout":{"type":"constrained"}} /-->
+</main>
+<!-- /wp:group -->
+
+<!-- wp:template-part {"slug":"footer","theme":"marketlense","tagName":"footer"} /-->

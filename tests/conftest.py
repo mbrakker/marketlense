@@ -91,6 +91,7 @@ def publish_settings_factory(app_paths: dict[str, str]):
                 app_password="pass",
                 bearer_token=None,
                 post_status="publish",
+                post_type="ml_report",
             ),
         )
 

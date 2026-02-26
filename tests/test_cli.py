@@ -76,6 +76,7 @@ class TestCli(unittest.TestCase):
                 app_password="pass",
                 bearer_token=None,
                 post_status="publish",
+                post_type="ml_report",
             ),
         )
         outcomes = [

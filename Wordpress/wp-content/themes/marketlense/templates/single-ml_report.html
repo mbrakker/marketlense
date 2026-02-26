@@ -1,0 +1,30 @@
+<!-- wp:template-part {"slug":"header","theme":"marketlense","tagName":"header"} /-->
+
+<!-- wp:group {"tagName":"main","anchor":"main-content","className":"ml-shell ml-report-shell","layout":{"type":"constrained"}} -->
+<main id="main-content" class="wp-block-group ml-shell ml-report-shell">
+  <!-- wp:template-part {"slug":"report-hero","theme":"marketlense"} /-->
+
+  <!-- wp:spacer {"height":"var:preset|spacing|50"} -->
+  <div style="height:var(--wp--preset--spacing--50)" aria-hidden="true" class="wp-block-spacer"></div>
+  <!-- /wp:spacer -->
+
+  <!-- wp:group {"className":"ml-report-grid-shell","layout":{"type":"default"}} -->
+  <div class="wp-block-group ml-report-grid-shell">
+    <!-- wp:group {"className":"ml-report-main","layout":{"type":"constrained"}} -->
+    <div class="wp-block-group ml-report-main">
+      <!-- wp:post-content {"layout":{"type":"constrained"}} /-->
+    </div>
+    <!-- /wp:group -->
+
+    <!-- wp:group {"className":"ml-report-side","layout":{"type":"constrained"}} -->
+    <div class="wp-block-group ml-report-side">
+      <!-- wp:template-part {"slug":"report-toc","theme":"marketlense"} /-->
+      <!-- wp:template-part {"slug":"report-rail","theme":"marketlense"} /-->
+    </div>
+    <!-- /wp:group -->
+  </div>
+  <!-- /wp:group -->
+</main>
+<!-- /wp:group -->
+
+<!-- wp:template-part {"slug":"footer","theme":"marketlense","tagName":"footer"} /-->

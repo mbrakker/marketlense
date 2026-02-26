@@ -87,6 +87,7 @@ Key fields and env overrides:
 
 - Paths: `paths.output_dir` (`OUTPUT_DIR`, default `./out`), `paths.cache_dir` (`CACHE_DIR`, default `./cache`), `paths.state_db` (`STATE_DB`), `paths.reports_db` (`REPORTS_DB`), `paths.category_mappings` (defaults to `src/config/category-mappings.yaml`), `paths.html_tag_acronyms` (defaults to `src/config/html-tag-acronyms.yaml`).
 - Ingest: `ingest.google_sa_path` (`GOOGLE_SERVICE_ACCOUNT_JSON`), `ingest.gdrive_folder_id` (`GDRIVE_FOLDER_ID`), `ingest.openai_model` (`OPENAI_MODEL`), `ingest.batch_limit` (`BATCH_LIMIT`, default 20), `ingest.worker_limit` (`INGEST_WORKER_LIMIT`, default 2), `ingest.report_worker_limit` (`INGEST_REPORT_WORKER_LIMIT`, default 2), `ingest.temperature` (`TEMPERATURE`, default 1.0), `ingest.timeout_seconds` (`OPENAI_TIMEOUT_SECONDS`, default 600), `ingest.lock_ttl_seconds` (`INGEST_LOCK_TTL_SECONDS`, default 7200), `ingest.contents_page.*` (keywords, max_pages, min_headings, render_dpi, preview_enabled), `ingest.evidence_packs.parallel_workers` (`EVIDENCE_PACK_PARALLEL_WORKERS`, default 3), `ingest.evidence_packs.global_max_in_flight` (`EVIDENCE_PACK_GLOBAL_MAX_IN_FLIGHT`, default 2), `ingest.evidence_packs.global_min_interval_ms` (`EVIDENCE_PACK_GLOBAL_MIN_INTERVAL_MS`, default 250), `ingest.evidence_packs.doc_map_max_attempts` (`EVIDENCE_PACK_DOC_MAP_MAX_ATTEMPTS`, default 3), `ingest.evidence_packs.doc_map_retry_delay_ms` (`EVIDENCE_PACK_DOC_MAP_RETRY_DELAY_MS`, default 500), `ingest.evidence_packs.registry` (`EVIDENCE_PACK_REGISTRY`, comma-separated), `ingest.evidence_packs.enable_new_variety_packs` (`EVIDENCE_PACK_ENABLE_NEW_VARIETY_PACKS`, default `false`), `ingest.artifacts.parallel_workers` (`ARTIFACT_PARALLEL_WORKERS`, default 4), `ingest.artifacts.global_max_in_flight` (`ARTIFACT_GLOBAL_MAX_IN_FLIGHT`, default 2), `ingest.artifacts.global_min_interval_ms` (`ARTIFACT_GLOBAL_MIN_INTERVAL_MS`, default 250).
+- Publish: `publish.wp.site_url` (`WP_SITE_URL`), `publish.wp.username` (`WP_USERNAME`), `publish.wp.post_status` (`WP_POST_STATUS`, default `publish`), `publish.wp.post_type` (`WP_POST_TYPE`, default `ml_report`), `publish.validation.policy` (`PUBLISH_VALIDATION_POLICY`, default `block`).
 - Ranking/crop refinement: `rank.max_candidates`, `rank.selected_max` (default `5`), `rank.min_overall_score`, `rank.min_quality_score`, `rank.min_insight_score`, `rank.min_data_score`, `rank.crop_refine_enabled`, `rank.crop_refine_mode` (`adaptive|always|off`), `rank.crop_refine_page_dpi`, `rank.crop_refine_temperature`, `rank.crop_refine_timeout_seconds` (defaults to `rank.timeout_seconds` when omitted).
 - Drive listing: `ingest.drive.supports_all_drives`, `ingest.drive.include_items_from_all_drives` (shared drive flags), `ingest.drive.drive_id` (shared drive scope), and `ingest.drive.list_mode` (`full` vs `metadata` to omit names until needed).
 - PDF text extraction: `ingest.pdf_text.max_pages` and `ingest.pdf_text.max_chars` cap how much text is sampled per PDF; `ingest.pdf_text.min_density` (default `250` chars/page) triggers "not available from text" fallbacks when extraction is sparse; `ingest.pdf_text.sample_pages` (default `3`) controls the deterministic sample used to validate extractability before analysis.
@@ -110,6 +111,7 @@ Secrets (env only):
 
 - `OPENAI_API_KEY` (required)
 - `WP_APP_PASSWORD` or `WP_BEARER_TOKEN` (publishing)
+- `WP_POST_TYPE` (optional publish endpoint override; defaults to `ml_report`)
 - Optional provider keys (e.g., `MINERU_API_KEY`) if used.
 
 Prompt locations:
@@ -430,7 +432,7 @@ Required environment variables:
 
 - `OPENAI_API_KEY`
 - `WP_APP_PASSWORD` (or `WP_BEARER_TOKEN` if using bearer auth)
-- Optional: other provider keys (e.g., `MINERU_API_KEY`), `WP_USERNAME`/`WP_SITE_URL` if not set in YAML.
+- Optional: other provider keys (e.g., `MINERU_API_KEY`), `WP_USERNAME`/`WP_SITE_URL`/`WP_POST_TYPE` if not set in YAML.
 
 ---
 
@@ -604,12 +606,17 @@ To extend the system:
 - Artifacts: `src/generators/artifact_generator.py` writes `artifacts.json` under the same analysis path, parallelizing independent steps with dependency ordering and process-wide rate limiting via `ingest.artifacts.*`.
 - Cost ledger: `src/services/cost_ledger_service.py` appends JSONL entries for every LLM call and writes daily rollups (`./out/cost-ledger.jsonl`, `./out/cost-daily.json`) using per-model pricing from config.
 
-## WordPress Theme Development Environment
+## WordPress Rendering Environment
 
-A dedicated local WordPress theme workspace is available under `Wordpress/`.
+A dedicated local WordPress workspace is available under `Wordpress/`.
 
-- Current scope: theme source only (`Wordpress/wp-content/themes/marketlense-theme`) with native WordPress template hierarchy (`style.css`, `functions.php`, `index.php`, template parts).
+- Includes block theme source (`Wordpress/wp-content/themes/marketlense`) and core plugin source (`Wordpress/wp-content/plugins/marketlense-core`).
+- Plugin packaging: `bash Wordpress/scripts/build-plugin-zip.sh` builds `Wordpress/dist/marketlense-core.zip` for WP Admin upload (`Plugins -> Add New -> Upload Plugin`).
+- Theme packaging: `bash Wordpress/scripts/build-theme-zip.sh` builds `Wordpress/dist/marketlense.zip` for WP Admin upload (`Appearance -> Themes -> Upload Theme`).
+- Packaging scripts use `zip` when available and fall back to Python `zipfile` via `python`/`python3`/`py` or local `.venv` interpreters when `zip` is unavailable.
+- Smoke validation: `bash Wordpress/scripts/smoke-test.sh` (when `wp-cli` is available) checks plugin activation, theme activation, required templates, front-page HTTP `200`, and a seeded `ml_report` HTTP `200`.
+- WordPress publish endpoint type is configurable via `publish.wp.post_type` (or `WP_POST_TYPE`) and defaults to `ml_report`.
 - Docker runtime is not maintained in this subproject.
-- Publish integration uses the root `.env` (`WP_SITE_URL`, `WP_USERNAME`, `WP_APP_PASSWORD` or `WP_BEARER_TOKEN`) through the Python pipeline commands (`publish-wp`, `update-wp-categories`).
+- Publish integration continues to use root `.env` (`WP_SITE_URL`, `WP_USERNAME`, `WP_APP_PASSWORD` or `WP_BEARER_TOKEN`) through Python pipeline commands (`publish-wp`, `update-wp-categories`).
 
 Detailed instructions live in `Wordpress/README_WORDPRESS.md`.

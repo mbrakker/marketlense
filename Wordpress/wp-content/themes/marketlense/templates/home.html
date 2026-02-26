@@ -1,0 +1,56 @@
+<!-- wp:template-part {"slug":"header","theme":"marketlense","tagName":"header"} /-->
+
+<!-- wp:group {"tagName":"main","anchor":"main-content","className":"ml-shell","layout":{"type":"constrained"}} -->
+<main id="main-content" class="wp-block-group ml-shell">
+  <!-- wp:group {"className":"ml-taxonomy-header","layout":{"type":"constrained"}} -->
+  <div class="wp-block-group ml-taxonomy-header">
+    <!-- wp:paragraph {"className":"ml-eyebrow"} -->
+    <p class="ml-eyebrow">Market Lense</p>
+    <!-- /wp:paragraph -->
+
+    <!-- wp:heading {"level":1} -->
+    <h1 class="wp-block-heading">Latest intelligence digests</h1>
+    <!-- /wp:heading -->
+
+    <!-- wp:paragraph -->
+    <p>Track newly published reports, methodology notes, and editorial updates from the Market Lense research pipeline.</p>
+    <!-- /wp:paragraph -->
+  </div>
+  <!-- /wp:group -->
+
+  <!-- wp:spacer {"height":"var:preset|spacing|60"} -->
+  <div style="height:var(--wp--preset--spacing--60)" aria-hidden="true" class="wp-block-spacer"></div>
+  <!-- /wp:spacer -->
+
+  <!-- wp:pattern {"slug":"marketlense/report-grid"} /-->
+
+  <!-- wp:spacer {"height":"var:preset|spacing|60"} -->
+  <div style="height:var(--wp--preset--spacing--60)" aria-hidden="true" class="wp-block-spacer"></div>
+  <!-- /wp:spacer -->
+
+  <!-- wp:heading {"level":2} -->
+  <h2 class="wp-block-heading">Editorial posts</h2>
+  <!-- /wp:heading -->
+
+  <!-- wp:query {"queryId":21,"query":{"perPage":"8","pages":0,"offset":0,"postType":"post","order":"desc","orderBy":"date","author":"","search":"","exclude":[],"sticky":"","inherit":false}} -->
+  <div class="wp-block-query">
+    <!-- wp:post-template -->
+    <!-- wp:group {"className":"ml-report-card","layout":{"type":"constrained"}} -->
+    <div class="wp-block-group ml-report-card">
+      <!-- wp:post-title {"isLink":true,"level":3} /-->
+      <!-- wp:post-date {"fontSize":"xs"} /-->
+      <!-- wp:post-excerpt {"moreText":"Continue reading"} /-->
+    </div>
+    <!-- /wp:group -->
+    <!-- /wp:post-template -->
+
+    <!-- wp:query-pagination {"layout":{"type":"flex","justifyContent":"space-between"}} -->
+    <!-- wp:query-pagination-previous /-->
+    <!-- wp:query-pagination-next /-->
+    <!-- /wp:query-pagination -->
+  </div>
+  <!-- /wp:query -->
+</main>
+<!-- /wp:group -->
+
+<!-- wp:template-part {"slug":"footer","theme":"marketlense","tagName":"footer"} /-->

@@ -12,6 +12,7 @@ class WordPressAuthSettings:
     app_password: Optional[str] = field(metadata={"doc": "WordPress application password (secret)."})
     bearer_token: Optional[str] = field(metadata={"doc": "WordPress bearer token (secret)."})
     post_status: str = field(metadata={"doc": "Default WordPress post status."})
+    post_type: str = field(default="ml_report", metadata={"doc": "REST post type endpoint slug (for example: posts, ml_report)."})
 
 
 @dataclass(frozen=True)
@@ -44,6 +45,7 @@ class WordPressPostCreateRequest:
     featured_media: Optional[int] = field(default=None, metadata={"doc": "Optional featured media ID."})
     categories: Optional[List[int]] = field(default=None, metadata={"doc": "Optional WordPress category IDs."})
     tags: Optional[List[int]] = field(default=None, metadata={"doc": "Optional WordPress tag IDs."})
+    post_type: str = field(default="posts", metadata={"doc": "REST post type endpoint slug."})
 
 
 @dataclass(frozen=True)
@@ -61,6 +63,7 @@ class WordPressPostLookupRequest:
     auth_header: str = field(metadata={"doc": "Authorization header value."})
     file_id: str = field(metadata={"doc": "Drive file ID to search for."})
     per_page: int = field(default=5, metadata={"doc": "Max posts to inspect."})
+    post_type: str = field(default="posts", metadata={"doc": "REST post type endpoint slug."})
 
 
 @dataclass(frozen=True)
@@ -113,6 +116,7 @@ class WordPressPostUpdateRequest:
     auth_header: str = field(metadata={"doc": "Authorization header value."})
     post_id: int = field(metadata={"doc": "WordPress post ID."})
     categories: List[int] = field(metadata={"doc": "Category IDs to assign to the post."})
+    post_type: str = field(default="posts", metadata={"doc": "REST post type endpoint slug."})
 
 
 @dataclass(frozen=True)

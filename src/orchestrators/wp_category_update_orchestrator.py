@@ -68,6 +68,7 @@ def run_update_wp_categories(settings: PublishSettings) -> List[WordPressCategor
                 categories=record.categories,
                 base_url=base_url,
                 auth_header=auth_header,
+                post_type=settings.wp.post_type,
                 mappings=mappings_resp,
                 ctx=record_ctx,
             )

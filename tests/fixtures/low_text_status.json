@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0",
+  "text_density": 10.0,
+  "density_threshold": 120.0,
+  "pages_sampled": 2,
+  "char_count": 20,
+  "not_available": true,
+  "reason": "text_density_below_threshold",
+  "evidence_present": false
+}

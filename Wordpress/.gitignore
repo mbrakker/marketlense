@@ -2,4 +2,5 @@
 wp-content/uploads/
 wp-content/cache/
 wp-content/upgrade/
+dist/
 .DS_Store

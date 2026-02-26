@@ -319,6 +319,7 @@ def run_publish(
                     base_url=base_url,
                     auth_header=auth_header,
                     file_id=file_id,
+                    post_type=settings.wp.post_type,
                 ),
                 file_ctx,
             )

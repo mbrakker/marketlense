@@ -1498,6 +1498,7 @@ def _render_publishing_control(
                     "site_url": publish_settings.wp.site_url,
                     "username": publish_settings.wp.username,
                     "post_status": publish_settings.wp.post_status,
+                    "post_type": publish_settings.wp.post_type,
                     "validation_policy": publish_settings.validation_policy,
                 }
             )
@@ -2348,6 +2349,11 @@ def _render_structured_config_form(
                         _as_str(wp.get("post_status"), "publish")
                     ),
                 )
+                wp_post_type = st.text_input(
+                    "WordPress Post Type Endpoint",
+                    value=_as_str(wp.get("post_type"), "ml_report"),
+                    help="REST endpoint slug used for publishing (for example: ml_report or posts).",
+                )
             with pub2:
                 publish_validation_policy = st.selectbox(
                     "Publish Validation Policy",
@@ -2513,6 +2519,7 @@ def _render_structured_config_form(
     wp["site_url"] = wp_site_url.strip()
     wp["username"] = wp_username.strip()
     wp["post_status"] = wp_post_status
+    wp["post_type"] = wp_post_type.strip().strip("/") or "ml_report"
     publish["wp"] = wp
     publish_validation["policy"] = publish_validation_policy
     publish["validation"] = publish_validation

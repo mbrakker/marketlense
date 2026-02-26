@@ -904,6 +904,16 @@ def load_publish_settings(
         post_status=wp_cfg.get("post_status")
         or _env_value("WP_POST_STATUS")
         or "publish",
+        post_type=(
+            str(
+                wp_cfg.get("post_type")
+                or _env_value("WP_POST_TYPE")
+                or "ml_report"
+            )
+            .strip()
+            .strip("/")
+            or "ml_report"
+        ),
     )
 
     validation_policy_raw = (
@@ -954,6 +964,7 @@ def load_publish_settings(
                 "site_url": settings.wp.site_url,
                 "username": settings.wp.username,
                 "post_status": settings.wp.post_status,
+                "post_type": settings.wp.post_type,
                 "validation_policy": settings.validation_policy,
             },
         )
