@@ -608,15 +608,8 @@ To extend the system:
 
 A dedicated local WordPress theme workspace is available under `Wordpress/`.
 
-- Stack: Docker Compose with WordPress, MySQL 8, and phpMyAdmin.
-- Theme scaffold: `Wordpress/wp-content/themes/marketlense-theme` using native WordPress template hierarchy (`style.css`, `functions.php`, `index.php`, template parts).
-- Environment variables: copy `Wordpress/.env.example` to `Wordpress/.env` and customize credentials/ports.
+- Current scope: theme source only (`Wordpress/wp-content/themes/marketlense-theme`) with native WordPress template hierarchy (`style.css`, `functions.php`, `index.php`, template parts).
+- Docker runtime is not maintained in this subproject.
+- Publish integration uses the root `.env` (`WP_SITE_URL`, `WP_USERNAME`, `WP_APP_PASSWORD` or `WP_BEARER_TOKEN`) through the Python pipeline commands (`publish-wp`, `update-wp-categories`).
 
-Quick start:
-
-```bash
-cp Wordpress/.env.example Wordpress/.env
-docker compose --env-file Wordpress/.env -f Wordpress/docker-compose.yml up -d
-```
-
-Detailed instructions live in `Wordpress/README.md`.
+Detailed instructions live in `Wordpress/README_WORDPRESS.md`.
