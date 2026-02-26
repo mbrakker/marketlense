@@ -603,3 +603,20 @@ To extend the system:
 - Evidence packs: `src/generators/evidence_pack_generator.py` uses `src/prompts/report_vs/**` and writes packs to `out/<report-slug>/report_analysis/*.json`; `doc_map` runs first and remaining packs run in parallel with process-wide rate limiting via `ingest.evidence_packs.*`. Validation uses strict per-pack schemas (`scope_pack`, `methods_pack`, `findings_pack`, `limitations_pack`, `quote_candidates_pack`) plus optional variety-pack schemas (`key_metrics_pack`, `risk_register_pack`, `recommendations_pack`, `contradictions_pack`).
 - Artifacts: `src/generators/artifact_generator.py` writes `artifacts.json` under the same analysis path, parallelizing independent steps with dependency ordering and process-wide rate limiting via `ingest.artifacts.*`.
 - Cost ledger: `src/services/cost_ledger_service.py` appends JSONL entries for every LLM call and writes daily rollups (`./out/cost-ledger.jsonl`, `./out/cost-daily.json`) using per-model pricing from config.
+
+## WordPress Theme Development Environment
+
+A dedicated local WordPress theme workspace is available under `Wordpress/`.
+
+- Stack: Docker Compose with WordPress, MySQL 8, and phpMyAdmin.
+- Theme scaffold: `Wordpress/wp-content/themes/marketlense-theme` using native WordPress template hierarchy (`style.css`, `functions.php`, `index.php`, template parts).
+- Environment variables: copy `Wordpress/.env.example` to `Wordpress/.env` and customize credentials/ports.
+
+Quick start:
+
+```bash
+cp Wordpress/.env.example Wordpress/.env
+docker compose --env-file Wordpress/.env -f Wordpress/docker-compose.yml up -d
+```
+
+Detailed instructions live in `Wordpress/README.md`.

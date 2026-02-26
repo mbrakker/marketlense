@@ -20,6 +20,7 @@ from src.contracts.costs import (
     StepCostTotal,
 )
 from src.contracts.run_context import RunContext
+from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.cost_ledger_service")
@@ -97,7 +98,6 @@ def _step_totals(step_name: str, metrics: Dict[str, float | int]) -> StepCostTot
 
 def append_entry(request: CostLedgerAppendRequest, ctx: RunContext) -> CostLedgerAppendResponse:
     path = Path(request.path)
-    path.parent.mkdir(parents=True, exist_ok=True)
     with _LEDGER_LOCK:
         logger.info(log_event(
             ctx,
@@ -106,8 +106,18 @@ def append_entry(request: CostLedgerAppendRequest, ctx: RunContext) -> CostLedge
             module=logger.name,
             fields={"path": str(path)},
         ))
-        with path.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(request.entry.__dict__, ensure_ascii=False) + "\n")
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("a", encoding="utf-8") as f:
+                f.write(json.dumps(request.entry.__dict__, ensure_ascii=False) + "\n")
+        except Exception as exc:
+            raise AppError(
+                code="cost_ledger_append_failed",
+                message=f"Failed to append entry to cost ledger at {path}",
+                cause=exc,
+                retryable=False,
+                context={"path": str(path)},
+            ) from exc
         logger.info(log_event(
             ctx,
             role="service",
@@ -132,34 +142,43 @@ def rollup_daily(request: CostRollupRequest, ctx: RunContext) -> CostRollupRespo
             module=logger.name,
             fields={"ledger_path": str(ledger_path), "out_path": str(out_path)},
         ))
-        rows = _load_rows(ledger_path)
-        if rows:
-            daily_agg = _aggregate_rows(rows, _date_key)
-            run_agg = _aggregate_rows(rows, lambda row: str(row.get("run_id") or "unknown"))
-            task_agg = _aggregate_rows(rows, lambda row: str(row.get("task_id") or "unknown"))
-            totals_by_date = {
-                day: DailyCostTotal(
-                    schema_version="1.0",
-                    date_utc=day,
-                    total_usd=round(metrics["estimated_cost_usd"], 6),
-                    input_tokens=int(metrics["input_tokens"]),
-                    output_tokens=int(metrics["output_tokens"]),
-                    tool_calls=int(metrics["tool_calls"]),
-                )
-                for day, metrics in sorted(daily_agg.items())
+        try:
+            rows = _load_rows(ledger_path)
+            if rows:
+                daily_agg = _aggregate_rows(rows, _date_key)
+                run_agg = _aggregate_rows(rows, lambda row: str(row.get("run_id") or "unknown"))
+                task_agg = _aggregate_rows(rows, lambda row: str(row.get("task_id") or "unknown"))
+                totals_by_date = {
+                    day: DailyCostTotal(
+                        schema_version="1.0",
+                        date_utc=day,
+                        total_usd=round(metrics["estimated_cost_usd"], 6),
+                        input_tokens=int(metrics["input_tokens"]),
+                        output_tokens=int(metrics["output_tokens"]),
+                        tool_calls=int(metrics["tool_calls"]),
+                    )
+                    for day, metrics in sorted(daily_agg.items())
+                }
+                totals_by_run = {run_id: _to_cost_totals(metrics) for run_id, metrics in sorted(run_agg.items())}
+                totals_by_task = {task_id: _to_cost_totals(metrics) for task_id, metrics in sorted(task_agg.items())}
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            serialized = {
+                "schema_version": "1.1",
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "totals": {day: total.__dict__ for day, total in totals_by_date.items()},
+                "totals_by_date": {day: total.__dict__ for day, total in totals_by_date.items()},
+                "totals_by_run": {run_id: total.__dict__ for run_id, total in totals_by_run.items()},
+                "totals_by_task": {task_id: total.__dict__ for task_id, total in totals_by_task.items()},
             }
-            totals_by_run = {run_id: _to_cost_totals(metrics) for run_id, metrics in sorted(run_agg.items())}
-            totals_by_task = {task_id: _to_cost_totals(metrics) for task_id, metrics in sorted(task_agg.items())}
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        serialized = {
-            "schema_version": "1.1",
-            "generated_at": datetime.now(timezone.utc).isoformat(),
-            "totals": {day: total.__dict__ for day, total in totals_by_date.items()},
-            "totals_by_date": {day: total.__dict__ for day, total in totals_by_date.items()},
-            "totals_by_run": {run_id: total.__dict__ for run_id, total in totals_by_run.items()},
-            "totals_by_task": {task_id: total.__dict__ for task_id, total in totals_by_task.items()},
-        }
-        out_path.write_text(json.dumps(serialized, ensure_ascii=False, indent=2), encoding="utf-8")
+            out_path.write_text(json.dumps(serialized, ensure_ascii=False, indent=2), encoding="utf-8")
+        except Exception as exc:
+            raise AppError(
+                code="cost_ledger_rollup_failed",
+                message=f"Failed to roll up cost ledger from {ledger_path} to {out_path}",
+                cause=exc,
+                retryable=False,
+                context={"ledger_path": str(ledger_path), "out_path": str(out_path)},
+            ) from exc
         logger.info(log_event(
             ctx,
             role="service",

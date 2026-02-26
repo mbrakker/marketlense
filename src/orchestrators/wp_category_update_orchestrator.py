@@ -8,7 +8,6 @@ from src.contracts.categories import (
     CategoryMappingLoadRequest,
 )
 from src.contracts.publish import PublishSettings
-from src.contracts.run_context import RunContext
 from src.contracts.state import StatePublishCheckRequest
 from src.contracts.report_store import ReportMetadataListRequest
 from src.generators.wp_category_generator import update_post_categories_for_record

@@ -19,7 +19,6 @@ from src.services.drive_service import download_pdf, list_pdfs
 from src.services.file_service import file_exists, file_md5, write_bytes
 from src.services.pdf_service import check_pdf_eof
 from src.orchestrators.retry_orchestrator import run_step_with_default_policy
-from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.path_utils import safe_pdf_name
 from src.utils.slugify import slugify

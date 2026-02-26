@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import mimetypes
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 from src.contracts.files import FileExistsRequest, ReadBytesRequest, ReadTextRequest
 from src.contracts.publish import PublishOutcome, PublishRequest, PublishSettings

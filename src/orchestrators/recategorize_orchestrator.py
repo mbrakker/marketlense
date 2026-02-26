@@ -11,7 +11,6 @@ from src.contracts.categories import (
     UncategorizedTagsUpdateRequest,
 )
 from src.contracts.report_store import ReportMetadataUpsertRequest, ReportMetadataListRequest
-from src.contracts.run_context import RunContext
 from src.generators.categorize_generator import categorize_taxonomy
 from src.services.category_mapping_service import (
     load_mappings as load_category_mappings,

@@ -11,6 +11,7 @@ from src.contracts.report_analysis import (
     AnalysisStorePackResponse,
 )
 from src.contracts.run_context import RunContext
+from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.slugify import slugify
 
@@ -65,19 +66,35 @@ def store_pack(request: AnalysisStorePackRequest, ctx: RunContext) -> AnalysisSt
         },
     ))
 
-    primary_path = Path(pack_path(
-        AnalysisPackPathRequest(
-            schema_version="1.0",
-            output_dir=request.output_dir,
-            report_id=request.report_id,
-            pack_name=request.pack_name,
-            report_slug=request.report_slug,
-        ),
-        ctx,
-    ).output_path)
-    primary_path.parent.mkdir(parents=True, exist_ok=True)
-    payload_json = json.dumps(request.payload, ensure_ascii=False, indent=2)
-    primary_path.write_text(payload_json, encoding="utf-8")
+    primary_path = Path(
+        pack_path(
+            AnalysisPackPathRequest(
+                schema_version="1.0",
+                output_dir=request.output_dir,
+                report_id=request.report_id,
+                pack_name=request.pack_name,
+                report_slug=request.report_slug,
+            ),
+            ctx,
+        ).output_path
+    )
+    try:
+        primary_path.parent.mkdir(parents=True, exist_ok=True)
+        payload_json = json.dumps(request.payload, ensure_ascii=False, indent=2)
+        primary_path.write_text(payload_json, encoding="utf-8")
+    except Exception as exc:
+        raise AppError(
+            code="analysis_store_failed",
+            message=f"Failed to store analysis pack '{request.pack_name}' for report '{request.report_id}'",
+            cause=exc,
+            retryable=False,
+            context={
+                "output_dir": request.output_dir,
+                "report_id": request.report_id,
+                "pack_name": request.pack_name,
+                "path": str(primary_path),
+            },
+        ) from exc
 
     response = AnalysisStorePackResponse(
         schema_version="1.0",
