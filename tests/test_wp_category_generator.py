@@ -68,6 +68,7 @@ def test_wp_category_update_applies_categories(monkeypatch):
             slug_to_id={"digital_payments": 101, "consumer_behavior": 102},
         ),
     )
+
     def _update(req, ctx):
         assert req.post_type == "ml_report"
         return WordPressPostUpdateResponse(schema_version="1.0", post_id=req.post_id)

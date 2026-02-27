@@ -48,8 +48,12 @@ class TestCli(unittest.TestCase):
             )
         ]
 
-        with patch.object(cli, "load_settings", return_value=settings) as load_settings_mock:
-            with patch.object(cli, "run_ingest", return_value=outcomes) as run_ingest_mock:
+        with patch.object(
+            cli, "load_settings", return_value=settings
+        ) as load_settings_mock:
+            with patch.object(
+                cli, "run_ingest", return_value=outcomes
+            ) as run_ingest_mock:
                 cli.ingest(folder=None, limit=1)
                 load_settings_mock.assert_called_once()
                 run_ingest_mock.assert_called_once()
@@ -90,8 +94,12 @@ class TestCli(unittest.TestCase):
             )
         ]
 
-        with patch.object(cli, "load_publish_settings", return_value=settings) as load_settings_mock:
-            with patch.object(cli, "run_publish", return_value=outcomes) as run_publish_mock:
+        with patch.object(
+            cli, "load_publish_settings", return_value=settings
+        ) as load_settings_mock:
+            with patch.object(
+                cli, "run_publish", return_value=outcomes
+            ) as run_publish_mock:
                 cli.publish_wp(limit=1)
                 load_settings_mock.assert_called_once()
                 run_publish_mock.assert_called_once()
@@ -145,11 +153,15 @@ class TestCli(unittest.TestCase):
             matched_entries=1,
         )
 
-        with patch.object(cli, "load_settings", return_value=settings) as load_settings_mock:
+        with patch.object(
+            cli, "load_settings", return_value=settings
+        ) as load_settings_mock:
             with patch.object(
                 cli,
                 "run_cost_reporting",
-                return_value=type("CostReporting", (), {"report": response, "rollup": None})(),
+                return_value=type(
+                    "CostReporting", (), {"report": response, "rollup": None}
+                )(),
             ) as reporting_mock:
                 with patch.object(cli.console, "print"):
                     cli.cost_report(date="2026-01-01", run_id=None, top=1)

@@ -616,6 +616,7 @@ A dedicated local WordPress workspace is available under `Wordpress/`.
 - Packaging scripts use `zip` when available and fall back to Python `zipfile` via `python`/`python3`/`py` or local `.venv` interpreters when `zip` is unavailable.
 - Smoke validation: `bash Wordpress/scripts/smoke-test.sh` (when `wp-cli` is available) checks plugin activation, theme activation, required templates, front-page HTTP `200`, and a seeded `ml_report` HTTP `200`.
 - WordPress publish endpoint type is configurable via `publish.wp.post_type` (or `WP_POST_TYPE`) and defaults to `ml_report`.
+- Theme responsive layout defaults were widened for better laptop/desktop presentation while retaining mobile behavior (`contentSize: min(60rem, calc(100vw - 2.5rem))`, `wideSize: min(92rem, calc(100vw - 2.5rem))` in `Wordpress/wp-content/themes/marketlense/theme.json`).
 - Docker runtime is not maintained in this subproject.
 - Publish integration continues to use root `.env` (`WP_SITE_URL`, `WP_USERNAME`, `WP_APP_PASSWORD` or `WP_BEARER_TOKEN`) through Python pipeline commands (`publish-wp`, `update-wp-categories`).
 

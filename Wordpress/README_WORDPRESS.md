@@ -110,6 +110,16 @@ Optional environment controls:
 
 If `wp-cli` is unavailable, smoke test exits with a skip message.
 
+
+## Responsive Layout Defaults
+
+The `marketlense` theme now uses wider responsive layout defaults in `theme.json` so content scales better on laptop/desktop widths while preserving mobile readability:
+
+- `settings.layout.contentSize`: `min(60rem, calc(100vw - 2.5rem))`
+- `settings.layout.wideSize`: `min(92rem, calc(100vw - 2.5rem))`
+
+This keeps blocks fluid across breakpoints and avoids the previous narrow desktop appearance.
+
 ## Pipeline Integration
 
 Publishing remains controlled by Python orchestration in `src/`:

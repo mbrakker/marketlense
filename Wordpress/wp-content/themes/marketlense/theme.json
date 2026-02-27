@@ -4,8 +4,8 @@
   "settings": {
     "appearanceTools": true,
     "layout": {
-      "contentSize": "47rem",
-      "wideSize": "76rem"
+      "contentSize": "min(60rem, calc(100vw - 2.5rem))",
+      "wideSize": "min(92rem, calc(100vw - 2.5rem))"
     },
     "custom": {
       "radius": {

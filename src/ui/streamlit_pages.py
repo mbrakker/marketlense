@@ -142,9 +142,10 @@ def _ctx(task_id: str) -> Any:
 def _to_dicts(items: Iterable[Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for item in items:
-        if is_dataclass(item):
+        if is_dataclass(item) and not isinstance(item, type):
             rows.append(asdict(item))
-        elif isinstance(item, dict):
+            continue
+        if isinstance(item, dict):
             rows.append(item)
     return rows
 
@@ -2150,10 +2151,9 @@ def _render_structured_config_form(
                     min_value=72,
                     step=1,
                 )
-            keywords_default = (
-                contents_page.get("keywords")
-                if isinstance(contents_page.get("keywords"), list)
-                else []
+            raw_keywords = contents_page.get("keywords")
+            keywords_default: list[Any] = (
+                raw_keywords if isinstance(raw_keywords, list) else []
             )
             contents_keywords_text = st.text_area(
                 "Contents Keywords (one per line)",
@@ -2706,6 +2706,8 @@ def _render_settings_and_prompts(
                 )
                 if save_error:
                     st.error(f"Save failed: {save_error}")
+                elif save_response is None:
+                    st.error("Save failed: empty response from config service.")
                 else:
                     refreshed_doc, refresh_error = _try_read_app_config()
                     if refreshed_doc and not refresh_error:

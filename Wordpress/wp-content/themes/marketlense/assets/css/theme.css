@@ -116,6 +116,8 @@ summary:focus-visible,
 }
 
 .ml-shell {
+  width: min(100%, 110rem);
+  margin: 0 auto;
   padding: clamp(1rem, 1vw + 0.8rem, 1.6rem);
 }
 
@@ -915,6 +917,17 @@ summary:focus-visible,
 .wp-block-post-content .summary-copy,
 .wp-block-post-content .claim-list {
   color: color-mix(in srgb, var(--ml-midnight) 88%, white 12%);
+}
+
+
+@media (min-width: 1200px) {
+  .ml-report-main .wp-block-post-content {
+    padding: clamp(1.3rem, 1vw + 1rem, 2rem);
+  }
+
+  .ml-page-frame .wp-block-post-content {
+    padding: clamp(1.4rem, 1vw + 1rem, 2.1rem);
+  }
 }
 
 @media (max-width: 1100px) {

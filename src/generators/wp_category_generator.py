@@ -28,21 +28,25 @@ def update_post_categories_for_record(
     mappings: CategoryMappingLoadResponse,
     ctx: RunContext,
 ) -> WordPressCategoryUpdateOutcome:
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="wp_category_update_start",
-        module=logger.name,
-        fields={"file_id": file_id, "post_id": post_id, "categories": categories},
-    ))
-    if not categories:
-        logger.info(log_event(
+    logger.info(
+        log_event(
             ctx,
             role="generator",
-            event="wp_category_update_skipped",
+            event="wp_category_update_start",
             module=logger.name,
-            fields={"file_id": file_id, "reason": "no_categories"},
-        ))
+            fields={"file_id": file_id, "post_id": post_id, "categories": categories},
+        )
+    )
+    if not categories:
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="wp_category_update_skipped",
+                module=logger.name,
+                fields={"file_id": file_id, "reason": "no_categories"},
+            )
+        )
         return WordPressCategoryUpdateOutcome(
             schema_version="1.0",
             file_id=file_id,
@@ -54,7 +58,9 @@ def update_post_categories_for_record(
 
     id_to_label = {cat.id: cat.label or cat.id for cat in mappings.mappings.categories}
     terms = [
-        WordPressCategoryTerm(schema_version="1.0", slug=cat_id, name=id_to_label.get(cat_id, cat_id))
+        WordPressCategoryTerm(
+            schema_version="1.0", slug=cat_id, name=id_to_label.get(cat_id, cat_id)
+        )
         for cat_id in categories
     ]
     ensure_resp = ensure_categories(
@@ -91,13 +97,15 @@ def update_post_categories_for_record(
         ),
         ctx,
     )
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="wp_category_update_complete",
-        module=logger.name,
-        fields={"file_id": file_id, "post_id": post_id, "categories": category_ids},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="wp_category_update_complete",
+            module=logger.name,
+            fields={"file_id": file_id, "post_id": post_id, "categories": category_ids},
+        )
+    )
     return WordPressCategoryUpdateOutcome(
         schema_version="1.0",
         file_id=file_id,

@@ -905,11 +905,7 @@ def load_publish_settings(
         or _env_value("WP_POST_STATUS")
         or "publish",
         post_type=(
-            str(
-                wp_cfg.get("post_type")
-                or _env_value("WP_POST_TYPE")
-                or "ml_report"
-            )
+            str(wp_cfg.get("post_type") or _env_value("WP_POST_TYPE") or "ml_report")
             .strip()
             .strip("/")
             or "ml_report"
