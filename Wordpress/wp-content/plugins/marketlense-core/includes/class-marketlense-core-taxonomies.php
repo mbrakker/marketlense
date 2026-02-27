@@ -15,6 +15,8 @@ if (! defined('ABSPATH')) {
 
 final class Taxonomies
 {
+    public const CATEGORY_TAXONOMY = 'category';
+
     public const TOPIC_TAXONOMY = 'ml_topic';
 
     public const PUBLISHER_TAXONOMY = 'ml_publisher';
@@ -114,7 +116,7 @@ final class Taxonomies
             [$this, 'save_publisher_fields']
         );
 
-        register_taxonomy_for_object_type('category', Post_Type::POST_TYPE);
+        register_taxonomy_for_object_type(self::CATEGORY_TAXONOMY, Post_Type::POST_TYPE);
         register_taxonomy_for_object_type('post_tag', Post_Type::POST_TYPE);
     }
 

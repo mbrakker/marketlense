@@ -59,7 +59,8 @@ Primary responsibilities:
 
 - Registers custom post type `ml_report` (`show_in_rest=true`, REST base `ml_report`)
 - Registers taxonomies:
-  - `ml_topic`
+  - native WordPress `category` support on `ml_report` for public topic/archive/filter UX
+  - legacy `ml_topic` projection for backward compatibility with existing synced metadata
   - `ml_publisher`
 - Registers publisher term metadata:
   - `ml_publisher_homepage` (REST-exposed, sanitized URL)
@@ -159,11 +160,12 @@ If `wp-cli` is unavailable, smoke test exits with a skip message.
 
 ## Archive and Directory UX
 
-- `templates/archive-ml_report.html` now renders `[ml_report_browser]`, which provides server-side taxonomy filtering at `/reports/` via:
-  - `?ml_topic=<slug>`
-  - `?ml_publisher=<slug>`
+- `templates/archive-ml_report.html` now renders `[ml_report_browser]`, which provides server-side report filtering at `/reports/` via:
+  - `?ml_topic=<category-slug>` mapped to native WordPress categories assigned to published `ml_report` posts
+  - `?ml_publisher=<slug>` mapped to the `ml_publisher` taxonomy
 - `templates/page-topics-directory.html` renders `[ml_topics_directory]`.
 - `templates/page-publishers-directory.html` renders `[ml_publishers_directory]` with publisher homepage CTAs.
+- `templates/category.html` routes native category archives through the same report browser, so topic archive pages stay limited to uploaded reports instead of falling back to generic site-wide category queries.
 - Legacy report posts under default `post` are intentionally not migrated; new publishing remains `ml_report`-first.
 
 
@@ -206,6 +208,13 @@ WordPress credentials and publish controls come from root `.env`/`app.yaml`:
 - `WP_APP_PASSWORD` or `WP_BEARER_TOKEN`
 - `WP_POST_STATUS` (optional override)
 - `WP_POST_TYPE` (optional override, default `ml_report`)
+
+During publish, the pipeline now writes:
+
+- native category IDs for report topics
+- `ml_publisher` term IDs for report publishers
+
+through the WordPress REST API so archive filters and directory pages stay aligned with uploaded reports.
 
 ## Maintenance Rule
 

@@ -15,13 +15,13 @@ Core WordPress domain plugin for Market Lense.
 Market Lense Core provides the WordPress data model required by the Market Lense publishing pipeline and block theme:
 
 * Custom post type: `ml_report`
-* Taxonomies: `ml_topic`, `ml_publisher`
+* Taxonomies: native `category` support for report topics, legacy `ml_topic` projection, and `ml_publisher`
 * Publisher term homepage metadata: `ml_publisher_homepage`
 * REST exposure for CPT, taxonomies, and core report metadata
 * Metadata synchronization from rendered digest content (`ml_file_id`, publisher, time period, region)
 * Topic/publisher projection from existing post tags/categories and metadata panels
 * Shortcodes:
-  * `[ml_report_browser]` (URL filters via `ml_topic` + `ml_publisher`)
+  * `[ml_report_browser]` (`ml_topic` maps to native category slugs; `ml_publisher` maps to publisher taxonomy slugs)
   * `[ml_topics_directory]`
   * `[ml_publishers_directory]`
 
@@ -35,6 +35,11 @@ This plugin is intended to be used together with the `marketlense` block theme.
 4. Confirm that `/wp-json/wp/v2/ml_report` is reachable.
 
 == Changelog ==
+
+= 1.1.1 =
+* Switched frontend topic surfaces to native WordPress categories scoped to published `ml_report` posts.
+* Added a dedicated category archive template for report-only topic browsing.
+* Publisher terms are now assigned directly during publish so archive filters stay aligned with uploaded reports.
 
 = 1.1.0 =
 * Added publisher homepage term metadata (`ml_publisher_homepage`) with WP Admin edit fields and REST exposure.

@@ -10,11 +10,11 @@ from src.contracts.publish import PublishOutcome, PublishRequest, PublishSetting
 from src.contracts.report_store import ReportMetadataGetRequest
 from src.contracts.run_context import RunContext
 from src.contracts.wordpress import (
-    WordPressCategoryEnsureRequest,
-    WordPressCategoryTerm,
     WordPressMediaUploadRequest,
     WordPressPostCreateRequest,
     WordPressTagEnsureRequest,
+    WordPressTaxonomyEnsureRequest,
+    WordPressTaxonomyTerm,
 )
 from src.contracts.categories import CategoryMappingLoadRequest
 from src.services.category_mapping_service import (
@@ -24,7 +24,7 @@ from src.services.file_service import file_exists, read_bytes, read_text
 from src.services.report_store_service import get_metadata
 from src.services.wordpress_service import (
     create_post,
-    ensure_categories,
+    ensure_taxonomy_terms,
     ensure_tags,
     upload_media,
 )
@@ -110,6 +110,7 @@ def publish_html(
     )
     category_ids_for_wp: list[int] = []
     tag_ids_for_wp: list[int] = []
+    publisher_term_ids_for_wp: list[int] = []
     if metadata and metadata.categories:
         mappings_resp = load_category_mappings(
             CategoryMappingLoadRequest(
@@ -123,18 +124,19 @@ def publish_html(
             cat.id: cat.label or cat.id for cat in mappings_resp.mappings.categories
         }
         terms = [
-            WordPressCategoryTerm(
+            WordPressTaxonomyTerm(
                 schema_version="1.0", slug=cat_id, name=id_to_label.get(cat_id, cat_id)
             )
             for cat_id in metadata.categories
         ]
         if terms:
-            ensure_resp = ensure_categories(
-                WordPressCategoryEnsureRequest(
+            ensure_resp = ensure_taxonomy_terms(
+                WordPressTaxonomyEnsureRequest(
                     schema_version="1.0",
                     base_url=base_url,
                     auth_header=auth_header,
-                    categories=terms,
+                    taxonomy_rest_base="categories",
+                    terms=terms,
                 ),
                 ctx,
             )
@@ -142,6 +144,32 @@ def publish_html(
                 ensure_resp.slug_to_id[term.slug]
                 for term in terms
                 if term.slug in ensure_resp.slug_to_id
+            ]
+    if metadata and metadata.publisher and metadata.publisher.strip():
+        publisher_name = metadata.publisher.strip()
+        publisher_slug = slugify(publisher_name)
+        if publisher_slug:
+            publisher_terms = [
+                WordPressTaxonomyTerm(
+                    schema_version="1.0",
+                    slug=publisher_slug,
+                    name=publisher_name,
+                )
+            ]
+            ensure_publishers_resp = ensure_taxonomy_terms(
+                WordPressTaxonomyEnsureRequest(
+                    schema_version="1.0",
+                    base_url=base_url,
+                    auth_header=auth_header,
+                    taxonomy_rest_base="ml_publisher",
+                    terms=publisher_terms,
+                ),
+                ctx,
+            )
+            publisher_term_ids_for_wp = [
+                ensure_publishers_resp.slug_to_id[term.slug]
+                for term in publisher_terms
+                if term.slug in ensure_publishers_resp.slug_to_id
             ]
     if metadata and metadata.taxonomy:
         tag_slugs: list[str] = []
@@ -199,6 +227,11 @@ def publish_html(
             featured_media=featured_media_id,
             categories=category_ids_for_wp if category_ids_for_wp else None,
             tags=tag_ids_for_wp if tag_ids_for_wp else None,
+            taxonomy_terms=(
+                {"ml_publisher": publisher_term_ids_for_wp}
+                if publisher_term_ids_for_wp
+                else None
+            ),
             post_type=settings.wp.post_type,
         ),
         ctx,

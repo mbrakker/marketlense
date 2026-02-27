@@ -14,7 +14,7 @@
   <!-- wp:heading {"level":3} -->
   <h3 class="wp-block-heading">Featured topics</h3>
   <!-- /wp:heading -->
-  <!-- wp:tag-cloud {"taxonomy":"ml_topic","numberOfTags":24,"showTagCounts":false} /-->
+  <!-- wp:tag-cloud {"taxonomy":"category","numberOfTags":24,"showTagCounts":false} /-->
   <!-- wp:buttons -->
   <div class="wp-block-buttons">
     <!-- wp:button {"className":"is-style-outline"} -->

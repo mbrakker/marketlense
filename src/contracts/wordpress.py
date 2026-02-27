@@ -70,6 +70,12 @@ class WordPressPostCreateRequest:
     tags: Optional[List[int]] = field(
         default=None, metadata={"doc": "Optional WordPress tag IDs."}
     )
+    taxonomy_terms: Optional[Dict[str, List[int]]] = field(
+        default=None,
+        metadata={
+            "doc": "Optional mapping of taxonomy REST base to WordPress term IDs."
+        },
+    )
     post_type: str = field(
         default="posts", metadata={"doc": "REST post type endpoint slug."}
     )
@@ -112,31 +118,36 @@ class WordPressPostLookupResponse:
 
 
 @dataclass(frozen=True)
-class WordPressCategoryTerm:
-    schema_version: str = field(metadata={"doc": "Category term schema version."})
-    slug: str = field(metadata={"doc": "Category slug."})
-    name: str = field(metadata={"doc": "Category display name."})
+class WordPressTaxonomyTerm:
+    schema_version: str = field(
+        metadata={"doc": "WordPress taxonomy term schema version."}
+    )
+    slug: str = field(metadata={"doc": "WordPress taxonomy term slug."})
+    name: str = field(metadata={"doc": "WordPress taxonomy term display name."})
 
 
 @dataclass(frozen=True)
-class WordPressCategoryEnsureRequest:
+class WordPressTaxonomyEnsureRequest:
     schema_version: str = field(
-        metadata={"doc": "Category ensure request schema version."}
+        metadata={"doc": "WordPress taxonomy ensure request schema version."}
     )
     base_url: str = field(metadata={"doc": "WordPress site base URL."})
     auth_header: str = field(metadata={"doc": "Authorization header value."})
-    categories: List[WordPressCategoryTerm] = field(
-        metadata={"doc": "Category terms to ensure exist."}
+    taxonomy_rest_base: str = field(
+        metadata={"doc": "Taxonomy REST base endpoint slug to target."}
+    )
+    terms: List[WordPressTaxonomyTerm] = field(
+        metadata={"doc": "Taxonomy terms to ensure exist."}
     )
 
 
 @dataclass(frozen=True)
-class WordPressCategoryEnsureResponse:
+class WordPressTaxonomyEnsureResponse:
     schema_version: str = field(
-        metadata={"doc": "Category ensure response schema version."}
+        metadata={"doc": "WordPress taxonomy ensure response schema version."}
     )
     slug_to_id: Dict[str, int] = field(
-        metadata={"doc": "Mapping of category slug to WordPress term ID."}
+        metadata={"doc": "Mapping of taxonomy term slug to WordPress term ID."}
     )
 
 

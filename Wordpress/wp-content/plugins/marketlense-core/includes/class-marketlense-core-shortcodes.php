@@ -49,7 +49,7 @@ final class Shortcodes
             $archive_url = home_url('/reports/');
         }
 
-        $selected_topic = $this->selected_filter_slug('ml_topic', Taxonomies::TOPIC_TAXONOMY);
+        $selected_topic = $this->selected_filter_slug('ml_topic', Taxonomies::CATEGORY_TAXONOMY);
         $selected_publisher = $this->selected_filter_slug('ml_publisher', Taxonomies::PUBLISHER_TAXONOMY);
         $active_filters = [];
         if ($selected_topic !== '') {
@@ -72,7 +72,7 @@ final class Shortcodes
             $tax_query = ['relation' => 'AND'];
             if ($selected_topic !== '') {
                 $tax_query[] = [
-                    'taxonomy' => Taxonomies::TOPIC_TAXONOMY,
+                    'taxonomy' => Taxonomies::CATEGORY_TAXONOMY,
                     'field'    => 'slug',
                     'terms'    => [$selected_topic],
                 ];
@@ -88,8 +88,8 @@ final class Shortcodes
         }
 
         $query = new \WP_Query($query_args);
-        $topic_options = $this->taxonomy_terms(Taxonomies::TOPIC_TAXONOMY);
-        $publisher_options = $this->taxonomy_terms(Taxonomies::PUBLISHER_TAXONOMY);
+        $topic_options = $this->report_taxonomy_terms(Taxonomies::CATEGORY_TAXONOMY);
+        $publisher_options = $this->report_taxonomy_terms(Taxonomies::PUBLISHER_TAXONOMY);
 
         ob_start();
         ?>
@@ -140,7 +140,7 @@ final class Shortcodes
             <?php if (! empty($active_filters)) : ?>
                 <div class="ml-active-filters" aria-label="<?php esc_attr_e('Active filters', 'marketlense-core'); ?>">
                     <?php if ($selected_topic !== '') : ?>
-                        <?php $topic = get_term_by('slug', $selected_topic, Taxonomies::TOPIC_TAXONOMY); ?>
+                        <?php $topic = get_term_by('slug', $selected_topic, Taxonomies::CATEGORY_TAXONOMY); ?>
                         <?php if ($topic instanceof \WP_Term) : ?>
                             <?php
                             $topic_reset = add_query_arg(
@@ -209,7 +209,7 @@ final class Shortcodes
                                 <?php
                                 $topic_terms = get_the_term_list(
                                     get_the_ID(),
-                                    Taxonomies::TOPIC_TAXONOMY,
+                                    Taxonomies::CATEGORY_TAXONOMY,
                                     '',
                                     ' ',
                                     ''
@@ -256,7 +256,7 @@ final class Shortcodes
      */
     public function render_topics_directory(): string
     {
-        $terms = $this->taxonomy_terms(Taxonomies::TOPIC_TAXONOMY, false);
+        $terms = $this->report_taxonomy_terms(Taxonomies::CATEGORY_TAXONOMY, false);
         if ($terms === []) {
             return '<p>' . esc_html__('No topics are available yet.', 'marketlense-core') . '</p>';
         }
@@ -299,7 +299,7 @@ final class Shortcodes
      */
     public function render_publishers_directory(): string
     {
-        $terms = $this->taxonomy_terms(Taxonomies::PUBLISHER_TAXONOMY, false);
+        $terms = $this->report_taxonomy_terms(Taxonomies::PUBLISHER_TAXONOMY, false);
         if ($terms === []) {
             return '<p>' . esc_html__('No publishers are available yet.', 'marketlense-core') . '</p>';
         }
@@ -370,23 +370,83 @@ final class Shortcodes
     /**
      * @return array<int,\WP_Term>
      */
-    private function taxonomy_terms(string $taxonomy, bool $hide_empty = true): array
+    private function report_taxonomy_terms(string $taxonomy, bool $hide_empty = true): array
     {
-        $terms = get_terms(
+        $report_ids = get_posts(
             [
-                'taxonomy'   => $taxonomy,
-                'hide_empty' => $hide_empty,
-                'orderby'    => 'count',
-                'order'      => 'DESC',
-                'number'     => 300,
+                'post_type'              => Post_Type::POST_TYPE,
+                'post_status'            => 'publish',
+                'fields'                 => 'ids',
+                'posts_per_page'         => -1,
+                'no_found_rows'          => true,
+                'update_post_meta_cache' => false,
+                'update_post_term_cache' => false,
+                'orderby'                => 'date',
+                'order'                  => 'DESC',
             ]
         );
 
-        if (is_wp_error($terms) || ! is_array($terms)) {
+        if (! is_array($report_ids) || $report_ids === []) {
             return [];
         }
 
-        return array_values(array_filter($terms, static fn ($term): bool => $term instanceof \WP_Term));
+        $term_rows = wp_get_object_terms(
+            $report_ids,
+            $taxonomy,
+            [
+                'fields' => 'all_with_object_id',
+            ]
+        );
+
+        if (is_wp_error($term_rows) || ! is_array($term_rows)) {
+            return [];
+        }
+
+        $terms = [];
+        $counts = [];
+        foreach ($term_rows as $term) {
+            if (! ($term instanceof \WP_Term)) {
+                continue;
+            }
+
+            $term_id = (int) $term->term_id;
+            if ($term_id <= 0) {
+                continue;
+            }
+
+            if (! isset($terms[$term_id])) {
+                $terms[$term_id] = clone $term;
+                $counts[$term_id] = [];
+            }
+
+            $object_id = isset($term->object_id) ? (int) $term->object_id : 0;
+            if ($object_id > 0) {
+                $counts[$term_id][$object_id] = true;
+            }
+        }
+
+        $scoped_terms = [];
+        foreach ($terms as $term_id => $term) {
+            $term->count = isset($counts[$term_id]) ? count($counts[$term_id]) : 0;
+            if ($hide_empty && (int) $term->count < 1) {
+                continue;
+            }
+            $scoped_terms[] = $term;
+        }
+
+        usort(
+            $scoped_terms,
+            static function (\WP_Term $left, \WP_Term $right): int {
+                $count_compare = (int) $right->count <=> (int) $left->count;
+                if ($count_compare !== 0) {
+                    return $count_compare;
+                }
+
+                return strcasecmp($left->name, $right->name);
+            }
+        );
+
+        return array_slice($scoped_terms, 0, 300);
     }
 
     /**
@@ -395,6 +455,10 @@ final class Shortcodes
     private function selected_filter_slug(string $query_key, string $taxonomy): string
     {
         if (! isset($_GET[$query_key])) {
+            $archive_slug = $this->current_archive_term_slug($taxonomy);
+            if ($archive_slug !== '') {
+                return $archive_slug;
+            }
             return '';
         }
 
@@ -406,10 +470,31 @@ final class Shortcodes
 
         $term = get_term_by('slug', $slug, $taxonomy);
         if (! ($term instanceof \WP_Term)) {
-            return '';
+            return $this->current_archive_term_slug($taxonomy);
         }
 
         return $slug;
+    }
+
+    /**
+     * Resolves the current archive term slug when viewing a taxonomy archive directly.
+     */
+    private function current_archive_term_slug(string $taxonomy): string
+    {
+        if ($taxonomy === Taxonomies::CATEGORY_TAXONOMY) {
+            if (! is_category()) {
+                return '';
+            }
+        } elseif (! is_tax($taxonomy)) {
+            return '';
+        }
+
+        $term = get_queried_object();
+        if (! ($term instanceof \WP_Term) || $term->taxonomy !== $taxonomy) {
+            return '';
+        }
+
+        return sanitize_title($term->slug);
     }
 
     /**

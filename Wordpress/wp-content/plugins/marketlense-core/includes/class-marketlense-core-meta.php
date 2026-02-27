@@ -105,7 +105,7 @@ final class Meta
     {
         $existing = wp_get_post_terms($post_id, Taxonomies::TOPIC_TAXONOMY, ['fields' => 'names']);
         $tags = wp_get_post_terms($post_id, 'post_tag', ['fields' => 'names']);
-        $categories = wp_get_post_terms($post_id, 'category', ['fields' => 'names']);
+        $categories = wp_get_post_terms($post_id, Taxonomies::CATEGORY_TAXONOMY, ['fields' => 'names']);
 
         if (is_wp_error($existing)) {
             $existing = [];

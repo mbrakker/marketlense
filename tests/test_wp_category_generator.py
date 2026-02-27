@@ -7,8 +7,8 @@ from src.contracts.categories import (
 )
 from src.contracts.run_context import RunContext
 from src.contracts.wordpress import (
-    WordPressCategoryEnsureResponse,
     WordPressPostUpdateResponse,
+    WordPressTaxonomyEnsureResponse,
 )
 from src.generators import wp_category_generator as gen
 
@@ -62,8 +62,8 @@ def test_wp_category_update_skips_when_no_categories():
 def test_wp_category_update_applies_categories(monkeypatch):
     monkeypatch.setattr(
         gen,
-        "ensure_categories",
-        lambda req, ctx: WordPressCategoryEnsureResponse(
+        "ensure_taxonomy_terms",
+        lambda req, ctx: WordPressTaxonomyEnsureResponse(
             schema_version="1.0",
             slug_to_id={"digital_payments": 101, "consumer_behavior": 102},
         ),
@@ -93,8 +93,8 @@ def test_wp_category_update_applies_categories(monkeypatch):
 def test_wp_category_update_skips_when_no_term_ids(monkeypatch):
     monkeypatch.setattr(
         gen,
-        "ensure_categories",
-        lambda req, ctx: WordPressCategoryEnsureResponse(
+        "ensure_taxonomy_terms",
+        lambda req, ctx: WordPressTaxonomyEnsureResponse(
             schema_version="1.0",
             slug_to_id={},
         ),

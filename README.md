@@ -619,8 +619,8 @@ A dedicated local WordPress workspace is available under `Wordpress/`.
 - Smoke validation: `bash Wordpress/scripts/smoke-test.sh` (when `wp-cli` is available) checks plugin/theme activation, REST endpoints, required pages, archive filter URLs, directory shortcode rendering, navigation links, and a seeded `ml_report` HTTP `200`.
 - WordPress publish endpoint type is configurable via `publish.wp.post_type` (or `WP_POST_TYPE`) and defaults to `ml_report`.
 - REST fallback scripts require `WP_SITE_URL` plus `WP_USERNAME`/`WP_APP_PASSWORD` (or `WP_BEARER_TOKEN`).
-- Reports archive now renders a server-side filter UI via `[ml_report_browser]` with URL query params `ml_topic` and `ml_publisher` on `/reports/`.
-- Topics and publishers directories render via `[ml_topics_directory]` and `[ml_publishers_directory]`; publisher cards include a homepage CTA sourced from `ml_publisher_homepage`.
+- Reports archive now renders a server-side filter UI via `[ml_report_browser]` on `/reports/`; `ml_topic` filters native WordPress `category` terms scoped to published `ml_report` posts, and `ml_publisher` filters the `ml_publisher` taxonomy.
+- Topics and publishers directories render via `[ml_topics_directory]` and `[ml_publishers_directory]`; topics are native WordPress categories scoped to uploaded reports, publisher cards include a homepage CTA sourced from `ml_publisher_homepage`, and category archives use a dedicated report-only template.
 - Legacy report posts under default `post` are intentionally not migrated; new publishing stays `ml_report`-first.
 - Theme responsive layout defaults were widened for better laptop/desktop presentation while retaining mobile behavior (`contentSize: min(60rem, calc(100vw - 2.5rem))`, `wideSize: min(92rem, calc(100vw - 2.5rem))` in `Wordpress/wp-content/themes/marketlense/theme.json`).
 - `ml_report` single rendering is ingest-first: the template renders uploaded digest `post-content` directly, with scoped parity CSS/JS (`.ml-ingest-report-content`) so article presentation matches generated ingest HTML structure and interactions after upload.
@@ -628,5 +628,6 @@ A dedicated local WordPress workspace is available under `Wordpress/`.
 - Report interaction JS is enqueued for all singular pages; reveal panels are fail-open (visible if JS fails), publish-time image rewriting updates both `src` and `srcset`, and legacy pages with mismatched absolute `src` + relative `srcset` are auto-healed client-side by dropping invalid `srcset`.
 - Docker runtime is not maintained in this subproject.
 - Publish integration continues to use root `.env` (`WP_SITE_URL`, `WP_USERNAME`, `WP_APP_PASSWORD` or `WP_BEARER_TOKEN`) through Python pipeline commands (`publish-wp`, `update-wp-categories`).
+- Publish-time taxonomy assignment now writes both native categories and `ml_publisher` terms through the WordPress REST API, so report topics/publisher filters stay in sync with uploaded reports without relying on theme-side fallbacks.
 
 Detailed instructions live in `Wordpress/README_WORDPRESS.md`.

@@ -6,12 +6,12 @@ from typing import List
 from src.contracts.categories import WordPressCategoryUpdateOutcome
 from src.contracts.categories import CategoryMappingLoadResponse
 from src.contracts.wordpress import (
-    WordPressCategoryEnsureRequest,
-    WordPressCategoryTerm,
     WordPressPostUpdateRequest,
+    WordPressTaxonomyEnsureRequest,
+    WordPressTaxonomyTerm,
 )
 from src.contracts.run_context import RunContext
-from src.services.wordpress_service import ensure_categories, update_post_categories
+from src.services.wordpress_service import ensure_taxonomy_terms, update_post_categories
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.wp_category_generator")
@@ -58,17 +58,18 @@ def update_post_categories_for_record(
 
     id_to_label = {cat.id: cat.label or cat.id for cat in mappings.mappings.categories}
     terms = [
-        WordPressCategoryTerm(
+        WordPressTaxonomyTerm(
             schema_version="1.0", slug=cat_id, name=id_to_label.get(cat_id, cat_id)
         )
         for cat_id in categories
     ]
-    ensure_resp = ensure_categories(
-        WordPressCategoryEnsureRequest(
+    ensure_resp = ensure_taxonomy_terms(
+        WordPressTaxonomyEnsureRequest(
             schema_version="1.0",
             base_url=base_url,
             auth_header=auth_header,
-            categories=terms,
+            taxonomy_rest_base="categories",
+            terms=terms,
         ),
         ctx,
     )

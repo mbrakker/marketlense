@@ -23,9 +23,9 @@ from src.contracts.vector_store import (
     VectorStoreStatusRequest,
 )
 from src.contracts.wordpress import (
-    WordPressCategoryEnsureRequest,
-    WordPressCategoryTerm,
     WordPressPostUpdateRequest,
+    WordPressTaxonomyEnsureRequest,
+    WordPressTaxonomyTerm,
 )
 from src.services import (
     drive_service,
@@ -33,7 +33,7 @@ from src.services import (
     pdf_service,
     vector_store_service,
 )
-from src.services.wordpress_service import ensure_categories, update_post_categories
+from src.services.wordpress_service import ensure_taxonomy_terms, update_post_categories
 
 
 def _ctx() -> RunContext:
@@ -144,13 +144,14 @@ def test_wordpress_service_against_local_stub():
     thread.start()
     try:
         base_url = f"http://127.0.0.1:{server.server_port}"
-        ensured = ensure_categories(
-            WordPressCategoryEnsureRequest(
+        ensured = ensure_taxonomy_terms(
+            WordPressTaxonomyEnsureRequest(
                 schema_version="1.0",
                 base_url=base_url,
                 auth_header="Bearer test-token",
-                categories=[
-                    WordPressCategoryTerm(
+                taxonomy_rest_base="categories",
+                terms=[
+                    WordPressTaxonomyTerm(
                         schema_version="1.0",
                         slug="digital_payments",
                         name="Digital Payments",

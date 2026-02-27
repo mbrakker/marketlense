@@ -12,14 +12,14 @@ from src.contracts.wordpress import (
     WordPressMediaUploadResponse,
     WordPressPostCreateRequest,
     WordPressPostCreateResponse,
-    WordPressCategoryEnsureRequest,
-    WordPressCategoryEnsureResponse,
     WordPressPostLookupRequest,
     WordPressPostLookupResponse,
     WordPressPostUpdateRequest,
     WordPressPostUpdateResponse,
     WordPressTagEnsureRequest,
     WordPressTagEnsureResponse,
+    WordPressTaxonomyEnsureRequest,
+    WordPressTaxonomyEnsureResponse,
 )
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -128,6 +128,7 @@ def create_post(
                 "post_type": post_type_endpoint,
                 "categories_count": len(request.categories or []),
                 "tags_count": len(request.tags or []),
+                "taxonomy_count": len(request.taxonomy_terms or {}),
             },
         )
     )
@@ -149,6 +150,12 @@ def create_post(
         payload["categories"] = request.categories
     if request.tags:
         payload["tags"] = request.tags
+    if request.taxonomy_terms:
+        for taxonomy_rest_base, term_ids in request.taxonomy_terms.items():
+            key = str(taxonomy_rest_base).strip()
+            normalized_ids = [int(term_id) for term_id in term_ids if int(term_id) > 0]
+            if key and normalized_ids:
+                payload[key] = normalized_ids
 
     try:
         resp = requests.post(
@@ -383,49 +390,65 @@ def _ensure_terms(
     return slug_to_id
 
 
-def ensure_categories(
-    request: WordPressCategoryEnsureRequest, ctx: RunContext
-) -> WordPressCategoryEnsureResponse:
+def ensure_taxonomy_terms(
+    request: WordPressTaxonomyEnsureRequest, ctx: RunContext
+) -> WordPressTaxonomyEnsureResponse:
     logger.info(
         log_event(
             ctx,
             role="service",
-            event="wp_category_ensure_start",
+            event="wp_taxonomy_ensure_start",
             module=logger.name,
-            fields={"count": len(request.categories)},
+            fields={
+                "taxonomy_rest_base": request.taxonomy_rest_base,
+                "count": len(request.terms),
+            },
         )
     )
-    base_url = f"{request.base_url.rstrip('/')}/wp-json/wp/v2/categories"
+    taxonomy_rest_base = request.taxonomy_rest_base.strip().strip("/")
+    if taxonomy_rest_base == "":
+        raise AppError(
+            code="wp_taxonomy_invalid_rest_base",
+            message="WordPress taxonomy REST base is required",
+            retryable=False,
+        )
+    base_url = f"{request.base_url.rstrip('/')}/wp-json/wp/v2/{taxonomy_rest_base}"
     slug_to_id = _ensure_terms(
         base_url=base_url,
         auth_header=request.auth_header,
-        terms=[(term.slug, term.name or term.slug) for term in request.categories],
-        lookup_failed_code="wp_category_lookup_failed",
-        lookup_failed_message="Failed to lookup WordPress category",
-        lookup_server_code="wp_category_lookup_server_error",
-        lookup_server_prefix="Category lookup server error",
-        lookup_client_code="wp_category_lookup_client_error",
-        lookup_client_prefix="Category lookup client error",
-        create_failed_code="wp_category_create_failed",
-        create_failed_message="Failed to create WordPress category",
-        create_server_code="wp_category_create_server_error",
-        create_server_prefix="Category create server error",
-        create_client_code="wp_category_create_client_error",
-        create_client_prefix="Category create client error",
-        invalid_code="wp_category_invalid_response",
-        invalid_message="Category ensure returned invalid response",
+        terms=[(term.slug, term.name or term.slug) for term in request.terms],
+        lookup_failed_code="wp_taxonomy_lookup_failed",
+        lookup_failed_message="Failed to lookup WordPress taxonomy term",
+        lookup_server_code="wp_taxonomy_lookup_server_error",
+        lookup_server_prefix="Taxonomy lookup server error",
+        lookup_client_code="wp_taxonomy_lookup_client_error",
+        lookup_client_prefix="Taxonomy lookup client error",
+        create_failed_code="wp_taxonomy_create_failed",
+        create_failed_message="Failed to create WordPress taxonomy term",
+        create_server_code="wp_taxonomy_create_server_error",
+        create_server_prefix="Taxonomy create server error",
+        create_client_code="wp_taxonomy_create_client_error",
+        create_client_prefix="Taxonomy create client error",
+        invalid_code="wp_taxonomy_invalid_response",
+        invalid_message="Taxonomy ensure returned invalid response",
     )
 
     logger.info(
         log_event(
             ctx,
             role="service",
-            event="wp_category_ensure_complete",
+            event="wp_taxonomy_ensure_complete",
             module=logger.name,
-            fields={"count": len(slug_to_id)},
+            fields={
+                "taxonomy_rest_base": taxonomy_rest_base,
+                "count": len(slug_to_id),
+            },
         )
     )
-    return WordPressCategoryEnsureResponse(schema_version="1.0", slug_to_id=slug_to_id)
+    return WordPressTaxonomyEnsureResponse(
+        schema_version="1.0",
+        slug_to_id=slug_to_id,
+    )
 
 
 def ensure_tags(

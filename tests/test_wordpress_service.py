@@ -5,12 +5,12 @@ import pytest
 
 from src.contracts.run_context import RunContext
 from src.contracts.wordpress import (
-    WordPressCategoryEnsureRequest,
-    WordPressCategoryTerm,
     WordPressMediaUploadRequest,
     WordPressPostCreateRequest,
     WordPressPostLookupRequest,
     WordPressPostUpdateRequest,
+    WordPressTaxonomyEnsureRequest,
+    WordPressTaxonomyTerm,
 )
 from src.services import wordpress_service as svc
 from src.utils.errors import AppError
@@ -48,6 +48,7 @@ def test_create_post_success(monkeypatch):
         featured_media=2,
         categories=[1, 2],
         tags=[3],
+        taxonomy_terms={"ml_publisher": [4]},
     )
     response = svc.create_post(request, _ctx())
     assert response.post_id == 10
@@ -56,6 +57,7 @@ def test_create_post_success(monkeypatch):
     assert captured["payload"]["slug"] == "slug"
     assert captured["payload"]["categories"] == [1, 2]
     assert captured["payload"]["tags"] == [3]
+    assert captured["payload"]["ml_publisher"] == [4]
 
 
 def test_create_post_custom_post_type_endpoint(monkeypatch):
@@ -123,7 +125,7 @@ def test_find_post_by_file_id_found(monkeypatch):
     assert response.link == "https://site/p/11"
 
 
-def test_ensure_categories_creates_missing_terms(monkeypatch):
+def test_ensure_taxonomy_terms_creates_missing_terms(monkeypatch):
     calls = {"get": 0, "post": 0}
 
     def _get(url, headers, params, timeout):
@@ -141,21 +143,38 @@ def test_ensure_categories_creates_missing_terms(monkeypatch):
 
     monkeypatch.setattr(svc.requests, "get", _get)
     monkeypatch.setattr(svc.requests, "post", _post)
-    request = WordPressCategoryEnsureRequest(
+    request = WordPressTaxonomyEnsureRequest(
         schema_version="1.0",
         base_url="https://site",
         auth_header="Bearer token",
-        categories=[
-            WordPressCategoryTerm(
+        taxonomy_rest_base="categories",
+        terms=[
+            WordPressTaxonomyTerm(
                 schema_version="1.0", slug="existing", name="Existing"
             ),
-            WordPressCategoryTerm(schema_version="1.0", slug="new", name="New"),
+            WordPressTaxonomyTerm(schema_version="1.0", slug="new", name="New"),
         ],
     )
-    response = svc.ensure_categories(request, _ctx())
+    response = svc.ensure_taxonomy_terms(request, _ctx())
     assert response.slug_to_id == {"existing": 5, "new": 7}
     assert calls["get"] == 2
     assert calls["post"] == 1
+
+
+def test_ensure_taxonomy_terms_rejects_empty_rest_base():
+    request = WordPressTaxonomyEnsureRequest(
+        schema_version="1.0",
+        base_url="https://site",
+        auth_header="Bearer token",
+        taxonomy_rest_base="",
+        terms=[WordPressTaxonomyTerm(schema_version="1.0", slug="x", name="X")],
+    )
+
+    with pytest.raises(AppError) as exc:
+        svc.ensure_taxonomy_terms(request, _ctx())
+
+    assert exc.value.code == "wp_taxonomy_invalid_rest_base"
+    assert exc.value.retryable is False
 
 
 def test_upload_media_invalid_response(monkeypatch):
