@@ -614,8 +614,14 @@ A dedicated local WordPress workspace is available under `Wordpress/`.
 - Plugin packaging: `bash Wordpress/scripts/build-plugin-zip.sh` builds `Wordpress/dist/marketlense-core.zip` for WP Admin upload (`Plugins -> Add New -> Upload Plugin`).
 - Theme packaging: `bash Wordpress/scripts/build-theme-zip.sh` builds `Wordpress/dist/marketlense.zip` for WP Admin upload (`Appearance -> Themes -> Upload Theme`).
 - Packaging scripts use `zip` when available and fall back to Python `zipfile` via `python`/`python3`/`py` or local `.venv` interpreters when `zip` is unavailable.
-- Smoke validation: `bash Wordpress/scripts/smoke-test.sh` (when `wp-cli` is available) checks plugin activation, theme activation, required templates, front-page HTTP `200`, and a seeded `ml_report` HTTP `200`.
+- Site IA provisioning: `bash Wordpress/scripts/provision-site-structure.sh` creates/updates required pages idempotently and, when `wp-cli` can access local WP core, also provisions primary/footer menus. If `wp-cli` is unavailable, it auto-falls back to REST provisioning.
+- Publisher homepage seeding: `bash Wordpress/scripts/seed-publisher-homepages.sh` loads curated publisher URLs from `Wordpress/config/publisher-homepages.json` and upserts `ml_publisher_homepage` taxonomy term metadata; it auto-falls back to REST mode when `wp-cli` is unavailable and auto-activates `marketlense-core` if installed but inactive.
+- Smoke validation: `bash Wordpress/scripts/smoke-test.sh` (when `wp-cli` is available) checks plugin/theme activation, REST endpoints, required pages, archive filter URLs, directory shortcode rendering, navigation links, and a seeded `ml_report` HTTP `200`.
 - WordPress publish endpoint type is configurable via `publish.wp.post_type` (or `WP_POST_TYPE`) and defaults to `ml_report`.
+- REST fallback scripts require `WP_SITE_URL` plus `WP_USERNAME`/`WP_APP_PASSWORD` (or `WP_BEARER_TOKEN`).
+- Reports archive now renders a server-side filter UI via `[ml_report_browser]` with URL query params `ml_topic` and `ml_publisher` on `/reports/`.
+- Topics and publishers directories render via `[ml_topics_directory]` and `[ml_publishers_directory]`; publisher cards include a homepage CTA sourced from `ml_publisher_homepage`.
+- Legacy report posts under default `post` are intentionally not migrated; new publishing stays `ml_report`-first.
 - Theme responsive layout defaults were widened for better laptop/desktop presentation while retaining mobile behavior (`contentSize: min(60rem, calc(100vw - 2.5rem))`, `wideSize: min(92rem, calc(100vw - 2.5rem))` in `Wordpress/wp-content/themes/marketlense/theme.json`).
 - `ml_report` single rendering is ingest-first: the template renders uploaded digest `post-content` directly, with scoped parity CSS/JS (`.ml-ingest-report-content`) so article presentation matches generated ingest HTML structure and interactions after upload.
 - A generic `templates/single.html` now renders full content directly as well, so single URLs do not fall back to excerpt-style `index.html` previews with "Continue reading".

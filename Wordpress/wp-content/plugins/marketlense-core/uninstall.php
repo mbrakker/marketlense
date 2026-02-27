@@ -21,3 +21,5 @@ $meta_keys = [
 foreach ($meta_keys as $meta_key) {
     delete_post_meta_by_key($meta_key);
 }
+
+delete_metadata('term', 0, 'ml_publisher_homepage', '', true);

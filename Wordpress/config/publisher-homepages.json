@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.0",
+  "publishers": [
+    {
+      "name": "Attest",
+      "homepage": "https://www.askattest.com"
+    },
+    {
+      "name": "Braze",
+      "homepage": "https://www.braze.com"
+    },
+    {
+      "name": "Capgemini",
+      "homepage": "https://www.capgemini.com"
+    },
+    {
+      "name": "Deloitte Insights",
+      "homepage": "https://www2.deloitte.com/us/en/insights.html"
+    },
+    {
+      "name": "Integral Ad Science (IAS)",
+      "homepage": "https://integralads.com"
+    },
+    {
+      "name": "Morningstar",
+      "homepage": "https://www.morningstar.com"
+    },
+    {
+      "name": "OECD",
+      "homepage": "https://www.oecd.org"
+    },
+    {
+      "name": "Red Antler",
+      "homepage": "https://www.redantler.com"
+    },
+    {
+      "name": "Sensor Tower",
+      "homepage": "https://sensortower.com"
+    },
+    {
+      "name": "The Akin",
+      "homepage": "https://www.theakin.com"
+    },
+    {
+      "name": "Trend Bible Ltd",
+      "homepage": "https://www.trendbible.com"
+    },
+    {
+      "name": "pinterestpredicts.com",
+      "homepage": "https://pinterestpredicts.com"
+    }
+  ]
+}

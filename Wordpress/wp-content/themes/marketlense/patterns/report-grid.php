@@ -14,7 +14,7 @@
     <h2 class="wp-block-heading">Latest reports</h2>
     <!-- /wp:heading -->
     <!-- wp:button {"className":"is-style-outline"} -->
-    <div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button" href="/ml_report/">View all</a></div>
+    <div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button" href="/reports/">View all</a></div>
     <!-- /wp:button -->
   </div>
   <!-- /wp:group -->

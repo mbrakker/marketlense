@@ -25,12 +25,15 @@ final class Plugin
 
     private Meta $meta;
 
+    private Shortcodes $shortcodes;
+
     private function __construct()
     {
         $parser = new Content_Parser();
         $this->post_type = new Post_Type();
         $this->taxonomies = new Taxonomies();
         $this->meta = new Meta($parser);
+        $this->shortcodes = new Shortcodes();
     }
 
     public static function instance(): Plugin
@@ -51,6 +54,7 @@ final class Plugin
         add_action('init', [$this->post_type, 'register'], 5);
         add_action('init', [$this->taxonomies, 'register'], 8);
         add_action('init', [$this->meta, 'register_meta_fields'], 11);
+        add_action('init', [$this->shortcodes, 'register'], 12);
         add_action('save_post_' . Post_Type::POST_TYPE, [$this->meta, 'sync_report_contract'], 20, 3);
 
         $this->booted = true;

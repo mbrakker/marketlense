@@ -16,25 +16,9 @@
   </div>
   <!-- /wp:group -->
 
-  <!-- wp:pattern {"slug":"marketlense/featured-publishers"} /-->
-
-  <!-- wp:heading {"level":2} -->
-  <h2 class="wp-block-heading">Latest reports by publisher</h2>
-  <!-- /wp:heading -->
-
-  <!-- wp:query {"queryId":81,"query":{"perPage":"9","pages":0,"offset":0,"postType":"ml_report","order":"desc","orderBy":"date","inherit":false},"className":"ml-report-grid"} -->
-  <div class="wp-block-query ml-report-grid">
-    <!-- wp:post-template -->
-    <!-- wp:group {"className":"ml-report-card","layout":{"type":"constrained"}} -->
-    <div class="wp-block-group ml-report-card">
-      <!-- wp:post-title {"isLink":true,"level":3} /-->
-      <!-- wp:post-terms {"term":"ml_publisher","className":"ml-chip-terms"} /-->
-      <!-- wp:post-excerpt {"moreText":"Open digest"} /-->
-    </div>
-    <!-- /wp:group -->
-    <!-- /wp:post-template -->
-  </div>
-  <!-- /wp:query -->
+  <!-- wp:shortcode -->
+  [ml_publishers_directory]
+  <!-- /wp:shortcode -->
 
   <!-- wp:post-content {"layout":{"type":"constrained"}} /-->
 </main>

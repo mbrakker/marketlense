@@ -22,33 +22,9 @@
   <div style="height:var(--wp--preset--spacing--60)" aria-hidden="true" class="wp-block-spacer"></div>
   <!-- /wp:spacer -->
 
-  <!-- wp:query {"queryId":31,"query":{"perPage":"12","pages":0,"offset":0,"postType":"ml_report","order":"desc","orderBy":"date","author":"","search":"","exclude":[],"sticky":"","inherit":false},"className":"ml-report-grid"} -->
-  <div class="wp-block-query ml-report-grid">
-    <!-- wp:post-template -->
-    <!-- wp:group {"className":"ml-report-card","layout":{"type":"constrained"}} -->
-    <div class="wp-block-group ml-report-card">
-      <!-- wp:post-featured-image {"isLink":true} /-->
-      <!-- wp:post-title {"isLink":true,"level":3} /-->
-      <!-- wp:post-date {"fontSize":"xs"} /-->
-      <!-- wp:post-terms {"term":"ml_publisher","className":"ml-chip-terms"} /-->
-      <!-- wp:post-terms {"term":"ml_topic","className":"ml-chip-terms"} /-->
-      <!-- wp:post-excerpt {"moreText":"Open digest"} /-->
-    </div>
-    <!-- /wp:group -->
-    <!-- /wp:post-template -->
-
-    <!-- wp:query-pagination {"layout":{"type":"flex","justifyContent":"space-between"}} -->
-    <!-- wp:query-pagination-previous /-->
-    <!-- wp:query-pagination-next /-->
-    <!-- /wp:query-pagination -->
-
-    <!-- wp:query-no-results -->
-    <!-- wp:paragraph -->
-    <p>No reports are published yet.</p>
-    <!-- /wp:paragraph -->
-    <!-- /wp:query-no-results -->
-  </div>
-  <!-- /wp:query -->
+  <!-- wp:shortcode -->
+  [ml_report_browser]
+  <!-- /wp:shortcode -->
 </main>
 <!-- /wp:group -->
 

@@ -27,7 +27,7 @@
       <!-- wp:buttons -->
       <div class="wp-block-buttons">
         <!-- wp:button -->
-        <div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="/ml_report/">Browse reports</a></div>
+        <div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="/reports/">Browse reports</a></div>
         <!-- /wp:button -->
         <!-- wp:button {"className":"is-style-outline"} -->
         <div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button" href="/topics-directory/">Explore topics</a></div>
