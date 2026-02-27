@@ -6,6 +6,7 @@ from typing import Dict, List, Optional
 
 
 _IMG_SRC_RX = re.compile(r'<img[^>]+src=["\']([^"\']+)["\']', re.IGNORECASE)
+_IMG_SRCSET_RX = re.compile(r'(<img[^>]+srcset=["\'])([^"\']+)(["\'])', re.IGNORECASE)
 _TITLE_RX = re.compile(r"<title>(.*?)</title>", re.IGNORECASE | re.DOTALL)
 _H1_RX = re.compile(r"<h1[^>]*>(.*?)</h1>", re.IGNORECASE | re.DOTALL)
 _BODY_RX = re.compile(r"<body[^>]*>(.*?)</body>", re.IGNORECASE | re.DOTALL)
@@ -28,7 +29,29 @@ def replace_image_sources(html_text: str, mapping: Dict[str, str]) -> str:
             return match.group(0)
         return match.group(0).replace(src, mapping[src])
 
-    return _IMG_SRC_RX.sub(_replace, html_text)
+    updated = _IMG_SRC_RX.sub(_replace, html_text)
+
+    def _replace_srcset(match: re.Match[str]) -> str:
+        prefix, value, suffix = match.groups()
+        entries: list[str] = []
+        for raw_entry in value.split(","):
+            entry = raw_entry.strip()
+            if not entry:
+                continue
+            parts = entry.split()
+            if not parts:
+                continue
+            url = parts[0]
+            mapped = mapping.get(url, url)
+            if len(parts) > 1:
+                entries.append(" ".join([mapped, *parts[1:]]))
+            else:
+                entries.append(mapped)
+        if not entries:
+            return match.group(0)
+        return f"{prefix}{', '.join(entries)}{suffix}"
+
+    return _IMG_SRCSET_RX.sub(_replace_srcset, updated)
 
 
 def extract_title(html_text: str) -> Optional[str]:

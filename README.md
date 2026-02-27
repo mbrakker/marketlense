@@ -617,6 +617,9 @@ A dedicated local WordPress workspace is available under `Wordpress/`.
 - Smoke validation: `bash Wordpress/scripts/smoke-test.sh` (when `wp-cli` is available) checks plugin activation, theme activation, required templates, front-page HTTP `200`, and a seeded `ml_report` HTTP `200`.
 - WordPress publish endpoint type is configurable via `publish.wp.post_type` (or `WP_POST_TYPE`) and defaults to `ml_report`.
 - Theme responsive layout defaults were widened for better laptop/desktop presentation while retaining mobile behavior (`contentSize: min(60rem, calc(100vw - 2.5rem))`, `wideSize: min(92rem, calc(100vw - 2.5rem))` in `Wordpress/wp-content/themes/marketlense/theme.json`).
+- `ml_report` single rendering is ingest-first: the template renders uploaded digest `post-content` directly, with scoped parity CSS/JS (`.ml-ingest-report-content`) so article presentation matches generated ingest HTML structure and interactions after upload.
+- A generic `templates/single.html` now renders full content directly as well, so single URLs do not fall back to excerpt-style `index.html` previews with "Continue reading".
+- Report interaction JS is enqueued for all singular pages; reveal panels are fail-open (visible if JS fails), publish-time image rewriting updates both `src` and `srcset`, and legacy pages with mismatched absolute `src` + relative `srcset` are auto-healed client-side by dropping invalid `srcset`.
 - Docker runtime is not maintained in this subproject.
 - Publish integration continues to use root `.env` (`WP_SITE_URL`, `WP_USERNAME`, `WP_APP_PASSWORD` or `WP_BEARER_TOKEN`) through Python pipeline commands (`publish-wp`, `update-wp-categories`).
 

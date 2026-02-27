@@ -47,7 +47,7 @@ function marketlense_enqueue_assets(): void
         $version
     );
 
-    if (is_singular('ml_report')) {
+    if (is_singular()) {
         wp_enqueue_script(
             'marketlense-report-interactions',
             get_template_directory_uri() . '/assets/js/report-interactions.js',

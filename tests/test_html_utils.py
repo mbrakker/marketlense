@@ -21,11 +21,24 @@ class TestHtmlUtils(unittest.TestCase):
         self.assertEqual("abc123", extract_file_id(html))
 
     def test_image_sources_and_replace(self) -> None:
-        html = '<img src="a.png"><img src="b.png">'
+        html = (
+            '<img src="a.png" srcset="a.png 1x, a@2x.png 2x">'
+            '<img src="b.png">'
+        )
         sources = extract_image_sources(html)
         self.assertEqual(["a.png", "b.png"], sources)
-        replaced = replace_image_sources(html, {"a.png": "x.png"})
-        self.assertIn('src="x.png"', replaced)
+        replaced = replace_image_sources(
+            html,
+            {
+                "a.png": "https://cdn.example/x.png",
+                "a@2x.png": "https://cdn.example/x@2x.png",
+            },
+        )
+        self.assertIn('src="https://cdn.example/x.png"', replaced)
+        self.assertIn(
+            'srcset="https://cdn.example/x.png 1x, https://cdn.example/x@2x.png 2x"',
+            replaced,
+        )
 
     def test_extract_preview_image(self) -> None:
         html = '<div class="preview"><img src="prev.png"></div>'

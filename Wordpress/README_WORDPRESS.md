@@ -120,6 +120,20 @@ The `marketlense` theme now uses wider responsive layout defaults in `theme.json
 
 This keeps blocks fluid across breakpoints and avoids the previous narrow desktop appearance.
 
+## `ml_report` Ingest Rendering
+
+Published ingest reports now render in an ingest-first mode in the single template:
+
+- `templates/single-ml_report.html` renders raw `post-content` directly (no theme-level report hero/rail wrappers).
+- `templates/single.html` also renders full `post-content` directly, preventing fallback to `index.html` excerpt previews ("Continue reading") for reports published under default `post` type.
+- `assets/css/theme.css` contains a scoped parity layer under `.ml-ingest-report-content` that mirrors the generated digest body classes (`.page-shell`, `.report`, `.hero`, `.panel`, carousel/lightbox, sticky section nav).
+- `assets/js/report-interactions.js` now covers behavior that is stripped from uploaded HTML body content (panel reveal, prose chunking, section spy, reading progress, and carousel/lightbox interactions), and is enqueued for all singular views to support reports published under either `ml_report` or default `post`.
+- Reveal panels are fail-open: content remains visible even if JS does not execute.
+- Publish HTML source rewriting now updates both `img src` and `img srcset` URLs, preventing broken preview images after upload.
+- Legacy safety: if an older post has absolute `src` but relative `srcset`, frontend JS removes the broken `srcset` so the image still renders.
+
+This ensures the WordPress article view matches the latest ingest-generated HTML report styling and behavior as closely as possible after upload.
+
 ## Pipeline Integration
 
 Publishing remains controlled by Python orchestration in `src/`:

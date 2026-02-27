@@ -7,31 +7,154 @@
     return Math.max(min, Math.min(max, value));
   }
 
+  function hasAbsoluteUrl(value) {
+    const candidate = String(value || "").trim();
+    return /^(?:[a-z]+:)?\/\//i.test(candidate);
+  }
+
+  function initImageSrcsetFallback() {
+    const images = Array.from(document.querySelectorAll(".ml-ingest-report-content img[srcset]"));
+    if (!images.length) {
+      return;
+    }
+
+    images.forEach((img) => {
+      const src = (img.getAttribute("src") || "").trim();
+      const srcset = (img.getAttribute("srcset") || "").trim();
+      if (!src || !srcset || !hasAbsoluteUrl(src)) {
+        return;
+      }
+
+      const entries = srcset
+        .split(",")
+        .map((entry) => entry.trim())
+        .filter(Boolean);
+      if (!entries.length) {
+        return;
+      }
+
+      const hasRelativeEntry = entries.some((entry) => {
+        const token = entry.split(/\s+/)[0] || "";
+        return token && !hasAbsoluteUrl(token) && !token.startsWith("data:");
+      });
+
+      if (hasRelativeEntry) {
+        img.removeAttribute("srcset");
+      }
+    });
+  }
+
   function initReadingProgress() {
     const progressBar =
       document.getElementById("reading-progress-bar") ||
       document.querySelector("[data-reading-progress-bar]");
-    const contentRoot =
-      document.getElementById("digest-content") ||
-      document.querySelector(".ml-report-main .wp-block-post-content");
-
-    if (!progressBar || !contentRoot) {
+    if (!progressBar) {
       return;
     }
 
     const update = () => {
-      const bodyRect = document.body.getBoundingClientRect();
-      const rootRect = contentRoot.getBoundingClientRect();
-      const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-      const scrollable = contentRoot.offsetHeight - viewportHeight;
-      const traveled = clamp((bodyRect.top * -1) - (rootRect.top + bodyRect.top), 0, Math.max(scrollable, 1));
-      const percent = clamp((traveled / Math.max(scrollable, 1)) * 100, 0, 100);
+      const top = window.scrollY || window.pageYOffset || 0;
+      const total = Math.max(
+        (document.documentElement.scrollHeight || 0) - (window.innerHeight || 0),
+        1
+      );
+      const percent = clamp((top / total) * 100, 0, 100);
       progressBar.style.width = `${percent.toFixed(2)}%`;
     };
 
     window.addEventListener("scroll", update, { passive: true });
     window.addEventListener("resize", update);
     update();
+  }
+
+  function initChunkedProse() {
+    const proseBlocks = Array.from(document.querySelectorAll("[data-chunk-prose]"));
+    if (!proseBlocks.length) {
+      return;
+    }
+
+    proseBlocks.forEach((element) => {
+      const text = (element.textContent || "").trim();
+      if (!text || text.length < 320) {
+        return;
+      }
+
+      let parts = [];
+      const lines = text
+        .split(/\n+/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+      if (lines.length > 1) {
+        parts = lines;
+      } else {
+        const sentences = text.match(/[^.!?]+[.!?]*/g) || [text];
+        let bucket = "";
+        sentences.forEach((sentence) => {
+          const next = `${bucket} ${sentence}`.trim();
+          if (next.length > 260 && bucket) {
+            parts.push(bucket.trim());
+            bucket = sentence;
+          } else {
+            bucket = next;
+          }
+        });
+        if (bucket.trim()) {
+          parts.push(bucket.trim());
+        }
+      }
+
+      if (parts.length < 2) {
+        return;
+      }
+
+      element.innerHTML = "";
+      parts.forEach((part) => {
+        const paragraph = document.createElement("p");
+        paragraph.className = "prose-paragraph";
+        paragraph.textContent = part;
+        element.appendChild(paragraph);
+      });
+    });
+  }
+
+  function initRevealPanels() {
+    const panels = Array.from(document.querySelectorAll("[data-reveal]"));
+    if (!panels.length) {
+      return;
+    }
+
+    panels.forEach((panel) => {
+      const root = panel.closest(".ml-ingest-report-content");
+      if (root) {
+        root.classList.add("ml-report-interactive");
+      }
+    });
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!("IntersectionObserver" in window) || reducedMotion) {
+      panels.forEach((panel) => panel.classList.add("is-visible"));
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries, instance) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) {
+            return;
+          }
+          entry.target.classList.add("is-visible");
+          instance.unobserve(entry.target);
+        });
+      },
+      {
+        root: null,
+        rootMargin: "0px 0px -10% 0px",
+        threshold: 0.1
+      }
+    );
+
+    panels.forEach((panel) => observer.observe(panel));
   }
 
   function initSectionSpy() {
@@ -78,25 +201,27 @@
       });
     };
 
-    let latestActive = allSections[0];
-    setActive(latestActive);
+    if (!("IntersectionObserver" in window)) {
+      setActive(allSections[0]);
+      return;
+    }
 
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            latestActive = entry.target;
-            setActive(latestActive);
+            setActive(entry.target);
           }
         });
       },
       {
         root: null,
-        rootMargin: "-24% 0px -62% 0px",
-        threshold: [0.2, 0.45]
+        rootMargin: "-35% 0px -45% 0px",
+        threshold: 0.01
       }
     );
 
+    setActive(allSections[0]);
     allSections.forEach((section) => observer.observe(section));
   }
 
@@ -221,6 +346,10 @@
       }
       lightbox.hidden = true;
       lightbox.setAttribute("aria-hidden", "true");
+      if (lightboxImage) {
+        lightboxImage.src = "";
+      }
+      document.body.style.overflow = "";
     };
 
     const openLightbox = () => {
@@ -243,7 +372,15 @@
 
       lightbox.hidden = false;
       lightbox.setAttribute("aria-hidden", "false");
+      document.body.style.overflow = "hidden";
     };
+
+    slides.forEach((slide, slideIndex) => {
+      slide.addEventListener("click", () => {
+        goTo(slideIndex);
+        openLightbox();
+      });
+    });
 
     if (openLightboxButton) {
       openLightboxButton.addEventListener("click", openLightbox);
@@ -275,6 +412,9 @@
   }
 
   function init() {
+    initImageSrcsetFallback();
+    initChunkedProse();
+    initRevealPanels();
     initReadingProgress();
     initSectionSpy();
     initCarousels();
