@@ -2,22 +2,27 @@
 <a class="skip-link" href="#main-content">Skip to content</a>
 <!-- /wp:html -->
 
-<!-- wp:group {"className":"ml-site-header","layout":{"type":"default"}} -->
-<div class="wp-block-group ml-site-header">
-  <!-- wp:group {"className":"ml-header-inner","layout":{"type":"flex","justifyContent":"space-between","flexWrap":"wrap","verticalAlignment":"center"}} -->
-  <div class="wp-block-group ml-header-inner">
-    <!-- wp:group {"layout":{"type":"constrained"}} -->
-    <div class="wp-block-group">
+<!-- wp:group {"tagName":"header","className":"ml-site-header","layout":{"type":"default"}} -->
+<header class="wp-block-group ml-site-header">
+  <!-- wp:group {"className":"ml-header-inner ml-header-frame","layout":{"type":"flex","justifyContent":"space-between","flexWrap":"wrap","verticalAlignment":"center"}} -->
+  <div class="wp-block-group ml-header-inner ml-header-frame">
+    <!-- wp:group {"className":"ml-brand-block","layout":{"type":"constrained"}} -->
+    <div class="wp-block-group ml-brand-block">
       <!-- wp:paragraph {"className":"ml-brand-kicker"} -->
-      <p class="ml-brand-kicker">Insights intelligence portal</p>
+      <p class="ml-brand-kicker">Market Lense</p>
       <!-- /wp:paragraph -->
 
-      <!-- wp:site-title {"className":"ml-brand-title","level":0} /-->
+      <!-- wp:site-title {"level":0,"className":"ml-brand-title"} /-->
     </div>
     <!-- /wp:group -->
 
-    <!-- wp:template-part {"slug":"nav","theme":"marketlense","tagName":"nav"} /-->
+    <!-- wp:group {"className":"ml-header-tools","layout":{"type":"flex","justifyContent":"right","flexWrap":"wrap","verticalAlignment":"center"}} -->
+    <div class="wp-block-group ml-header-tools">
+      <!-- wp:search {"label":"Search reports","showLabel":false,"placeholder":"Search digests, topics, publishers","buttonText":"Search","buttonPosition":"button-inside","buttonUseIcon":true,"className":"ml-header-search"} /-->
+      <!-- wp:template-part {"slug":"nav","theme":"marketlense","tagName":"div"} /-->
+    </div>
+    <!-- /wp:group -->
   </div>
   <!-- /wp:group -->
-</div>
+</header>
 <!-- /wp:group -->

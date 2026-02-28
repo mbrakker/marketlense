@@ -3,7 +3,7 @@
  * Plugin Name: Market Lense Core
  * Plugin URI: https://marketlense.local
  * Description: Core WordPress domain layer for Market Lense reports (CPT, taxonomies, and metadata synchronization).
- * Version: 1.1.0
+ * Version: 1.2.0
  * Author: Market Lense
  * Author URI: https://marketlense.local
  * Requires at least: 6.6
@@ -21,7 +21,7 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
-define('MARKETLENSE_CORE_VERSION', '1.1.0');
+define('MARKETLENSE_CORE_VERSION', '1.2.0');
 define('MARKETLENSE_CORE_PATH', plugin_dir_path(__FILE__));
 define('MARKETLENSE_CORE_URL', plugin_dir_url(__FILE__));
 
@@ -30,6 +30,8 @@ require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-post-type.
 require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-taxonomies.php';
 require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-content-parser.php';
 require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-meta.php';
+require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-report-view-model-builder.php';
+require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-intelligence-stats.php';
 require_once MARKETLENSE_CORE_PATH . 'includes/class-marketlense-core-shortcodes.php';
 
 register_activation_hook(__FILE__, ['\\MarketLense\\Core\\Plugin', 'activate']);

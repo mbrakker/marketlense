@@ -1,15 +1,18 @@
-<!-- wp:template-part {"slug":"header","theme":"marketlense","tagName":"header"} /-->
+<!-- wp:template-part {"slug":"header","theme":"marketlense","tagName":"div"} /-->
 
 <!-- wp:group {"tagName":"main","anchor":"main-content","className":"ml-shell","layout":{"type":"constrained"}} -->
 <main id="main-content" class="wp-block-group ml-shell">
   <!-- wp:group {"className":"ml-search-header","layout":{"type":"constrained"}} -->
   <div class="wp-block-group ml-search-header">
-    <!-- wp:paragraph {"className":"ml-eyebrow"} -->
-    <p class="ml-eyebrow">Search</p>
+    <!-- wp:paragraph {"className":"ml-section-kicker"} -->
+    <p class="ml-section-kicker">Search</p>
     <!-- /wp:paragraph -->
 
     <!-- wp:query-title {"type":"search","level":1} /-->
-    <!-- wp:search {"label":"Search reports","showLabel":false,"placeholder":"Search reports, topics, and publishers","buttonText":"Search","buttonPosition":"button-inside","buttonUseIcon":true} /-->
+    <!-- wp:paragraph {"className":"ml-page-lead"} -->
+    <p class="ml-page-lead">Search published digests, strategic themes, and publisher archives from the intelligence portal.</p>
+    <!-- /wp:paragraph -->
+    <!-- wp:search {"label":"Search reports","showLabel":false,"placeholder":"Search digests, topics, publishers","buttonText":"Search","buttonPosition":"button-inside","buttonUseIcon":true} /-->
   </div>
   <!-- /wp:group -->
 
@@ -17,31 +20,10 @@
   <div style="height:var(--wp--preset--spacing--60)" aria-hidden="true" class="wp-block-spacer"></div>
   <!-- /wp:spacer -->
 
-  <!-- wp:query {"queryId":61,"query":{"perPage":"10","pages":0,"offset":0,"postType":"any","order":"desc","orderBy":"date","inherit":true}} -->
-  <div class="wp-block-query">
-    <!-- wp:post-template -->
-    <!-- wp:group {"className":"ml-report-card","layout":{"type":"constrained"}} -->
-    <div class="wp-block-group ml-report-card">
-      <!-- wp:post-title {"isLink":true,"level":3} /-->
-      <!-- wp:post-date {"fontSize":"xs"} /-->
-      <!-- wp:post-excerpt {"moreText":"Open"} /-->
-    </div>
-    <!-- /wp:group -->
-    <!-- /wp:post-template -->
-
-    <!-- wp:query-pagination {"layout":{"type":"flex","justifyContent":"space-between"}} -->
-    <!-- wp:query-pagination-previous /-->
-    <!-- wp:query-pagination-next /-->
-    <!-- /wp:query-pagination -->
-
-    <!-- wp:query-no-results -->
-    <!-- wp:paragraph -->
-    <p>No matching content was found. Try broader terms.</p>
-    <!-- /wp:paragraph -->
-    <!-- /wp:query-no-results -->
-  </div>
-  <!-- /wp:query -->
+  <!-- wp:shortcode -->
+  [ml_report_browser per_page="12" show_filters="0" show_pagination="1" context="auto"]
+  <!-- /wp:shortcode -->
 </main>
 <!-- /wp:group -->
 
-<!-- wp:template-part {"slug":"footer","theme":"marketlense","tagName":"footer"} /-->
+<!-- wp:template-part {"slug":"footer","theme":"marketlense","tagName":"div"} /-->

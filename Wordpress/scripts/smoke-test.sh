@@ -39,6 +39,18 @@ require_php_true() {
   echo "$check_name passed."
 }
 
+require_php_false() {
+  local php_expr="$1"
+  local check_name="$2"
+  local result
+  result="$(wp_cli eval "$php_expr" | tr -d '[:space:]')"
+  if [[ "$result" != "0" ]]; then
+    echo "$check_name failed: expected falsy php expression, got '$result'" >&2
+    exit 1
+  fi
+  echo "$check_name passed."
+}
+
 require_file_sequence() {
   local file_path="$1"
   shift
@@ -221,5 +233,11 @@ require_php_true "echo strpos((string) wp_remote_retrieve_body(wp_remote_get(hom
 require_php_true "echo strpos((string) wp_remote_retrieve_body(wp_remote_get(home_url('/'))), '/about/') !== false ? '1' : '0';" "Navigation includes about link"
 require_php_true "echo strpos((string) wp_remote_retrieve_body(wp_remote_get(home_url('/'))), '/submit-a-report/') !== false ? '1' : '0';" "Navigation includes submit link"
 require_php_true "echo strpos((string) wp_remote_retrieve_body(wp_remote_get(home_url('/'))), '/contact/') !== false ? '1' : '0';" "Navigation includes contact link"
+require_php_true "echo strpos((string) wp_remote_retrieve_body(wp_remote_get(home_url('/'))), 'Featured Digest') !== false ? '1' : '0';" "Front page includes featured digest section"
+require_php_true "echo strpos((string) wp_remote_retrieve_body(wp_remote_get(home_url('/'))), 'This Week in Intelligence') !== false ? '1' : '0';" "Front page includes signals section"
+require_php_true "echo strpos((string) wp_remote_retrieve_body(wp_remote_get(home_url('/'))), 'Weekly Executive Intelligence Briefing') !== false ? '1' : '0';" "Front page includes executive briefing section"
+require_php_true "echo strpos((string) wp_remote_retrieve_body(wp_remote_get(home_url('/'))), 'Search digests, topics, publishers') !== false ? '1' : '0';" "Front page includes header search"
+require_php_false "echo preg_match('/\\[ml_[a-z0-9_\\-]+(?:\\s[^\\]]*)?\\]/', (string) wp_remote_retrieve_body(wp_remote_get(home_url('/')))) ? '1' : '0';" "Front page does not leak raw Market Lense shortcodes"
+require_php_false "echo preg_match('/\\[ml_[a-z0-9_\\-]+(?:\\s[^\\]]*)?\\]/', (string) wp_remote_retrieve_body(wp_remote_get(get_post_type_archive_link('ml_report')))) ? '1' : '0';" "Reports archive does not leak raw Market Lense shortcodes"
 
 echo "Smoke test passed."

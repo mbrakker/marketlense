@@ -158,9 +158,7 @@
   }
 
   function initSectionSpy() {
-    const sectionLinks = Array.from(
-      document.querySelectorAll("[data-section-link], .ml-report-toc a[href^='#']")
-    );
+    const sectionLinks = Array.from(document.querySelectorAll("[data-section-link]"));
 
     if (!sectionLinks.length) {
       return;

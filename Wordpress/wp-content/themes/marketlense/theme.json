@@ -4,21 +4,21 @@
   "settings": {
     "appearanceTools": true,
     "layout": {
-      "contentSize": "min(60rem, calc(100vw - 2.5rem))",
-      "wideSize": "min(92rem, calc(100vw - 2.5rem))"
+      "contentSize": "100%",
+      "wideSize": "100%"
     },
     "custom": {
       "radius": {
-        "soft": "0.65rem",
-        "card": "1rem",
+        "soft": "0.45rem",
+        "card": "0.8rem",
         "pill": "999px"
       },
       "shadow": {
-        "glass": "0 18px 40px rgba(8, 29, 45, 0.12)",
-        "card": "0 14px 28px rgba(14, 33, 52, 0.1)"
+        "card": "0 14px 28px rgba(17, 27, 40, 0.06)",
+        "float": "0 18px 40px rgba(10, 17, 28, 0.08)"
       },
       "blur": {
-        "glass": "blur(16px)"
+        "header": "blur(14px)"
       }
     },
     "color": {
@@ -28,69 +28,69 @@
         {
           "slug": "canvas",
           "name": "Canvas",
-          "color": "#f4f7fb"
+          "color": "#f3f0ea"
         },
         {
           "slug": "surface",
           "name": "Surface",
-          "color": "#ffffff"
+          "color": "#fffdf9"
+        },
+        {
+          "slug": "surface-muted",
+          "name": "Surface Muted",
+          "color": "#f7f3ec"
         },
         {
           "slug": "ink",
           "name": "Ink",
-          "color": "#112339"
+          "color": "#111b28"
         },
         {
-          "slug": "muted-ink",
-          "name": "Muted Ink",
-          "color": "#4d5f72"
-        },
-        {
-          "slug": "teal",
-          "name": "Teal",
-          "color": "#1f8f83"
-        },
-        {
-          "slug": "amber",
-          "name": "Amber",
-          "color": "#d0932f"
+          "slug": "ink-soft",
+          "name": "Ink Soft",
+          "color": "#53606e"
         },
         {
           "slug": "midnight",
           "name": "Midnight",
-          "color": "#0d1b2a"
+          "color": "#14212d"
         },
         {
-          "slug": "line",
-          "name": "Line",
-          "color": "#d5dee8"
+          "slug": "teal",
+          "name": "Teal",
+          "color": "#0f6b63"
+        },
+        {
+          "slug": "brass",
+          "name": "Brass",
+          "color": "#9d7b41"
+        },
+        {
+          "slug": "border",
+          "name": "Border",
+          "color": "#d8cec0"
         }
       ],
       "gradients": [
         {
-          "slug": "hero-sky",
-          "name": "Hero Sky",
-          "gradient": "linear-gradient(135deg, #ffffff 0%, #edf4fb 45%, #dcebf8 100%)"
+          "slug": "hero-paper",
+          "name": "Hero Paper",
+          "gradient": "linear-gradient(180deg, #fffdf9 0%, #f7f2e9 100%)"
         },
         {
-          "slug": "glass-edge",
-          "name": "Glass Edge",
-          "gradient": "linear-gradient(120deg, rgba(255,255,255,0.85), rgba(223,236,248,0.66))"
-        },
-        {
-          "slug": "rail",
-          "name": "Rail",
-          "gradient": "linear-gradient(160deg, #0d1b2a 0%, #16324f 55%, #1f4d73 100%)"
+          "slug": "quiet-panel",
+          "name": "Quiet Panel",
+          "gradient": "linear-gradient(180deg, rgba(255,253,249,0.98) 0%, rgba(247,243,236,0.92) 100%)"
         }
       ]
     },
     "spacing": {
-      "units": ["px", "rem", "vw", "vh", "%"],
+      "units": ["px", "rem", "vw", "%"],
       "spacingSizes": [
         {
           "slug": "20",
           "name": "2XS",
-          "size": "0.4rem"
+          "size": "0.375rem"
         },
         {
           "slug": "30",
@@ -105,22 +105,22 @@
         {
           "slug": "50",
           "name": "M",
-          "size": "1.4rem"
+          "size": "1.5rem"
         },
         {
           "slug": "60",
           "name": "L",
-          "size": "2rem"
+          "size": "2.5rem"
         },
         {
           "slug": "70",
           "name": "XL",
-          "size": "2.8rem"
+          "size": "4rem"
         },
         {
           "slug": "80",
           "name": "2XL",
-          "size": "4rem"
+          "size": "6rem"
         }
       ]
     },
@@ -138,8 +138,8 @@
           "slug": "serif"
         },
         {
-          "fontFamily": "\"JetBrains Mono\", \"IBM Plex Mono\", monospace",
-          "name": "Monospace",
+          "fontFamily": "\"IBM Plex Mono\", \"JetBrains Mono\", monospace",
+          "name": "Mono",
           "slug": "mono"
         }
       ],
@@ -147,12 +147,12 @@
         {
           "slug": "xs",
           "name": "XS",
-          "size": "0.82rem"
+          "size": "0.8rem"
         },
         {
           "slug": "sm",
           "name": "S",
-          "size": "0.93rem"
+          "size": "0.95rem"
         },
         {
           "slug": "md",
@@ -162,22 +162,27 @@
         {
           "slug": "lg",
           "name": "L",
-          "size": "1.22rem"
+          "size": "1.25rem"
         },
         {
           "slug": "xl",
           "name": "XL",
-          "size": "1.64rem"
+          "size": "1.65rem"
         },
         {
           "slug": "2xl",
           "name": "2XL",
-          "size": "2.2rem"
+          "size": "2.35rem"
         },
         {
           "slug": "3xl",
           "name": "3XL",
-          "size": "3.1rem"
+          "size": "3.3rem"
+        },
+        {
+          "slug": "4xl",
+          "name": "4XL",
+          "size": "4.6rem"
         }
       ],
       "lineHeight": true,
@@ -186,7 +191,7 @@
     "blocks": {
       "core/navigation": {
         "typography": {
-          "fontSize": "0.95rem",
+          "fontSize": "0.92rem",
           "fontWeight": "600"
         }
       },
@@ -195,7 +200,7 @@
           "radius": "999px"
         },
         "typography": {
-          "fontSize": "0.92rem",
+          "fontSize": "0.9rem",
           "fontWeight": "600",
           "letterSpacing": "0.01em"
         }
@@ -205,15 +210,14 @@
           "fontFamily": "var(--wp--preset--font-family--serif)"
         }
       },
-      "core/post-terms": {
-        "typography": {
-          "fontSize": "0.82rem",
-          "fontWeight": "600"
+      "core/post-content": {
+        "spacing": {
+          "blockGap": "var(--wp--preset--spacing--50)"
         }
       },
       "core/query": {
         "spacing": {
-          "blockGap": "var(--wp--preset--spacing--50)"
+          "blockGap": "var(--wp--preset--spacing--60)"
         }
       }
     }
@@ -247,15 +251,15 @@
         "typography": {
           "fontFamily": "var(--wp--preset--font-family--serif)",
           "fontWeight": "600",
-          "lineHeight": "1.16",
-          "letterSpacing": "-0.012em"
+          "lineHeight": "1.08",
+          "letterSpacing": "-0.02em"
         }
       }
     },
     "typography": {
       "fontFamily": "var(--wp--preset--font-family--sans)",
       "fontSize": "var(--wp--preset--font-size--md)",
-      "lineHeight": "1.7"
+      "lineHeight": "1.72"
     },
     "spacing": {
       "blockGap": "var(--wp--preset--spacing--50)"
@@ -271,25 +275,15 @@
           }
         }
       },
-      "core/post-content": {
-        "spacing": {
-          "blockGap": "var(--wp--preset--spacing--50)"
-        }
-      },
-      "core/query": {
-        "spacing": {
-          "blockGap": "var(--wp--preset--spacing--60)"
-        }
-      },
       "core/pullquote": {
         "border": {
           "left": {
-            "color": "var(--wp--preset--color--amber)",
-            "width": "4px"
+            "color": "var(--wp--preset--color--brass)",
+            "width": "3px"
           }
         },
         "color": {
-          "background": "#fdfaf4"
+          "background": "var(--wp--preset--color--surface-muted)"
         }
       }
     }
@@ -311,18 +305,8 @@
       "area": "header"
     },
     {
-      "name": "report-hero",
-      "title": "Report Hero",
-      "area": "uncategorized"
-    },
-    {
-      "name": "report-toc",
-      "title": "Report TOC",
-      "area": "uncategorized"
-    },
-    {
-      "name": "report-rail",
-      "title": "Report Rail",
+      "name": "single-content",
+      "title": "Single Content",
       "area": "uncategorized"
     }
   ]

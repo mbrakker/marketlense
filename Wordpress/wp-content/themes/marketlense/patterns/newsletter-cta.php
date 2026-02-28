@@ -1,33 +1,37 @@
 <?php
 /**
- * Title: Newsletter call to action
+ * Title: ML - Weekly Executive Intelligence Briefing
  * Slug: marketlense/newsletter-cta
  * Categories: marketlense-home, marketlense-pages
  * Inserter: yes
  */
 ?>
-<!-- wp:group {"className":"ml-newsletter-cta","layout":{"type":"constrained"}} -->
-<div class="wp-block-group ml-newsletter-cta">
+<!-- wp:group {"className":"ml-home-section ml-briefing-cta","layout":{"type":"constrained"}} -->
+<div class="wp-block-group ml-home-section ml-briefing-cta">
   <!-- wp:columns {"verticalAlignment":"center"} -->
   <div class="wp-block-columns are-vertically-aligned-center">
     <!-- wp:column {"width":"70%"} -->
     <div class="wp-block-column" style="flex-basis:70%">
-      <!-- wp:paragraph {"className":"ml-eyebrow"} -->
-      <p class="ml-eyebrow">Stay informed</p>
+      <!-- wp:paragraph {"className":"ml-section-kicker"} -->
+      <p class="ml-section-kicker">Briefing</p>
       <!-- /wp:paragraph -->
-      <!-- wp:heading {"level":3} -->
-      <h3 class="wp-block-heading">Get weekly Market Lense highlights</h3>
+      <!-- wp:heading {"level":2} -->
+      <h2 class="wp-block-heading">Weekly Executive Intelligence Briefing</h2>
       <!-- /wp:heading -->
-      <!-- wp:paragraph -->
-      <p>Receive a curated briefing of newly published digests, trending topics, and key shifts by publisher.</p>
-      <!-- /wp:paragraph -->
+      <!-- wp:list {"className":"ml-briefing-list"} -->
+      <ul class="ml-briefing-list">
+        <li>Newly published digests and the strongest claims worth leadership attention.</li>
+        <li>Fast reads on shifting themes, publisher momentum, and emerging evidence clusters.</li>
+        <li>Concise links back into the full digest archive for deeper review.</li>
+      </ul>
+      <!-- /wp:list -->
     </div>
     <!-- /wp:column -->
 
     <!-- wp:column {"width":"30%"} -->
     <div class="wp-block-column" style="flex-basis:30%">
-      <!-- wp:buttons {"layout":{"type":"flex","justifyContent":"right"}} -->
-      <div class="wp-block-buttons">
+      <!-- wp:buttons {"className":"ml-briefing-actions","layout":{"type":"flex","justifyContent":"right"}} -->
+      <div class="wp-block-buttons ml-briefing-actions">
         <!-- wp:button -->
         <div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="/contact/">Request access</a></div>
         <!-- /wp:button -->

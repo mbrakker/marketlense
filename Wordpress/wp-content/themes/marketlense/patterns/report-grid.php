@@ -1,45 +1,34 @@
 <?php
 /**
- * Title: Report grid
+ * Title: ML - Latest Reports
  * Slug: marketlense/report-grid
- * Categories: marketlense-reports
+ * Categories: marketlense-home, marketlense-reports
  * Inserter: yes
  */
 ?>
-<!-- wp:group {"layout":{"type":"constrained"}} -->
-<div class="wp-block-group">
-  <!-- wp:group {"layout":{"type":"flex","justifyContent":"space-between","verticalAlignment":"center"}} -->
-  <div class="wp-block-group">
-    <!-- wp:heading {"level":2} -->
-    <h2 class="wp-block-heading">Latest reports</h2>
-    <!-- /wp:heading -->
-    <!-- wp:button {"className":"is-style-outline"} -->
-    <div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button" href="/reports/">View all</a></div>
-    <!-- /wp:button -->
+<!-- wp:group {"className":"ml-home-section ml-latest-reports","layout":{"type":"constrained"}} -->
+<div class="wp-block-group ml-home-section ml-latest-reports">
+  <!-- wp:group {"className":"ml-section-heading","layout":{"type":"flex","justifyContent":"space-between","flexWrap":"wrap","verticalAlignment":"center"}} -->
+  <div class="wp-block-group ml-section-heading">
+    <!-- wp:group {"layout":{"type":"constrained"}} -->
+    <div class="wp-block-group">
+      <!-- wp:paragraph {"className":"ml-section-kicker"} -->
+      <p class="ml-section-kicker">Latest coverage</p>
+      <!-- /wp:paragraph -->
+      <!-- wp:heading {"level":2} -->
+      <h2 class="wp-block-heading">Latest Reports</h2>
+      <!-- /wp:heading -->
+    </div>
+    <!-- /wp:group -->
+
+    <!-- wp:paragraph {"className":"ml-inline-link"} -->
+    <p class="ml-inline-link"><a href="/reports/">View all reports <span aria-hidden="true">&rarr;</span></a></p>
+    <!-- /wp:paragraph -->
   </div>
   <!-- /wp:group -->
 
-  <!-- wp:query {"queryId":11,"query":{"perPage":"9","pages":0,"offset":0,"postType":"ml_report","order":"desc","orderBy":"date","author":"","search":"","exclude":[],"sticky":"","inherit":false},"className":"ml-report-grid"} -->
-  <div class="wp-block-query ml-report-grid">
-    <!-- wp:post-template -->
-    <!-- wp:group {"className":"ml-report-card","layout":{"type":"constrained"}} -->
-    <div class="wp-block-group ml-report-card">
-      <!-- wp:post-featured-image {"isLink":true} /-->
-      <!-- wp:post-title {"isLink":true,"level":3} /-->
-      <!-- wp:post-date {"fontSize":"xs"} /-->
-      <!-- wp:post-terms {"term":"ml_publisher","className":"ml-chip-terms"} /-->
-      <!-- wp:post-terms {"term":"category","className":"ml-chip-terms"} /-->
-      <!-- wp:post-excerpt {"moreText":"Open digest","showMoreOnNewLine":false} /-->
-    </div>
-    <!-- /wp:group -->
-    <!-- /wp:post-template -->
-
-    <!-- wp:query-no-results -->
-    <!-- wp:paragraph -->
-    <p>No reports have been published yet.</p>
-    <!-- /wp:paragraph -->
-    <!-- /wp:query-no-results -->
-  </div>
-  <!-- /wp:query -->
+  <!-- wp:shortcode -->
+  [ml_report_browser per_page="6" show_filters="0" show_pagination="0" context="auto"]
+  <!-- /wp:shortcode -->
 </div>
 <!-- /wp:group -->

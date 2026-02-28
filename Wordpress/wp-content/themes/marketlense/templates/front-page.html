@@ -1,8 +1,26 @@
-<!-- wp:template-part {"slug":"header","theme":"marketlense","tagName":"header"} /-->
+<!-- wp:template-part {"slug":"header","theme":"marketlense","tagName":"div"} /-->
 
-<!-- wp:group {"tagName":"main","anchor":"main-content","className":"ml-shell","layout":{"type":"constrained"}} -->
-<main id="main-content" class="wp-block-group ml-shell">
-  <!-- wp:pattern {"slug":"marketlense/hero-home"} /-->
+<!-- wp:group {"tagName":"main","anchor":"main-content","className":"ml-shell ml-home-shell","layout":{"type":"default"}} -->
+<main id="main-content" class="wp-block-group ml-shell ml-home-shell">
+  <!-- wp:pattern {"slug":"marketlense/hero-institutional"} /-->
+
+  <!-- wp:spacer {"height":"var:preset|spacing|60"} -->
+  <div style="height:var(--wp--preset--spacing--60)" aria-hidden="true" class="wp-block-spacer"></div>
+  <!-- /wp:spacer -->
+
+  <!-- wp:pattern {"slug":"marketlense/home-metrics"} /-->
+
+  <!-- wp:spacer {"height":"var:preset|spacing|60"} -->
+  <div style="height:var(--wp--preset--spacing--60)" aria-hidden="true" class="wp-block-spacer"></div>
+  <!-- /wp:spacer -->
+
+  <!-- wp:pattern {"slug":"marketlense/featured-digest"} /-->
+
+  <!-- wp:spacer {"height":"var:preset|spacing|60"} -->
+  <div style="height:var(--wp--preset--spacing--60)" aria-hidden="true" class="wp-block-spacer"></div>
+  <!-- /wp:spacer -->
+
+  <!-- wp:pattern {"slug":"marketlense/this-week-intelligence"} /-->
 
   <!-- wp:spacer {"height":"var:preset|spacing|60"} -->
   <div style="height:var(--wp--preset--spacing--60)" aria-hidden="true" class="wp-block-spacer"></div>
@@ -14,21 +32,19 @@
   <div style="height:var(--wp--preset--spacing--60)" aria-hidden="true" class="wp-block-spacer"></div>
   <!-- /wp:spacer -->
 
-  <!-- wp:columns -->
-  <div class="wp-block-columns">
-    <!-- wp:column -->
-    <div class="wp-block-column">
-      <!-- wp:pattern {"slug":"marketlense/featured-topics"} /-->
-    </div>
-    <!-- /wp:column -->
+  <!-- wp:pattern {"slug":"marketlense/strategic-themes"} /-->
 
-    <!-- wp:column -->
-    <div class="wp-block-column">
-      <!-- wp:pattern {"slug":"marketlense/featured-publishers"} /-->
-    </div>
-    <!-- /wp:column -->
-  </div>
-  <!-- /wp:columns -->
+  <!-- wp:spacer {"height":"var:preset|spacing|60"} -->
+  <div style="height:var(--wp--preset--spacing--60)" aria-hidden="true" class="wp-block-spacer"></div>
+  <!-- /wp:spacer -->
+
+  <!-- wp:pattern {"slug":"marketlense/publisher-authority"} /-->
+
+  <!-- wp:spacer {"height":"var:preset|spacing|60"} -->
+  <div style="height:var(--wp--preset--spacing--60)" aria-hidden="true" class="wp-block-spacer"></div>
+  <!-- /wp:spacer -->
+
+  <!-- wp:pattern {"slug":"marketlense/how-it-works"} /-->
 
   <!-- wp:spacer {"height":"var:preset|spacing|60"} -->
   <div style="height:var(--wp--preset--spacing--60)" aria-hidden="true" class="wp-block-spacer"></div>
@@ -38,4 +54,4 @@
 </main>
 <!-- /wp:group -->
 
-<!-- wp:template-part {"slug":"footer","theme":"marketlense","tagName":"footer"} /-->
+<!-- wp:template-part {"slug":"footer","theme":"marketlense","tagName":"div"} /-->

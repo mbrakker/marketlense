@@ -4,7 +4,7 @@ Tags: reports, custom-post-type, taxonomy, api, editorial
 Requires at least: 6.6
 Tested up to: 6.6
 Requires PHP: 8.2
-Stable tag: 1.1.0
+Stable tag: 1.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -22,6 +22,11 @@ Market Lense Core provides the WordPress data model required by the Market Lense
 * Topic/publisher projection from existing post tags/categories and metadata panels
 * Shortcodes:
   * `[ml_report_browser]` (`ml_topic` maps to native category slugs; `ml_publisher` maps to publisher taxonomy slugs)
+  * `[ml_home_metrics]`
+  * `[ml_featured_digest]`
+  * `[ml_intelligence_signals]`
+  * `[ml_strategic_themes]`
+  * `[ml_publisher_authority]`
   * `[ml_topics_directory]`
   * `[ml_publishers_directory]`
 
@@ -35,6 +40,11 @@ This plugin is intended to be used together with the `marketlense` block theme.
 4. Confirm that `/wp-json/wp/v2/ml_report` is reachable.
 
 == Changelog ==
+
+= 1.2.0 =
+* Added homepage intelligence shortcodes for editorial portal sections, including metrics, featured digest, weekly signals, strategic themes, and publisher authority.
+* Upgraded report-browser cards to use parsed digest metadata, counts, concise excerpts, and executive-style CTAs.
+* Added archive-aware filtering support for search, native category archives, and legacy `ml_topic` views.
 
 = 1.1.1 =
 * Switched frontend topic surfaces to native WordPress categories scoped to published `ml_report` posts.

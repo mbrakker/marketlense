@@ -22,15 +22,31 @@ function marketlense_setup(): void
     add_theme_support('post-thumbnails');
 
     add_editor_style('assets/css/theme.css');
-
-    register_nav_menus(
-        [
-            'primary' => __('Primary Navigation', 'marketlense'),
-            'footer'  => __('Footer Navigation', 'marketlense'),
-        ]
-    );
 }
 add_action('after_setup_theme', 'marketlense_setup');
+
+/**
+ * Shows an admin notice when the companion plugin is unavailable.
+ */
+function marketlense_require_core_plugin_notice(): void
+{
+    if (! current_user_can('activate_plugins')) {
+        return;
+    }
+
+    if (class_exists('\\MarketLense\\Core\\Plugin')) {
+        return;
+    }
+
+    printf(
+        '<div class="notice notice-error"><p>%s</p></div>',
+        esc_html__(
+            'Market Lense theme requires the Market Lense Core plugin for report archives, homepage intelligence sections, and directory shortcodes.',
+            'marketlense'
+        )
+    );
+}
+add_action('admin_notices', 'marketlense_require_core_plugin_notice');
 
 /**
  * Enqueues frontend assets.
@@ -47,7 +63,7 @@ function marketlense_enqueue_assets(): void
         $version
     );
 
-    if (is_singular()) {
+    if (is_singular(['ml_report', 'post'])) {
         wp_enqueue_script(
             'marketlense-report-interactions',
             get_template_directory_uri() . '/assets/js/report-interactions.js',

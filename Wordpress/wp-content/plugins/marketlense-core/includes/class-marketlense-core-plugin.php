@@ -25,6 +25,10 @@ final class Plugin
 
     private Meta $meta;
 
+    private Report_View_Model_Builder $view_model_builder;
+
+    private Intelligence_Stats $stats;
+
     private Shortcodes $shortcodes;
 
     private function __construct()
@@ -33,7 +37,9 @@ final class Plugin
         $this->post_type = new Post_Type();
         $this->taxonomies = new Taxonomies();
         $this->meta = new Meta($parser);
-        $this->shortcodes = new Shortcodes();
+        $this->view_model_builder = new Report_View_Model_Builder();
+        $this->stats = new Intelligence_Stats();
+        $this->shortcodes = new Shortcodes($this->view_model_builder, $this->stats);
     }
 
     public static function instance(): Plugin

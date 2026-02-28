@@ -20,6 +20,10 @@ Excluded:
 - Docker runtime stack
 - Python publish/orchestration logic in `src/`
 
+## Runtime Expectation
+
+This repo does not ship a local WordPress runtime. Use an existing local or hosted WordPress 6.6+ / PHP 8.2 environment, then install the packaged plugin/theme ZIPs through WP Admin.
+
 ## Current Structure
 
 ```text
@@ -72,8 +76,22 @@ Primary responsibilities:
 - Synchronizes metadata/taxonomy projections from published digest content and existing tags/categories on save.
 - Provides shortcodes:
   - `[ml_report_browser]` (URL filters: `ml_topic`, `ml_publisher`)
+  - `[ml_home_metrics]`
+  - `[ml_featured_digest]`
+  - `[ml_intelligence_signals]`
+  - `[ml_strategic_themes]`
+  - `[ml_publisher_authority]`
   - `[ml_topics_directory]`
   - `[ml_publishers_directory]`
+
+## Theme Contract (`marketlense`)
+
+The block theme is organized as an editorial intelligence portal:
+
+- Full-site editing templates and template parts for header, footer, archives, search, and ingest-first singles
+- Homepage assembled from reorderable patterns
+- Theme-driven editorial token system in `theme.json`
+- Minimal JS only for singular report interaction parity
 
 ## Provision Site IA (Pages + Navigation + Publisher Homepages)
 
@@ -88,8 +106,8 @@ What `provision-site-structure.sh` does:
 
 - Creates/updates required pages (About, Methodology, Topics directory, Publishers directory, Submit a Report, Contact, Privacy, Terms).
 - Publishes pages idempotently (no duplicates on rerun).
-- If `wp-cli` can access a local WP core (`wp core is-installed`), creates/updates primary and footer menus and assigns them to `primary` / `footer`.
-- If `wp-cli` is unavailable in your environment, automatically falls back to REST (`provision-site-structure-rest.py`) and provisions pages only; navigation is already provided by static block-theme template parts (`parts/nav.html`, `parts/footer.html`).
+- Navigation is provided directly by static block-theme template parts (`parts/nav.html`, `parts/footer.html`); the provisioning script does not create classic menu locations.
+- If `wp-cli` is unavailable in your environment, automatically falls back to REST (`provision-site-structure-rest.py`) and provisions the same required pages.
 
 What `seed-publisher-homepages.sh` does:
 
@@ -145,6 +163,7 @@ What it validates:
 - Required site pages return HTTP `200`.
 - Topics and publishers directory shortcodes render.
 - Primary navigation links are present in rendered output.
+- Front page editorial sections render (`Featured Digest`, `This Week in Intelligence`, `Weekly Executive Intelligence Briefing`, header search).
 - A published `ml_report` URL returns HTTP `200` (seeded if missing).
 
 Optional environment controls:
@@ -163,6 +182,14 @@ If `wp-cli` is unavailable, smoke test exits with a skip message.
 - `templates/archive-ml_report.html` now renders `[ml_report_browser]`, which provides server-side report filtering at `/reports/` via:
   - `?ml_topic=<category-slug>` mapped to native WordPress categories assigned to published `ml_report` posts
   - `?ml_publisher=<slug>` mapped to the `ml_publisher` taxonomy
+- Homepage editorial sections are backed by shortcode-driven intelligence components:
+  - `[ml_home_metrics]`
+  - `[ml_featured_digest]`
+  - `[ml_intelligence_signals]`
+  - `[ml_strategic_themes]`
+  - `[ml_publisher_authority]`
+- Theme dependency: shortcode-backed homepage/archive/directory surfaces are owned by `marketlense-core`; the theme expects the plugin to be active and shows an admin notice when it is missing instead of duplicating shortcode/business logic in theme PHP.
+- Block-template compatibility: `marketlense-core` also applies its registered `ml_*` shortcodes during block rendering when template/pattern output leaves a raw shortcode string unresolved, so theme patterns built with `core/shortcode` blocks still render on the front end.
 - `templates/page-topics-directory.html` renders `[ml_topics_directory]`.
 - `templates/page-publishers-directory.html` renders `[ml_publishers_directory]` with publisher homepage CTAs.
 - `templates/category.html` routes native category archives through the same report browser, so topic archive pages stay limited to uploaded reports instead of falling back to generic site-wide category queries.
@@ -171,21 +198,29 @@ If `wp-cli` is unavailable, smoke test exits with a skip message.
 
 ## Responsive Layout Defaults
 
-The `marketlense` theme now uses wider responsive layout defaults in `theme.json` so content scales better on laptop/desktop widths while preserving mobile readability:
+The `marketlense` theme now uses full-width layout defaults in `theme.json` and constrains the actual editorial content in CSS so pages still read deliberately on both mobile and laptop widths:
 
-- `settings.layout.contentSize`: `min(60rem, calc(100vw - 2.5rem))`
-- `settings.layout.wideSize`: `min(92rem, calc(100vw - 2.5rem))`
+- `settings.layout.contentSize`: `100%`
+- `settings.layout.wideSize`: `100%`
 
-This keeps blocks fluid across breakpoints and avoids the previous narrow desktop appearance.
+This lets the UI take over the full screen on any device while preserving a controlled internal editorial frame for hero copy, cards, and process/briefing sections.
+
+The homepage hero follows the same rule: the visual background and decorative circles live on the full-width outer hero band, while the inner hero frame stays transparent and constrained for readable copy width.
+The hero now uses the shared home frame with the gutter carried by the outer band, not an extra inner inset, so both left and right edges stay in lockstep with the metrics, featured digest, and other homepage sections.
+The desktop hero frame also no longer reserves an unused split column, which keeps the hero from appearing visually narrower on the right than the sections below it.
+The headline itself also no longer carries a separate desktop `max-width`, so the `h1` aligns with the hero stack instead of stopping short inside the correct frame.
+The process-section note copy also no longer carries its own narrower `max-width`, so it aligns to the same width as the section heading container.
+The hero body copy and credibility line also no longer carry separate desktop `max-width` caps, so both lines align with the same hero stack width.
+Other reusable theme copy blocks now follow their parent containers for the same reason: `ml-page-lead`, generic `ml-section-note`, featured digest excerpts, and ingest report hero subtitles no longer carry separate text-width caps.
 
 ## `ml_report` Ingest Rendering
 
 Published ingest reports now render in an ingest-first mode in the single template:
 
-- `templates/single-ml_report.html` renders raw `post-content` directly (no theme-level report hero/rail wrappers).
-- `templates/single.html` also renders full `post-content` directly, preventing fallback to `index.html` excerpt previews ("Continue reading") for reports published under default `post` type.
+- `parts/single-content.html` is the single source of truth for singular report content rendering.
+- `templates/single-ml_report.html` and `templates/single.html` both route through that shared template part, preventing template drift while still covering `ml_report` and legacy default `post` entries.
 - `assets/css/theme.css` contains a scoped parity layer under `.ml-ingest-report-content` that mirrors the generated digest body classes (`.page-shell`, `.report`, `.hero`, `.panel`, carousel/lightbox, sticky section nav).
-- `assets/js/report-interactions.js` now covers behavior that is stripped from uploaded HTML body content (panel reveal, prose chunking, section spy, reading progress, and carousel/lightbox interactions), and is enqueued for all singular views to support reports published under either `ml_report` or default `post`.
+- `assets/js/report-interactions.js` covers behavior that is stripped from uploaded HTML body content (panel reveal, prose chunking, section spy, reading progress, and carousel/lightbox interactions), and is enqueued only for `ml_report` and legacy default `post` singular views.
 - Reveal panels are fail-open: content remains visible even if JS does not execute.
 - Publish HTML source rewriting now updates both `img src` and `img srcset` URLs, preventing broken preview images after upload.
 - Legacy safety: if an older post has absolute `src` but relative `srcset`, frontend JS removes the broken `srcset` so the image still renders.

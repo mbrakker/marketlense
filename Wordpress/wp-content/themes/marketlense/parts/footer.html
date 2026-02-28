@@ -1,24 +1,42 @@
-<!-- wp:group {"className":"ml-site-footer","layout":{"type":"default"}} -->
-<div class="wp-block-group ml-site-footer">
+<!-- wp:group {"tagName":"footer","className":"ml-site-footer","layout":{"type":"default"}} -->
+<footer class="wp-block-group ml-site-footer">
   <!-- wp:group {"className":"ml-header-inner","layout":{"type":"constrained"}} -->
   <div class="wp-block-group ml-header-inner">
-    <!-- wp:columns {"verticalAlignment":"center"} -->
-    <div class="wp-block-columns are-vertically-aligned-center">
-      <!-- wp:column {"width":"65%"} -->
-      <div class="wp-block-column" style="flex-basis:65%">
-        <!-- wp:site-title {"level":0} /-->
+    <!-- wp:columns {"className":"ml-footer-columns"} -->
+    <div class="wp-block-columns ml-footer-columns">
+      <!-- wp:column {"width":"42%"} -->
+      <div class="wp-block-column" style="flex-basis:42%">
+        <!-- wp:site-title {"level":0,"className":"ml-footer-title"} /-->
         <!-- wp:paragraph {"className":"ml-footnote"} -->
-        <p class="ml-footnote">Market Lense converts long reports into editorial digests for executive teams.</p>
+        <p class="ml-footnote">Validated market digests, source-traceable evidence, and executive-ready briefings for strategy teams and decision makers.</p>
         <!-- /wp:paragraph -->
       </div>
       <!-- /wp:column -->
 
-      <!-- wp:column {"width":"35%"} -->
-      <div class="wp-block-column" style="flex-basis:35%">
-        <!-- wp:navigation {"overlayMenu":"never","layout":{"type":"flex","justifyContent":"right","orientation":"horizontal"}} -->
+      <!-- wp:column {"width":"28%"} -->
+      <div class="wp-block-column" style="flex-basis:28%">
+        <!-- wp:paragraph {"className":"ml-footer-label"} -->
+        <p class="ml-footer-label">Navigate</p>
+        <!-- /wp:paragraph -->
+        <!-- wp:navigation {"overlayMenu":"never","className":"ml-footer-nav","layout":{"type":"flex","orientation":"vertical"}} -->
+        <!-- wp:navigation-link {"label":"Reports","url":"/reports/","kind":"custom"} /-->
+        <!-- wp:navigation-link {"label":"Topics","url":"/topics-directory/","kind":"custom"} /-->
+        <!-- wp:navigation-link {"label":"Publishers","url":"/publishers-directory/","kind":"custom"} /-->
+        <!-- wp:navigation-link {"label":"About","url":"/about/","kind":"custom"} /-->
+        <!-- /wp:navigation -->
+      </div>
+      <!-- /wp:column -->
+
+      <!-- wp:column {"width":"30%"} -->
+      <div class="wp-block-column" style="flex-basis:30%">
+        <!-- wp:paragraph {"className":"ml-footer-label"} -->
+        <p class="ml-footer-label">Utilities</p>
+        <!-- /wp:paragraph -->
+        <!-- wp:navigation {"overlayMenu":"never","className":"ml-footer-nav","layout":{"type":"flex","orientation":"vertical"}} -->
+        <!-- wp:navigation-link {"label":"Methodology","url":"/methodology/","kind":"custom"} /-->
+        <!-- wp:navigation-link {"label":"Contact","url":"/contact/","kind":"custom"} /-->
         <!-- wp:navigation-link {"label":"Privacy","url":"/privacy/","kind":"custom"} /-->
         <!-- wp:navigation-link {"label":"Terms","url":"/terms/","kind":"custom"} /-->
-        <!-- wp:navigation-link {"label":"Contact","url":"/contact/","kind":"custom"} /-->
         <!-- /wp:navigation -->
       </div>
       <!-- /wp:column -->
@@ -26,5 +44,5 @@
     <!-- /wp:columns -->
   </div>
   <!-- /wp:group -->
-</div>
+</footer>
 <!-- /wp:group -->

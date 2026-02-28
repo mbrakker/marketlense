@@ -87,69 +87,6 @@ ensure_page() {
   printf "%s" "$page_id"
 }
 
-ensure_menu() {
-  local menu_name="$1"
-  local menu_slug="$2"
-  local menu_id
-
-  menu_id="$(
-    wp_cli menu list --format=csv --fields=term_id,slug \
-      | awk -F, -v slug="$menu_slug" 'NR > 1 && $2 == slug { print $1; exit }'
-  )"
-
-  if [[ -z "$menu_id" ]]; then
-    menu_id="$(wp_cli menu create "$menu_name" --porcelain)"
-    echo "Created menu: $menu_name -> ID $menu_id" >&2
-  else
-    echo "Using menu: $menu_name -> ID $menu_id" >&2
-  fi
-
-  printf "%s" "$menu_id"
-}
-
-clear_menu_items() {
-  local menu_id="$1"
-  local existing_ids
-
-  existing_ids="$(wp_cli menu item list "$menu_id" --format=ids || true)"
-  if [[ -z "$existing_ids" ]]; then
-    return
-  fi
-
-  for item_id in $existing_ids; do
-    wp_cli menu item delete "$item_id" --force >/dev/null
-  done
-}
-
-menu_location_exists() {
-  local location="$1"
-  wp_cli menu location list --format=csv --fields=location \
-    | awk -F, -v wanted="$location" 'NR > 1 && $1 == wanted { found = 1 } END { exit(found ? 0 : 1) }'
-}
-
-assign_menu_location_if_available() {
-  local menu_id="$1"
-  local location="$2"
-
-  if menu_location_exists "$location"; then
-    wp_cli menu location assign "$menu_id" "$location" >/dev/null
-    echo "Assigned menu $menu_id to location '$location'."
-    return
-  fi
-
-  echo "Menu location '$location' is not registered; skipped assignment."
-}
-
-add_menu_pages_in_order() {
-  local menu_id="$1"
-  shift
-  local page_id
-
-  for page_id in "$@"; do
-    wp_cli menu item add-post "$menu_id" "$page_id" >/dev/null
-  done
-}
-
 main() {
   if ! wp_cli_ready; then
     run_rest_fallback
@@ -167,38 +104,13 @@ main() {
     "Terms|terms"
   )
 
-  declare -A page_ids=()
-
   local title
   local slug
   local page_id
   for page_spec in "${pages[@]}"; do
     IFS='|' read -r title slug <<< "$page_spec"
     page_id="$(ensure_page "$title" "$slug")"
-    page_ids["$slug"]="$page_id"
   done
-
-  local primary_menu_id
-  primary_menu_id="$(ensure_menu "Market Lense Primary" "market-lense-primary")"
-  clear_menu_items "$primary_menu_id"
-  wp_cli menu item add-custom "$primary_menu_id" "Reports" "/reports/" >/dev/null
-  add_menu_pages_in_order "$primary_menu_id" \
-    "${page_ids[topics-directory]}" \
-    "${page_ids[publishers-directory]}" \
-    "${page_ids[methodology]}" \
-    "${page_ids[about]}" \
-    "${page_ids[submit-a-report]}" \
-    "${page_ids[contact]}"
-  assign_menu_location_if_available "$primary_menu_id" "primary"
-
-  local footer_menu_id
-  footer_menu_id="$(ensure_menu "Market Lense Footer" "market-lense-footer")"
-  clear_menu_items "$footer_menu_id"
-  add_menu_pages_in_order "$footer_menu_id" \
-    "${page_ids[privacy]}" \
-    "${page_ids[terms]}" \
-    "${page_ids[contact]}"
-  assign_menu_location_if_available "$footer_menu_id" "footer"
 
   echo "Provisioning complete."
 }
