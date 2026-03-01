@@ -4,13 +4,57 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WP_CLI_BIN="${WP_CLI_BIN:-wp}"
 WP_CLI_FLAGS="${WP_CLI_FLAGS:-}"
+WP_PATH="${WP_PATH:-}"
 PUBLISHER_MAP_PATH="${PUBLISHER_MAP_PATH:-$ROOT_DIR/config/publisher-homepages.json}"
 META_KEY="ml_publisher_homepage"
 TAXONOMY="ml_publisher"
 REST_SCRIPT="$ROOT_DIR/scripts/seed-publisher-homepages-rest.py"
 read -r -a WP_CLI_FLAGS_ARR <<< "$WP_CLI_FLAGS"
 
+is_windows_bridge_available() {
+  command -v cmd.exe >/dev/null 2>&1
+}
+
+_cmd_quote() {
+  local value="$1"
+  value="${value//^/^^}"
+  value="${value//&/^&}"
+  value="${value//|/^|}"
+  value="${value//</^<}"
+  value="${value//>/^>}"
+  printf '"%s"' "$value"
+}
+
+wp_cli_windows() {
+  local args=("$WP_CLI_BIN")
+  if [[ -n "$WP_PATH" ]]; then
+    args+=("--path=$WP_PATH")
+  fi
+  args+=("${WP_CLI_FLAGS_ARR[@]}" "$@")
+  local command_str=""
+  local item
+  for item in "${args[@]}"; do
+    if [[ -n "$command_str" ]]; then
+      command_str+=" "
+    fi
+    command_str+="$(_cmd_quote "$item")"
+  done
+  cmd.exe /d /s /c "$command_str"
+}
+
 wp_cli() {
+  if command -v "$WP_CLI_BIN" >/dev/null 2>&1; then
+    if [[ -n "$WP_PATH" ]]; then
+      "$WP_CLI_BIN" "--path=$WP_PATH" "${WP_CLI_FLAGS_ARR[@]}" "$@"
+    else
+      "$WP_CLI_BIN" "${WP_CLI_FLAGS_ARR[@]}" "$@"
+    fi
+    return
+  fi
+  if is_windows_bridge_available; then
+    wp_cli_windows "$@"
+    return
+  fi
   "$WP_CLI_BIN" "${WP_CLI_FLAGS_ARR[@]}" "$@"
 }
 
@@ -31,12 +75,31 @@ resolve_python_bin() {
   exit 1
 }
 
-wp_cli_available() {
-  if [[ "$WP_CLI_BIN" == */* ]]; then
-    [[ -x "$WP_CLI_BIN" ]]
+run_python() {
+  local python_cmd="$1"
+  shift
+
+  if [[ "$python_cmd" == "py -3" ]]; then
+    py -3 "$@"
     return
   fi
-  command -v "$WP_CLI_BIN" >/dev/null 2>&1
+
+  "$python_cmd" "$@"
+}
+
+wp_cli_available() {
+  if [[ "$WP_CLI_BIN" == */* ]]; then
+    [[ -x "$WP_CLI_BIN" || -f "$WP_CLI_BIN" ]]
+    return
+  fi
+  if command -v "$WP_CLI_BIN" >/dev/null 2>&1; then
+    return 0
+  fi
+  if is_windows_bridge_available; then
+    cmd.exe /d /s /c "where $WP_CLI_BIN" >/dev/null 2>&1
+    return $?
+  fi
+  return 1
 }
 
 wp_cli_ready() {
@@ -54,12 +117,12 @@ run_rest_fallback() {
   local python_cmd
   python_cmd="$(resolve_python_bin)"
   echo "wp-cli unavailable for local WordPress core; switching to REST fallback seeding." >&2
-  PUBLISHER_MAP_PATH="$PUBLISHER_MAP_PATH" eval "$python_cmd" "\"$REST_SCRIPT\""
+  PUBLISHER_MAP_PATH="$PUBLISHER_MAP_PATH" run_python "$python_cmd" "$REST_SCRIPT"
 }
 
 normalize_rows() {
   local python_cmd="$1"
-  eval "$python_cmd" - "$PUBLISHER_MAP_PATH" <<'PY'
+  run_python "$python_cmd" - "$PUBLISHER_MAP_PATH" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -116,10 +179,10 @@ main() {
     fi
 
     if [[ -n "$homepage" ]]; then
-      wp_cli term meta update "$TAXONOMY" "$term_id" "$META_KEY" "$homepage" >/dev/null
+      wp_cli term meta update "$term_id" "$META_KEY" "$homepage" >/dev/null
       echo "Set homepage: $name -> $homepage"
     else
-      wp_cli term meta delete "$TAXONOMY" "$term_id" "$META_KEY" >/dev/null || true
+      wp_cli term meta delete "$term_id" "$META_KEY" >/dev/null || true
       echo "Cleared homepage: $name"
     fi
   done < <(normalize_rows "$python_cmd")

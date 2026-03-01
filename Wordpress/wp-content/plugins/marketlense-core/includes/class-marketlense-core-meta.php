@@ -94,39 +94,6 @@ final class Meta
         if ($publisher !== '') {
             wp_set_object_terms($post_id, [$publisher], Taxonomies::PUBLISHER_TAXONOMY, false);
         }
-
-        $topic_names = $this->collect_topic_names($post_id);
-        if (! empty($topic_names)) {
-            wp_set_object_terms($post_id, $topic_names, Taxonomies::TOPIC_TAXONOMY, false);
-        }
-    }
-
-    private function collect_topic_names(int $post_id): array
-    {
-        $existing = wp_get_post_terms($post_id, Taxonomies::TOPIC_TAXONOMY, ['fields' => 'names']);
-        $tags = wp_get_post_terms($post_id, 'post_tag', ['fields' => 'names']);
-        $categories = wp_get_post_terms($post_id, Taxonomies::CATEGORY_TAXONOMY, ['fields' => 'names']);
-
-        if (is_wp_error($existing)) {
-            $existing = [];
-        }
-        if (is_wp_error($tags)) {
-            $tags = [];
-        }
-        if (is_wp_error($categories)) {
-            $categories = [];
-        }
-
-        $merged = array_unique(
-            array_filter(
-                array_map(
-                    static fn (string $value): string => sanitize_text_field(trim($value)),
-                    array_merge($existing, $tags, $categories)
-                )
-            )
-        );
-
-        return array_values($merged);
     }
 
     private function resolve_existing_publisher(int $post_id): string

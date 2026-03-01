@@ -56,7 +56,7 @@ final class Post_Type
                     'with_front' => false,
                 ],
                 'hierarchical'        => false,
-                'taxonomies'          => ['category', 'post_tag', Taxonomies::TOPIC_TAXONOMY, Taxonomies::PUBLISHER_TAXONOMY],
+                'taxonomies'          => ['category', 'post_tag', Taxonomies::PUBLISHER_TAXONOMY],
                 'exclude_from_search' => false,
                 'publicly_queryable'  => true,
                 'query_var'           => true,

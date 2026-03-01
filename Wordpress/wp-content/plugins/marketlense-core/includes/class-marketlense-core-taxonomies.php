@@ -30,28 +30,18 @@ final class Taxonomies
             [Post_Type::POST_TYPE],
             [
                 'labels' => [
-                    'name'          => __('Topics', 'marketlense-core'),
-                    'singular_name' => __('Topic', 'marketlense-core'),
-                    'search_items'  => __('Search Topics', 'marketlense-core'),
-                    'all_items'     => __('All Topics', 'marketlense-core'),
-                    'edit_item'     => __('Edit Topic', 'marketlense-core'),
-                    'update_item'   => __('Update Topic', 'marketlense-core'),
-                    'add_new_item'  => __('Add New Topic', 'marketlense-core'),
-                    'new_item_name' => __('New Topic Name', 'marketlense-core'),
-                    'menu_name'     => __('Topics', 'marketlense-core'),
+                    'name'          => __('Legacy Topics', 'marketlense-core'),
+                    'singular_name' => __('Legacy Topic', 'marketlense-core'),
                 ],
-                'public'            => true,
-                'show_ui'           => true,
-                'show_in_menu'      => true,
-                'show_admin_column' => true,
-                'show_in_rest'      => true,
+                'public'            => false,
+                'show_ui'           => false,
+                'show_in_menu'      => false,
+                'show_admin_column' => false,
+                'show_in_rest'      => false,
                 'rest_base'         => self::TOPIC_TAXONOMY,
                 'hierarchical'      => false,
-                'query_var'         => true,
-                'rewrite'           => [
-                    'slug'       => 'topic',
-                    'with_front' => false,
-                ],
+                'query_var'         => false,
+                'rewrite'           => false,
             ]
         );
 

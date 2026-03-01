@@ -16,6 +16,10 @@ if (! defined('ABSPATH')) {
 final class Shortcodes
 {
     private const DEFAULT_PER_PAGE = 12;
+
+    private const TOPIC_QUERY_KEY = 'category';
+
+    private const LEGACY_TOPIC_QUERY_KEY = 'ml_topic';
     /**
      * @var array<string,string>
      */
@@ -28,6 +32,10 @@ final class Shortcodes
         'ml_intelligence_signals' => 'render_intelligence_signals',
         'ml_strategic_themes' => 'render_strategic_themes',
         'ml_publisher_authority' => 'render_publisher_authority',
+        'ml_button_link' => 'render_button_link',
+        'ml_inline_link' => 'render_inline_link',
+        'ml_primary_nav' => 'render_primary_nav',
+        'ml_footer_nav' => 'render_footer_nav',
     ];
 
     private Report_View_Model_Builder $view_model_builder;
@@ -108,11 +116,11 @@ final class Shortcodes
             $archive_url = home_url('/reports/');
         }
 
-        $selected_topic = $this->selected_filter_slug('ml_topic', Taxonomies::CATEGORY_TAXONOMY);
+        $selected_topic = $this->selected_topic_slug();
         $selected_publisher = $this->selected_filter_slug('ml_publisher', Taxonomies::PUBLISHER_TAXONOMY);
         $active_filters = [];
         if ($selected_topic !== '') {
-            $active_filters['ml_topic'] = $selected_topic;
+            $active_filters[self::TOPIC_QUERY_KEY] = $selected_topic;
         }
         if ($selected_publisher !== '') {
             $active_filters['ml_publisher'] = $selected_publisher;
@@ -165,7 +173,7 @@ final class Shortcodes
                     <div class="ml-report-filter-grid">
                         <label class="ml-report-filter-field" for="ml_topic_filter">
                             <span><?php esc_html_e('Topic', 'marketlense-core'); ?></span>
-                            <select id="ml_topic_filter" name="ml_topic">
+                            <select id="ml_topic_filter" name="<?php echo esc_attr(self::TOPIC_QUERY_KEY); ?>">
                                 <option value=""><?php esc_html_e('All topics', 'marketlense-core'); ?></option>
                                 <?php foreach ($topic_options as $term) : ?>
                                     <option value="<?php echo esc_attr($term->slug); ?>" <?php selected($selected_topic, $term->slug); ?>>
@@ -221,7 +229,7 @@ final class Shortcodes
                         <?php if ($publisher instanceof \WP_Term) : ?>
                             <?php
                             $publisher_reset = add_query_arg(
-                                ['ml_topic' => $selected_topic !== '' ? $selected_topic : null],
+                                [self::TOPIC_QUERY_KEY => $selected_topic !== '' ? $selected_topic : null],
                                 $archive_url
                             );
                             ?>
@@ -635,6 +643,139 @@ final class Shortcodes
     }
 
     /**
+     * Renders a deploy-safe internal CTA button.
+     *
+     * @param array<string,mixed> $attrs Shortcode attributes.
+     */
+    public function render_button_link(array $attrs = []): string
+    {
+        $atts = shortcode_atts(
+            [
+                'target' => '',
+                'label' => '',
+                'style' => 'primary',
+            ],
+            $attrs,
+            'ml_button_link'
+        );
+
+        $url = $this->resolve_internal_url((string) $atts['target']);
+        $label = trim((string) $atts['label']);
+        $style = sanitize_key((string) $atts['style']);
+        if ($url === '' || $label === '') {
+            return '';
+        }
+
+        $wrapper_class = $style === 'outline'
+            ? 'wp-block-button is-style-outline'
+            : 'wp-block-button';
+
+        ob_start();
+        ?>
+        <div class="<?php echo esc_attr($wrapper_class); ?>">
+            <a class="wp-block-button__link wp-element-button" href="<?php echo esc_url($url); ?>">
+                <?php echo esc_html($label); ?>
+            </a>
+        </div>
+        <?php
+        return (string) ob_get_clean();
+    }
+
+    /**
+     * Renders a deploy-safe inline link.
+     *
+     * @param array<string,mixed> $attrs Shortcode attributes.
+     */
+    public function render_inline_link(array $attrs = []): string
+    {
+        $atts = shortcode_atts(
+            [
+                'target' => '',
+                'label' => '',
+                'show_arrow' => '1',
+            ],
+            $attrs,
+            'ml_inline_link'
+        );
+
+        $url = $this->resolve_internal_url((string) $atts['target']);
+        $label = trim((string) $atts['label']);
+        if ($url === '' || $label === '') {
+            return '';
+        }
+
+        ob_start();
+        ?>
+        <p class="ml-inline-link">
+            <a href="<?php echo esc_url($url); ?>">
+                <?php echo esc_html($label); ?>
+                <?php if ($this->to_bool_flag($atts['show_arrow'])) : ?>
+                    <span aria-hidden="true">&rarr;</span>
+                <?php endif; ?>
+            </a>
+        </p>
+        <?php
+        return (string) ob_get_clean();
+    }
+
+    /**
+     * Renders the primary site navigation.
+     */
+    public function render_primary_nav(): string
+    {
+        return $this->render_navigation(
+            [
+                ['label' => __('Reports', 'marketlense-core'), 'target' => 'reports'],
+                ['label' => __('Topics', 'marketlense-core'), 'target' => 'topics-directory'],
+                ['label' => __('Publishers', 'marketlense-core'), 'target' => 'publishers-directory'],
+                ['label' => __('Methodology', 'marketlense-core'), 'target' => 'methodology'],
+                ['label' => __('About', 'marketlense-core'), 'target' => 'about'],
+                ['label' => __('Submit', 'marketlense-core'), 'target' => 'submit-a-report'],
+                ['label' => __('Contact', 'marketlense-core'), 'target' => 'contact'],
+            ],
+            'ml-primary-nav',
+            __('Primary navigation', 'marketlense-core')
+        );
+    }
+
+    /**
+     * Renders a footer navigation column.
+     *
+     * @param array<string,mixed> $attrs Shortcode attributes.
+     */
+    public function render_footer_nav(array $attrs = []): string
+    {
+        $atts = shortcode_atts(
+            [
+                'menu' => 'navigate',
+            ],
+            $attrs,
+            'ml_footer_nav'
+        );
+
+        $menu = sanitize_key((string) $atts['menu']);
+        if ($menu === 'utilities') {
+            $items = [
+                ['label' => __('Methodology', 'marketlense-core'), 'target' => 'methodology'],
+                ['label' => __('Contact', 'marketlense-core'), 'target' => 'contact'],
+                ['label' => __('Privacy', 'marketlense-core'), 'target' => 'privacy'],
+                ['label' => __('Terms', 'marketlense-core'), 'target' => 'terms'],
+            ];
+            $label = __('Footer utilities', 'marketlense-core');
+        } else {
+            $items = [
+                ['label' => __('Reports', 'marketlense-core'), 'target' => 'reports'],
+                ['label' => __('Topics', 'marketlense-core'), 'target' => 'topics-directory'],
+                ['label' => __('Publishers', 'marketlense-core'), 'target' => 'publishers-directory'],
+                ['label' => __('About', 'marketlense-core'), 'target' => 'about'],
+            ];
+            $label = __('Footer navigation', 'marketlense-core');
+        }
+
+        return $this->render_navigation($items, 'ml-footer-nav', $label);
+    }
+
+    /**
      * @param array<string,mixed> $report
      */
     private function render_report_card(\WP_Post $post, array $report): void
@@ -773,17 +914,35 @@ final class Shortcodes
     }
 
     /**
+     * Resolves the canonical topic filter slug from category archives or query string.
+     */
+    private function selected_topic_slug(): string
+    {
+        $slug = $this->selected_filter_slug(self::TOPIC_QUERY_KEY, Taxonomies::CATEGORY_TAXONOMY);
+        if ($slug !== '') {
+            return $slug;
+        }
+
+        if (! isset($_GET[self::LEGACY_TOPIC_QUERY_KEY])) {
+            return '';
+        }
+
+        $raw = wp_unslash((string) $_GET[self::LEGACY_TOPIC_QUERY_KEY]);
+        $legacy_slug = sanitize_title($raw);
+        if ($legacy_slug === '') {
+            return '';
+        }
+
+        $term = get_term_by('slug', $legacy_slug, Taxonomies::CATEGORY_TAXONOMY);
+
+        return $term instanceof \WP_Term ? $legacy_slug : '';
+    }
+
+    /**
      * Resolves the current archive term slug when viewing a taxonomy archive directly.
      */
     private function current_archive_term_slug(string $query_key, string $taxonomy): string
     {
-        if ($query_key === 'ml_topic' && is_tax(Taxonomies::TOPIC_TAXONOMY)) {
-            $term = get_queried_object();
-            if ($term instanceof \WP_Term) {
-                return sanitize_title($term->slug);
-            }
-        }
-
         if ($taxonomy === Taxonomies::CATEGORY_TAXONOMY) {
             if (! is_category()) {
                 return '';
@@ -814,7 +973,7 @@ final class Shortcodes
 
         $pagination = paginate_links(
             [
-                'base' => str_replace(999999999, '%#%', (string) esc_url(get_pagenum_link(999999999))),
+                'base' => str_replace('999999999', '%#%', (string) esc_url(get_pagenum_link(999999999))),
                 'current' => max(1, $this->current_page()),
                 'total' => (int) $query->max_num_pages,
                 'type' => 'array',
@@ -883,5 +1042,75 @@ final class Shortcodes
         );
 
         return implode(' / ', $values);
+    }
+
+    /**
+     * @param array<int,array{label:string,target:string}> $items
+     */
+    private function render_navigation(array $items, string $class_name, string $aria_label): string
+    {
+        $links = [];
+        foreach ($items as $item) {
+            $url = $this->resolve_internal_url($item['target']);
+            if ($url === '') {
+                continue;
+            }
+
+            $is_current = $this->is_current_url($url);
+            $item_class = $is_current
+                ? 'wp-block-navigation-item current-menu-item'
+                : 'wp-block-navigation-item';
+            $aria_current = $is_current ? ' aria-current="page"' : '';
+            $links[] = sprintf(
+                '<li class="%1$s"><a class="wp-block-navigation-item__content" href="%2$s"%3$s>%4$s</a></li>',
+                esc_attr($item_class),
+                esc_url($url),
+                $aria_current,
+                esc_html($item['label'])
+            );
+        }
+
+        if ($links === []) {
+            return '';
+        }
+
+        return sprintf(
+            '<nav class="wp-block-navigation %1$s" aria-label="%2$s"><ul class="wp-block-navigation__container">%3$s</ul></nav>',
+            esc_attr($class_name),
+            esc_attr($aria_label),
+            implode('', $links)
+        );
+    }
+
+    private function resolve_internal_url(string $target): string
+    {
+        $normalized = sanitize_key($target);
+
+        return match ($normalized) {
+            'home' => home_url('/'),
+            'reports' => (string) (get_post_type_archive_link(Post_Type::POST_TYPE) ?: home_url('/reports/')),
+            'topics-directory' => home_url('/topics-directory/'),
+            'publishers-directory' => home_url('/publishers-directory/'),
+            'methodology' => home_url('/methodology/'),
+            'about' => home_url('/about/'),
+            'submit-a-report' => home_url('/submit-a-report/'),
+            'contact' => home_url('/contact/'),
+            'privacy' => home_url('/privacy/'),
+            'terms' => home_url('/terms/'),
+            default => '',
+        };
+    }
+
+    private function is_current_url(string $url): bool
+    {
+        global $wp;
+
+        if (! isset($wp) || ! isset($wp->request) || ! is_string($wp->request)) {
+            return false;
+        }
+
+        $current_url = home_url('/' . ltrim($wp->request, '/') . '/');
+
+        return untrailingslashit($current_url) === untrailingslashit($url);
     }
 }

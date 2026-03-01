@@ -33,7 +33,7 @@
       <!-- wp:buttons {"className":"ml-briefing-actions","layout":{"type":"flex","justifyContent":"right"}} -->
       <div class="wp-block-buttons ml-briefing-actions">
         <!-- wp:button -->
-        <div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="/contact/">Request access</a></div>
+        <div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="<?php echo esc_url(home_url('/contact/')); ?>">Request access</a></div>
         <!-- /wp:button -->
       </div>
       <!-- /wp:buttons -->

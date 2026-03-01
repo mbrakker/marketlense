@@ -64,8 +64,8 @@ Primary responsibilities:
 - Registers custom post type `ml_report` (`show_in_rest=true`, REST base `ml_report`)
 - Registers taxonomies:
   - native WordPress `category` support on `ml_report` for public topic/archive/filter UX
-  - legacy `ml_topic` projection for backward compatibility with existing synced metadata
   - `ml_publisher`
+- keeps legacy `ml_topic` taxonomy data internal only for backward compatibility; it is not a public archive/filter surface
 - Registers publisher term metadata:
   - `ml_publisher_homepage` (REST-exposed, sanitized URL)
 - Registers and exposes report metadata keys:
@@ -75,7 +75,7 @@ Primary responsibilities:
   - `ml_region`
 - Synchronizes metadata/taxonomy projections from published digest content and existing tags/categories on save.
 - Provides shortcodes:
-  - `[ml_report_browser]` (URL filters: `ml_topic`, `ml_publisher`)
+  - `[ml_report_browser]` (URL filters: `category`, `ml_publisher`; legacy `ml_topic` query params still map to categories)
   - `[ml_home_metrics]`
   - `[ml_featured_digest]`
   - `[ml_intelligence_signals]`
@@ -118,6 +118,32 @@ What `seed-publisher-homepages.sh` does:
 - Falls back to REST (`seed-publisher-homepages-rest.py`) when `wp-cli` cannot access a local WP core.
 - In REST mode, if `marketlense-core` is installed but inactive, it auto-activates the plugin before seeding taxonomy terms.
 
+## Local Windows Workflow
+
+If your local WordPress runtime cannot safely follow theme symlinks, keep the local theme/plugin as real directories and sync from the repo instead of linking.
+
+One-shot sync:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Wordpress\scripts\sync-local-wordpress.ps1 `
+  -LocalWpPath 'C:\Users\name\Studio\marker-lense'
+```
+
+Watch mode:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Wordpress\scripts\sync-local-wordpress.ps1 `
+  -LocalWpPath 'C:\Users\name\Studio\marker-lense' `
+  -Watch
+```
+
+Notes:
+
+- The script mirrors repo changes into the local theme/plugin directories with `robocopy /MIR`.
+- `-SyncTarget theme` or `-SyncTarget plugin` limits sync to one side.
+- The local target directories must be real directories, not symlinks/junctions.
+- This avoids block-theme `theme.json` failures caused by local stacks that resolve symlinks through `/internal/symlinks/...`.
+
 ## Build ZIPs For WP Admin Upload
 
 From repo root:
@@ -128,6 +154,8 @@ bash Wordpress/scripts/build-theme-zip.sh
 ```
 
 Build scripts use `zip` when available and automatically fall back to Python (`python`/`python3`/`py`) or local virtualenv interpreters (`../.venv/Scripts/python.exe`, `../.venv/bin/python`) when `zip` is not installed.
+
+On Windows in this workspace, repo-local helper shims are also available under `tools/`: `php`, `composer`, and `wp` point to `tools/php82/php.exe` plus the user-space PHAR installs in `%USERPROFILE%\\.local\\bin`.
 
 Outputs:
 
@@ -158,7 +186,7 @@ What it validates:
 - Plugin `marketlense-core` is installed and can activate.
 - Theme `marketlense` is installed and can activate.
 - Required theme templates exist.
-- REST endpoints resolve for `ml_report`, `ml_topic`, `ml_publisher`.
+- REST endpoints resolve for `ml_report` and `ml_publisher`.
 - Front page, report archive, and report filter URLs return HTTP `200`.
 - Required site pages return HTTP `200`.
 - Topics and publishers directory shortcodes render.
@@ -169,7 +197,9 @@ What it validates:
 Optional environment controls:
 
 - `WP_CLI_BIN` (default: `wp`)
+- `WP_PATH` (preferred on Windows/local installs; example: `C:\Users\name\Studio\marker-lense`)
 - `WP_CLI_FLAGS` (example: `--path=/var/www/html --allow-root`)
+- On Windows Bash environments (`bash.exe`, Git Bash, WSL calling Windows `cmd.exe`), the provisioning and publisher-seeding scripts now detect `wp.bat`/`wp.cmd` via `cmd.exe` automatically, so `WP_CLI_BIN=wp` continues to work for local installs.
 - `PROVISION_STRUCTURE` (`1|0`, default `1`)
 - `SEED_PUBLISHERS` (`1|0`, default `1`)
 - `WP_SITE_URL` (required for REST fallback provisioning/seeding)
@@ -177,11 +207,30 @@ Optional environment controls:
 
 If `wp-cli` is unavailable, smoke test exits with a skip message.
 
+## Automated Verification
+
+The repo now includes a minimal WordPress verification harness for CI and local use:
+
+```bash
+python scripts/ci/check_wordpress_subproject.py
+```
+
+What it validates:
+
+- no hardcoded root-relative internal links remain in theme `parts/`, `patterns/`, or `templates/`
+- no public `taxonomy-ml_topic.html` template is shipped
+- PHP syntax for theme/plugin PHP files
+- shell syntax for `Wordpress/scripts/*.sh`
+- optional live smoke test only when `RUN_WORDPRESS_SMOKE=1` and `wp-cli` is available
+
+The main CI workflow runs this harness automatically after installing PHP CLI.
+
 ## Archive and Directory UX
 
 - `templates/archive-ml_report.html` now renders `[ml_report_browser]`, which provides server-side report filtering at `/reports/` via:
-  - `?ml_topic=<category-slug>` mapped to native WordPress categories assigned to published `ml_report` posts
+  - `?category=<category-slug>` mapped to native WordPress categories assigned to published `ml_report` posts
   - `?ml_publisher=<slug>` mapped to the `ml_publisher` taxonomy
+- Backward compatibility: older `?ml_topic=<slug>` links are still accepted and normalized onto the same native category filter.
 - Homepage editorial sections are backed by shortcode-driven intelligence components:
   - `[ml_home_metrics]`
   - `[ml_featured_digest]`
@@ -193,6 +242,7 @@ If `wp-cli` is unavailable, smoke test exits with a skip message.
 - `templates/page-topics-directory.html` renders `[ml_topics_directory]`.
 - `templates/page-publishers-directory.html` renders `[ml_publishers_directory]` with publisher homepage CTAs.
 - `templates/category.html` routes native category archives through the same report browser, so topic archive pages stay limited to uploaded reports instead of falling back to generic site-wide category queries.
+- No dedicated `taxonomy-ml_topic.html` template is shipped; topic browsing is category-first.
 - Legacy report posts under default `post` are intentionally not migrated; new publishing remains `ml_report`-first.
 
 

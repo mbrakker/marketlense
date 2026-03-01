@@ -15,13 +15,13 @@ Core WordPress domain plugin for Market Lense.
 Market Lense Core provides the WordPress data model required by the Market Lense publishing pipeline and block theme:
 
 * Custom post type: `ml_report`
-* Taxonomies: native `category` support for report topics, legacy `ml_topic` projection, and `ml_publisher`
+* Taxonomies: native `category` support for report topics and `ml_publisher`
 * Publisher term homepage metadata: `ml_publisher_homepage`
-* REST exposure for CPT, taxonomies, and core report metadata
+* REST exposure for the CPT, native categories, publisher taxonomy, and core report metadata
 * Metadata synchronization from rendered digest content (`ml_file_id`, publisher, time period, region)
-* Topic/publisher projection from existing post tags/categories and metadata panels
+* Publisher projection from digest metadata and taxonomy panels
 * Shortcodes:
-  * `[ml_report_browser]` (`ml_topic` maps to native category slugs; `ml_publisher` maps to publisher taxonomy slugs)
+  * `[ml_report_browser]` (`category` maps to native category slugs; `ml_publisher` maps to publisher taxonomy slugs; legacy `ml_topic` query params remain accepted)
   * `[ml_home_metrics]`
   * `[ml_featured_digest]`
   * `[ml_intelligence_signals]`
@@ -44,7 +44,7 @@ This plugin is intended to be used together with the `marketlense` block theme.
 = 1.2.0 =
 * Added homepage intelligence shortcodes for editorial portal sections, including metrics, featured digest, weekly signals, strategic themes, and publisher authority.
 * Upgraded report-browser cards to use parsed digest metadata, counts, concise excerpts, and executive-style CTAs.
-* Added archive-aware filtering support for search, native category archives, and legacy `ml_topic` views.
+* Added archive-aware filtering support for search and native category archives.
 
 = 1.1.1 =
 * Switched frontend topic surfaces to native WordPress categories scoped to published `ml_report` posts.
@@ -56,4 +56,4 @@ This plugin is intended to be used together with the `marketlense` block theme.
 * Added report browser and taxonomy directory shortcodes.
 
 = 1.0.0 =
-* Initial release with `ml_report` CPT, `ml_topic` and `ml_publisher` taxonomies, and metadata synchronization.
+* Initial release with `ml_report` CPT, topic/publisher taxonomies, and metadata synchronization.

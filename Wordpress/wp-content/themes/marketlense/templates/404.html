@@ -18,16 +18,16 @@
 
     <!-- wp:search {"label":"Search","showLabel":false,"placeholder":"Search all reports","buttonText":"Search","buttonPosition":"button-inside","buttonUseIcon":true} /-->
 
-    <!-- wp:buttons -->
-    <div class="wp-block-buttons">
-      <!-- wp:button -->
-      <div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="/">Back to home</a></div>
-      <!-- /wp:button -->
-      <!-- wp:button {"className":"is-style-outline"} -->
-      <div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button" href="/reports/">Browse reports</a></div>
-      <!-- /wp:button -->
-    </div>
-    <!-- /wp:buttons -->
+  <!-- wp:buttons -->
+  <div class="wp-block-buttons">
+      <!-- wp:shortcode -->
+      [ml_button_link target="home" label="Back to home" style="primary"]
+      <!-- /wp:shortcode -->
+      <!-- wp:shortcode -->
+      [ml_button_link target="reports" label="Browse reports" style="outline"]
+      <!-- /wp:shortcode -->
+  </div>
+  <!-- /wp:buttons -->
   </div>
   <!-- /wp:group -->
 </main>

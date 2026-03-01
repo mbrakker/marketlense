@@ -75,6 +75,25 @@ Current control-plane modules in `src/orchestrators/` include:
 - `ops_dashboard_orchestrator.py`: dashboard snapshot aggregation (reports/state/lock/storage).
 - `candidate_extraction_orchestrator.py`, `cover_image_orchestrator.py`, `recategorize_orchestrator.py`, `wp_category_update_orchestrator.py`: feature-specific workflows.
 
+## Local WordPress Dev
+
+For the local WordPress instance at `C:\Users\Михаил\Studio\marker-lense`, do not symlink the block theme into the local site. Some local stacks resolve theme symlinks through `/internal/symlinks/...`, which breaks `theme.json` loading in the web runtime.
+
+Use the repo sync script instead:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Wordpress\scripts\sync-local-wordpress.ps1 `
+  -LocalWpPath 'C:\Users\Михаил\Studio\marker-lense'
+```
+
+For near-realtime updates during theme/plugin development:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Wordpress\scripts\sync-local-wordpress.ps1 `
+  -LocalWpPath 'C:\Users\Михаил\Studio\marker-lense' `
+  -Watch
+```
+
 ---
 
 ## Configuration (YAML + .env)
@@ -615,12 +634,14 @@ A dedicated local WordPress workspace is available under `Wordpress/`.
 - Plugin packaging: `bash Wordpress/scripts/build-plugin-zip.sh` builds `Wordpress/dist/marketlense-core.zip` for WP Admin upload (`Plugins -> Add New -> Upload Plugin`).
 - Theme packaging: `bash Wordpress/scripts/build-theme-zip.sh` builds `Wordpress/dist/marketlense.zip` for WP Admin upload (`Appearance -> Themes -> Upload Theme`).
 - Packaging scripts use `zip` when available and fall back to Python `zipfile` via `python`/`python3`/`py` or local `.venv` interpreters when `zip` is unavailable.
+- Windows workspace helper commands now live under `tools/`: `php`, `composer`, and `wp` resolve to the repo-local PHP 8.2 runtime (`tools/php82`) and the user-space Composer / `wp-cli` PHAR installs in `%USERPROFILE%\\.local\\bin`.
 - Site IA provisioning: `bash Wordpress/scripts/provision-site-structure.sh` creates/updates required pages idempotently. If `wp-cli` is unavailable, it auto-falls back to REST provisioning.
 - Publisher homepage seeding: `bash Wordpress/scripts/seed-publisher-homepages.sh` loads curated publisher URLs from `Wordpress/config/publisher-homepages.json` and upserts `ml_publisher_homepage` taxonomy term metadata; it auto-falls back to REST mode when `wp-cli` is unavailable and auto-activates `marketlense-core` if installed but inactive.
 - Smoke validation: `bash Wordpress/scripts/smoke-test.sh` (when `wp-cli` is available) checks plugin/theme activation, REST endpoints, required pages, archive filter URLs, directory shortcode rendering, navigation links, homepage editorial sections, and a seeded `ml_report` HTTP `200`.
+- Automated subproject verification: `python scripts/ci/check_wordpress_subproject.py` enforces deploy-safe theme links, removes legacy public `ml_topic` theme surfaces, lints WordPress PHP/theme scripts, and can optionally chain into the live smoke test when `RUN_WORDPRESS_SMOKE=1`.
 - WordPress publish endpoint type is configurable via `publish.wp.post_type` (or `WP_POST_TYPE`) and defaults to `ml_report`.
 - REST fallback scripts require `WP_SITE_URL` plus `WP_USERNAME`/`WP_APP_PASSWORD` (or `WP_BEARER_TOKEN`).
-- Reports archive now renders a server-side filter UI via `[ml_report_browser]` on `/reports/`; `ml_topic` filters native WordPress `category` terms scoped to published `ml_report` posts, and `ml_publisher` filters the `ml_publisher` taxonomy.
+- Reports archive now renders a server-side filter UI via `[ml_report_browser]` on `/reports/`; `category` filters native WordPress `category` terms scoped to published `ml_report` posts, and `ml_publisher` filters the `ml_publisher` taxonomy. Legacy `ml_topic` query params are accepted only as backward-compatible aliases.
 - Homepage editorial sections are shortcode-backed through `marketlense-core`; the theme now treats that plugin as a hard dependency instead of mirroring shortcode/business logic in theme PHP.
 - `marketlense-core` also bridges its registered `ml_*` shortcodes through block rendering when block-template or pattern output leaves them unresolved, which keeps homepage/archive shortcode blocks rendering inside the block theme.
 - Topics and publishers directories render via `[ml_topics_directory]` and `[ml_publishers_directory]`; topics are native WordPress categories scoped to uploaded reports, publisher cards include a homepage CTA sourced from `ml_publisher_homepage`, and category archives use a dedicated report-only template.
@@ -637,6 +658,6 @@ A dedicated local WordPress workspace is available under `Wordpress/`.
 - Report interaction JS is enqueued only for report-capable singular content (`ml_report` and legacy `post` entries); reveal panels are fail-open (visible if JS fails), publish-time image rewriting updates both `src` and `srcset`, and legacy pages with mismatched absolute `src` + relative `srcset` are auto-healed client-side by dropping invalid `srcset`.
 - Docker runtime is not maintained in this subproject.
 - Publish integration continues to use root `.env` (`WP_SITE_URL`, `WP_USERNAME`, `WP_APP_PASSWORD` or `WP_BEARER_TOKEN`) through Python pipeline commands (`publish-wp`, `update-wp-categories`).
-- Publish-time taxonomy assignment now writes both native categories and `ml_publisher` terms through the WordPress REST API, so report topics/publisher filters stay in sync with uploaded reports without relying on theme-level fallback renderers.
+- Publish-time taxonomy assignment now writes native categories and `ml_publisher` terms through the WordPress REST API, so report topics/publisher filters stay in sync with uploaded reports without relying on legacy topic taxonomies.
 
 Detailed instructions live in `Wordpress/README_WORDPRESS.md`.

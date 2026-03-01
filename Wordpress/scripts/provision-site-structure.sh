@@ -4,10 +4,54 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WP_CLI_BIN="${WP_CLI_BIN:-wp}"
 WP_CLI_FLAGS="${WP_CLI_FLAGS:-}"
+WP_PATH="${WP_PATH:-}"
 read -r -a WP_CLI_FLAGS_ARR <<< "$WP_CLI_FLAGS"
 REST_SCRIPT="$ROOT_DIR/scripts/provision-site-structure-rest.py"
 
+is_windows_bridge_available() {
+  command -v cmd.exe >/dev/null 2>&1
+}
+
+_cmd_quote() {
+  local value="$1"
+  value="${value//^/^^}"
+  value="${value//&/^&}"
+  value="${value//|/^|}"
+  value="${value//</^<}"
+  value="${value//>/^>}"
+  printf '"%s"' "$value"
+}
+
+wp_cli_windows() {
+  local args=("$WP_CLI_BIN")
+  if [[ -n "$WP_PATH" ]]; then
+    args+=("--path=$WP_PATH")
+  fi
+  args+=("${WP_CLI_FLAGS_ARR[@]}" "$@")
+  local command_str=""
+  local item
+  for item in "${args[@]}"; do
+    if [[ -n "$command_str" ]]; then
+      command_str+=" "
+    fi
+    command_str+="$(_cmd_quote "$item")"
+  done
+  cmd.exe /d /s /c "$command_str"
+}
+
 wp_cli() {
+  if command -v "$WP_CLI_BIN" >/dev/null 2>&1; then
+    if [[ -n "$WP_PATH" ]]; then
+      "$WP_CLI_BIN" "--path=$WP_PATH" "${WP_CLI_FLAGS_ARR[@]}" "$@"
+    else
+      "$WP_CLI_BIN" "${WP_CLI_FLAGS_ARR[@]}" "$@"
+    fi
+    return
+  fi
+  if is_windows_bridge_available; then
+    wp_cli_windows "$@"
+    return
+  fi
   "$WP_CLI_BIN" "${WP_CLI_FLAGS_ARR[@]}" "$@"
 }
 
@@ -30,10 +74,17 @@ resolve_python_bin() {
 
 wp_cli_available() {
   if [[ "$WP_CLI_BIN" == */* ]]; then
-    [[ -x "$WP_CLI_BIN" ]]
+    [[ -x "$WP_CLI_BIN" || -f "$WP_CLI_BIN" ]]
     return
   fi
-  command -v "$WP_CLI_BIN" >/dev/null 2>&1
+  if command -v "$WP_CLI_BIN" >/dev/null 2>&1; then
+    return 0
+  fi
+  if is_windows_bridge_available; then
+    cmd.exe /d /s /c "where $WP_CLI_BIN" >/dev/null 2>&1
+    return $?
+  fi
+  return 1
 }
 
 wp_cli_ready() {

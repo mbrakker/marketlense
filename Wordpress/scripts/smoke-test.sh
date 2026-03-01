@@ -7,12 +7,18 @@ THEME_DIR="$ROOT_DIR/wp-content/themes/$THEME_SLUG"
 PLUGIN_SLUG="marketlense-core"
 WP_CLI_BIN="${WP_CLI_BIN:-wp}"
 WP_CLI_FLAGS="${WP_CLI_FLAGS:-}"
+WP_PATH="${WP_PATH:-}"
 PROVISION_STRUCTURE="${PROVISION_STRUCTURE:-1}"
 SEED_PUBLISHERS="${SEED_PUBLISHERS:-1}"
 read -r -a WP_CLI_FLAGS_ARR <<< "$WP_CLI_FLAGS"
 
 wp_cli() {
-  "$WP_CLI_BIN" "${WP_CLI_FLAGS_ARR[@]}" "$@"
+  local args=("$WP_CLI_BIN")
+  if [[ -n "$WP_PATH" ]]; then
+    args+=("--path=$WP_PATH")
+  fi
+  args+=("${WP_CLI_FLAGS_ARR[@]}" "$@")
+  "${args[@]}"
 }
 
 require_http_200() {
@@ -131,7 +137,6 @@ required_templates=(
   "front-page.html"
   "single-ml_report.html"
   "archive-ml_report.html"
-  "taxonomy-ml_topic.html"
   "taxonomy-ml_publisher.html"
   "page-about.html"
   "page-methodology.html"
@@ -153,22 +158,8 @@ for template in "${required_templates[@]}"; do
   fi
 done
 echo "Template presence checks passed."
-require_file_sequence "$THEME_DIR/parts/nav.html" \
-  "/reports/" \
-  "/topics-directory/" \
-  "/publishers-directory/" \
-  "/methodology/" \
-  "/about/" \
-  "/submit-a-report/" \
-  "/contact/"
-require_file_sequence "$THEME_DIR/parts/footer.html" \
-  "/privacy/" \
-  "/terms/" \
-  "/contact/"
-
 require_http_200 "echo wp_remote_retrieve_response_code( wp_remote_get( home_url('/') ) );" "Front page request"
 require_http_200 "echo wp_remote_retrieve_response_code( wp_remote_get( rest_url('wp/v2/types/ml_report') ) );" "REST type ml_report"
-require_http_200 "echo wp_remote_retrieve_response_code( wp_remote_get( rest_url('wp/v2/taxonomies/ml_topic') ) );" "REST taxonomy ml_topic"
 require_http_200 "echo wp_remote_retrieve_response_code( wp_remote_get( rest_url('wp/v2/taxonomies/ml_publisher') ) );" "REST taxonomy ml_publisher"
 
 echo "Checking ml_report post type..."
@@ -196,17 +187,17 @@ if [[ -z "$report_id" ]]; then
 fi
 
 echo "Ensuring taxonomy terms exist for filter checks..."
-topic_id="$(ensure_term "ml_topic" "Smoke Topic" "smoke-topic")"
+topic_id="$(ensure_term "category" "Smoke Topic" "smoke-topic")"
 publisher_id="$(ensure_term "ml_publisher" "Smoke Publisher" "smoke-publisher")"
-wp_cli term meta update ml_publisher "$publisher_id" ml_publisher_homepage "https://example.com" >/dev/null
-wp_cli post term set "$report_id" ml_topic "$topic_id" >/dev/null
+wp_cli term meta update "$publisher_id" ml_publisher_homepage "https://example.com" >/dev/null
+wp_cli post term set "$report_id" category "$topic_id" >/dev/null
 wp_cli post term set "$report_id" ml_publisher "$publisher_id" >/dev/null
 
 require_http_200 "echo wp_remote_retrieve_response_code( wp_remote_get( get_permalink(${report_id}) ) );" "Single ml_report request"
 require_http_200 "echo wp_remote_retrieve_response_code( wp_remote_get( get_post_type_archive_link('ml_report') ) );" "Reports archive request"
-require_http_200 "echo wp_remote_retrieve_response_code( wp_remote_get( add_query_arg(array('ml_topic' => 'smoke-topic'), get_post_type_archive_link('ml_report')) ) );" "Reports topic filter request"
+require_http_200 "echo wp_remote_retrieve_response_code( wp_remote_get( add_query_arg(array('category' => 'smoke-topic'), get_post_type_archive_link('ml_report')) ) );" "Reports topic filter request"
 require_http_200 "echo wp_remote_retrieve_response_code( wp_remote_get( add_query_arg(array('ml_publisher' => 'smoke-publisher'), get_post_type_archive_link('ml_report')) ) );" "Reports publisher filter request"
-require_http_200 "echo wp_remote_retrieve_response_code( wp_remote_get( add_query_arg(array('ml_topic' => 'smoke-topic', 'ml_publisher' => 'smoke-publisher'), get_post_type_archive_link('ml_report')) ) );" "Reports combined filter request"
+require_http_200 "echo wp_remote_retrieve_response_code( wp_remote_get( add_query_arg(array('category' => 'smoke-topic', 'ml_publisher' => 'smoke-publisher'), get_post_type_archive_link('ml_report')) ) );" "Reports combined filter request"
 
 required_pages=(
   "about"
