@@ -63,6 +63,14 @@ function marketlense_enqueue_assets(): void
         $version
     );
 
+    wp_enqueue_script(
+        'marketlense-reveal',
+        get_template_directory_uri() . '/assets/js/reveal.js',
+        [],
+        $version,
+        true
+    );
+
     if (is_singular(['ml_report', 'post'])) {
         wp_enqueue_script(
             'marketlense-report-interactions',

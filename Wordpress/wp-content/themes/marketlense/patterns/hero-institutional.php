@@ -6,8 +6,8 @@
  * Inserter: yes
  */
 ?>
-<!-- wp:group {"align":"full","className":"ml-hero-band","layout":{"type":"default"}} -->
-<div class="wp-block-group alignfull ml-hero-band">
+<!-- wp:group {"align":"full","className":"ml-hero-band reveal","layout":{"type":"default"}} -->
+<div class="wp-block-group alignfull ml-hero-band reveal">
   <!-- wp:group {"className":"ml-hero-frame","layout":{"type":"default"}} -->
   <div class="wp-block-group ml-hero-frame">
     <!-- wp:html -->

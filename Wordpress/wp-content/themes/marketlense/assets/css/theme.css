@@ -30,6 +30,37 @@ body {
   color: var(--ml-ink);
 }
 
+.reveal,
+.reveal-auto {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.has-reveal-motion .reveal,
+.has-reveal-motion .reveal-auto {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+  will-change: opacity, transform;
+}
+
+.has-reveal-motion .reveal.is-visible,
+.has-reveal-motion .reveal-auto.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .has-reveal-motion .reveal,
+  .has-reveal-motion .reveal.is-visible,
+  .has-reveal-motion .reveal-auto,
+  .has-reveal-motion .reveal-auto.is-visible {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
 img {
   max-width: 100%;
   height: auto;

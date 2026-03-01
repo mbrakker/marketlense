@@ -6,6 +6,10 @@
  * Inserter: yes
  */
 ?>
-<!-- wp:shortcode -->
-[ml_featured_digest]
-<!-- /wp:shortcode -->
+<!-- wp:group {"className":"ml-home-section ml-featured-digest-shell reveal","layout":{"type":"constrained"}} -->
+<div class="wp-block-group ml-home-section ml-featured-digest-shell reveal">
+  <!-- wp:shortcode -->
+  [ml_featured_digest]
+  <!-- /wp:shortcode -->
+</div>
+<!-- /wp:group -->

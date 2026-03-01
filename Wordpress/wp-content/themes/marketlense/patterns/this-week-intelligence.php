@@ -6,6 +6,10 @@
  * Inserter: yes
  */
 ?>
-<!-- wp:shortcode -->
-[ml_intelligence_signals]
-<!-- /wp:shortcode -->
+<!-- wp:group {"className":"ml-home-section ml-intelligence-signals-shell reveal","layout":{"type":"constrained"}} -->
+<div class="wp-block-group ml-home-section ml-intelligence-signals-shell reveal">
+  <!-- wp:shortcode -->
+  [ml_intelligence_signals]
+  <!-- /wp:shortcode -->
+</div>
+<!-- /wp:group -->

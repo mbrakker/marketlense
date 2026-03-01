@@ -6,8 +6,8 @@
  * Inserter: yes
  */
 ?>
-<!-- wp:group {"className":"ml-home-section ml-latest-reports","layout":{"type":"constrained"}} -->
-<div class="wp-block-group ml-home-section ml-latest-reports">
+<!-- wp:group {"className":"ml-home-section ml-latest-reports reveal","layout":{"type":"constrained"}} -->
+<div class="wp-block-group ml-home-section ml-latest-reports reveal">
   <!-- wp:group {"className":"ml-section-heading","layout":{"type":"flex","justifyContent":"space-between","flexWrap":"wrap","verticalAlignment":"center"}} -->
   <div class="wp-block-group ml-section-heading">
     <!-- wp:group {"layout":{"type":"constrained"}} -->

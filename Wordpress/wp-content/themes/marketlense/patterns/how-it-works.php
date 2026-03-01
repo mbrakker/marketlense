@@ -6,8 +6,8 @@
  * Inserter: yes
  */
 ?>
-<!-- wp:group {"className":"ml-home-section ml-process-section","layout":{"type":"constrained"}} -->
-<div class="wp-block-group ml-home-section ml-process-section">
+<!-- wp:group {"className":"ml-home-section ml-process-section reveal","layout":{"type":"constrained"}} -->
+<div class="wp-block-group ml-home-section ml-process-section reveal">
   <!-- wp:group {"className":"ml-section-heading","layout":{"type":"constrained"}} -->
   <div class="wp-block-group ml-section-heading">
     <!-- wp:paragraph {"className":"ml-section-kicker"} -->
