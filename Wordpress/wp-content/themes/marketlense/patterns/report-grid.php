@@ -27,8 +27,26 @@
   </div>
   <!-- /wp:group -->
 
-  <!-- wp:shortcode -->
-  [ml_report_browser per_page="6" show_filters="0" show_pagination="0" context="auto"]
-  <!-- /wp:shortcode -->
+  <!-- wp:query {"queryId":21,"query":{"perPage":"6","pages":0,"offset":0,"postType":"ml_report","order":"desc","orderBy":"date","author":"","search":"","exclude":[],"sticky":"","inherit":false},"displayLayout":{"type":"grid","columns":3},"className":"ml-report-query"} -->
+  <div class="wp-block-query ml-report-query">
+    <!-- wp:post-template -->
+    <!-- wp:group {"className":"ml-report-card","layout":{"type":"constrained"}} -->
+    <div class="wp-block-group ml-report-card">
+      <!-- wp:post-featured-image {"isLink":true} /-->
+      <!-- wp:post-date {"fontSize":"xs","textColor":"ink-soft"} /-->
+      <!-- wp:post-title {"isLink":true,"level":3} /-->
+      <!-- wp:post-terms {"term":"ml_publisher","className":"ml-chip-terms"} /-->
+      <!-- wp:post-excerpt {"moreText":"Read digest"} /-->
+    </div>
+    <!-- /wp:group -->
+    <!-- /wp:post-template -->
+
+    <!-- wp:query-no-results -->
+    <!-- wp:paragraph {"className":"ml-query-empty"} -->
+    <p class="ml-query-empty">No reports are available yet.</p>
+    <!-- /wp:paragraph -->
+    <!-- /wp:query-no-results -->
+  </div>
+  <!-- /wp:query -->
 </div>
 <!-- /wp:group -->

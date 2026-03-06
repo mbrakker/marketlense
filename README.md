@@ -76,7 +76,9 @@ Current control-plane modules in `src/orchestrators/` include:
 - `candidate_extraction_orchestrator.py`, `cover_image_orchestrator.py`, `recategorize_orchestrator.py`, `wp_category_update_orchestrator.py`: feature-specific workflows.
 
 ## Local WordPress Dev
+WordPress local development, packaging, smoke tests, and sync workflows are documented in `Wordpress/README_WORDPRESS.md`.
 
+<<<<<<< ours
 For the local WordPress instance at `C:\Users\Михаил\Studio\marker-lense`, do not symlink the block theme into the local site. Some local stacks resolve theme symlinks through `/internal/symlinks/...`, which breaks `theme.json` loading in the web runtime.
 
 Use the repo sync script instead:
@@ -94,7 +96,12 @@ powershell -ExecutionPolicy Bypass -File .\Wordpress\scripts\sync-local-wordpres
   -Watch
 ```
 
+The WordPress subproject now uses native block markup for primary navigation, footer navigation lists, and standard report listing templates (archive/category/publisher/search/home latest grid). Computed editorial analytics and taxonomy directory surfaces still come from the companion plugin until they are replaced with dynamic blocks.
+
 ---
+=======
+Use this root README for pipeline architecture and CLI usage; use the WordPress subproject README for all theme/plugin operations.
+>>>>>>> theirs
 
 ## Configuration (YAML + .env)
 
@@ -626,39 +633,13 @@ To extend the system:
 - Cost ledger: `src/services/cost_ledger_service.py` appends JSONL entries for every LLM call and writes daily rollups (`./out/cost-ledger.jsonl`, `./out/cost-daily.json`) using per-model pricing from config.
 
 ## WordPress Rendering Environment
+All WordPress subproject details live in `Wordpress/README_WORDPRESS.md`, including:
 
-A dedicated local WordPress workspace is available under `Wordpress/`.
+- plugin/theme structure and contracts
+- local Windows sync workflow
+- ZIP packaging commands
+- provisioning and smoke-test scripts
+- archive/directory UX behavior
+- ingest-rendering parity details
 
-- Includes block theme source (`Wordpress/wp-content/themes/marketlense`) and core plugin source (`Wordpress/wp-content/plugins/marketlense-core`).
-- This repo does not include a runnable WordPress stack; use an existing local or hosted WordPress 6.6+ / PHP 8.2 environment for activation and smoke validation.
-- Plugin packaging: `bash Wordpress/scripts/build-plugin-zip.sh` builds `Wordpress/dist/marketlense-core.zip` for WP Admin upload (`Plugins -> Add New -> Upload Plugin`).
-- Theme packaging: `bash Wordpress/scripts/build-theme-zip.sh` builds `Wordpress/dist/marketlense.zip` for WP Admin upload (`Appearance -> Themes -> Upload Theme`).
-- Packaging scripts use `zip` when available and fall back to Python `zipfile` via `python`/`python3`/`py` or local `.venv` interpreters when `zip` is unavailable.
-- Windows workspace helper commands now live under `tools/`: `php`, `composer`, and `wp` resolve to the repo-local PHP 8.2 runtime (`tools/php82`) and the user-space Composer / `wp-cli` PHAR installs in `%USERPROFILE%\\.local\\bin`.
-- Site IA provisioning: `bash Wordpress/scripts/provision-site-structure.sh` creates/updates required pages idempotently. If `wp-cli` is unavailable, it auto-falls back to REST provisioning.
-- Publisher homepage seeding: `bash Wordpress/scripts/seed-publisher-homepages.sh` loads curated publisher URLs from `Wordpress/config/publisher-homepages.json` and upserts `ml_publisher_homepage` taxonomy term metadata; it auto-falls back to REST mode when `wp-cli` is unavailable and auto-activates `marketlense-core` if installed but inactive.
-- Smoke validation: `bash Wordpress/scripts/smoke-test.sh` (when `wp-cli` is available) checks plugin/theme activation, REST endpoints, required pages, archive filter URLs, directory shortcode rendering, navigation links, homepage editorial sections, and a seeded `ml_report` HTTP `200`.
-- Automated subproject verification: `python scripts/ci/check_wordpress_subproject.py` enforces deploy-safe theme links, removes legacy public `ml_topic` theme surfaces, lints WordPress PHP/theme scripts, and can optionally chain into the live smoke test when `RUN_WORDPRESS_SMOKE=1`.
-- WordPress publish endpoint type is configurable via `publish.wp.post_type` (or `WP_POST_TYPE`) and defaults to `ml_report`.
-- REST fallback scripts require `WP_SITE_URL` plus `WP_USERNAME`/`WP_APP_PASSWORD` (or `WP_BEARER_TOKEN`).
-- Reports archive now renders a server-side filter UI via `[ml_report_browser]` on `/reports/`; `category` filters native WordPress `category` terms scoped to published `ml_report` posts, and `ml_publisher` filters the `ml_publisher` taxonomy. Legacy `ml_topic` query params are accepted only as backward-compatible aliases.
-- Homepage editorial sections are shortcode-backed through `marketlense-core`; the theme now treats that plugin as a hard dependency instead of mirroring shortcode/business logic in theme PHP.
-- `marketlense-core` also bridges its registered `ml_*` shortcodes through block rendering when block-template or pattern output leaves them unresolved, which keeps homepage/archive shortcode blocks rendering inside the block theme.
-- Topics and publishers directories render via `[ml_topics_directory]` and `[ml_publishers_directory]`; topics are native WordPress categories scoped to uploaded reports, publisher cards include a homepage CTA sourced from `ml_publisher_homepage`, and category archives use a dedicated report-only template.
-- Legacy report posts under default `post` are intentionally not migrated; new publishing stays `ml_report`-first.
-- Theme layout defaults now run full-width (`contentSize: 100%`, `wideSize: 100%` in `Wordpress/wp-content/themes/marketlense/theme.json`) while the theme CSS applies an internal editorial frame so laptop and mobile layouts both read as full-screen without uncontrolled whitespace.
-- Scroll-reveal motion is now the default across theme pages, but only for safe editorial wrappers: `assets/js/reveal.js` automatically targets homepage section groups, archive/search headers, standard page titles and bodies, and non-report query/content blocks inside `main#main-content`, while explicitly excluding ingest report article bodies so published report pages never disappear. Explicit `.reveal` hooks are still honored, and `assets/css/theme.css` defines the shared reveal states (`opacity 0 -> 1`, `translateY(14px) -> 0`, `0.6s ease-out`) with `prefers-reduced-motion: reduce` disabling motion.
-- The homepage hero now applies its background and edge-to-edge decorative treatment on the full-width outer band while keeping the readable text frame constrained and transparent, preventing the hero from looking clipped to the inner content width.
-- The homepage hero now uses the shared home frame with the gutter applied on the outer band rather than an extra inner inset, so both left and right edges line up with the metrics and other homepage sections.
-- The homepage hero frame no longer reserves an empty desktop split column, so the section reads as a single aligned content band instead of appearing narrower on the right.
-- The hero headline no longer applies its own narrower max-width inside that frame, so the heading aligns to the same content width as the rest of the hero stack.
-- The process-section note text no longer applies a narrower local max-width, so it follows the same width as the section heading container.
-- The hero body copy and credibility line no longer apply separate narrower max-width caps, so they align to the same width as the hero stack.
-- Reusable theme copy blocks now follow their parent containers instead of local text caps: `ml-page-lead`, generic `ml-section-note`, featured digest excerpts, and ingest report hero subtitles no longer apply separate `max-width` limits.
-- `ml_report` single rendering is ingest-first: both `single.html` and `single-ml_report.html` route through a shared `parts/single-content.html` template part, rendering uploaded digest `post-content` directly with scoped parity CSS/JS (`.ml-ingest-report-content`) so article presentation matches generated ingest HTML structure and interactions after upload.
-- Report interaction JS is enqueued only for report-capable singular content (`ml_report` and legacy `post` entries); reveal panels are fail-open (visible if JS fails), publish-time image rewriting updates both `src` and `srcset`, and legacy pages with mismatched absolute `src` + relative `srcset` are auto-healed client-side by dropping invalid `srcset`.
-- Docker runtime is not maintained in this subproject.
-- Publish integration continues to use root `.env` (`WP_SITE_URL`, `WP_USERNAME`, `WP_APP_PASSWORD` or `WP_BEARER_TOKEN`) through Python pipeline commands (`publish-wp`, `update-wp-categories`).
-- Publish-time taxonomy assignment now writes native categories and `ml_publisher` terms through the WordPress REST API, so report topics/publisher filters stay in sync with uploaded reports without relying on legacy topic taxonomies.
-
-Detailed instructions live in `Wordpress/README_WORDPRESS.md`.
+Keep WordPress-specific implementation guidance centralized in the subproject README to avoid documentation drift.

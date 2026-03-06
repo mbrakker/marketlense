@@ -106,7 +106,7 @@ What `provision-site-structure.sh` does:
 
 - Creates/updates required pages (About, Methodology, Topics directory, Publishers directory, Submit a Report, Contact, Privacy, Terms).
 - Publishes pages idempotently (no duplicates on rerun).
-- Navigation is provided directly by static block-theme template parts (`parts/nav.html`, `parts/footer.html`); the provisioning script does not create classic menu locations.
+- Navigation is provided directly by static block-theme template parts (`parts/nav.html`, `parts/footer.html`) using native block navigation/list markup; the provisioning script does not create classic menu locations.
 - If `wp-cli` is unavailable in your environment, automatically falls back to REST (`provision-site-structure-rest.py`) and provisions the same required pages.
 
 What `seed-publisher-homepages.sh` does:
@@ -227,17 +227,16 @@ The main CI workflow runs this harness automatically after installing PHP CLI.
 
 ## Archive and Directory UX
 
-- `templates/archive-ml_report.html` now renders `[ml_report_browser]`, which provides server-side report filtering at `/reports/` via:
-  - `?category=<category-slug>` mapped to native WordPress categories assigned to published `ml_report` posts
-  - `?ml_publisher=<slug>` mapped to the `ml_publisher` taxonomy
-- Backward compatibility: older `?ml_topic=<slug>` links are still accepted and normalized onto the same native category filter.
-- Homepage editorial sections are backed by shortcode-driven intelligence components:
+- `templates/archive-ml_report.html`, `templates/category.html`, `templates/taxonomy-ml_publisher.html`, and `templates/search.html` now use native `core/query` loops for report cards and pagination.
+- `marketlense-core` normalizes the main front-end archive/search queries onto `ml_report`, so these templates can inherit the correct result set without shortcode rendering.
+- Backward compatibility: older `?ml_topic=<slug>` links remain accepted by the shortcode-based browser where that surface is still used.
+- Homepage editorial sections are still backed by shortcode-driven intelligence components where the content is computed rather than directly queryable:
   - `[ml_home_metrics]`
   - `[ml_featured_digest]`
   - `[ml_intelligence_signals]`
   - `[ml_strategic_themes]`
   - `[ml_publisher_authority]`
-- Theme dependency: shortcode-backed homepage/archive/directory surfaces are owned by `marketlense-core`; the theme expects the plugin to be active and shows an admin notice when it is missing instead of duplicating shortcode/business logic in theme PHP.
+- Theme dependency: computed homepage and directory surfaces are still owned by `marketlense-core`; navigation and standard report listings are now block-native in the theme, while analytics/directory shortcodes remain plugin-owned until they are replaced with dynamic blocks.
 - Block-template compatibility: `marketlense-core` also applies its registered `ml_*` shortcodes during block rendering when template/pattern output leaves a raw shortcode string unresolved, so theme patterns built with `core/shortcode` blocks still render on the front end.
 - `templates/page-topics-directory.html` renders `[ml_topics_directory]`.
 - `templates/page-publishers-directory.html` renders `[ml_publishers_directory]` with publisher homepage CTAs.

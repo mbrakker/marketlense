@@ -61,6 +61,7 @@ final class Plugin
         add_action('init', [$this->taxonomies, 'register'], 8);
         add_action('init', [$this->meta, 'register_meta_fields'], 11);
         add_action('init', [$this->shortcodes, 'register'], 12);
+        add_action('pre_get_posts', [$this->post_type, 'filter_frontend_queries']);
         add_action('save_post_' . Post_Type::POST_TYPE, [$this->meta, 'sync_report_contract'], 20, 3);
 
         $this->booted = true;

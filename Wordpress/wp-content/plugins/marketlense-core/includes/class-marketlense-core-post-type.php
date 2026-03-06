@@ -65,4 +65,26 @@ final class Post_Type
             ]
         );
     }
+
+    /**
+     * Normalizes front-end queries onto the report CPT so native block query
+     * loops can inherit the expected result set.
+     */
+    public function filter_frontend_queries(\WP_Query $query): void
+    {
+        if (is_admin() || ! $query->is_main_query()) {
+            return;
+        }
+
+        if (
+            $query->is_post_type_archive(self::POST_TYPE)
+            || $query->is_tax(Taxonomies::PUBLISHER_TAXONOMY)
+            || $query->is_category()
+            || $query->is_search()
+        ) {
+            $query->set('post_type', self::POST_TYPE);
+            $query->set('orderby', 'date');
+            $query->set('order', 'DESC');
+        }
+    }
 }
