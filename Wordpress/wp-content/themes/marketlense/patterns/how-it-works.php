@@ -6,9 +6,9 @@
  * Inserter: yes
  */
 ?>
-<!-- wp:group {"className":"ml-home-section ml-process-section reveal","layout":{"type":"constrained"}} -->
+<!-- wp:group {"className":"ml-home-section ml-process-section reveal","layout":{"type":"default"}} -->
 <div class="wp-block-group ml-home-section ml-process-section reveal">
-  <!-- wp:group {"className":"ml-section-heading","layout":{"type":"constrained"}} -->
+  <!-- wp:group {"className":"ml-section-heading","layout":{"type":"default"}} -->
   <div class="wp-block-group ml-section-heading">
     <!-- wp:paragraph {"className":"ml-section-kicker"} -->
     <p class="ml-section-kicker">Method</p>

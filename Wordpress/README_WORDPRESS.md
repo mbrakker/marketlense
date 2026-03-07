@@ -77,6 +77,7 @@ Primary responsibilities:
 - Provides shortcodes:
   - `[ml_report_browser]` (URL filters: `category`, `ml_publisher`; legacy `ml_topic` query params still map to categories)
   - `[ml_home_metrics]`
+  - `[ml_hero_snapshot]`
   - `[ml_featured_digest]`
   - `[ml_intelligence_signals]`
   - `[ml_strategic_themes]`
@@ -88,9 +89,9 @@ Primary responsibilities:
 
 The block theme is organized as an editorial intelligence portal:
 
-- Full-site editing templates and template parts for header, footer, archives, search, and ingest-first singles
-- Homepage assembled from reorderable patterns
-- Theme-driven editorial token system in `theme.json`
+- Full-site editing templates and template parts for header, footer, archives, trust pages, search, and ingest-first singles
+- Homepage assembled from reorderable patterns with a consultancy-style hero, proof bands, and discovery bands
+- Theme-driven editorial token system in `theme.json` with a constrained reading frame and wider discovery frame
 - Minimal JS only for singular report interaction parity
 
 ## Provision Site IA (Pages + Navigation + Publisher Homepages)
@@ -107,6 +108,7 @@ What `provision-site-structure.sh` does:
 - Creates/updates required pages (About, Methodology, Topics directory, Publishers directory, Submit a Report, Contact, Privacy, Terms).
 - Publishes pages idempotently (no duplicates on rerun).
 - Navigation is provided directly by static block-theme template parts (`parts/nav.html`, `parts/footer.html`) using native block navigation/list markup; the provisioning script does not create classic menu locations.
+- The header is a compact two-row filesystem template part: brand plus navigation/briefing CTA on the first row, then a narrower archive search row beneath it. Header and footer both use the same shell/frame width model as the hero and homepage content lane.
 - If `wp-cli` is unavailable in your environment, automatically falls back to REST (`provision-site-structure-rest.py`) and provisions the same required pages.
 
 What `seed-publisher-homepages.sh` does:
@@ -227,17 +229,20 @@ The main CI workflow runs this harness automatically after installing PHP CLI.
 
 ## Archive and Directory UX
 
-- `templates/archive-ml_report.html`, `templates/category.html`, `templates/taxonomy-ml_publisher.html`, and `templates/search.html` now use native `core/query` loops for report cards and pagination.
-- `marketlense-core` normalizes the main front-end archive/search queries onto `ml_report`, so these templates can inherit the correct result set without shortcode rendering.
-- Backward compatibility: older `?ml_topic=<slug>` links remain accepted by the shortcode-based browser where that surface is still used.
+- `templates/archive-ml_report.html`, `templates/category.html`, `templates/taxonomy-ml_publisher.html`, and `templates/search.html` now route through the richer shortcode-based report browser instead of plain `core/query` grids.
+- `[ml_report_browser]` now owns filtering, sort order, result summaries, active-filter chips, and the responsive archive layout for archive/search/topic/publisher views.
+- Backward compatibility: older `?ml_topic=<slug>` links remain accepted and are still mapped onto native categories in the browser surface.
 - Homepage editorial sections are still backed by shortcode-driven intelligence components where the content is computed rather than directly queryable:
   - `[ml_home_metrics]`
+  - `[ml_hero_snapshot]`
   - `[ml_featured_digest]`
   - `[ml_intelligence_signals]`
+  - `[ml_latest_reports]`
   - `[ml_strategic_themes]`
   - `[ml_publisher_authority]`
-- Theme dependency: computed homepage and directory surfaces are still owned by `marketlense-core`; navigation and standard report listings are now block-native in the theme, while analytics/directory shortcodes remain plugin-owned until they are replaced with dynamic blocks.
+- Theme dependency: computed homepage and directory surfaces remain owned by `marketlense-core`; the header/footer now consume plugin shortcodes for navigation/CTA resolution while the theme keeps layout control.
 - Block-template compatibility: `marketlense-core` also applies its registered `ml_*` shortcodes during block rendering when template/pattern output leaves a raw shortcode string unresolved, so theme patterns built with `core/shortcode` blocks still render on the front end.
+- Legacy projection safety: on activation and on the first runtime after upgrade, `marketlense-core` backfills missing report metadata and publisher taxonomy projections for existing `ml_report` posts so publisher counts, authority sections, and latest-report cards recover without manually re-saving reports. Current parser support includes digest hero subtitle metadata rows such as `Publisher`, `Time Period`, and `Geography`, which are now used during backfill as well.
 - `templates/page-topics-directory.html` renders `[ml_topics_directory]`.
 - `templates/page-publishers-directory.html` renders `[ml_publishers_directory]` with publisher homepage CTAs.
 - `templates/category.html` routes native category archives through the same report browser, so topic archive pages stay limited to uploaded reports instead of falling back to generic site-wide category queries.
@@ -247,20 +252,18 @@ The main CI workflow runs this harness automatically after installing PHP CLI.
 
 ## Responsive Layout Defaults
 
-The `marketlense` theme now uses full-width layout defaults in `theme.json` and constrains the actual editorial content in CSS so pages still read deliberately on both mobile and laptop widths:
+The `marketlense` theme now uses an explicit reading frame and a wider discovery frame in `theme.json` so the site feels more like a consultancy-quality portal than a stretched content dump:
 
-- `settings.layout.contentSize`: `100%`
-- `settings.layout.wideSize`: `100%`
+- `settings.layout.contentSize`: `48rem`
+- `settings.layout.wideSize`: `82rem`
 
-This lets the UI take over the full screen on any device while preserving a controlled internal editorial frame for hero copy, cards, and process/briefing sections.
+This keeps narrative copy readable while giving discovery, archive, and homepage proof sections enough horizontal room to feel intentional on larger screens.
 
-The homepage hero follows the same rule: the visual background and decorative circles live on the full-width outer hero band, while the inner hero frame stays transparent and constrained for readable copy width.
-The hero now uses the shared home frame with the gutter carried by the outer band, not an extra inner inset, so both left and right edges stay in lockstep with the metrics, featured digest, and other homepage sections.
-The desktop hero frame also no longer reserves an unused split column, which keeps the hero from appearing visually narrower on the right than the sections below it.
-The headline itself also no longer carries a separate desktop `max-width`, so the `h1` aligns with the hero stack instead of stopping short inside the correct frame.
-The process-section note copy also no longer carries its own narrower `max-width`, so it aligns to the same width as the section heading container.
-The hero body copy and credibility line also no longer carry separate desktop `max-width` caps, so both lines align with the same hero stack width.
-Other reusable theme copy blocks now follow their parent containers for the same reason: `ml-page-lead`, generic `ml-section-note`, featured digest excerpts, and ingest report hero subtitles no longer carry separate text-width caps.
+The homepage hero now uses a two-column proof-led composition: the left side carries the message and core CTAs, while the right side is a live proof rail rendered by `[ml_hero_snapshot]`.
+That hero proof rail is the only homepage portal snapshot surface; the separate metrics strip is no longer rendered beneath the hero on the front page.
+Homepage sections are grouped into proof and discovery bands so the page reads as a sequence of distinct consultancy-style surfaces instead of one long stack of interchangeable cards. Those bands now use the same shell/frame model as the hero and latest-reports sections, one canonical home-frame token (`--ml-frame-home`), explicit guards against legacy `is-layout-constrained` homepage markup, and no duplicate inner gutters inside band sections.
+The header and footer now use the same home frame width as the hero and homepage section bands, with shell padding on the outer container and an unpadded inner frame so all major surfaces align predictably across breakpoints.
+Trust and conversion templates (`About`, `Methodology`, `Contact`, `Submit a Report`) were also redesigned around the same frame so the visual language stays consistent once a visitor leaves the homepage.
 
 ## `ml_report` Ingest Rendering
 
@@ -292,6 +295,8 @@ WordPress credentials and publish controls come from root `.env`/`app.yaml`:
 - `WP_APP_PASSWORD` or `WP_BEARER_TOKEN`
 - `WP_POST_STATUS` (optional override)
 - `WP_POST_TYPE` (optional override, default `ml_report`)
+
+The checked-in `publish.wp.site_url` value now targets `https://marketlense.medianewsonline.com` so publish flows and follow-on tooling stop reinforcing the legacy `http` scheme.
 
 During publish, the pipeline now writes:
 

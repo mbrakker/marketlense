@@ -4,8 +4,8 @@
   "settings": {
     "appearanceTools": true,
     "layout": {
-      "contentSize": "100%",
-      "wideSize": "100%"
+      "contentSize": "48rem",
+      "wideSize": "84rem"
     },
     "custom": {
       "radius": {
@@ -14,10 +14,12 @@
         "pill": "999px"
       },
       "shadow": {
+        "glass": "0 16px 38px rgba(17, 27, 40, 0.08)",
         "card": "0 14px 28px rgba(17, 27, 40, 0.06)",
         "float": "0 18px 40px rgba(10, 17, 28, 0.08)"
       },
       "blur": {
+        "glass": "blur(18px)",
         "header": "blur(14px)"
       }
     },
@@ -66,9 +68,19 @@
           "color": "#9d7b41"
         },
         {
+          "slug": "amber",
+          "name": "Amber",
+          "color": "#d0932f"
+        },
+        {
           "slug": "border",
           "name": "Border",
           "color": "#d8cec0"
+        },
+        {
+          "slug": "line",
+          "name": "Line",
+          "color": "#e2d8ca"
         }
       ],
       "gradients": [
@@ -81,6 +93,11 @@
           "slug": "quiet-panel",
           "name": "Quiet Panel",
           "gradient": "linear-gradient(180deg, rgba(255,253,249,0.98) 0%, rgba(247,243,236,0.92) 100%)"
+        },
+        {
+          "slug": "hero-sky",
+          "name": "Hero Sky",
+          "gradient": "linear-gradient(180deg, rgba(245,248,251,0.98) 0%, rgba(247,243,236,0.92) 100%)"
         }
       ]
     },

@@ -8,38 +8,83 @@
     <p class="ml-eyebrow">Contact</p>
     <!-- /wp:paragraph -->
     <!-- wp:heading {"level":1} -->
-    <h1 class="wp-block-heading">Get in touch with Market Lense</h1>
+    <h1 class="wp-block-heading">Choose the right path for briefings, corrections, or publishing support</h1>
     <!-- /wp:heading -->
     <!-- wp:paragraph {"className":"ml-page-lead"} -->
-    <p class="ml-page-lead">For data quality feedback, publishing operations, or editorial corrections, route requests through your Market Lense workspace channel.</p>
+    <p class="ml-page-lead">Market Lense handles strategic briefing requests, editorial corrections, and publishing operations through structured intake so the right team sees the full context immediately.</p>
     <!-- /wp:paragraph -->
   </div>
   <!-- /wp:group -->
 
-  <!-- wp:columns {"className":"ml-directory-grid"} -->
-  <div class="wp-block-columns ml-directory-grid">
-    <!-- wp:column {"className":"ml-directory-card"} -->
-    <div class="wp-block-column ml-directory-card">
+  <!-- wp:columns {"className":"ml-page-grid ml-contact-grid"} -->
+  <div class="wp-block-columns ml-page-grid ml-contact-grid">
+    <!-- wp:column {"className":"ml-page-card"} -->
+    <div class="wp-block-column ml-page-card">
+      <!-- wp:paragraph {"className":"ml-section-kicker"} -->
+      <p class="ml-section-kicker">Briefings</p>
+      <!-- /wp:paragraph -->
       <!-- wp:heading {"level":3} -->
-      <h3 class="wp-block-heading">Editorial corrections</h3>
+      <h3 class="wp-block-heading">Executive and strategy requests</h3>
       <!-- /wp:heading -->
       <!-- wp:paragraph -->
-      <p>Reference the report URL and the section heading, then include the corrected source statement and citation context.</p>
+      <p>Use this path for advisory conversations, executive briefing requests, or guidance on how teams can use the intelligence archive.</p>
       <!-- /wp:paragraph -->
+      <!-- wp:shortcode -->
+      [ml_button_link target="contact" label="Request a briefing" style="primary"]
+      <!-- /wp:shortcode -->
     </div>
     <!-- /wp:column -->
-    <!-- wp:column {"className":"ml-directory-card"} -->
-    <div class="wp-block-column ml-directory-card">
+
+    <!-- wp:column {"className":"ml-page-card"} -->
+    <div class="wp-block-column ml-page-card">
+      <!-- wp:paragraph {"className":"ml-section-kicker"} -->
+      <p class="ml-section-kicker">Corrections</p>
+      <!-- /wp:paragraph -->
       <!-- wp:heading {"level":3} -->
-      <h3 class="wp-block-heading">Operations support</h3>
+      <h3 class="wp-block-heading">Editorial or evidence corrections</h3>
       <!-- /wp:heading -->
       <!-- wp:paragraph -->
-      <p>For ingestion failures or publishing incidents, include the source file identifier and expected delivery deadline.</p>
+      <p>Reference the report URL, section heading, and corrected source statement so the editorial team can review the exact evidence path.</p>
       <!-- /wp:paragraph -->
+      <!-- wp:shortcode -->
+      [ml_button_link target="contact" label="Send a correction" style="outline"]
+      <!-- /wp:shortcode -->
+    </div>
+    <!-- /wp:column -->
+
+    <!-- wp:column {"className":"ml-page-card"} -->
+    <div class="wp-block-column ml-page-card">
+      <!-- wp:paragraph {"className":"ml-section-kicker"} -->
+      <p class="ml-section-kicker">Operations</p>
+      <!-- /wp:paragraph -->
+      <!-- wp:heading {"level":3} -->
+      <h3 class="wp-block-heading">Publishing and ingestion support</h3>
+      <!-- /wp:heading -->
+      <!-- wp:paragraph -->
+      <p>For ingestion failures or publishing incidents, include the source identifier, the required deadline, and any visible downstream impact.</p>
+      <!-- /wp:paragraph -->
+      <!-- wp:shortcode -->
+      [ml_button_link target="submit-a-report" label="Submit a report" style="outline"]
+      <!-- /wp:shortcode -->
     </div>
     <!-- /wp:column -->
   </div>
   <!-- /wp:columns -->
+
+  <!-- wp:group {"className":"ml-page-section","layout":{"type":"constrained"}} -->
+  <div class="wp-block-group ml-page-section">
+    <!-- wp:paragraph {"className":"ml-section-kicker"} -->
+    <p class="ml-section-kicker">Before you reach out</p>
+    <!-- /wp:paragraph -->
+    <!-- wp:list {"className":"ml-principles-list"} -->
+    <ul class="wp-block-list ml-principles-list">
+      <li>Include the report URL or source identifier so the request can be routed immediately.</li>
+      <li>State whether the request is strategic, editorial, or operational and whether there is a deadline.</li>
+      <li>For corrections, include the revised source-backed language and the exact section to be reviewed.</li>
+    </ul>
+    <!-- /wp:list -->
+  </div>
+  <!-- /wp:group -->
 
   <!-- wp:post-content {"layout":{"type":"constrained"}} /-->
 </main>

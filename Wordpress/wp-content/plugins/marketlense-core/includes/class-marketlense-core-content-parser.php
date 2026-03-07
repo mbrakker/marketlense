@@ -43,16 +43,31 @@ final class Content_Parser
         $quoted_label = preg_quote($label, '/');
         $patterns = [
             '/<span[^>]*class=["\'][^"\']*meta-label[^"\']*["\'][^>]*>\s*' . $quoted_label . '\s*<\/span>\s*<p[^>]*class=["\'][^"\']*meta-value[^"\']*["\'][^>]*>(.*?)<\/p>/is',
+            '/<span[^>]*class=["\'][^"\']*hero-subtitle-label[^"\']*["\'][^>]*>\s*' . $quoted_label . '\s*:\s*<\/span>\s*(.*?)<\/span>/is',
             '/<strong>\s*' . $quoted_label . '\s*:\s*<\/strong>\s*([^<\r\n]+)/i',
         ];
 
         foreach ($patterns as $pattern) {
             if (preg_match($pattern, $content, $matches) === 1) {
-                return $this->normalize_text($matches[1]);
+                return $this->normalize_metadata_value($label, $matches[1]);
             }
         }
 
         return '';
+    }
+
+    private function normalize_metadata_value(string $label, string $value): string
+    {
+        $normalized = $this->normalize_text($value);
+        if ($normalized === '') {
+            return '';
+        }
+
+        if (strcasecmp($label, 'Publisher') === 0 && in_array(strtolower($normalized), ['unknown publisher', 'not specified'], true)) {
+            return '';
+        }
+
+        return $normalized;
     }
 
     private function normalize_text(string $value): string

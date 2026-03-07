@@ -37,7 +37,7 @@ final class Plugin
         $this->post_type = new Post_Type();
         $this->taxonomies = new Taxonomies();
         $this->meta = new Meta($parser);
-        $this->view_model_builder = new Report_View_Model_Builder();
+        $this->view_model_builder = new Report_View_Model_Builder($parser);
         $this->stats = new Intelligence_Stats();
         $this->shortcodes = new Shortcodes($this->view_model_builder, $this->stats);
     }
@@ -61,6 +61,7 @@ final class Plugin
         add_action('init', [$this->taxonomies, 'register'], 8);
         add_action('init', [$this->meta, 'register_meta_fields'], 11);
         add_action('init', [$this->shortcodes, 'register'], 12);
+        add_action('init', [$this->meta, 'backfill_report_contracts'], 13);
         add_action('pre_get_posts', [$this->post_type, 'filter_frontend_queries']);
         add_action('save_post_' . Post_Type::POST_TYPE, [$this->meta, 'sync_report_contract'], 20, 3);
 
@@ -73,6 +74,7 @@ final class Plugin
         $plugin->post_type->register();
         $plugin->taxonomies->register();
         $plugin->meta->register_meta_fields();
+        $plugin->meta->backfill_report_contracts();
         flush_rewrite_rules();
     }
 

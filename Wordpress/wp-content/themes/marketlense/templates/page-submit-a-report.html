@@ -8,34 +8,82 @@
     <p class="ml-eyebrow">Submit a report</p>
     <!-- /wp:paragraph -->
     <!-- wp:heading {"level":1} -->
-    <h1 class="wp-block-heading">Request a new report digest</h1>
+    <h1 class="wp-block-heading">Submit a report for structured review and digest creation</h1>
     <!-- /wp:heading -->
     <!-- wp:paragraph {"className":"ml-page-lead"} -->
-    <p class="ml-page-lead">Share a source PDF and context notes so the Market Lense pipeline can ingest, validate, and publish it to the portal.</p>
+    <p class="ml-page-lead">Share the source file, context, and timing expectations up front so the Market Lense pipeline can validate, prioritize, and publish the report with the right metadata and evidence checks.</p>
     <!-- /wp:paragraph -->
   </div>
   <!-- /wp:group -->
 
-  <!-- wp:heading {"level":2} -->
-  <h2 class="wp-block-heading">Submission checklist</h2>
-  <!-- /wp:heading -->
-  <!-- wp:list -->
-  <ul>
-    <li>Provide the source file URL or upload location.</li>
-    <li>Include publisher name, publication date, and region when known.</li>
-    <li>State why this report matters for decision-making now.</li>
-    <li>Highlight priority sections if rapid turnaround is required.</li>
-  </ul>
-  <!-- /wp:list -->
+  <!-- wp:columns {"className":"ml-page-grid ml-submit-grid"} -->
+  <div class="wp-block-columns ml-page-grid ml-submit-grid">
+    <!-- wp:column {"className":"ml-page-card"} -->
+    <div class="wp-block-column ml-page-card">
+      <!-- wp:paragraph {"className":"ml-section-kicker"} -->
+      <p class="ml-section-kicker">Required</p>
+      <!-- /wp:paragraph -->
+      <!-- wp:heading {"level":3} -->
+      <h3 class="wp-block-heading">Source package</h3>
+      <!-- /wp:heading -->
+      <!-- wp:paragraph -->
+      <p>Provide the report file URL or upload location, plus publisher, publication date, and region when those details are known.</p>
+      <!-- /wp:paragraph -->
+    </div>
+    <!-- /wp:column -->
 
-  <!-- wp:paragraph -->
-  <p>Submissions are processed through the same validation gates used for scheduled ingestion. Reports missing extractable text or evidence integrity may be rejected until source quality is improved.</p>
-  <!-- /wp:paragraph -->
+    <!-- wp:column {"className":"ml-page-card"} -->
+    <div class="wp-block-column ml-page-card">
+      <!-- wp:paragraph {"className":"ml-section-kicker"} -->
+      <p class="ml-section-kicker">Context</p>
+      <!-- /wp:paragraph -->
+      <!-- wp:heading {"level":3} -->
+      <h3 class="wp-block-heading">Why it matters now</h3>
+      <!-- /wp:heading -->
+      <!-- wp:paragraph -->
+      <p>Explain the business question, audience, or active decision that makes this report worth processing now rather than later.</p>
+      <!-- /wp:paragraph -->
+    </div>
+    <!-- /wp:column -->
 
-  <!-- wp:buttons -->
-  <div class="wp-block-buttons">
+    <!-- wp:column {"className":"ml-page-card"} -->
+    <div class="wp-block-column ml-page-card">
+      <!-- wp:paragraph {"className":"ml-section-kicker"} -->
+      <p class="ml-section-kicker">Timing</p>
+      <!-- /wp:paragraph -->
+      <!-- wp:heading {"level":3} -->
+      <h3 class="wp-block-heading">Priority guidance</h3>
+      <!-- /wp:heading -->
+      <!-- wp:paragraph -->
+      <p>Flag urgent sections, deadlines, or expected deliverables if the report needs accelerated review or a narrower editorial cut.</p>
+      <!-- /wp:paragraph -->
+    </div>
+    <!-- /wp:column -->
+  </div>
+  <!-- /wp:columns -->
+
+  <!-- wp:group {"className":"ml-page-section","layout":{"type":"constrained"}} -->
+  <div class="wp-block-group ml-page-section">
+    <!-- wp:paragraph {"className":"ml-section-kicker"} -->
+    <p class="ml-section-kicker">What happens next</p>
+    <!-- /wp:paragraph -->
+    <!-- wp:list {"className":"ml-principles-list"} -->
+    <ul class="wp-block-list ml-principles-list">
+      <li>The report is checked for extractable text, content quality, and evidence integrity before digest creation begins.</li>
+      <li>Submissions missing critical metadata or clear source material may be paused until the source package is improved.</li>
+      <li>Accepted submissions are processed through the same validation and publication gates as scheduled ingestion.</li>
+    </ul>
+    <!-- /wp:list -->
+  </div>
+  <!-- /wp:group -->
+
+  <!-- wp:buttons {"className":"ml-page-actions"} -->
+  <div class="wp-block-buttons ml-page-actions">
     <!-- wp:shortcode -->
-    [ml_button_link target="contact" label="Contact the operations team" style="primary"]
+    [ml_button_link target="contact" label="Start a submission request" style="primary"]
+    <!-- /wp:shortcode -->
+    <!-- wp:shortcode -->
+    [ml_button_link target="methodology" label="Review submission standards" style="outline"]
     <!-- /wp:shortcode -->
   </div>
   <!-- /wp:buttons -->

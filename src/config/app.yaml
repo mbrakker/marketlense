@@ -102,7 +102,7 @@ rank:
 
 publish:
   wp:
-    site_url: "http://marketlense.medianewsonline.com"
+    site_url: "https://marketlense.medianewsonline.com"
     username: "admin"
     post_status: "publish"
     post_type: "posts"

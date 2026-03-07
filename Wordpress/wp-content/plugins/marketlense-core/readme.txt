@@ -4,7 +4,7 @@ Tags: reports, custom-post-type, taxonomy, api, editorial
 Requires at least: 6.6
 Tested up to: 6.6
 Requires PHP: 8.2
-Stable tag: 1.2.0
+Stable tag: 1.2.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -40,6 +40,10 @@ This plugin is intended to be used together with the `marketlense` block theme.
 4. Confirm that `/wp-json/wp/v2/ml_report` is reachable.
 
 == Changelog ==
+
+= 1.2.2 =
+* Fixed publisher/time period/geography extraction for digest HTML that stores metadata in hero subtitle rows instead of the older meta panel markup.
+* Re-runs legacy report projection backfill after upgrade so weekly publisher signals and publisher authority surfaces recover for existing reports.
 
 = 1.2.0 =
 * Added homepage intelligence shortcodes for editorial portal sections, including metrics, featured digest, weekly signals, strategic themes, and publisher authority.

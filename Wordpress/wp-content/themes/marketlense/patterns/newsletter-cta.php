@@ -6,7 +6,7 @@
  * Inserter: yes
  */
 ?>
-<!-- wp:group {"className":"ml-home-section ml-briefing-cta reveal","layout":{"type":"constrained"}} -->
+<!-- wp:group {"className":"ml-home-section ml-briefing-cta reveal","layout":{"type":"default"}} -->
 <div class="wp-block-group ml-home-section ml-briefing-cta reveal">
   <!-- wp:columns {"verticalAlignment":"center"} -->
   <div class="wp-block-columns are-vertically-aligned-center">

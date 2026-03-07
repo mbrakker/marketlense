@@ -15,6 +15,10 @@ if (! defined('ABSPATH')) {
 
 final class Meta
 {
+    private const PROJECTION_BACKFILL_OPTION = 'marketlense_core_projection_backfill_version';
+
+    private const PROJECTION_BACKFILL_VERSION = '2026-03-06-hero-subtitle';
+
     public const META_FILE_ID = 'ml_file_id';
 
     public const META_PUBLISHER = 'ml_publisher_name';
@@ -54,6 +58,45 @@ final class Meta
                 ]
             );
         }
+    }
+
+    /**
+     * Backfills metadata and publisher term projections for legacy reports.
+     */
+    public function backfill_report_contracts(): void
+    {
+        $completed_version = (string) get_option(self::PROJECTION_BACKFILL_OPTION, '');
+        if ($completed_version === self::PROJECTION_BACKFILL_VERSION) {
+            return;
+        }
+
+        $post_ids = get_posts(
+            [
+                'post_type' => Post_Type::POST_TYPE,
+                'post_status' => 'publish',
+                'fields' => 'ids',
+                'posts_per_page' => -1,
+                'no_found_rows' => true,
+                'update_post_meta_cache' => false,
+                'update_post_term_cache' => false,
+            ]
+        );
+
+        if (is_array($post_ids)) {
+            foreach ($post_ids as $post_id) {
+                $normalized_post_id = (int) $post_id;
+                if ($normalized_post_id < 1 || ! $this->needs_contract_sync($normalized_post_id)) {
+                    continue;
+                }
+
+                $post = get_post($normalized_post_id);
+                if ($post instanceof \WP_Post) {
+                    $this->sync_report_contract($normalized_post_id, $post, true);
+                }
+            }
+        }
+
+        update_option(self::PROJECTION_BACKFILL_OPTION, self::PROJECTION_BACKFILL_VERSION, false);
     }
 
     /**
@@ -104,6 +147,27 @@ final class Meta
         }
 
         return sanitize_text_field(trim((string) $existing[0]));
+    }
+
+    private function needs_contract_sync(int $post_id): bool
+    {
+        $publisher = trim((string) get_post_meta($post_id, self::META_PUBLISHER, true));
+        if ($publisher === '') {
+            return true;
+        }
+
+        $publisher_terms = wp_get_post_terms($post_id, Taxonomies::PUBLISHER_TAXONOMY, ['fields' => 'ids']);
+        if (is_wp_error($publisher_terms) || $publisher_terms === []) {
+            return true;
+        }
+
+        foreach ([self::META_FILE_ID, self::META_TIME_PERIOD, self::META_REGION] as $meta_key) {
+            if (trim((string) get_post_meta($post_id, $meta_key, true)) === '') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function upsert_string_meta(int $post_id, string $meta_key, string $meta_value): void

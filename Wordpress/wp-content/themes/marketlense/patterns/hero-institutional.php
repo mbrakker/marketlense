@@ -27,15 +27,15 @@
       <!-- wp:group {"className":"ml-hero-stack","layout":{"type":"default"}} -->
       <div class="wp-block-group ml-hero-stack">
         <!-- wp:heading {"level":1,"fontSize":"4xl","className":"ml-hero-title"} -->
-        <h1 class="wp-block-heading ml-hero-title has-4-xl-font-size">Research intelligence, structured for executive decisions.</h1>
+        <h1 class="wp-block-heading ml-hero-title has-4-xl-font-size">Executive research intelligence with traceable evidence.</h1>
         <!-- /wp:heading -->
 
         <!-- wp:paragraph {"className":"ml-hero-copy"} -->
-        <p class="ml-hero-copy">Market Lense turns long-form research into concise, source-traceable briefings built for strategy teams, analysts, and decision makers.</p>
+        <p class="ml-hero-copy">Market Lense converts long-form market, strategy, and industry reports into concise digests built for strategy, insights, and leadership teams.</p>
         <!-- /wp:paragraph -->
 
         <!-- wp:paragraph {"className":"ml-hero-credibility"} -->
-        <p class="ml-hero-credibility">Validated digests from OECD, Deloitte, Morningstar, Kantar, IAS and leading research publishers.</p>
+        <p class="ml-hero-credibility">Validated coverage spanning OECD, Deloitte, Morningstar, Kantar, IAS, and other leading research publishers.</p>
         <!-- /wp:paragraph -->
 
         <!-- wp:buttons {"className":"ml-hero-actions"} -->
@@ -44,7 +44,7 @@
           <div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="<?php echo esc_url((string) (get_post_type_archive_link('ml_report') ?: home_url('/reports/'))); ?>">Browse reports</a></div>
           <!-- /wp:button -->
           <!-- wp:button {"className":"is-style-outline"} -->
-          <div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button" href="<?php echo esc_url(home_url('/topics-directory/')); ?>">Explore topics</a></div>
+          <div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button" href="<?php echo esc_url(home_url('/methodology/')); ?>">Review methodology</a></div>
           <!-- /wp:button -->
         </div>
         <!-- /wp:buttons -->
@@ -53,8 +53,16 @@
     </div>
     <!-- /wp:group -->
 
+    <!-- wp:group {"className":"ml-hero-proof","layout":{"type":"default"}} -->
+    <div class="wp-block-group ml-hero-proof">
+      <!-- wp:shortcode -->
+      [ml_hero_snapshot]
+      <!-- /wp:shortcode -->
+    </div>
+    <!-- /wp:group -->
+
     <!-- wp:paragraph {"className":"ml-capability-strip"} -->
-    <p class="ml-capability-strip">Digest-first &middot; Source-traceable &middot; Claim-verified &middot; Executive-ready &middot; Figure-indexed</p>
+    <p class="ml-capability-strip">Source-traceable &middot; Claim-linked &middot; Freshly updated &middot; Executive-ready &middot; Figure-indexed</p>
     <!-- /wp:paragraph -->
   </div>
   <!-- /wp:group -->

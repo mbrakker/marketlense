@@ -78,7 +78,6 @@ Current control-plane modules in `src/orchestrators/` include:
 ## Local WordPress Dev
 WordPress local development, packaging, smoke tests, and sync workflows are documented in `Wordpress/README_WORDPRESS.md`.
 
-<<<<<<< ours
 For the local WordPress instance at `C:\Users\Михаил\Studio\marker-lense`, do not symlink the block theme into the local site. Some local stacks resolve theme symlinks through `/internal/symlinks/...`, which breaks `theme.json` loading in the web runtime.
 
 Use the repo sync script instead:
@@ -96,12 +95,16 @@ powershell -ExecutionPolicy Bypass -File .\Wordpress\scripts\sync-local-wordpres
   -Watch
 ```
 
-The WordPress subproject now uses native block markup for primary navigation, footer navigation lists, and standard report listing templates (archive/category/publisher/search/home latest grid). Computed editorial analytics and taxonomy directory surfaces still come from the companion plugin until they are replaced with dynamic blocks.
+The WordPress subproject now uses a consultancy-style block theme with:
 
----
-=======
+- shortcode-driven header/footer navigation resolution
+- a proof-led homepage hero and dynamic homepage intelligence surfaces
+- shortcode-driven premium homepage latest-report cards instead of the older Query-block grid
+- a richer `[ml_report_browser]` archive/search/category/publisher experience
+- redesigned trust and conversion pages (`About`, `Methodology`, `Contact`, `Submit a Report`)
+- automatic backfill of legacy report publisher/meta projections during plugin upgrade/runtime so homepage authority surfaces recover without manual post edits
+
 Use this root README for pipeline architecture and CLI usage; use the WordPress subproject README for all theme/plugin operations.
->>>>>>> theirs
 
 ## Configuration (YAML + .env)
 

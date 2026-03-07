@@ -8,30 +8,123 @@
     <p class="ml-eyebrow">Methodology</p>
     <!-- /wp:paragraph -->
     <!-- wp:heading {"level":1} -->
-    <h1 class="wp-block-heading">How Market Lense creates each report digest</h1>
+    <h1 class="wp-block-heading">How Market Lense creates each digest with a clear audit trail</h1>
     <!-- /wp:heading -->
     <!-- wp:paragraph {"className":"ml-page-lead"} -->
-    <p class="ml-page-lead">Our publishing pipeline uses deterministic extraction, schema validation, and structured prompting so every published digest is reproducible and auditable.</p>
+    <p class="ml-page-lead">The pipeline combines deterministic extraction, typed validation, and structured editorial shaping so every published digest is reproducible, reviewable, and source-aware.</p>
     <!-- /wp:paragraph -->
   </div>
   <!-- /wp:group -->
 
-  <!-- wp:list {"ordered":true} -->
-  <ol>
-    <li><strong>Source ingestion:</strong> reports are imported from configured sources and fingerprinted by content hash.</li>
-    <li><strong>Evidence extraction:</strong> document structure, claims, metrics, and figure candidates are extracted and normalized into typed contracts.</li>
-    <li><strong>Validation:</strong> generated artifacts pass schema and grounding checks before publication is allowed.</li>
-    <li><strong>Digest rendering:</strong> output is rendered as executive-friendly HTML with section navigation, figure surfaces, and citation-aware summaries.</li>
-    <li><strong>WordPress publishing:</strong> digests, media, and taxonomy mappings are pushed via controlled publish orchestration.</li>
-  </ol>
-  <!-- /wp:list -->
+  <!-- wp:columns {"className":"ml-page-grid ml-method-grid"} -->
+  <div class="wp-block-columns ml-page-grid ml-method-grid">
+    <!-- wp:column {"className":"ml-page-card"} -->
+    <div class="wp-block-column ml-page-card">
+      <!-- wp:paragraph {"className":"ml-section-kicker"} -->
+      <p class="ml-section-kicker">1. Ingest</p>
+      <!-- /wp:paragraph -->
+      <!-- wp:heading {"level":3} -->
+      <h3 class="wp-block-heading">Source acquisition</h3>
+      <!-- /wp:heading -->
+      <!-- wp:paragraph -->
+      <p>Reports are imported from controlled sources, fingerprinted, and staged so the pipeline can process a stable copy of the original material.</p>
+      <!-- /wp:paragraph -->
+    </div>
+    <!-- /wp:column -->
 
-  <!-- wp:heading {"level":2} -->
-  <h2 class="wp-block-heading">Quality controls</h2>
-  <!-- /wp:heading -->
-  <!-- wp:paragraph -->
-  <p>Every run is logged with run/task/span identifiers, prompt hashes, and validation outcomes. Reports that fail extractability or evidence integrity gates are explicitly blocked from publishing.</p>
-  <!-- /wp:paragraph -->
+    <!-- wp:column {"className":"ml-page-card"} -->
+    <div class="wp-block-column ml-page-card">
+      <!-- wp:paragraph {"className":"ml-section-kicker"} -->
+      <p class="ml-section-kicker">2. Extract</p>
+      <!-- /wp:paragraph -->
+      <!-- wp:heading {"level":3} -->
+      <h3 class="wp-block-heading">Evidence normalization</h3>
+      <!-- /wp:heading -->
+      <!-- wp:paragraph -->
+      <p>Document structure, metrics, claims, figures, and metadata are normalized into typed contracts before a digest can be shaped for readers.</p>
+      <!-- /wp:paragraph -->
+    </div>
+    <!-- /wp:column -->
+
+    <!-- wp:column {"className":"ml-page-card"} -->
+    <div class="wp-block-column ml-page-card">
+      <!-- wp:paragraph {"className":"ml-section-kicker"} -->
+      <p class="ml-section-kicker">3. Validate</p>
+      <!-- /wp:paragraph -->
+      <!-- wp:heading {"level":3} -->
+      <h3 class="wp-block-heading">Schema and quality gates</h3>
+      <!-- /wp:heading -->
+      <!-- wp:paragraph -->
+      <p>Outputs must pass schema checks, content completeness checks, and explicit evidence-integrity gates before publication is allowed.</p>
+      <!-- /wp:paragraph -->
+    </div>
+    <!-- /wp:column -->
+  </div>
+  <!-- /wp:columns -->
+
+  <!-- wp:columns {"className":"ml-page-grid ml-method-grid"} -->
+  <div class="wp-block-columns ml-page-grid ml-method-grid">
+    <!-- wp:column {"className":"ml-page-card"} -->
+    <div class="wp-block-column ml-page-card">
+      <!-- wp:paragraph {"className":"ml-section-kicker"} -->
+      <p class="ml-section-kicker">4. Shape</p>
+      <!-- /wp:paragraph -->
+      <!-- wp:heading {"level":3} -->
+      <h3 class="wp-block-heading">Executive digest rendering</h3>
+      <!-- /wp:heading -->
+      <!-- wp:paragraph -->
+      <p>Approved evidence is composed into executive-friendly HTML with section navigation, visual surfaces, and context that supports rapid reading.</p>
+      <!-- /wp:paragraph -->
+    </div>
+    <!-- /wp:column -->
+
+    <!-- wp:column {"className":"ml-page-card"} -->
+    <div class="wp-block-column ml-page-card">
+      <!-- wp:paragraph {"className":"ml-section-kicker"} -->
+      <p class="ml-section-kicker">5. Publish</p>
+      <!-- /wp:paragraph -->
+      <!-- wp:heading {"level":3} -->
+      <h3 class="wp-block-heading">Controlled delivery</h3>
+      <!-- /wp:heading -->
+      <!-- wp:paragraph -->
+      <p>Only validated digests are published with taxonomy mappings, media assets, and archive placement that keep discovery surfaces aligned.</p>
+      <!-- /wp:paragraph -->
+    </div>
+    <!-- /wp:column -->
+
+    <!-- wp:column {"className":"ml-page-card"} -->
+    <div class="wp-block-column ml-page-card">
+      <!-- wp:paragraph {"className":"ml-section-kicker"} -->
+      <p class="ml-section-kicker">6. Observe</p>
+      <!-- /wp:paragraph -->
+      <!-- wp:heading {"level":3} -->
+      <h3 class="wp-block-heading">Logged and reviewable</h3>
+      <!-- /wp:heading -->
+      <!-- wp:paragraph -->
+      <p>Runs, tasks, prompt selections, and validation outcomes are logged so failures can be investigated and outputs can be reviewed later.</p>
+      <!-- /wp:paragraph -->
+    </div>
+    <!-- /wp:column -->
+  </div>
+  <!-- /wp:columns -->
+
+  <!-- wp:group {"className":"ml-page-section","layout":{"type":"constrained"}} -->
+  <div class="wp-block-group ml-page-section">
+    <!-- wp:paragraph {"className":"ml-section-kicker"} -->
+    <p class="ml-section-kicker">Quality controls</p>
+    <!-- /wp:paragraph -->
+    <!-- wp:heading {"level":2} -->
+    <h2 class="wp-block-heading">What keeps the output trustworthy</h2>
+    <!-- /wp:heading -->
+    <!-- wp:list {"className":"ml-principles-list"} -->
+    <ul class="wp-block-list ml-principles-list">
+      <li>Reports that fail extractability or evidence-integrity checks are blocked instead of silently degraded.</li>
+      <li>Structured metadata and taxonomy mapping keep discovery pages consistent with what was actually published.</li>
+      <li>Prompt and validation events are retained so rendered output can be traced back through the pipeline.</li>
+    </ul>
+    <!-- /wp:list -->
+  </div>
+  <!-- /wp:group -->
 
   <!-- wp:post-content {"layout":{"type":"constrained"}} /-->
 </main>

@@ -15,10 +15,17 @@ if (! defined('ABSPATH')) {
 
 final class Report_View_Model_Builder
 {
+    private Content_Parser $parser;
+
     /**
      * @var array<int,array<string,mixed>>
      */
     private array $cache = [];
+
+    public function __construct(Content_Parser $parser)
+    {
+        $this->parser = $parser;
+    }
 
     /**
      * Builds normalized presentation data for a published report.
@@ -49,9 +56,9 @@ final class Report_View_Model_Builder
             'permalink' => (string) get_permalink($post),
             'date' => (string) get_the_date('F j, Y', $post),
             'timestamp' => get_post_timestamp($post, 'date'),
-            'publisher' => $this->resolve_publisher($post_id),
-            'geography' => $this->normalize_text((string) get_post_meta($post_id, Meta::META_REGION, true)),
-            'time_period' => $this->normalize_text((string) get_post_meta($post_id, Meta::META_TIME_PERIOD, true)),
+            'publisher' => $this->resolve_publisher($post_id, $content),
+            'geography' => $this->resolve_metadata_value($post_id, Meta::META_REGION, $content, 'Region'),
+            'time_period' => $this->resolve_metadata_value($post_id, Meta::META_TIME_PERIOD, $content, 'Time period'),
             'insights_count' => $counts['insights'],
             'quotes_count' => $counts['quotes'],
             'topics_count' => $counts['topics'],
@@ -65,7 +72,7 @@ final class Report_View_Model_Builder
         return $view_model;
     }
 
-    private function resolve_publisher(int $post_id): string
+    private function resolve_publisher(int $post_id, string $content): string
     {
         $publisher = $this->normalize_text((string) get_post_meta($post_id, Meta::META_PUBLISHER, true));
         if ($publisher !== '') {
@@ -74,15 +81,25 @@ final class Report_View_Model_Builder
 
         $terms = get_the_terms($post_id, Taxonomies::PUBLISHER_TAXONOMY);
         if (! is_array($terms) || $terms === []) {
-            return '';
+            return $this->normalize_text($this->parser->extract_metadata_value($content, 'Publisher'));
         }
 
         $first_term = $terms[0];
         if (! ($first_term instanceof \WP_Term)) {
-            return '';
+            return $this->normalize_text($this->parser->extract_metadata_value($content, 'Publisher'));
         }
 
         return $this->normalize_text($first_term->name);
+    }
+
+    private function resolve_metadata_value(int $post_id, string $meta_key, string $content, string $label): string
+    {
+        $stored = $this->normalize_text((string) get_post_meta($post_id, $meta_key, true));
+        if ($stored !== '') {
+            return $stored;
+        }
+
+        return $this->normalize_text($this->parser->extract_metadata_value($content, $label));
     }
 
     /**

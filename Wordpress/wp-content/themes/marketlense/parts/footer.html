@@ -1,67 +1,68 @@
 <!-- wp:group {"tagName":"footer","className":"ml-site-footer","layout":{"type":"default"}} -->
 <footer class="wp-block-group ml-site-footer">
-  <!-- wp:group {"className":"ml-header-inner","layout":{"type":"constrained"}} -->
-  <div class="wp-block-group ml-header-inner">
-    <!-- wp:columns {"className":"ml-footer-columns"} -->
-    <div class="wp-block-columns ml-footer-columns">
-      <!-- wp:column {"width":"42%"} -->
-      <div class="wp-block-column" style="flex-basis:42%">
+  <!-- wp:group {"className":"ml-footer-frame","layout":{"type":"default"}} -->
+  <div class="wp-block-group ml-footer-frame">
+    <!-- wp:group {"className":"ml-footer-grid","layout":{"type":"default"}} -->
+    <div class="wp-block-group ml-footer-grid">
+      <!-- wp:group {"className":"ml-footer-column ml-footer-brand-column","layout":{"type":"default"}} -->
+      <div class="wp-block-group ml-footer-column ml-footer-brand-column">
         <!-- wp:site-title {"level":0,"className":"ml-footer-title"} /-->
         <!-- wp:paragraph {"className":"ml-footnote"} -->
         <p class="ml-footnote">Validated market digests, source-traceable evidence, and executive-ready briefings for strategy teams and decision makers.</p>
         <!-- /wp:paragraph -->
-      </div>
-      <!-- /wp:column -->
-
-      <!-- wp:column {"width":"28%"} -->
-      <div class="wp-block-column" style="flex-basis:28%">
-        <!-- wp:paragraph {"className":"ml-footer-label"} -->
-        <p class="ml-footer-label">Navigate</p>
-        <!-- /wp:paragraph -->
-        <!-- wp:list {"className":"ml-footer-links"} -->
-        <ul class="wp-block-list ml-footer-links">
+        <!-- wp:list {"className":"ml-footer-trust"} -->
+        <ul class="wp-block-list ml-footer-trust">
           <!-- wp:list-item -->
-          <li><a href="/reports/">Reports</a></li>
+          <li>Source-linked summaries designed for leadership review.</li>
           <!-- /wp:list-item -->
           <!-- wp:list-item -->
-          <li><a href="/topics-directory/">Topics</a></li>
+          <li>Methodology-first publishing standards and explicit QA gates.</li>
           <!-- /wp:list-item -->
           <!-- wp:list-item -->
-          <li><a href="/publishers-directory/">Publishers</a></li>
-          <!-- /wp:list-item -->
-          <!-- wp:list-item -->
-          <li><a href="/about/">About</a></li>
+          <li>Coverage spanning consultancies, institutions, and specialist publishers.</li>
           <!-- /wp:list-item -->
         </ul>
         <!-- /wp:list -->
       </div>
-      <!-- /wp:column -->
+      <!-- /wp:group -->
 
-      <!-- wp:column {"width":"30%"} -->
-      <div class="wp-block-column" style="flex-basis:30%">
+      <!-- wp:group {"className":"ml-footer-column ml-footer-links-column","layout":{"type":"default"}} -->
+      <div class="wp-block-group ml-footer-column ml-footer-links-column">
         <!-- wp:paragraph {"className":"ml-footer-label"} -->
-        <p class="ml-footer-label">Utilities</p>
+        <p class="ml-footer-label">Explore</p>
         <!-- /wp:paragraph -->
-        <!-- wp:list {"className":"ml-footer-links"} -->
-        <ul class="wp-block-list ml-footer-links">
-          <!-- wp:list-item -->
-          <li><a href="/methodology/">Methodology</a></li>
-          <!-- /wp:list-item -->
-          <!-- wp:list-item -->
-          <li><a href="/contact/">Contact</a></li>
-          <!-- /wp:list-item -->
-          <!-- wp:list-item -->
-          <li><a href="/privacy/">Privacy</a></li>
-          <!-- /wp:list-item -->
-          <!-- wp:list-item -->
-          <li><a href="/terms/">Terms</a></li>
-          <!-- /wp:list-item -->
-        </ul>
-        <!-- /wp:list -->
+        <!-- wp:shortcode -->
+        [ml_footer_nav]
+        <!-- /wp:shortcode -->
       </div>
-      <!-- /wp:column -->
+      <!-- /wp:group -->
+
+      <!-- wp:group {"className":"ml-footer-column ml-footer-links-column","layout":{"type":"default"}} -->
+      <div class="wp-block-group ml-footer-column ml-footer-links-column">
+        <!-- wp:paragraph {"className":"ml-footer-label"} -->
+        <p class="ml-footer-label">Standards</p>
+        <!-- /wp:paragraph -->
+        <!-- wp:shortcode -->
+        [ml_footer_nav menu="utilities"]
+        <!-- /wp:shortcode -->
+      </div>
+      <!-- /wp:group -->
+
+      <!-- wp:group {"className":"ml-footer-column ml-footer-request-column","layout":{"type":"default"}} -->
+      <div class="wp-block-group ml-footer-column ml-footer-request-column">
+        <!-- wp:paragraph {"className":"ml-footer-label"} -->
+        <p class="ml-footer-label">Request</p>
+        <!-- /wp:paragraph -->
+        <!-- wp:paragraph {"className":"ml-footer-cta-copy"} -->
+        <p class="ml-footer-cta-copy">Need a briefing, correction, or new report review?</p>
+        <!-- /wp:paragraph -->
+        <!-- wp:shortcode -->
+        [ml_button_link target="contact" label="Get in touch" style="primary"]
+        <!-- /wp:shortcode -->
+      </div>
+      <!-- /wp:group -->
     </div>
-    <!-- /wp:columns -->
+    <!-- /wp:group -->
   </div>
   <!-- /wp:group -->
 </footer>

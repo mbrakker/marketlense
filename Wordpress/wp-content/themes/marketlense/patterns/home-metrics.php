@@ -6,7 +6,7 @@
  * Inserter: yes
  */
 ?>
-<!-- wp:group {"className":"ml-home-section ml-home-metrics-shell reveal","layout":{"type":"constrained"}} -->
+<!-- wp:group {"className":"ml-home-section ml-home-metrics-shell reveal","layout":{"type":"default"}} -->
 <div class="wp-block-group ml-home-section ml-home-metrics-shell reveal">
   <!-- wp:shortcode -->
   [ml_home_metrics]
