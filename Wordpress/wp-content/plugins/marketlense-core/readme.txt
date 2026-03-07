@@ -4,7 +4,7 @@ Tags: reports, custom-post-type, taxonomy, api, editorial
 Requires at least: 6.6
 Tested up to: 6.6
 Requires PHP: 8.2
-Stable tag: 1.2.2
+Stable tag: 1.2.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -16,7 +16,12 @@ Market Lense Core provides the WordPress data model required by the Market Lense
 
 * Custom post type: `ml_report`
 * Taxonomies: native `category` support for report topics and `ml_publisher`
-* Publisher term homepage metadata: `ml_publisher_homepage`
+* Publisher term profile metadata:
+  * `ml_publisher_homepage`
+  * `ml_publisher_insights_url`
+  * `ml_publisher_icon_source`
+  * `ml_publisher_notion_page_id`
+  * `ml_publisher_notion_page_url`
 * REST exposure for the CPT, native categories, publisher taxonomy, and core report metadata
 * Metadata synchronization from rendered digest content (`ml_file_id`, publisher, time period, region)
 * Publisher projection from digest metadata and taxonomy panels
@@ -30,6 +35,7 @@ Market Lense Core provides the WordPress data model required by the Market Lense
   * `[ml_publisher_authority]`
   * `[ml_topics_directory]`
   * `[ml_publishers_directory]`
+  * `[ml_publisher_profile]`
 
 This plugin is intended to be used together with the `marketlense` block theme.
 
@@ -41,6 +47,22 @@ This plugin is intended to be used together with the `marketlense` block theme.
 4. Confirm that `/wp-json/wp/v2/ml_report` is reachable.
 
 == Changelog ==
+
+= 1.2.6 =
+* Refined the custom Publishers manager layout in WP Admin so the editor form, long icon source values, and action links stay inside their panels and remain readable on narrower screens.
+
+= 1.2.5 =
+* Replaced the fragile native `edit-tags.php` publisher admin path with a dedicated Publishers manager under `Market Lense Reports`.
+* Redirects the old `edit-tags.php?taxonomy=ml_publisher&post_type=ml_report` URL into the custom manager so the Reports menu no longer dead-ends on hosts that block the native taxonomy screen.
+
+= 1.2.4 =
+* Fixed the publisher admin taxonomy screen capability mapping so report editors can open and manage publisher terms without the category-capability mismatch.
+* Fixed the publishers directory to include synced publisher terms even when they do not yet have published reports.
+* Added publisher logo fallbacks and sync-time icon inlining for remote/private sources so broken image boxes no longer appear on publisher archive pages.
+
+= 1.2.3 =
+* Added full publisher profile term metadata for Notion-driven homepage, insights, icon, and source-page sync.
+* Added `[ml_publisher_profile]` for publisher archive pages and trimmed directory-card rendering for longer publisher descriptions.
 
 = 1.2.2 =
 * Fixed publisher/time period/geography extraction for digest HTML that stores metadata in hero subtitle rows instead of the older meta panel markup.

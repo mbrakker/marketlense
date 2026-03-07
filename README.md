@@ -102,8 +102,17 @@ The WordPress subproject now uses a consultancy-style block theme with:
 - a homepage `Signal of the moment` card that rotates a full-text report key-data insight with direct report attribution
 - shortcode-driven premium homepage latest-report cards instead of the older Query-block grid
 - a richer `[ml_report_browser]` archive/search/category/publisher experience
+- imported publisher profile support from Notion (`[ml_publisher_profile]`, publisher insights/homepage/icon term metadata, and `Wordpress/config/publisher-profiles.json`)
 - redesigned trust and conversion pages (`About`, `Methodology`, `Contact`, `Submit a Report`)
 - automatic backfill of legacy report publisher/meta projections during plugin upgrade/runtime so homepage authority surfaces recover without manual post edits
+
+To sync publisher directory/profile content from the Notion `REPORT SOURCES` workspace snapshot into WordPress term pages, run:
+
+```bash
+bash Wordpress/scripts/sync-publisher-profiles.sh
+```
+
+The sync reads `Wordpress/config/publisher-profiles.json` and updates each `ml_publisher` term with its Notion-derived homepage, self-presentation text, insights link(s), icon source, and source page identifiers.
 
 Use this root README for pipeline architecture and CLI usage; use the WordPress subproject README for all theme/plugin operations.
 

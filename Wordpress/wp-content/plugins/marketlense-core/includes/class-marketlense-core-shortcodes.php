@@ -28,6 +28,7 @@ final class Shortcodes
         'ml_latest_reports' => 'render_latest_reports',
         'ml_topics_directory' => 'render_topics_directory',
         'ml_publishers_directory' => 'render_publishers_directory',
+        'ml_publisher_profile' => 'render_publisher_profile',
         'ml_home_metrics' => 'render_home_metrics',
         'ml_hero_snapshot' => 'render_hero_snapshot',
         'ml_featured_digest' => 'render_featured_digest',
@@ -893,7 +894,7 @@ final class Shortcodes
      */
     public function render_publishers_directory(): string
     {
-        $terms = $this->stats->scoped_terms(Taxonomies::PUBLISHER_TAXONOMY, 300, false);
+        $terms = $this->stats->all_terms(Taxonomies::PUBLISHER_TAXONOMY, 300);
         if ($terms === []) {
             return '<p>' . esc_html__('No publishers are available yet.', 'marketlense-core') . '</p>';
         }
@@ -905,6 +906,10 @@ final class Shortcodes
                 <?php
                 $archive_link = get_term_link($term);
                 $homepage = (string) get_term_meta($term->term_id, Taxonomies::PUBLISHER_HOMEPAGE_META, true);
+                $insights_links = $this->publisher_external_urls(
+                    (string) get_term_meta($term->term_id, Taxonomies::PUBLISHER_INSIGHTS_META, true)
+                );
+                $description = $this->publisher_description_excerpt($term->description);
                 ?>
                 <article class="ml-directory-card">
                     <h3>
@@ -919,8 +924,8 @@ final class Shortcodes
                     <p class="ml-directory-count">
                         <?php echo esc_html(sprintf(_n('%d report', '%d reports', (int) $term->count, 'marketlense-core'), (int) $term->count)); ?>
                     </p>
-                    <?php if ($term->description !== '') : ?>
-                        <p><?php echo esc_html($term->description); ?></p>
+                    <?php if ($description !== '') : ?>
+                        <p class="ml-directory-description"><?php echo esc_html($description); ?></p>
                     <?php endif; ?>
                     <div class="ml-directory-actions">
                         <?php if (! is_wp_error($archive_link)) : ?>
@@ -933,9 +938,78 @@ final class Shortcodes
                                 <?php esc_html_e('Publisher homepage', 'marketlense-core'); ?>
                             </a>
                         <?php endif; ?>
+                        <?php if ($insights_links !== []) : ?>
+                            <a class="ml-button ml-button-outline" href="<?php echo esc_url($insights_links[0]); ?>" target="_blank" rel="noopener noreferrer">
+                                <?php esc_html_e('Insights', 'marketlense-core'); ?>
+                            </a>
+                        <?php endif; ?>
                     </div>
                 </article>
             <?php endforeach; ?>
+        </section>
+        <?php
+        return (string) ob_get_clean();
+    }
+
+    /**
+     * Renders current publisher profile metadata on taxonomy archive pages.
+     */
+    public function render_publisher_profile(): string
+    {
+        if (! is_tax(Taxonomies::PUBLISHER_TAXONOMY)) {
+            return '';
+        }
+
+        $term = get_queried_object();
+        if (! ($term instanceof \WP_Term)) {
+            return '';
+        }
+
+        $homepage_links = $this->publisher_external_urls(
+            (string) get_term_meta($term->term_id, Taxonomies::PUBLISHER_HOMEPAGE_META, true)
+        );
+        $insight_links = $this->publisher_external_urls(
+            (string) get_term_meta($term->term_id, Taxonomies::PUBLISHER_INSIGHTS_META, true)
+        );
+        $icon_source = trim(
+            (string) get_term_meta($term->term_id, Taxonomies::PUBLISHER_ICON_META, true)
+        );
+
+        if ($homepage_links === [] && $insight_links === [] && $icon_source === '') {
+            return '';
+        }
+
+        ob_start();
+        ?>
+        <section class="ml-publisher-profile" aria-label="<?php esc_attr_e('Publisher profile', 'marketlense-core'); ?>">
+            <div class="ml-publisher-profile-shell">
+                <?php if ($icon_source !== '') : ?>
+                    <div class="ml-publisher-profile-icon">
+                        <?php echo $this->publisher_icon_markup($icon_source, $term->name); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                    </div>
+                <?php endif; ?>
+                <div class="ml-publisher-profile-content">
+                    <p class="ml-publisher-profile-label"><?php esc_html_e('Publisher profile', 'marketlense-core'); ?></p>
+                    <div class="ml-publisher-profile-actions">
+                        <?php if ($homepage_links !== []) : ?>
+                            <a class="ml-button ml-button-primary" href="<?php echo esc_url($homepage_links[0]); ?>" target="_blank" rel="noopener noreferrer">
+                                <?php esc_html_e('Visit homepage', 'marketlense-core'); ?>
+                            </a>
+                        <?php endif; ?>
+                        <?php foreach ($insight_links as $index => $url) : ?>
+                            <a class="ml-button ml-button-outline" href="<?php echo esc_url($url); ?>" target="_blank" rel="noopener noreferrer">
+                                <?php
+                                echo esc_html(
+                                    $index === 0
+                                        ? __('Open insights', 'marketlense-core')
+                                        : sprintf(__('Open insights %d', 'marketlense-core'), $index + 1)
+                                );
+                                ?>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
         </section>
         <?php
         return (string) ob_get_clean();
@@ -1382,6 +1456,107 @@ final class Shortcodes
     }
 
     /**
+     * @return array<int,string>
+     */
+    private function publisher_external_urls(string $value): array
+    {
+        $trimmed = trim($value);
+        if ($trimmed === '') {
+            return [];
+        }
+
+        preg_match_all(
+            '/(?i)\b(?:https?:\/\/|www\.)[^\s,]+|(?<!@)\b[a-z0-9][a-z0-9.-]+\.[a-z]{2,}(?:\/[^\s,]+)?/',
+            $trimmed,
+            $matches
+        );
+        $candidates = is_array($matches[0] ?? null) ? $matches[0] : [];
+        $urls = [];
+        foreach ($candidates as $candidate) {
+            $normalized = $this->normalize_external_url(rtrim((string) $candidate, '.,;)'));
+            if ($normalized !== '' && ! in_array($normalized, $urls, true)) {
+                $urls[] = $normalized;
+            }
+            if (count($urls) >= 3) {
+                break;
+            }
+        }
+
+        return $urls;
+    }
+
+    private function publisher_description_excerpt(string $description): string
+    {
+        $trimmed = trim(wp_strip_all_tags($description));
+        if ($trimmed === '') {
+            return '';
+        }
+
+        return wp_trim_words($trimmed, 28, '...');
+    }
+
+    private function publisher_icon_markup(string $icon_source, string $publisher_name): string
+    {
+        $trimmed = trim($icon_source);
+        if ($trimmed === '') {
+            return '';
+        }
+
+        $alt_text = sprintf(__('%s logo', 'marketlense-core'), $publisher_name);
+        $fallback = sprintf(
+            '<span class="ml-publisher-profile-monogram" aria-hidden="true">%s</span>',
+            esc_html($this->publisher_monogram($publisher_name))
+        );
+
+        if (preg_match('/^data:image\/[a-z0-9.+-]+;base64,[a-z0-9+\/=]+$/i', $trimmed) === 1) {
+            return $this->publisher_image_markup(esc_attr($trimmed), $alt_text, $fallback);
+        }
+
+        $url = $this->normalize_external_url($trimmed);
+        if ($url !== '') {
+            return $this->publisher_image_markup(esc_url($url), $alt_text, $fallback);
+        }
+
+        return sprintf(
+            '<span class="ml-publisher-profile-emoji" aria-hidden="true">%s</span>',
+            esc_html($trimmed)
+        );
+    }
+
+    private function publisher_image_markup(string $source, string $alt_text, string $fallback): string
+    {
+        return sprintf(
+            '<span class="ml-publisher-profile-icon-media"><img src="%1$s" alt="%2$s" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.parentNode.classList.add(\'is-fallback\');this.remove();" />%3$s</span>',
+            $source,
+            esc_attr($alt_text),
+            $fallback
+        );
+    }
+
+    private function publisher_monogram(string $publisher_name): string
+    {
+        $parts = preg_split('/\s+/', trim(wp_strip_all_tags($publisher_name))) ?: [];
+        $initials = '';
+
+        foreach ($parts as $part) {
+            if ($part === '') {
+                continue;
+            }
+
+            $initials .= strtoupper(substr($part, 0, 1));
+            if (strlen($initials) >= 2) {
+                break;
+            }
+        }
+
+        if ($initials !== '') {
+            return $initials;
+        }
+
+        return strtoupper(substr(trim($publisher_name), 0, 2));
+    }
+
+    /**
      * @param array<int,string> $parts
      */
     private function joined_text(array $parts): string
@@ -1454,6 +1629,32 @@ final class Shortcodes
             'terms' => home_url('/terms/'),
             default => '',
         };
+    }
+
+    private function normalize_external_url(string $value): string
+    {
+        $trimmed = trim($value);
+        if ($trimmed === '') {
+            return '';
+        }
+
+        if (preg_match('/^[a-z][a-z0-9+\-.]*:\/\//i', $trimmed) !== 1) {
+            $trimmed = 'https://' . $trimmed;
+        }
+
+        $validated = esc_url_raw($trimmed, ['https', 'http']);
+        if ($validated === '' || ! wp_http_validate_url($validated)) {
+            return '';
+        }
+
+        if (stripos($validated, 'http://') === 0) {
+            $https_candidate = 'https://' . substr($validated, 7);
+            if (wp_http_validate_url($https_candidate)) {
+                $validated = $https_candidate;
+            }
+        }
+
+        return (string) esc_url_raw($validated, ['https', 'http']);
     }
 
     private function is_current_url(string $url): bool

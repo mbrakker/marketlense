@@ -30,6 +30,7 @@ This repo does not ship a local WordPress runtime. Use an existing local or host
 Wordpress/
   config/
     publisher-homepages.json
+    publisher-profiles.json
   wp-content/
     themes/
       marketlense/
@@ -52,6 +53,7 @@ Wordpress/
     build-plugin-zip.sh
     provision-site-structure.sh
     seed-publisher-homepages.sh
+    sync-publisher-profiles.sh
     smoke-test.sh
   dist/
 ```
@@ -68,6 +70,10 @@ Primary responsibilities:
 - keeps legacy `ml_topic` taxonomy data internal only for backward compatibility; it is not a public archive/filter surface
 - Registers publisher term metadata:
   - `ml_publisher_homepage` (REST-exposed, sanitized URL)
+  - `ml_publisher_insights_url` (REST-exposed, newline-delimited external insights URLs)
+  - `ml_publisher_icon_source` (REST-exposed icon URL, data URI, or emoji source)
+  - `ml_publisher_notion_page_id`
+  - `ml_publisher_notion_page_url`
 - Registers and exposes report metadata keys:
   - `ml_file_id`
   - `ml_publisher_name`
@@ -84,6 +90,7 @@ Primary responsibilities:
   - `[ml_publisher_authority]`
   - `[ml_topics_directory]`
   - `[ml_publishers_directory]`
+  - `[ml_publisher_profile]`
 
 ## Theme Contract (`marketlense`)
 
@@ -94,13 +101,14 @@ The block theme is organized as an editorial intelligence portal:
 - Theme-driven editorial token system in `theme.json` with a constrained reading frame and wider discovery frame
 - Minimal JS only for singular report interaction parity
 
-## Provision Site IA (Pages + Navigation + Publisher Homepages)
+## Provision Site IA (Pages + Navigation + Publisher Profiles)
 
 After plugin/theme activation, provision the editorial IA:
 
 ```bash
 bash Wordpress/scripts/provision-site-structure.sh
 bash Wordpress/scripts/seed-publisher-homepages.sh
+bash Wordpress/scripts/sync-publisher-profiles.sh
 ```
 
 What `provision-site-structure.sh` does:
@@ -119,6 +127,29 @@ What `seed-publisher-homepages.sh` does:
 - Is idempotent and safe to rerun.
 - Falls back to REST (`seed-publisher-homepages-rest.py`) when `wp-cli` cannot access a local WP core.
 - In REST mode, if `marketlense-core` is installed but inactive, it auto-activates the plugin before seeding taxonomy terms.
+
+What `sync-publisher-profiles.sh` does:
+
+- Reads `Wordpress/config/publisher-profiles.json`.
+- Ensures current publisher terms exist in `ml_publisher`.
+- Upserts the full publisher profile contract onto each term:
+  - `description` from Notion `Publisher self presentation`
+  - `ml_publisher_homepage`
+  - `ml_publisher_insights_url`
+  - `ml_publisher_icon_source`
+  - `ml_publisher_notion_page_id`
+  - `ml_publisher_notion_page_url`
+- Uses REST (`sync-publisher-profiles-rest.py`) so large icon/data URI payloads and long profile descriptions can be synced safely.
+- Inlines remote publisher icons to `data:image/...` payloads when the source is fetchable, and swaps known private Notion-secure icon URLs to public equivalents before sync.
+- Is idempotent and safe to rerun after refreshing the Notion-derived JSON snapshot.
+
+`publisher-profiles.json` is generated from the Notion `REPORT SOURCES` database snapshot. It captures, per publisher:
+
+- icon source
+- publisher name
+- homepage link
+- self-presentation text
+- insights/report link
 
 ## Local Windows Workflow
 
@@ -173,6 +204,7 @@ Install order in WordPress Admin:
 3. Run IA/data provisioning from this repo:
    - `bash Wordpress/scripts/provision-site-structure.sh`
    - `bash Wordpress/scripts/seed-publisher-homepages.sh`
+   - `bash Wordpress/scripts/sync-publisher-profiles.sh`
    These scripts auto-select `wp-cli` mode when available, otherwise REST mode.
 
 ## Smoke Test
@@ -230,6 +262,8 @@ The main CI workflow runs this harness automatically after installing PHP CLI.
 ## Archive and Directory UX
 
 - `templates/archive-ml_report.html`, `templates/category.html`, `templates/taxonomy-ml_publisher.html`, and `templates/search.html` now route through the richer shortcode-based report browser instead of plain `core/query` grids.
+- `templates/taxonomy-ml_publisher.html` now renders `[ml_publisher_profile]` above the archive browser so each publisher term page can expose the imported icon, homepage CTA, and insights CTA.
+- Publisher archive/profile icon rendering now falls back to a monogram when a remote image source fails, so taxonomy pages never show a broken image box.
 - `[ml_report_browser]` now owns filtering, sort order, result summaries, active-filter chips, and the responsive archive layout for archive/search/topic/publisher views.
 - Backward compatibility: older `?ml_topic=<slug>` links remain accepted and are still mapped onto native categories in the browser surface.
 - Homepage editorial sections are still backed by shortcode-driven intelligence components where the content is computed rather than directly queryable:
@@ -244,7 +278,10 @@ The main CI workflow runs this harness automatically after installing PHP CLI.
 - Block-template compatibility: `marketlense-core` also applies its registered `ml_*` shortcodes during block rendering when template/pattern output leaves a raw shortcode string unresolved, so theme patterns built with `core/shortcode` blocks still render on the front end.
 - Legacy projection safety: on activation and on the first runtime after upgrade, `marketlense-core` backfills missing report metadata and publisher taxonomy projections for existing `ml_report` posts so publisher counts, authority sections, and latest-report cards recover without manually re-saving reports. Current parser support includes digest hero subtitle metadata rows such as `Publisher`, `Time Period`, and `Geography`, which are now used during backfill as well.
 - `templates/page-topics-directory.html` renders `[ml_topics_directory]`.
-- `templates/page-publishers-directory.html` renders `[ml_publishers_directory]` with publisher homepage CTAs.
+- `templates/page-publishers-directory.html` renders `[ml_publishers_directory]` with publisher homepage CTAs, trimmed self-presentation copy, and optional insights links.
+- The publishers directory is term-driven, so synced publishers remain visible even before they have published reports attached.
+- In WP Admin, publisher management now uses a dedicated `Market Lense Reports -> Publishers` screen instead of relying on the native taxonomy `edit-tags.php` UI.
+- That custom Publishers manager ships with page-scoped admin styling so long profile fields and action links remain readable without panel overflow.
 - `templates/category.html` routes native category archives through the same report browser, so topic archive pages stay limited to uploaded reports instead of falling back to generic site-wide category queries.
 - No dedicated `taxonomy-ml_topic.html` template is shipped; topic browsing is category-first.
 - Legacy report posts under default `post` are intentionally not migrated; new publishing remains `ml_report`-first.

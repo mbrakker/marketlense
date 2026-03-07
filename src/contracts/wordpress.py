@@ -29,6 +29,39 @@ class WordPressAuthSettings:
 
 
 @dataclass(frozen=True)
+class WordPressPublisherProfileSeed:
+    schema_version: str = field(
+        metadata={"doc": "Publisher profile seed schema version."}
+    )
+    notion_page_id: str = field(
+        metadata={"doc": "Source Notion publisher page identifier."}
+    )
+    notion_page_url: str = field(
+        metadata={"doc": "Source Notion publisher page URL."}
+    )
+    name: str = field(metadata={"doc": "Publisher display name."})
+    slug: str = field(
+        metadata={"doc": "Canonical WordPress term slug for the publisher."}
+    )
+    homepage: str = field(
+        metadata={"doc": "Normalized publisher homepage URL, if available."}
+    )
+    self_presentation: str = field(
+        metadata={"doc": "Publisher self-description copied from Notion."}
+    )
+    insights_url: str = field(
+        metadata={
+            "doc": "One or more normalized publisher insights URLs separated by newlines."
+        }
+    )
+    icon_source: str = field(
+        metadata={
+            "doc": "Publisher icon source string from Notion (URL, data URI, or emoji)."
+        }
+    )
+
+
+@dataclass(frozen=True)
 class WordPressMediaUploadRequest:
     schema_version: str = field(
         metadata={"doc": "Media upload request schema version."}

@@ -23,3 +23,7 @@ foreach ($meta_keys as $meta_key) {
 }
 
 delete_metadata('term', 0, 'ml_publisher_homepage', '', true);
+delete_metadata('term', 0, 'ml_publisher_insights_url', '', true);
+delete_metadata('term', 0, 'ml_publisher_icon_source', '', true);
+delete_metadata('term', 0, 'ml_publisher_notion_page_id', '', true);
+delete_metadata('term', 0, 'ml_publisher_notion_page_url', '', true);

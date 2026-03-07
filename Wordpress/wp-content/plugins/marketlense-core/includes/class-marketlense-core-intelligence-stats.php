@@ -135,6 +135,69 @@ final class Intelligence_Stats
     }
 
     /**
+     * Returns every term in the taxonomy while keeping counts scoped to published reports.
+     *
+     * @return array<int,\WP_Term>
+     */
+    public function all_terms(string $taxonomy, int $limit = 300): array
+    {
+        $cache_key = 'all:' . $taxonomy . ':' . $limit;
+        if (isset($this->term_cache[$cache_key])) {
+            return $this->term_cache[$cache_key];
+        }
+
+        $raw_terms = get_terms(
+            [
+                'taxonomy' => $taxonomy,
+                'hide_empty' => false,
+            ]
+        );
+
+        if (is_wp_error($raw_terms) || ! is_array($raw_terms) || $raw_terms === []) {
+            $this->term_cache[$cache_key] = [];
+
+            return [];
+        }
+
+        $count_map = [];
+        foreach ($this->count_terms_for_posts($this->published_report_ids(), $taxonomy) as $item) {
+            $term = $item['term'];
+            if ($term instanceof \WP_Term) {
+                $count_map[(int) $term->term_id] = (int) $item['count'];
+            }
+        }
+
+        usort(
+            $raw_terms,
+            static function (\WP_Term $left, \WP_Term $right) use ($count_map): int {
+                $left_count = $count_map[(int) $left->term_id] ?? 0;
+                $right_count = $count_map[(int) $right->term_id] ?? 0;
+                $count_compare = $right_count <=> $left_count;
+                if ($count_compare !== 0) {
+                    return $count_compare;
+                }
+
+                return strcasecmp($left->name, $right->name);
+            }
+        );
+
+        $terms = [];
+        foreach (array_slice($raw_terms, 0, $limit) as $term) {
+            if (! ($term instanceof \WP_Term)) {
+                continue;
+            }
+
+            $scoped_term = clone $term;
+            $scoped_term->count = $count_map[(int) $term->term_id] ?? 0;
+            $terms[] = $scoped_term;
+        }
+
+        $this->term_cache[$cache_key] = $terms;
+
+        return $terms;
+    }
+
+    /**
      * @return array<string,mixed>
      */
     public function weekly_signals(int $limit = 5): array

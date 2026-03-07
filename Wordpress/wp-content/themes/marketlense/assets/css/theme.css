@@ -3989,6 +3989,96 @@ body {
   margin-top: 1.15rem;
 }
 
+.ml-publisher-profile {
+  margin-top: 1rem;
+}
+
+.ml-publisher-profile-shell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  padding-top: 0.95rem;
+  border-top: 1px solid rgba(17, 27, 40, 0.1);
+}
+
+.ml-publisher-profile-icon {
+  display: grid;
+  place-items: center;
+  width: clamp(4.5rem, 5vw, 5.6rem);
+  height: clamp(4.5rem, 5vw, 5.6rem);
+  flex: 0 0 auto;
+  border-radius: 1.3rem;
+  border: 1px solid rgba(17, 27, 40, 0.1);
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  overflow: hidden;
+}
+
+.ml-publisher-profile-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.ml-publisher-profile-icon-media {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+.ml-publisher-profile-monogram {
+  display: none;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  font-family: "Avenir Next", "Segoe UI", Tahoma, sans-serif;
+  font-size: clamp(1.1rem, 1.8vw, 1.45rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--ml-midnight);
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0) 48%),
+    linear-gradient(145deg, rgba(209, 223, 241, 0.88), rgba(238, 244, 251, 0.94));
+}
+
+.ml-publisher-profile-icon-media.is-fallback .ml-publisher-profile-monogram {
+  display: flex;
+}
+
+.ml-publisher-profile-emoji {
+  font-size: clamp(2rem, 2.6vw, 2.8rem);
+  line-height: 1;
+}
+
+.ml-publisher-profile-content {
+  display: grid;
+  gap: 0.55rem;
+  min-width: min(20rem, 100%);
+}
+
+.ml-publisher-profile-label {
+  margin: 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ml-ink-soft);
+}
+
+.ml-publisher-profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.ml-directory-description {
+  margin: 0;
+  color: var(--ml-ink-soft);
+}
+
 .ml-footer-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(9.75rem, 0.72fr) minmax(9.75rem, 0.72fr) minmax(12.5rem, 0.92fr);
