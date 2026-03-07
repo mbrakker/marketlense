@@ -9,7 +9,7 @@
 <!-- wp:group {"className":"ml-home-section ml-intelligence-signals-shell reveal","layout":{"type":"default"}} -->
 <div class="wp-block-group ml-home-section ml-intelligence-signals-shell reveal">
   <!-- wp:shortcode -->
-  [ml_intelligence_signals]
+  [ml_intelligence_signals show_publishers="0"]
   <!-- /wp:shortcode -->
 </div>
 <!-- /wp:group -->

@@ -49,6 +49,7 @@ final class Report_View_Model_Builder
         $normalized_summary = $this->normalize_text($summary);
         $insight_texts = $this->extract_insight_texts($content);
         $counts = $this->extract_content_counts($content, $insight_texts);
+        $full_key_metrics = $this->extract_full_key_metrics($insight_texts);
 
         $view_model = [
             'post_id' => $post_id,
@@ -64,7 +65,8 @@ final class Report_View_Model_Builder
             'topics_count' => $counts['topics'],
             'excerpt' => wp_trim_words($normalized_summary, 24, '...'),
             'why_it_matters' => $this->extract_first_sentence($normalized_summary),
-            'key_metrics' => $this->extract_key_metrics($insight_texts),
+            'key_metrics' => $this->summarize_key_metrics($full_key_metrics),
+            'full_key_metrics' => $full_key_metrics,
         ];
 
         $this->cache[$post_id] = $view_model;
@@ -156,7 +158,7 @@ final class Report_View_Model_Builder
      * @param list<string> $insight_texts
      * @return list<string>
      */
-    private function extract_key_metrics(array $insight_texts, int $limit = 3): array
+    private function extract_full_key_metrics(array $insight_texts, int $limit = 3): array
     {
         $metrics = [];
         foreach ($insight_texts as $text) {
@@ -164,13 +166,29 @@ final class Report_View_Model_Builder
                 continue;
             }
 
-            $metrics[] = wp_trim_words($text, 12, '...');
+            $metrics[] = $text;
             if (count($metrics) >= $limit) {
                 break;
             }
         }
 
         return array_values(array_unique($metrics));
+    }
+
+    /**
+     * @param list<string> $metrics
+     * @return list<string>
+     */
+    private function summarize_key_metrics(array $metrics, int $word_limit = 12): array
+    {
+        return array_values(
+            array_unique(
+                array_map(
+                    static fn (string $metric): string => wp_trim_words($metric, $word_limit, '...'),
+                    $metrics
+                )
+            )
+        );
     }
 
     private function extract_section_text(string $content, string $section_id): string

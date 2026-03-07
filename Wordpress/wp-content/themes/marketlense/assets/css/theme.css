@@ -3373,6 +3373,31 @@ body {
   line-height: 1.5;
 }
 
+.ml-hero-snapshot-signal {
+  margin: 0;
+  color: var(--ml-midnight);
+  font-size: clamp(1rem, 0.95rem + 0.36vw, 1.18rem);
+  line-height: 1.45;
+}
+
+.ml-hero-snapshot-source {
+  margin: 0.7rem 0 0;
+  color: var(--ml-ink-soft);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.ml-hero-snapshot-source a {
+  color: var(--ml-midnight);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.ml-hero-snapshot-source a:hover,
+.ml-hero-snapshot-source a:focus-visible {
+  text-decoration: underline;
+}
+
 .ml-hero-chip-list,
 .ml-hero-source-list {
   list-style: none;

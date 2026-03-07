@@ -79,7 +79,7 @@ Primary responsibilities:
   - `[ml_home_metrics]`
   - `[ml_hero_snapshot]`
   - `[ml_featured_digest]`
-  - `[ml_intelligence_signals]`
+  - `[ml_intelligence_signals]` (optional `show_publishers="0"` removes the `Top publishers` column)
   - `[ml_strategic_themes]`
   - `[ml_publisher_authority]`
   - `[ml_topics_directory]`
@@ -262,6 +262,7 @@ This keeps narrative copy readable while giving discovery, archive, and homepage
 The homepage hero now uses a two-column proof-led composition: the left side carries the message and core CTAs, while the right side is a live proof rail rendered by `[ml_hero_snapshot]`.
 That hero proof rail is the only homepage portal snapshot surface; the separate metrics strip is no longer rendered beneath the hero on the front page.
 Homepage sections are grouped into proof and discovery bands so the page reads as a sequence of distinct consultancy-style surfaces instead of one long stack of interchangeable cards. Those bands now use the same shell/frame model as the hero and latest-reports sections, one canonical home-frame token (`--ml-frame-home`), explicit guards against legacy `is-layout-constrained` homepage markup, and no duplicate inner gutters inside band sections.
+On the front page, the `This Week in Intelligence` pattern now renders `[ml_intelligence_signals show_publishers="0"]`, so the homepage focuses that band on topic and theme movement without the `Top publishers` column.
 The header and footer now use the same home frame width as the hero and homepage section bands, with shell padding on the outer container and an unpadded inner frame so all major surfaces align predictably across breakpoints.
 Trust and conversion templates (`About`, `Methodology`, `Contact`, `Submit a Report`) were also redesigned around the same frame so the visual language stays consistent once a visitor leaves the homepage.
 

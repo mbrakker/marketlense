@@ -99,6 +99,7 @@ The WordPress subproject now uses a consultancy-style block theme with:
 
 - shortcode-driven header/footer navigation resolution
 - a proof-led homepage hero and dynamic homepage intelligence surfaces
+- a homepage `Signal of the moment` card that rotates a full-text report key-data insight with direct report attribution
 - shortcode-driven premium homepage latest-report cards instead of the older Query-block grid
 - a richer `[ml_report_browser]` archive/search/category/publisher experience
 - redesigned trust and conversion pages (`About`, `Methodology`, `Contact`, `Submit a Report`)

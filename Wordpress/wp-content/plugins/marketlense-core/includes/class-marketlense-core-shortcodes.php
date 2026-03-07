@@ -450,8 +450,7 @@ final class Shortcodes
         $latest = $latest_post instanceof \WP_Post
             ? $this->view_model_builder->build($latest_post)
             : null;
-        $themes = $this->stats->strategic_themes(3);
-        $publishers = $this->stats->publisher_authority(4);
+        $signal = $this->signal_of_the_day();
 
         ob_start();
         ?>
@@ -495,37 +494,94 @@ final class Shortcodes
                 </div>
             <?php endif; ?>
 
-            <?php if ($themes !== [] || $publishers !== []) : ?>
+            <?php if (is_array($signal)) : ?>
                 <div class="ml-hero-snapshot-card">
-                    <?php if ($themes !== []) : ?>
-                        <p class="ml-proof-label"><?php esc_html_e('Tracking now', 'marketlense-core'); ?></p>
-                        <ul class="ml-hero-chip-list">
-                            <?php foreach ($themes as $theme) : ?>
-                                <li>
-                                    <?php if ((string) ($theme['url'] ?? '') !== '') : ?>
-                                        <a href="<?php echo esc_url((string) $theme['url']); ?>"><?php echo esc_html((string) $theme['name']); ?></a>
-                                    <?php else : ?>
-                                        <span><?php echo esc_html((string) $theme['name']); ?></span>
-                                    <?php endif; ?>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
-                    <?php endif; ?>
-
-                    <?php if ($publishers !== []) : ?>
-                        <p class="ml-proof-label"><?php esc_html_e('Leading publishers', 'marketlense-core'); ?></p>
-                        <ul class="ml-hero-source-list">
-                            <?php foreach ($publishers as $publisher) : ?>
-                                <li><?php echo esc_html((string) $publisher['name']); ?></li>
-                            <?php endforeach; ?>
-                        </ul>
-                    <?php endif; ?>
+                    <p class="ml-proof-label"><?php esc_html_e('Signal of the moment', 'marketlense-core'); ?></p>
+                    <p class="ml-hero-snapshot-signal"><?php echo esc_html((string) $signal['insight']); ?></p>
+                    <p class="ml-hero-snapshot-source">
+                        <a href="<?php echo esc_url((string) $signal['permalink']); ?>">
+                            <?php echo esc_html((string) $signal['title']); ?>
+                        </a>
+                        <?php if ((string) $signal['publisher'] !== '') : ?>
+                            <span><?php echo esc_html(' / ' . (string) $signal['publisher']); ?></span>
+                        <?php endif; ?>
+                    </p>
                 </div>
             <?php endif; ?>
         </section>
         <?php
 
         return (string) ob_get_clean();
+    }
+
+    /**
+     * @return array{insight:string,title:string,permalink:string,publisher:string}|null
+     */
+    private function signal_of_the_day(): ?array
+    {
+        $report_ids = get_posts(
+            [
+                'post_type' => Post_Type::POST_TYPE,
+                'post_status' => 'publish',
+                'fields' => 'ids',
+                'posts_per_page' => -1,
+                'no_found_rows' => true,
+                'update_post_meta_cache' => false,
+                'update_post_term_cache' => false,
+                'orderby' => 'date',
+                'order' => 'DESC',
+            ]
+        );
+
+        if (! is_array($report_ids) || $report_ids === []) {
+            return null;
+        }
+
+        $candidate_ids = array_values(
+            array_filter(
+                array_map('intval', $report_ids),
+                static fn (int $post_id): bool => $post_id > 0
+            )
+        );
+
+        if ($candidate_ids === []) {
+            return null;
+        }
+
+        shuffle($candidate_ids);
+
+        foreach ($candidate_ids as $post_id) {
+            $post = get_post($post_id);
+            if (! ($post instanceof \WP_Post) || $post->post_type !== Post_Type::POST_TYPE || $post->post_status !== 'publish') {
+                continue;
+            }
+
+            $report = $this->view_model_builder->build($post);
+            $metrics = array_values(
+                array_filter(
+                    array_map(
+                        static fn ($metric): string => trim((string) $metric),
+                        is_array($report['full_key_metrics'] ?? null) ? $report['full_key_metrics'] : []
+                    ),
+                    static fn (string $metric): bool => $metric !== ''
+                )
+            );
+
+            if ($metrics === []) {
+                continue;
+            }
+
+            $metric_index = count($metrics) > 1 ? wp_rand(0, count($metrics) - 1) : 0;
+
+            return [
+                'insight' => $metrics[$metric_index],
+                'title' => (string) ($report['title'] ?? ''),
+                'permalink' => (string) ($report['permalink'] ?? ''),
+                'publisher' => (string) ($report['publisher'] ?? ''),
+            ];
+        }
+
+        return null;
     }
 
     /**
@@ -621,13 +677,21 @@ final class Shortcodes
     /**
      * Renders the weekly intelligence signals panel.
      */
-    public function render_intelligence_signals(): string
+    public function render_intelligence_signals(array $attrs = []): string
     {
+        $atts = shortcode_atts(
+            [
+                'show_publishers' => '1',
+            ],
+            $attrs,
+            'ml_intelligence_signals'
+        );
+        $show_publishers = $this->to_bool_flag($atts['show_publishers']);
         $signals = $this->stats->weekly_signals();
         if (
             $signals['trending_topics'] === []
             && $signals['emerging_themes'] === []
-            && $signals['top_publishers'] === []
+            && (! $show_publishers || $signals['top_publishers'] === [])
         ) {
             return '';
         }
@@ -648,7 +712,9 @@ final class Shortcodes
                     <?php $this->render_signal_column(__('Trending topics', 'marketlense-core'), $signals['trending_topics'], 'ml-signal-column ml-signal-column--topics'); ?>
                     <?php $this->render_signal_column(__('Emerging themes', 'marketlense-core'), $signals['emerging_themes'], 'ml-signal-column ml-signal-column--themes'); ?>
                 </div>
-                <?php $this->render_signal_column(__('Top publishers', 'marketlense-core'), $signals['top_publishers'], 'ml-signal-column ml-signal-column--publishers'); ?>
+                <?php if ($show_publishers) : ?>
+                    <?php $this->render_signal_column(__('Top publishers', 'marketlense-core'), $signals['top_publishers'], 'ml-signal-column ml-signal-column--publishers'); ?>
+                <?php endif; ?>
             </div>
         </section>
         <?php

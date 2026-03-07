@@ -20,11 +20,12 @@ Market Lense Core provides the WordPress data model required by the Market Lense
 * REST exposure for the CPT, native categories, publisher taxonomy, and core report metadata
 * Metadata synchronization from rendered digest content (`ml_file_id`, publisher, time period, region)
 * Publisher projection from digest metadata and taxonomy panels
+* Homepage hero snapshot includes a rotating `Signal of the moment` card sourced from a random report full-text key-data insight with linked report attribution
 * Shortcodes:
   * `[ml_report_browser]` (`category` maps to native category slugs; `ml_publisher` maps to publisher taxonomy slugs; legacy `ml_topic` query params remain accepted)
   * `[ml_home_metrics]`
   * `[ml_featured_digest]`
-  * `[ml_intelligence_signals]`
+  * `[ml_intelligence_signals]` (optional `show_publishers="0"` removes the Top publishers column)
   * `[ml_strategic_themes]`
   * `[ml_publisher_authority]`
   * `[ml_topics_directory]`
