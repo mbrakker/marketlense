@@ -470,11 +470,13 @@ CI gates (see `.github/workflows/ci.yml`):
 
 See:
 
+- `CONSOLIDATED_TODO.md` (canonical backlog, including the merged ineffective-choices audit intake)
 - `docs/quality/non-regression-policy.md`
 - `docs/docpacks/pack-specs.md`
 - `docs/docpacks/prompt-authoring.md`
 - `docs/architecture/role-boundaries.md`
 - `docs/testing/integrity-rules.md`
+- `docs/quality/ineffective-choices-top50.md` (source analysis archived after merge into `CONSOLIDATED_TODO.md`)
 
 ---
 

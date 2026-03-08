@@ -1,6 +1,6 @@
 # Consolidated TODO
 
-Last compiled: 2026-02-21
+Last compiled: 2026-03-08
 
 This file combines all TODOs found in the repository (from `TODO.md`, `html_todo.md`, and `potential-TODO.md`). Items are grouped by theme. Duplicates were merged. Each task includes: title, explanation (what & why), pros & cons, and acceptance criteria.
 
@@ -445,3 +445,63 @@ Each quick-win should be documented with a short task when prioritized.
     - `tests/integration/` includes at least one integration test per service module.
     - Integration tests are explicitly marked and excluded from default CI unit run.
     - Unit tests avoid live external calls.
+
+---
+
+## 11. Merged Audit Intake: Ineffective Choices Top 50
+
+This section absorbs the 2026-03-08 low-effort/high-impact repository audit into the canonical backlog. Overlapping findings were deduplicated against existing items above; the tasks below capture the remaining gaps and name the concrete hotspots to refactor.
+
+- **Title:** Split remaining monolithic UI, config, state, and ingest modules
+  - Explanation: Extend the existing module-split backlog to cover `src/ui/streamlit_pages.py`, `src/services/config_service.py`, `src/services/state_service.py`, `src/orchestrators/ingest_orchestrator.py`, and `src/orchestrators/ingest_file_orchestrator.py`, plus their largest entrypoints such as `_render_structured_config_form`, `_render_settings_and_prompts`, `load_settings`, `run_ingest`, and `run_ingest_file`. This merges audit items 3, 8, 9, 10, 12, 14, 17, 18, 22, and 24 into actionable refactors.
+  - Pros: Lower UI and ingest regression risk, faster code review, clearer role boundaries.
+  - Cons: Requires coordinated signature cleanup and test updates across UI/orchestrator callers.
+  - Acceptance Criteria:
+    - Each target module is reduced to smaller role-consistent units with explicit helper boundaries.
+    - The named oversized functions are decomposed into shorter phase-specific helpers.
+    - Existing behavior is preserved by updated tests on the affected flows.
+
+- **Title:** Phase-split oversized generation and validation flows
+  - Explanation: Break large domain functions into typed phases for ranking, refinement, validation, and adaptation across `generate_report`, `_select_refined_candidate_items`, `generate_artifacts`, `_generate_pack`, `validate_report`, `_run_grounding_check`, `extract_taxonomy`, and `analyze_report`. This merges audit items 11, 13, 15, 19, 20, 21, 23, and 25.
+  - Pros: Easier reasoning about generator behavior, smaller failure surfaces, better contract-level testing.
+  - Cons: Refactor touches core generation paths and requires careful preservation of current outputs.
+  - Acceptance Criteria:
+    - Each listed flow is split into named phase helpers with typed intermediate contracts where appropriate.
+    - Generator logs continue to expose the same prompt and validation observability after the split.
+    - Sentinel or default-filled intermediate payloads are not introduced during refactoring.
+
+- **Title:** Replace broad exception hotspots with typed `AppError` mapping
+  - Explanation: Audit and narrow `except Exception` usage in `src/services/pdf_service.py`, `src/services/openai_service.py`, `src/ui/streamlit_pages.py`, `src/generators/report_generator.py`, `src/services/file_service.py`, `src/services/lock_service.py`, `src/services/drive_service.py`, `src/orchestrators/ingest_orchestrator.py`, `src/services/wordpress_service.py`, and `src/services/report_store_service.py`. This merges audit items 26 through 35.
+  - Pros: Better retry decisions, clearer root causes, and stronger compliance with the typed error taxonomy.
+  - Cons: Requires revisiting negative-path tests and some UI error rendering assumptions.
+  - Acceptance Criteria:
+    - Broad catches are replaced with specific exception handling or explicit typed boundary mapping.
+    - Negative-path tests assert `AppError.code`, `retryable`, and `severity` for the affected modules.
+    - Retryable errors propagate to orchestrators instead of being downgraded to generic failures.
+
+- **Title:** Replace monkeypatch-heavy tests with boundary fixtures and real-path assertions
+  - Explanation: Prioritize `tests/test_vector_pipeline_wiring.py`, `tests/test_ingest_parallel.py`, `tests/test_candidate_extraction_orchestrator.py`, `tests/test_publish_orchestrator.py`, `tests/test_openai_vector_store.py`, `tests/test_candidate_refine_selection.py`, `tests/test_wordpress_service.py`, and `tests/test_publish_generator.py` for anti-cheat cleanup. Remove `sys.path.append(...)` setup hacks, patch only external boundaries, and assert real contracts, logs, retries, and side effects. This merges audit items 36 through 45.
+  - Pros: Higher-confidence tests, better mutation resistance, less brittle fixture setup.
+  - Cons: Test rewrites take time and may initially expose real defects.
+  - Acceptance Criteria:
+    - The targeted tests stop patching private helpers or internal orchestration paths.
+    - Shared fixtures enforce external-boundary-only mocking and required structured log assertions.
+    - At least one real-path integration or pipeline test covers each hotspot currently dominated by monkeypatching.
+
+- **Title:** Decouple cross-role side effects in OpenAI, CLI, and control-flow helpers
+  - Explanation: Remove cost-ledger persistence from `src/services/openai_service.py`, centralize repeated CLI status rendering instead of scattered `console.print(...)` calls in `src/cli.py`, and extract large branch-policy helpers from `src/ui/streamlit_pages.py` and `src/generators/report_generator.py`. This merges audit items 46, 47, and 49.
+  - Pros: Cleaner service boundaries, more consistent operator UX, easier policy testing.
+  - Cons: Requires small API changes between orchestrators, services, and UI helpers.
+  - Acceptance Criteria:
+    - OpenAI service emits cost/accounting data without directly persisting ledger side effects.
+    - CLI status formatting is routed through shared rendering helpers.
+    - Major branch policies in UI/report generation are moved into named helpers with focused tests.
+
+- **Title:** Normalize config defaults and stop tracking generated operational artifacts
+  - Explanation: Move hardcoded defaults and keyword lists out of `src/services/config_service.py` into schema-backed config constants or YAML, and remove generated `logs/*.csv` and `logs/*.json` artifacts from tracked repository state unless they are intentional documented fixtures. This merges audit items 48 and 50.
+  - Pros: Safer configuration drift control, less repository noise, clearer operational hygiene.
+  - Cons: Requires migration notes for current defaults and a review of any log files currently treated as fixtures.
+  - Acceptance Criteria:
+    - Config defaults are defined in one source of truth and documented in the README.
+    - Generated log artifacts are ignored or moved to a documented fixture/snapshot location with rationale.
+    - Tests or tooling verify config defaults and log artifact policies do not regress.
