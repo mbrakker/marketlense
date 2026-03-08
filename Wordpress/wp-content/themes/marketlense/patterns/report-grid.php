@@ -10,14 +10,17 @@
 <div class="wp-block-group ml-home-section ml-latest-reports reveal">
   <!-- wp:group {"className":"ml-section-heading","layout":{"type":"flex","justifyContent":"space-between","flexWrap":"wrap","verticalAlignment":"center"}} -->
   <div class="wp-block-group ml-section-heading">
-    <!-- wp:group {"layout":{"type":"default"}} -->
-    <div class="wp-block-group">
-      <!-- wp:paragraph {"className":"ml-section-kicker"} -->
-      <p class="ml-section-kicker">Latest coverage</p>
+    <!-- wp:group {"className":"ml-section-anchor","layout":{"type":"default"}} -->
+    <div class="wp-block-group ml-section-anchor">
+      <!-- wp:paragraph {"className":"ml-section-kicker ml-section-eyebrow"} -->
+      <p class="ml-section-kicker ml-section-eyebrow">ARCHIVE</p>
       <!-- /wp:paragraph -->
-      <!-- wp:heading {"level":2} -->
-      <h2 class="wp-block-heading">Latest Reports</h2>
+      <!-- wp:heading {"level":2,"className":"ml-section-title"} -->
+      <h2 class="wp-block-heading ml-section-title">Latest Reports</h2>
       <!-- /wp:heading -->
+      <!-- wp:html -->
+      <span class="ml-section-rule" aria-hidden="true"></span>
+      <!-- /wp:html -->
     </div>
     <!-- /wp:group -->
 

@@ -51,6 +51,7 @@ Wordpress/
   scripts/
     build-theme-zip.sh
     build-plugin-zip.sh
+    build-plugin-zip.ps1
     provision-site-structure.sh
     seed-publisher-homepages.sh
     sync-publisher-profiles.sh
@@ -98,7 +99,18 @@ The block theme is organized as an editorial intelligence portal:
 
 - Full-site editing templates and template parts for header, footer, archives, trust pages, search, and ingest-first singles
 - Homepage assembled from reorderable patterns with a consultancy-style hero, proof bands, and discovery bands
-- Theme-driven editorial token system in `theme.json` with a constrained reading frame and wider discovery frame
+- Theme-driven editorial token system in `theme.json` with a constrained reading frame, wider discovery frame, and semantic enterprise-blue tokens mirrored into `assets/css/theme.css` for non-block components
+- Sans-first typography roles for display, page titles, section titles, card titles, body copy, metadata, navigation, and buttons are defined centrally in `theme.json` and reinforced in `assets/css/theme.css`
+- Homepage chapter anchors are now standardized through reusable heading classes (`.ml-section-anchor`, `.ml-section-eyebrow`, `.ml-section-title`, `.ml-section-rule`) applied in theme patterns and shortcode section headers without changing module internals
+- Homepage and shared editorial cards now opt into a reusable premium surface system via `.ml-surface-card` plus standard/compact padding variants, matching border/shadow states, and 24px inter-card gaps across featured digest, reports, signals, themes, authority, and method cards
+- The active homepage hero pattern now uses a dedicated `.ml-hero` / `.ml-hero-grid` / `.ml-hero-panel` structure with a native search block and a premium right-side panel while keeping the existing hero copy, CTA targets, and `[ml_hero_snapshot]` shortcode output
+- The weekly intelligence shortcode keeps the same data/query flow but now renders lighter single-line signal rows with `.ml-signals-column`, `.ml-signal-row`, `.ml-signal-topic`, and `.ml-signal-indicator` for a cleaner intelligence-list presentation
+- The strategic themes shortcode keeps the same taxonomy data/order but now renders premium discovery cards with `.ml-theme-item`, `.ml-theme-title`, `.ml-theme-count`, and `.ml-theme-affordance`, including full-card hover treatment and lighter surface styling
+- The publisher authority shortcode keeps the same publisher data/order but now renders institutional source cards with `.ml-authority-item`, `.ml-authority-item-copy`, `.ml-authority-name`, `.ml-authority-count`, and `.ml-publisher-profile-link`, using a stacked name/meta treatment and an internal publisher-profile CTA without changing publisher ordering, counts, or queries
+- The latest reports/report-browser cards keep the same query and ordering logic but now use a fixed archive information stack (date, period, title, publisher, metrics, excerpt, CTA) with 4:3 media crops, 18px titles, muted 12px metadata, a longer archive-specific excerpt source, an 8-line reserved TLDR area, and inline digest CTAs
+- The featured digest shortcode keeps the same featured-report selection logic but now renders a flagship editorial module with a top-right fixed badge column for insights/quotes/topics aligned to the publish/publisher/period rows, a 260px report-cover column, a stronger 30px title, a compact 3-line summary, limited topic display, and labeled insight bullets sourced from existing report data
+- The theme-owned `How It Works` pattern now uses numbered procedural cards (`.ml-process-step`, `.ml-process-title`, `.ml-process-copy`, `.ml-process-intro`) with a tuned premium surface treatment, equal-height columns, and an icon-free institutional presentation while keeping the original methodology copy intact
+- `assets/css/theme.css` now includes a final premium-polish layer: subtle node/network motifs in the hero and section rules, normalized chip/badge styling, calmer shared card/button/link transitions, and explicit `prefers-reduced-motion` handling without changing any shortcode/query logic
 - Minimal JS only for singular report interaction parity
 
 ## Provision Site IA (Pages + Navigation + Publisher Profiles)
@@ -184,6 +196,12 @@ From repo root:
 ```bash
 bash Wordpress/scripts/build-plugin-zip.sh
 bash Wordpress/scripts/build-theme-zip.sh
+```
+
+From PowerShell on Windows, you can build the plugin archive without going through `bash.exe`/WSL:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Wordpress\scripts\build-plugin-zip.ps1
 ```
 
 Build scripts use `zip` when available and automatically fall back to Python (`python`/`python3`/`py`) or local virtualenv interpreters (`../.venv/Scripts/python.exe`, `../.venv/bin/python`) when `zip` is not installed.

@@ -6,10 +6,10 @@
  * Inserter: yes
  */
 ?>
-<!-- wp:group {"align":"full","className":"ml-hero-band reveal","layout":{"type":"default"}} -->
-<div class="wp-block-group alignfull ml-hero-band reveal">
-  <!-- wp:group {"className":"ml-hero-frame","layout":{"type":"default"}} -->
-  <div class="wp-block-group ml-hero-frame">
+<!-- wp:group {"align":"full","className":"ml-hero-band ml-hero reveal","layout":{"type":"default"}} -->
+<div class="wp-block-group alignfull ml-hero-band ml-hero reveal">
+  <!-- wp:group {"className":"ml-hero-frame ml-hero-grid","layout":{"type":"default"}} -->
+  <div class="wp-block-group ml-hero-frame ml-hero-grid">
     <!-- wp:html -->
     <span class="ml-hero-decor ml-hero-decor-left" aria-hidden="true"></span>
     <!-- /wp:html -->
@@ -30,31 +30,37 @@
         <h1 class="wp-block-heading ml-hero-title has-4-xl-font-size">Executive research intelligence with traceable evidence.</h1>
         <!-- /wp:heading -->
 
-        <!-- wp:paragraph {"className":"ml-hero-copy"} -->
-        <p class="ml-hero-copy">Market Lense converts long-form market, strategy, and industry reports into concise digests built for strategy, insights, and leadership teams.</p>
-        <!-- /wp:paragraph -->
+        <!-- wp:group {"className":"ml-hero-support","layout":{"type":"default"}} -->
+        <div class="wp-block-group ml-hero-support">
+          <!-- wp:paragraph {"className":"ml-hero-copy"} -->
+          <p class="ml-hero-copy">Market Lense converts long-form market, strategy, and industry reports into concise digests built for strategy, insights, and leadership teams.</p>
+          <!-- /wp:paragraph -->
 
-        <!-- wp:paragraph {"className":"ml-hero-credibility"} -->
-        <p class="ml-hero-credibility">Validated coverage spanning OECD, Deloitte, Morningstar, Kantar, IAS, and other leading research publishers.</p>
-        <!-- /wp:paragraph -->
-
-        <!-- wp:buttons {"className":"ml-hero-actions"} -->
-        <div class="wp-block-buttons ml-hero-actions">
-          <!-- wp:button -->
-          <div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="<?php echo esc_url((string) (get_post_type_archive_link('ml_report') ?: home_url('/reports/'))); ?>">Browse reports</a></div>
-          <!-- /wp:button -->
-          <!-- wp:button {"className":"is-style-outline"} -->
-          <div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button" href="<?php echo esc_url(home_url('/methodology/')); ?>">Review methodology</a></div>
-          <!-- /wp:button -->
+          <!-- wp:paragraph {"className":"ml-hero-credibility"} -->
+          <p class="ml-hero-credibility">Validated coverage spanning OECD, Deloitte, Morningstar, Kantar, IAS, and other leading research publishers.</p>
+          <!-- /wp:paragraph -->
         </div>
-        <!-- /wp:buttons -->
+        <!-- /wp:group -->
       </div>
       <!-- /wp:group -->
+
+      <!-- wp:search {"label":"Search Market Lense","showLabel":false,"placeholder":"Search reports, topics, and publishers","buttonPosition":"button-inside","buttonUseIcon":true,"className":"ml-hero-search"} /-->
+
+      <!-- wp:buttons {"className":"ml-hero-actions"} -->
+      <div class="wp-block-buttons ml-hero-actions">
+        <!-- wp:button -->
+        <div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="<?php echo esc_url((string) (get_post_type_archive_link('ml_report') ?: home_url('/reports/'))); ?>">Browse reports</a></div>
+        <!-- /wp:button -->
+        <!-- wp:button {"className":"is-style-outline"} -->
+        <div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button" href="<?php echo esc_url(home_url('/methodology/')); ?>">Review methodology</a></div>
+        <!-- /wp:button -->
+      </div>
+      <!-- /wp:buttons -->
     </div>
     <!-- /wp:group -->
 
-    <!-- wp:group {"className":"ml-hero-proof","layout":{"type":"default"}} -->
-    <div class="wp-block-group ml-hero-proof">
+    <!-- wp:group {"className":"ml-hero-proof ml-hero-panel","layout":{"type":"default"}} -->
+    <div class="wp-block-group ml-hero-proof ml-hero-panel">
       <!-- wp:shortcode -->
       [ml_hero_snapshot]
       <!-- /wp:shortcode -->

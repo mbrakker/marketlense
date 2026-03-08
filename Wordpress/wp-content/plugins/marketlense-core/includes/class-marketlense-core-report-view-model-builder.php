@@ -15,6 +15,10 @@ if (! defined('ABSPATH')) {
 
 final class Report_View_Model_Builder
 {
+    private const FEATURED_EXCERPT_WORDS = 24;
+
+    private const ARCHIVE_EXCERPT_WORDS = 56;
+
     private Content_Parser $parser;
 
     /**
@@ -63,7 +67,9 @@ final class Report_View_Model_Builder
             'insights_count' => $counts['insights'],
             'quotes_count' => $counts['quotes'],
             'topics_count' => $counts['topics'],
-            'excerpt' => wp_trim_words($normalized_summary, 24, '...'),
+            'full_excerpt' => $normalized_summary,
+            'excerpt' => wp_trim_words($normalized_summary, self::FEATURED_EXCERPT_WORDS, '...'),
+            'archive_excerpt' => wp_trim_words($normalized_summary, self::ARCHIVE_EXCERPT_WORDS, '...'),
             'why_it_matters' => $this->extract_first_sentence($normalized_summary),
             'key_metrics' => $this->summarize_key_metrics($full_key_metrics),
             'full_key_metrics' => $full_key_metrics,

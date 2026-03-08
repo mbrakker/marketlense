@@ -99,11 +99,23 @@ The WordPress subproject now uses a consultancy-style block theme with:
 
 - shortcode-driven header/footer navigation resolution
 - a proof-led homepage hero and dynamic homepage intelligence surfaces
+- a semantic enterprise-blue token foundation in `theme.json` plus `assets/css/theme.css` (`text-primary`, `text-secondary`, `text-muted`, `brand-navy`, `signal-blue`, `support-blue`, `surface-white`, `background-cool`, `border-subtle`, `shadow-premium`) while keeping legacy slugs as compatibility aliases
+- a sans-first enterprise typography system in `theme.json` and `assets/css/theme.css` covering display/page/section/card/meta/nav/button roles without changing shortcode structure or homepage composition
+- a reusable homepage section-anchor system (`.ml-section-anchor`, `.ml-section-eyebrow`, `.ml-section-title`, `.ml-section-rule`) so editorial chapters read as distinct premium intelligence surfaces without changing inner module grids
+- a centralized premium surface-card system in `assets/css/theme.css` (`.ml-surface-card`, standard/compact padding, 12px radius, semantic border/shadow states, and 24px card gaps) applied to featured, report, signals, themes, authority, and method cards without changing shortcode logic or grid templates
+- a two-column premium homepage hero in `patterns/hero-institutional.php` with native search, stronger entry hierarchy, and a right-side intelligence panel powered by the existing hero snapshot shortcode without changing shortcode/query behavior
+- a signal-list treatment for `This Week in Intelligence` so topic rows use premium intelligence cues (`.ml-signals-column`, `.ml-signal-row`, `.ml-signal-indicator`) instead of generic badge/bar styling while preserving topic order, counts, and shortcode queries
+- a premium strategic-theme discovery treatment so taxonomy cards use lighter surfaces, stronger title/count hierarchy, and directional affordance cues without changing topic ordering or taxonomy shortcode queries
+- a publisher-authority presentation upgrade so institutional source cards use a vertically stacked name/meta hierarchy, lighter premium surfaces, and internal profile-link pills without changing publisher ordering, counts, or shortcode queries
 - a homepage `Signal of the moment` card that rotates a full-text report key-data insight with direct report attribution
-- shortcode-driven premium homepage latest-report cards instead of the older Query-block grid
+- shortcode-driven premium homepage latest-report cards with a fixed archive information stack (date, period, title, publisher, metrics, excerpt, CTA), consistent 4:3 covers, a longer archive-specific excerpt source, an 8-line reserved TLDR area, and inline digest CTAs instead of the older Query-block grid
+- a flagship Featured Digest module with a two-column editorial cover/content layout, a top-right fixed badge column for insights/quotes/topics aligned to the publish/publisher/period rows, a stronger 30px title, a compact 3-line summary, limited topic display, and labeled insight bullets sourced from existing report data without changing featured-report selection logic
+- a more procedural `How It Works` methodology band with numbered step markers, stronger step-title/support hierarchy, equal-height premium cards, and an icon-free institutional presentation without changing the underlying copy or structure
+- a restrained motif/micro-interaction layer in `assets/css/theme.css` that adds subtle node-network brand accents, unified chip styling, calmer premium hover behavior, smoother editorial links/buttons, and reduced-motion handling without changing module structure
 - a richer `[ml_report_browser]` archive/search/category/publisher experience
 - imported publisher profile support from Notion (`[ml_publisher_profile]`, publisher insights/homepage/icon term metadata, and `Wordpress/config/publisher-profiles.json`)
 - redesigned trust and conversion pages (`About`, `Methodology`, `Contact`, `Submit a Report`)
+- a native PowerShell plugin packaging script at `Wordpress/scripts/build-plugin-zip.ps1` so Windows builds do not depend on `bash.exe`/WSL
 - automatic backfill of legacy report publisher/meta projections during plugin upgrade/runtime so homepage authority surfaces recover without manual post edits
 
 To sync publisher directory/profile content from the Notion `REPORT SOURCES` workspace snapshot into WordPress term pages, run:

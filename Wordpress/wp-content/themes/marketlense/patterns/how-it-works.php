@@ -8,16 +8,19 @@
 ?>
 <!-- wp:group {"className":"ml-home-section ml-process-section reveal","layout":{"type":"default"}} -->
 <div class="wp-block-group ml-home-section ml-process-section reveal">
-  <!-- wp:group {"className":"ml-section-heading","layout":{"type":"default"}} -->
-  <div class="wp-block-group ml-section-heading">
-    <!-- wp:paragraph {"className":"ml-section-kicker"} -->
-    <p class="ml-section-kicker">Method</p>
+  <!-- wp:group {"className":"ml-section-heading ml-section-anchor","layout":{"type":"default"}} -->
+  <div class="wp-block-group ml-section-heading ml-section-anchor">
+    <!-- wp:paragraph {"className":"ml-section-kicker ml-section-eyebrow"} -->
+    <p class="ml-section-kicker ml-section-eyebrow">METHOD</p>
     <!-- /wp:paragraph -->
-    <!-- wp:heading {"level":2} -->
-    <h2 class="wp-block-heading">How It Works</h2>
+    <!-- wp:heading {"level":2,"className":"ml-section-title"} -->
+    <h2 class="wp-block-heading ml-section-title">How It Works</h2>
     <!-- /wp:heading -->
-    <!-- wp:paragraph {"className":"ml-section-note"} -->
-    <p class="ml-section-note">A light-touch editorial workflow for converting source reports into executive-ready digests.</p>
+    <!-- wp:html -->
+    <span class="ml-section-rule" aria-hidden="true"></span>
+    <!-- /wp:html -->
+    <!-- wp:paragraph {"className":"ml-section-note ml-process-intro"} -->
+    <p class="ml-section-note ml-process-intro">A light-touch editorial workflow for converting source reports into executive-ready digests.</p>
     <!-- /wp:paragraph -->
   </div>
   <!-- /wp:group -->
@@ -26,16 +29,16 @@
   <div class="wp-block-columns ml-process-grid">
     <!-- wp:column -->
     <div class="wp-block-column">
-      <!-- wp:group {"className":"ml-process-card","layout":{"type":"constrained"}} -->
-      <div class="wp-block-group ml-process-card">
-        <!-- wp:html -->
-        <svg viewBox="0 0 48 48" aria-hidden="true" class="ml-process-icon"><path d="M10 14h28M10 24h28M10 34h18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><rect x="7" y="8" width="34" height="32" rx="4" fill="none" stroke="currentColor" stroke-width="2"/></svg>
-        <!-- /wp:html -->
-        <!-- wp:heading {"level":3} -->
-        <h3 class="wp-block-heading">Extract</h3>
+      <!-- wp:group {"className":"ml-process-card ml-surface-card ml-surface-card--compact","layout":{"type":"constrained"}} -->
+      <div class="wp-block-group ml-process-card ml-surface-card ml-surface-card--compact">
+        <!-- wp:paragraph {"className":"ml-process-step"} -->
+        <p class="ml-process-step">01</p>
+        <!-- /wp:paragraph -->
+        <!-- wp:heading {"level":3,"className":"ml-process-title"} -->
+        <h3 class="wp-block-heading ml-process-title">Extract</h3>
         <!-- /wp:heading -->
-        <!-- wp:paragraph -->
-        <p>Source reports are ingested, normalized, and parsed into a consistent evidence base.</p>
+        <!-- wp:paragraph {"className":"ml-process-copy"} -->
+        <p class="ml-process-copy">Source reports are ingested, normalized, and parsed into a consistent evidence base.</p>
         <!-- /wp:paragraph -->
       </div>
       <!-- /wp:group -->
@@ -44,16 +47,16 @@
 
     <!-- wp:column -->
     <div class="wp-block-column">
-      <!-- wp:group {"className":"ml-process-card","layout":{"type":"constrained"}} -->
-      <div class="wp-block-group ml-process-card">
-        <!-- wp:html -->
-        <svg viewBox="0 0 48 48" aria-hidden="true" class="ml-process-icon"><path d="M12 12h10v10H12zM26 12h10v10H26zM12 26h10v10H12zM26 26h10v10H26z" fill="none" stroke="currentColor" stroke-width="2"/></svg>
-        <!-- /wp:html -->
-        <!-- wp:heading {"level":3} -->
-        <h3 class="wp-block-heading">Structure</h3>
+      <!-- wp:group {"className":"ml-process-card ml-surface-card ml-surface-card--compact","layout":{"type":"constrained"}} -->
+      <div class="wp-block-group ml-process-card ml-surface-card ml-surface-card--compact">
+        <!-- wp:paragraph {"className":"ml-process-step"} -->
+        <p class="ml-process-step">02</p>
+        <!-- /wp:paragraph -->
+        <!-- wp:heading {"level":3,"className":"ml-process-title"} -->
+        <h3 class="wp-block-heading ml-process-title">Structure</h3>
         <!-- /wp:heading -->
-        <!-- wp:paragraph -->
-        <p>Key findings, figures, topics, and summaries are shaped into a repeatable editorial format.</p>
+        <!-- wp:paragraph {"className":"ml-process-copy"} -->
+        <p class="ml-process-copy">Key findings, figures, topics, and summaries are shaped into a repeatable editorial format.</p>
         <!-- /wp:paragraph -->
       </div>
       <!-- /wp:group -->
@@ -62,16 +65,16 @@
 
     <!-- wp:column -->
     <div class="wp-block-column">
-      <!-- wp:group {"className":"ml-process-card","layout":{"type":"constrained"}} -->
-      <div class="wp-block-group ml-process-card">
-        <!-- wp:html -->
-        <svg viewBox="0 0 48 48" aria-hidden="true" class="ml-process-icon"><path d="M14 33l8-8 5 5 9-12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="14" cy="33" r="3" fill="currentColor"/><circle cx="22" cy="25" r="3" fill="currentColor"/><circle cx="27" cy="30" r="3" fill="currentColor"/><circle cx="36" cy="18" r="3" fill="currentColor"/></svg>
-        <!-- /wp:html -->
-        <!-- wp:heading {"level":3} -->
-        <h3 class="wp-block-heading">Evidence-link</h3>
+      <!-- wp:group {"className":"ml-process-card ml-surface-card ml-surface-card--compact","layout":{"type":"constrained"}} -->
+      <div class="wp-block-group ml-process-card ml-surface-card ml-surface-card--compact">
+        <!-- wp:paragraph {"className":"ml-process-step"} -->
+        <p class="ml-process-step">03</p>
+        <!-- /wp:paragraph -->
+        <!-- wp:heading {"level":3,"className":"ml-process-title"} -->
+        <h3 class="wp-block-heading ml-process-title">Evidence-link</h3>
         <!-- /wp:heading -->
-        <!-- wp:paragraph -->
-        <p>Claims are tied back to source context so readers can move from summary to evidence without friction.</p>
+        <!-- wp:paragraph {"className":"ml-process-copy"} -->
+        <p class="ml-process-copy">Claims are tied back to source context so readers can move from summary to evidence without friction.</p>
         <!-- /wp:paragraph -->
       </div>
       <!-- /wp:group -->

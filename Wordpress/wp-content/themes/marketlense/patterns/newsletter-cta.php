@@ -12,12 +12,19 @@
   <div class="wp-block-columns are-vertically-aligned-center">
     <!-- wp:column {"width":"70%"} -->
     <div class="wp-block-column" style="flex-basis:70%">
-      <!-- wp:paragraph {"className":"ml-section-kicker"} -->
-      <p class="ml-section-kicker">Briefing</p>
-      <!-- /wp:paragraph -->
-      <!-- wp:heading {"level":2} -->
-      <h2 class="wp-block-heading">Weekly Executive Intelligence Briefing</h2>
-      <!-- /wp:heading -->
+      <!-- wp:group {"className":"ml-section-anchor","layout":{"type":"default"}} -->
+      <div class="wp-block-group ml-section-anchor">
+        <!-- wp:paragraph {"className":"ml-section-kicker ml-section-eyebrow"} -->
+        <p class="ml-section-kicker ml-section-eyebrow">BRIEFING</p>
+        <!-- /wp:paragraph -->
+        <!-- wp:heading {"level":2,"className":"ml-section-title"} -->
+        <h2 class="wp-block-heading ml-section-title">Weekly Executive Intelligence Briefing</h2>
+        <!-- /wp:heading -->
+        <!-- wp:html -->
+        <span class="ml-section-rule" aria-hidden="true"></span>
+        <!-- /wp:html -->
+      </div>
+      <!-- /wp:group -->
       <!-- wp:list {"className":"ml-briefing-list"} -->
       <ul class="ml-briefing-list">
         <li>Newly published digests and the strongest claims worth leadership attention.</li>

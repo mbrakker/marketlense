@@ -605,22 +605,64 @@ final class Shortcodes
                 'sizes' => '(max-width: 720px) 100vw, 42rem',
             ]
         );
+        $featured_publisher = trim((string) $report['publisher']);
+        $featured_period = trim((string) $report['time_period']);
+        $featured_badges = [
+            sprintf('%02d %s', (int) $report['insights_count'], __('Insights', 'marketlense-core')),
+            sprintf('%02d %s', (int) $report['quotes_count'], __('Quotes', 'marketlense-core')),
+            sprintf('%02d %s', (int) $report['topics_count'], __('Topics', 'marketlense-core')),
+        ];
+        $featured_topics = [];
+        $topic_terms = get_the_terms($post, Taxonomies::CATEGORY_TAXONOMY);
+        if (is_array($topic_terms)) {
+            foreach ($topic_terms as $term) {
+                if (! ($term instanceof \WP_Term)) {
+                    continue;
+                }
+
+                $name = trim($term->name);
+                if ($name !== '') {
+                    $featured_topics[] = $name;
+                }
+            }
+        }
+        $featured_topics = array_values(array_unique($featured_topics));
+        $featured_topics_preview = array_slice($featured_topics, 0, 3);
+        $featured_topics_display = implode(', ', $featured_topics_preview);
+        $featured_topics_remaining = count($featured_topics) - count($featured_topics_preview);
+        if ($featured_topics_remaining > 0) {
+            $featured_topics_display .= sprintf(' +%d', $featured_topics_remaining);
+        }
+        $featured_excerpt = trim((string) ($report['full_excerpt'] ?? $report['excerpt']));
+        $featured_insights = array_values(
+            array_filter(
+                array_map(
+                    static fn ($value): string => trim((string) $value),
+                    is_array($report['full_key_metrics'] ?? null) ? $report['full_key_metrics'] : (
+                        is_array($report['key_metrics'] ?? null) ? $report['key_metrics'] : []
+                    )
+                ),
+                static fn (string $value): bool => $value !== ''
+            )
+        );
+        $featured_insights = array_slice($featured_insights, 0, 2);
 
         ob_start();
         ?>
         <section class="ml-featured-digest" aria-label="<?php esc_attr_e('Featured digest', 'marketlense-core'); ?>">
-            <div class="ml-section-heading">
-                <p class="ml-section-kicker"><?php esc_html_e('Editorial lead', 'marketlense-core'); ?></p>
+            <div class="ml-section-heading ml-section-anchor">
+                <p class="ml-section-kicker ml-section-eyebrow"><?php esc_html_e('EDITORIAL', 'marketlense-core'); ?></p>
                 <div class="ml-section-heading-row">
-                    <h2><?php esc_html_e('Featured Digest', 'marketlense-core'); ?></h2>
+                    <h2 class="ml-section-title"><?php esc_html_e('Featured Digest', 'marketlense-core'); ?></h2>
                     <a class="ml-inline-link" href="<?php echo esc_url(get_post_type_archive_link(Post_Type::POST_TYPE) ?: home_url('/reports/')); ?>">
                         <?php esc_html_e('Browse all reports', 'marketlense-core'); ?>
                         <span aria-hidden="true">&rarr;</span>
                     </a>
                 </div>
+                <span class="ml-section-rule" aria-hidden="true"></span>
             </div>
 
-            <article class="ml-featured-digest-card">
+            <article class="ml-featured-digest-card ml-surface-card ml-surface-card--standard">
                 <a class="ml-featured-media" href="<?php echo esc_url((string) $report['permalink']); ?>">
                     <?php if (is_string($thumbnail) && $thumbnail !== '') : ?>
                         <?php echo $thumbnail; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
@@ -633,36 +675,62 @@ final class Shortcodes
                     <?php endif; ?>
                 </a>
 
-                <div class="ml-featured-copy">
-                    <p class="ml-featured-meta">
-                        <?php echo esc_html($this->joined_text([(string) $report['publisher'], (string) $report['time_period'], (string) $report['date']])); ?>
-                    </p>
-                    <h3>
+                <div class="ml-featured-copy ml-featured-content">
+                    <div class="ml-featured-header">
+                        <div class="ml-featured-meta ml-featured-meta-block">
+                            <p class="ml-featured-meta-line ml-featured-meta-date">
+                                <strong><?php esc_html_e('Publish date:', 'marketlense-core'); ?></strong>
+                                <span><?php echo esc_html((string) $report['date']); ?></span>
+                            </p>
+                            <?php if ($featured_publisher !== '') : ?>
+                                <p class="ml-featured-meta-line ml-featured-meta-publisher">
+                                    <strong><?php esc_html_e('Publisher:', 'marketlense-core'); ?></strong>
+                                    <span><?php echo esc_html($featured_publisher); ?></span>
+                                </p>
+                            <?php endif; ?>
+                            <?php if ($featured_period !== '') : ?>
+                                <p class="ml-featured-meta-line ml-featured-meta-period">
+                                    <strong><?php esc_html_e('Periods covered:', 'marketlense-core'); ?></strong>
+                                    <span><?php echo esc_html($featured_period); ?></span>
+                                </p>
+                            <?php endif; ?>
+                        </div>
+
+                        <div class="ml-featured-badges" aria-label="<?php esc_attr_e('Featured digest evidence', 'marketlense-core'); ?>">
+                            <?php foreach ($featured_badges as $featured_badge) : ?>
+                                <span class="ml-featured-badge"><?php echo esc_html($featured_badge); ?></span>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    <h3 class="ml-featured-title">
                         <a href="<?php echo esc_url((string) $report['permalink']); ?>">
                             <?php echo esc_html((string) $report['title']); ?>
                         </a>
                     </h3>
 
-                    <?php if ((string) $report['excerpt'] !== '') : ?>
-                        <p class="ml-featured-excerpt"><?php echo esc_html((string) $report['excerpt']); ?></p>
+                    <?php if ($featured_excerpt !== '') : ?>
+                        <p class="ml-featured-excerpt"><?php echo esc_html($featured_excerpt); ?></p>
                     <?php endif; ?>
 
-                    <?php if (is_array($report['key_metrics']) && $report['key_metrics'] !== []) : ?>
-                        <ul class="ml-featured-metrics">
-                            <?php foreach ($report['key_metrics'] as $metric) : ?>
-                                <li><?php echo esc_html((string) $metric); ?></li>
-                            <?php endforeach; ?>
-                        </ul>
-                    <?php endif; ?>
-
-                    <?php if ((string) $report['why_it_matters'] !== '') : ?>
-                        <p class="ml-featured-why">
-                            <strong><?php esc_html_e('Why it matters:', 'marketlense-core'); ?></strong>
-                            <?php echo esc_html((string) $report['why_it_matters']); ?>
+                    <?php if ($featured_topics !== []) : ?>
+                        <p class="ml-featured-meta-line ml-featured-topics">
+                            <strong><?php esc_html_e('Topics:', 'marketlense-core'); ?></strong>
+                            <span><?php echo esc_html($featured_topics_display); ?></span>
                         </p>
                     <?php endif; ?>
 
-                    <p class="ml-report-card-link">
+                    <?php if ($featured_insights !== []) : ?>
+                        <div class="ml-featured-insights">
+                            <strong><?php esc_html_e('Insights:', 'marketlense-core'); ?></strong>
+                            <ul class="ml-featured-insights-list">
+                                <?php foreach ($featured_insights as $featured_insight) : ?>
+                                    <li><?php echo esc_html((string) $featured_insight); ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                    <?php endif; ?>
+
+                    <p class="ml-report-card-link ml-featured-link">
                         <a href="<?php echo esc_url((string) $report['permalink']); ?>">
                             <?php esc_html_e('Read digest', 'marketlense-core'); ?>
                             <span aria-hidden="true">&rarr;</span>
@@ -700,12 +768,13 @@ final class Shortcodes
         ob_start();
         ?>
         <section class="ml-intelligence-signals" aria-label="<?php esc_attr_e('This week in intelligence', 'marketlense-core'); ?>">
-            <div class="ml-section-heading">
-                <p class="ml-section-kicker"><?php esc_html_e('Signals', 'marketlense-core'); ?></p>
+            <div class="ml-section-heading ml-section-anchor">
+                <p class="ml-section-kicker ml-section-eyebrow"><?php esc_html_e('SIGNALS', 'marketlense-core'); ?></p>
                 <div class="ml-section-heading-row">
-                    <h2><?php esc_html_e('This Week in Intelligence', 'marketlense-core'); ?></h2>
+                    <h2 class="ml-section-title"><?php esc_html_e('This Week in Intelligence', 'marketlense-core'); ?></h2>
                     <p class="ml-section-note"><?php echo esc_html((string) $signals['window_label']); ?></p>
                 </div>
+                <span class="ml-section-rule" aria-hidden="true"></span>
             </div>
 
             <div class="ml-signals-layout">
@@ -745,22 +814,24 @@ final class Shortcodes
         ob_start();
         ?>
         <section class="ml-strategic-themes" aria-label="<?php esc_attr_e('Strategic themes', 'marketlense-core'); ?>">
-            <div class="ml-section-heading">
-                <p class="ml-section-kicker"><?php esc_html_e('Discovery', 'marketlense-core'); ?></p>
+            <div class="ml-section-heading ml-section-anchor">
+                <p class="ml-section-kicker ml-section-eyebrow"><?php esc_html_e('DISCOVER', 'marketlense-core'); ?></p>
                 <div class="ml-section-heading-row">
-                    <h2><?php esc_html_e('Strategic Themes', 'marketlense-core'); ?></h2>
+                    <h2 class="ml-section-title"><?php esc_html_e('Strategic Themes', 'marketlense-core'); ?></h2>
                     <a class="ml-inline-link" href="<?php echo esc_url(home_url('/topics-directory/')); ?>">
                         <?php esc_html_e('Open topics directory', 'marketlense-core'); ?>
                         <span aria-hidden="true">&rarr;</span>
                     </a>
                 </div>
+                <span class="ml-section-rule" aria-hidden="true"></span>
             </div>
 
             <div class="ml-theme-list">
                 <?php foreach ($themes as $theme) : ?>
-                    <article class="ml-theme-item">
-                        <div>
-                            <h3>
+                    <?php $theme_has_url = (string) $theme['url'] !== ''; ?>
+                    <article class="ml-theme-item ml-surface-card ml-surface-card--compact<?php echo $theme_has_url ? ' ml-theme-item--linked' : ''; ?>">
+                        <div class="ml-theme-item-copy">
+                            <h3 class="ml-theme-title">
                                 <?php if ((string) $theme['url'] !== '') : ?>
                                     <a href="<?php echo esc_url((string) $theme['url']); ?>">
                                         <?php echo esc_html((string) $theme['name']); ?>
@@ -769,9 +840,9 @@ final class Shortcodes
                                     <?php echo esc_html((string) $theme['name']); ?>
                                 <?php endif; ?>
                             </h3>
-                            <p><?php echo esc_html(sprintf(_n('%d digest', '%d digests', (int) $theme['count'], 'marketlense-core'), (int) $theme['count'])); ?></p>
+                            <p class="ml-theme-count"><?php echo esc_html(sprintf(_n('%d digest', '%d digests', (int) $theme['count'], 'marketlense-core'), (int) $theme['count'])); ?></p>
                         </div>
-                        <?php $this->render_delta_badge($theme['delta'] ?? null); ?>
+                        <span class="ml-theme-affordance" aria-hidden="true">&rarr;</span>
                     </article>
                 <?php endforeach; ?>
             </div>
@@ -803,15 +874,16 @@ final class Shortcodes
         ob_start();
         ?>
         <section class="ml-publisher-authority" aria-label="<?php esc_attr_e('Publisher authority', 'marketlense-core'); ?>">
-            <div class="ml-section-heading">
-                <p class="ml-section-kicker"><?php esc_html_e('Authority', 'marketlense-core'); ?></p>
+            <div class="ml-section-heading ml-section-anchor">
+                <p class="ml-section-kicker ml-section-eyebrow"><?php esc_html_e('AUTHORITY', 'marketlense-core'); ?></p>
                 <div class="ml-section-heading-row">
-                    <h2><?php esc_html_e('Publisher Authority', 'marketlense-core'); ?></h2>
+                    <h2 class="ml-section-title"><?php esc_html_e('Publisher Authority', 'marketlense-core'); ?></h2>
                     <a class="ml-inline-link" href="<?php echo esc_url(home_url('/publishers-directory/')); ?>">
                         <?php esc_html_e('Open publishers directory', 'marketlense-core'); ?>
                         <span aria-hidden="true">&rarr;</span>
                     </a>
                 </div>
+                <span class="ml-section-rule" aria-hidden="true"></span>
                 <p class="ml-section-note">
                     <?php esc_html_e('Track recurring institutions, consultancies, and specialist publishers shaping the intelligence agenda.', 'marketlense-core'); ?>
                 </p>
@@ -819,8 +891,8 @@ final class Shortcodes
 
             <div class="ml-authority-wall">
                 <?php foreach ($publishers as $publisher) : ?>
-                    <article class="ml-authority-item">
-                        <div class="ml-authority-name-row">
+                    <article class="ml-authority-item ml-surface-card ml-surface-card--compact">
+                        <div class="ml-authority-item-copy">
                             <?php if ((string) $publisher['url'] !== '') : ?>
                                 <a href="<?php echo esc_url((string) $publisher['url']); ?>" class="ml-authority-name">
                                     <?php echo esc_html((string) $publisher['name']); ?>
@@ -832,10 +904,10 @@ final class Shortcodes
                                 <?php echo esc_html(sprintf(_n('%d digest', '%d digests', (int) $publisher['count'], 'marketlense-core'), (int) $publisher['count'])); ?>
                             </span>
                         </div>
-                        <?php if ((string) $publisher['homepage'] !== '') : ?>
-                            <a class="ml-authority-homepage" href="<?php echo esc_url((string) $publisher['homepage']); ?>" target="_blank" rel="noopener noreferrer">
-                                <?php esc_html_e('Homepage', 'marketlense-core'); ?>
-                                <span aria-hidden="true">&nearr;</span>
+                        <?php if ((string) $publisher['url'] !== '') : ?>
+                            <a class="ml-authority-homepage ml-publisher-profile-link" href="<?php echo esc_url((string) $publisher['url']); ?>">
+                                <?php esc_html_e('View profile', 'marketlense-core'); ?>
+                                <span aria-hidden="true">&rarr;</span>
                             </a>
                         <?php endif; ?>
                     </article>
@@ -1159,8 +1231,10 @@ final class Shortcodes
                 'sizes' => '(max-width: 782px) 100vw, (max-width: 1200px) 48vw, 32vw',
             ]
         );
+        $report_period = trim((string) $report['time_period']);
+        $publisher_name = trim((string) $report['publisher']);
         ?>
-        <article class="ml-report-card">
+        <article class="ml-report-card ml-surface-card ml-surface-card--standard">
             <a class="ml-report-card-image" href="<?php echo esc_url((string) $report['permalink']); ?>">
                 <?php if (is_string($thumbnail) && $thumbnail !== '') : ?>
                     <?php echo $thumbnail; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
@@ -1173,42 +1247,52 @@ final class Shortcodes
                 <?php endif; ?>
             </a>
 
-            <p class="ml-report-card-kicker">
-                <?php echo esc_html($this->joined_text([(string) $report['date'], (string) $report['time_period']])); ?>
-            </p>
+            <div class="ml-report-card-body">
+                <p class="ml-report-card-kicker"><?php echo esc_html((string) $report['date']); ?></p>
 
-            <h3 class="ml-report-card-title">
-                <a href="<?php echo esc_url((string) $report['permalink']); ?>">
-                    <?php echo esc_html((string) $report['title']); ?>
-                </a>
-            </h3>
-
-            <p class="ml-report-card-subtitle">
-                <?php echo esc_html($this->joined_text([(string) $report['publisher'], (string) $report['geography']])); ?>
-            </p>
-
-            <ul class="ml-report-card-meta" aria-label="<?php esc_attr_e('Report highlights', 'marketlense-core'); ?>">
-                <?php if ((int) $report['insights_count'] > 0) : ?>
-                    <li><?php echo esc_html(sprintf(_n('%d insight', '%d insights', (int) $report['insights_count'], 'marketlense-core'), (int) $report['insights_count'])); ?></li>
+                <?php if ($report_period !== '') : ?>
+                    <p class="ml-report-period">
+                        <span class="ml-report-meta-label"><?php esc_html_e('Periods covered:', 'marketlense-core'); ?></span>
+                        <span class="ml-report-meta-value"><?php echo esc_html($report_period); ?></span>
+                    </p>
                 <?php endif; ?>
-                <?php if ((int) $report['quotes_count'] > 0) : ?>
-                    <li><?php echo esc_html(sprintf(_n('%d quote', '%d quotes', (int) $report['quotes_count'], 'marketlense-core'), (int) $report['quotes_count'])); ?></li>
-                <?php endif; ?>
-                <?php if ((int) $report['topics_count'] > 0) : ?>
-                    <li><?php echo esc_html(sprintf(_n('%d topic', '%d topics', (int) $report['topics_count'], 'marketlense-core'), (int) $report['topics_count'])); ?></li>
-                <?php endif; ?>
-            </ul>
 
-            <?php if ((string) $report['excerpt'] !== '') : ?>
-                <p class="ml-report-card-excerpt"><?php echo esc_html((string) $report['excerpt']); ?></p>
-            <?php endif; ?>
+                <h3 class="ml-report-card-title">
+                    <a href="<?php echo esc_url((string) $report['permalink']); ?>">
+                        <?php echo esc_html((string) $report['title']); ?>
+                    </a>
+                </h3>
 
-            <p class="ml-report-card-link">
-                <a href="<?php echo esc_url((string) $report['permalink']); ?>">
-                    <?php esc_html_e('Read digest', 'marketlense-core'); ?>
-                    <span aria-hidden="true">&rarr;</span>
-                </a>
-            </p>
+                <?php if ($publisher_name !== '') : ?>
+                    <p class="ml-report-card-subtitle ml-report-publisher">
+                        <span class="ml-report-meta-label"><?php esc_html_e('Publisher:', 'marketlense-core'); ?></span>
+                        <span class="ml-report-meta-value"><?php echo esc_html($publisher_name); ?></span>
+                    </p>
+                <?php endif; ?>
+
+                <ul class="ml-report-card-meta ml-report-card-metrics" aria-label="<?php esc_attr_e('Report highlights', 'marketlense-core'); ?>">
+                    <?php if ((int) $report['insights_count'] > 0) : ?>
+                        <li><?php echo esc_html(sprintf(_n('%d insight', '%d insights', (int) $report['insights_count'], 'marketlense-core'), (int) $report['insights_count'])); ?></li>
+                    <?php endif; ?>
+                    <?php if ((int) $report['quotes_count'] > 0) : ?>
+                        <li><?php echo esc_html(sprintf(_n('%d quote', '%d quotes', (int) $report['quotes_count'], 'marketlense-core'), (int) $report['quotes_count'])); ?></li>
+                    <?php endif; ?>
+                    <?php if ((int) $report['topics_count'] > 0) : ?>
+                        <li><?php echo esc_html(sprintf(_n('%d topic', '%d topics', (int) $report['topics_count'], 'marketlense-core'), (int) $report['topics_count'])); ?></li>
+                    <?php endif; ?>
+                </ul>
+
+                <?php if ((string) ($report['archive_excerpt'] ?? $report['excerpt']) !== '') : ?>
+                    <p class="ml-report-card-excerpt"><?php echo esc_html((string) ($report['archive_excerpt'] ?? $report['excerpt'])); ?></p>
+                <?php endif; ?>
+
+                <p class="ml-report-card-link">
+                    <a href="<?php echo esc_url((string) $report['permalink']); ?>">
+                        <?php esc_html_e('Read digest', 'marketlense-core'); ?>
+                        <span aria-hidden="true">&rarr;</span>
+                    </a>
+                </p>
+            </div>
         </article>
         <?php
     }
@@ -1219,25 +1303,27 @@ final class Shortcodes
     private function render_signal_column(string $title, array $items, string $class_name = 'ml-signal-column'): void
     {
         ?>
-        <section class="<?php echo esc_attr($class_name); ?>">
-            <h3><?php echo esc_html($title); ?></h3>
+        <section class="<?php echo esc_attr(trim($class_name . ' ml-signals-column ml-surface-card ml-surface-card--compact')); ?>">
+            <h3 class="ml-signals-column-title"><?php echo esc_html($title); ?></h3>
             <?php if ($items === []) : ?>
                 <p class="ml-signal-empty"><?php esc_html_e('No recent movement yet.', 'marketlense-core'); ?></p>
             <?php else : ?>
                 <ul class="ml-signal-list">
                     <?php foreach ($items as $item) : ?>
-                        <li class="ml-signal-item">
+                        <li class="ml-signal-item ml-signal-row">
                             <div class="ml-signal-item-main">
                                 <?php if ((string) $item['url'] !== '') : ?>
-                                    <a href="<?php echo esc_url((string) $item['url']); ?>">
+                                    <a class="ml-signal-topic" href="<?php echo esc_url((string) $item['url']); ?>">
                                         <?php echo esc_html((string) $item['name']); ?>
                                     </a>
                                 <?php else : ?>
-                                    <span><?php echo esc_html((string) $item['name']); ?></span>
+                                    <span class="ml-signal-topic"><?php echo esc_html((string) $item['name']); ?></span>
                                 <?php endif; ?>
-                                <span class="ml-signal-count"><?php echo esc_html((string) $item['count']); ?></span>
                             </div>
-                            <?php $this->render_delta_badge($item['delta'] ?? null); ?>
+                            <span class="ml-signal-indicator">
+                                <?php $this->render_delta_badge($item['delta'] ?? null); ?>
+                                <span class="ml-signal-count"><?php echo esc_html((string) $item['count']); ?></span>
+                            </span>
                         </li>
                     <?php endforeach; ?>
                 </ul>
@@ -1256,12 +1342,9 @@ final class Shortcodes
         }
 
         $class_name = $delta > 0 ? 'is-up' : 'is-down';
-        $symbol = $delta > 0 ? '+' : '-';
+        $symbol = $delta > 0 ? "\u{25B2}" : "\u{2022}";
         ?>
-        <span class="ml-delta-badge <?php echo esc_attr($class_name); ?>">
-            <span aria-hidden="true"><?php echo esc_html($symbol); ?></span>
-            <?php echo esc_html((string) abs($delta)); ?>
-        </span>
+        <span class="ml-delta-badge ml-signal-trend <?php echo esc_attr($class_name); ?>" aria-hidden="true"><?php echo esc_html($symbol); ?></span>
         <?php
     }
 
