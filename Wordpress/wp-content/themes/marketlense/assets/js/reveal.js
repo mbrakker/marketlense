@@ -36,6 +36,7 @@
     sections.forEach((section) => section.classList.add("reveal-auto"));
 
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const isCompactViewport = window.matchMedia("(max-width: 782px)").matches;
 
     if (prefersReducedMotion || !("IntersectionObserver" in window)) {
       sections.forEach((section) => section.classList.add("is-visible"));
@@ -54,8 +55,8 @@
         });
       },
       {
-        threshold: 0.18,
-        rootMargin: "0px 0px -6% 0px",
+        threshold: isCompactViewport ? 0.06 : 0.18,
+        rootMargin: isCompactViewport ? "0px 0px -2% 0px" : "0px 0px -6% 0px",
       }
     );
 

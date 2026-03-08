@@ -29,10 +29,10 @@
   <div class="wp-block-columns ml-process-grid">
     <!-- wp:column -->
     <div class="wp-block-column">
-      <!-- wp:group {"className":"ml-process-card ml-surface-card ml-surface-card--compact","layout":{"type":"constrained"}} -->
-      <div class="wp-block-group ml-process-card ml-surface-card ml-surface-card--compact">
-        <!-- wp:paragraph {"className":"ml-process-step"} -->
-        <p class="ml-process-step">01</p>
+      <!-- wp:group {"className":"ml-process-card ml-surface-card ml-surface-card--compact ml-card","layout":{"type":"constrained"}} -->
+      <div class="wp-block-group ml-process-card ml-surface-card ml-surface-card--compact ml-card">
+        <!-- wp:paragraph {"className":"ml-process-step ml-chip"} -->
+        <p class="ml-process-step ml-chip">01</p>
         <!-- /wp:paragraph -->
         <!-- wp:heading {"level":3,"className":"ml-process-title"} -->
         <h3 class="wp-block-heading ml-process-title">Extract</h3>
@@ -47,10 +47,10 @@
 
     <!-- wp:column -->
     <div class="wp-block-column">
-      <!-- wp:group {"className":"ml-process-card ml-surface-card ml-surface-card--compact","layout":{"type":"constrained"}} -->
-      <div class="wp-block-group ml-process-card ml-surface-card ml-surface-card--compact">
-        <!-- wp:paragraph {"className":"ml-process-step"} -->
-        <p class="ml-process-step">02</p>
+      <!-- wp:group {"className":"ml-process-card ml-surface-card ml-surface-card--compact ml-card","layout":{"type":"constrained"}} -->
+      <div class="wp-block-group ml-process-card ml-surface-card ml-surface-card--compact ml-card">
+        <!-- wp:paragraph {"className":"ml-process-step ml-chip"} -->
+        <p class="ml-process-step ml-chip">02</p>
         <!-- /wp:paragraph -->
         <!-- wp:heading {"level":3,"className":"ml-process-title"} -->
         <h3 class="wp-block-heading ml-process-title">Structure</h3>
@@ -65,10 +65,10 @@
 
     <!-- wp:column -->
     <div class="wp-block-column">
-      <!-- wp:group {"className":"ml-process-card ml-surface-card ml-surface-card--compact","layout":{"type":"constrained"}} -->
-      <div class="wp-block-group ml-process-card ml-surface-card ml-surface-card--compact">
-        <!-- wp:paragraph {"className":"ml-process-step"} -->
-        <p class="ml-process-step">03</p>
+      <!-- wp:group {"className":"ml-process-card ml-surface-card ml-surface-card--compact ml-card","layout":{"type":"constrained"}} -->
+      <div class="wp-block-group ml-process-card ml-surface-card ml-surface-card--compact ml-card">
+        <!-- wp:paragraph {"className":"ml-process-step ml-chip"} -->
+        <p class="ml-process-step ml-chip">03</p>
         <!-- /wp:paragraph -->
         <!-- wp:heading {"level":3,"className":"ml-process-title"} -->
         <h3 class="wp-block-heading ml-process-title">Evidence-link</h3>

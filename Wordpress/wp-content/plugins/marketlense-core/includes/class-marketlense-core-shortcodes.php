@@ -656,13 +656,13 @@ final class Shortcodes
                     <h2 class="ml-section-title"><?php esc_html_e('Featured Digest', 'marketlense-core'); ?></h2>
                     <a class="ml-inline-link" href="<?php echo esc_url(get_post_type_archive_link(Post_Type::POST_TYPE) ?: home_url('/reports/')); ?>">
                         <?php esc_html_e('Browse all reports', 'marketlense-core'); ?>
-                        <span aria-hidden="true">&rarr;</span>
+                        <span class="ml-link-arrow" aria-hidden="true">&rarr;</span>
                     </a>
                 </div>
                 <span class="ml-section-rule" aria-hidden="true"></span>
             </div>
 
-            <article class="ml-featured-digest-card ml-surface-card ml-surface-card--standard">
+            <article class="ml-featured-digest-card ml-surface-card ml-surface-card--standard ml-card">
                 <a class="ml-featured-media" href="<?php echo esc_url((string) $report['permalink']); ?>">
                     <?php if (is_string($thumbnail) && $thumbnail !== '') : ?>
                         <?php echo $thumbnail; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
@@ -698,7 +698,7 @@ final class Shortcodes
 
                         <div class="ml-featured-badges" aria-label="<?php esc_attr_e('Featured digest evidence', 'marketlense-core'); ?>">
                             <?php foreach ($featured_badges as $featured_badge) : ?>
-                                <span class="ml-featured-badge"><?php echo esc_html($featured_badge); ?></span>
+                                <span class="ml-featured-badge ml-chip"><?php echo esc_html($featured_badge); ?></span>
                             <?php endforeach; ?>
                         </div>
                     </div>
@@ -733,7 +733,7 @@ final class Shortcodes
                     <p class="ml-report-card-link ml-featured-link">
                         <a href="<?php echo esc_url((string) $report['permalink']); ?>">
                             <?php esc_html_e('Read digest', 'marketlense-core'); ?>
-                            <span aria-hidden="true">&rarr;</span>
+                            <span class="ml-link-arrow" aria-hidden="true">&rarr;</span>
                         </a>
                     </p>
                 </div>
@@ -820,7 +820,7 @@ final class Shortcodes
                     <h2 class="ml-section-title"><?php esc_html_e('Strategic Themes', 'marketlense-core'); ?></h2>
                     <a class="ml-inline-link" href="<?php echo esc_url(home_url('/topics-directory/')); ?>">
                         <?php esc_html_e('Open topics directory', 'marketlense-core'); ?>
-                        <span aria-hidden="true">&rarr;</span>
+                        <span class="ml-link-arrow" aria-hidden="true">&rarr;</span>
                     </a>
                 </div>
                 <span class="ml-section-rule" aria-hidden="true"></span>
@@ -829,7 +829,7 @@ final class Shortcodes
             <div class="ml-theme-list">
                 <?php foreach ($themes as $theme) : ?>
                     <?php $theme_has_url = (string) $theme['url'] !== ''; ?>
-                    <article class="ml-theme-item ml-surface-card ml-surface-card--compact<?php echo $theme_has_url ? ' ml-theme-item--linked' : ''; ?>">
+                    <article class="ml-theme-item ml-surface-card ml-surface-card--compact ml-card<?php echo $theme_has_url ? ' ml-theme-item--linked' : ''; ?>">
                         <div class="ml-theme-item-copy">
                             <h3 class="ml-theme-title">
                                 <?php if ((string) $theme['url'] !== '') : ?>
@@ -880,7 +880,7 @@ final class Shortcodes
                     <h2 class="ml-section-title"><?php esc_html_e('Publisher Authority', 'marketlense-core'); ?></h2>
                     <a class="ml-inline-link" href="<?php echo esc_url(home_url('/publishers-directory/')); ?>">
                         <?php esc_html_e('Open publishers directory', 'marketlense-core'); ?>
-                        <span aria-hidden="true">&rarr;</span>
+                        <span class="ml-link-arrow" aria-hidden="true">&rarr;</span>
                     </a>
                 </div>
                 <span class="ml-section-rule" aria-hidden="true"></span>
@@ -891,7 +891,7 @@ final class Shortcodes
 
             <div class="ml-authority-wall">
                 <?php foreach ($publishers as $publisher) : ?>
-                    <article class="ml-authority-item ml-surface-card ml-surface-card--compact">
+                    <article class="ml-authority-item ml-surface-card ml-surface-card--compact ml-card">
                         <div class="ml-authority-item-copy">
                             <?php if ((string) $publisher['url'] !== '') : ?>
                                 <a href="<?php echo esc_url((string) $publisher['url']); ?>" class="ml-authority-name">
@@ -905,9 +905,9 @@ final class Shortcodes
                             </span>
                         </div>
                         <?php if ((string) $publisher['url'] !== '') : ?>
-                            <a class="ml-authority-homepage ml-publisher-profile-link" href="<?php echo esc_url((string) $publisher['url']); ?>">
+                            <a class="ml-authority-homepage ml-publisher-profile-link ml-chip" href="<?php echo esc_url((string) $publisher['url']); ?>">
                                 <?php esc_html_e('View profile', 'marketlense-core'); ?>
-                                <span aria-hidden="true">&rarr;</span>
+                                <span class="ml-link-arrow" aria-hidden="true">&rarr;</span>
                             </a>
                         <?php endif; ?>
                     </article>
@@ -1118,7 +1118,7 @@ final class Shortcodes
         ob_start();
         ?>
         <div class="<?php echo esc_attr($wrapper_class); ?>">
-            <a class="wp-block-button__link wp-element-button" href="<?php echo esc_url($url); ?>">
+            <a class="wp-block-button__link wp-element-button ml-button" href="<?php echo esc_url($url); ?>">
                 <?php echo esc_html($label); ?>
             </a>
         </div>
@@ -1155,7 +1155,7 @@ final class Shortcodes
             <a href="<?php echo esc_url($url); ?>">
                 <?php echo esc_html($label); ?>
                 <?php if ($this->to_bool_flag($atts['show_arrow'])) : ?>
-                    <span aria-hidden="true">&rarr;</span>
+                    <span class="ml-link-arrow" aria-hidden="true">&rarr;</span>
                 <?php endif; ?>
             </a>
         </p>
@@ -1234,7 +1234,7 @@ final class Shortcodes
         $report_period = trim((string) $report['time_period']);
         $publisher_name = trim((string) $report['publisher']);
         ?>
-        <article class="ml-report-card ml-surface-card ml-surface-card--standard">
+        <article class="ml-report-card ml-surface-card ml-surface-card--standard ml-card">
             <a class="ml-report-card-image" href="<?php echo esc_url((string) $report['permalink']); ?>">
                 <?php if (is_string($thumbnail) && $thumbnail !== '') : ?>
                     <?php echo $thumbnail; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
@@ -1289,7 +1289,7 @@ final class Shortcodes
                 <p class="ml-report-card-link">
                     <a href="<?php echo esc_url((string) $report['permalink']); ?>">
                         <?php esc_html_e('Read digest', 'marketlense-core'); ?>
-                        <span aria-hidden="true">&rarr;</span>
+                        <span class="ml-link-arrow" aria-hidden="true">&rarr;</span>
                     </a>
                 </p>
             </div>
@@ -1303,7 +1303,7 @@ final class Shortcodes
     private function render_signal_column(string $title, array $items, string $class_name = 'ml-signal-column'): void
     {
         ?>
-        <section class="<?php echo esc_attr(trim($class_name . ' ml-signals-column ml-surface-card ml-surface-card--compact')); ?>">
+        <section class="<?php echo esc_attr(trim($class_name . ' ml-signals-column ml-surface-card ml-surface-card--compact ml-card')); ?>">
             <h3 class="ml-signals-column-title"><?php echo esc_html($title); ?></h3>
             <?php if ($items === []) : ?>
                 <p class="ml-signal-empty"><?php esc_html_e('No recent movement yet.', 'marketlense-core'); ?></p>

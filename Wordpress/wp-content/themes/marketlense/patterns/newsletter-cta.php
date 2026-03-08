@@ -6,8 +6,8 @@
  * Inserter: yes
  */
 ?>
-<!-- wp:group {"className":"ml-home-section ml-briefing-cta reveal","layout":{"type":"default"}} -->
-<div class="wp-block-group ml-home-section ml-briefing-cta reveal">
+<!-- wp:group {"className":"ml-home-section ml-briefing-cta ml-briefing-band reveal","layout":{"type":"default"}} -->
+<div class="wp-block-group ml-home-section ml-briefing-cta ml-briefing-band reveal">
   <!-- wp:columns {"verticalAlignment":"center"} -->
   <div class="wp-block-columns are-vertically-aligned-center">
     <!-- wp:column {"width":"70%"} -->
@@ -40,7 +40,7 @@
       <!-- wp:buttons {"className":"ml-briefing-actions","layout":{"type":"flex","justifyContent":"right"}} -->
       <div class="wp-block-buttons ml-briefing-actions">
         <!-- wp:button -->
-        <div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="<?php echo esc_url(home_url('/contact/')); ?>">Request access</a></div>
+        <div class="wp-block-button"><a class="wp-block-button__link wp-element-button ml-button" href="<?php echo esc_url(home_url('/contact/')); ?>">Request access</a></div>
         <!-- /wp:button -->
       </div>
       <!-- /wp:buttons -->

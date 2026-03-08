@@ -25,7 +25,7 @@
     <!-- /wp:group -->
 
     <!-- wp:paragraph {"className":"ml-inline-link"} -->
-    <p class="ml-inline-link"><a href="<?php echo esc_url((string) (get_post_type_archive_link('ml_report') ?: home_url('/reports/'))); ?>">View all reports <span aria-hidden="true">&rarr;</span></a></p>
+    <p class="ml-inline-link"><a href="<?php echo esc_url((string) (get_post_type_archive_link('ml_report') ?: home_url('/reports/'))); ?>">View all reports <span class="ml-link-arrow" aria-hidden="true">&rarr;</span></a></p>
     <!-- /wp:paragraph -->
   </div>
   <!-- /wp:group -->

@@ -4,7 +4,7 @@ Tags: reports, custom-post-type, taxonomy, api, editorial
 Requires at least: 6.6
 Tested up to: 6.6
 Requires PHP: 8.2
-Stable tag: 1.2.6
+Stable tag: 1.2.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,9 @@ This plugin is intended to be used together with the `marketlense` block theme.
 4. Confirm that `/wp-json/wp/v2/ml_report` is reachable.
 
 == Changelog ==
+
+= 1.2.7 =
+* Finalized the premium homepage/theme integration pass with release-safe visual cleanup, consistent card/chip interaction styling, and synchronized plugin/theme versioning.
 
 = 1.2.6 =
 * Refined the custom Publishers manager layout in WP Admin so the editor form, long icon source values, and action links stay inside their panels and remain readable on narrower screens.
