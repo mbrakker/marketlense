@@ -197,6 +197,7 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
 
 3. **Drive discovery**
    - `src/services/drive_service.py` lists PDF files in the target Drive folder.
+   - Discovery is recursive: PDFs in nested subfolders are included.
    - Produces `DriveFile` contracts.
    - Supports shared-drive scoping (`drive_id` + `corpora=drive`) and configurable `supportsAllDrives`/`includeItemsFromAllDrives`.
    - Metadata-only listing (`ingest.drive.list_mode=metadata`) skips names until a file is actually processed.

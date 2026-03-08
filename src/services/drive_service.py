@@ -4,7 +4,6 @@ import hashlib
 import io
 import logging
 import threading
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -108,14 +107,71 @@ def _get_drive_client(sa_path: str, ctx: RunContext):
     return client
 
 
-def _parse_rfc3339(value: Optional[str]) -> Optional[datetime]:
-    if not value:
-        return None
-    try:
-        normalized = value.replace("Z", "+00:00")
-        return datetime.fromisoformat(normalized).astimezone(timezone.utc)
-    except Exception:
-        return None
+
+def _list_files_paginated(drive, list_kwargs: dict, request: DriveListRequest, ctx: RunContext) -> list[dict]:
+    page_token: Optional[str] = None
+    items: list[dict] = []
+    while True:
+        try:
+            kwargs = dict(list_kwargs)
+            kwargs["pageToken"] = page_token
+            resp = drive.files().list(**kwargs).execute()
+        except Exception as exc:
+            logger.info(log_event(
+                ctx,
+                role="service",
+                event="drive_list_error",
+                module=logger.name,
+                fields={"folder_id": request.folder_id, "error": str(exc)},
+            ))
+            raise AppError(
+                code="drive_list_failed",
+                message="Drive list failed",
+                cause=exc,
+                retryable=True,
+                context={"folder_id": request.folder_id},
+            ) from exc
+        items.extend(resp.get("files", []))
+        page_token = resp.get("nextPageToken")
+        if not page_token:
+            break
+    return items
+
+
+def _resolve_folder_scope(drive, request: DriveListRequest, ctx: RunContext) -> list[str]:
+    folder_ids = [request.folder_id]
+    seen = {request.folder_id}
+    queue = [request.folder_id]
+    while queue:
+        current_folder_id = queue.pop(0)
+        list_kwargs = {
+            "q": f"'{current_folder_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false",
+            "fields": "files(id),nextPageToken",
+            "supportsAllDrives": request.supports_all_drives,
+            "includeItemsFromAllDrives": request.include_items_from_all_drives,
+        }
+        if request.page_size:
+            list_kwargs["pageSize"] = int(request.page_size)
+        if request.drive_id:
+            list_kwargs["driveId"] = request.drive_id
+            list_kwargs["corpora"] = "drive"
+        subfolders = _list_files_paginated(drive, list_kwargs, request, ctx)
+        for subfolder in subfolders:
+            subfolder_id = subfolder.get("id", "")
+            if not subfolder_id or subfolder_id in seen:
+                continue
+            seen.add(subfolder_id)
+            folder_ids.append(subfolder_id)
+            queue.append(subfolder_id)
+
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="drive_list_folder_scope_resolved",
+        module=logger.name,
+        fields={"root_folder_id": request.folder_id, "folder_count": len(folder_ids)},
+    ))
+    return folder_ids
 
 
 def list_pdfs(request: DriveListRequest, ctx: RunContext) -> Iterable[DriveFile]:
@@ -148,81 +204,42 @@ def list_pdfs(request: DriveListRequest, ctx: RunContext) -> Iterable[DriveFile]
             retryable=False,
         )
     drive = _get_drive_client(request.service_account_path, ctx)
-    q = f"'{request.folder_id}' in parents and mimeType='application/pdf' and trashed=false"
-    if request.modified_after:
-        q += f" and modifiedTime > '{request.modified_after}'"
+    folder_ids = _resolve_folder_scope(drive, request, ctx)
     list_mode = (request.list_mode or "full").strip().lower()
     fields = "files(id,modifiedTime,md5Checksum),nextPageToken"
     if list_mode == "full":
         fields = "files(id,name,modifiedTime,md5Checksum),nextPageToken"
-    modified_after_dt = _parse_rfc3339(request.modified_after)
-    page_token: Optional[str] = None
     total = 0
     completed = False
-    early_stop = False
     try:
-        while True:
-            try:
-                list_kwargs = {
-                    "q": q,
-                    "fields": fields,
-                    "pageToken": page_token,
-                    "supportsAllDrives": request.supports_all_drives,
-                    "includeItemsFromAllDrives": request.include_items_from_all_drives,
-                }
-                if request.page_size:
-                    list_kwargs["pageSize"] = int(request.page_size)
-                if request.order_by:
-                    list_kwargs["orderBy"] = request.order_by
-                if request.drive_id:
-                    list_kwargs["driveId"] = request.drive_id
-                    list_kwargs["corpora"] = "drive"
-                resp = drive.files().list(**list_kwargs).execute()
-            except Exception as exc:
-                logger.info(log_event(
-                    ctx,
-                    role="service",
-                    event="drive_list_error",
-                    module=logger.name,
-                    fields={"folder_id": request.folder_id, "error": str(exc)},
-                ))
-                raise AppError(
-                    code="drive_list_failed",
-                    message="Drive list failed",
-                    cause=exc,
-                    retryable=True,
-                    context={"folder_id": request.folder_id},
-                ) from exc
-            files = resp.get("files", [])
+        for folder_id in folder_ids:
+            q = f"'{folder_id}' in parents and mimeType='application/pdf' and trashed=false"
+            if request.modified_after:
+                q += f" and modifiedTime > '{request.modified_after}'"
+            list_kwargs = {
+                "q": q,
+                "fields": fields,
+                "supportsAllDrives": request.supports_all_drives,
+                "includeItemsFromAllDrives": request.include_items_from_all_drives,
+            }
+            if request.page_size:
+                list_kwargs["pageSize"] = int(request.page_size)
+            if request.order_by:
+                list_kwargs["orderBy"] = request.order_by
+            if request.drive_id:
+                list_kwargs["driveId"] = request.drive_id
+                list_kwargs["corpora"] = "drive"
+            files = _list_files_paginated(drive, list_kwargs, request, ctx)
             for f in files:
-                modified_time = f.get("modifiedTime")
-                if modified_after_dt and request.order_by and "modifiedtime desc" in request.order_by.lower():
-                    file_dt = _parse_rfc3339(modified_time)
-                    if file_dt and file_dt <= modified_after_dt:
-                        early_stop = True
-                        break
                 total += 1
                 yield DriveFile(
                     schema_version="1.0",
                     file_id=f.get("id", ""),
                     name=f.get("name"),
-                    modified_time=modified_time,
+                    modified_time=f.get("modifiedTime"),
                     md5_checksum=f.get("md5Checksum"),
                 )
-            if early_stop:
-                logger.info(log_event(
-                    ctx,
-                    role="service",
-                    event="drive_list_cutoff_reached",
-                    module=logger.name,
-                    fields={"modified_after": request.modified_after or ""},
-                ))
-                completed = True
-                break
-            page_token = resp.get("nextPageToken")
-            if not page_token:
-                completed = True
-                break
+        completed = True
     finally:
         logger.info(log_event(
             ctx,
