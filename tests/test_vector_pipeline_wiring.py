@@ -1,12 +1,9 @@
 from types import SimpleNamespace
 from pathlib import Path
-import sys
 import json
 import threading
 
 import pytest
-
-sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings

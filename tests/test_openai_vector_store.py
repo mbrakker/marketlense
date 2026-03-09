@@ -1,7 +1,6 @@
-import json
-from types import SimpleNamespace
+from __future__ import annotations
 
-import pytest
+import json
 
 from src.contracts.openai import (
     OpenAIJSONImagePromptRequest,
@@ -13,45 +12,16 @@ from src.contracts.openai import (
 )
 from src.contracts.run_context import RunContext
 from src.services import openai_service as svc
-from src.utils.errors import AppError
-
-
-class FakeResponse:
-    def __init__(self, text: str):
-        self.id = "resp_1"
-        self.output_text = text
-        self.usage = {"input_tokens": 10, "output_tokens": 20, "total_tool_calls": 2}
-
-
-class FakeResponsesAPI:
-    def __init__(self, text: str):
-        self._text = text
-
-    def create(self, **kwargs):
-        return FakeResponse(self._text)
-
-
-class FakeBadRequestError(Exception):
-    pass
-
-
-class FakeOpenAI:
-    def __init__(self, **kwargs):
-        self.responses = FakeResponsesAPI(kwargs.get("text", json.dumps({"ok": True})))
 
 
 def _ctx() -> RunContext:
     return RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
 
 
-def test_openai_response_with_vector_store_writes_ledger(tmp_path, monkeypatch):
+def test_openai_response_with_vector_store_writes_ledger(tmp_path, fake_openai) -> None:
     ledger_path = tmp_path / "ledger.jsonl"
     daily_path = tmp_path / "daily.json"
-
-    def _fake_client(**kwargs):
-        return SimpleNamespace(responses=FakeResponsesAPI(json.dumps({"result": "ok"})))
-
-    monkeypatch.setattr(svc, "OpenAI", _fake_client)
+    fake_openai.queue_response_text(json.dumps({"result": "ok"}))
     req = OpenAIResponseRequest(
         schema_version="1.0",
         system_prompt="system",
@@ -72,7 +42,9 @@ def test_openai_response_with_vector_store_writes_ledger(tmp_path, monkeypatch):
             }
         },
     )
+
     resp = svc.openai_respond_with_vector_store(req, _ctx())
+
     assert resp.text
     assert resp.parsed_json == {"result": "ok"}
     assert resp.request_id == "resp_1"
@@ -81,9 +53,14 @@ def test_openai_response_with_vector_store_writes_ledger(tmp_path, monkeypatch):
     assert daily_path.exists()
     ledger_lines = ledger_path.read_text(encoding="utf-8").strip().splitlines()
     assert ledger_lines and json.loads(ledger_lines[0])["model"] == "gpt-4.1-mini"
+    assert fake_openai.calls["responses.create"][0]["tools"][0]["vector_store_ids"] == [
+        "vs_123"
+    ]
 
 
-def test_openai_response_with_vector_store_requires_vector_store_id():
+def test_openai_response_with_vector_store_requires_vector_store_id(
+    assert_app_error,
+) -> None:
     req = OpenAIResponseRequest(
         schema_version="1.0",
         system_prompt="s",
@@ -93,16 +70,19 @@ def test_openai_response_with_vector_store_requires_vector_store_id():
         temperature=0.1,
         api_key="key",
     )
-    with pytest.raises(AppError) as exc:
+
+    try:
         svc.openai_respond_with_vector_store(req, _ctx())
-    assert exc.value.code == "vector_store_missing"
+    except Exception as err:
+        assert_app_error(err, code="vector_store_missing", retryable=False)
+    else:  # pragma: no cover
+        raise AssertionError("expected AppError")
 
 
-def test_openai_response_with_vector_store_rejects_non_json(monkeypatch):
-    def _fake_client(**kwargs):
-        return SimpleNamespace(responses=FakeResponsesAPI("not-json"))
-
-    monkeypatch.setattr(svc, "OpenAI", _fake_client)
+def test_openai_response_with_vector_store_rejects_non_json(
+    fake_openai, assert_app_error
+) -> None:
+    fake_openai.queue_response_text("not-json")
     req = OpenAIResponseRequest(
         schema_version="1.0",
         system_prompt="system",
@@ -112,18 +92,19 @@ def test_openai_response_with_vector_store_rejects_non_json(monkeypatch):
         temperature=0.1,
         api_key="key",
     )
-    with pytest.raises(AppError) as exc:
+
+    try:
         svc.openai_respond_with_vector_store(req, _ctx())
-    assert exc.value.code == "openai_response_invalid_json"
+    except Exception as err:
+        assert_app_error(err, code="openai_response_invalid_json", retryable=False)
+    else:  # pragma: no cover
+        raise AssertionError("expected AppError")
 
 
-def test_openai_response_with_vector_store_rejects_json_arrays(monkeypatch):
-    def _fake_client(**kwargs):
-        return SimpleNamespace(
-            responses=FakeResponsesAPI(json.dumps([{"result": "ok"}]))
-        )
-
-    monkeypatch.setattr(svc, "OpenAI", _fake_client)
+def test_openai_response_with_vector_store_rejects_json_arrays(
+    fake_openai, assert_app_error
+) -> None:
+    fake_openai.queue_response_text(json.dumps([{"result": "ok"}]))
     req = OpenAIResponseRequest(
         schema_version="1.0",
         system_prompt="system",
@@ -133,18 +114,17 @@ def test_openai_response_with_vector_store_rejects_json_arrays(monkeypatch):
         temperature=0.1,
         api_key="key",
     )
-    with pytest.raises(AppError) as exc:
+
+    try:
         svc.openai_respond_with_vector_store(req, _ctx())
-    assert exc.value.code == "openai_response_json_type_invalid"
+    except Exception as err:
+        assert_app_error(err, code="openai_response_json_type_invalid", retryable=False)
+    else:  # pragma: no cover
+        raise AssertionError("expected AppError")
 
 
-def test_openai_response_with_vector_store_parses_fenced_json(monkeypatch):
-    def _fake_client(**kwargs):
-        return SimpleNamespace(
-            responses=FakeResponsesAPI('```json\n{"result":"ok"}\n```')
-        )
-
-    monkeypatch.setattr(svc, "OpenAI", _fake_client)
+def test_openai_response_with_vector_store_parses_fenced_json(fake_openai) -> None:
+    fake_openai.queue_response_text('```json\n{"result":"ok"}\n```')
     req = OpenAIResponseRequest(
         schema_version="1.0",
         system_prompt="system",
@@ -154,29 +134,18 @@ def test_openai_response_with_vector_store_parses_fenced_json(monkeypatch):
         temperature=0.1,
         api_key="key",
     )
+
     result = svc.openai_respond_with_vector_store(req, _ctx())
+
     assert result.parsed_json == {"result": "ok"}
 
 
 def test_openai_chat_json_with_images_skips_known_unsupported_params(
-    tmp_path, monkeypatch
-):
-    class _Responses:
-        def __init__(self):
-            self.calls = []
-
-        def create(self, **kwargs):
-            self.calls.append(kwargs)
-            return FakeResponse(json.dumps({"results": []}))
-
-    responses = _Responses()
-
-    def _fake_client(**kwargs):
-        return SimpleNamespace(responses=responses)
-
-    monkeypatch.setattr(svc, "OpenAI", _fake_client)
+    tmp_path, fake_openai
+) -> None:
     image_path = tmp_path / "test.png"
     image_path.write_bytes(b"fake-image")
+    fake_openai.queue_response_text(json.dumps({"results": []}))
     req = OpenAIJSONImagePromptRequest(
         schema_version="1.0",
         system_prompt="return json",
@@ -194,35 +163,24 @@ def test_openai_chat_json_with_images_skips_known_unsupported_params(
 
     result = svc.openai_chat_json_with_images(req, _ctx())
 
+    call = fake_openai.calls["responses.create"][0]
     assert result.parsed_json == {"results": []}
-    assert len(responses.calls) == 1
-    assert "temperature" not in responses.calls[0]
-    assert "seed" not in responses.calls[0]
+    assert "temperature" not in call
+    assert "seed" not in call
 
 
 def test_openai_chat_json_with_images_retries_unknown_unsupported_param(
-    tmp_path, monkeypatch
-):
-    class _Responses:
-        def __init__(self):
-            self.calls = []
-
-        def create(self, **kwargs):
-            self.calls.append(kwargs)
-            if len(self.calls) == 1:
-                raise FakeBadRequestError(
-                    "Error code: 400 - {'error': {'message': \"Unsupported parameter: 'temperature' is not supported with this model.\", 'type': 'invalid_request_error', 'param': 'temperature', 'code': None}}"
-                )
-            return FakeResponse(json.dumps({"results": []}))
-
-    responses = _Responses()
-
-    def _fake_client(**kwargs):
-        return SimpleNamespace(responses=responses)
-
-    monkeypatch.setattr(svc, "OpenAI", _fake_client)
+    tmp_path, fake_openai
+) -> None:
     image_path = tmp_path / "test.png"
     image_path.write_bytes(b"fake-image")
+    fake_openai.add(
+        "responses.create",
+        Exception(
+            "Error code: 400 - {'error': {'message': \"Unsupported parameter: 'temperature' is not supported with this model.\", 'type': 'invalid_request_error', 'param': 'temperature', 'code': None}}"
+        ),
+    )
+    fake_openai.queue_response_text(json.dumps({"results": []}))
     req = OpenAIJSONImagePromptRequest(
         schema_version="1.0",
         system_prompt="return json",
@@ -240,17 +198,15 @@ def test_openai_chat_json_with_images_retries_unknown_unsupported_param(
 
     result = svc.openai_chat_json_with_images(req, _ctx())
 
+    first_call, second_call = fake_openai.calls["responses.create"]
     assert result.parsed_json == {"results": []}
-    assert len(responses.calls) == 2
-    assert "temperature" in responses.calls[0]
-    assert "temperature" not in responses.calls[1]
+    assert "temperature" in first_call
+    assert "temperature" not in second_call
 
 
-def test_openai_vector_store_create_success(monkeypatch):
-    client = SimpleNamespace(
-        vector_stores=SimpleNamespace(create=lambda **kwargs: {"id": "vs_123"}),
-    )
-    monkeypatch.setattr(svc, "OpenAI", lambda **kwargs: client)
+def test_openai_vector_store_create_success(fake_openai) -> None:
+    fake_openai.add("vector_stores.create", {"id": "vs_123"})
+
     resp = svc.openai_vector_store_create(
         OpenAIVectorStoreCreateRequest(
             schema_version="1.0",
@@ -260,16 +216,13 @@ def test_openai_vector_store_create_success(monkeypatch):
         ),
         _ctx(),
     )
+
     assert resp.vector_store_id == "vs_123"
+    assert fake_openai.calls["vector_stores.create"][0]["name"] == "report"
 
 
-def test_openai_vector_store_upload_missing_file(monkeypatch, tmp_path):
-    client = SimpleNamespace(
-        files=SimpleNamespace(create=lambda **kwargs: {"id": "file_123"})
-    )
-    monkeypatch.setattr(svc, "OpenAI", lambda **kwargs: client)
-
-    with pytest.raises(AppError) as exc:
+def test_openai_vector_store_upload_missing_file(assert_app_error, tmp_path) -> None:
+    try:
         svc.openai_vector_store_upload_file(
             OpenAIVectorStoreFileUploadRequest(
                 schema_version="1.0",
@@ -278,20 +231,21 @@ def test_openai_vector_store_upload_missing_file(monkeypatch, tmp_path):
             ),
             _ctx(),
         )
-    assert exc.value.code == "openai_file_missing"
+    except Exception as err:
+        assert_app_error(err, code="openai_file_missing", retryable=False)
+    else:  # pragma: no cover
+        raise AssertionError("expected AppError")
 
 
-def test_openai_vector_store_status_reads_dict_response(monkeypatch):
-    client = SimpleNamespace(
-        vector_stores=SimpleNamespace(
-            retrieve=lambda _vector_store_id: {
-                "status": "completed",
-                "created_at": "2026-01-07T00:00:00Z",
-                "last_error": None,
-            }
-        )
+def test_openai_vector_store_status_reads_dict_response(fake_openai) -> None:
+    fake_openai.add(
+        "vector_stores.retrieve",
+        {
+            "status": "completed",
+            "created_at": "2026-01-07T00:00:00Z",
+            "last_error": None,
+        },
     )
-    monkeypatch.setattr(svc, "OpenAI", lambda **kwargs: client)
 
     resp = svc.openai_vector_store_status(
         OpenAIVectorStoreStatusRequest(
@@ -301,15 +255,17 @@ def test_openai_vector_store_status_reads_dict_response(monkeypatch):
         ),
         _ctx(),
     )
+
     assert resp.status == "completed"
     assert resp.indexed_at_utc == "2026-01-07T00:00:00Z"
 
 
-def test_openai_vector_store_update_metadata_missing_id(monkeypatch):
-    client = SimpleNamespace(vector_stores=SimpleNamespace(update=lambda **kwargs: {}))
-    monkeypatch.setattr(svc, "OpenAI", lambda **kwargs: client)
+def test_openai_vector_store_update_metadata_missing_id(
+    fake_openai, assert_app_error
+) -> None:
+    fake_openai.add("vector_stores.update", {})
 
-    with pytest.raises(AppError) as exc:
+    try:
         svc.openai_vector_store_update_metadata(
             OpenAIVectorStoreUpdateMetadataRequest(
                 schema_version="1.0",
@@ -319,21 +275,28 @@ def test_openai_vector_store_update_metadata_missing_id(monkeypatch):
             ),
             _ctx(),
         )
-    assert exc.value.code == "openai_vector_store_update_metadata_failed"
+    except Exception as err:
+        assert_app_error(
+            err, code="openai_vector_store_update_metadata_failed", retryable=True
+        )
+    else:  # pragma: no cover
+        raise AssertionError("expected AppError")
 
 
-def test_image_path_to_data_url_defaults_png_for_unknown_extension(tmp_path):
+def test_image_path_to_data_url_defaults_png_for_unknown_extension(tmp_path) -> None:
     image_path = tmp_path / "raw-image"
     image_path.write_bytes(b"png-bytes")
+
     data_url = svc._image_path_to_data_url(str(image_path))
+
     assert data_url.startswith("data:image/png;base64,")
 
 
-def test_openai_strip_json_fence_requires_closing_fence():
+def test_openai_strip_json_fence_requires_closing_fence() -> None:
     raw = '```json\n{"key":1}\n'
     assert svc._strip_json_fence(raw) == raw.strip()
 
 
-def test_openai_strip_json_fence_strips_allowed_json_fence():
+def test_openai_strip_json_fence_strips_allowed_json_fence() -> None:
     raw = '```json\n{"key":1}\n```'
     assert svc._strip_json_fence(raw) == '{"key":1}'

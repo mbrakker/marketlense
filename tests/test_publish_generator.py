@@ -1,34 +1,30 @@
 from __future__ import annotations
 
-from types import SimpleNamespace
+from pathlib import Path
 
 from src.contracts.publish import PublishRequest
-from src.contracts.report_store import ReportMetadataGetResponse
+from src.contracts.report_store import ReportMetadataUpsertRequest
 from src.generators import publish_generator as pg
+from src.services.report_store_service import upsert_metadata
+from tests.support.fakes import FakeHttpResponse, RecordedHttpRequest
 
 
-def test_publish_html_uses_preloaded_html_without_reading_file(
-    publish_settings_factory, run_context, monkeypatch
+def test_publish_html_uses_preloaded_html_with_real_wordpress_side_effect(
+    publish_settings_factory,
+    run_context,
+    wordpress_http,
+    assert_no_defaulted_required_fields,
 ) -> None:
     settings = publish_settings_factory(validation_policy="warn")
-    html_text = "<html><head><title>Report</title></head><body>Drive fileId: file123</body></html>"
-
-    monkeypatch.setattr(
-        pg,
-        "read_text",
-        lambda req, ctx: (_ for _ in ()).throw(
-            AssertionError(
-                "publish_html should not read html_path when html_text is provided"
-            )
-        ),
+    html_text = (
+        "<html><head><title>Report</title></head>"
+        "<body>Drive fileId: file123</body></html>"
     )
-    monkeypatch.setattr(pg, "get_metadata", lambda req, ctx: None)
-    monkeypatch.setattr(
-        pg,
-        "create_post",
-        lambda req, ctx: SimpleNamespace(
-            post_id=42, link="https://example.com/post/42"
-        ),
+    wordpress_http.add_json(
+        "POST",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=201,
+        payload={"id": 42, "link": "https://example.com/post/42", "status": "publish"},
     )
 
     outcome = pg.publish_html(
@@ -42,31 +38,37 @@ def test_publish_html_uses_preloaded_html_without_reading_file(
         run_context,
     )
 
+    post_call = wordpress_http.calls_for(
+        "POST", "https://example.com/wp-json/wp/v2/ml_report"
+    )[0]
+    assert_no_defaulted_required_fields(outcome)
     assert outcome.status == "published"
     assert outcome.file_id == "file123"
     assert outcome.post_id == 42
     assert outcome.post_url == "https://example.com/post/42"
+    assert "Drive fileId: file123" in post_call.json_data["content"]
 
 
 def test_publish_html_assigns_publisher_taxonomy_terms(
-    publish_settings_factory, run_context, monkeypatch
+    publish_settings_factory,
+    run_context,
+    wordpress_http,
+    assert_no_defaulted_required_fields,
 ) -> None:
     settings = publish_settings_factory(validation_policy="warn", ssl_verify=False)
+    html_path = Path(settings.output_dir) / "report.html"
+    html_path.parent.mkdir(parents=True, exist_ok=True)
     html_text = (
         "<html><head><title>Report</title></head>"
         "<body>Drive fileId: file123</body></html>"
     )
-    captured = {}
-
-    monkeypatch.setattr(
-        pg,
-        "get_metadata",
-        lambda req, ctx: ReportMetadataGetResponse(
+    html_path.write_text(html_text, encoding="utf-8")
+    upsert_metadata(
+        ReportMetadataUpsertRequest(
             schema_version="1.1",
+            db_path=settings.reports_db,
             file_id="file123",
             title="Report",
-            created_at=1,
-            updated_at=1,
             file_name="report.pdf",
             publisher="WARC",
             taxonomy=[],
@@ -74,7 +76,7 @@ def test_publish_html_assigns_publisher_taxonomy_terms(
             region=None,
             time_period=None,
             source_url=None,
-            html_path="out/report.html",
+            html_path=str(html_path),
             md5=None,
             page_count=None,
             contents_page_number=0,
@@ -83,55 +85,67 @@ def test_publish_html_assigns_publisher_taxonomy_terms(
             vector_store_id=None,
             evidence_pack_paths={},
         ),
-    )
-    monkeypatch.setattr(
-        pg,
-        "load_category_mappings",
-        lambda req, ctx: SimpleNamespace(
-            mappings=SimpleNamespace(
-                categories=[
-                    SimpleNamespace(id="digital_payments", label="Digital Payments")
-                ]
-            )
-        ),
-    )
-    monkeypatch.setattr(
-        pg,
-        "ensure_taxonomy_terms",
-        lambda req, ctx: (
-            captured.setdefault("taxonomy_ssl", []).append(req.ssl_verify)
-            or SimpleNamespace(
-                slug_to_id=(
-                    {"digital_payments": 11}
-                    if req.taxonomy_rest_base == "categories"
-                    else {"warc": 22}
-                )
-            )
-        ),
-    )
-    monkeypatch.setattr(
-        pg, "ensure_tags", lambda req, ctx: SimpleNamespace(slug_to_id={})
+        run_context,
     )
 
-    def _create_post(req, ctx):
-        captured["request"] = req
-        return SimpleNamespace(post_id=42, link="https://example.com/post/42")
+    def _lookup_missing(_call: RecordedHttpRequest) -> FakeHttpResponse:
+        return FakeHttpResponse.from_payload(status_code=200, payload=[])
 
-    monkeypatch.setattr(pg, "create_post", _create_post)
+    def _create_term(call: RecordedHttpRequest) -> FakeHttpResponse:
+        payload = call.json_data
+        term_id = 11 if payload["slug"] == "digital_payments" else 22
+        return FakeHttpResponse.from_payload(status_code=201, payload={"id": term_id})
+
+    wordpress_http.add(
+        "GET", "https://example.com/wp-json/wp/v2/categories", _lookup_missing
+    )
+    wordpress_http.add(
+        "POST", "https://example.com/wp-json/wp/v2/categories", _create_term
+    )
+    wordpress_http.add(
+        "GET", "https://example.com/wp-json/wp/v2/ml_publisher", _lookup_missing
+    )
+    wordpress_http.add(
+        "POST", "https://example.com/wp-json/wp/v2/ml_publisher", _create_term
+    )
+    wordpress_http.add_json(
+        "POST",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=201,
+        payload={"id": 42, "link": "https://example.com/post/42", "status": "publish"},
+    )
 
     outcome = pg.publish_html(
         PublishRequest(
             schema_version="1.0",
-            html_path="out/report.html",
+            html_path=str(html_path),
             file_id=None,
-            html_text=html_text,
+            html_text=None,
         ),
         settings,
         run_context,
     )
 
+    post_call = wordpress_http.calls_for(
+        "POST", "https://example.com/wp-json/wp/v2/ml_report"
+    )[0]
+    taxonomy_calls = [
+        *wordpress_http.calls_for(
+            "GET", "https://example.com/wp-json/wp/v2/categories"
+        ),
+        *wordpress_http.calls_for(
+            "POST", "https://example.com/wp-json/wp/v2/categories"
+        ),
+        *wordpress_http.calls_for(
+            "GET", "https://example.com/wp-json/wp/v2/ml_publisher"
+        ),
+        *wordpress_http.calls_for(
+            "POST", "https://example.com/wp-json/wp/v2/ml_publisher"
+        ),
+    ]
+    assert_no_defaulted_required_fields(outcome)
     assert outcome.status == "published"
-    assert captured["request"].categories == [11]
-    assert captured["request"].taxonomy_terms == {"ml_publisher": [22]}
-    assert captured["request"].ssl_verify is False
-    assert captured["taxonomy_ssl"] == [False, False]
+    assert post_call.json_data["categories"] == [11]
+    assert post_call.json_data["ml_publisher"] == [22]
+    assert post_call.verify is False
+    assert all(call.verify is False for call in taxonomy_calls)

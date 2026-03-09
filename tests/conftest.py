@@ -11,7 +11,9 @@ from src.contracts.ingest import IngestSettings
 from src.contracts.publish import PublishSettings
 from src.contracts.run_context import RunContext
 from src.contracts.wordpress import WordPressAuthSettings
+from src.services import openai_service, wordpress_service
 from src.utils.errors import AppError
+from tests.support.fakes import FakeOpenAIBoundary, RequestsRouter
 
 
 @pytest.fixture
@@ -198,3 +200,18 @@ def idempotency_guard():
         return first, second
 
     return _guard
+
+
+@pytest.fixture
+def wordpress_http(monkeypatch: pytest.MonkeyPatch) -> RequestsRouter:
+    router = RequestsRouter()
+    monkeypatch.setattr(wordpress_service.requests, "get", router.get)
+    monkeypatch.setattr(wordpress_service.requests, "post", router.post)
+    return router
+
+
+@pytest.fixture
+def fake_openai(monkeypatch: pytest.MonkeyPatch) -> FakeOpenAIBoundary:
+    boundary = FakeOpenAIBoundary()
+    monkeypatch.setattr(openai_service, "OpenAI", boundary.client_factory)
+    return boundary

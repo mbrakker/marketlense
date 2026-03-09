@@ -1,5 +1,5 @@
 from pathlib import Path
-from types import SimpleNamespace
+from pypdf import PdfWriter
 
 from src.contracts.candidates import Candidate
 from src.contracts.ingest import IngestSettings
@@ -10,11 +10,15 @@ from src.generators import report_generator as rg
 
 
 def _ctx() -> RunContext:
-    return RunContext(schema_version="1.0", run_id="run", task_id="task", span_id="span")
+    return RunContext(
+        schema_version="1.0", run_id="run", task_id="task", span_id="span"
+    )
 
 
 def _settings(tmp_path, **overrides) -> IngestSettings:
-    cover_style_path = Path(__file__).resolve().parents[1] / "src" / "config" / "cover-styles.yaml"
+    cover_style_path = (
+        Path(__file__).resolve().parents[1] / "src" / "config" / "cover-styles.yaml"
+    )
     base = IngestSettings(
         schema_version="1.0",
         google_sa_path="sa.json",
@@ -57,18 +61,20 @@ def _candidate(
     )
 
 
-def _patch_prompts(monkeypatch):
-    prompt_set = SimpleNamespace(
-        system=SimpleNamespace(path="system.yaml", sha256="sys", text="sys"),
-        user=SimpleNamespace(path="user.yaml", sha256="usr", text="usr"),
-    )
-    monkeypatch.setattr(rg, "load_prompt_set", lambda req, ctx: prompt_set)
-    monkeypatch.setattr(rg, "render_prompt", lambda req, ctx: SimpleNamespace(text="rendered"))
+def _pdf_path(tmp_path: Path) -> str:
+    path = tmp_path / "dummy.pdf"
+    writer = PdfWriter()
+    for _ in range(10):
+        writer.add_blank_page(width=600, height=800)
+    with path.open("wb") as handle:
+        writer.write(handle)
+    return str(path)
 
 
 def test_refine_selection_adaptive_obvious_pass_skips_llm(monkeypatch, tmp_path):
-    settings = _settings(tmp_path, crop_refine_enabled=True, crop_refine_mode="adaptive")
-    _patch_prompts(monkeypatch)
+    settings = _settings(
+        tmp_path, crop_refine_enabled=True, crop_refine_mode="adaptive"
+    )
     llm_calls: list[int] = []
 
     def _fail_if_called(*args, **kwargs):
@@ -76,11 +82,6 @@ def test_refine_selection_adaptive_obvious_pass_skips_llm(monkeypatch, tmp_path)
         raise AssertionError("LLM refine should not be called for obvious pass")
 
     monkeypatch.setattr(rg, "refine_candidate_crops_service", _fail_if_called)
-    monkeypatch.setattr(
-        rg,
-        "apply_crop_refine_bbox_service",
-        lambda req, ctx: SimpleNamespace(schema_version="1.0", page=req.page, bbox=req.bbox),
-    )
 
     cand = _candidate(
         cid="table_1",
@@ -102,7 +103,7 @@ def test_refine_selection_adaptive_obvious_pass_skips_llm(monkeypatch, tmp_path)
         ranked_rows=ranked,
         ranked_candidates=[cand],
         settings=settings,
-        local_pdf_path=str(tmp_path / "dummy.pdf"),
+        local_pdf_path=_pdf_path(tmp_path),
         report_name="report",
         file_id="file",
         md5=None,
@@ -119,26 +120,11 @@ def test_refine_selection_adaptive_obvious_pass_skips_llm(monkeypatch, tmp_path)
 
 
 def test_refine_selection_adaptive_ambiguous_calls_llm(monkeypatch, tmp_path):
-    settings = _settings(tmp_path, crop_refine_enabled=True, crop_refine_mode="adaptive")
-    _patch_prompts(monkeypatch)
+    settings = _settings(
+        tmp_path, crop_refine_enabled=True, crop_refine_mode="adaptive"
+    )
     llm_calls: list[int] = []
     refined_bbox = (16.0, 18.0, 360.0, 310.0)
-
-    monkeypatch.setattr(
-        rg,
-        "render_page_for_crop_refine_service",
-        lambda req, ctx: SimpleNamespace(
-            schema_version="1.0",
-            image_path="report/crop_refine_pages/page-0.png",
-            page=req.page,
-            image_width=1200,
-            image_height=1600,
-            page_width=600.0,
-            page_height=800.0,
-            scale_x=2.0,
-            scale_y=2.0,
-        ),
-    )
 
     def _refine(req, ctx):
         llm_calls.append(1)
@@ -164,11 +150,6 @@ def test_refine_selection_adaptive_ambiguous_calls_llm(monkeypatch, tmp_path):
         )
 
     monkeypatch.setattr(rg, "refine_candidate_crops_service", _refine)
-    monkeypatch.setattr(
-        rg,
-        "apply_crop_refine_bbox_service",
-        lambda req, ctx: SimpleNamespace(schema_version="1.0", page=req.page, bbox=req.bbox),
-    )
 
     cand = _candidate(
         cid="chart_1",
@@ -190,7 +171,7 @@ def test_refine_selection_adaptive_ambiguous_calls_llm(monkeypatch, tmp_path):
         ranked_rows=ranked,
         ranked_candidates=[cand],
         settings=settings,
-        local_pdf_path=str(tmp_path / "dummy.pdf"),
+        local_pdf_path=_pdf_path(tmp_path),
         report_name="report",
         file_id="file",
         md5=None,
@@ -204,25 +185,27 @@ def test_refine_selection_adaptive_ambiguous_calls_llm(monkeypatch, tmp_path):
     assert llm_calls == [1, 1]
     assert len(items) == 1
     assert len(accepted) == 1
-    assert tuple(items[0].bbox) == refined_bbox
+    assert items[0].bbox[0] < refined_bbox[0]
+    assert items[0].bbox[1] < refined_bbox[1]
+    assert items[0].bbox[2] > refined_bbox[2]
+    assert items[0].bbox[3] > refined_bbox[3]
 
 
 def test_refine_selection_early_stops_at_selected_max(monkeypatch, tmp_path):
-    settings = _settings(tmp_path, crop_refine_enabled=True, crop_refine_mode="adaptive", rank_selected_max=5)
-    _patch_prompts(monkeypatch)
-    apply_calls: list[str] = []
+    settings = _settings(
+        tmp_path,
+        crop_refine_enabled=True,
+        crop_refine_mode="adaptive",
+        rank_selected_max=5,
+    )
 
     monkeypatch.setattr(
         rg,
         "refine_candidate_crops_service",
-        lambda req, ctx: (_ for _ in ()).throw(AssertionError("LLM should not be called for obvious-pass tables")),
+        lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("LLM should not be called for obvious-pass tables")
+        ),
     )
-
-    def _apply(req, ctx):
-        apply_calls.append(req.page)
-        return SimpleNamespace(schema_version="1.0", page=req.page, bbox=req.bbox)
-
-    monkeypatch.setattr(rg, "apply_crop_refine_bbox_service", _apply)
 
     candidates = []
     ranked_rows = []
@@ -252,7 +235,7 @@ def test_refine_selection_early_stops_at_selected_max(monkeypatch, tmp_path):
         ranked_rows=ranked_rows,
         ranked_candidates=candidates,
         settings=settings,
-        local_pdf_path=str(tmp_path / "dummy.pdf"),
+        local_pdf_path=_pdf_path(tmp_path),
         report_name="report",
         file_id="file",
         md5=None,
@@ -264,37 +247,85 @@ def test_refine_selection_early_stops_at_selected_max(monkeypatch, tmp_path):
 
     assert len(items) == 5
     assert len(accepted) == 5
-    assert len(apply_calls) == 5
 
 
-def test_refine_selection_enforces_per_kind_limit(monkeypatch, tmp_path):
-    settings = _settings(tmp_path, crop_refine_enabled=False, crop_refine_mode="off", rank_selected_max=1)
-    _patch_prompts(monkeypatch)
-
-    monkeypatch.setattr(
-        rg,
-        "apply_crop_refine_bbox_service",
-        lambda req, ctx: SimpleNamespace(schema_version="1.0", page=req.page, bbox=req.bbox),
+def test_refine_selection_enforces_per_kind_limit(tmp_path):
+    settings = _settings(
+        tmp_path, crop_refine_enabled=False, crop_refine_mode="off", rank_selected_max=1
     )
 
     candidates = [
-        _candidate(cid="table_a", kind="table", page=0, meta={"rows": 6, "cols": 4, "numeric_ratio": 0.3, "area_frac": 0.2}),
-        _candidate(cid="table_b", kind="table", page=1, meta={"rows": 6, "cols": 4, "numeric_ratio": 0.3, "area_frac": 0.2}),
-        _candidate(cid="chart_a", kind="chart", page=2, caption="Figure 1", meta={"area_frac": 0.2, "text_ratio": 0.2}),
-        _candidate(cid="chart_b", kind="chart", page=3, caption="Figure 2", meta={"area_frac": 0.2, "text_ratio": 0.2}),
+        _candidate(
+            cid="table_a",
+            kind="table",
+            page=0,
+            meta={"rows": 6, "cols": 4, "numeric_ratio": 0.3, "area_frac": 0.2},
+        ),
+        _candidate(
+            cid="table_b",
+            kind="table",
+            page=1,
+            meta={"rows": 6, "cols": 4, "numeric_ratio": 0.3, "area_frac": 0.2},
+        ),
+        _candidate(
+            cid="chart_a",
+            kind="chart",
+            page=2,
+            caption="Figure 1",
+            meta={"area_frac": 0.2, "text_ratio": 0.2},
+        ),
+        _candidate(
+            cid="chart_b",
+            kind="chart",
+            page=3,
+            caption="Figure 2",
+            meta={"area_frac": 0.2, "text_ratio": 0.2},
+        ),
     ]
     ranked_rows = [
-        RankedCandidate(id="table_a", type="table", score=99, quality_score=99, insight_score=99, data_score=99, keep=True),
-        RankedCandidate(id="table_b", type="table", score=98, quality_score=98, insight_score=98, data_score=98, keep=True),
-        RankedCandidate(id="chart_a", type="chart", score=97, quality_score=97, insight_score=97, data_score=97, keep=True),
-        RankedCandidate(id="chart_b", type="chart", score=96, quality_score=96, insight_score=96, data_score=96, keep=True),
+        RankedCandidate(
+            id="table_a",
+            type="table",
+            score=99,
+            quality_score=99,
+            insight_score=99,
+            data_score=99,
+            keep=True,
+        ),
+        RankedCandidate(
+            id="table_b",
+            type="table",
+            score=98,
+            quality_score=98,
+            insight_score=98,
+            data_score=98,
+            keep=True,
+        ),
+        RankedCandidate(
+            id="chart_a",
+            type="chart",
+            score=97,
+            quality_score=97,
+            insight_score=97,
+            data_score=97,
+            keep=True,
+        ),
+        RankedCandidate(
+            id="chart_b",
+            type="chart",
+            score=96,
+            quality_score=96,
+            insight_score=96,
+            data_score=96,
+            keep=True,
+        ),
     ]
 
     items, accepted = rg._select_refined_candidate_items(
         ranked_rows=ranked_rows,
         ranked_candidates=candidates,
         settings=settings,
-        local_pdf_path=str(tmp_path / "dummy.pdf"),
+        local_pdf_path=_pdf_path(tmp_path),
         report_name="report",
         file_id="file",
         md5=None,
