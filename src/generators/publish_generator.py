@@ -4,6 +4,7 @@ import logging
 import mimetypes
 from pathlib import Path
 from typing import Dict, Optional, Tuple
+from urllib.parse import unquote, urlparse
 
 from src.contracts.files import FileExistsRequest, ReadBytesRequest, ReadTextRequest
 from src.contracts.publish import PublishOutcome, PublishRequest, PublishSettings
@@ -201,6 +202,7 @@ def publish_html(
 
     image_map, featured_media_id = _upload_images(
         html_text,
+        request.html_path,
         settings.output_dir,
         base_url,
         auth_header,
@@ -299,6 +301,7 @@ def _resolve_auth_header(settings: PublishSettings, ctx: RunContext) -> str:
 
 def _upload_images(
     html_text: str,
+    html_path: str,
     output_dir: str,
     base_url: str,
     auth_header: str,
@@ -318,7 +321,7 @@ def _upload_images(
     for src in sources:
         if src in mapping:
             continue
-        local_path = _resolve_local_path(src, output_dir, ctx)
+        local_path = _resolve_local_path(src, html_path, output_dir, ctx)
         if not local_path:
             if not src.startswith("http://") and not src.startswith("https://"):
                 logger.info(
@@ -381,14 +384,37 @@ def _media_upload_request(
     )
 
 
-def _resolve_local_path(src: str, output_dir: str, ctx: RunContext) -> Optional[str]:
-    rel = src.lstrip("/").replace("\\", "/")
-    if rel.startswith("http://") or rel.startswith("https://"):
+def _resolve_local_path(
+    src: str,
+    html_path: str,
+    output_dir: str,
+    ctx: RunContext,
+) -> Optional[str]:
+    parsed = urlparse(src)
+    if parsed.scheme in {"http", "https", "data"}:
         return None
-    path = Path(output_dir) / rel
-    exists_resp = file_exists(
-        FileExistsRequest(schema_version="1.0", path=str(path)), ctx
-    )
-    if not exists_resp.exists:
+
+    raw_path = unquote((parsed.path or src).strip())
+    if not raw_path:
         return None
-    return str(path)
+
+    normalized = raw_path.replace("\\", "/")
+    candidates: list[Path] = []
+    candidate_path = Path(normalized)
+
+    if candidate_path.is_absolute():
+        candidates.append(candidate_path)
+
+    relative = normalized.lstrip("/")
+    if relative:
+        candidates.append(Path(output_dir) / relative)
+        candidates.append(Path(html_path).resolve().parent / relative)
+
+    for candidate in candidates:
+        exists_resp = file_exists(
+            FileExistsRequest(schema_version="1.0", path=str(candidate)), ctx
+        )
+        if exists_resp.exists:
+            return str(candidate)
+
+    return None
