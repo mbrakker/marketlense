@@ -483,7 +483,11 @@ See:
 - `docs/docpacks/prompt-authoring.md`
 - `docs/architecture/role-boundaries.md`
 - `docs/testing/integrity-rules.md`
+<<<<<<< ours
 - `docs/quality/ineffective-choices-top50.md` (source analysis archived after merge into `CONSOLIDATED_TODO.md`)
+=======
+- `docs/quality/ineffective-choices-top50.md` (repository improvement backlog focused on low-effort/high-impact fixes)
+>>>>>>> theirs
 
 ---
 
