@@ -120,7 +120,12 @@ def build_publish_queue_snapshot(request: PublishQueueRequest, ctx: RunContext) 
         publish_state = None
         if file_id:
             publish_state = get_publish(
-                StatePublishCheckRequest(schema_version="1.0", state_db=request.state_db, file_id=file_id),
+                StatePublishCheckRequest(
+                    schema_version="1.0",
+                    state_db=request.state_db,
+                    file_id=file_id,
+                    post_type=request.post_type,
+                ),
                 row_ctx,
             )
         items.append(PublishQueueItem(

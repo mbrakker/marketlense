@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import List
+from typing import List, Optional
 
 from src.contracts.categories import WordPressCategoryUpdateOutcome
 from src.contracts.categories import CategoryMappingLoadResponse
@@ -25,6 +25,8 @@ def update_post_categories_for_record(
     base_url: str,
     auth_header: str,
     post_type: str,
+    ssl_verify: bool = True,
+    ca_bundle_path: Optional[str] = None,
     mappings: CategoryMappingLoadResponse,
     ctx: RunContext,
 ) -> WordPressCategoryUpdateOutcome:
@@ -70,6 +72,8 @@ def update_post_categories_for_record(
             auth_header=auth_header,
             taxonomy_rest_base="categories",
             terms=terms,
+            ssl_verify=ssl_verify,
+            ca_bundle_path=ca_bundle_path,
         ),
         ctx,
     )
@@ -94,6 +98,8 @@ def update_post_categories_for_record(
             auth_header=auth_header,
             post_id=post_id,
             categories=category_ids,
+            ssl_verify=ssl_verify,
+            ca_bundle_path=ca_bundle_path,
             post_type=post_type,
         ),
         ctx,

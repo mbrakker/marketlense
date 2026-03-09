@@ -115,6 +115,9 @@ class StatePublishCheckRequest:
     schema_version: str = field(metadata={"doc": "Publish check request schema version."})
     state_db: str = field(metadata={"doc": "SQLite path for publishing state."})
     file_id: str = field(metadata={"doc": "Drive file ID."})
+    post_type: str = field(
+        metadata={"doc": "WordPress post type slug tracked for this publish target."}
+    )
 
 
 @dataclass(frozen=True)
@@ -125,6 +128,9 @@ class StatePublishRecordRequest:
     md5: str = field(metadata={"doc": "MD5 checksum of the PDF."})
     wp_post_id: int = field(metadata={"doc": "WordPress post ID."})
     wp_post_url: str = field(metadata={"doc": "WordPress post URL."})
+    post_type: str = field(
+        metadata={"doc": "WordPress post type slug used for this publish record."}
+    )
 
 
 @dataclass(frozen=True)
@@ -135,6 +141,9 @@ class StatePublishGetResponse:
     published_at: int = field(metadata={"doc": "Unix timestamp of publish time."})
     wp_post_id: int = field(metadata={"doc": "WordPress post ID."})
     wp_post_url: str = field(metadata={"doc": "WordPress post URL."})
+    post_type: str = field(
+        metadata={"doc": "WordPress post type slug used for this publish record."}
+    )
 
 
 @dataclass(frozen=True)
@@ -182,6 +191,9 @@ class StatePublishedRow:
     published_at: int = field(metadata={"doc": "Unix timestamp when publishing completed."})
     wp_post_id: int = field(metadata={"doc": "WordPress post ID."})
     wp_post_url: str = field(metadata={"doc": "WordPress post URL."})
+    post_type: str = field(
+        metadata={"doc": "WordPress post type slug used for this publish record."}
+    )
 
 
 @dataclass(frozen=True)

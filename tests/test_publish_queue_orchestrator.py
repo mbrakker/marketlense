@@ -31,7 +31,12 @@ def test_build_publish_queue_snapshot(monkeypatch) -> None:
     )
 
     response = orch.build_publish_queue_snapshot(
-        PublishQueueRequest(schema_version="1.0", output_dir="out", state_db="state.sqlite"),
+        PublishQueueRequest(
+            schema_version="1.0",
+            output_dir="out",
+            state_db="state.sqlite",
+            post_type="ml_report",
+        ),
         _ctx(),
     )
 
@@ -76,6 +81,7 @@ def test_build_publish_queue_snapshot_prefers_reports_db_mapping(monkeypatch) ->
             output_dir="out",
             state_db="state.sqlite",
             reports_db="reports.sqlite",
+            post_type="ml_report",
         ),
         _ctx(),
     )

@@ -402,6 +402,48 @@ class TestConfigService(unittest.TestCase):
                     )
         self.assertIn("WP_APP_PASSWORD", str(ctx.exception))
 
+    def test_publish_settings_ssl_verify_env_override(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_publish=True)
+            env = {
+                "WP_SITE_URL": "https://example.com",
+                "WP_APP_PASSWORD": "app-pass",
+                "WP_BEARER_TOKEN": "",
+                "WP_SSL_VERIFY": "false",
+            }
+            with patch.dict(os.environ, env, clear=True):
+                settings = load_publish_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
+                )
+
+        self.assertFalse(settings.wp.ssl_verify)
+        self.assertIsNone(settings.wp.ca_bundle_path)
+
+    def test_publish_settings_missing_ca_bundle_raises(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_publish=True)
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["publish"]["wp"]["ca_bundle_path"] = "missing-ca.pem"
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
+            env = {
+                "WP_SITE_URL": "https://example.com",
+                "WP_APP_PASSWORD": "app-pass",
+                "WP_BEARER_TOKEN": "",
+            }
+            with patch.dict(os.environ, env, clear=True):
+                with self.assertRaises(RuntimeError) as ctx:
+                    load_publish_settings(
+                        ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                        RunContext(
+                            schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                        ),
+                    )
+
+        self.assertIn("publish.wp.ca_bundle_path", str(ctx.exception))
+
     def test_read_and_write_app_config_round_trip(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(

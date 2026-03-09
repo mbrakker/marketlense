@@ -105,7 +105,8 @@ publish:
     site_url: "https://marketlense.medianewsonline.com"
     username: "admin"
     post_status: "publish"
-    post_type: "posts"
+    post_type: "ml_report"
+    ssl_verify: false
   validation:
     policy: "block"
 

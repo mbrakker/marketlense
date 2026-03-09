@@ -306,7 +306,10 @@ def run_publish(
 
         if state_already_published(
             StatePublishCheckRequest(
-                schema_version="1.0", state_db=settings.state_db, file_id=file_id
+                schema_version="1.0",
+                state_db=settings.state_db,
+                file_id=file_id,
+                post_type=settings.wp.post_type,
             ),
             file_ctx,
         ):
@@ -391,6 +394,8 @@ def run_publish(
                     base_url=base_url,
                     auth_header=auth_header,
                     file_id=file_id,
+                    ssl_verify=settings.wp.ssl_verify,
+                    ca_bundle_path=settings.wp.ca_bundle_path,
                     post_type=settings.wp.post_type,
                 ),
                 file_ctx,
@@ -413,6 +418,7 @@ def run_publish(
                         md5=state_row.md5,
                         wp_post_id=lookup_resp.post_id,
                         wp_post_url=lookup_resp.link,
+                        post_type=settings.wp.post_type,
                     ),
                     file_ctx,
                 )
@@ -447,6 +453,7 @@ def run_publish(
                         md5=state_row.md5,
                         wp_post_id=outcome.post_id,
                         wp_post_url=outcome.post_url,
+                        post_type=settings.wp.post_type,
                     ),
                     file_ctx,
                 )

@@ -51,7 +51,7 @@ def test_publish_html_uses_preloaded_html_without_reading_file(
 def test_publish_html_assigns_publisher_taxonomy_terms(
     publish_settings_factory, run_context, monkeypatch
 ) -> None:
-    settings = publish_settings_factory(validation_policy="warn")
+    settings = publish_settings_factory(validation_policy="warn", ssl_verify=False)
     html_text = (
         "<html><head><title>Report</title></head>"
         "<body>Drive fileId: file123</body></html>"
@@ -98,11 +98,14 @@ def test_publish_html_assigns_publisher_taxonomy_terms(
     monkeypatch.setattr(
         pg,
         "ensure_taxonomy_terms",
-        lambda req, ctx: SimpleNamespace(
-            slug_to_id=(
-                {"digital_payments": 11}
-                if req.taxonomy_rest_base == "categories"
-                else {"warc": 22}
+        lambda req, ctx: (
+            captured.setdefault("taxonomy_ssl", []).append(req.ssl_verify)
+            or SimpleNamespace(
+                slug_to_id=(
+                    {"digital_payments": 11}
+                    if req.taxonomy_rest_base == "categories"
+                    else {"warc": 22}
+                )
             )
         ),
     )
@@ -130,3 +133,5 @@ def test_publish_html_assigns_publisher_taxonomy_terms(
     assert outcome.status == "published"
     assert captured["request"].categories == [11]
     assert captured["request"].taxonomy_terms == {"ml_publisher": [22]}
+    assert captured["request"].ssl_verify is False
+    assert captured["taxonomy_ssl"] == [False, False]

@@ -1190,6 +1190,128 @@ def _select_refined_candidate_items(
     return accepted_items[:selected_max], accepted_candidates[:selected_max]
 
 
+def _candidate_crop_path_map(
+    candidates: list[Candidate],
+    candidate_paths: list[str],
+) -> dict[str, str]:
+    mapping: dict[str, str] = {}
+    for candidate, path in zip(candidates, candidate_paths):
+        candidate_id = str(candidate.id or "").strip()
+        normalized_path = str(path or "").strip()
+        if not candidate_id or not normalized_path:
+            continue
+        mapping[candidate_id] = normalized_path
+    return mapping
+
+
+def _select_fallback_candidate_crop_paths(
+    *,
+    ranked_rows: list[Any],
+    prefiltered_candidates: list[Candidate],
+    candidate_path_by_id: dict[str, str],
+    selected_kind_max: int,
+) -> tuple[list[str], list[Candidate], dict[str, Any]]:
+    selected_max = max(1, int(selected_kind_max)) * 2
+    selected_per_kind = max(1, int(selected_kind_max))
+    prefiltered_by_id = {
+        str(candidate.id or "").strip(): candidate for candidate in prefiltered_candidates
+    }
+    ordered_candidates: list[tuple[str, Candidate]] = []
+    seen_ids: set[str] = set()
+
+    for row in sorted(
+        ranked_rows,
+        key=lambda item: coerce_float(getattr(item, "score", 0.0), 0.0),
+        reverse=True,
+    ):
+        candidate_id = str(getattr(row, "id", "") or "").strip()
+        candidate = prefiltered_by_id.get(candidate_id)
+        if candidate is None or candidate_id in seen_ids:
+            continue
+        seen_ids.add(candidate_id)
+        ordered_candidates.append(("ranked", candidate))
+
+    for candidate in prefiltered_candidates:
+        candidate_id = str(candidate.id or "").strip()
+        if not candidate_id or candidate_id in seen_ids:
+            continue
+        seen_ids.add(candidate_id)
+        ordered_candidates.append(("prefilter", candidate))
+
+    fallback_paths: list[str] = []
+    fallback_candidates: list[Candidate] = []
+    selected_by_kind: dict[str, int] = {"table": 0, "chart": 0}
+    selected_by_source: dict[str, int] = {"ranked": 0, "prefilter": 0}
+    rejected_reasons: dict[str, int] = {}
+    skipped_missing_crop = 0
+    skipped_kind_limit = 0
+
+    for source, candidate in ordered_candidates:
+        if len(fallback_paths) >= selected_max:
+            break
+        candidate_id = str(candidate.id or "").strip()
+        crop_path = str(candidate_path_by_id.get(candidate_id) or "").strip()
+        if not crop_path:
+            skipped_missing_crop += 1
+            continue
+        reject_now, reject_reason = _candidate_is_obvious_reject(candidate)
+        if reject_now:
+            rejected_reasons[reject_reason] = int(
+                rejected_reasons.get(reject_reason, 0)
+            ) + 1
+            continue
+        candidate_kind = str(candidate.kind or "").strip()
+        if selected_by_kind.get(candidate_kind, 0) >= selected_per_kind:
+            skipped_kind_limit += 1
+            continue
+        fallback_paths.append(crop_path)
+        fallback_candidates.append(candidate)
+        selected_by_kind[candidate_kind] = (
+            int(selected_by_kind.get(candidate_kind, 0)) + 1
+        )
+        selected_by_source[source] = int(selected_by_source.get(source, 0)) + 1
+
+    stats = {
+        "ordered_candidate_count": len(ordered_candidates),
+        "candidate_crop_count": len(candidate_path_by_id),
+        "selected_count": len(fallback_paths),
+        "selected_by_kind": selected_by_kind,
+        "selected_by_source": {
+            key: value for key, value in selected_by_source.items() if value
+        },
+        "skipped_missing_crop": skipped_missing_crop,
+        "skipped_kind_limit": skipped_kind_limit,
+        "rejected_reasons": rejected_reasons,
+    }
+    return fallback_paths, fallback_candidates, stats
+
+
+def _apply_figure_candidate_metadata(
+    data: ReportPayload,
+    candidate: Optional[Candidate],
+) -> None:
+    if candidate is None:
+        return
+    caption = (candidate.caption or "").strip()
+    preview = (candidate.preview_text or "").strip()
+    derived_title = caption or (preview[:140] if preview else "")
+    if derived_title:
+        data.figure.title = derived_title
+    if caption or preview:
+        data.figure.evidence = caption or preview
+
+
+def _resolve_figure_section_assets(
+    sliced_paths: list[str],
+    primary_figure_path: str,
+) -> tuple[list[str], str, bool]:
+    gallery_paths = [str(path or "").strip() for path in sliced_paths if str(path or "").strip()]
+    if gallery_paths:
+        return gallery_paths, gallery_paths[0], True
+    normalized_primary = str(primary_figure_path or "").strip()
+    return [], normalized_primary, bool(normalized_primary)
+
+
 def _pack_paths(
     output_dir: str,
     report_id: str,
@@ -2514,6 +2636,7 @@ def generate_report(
     rank_usage = None
     sliced_paths = []
     candidate_paths = []
+    candidate_path_by_id: dict[str, str] = {}
     data._figure_section_enabled = False
     if cands_resp.candidates:
         for cand in cands_resp.candidates:
@@ -2593,6 +2716,10 @@ def generate_report(
                     ctx,
                 )
                 candidate_paths = candidate_crop_resp.paths
+                candidate_path_by_id = _candidate_crop_path_map(
+                    cands_resp.candidates,
+                    candidate_paths,
+                )
                 logger.info(
                     log_event(
                         ctx,
@@ -2717,24 +2844,55 @@ def generate_report(
                     ctx,
                 )
                 sliced_paths.extend(chart_crop_resp.paths)
-        if selected_candidates:
-            top_cand = selected_candidates[0]
-            caption = (top_cand.caption or "").strip()
-            preview = (top_cand.preview_text or "").strip()
-            derived_title = caption or (preview[:140] if preview else "")
-            if derived_title:
-                data.figure.title = derived_title
-            if caption or preview:
-                data.figure.evidence = caption or preview
+        figure_candidates = selected_candidates
+        if not sliced_paths and candidate_path_by_id:
+            fallback_paths, fallback_candidates, fallback_stats = (
+                _select_fallback_candidate_crop_paths(
+                    ranked_rows=ranked,
+                    prefiltered_candidates=prefiltered_candidates,
+                    candidate_path_by_id=candidate_path_by_id,
+                    selected_kind_max=max(1, int(settings.rank_selected_max)),
+                )
+            )
+            if fallback_paths:
+                sliced_paths = fallback_paths
+                figure_candidates = fallback_candidates
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="generator",
+                        event="figure_section_fallback_candidate_crops_enabled",
+                        module=logger.name,
+                        fields={
+                            "file_id": file.file_id,
+                            "ranked_count": len(ranked),
+                            "prefiltered_count": len(prefiltered_candidates),
+                            **fallback_stats,
+                        },
+                    )
+                )
+        if figure_candidates:
+            _apply_figure_candidate_metadata(data, figure_candidates[0])
 
-    if sliced_paths:
-        data._figure_gallery = sliced_paths
-        data._figure_top = sliced_paths[0]
-        data._figure_section_enabled = True
-    else:
-        data._figure_gallery = []
-        data._figure_top = ""
-        data._figure_section_enabled = False
+    primary_figure_path = str(data._figure_top or data._figure_image or "").strip()
+    figure_gallery, figure_top, figure_section_enabled = _resolve_figure_section_assets(
+        sliced_paths,
+        primary_figure_path,
+    )
+    data._figure_gallery = figure_gallery
+    data._figure_top = figure_top
+    data._figure_section_enabled = figure_section_enabled
+    if data._figure_section_enabled and not figure_gallery and figure_top:
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="figure_section_enabled_primary_only",
+                module=logger.name,
+                fields={"file_id": file.file_id, "primary_figure": figure_top},
+            )
+        )
+    if not data._figure_section_enabled:
         logger.info(
             log_event(
                 ctx,

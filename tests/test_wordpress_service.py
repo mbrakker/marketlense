@@ -27,11 +27,12 @@ def _response(status_code: int, payload: object) -> SimpleNamespace:
 def test_create_post_success(monkeypatch):
     captured = {}
 
-    def _post(url, headers, data, timeout):
+    def _post(url, headers, data, timeout, verify):
         captured["url"] = url
         captured["headers"] = headers
         captured["payload"] = json.loads(data)
         captured["timeout"] = timeout
+        captured["verify"] = verify
         return _response(
             201, {"id": 10, "link": "https://site/p/10", "status": "publish"}
         )
@@ -58,13 +59,15 @@ def test_create_post_success(monkeypatch):
     assert captured["payload"]["categories"] == [1, 2]
     assert captured["payload"]["tags"] == [3]
     assert captured["payload"]["ml_publisher"] == [4]
+    assert captured["verify"] is True
 
 
 def test_create_post_custom_post_type_endpoint(monkeypatch):
     captured = {}
 
-    def _post(url, headers, data, timeout):
+    def _post(url, headers, data, timeout, verify):
         captured["url"] = url
+        captured["verify"] = verify
         return _response(
             201, {"id": 10, "link": "https://site/r/10", "status": "publish"}
         )
@@ -82,6 +85,7 @@ def test_create_post_custom_post_type_endpoint(monkeypatch):
     response = svc.create_post(request, _ctx())
     assert response.post_id == 10
     assert captured["url"].endswith("/wp-json/wp/v2/ml_report")
+    assert captured["verify"] is True
 
 
 def test_create_post_client_error(monkeypatch):
@@ -125,16 +129,40 @@ def test_find_post_by_file_id_found(monkeypatch):
     assert response.link == "https://site/p/11"
 
 
+def test_find_post_by_file_id_ssl_verify_disabled(monkeypatch):
+    captured = {}
+
+    def _get(url, headers, params, timeout, verify):
+        captured["url"] = url
+        captured["verify"] = verify
+        return _response(200, [])
+
+    monkeypatch.setattr(svc.requests, "get", _get)
+    request = WordPressPostLookupRequest(
+        schema_version="1.0",
+        base_url="https://site",
+        auth_header="Bearer token",
+        file_id="file-1",
+        ssl_verify=False,
+    )
+
+    response = svc.find_post_by_file_id(request, _ctx())
+
+    assert response.found is False
+    assert captured["url"].endswith("/wp-json/wp/v2/posts")
+    assert captured["verify"] is False
+
+
 def test_ensure_taxonomy_terms_creates_missing_terms(monkeypatch):
     calls = {"get": 0, "post": 0}
 
-    def _get(url, headers, params, timeout):
+    def _get(url, headers, params, timeout, verify):
         calls["get"] += 1
         if params.get("slug") == "existing":
             return _response(200, [{"id": 5}])
         return _response(200, [])
 
-    def _post(url, headers, data, timeout):
+    def _post(url, headers, data, timeout, verify):
         calls["post"] += 1
         payload = json.loads(data)
         if payload.get("slug") == "new":

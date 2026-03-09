@@ -246,6 +246,7 @@ def test_list_processed_and_published_rows(tmp_path: Path) -> None:
             md5="md5-1",
             wp_post_id=123,
             wp_post_url="https://example.com/post/123",
+            post_type="ml_report",
         ),
         _ctx(),
     )
@@ -256,3 +257,4 @@ def test_list_processed_and_published_rows(tmp_path: Path) -> None:
     assert len(published.rows) == 1
     assert published.rows[0].file_id == "file-1"
     assert published.rows[0].wp_post_id == 123
+    assert published.rows[0].post_type == "ml_report"

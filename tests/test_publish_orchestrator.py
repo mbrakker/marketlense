@@ -62,6 +62,7 @@ def test_publish_runs_when_processed(publish_settings_factory, run_context, monk
             schema_version="1.0",
             state_db=settings.state_db,
             file_id="file123",
+            post_type=settings.wp.post_type,
         ),
         run_context,
     )
@@ -135,6 +136,7 @@ def test_publish_blocks_when_validation_fails(publish_settings_factory, run_cont
             schema_version="1.0",
             state_db=settings.state_db,
             file_id="file123",
+            post_type=settings.wp.post_type,
         ),
         run_context,
     )
@@ -245,3 +247,73 @@ def test_publish_retries_retryable_app_error(publish_settings_factory, run_conte
     assert results[0].file_id == "file123"
     assert calls["count"] == 3
     assert sleep_calls == [1, 2]
+
+
+def test_publish_ignores_publish_state_for_different_post_type(
+    publish_settings_factory, run_context, monkeypatch
+) -> None:
+    settings = publish_settings_factory(validation_policy="warn")
+    html_path = Path(settings.output_dir) / "report.html"
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+    html_path.write_text("<html><body>Drive fileId: file123</body></html>", encoding="utf-8")
+
+    record(
+        StateRecordRequest(
+            schema_version="1.0",
+            state_db=settings.state_db,
+            file_id="file123",
+            md5="md5",
+        ),
+        run_context,
+    )
+
+    from src.services.state_service import record_publish
+    from src.contracts.state import StatePublishRecordRequest
+
+    record_publish(
+        StatePublishRecordRequest(
+            schema_version="1.0",
+            state_db=settings.state_db,
+            file_id="file123",
+            md5="md5",
+            wp_post_id=99,
+            wp_post_url="https://example.com/post/99",
+            post_type="posts",
+        ),
+        run_context,
+    )
+
+    monkeypatch.setattr(
+        orch,
+        "find_post_by_file_id",
+        lambda req, ctx: WordPressPostLookupResponse(schema_version="1.0", found=False),
+    )
+    monkeypatch.setattr(
+        orch,
+        "publish_html",
+        lambda req, current_settings, ctx: PublishOutcome(
+            schema_version="1.0",
+            html_path=req.html_path,
+            file_id=req.file_id,
+            status="published",
+            post_id=101,
+            post_url="https://example.com/reports/101",
+        ),
+    )
+
+    results = orch.run_publish(settings, limit=1)
+
+    assert len(results) == 1
+    assert results[0].status == "published"
+    publish_row = get_publish(
+        StatePublishCheckRequest(
+            schema_version="1.0",
+            state_db=settings.state_db,
+            file_id="file123",
+            post_type=settings.wp.post_type,
+        ),
+        run_context,
+    )
+    assert publish_row is not None
+    assert publish_row.wp_post_id == 101
+    assert publish_row.post_type == settings.wp.post_type

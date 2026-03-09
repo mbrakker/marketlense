@@ -44,6 +44,10 @@ class PublishQueueRequest:
     output_dir: str = field(metadata={"doc": "Directory containing generated HTML files."})
     state_db: str = field(metadata={"doc": "SQLite path storing publish state."})
     reports_db: str = field(default="", metadata={"doc": "Optional report metadata SQLite path used for html_path->file_id mapping."})
+    post_type: str = field(
+        default="ml_report",
+        metadata={"doc": "WordPress post type slug used when resolving publish state."},
+    )
 
 
 @dataclass(frozen=True)

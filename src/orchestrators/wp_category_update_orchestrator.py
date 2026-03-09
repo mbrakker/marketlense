@@ -59,7 +59,10 @@ def run_update_wp_categories(
         record_ctx = child_context(ctx, task_id=record.file_id)
         publish_state = get_publish(
             StatePublishCheckRequest(
-                schema_version="1.0", state_db=settings.state_db, file_id=record.file_id
+                schema_version="1.0",
+                state_db=settings.state_db,
+                file_id=record.file_id,
+                post_type=settings.wp.post_type,
             ),
             record_ctx,
         )
@@ -83,6 +86,8 @@ def run_update_wp_categories(
                 base_url=base_url,
                 auth_header=auth_header,
                 post_type=settings.wp.post_type,
+                ssl_verify=settings.wp.ssl_verify,
+                ca_bundle_path=settings.wp.ca_bundle_path,
                 mappings=mappings_resp,
                 ctx=record_ctx,
             )

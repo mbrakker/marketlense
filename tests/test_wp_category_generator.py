@@ -63,14 +63,19 @@ def test_wp_category_update_applies_categories(monkeypatch):
     monkeypatch.setattr(
         gen,
         "ensure_taxonomy_terms",
-        lambda req, ctx: WordPressTaxonomyEnsureResponse(
-            schema_version="1.0",
-            slug_to_id={"digital_payments": 101, "consumer_behavior": 102},
+        lambda req, ctx: (
+            (_ for _ in ()).throw(AssertionError("ssl_verify should be disabled"))
+            if req.ssl_verify is not False
+            else WordPressTaxonomyEnsureResponse(
+                schema_version="1.0",
+                slug_to_id={"digital_payments": 101, "consumer_behavior": 102},
+            )
         ),
     )
 
     def _update(req, ctx):
         assert req.post_type == "ml_report"
+        assert req.ssl_verify is False
         return WordPressPostUpdateResponse(schema_version="1.0", post_id=req.post_id)
 
     monkeypatch.setattr(gen, "update_post_categories", _update)
@@ -82,6 +87,7 @@ def test_wp_category_update_applies_categories(monkeypatch):
         base_url="https://example.com",
         auth_header="Bearer token",
         post_type="ml_report",
+        ssl_verify=False,
         mappings=_mappings(),
         ctx=_ctx(),
     )

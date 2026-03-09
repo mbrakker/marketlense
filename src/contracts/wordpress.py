@@ -26,6 +26,14 @@ class WordPressAuthSettings:
             "doc": "REST post type endpoint slug (for example: posts, ml_report)."
         },
     )
+    ssl_verify: bool = field(
+        default=True,
+        metadata={"doc": "Whether HTTPS certificates should be verified for WordPress REST calls."},
+    )
+    ca_bundle_path: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Optional CA bundle path used for WordPress HTTPS verification."},
+    )
 
 
 @dataclass(frozen=True)
@@ -71,6 +79,14 @@ class WordPressMediaUploadRequest:
     filename: str = field(metadata={"doc": "Filename to upload."})
     mime_type: str = field(metadata={"doc": "Content MIME type."})
     data: bytes = field(metadata={"doc": "Binary content to upload."})
+    ssl_verify: bool = field(
+        default=True,
+        metadata={"doc": "Whether HTTPS certificates should be verified for this request."},
+    )
+    ca_bundle_path: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Optional CA bundle path used when verifying HTTPS certificates."},
+    )
     alt_text: Optional[str] = field(
         default=None, metadata={"doc": "Optional alt text."}
     )
@@ -93,6 +109,14 @@ class WordPressPostCreateRequest:
     title: str = field(metadata={"doc": "Post title."})
     content_html: str = field(metadata={"doc": "Rendered HTML content."})
     status: str = field(metadata={"doc": "Post status."})
+    ssl_verify: bool = field(
+        default=True,
+        metadata={"doc": "Whether HTTPS certificates should be verified for this request."},
+    )
+    ca_bundle_path: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Optional CA bundle path used when verifying HTTPS certificates."},
+    )
     slug: Optional[str] = field(default=None, metadata={"doc": "Optional post slug."})
     featured_media: Optional[int] = field(
         default=None, metadata={"doc": "Optional featured media ID."}
@@ -130,6 +154,14 @@ class WordPressPostLookupRequest:
     base_url: str = field(metadata={"doc": "WordPress site base URL."})
     auth_header: str = field(metadata={"doc": "Authorization header value."})
     file_id: str = field(metadata={"doc": "Drive file ID to search for."})
+    ssl_verify: bool = field(
+        default=True,
+        metadata={"doc": "Whether HTTPS certificates should be verified for this request."},
+    )
+    ca_bundle_path: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Optional CA bundle path used when verifying HTTPS certificates."},
+    )
     per_page: int = field(default=5, metadata={"doc": "Max posts to inspect."})
     post_type: str = field(
         default="posts", metadata={"doc": "REST post type endpoint slug."}
@@ -172,6 +204,14 @@ class WordPressTaxonomyEnsureRequest:
     terms: List[WordPressTaxonomyTerm] = field(
         metadata={"doc": "Taxonomy terms to ensure exist."}
     )
+    ssl_verify: bool = field(
+        default=True,
+        metadata={"doc": "Whether HTTPS certificates should be verified for this request."},
+    )
+    ca_bundle_path: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Optional CA bundle path used when verifying HTTPS certificates."},
+    )
 
 
 @dataclass(frozen=True)
@@ -190,6 +230,14 @@ class WordPressTagEnsureRequest:
     base_url: str = field(metadata={"doc": "WordPress site base URL."})
     auth_header: str = field(metadata={"doc": "Authorization header value."})
     tags: List[str] = field(metadata={"doc": "Tag slugs to ensure exist."})
+    ssl_verify: bool = field(
+        default=True,
+        metadata={"doc": "Whether HTTPS certificates should be verified for this request."},
+    )
+    ca_bundle_path: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Optional CA bundle path used when verifying HTTPS certificates."},
+    )
 
 
 @dataclass(frozen=True)
@@ -208,6 +256,14 @@ class WordPressPostUpdateRequest:
     post_id: int = field(metadata={"doc": "WordPress post ID."})
     categories: List[int] = field(
         metadata={"doc": "Category IDs to assign to the post."}
+    )
+    ssl_verify: bool = field(
+        default=True,
+        metadata={"doc": "Whether HTTPS certificates should be verified for this request."},
+    )
+    ca_bundle_path: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Optional CA bundle path used when verifying HTTPS certificates."},
     )
     post_type: str = field(
         default="posts", metadata={"doc": "REST post type endpoint slug."}

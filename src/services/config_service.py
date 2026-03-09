@@ -64,6 +64,28 @@ def _to_int(value: Any, default: int) -> int:
         return default
 
 
+def _to_bool(value: Any, default: bool) -> bool:
+    if _is_missing(value):
+        return default
+    if isinstance(value, bool):
+        return value
+    token = str(value).strip().lower()
+    if token in {"1", "true", "yes", "on"}:
+        return True
+    if token in {"0", "false", "no", "off"}:
+        return False
+    return default
+
+
+def _resolve_optional_path(raw_value: Any, *, base_path: Path) -> str:
+    if _is_missing(raw_value):
+        return ""
+    candidate = Path(str(raw_value).strip()).expanduser()
+    if not candidate.is_absolute():
+        candidate = (base_path / candidate).resolve()
+    return str(candidate)
+
+
 def _normalize_html_tag_acronyms(values: object) -> list[str]:
     if not isinstance(values, list):
         return []
@@ -866,6 +888,7 @@ def load_publish_settings(
         )
     )
     data = _load_config(request.path or str(CONFIG_PATH))
+    config_path = Path(request.path or str(CONFIG_PATH)).resolve()
     resolver = _ConfigResolver()
     need = resolver.need
     missing = resolver.missing
@@ -895,6 +918,21 @@ def load_publish_settings(
     if not app_password and not bearer_token:
         missing.append("env:WP_APP_PASSWORD|WP_BEARER_TOKEN")
 
+    ssl_verify_raw = wp_cfg.get("ssl_verify")
+    if _is_missing(ssl_verify_raw):
+        ssl_verify_raw = _env_value("WP_SSL_VERIFY")
+    ssl_verify = _to_bool(ssl_verify_raw, True)
+
+    ca_bundle_path_raw = wp_cfg.get("ca_bundle_path")
+    if _is_missing(ca_bundle_path_raw):
+        ca_bundle_path_raw = _env_value("WP_CA_BUNDLE_PATH")
+    ca_bundle_path = _resolve_optional_path(
+        ca_bundle_path_raw,
+        base_path=config_path.parent,
+    )
+    if ssl_verify and ca_bundle_path and not Path(ca_bundle_path).exists():
+        missing.append("publish.wp.ca_bundle_path|env:WP_CA_BUNDLE_PATH")
+
     wp = WordPressAuthSettings(
         schema_version="1.0",
         site_url=_normalize_site_url(site_url),
@@ -910,6 +948,8 @@ def load_publish_settings(
             .strip("/")
             or "ml_report"
         ),
+        ssl_verify=ssl_verify,
+        ca_bundle_path=ca_bundle_path or None,
     )
 
     validation_policy_raw = (
@@ -961,6 +1001,8 @@ def load_publish_settings(
                 "username": settings.wp.username,
                 "post_status": settings.wp.post_status,
                 "post_type": settings.wp.post_type,
+                "ssl_verify": settings.wp.ssl_verify,
+                "ca_bundle_path": settings.wp.ca_bundle_path or "",
                 "validation_policy": settings.validation_policy,
             },
         )

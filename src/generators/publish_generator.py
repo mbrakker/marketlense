@@ -137,6 +137,8 @@ def publish_html(
                     auth_header=auth_header,
                     taxonomy_rest_base="categories",
                     terms=terms,
+                    ssl_verify=settings.wp.ssl_verify,
+                    ca_bundle_path=settings.wp.ca_bundle_path,
                 ),
                 ctx,
             )
@@ -163,6 +165,8 @@ def publish_html(
                     auth_header=auth_header,
                     taxonomy_rest_base="ml_publisher",
                     terms=publisher_terms,
+                    ssl_verify=settings.wp.ssl_verify,
+                    ca_bundle_path=settings.wp.ca_bundle_path,
                 ),
                 ctx,
             )
@@ -184,6 +188,8 @@ def publish_html(
                     base_url=base_url,
                     auth_header=auth_header,
                     tags=tag_slugs,
+                    ssl_verify=settings.wp.ssl_verify,
+                    ca_bundle_path=settings.wp.ca_bundle_path,
                 ),
                 ctx,
             )
@@ -198,6 +204,8 @@ def publish_html(
         settings.output_dir,
         base_url,
         auth_header,
+        settings.wp.ssl_verify,
+        settings.wp.ca_bundle_path,
         ctx,
     )
     logger.info(
@@ -223,6 +231,8 @@ def publish_html(
             title=title,
             content_html=body_html,
             status=settings.wp.post_status,
+            ssl_verify=settings.wp.ssl_verify,
+            ca_bundle_path=settings.wp.ca_bundle_path,
             slug=slug,
             featured_media=featured_media_id,
             categories=category_ids_for_wp if category_ids_for_wp else None,
@@ -292,6 +302,8 @@ def _upload_images(
     output_dir: str,
     base_url: str,
     auth_header: str,
+    ssl_verify: bool,
+    ca_bundle_path: Optional[str],
     ctx: RunContext,
 ) -> Tuple[Dict[str, str], Optional[int]]:
     sources = extract_image_sources(html_text)
@@ -320,7 +332,15 @@ def _upload_images(
                 )
             continue
         upload_resp = upload_media(
-            _media_upload_request(local_path, src, base_url, auth_header, ctx),
+            _media_upload_request(
+                local_path,
+                src,
+                base_url,
+                auth_header,
+                ssl_verify,
+                ca_bundle_path,
+                ctx,
+            ),
             ctx,
         )
         mapping[src] = upload_resp.source_url
@@ -340,6 +360,8 @@ def _media_upload_request(
     src: str,
     base_url: str,
     auth_header: str,
+    ssl_verify: bool,
+    ca_bundle_path: Optional[str],
     ctx: RunContext,
 ) -> WordPressMediaUploadRequest:
     data_resp = read_bytes(ReadBytesRequest(schema_version="1.0", path=local_path), ctx)
@@ -353,6 +375,8 @@ def _media_upload_request(
         filename=filename,
         mime_type=mime_type or "image/png",
         data=data_resp.content,
+        ssl_verify=ssl_verify,
+        ca_bundle_path=ca_bundle_path,
         alt_text=alt_text,
     )
 

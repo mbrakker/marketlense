@@ -1473,6 +1473,11 @@ def _render_publishing_control(
                 output_dir=settings.output_dir,
                 state_db=settings.state_db,
                 reports_db=settings.reports_db,
+                post_type=(
+                    publish_settings.wp.post_type
+                    if publish_settings is not None
+                    else "ml_report"
+                ),
             ),
             _ctx("publish_queue"),
         )

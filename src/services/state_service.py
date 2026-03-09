@@ -68,7 +68,8 @@ CREATE TABLE IF NOT EXISTS published (
   md5 TEXT NOT NULL,
   published_at INTEGER NOT NULL,
   wp_post_id INTEGER NOT NULL,
-  wp_post_url TEXT NOT NULL
+  wp_post_url TEXT NOT NULL,
+  post_type TEXT NOT NULL DEFAULT ''
 );
 """
 
@@ -111,6 +112,17 @@ def _migrate_schema(conn: sqlite3.Connection) -> None:
     for col, col_type in required.items():
         if col not in cols:
             conn.execute(f"ALTER TABLE processed ADD COLUMN {col} {col_type}")
+
+    published_cols = {row[1] for row in conn.execute("PRAGMA table_info(published)")}
+    if "post_type" not in published_cols:
+        conn.execute(
+            "ALTER TABLE published ADD COLUMN post_type TEXT NOT NULL DEFAULT ''"
+        )
+
+
+def _normalize_post_type(post_type: str) -> str:
+    token = str(post_type).strip().strip("/")
+    return token or "posts"
 
 
 def _is_lock_error(exc: Exception) -> bool:
@@ -569,16 +581,18 @@ def list_processed(request: StateProcessedListRequest, ctx: RunContext) -> State
 
 
 def already_published(request: StatePublishCheckRequest, ctx: RunContext) -> bool:
+    post_type = _normalize_post_type(request.post_type)
     logger.info(log_event(
         ctx,
         role="service",
         event="state_publish_check_start",
         module=logger.name,
-        fields={"file_id": request.file_id},
+        fields={"file_id": request.file_id, "post_type": post_type},
     ))
     with _state_conn(request.state_db) as conn:
         cur = conn.execute(
-            "SELECT 1 FROM published WHERE file_id=?", (request.file_id,)
+            "SELECT 1 FROM published WHERE file_id=? AND post_type=?",
+            (request.file_id, post_type),
         )
         result = cur.fetchone() is not None
     logger.info(log_event(
@@ -586,46 +600,68 @@ def already_published(request: StatePublishCheckRequest, ctx: RunContext) -> boo
         role="service",
         event="state_publish_check_complete",
         module=logger.name,
-        fields={"file_id": request.file_id, "already_published": result},
+        fields={
+            "file_id": request.file_id,
+            "post_type": post_type,
+            "already_published": result,
+        },
     ))
     return result
 
 
 def record_publish(request: StatePublishRecordRequest, ctx: RunContext) -> None:
+    post_type = _normalize_post_type(request.post_type)
     logger.info(log_event(
         ctx,
         role="service",
         event="state_publish_record_start",
         module=logger.name,
-        fields={"file_id": request.file_id, "wp_post_id": request.wp_post_id},
+        fields={
+            "file_id": request.file_id,
+            "wp_post_id": request.wp_post_id,
+            "post_type": post_type,
+        },
     ))
     with _state_conn(request.state_db) as conn:
         conn.execute(
-            "INSERT OR REPLACE INTO published(file_id, md5, published_at, wp_post_id, wp_post_url) "
-            "VALUES(?, ?, strftime('%s','now'), ?, ?)",
-            (request.file_id, request.md5, request.wp_post_id, request.wp_post_url),
+            "INSERT OR REPLACE INTO published("
+            "file_id, md5, published_at, wp_post_id, wp_post_url, post_type"
+            ") VALUES(?, ?, strftime('%s','now'), ?, ?, ?)",
+            (
+                request.file_id,
+                request.md5,
+                request.wp_post_id,
+                request.wp_post_url,
+                post_type,
+            ),
         )
     logger.info(log_event(
         ctx,
         role="service",
         event="state_publish_record_complete",
         module=logger.name,
-        fields={"file_id": request.file_id, "wp_post_id": request.wp_post_id},
+        fields={
+            "file_id": request.file_id,
+            "wp_post_id": request.wp_post_id,
+            "post_type": post_type,
+        },
     ))
 
 
 def get_publish(request: StatePublishCheckRequest, ctx: RunContext) -> Optional[StatePublishGetResponse]:
+    post_type = _normalize_post_type(request.post_type)
     logger.info(log_event(
         ctx,
         role="service",
         event="state_publish_get_start",
         module=logger.name,
-        fields={"file_id": request.file_id},
+        fields={"file_id": request.file_id, "post_type": post_type},
     ))
     with _state_conn(request.state_db) as conn:
         cur = conn.execute(
-            "SELECT file_id, md5, published_at, wp_post_id, wp_post_url FROM published WHERE file_id=?",
-            (request.file_id,),
+            "SELECT file_id, md5, published_at, wp_post_id, wp_post_url, post_type "
+            "FROM published WHERE file_id=? AND post_type=?",
+            (request.file_id, post_type),
         )
         row = cur.fetchone()
     if not row:
@@ -634,16 +670,16 @@ def get_publish(request: StatePublishCheckRequest, ctx: RunContext) -> Optional[
             role="service",
             event="state_publish_get_complete",
             module=logger.name,
-            fields={"file_id": request.file_id, "found": False},
+            fields={"file_id": request.file_id, "post_type": post_type, "found": False},
         ))
         return None
-    file_id, md5, published_at, wp_post_id, wp_post_url = row
+    file_id, md5, published_at, wp_post_id, wp_post_url, stored_post_type = row
     logger.info(log_event(
         ctx,
         role="service",
         event="state_publish_get_complete",
         module=logger.name,
-        fields={"file_id": file_id, "found": True},
+        fields={"file_id": file_id, "post_type": stored_post_type, "found": True},
     ))
     return StatePublishGetResponse(
         schema_version="1.0",
@@ -652,6 +688,7 @@ def get_publish(request: StatePublishCheckRequest, ctx: RunContext) -> Optional[
         published_at=published_at,
         wp_post_id=wp_post_id,
         wp_post_url=wp_post_url,
+        post_type=str(stored_post_type or ""),
     )
 
 
@@ -669,11 +706,11 @@ def list_published(request: StatePublishedListRequest, ctx: RunContext) -> State
     rows: list[StatePublishedRow] = []
     with _state_conn(request.state_db) as conn:
         cur = conn.execute(
-            "SELECT file_id, md5, published_at, wp_post_id, wp_post_url "
+            "SELECT file_id, md5, published_at, wp_post_id, wp_post_url, post_type "
             "FROM published ORDER BY published_at DESC LIMIT ?",
             (limit,),
         )
-        for file_id, md5, published_at, wp_post_id, wp_post_url in cur.fetchall():
+        for file_id, md5, published_at, wp_post_id, wp_post_url, post_type in cur.fetchall():
             rows.append(StatePublishedRow(
                 schema_version="1.0",
                 file_id=file_id,
@@ -681,6 +718,7 @@ def list_published(request: StatePublishedListRequest, ctx: RunContext) -> State
                 published_at=int(published_at),
                 wp_post_id=int(wp_post_id),
                 wp_post_url=wp_post_url,
+                post_type=str(post_type or ""),
             ))
     response = StatePublishedListResponse(schema_version="1.0", rows=rows)
     logger.info(log_event(

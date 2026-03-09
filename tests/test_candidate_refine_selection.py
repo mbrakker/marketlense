@@ -307,3 +307,131 @@ def test_refine_selection_enforces_per_kind_limit(monkeypatch, tmp_path):
     assert len(items) == 2
     assert len(accepted) == 2
     assert {item.type for item in items} == {"table", "chart"}
+
+
+def test_select_fallback_candidate_crop_paths_prefers_ranked_order(tmp_path):
+    candidates = [
+        _candidate(
+            cid="table_a",
+            kind="table",
+            page=0,
+            meta={"rows": 6, "cols": 4, "numeric_ratio": 0.3, "area_frac": 0.2},
+        ),
+        _candidate(
+            cid="chart_a",
+            kind="chart",
+            page=1,
+            caption="Figure 1",
+            meta={"area_frac": 0.18, "text_ratio": 0.2},
+        ),
+        _candidate(
+            cid="chart_b",
+            kind="chart",
+            page=2,
+            caption="Figure 2",
+            meta={"area_frac": 0.2, "text_ratio": 0.2},
+        ),
+    ]
+    ranked_rows = [
+        RankedCandidate(
+            id="chart_b",
+            type="chart",
+            score=97,
+            quality_score=97,
+            insight_score=97,
+            data_score=97,
+            keep=False,
+            reject_reason="model_reject",
+        ),
+        RankedCandidate(
+            id="table_a",
+            type="table",
+            score=91,
+            quality_score=91,
+            insight_score=91,
+            data_score=91,
+            keep=False,
+            reject_reason="model_reject",
+        ),
+    ]
+
+    paths, selected, stats = rg._select_fallback_candidate_crop_paths(
+        ranked_rows=ranked_rows,
+        prefiltered_candidates=candidates,
+        candidate_path_by_id={
+            "table_a": "report/candidates/table_a.png",
+            "chart_a": "report/candidates/chart_a.png",
+            "chart_b": "report/candidates/chart_b.png",
+        },
+        selected_kind_max=1,
+    )
+
+    assert paths == [
+        "report/candidates/chart_b.png",
+        "report/candidates/table_a.png",
+    ]
+    assert [candidate.id for candidate in selected] == ["chart_b", "table_a"]
+    assert stats["selected_by_source"] == {"ranked": 2}
+
+
+def test_select_fallback_candidate_crop_paths_skips_obvious_rejects():
+    candidates = [
+        _candidate(
+            cid="bad_chart",
+            kind="chart",
+            page=0,
+            meta={"area_frac": 0.04, "text_ratio": 0.95},
+        ),
+        _candidate(
+            cid="good_chart",
+            kind="chart",
+            page=1,
+            caption="Figure 3",
+            meta={"area_frac": 0.18, "text_ratio": 0.2},
+        ),
+    ]
+    ranked_rows = [
+        RankedCandidate(
+            id="bad_chart",
+            type="chart",
+            score=99,
+            quality_score=99,
+            insight_score=99,
+            data_score=99,
+            keep=False,
+            reject_reason="model_reject",
+        )
+    ]
+
+    paths, selected, stats = rg._select_fallback_candidate_crop_paths(
+        ranked_rows=ranked_rows,
+        prefiltered_candidates=candidates,
+        candidate_path_by_id={
+            "bad_chart": "report/candidates/bad_chart.png",
+            "good_chart": "report/candidates/good_chart.png",
+        },
+        selected_kind_max=1,
+    )
+
+    assert paths == ["report/candidates/good_chart.png"]
+    assert [candidate.id for candidate in selected] == ["good_chart"]
+    assert stats["rejected_reasons"] == {"chart_text_fragment": 1}
+
+
+def test_resolve_figure_section_assets_enables_primary_image_without_gallery():
+    gallery, top, enabled = rg._resolve_figure_section_assets(
+        [],
+        "report/assets/figure.png",
+    )
+
+    assert gallery == []
+    assert top == "report/assets/figure.png"
+    assert enabled is True
+
+
+def test_resolve_figure_section_assets_disables_without_any_asset():
+    gallery, top, enabled = rg._resolve_figure_section_assets([], "")
+
+    assert gallery == []
+    assert top == ""
+    assert enabled is False

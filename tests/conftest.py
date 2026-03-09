@@ -76,7 +76,12 @@ def publish_settings_factory(app_paths: dict[str, str]):
     repo_root = Path(__file__).resolve().parents[1]
     config_dir = repo_root / "src" / "config"
 
-    def _factory(*, validation_policy: str = "block") -> PublishSettings:
+    def _factory(
+        *,
+        validation_policy: str = "block",
+        ssl_verify: bool = True,
+        ca_bundle_path: str | None = None,
+    ) -> PublishSettings:
         return PublishSettings(
             schema_version="1.0",
             output_dir=app_paths["output_dir"],
@@ -92,6 +97,8 @@ def publish_settings_factory(app_paths: dict[str, str]):
                 bearer_token=None,
                 post_status="publish",
                 post_type="ml_report",
+                ssl_verify=ssl_verify,
+                ca_bundle_path=ca_bundle_path,
             ),
         )
 

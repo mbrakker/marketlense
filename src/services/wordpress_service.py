@@ -34,6 +34,13 @@ def _post_type_endpoint(post_type: str) -> str:
     return token or "posts"
 
 
+def _requests_verify(*, ssl_verify: bool, ca_bundle_path: Optional[str]) -> bool | str:
+    if not ssl_verify:
+        return False
+    bundle_path = str(ca_bundle_path or "").strip()
+    return bundle_path or True
+
+
 def upload_media(
     request: WordPressMediaUploadRequest, ctx: RunContext
 ) -> WordPressMediaUploadResponse:
@@ -47,6 +54,8 @@ def upload_media(
                 "filename": request.filename,
                 "mime_type": request.mime_type,
                 "size": len(request.data),
+                "ssl_verify": request.ssl_verify,
+                "ca_bundle_path": request.ca_bundle_path or "",
             },
         )
     )
@@ -58,7 +67,16 @@ def upload_media(
         "file": (request.filename, request.data, request.mime_type),
     }
     try:
-        resp = requests.post(url, headers=headers, files=files, timeout=DEFAULT_TIMEOUT)
+        resp = requests.post(
+            url,
+            headers=headers,
+            files=files,
+            timeout=DEFAULT_TIMEOUT,
+            verify=_requests_verify(
+                ssl_verify=request.ssl_verify,
+                ca_bundle_path=request.ca_bundle_path,
+            ),
+        )
     except requests.RequestException as exc:
         raise AppError(
             code="wp_media_upload_failed",
@@ -92,7 +110,13 @@ def upload_media(
 
     if request.alt_text:
         _update_media_alt_text(
-            request.base_url, request.auth_header, media_id, request.alt_text, ctx
+            request.base_url,
+            request.auth_header,
+            media_id,
+            request.alt_text,
+            request.ssl_verify,
+            request.ca_bundle_path,
+            ctx,
         )
 
     logger.info(
@@ -129,6 +153,8 @@ def create_post(
                 "categories_count": len(request.categories or []),
                 "tags_count": len(request.tags or []),
                 "taxonomy_count": len(request.taxonomy_terms or {}),
+                "ssl_verify": request.ssl_verify,
+                "ca_bundle_path": request.ca_bundle_path or "",
             },
         )
     )
@@ -159,7 +185,14 @@ def create_post(
 
     try:
         resp = requests.post(
-            url, headers=headers, data=json.dumps(payload), timeout=DEFAULT_TIMEOUT
+            url,
+            headers=headers,
+            data=json.dumps(payload),
+            timeout=DEFAULT_TIMEOUT,
+            verify=_requests_verify(
+                ssl_verify=request.ssl_verify,
+                ca_bundle_path=request.ca_bundle_path,
+            ),
         )
     except requests.RequestException as exc:
         raise AppError(
@@ -220,7 +253,12 @@ def find_post_by_file_id(
             role="service",
             event="wp_post_lookup_start",
             module=logger.name,
-            fields={"file_id": request.file_id, "post_type": post_type_endpoint},
+            fields={
+                "file_id": request.file_id,
+                "post_type": post_type_endpoint,
+                "ssl_verify": request.ssl_verify,
+                "ca_bundle_path": request.ca_bundle_path or "",
+            },
         )
     )
     url = f"{request.base_url.rstrip('/')}/wp-json/wp/v2/{post_type_endpoint}"
@@ -231,7 +269,14 @@ def find_post_by_file_id(
     headers = {"Authorization": request.auth_header}
     try:
         resp = requests.get(
-            url, headers=headers, params=params, timeout=DEFAULT_TIMEOUT
+            url,
+            headers=headers,
+            params=params,
+            timeout=DEFAULT_TIMEOUT,
+            verify=_requests_verify(
+                ssl_verify=request.ssl_verify,
+                ca_bundle_path=request.ca_bundle_path,
+            ),
         )
     except requests.RequestException as exc:
         raise AppError(
@@ -292,6 +337,8 @@ def _ensure_terms(
     base_url: str,
     auth_header: str,
     terms: list[tuple[str, str]],
+    ssl_verify: bool,
+    ca_bundle_path: Optional[str],
     lookup_failed_code: str,
     lookup_failed_message: str,
     lookup_server_code: str,
@@ -312,6 +359,10 @@ def _ensure_terms(
         "Authorization": auth_header,
         "Content-Type": "application/json",
     }
+    verify = _requests_verify(
+        ssl_verify=ssl_verify,
+        ca_bundle_path=ca_bundle_path,
+    )
     for slug, name in terms:
         try:
             resp = requests.get(
@@ -319,6 +370,7 @@ def _ensure_terms(
                 headers={"Authorization": auth_header},
                 params={"slug": slug},
                 timeout=DEFAULT_TIMEOUT,
+                verify=verify,
             )
         except requests.RequestException as exc:
             raise AppError(
@@ -356,6 +408,7 @@ def _ensure_terms(
                     headers=headers,
                     data=json.dumps({"name": name, "slug": slug}),
                     timeout=DEFAULT_TIMEOUT,
+                    verify=verify,
                 )
             except requests.RequestException as exc:
                 raise AppError(
@@ -402,6 +455,8 @@ def ensure_taxonomy_terms(
             fields={
                 "taxonomy_rest_base": request.taxonomy_rest_base,
                 "count": len(request.terms),
+                "ssl_verify": request.ssl_verify,
+                "ca_bundle_path": request.ca_bundle_path or "",
             },
         )
     )
@@ -417,6 +472,8 @@ def ensure_taxonomy_terms(
         base_url=base_url,
         auth_header=request.auth_header,
         terms=[(term.slug, term.name or term.slug) for term in request.terms],
+        ssl_verify=request.ssl_verify,
+        ca_bundle_path=request.ca_bundle_path,
         lookup_failed_code="wp_taxonomy_lookup_failed",
         lookup_failed_message="Failed to lookup WordPress taxonomy term",
         lookup_server_code="wp_taxonomy_lookup_server_error",
@@ -460,7 +517,11 @@ def ensure_tags(
             role="service",
             event="wp_tag_ensure_start",
             module=logger.name,
-            fields={"count": len(request.tags)},
+            fields={
+                "count": len(request.tags),
+                "ssl_verify": request.ssl_verify,
+                "ca_bundle_path": request.ca_bundle_path or "",
+            },
         )
     )
     base_url = f"{request.base_url.rstrip('/')}/wp-json/wp/v2/tags"
@@ -468,6 +529,8 @@ def ensure_tags(
         base_url=base_url,
         auth_header=request.auth_header,
         terms=[(slug, slug) for slug in request.tags],
+        ssl_verify=request.ssl_verify,
+        ca_bundle_path=request.ca_bundle_path,
         lookup_failed_code="wp_tag_lookup_failed",
         lookup_failed_message="Failed to lookup WordPress tag",
         lookup_server_code="wp_tag_lookup_server_error",
@@ -510,6 +573,8 @@ def update_post_categories(
                 "post_id": request.post_id,
                 "categories": request.categories,
                 "post_type": post_type_endpoint,
+                "ssl_verify": request.ssl_verify,
+                "ca_bundle_path": request.ca_bundle_path or "",
             },
         )
     )
@@ -521,7 +586,14 @@ def update_post_categories(
     payload = {"categories": request.categories}
     try:
         resp = requests.post(
-            url, headers=headers, data=json.dumps(payload), timeout=DEFAULT_TIMEOUT
+            url,
+            headers=headers,
+            data=json.dumps(payload),
+            timeout=DEFAULT_TIMEOUT,
+            verify=_requests_verify(
+                ssl_verify=request.ssl_verify,
+                ca_bundle_path=request.ca_bundle_path,
+            ),
         )
     except requests.RequestException as exc:
         raise AppError(
@@ -564,6 +636,8 @@ def _update_media_alt_text(
     auth_header: str,
     media_id: int,
     alt_text: str,
+    ssl_verify: bool,
+    ca_bundle_path: Optional[str],
     ctx: RunContext,
 ) -> None:
     url = f"{base_url.rstrip('/')}/wp-json/wp/v2/media/{media_id}"
@@ -574,7 +648,14 @@ def _update_media_alt_text(
     payload = {"alt_text": alt_text}
     try:
         resp = requests.post(
-            url, headers=headers, data=json.dumps(payload), timeout=DEFAULT_TIMEOUT
+            url,
+            headers=headers,
+            data=json.dumps(payload),
+            timeout=DEFAULT_TIMEOUT,
+            verify=_requests_verify(
+                ssl_verify=ssl_verify,
+                ca_bundle_path=ca_bundle_path,
+            ),
         )
     except requests.RequestException:
         logger.info(
