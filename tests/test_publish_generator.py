@@ -135,3 +135,47 @@ def test_publish_html_assigns_publisher_taxonomy_terms(
     assert captured["request"].taxonomy_terms == {"ml_publisher": [22]}
     assert captured["request"].ssl_verify is False
     assert captured["taxonomy_ssl"] == [False, False]
+
+
+def test_resolve_local_path_uses_html_directory_for_relative_assets(
+    tmp_path, run_context
+) -> None:
+    output_dir = tmp_path / "out"
+    report_dir = output_dir / "report-123"
+    report_dir.mkdir(parents=True)
+    html_path = report_dir / "report-123.html"
+    html_path.write_text("<html></html>", encoding="utf-8")
+    cover_path = report_dir / "report_analysis" / "cover.png"
+    cover_path.parent.mkdir(parents=True)
+    cover_path.write_bytes(b"img")
+
+    resolved = pg._resolve_local_path(
+        "report_analysis/cover.png",
+        str(html_path),
+        str(output_dir),
+        run_context,
+    )
+
+    assert resolved == str(cover_path)
+
+
+def test_resolve_local_path_ignores_query_string_for_relative_assets(
+    tmp_path, run_context
+) -> None:
+    output_dir = tmp_path / "out"
+    report_dir = output_dir / "report-123"
+    report_dir.mkdir(parents=True)
+    html_path = report_dir / "report-123.html"
+    html_path.write_text("<html></html>", encoding="utf-8")
+    figure_path = report_dir / "report_analysis" / "figures" / "crop_01.png"
+    figure_path.parent.mkdir(parents=True)
+    figure_path.write_bytes(b"img")
+
+    resolved = pg._resolve_local_path(
+        "report_analysis/figures/crop_01.png?raw=1#v",
+        str(html_path),
+        str(output_dir),
+        run_context,
+    )
+
+    assert resolved == str(figure_path)
