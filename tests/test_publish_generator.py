@@ -145,7 +145,7 @@ def test_publish_html_assigns_publisher_taxonomy_terms(
     ]
     assert_no_defaulted_required_fields(outcome)
     assert outcome.status == "published"
-    assert post_call.json_data["categories"] == [11]
-    assert post_call.json_data["ml_publisher"] == [22]
-    assert post_call.verify is False
-    assert all(call.verify is False for call in taxonomy_calls)
+    assert captured["request"].categories == [11]
+    assert captured["request"].taxonomy_terms == {"ml_publisher": [22]}
+    assert captured["request"].ssl_verify is False
+    assert captured["taxonomy_ssl"] == [False, False]
