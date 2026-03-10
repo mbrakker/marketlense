@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from src.contracts.candidates import Candidate
 from src.contracts.pdf_text import (
@@ -141,6 +141,77 @@ class _TaxonomyCategoryState:
 class _RankBatchResult:
     ranked: list[Any]
     usage: dict[str, Optional[int]]
+
+
+@dataclass(frozen=True)
+class ReportGeneratorDependencies:
+    state_get: Callable[[StateGetRequest, RunContext], Any]
+    state_record: Callable[[StateRecordRequest, RunContext], Any]
+    vector_store_get_status: Callable[[VectorStoreStatusRequest, RunContext], Any]
+    vector_store_create: Callable[[VectorStoreCreateRequest, RunContext], Any]
+    vector_store_upload_file: Callable[[VectorStoreUploadFileRequest, RunContext], Any]
+    vector_store_attach_file: Callable[[VectorStoreAttachFileRequest, RunContext], Any]
+    vector_store_wait_until_indexed: Callable[[VectorStoreWaitRequest, RunContext], Any]
+    vector_store_update_metadata: Callable[
+        [VectorStoreUpdateMetadataRequest, RunContext], Any
+    ]
+    build_pdf_context: Callable[[PdfContextBuildRequest, RunContext], Any]
+    extract_pdf_info: Callable[[PdfInfoRequest, RunContext], PdfInfoResponse]
+    detect_contents_page: Callable[
+        [PdfContentsDetectionRequest, RunContext], PdfContentsDetectionResponse
+    ]
+    render_preview: Callable[[PreviewRequest, RunContext], Any]
+    extract_pdf_text: Callable[
+        [PdfTextExtractRequest, RunContext], PdfTextExtractResponse
+    ]
+    sample_pdf_text: Callable[[PdfTextSampleRequest, RunContext], Any]
+    extract_best_figure: Callable[[FigureExtractRequest, RunContext], Any]
+    collect_candidates: Callable[[ExtractCandidatesRequest, RunContext], Any]
+    extract_taxonomy: Callable[[TaxonomyExtractRequest, RunContext], Any]
+    load_category_mappings: Callable[[CategoryMappingLoadRequest, RunContext], Any]
+    categorize_taxonomy: Callable[[list[str], Any, RunContext], Any]
+    update_uncategorized_tags: Callable[
+        [UncategorizedTagsUpdateRequest, RunContext], Any
+    ]
+    generate_evidence_packs: Callable[..., dict[str, dict]]
+    generate_artifacts: Callable[..., dict[str, Any]]
+    run_validation: Callable[..., ValidationReport]
+    analysis_store_pack: Callable[[AnalysisStorePackRequest, RunContext], Any]
+    render_report: Callable[[RenderRequest, RunContext], RenderResponse]
+    upsert_report_metadata: Callable[[ReportMetadataUpsertRequest, RunContext], Any]
+    get_report_metadata: Callable[[ReportMetadataGetRequest, RunContext], Any]
+
+    @classmethod
+    def default(cls) -> "ReportGeneratorDependencies":
+        return cls(
+            state_get=state_service.get,
+            state_record=state_service.record,
+            vector_store_get_status=vector_store_service.get_vector_store_status,
+            vector_store_create=vector_store_service.create_vector_store,
+            vector_store_upload_file=vector_store_service.upload_file,
+            vector_store_attach_file=vector_store_service.attach_file,
+            vector_store_wait_until_indexed=vector_store_service.wait_until_indexed,
+            vector_store_update_metadata=vector_store_service.update_metadata,
+            build_pdf_context=build_pdf_context,
+            extract_pdf_info=extract_pdf_info,
+            detect_contents_page=detect_contents_page_service,
+            render_preview=render_preview_service,
+            extract_pdf_text=extract_pdf_text,
+            sample_pdf_text=sample_pdf_text,
+            extract_best_figure=extract_best_figure_service,
+            collect_candidates=collect_candidates_service,
+            extract_taxonomy=extract_taxonomy,
+            load_category_mappings=load_category_mappings,
+            categorize_taxonomy=categorize_taxonomy,
+            update_uncategorized_tags=update_uncategorized_tags,
+            generate_evidence_packs=generate_evidence_packs,
+            generate_artifacts=generate_artifacts,
+            run_validation=run_validation,
+            analysis_store_pack=report_analysis_store_service.store_pack,
+            render_report=render_report_service,
+            upsert_report_metadata=upsert_report_metadata,
+            get_report_metadata=get_report_metadata,
+        )
 
 
 def _derive_title(name: str) -> str:
@@ -1214,7 +1285,8 @@ def _select_fallback_candidate_crop_paths(
     selected_max = max(1, int(selected_kind_max)) * 2
     selected_per_kind = max(1, int(selected_kind_max))
     prefiltered_by_id = {
-        str(candidate.id or "").strip(): candidate for candidate in prefiltered_candidates
+        str(candidate.id or "").strip(): candidate
+        for candidate in prefiltered_candidates
     }
     ordered_candidates: list[tuple[str, Candidate]] = []
     seen_ids: set[str] = set()
@@ -1256,9 +1328,9 @@ def _select_fallback_candidate_crop_paths(
             continue
         reject_now, reject_reason = _candidate_is_obvious_reject(candidate)
         if reject_now:
-            rejected_reasons[reject_reason] = int(
-                rejected_reasons.get(reject_reason, 0)
-            ) + 1
+            rejected_reasons[reject_reason] = (
+                int(rejected_reasons.get(reject_reason, 0)) + 1
+            )
             continue
         candidate_kind = str(candidate.kind or "").strip()
         if selected_by_kind.get(candidate_kind, 0) >= selected_per_kind:
@@ -1305,7 +1377,9 @@ def _resolve_figure_section_assets(
     sliced_paths: list[str],
     primary_figure_path: str,
 ) -> tuple[list[str], str, bool]:
-    gallery_paths = [str(path or "").strip() for path in sliced_paths if str(path or "").strip()]
+    gallery_paths = [
+        str(path or "").strip() for path in sliced_paths if str(path or "").strip()
+    ]
     if gallery_paths:
         return gallery_paths, gallery_paths[0], True
     normalized_primary = str(primary_figure_path or "").strip()
@@ -1602,6 +1676,7 @@ def _record_state_progress(
     file_id: str,
     md5: Optional[str],
     ctx: RunContext,
+    dependencies: ReportGeneratorDependencies,
     stage: str,
     vector_store_id: Optional[str] = None,
     vector_store_status: Optional[str] = None,
@@ -1612,7 +1687,7 @@ def _record_state_progress(
     if not md5:
         return
     try:
-        state_service.record(
+        dependencies.state_record(
             StateRecordRequest(
                 schema_version="1.0",
                 state_db=settings.state_db,
@@ -1662,6 +1737,7 @@ def _start_vector_store_indexing(
     local_pdf_path: str,
     settings: IngestSettings,
     ctx: RunContext,
+    dependencies: ReportGeneratorDependencies,
 ) -> _VectorStoreIndexingState:
     vector_store_id = None
     openai_file_id = None
@@ -1680,7 +1756,7 @@ def _start_vector_store_indexing(
     )
     existing = None
     try:
-        existing = state_service.get(
+        existing = dependencies.state_get(
             StateGetRequest(
                 schema_version="1.0", state_db=settings.state_db, file_id=file.file_id
             ),
@@ -1700,7 +1776,7 @@ def _start_vector_store_indexing(
                 fields={"file_id": file.file_id, "vector_store_id": vector_store_id},
             )
         )
-        status_resp = vector_store_service.get_vector_store_status(
+        status_resp = dependencies.vector_store_get_status(
             VectorStoreStatusRequest(
                 schema_version="1.0", vector_store_id=vector_store_id
             ),
@@ -1710,7 +1786,7 @@ def _start_vector_store_indexing(
         indexed_at_utc = status_resp.indexed_at_utc
         last_error = status_resp.last_error
     if not vector_store_id:
-        vs_resp = vector_store_service.create_vector_store(
+        vs_resp = dependencies.vector_store_create(
             VectorStoreCreateRequest(
                 schema_version="1.0",
                 name=file.file_id,
@@ -1736,7 +1812,7 @@ def _start_vector_store_indexing(
                 fields={"file_id": file.file_id, "vector_store_id": vector_store_id},
             )
         )
-        upload_resp = vector_store_service.upload_file(
+        upload_resp = dependencies.vector_store_upload_file(
             VectorStoreUploadFileRequest(
                 schema_version="1.0",
                 vector_store_id=vector_store_id,
@@ -1745,7 +1821,7 @@ def _start_vector_store_indexing(
             ctx,
         )
         openai_file_id = upload_resp.openai_file_id
-        vector_store_service.attach_file(
+        dependencies.vector_store_attach_file(
             VectorStoreAttachFileRequest(
                 schema_version="1.0",
                 vector_store_id=vector_store_id,
@@ -1784,6 +1860,7 @@ def _await_vector_store_indexing(
     state: _VectorStoreIndexingState,
     settings: IngestSettings,
     ctx: RunContext,
+    dependencies: ReportGeneratorDependencies,
 ) -> _VectorStoreIndexingState:
     vector_store_id = state.vector_store_id
     if not vector_store_id:
@@ -1833,7 +1910,7 @@ def _await_vector_store_indexing(
             },
         )
     )
-    status_resp = vector_store_service.wait_until_indexed(
+    status_resp = dependencies.vector_store_wait_until_indexed(
         VectorStoreWaitRequest(
             schema_version="1.0",
             vector_store_id=vector_store_id,
@@ -1870,9 +1947,23 @@ def _ensure_vector_store(
     local_pdf_path: str,
     settings: IngestSettings,
     ctx: RunContext,
+    *,
+    dependencies: Optional[ReportGeneratorDependencies] = None,
 ):
-    indexing_state = _start_vector_store_indexing(file, local_pdf_path, settings, ctx)
-    ready_state = _await_vector_store_indexing(indexing_state, settings, ctx)
+    deps = dependencies or ReportGeneratorDependencies.default()
+    indexing_state = _start_vector_store_indexing(
+        file,
+        local_pdf_path,
+        settings,
+        ctx,
+        dependencies=deps,
+    )
+    ready_state = _await_vector_store_indexing(
+        indexing_state,
+        settings,
+        ctx,
+        dependencies=deps,
+    )
     return (
         ready_state.vector_store_id,
         ready_state.openai_file_id,
@@ -1891,9 +1982,10 @@ def _resolve_taxonomy_and_categories(
     report_slug: str,
     settings: IngestSettings,
     mode_ctx: RunContext,
+    dependencies: ReportGeneratorDependencies,
 ) -> _TaxonomyCategoryState:
     taxonomy_ctx = child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:taxonomy")
-    taxonomy_resp = extract_taxonomy(
+    taxonomy_resp = dependencies.extract_taxonomy(
         TaxonomyExtractRequest(
             schema_version="1.0",
             report_id=file.file_id,
@@ -1905,7 +1997,7 @@ def _resolve_taxonomy_and_categories(
         ),
         taxonomy_ctx,
     )
-    mappings_resp = load_category_mappings(
+    mappings_resp = dependencies.load_category_mappings(
         CategoryMappingLoadRequest(
             schema_version="1.0",
             path=settings.category_mapping_path,
@@ -1913,11 +2005,11 @@ def _resolve_taxonomy_and_categories(
         ),
         taxonomy_ctx,
     )
-    category_assignment = categorize_taxonomy(
+    category_assignment = dependencies.categorize_taxonomy(
         taxonomy_resp.taxonomy, mappings_resp, taxonomy_ctx
     )
     if category_assignment.unmapped_tags or mappings_resp.mappings.uncategorized:
-        update_uncategorized_tags(
+        dependencies.update_uncategorized_tags(
             UncategorizedTagsUpdateRequest(
                 schema_version="1.0",
                 path=settings.category_mapping_path,
@@ -1927,7 +2019,7 @@ def _resolve_taxonomy_and_categories(
             taxonomy_ctx,
         )
     if vector_store_id:
-        vector_store_service.update_metadata(
+        dependencies.vector_store_update_metadata(
             VectorStoreUpdateMetadataRequest(
                 schema_version="1.0",
                 vector_store_id=vector_store_id,
@@ -1960,7 +2052,9 @@ def generate_report(
     *,
     evidence_pack_openai_client=None,
     artifact_openai_client=None,
+    dependencies: Optional[ReportGeneratorDependencies] = None,
 ) -> IngestOutcome:
+    deps = dependencies or ReportGeneratorDependencies.default()
     report_worker_limit = getattr(settings, "report_worker_limit", 1)
     try:
         report_worker_limit = int(report_worker_limit)
@@ -2015,7 +2109,7 @@ def generate_report(
     if not parallel_within_file:
         try:
             ctx_pdf = child_context(ctx, task_id=f"{ctx.task_id}:pdf_context")
-            pdf_ctx_resp = build_pdf_context(
+            pdf_ctx_resp = deps.build_pdf_context(
                 PdfContextBuildRequest(schema_version="1.0", path=local_pdf_path),
                 ctx_pdf,
             )
@@ -2102,7 +2196,7 @@ def generate_report(
                     )
                 )
         if info_resp is None:
-            info_resp = extract_pdf_info(
+            info_resp = deps.extract_pdf_info(
                 PdfInfoRequest(
                     schema_version="1.0",
                     path=local_pdf_path,
@@ -2204,7 +2298,7 @@ def generate_report(
                         )
                     )
             if contents_resp is None:
-                contents_resp = detect_contents_page_service(
+                contents_resp = deps.detect_contents_page(
                     PdfContentsDetectionRequest(
                         schema_version="1.0",
                         path=local_pdf_path,
@@ -2245,7 +2339,7 @@ def generate_report(
                 local_contents_page = contents_resp.page_number
                 local_contents_heading = contents_resp.heading or ""
                 if settings.contents_preview_enabled:
-                    contents_preview = render_preview_service(
+                    contents_preview = deps.render_preview(
                         PreviewRequest(
                             schema_version="1.1",
                             pdf_path=local_pdf_path,
@@ -2359,7 +2453,7 @@ def generate_report(
                     )
                 )
         if text_resp is None:
-            text_resp = extract_pdf_text(
+            text_resp = deps.extract_pdf_text(
                 PdfTextExtractRequest(
                     schema_version="1.0",
                     path=local_pdf_path,
@@ -2487,7 +2581,7 @@ def generate_report(
             text_validation_reason=text_validation_reason,
             text_validation_pages=text_validation_pages,
         )
-    sample_resp = sample_pdf_text(
+    sample_resp = deps.sample_pdf_text(
         PdfTextSampleRequest(
             schema_version="1.0",
             path=local_pdf_path,
@@ -2569,6 +2663,7 @@ def generate_report(
         local_pdf_path,
         settings,
         mode_ctx,
+        dependencies=deps,
     )
     vector_store_id = vector_state.vector_store_id
     openai_file_id = vector_state.openai_file_id
@@ -2581,6 +2676,7 @@ def generate_report(
             file_id=file.file_id,
             md5=md5,
             ctx=mode_ctx,
+            dependencies=deps,
             stage="vector_store_indexing",
             vector_store_id=vector_store_id,
             vector_store_status=vector_store_status or "indexing",
@@ -2590,7 +2686,7 @@ def generate_report(
         )
 
     def _extract_figure_task():
-        return extract_best_figure_service(
+        return deps.extract_best_figure(
             FigureExtractRequest(
                 schema_version="1.0",
                 pdf_path=local_pdf_path,
@@ -2605,7 +2701,7 @@ def generate_report(
         exclude_page_indices: list[int] = []
         if contents_page_number > 0:
             exclude_page_indices = [int(contents_page_number) - 1]
-        return collect_candidates_service(
+        return deps.collect_candidates(
             ExtractCandidatesRequest(
                 schema_version="1.0",
                 pdf_path=local_pdf_path,
@@ -2904,7 +3000,7 @@ def generate_report(
         )
 
     preview_ctx = child_context(ctx, task_id=f"{ctx.task_id}:preview")
-    preview_resp = render_preview_service(
+    preview_resp = deps.render_preview(
         PreviewRequest(
             schema_version="1.1",
             pdf_path=local_pdf_path,
@@ -2915,7 +3011,12 @@ def generate_report(
         preview_ctx,
     )
 
-    vector_state = _await_vector_store_indexing(vector_state, settings, mode_ctx)
+    vector_state = _await_vector_store_indexing(
+        vector_state,
+        settings,
+        mode_ctx,
+        dependencies=deps,
+    )
     vector_store_id = vector_state.vector_store_id
     openai_file_id = vector_state.openai_file_id
     vector_store_status = vector_state.vector_store_status
@@ -2926,6 +3027,7 @@ def generate_report(
         file_id=file.file_id,
         md5=md5,
         ctx=mode_ctx,
+        dependencies=deps,
         stage="vector_store_ready",
         vector_store_id=vector_store_id,
         vector_store_status=vector_store_status,
@@ -2965,9 +3067,10 @@ def generate_report(
                 report_slug=report_name,
                 settings=settings,
                 mode_ctx=mode_ctx,
+                dependencies=deps,
             )
             evidence_future = executor.submit(
-                generate_evidence_packs,
+                deps.generate_evidence_packs,
                 report_id=file.file_id,
                 report_name=report_name,
                 vector_store_id=vector_store_id,
@@ -3003,6 +3106,7 @@ def generate_report(
             report_slug=report_name,
             settings=settings,
             mode_ctx=mode_ctx,
+            dependencies=deps,
         )
     data.taxonomy = taxonomy_state.taxonomy
     data.region = taxonomy_state.region
@@ -3018,7 +3122,7 @@ def generate_report(
     artifacts_payload: dict | None = None
     try:
         if not parallel_within_file:
-            packs = generate_evidence_packs(
+            packs = deps.generate_evidence_packs(
                 report_id=file.file_id,
                 report_name=report_name,
                 vector_store_id=vector_store_id,
@@ -3109,6 +3213,7 @@ def generate_report(
         file_id=file.file_id,
         md5=md5,
         ctx=mode_ctx,
+        dependencies=deps,
         stage="evidence_packs",
         vector_store_id=vector_store_id,
         vector_store_status=vector_store_status,
@@ -3142,7 +3247,7 @@ def generate_report(
                 )
             )
     try:
-        artifacts_payload = generate_artifacts(
+        artifacts_payload = deps.generate_artifacts(
             report_id=file.file_id,
             report_name=report_name,
             doc_map=packs.get("doc_map", {}),
@@ -3167,6 +3272,7 @@ def generate_report(
             file_id=file.file_id,
             md5=md5,
             ctx=mode_ctx,
+            dependencies=deps,
             stage="artifacts_ready",
             vector_store_id=vector_store_id,
             vector_store_status=vector_store_status,
@@ -3197,7 +3303,7 @@ def generate_report(
             evidence_packs=mode_evidence_packs,
             vector_store_id=vector_store_id,
         )
-        validation_report = run_validation(
+        validation_report = deps.run_validation(
             validation_req,
             settings,
             child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:validation"),
@@ -3212,6 +3318,7 @@ def generate_report(
             file_id=file.file_id,
             md5=md5,
             ctx=mode_ctx,
+            dependencies=deps,
             stage="validation_complete",
             vector_store_id=vector_store_id,
             vector_store_status=vector_store_status,
@@ -3246,7 +3353,7 @@ def generate_report(
             severity="error",
         )
         try:
-            validation_path = report_analysis_store_service.store_pack(
+            validation_path = deps.analysis_store_pack(
                 AnalysisStorePackRequest(
                     schema_version="1.0",
                     output_dir=settings.output_dir,
@@ -3299,7 +3406,7 @@ def generate_report(
     )
 
     snapshot_name = f"analysis_{analysis_mode}"
-    snapshot_path = report_analysis_store_service.store_pack(
+    snapshot_path = deps.analysis_store_pack(
         AnalysisStorePackRequest(
             schema_version="1.0",
             output_dir=settings.output_dir,
@@ -3357,8 +3464,10 @@ def generate_report(
         )
 
     # Persist metadata before rendering so HTML title/publisher/time_period is sourced from DB.
-    upsert_report_metadata(_build_metadata_upsert_request(html_path_value=None), ctx)
-    render_meta = get_report_metadata(
+    deps.upsert_report_metadata(
+        _build_metadata_upsert_request(html_path_value=None), ctx
+    )
+    render_meta = deps.get_report_metadata(
         ReportMetadataGetRequest(
             schema_version="1.1",
             db_path=settings.reports_db,
@@ -3475,7 +3584,7 @@ def generate_report(
                     )
                 )
     if not html_cache_hit:
-        render_resp = render_report_service(
+        render_resp = deps.render_report(
             RenderRequest(
                 schema_version="1.0",
                 data=render_data_dict,
@@ -3505,11 +3614,11 @@ def generate_report(
                 )
             )
 
-    upsert_report_metadata(
+    deps.upsert_report_metadata(
         _build_metadata_upsert_request(html_path_value=out_html), ctx
     )
 
-    cover_meta = get_report_metadata(
+    cover_meta = deps.get_report_metadata(
         ReportMetadataGetRequest(
             schema_version="1.0",
             db_path=settings.reports_db,

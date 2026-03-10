@@ -192,22 +192,12 @@ Format for each item:
 
 ## D) Test integrity and brittleness hotspots
 
-### 36) High total `monkeypatch.setattr` usage (189)
-- **Context:** Over-mocking risks tests validating narratives instead of behavior.
+### 36) Repo-wide `monkeypatch.setattr` usage remains elevated (71)
+- **Context:** Over-mocking still risks tests validating narratives instead of behavior, even after the hotspot reductions.
 - **Expected:** Patch only external boundaries; keep core logic real.
 - **Success criteria:** Removing core logic breaks tests that claim to cover it.
 
-### 37) `tests/test_vector_pipeline_wiring.py` uses 60 monkeypatches
-- **Context:** Extensive internal patching obscures true pipeline behavior.
-- **Expected:** Fixture-based fake boundaries with real orchestration path.
-- **Success criteria:** Pipeline tests assert state/log side effects without patching internals.
-
-### 38) `tests/test_ingest_parallel.py` uses 15 monkeypatches
-- **Context:** Concurrency behavior may be under-validated.
-- **Expected:** Real parallel path + controlled boundary fakes.
-- **Success criteria:** Attempt counts, ordering/backoff, and outputs are asserted.
-
-Resolved on 2026-03-09: former items 39-45 were removed after converting the candidate-extraction, publish, OpenAI vector-store, WordPress, and candidate-refine tests to shared boundary fixtures/real execution paths and removing the `sys.path.append(...)` import hack from `tests/test_vector_pipeline_wiring.py`.
+Resolved on 2026-03-09: former items 37-45 were removed after converting `tests/test_vector_pipeline_wiring.py` and `tests/test_ingest_parallel.py` to explicit dependency-injection seams plus log capture, converting the candidate-extraction, publish, OpenAI vector-store, WordPress, and candidate-refine tests to shared boundary fixtures/real execution paths, and removing the `sys.path.append(...)` import hack from `tests/test_vector_pipeline_wiring.py`.
 
 ## E) Cross-role coupling and maintainability quick wins
 

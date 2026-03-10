@@ -5,9 +5,10 @@ import logging
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Callable, Iterable, List, Optional
 
 from src.contracts.categories import UncategorizedTagsFlushRequest
 from src.services.pdf_service import check_pdf_eof
@@ -18,7 +19,10 @@ from src.contracts.drive import (
 )
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.lock import LockAcquireRequest, LockReleaseRequest
-from src.contracts.report_store import ReportMetadataDbAccessRequest, ReportMetadataGetRequest
+from src.contracts.report_store import (
+    ReportMetadataDbAccessRequest,
+    ReportMetadataGetRequest,
+)
 from src.contracts.run_context import RunContext
 from src.generators.report_generator import generate_report
 from src.orchestrators.ingest_file_orchestrator import (
@@ -30,7 +34,11 @@ from src.orchestrators.retry_orchestrator import run_step_with_default_policy
 from src.orchestrators.report_pipeline_orchestrator import (
     run_report_pipeline as run_report_pipeline_orchestrator,
 )
-from src.services.drive_service import download_pdf_to_path, get_file_metadata, list_pdfs
+from src.services.drive_service import (
+    download_pdf_to_path,
+    get_file_metadata,
+    list_pdfs,
+)
 from src.services.file_service import (
     delete_file,
     file_stat,
@@ -43,10 +51,19 @@ from src.contracts.files import (
     WriteBytesRequest,
 )
 from src.services.lock_service import acquire_lock, release_lock
-from src.services.report_store_service import check_report_db_access, get_metadata as get_report_metadata
-from src.services.state_service import already_processed_batch as state_already_processed_batch
+from src.services.report_store_service import (
+    check_report_db_access,
+    get_metadata as get_report_metadata,
+)
+from src.services.state_service import (
+    already_processed_batch as state_already_processed_batch,
+)
 from src.services.state_service import already_processed as state_already_processed
-from src.services.state_service import check_state_db_access, get_ingest_cursor, set_ingest_cursor
+from src.services.state_service import (
+    check_state_db_access,
+    get_ingest_cursor,
+    set_ingest_cursor,
+)
 from src.services.state_service import record as state_record
 from src.contracts.state import (
     StateBatchCheckItem,
@@ -69,7 +86,32 @@ EOF_RETRY_LIMIT = 1
 STATE_PREFILTER_BATCH_SIZE = 200
 
 
-def _should_skip(file: DriveFile, md5: Optional[str], state_db: str, ctx: RunContext) -> bool:
+@dataclass(frozen=True)
+class IngestBatchDependencies:
+    list_pdfs: Callable[[DriveListRequest, RunContext], Iterable[DriveFile]]
+    batch_should_skip: Callable[
+        [list[DriveFile], str, RunContext], dict[tuple[str, str], bool]
+    ]
+    process_file: Callable[
+        [DriveFile, int, IngestSettings, RunContext], _FileProcessResult
+    ]
+    thread_pool_executor_factory: Callable[[int], Any]
+    flush_uncategorized_tags: Callable[[UncategorizedTagsFlushRequest, RunContext], Any]
+
+    @classmethod
+    def default(cls) -> "IngestBatchDependencies":
+        return cls(
+            list_pdfs=list_pdfs,
+            batch_should_skip=_batch_should_skip,
+            process_file=_process_file,
+            thread_pool_executor_factory=ThreadPoolExecutor,
+            flush_uncategorized_tags=flush_uncategorized_tags,
+        )
+
+
+def _should_skip(
+    file: DriveFile, md5: Optional[str], state_db: str, ctx: RunContext
+) -> bool:
     if not md5:
         return False
     req = StateCheckRequest(
@@ -91,7 +133,9 @@ def _batch_should_skip(
         md5 = file.md5_checksum.strip() if file.md5_checksum else ""
         if not md5:
             continue
-        items.append(StateBatchCheckItem(schema_version="1.0", file_id=file.file_id, md5=md5))
+        items.append(
+            StateBatchCheckItem(schema_version="1.0", file_id=file.file_id, md5=md5)
+        )
     if not items:
         return {}
     response = state_already_processed_batch(
@@ -107,13 +151,15 @@ def _batch_should_skip(
     for item in items:
         key = (item.file_id, item.md5)
         lookup[key] = key in processed
-    logger.info(log_event(
-        ctx,
-        role="orchestrator",
-        event="drive_list_state_batch_checked",
-        module=logger.name,
-        fields={"checked": len(items), "matched": len(processed)},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="drive_list_state_batch_checked",
+            module=logger.name,
+            fields={"checked": len(items), "matched": len(processed)},
+        )
+    )
     return lookup
 
 
@@ -140,53 +186,65 @@ def _load_md5_sidecar(path: str, file_id: str, ctx: RunContext) -> Optional[dict
         resp = read_text(ReadTextRequest(schema_version="1.0", path=path), ctx)
     except AppError as exc:
         if exc.code == "file_not_found":
-            logger.info(log_event(
+            logger.info(
+                log_event(
+                    ctx,
+                    role="orchestrator",
+                    event="md5_sidecar_missing",
+                    module=logger.name,
+                    fields={"file_id": file_id, "path": path},
+                )
+            )
+            return None
+        logger.info(
+            log_event(
                 ctx,
                 role="orchestrator",
-                event="md5_sidecar_missing",
+                event="md5_sidecar_read_failed",
                 module=logger.name,
-                fields={"file_id": file_id, "path": path},
-            ))
-            return None
-        logger.info(log_event(
-            ctx,
-            role="orchestrator",
-            event="md5_sidecar_read_failed",
-            module=logger.name,
-            fields={"file_id": file_id, "path": path, "error": exc.message},
-        ))
+                fields={"file_id": file_id, "path": path, "error": exc.message},
+            )
+        )
         return None
     try:
         payload = json.loads(resp.content)
     except json.JSONDecodeError as exc:
-        logger.info(log_event(
-            ctx,
-            role="orchestrator",
-            event="md5_sidecar_invalid_json",
-            module=logger.name,
-            fields={"file_id": file_id, "path": path, "error": str(exc)},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="md5_sidecar_invalid_json",
+                module=logger.name,
+                fields={"file_id": file_id, "path": path, "error": str(exc)},
+            )
+        )
         return None
     if not isinstance(payload, dict):
-        logger.info(log_event(
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="md5_sidecar_invalid_payload",
+                module=logger.name,
+                fields={"file_id": file_id, "path": path},
+            )
+        )
+        return None
+    logger.info(
+        log_event(
             ctx,
             role="orchestrator",
-            event="md5_sidecar_invalid_payload",
+            event="md5_sidecar_loaded",
             module=logger.name,
             fields={"file_id": file_id, "path": path},
-        ))
-        return None
-    logger.info(log_event(
-        ctx,
-        role="orchestrator",
-        event="md5_sidecar_loaded",
-        module=logger.name,
-        fields={"file_id": file_id, "path": path},
-    ))
+        )
+    )
     return payload
 
 
-def _sidecar_md5_for_stat(payload: dict, size_bytes: Optional[int], mtime_utc: Optional[float]) -> Optional[str]:
+def _sidecar_md5_for_stat(
+    payload: dict, size_bytes: Optional[int], mtime_utc: Optional[float]
+) -> Optional[str]:
     if not payload:
         return None
     md5 = str(payload.get("md5") or "").strip()
@@ -205,7 +263,9 @@ def _sidecar_md5_for_stat(payload: dict, size_bytes: Optional[int], mtime_utc: O
     return md5
 
 
-def _ensure_file_name(file: DriveFile, settings: IngestSettings, ctx: RunContext) -> DriveFile:
+def _ensure_file_name(
+    file: DriveFile, settings: IngestSettings, ctx: RunContext
+) -> DriveFile:
     if file.name:
         return file
     try:
@@ -225,13 +285,15 @@ def _ensure_file_name(file: DriveFile, settings: IngestSettings, ctx: RunContext
             md5_checksum=file.md5_checksum or meta.md5_checksum,
         )
     except AppError as exc:
-        logger.info(log_event(
-            ctx,
-            role="orchestrator",
-            event="drive_file_metadata_failed",
-            module=logger.name,
-            fields={"file_id": file.file_id, "error": exc.message},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="drive_file_metadata_failed",
+                module=logger.name,
+                fields={"file_id": file.file_id, "error": exc.message},
+            )
+        )
         return DriveFile(
             schema_version="1.0",
             file_id=file.file_id,
@@ -261,16 +323,20 @@ def _write_md5_sidecar(
     }
     content = json.dumps(payload, ensure_ascii=True)
     write_bytes(
-        WriteBytesRequest(schema_version="1.0", path=path, content=content.encode("utf-8")),
+        WriteBytesRequest(
+            schema_version="1.0", path=path, content=content.encode("utf-8")
+        ),
         ctx,
     )
-    logger.info(log_event(
-        ctx,
-        role="orchestrator",
-        event="md5_sidecar_written",
-        module=logger.name,
-        fields={"file_id": file.file_id, "path": path, "size_bytes": size_bytes},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="md5_sidecar_written",
+            module=logger.name,
+            fields={"file_id": file.file_id, "path": path, "size_bytes": size_bytes},
+        )
+    )
 
 
 def _existing_report_html(
@@ -291,13 +357,15 @@ def _existing_report_html(
             ctx,
         )
     except Exception as exc:
-        logger.info(log_event(
-            ctx,
-            role="orchestrator",
-            event="report_metadata_lookup_failed",
-            module=logger.name,
-            fields={"file_id": file.file_id, "error": str(exc)},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="report_metadata_lookup_failed",
+                module=logger.name,
+                fields={"file_id": file.file_id, "error": str(exc)},
+            )
+        )
         return None
     if not metadata or not metadata.md5 or metadata.md5 != md5:
         return None
@@ -306,21 +374,25 @@ def _existing_report_html(
         return None
     html_stat = file_stat(FileStatRequest(schema_version="1.0", path=html_path), ctx)
     if not html_stat.exists:
-        logger.info(log_event(
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="report_html_missing",
+                module=logger.name,
+                fields={"file_id": file.file_id, "md5": md5, "html_path": html_path},
+            )
+        )
+        return None
+    logger.info(
+        log_event(
             ctx,
             role="orchestrator",
-            event="report_html_missing",
+            event="report_html_cache_hit",
             module=logger.name,
             fields={"file_id": file.file_id, "md5": md5, "html_path": html_path},
-        ))
-        return None
-    logger.info(log_event(
-        ctx,
-        role="orchestrator",
-        event="report_html_cache_hit",
-        module=logger.name,
-        fields={"file_id": file.file_id, "md5": md5, "html_path": html_path},
-    ))
+        )
+    )
     return html_path
 
 
@@ -386,7 +458,9 @@ def run_ingest(
     folder_id: Optional[str] = None,
     limit: Optional[int] = None,
     ctx: Optional[RunContext] = None,
+    dependencies: Optional[IngestBatchDependencies] = None,
 ) -> List[IngestOutcome]:
+    deps = dependencies or IngestBatchDependencies.default()
     root_ctx = ctx or new_run_context()
     lock_ctx = child_context(root_ctx, task_id="ingest_lock")
     lock_info = None
@@ -405,17 +479,19 @@ def run_ingest(
         )
         if not lock_resp.acquired:
             conflict = lock_resp.conflict
-            logger.info(log_event(
-                lock_ctx,
-                role="orchestrator",
-                event="ingest_lock_conflict",
-                module=logger.name,
-                fields={
-                    "lock_path": settings.ingest_lock_path,
-                    "existing_owner": conflict.owner_id if conflict else None,
-                    "existing_pid": conflict.pid if conflict else None,
-                },
-            ))
+            logger.info(
+                log_event(
+                    lock_ctx,
+                    role="orchestrator",
+                    event="ingest_lock_conflict",
+                    module=logger.name,
+                    fields={
+                        "lock_path": settings.ingest_lock_path,
+                        "existing_owner": conflict.owner_id if conflict else None,
+                        "existing_pid": conflict.pid if conflict else None,
+                    },
+                )
+            )
             raise AppError(
                 code="ingest_locked",
                 message="Another ingest run is already active",
@@ -427,26 +503,33 @@ def run_ingest(
                 },
             )
         lock_info = lock_resp.lock
-        logger.info(log_event(
-            lock_ctx,
-            role="orchestrator",
-            event="ingest_lock_acquired",
-            module=logger.name,
-            fields={
-                "lock_path": settings.ingest_lock_path,
-                "owner_id": lock_info.owner_id if lock_info else "",
-                "pid": lock_info.pid if lock_info else None,
-            },
-        ))
+        logger.info(
+            log_event(
+                lock_ctx,
+                role="orchestrator",
+                event="ingest_lock_acquired",
+                module=logger.name,
+                fields={
+                    "lock_path": settings.ingest_lock_path,
+                    "owner_id": lock_info.owner_id if lock_info else "",
+                    "pid": lock_info.pid if lock_info else None,
+                },
+            )
+        )
 
         db_ctx = child_context(root_ctx, task_id="ingest_db_access")
-        logger.info(log_event(
-            db_ctx,
-            role="orchestrator",
-            event="ingest_db_access_start",
-            module=logger.name,
-            fields={"state_db": settings.state_db, "reports_db": settings.reports_db},
-        ))
+        logger.info(
+            log_event(
+                db_ctx,
+                role="orchestrator",
+                event="ingest_db_access_start",
+                module=logger.name,
+                fields={
+                    "state_db": settings.state_db,
+                    "reports_db": settings.reports_db,
+                },
+            )
+        )
         state_access = check_state_db_access(
             StateDbAccessRequest(
                 schema_version="1.0",
@@ -470,19 +553,21 @@ def run_ingest(
             if report_access.locked:
                 locked.append(f"reports_db={settings.reports_db}")
             reason = ", ".join(locked) if locked else "unknown"
-            logger.info(log_event(
-                db_ctx,
-                role="orchestrator",
-                event="ingest_db_access_blocked",
-                module=logger.name,
-                fields={
-                    "state_db_accessible": state_access.accessible,
-                    "state_db_locked": state_access.locked,
-                    "reports_db_accessible": report_access.accessible,
-                    "reports_db_locked": report_access.locked,
-                    "reason": reason,
-                },
-            ))
+            logger.info(
+                log_event(
+                    db_ctx,
+                    role="orchestrator",
+                    event="ingest_db_access_blocked",
+                    module=logger.name,
+                    fields={
+                        "state_db_accessible": state_access.accessible,
+                        "state_db_locked": state_access.locked,
+                        "reports_db_accessible": report_access.accessible,
+                        "reports_db_locked": report_access.locked,
+                        "reason": reason,
+                    },
+                )
+            )
             raise AppError(
                 code="db_locked",
                 message=f"Database locked: {reason}",
@@ -494,48 +579,61 @@ def run_ingest(
                     "reports_db_locked": report_access.locked,
                 },
             )
-        logger.info(log_event(
-            db_ctx,
-            role="orchestrator",
-            event="ingest_db_access_complete",
-            module=logger.name,
-            fields={
-                "state_db": settings.state_db,
-                "reports_db": settings.reports_db,
-            },
-        ))
+        logger.info(
+            log_event(
+                db_ctx,
+                role="orchestrator",
+                event="ingest_db_access_complete",
+                module=logger.name,
+                fields={
+                    "state_db": settings.state_db,
+                    "reports_db": settings.reports_db,
+                },
+            )
+        )
 
-        logger.info(log_event(
-            root_ctx,
-            role="orchestrator",
-            event="ingest_start",
-            module=logger.name,
-            fields={"folder_id": folder_id or settings.gdrive_folder_id, "limit": limit},
-        ))
+        logger.info(
+            log_event(
+                root_ctx,
+                role="orchestrator",
+                event="ingest_start",
+                module=logger.name,
+                fields={
+                    "folder_id": folder_id or settings.gdrive_folder_id,
+                    "limit": limit,
+                },
+            )
+        )
 
         modified_after = None
         if limit is None:
             cursor_resp = get_ingest_cursor(
-                StateIngestCursorGetRequest(schema_version="1.0", state_db=settings.state_db),
+                StateIngestCursorGetRequest(
+                    schema_version="1.0", state_db=settings.state_db
+                ),
                 root_ctx,
             )
             modified_after = cursor_resp.last_successful_ingest_utc
             if modified_after:
-                logger.info(log_event(
+                logger.info(
+                    log_event(
+                        root_ctx,
+                        role="orchestrator",
+                        event="ingest_modified_after_loaded",
+                        module=logger.name,
+                        fields={"modified_after": modified_after},
+                    )
+                )
+        else:
+            logger.info(
+                log_event(
                     root_ctx,
                     role="orchestrator",
-                    event="ingest_modified_after_loaded",
+                    event="ingest_modified_after_ignored",
                     module=logger.name,
-                    fields={"modified_after": modified_after},
-                ))
-        else:
-            logger.info(log_event(
-                root_ctx,
-                role="orchestrator",
-                event="ingest_modified_after_ignored",
-                module=logger.name,
-                fields={"reason": "limit_override", "limit": limit},
-            ))
+                    fields={"reason": "limit_override", "limit": limit},
+                )
+            )
 
         max_n = limit if limit is not None else settings.batch_limit
         page_size = min(max_n, 1000) if limit is not None else None
@@ -560,24 +658,28 @@ def run_ingest(
             nonlocal pending_md5_files
             if not pending_md5_files:
                 return
-            lookup = _batch_should_skip(pending_md5_files, settings.state_db, root_ctx)
+            lookup = deps.batch_should_skip(
+                pending_md5_files, settings.state_db, root_ctx
+            )
             for pending in pending_md5_files:
                 drive_md5 = pending.md5_checksum.strip() if pending.md5_checksum else ""
                 if drive_md5 and lookup.get((pending.file_id, drive_md5), False):
-                    logger.info(log_event(
-                        root_ctx,
-                        role="orchestrator",
-                        event="drive_list_skip_processed",
-                        module=logger.name,
-                        fields={"file_id": pending.file_id, "md5": drive_md5},
-                    ))
+                    logger.info(
+                        log_event(
+                            root_ctx,
+                            role="orchestrator",
+                            event="drive_list_skip_processed",
+                            module=logger.name,
+                            fields={"file_id": pending.file_id, "md5": drive_md5},
+                        )
+                    )
                     continue
                 files_to_process.append(pending)
                 if len(files_to_process) >= max_n:
                     break
             pending_md5_files = []
 
-        for file in list_pdfs(list_req, root_ctx):
+        for file in deps.list_pdfs(list_req, root_ctx):
             drive_md5 = file.md5_checksum.strip() if file.md5_checksum else None
             if drive_md5:
                 pending_md5_files.append(file)
@@ -592,13 +694,15 @@ def run_ingest(
 
         if len(files_to_process) < max_n:
             _flush_pending_md5_files()
-        logger.info(log_event(
-            root_ctx,
-            role="orchestrator",
-            event="drive_list_materialized",
-            module=logger.name,
-            fields={"count": len(files_to_process), "limit": max_n},
-        ))
+        logger.info(
+            log_event(
+                root_ctx,
+                role="orchestrator",
+                event="drive_list_materialized",
+                module=logger.name,
+                fields={"count": len(files_to_process), "limit": max_n},
+            )
+        )
 
         worker_limit = settings.ingest_worker_limit
         try:
@@ -607,22 +711,32 @@ def run_ingest(
             worker_limit = 1
         if worker_limit < 1:
             worker_limit = 1
-        logger.info(log_event(
-            root_ctx,
-            role="orchestrator",
-            event="ingest_worker_config",
-            module=logger.name,
-            fields={"worker_limit": worker_limit, "file_count": len(files_to_process)},
-        ))
+        logger.info(
+            log_event(
+                root_ctx,
+                role="orchestrator",
+                event="ingest_worker_config",
+                module=logger.name,
+                fields={
+                    "worker_limit": worker_limit,
+                    "file_count": len(files_to_process),
+                },
+            )
+        )
 
         results: list[_FileProcessResult] = []
         if worker_limit <= 1 or len(files_to_process) <= 1:
             for idx, file in enumerate(files_to_process):
-                results.append(_process_file(file, idx, settings, root_ctx))
+                results.append(deps.process_file(file, idx, settings, root_ctx))
         else:
-            with ThreadPoolExecutor(max_workers=worker_limit) as executor:
+            with deps.thread_pool_executor_factory(
+                max_workers=worker_limit
+            ) as executor:
                 futures = {
-                    executor.submit(_process_file, file, idx, settings, root_ctx): (idx, file)
+                    executor.submit(deps.process_file, file, idx, settings, root_ctx): (
+                        idx,
+                        file,
+                    )
                     for idx, file in enumerate(files_to_process)
                 }
                 for future in as_completed(futures):
@@ -631,18 +745,20 @@ def run_ingest(
                         result = future.result()
                     except Exception as exc:  # pragma: no cover - defensive fallback
                         file_ctx = child_context(root_ctx, task_id=file.file_id)
-                        logger.info(log_event(
-                            file_ctx,
-                            role="orchestrator",
-                            event="file_processing_error",
-                            module=logger.name,
-                            fields={
-                                "file_id": file.file_id,
-                                "error": str(exc),
-                                "local_path": _cache_pdf_path(settings, file),
-                                "md5": file.md5_checksum or "",
-                            },
-                        ))
+                        logger.info(
+                            log_event(
+                                file_ctx,
+                                role="orchestrator",
+                                event="file_processing_error",
+                                module=logger.name,
+                                fields={
+                                    "file_id": file.file_id,
+                                    "error": str(exc),
+                                    "local_path": _cache_pdf_path(settings, file),
+                                    "md5": file.md5_checksum or "",
+                                },
+                            )
+                        )
                         result = _FileProcessResult(
                             index=idx,
                             outcome=IngestOutcome(
@@ -664,16 +780,23 @@ def run_ingest(
         processed = sum(result.processed for result in results)
         had_errors = any(result.had_error for result in results)
 
-        logger.info(log_event(
-            root_ctx,
-            role="orchestrator",
-            event="ingest_complete",
-            module=logger.name,
-            fields={"processed": processed},
-        ))
+        logger.info(
+            log_event(
+                root_ctx,
+                role="orchestrator",
+                event="ingest_complete",
+                module=logger.name,
+                fields={"processed": processed},
+            )
+        )
         if not had_errors and processed > 0 and limit is None:
             try:
-                now_utc = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+                now_utc = (
+                    datetime.now(timezone.utc)
+                    .replace(microsecond=0)
+                    .isoformat()
+                    .replace("+00:00", "Z")
+                )
                 set_ingest_cursor(
                     StateIngestCursorSetRequest(
                         schema_version="1.0",
@@ -682,37 +805,45 @@ def run_ingest(
                     ),
                     root_ctx,
                 )
-                logger.info(log_event(
-                    root_ctx,
-                    role="orchestrator",
-                    event="ingest_cursor_updated",
-                    module=logger.name,
-                    fields={"last_successful_ingest_utc": now_utc},
-                ))
+                logger.info(
+                    log_event(
+                        root_ctx,
+                        role="orchestrator",
+                        event="ingest_cursor_updated",
+                        module=logger.name,
+                        fields={"last_successful_ingest_utc": now_utc},
+                    )
+                )
             except Exception as exc:
-                logger.info(log_event(
+                logger.info(
+                    log_event(
+                        root_ctx,
+                        role="orchestrator",
+                        event="ingest_cursor_update_failed",
+                        module=logger.name,
+                        fields={"error": str(exc)},
+                    )
+                )
+        else:
+            logger.info(
+                log_event(
                     root_ctx,
                     role="orchestrator",
-                    event="ingest_cursor_update_failed",
+                    event="ingest_cursor_skipped",
                     module=logger.name,
-                    fields={"error": str(exc)},
-                ))
-        else:
-            logger.info(log_event(
-                root_ctx,
-                role="orchestrator",
-                event="ingest_cursor_skipped",
-                module=logger.name,
-                fields={
-                    "reason": "errors_detected" if had_errors else "no_processed_or_limit_override",
-                    "processed": processed,
-                    "limit": limit,
-                },
-            ))
+                    fields={
+                        "reason": "errors_detected"
+                        if had_errors
+                        else "no_processed_or_limit_override",
+                        "processed": processed,
+                        "limit": limit,
+                    },
+                )
+            )
         return outcomes
     finally:
         try:
-            flush_uncategorized_tags(
+            deps.flush_uncategorized_tags(
                 UncategorizedTagsFlushRequest(
                     schema_version="1.0",
                     path=settings.category_mapping_path,
@@ -720,13 +851,15 @@ def run_ingest(
                 root_ctx,
             )
         except Exception as exc:
-            logger.info(log_event(
-                root_ctx,
-                role="orchestrator",
-                event="ingest_uncategorized_flush_failed",
-                module=logger.name,
-                fields={"path": settings.category_mapping_path, "error": str(exc)},
-            ))
+            logger.info(
+                log_event(
+                    root_ctx,
+                    role="orchestrator",
+                    event="ingest_uncategorized_flush_failed",
+                    module=logger.name,
+                    fields={"path": settings.category_mapping_path, "error": str(exc)},
+                )
+            )
         if lock_info:
             try:
                 release_lock(
@@ -738,18 +871,25 @@ def run_ingest(
                     ),
                     lock_ctx,
                 )
-                logger.info(log_event(
-                    lock_ctx,
-                    role="orchestrator",
-                    event="ingest_lock_released",
-                    module=logger.name,
-                    fields={"lock_path": lock_info.lock_path},
-                ))
+                logger.info(
+                    log_event(
+                        lock_ctx,
+                        role="orchestrator",
+                        event="ingest_lock_released",
+                        module=logger.name,
+                        fields={"lock_path": lock_info.lock_path},
+                    )
+                )
             except Exception as exc:
-                logger.info(log_event(
-                    lock_ctx,
-                    role="orchestrator",
-                    event="ingest_lock_release_failed",
-                    module=logger.name,
-                    fields={"lock_path": settings.ingest_lock_path, "error": str(exc)},
-                ))
+                logger.info(
+                    log_event(
+                        lock_ctx,
+                        role="orchestrator",
+                        event="ingest_lock_release_failed",
+                        module=logger.name,
+                        fields={
+                            "lock_path": settings.ingest_lock_path,
+                            "error": str(exc),
+                        },
+                    )
+                )

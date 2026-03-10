@@ -444,6 +444,7 @@ pytest
 
 `pytest.ini` sets `pythonpath = .` so `src.*` imports resolve without exporting `PYTHONPATH`.
 Default runs exclude `integration`-marked tests (`addopts = -m "not integration"`).
+Batch ingest and report-generator boundary tests now inject explicit dependency dataclasses (`IngestBatchDependencies`, `ReportGeneratorDependencies`) instead of monkeypatching module globals.
 
 Run the live OpenAI smoke test explicitly (opt-in):
 
