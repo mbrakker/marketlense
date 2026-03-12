@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 import logging
 import mimetypes
 from pathlib import Path
@@ -220,7 +221,22 @@ def publish_html(
         )
     )
     rendered_html = replace_image_sources(html_text, image_map)
-    body_html = extract_body_html(rendered_html)
+    body_html, file_id_marker_inserted = _ensure_hidden_file_id_marker(
+        extract_body_html(rendered_html),
+        file_id,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="publish_file_id_marker",
+            module=logger.name,
+            fields={
+                "file_id": file_id,
+                "inserted": file_id_marker_inserted,
+            },
+        )
+    )
 
     title = extract_title(rendered_html) or Path(request.html_path).stem
     slug = slugify(title)
@@ -346,7 +362,7 @@ def _upload_images(
             ),
             ctx,
         )
-        mapping[src] = upload_resp.source_url
+        mapping[src] = _wordpress_media_proxy_url(base_url, upload_resp.media_id)
         media_ids[src] = upload_resp.media_id
         if preview_src and src == preview_src:
             featured_media_id = upload_resp.media_id
@@ -356,6 +372,19 @@ def _upload_images(
         featured_media_id = media_ids.get(first_src)
 
     return mapping, featured_media_id
+
+
+def _wordpress_media_proxy_url(base_url: str, media_id: int) -> str:
+    return f"{base_url.rstrip('/')}/?ml_media={int(media_id)}"
+
+
+def _ensure_hidden_file_id_marker(content_html: str, file_id: str) -> Tuple[str, bool]:
+    if extract_file_id(content_html) == file_id:
+        return content_html, False
+    marker = f"<p hidden>Drive fileId: {html.escape(file_id, quote=True)}</p>"
+    if not content_html:
+        return marker, True
+    return f"{content_html}\n{marker}", True
 
 
 def _media_upload_request(

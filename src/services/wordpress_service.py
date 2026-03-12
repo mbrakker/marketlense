@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Dict, Optional
+import warnings
+from contextlib import contextmanager
+from typing import Any, Dict, Iterator, NoReturn, Optional
 
 import requests  # type: ignore[import-untyped]
+import urllib3  # type: ignore[import-untyped]
 
 from src.contracts.run_context import RunContext
 from src.contracts.wordpress import (
@@ -27,6 +30,8 @@ from src.utils.logging import log_event
 logger = logging.getLogger("market_lense.wordpress_service")
 
 DEFAULT_TIMEOUT = 30
+HTTP_ERROR_BODY_LIMIT = 1000
+REDACTED_HEADER_KEYS = {"authorization", "cookie", "set-cookie"}
 
 
 def _post_type_endpoint(post_type: str) -> str:
@@ -39,6 +44,136 @@ def _requests_verify(*, ssl_verify: bool, ca_bundle_path: Optional[str]) -> bool
         return False
     bundle_path = str(ca_bundle_path or "").strip()
     return bundle_path or True
+
+
+@contextmanager
+def _suppress_insecure_request_warning(*, ssl_verify: bool) -> Iterator[None]:
+    if ssl_verify:
+        yield
+        return
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", urllib3.exceptions.InsecureRequestWarning)
+        yield
+
+
+def _truncate_text(value: str, limit: int = HTTP_ERROR_BODY_LIMIT) -> str:
+    normalized = str(value).replace("\r", "\\r").replace("\n", "\\n")
+    if len(normalized) <= limit:
+        return normalized
+    return f"{normalized[:limit]}...(truncated)"
+
+
+def _sanitize_response_headers(headers: Any) -> Dict[str, str]:
+    sanitized: Dict[str, str] = {}
+    try:
+        items = list(getattr(headers, "items", lambda: [])())
+    except Exception:
+        return sanitized
+    for raw_key, raw_value in items:
+        key = str(raw_key)
+        if key.strip().lower() in REDACTED_HEADER_KEYS:
+            continue
+        sanitized[key] = str(raw_value)
+    return sanitized
+
+
+def _http_error_context(resp: Any) -> Dict[str, Any]:
+    return {
+        "status_code": int(getattr(resp, "status_code", 0) or 0),
+        "reason": str(getattr(resp, "reason", "") or ""),
+        "response_headers": _sanitize_response_headers(
+            getattr(resp, "headers", {}) or {}
+        ),
+        "response_body_excerpt": _truncate_text(getattr(resp, "text", "") or ""),
+    }
+
+
+def _raise_request_exception(
+    *,
+    ctx: RunContext,
+    event: str,
+    code: str,
+    message: str,
+    exc: requests.RequestException,
+    fields: Optional[Dict[str, Any]] = None,
+) -> NoReturn:
+    error_context = {
+        "exception_type": type(exc).__name__,
+        "exception_message": str(exc),
+    }
+    response = getattr(exc, "response", None)
+    if response is not None:
+        error_context.update(_http_error_context(response))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event=event,
+            module=logger.name,
+            fields={**(fields or {}), **error_context},
+        )
+    )
+    raise AppError(
+        code=code,
+        message=message,
+        cause=exc,
+        retryable=True,
+        context=error_context,
+    ) from exc
+
+
+def _raise_http_server_error(
+    *,
+    ctx: RunContext,
+    event: str,
+    code: str,
+    message_prefix: str,
+    resp: Any,
+    fields: Optional[Dict[str, Any]] = None,
+) -> NoReturn:
+    error_context = _http_error_context(resp)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event=event,
+            module=logger.name,
+            fields={**(fields or {}), **error_context},
+        )
+    )
+    raise AppError(
+        code=code,
+        message=f"{message_prefix}: {resp.status_code}",
+        retryable=True,
+        context=error_context,
+    )
+
+
+def _raise_http_redirect_error(
+    *,
+    ctx: RunContext,
+    event: str,
+    code: str,
+    message_prefix: str,
+    resp: Any,
+    fields: Optional[Dict[str, Any]] = None,
+) -> NoReturn:
+    error_context = _http_error_context(resp)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event=event,
+            module=logger.name,
+            fields={**(fields or {}), **error_context},
+        )
+    )
+    raise AppError(
+        code=code,
+        message=f"{message_prefix}: {resp.status_code}",
+        retryable=True,
+        context=error_context,
+    )
 
 
 def upload_media(
@@ -67,16 +202,17 @@ def upload_media(
         "file": (request.filename, request.data, request.mime_type),
     }
     try:
-        resp = requests.post(
-            url,
-            headers=headers,
-            files=files,
-            timeout=DEFAULT_TIMEOUT,
-            verify=_requests_verify(
-                ssl_verify=request.ssl_verify,
-                ca_bundle_path=request.ca_bundle_path,
-            ),
-        )
+        with _suppress_insecure_request_warning(ssl_verify=request.ssl_verify):
+            resp = requests.post(
+                url,
+                headers=headers,
+                files=files,
+                timeout=DEFAULT_TIMEOUT,
+                verify=_requests_verify(
+                    ssl_verify=request.ssl_verify,
+                    ca_bundle_path=request.ca_bundle_path,
+                ),
+            )
     except requests.RequestException as exc:
         raise AppError(
             code="wp_media_upload_failed",
@@ -86,10 +222,13 @@ def upload_media(
         ) from exc
 
     if resp.status_code >= 500:
-        raise AppError(
+        _raise_http_server_error(
+            ctx=ctx,
+            event="wp_media_upload_http_error",
             code="wp_media_server_error",
-            message=f"Media upload server error: {resp.status_code}",
-            retryable=True,
+            message_prefix="Media upload server error",
+            resp=resp,
+            fields={"url": url, "filename": request.filename},
         )
     if resp.status_code >= 400:
         raise AppError(
@@ -184,16 +323,17 @@ def create_post(
                 payload[key] = normalized_ids
 
     try:
-        resp = requests.post(
-            url,
-            headers=headers,
-            data=json.dumps(payload),
-            timeout=DEFAULT_TIMEOUT,
-            verify=_requests_verify(
-                ssl_verify=request.ssl_verify,
-                ca_bundle_path=request.ca_bundle_path,
-            ),
-        )
+        with _suppress_insecure_request_warning(ssl_verify=request.ssl_verify):
+            resp = requests.post(
+                url,
+                headers=headers,
+                data=json.dumps(payload),
+                timeout=DEFAULT_TIMEOUT,
+                verify=_requests_verify(
+                    ssl_verify=request.ssl_verify,
+                    ca_bundle_path=request.ca_bundle_path,
+                ),
+            )
     except requests.RequestException as exc:
         raise AppError(
             code="wp_post_create_failed",
@@ -203,10 +343,13 @@ def create_post(
         ) from exc
 
     if resp.status_code >= 500:
-        raise AppError(
+        _raise_http_server_error(
+            ctx=ctx,
+            event="wp_post_create_http_error",
             code="wp_post_server_error",
-            message=f"Post create server error: {resp.status_code}",
-            retryable=True,
+            message_prefix="Post create server error",
+            resp=resp,
+            fields={"url": url, "post_type": post_type_endpoint},
         )
     if resp.status_code >= 400:
         raise AppError(
@@ -268,29 +411,45 @@ def find_post_by_file_id(
     }
     headers = {"Authorization": request.auth_header}
     try:
-        resp = requests.get(
-            url,
-            headers=headers,
-            params=params,
-            timeout=DEFAULT_TIMEOUT,
-            verify=_requests_verify(
-                ssl_verify=request.ssl_verify,
-                ca_bundle_path=request.ca_bundle_path,
-            ),
-        )
+        with _suppress_insecure_request_warning(ssl_verify=request.ssl_verify):
+            resp = requests.get(
+                url,
+                headers=headers,
+                params=params,
+                allow_redirects=False,
+                timeout=DEFAULT_TIMEOUT,
+                verify=_requests_verify(
+                    ssl_verify=request.ssl_verify,
+                    ca_bundle_path=request.ca_bundle_path,
+                ),
+            )
     except requests.RequestException as exc:
-        raise AppError(
+        _raise_request_exception(
+            ctx=ctx,
+            event="wp_post_lookup_request_error",
             code="wp_post_lookup_failed",
             message="Failed to lookup WordPress post",
-            cause=exc,
-            retryable=True,
-        ) from exc
+            exc=exc,
+            fields={"url": url, "file_id": request.file_id},
+        )
 
+    if 300 <= resp.status_code < 400:
+        _raise_http_redirect_error(
+            ctx=ctx,
+            event="wp_post_lookup_http_redirect",
+            code="wp_post_lookup_redirected",
+            message_prefix="Post lookup redirected unexpectedly",
+            resp=resp,
+            fields={"url": url, "file_id": request.file_id},
+        )
     if resp.status_code >= 500:
-        raise AppError(
+        _raise_http_server_error(
+            ctx=ctx,
+            event="wp_post_lookup_http_error",
             code="wp_post_lookup_server_error",
-            message=f"Post lookup server error: {resp.status_code}",
-            retryable=True,
+            message_prefix="Post lookup server error",
+            resp=resp,
+            fields={"url": url, "file_id": request.file_id},
         )
     if resp.status_code >= 400:
         raise AppError(
@@ -334,6 +493,7 @@ def find_post_by_file_id(
 
 def _ensure_terms(
     *,
+    ctx: RunContext,
     base_url: str,
     auth_header: str,
     terms: list[tuple[str, str]],
@@ -363,83 +523,90 @@ def _ensure_terms(
         ssl_verify=ssl_verify,
         ca_bundle_path=ca_bundle_path,
     )
-    for slug, name in terms:
-        try:
-            resp = requests.get(
-                base_url,
-                headers={"Authorization": auth_header},
-                params={"slug": slug},
-                timeout=DEFAULT_TIMEOUT,
-                verify=verify,
-            )
-        except requests.RequestException as exc:
-            raise AppError(
-                code=lookup_failed_code,
-                message=lookup_failed_message,
-                cause=exc,
-                retryable=True,
-            ) from exc
-
-        if resp.status_code >= 500:
-            raise AppError(
-                code=lookup_server_code,
-                message=f"{lookup_server_prefix}: {resp.status_code}",
-                retryable=True,
-            )
-        if resp.status_code >= 400:
-            raise AppError(
-                code=lookup_client_code,
-                message=f"{lookup_client_prefix}: {resp.status_code}",
-                retryable=False,
-            )
-
-        term_id: Optional[int] = None
-        try:
-            payload = json.loads(resp.text)
-        except Exception:
-            payload = []
-        if isinstance(payload, list) and payload:
-            term_id = payload[0].get("id")
-
-        if not term_id:
+    with _suppress_insecure_request_warning(ssl_verify=ssl_verify):
+        for slug, name in terms:
             try:
-                create_resp = requests.post(
+                resp = requests.get(
                     base_url,
-                    headers=headers,
-                    data=json.dumps({"name": name, "slug": slug}),
+                    headers={"Authorization": auth_header},
+                    params={"slug": slug},
                     timeout=DEFAULT_TIMEOUT,
                     verify=verify,
                 )
             except requests.RequestException as exc:
                 raise AppError(
-                    code=create_failed_code,
-                    message=create_failed_message,
+                    code=lookup_failed_code,
+                    message=lookup_failed_message,
                     cause=exc,
                     retryable=True,
                 ) from exc
 
-            if create_resp.status_code >= 500:
-                raise AppError(
-                    code=create_server_code,
-                    message=f"{create_server_prefix}: {create_resp.status_code}",
-                    retryable=True,
+            if resp.status_code >= 500:
+                _raise_http_server_error(
+                    ctx=ctx,
+                    event="wp_taxonomy_lookup_http_error",
+                    code=lookup_server_code,
+                    message_prefix=lookup_server_prefix,
+                    resp=resp,
+                    fields={"base_url": base_url, "slug": slug},
                 )
-            if create_resp.status_code >= 400:
+            if resp.status_code >= 400:
                 raise AppError(
-                    code=create_client_code,
-                    message=f"{create_client_prefix}: {create_resp.status_code}",
+                    code=lookup_client_code,
+                    message=f"{lookup_client_prefix}: {resp.status_code}",
                     retryable=False,
                 )
-            data = _safe_json(create_resp.text)
-            term_id = data.get("id")
 
-        if not term_id:
-            raise AppError(
-                code=invalid_code,
-                message=invalid_message,
-                retryable=False,
-            )
-        slug_to_id[slug] = int(term_id)
+            term_id: Optional[int] = None
+            try:
+                payload = json.loads(resp.text)
+            except Exception:
+                payload = []
+            if isinstance(payload, list) and payload:
+                term_id = payload[0].get("id")
+
+            if not term_id:
+                try:
+                    create_resp = requests.post(
+                        base_url,
+                        headers=headers,
+                        data=json.dumps({"name": name, "slug": slug}),
+                        timeout=DEFAULT_TIMEOUT,
+                        verify=verify,
+                    )
+                except requests.RequestException as exc:
+                    raise AppError(
+                        code=create_failed_code,
+                        message=create_failed_message,
+                        cause=exc,
+                        retryable=True,
+                    ) from exc
+
+                if create_resp.status_code >= 500:
+                    _raise_http_server_error(
+                        ctx=ctx,
+                        event="wp_taxonomy_create_http_error",
+                        code=create_server_code,
+                        message_prefix=create_server_prefix,
+                        resp=create_resp,
+                        fields={"base_url": base_url, "slug": slug, "name": name},
+                    )
+                if create_resp.status_code >= 400:
+                    raise AppError(
+                        code=create_client_code,
+                        message=f"{create_client_prefix}: {create_resp.status_code}",
+                        retryable=False,
+                    )
+                data = _safe_json(create_resp.text)
+                term_id = data.get("id")
+
+            if not term_id:
+                raise AppError(
+                    code=invalid_code,
+                    message=invalid_message,
+                    retryable=False,
+                )
+            slug_to_id[slug] = int(term_id)
     return slug_to_id
 
 
@@ -469,6 +636,7 @@ def ensure_taxonomy_terms(
         )
     base_url = f"{request.base_url.rstrip('/')}/wp-json/wp/v2/{taxonomy_rest_base}"
     slug_to_id = _ensure_terms(
+        ctx=ctx,
         base_url=base_url,
         auth_header=request.auth_header,
         terms=[(term.slug, term.name or term.slug) for term in request.terms],
@@ -526,6 +694,7 @@ def ensure_tags(
     )
     base_url = f"{request.base_url.rstrip('/')}/wp-json/wp/v2/tags"
     slug_to_id = _ensure_terms(
+        ctx=ctx,
         base_url=base_url,
         auth_header=request.auth_header,
         terms=[(slug, slug) for slug in request.tags],
@@ -585,16 +754,17 @@ def update_post_categories(
     }
     payload = {"categories": request.categories}
     try:
-        resp = requests.post(
-            url,
-            headers=headers,
-            data=json.dumps(payload),
-            timeout=DEFAULT_TIMEOUT,
-            verify=_requests_verify(
-                ssl_verify=request.ssl_verify,
-                ca_bundle_path=request.ca_bundle_path,
-            ),
-        )
+        with _suppress_insecure_request_warning(ssl_verify=request.ssl_verify):
+            resp = requests.post(
+                url,
+                headers=headers,
+                data=json.dumps(payload),
+                timeout=DEFAULT_TIMEOUT,
+                verify=_requests_verify(
+                    ssl_verify=request.ssl_verify,
+                    ca_bundle_path=request.ca_bundle_path,
+                ),
+            )
     except requests.RequestException as exc:
         raise AppError(
             code="wp_post_update_failed",
@@ -604,10 +774,13 @@ def update_post_categories(
         ) from exc
 
     if resp.status_code >= 500:
-        raise AppError(
+        _raise_http_server_error(
+            ctx=ctx,
+            event="wp_post_update_http_error",
             code="wp_post_update_server_error",
-            message=f"Post update server error: {resp.status_code}",
-            retryable=True,
+            message_prefix="Post update server error",
+            resp=resp,
+            fields={"url": url, "post_id": request.post_id},
         )
     if resp.status_code >= 400:
         raise AppError(
@@ -647,16 +820,17 @@ def _update_media_alt_text(
     }
     payload = {"alt_text": alt_text}
     try:
-        resp = requests.post(
-            url,
-            headers=headers,
-            data=json.dumps(payload),
-            timeout=DEFAULT_TIMEOUT,
-            verify=_requests_verify(
-                ssl_verify=ssl_verify,
-                ca_bundle_path=ca_bundle_path,
-            ),
-        )
+        with _suppress_insecure_request_warning(ssl_verify=ssl_verify):
+            resp = requests.post(
+                url,
+                headers=headers,
+                data=json.dumps(payload),
+                timeout=DEFAULT_TIMEOUT,
+                verify=_requests_verify(
+                    ssl_verify=ssl_verify,
+                    ca_bundle_path=ca_bundle_path,
+                ),
+            )
     except requests.RequestException:
         logger.info(
             log_event(

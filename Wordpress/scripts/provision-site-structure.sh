@@ -102,7 +102,7 @@ run_rest_fallback() {
 
   local python_cmd
   python_cmd="$(resolve_python_bin)"
-  echo "wp-cli unavailable for local WordPress core; switching to REST fallback provisioning." >&2
+  echo "wp-cli unavailable for direct WordPress access; switching to REST fallback provisioning." >&2
   eval "$python_cmd" "\"$REST_SCRIPT\""
 }
 

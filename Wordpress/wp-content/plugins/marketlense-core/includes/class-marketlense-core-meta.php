@@ -17,9 +17,11 @@ final class Meta
 {
     private const PROJECTION_BACKFILL_OPTION = 'marketlense_core_projection_backfill_version';
 
-    private const PROJECTION_BACKFILL_VERSION = '2026-03-06-hero-subtitle';
+    private const PROJECTION_BACKFILL_VERSION = '2026-03-10-core-post-digest-contract';
 
     public const META_FILE_ID = 'ml_file_id';
+
+    public const META_DIGEST_FLAG = 'ml_is_digest';
 
     public const META_PUBLISHER = 'ml_publisher_name';
 
@@ -38,26 +40,64 @@ final class Meta
     {
         $keys = [
             self::META_FILE_ID,
+            self::META_DIGEST_FLAG,
             self::META_PUBLISHER,
             self::META_TIME_PERIOD,
             self::META_REGION,
         ];
 
-        foreach ($keys as $key) {
-            register_post_meta(
-                Post_Type::POST_TYPE,
-                $key,
-                [
-                    'single'            => true,
-                    'type'              => 'string',
-                    'show_in_rest'      => true,
-                    'sanitize_callback' => 'sanitize_text_field',
-                    'auth_callback'     => static function (): bool {
-                        return current_user_can('edit_posts');
-                    },
-                ]
-            );
+        foreach (Post_Type::report_post_types() as $post_type) {
+            foreach ($keys as $key) {
+                register_post_meta(
+                    $post_type,
+                    $key,
+                    [
+                        'single'            => true,
+                        'type'              => 'string',
+                        'show_in_rest'      => true,
+                        'sanitize_callback' => 'sanitize_text_field',
+                        'auth_callback'     => static function (): bool {
+                            return current_user_can('edit_posts');
+                        },
+                    ]
+                );
+            }
         }
+    }
+
+    /**
+     * @param array<string,mixed> $query_args
+     * @return array<string,mixed>
+     */
+    public static function apply_digest_query_constraints(array $query_args): array
+    {
+        $query_args['post_type'] = Post_Type::report_post_types();
+        $digest_contract_query = [
+            'relation' => 'OR',
+            [
+                'key' => self::META_FILE_ID,
+                'compare' => 'EXISTS',
+            ],
+            [
+                'key' => self::META_DIGEST_FLAG,
+                'value' => '1',
+                'compare' => '=',
+            ],
+        ];
+
+        $meta_query = $query_args['meta_query'] ?? [];
+        if (! is_array($meta_query) || $meta_query === []) {
+            $query_args['meta_query'] = $digest_contract_query;
+            return $query_args;
+        }
+
+        $query_args['meta_query'] = [
+            'relation' => 'AND',
+            $meta_query,
+            $digest_contract_query,
+        ];
+
+        return $query_args;
     }
 
     /**
@@ -72,7 +112,7 @@ final class Meta
 
         $post_ids = get_posts(
             [
-                'post_type' => Post_Type::POST_TYPE,
+                'post_type' => Post_Type::report_post_types(),
                 'post_status' => 'publish',
                 'fields' => 'ids',
                 'posts_per_page' => -1,
@@ -114,22 +154,23 @@ final class Meta
             return;
         }
 
-        if ($post->post_type !== Post_Type::POST_TYPE) {
+        $content = (string) $post->post_content;
+
+        if (! $this->should_sync_report_post($post_id, $post, $content)) {
             return;
         }
-
-        $content = (string) $post->post_content;
 
         $file_id = $this->parser->extract_file_id($content);
         $publisher = $this->parser->extract_metadata_value($content, 'Publisher');
         $time_period = $this->parser->extract_metadata_value($content, 'Time period');
-        $region = $this->parser->extract_metadata_value($content, 'Region');
+        $region = $this->extract_region_value($content);
 
         if ($publisher === '') {
             $publisher = $this->resolve_existing_publisher($post_id);
         }
 
         $this->upsert_string_meta($post_id, self::META_FILE_ID, $file_id);
+        $this->upsert_string_meta($post_id, self::META_DIGEST_FLAG, '1');
         $this->upsert_string_meta($post_id, self::META_PUBLISHER, $publisher);
         $this->upsert_string_meta($post_id, self::META_TIME_PERIOD, $time_period);
         $this->upsert_string_meta($post_id, self::META_REGION, $region);
@@ -149,8 +190,41 @@ final class Meta
         return sanitize_text_field(trim((string) $existing[0]));
     }
 
+    private function should_sync_report_post(int $post_id, \WP_Post $post, string $content): bool
+    {
+        if (! Post_Type::is_report_post_type($post->post_type)) {
+            return false;
+        }
+
+        if ($post->post_type === Post_Type::POST_TYPE) {
+            return true;
+        }
+
+        if ($this->parser->extract_file_id($content) !== '') {
+            return true;
+        }
+
+        if ($this->has_digest_flag($post_id) || $this->has_digest_content_signature($content)) {
+            return true;
+        }
+
+        foreach ([self::META_FILE_ID, self::META_PUBLISHER, self::META_TIME_PERIOD, self::META_REGION] as $meta_key) {
+            if (trim((string) get_post_meta($post_id, $meta_key, true)) !== '') {
+                return true;
+            }
+        }
+
+        $publisher_terms = wp_get_post_terms($post_id, Taxonomies::PUBLISHER_TAXONOMY, ['fields' => 'ids']);
+
+        return ! is_wp_error($publisher_terms) && $publisher_terms !== [];
+    }
+
     private function needs_contract_sync(int $post_id): bool
     {
+        if (! $this->has_digest_flag($post_id)) {
+            return true;
+        }
+
         $publisher = trim((string) get_post_meta($post_id, self::META_PUBLISHER, true));
         if ($publisher === '') {
             return true;
@@ -161,13 +235,41 @@ final class Meta
             return true;
         }
 
-        foreach ([self::META_FILE_ID, self::META_TIME_PERIOD, self::META_REGION] as $meta_key) {
-            if (trim((string) get_post_meta($post_id, $meta_key, true)) === '') {
-                return true;
-            }
+        return false;
+    }
+
+    private function extract_region_value(string $content): string
+    {
+        $region = $this->parser->extract_metadata_value($content, 'Region');
+        if ($region !== '') {
+            return $region;
         }
 
-        return false;
+        return $this->parser->extract_metadata_value($content, 'Geography');
+    }
+
+    private function has_digest_flag(int $post_id): bool
+    {
+        return trim((string) get_post_meta($post_id, self::META_DIGEST_FLAG, true)) === '1';
+    }
+
+    private function has_digest_content_signature(string $content): bool
+    {
+        $publisher = $this->parser->extract_metadata_value($content, 'Publisher');
+        $time_period = $this->parser->extract_metadata_value($content, 'Time period');
+        $region = $this->extract_region_value($content);
+        $normalized_content = strtolower($content);
+        $has_digest_shell = str_contains($normalized_content, 'market lense report digest')
+            || str_contains($normalized_content, 'class="page-shell"')
+            || str_contains($normalized_content, "class='page-shell'")
+            || str_contains($normalized_content, 'class="report"')
+            || str_contains($normalized_content, "class='report'");
+
+        if ($publisher !== '' && ($time_period !== '' || $region !== '')) {
+            return true;
+        }
+
+        return $publisher !== '' && $has_digest_shell;
     }
 
     private function upsert_string_meta(int $post_id, string $meta_key, string $meta_value): void

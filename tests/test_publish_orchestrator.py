@@ -184,10 +184,14 @@ def test_publish_prefers_reports_db_file_id_mapping(
     )
 
     results = orch.run_publish(settings, limit=1)
+    post_call = wordpress_http.calls_for(
+        "POST", "https://example.com/wp-json/wp/v2/ml_report"
+    )[0]
 
     assert len(results) == 1
     assert results[0].status == "published"
     assert results[0].file_id == "file_from_db"
+    assert "Drive fileId: file_from_db" in post_call.json_data["content"]
 
 
 def test_publish_retries_retryable_app_error(

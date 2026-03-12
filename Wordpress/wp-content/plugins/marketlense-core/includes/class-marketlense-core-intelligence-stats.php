@@ -33,13 +33,14 @@ final class Intelligence_Stats
     public function latest_report(): ?\WP_Post
     {
         $posts = get_posts(
-            [
-                'post_type' => Post_Type::POST_TYPE,
-                'post_status' => 'publish',
-                'posts_per_page' => 1,
-                'orderby' => 'date',
-                'order' => 'DESC',
-            ]
+            Meta::apply_digest_query_constraints(
+                [
+                    'post_status' => 'publish',
+                    'posts_per_page' => 1,
+                    'orderby' => 'date',
+                    'order' => 'DESC',
+                ]
+            )
         );
 
         if (! is_array($posts) || $posts === []) {
@@ -310,19 +311,20 @@ final class Intelligence_Stats
         }
 
         $post_ids = get_posts(
-            array_merge(
-                [
-                    'post_type' => Post_Type::POST_TYPE,
-                    'post_status' => 'publish',
-                    'fields' => 'ids',
-                    'posts_per_page' => -1,
-                    'no_found_rows' => true,
-                    'update_post_meta_cache' => false,
-                    'update_post_term_cache' => false,
-                    'orderby' => 'date',
-                    'order' => 'DESC',
-                ],
-                $extra_args
+            Meta::apply_digest_query_constraints(
+                array_merge(
+                    [
+                        'post_status' => 'publish',
+                        'fields' => 'ids',
+                        'posts_per_page' => -1,
+                        'no_found_rows' => true,
+                        'update_post_meta_cache' => false,
+                        'update_post_term_cache' => false,
+                        'orderby' => 'date',
+                        'order' => 'DESC',
+                    ],
+                    $extra_args
+                )
             )
         );
 

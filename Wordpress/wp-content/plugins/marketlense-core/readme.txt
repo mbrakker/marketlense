@@ -4,7 +4,7 @@ Tags: reports, custom-post-type, taxonomy, api, editorial
 Requires at least: 6.6
 Tested up to: 6.6
 Requires PHP: 8.2
-Stable tag: 1.2.7
+Stable tag: 1.2.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,11 @@ This plugin is intended to be used together with the `marketlense` block theme.
 4. Confirm that `/wp-json/wp/v2/ml_report` is reachable.
 
 == Changelog ==
+
+= 1.2.9 =
+* Restored digest visibility for generated core `post` entries by persisting a dedicated `ml_is_digest` contract during metadata backfill instead of requiring `ml_file_id` to exist up front.
+* Added `Geography` fallback parsing for region metadata and preserved hidden `Drive fileId` markers from the Python publisher so digest lookup/backfill remain deterministic.
+* Added a frontend media proxy that rewrites digest image URLs away from blocked `/wp-content/uploads/...` paths so uploaded covers render publicly on hosts with direct-upload restrictions.
 
 = 1.2.7 =
 * Finalized the premium homepage/theme integration pass with release-safe visual cleanup, consistent card/chip interaction styling, and synchronized plugin/theme versioning.

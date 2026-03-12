@@ -49,6 +49,44 @@ def test_publish_html_uses_preloaded_html_with_real_wordpress_side_effect(
     assert "Drive fileId: file123" in post_call.json_data["content"]
 
 
+def test_publish_html_injects_hidden_file_id_marker_when_missing(
+    publish_settings_factory,
+    run_context,
+    wordpress_http,
+    assert_no_defaulted_required_fields,
+) -> None:
+    settings = publish_settings_factory(validation_policy="warn")
+    html_text = (
+        "<html><head><title>Report</title></head>"
+        "<body><section><h1>Report</h1></section></body></html>"
+    )
+    wordpress_http.add_json(
+        "POST",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=201,
+        payload={"id": 42, "link": "https://example.com/post/42", "status": "publish"},
+    )
+
+    outcome = pg.publish_html(
+        PublishRequest(
+            schema_version="1.0",
+            html_path="out/report.html",
+            file_id="file123",
+            html_text=html_text,
+        ),
+        settings,
+        run_context,
+    )
+
+    post_call = wordpress_http.calls_for(
+        "POST", "https://example.com/wp-json/wp/v2/ml_report"
+    )[0]
+    assert_no_defaulted_required_fields(outcome)
+    assert outcome.status == "published"
+    assert outcome.file_id == "file123"
+    assert "<p hidden>Drive fileId: file123</p>" in post_call.json_data["content"]
+
+
 def test_publish_html_assigns_publisher_taxonomy_terms(
     publish_settings_factory,
     run_context,
@@ -145,7 +183,66 @@ def test_publish_html_assigns_publisher_taxonomy_terms(
     ]
     assert_no_defaulted_required_fields(outcome)
     assert outcome.status == "published"
-    assert captured["request"].categories == [11]
-    assert captured["request"].taxonomy_terms == {"ml_publisher": [22]}
-    assert captured["request"].ssl_verify is False
-    assert captured["taxonomy_ssl"] == [False, False]
+    assert post_call.json_data["categories"] == [11]
+    assert post_call.json_data["ml_publisher"] == [22]
+    assert post_call.verify is False
+    assert taxonomy_calls
+    assert all(call.verify is False for call in taxonomy_calls)
+
+
+def test_publish_html_rewrites_uploaded_images_to_media_proxy(
+    publish_settings_factory,
+    run_context,
+    wordpress_http,
+    assert_no_defaulted_required_fields,
+) -> None:
+    settings = publish_settings_factory(validation_policy="warn")
+    html_path = Path(settings.output_dir) / "report.html"
+    assets_dir = Path(settings.output_dir) / "assets"
+    assets_dir.mkdir(parents=True, exist_ok=True)
+    image_path = assets_dir / "cover.png"
+    image_path.write_bytes(b"png-bytes")
+    html_text = (
+        "<html><head><title>Report</title></head>"
+        "<body>Drive fileId: file123"
+        "<img src=\"assets/cover.png\" alt=\"cover\"></body></html>"
+    )
+    html_path.write_text(html_text, encoding="utf-8")
+    wordpress_http.add_json(
+        "POST",
+        "https://example.com/wp-json/wp/v2/media",
+        status_code=201,
+        payload={"id": 55, "source_url": "https://example.com/wp-content/uploads/cover.png"},
+    )
+    wordpress_http.add_json(
+        "POST",
+        "https://example.com/wp-json/wp/v2/media/55",
+        status_code=200,
+        payload={"id": 55},
+    )
+    wordpress_http.add_json(
+        "POST",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=201,
+        payload={"id": 42, "link": "https://example.com/post/42", "status": "publish"},
+    )
+
+    outcome = pg.publish_html(
+        PublishRequest(
+            schema_version="1.0",
+            html_path=str(html_path),
+            file_id="file123",
+            html_text=None,
+        ),
+        settings,
+        run_context,
+    )
+
+    post_call = wordpress_http.calls_for(
+        "POST", "https://example.com/wp-json/wp/v2/ml_report"
+    )[0]
+    assert_no_defaulted_required_fields(outcome)
+    assert outcome.status == "published"
+    assert post_call.json_data["featured_media"] == 55
+    assert "https://example.com/?ml_media=55" in post_call.json_data["content"]
+    assert "wp-content/uploads/cover.png" not in post_call.json_data["content"]

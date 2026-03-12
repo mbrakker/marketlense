@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+import json
+import logging
+import warnings
+
+import urllib3  # type: ignore[import-untyped]
+
 from src.contracts.run_context import RunContext
 from src.contracts.wordpress import (
     WordPressMediaUploadRequest,
@@ -121,9 +127,11 @@ def test_find_post_by_file_id_found(wordpress_http) -> None:
 
     response = svc.find_post_by_file_id(request, _ctx())
 
+    call = wordpress_http.calls_for("GET", "https://site/wp-json/wp/v2/posts")[0]
     assert response.found is True
     assert response.post_id == 11
     assert response.link == "https://site/p/11"
+    assert call.allow_redirects is False
 
 
 def test_find_post_by_file_id_ssl_verify_disabled(wordpress_http) -> None:
@@ -145,7 +153,126 @@ def test_find_post_by_file_id_ssl_verify_disabled(wordpress_http) -> None:
 
     call = wordpress_http.calls_for("GET", "https://site/wp-json/wp/v2/posts")[0]
     assert response.found is False
+    assert call.allow_redirects is False
     assert call.verify is False
+
+
+def test_find_post_by_file_id_suppresses_insecure_request_warning_when_ssl_verify_disabled(
+    wordpress_http,
+) -> None:
+    def _lookup(_call: RecordedHttpRequest) -> FakeHttpResponse:
+        warnings.warn(
+            "unverified https request",
+            urllib3.exceptions.InsecureRequestWarning,
+            stacklevel=1,
+        )
+        return FakeHttpResponse.from_payload(status_code=200, payload=[])
+
+    wordpress_http.add("GET", "https://site/wp-json/wp/v2/posts", _lookup)
+    request = WordPressPostLookupRequest(
+        schema_version="1.0",
+        base_url="https://site",
+        auth_header="Bearer token",
+        file_id="file-1",
+        ssl_verify=False,
+    )
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        response = svc.find_post_by_file_id(request, _ctx())
+
+    assert response.found is False
+    insecure = [
+        warning
+        for warning in caught
+        if issubclass(warning.category, urllib3.exceptions.InsecureRequestWarning)
+    ]
+    assert insecure == []
+
+
+def test_find_post_by_file_id_keeps_insecure_request_warning_when_ssl_verify_enabled(
+    wordpress_http,
+) -> None:
+    def _lookup(_call: RecordedHttpRequest) -> FakeHttpResponse:
+        warnings.warn(
+            "unverified https request",
+            urllib3.exceptions.InsecureRequestWarning,
+            stacklevel=1,
+        )
+        return FakeHttpResponse.from_payload(status_code=200, payload=[])
+
+    wordpress_http.add("GET", "https://site/wp-json/wp/v2/posts", _lookup)
+    request = WordPressPostLookupRequest(
+        schema_version="1.0",
+        base_url="https://site",
+        auth_header="Bearer token",
+        file_id="file-1",
+    )
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        response = svc.find_post_by_file_id(request, _ctx())
+
+    assert response.found is False
+    insecure = [
+        warning
+        for warning in caught
+        if issubclass(warning.category, urllib3.exceptions.InsecureRequestWarning)
+    ]
+    assert len(insecure) == 1
+
+
+def test_find_post_by_file_id_redirect_logs_response_diagnostics(
+    wordpress_http,
+    caplog,
+    assert_app_error,
+    assert_logs_have_required_fields,
+) -> None:
+    caplog.set_level(logging.INFO, logger="market_lense.wordpress_service")
+    wordpress_http.add_json(
+        "GET",
+        "https://site/wp-json/wp/v2/posts",
+        status_code=302,
+        text="",
+        headers={
+            "Location": "wp-admin/install.php",
+            "Set-Cookie": "secret=1",
+        },
+        reason="Found",
+    )
+    request = WordPressPostLookupRequest(
+        schema_version="1.0",
+        base_url="https://site",
+        auth_header="Bearer token",
+        file_id="file-redirect",
+    )
+
+    try:
+        svc.find_post_by_file_id(request, _ctx())
+    except Exception as err:
+        assert_app_error(err, code="wp_post_lookup_redirected", retryable=True)
+        assert err.context["status_code"] == 302
+        assert err.context["reason"] == "Found"
+        assert err.context["response_headers"]["Location"] == "wp-admin/install.php"
+        assert "Set-Cookie" not in err.context["response_headers"]
+        assert err.context["response_body_excerpt"] == ""
+    else:  # pragma: no cover
+        raise AssertionError("expected AppError")
+
+    call = wordpress_http.calls_for("GET", "https://site/wp-json/wp/v2/posts")[0]
+    assert call.allow_redirects is False
+
+    events = [
+        json.loads(record.message)
+        for record in caplog.records
+        if "wp_post_lookup_http_redirect" in record.message
+    ]
+    assert len(events) == 1
+    assert events[0]["fields"]["status_code"] == 302
+    assert events[0]["fields"]["reason"] == "Found"
+    assert events[0]["fields"]["response_headers"]["Location"] == "wp-admin/install.php"
+    assert "Set-Cookie" not in events[0]["fields"]["response_headers"]
+    assert_logs_have_required_fields(events)
 
 
 def test_ensure_taxonomy_terms_creates_missing_terms(wordpress_http) -> None:
@@ -229,6 +356,60 @@ def test_upload_media_invalid_response(wordpress_http, assert_app_error) -> None
         assert_app_error(err, code="wp_media_invalid_response", retryable=False)
     else:  # pragma: no cover
         raise AssertionError("expected AppError")
+
+
+def test_upload_media_server_error_logs_response_diagnostics(
+    wordpress_http,
+    caplog,
+    assert_app_error,
+    assert_logs_have_required_fields,
+) -> None:
+    caplog.set_level(logging.INFO, logger="market_lense.wordpress_service")
+    wordpress_http.add_json(
+        "POST",
+        "https://site/wp-json/wp/v2/media",
+        status_code=503,
+        payload={"code": "server_error", "message": "temporary outage"},
+        headers={
+            "Content-Type": "application/json",
+            "Retry-After": "120",
+            "Set-Cookie": "secret=1",
+        },
+        reason="Service Unavailable",
+    )
+    request = WordPressMediaUploadRequest(
+        schema_version="1.0",
+        base_url="https://site",
+        auth_header="Bearer token",
+        filename="x.png",
+        mime_type="image/png",
+        data=b"abc",
+    )
+
+    try:
+        svc.upload_media(request, _ctx())
+    except Exception as err:
+        assert_app_error(err, code="wp_media_server_error", retryable=True)
+        assert err.context["status_code"] == 503
+        assert err.context["reason"] == "Service Unavailable"
+        assert err.context["response_headers"]["Content-Type"] == "application/json"
+        assert err.context["response_headers"]["Retry-After"] == "120"
+        assert "Set-Cookie" not in err.context["response_headers"]
+        assert "temporary outage" in err.context["response_body_excerpt"]
+    else:  # pragma: no cover
+        raise AssertionError("expected AppError")
+
+    events = [
+        json.loads(record.message)
+        for record in caplog.records
+        if "wp_media_upload_http_error" in record.message
+    ]
+    assert len(events) == 1
+    assert events[0]["fields"]["status_code"] == 503
+    assert events[0]["fields"]["reason"] == "Service Unavailable"
+    assert "temporary outage" in events[0]["fields"]["response_body_excerpt"]
+    assert "Set-Cookie" not in events[0]["fields"]["response_headers"]
+    assert_logs_have_required_fields(events)
 
 
 def test_update_post_categories_server_error(wordpress_http, assert_app_error) -> None:

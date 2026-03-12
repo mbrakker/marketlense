@@ -25,6 +25,8 @@ final class Plugin
 
     private Meta $meta;
 
+    private Media_Proxy $media_proxy;
+
     private Report_View_Model_Builder $view_model_builder;
 
     private Intelligence_Stats $stats;
@@ -37,6 +39,7 @@ final class Plugin
         $this->post_type = new Post_Type();
         $this->taxonomies = new Taxonomies();
         $this->meta = new Meta($parser);
+        $this->media_proxy = new Media_Proxy();
         $this->view_model_builder = new Report_View_Model_Builder($parser);
         $this->stats = new Intelligence_Stats();
         $this->shortcodes = new Shortcodes($this->view_model_builder, $this->stats);
@@ -63,7 +66,11 @@ final class Plugin
         add_action('init', [$this->shortcodes, 'register'], 12);
         add_action('init', [$this->meta, 'backfill_report_contracts'], 13);
         add_action('pre_get_posts', [$this->post_type, 'filter_frontend_queries']);
-        add_action('save_post_' . Post_Type::POST_TYPE, [$this->meta, 'sync_report_contract'], 20, 3);
+        $this->media_proxy->register();
+
+        foreach (Post_Type::report_post_types() as $post_type) {
+            add_action('save_post_' . $post_type, [$this->meta, 'sync_report_contract'], 20, 3);
+        }
 
         $this->booted = true;
     }

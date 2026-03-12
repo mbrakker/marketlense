@@ -9,13 +9,26 @@ from typing import Any, Callable
 class FakeHttpResponse:
     status_code: int
     text: str
+    headers: dict[str, Any]
+    reason: str
 
     @classmethod
     def from_payload(
-        cls, *, status_code: int, payload: object | None = None, text: str | None = None
+        cls,
+        *,
+        status_code: int,
+        payload: object | None = None,
+        text: str | None = None,
+        headers: dict[str, Any] | None = None,
+        reason: str = "",
     ) -> "FakeHttpResponse":
         rendered = text if text is not None else json.dumps(payload)
-        return cls(status_code=status_code, text=rendered)
+        return cls(
+            status_code=status_code,
+            text=rendered,
+            headers=dict(headers or {}),
+            reason=reason,
+        )
 
 
 @dataclass(frozen=True)
@@ -26,6 +39,7 @@ class RecordedHttpRequest:
     params: dict[str, Any]
     data: Any
     files: dict[str, Any]
+    allow_redirects: Any
     timeout: Any
     verify: Any
 
@@ -70,6 +84,8 @@ class RequestsRouter:
         status_code: int,
         payload: object | None = None,
         text: str | None = None,
+        headers: dict[str, Any] | None = None,
+        reason: str = "",
     ) -> None:
         self.add(
             method,
@@ -78,6 +94,8 @@ class RequestsRouter:
                 status_code=status_code,
                 payload=payload,
                 text=text,
+                headers=headers,
+                reason=reason,
             ),
         )
 
@@ -93,6 +111,7 @@ class RequestsRouter:
         *,
         headers: dict[str, Any] | None = None,
         params: dict[str, Any] | None = None,
+        allow_redirects: Any = True,
         timeout: Any = None,
         verify: Any = None,
     ) -> FakeHttpResponse:
@@ -103,6 +122,7 @@ class RequestsRouter:
             params=params,
             data=None,
             files=None,
+            allow_redirects=allow_redirects,
             timeout=timeout,
             verify=verify,
         )
@@ -114,6 +134,7 @@ class RequestsRouter:
         headers: dict[str, Any] | None = None,
         data: Any = None,
         files: dict[str, Any] | None = None,
+        allow_redirects: Any = True,
         timeout: Any = None,
         verify: Any = None,
     ) -> FakeHttpResponse:
@@ -124,6 +145,7 @@ class RequestsRouter:
             params=None,
             data=data,
             files=files,
+            allow_redirects=allow_redirects,
             timeout=timeout,
             verify=verify,
         )
@@ -137,6 +159,7 @@ class RequestsRouter:
         params: dict[str, Any] | None,
         data: Any,
         files: dict[str, Any] | None,
+        allow_redirects: Any,
         timeout: Any,
         verify: Any,
     ) -> FakeHttpResponse:
@@ -147,6 +170,7 @@ class RequestsRouter:
             params=dict(params or {}),
             data=data,
             files=dict(files or {}),
+            allow_redirects=allow_redirects,
             timeout=timeout,
             verify=verify,
         )

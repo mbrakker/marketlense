@@ -134,6 +134,7 @@ What `provision-site-structure.sh` does:
 - Navigation is provided directly by static block-theme template parts (`parts/nav.html`, `parts/footer.html`) using native block navigation/list markup; the provisioning script does not create classic menu locations.
 - The header is a compact two-row filesystem template part: brand plus navigation/briefing CTA on the first row, then a narrower archive search row beneath it. Header and footer both use the same shell/frame width model as the hero and homepage content lane.
 - If `wp-cli` is unavailable in your environment, automatically falls back to REST (`provision-site-structure-rest.py`) and provisions the same required pages.
+- REST fallback auto-discovers both pretty-permalink API roots (`/wp-json/`) and hosts that only expose REST through `?rest_route=/` or `index.php?rest_route=/`.
 
 What `seed-publisher-homepages.sh` does:
 
@@ -142,6 +143,7 @@ What `seed-publisher-homepages.sh` does:
 - Upserts `ml_publisher_homepage` term meta for each publisher.
 - Is idempotent and safe to rerun.
 - Falls back to REST (`seed-publisher-homepages-rest.py`) when `wp-cli` cannot access a local WP core.
+- REST fallback uses the same WordPress API discovery logic as provisioning, so hosted installs that require `?rest_route=/` still work.
 - In REST mode, if `marketlense-core` is installed but inactive, it auto-activates the plugin before seeding taxonomy terms.
 
 What `sync-publisher-profiles.sh` does:
@@ -260,6 +262,8 @@ Optional environment controls:
 - `SEED_PUBLISHERS` (`1|0`, default `1`)
 - `WP_SITE_URL` (required for REST fallback provisioning/seeding)
 - `WP_USERNAME` + `WP_APP_PASSWORD` (or `WP_BEARER_TOKEN`) for REST fallback auth
+- `WP_SSL_VERIFY` (`true|false`, default `true`) for REST fallback TLS verification
+- `WP_CA_BUNDLE_PATH` (optional) to trust a custom CA bundle for REST fallback HTTPS
 
 If `wp-cli` is unavailable, smoke test exits with a skip message.
 
@@ -298,7 +302,7 @@ The main CI workflow runs this harness automatically after installing PHP CLI.
   - `[ml_publisher_authority]`
 - Theme dependency: computed homepage and directory surfaces remain owned by `marketlense-core`; the header/footer now consume plugin shortcodes for navigation/CTA resolution while the theme keeps layout control.
 - Block-template compatibility: `marketlense-core` also applies its registered `ml_*` shortcodes during block rendering when template/pattern output leaves a raw shortcode string unresolved, so theme patterns built with `core/shortcode` blocks still render on the front end.
-- Legacy projection safety: on activation and on the first runtime after upgrade, `marketlense-core` backfills missing report metadata and publisher taxonomy projections for existing `ml_report` posts so publisher counts, authority sections, and latest-report cards recover without manually re-saving reports. Current parser support includes digest hero subtitle metadata rows such as `Publisher`, `Time Period`, and `Geography`, which are now used during backfill as well.
+- Legacy projection safety: on activation and on the first runtime after upgrade, `marketlense-core` backfills missing report metadata and publisher taxonomy projections for existing `ml_report` posts and digest-style core `post` entries so publisher counts, authority sections, and latest-report cards recover without manually re-saving reports. Current parser support includes digest hero subtitle metadata rows such as `Publisher`, `Time Period`, and `Geography`, plus a persisted `ml_is_digest` contract flag for core-post digests that do not yet have `ml_file_id`.
 - `templates/page-topics-directory.html` renders `[ml_topics_directory]`.
 - `templates/page-publishers-directory.html` renders `[ml_publishers_directory]` with publisher homepage CTAs, trimmed self-presentation copy, and optional insights links.
 - The publishers directory is term-driven, so synced publishers remain visible even before they have published reports attached.
@@ -306,7 +310,7 @@ The main CI workflow runs this harness automatically after installing PHP CLI.
 - That custom Publishers manager ships with page-scoped admin styling so long profile fields and action links remain readable without panel overflow.
 - `templates/category.html` routes native category archives through the same report browser, so topic archive pages stay limited to uploaded reports instead of falling back to generic site-wide category queries.
 - No dedicated `taxonomy-ml_topic.html` template is shipped; topic browsing is category-first.
-- Legacy report posts under default `post` are intentionally not migrated; new publishing remains `ml_report`-first.
+- Digest content can now live in either `ml_report` or core `post`. Front-end report surfaces scope to entries that carry the recovered digest contract (`ml_is_digest=1` and, when available, `ml_file_id`), so ordinary blog posts stay out of the report browser while published digest posts remain visible.
 
 
 ## Responsive Layout Defaults
@@ -357,6 +361,10 @@ WordPress credentials and publish controls come from root `.env`/`app.yaml`:
 - `WP_POST_TYPE` (optional override, default `ml_report`)
 
 The checked-in `publish.wp.site_url` value now targets `https://marketlense.medianewsonline.com` so publish flows and follow-on tooling stop reinforcing the legacy `http` scheme.
+If root config disables WordPress TLS verification (`publish.wp.ssl_verify: false`), the Python publish service suppresses `urllib3` insecure-request warnings for those calls, but the HTTPS connection remains untrusted until the host certificate chain is fixed.
+The WordPress shell/Python provisioning scripts also honor `WP_SSL_VERIFY` and `WP_CA_BUNDLE_PATH`, so hosted admin/provisioning runs can match the same TLS policy as publish flows.
+When the hosting layer blocks direct `/wp-content/uploads/...` access, the plugin now serves attachments through a frontend proxy route (`/?ml_media=<attachment_id>`) and rewrites frontend digest content/thumbnail URLs to that proxy so uploaded media still renders publicly.
+The Python publisher now appends a hidden `Drive fileId: ...` marker to post content when the rendered HTML lacks one so plugin backfill and REST lookup remain deterministic for digest posts created under the core `post` type.
 
 During publish, the pipeline now writes:
 

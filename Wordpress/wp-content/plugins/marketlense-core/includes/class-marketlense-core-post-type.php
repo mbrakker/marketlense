@@ -17,6 +17,21 @@ final class Post_Type
 {
     public const POST_TYPE = 'ml_report';
 
+    public const CORE_POST_TYPE = 'post';
+
+    /**
+     * @return list<string>
+     */
+    public static function report_post_types(): array
+    {
+        return [self::POST_TYPE, self::CORE_POST_TYPE];
+    }
+
+    public static function is_report_post_type(string $post_type): bool
+    {
+        return in_array($post_type, self::report_post_types(), true);
+    }
+
     public function register(): void
     {
         register_post_type(
@@ -82,7 +97,15 @@ final class Post_Type
             || $query->is_category()
             || $query->is_search()
         ) {
-            $query->set('post_type', self::POST_TYPE);
+            $digest_query_args = Meta::apply_digest_query_constraints(
+                [
+                    'post_type' => self::report_post_types(),
+                    'meta_query' => $query->get('meta_query'),
+                ]
+            );
+
+            $query->set('post_type', $digest_query_args['post_type']);
+            $query->set('meta_query', $digest_query_args['meta_query']);
             $query->set('orderby', 'date');
             $query->set('order', 'DESC');
         }

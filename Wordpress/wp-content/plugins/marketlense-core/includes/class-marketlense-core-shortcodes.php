@@ -141,7 +141,6 @@ final class Shortcodes
         }
 
         $query_args = [
-            'post_type' => Post_Type::POST_TYPE,
             'post_status' => 'publish',
             'posts_per_page' => $per_page,
             'paged' => $current_page,
@@ -171,6 +170,7 @@ final class Shortcodes
             $query_args['tax_query'] = $tax_query;
         }
 
+        $query_args = Meta::apply_digest_query_constraints($query_args);
         $query = new \WP_Query($query_args);
         $topic_options = $this->stats->scoped_terms(Taxonomies::CATEGORY_TAXONOMY);
         $publisher_options = $this->stats->scoped_terms(Taxonomies::PUBLISHER_TAXONOMY);
@@ -371,14 +371,15 @@ final class Shortcodes
         $limit = max(1, min(12, (int) $atts['limit']));
 
         $query = new \WP_Query(
-            [
-                'post_type' => Post_Type::POST_TYPE,
-                'post_status' => 'publish',
-                'posts_per_page' => $limit,
-                'orderby' => 'date',
-                'order' => 'DESC',
-                'no_found_rows' => true,
-            ]
+            Meta::apply_digest_query_constraints(
+                [
+                    'post_status' => 'publish',
+                    'posts_per_page' => $limit,
+                    'orderby' => 'date',
+                    'order' => 'DESC',
+                    'no_found_rows' => true,
+                ]
+            )
         );
 
         ob_start();
@@ -521,17 +522,18 @@ final class Shortcodes
     private function signal_of_the_day(): ?array
     {
         $report_ids = get_posts(
-            [
-                'post_type' => Post_Type::POST_TYPE,
-                'post_status' => 'publish',
-                'fields' => 'ids',
-                'posts_per_page' => -1,
-                'no_found_rows' => true,
-                'update_post_meta_cache' => false,
-                'update_post_term_cache' => false,
-                'orderby' => 'date',
-                'order' => 'DESC',
-            ]
+            Meta::apply_digest_query_constraints(
+                [
+                    'post_status' => 'publish',
+                    'fields' => 'ids',
+                    'posts_per_page' => -1,
+                    'no_found_rows' => true,
+                    'update_post_meta_cache' => false,
+                    'update_post_term_cache' => false,
+                    'orderby' => 'date',
+                    'order' => 'DESC',
+                ]
+            )
         );
 
         if (! is_array($report_ids) || $report_ids === []) {
@@ -553,7 +555,12 @@ final class Shortcodes
 
         foreach ($candidate_ids as $post_id) {
             $post = get_post($post_id);
-            if (! ($post instanceof \WP_Post) || $post->post_type !== Post_Type::POST_TYPE || $post->post_status !== 'publish') {
+            if (
+                ! ($post instanceof \WP_Post)
+                || ! Post_Type::is_report_post_type($post->post_type)
+                || $post->post_status !== 'publish'
+                || trim((string) get_post_meta($post_id, Meta::META_FILE_ID, true)) === ''
+            ) {
                 continue;
             }
 

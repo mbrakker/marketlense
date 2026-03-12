@@ -129,6 +129,7 @@ bash Wordpress/scripts/sync-publisher-profiles.sh
 ```
 
 The sync reads `Wordpress/config/publisher-profiles.json` and updates each `ml_publisher` term with its Notion-derived homepage, self-presentation text, insights link(s), icon source, and source page identifiers.
+When those provisioning scripts fall back to REST, they now auto-discover both `/wp-json/` and `?rest_route=/` API roots and honor `WP_SSL_VERIFY` / `WP_CA_BUNDLE_PATH` for hosted sites with custom TLS.
 
 Use this root README for pipeline architecture and CLI usage; use the WordPress subproject README for all theme/plugin operations.
 
@@ -142,8 +143,8 @@ Key fields and env overrides:
 
 - Paths: `paths.output_dir` (`OUTPUT_DIR`, default `./out`), `paths.cache_dir` (`CACHE_DIR`, default `./cache`), `paths.state_db` (`STATE_DB`), `paths.reports_db` (`REPORTS_DB`), `paths.category_mappings` (defaults to `src/config/category-mappings.yaml`), `paths.html_tag_acronyms` (defaults to `src/config/html-tag-acronyms.yaml`).
 - Ingest: `ingest.google_sa_path` (`GOOGLE_SERVICE_ACCOUNT_JSON`), `ingest.gdrive_folder_id` (`GDRIVE_FOLDER_ID`), `ingest.openai_model` (`OPENAI_MODEL`), `ingest.batch_limit` (`BATCH_LIMIT`, default 20), `ingest.worker_limit` (`INGEST_WORKER_LIMIT`, default 2), `ingest.report_worker_limit` (`INGEST_REPORT_WORKER_LIMIT`, default 2), `ingest.temperature` (`TEMPERATURE`, default 1.0), `ingest.timeout_seconds` (`OPENAI_TIMEOUT_SECONDS`, default 600), `ingest.lock_ttl_seconds` (`INGEST_LOCK_TTL_SECONDS`, default 7200), `ingest.contents_page.*` (keywords, max_pages, min_headings, render_dpi, preview_enabled), `ingest.evidence_packs.parallel_workers` (`EVIDENCE_PACK_PARALLEL_WORKERS`, default 3), `ingest.evidence_packs.global_max_in_flight` (`EVIDENCE_PACK_GLOBAL_MAX_IN_FLIGHT`, default 2), `ingest.evidence_packs.global_min_interval_ms` (`EVIDENCE_PACK_GLOBAL_MIN_INTERVAL_MS`, default 250), `ingest.evidence_packs.doc_map_max_attempts` (`EVIDENCE_PACK_DOC_MAP_MAX_ATTEMPTS`, default 3), `ingest.evidence_packs.doc_map_retry_delay_ms` (`EVIDENCE_PACK_DOC_MAP_RETRY_DELAY_MS`, default 500), `ingest.evidence_packs.registry` (`EVIDENCE_PACK_REGISTRY`, comma-separated), `ingest.evidence_packs.enable_new_variety_packs` (`EVIDENCE_PACK_ENABLE_NEW_VARIETY_PACKS`, default `false`), `ingest.artifacts.parallel_workers` (`ARTIFACT_PARALLEL_WORKERS`, default 4), `ingest.artifacts.global_max_in_flight` (`ARTIFACT_GLOBAL_MAX_IN_FLIGHT`, default 2), `ingest.artifacts.global_min_interval_ms` (`ARTIFACT_GLOBAL_MIN_INTERVAL_MS`, default 250).
-- Publish: `publish.wp.site_url` (`WP_SITE_URL`), `publish.wp.username` (`WP_USERNAME`), `publish.wp.post_status` (`WP_POST_STATUS`, default `publish`), `publish.wp.post_type` (`WP_POST_TYPE`, default `ml_report`), `publish.wp.ssl_verify` (`WP_SSL_VERIFY`, default `true`), `publish.wp.ca_bundle_path` (`WP_CA_BUNDLE_PATH`, optional CA bundle for self-signed/private certs), `publish.validation.policy` (`PUBLISH_VALIDATION_POLICY`, default `block`).
-- For the bundled WordPress theme/plugin, keep `publish.wp.post_type=ml_report`. The homepage, reports archive, topic surfaces, and publisher intelligence modules query the `ml_report` CPT; publishing to core `posts` will bypass those dynamic surfaces.
+- Publish: `publish.wp.site_url` (`WP_SITE_URL`), `publish.wp.username` (`WP_USERNAME`), `publish.wp.post_status` (`WP_POST_STATUS`, default `publish`), `publish.wp.post_type` (`WP_POST_TYPE`, fallback default `ml_report`; this repo currently sets `posts` in YAML), `publish.wp.ssl_verify` (`WP_SSL_VERIFY`, default `true`), `publish.wp.ca_bundle_path` (`WP_CA_BUNDLE_PATH`, optional CA bundle for self-signed/private certs), `publish.validation.policy` (`PUBLISH_VALIDATION_POLICY`, default `block`).
+- This repo currently publishes into core WordPress posts with `publish.wp.post_type=posts`. The bundled WordPress plugin now treats digest posts with a recovered digest contract (`ml_is_digest=1` and, when available, `ml_file_id`) as first-class report content across archive/home surfaces, so report cards and intelligence modules still work even when the underlying post type is `post`.
 - Ranking/crop refinement: `rank.max_candidates`, `rank.selected_max` (default `5`), `rank.min_overall_score`, `rank.min_quality_score`, `rank.min_insight_score`, `rank.min_data_score`, `rank.crop_refine_enabled`, `rank.crop_refine_mode` (`adaptive|always|off`), `rank.crop_refine_page_dpi`, `rank.crop_refine_temperature`, `rank.crop_refine_timeout_seconds` (defaults to `rank.timeout_seconds` when omitted).
 - Drive listing: `ingest.drive.supports_all_drives`, `ingest.drive.include_items_from_all_drives` (shared drive flags), `ingest.drive.drive_id` (shared drive scope), and `ingest.drive.list_mode` (`full` vs `metadata` to omit names until needed).
 - PDF text extraction: `ingest.pdf_text.max_pages` and `ingest.pdf_text.max_chars` cap how much text is sampled per PDF; `ingest.pdf_text.min_density` (default `250` chars/page) triggers "not available from text" fallbacks when extraction is sparse; `ingest.pdf_text.sample_pages` (default `3`) controls the deterministic sample used to validate extractability before analysis.
@@ -167,7 +168,7 @@ Secrets (env only):
 
 - `OPENAI_API_KEY` (required)
 - `WP_APP_PASSWORD` or `WP_BEARER_TOKEN` (publishing)
-- `WP_POST_TYPE` (optional publish endpoint override; defaults to `ml_report`)
+- `WP_POST_TYPE` (optional publish endpoint override; current YAML sets `posts`, code fallback is `ml_report`)
 - Optional provider keys (e.g., `MINERU_API_KEY`) if used.
 
 WordPress HTTPS note:
@@ -175,6 +176,7 @@ WordPress HTTPS note:
 - Leave `publish.wp.ssl_verify` enabled in normal environments.
 - For self-signed/private certificates, prefer `publish.wp.ca_bundle_path` or `WP_CA_BUNDLE_PATH` to trust a specific CA bundle.
 - As a last resort for local/admin environments with a self-signed certificate, set `publish.wp.ssl_verify: false` (or `WP_SSL_VERIFY=false`) to disable TLS verification for WordPress REST calls.
+- When `publish.wp.ssl_verify` is `false`, `src/services/wordpress_service.py` suppresses `urllib3`'s `InsecureRequestWarning` for those WordPress calls so CLI output stays readable; the connection is still unverified and should be treated as insecure.
 
 Prompt locations:
 
@@ -299,8 +301,8 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
    - `src/services/state_service.py` verifies the report was processed and not already published.
 
 5. **Publishing (per file)**
-   - `src/generators/publish_generator.py` uploads report images, swaps image URLs, and creates a WordPress post.
-   - `src/services/wordpress_service.py` handles media and post API calls.
+   - `src/generators/publish_generator.py` uploads report images, swaps image URLs to the site-side media proxy route, injects a hidden `Drive fileId` marker when the rendered HTML does not already contain one, and creates a WordPress post.
+   - `src/services/wordpress_service.py` handles media and post API calls. WordPress 5xx responses now log bounded header/body diagnostics (sanitized and truncated) before retryable errors propagate, and post lookup requests fail fast on unexpected REST redirects with the redirect target logged in structured error context.
 
 6. **State record**
    - Published posts are recorded with post ID and URL for idempotency.
