@@ -146,7 +146,6 @@ categories:
   - home_automation
   - domestic_robots
   - physical_ai
-  - innovation
 - id: retail_logistics
   label: Retail Logistics & Fulfillment
   description: Inventory, warehousing, last-mile delivery, and omnichannel fulfillment
@@ -384,7 +383,6 @@ categories:
   - retail_data
   - retail_media_networks
   - shoppable_ads
-  - RMN
   - retail_media_advertising
   - marketplace_ads
   - advertising_revenue
@@ -677,4 +675,7 @@ categories:
   - electronics_retail
   - device_upgrade_cycles
   - smart_home
-uncategorized: []
+uncategorized:
+- title: IAS - Industry_Pulse_Report_2026_ACIG
+  tags:
+  - brand_safety_and_suitability

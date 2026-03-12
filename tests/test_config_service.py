@@ -426,6 +426,7 @@ class TestConfigService(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(tmp_dir, include_publish=True)
             cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["publish"]["wp"]["ssl_verify"] = True
             cfg_data["publish"]["wp"]["ca_bundle_path"] = "missing-ca.pem"
             Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
             env = {

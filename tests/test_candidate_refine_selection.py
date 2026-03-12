@@ -1,4 +1,7 @@
 from pathlib import Path
+from types import SimpleNamespace
+from dataclasses import replace
+
 from pypdf import PdfWriter
 
 from src.contracts.candidates import Candidate
@@ -6,7 +9,8 @@ from src.contracts.ingest import IngestSettings
 from src.contracts.report_assets import CropRefineResponse, CropRefineResult
 from src.contracts.report_models import RankedCandidate
 from src.contracts.run_context import RunContext
-from src.generators import report_generator as rg
+from src.generators import report_selection_generator as rsg
+from src.generators.report_generation_dependencies import ReportGeneratorDependencies
 
 
 def _ctx() -> RunContext:
@@ -37,6 +41,40 @@ def _settings(tmp_path, **overrides) -> IngestSettings:
     )
     payload = {**base.__dict__, **overrides}
     return IngestSettings(**payload)
+
+
+def _deps(**overrides) -> ReportGeneratorDependencies:
+    base = ReportGeneratorDependencies.default()
+    seeded = replace(
+        base,
+        load_prompt_set=lambda req, ctx: SimpleNamespace(
+            system=SimpleNamespace(path="system.yaml", sha256="sys"),
+            user=SimpleNamespace(path="user.yaml", sha256="usr"),
+        ),
+        render_prompt=lambda req, ctx: SimpleNamespace(text="prompt"),
+        render_page_for_crop_refine=lambda req, ctx: SimpleNamespace(
+            schema_version="1.0",
+            image_path="page.png",
+            page=req.page,
+            image_width=600,
+            image_height=800,
+            page_width=600.0,
+            page_height=800.0,
+            scale_x=1.0,
+            scale_y=1.0,
+        ),
+        apply_crop_refine_bbox=lambda req, ctx: SimpleNamespace(
+            schema_version="1.0",
+            page=req.page,
+            bbox=(
+                float(req.bbox[0]) - 8.0,
+                float(req.bbox[1]) - 8.0,
+                float(req.bbox[2]) + 8.0,
+                float(req.bbox[3]) + 8.0,
+            ),
+        ),
+    )
+    return replace(seeded, **overrides)
 
 
 def _candidate(
@@ -71,17 +109,19 @@ def _pdf_path(tmp_path: Path) -> str:
     return str(path)
 
 
-def test_refine_selection_adaptive_obvious_pass_skips_llm(monkeypatch, tmp_path):
+def test_refine_selection_adaptive_obvious_pass_skips_llm(tmp_path):
     settings = _settings(
         tmp_path, crop_refine_enabled=True, crop_refine_mode="adaptive"
     )
     llm_calls: list[int] = []
-
-    def _fail_if_called(*args, **kwargs):
-        llm_calls.append(1)
-        raise AssertionError("LLM refine should not be called for obvious pass")
-
-    monkeypatch.setattr(rg, "refine_candidate_crops_service", _fail_if_called)
+    deps = _deps(
+        refine_candidate_crops=lambda req, ctx: (
+            llm_calls.append(1)
+            or (_ for _ in ()).throw(
+                AssertionError("LLM refine should not be called for obvious pass")
+            )
+        )
+    )
 
     cand = _candidate(
         cid="table_1",
@@ -99,7 +139,7 @@ def test_refine_selection_adaptive_obvious_pass_skips_llm(monkeypatch, tmp_path)
             keep=True,
         )
     ]
-    items, accepted = rg._select_refined_candidate_items(
+    items, accepted = rsg.select_refined_candidate_items(
         ranked_rows=ranked,
         ranked_candidates=[cand],
         settings=settings,
@@ -111,6 +151,7 @@ def test_refine_selection_adaptive_obvious_pass_skips_llm(monkeypatch, tmp_path)
         pdf_context=None,
         fallback_model="gpt-5-mini",
         selected_kind_max=max(1, int(settings.rank_selected_max)),
+        dependencies=deps,
     )
 
     assert llm_calls == []
@@ -119,7 +160,7 @@ def test_refine_selection_adaptive_obvious_pass_skips_llm(monkeypatch, tmp_path)
     assert items[0].id == "table_1"
 
 
-def test_refine_selection_adaptive_ambiguous_calls_llm(monkeypatch, tmp_path):
+def test_refine_selection_adaptive_ambiguous_calls_llm(tmp_path):
     settings = _settings(
         tmp_path, crop_refine_enabled=True, crop_refine_mode="adaptive"
     )
@@ -149,8 +190,7 @@ def test_refine_selection_adaptive_ambiguous_calls_llm(monkeypatch, tmp_path):
             request_id="req",
         )
 
-    monkeypatch.setattr(rg, "refine_candidate_crops_service", _refine)
-
+    deps = _deps(refine_candidate_crops=_refine)
     cand = _candidate(
         cid="chart_1",
         kind="chart",
@@ -167,7 +207,7 @@ def test_refine_selection_adaptive_ambiguous_calls_llm(monkeypatch, tmp_path):
             keep=True,
         )
     ]
-    items, accepted = rg._select_refined_candidate_items(
+    items, accepted = rsg.select_refined_candidate_items(
         ranked_rows=ranked,
         ranked_candidates=[cand],
         settings=settings,
@@ -179,9 +219,9 @@ def test_refine_selection_adaptive_ambiguous_calls_llm(monkeypatch, tmp_path):
         pdf_context=None,
         fallback_model="gpt-5-mini",
         selected_kind_max=max(1, int(settings.rank_selected_max)),
+        dependencies=deps,
     )
 
-    # Adaptive LLM refine runs a two-pass sequence: coarse + finalize.
     assert llm_calls == [1, 1]
     assert len(items) == 1
     assert len(accepted) == 1
@@ -191,20 +231,17 @@ def test_refine_selection_adaptive_ambiguous_calls_llm(monkeypatch, tmp_path):
     assert items[0].bbox[3] > refined_bbox[3]
 
 
-def test_refine_selection_early_stops_at_selected_max(monkeypatch, tmp_path):
+def test_refine_selection_early_stops_at_selected_max(tmp_path):
     settings = _settings(
         tmp_path,
         crop_refine_enabled=True,
         crop_refine_mode="adaptive",
         rank_selected_max=5,
     )
-
-    monkeypatch.setattr(
-        rg,
-        "refine_candidate_crops_service",
-        lambda req, ctx: (_ for _ in ()).throw(
+    deps = _deps(
+        refine_candidate_crops=lambda req, ctx: (_ for _ in ()).throw(
             AssertionError("LLM should not be called for obvious-pass tables")
-        ),
+        )
     )
 
     candidates = []
@@ -231,7 +268,7 @@ def test_refine_selection_early_stops_at_selected_max(monkeypatch, tmp_path):
             )
         )
 
-    items, accepted = rg._select_refined_candidate_items(
+    items, accepted = rsg.select_refined_candidate_items(
         ranked_rows=ranked_rows,
         ranked_candidates=candidates,
         settings=settings,
@@ -243,6 +280,7 @@ def test_refine_selection_early_stops_at_selected_max(monkeypatch, tmp_path):
         pdf_context=None,
         fallback_model="gpt-5-mini",
         selected_kind_max=max(1, int(settings.rank_selected_max)),
+        dependencies=deps,
     )
 
     assert len(items) == 5
@@ -253,7 +291,7 @@ def test_refine_selection_enforces_per_kind_limit(tmp_path):
     settings = _settings(
         tmp_path, crop_refine_enabled=False, crop_refine_mode="off", rank_selected_max=1
     )
-
+    deps = _deps()
     candidates = [
         _candidate(
             cid="table_a",
@@ -283,45 +321,13 @@ def test_refine_selection_enforces_per_kind_limit(tmp_path):
         ),
     ]
     ranked_rows = [
-        RankedCandidate(
-            id="table_a",
-            type="table",
-            score=99,
-            quality_score=99,
-            insight_score=99,
-            data_score=99,
-            keep=True,
-        ),
-        RankedCandidate(
-            id="table_b",
-            type="table",
-            score=98,
-            quality_score=98,
-            insight_score=98,
-            data_score=98,
-            keep=True,
-        ),
-        RankedCandidate(
-            id="chart_a",
-            type="chart",
-            score=97,
-            quality_score=97,
-            insight_score=97,
-            data_score=97,
-            keep=True,
-        ),
-        RankedCandidate(
-            id="chart_b",
-            type="chart",
-            score=96,
-            quality_score=96,
-            insight_score=96,
-            data_score=96,
-            keep=True,
-        ),
+        RankedCandidate(id="table_a", type="table", score=99, quality_score=99, insight_score=99, data_score=99, keep=True),
+        RankedCandidate(id="table_b", type="table", score=98, quality_score=98, insight_score=98, data_score=98, keep=True),
+        RankedCandidate(id="chart_a", type="chart", score=97, quality_score=97, insight_score=97, data_score=97, keep=True),
+        RankedCandidate(id="chart_b", type="chart", score=96, quality_score=96, insight_score=96, data_score=96, keep=True),
     ]
 
-    items, accepted = rg._select_refined_candidate_items(
+    items, accepted = rsg.select_refined_candidate_items(
         ranked_rows=ranked_rows,
         ranked_candidates=candidates,
         settings=settings,
@@ -333,6 +339,7 @@ def test_refine_selection_enforces_per_kind_limit(tmp_path):
         pdf_context=None,
         fallback_model="gpt-5-mini",
         selected_kind_max=1,
+        dependencies=deps,
     )
 
     assert len(items) == 2
@@ -342,51 +349,16 @@ def test_refine_selection_enforces_per_kind_limit(tmp_path):
 
 def test_select_fallback_candidate_crop_paths_prefers_ranked_order(tmp_path):
     candidates = [
-        _candidate(
-            cid="table_a",
-            kind="table",
-            page=0,
-            meta={"rows": 6, "cols": 4, "numeric_ratio": 0.3, "area_frac": 0.2},
-        ),
-        _candidate(
-            cid="chart_a",
-            kind="chart",
-            page=1,
-            caption="Figure 1",
-            meta={"area_frac": 0.18, "text_ratio": 0.2},
-        ),
-        _candidate(
-            cid="chart_b",
-            kind="chart",
-            page=2,
-            caption="Figure 2",
-            meta={"area_frac": 0.2, "text_ratio": 0.2},
-        ),
+        _candidate(cid="table_a", kind="table", page=0, meta={"rows": 6, "cols": 4, "numeric_ratio": 0.3, "area_frac": 0.2}),
+        _candidate(cid="chart_a", kind="chart", page=1, caption="Figure 1", meta={"area_frac": 0.18, "text_ratio": 0.2}),
+        _candidate(cid="chart_b", kind="chart", page=2, caption="Figure 2", meta={"area_frac": 0.2, "text_ratio": 0.2}),
     ]
     ranked_rows = [
-        RankedCandidate(
-            id="chart_b",
-            type="chart",
-            score=97,
-            quality_score=97,
-            insight_score=97,
-            data_score=97,
-            keep=False,
-            reject_reason="model_reject",
-        ),
-        RankedCandidate(
-            id="table_a",
-            type="table",
-            score=91,
-            quality_score=91,
-            insight_score=91,
-            data_score=91,
-            keep=False,
-            reject_reason="model_reject",
-        ),
+        RankedCandidate(id="chart_b", type="chart", score=97, quality_score=97, insight_score=97, data_score=97, keep=False, reject_reason="model_reject"),
+        RankedCandidate(id="table_a", type="table", score=91, quality_score=91, insight_score=91, data_score=91, keep=False, reject_reason="model_reject"),
     ]
 
-    paths, selected, stats = rg._select_fallback_candidate_crop_paths(
+    paths, selected, stats = rsg._select_fallback_candidate_crop_paths(
         ranked_rows=ranked_rows,
         prefiltered_candidates=candidates,
         candidate_path_by_id={
@@ -407,34 +379,14 @@ def test_select_fallback_candidate_crop_paths_prefers_ranked_order(tmp_path):
 
 def test_select_fallback_candidate_crop_paths_skips_obvious_rejects():
     candidates = [
-        _candidate(
-            cid="bad_chart",
-            kind="chart",
-            page=0,
-            meta={"area_frac": 0.04, "text_ratio": 0.95},
-        ),
-        _candidate(
-            cid="good_chart",
-            kind="chart",
-            page=1,
-            caption="Figure 3",
-            meta={"area_frac": 0.18, "text_ratio": 0.2},
-        ),
+        _candidate(cid="bad_chart", kind="chart", page=0, meta={"area_frac": 0.04, "text_ratio": 0.95}),
+        _candidate(cid="good_chart", kind="chart", page=1, caption="Figure 3", meta={"area_frac": 0.18, "text_ratio": 0.2}),
     ]
     ranked_rows = [
-        RankedCandidate(
-            id="bad_chart",
-            type="chart",
-            score=99,
-            quality_score=99,
-            insight_score=99,
-            data_score=99,
-            keep=False,
-            reject_reason="model_reject",
-        )
+        RankedCandidate(id="bad_chart", type="chart", score=99, quality_score=99, insight_score=99, data_score=99, keep=False, reject_reason="model_reject")
     ]
 
-    paths, selected, stats = rg._select_fallback_candidate_crop_paths(
+    paths, selected, stats = rsg._select_fallback_candidate_crop_paths(
         ranked_rows=ranked_rows,
         prefiltered_candidates=candidates,
         candidate_path_by_id={
@@ -450,7 +402,7 @@ def test_select_fallback_candidate_crop_paths_skips_obvious_rejects():
 
 
 def test_resolve_figure_section_assets_enables_primary_image_without_gallery():
-    gallery, top, enabled = rg._resolve_figure_section_assets(
+    gallery, top, enabled = rsg._resolve_figure_section_assets(
         [],
         "report/assets/figure.png",
     )
@@ -461,7 +413,7 @@ def test_resolve_figure_section_assets_enables_primary_image_without_gallery():
 
 
 def test_resolve_figure_section_assets_disables_without_any_asset():
-    gallery, top, enabled = rg._resolve_figure_section_assets([], "")
+    gallery, top, enabled = rsg._resolve_figure_section_assets([], "")
 
     assert gallery == []
     assert top == ""

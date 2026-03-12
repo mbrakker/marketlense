@@ -230,16 +230,21 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
 
 6. **Report generation (per file)**
    - `src/orchestrators/report_pipeline_orchestrator.py` controls report-generation retries and delegates domain generation to `src/generators/report_generator.py`.
-   - `src/generators/report_generator.py` runs the core domain pipeline:
-     - Optional within-file parallelism uses `ingest.report_worker_limit` to overlap PDF info/contents/text extraction and visual prep when enabled (default `2`).
+   - `src/generators/report_generator.py` is now a thin sequencer over four phase generators plus shared contracts/dependency wiring:
+     - `src/contracts/report_generation.py`: typed handoff contracts (`ReportRuntimeState`, `ReportSourceState`, `ReportSelectionState`, `ReportAnalysisState`).
+     - `src/generators/report_source_generator.py`: PDF context bootstrap, md5-backed PDF info/contents/text caches, density/extractability checks, and base payload seeding.
+     - `src/generators/report_selection_generator.py`: figure extraction, candidate prefilter/ranking, crop refinement, strict crops, and figure-gallery fallback selection.
+     - `src/generators/report_analysis_generator.py`: vector-store lifecycle, taxonomy/category resolution, evidence packs, artifacts, validation, and analysis snapshot persistence.
+     - `src/generators/report_render_generator.py`: preview rendering, metadata DB readback, HTML cache/render, cover generation, and final `IngestOutcome` assembly.
+     - Optional within-file parallelism still uses `ingest.report_worker_limit` to overlap PDF info/contents/text extraction, figure vs candidate extraction, and taxonomy vs evidence generation when enabled (default `2`).
      - **PDF info**: `pdf_service.extract_pdf_info` captures page count and sanitized PDF metadata for persistence (cached by md5 under `cache_dir/pdf_cache/`).
      - **PDF context**: `pdf_service.build_pdf_context` opens PyMuPDF and pypdf handles once; downstream services reuse them and fall back to local opens if unavailable.
-    - **Contents/index detection**: scans the first pages for a contents/index section, records the page number for DB/runtime routing, and can render an internal preview asset for diagnostics (detection cached by md5 + settings).
+     - **Contents/index detection**: scans the first pages for a contents/index section, records the page number for DB/runtime routing, and can render an internal preview asset for diagnostics (detection cached by md5 + settings).
      - **Text extraction**: `pdf_service.extract_pdf_text` extracts text from the first N pages (reusing the shared context when present) and computes text density (cached by md5 + extraction settings); if density falls below `ingest.pdf_text.min_density`, downstream artifacts short-circuit to explicit “not available from text” placeholders with HTML notices.
      - **Text extractability check**: deterministically samples `ingest.pdf_text.sample_pages` pages (seeded by file id + hash) via `pdf_service.sample_pdf_text`; if none contain extractable text, the run aborts early with `pdf_text_unextractable` before any vector store or LLM work.
      - **LLM analysis**:
        - `vector_store` mode (only path): Ensures a vector store exists (create -> upload PDF -> attach) and starts provider-side indexing first.
-       - While indexing runs, the generator continues PDF-only work (figure/candidate extraction, ranking, preview).
+       - While indexing runs, the generator continues PDF-only work (figure/candidate extraction and preview rendering).
        - It waits for indexing only right before vector-dependent stages (taxonomy/evidence/artifacts) via `vector_store_service.wait_until_indexed`.
        - After indexing is ready, taxonomy/category resolution and evidence-pack generation run concurrently when `ingest.report_worker_limit > 1` (serial when `= 1`).
       - Evidence packs are generated via `src/generators/evidence_pack_generator.py` with a config-driven registry (`ingest.evidence_packs.registry`) and optional variety expansion (`ingest.evidence_packs.enable_new_variety_packs`): `doc_map`, `scope`, `methods`, `findings`, `limitations`, `quote_candidates`, and optional `key_metrics`, `risk_register`, `recommendations`, `contradictions`. `doc_map` runs first as a hard gate; remaining packs run in parallel (`ingest.evidence_packs.parallel_workers`). Global evidence-pack rate limiting is applied at the orchestrator boundary (`src/orchestrators/report_pipeline_orchestrator.py`) using `ingest.evidence_packs.global_max_in_flight` + `ingest.evidence_packs.global_min_interval_ms`.

@@ -12,6 +12,7 @@ from pypdf import PdfWriter
 
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
+from src.contracts.report_generation import ReportRuntimeState
 from src.contracts.pdf_text import PdfTextSample, PdfTextSampleResponse
 from src.contracts.report_analysis import AnalysisStorePackRequest
 from src.contracts.report_assets import RenderResponse
@@ -20,7 +21,10 @@ from src.contracts.run_context import RunContext
 from src.contracts.state import StateGetRequest
 from src.contracts.taxonomy import TaxonomyExtractResponse
 from src.contracts.validation import ValidationReport
+from src.generators import report_analysis_generator as rag
 from src.generators import report_generator as rg
+from src.generators.report_generation_dependencies import ReportGeneratorDependencies
+from src.generators.report_generation_shared import derive_title, report_slug
 from src.orchestrators import ingest_orchestrator as orch
 from src.orchestrators.ingest_file_orchestrator import (
     IngestFileDependencies,
@@ -75,8 +79,8 @@ def _pdf_bytes() -> bytes:
     return b"%PDF-1.4\n1 0 obj <</Type/Catalog>> endobj\n%%EOF\n"
 
 
-def _report_dependencies(**overrides) -> rg.ReportGeneratorDependencies:
-    return replace(rg.ReportGeneratorDependencies.default(), **overrides)
+def _report_dependencies(**overrides) -> ReportGeneratorDependencies:
+    return replace(ReportGeneratorDependencies.default(), **overrides)
 
 
 def _batch_dependencies(**overrides) -> orch.IngestBatchDependencies:
@@ -144,7 +148,7 @@ def _decode_log_events(caplog, logger_name: str) -> list[dict]:
 
 def _base_vector_report_dependencies(
     tmp_path: Path, **overrides
-) -> rg.ReportGeneratorDependencies:
+) -> ReportGeneratorDependencies:
     base = {
         "state_get": lambda req, ctx: None,
         "vector_store_create": lambda req, ctx: SimpleNamespace(
@@ -238,6 +242,32 @@ def _base_vector_report_dependencies(
     return _report_dependencies(**base)
 
 
+def _runtime_state(
+    file: DriveFile,
+    settings: IngestSettings,
+    *,
+    local_pdf_path: str,
+    md5: str | None,
+    ctx: RunContext,
+) -> ReportRuntimeState:
+    file_name = file.name or file.file_id
+    return ReportRuntimeState(
+        schema_version="1.0",
+        file=file,
+        local_pdf_path=local_pdf_path,
+        settings=settings,
+        md5=md5,
+        ctx=ctx,
+        file_name=file_name,
+        report_name=report_slug(file_name, file.file_id),
+        report_title=derive_title(file_name),
+        analysis_mode="vector_store",
+        analysis_modes=["vector_store"],
+        report_worker_limit=int(getattr(settings, "report_worker_limit", 1) or 1),
+        parallel_within_file=bool(int(getattr(settings, "report_worker_limit", 1) or 1) > 1),
+    )
+
+
 def test_ensure_vector_store_creates_and_waits(tmp_path):
     settings = _ingest_settings(tmp_path)
     ctx = RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
@@ -269,14 +299,15 @@ def test_ensure_vector_store_creates_and_waits(tmp_path):
         ),
     )
 
+    runtime = _runtime_state(
+        file,
+        settings,
+        local_pdf_path="local.pdf",
+        md5="md5",
+        ctx=ctx,
+    )
     vector_store_id, openai_file_id, status, indexed_at_utc, last_error = (
-        rg._ensure_vector_store(
-            file,
-            "local.pdf",
-            settings,
-            ctx,
-            dependencies=deps,
-        )
+        rag.ensure_vector_store(runtime, deps)
     )
 
     assert calls == ["create", "upload", "attach", "wait"]
