@@ -5337,7 +5337,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0;
-  height: 100%;
+  height: auto;
+  align-self: start;
   padding: 18px 18px 20px;
   transition: var(--ml-transition-premium);
 }
@@ -5363,10 +5364,10 @@ body {
 
 .ml-report-card-body {
   display: flex;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   flex-direction: column;
   min-width: 0;
-  height: 100%;
+  height: auto;
 }
 
 .ml-report-card-body > * {
@@ -5493,18 +5494,18 @@ body {
 .ml-report-card-excerpt {
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 8;
+  -webkit-line-clamp: 5;
   overflow: hidden;
   font-size: 14px;
   line-height: 1.5;
   color: var(--ml-text-secondary);
-  margin-bottom: 14px;
-  min-height: calc(1.5em * 8);
+  margin-bottom: 0;
+  min-height: calc(1.5em * 5);
 }
 
 .ml-report-card-link {
-  margin-top: auto;
-  padding-top: 14px;
+  margin-top: 26px;
+  padding-top: 0;
 }
 
 .ml-report-card-link a {
@@ -5517,6 +5518,10 @@ body {
   color: var(--ml-brand-navy);
   text-decoration: none;
   transition: color 0.18s ease, transform 0.18s ease;
+}
+
+.ml-report-card-link a br {
+  display: none;
 }
 
 .ml-report-card-link a span {
@@ -6927,8 +6932,8 @@ a {
   }
 
   .ml-report-card-excerpt {
-    -webkit-line-clamp: 6;
-    min-height: calc(1.5em * 6);
+    -webkit-line-clamp: 3;
+    min-height: calc(1.5em * 3);
   }
 
   .ml-process-grid {

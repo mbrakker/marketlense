@@ -49,25 +49,42 @@ function marketlense_require_core_plugin_notice(): void
 add_action('admin_notices', 'marketlense_require_core_plugin_notice');
 
 /**
+ * Resolves a cache-busting version for theme assets.
+ */
+function marketlense_asset_version(string $relative_path): string
+{
+    $theme = wp_get_theme();
+    $theme_version = (string) $theme->get('Version');
+    $asset_path = get_theme_file_path($relative_path);
+    $modified = @filemtime($asset_path);
+
+    if ($modified === false) {
+        return $theme_version;
+    }
+
+    return $theme_version . '.' . (string) $modified;
+}
+
+/**
  * Enqueues frontend assets.
  */
 function marketlense_enqueue_assets(): void
 {
-    $theme = wp_get_theme();
-    $version = $theme->get('Version');
+    $theme_css_version = marketlense_asset_version('assets/css/theme.css');
+    $reveal_js_version = marketlense_asset_version('assets/js/reveal.js');
 
     wp_enqueue_style(
         'marketlense',
         get_template_directory_uri() . '/assets/css/theme.css',
         [],
-        $version
+        $theme_css_version
     );
 
     wp_enqueue_script(
         'marketlense-reveal',
         get_template_directory_uri() . '/assets/js/reveal.js',
         [],
-        $version,
+        $reveal_js_version,
         true
     );
 
@@ -76,7 +93,7 @@ function marketlense_enqueue_assets(): void
             'marketlense-report-interactions',
             get_template_directory_uri() . '/assets/js/report-interactions.js',
             [],
-            $version,
+            marketlense_asset_version('assets/js/report-interactions.js'),
             true
         );
     }

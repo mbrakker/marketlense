@@ -1,5 +1,46 @@
 <!-- wp:group {"tagName":"header","className":"ml-site-header","layout":{"type":"default"}} -->
 <header class="wp-block-group ml-site-header">
+  <!-- wp:html -->
+  <style id="ml-report-card-spacing-fix">
+    .ml-latest-report-grid .ml-report-card-excerpt,
+    .ml-report-browser-grid .ml-report-card-excerpt {
+      -webkit-line-clamp: 5 !important;
+      min-height: calc(1.5em * 5) !important;
+      margin-bottom: 0 !important;
+    }
+
+    .ml-latest-report-grid .ml-report-card,
+    .ml-report-browser-grid .ml-report-card {
+      height: auto !important;
+      align-self: start !important;
+    }
+
+    .ml-latest-report-grid .ml-report-card-body,
+    .ml-report-browser-grid .ml-report-card-body {
+      flex: 0 0 auto !important;
+      height: auto !important;
+    }
+
+    .ml-latest-report-grid .ml-report-card-link,
+    .ml-report-browser-grid .ml-report-card-link {
+      margin-top: 26px !important;
+      padding-top: 0 !important;
+    }
+
+    .ml-latest-report-grid .ml-report-card-link a br,
+    .ml-report-browser-grid .ml-report-card-link a br {
+      display: none !important;
+    }
+
+    @media (max-width: 782px) {
+      .ml-latest-report-grid .ml-report-card-excerpt,
+      .ml-report-browser-grid .ml-report-card-excerpt {
+        -webkit-line-clamp: 3 !important;
+        min-height: calc(1.5em * 3) !important;
+      }
+    }
+  </style>
+  <!-- /wp:html -->
   <!-- wp:group {"className":"ml-header-frame","layout":{"type":"default"}} -->
   <div class="wp-block-group ml-header-frame">
     <!-- wp:group {"className":"ml-header-top","layout":{"type":"default"}} -->
