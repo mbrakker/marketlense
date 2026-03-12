@@ -1,6 +1,6 @@
-# Repository Analysis: Top 50 Ineffective Choices (Low Effort, High Impact)
+# Repository Analysis: Remaining Ineffective Choices From Top-50 Audit (Low Effort, High Impact)
 
-Status: merged into `CONSOLIDATED_TODO.md` on 2026-03-08. Treat the consolidated todo as the actionable backlog; keep this file as the detailed source analysis behind those tasks. Updated 2026-03-12 to mark resolved items after the PDF service split.
+Status: merged into `CONSOLIDATED_TODO.md` on 2026-03-08. Treat the consolidated todo as the actionable backlog; keep this file as the detailed source analysis behind those tasks. Resolved items were removed on 2026-03-12 after the PDF-service split, the report-generator phase split, and related config/test cleanup. Original audit numbering is preserved so consolidated references stay stable.
 
 Method: static repository scan focused on maintainability, reliability, architecture boundaries, and test integrity. Prioritized by impact/effort ratio.
 
@@ -10,16 +10,6 @@ Format for each item:
 - **Success criteria**: measurable end-state to close the item.
 
 ## A) Monolithic modules (split-first wins)
-
-### 1) `src/services/pdf_service.py` was 3698 lines (resolved 2026-03-12)
-- **Context:** The audit snapshot captured a single PDF service file aggregating many concerns and increasing regression blast radius.
-- **Resolution:** `src/services/pdf_service.py` is now a stable facade backed by `src/services/_pdf/text.py`, `contents.py`, `figures.py`, `crop.py`, and `shared.py`.
-- **Verification:** Capability-focused facade tests were added, regression tests stayed green, and a real `ingest --limit 1` run exercised the updated PDF service successfully.
-
-### 2) `src/generators/report_generator.py` is 3468 lines
-- **Context:** Many report-generation phases are coupled in one generator.
-- **Expected:** Phase-oriented generator composition (selection, refinement, rendering, persistence signals).
-- **Success criteria:** Main `generate_report` flow becomes an orchestrated sequence of smaller functions/contracts; complexity and review time drop.
 
 ### 3) `src/ui/streamlit_pages.py` is 2967 lines
 - **Context:** UI logic for many screens lives in one file.
@@ -63,20 +53,10 @@ Format for each item:
 
 ## B) Oversized functions (highest refactor ROI)
 
-### 11) `generate_report` (~1637 lines)
-- **Context:** Very large control flow combines many concerns.
-- **Expected:** Phase decomposition with typed intermediate dataclasses.
-- **Success criteria:** No single function >200 lines in the report generation critical path.
-
 ### 12) `_render_structured_config_form` (~641 lines)
 - **Context:** One UI function owns too many sections and widgets.
 - **Expected:** Section renderers (core/paths/rank/publish/etc.).
 - **Success criteria:** Section-specific UI edits do not require touching unrelated code.
-
-### 13) `_select_refined_candidate_items` (~630 lines)
-- **Context:** Ranking/filtering/refinement branches are fused.
-- **Expected:** Independent policy functions per decision stage.
-- **Success criteria:** Deterministic tests exist per stage and branch coverage improves.
 
 ### 14) `load_settings` (~500 lines)
 - **Context:** Large sequential parsing chain increases default drift risk.
@@ -155,11 +135,6 @@ Format for each item:
 - **Expected:** Centralized UI error handling with explicit user-safe messaging.
 - **Success criteria:** Errors remain observable in logs with full context IDs.
 
-### 29) `report_generator.py` broad catches (10)
-- **Context:** Core generation failures may degrade silently.
-- **Expected:** Narrow catches and explicit fail-fast semantics.
-- **Success criteria:** Failure paths produce typed `IngestOutcome`/`AppError` with reason.
-
 ### 30) `file_service.py` broad catches (8)
 - **Context:** Different I/O problems collapse into generic errors.
 - **Expected:** Differentiate not-found, permission, encoding, and transient errors.
@@ -216,8 +191,8 @@ Resolved on 2026-03-09: former items 37-45 were removed after converting `tests/
 - **Expected:** Central defaults registry/schema constants.
 - **Success criteria:** README/config docs are generated or validated against runtime defaults.
 
-### 49) Large branch-heavy control flow in UI + report generator
-- **Context:** Deep branching raises onboarding and defect-localization cost.
+### 49) Large branch-heavy control flow in UI + remaining generation flows
+- **Context:** Deep branching in the Streamlit UI and the remaining oversized generation/validation modules raises onboarding and defect-localization cost.
 - **Expected:** Strategy/policy helpers with names matching decisions.
 - **Success criteria:** Branch coverage improves with lower cyclomatic complexity per function.
 
@@ -230,6 +205,6 @@ Resolved on 2026-03-09: former items 37-45 were removed after converting `tests/
 
 ## Prioritized execution plan
 
-- **Do first (highest return):** 11, 14, 26, 36, 46.
-- **Do next:** 2–10 (module decomposition), then 37–38 (remaining test integrity hardening).
+- **Do first (highest return):** 14, 20, 26, 36, 46.
+- **Do next:** 3–10 (module decomposition), then 15, 19, 21, 23, 25 and the remaining test-integrity cleanup around item 36.
 - **Program-level success criteria:** lower regression rate, faster PR review cycle, clearer error taxonomy, and stronger CI confidence.

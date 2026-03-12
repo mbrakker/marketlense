@@ -4,7 +4,7 @@ Last compiled: 2026-03-12
 
 This file combines all TODOs found in the repository (from `TODO.md`, `html_todo.md`, and `potential-TODO.md`). Items are grouped by theme. Duplicates were merged. Each task includes: title, explanation (what & why), pros & cons, and acceptance criteria.
 
-Completed items are removed from this backlog once their acceptance criteria are met. The PDF service internal split was completed on 2026-03-12 and is no longer tracked here as open work.
+Completed items are removed from this backlog once their acceptance criteria are met. The PDF service internal split, the report-generator phase split, the duration-tooling consolidation, and the legacy `analysis.compare` / `ingest.debug_candidate_gallery` cleanup were completed on or before 2026-03-12 and are no longer tracked here as open work.
 
 ---
 
@@ -257,14 +257,6 @@ Completed items are removed from this backlog once their acceptance criteria are
     - WAL mode enabled with safe busy timeouts.
     - Concurrency tests show reduced contention.
 
-- **Title:** Deduplicate and remove small hotspots (slugify, duration scripts)
-  - Explanation: Consolidate repeated slugify calls and merge duplicate duration scripts.
-  - Pros: Cleaner codebase and smaller attack surface.
-  - Cons: Low risk changes but requires tests to ensure behavior preserved.
-  - Acceptance Criteria:
-    - Duplicate scripts consolidated; related tests updated.
-    - No functional change in publish flows.
-
 ### Additional Code Audit Items (explicit)
 
 - **Title:** Fix O(n^2) table dedupe hotspot
@@ -282,13 +274,6 @@ Completed items are removed from this backlog once their acceptance criteria are
   - Acceptance Criteria:
     - Unused crop pass removed or guarded behind config.
     - Crop output paths are consumed by report generator or persisted for debug.
-
-- **Title:** Remove or implement `analysis_compare` and `debug_candidate_gallery` surfaces
-  - Explanation: Either remove legacy `analysis_compare` and dead `debug_candidate_gallery` config surfaces or fully implement them to avoid dead code and confusion.
-  - Pros: Cleaner codebase and fewer maintenance surprises.
-  - Cons: Possible loss of legacy debugging features if removed; require migration notes.
-  - Acceptance Criteria:
-    - Dead config flags removed or implemented and tested.
 
 - **Title:** Fix lock service double-close fd path and other minor fd issues
   - Explanation: Address potential double-close and FD-handling bugs in lock service and related code paths to avoid resource leaks and errors.
@@ -421,11 +406,10 @@ Each quick-win should be documented with a short task when prioritized.
     - Boundary lint/tests catch prohibited I/O usage.
 
 - **Title:** Split remaining monolithic generator/service modules to single-responsibility units
-  - Explanation: Break the remaining oversized mixed-responsibility modules (starting with `report_generator` and `openai_service`) into role-appropriate, single-purpose modules wired by orchestrators. The PDF service internal split is complete and removed from this backlog item.
+  - Explanation: Break the remaining oversized mixed-responsibility modules (notably `validation_generator`, `evidence_pack_generator`, `artifact_generator`, and `openai_service`) into role-appropriate, single-purpose modules wired by orchestrators. The PDF service internal split and the report-generator phase split are complete and removed from this backlog item.
   - Pros: Easier maintenance, lower regression risk, clearer ownership.
   - Cons: Large refactor with broad test impact.
   - Acceptance Criteria:
-    - `report_generator` reduced to focused domain responsibilities.
     - Remaining oversized service/generator modules extract cross-cutting orchestration and I/O concerns to proper layers.
     - Equivalent behavior validated by pipeline tests.
 
@@ -464,7 +448,7 @@ This section absorbs the 2026-03-08 low-effort/high-impact repository audit into
     - Existing behavior is preserved by updated tests on the affected flows.
 
 - **Title:** Phase-split oversized generation and validation flows
-  - Explanation: Break large domain functions into typed phases for ranking, refinement, validation, and adaptation across `generate_report`, `_select_refined_candidate_items`, `generate_artifacts`, `_generate_pack`, `validate_report`, `_run_grounding_check`, `extract_taxonomy`, and `analyze_report`. This merges audit items 11, 13, 15, 19, 20, 21, 23, and 25.
+  - Explanation: Break large domain functions into typed phases for generation, validation, and adaptation across `generate_artifacts`, `_generate_pack`, `validate_report`, `_run_grounding_check`, `extract_taxonomy`, and `analyze_report`. The `report_generator` and candidate-selection splits are complete and removed from this backlog item. This merges audit items 15, 19, 20, 21, 23, and 25.
   - Pros: Easier reasoning about generator behavior, smaller failure surfaces, better contract-level testing.
   - Cons: Refactor touches core generation paths and requires careful preservation of current outputs.
   - Acceptance Criteria:
@@ -473,7 +457,7 @@ This section absorbs the 2026-03-08 low-effort/high-impact repository audit into
     - Sentinel or default-filled intermediate payloads are not introduced during refactoring.
 
 - **Title:** Replace broad exception hotspots with typed `AppError` mapping
-  - Explanation: Audit and narrow `except Exception` usage in `src/services/_pdf/text.py`, `src/services/_pdf/contents.py`, `src/services/_pdf/figures.py`, `src/services/_pdf/crop.py`, `src/services/openai_service.py`, `src/ui/streamlit_pages.py`, `src/generators/report_generator.py`, `src/services/file_service.py`, `src/services/lock_service.py`, `src/services/drive_service.py`, `src/orchestrators/ingest_orchestrator.py`, `src/services/wordpress_service.py`, and `src/services/report_store_service.py`. This merges audit items 26 through 35.
+  - Explanation: Audit and narrow `except Exception` usage in `src/services/_pdf/text.py`, `src/services/_pdf/contents.py`, `src/services/_pdf/figures.py`, `src/services/_pdf/crop.py`, `src/services/openai_service.py`, `src/ui/streamlit_pages.py`, `src/services/file_service.py`, `src/services/lock_service.py`, `src/services/drive_service.py`, `src/orchestrators/ingest_orchestrator.py`, `src/services/wordpress_service.py`, and `src/services/report_store_service.py`. The report-generator split removed that module from this hotspot list. This merges audit items 26-28 and 30-35.
   - Pros: Better retry decisions, clearer root causes, and stronger compliance with the typed error taxonomy.
   - Cons: Requires revisiting negative-path tests and some UI error rendering assumptions.
   - Acceptance Criteria:
@@ -491,7 +475,7 @@ This section absorbs the 2026-03-08 low-effort/high-impact repository audit into
     - At least one real-path integration or pipeline test covers each hotspot currently dominated by monkeypatching.
 
 - **Title:** Decouple cross-role side effects in OpenAI, CLI, and control-flow helpers
-  - Explanation: Remove cost-ledger persistence from `src/services/openai_service.py`, centralize repeated CLI status rendering instead of scattered `console.print(...)` calls in `src/cli.py`, and extract large branch-policy helpers from `src/ui/streamlit_pages.py` and `src/generators/report_generator.py`. This merges audit items 46, 47, and 49.
+  - Explanation: Remove cost-ledger persistence from `src/services/openai_service.py`, centralize repeated CLI status rendering instead of scattered `console.print(...)` calls in `src/cli.py`, and extract large branch-policy helpers from `src/ui/streamlit_pages.py` and the remaining oversized generation flows. This merges audit items 46, 47, and 49.
   - Pros: Cleaner service boundaries, more consistent operator UX, easier policy testing.
   - Cons: Requires small API changes between orchestrators, services, and UI helpers.
   - Acceptance Criteria:
