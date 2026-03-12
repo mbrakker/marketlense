@@ -1,8 +1,10 @@
 # Consolidated TODO
 
-Last compiled: 2026-03-08
+Last compiled: 2026-03-12
 
 This file combines all TODOs found in the repository (from `TODO.md`, `html_todo.md`, and `potential-TODO.md`). Items are grouped by theme. Duplicates were merged. Each task includes: title, explanation (what & why), pros & cons, and acceptance criteria.
+
+Completed items are removed from this backlog once their acceptance criteria are met. The PDF service internal split was completed on 2026-03-12 and is no longer tracked here as open work.
 
 ---
 
@@ -418,13 +420,13 @@ Each quick-win should be documented with a short task when prioritized.
     - Utility modules remain stateless and I/O-free.
     - Boundary lint/tests catch prohibited I/O usage.
 
-- **Title:** Split monolithic generator/service modules to single-responsibility units
-  - Explanation: Break oversized mixed-responsibility modules (starting with `report_generator` and large PDF extraction/service surfaces) into role-appropriate, single-purpose modules wired by orchestrators.
+- **Title:** Split remaining monolithic generator/service modules to single-responsibility units
+  - Explanation: Break the remaining oversized mixed-responsibility modules (starting with `report_generator` and `openai_service`) into role-appropriate, single-purpose modules wired by orchestrators. The PDF service internal split is complete and removed from this backlog item.
   - Pros: Easier maintenance, lower regression risk, clearer ownership.
   - Cons: Large refactor with broad test impact.
   - Acceptance Criteria:
     - `report_generator` reduced to focused domain responsibilities.
-    - Cross-cutting orchestration and I/O concerns extracted to proper layers.
+    - Remaining oversized service/generator modules extract cross-cutting orchestration and I/O concerns to proper layers.
     - Equivalent behavior validated by pipeline tests.
 
 - **Title:** Harden test integrity and required AGENTS fixtures
@@ -471,7 +473,7 @@ This section absorbs the 2026-03-08 low-effort/high-impact repository audit into
     - Sentinel or default-filled intermediate payloads are not introduced during refactoring.
 
 - **Title:** Replace broad exception hotspots with typed `AppError` mapping
-  - Explanation: Audit and narrow `except Exception` usage in `src/services/pdf_service.py`, `src/services/openai_service.py`, `src/ui/streamlit_pages.py`, `src/generators/report_generator.py`, `src/services/file_service.py`, `src/services/lock_service.py`, `src/services/drive_service.py`, `src/orchestrators/ingest_orchestrator.py`, `src/services/wordpress_service.py`, and `src/services/report_store_service.py`. This merges audit items 26 through 35.
+  - Explanation: Audit and narrow `except Exception` usage in `src/services/_pdf/text.py`, `src/services/_pdf/contents.py`, `src/services/_pdf/figures.py`, `src/services/_pdf/crop.py`, `src/services/openai_service.py`, `src/ui/streamlit_pages.py`, `src/generators/report_generator.py`, `src/services/file_service.py`, `src/services/lock_service.py`, `src/services/drive_service.py`, `src/orchestrators/ingest_orchestrator.py`, `src/services/wordpress_service.py`, and `src/services/report_store_service.py`. This merges audit items 26 through 35.
   - Pros: Better retry decisions, clearer root causes, and stronger compliance with the typed error taxonomy.
   - Cons: Requires revisiting negative-path tests and some UI error rendering assumptions.
   - Acceptance Criteria:

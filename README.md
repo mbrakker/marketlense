@@ -221,6 +221,7 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
    - Drive API clients are cached per thread to keep googleapiclient/httplib2 usage thread-safe when `ingest.worker_limit > 1`.
    - `drive_service.download_pdf_to_path(...)` streams PDF bytes directly to disk while computing md5.
    - `src/services/pdf_service.py` checks for EOF marker using only tail bytes and redownloads once if missing.
+   - `src/services/pdf_service.py` remains the stable public facade; its implementation is split across private capability modules under `src/services/_pdf/` (`text`, `contents`, `figures`, `crop`) to keep one PDF service role with lower regression blast radius.
 
 5. **State management**
    - `src/services/state_service.py` maintains a SQLite store of processed file IDs and hashes.

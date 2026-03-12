@@ -24,10 +24,10 @@
       "total": 3
     },
     {
-      "killed": 2,
+      "killed": 3,
       "min_score": 60.0,
       "module": "src/generators/artifact_generator.py",
-      "score": 66.6667,
+      "score": 100.0,
       "total": 3
     },
     {
@@ -52,10 +52,10 @@
       "total": 2
     },
     {
-      "killed": 2,
+      "killed": 3,
       "min_score": 60.0,
       "module": "src/services/wordpress_service.py",
-      "score": 66.6667,
+      "score": 100.0,
       "total": 3
     },
     {

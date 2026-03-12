@@ -1,12 +1,24 @@
 from pathlib import Path
 
 import pymupdf as fitz
+import pytest
 from PIL import Image
 
-from src.contracts.report_assets import CropRequest
+from src.contracts.report_assets import (
+    CropRefineBBoxApplyRequest,
+    CropRefinePageRenderRequest,
+    CropRequest,
+    PreviewRequest,
+)
 from src.contracts.report_models import CropItem
 from src.contracts.run_context import RunContext
-from src.services.pdf_service import crop_regions
+from src.services.pdf_service import (
+    apply_crop_refine_bbox,
+    crop_regions,
+    render_page_for_crop_refine,
+    render_preview,
+)
+from src.utils.errors import AppError
 
 
 def _ctx() -> RunContext:
@@ -269,3 +281,86 @@ def test_table_strict_detects_mid_statlink_for_bottom_clamp(tmp_path):
         assert strict_img.height < legacy_img.height
         assert strict_img.height < 620
         assert strict_img.height > 420
+
+
+def test_render_preview_and_crop_refine_page_render_create_assets(tmp_path):
+    pdf_path = tmp_path / "preview.pdf"
+    _build_basic_pdf(pdf_path)
+    out_dir = tmp_path / "out"
+
+    preview_response = render_preview(
+        PreviewRequest(
+            schema_version="1.1",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="report",
+            page_number=0,
+            variant="contents",
+            dpi=96,
+        ),
+        _ctx(),
+    )
+    page_render_response = render_page_for_crop_refine(
+        CropRefinePageRenderRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="report",
+            page=0,
+            dpi=110,
+        ),
+        _ctx(),
+    )
+
+    assert preview_response.schema_version == "1.1"
+    assert preview_response.image_path == "report/assets/report-contents.png"
+    assert (out_dir / preview_response.image_path).exists()
+
+    assert page_render_response.page == 0
+    assert page_render_response.image_width > 0
+    assert page_render_response.image_height > 0
+    assert page_render_response.scale_x > 0
+    assert page_render_response.scale_y > 0
+    assert (out_dir / page_render_response.image_path).exists()
+
+
+def test_apply_crop_refine_bbox_clamps_to_page_bounds(tmp_path):
+    pdf_path = tmp_path / "bbox.pdf"
+    _build_basic_pdf(pdf_path)
+
+    response = apply_crop_refine_bbox(
+        CropRefineBBoxApplyRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            page=0,
+            bbox=(-30.0, -25.0, 500.0, 700.0),
+        ),
+        _ctx(),
+    )
+
+    x0, y0, x1, y1 = response.bbox
+    assert response.page == 0
+    assert 0.0 <= x0 < x1 <= 420.0
+    assert 0.0 <= y0 < y1 <= 560.0
+
+
+def test_apply_crop_refine_bbox_rejects_page_out_of_range(tmp_path, assert_app_error):
+    pdf_path = tmp_path / "bbox_oob.pdf"
+    _build_basic_pdf(pdf_path)
+
+    with pytest.raises(AppError) as exc_info:
+        apply_crop_refine_bbox(
+            CropRefineBBoxApplyRequest(
+                schema_version="1.0",
+                pdf_path=pdf_path.as_posix(),
+                page=3,
+                bbox=(10.0, 10.0, 40.0, 40.0),
+            ),
+            _ctx(),
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="crop_refine_page_out_of_range",
+        retryable=False,
+    )

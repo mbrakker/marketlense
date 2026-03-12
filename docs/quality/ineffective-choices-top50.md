@@ -1,6 +1,6 @@
 # Repository Analysis: Top 50 Ineffective Choices (Low Effort, High Impact)
 
-Status: merged into `CONSOLIDATED_TODO.md` on 2026-03-08. Treat the consolidated todo as the actionable backlog; keep this file as the detailed source analysis behind those tasks.
+Status: merged into `CONSOLIDATED_TODO.md` on 2026-03-08. Treat the consolidated todo as the actionable backlog; keep this file as the detailed source analysis behind those tasks. Updated 2026-03-12 to mark resolved items after the PDF service split.
 
 Method: static repository scan focused on maintainability, reliability, architecture boundaries, and test integrity. Prioritized by impact/effort ratio.
 
@@ -11,10 +11,10 @@ Format for each item:
 
 ## A) Monolithic modules (split-first wins)
 
-### 1) `src/services/pdf_service.py` is 3698 lines
-- **Context:** One service file aggregates many PDF concerns, increasing regression blast radius.
-- **Expected:** Keep one PDF service role, but split internal implementation by capability behind a stable facade.
-- **Success criteria:** New submodules for text/figures/crop/contents; each submodule has targeted tests and no behavior regression.
+### 1) `src/services/pdf_service.py` was 3698 lines (resolved 2026-03-12)
+- **Context:** The audit snapshot captured a single PDF service file aggregating many concerns and increasing regression blast radius.
+- **Resolution:** `src/services/pdf_service.py` is now a stable facade backed by `src/services/_pdf/text.py`, `contents.py`, `figures.py`, `crop.py`, and `shared.py`.
+- **Verification:** Capability-focused facade tests were added, regression tests stayed green, and a real `ingest --limit 1` run exercised the updated PDF service successfully.
 
 ### 2) `src/generators/report_generator.py` is 3468 lines
 - **Context:** Many report-generation phases are coupled in one generator.
@@ -140,8 +140,8 @@ Format for each item:
 
 ## C) Broad exception usage and hidden failure modes
 
-### 26) `pdf_service.py` high `except Exception` usage (56)
-- **Context:** Broad catches can hide true fault classes.
+### 26) `src/services/_pdf/*.py` broad `except Exception` usage remains elevated (56)
+- **Context:** The PDF service split reduced module size, but broad catches still hide true fault classes across the new capability modules.
 - **Expected:** Replace with typed, boundary-specific exception mapping.
 - **Success criteria:** Error logs preserve actionable root-cause categories.
 
@@ -231,5 +231,5 @@ Resolved on 2026-03-09: former items 37-45 were removed after converting `tests/
 ## Prioritized execution plan
 
 - **Do first (highest return):** 11, 14, 26, 36, 46.
-- **Do next:** 1–10 (module decomposition), then 37–38 (remaining test integrity hardening).
+- **Do next:** 2–10 (module decomposition), then 37–38 (remaining test integrity hardening).
 - **Program-level success criteria:** lower regression rate, faster PR review cycle, clearer error taxonomy, and stronger CI confidence.
