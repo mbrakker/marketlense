@@ -10,6 +10,7 @@ from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationRequest
 from src.contracts.openai import OpenAIResponseResult
+from src.generators.validation.registry import build_validation_rule_registry
 from src.generators.validation_generator import validate_report
 from src.utils.slugify import slugify
 
@@ -928,3 +929,68 @@ def test_validation_warn_policy_keeps_errors_without_data_gap(tmp_path):
     )
     assert result.status == "fail"
     assert any(issue.severity == "error" for issue in result.issues)
+
+
+def test_validation_rule_registry_is_deterministic():
+    registry = build_validation_rule_registry()
+    assert [rule.rule_id for rule in registry] == [
+        "semantic",
+        "metrics",
+        "quotes",
+        "numbers",
+        "grounding",
+    ]
+    assert [rule.stage for rule in registry] == [
+        "bootstrap",
+        "dependent",
+        "dependent",
+        "independent",
+        "independent",
+    ]
+
+
+def test_validation_failures_include_rule_identity_prefix(tmp_path):
+    settings = _settings(tmp_path)
+    artifacts = {
+        "insights_final": [
+            {
+                "id": "i1",
+                "text": "Insight text",
+                "evidence_id": "e1",
+                "evidence": "Growth was 5%",
+                "metric": {"value": "10", "unit": "%", "timeframe": "2024"},
+            }
+        ],
+        "quotes_final": [{"id": "q1", "text": "Outside quote", "speaker": "CEO", "citation": ""}],
+        "expert_comment": "We expect revenue to reach 99 soon.",
+    }
+    result = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="r-rule-prefix",
+            report=_report(),
+            artifacts=artifacts,
+            evidence_packs={},
+            vector_store_id=None,
+        ),
+        settings,
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAI(
+            semantic_payload={"metrics": [], "quotes": []},
+            grounding_payload={
+                "unsupported": [
+                    {
+                        "section": "expert_comment",
+                        "text": "We expect revenue to reach 99 soon.",
+                        "reason": "No evidence",
+                    }
+                ]
+            },
+        ),
+        analysis_store=FakeAnalysisStore(),
+    )
+    assert any(issue.message.startswith("[metrics]") for issue in result.issues)
+    assert any(issue.message.startswith("[quotes]") for issue in result.issues)
+    assert any(issue.message.startswith("[numbers]") for issue in result.issues)
+    assert any(issue.message.startswith("[grounding]") for issue in result.issues)

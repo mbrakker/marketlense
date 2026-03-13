@@ -1,6 +1,6 @@
 # Repository Analysis: Remaining Ineffective Choices From Top-50 Audit (Low Effort, High Impact)
 
-Status: merged into `CONSOLIDATED_TODO.md` on 2026-03-08. Treat the consolidated todo as the actionable backlog; keep this file as the detailed source analysis behind those tasks. Resolved items were removed on 2026-03-12 after the PDF-service split, the report-generator phase split, and related config/test cleanup. Original audit numbering is preserved so consolidated references stay stable.
+Status: merged into `CONSOLIDATED_TODO.md` on 2026-03-08. Treat the consolidated todo as the actionable backlog; keep this file as the detailed source analysis behind those tasks. Resolved items were removed on 2026-03-13 after the PDF-service split, the report-generator phase split, the validation-generator rule split, and related config/test cleanup. Original audit numbering is preserved so consolidated references stay stable.
 
 Method: static repository scan focused on maintainability, reliability, architecture boundaries, and test integrity. Prioritized by impact/effort ratio.
 
@@ -15,11 +15,6 @@ Format for each item:
 - **Context:** UI logic for many screens lives in one file.
 - **Expected:** Split by page/feature module with shared UI helpers.
 - **Success criteria:** Per-page files with clear ownership; page-level tests can run independently.
-
-### 4) `src/generators/validation_generator.py` is 2500 lines
-- **Context:** Validation checks are tightly bundled, making incremental changes risky.
-- **Expected:** Validator registry + composable rule modules.
-- **Success criteria:** New check can be added without touching large control blocks; failures report check identity consistently.
 
 ### 5) `src/generators/evidence_pack_generator.py` is 1778 lines
 - **Context:** Multiple pack types are mixed in one large implementation.
