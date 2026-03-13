@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import logging
-import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, Optional, Tuple
 
@@ -16,58 +15,32 @@ from src.contracts.report_analysis import (
 )
 from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
+from src.generators.evidence_packs.doc_map_strategy import (
+    normalize_payload as normalize_doc_map_payload,
+)
+from src.generators.evidence_packs.doc_map_strategy import (
+    summarize_completeness as summarize_doc_map_completeness,
+)
+from src.generators.evidence_packs.doc_map_strategy import (
+    summarize_payload as summarize_doc_map,
+)
+from src.generators.evidence_packs.registry import (
+    DEFAULT_PACK_REGISTRY,
+    PACK_STRATEGIES,
+    VARIETY_PACKS,
+)
 from src.services import file_service
 from src.services import openai_service
 from src.services import prompt_service
 from src.services import report_analysis_store_service
-from src.utils.logging import child_context, log_event, new_run_context
 from src.services.schema_validator_service import validate_schema
-from src.utils.errors import AppError
-from src.utils.model_resolver import resolve_model
-from src.utils.coercion import coerce_int
 from src.utils.cache_utils import sha256_json
-from src.utils.slugify import slugify
+from src.utils.coercion import coerce_int
+from src.utils.errors import AppError
+from src.utils.logging import child_context, log_event, new_run_context
+from src.utils.model_resolver import resolve_model
 
 logger = logging.getLogger("market_lense.evidence_pack_generator")
-
-_DEFAULT_PACK_REGISTRY: tuple[str, ...] = (
-    "doc_map",
-    "scope",
-    "methods",
-    "findings",
-    "limitations",
-    "quote_candidates",
-)
-_VARIETY_PACKS: tuple[str, ...] = (
-    "key_metrics",
-    "risk_register",
-    "recommendations",
-    "contradictions",
-)
-_PACK_DEFINITIONS: dict[str, tuple[str, str]] = {
-    "doc_map": ("doc_map", "doc_map"),
-    "scope": ("evidence_packs/scope", "scope_pack"),
-    "methods": ("evidence_packs/methods", "methods_pack"),
-    "findings": ("evidence_packs/findings", "findings_pack"),
-    "limitations": ("evidence_packs/limitations", "limitations_pack"),
-    "quote_candidates": ("evidence_packs/quote_candidates", "quote_candidates_pack"),
-    "key_metrics": ("evidence_packs/key_metrics", "key_metrics_pack"),
-    "risk_register": ("evidence_packs/risk_register", "risk_register_pack"),
-    "recommendations": ("evidence_packs/recommendations", "recommendations_pack"),
-    "contradictions": ("evidence_packs/contradictions", "contradictions_pack"),
-}
-
-_PACK_PAYLOAD_KEY_BY_NAME: dict[str, str] = {
-    "scope": "scope",
-    "methods": "methods",
-    "findings": "findings",
-    "limitations": "limitations",
-    "quote_candidates": "quote_candidates",
-    "key_metrics": "key_metrics",
-    "risk_register": "risk_register",
-    "recommendations": "recommendations",
-    "contradictions": "contradictions",
-}
 
 
 def _pack_parallel_workers(settings: AppSettings, step_count: int) -> int:
@@ -86,23 +59,26 @@ def _resolve_pack_steps(settings: AppSettings) -> list[tuple[str, str, str]]:
     if isinstance(raw_registry, list):
         for value in raw_registry:
             token = str(value).strip()
-            if token and token in _PACK_DEFINITIONS and token not in registry:
+            if token and token in PACK_STRATEGIES and token not in registry:
                 registry.append(token)
     if not registry:
-        registry = list(_DEFAULT_PACK_REGISTRY)
+        registry = list(DEFAULT_PACK_REGISTRY)
     if enable_variety:
-        for pack_name in _VARIETY_PACKS:
+        for pack_name in VARIETY_PACKS:
             if pack_name not in registry:
                 registry.append(pack_name)
     if "doc_map" not in registry:
         registry = ["doc_map", *registry]
     elif registry[0] != "doc_map":
         registry = ["doc_map"] + [item for item in registry if item != "doc_map"]
-    steps: list[tuple[str, str, str]] = []
-    for pack_name in registry:
-        namespace_suffix, schema_name = _PACK_DEFINITIONS[pack_name]
-        steps.append((pack_name, namespace_suffix, schema_name))
-    return steps
+    return [
+        (
+            pack_name,
+            PACK_STRATEGIES[pack_name].prompt_namespace_suffix,
+            PACK_STRATEGIES[pack_name].schema_name,
+        )
+        for pack_name in registry
+    ]
 
 
 def _strip_json_fence(text: str) -> str:
@@ -225,16 +201,15 @@ def generate_evidence_packs(
         )
     )
 
-    # `doc_map` is a hard gate; other packs depend on it being non-empty.
     doc_step = steps[0]
-    step_name, prompt_ns, schema = doc_step
+    step_name, prompt_ns, schema_name = doc_step
     step_ctx = child_context(ctx, task_id=f"{ctx.task_id}:{step_name}")
     results[step_name] = _generate_pack(
         report_id=report_id,
         report_name=report_name,
         vector_store_id=vector_store_id,
         prompt_namespace=f"report_vs/{prompt_ns}",
-        schema_name=schema,
+        schema_name=schema_name,
         settings=settings,
         ctx=step_ctx,
         md5=md5,
@@ -299,7 +274,7 @@ def generate_evidence_packs(
     if parallel_steps and parallel_workers > 1:
         with ThreadPoolExecutor(max_workers=parallel_workers) as executor:
             futures = {}
-            for step_name, prompt_ns, schema in parallel_steps:
+            for step_name, prompt_ns, schema_name in parallel_steps:
                 step_ctx = child_context(ctx, task_id=f"{ctx.task_id}:{step_name}")
                 future = executor.submit(
                     _generate_pack,
@@ -307,7 +282,7 @@ def generate_evidence_packs(
                     report_name=report_name,
                     vector_store_id=vector_store_id,
                     prompt_namespace=f"report_vs/{prompt_ns}",
-                    schema_name=schema,
+                    schema_name=schema_name,
                     settings=settings,
                     ctx=step_ctx,
                     md5=md5,
@@ -352,14 +327,14 @@ def generate_evidence_packs(
                     context={"report_id": report_id, "pack": failed_step},
                 ) from first_exc
     else:
-        for step_name, prompt_ns, schema in parallel_steps:
+        for step_name, prompt_ns, schema_name in parallel_steps:
             step_ctx = child_context(ctx, task_id=f"{ctx.task_id}:{step_name}")
             parallel_results[step_name] = _generate_pack(
                 report_id=report_id,
                 report_name=report_name,
                 vector_store_id=vector_store_id,
                 prompt_namespace=f"report_vs/{prompt_ns}",
-                schema_name=schema,
+                schema_name=schema_name,
                 settings=settings,
                 ctx=step_ctx,
                 md5=md5,
@@ -397,6 +372,7 @@ def _generate_pack(
     analysis_store,
     pack_name: str,
 ) -> dict:
+    strategy = PACK_STRATEGIES[pack_name]
     logger.info(
         log_event(
             ctx,
@@ -461,20 +437,21 @@ def _generate_pack(
                 analysis_store=analysis_store,
             )
             if cached is not None:
-                if schema_name == "doc_map":
-                    cached, normalization = _normalize_doc_map_payload(
-                        cached, report_id, report_name
+                normalized_cached = strategy.normalize_payload(
+                    cached, report_id, report_name
+                )
+                cached = normalized_cached.payload
+                if normalized_cached.changed:
+                    _store_pack(
+                        analysis_store=analysis_store,
+                        output_dir=settings.output_dir,
+                        report_id=report_id,
+                        pack_name=pack_name,
+                        payload=cached,
+                        ctx=ctx,
+                        report_name=report_name,
                     )
-                    if normalization["changed"]:
-                        _store_pack(
-                            analysis_store=analysis_store,
-                            output_dir=settings.output_dir,
-                            report_id=report_id,
-                            pack_name=pack_name,
-                            payload=cached,
-                            ctx=ctx,
-                            report_name=report_name,
-                        )
+                    if pack_name == "doc_map":
                         logger.info(
                             log_event(
                                 ctx,
@@ -483,20 +460,25 @@ def _generate_pack(
                                 module=logger.name,
                                 fields={
                                     "report_id": report_id,
-                                    "wrapper_key": normalization["wrapper_key"],
-                                    "sections_with_ids": normalization[
+                                    "wrapper_key": normalized_cached.metadata[
+                                        "wrapper_key"
+                                    ],
+                                    "sections_with_ids": normalized_cached.metadata[
                                         "sections_with_ids"
                                     ],
-                                    "added_section_ids": normalization[
+                                    "added_section_ids": normalized_cached.metadata[
                                         "added_section_ids"
                                     ],
-                                    "dropped_sections": normalization[
+                                    "dropped_sections": normalized_cached.metadata[
                                         "dropped_sections"
                                     ],
-                                    "doc_id_filled": normalization["doc_id_filled"],
+                                    "doc_id_filled": normalized_cached.metadata[
+                                        "doc_id_filled"
+                                    ],
                                 },
                             )
                         )
+                if pack_name == "doc_map":
                     summary = _summarize_doc_map(cached)
                     if not summary["has_content"]:
                         logger.info(
@@ -514,21 +496,6 @@ def _generate_pack(
                             )
                         )
                         cached = None
-                elif isinstance(cached, dict):
-                    normalized_cached = _normalize_evidence_pack_payload(
-                        cached, pack_name
-                    )
-                    if normalized_cached != cached:
-                        _store_pack(
-                            analysis_store=analysis_store,
-                            output_dir=settings.output_dir,
-                            report_id=report_id,
-                            pack_name=pack_name,
-                            payload=normalized_cached,
-                            ctx=ctx,
-                            report_name=report_name,
-                        )
-                        cached = normalized_cached
                 logger.info(
                     log_event(
                         ctx,
@@ -598,42 +565,42 @@ def _generate_pack(
             not_found_reason = "model_returned_no_json"
         else:
             try:
-                if schema_name == "doc_map":
-                    if not isinstance(parsed_payload, dict):
-                        raise AppError(
-                            code="schema_type_mismatch",
-                            message="doc_map payload must be a JSON object",
-                            retryable=False,
-                        )
-                    parsed_json, normalization = _normalize_doc_map_payload(
-                        parsed_payload, report_id, report_name
+                if pack_name == "doc_map" and not isinstance(parsed_payload, dict):
+                    raise AppError(
+                        code="schema_type_mismatch",
+                        message="doc_map payload must be a JSON object",
+                        retryable=False,
                     )
-                    if normalization["changed"]:
-                        logger.info(
-                            log_event(
-                                ctx,
-                                role="generator",
-                                event="doc_map_normalized",
-                                module=logger.name,
-                                fields={
-                                    "report_id": report_id,
-                                    "wrapper_key": normalization["wrapper_key"],
-                                    "sections_with_ids": normalization[
-                                        "sections_with_ids"
-                                    ],
-                                    "added_section_ids": normalization[
-                                        "added_section_ids"
-                                    ],
-                                    "dropped_sections": normalization[
-                                        "dropped_sections"
-                                    ],
-                                    "doc_id_filled": normalization["doc_id_filled"],
-                                },
-                            )
+                normalized_result = strategy.normalize_payload(
+                    parsed_payload, report_id, report_name
+                )
+                parsed_json = normalized_result.payload
+                if pack_name == "doc_map" and normalized_result.changed:
+                    logger.info(
+                        log_event(
+                            ctx,
+                            role="generator",
+                            event="doc_map_normalized",
+                            module=logger.name,
+                            fields={
+                                "report_id": report_id,
+                                "wrapper_key": normalized_result.metadata[
+                                    "wrapper_key"
+                                ],
+                                "sections_with_ids": normalized_result.metadata[
+                                    "sections_with_ids"
+                                ],
+                                "added_section_ids": normalized_result.metadata[
+                                    "added_section_ids"
+                                ],
+                                "dropped_sections": normalized_result.metadata[
+                                    "dropped_sections"
+                                ],
+                                "doc_id_filled": normalized_result.metadata[
+                                    "doc_id_filled"
+                                ],
+                            },
                         )
-                else:
-                    parsed_json = _normalize_evidence_pack_payload(
-                        parsed_payload, pack_name
                     )
                 if getattr(settings, "strict_schema_validation", True):
                     validate_schema(
@@ -694,10 +661,7 @@ def _generate_pack(
     result_payload = parsed_json or _empty_payload(pack_name, not_found_reason)
     if cache_meta and isinstance(result_payload, dict):
         result_payload = dict(result_payload)
-        result_payload["_cache"] = {
-            **cache_meta,
-            "key": cache_key,
-        }
+        result_payload["_cache"] = {**cache_meta, "key": cache_key}
     _store_pack(
         analysis_store=analysis_store,
         output_dir=settings.output_dir,
@@ -726,888 +690,32 @@ def _generate_pack(
 
 
 def _empty_payload(pack_name: str, reason: str) -> dict:
-    payload: dict[str, object] = {"schema_version": "1.0", "not_found_reason": reason}
-    if pack_name == "doc_map":
-        payload.update(
-            {"doc_id": "", "title": "", "summary": "", "publisher": "", "sections": []}
-        )
-        return payload
-    key = _PACK_PAYLOAD_KEY_BY_NAME.get(pack_name)
-    if key is None:
-        return payload
-    if key == "scope":
-        payload[key] = ""
-    else:
-        payload[key] = []
-    return payload
-
-
-def _text(value: object) -> str:
-    if isinstance(value, dict):
-        for key in ("text", "value", "title", "name", "summary", "brief", "label"):
-            candidate = value.get(key)
-            if candidate is None:
-                continue
-            token = str(candidate).strip()
-            if token:
-                return token
-        return ""
-    if value is None:
-        return ""
-    return str(value).strip()
-
-
-def _first_non_empty_text(*values: object) -> str:
-    for value in values:
-        candidate = _text(value)
-        if candidate:
-            return candidate
-    return ""
-
-
-def _normalize_report_name(report_name: str) -> str:
-    token = _text(report_name).replace("\\", "/").split("/")[-1]
-    token = re.sub(r"\.pdf$", "", token, flags=re.IGNORECASE).strip()
-    token = re.sub(r"[_-]?acig$", "", token, flags=re.IGNORECASE).strip()
-    token = re.sub(r"\s+", " ", token)
-    return token
-
-
-def _clean_publisher_token(raw_value: object) -> str:
-    token = _text(raw_value)
-    if not token:
-        return ""
-    token = re.sub(r"\b(?:19|20)\d{2}\b.*$", "", token).strip()
-    token = token.strip(" -_—–|,:;")
-    token = re.sub(r"\s+", " ", token)
-    if not token or re.fullmatch(r"\d+", token):
-        return ""
-    return token
-
-
-def _derive_publisher_from_document_title(document_title: object) -> str:
-    title = _text(document_title)
-    if not title:
-        return ""
-    parts = re.split(r"\s+[—–-]\s+", title)
-    if len(parts) < 2:
-        return ""
-    return _clean_publisher_token(parts[-1])
-
-
-def _derive_publisher_from_report_name(report_name: str) -> str:
-    normalized_name = _normalize_report_name(report_name)
-    if not normalized_name:
-        return ""
-    for separator in (" - ", " — ", " – "):
-        if separator in normalized_name:
-            head, _ = normalized_name.split(separator, 1)
-            candidate = _clean_publisher_token(head)
-            if candidate:
-                return candidate
-    return ""
-
-
-def _coerce_pages(value: object) -> list[int]:
-    items = value if isinstance(value, list) else [value]
-    pages: list[int] = []
-    seen: set[int] = set()
-    for item in items:
-        if isinstance(item, bool):
-            continue
-        if isinstance(item, (int, float)):
-            page_num = int(item)
-            if page_num > 0 and page_num not in seen:
-                seen.add(page_num)
-                pages.append(page_num)
-            continue
-        tokenized = _text(item).replace(";", ",").replace("|", ",")
-        for token in tokenized.split(","):
-            token_text = token.strip()
-            if not token_text or not token_text.isdigit():
-                continue
-            page_num = int(token_text)
-            if page_num > 0 and page_num not in seen:
-                seen.add(page_num)
-                pages.append(page_num)
-    return pages
-
-
-def _coerce_text_list(value: object) -> list[str]:
-    items = value if isinstance(value, list) else [value]
-    normalized: list[str] = []
-    seen: set[str] = set()
-    for item in items:
-        token = ""
-        if isinstance(item, dict):
-            token = _first_non_empty_text(
-                item.get("text"),
-                item.get("point"),
-                item.get("title"),
-                item.get("label"),
-                item.get("name"),
-                item.get("summary"),
-            )
-        else:
-            token = _text(item)
-        if not token or token in seen:
-            continue
-        seen.add(token)
-        normalized.append(token)
-    return normalized
-
-
-def _coerce_pack_items(value: object) -> list[object]:
-    if isinstance(value, list):
-        return value
-    if value is None:
-        return []
-    return [value]
-
-
-def _to_dict(value: object) -> dict:
-    if isinstance(value, dict):
-        return value
-    return {}
-
-
-def _extract_evidence_text(value: object) -> str:
-    if isinstance(value, str):
-        return value.strip()
-    if isinstance(value, list):
-        for item in value:
-            if isinstance(item, str) and item.strip():
-                return item.strip()
-            if isinstance(item, dict):
-                candidate = _first_non_empty_text(
-                    item.get("snippet"),
-                    item.get("text"),
-                    item.get("quote"),
-                    item.get("evidence"),
-                    item.get("description"),
-                )
-                if candidate:
-                    return candidate
-        return ""
-    if isinstance(value, dict):
-        return _first_non_empty_text(
-            value.get("snippet"),
-            value.get("text"),
-            value.get("quote"),
-            value.get("evidence"),
-            value.get("description"),
-        )
-    return ""
-
-
-def _coerce_confidence(value: object) -> str:
-    if isinstance(value, (int, float)) and not isinstance(value, bool):
-        return str(value)
-    return _text(value)
-
-
-def _normalize_findings(raw_findings: object) -> list[dict]:
-    normalized: list[dict] = []
-    for idx, entry in enumerate(_coerce_pack_items(raw_findings)):
-        if isinstance(entry, str):
-            text_value = entry.strip()
-            if not text_value:
-                continue
-            normalized.append(
-                {
-                    "id": f"finding_{idx + 1}",
-                    "text": text_value,
-                    "evidence": "",
-                    "confidence": "",
-                    "pages": [],
-                }
-            )
-            continue
-        if not isinstance(entry, dict):
-            continue
-        item = _to_dict(entry)
-        text_value = _first_non_empty_text(
-            item.get("text"),
-            item.get("summary"),
-            item.get("finding"),
-            item.get("claim"),
-            item.get("title"),
-        )
-        evidence_value = _first_non_empty_text(
-            _extract_evidence_text(item.get("evidence")),
-            _extract_evidence_text(item.get("supporting_evidence")),
-            item.get("rationale"),
-        )
-        pages = _coerce_pages(item.get("pages"))
-        if not pages:
-            pages = _coerce_pages(item.get("page"))
-        if not (text_value or evidence_value or pages):
-            continue
-        normalized.append(
-            {
-                "id": _first_non_empty_text(item.get("id"), f"finding_{idx + 1}"),
-                "text": text_value,
-                "evidence": evidence_value,
-                "confidence": _coerce_confidence(item.get("confidence")),
-                "pages": pages,
-            }
-        )
-    return normalized
-
-
-def _normalize_limitations(raw_limitations: object) -> list[str]:
-    limitations: list[str] = []
-    for entry in _coerce_pack_items(raw_limitations):
-        if isinstance(entry, str):
-            text_value = entry.strip()
-            if text_value:
-                limitations.append(text_value)
-            continue
-        if not isinstance(entry, dict):
-            continue
-        item = _to_dict(entry)
-        description = _first_non_empty_text(
-            item.get("description"),
-            item.get("text"),
-            item.get("summary"),
-            item.get("limitation"),
-            item.get("title"),
-            item.get("type"),
-        )
-        mitigation = _text(item.get("mitigation"))
-        if description and mitigation:
-            limitations.append(f"{description} Mitigation: {mitigation}")
-            continue
-        if description:
-            limitations.append(description)
-            continue
-        if mitigation:
-            limitations.append(f"Mitigation: {mitigation}")
-    return limitations
-
-
-def _normalize_quote_candidates(raw_quotes: object) -> list[dict]:
-    quotes: list[dict] = []
-    for idx, entry in enumerate(_coerce_pack_items(raw_quotes)):
-        if isinstance(entry, str):
-            text_value = entry.strip()
-            if text_value:
-                quotes.append(
-                    {
-                        "id": f"quote_{idx + 1}",
-                        "text": text_value,
-                        "source": "",
-                        "page": None,
-                    }
-                )
-            continue
-        if not isinstance(entry, dict):
-            continue
-        item = _to_dict(entry)
-        text_value = _first_non_empty_text(
-            item.get("text"),
-            item.get("quote"),
-            item.get("snippet"),
-            item.get("excerpt"),
-            item.get("content"),
-        )
-        if not text_value:
-            continue
-        source_value = _first_non_empty_text(
-            item.get("source"),
-            item.get("citation"),
-            item.get("speaker"),
-            item.get("author"),
-            item.get("evidence_id"),
-        )
-        pages = _coerce_pages(item.get("page"))
-        if not pages:
-            pages = _coerce_pages(item.get("pages"))
-        page_value: Optional[int] = pages[0] if pages else None
-        quotes.append(
-            {
-                "id": _first_non_empty_text(
-                    item.get("id"), item.get("evidence_id"), f"quote_{idx + 1}"
-                ),
-                "text": text_value,
-                "source": source_value,
-                "page": page_value,
-            }
-        )
-    return quotes
-
-
-def _normalize_methods(raw_methods: object) -> list[object]:
-    methods: list[object] = []
-    for entry in _coerce_pack_items(raw_methods):
-        if isinstance(entry, dict):
-            methods.append(entry)
-            continue
-        text_value = _text(entry)
-        if text_value:
-            methods.append(text_value)
-    return methods
-
-
-def _normalize_key_metrics(raw_metrics: object) -> list[dict]:
-    metrics: list[dict] = []
-    for idx, entry in enumerate(_coerce_pack_items(raw_metrics)):
-        if isinstance(entry, str):
-            text_value = entry.strip()
-            if not text_value:
-                continue
-            metrics.append(
-                {
-                    "id": f"metric_{idx + 1}",
-                    "metric": text_value,
-                    "value": "",
-                    "unit": "",
-                    "evidence_id": "",
-                    "pages": [],
-                }
-            )
-            continue
-        if not isinstance(entry, dict):
-            continue
-        item = _to_dict(entry)
-        metric = _first_non_empty_text(
-            item.get("metric"),
-            item.get("name"),
-            item.get("label"),
-            item.get("title"),
-        )
-        value = _first_non_empty_text(
-            item.get("value"), item.get("amount"), item.get("measure")
-        )
-        unit = _first_non_empty_text(item.get("unit"), item.get("units"))
-        evidence_id = _first_non_empty_text(
-            item.get("evidence_id"),
-            item.get("finding_id"),
-            item.get("reference_id"),
-        )
-        pages = _coerce_pages(item.get("pages")) or _coerce_pages(item.get("page"))
-        if not (metric or value or evidence_id or pages):
-            continue
-        metrics.append(
-            {
-                "id": _first_non_empty_text(item.get("id"), f"metric_{idx + 1}"),
-                "metric": metric,
-                "value": value,
-                "unit": unit,
-                "evidence_id": evidence_id,
-                "pages": pages,
-            }
-        )
-    return metrics
-
-
-def _normalize_risk_register(raw_risks: object) -> list[dict]:
-    risks: list[dict] = []
-    for idx, entry in enumerate(_coerce_pack_items(raw_risks)):
-        if isinstance(entry, str):
-            text_value = entry.strip()
-            if not text_value:
-                continue
-            risks.append(
-                {
-                    "id": f"risk_{idx + 1}",
-                    "risk": text_value,
-                    "impact": "",
-                    "likelihood": "",
-                    "mitigation": "",
-                    "evidence_id": "",
-                }
-            )
-            continue
-        if not isinstance(entry, dict):
-            continue
-        item = _to_dict(entry)
-        risk = _first_non_empty_text(
-            item.get("risk"), item.get("title"), item.get("description")
-        )
-        impact = _first_non_empty_text(item.get("impact"), item.get("severity"))
-        likelihood = _first_non_empty_text(
-            item.get("likelihood"), item.get("probability")
-        )
-        mitigation = _first_non_empty_text(item.get("mitigation"), item.get("response"))
-        evidence_id = _first_non_empty_text(
-            item.get("evidence_id"),
-            item.get("reference_id"),
-            item.get("finding_id"),
-        )
-        if not (risk or impact or likelihood or mitigation or evidence_id):
-            continue
-        risks.append(
-            {
-                "id": _first_non_empty_text(item.get("id"), f"risk_{idx + 1}"),
-                "risk": risk,
-                "impact": impact,
-                "likelihood": likelihood,
-                "mitigation": mitigation,
-                "evidence_id": evidence_id,
-            }
-        )
-    return risks
-
-
-def _normalize_recommendations(raw_recommendations: object) -> list[dict]:
-    recommendations: list[dict] = []
-    for idx, entry in enumerate(_coerce_pack_items(raw_recommendations)):
-        if isinstance(entry, str):
-            text_value = entry.strip()
-            if not text_value:
-                continue
-            recommendations.append(
-                {
-                    "id": f"recommendation_{idx + 1}",
-                    "recommendation": text_value,
-                    "rationale": "",
-                    "evidence_id": "",
-                }
-            )
-            continue
-        if not isinstance(entry, dict):
-            continue
-        item = _to_dict(entry)
-        recommendation = _first_non_empty_text(
-            item.get("recommendation"),
-            item.get("action"),
-            item.get("text"),
-            item.get("title"),
-        )
-        rationale = _first_non_empty_text(
-            item.get("rationale"), item.get("reason"), item.get("evidence")
-        )
-        evidence_id = _first_non_empty_text(
-            item.get("evidence_id"),
-            item.get("reference_id"),
-            item.get("finding_id"),
-        )
-        if not (recommendation or rationale or evidence_id):
-            continue
-        recommendations.append(
-            {
-                "id": _first_non_empty_text(
-                    item.get("id"), f"recommendation_{idx + 1}"
-                ),
-                "recommendation": recommendation,
-                "rationale": rationale,
-                "evidence_id": evidence_id,
-            }
-        )
-    return recommendations
-
-
-def _normalize_contradictions(raw_contradictions: object) -> list[dict]:
-    contradictions: list[dict] = []
-    for idx, entry in enumerate(_coerce_pack_items(raw_contradictions)):
-        if isinstance(entry, str):
-            text_value = entry.strip()
-            if not text_value:
-                continue
-            contradictions.append(
-                {
-                    "id": f"contradiction_{idx + 1}",
-                    "statement_a": text_value,
-                    "statement_b": "",
-                    "explanation": "",
-                    "evidence_ids": [],
-                }
-            )
-            continue
-        if not isinstance(entry, dict):
-            continue
-        item = _to_dict(entry)
-        statement_a = _first_non_empty_text(
-            item.get("statement_a"),
-            item.get("claim_a"),
-            item.get("point_a"),
-        )
-        statement_b = _first_non_empty_text(
-            item.get("statement_b"),
-            item.get("claim_b"),
-            item.get("point_b"),
-        )
-        explanation = _first_non_empty_text(
-            item.get("explanation"), item.get("context"), item.get("reason")
-        )
-        evidence_ids = [
-            token
-            for token in (
-                _coerce_pack_items(item.get("evidence_ids") or item.get("evidence_id"))
-            )
-            if isinstance(token, str) and token.strip()
-        ]
-        if not (statement_a or statement_b or explanation or evidence_ids):
-            continue
-        contradictions.append(
-            {
-                "id": _first_non_empty_text(item.get("id"), f"contradiction_{idx + 1}"),
-                "statement_a": statement_a,
-                "statement_b": statement_b,
-                "explanation": explanation,
-                "evidence_ids": evidence_ids,
-            }
-        )
-    return contradictions
+    return PACK_STRATEGIES[pack_name].empty_payload(reason)
 
 
 def _normalize_evidence_pack_payload(payload: object, pack_name: str) -> dict:
-    cache_meta = None
-    source = payload
-    if isinstance(payload, dict):
-        cache_meta = (
-            payload.get("_cache") if isinstance(payload.get("_cache"), dict) else None
+    if pack_name == "doc_map":
+        raise AppError(
+            code="invalid_pack_strategy",
+            message="doc_map uses _normalize_doc_map_payload",
+            retryable=False,
         )
-        wrapped = payload.get(pack_name)
-        if wrapped is None:
-            wrapped = payload.get("evidence_pack")
-        if wrapped is None:
-            wrapped = payload.get("evidencePack")
-        if wrapped is not None:
-            source = wrapped
-
-    root = _to_dict(source)
-    normalized = _empty_payload(pack_name, "")
-
-    if pack_name == "scope":
-        scope_value = root.get("scope") if isinstance(source, dict) else source
-        if scope_value is None:
-            scope_value = ""
-        if isinstance(scope_value, (str, dict)):
-            normalized["scope"] = scope_value
-        else:
-            normalized["scope"] = _text(scope_value)
-    elif pack_name == "methods":
-        raw_methods = root.get("methods") if isinstance(source, dict) else source
-        if raw_methods is None:
-            raw_methods = root.get("methodology")
-        if raw_methods is None:
-            raw_methods = root.get("approach")
-        normalized["methods"] = _normalize_methods(raw_methods)
-    elif pack_name == "findings":
-        raw_findings = root.get("findings") if isinstance(source, dict) else source
-        if raw_findings is None:
-            raw_findings = root.get("insights")
-        if raw_findings is None:
-            raw_findings = root.get("claims")
-        normalized["findings"] = _normalize_findings(raw_findings)
-    elif pack_name == "limitations":
-        raw_limitations = (
-            root.get("limitations") if isinstance(source, dict) else source
-        )
-        if raw_limitations is None:
-            raw_limitations = root.get("risks")
-        if raw_limitations is None:
-            raw_limitations = root.get("challenges")
-        normalized["limitations"] = _normalize_limitations(raw_limitations)
-    elif pack_name == "quote_candidates":
-        raw_quotes = (
-            root.get("quote_candidates") if isinstance(source, dict) else source
-        )
-        if raw_quotes is None:
-            raw_quotes = root.get("quotes")
-        if raw_quotes is None:
-            raw_quotes = root.get("quoteCandidates")
-        normalized["quote_candidates"] = _normalize_quote_candidates(raw_quotes)
-    elif pack_name == "key_metrics":
-        raw_metrics = root.get("key_metrics") if isinstance(source, dict) else source
-        if raw_metrics is None:
-            raw_metrics = root.get("metrics")
-        normalized["key_metrics"] = _normalize_key_metrics(raw_metrics)
-    elif pack_name == "risk_register":
-        raw_risks = root.get("risk_register") if isinstance(source, dict) else source
-        if raw_risks is None:
-            raw_risks = root.get("risks")
-        normalized["risk_register"] = _normalize_risk_register(raw_risks)
-    elif pack_name == "recommendations":
-        raw_recommendations = (
-            root.get("recommendations") if isinstance(source, dict) else source
-        )
-        if raw_recommendations is None:
-            raw_recommendations = root.get("actions")
-        normalized["recommendations"] = _normalize_recommendations(raw_recommendations)
-    elif pack_name == "contradictions":
-        raw_contradictions = (
-            root.get("contradictions") if isinstance(source, dict) else source
-        )
-        if raw_contradictions is None:
-            raw_contradictions = root.get("conflicts")
-        normalized["contradictions"] = _normalize_contradictions(raw_contradictions)
-
-    if cache_meta:
-        normalized["_cache"] = cache_meta
-    return normalized
-
-
-def _summarize_doc_map(payload: dict) -> dict:
-    if not isinstance(payload, dict):
-        return {
-            "has_content": False,
-            "sections_count": 0,
-            "title_present": False,
-            "doc_id_present": False,
-            "summary_present": False,
-            "not_found_reason": "invalid_payload",
-        }
-    title = str(payload.get("title") or "").strip()
-    doc_id = str(payload.get("doc_id") or "").strip()
-    summary_text = str(payload.get("summary") or "").strip()
-    sections = payload.get("sections")
-    sections_count = len(sections) if isinstance(sections, list) else 0
-    not_found_reason = str(payload.get("not_found_reason") or "").strip()
-    has_substantive_content = bool(title or summary_text or sections_count)
-    return {
-        # `doc_id` is auto-filled during normalization and must not be treated
-        # as evidence that the doc_map is substantively populated.
-        "has_content": has_substantive_content,
-        "sections_count": sections_count,
-        "title_present": bool(title),
-        "doc_id_present": bool(doc_id),
-        "summary_present": bool(summary_text),
-        "not_found_reason": not_found_reason,
-    }
-
-
-def _summarize_doc_map_completeness(payload: dict) -> dict:
-    sections = payload.get("sections") if isinstance(payload, dict) else []
-    if not isinstance(sections, list):
-        sections = []
-    sections_count = 0
-    sections_with_summary = 0
-    sections_with_key_points = 0
-    for section in sections:
-        if not isinstance(section, dict):
-            continue
-        sections_count += 1
-        if _text(section.get("summary")):
-            sections_with_summary += 1
-        if _coerce_text_list(section.get("key_points")):
-            sections_with_key_points += 1
-    sections_missing_summary = max(0, sections_count - sections_with_summary)
-    summary_coverage_ratio = (
-        round(sections_with_summary / sections_count, 4) if sections_count else 0.0
-    )
-    key_points_coverage_ratio = (
-        round(sections_with_key_points / sections_count, 4) if sections_count else 0.0
-    )
-    return {
-        "sections_count": sections_count,
-        "sections_with_summary": sections_with_summary,
-        "sections_missing_summary": sections_missing_summary,
-        "summary_coverage_ratio": summary_coverage_ratio,
-        "sections_with_key_points": sections_with_key_points,
-        "key_points_coverage_ratio": key_points_coverage_ratio,
-        "warn": sections_count > 0 and sections_missing_summary > 0,
-    }
+    return PACK_STRATEGIES[pack_name].normalize_payload(payload, "", "").payload
 
 
 def _normalize_doc_map_payload(
     payload: dict, report_id: str, report_name: str = ""
 ) -> Tuple[dict, dict]:
-    wrapper_key = ""
-    candidate = payload
-    for key in ("docmap", "doc_map", "docMap"):
-        wrapped = payload.get(key)
-        if isinstance(wrapped, dict):
-            wrapper_key = key
-            candidate = wrapped
-            break
-    normalized = dict(candidate) if isinstance(candidate, dict) else {}
-    changed = bool(wrapper_key)
-    cache_meta = (
-        payload.get("_cache") if isinstance(payload.get("_cache"), dict) else None
-    )
-    if cache_meta:
-        normalized["_cache"] = cache_meta
-    doc_meta = _to_dict(normalized.get("document"))
+    normalized = normalize_doc_map_payload(payload, report_id, report_name)
+    return normalized.payload, normalized.metadata
 
-    raw_title = normalized.get("title")
-    normalized_title = _text(raw_title)
-    resolved_title = _first_non_empty_text(
-        normalized_title,
-        normalized.get("report_title"),
-        normalized.get("document_title"),
-        normalized.get("document_name"),
-        normalized.get("name"),
-        doc_meta.get("title"),
-        doc_meta.get("name"),
-    )
-    if raw_title != resolved_title or "title" not in normalized:
-        normalized["title"] = resolved_title
-        changed = True
 
-    derived_publisher_from_title = _derive_publisher_from_document_title(
-        _first_non_empty_text(
-            normalized.get("document_title"),
-            normalized.get("title"),
-            normalized.get("report_title"),
-            doc_meta.get("title"),
-        )
-    )
-    derived_publisher_from_report_name = _derive_publisher_from_report_name(report_name)
-    raw_publisher = normalized.get("publisher")
-    normalized_publisher = _text(raw_publisher)
-    resolved_publisher = _first_non_empty_text(
-        normalized_publisher,
-        normalized.get("document_publisher"),
-        normalized.get("document_organization"),
-        normalized.get("document_organisation"),
-        normalized.get("organization"),
-        normalized.get("organisation"),
-        normalized.get("publisher_name"),
-        doc_meta.get("publisher"),
-        doc_meta.get("organization"),
-        doc_meta.get("organisation"),
-        derived_publisher_from_title,
-        derived_publisher_from_report_name,
-    )
-    if raw_publisher != resolved_publisher or "publisher" not in normalized:
-        normalized["publisher"] = resolved_publisher
-        changed = True
+def _summarize_doc_map(payload: dict) -> dict:
+    return summarize_doc_map(payload)
 
-    raw_summary = normalized.get("summary")
-    normalized_summary = _text(raw_summary)
-    resolved_summary = _first_non_empty_text(
-        normalized_summary,
-        normalized.get("document_summary"),
-        normalized.get("document_brief"),
-        normalized.get("document_overview"),
-        normalized.get("document_abstract"),
-        normalized.get("document_description"),
-        normalized.get("brief"),
-        normalized.get("overview"),
-        normalized.get("abstract"),
-        normalized.get("description"),
-        doc_meta.get("summary"),
-        doc_meta.get("brief"),
-        doc_meta.get("overview"),
-        doc_meta.get("abstract"),
-        doc_meta.get("description"),
-    )
-    if raw_summary != resolved_summary or "summary" not in normalized:
-        normalized["summary"] = resolved_summary
-        changed = True
 
-    doc_id = _text(normalized.get("doc_id"))
-    doc_id_filled = False
-    if not doc_id:
-        normalized["doc_id"] = report_id
-        doc_id_filled = True
-        changed = True
-    elif normalized.get("doc_id") != doc_id:
-        normalized["doc_id"] = doc_id
-        changed = True
-
-    sections = normalized.get("sections")
-    if not isinstance(sections, list):
-        structure = normalized.get("structure")
-        if isinstance(structure, list):
-            normalized["sections"] = structure
-            sections = normalized["sections"]
-            changed = True
-        else:
-            normalized["sections"] = []
-            sections = normalized["sections"]
-            changed = True
-
-    sections_with_ids = 0
-    added_section_ids = 0
-    dropped_sections = 0
-    if isinstance(sections, list):
-        updated_sections = []
-        for idx, section in enumerate(sections):
-            if not isinstance(section, dict):
-                dropped_sections += 1
-                continue
-            sec = dict(section)
-            sec_title = _first_non_empty_text(
-                sec.get("title"),
-                sec.get("heading"),
-                sec.get("name"),
-                sec.get("section"),
-                sec.get("label"),
-            )
-            if not sec_title:
-                sec_title = f"Section {idx + 1}"
-            if _text(sec.get("title")) != sec_title:
-                sec["title"] = sec_title
-                changed = True
-
-            sec_id = str(sec.get("id") or "").strip()
-            if not sec_id:
-                slug = slugify(sec_title) if sec_title else ""
-                sec_id = slug or f"section_{idx + 1}"
-                sec["id"] = sec_id
-                added_section_ids += 1
-                changed = True
-
-            raw_sec_summary = sec.get("summary")
-            sec_summary = _text(raw_sec_summary)
-            resolved_sec_summary = _first_non_empty_text(
-                sec_summary,
-                sec.get("brief"),
-                sec.get("overview"),
-                sec.get("abstract"),
-                sec.get("description"),
-                sec.get("text"),
-                sec.get("finding"),
-            )
-            if raw_sec_summary != resolved_sec_summary or "summary" not in sec:
-                sec["summary"] = resolved_sec_summary
-                changed = True
-
-            raw_key_points = sec.get("key_points")
-            existing_key_points = _coerce_text_list(raw_key_points)
-            resolved_key_points = list(existing_key_points)
-            if not resolved_key_points:
-                resolved_key_points = _coerce_text_list(sec.get("keyPoints"))
-            if not resolved_key_points:
-                resolved_key_points = _coerce_text_list(sec.get("highlights"))
-            if not resolved_key_points:
-                resolved_key_points = _coerce_text_list(sec.get("bullets"))
-            if not resolved_key_points:
-                resolved_key_points = _coerce_text_list(sec.get("points"))
-            if not resolved_key_points:
-                resolved_key_points = _coerce_text_list(sec.get("key_findings"))
-            if raw_key_points != resolved_key_points or "key_points" not in sec:
-                sec["key_points"] = resolved_key_points
-                changed = True
-
-            raw_pages = sec.get("pages")
-            existing_pages = _coerce_pages(raw_pages)
-            resolved_pages = existing_pages or _coerce_pages(sec.get("page"))
-            if raw_pages != resolved_pages or ("pages" not in sec and resolved_pages):
-                sec["pages"] = resolved_pages
-                changed = True
-
-            raw_refs = sec.get("references")
-            refs = raw_refs if isinstance(raw_refs, list) else []
-            normalized_refs = [_text(ref) for ref in refs if _text(ref)]
-            if not normalized_refs:
-                source_ref = _text(sec.get("source"))
-                if source_ref:
-                    normalized_refs = [source_ref]
-            if raw_refs != normalized_refs or (
-                "references" not in sec and normalized_refs
-            ):
-                sec["references"] = normalized_refs
-                changed = True
-
-            sections_with_ids += 1 if sec.get("id") else 0
-            updated_sections.append(sec)
-        normalized["sections"] = updated_sections
-        if dropped_sections > 0:
-            changed = True
-
-    return normalized, {
-        "changed": changed,
-        "wrapper_key": wrapper_key,
-        "sections_with_ids": sections_with_ids,
-        "added_section_ids": added_section_ids,
-        "dropped_sections": dropped_sections,
-        "doc_id_filled": doc_id_filled,
-    }
+def _summarize_doc_map_completeness(payload: dict) -> dict:
+    return summarize_doc_map_completeness(payload)
 
 
 def _resolve_pack_path(
@@ -1747,7 +855,7 @@ def _load_cached_pack(
         return None
     if not isinstance(payload, dict):
         return None
-    cached = _to_dict(payload.get("_cache"))
+    cached = payload.get("_cache") if isinstance(payload.get("_cache"), dict) else {}
     if cached.get("key") != cache_key:
         logger.info(
             log_event(
@@ -1759,7 +867,7 @@ def _load_cached_pack(
             )
         )
         return None
-    not_found_reason = _text(payload.get("not_found_reason"))
+    not_found_reason = str(payload.get("not_found_reason") or "").strip()
     if not_found_reason:
         logger.info(
             log_event(

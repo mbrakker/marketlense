@@ -4,7 +4,7 @@ Last compiled: 2026-03-13
 
 This file combines all TODOs found in the repository (from `TODO.md`, `html_todo.md`, and `potential-TODO.md`). Items are grouped by theme. Duplicates were merged. Each task includes: title, explanation (what & why), pros & cons, and acceptance criteria.
 
-Completed items are removed from this backlog once their acceptance criteria are met. The PDF service internal split, the report-generator phase split, the validation-generator rule split, the duration-tooling consolidation, and the legacy `analysis.compare` / `ingest.debug_candidate_gallery` cleanup were completed on or before 2026-03-13 and are no longer tracked here as open work.
+Completed items are removed from this backlog once their acceptance criteria are met. The PDF service internal split, the report-generator phase split, the validation-generator rule split, the evidence-pack strategy split, the duration-tooling consolidation, and the legacy `analysis.compare` / `ingest.debug_candidate_gallery` cleanup were completed on or before 2026-03-13 and are no longer tracked here as open work.
 
 ---
 
@@ -406,7 +406,7 @@ Each quick-win should be documented with a short task when prioritized.
     - Boundary lint/tests catch prohibited I/O usage.
 
 - **Title:** Split remaining monolithic generator/service modules to single-responsibility units
-  - Explanation: Break the remaining oversized mixed-responsibility modules (notably `evidence_pack_generator`, `artifact_generator`, and `openai_service`) into role-appropriate, single-purpose modules wired by orchestrators. The PDF service internal split, the report-generator phase split, and the validation-generator rule split are complete and removed from this backlog item.
+  - Explanation: Break the remaining oversized mixed-responsibility modules (notably `artifact_generator` and `openai_service`) into role-appropriate, single-purpose modules wired by orchestrators. The PDF service internal split, the report-generator phase split, the validation-generator rule split, and the evidence-pack strategy split are complete and removed from this backlog item.
   - Pros: Easier maintenance, lower regression risk, clearer ownership.
   - Cons: Large refactor with broad test impact.
   - Acceptance Criteria:

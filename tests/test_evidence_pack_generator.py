@@ -9,6 +9,7 @@ from src.contracts.config import AppSettings
 from src.contracts.openai import OpenAIResponseResult
 from src.contracts.prompts import PromptSet, PromptTemplate
 from src.contracts.run_context import RunContext
+from src.generators.evidence_packs.registry import PACK_STRATEGIES
 from src.generators.evidence_pack_generator import (
     _resolve_pack_steps,
     _strip_json_fence,
@@ -913,3 +914,29 @@ def test_resolve_pack_steps_prepends_doc_map_when_missing():
     )
     steps = _resolve_pack_steps(settings)
     assert [name for name, _, _ in steps][:3] == ["doc_map", "scope", "methods"]
+
+
+def test_pack_strategy_registry_exposes_expected_prompt_and_schema_metadata():
+    expected = {
+        "doc_map": ("doc_map", "doc_map"),
+        "scope": ("evidence_packs/scope", "scope_pack"),
+        "methods": ("evidence_packs/methods", "methods_pack"),
+        "findings": ("evidence_packs/findings", "findings_pack"),
+        "limitations": ("evidence_packs/limitations", "limitations_pack"),
+        "quote_candidates": (
+            "evidence_packs/quote_candidates",
+            "quote_candidates_pack",
+        ),
+        "key_metrics": ("evidence_packs/key_metrics", "key_metrics_pack"),
+        "risk_register": ("evidence_packs/risk_register", "risk_register_pack"),
+        "recommendations": (
+            "evidence_packs/recommendations",
+            "recommendations_pack",
+        ),
+        "contradictions": ("evidence_packs/contradictions", "contradictions_pack"),
+    }
+    assert set(PACK_STRATEGIES.keys()) == set(expected.keys())
+    for pack_name, (prompt_ns, schema_name) in expected.items():
+        strategy = PACK_STRATEGIES[pack_name]
+        assert strategy.prompt_namespace_suffix == prompt_ns
+        assert strategy.schema_name == schema_name

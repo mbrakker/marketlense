@@ -16,11 +16,6 @@ Format for each item:
 - **Expected:** Split by page/feature module with shared UI helpers.
 - **Success criteria:** Per-page files with clear ownership; page-level tests can run independently.
 
-### 5) `src/generators/evidence_pack_generator.py` is 1778 lines
-- **Context:** Multiple pack types are mixed in one large implementation.
-- **Expected:** One orchestration entry plus per-pack strategy modules.
-- **Success criteria:** Pack-specific changes are isolated; schema validation remains green for all packs.
-
 ### 6) `src/generators/artifact_generator.py` is 1598 lines
 - **Context:** Artifact creation, schema handling, and post-processing are deeply interleaved.
 - **Expected:** Separate prepare/call/normalize/validate stages.
