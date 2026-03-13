@@ -10,7 +10,9 @@ from typing import Callable, Optional
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.run_context import RunContext
-from src.generators.report_generator import generate_report as generate_report_generator
+from src.orchestrators.report_generation_orchestrator import (
+    run_report_generation as generate_report_orchestrator,
+)
 from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
 from src.services import openai_service
 from src.utils.errors import AppError
@@ -181,7 +183,7 @@ def run_report_pipeline(
     generate_report_fn: Optional[Callable[..., IngestOutcome]] = None,
     openai_client_override=None,
 ) -> IngestOutcome:
-    report_fn = generate_report_fn or generate_report_generator
+    report_fn = generate_report_fn or generate_report_orchestrator
     evidence_max_in_flight = coerce_int(getattr(settings, "evidence_pack_global_max_in_flight", 2), 2, min_value=1)
     evidence_min_interval_ms = coerce_int(getattr(settings, "evidence_pack_global_min_interval_ms", 250), 250, min_value=0)
     artifact_max_in_flight = coerce_int(getattr(settings, "artifact_global_max_in_flight", 2), 2, min_value=1)

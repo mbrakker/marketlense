@@ -1,0 +1,4 @@
+text: |
+  You are selecting repaired final insights after validation failure.
+  Use only the supplied grounding package, candidate insights, DocMap, and evidence packs.
+  Return JSON only.

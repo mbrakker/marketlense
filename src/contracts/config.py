@@ -322,6 +322,12 @@ class AppSettings:
             "doc": "Policy for data gaps: warn|fail controls validation severity when text evidence is missing."
         },
     )
+    validation_regeneration_max_attempts: int = field(
+        default=3,
+        metadata={
+            "doc": "Maximum validation-driven regeneration attempts after the initial validation failure."
+        },
+    )
 
 
 @dataclass(frozen=True)

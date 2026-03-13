@@ -1,0 +1,33 @@
+text: |
+  Context:
+  - Attempt index: {{ attempt_index }}
+  - Target section: {{ target_section }}
+  - Current summary JSON: {{ current_section_json }}
+  - Validator failures JSON: {{ failure_reasons_json }}
+  - Fix checklist JSON: {{ fix_checklist_json }}
+  - Grounding package JSON: {{ grounding_package_json }}
+  - DocMap JSON: {{ doc_map_json }}
+  - Evidence packs JSON: {{ evidence_json }}
+
+  Task:
+  Return a JSON object with:
+  {
+    "summary": {
+      "tldr": "<one-sentence TLDR>",
+      "executive_summary": "<grounded executive summary>",
+      "claim_evidence_map": [
+        {
+          "claim": "<concise supported claim>",
+          "evidence_id": "<single existing evidence id>",
+          "evidence": "<supporting excerpt or grounded paraphrase>",
+          "pages": [<page numbers if known>]
+        }
+      ]
+    }
+  }
+
+  Requirements:
+  - Fix the listed failures directly.
+  - Keep `evidence_id` to a single existing ID or an empty string.
+  - Keep `claim_evidence_map` brief and fully grounded.
+  - Do not introduce unsupported numbers, entities, quotes, or conclusions.

@@ -222,10 +222,7 @@ def generate_artifacts(
         )
         return payload
 
-    base_vars = {
-        "doc_map_json": _dump_json(safe_doc_map),
-        "evidence_json": _dump_json(safe_evidence),
-    }
+    base_vars = artifact_base_variables(safe_doc_map, safe_evidence)
 
     insights_final_ctx = child_context(ctx, task_id=f"{ctx.task_id}:insights_final")
 
@@ -266,7 +263,7 @@ def generate_artifacts(
             for step_name, namespace, variables in stage_one_steps:
                 step_ctx = child_context(ctx, task_id=f"{ctx.task_id}:{step_name}")
                 future = executor.submit(
-                    _call_json_model,
+                    render_artifact_json_model,
                     namespace=namespace,
                     variables=variables,
                     settings=settings,
@@ -301,7 +298,7 @@ def generate_artifacts(
     else:
         for step_name, namespace, variables in stage_one_steps:
             step_ctx = child_context(ctx, task_id=f"{ctx.task_id}:{step_name}")
-            stage_one_results[step_name] = _call_json_model(
+            stage_one_results[step_name] = render_artifact_json_model(
                 namespace=namespace,
                 variables=variables,
                 settings=settings,
@@ -336,7 +333,7 @@ def generate_artifacts(
         **base_vars,
         "insights_candidates_json": _dump_json(insights_candidates),
     }
-    insights_final_result = _call_json_model(
+    insights_final_result = render_artifact_json_model(
         namespace="report_vs/artifacts/insights_final",
         variables=insights_final_vars,
         settings=settings,
@@ -351,39 +348,6 @@ def generate_artifacts(
             insights_final_result.get("insights_final"), prefix="insight"
         ),
         insights_candidates,
-    )
-    topic_briefs = _expand_topics_with_briefs(
-        toc_topics=toc_topics,
-        doc_map=safe_doc_map,
-        summary=summary,
-        insights_final=insights_final,
-    )
-    logger.info(
-        log_event(
-            ctx,
-            role="generator",
-            event="artifact_topic_briefs_built",
-            module=logger.name,
-            fields={
-                "topic_count": len(toc_topics),
-                "brief_count": len(topic_briefs),
-                "briefs_with_summary": len(
-                    [
-                        item
-                        for item in topic_briefs
-                        if _s(item.get("summary")).strip()
-                    ]
-                ),
-                "briefs_with_key_points": len(
-                    [
-                        item
-                        for item in topic_briefs
-                        if isinstance(item.get("key_points"), list)
-                        and len(item.get("key_points") or []) > 0
-                    ]
-                ),
-            },
-        )
     )
     evidence_id_stats = _normalize_artifact_evidence_ids(
         summary=summary,
@@ -420,7 +384,7 @@ def generate_artifacts(
     if parallel_workers > 1:
         with ThreadPoolExecutor(max_workers=2) as executor:
             expert_future = executor.submit(
-                _call_json_model,
+                render_artifact_json_model,
                 namespace="report_vs/artifacts/expert_comment",
                 variables=expert_vars,
                 settings=settings,
@@ -431,7 +395,7 @@ def generate_artifacts(
                 vector_store_id=vector_store_id,
             )
             linkedin_future = executor.submit(
-                _call_json_model,
+                render_artifact_json_model,
                 namespace="report_vs/artifacts/linkedin_post",
                 variables=linkedin_vars,
                 settings=settings,
@@ -444,7 +408,7 @@ def generate_artifacts(
             expert_result = expert_future.result()
             linkedin_result = linkedin_future.result()
     else:
-        expert_result = _call_json_model(
+        expert_result = render_artifact_json_model(
             namespace="report_vs/artifacts/expert_comment",
             variables=expert_vars,
             settings=settings,
@@ -454,7 +418,7 @@ def generate_artifacts(
             allow_vector_store=artifact_use_vector_store,
             vector_store_id=vector_store_id,
         )
-        linkedin_result = _call_json_model(
+        linkedin_result = render_artifact_json_model(
             namespace="report_vs/artifacts/linkedin_post",
             variables=linkedin_vars,
             settings=settings,
@@ -469,49 +433,29 @@ def generate_artifacts(
         _s(linkedin_result.get("linkedin_post"))
     )
 
-    artifacts_payload: Dict[str, Any] = {
-        "schema_version": "1.0",
-        "toc_topics": toc_topics,
-        "toc_topics_expanded": topic_briefs,
-        "summary": summary,
-        "insights_candidates": insights_candidates,
-        "insights_final": insights_final,
-        "quotes_final": quotes_final,
-        "expert_comment": expert_comment,
-        "linkedin_post": linkedin_post,
-        "source_status": availability,
-    }
-    if cache_meta:
-        artifacts_payload["_cache"] = {**cache_meta, "key": cache_key}
-
-    try:
-        validate_schema(
-            SchemaValidateRequest(
-                schema_version="1.0", payload=artifacts_payload, schema_name="artifacts"
-            ),
-            ctx,
-        )
-        validate_evidence_references(artifacts_payload, safe_evidence, ctx)
-    except AppError as exc:
-        logger.info(
-            log_event(
-                ctx,
-                role="generator",
-                event="artifact_schema_validation_failed",
-                module=logger.name,
-                fields={"code": exc.code, "message": exc.message},
-            )
-        )
-        raise
-
-    _store_pack(
+    artifacts_payload = assemble_artifacts_payload(
+        report_id=report_id,
+        report_name=report_name,
+        doc_map=safe_doc_map,
+        evidence_packs=safe_evidence,
+        toc_topics=toc_topics,
+        summary=summary,
+        insights_candidates=insights_candidates,
+        insights_final=insights_final,
+        quotes_final=quotes_final,
+        expert_comment=expert_comment,
+        linkedin_post=linkedin_post,
+        source_status=availability,
+        ctx=ctx,
+        cache_meta={**cache_meta, "key": cache_key} if cache_meta else None,
+    )
+    store_artifacts_payload(
         analysis_store=analysis_store,
         output_dir=settings.output_dir,
         report_id=report_id,
-        pack_name="artifacts",
+        report_name=report_name,
         payload=artifacts_payload,
         ctx=ctx,
-        report_slug=report_name,
     )
 
     logger.info(
@@ -531,7 +475,238 @@ def generate_artifacts(
     return artifacts_payload
 
 
-def _call_json_model(
+def artifact_base_variables(
+    doc_map: Dict[str, Any],
+    evidence_packs: Dict[str, Any],
+) -> Dict[str, str]:
+    return {
+        "doc_map_json": _dump_json(doc_map or {}),
+        "evidence_json": _dump_json(evidence_packs or {}),
+    }
+
+
+def normalize_artifact_source_status(
+    source_status: Optional[Dict[str, Any]],
+    settings: AppSettings,
+    *,
+    has_density: bool,
+    vector_store_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    return _normalize_source_status(
+        source_status,
+        settings,
+        has_density=has_density,
+        vector_store_id=vector_store_id,
+    )
+
+
+def artifact_vector_store_enabled(
+    *, settings: AppSettings, vector_store_id: Optional[str]
+) -> bool:
+    return _resolve_artifact_vector_store_mode(
+        settings=settings, vector_store_id=vector_store_id
+    )
+
+
+def normalize_artifact_summary(value: Any) -> Dict[str, Any]:
+    return _normalize_summary(value)
+
+
+def normalize_artifact_insights(items: Any, *, prefix: str) -> List[Dict[str, Any]]:
+    return _normalize_insights(items, prefix=prefix)
+
+
+def pad_artifact_insights(
+    insights_final: List[Dict[str, Any]],
+    insights_candidates: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    return _pad_insights(insights_final, insights_candidates)
+
+
+def normalize_artifact_quotes(items: Any) -> List[Dict[str, Any]]:
+    return _normalize_quotes(items)
+
+
+def strip_artifact_inline_reference_ids(text: str) -> str:
+    return _strip_inline_reference_ids(text)
+
+
+def normalize_artifact_topics(value: Any) -> List[str]:
+    return _normalize_topics(value)
+
+
+def normalize_artifact_evidence_ids(
+    *,
+    summary: Dict[str, Any],
+    insights_candidates: List[Dict[str, Any]],
+    insights_final: List[Dict[str, Any]],
+    quotes_final: List[Dict[str, Any]],
+    doc_map: Dict[str, Any],
+    evidence_packs: Dict[str, Any],
+) -> Dict[str, int]:
+    return _normalize_artifact_evidence_ids(
+        summary=summary,
+        insights_candidates=insights_candidates,
+        insights_final=insights_final,
+        quotes_final=quotes_final,
+        doc_map=doc_map,
+        evidence_packs=evidence_packs,
+    )
+
+
+def normalize_expert_domain(categories: Optional[List[str]]) -> str:
+    return _normalize_expert_domain(categories)
+
+
+def artifact_quote_candidates(evidence_packs: Dict[str, Any]) -> List[Any]:
+    quote_candidates: list[Any] = []
+    quote_pack = evidence_packs.get("quote_candidates")
+    if isinstance(quote_pack, dict):
+        quote_candidates = quote_pack.get("quote_candidates") or []
+    elif isinstance(quote_pack, list):
+        quote_candidates = quote_pack
+    return quote_candidates
+
+
+def assemble_artifacts_payload(
+    *,
+    report_id: str,
+    report_name: Optional[str],
+    doc_map: Dict[str, Any],
+    evidence_packs: Dict[str, Any],
+    toc_topics: List[str],
+    summary: Dict[str, Any],
+    insights_candidates: List[Dict[str, Any]],
+    insights_final: List[Dict[str, Any]],
+    quotes_final: List[Dict[str, Any]],
+    expert_comment: str,
+    linkedin_post: str,
+    source_status: Dict[str, Any],
+    ctx: RunContext,
+    cache_meta: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    del report_id, report_name
+    topic_briefs = _expand_topics_with_briefs(
+        toc_topics=toc_topics,
+        doc_map=doc_map,
+        summary=summary,
+        insights_final=insights_final,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="artifact_topic_briefs_built",
+            module=logger.name,
+            fields={
+                "topic_count": len(toc_topics),
+                "brief_count": len(topic_briefs),
+                "briefs_with_summary": len(
+                    [item for item in topic_briefs if _s(item.get("summary")).strip()]
+                ),
+                "briefs_with_key_points": len(
+                    [
+                        item
+                        for item in topic_briefs
+                        if isinstance(item.get("key_points"), list)
+                        and len(item.get("key_points") or []) > 0
+                    ]
+                ),
+            },
+        )
+    )
+    evidence_id_stats = _normalize_artifact_evidence_ids(
+        summary=summary,
+        insights_candidates=insights_candidates,
+        insights_final=insights_final,
+        quotes_final=quotes_final,
+        doc_map=doc_map,
+        evidence_packs=evidence_packs,
+    )
+    if evidence_id_stats.get("normalized_count", 0) > 0:
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="artifact_evidence_ids_normalized",
+                module=logger.name,
+                fields=evidence_id_stats,
+            )
+        )
+    artifacts_payload: Dict[str, Any] = {
+        "schema_version": "1.0",
+        "toc_topics": toc_topics,
+        "toc_topics_expanded": topic_briefs,
+        "summary": summary,
+        "insights_candidates": insights_candidates,
+        "insights_final": insights_final,
+        "quotes_final": quotes_final,
+        "expert_comment": expert_comment,
+        "linkedin_post": linkedin_post,
+        "source_status": source_status,
+    }
+    if cache_meta:
+        artifacts_payload["_cache"] = dict(cache_meta)
+    try:
+        validate_schema(
+            SchemaValidateRequest(
+                schema_version="1.0",
+                payload=artifacts_payload,
+                schema_name="artifacts",
+            ),
+            ctx,
+        )
+        validate_evidence_references(artifacts_payload, evidence_packs, ctx)
+    except AppError as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="artifact_schema_validation_failed",
+                module=logger.name,
+                fields={"code": exc.code, "message": exc.message},
+            )
+        )
+        raise
+    return artifacts_payload
+
+
+def store_artifacts_payload(
+    *,
+    analysis_store,
+    output_dir: str,
+    report_id: str,
+    report_name: Optional[str],
+    payload: Dict[str, Any],
+    ctx: RunContext,
+    pack_name: str = "artifacts",
+) -> str:
+    output_path = _store_pack(
+        analysis_store=analysis_store,
+        output_dir=output_dir,
+        report_id=report_id,
+        pack_name=pack_name,
+        payload=payload,
+        ctx=ctx,
+        report_slug=report_name,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="artifact_payload_stored",
+            module=logger.name,
+            fields={
+                "report_id": report_id,
+                "pack_name": pack_name,
+                "path": output_path,
+            },
+        )
+    )
+    return output_path
+
+
+def render_artifact_json_model(
     *,
     namespace: str,
     variables: Dict[str, Any],
@@ -565,8 +740,12 @@ def _call_json_model(
             module=logger.name,
             fields={
                 "namespace": namespace,
+                "system_path": prompt_set.system.path,
+                "user_path": prompt_set.user.path,
                 "prompt_system_sha256": prompt_set.system.sha256,
                 "prompt_user_sha256": prompt_set.user.sha256,
+                "system_prompt": system_rendered.text,
+                "user_prompt": user_rendered.text,
             },
         )
     )
@@ -583,6 +762,26 @@ def _call_json_model(
                 "namespace": namespace,
                 "resolved_model": resolved_model,
                 "default_model": settings.openai_model,
+            },
+        )
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="artifact_model_request",
+            module=logger.name,
+            fields={
+                "namespace": namespace,
+                "model": resolved_model,
+                "temperature": settings.temperature,
+                "seed": settings.openai_seed,
+                "retrieval_mode": (
+                    "vector_store"
+                    if allow_vector_store and vector_store_id
+                    else "chat_json"
+                ),
+                "vector_store_id": vector_store_id or "",
             },
         )
     )
@@ -632,6 +831,8 @@ def _call_json_model(
                 "namespace": namespace,
                 "model": getattr(resp, "model", resolved_model),
                 "has_json": bool(resp.parsed_json),
+                "request_id": getattr(resp, "request_id", "") or "",
+                "raw_response": getattr(resp, "text", "") or "",
             },
         )
     )

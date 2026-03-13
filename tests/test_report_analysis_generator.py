@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import logging
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -11,6 +13,7 @@ from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestSettings
 from src.contracts.pdf_text import PdfTextExtractResponse
 from src.contracts.pdf_utils import PdfInfoResponse
+from src.contracts.regeneration import ArtifactRegenerationResponse
 from src.contracts.report_generation import (
     ReportRuntimeState,
     ReportSelectionState,
@@ -19,12 +22,13 @@ from src.contracts.report_generation import (
 from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.run_context import RunContext
 from src.contracts.taxonomy import TaxonomyExtractResponse
+from src.contracts.validation import ValidationIssue, ValidationReport
 from src.generators.report_analysis_generator import (
     VectorStoreIndexingState,
-    complete_report_analysis,
 )
 from src.generators.report_generation_dependencies import ReportGeneratorDependencies
 from src.generators.report_generation_shared import derive_title, report_slug
+from src.orchestrators.report_analysis_orchestrator import run_report_analysis
 from src.utils.errors import AppError
 
 
@@ -156,17 +160,63 @@ def _deps(**overrides) -> ReportGeneratorDependencies:
     return replace(seeded, **overrides)
 
 
+def _orchestrator_events(caplog) -> list[dict]:
+    parsed: list[dict] = []
+    for record in caplog.records:
+        try:
+            payload = json.loads(record.message)
+        except json.JSONDecodeError:
+            continue
+        if payload.get("module") == "market_lense.report_analysis_orchestrator":
+            parsed.append(payload)
+    return parsed
+
+
 def test_complete_report_analysis_falls_back_when_validation_raises(tmp_path):
     runtime = _runtime(tmp_path)
     source = _source(runtime)
     selection = _selection(runtime, source)
     stored: list[str] = []
+    regeneration_requests = []
     deps = _deps(
         generate_evidence_packs=lambda **kwargs: {
             "doc_map": {"docMap": {"title": "Doc Title", "publisher": "Doc Publisher"}}
         },
-        generate_artifacts=lambda **kwargs: {"summary": {"tldr": "summary"}},
+        generate_artifacts=lambda **kwargs: {
+            "schema_version": "1.0",
+            "toc_topics": ["Topic"],
+            "summary": {
+                "tldr": "summary",
+                "executive_summary": "Summary",
+                "claim_evidence_map": [],
+            },
+            "insights_candidates": [],
+            "insights_final": [],
+            "quotes_final": [],
+            "expert_comment": "",
+            "linkedin_post": "",
+            "source_status": {"schema_version": "1.0", "not_available": False, "reason": ""},
+        },
         run_validation=lambda *args, **kwargs: (_ for _ in ()).throw(ValueError("boom")),
+        regenerate_artifacts=lambda request: (
+            regeneration_requests.append(request)
+            or ArtifactRegenerationResponse(
+                updated_artifacts=request.current_artifacts,
+                regenerated_sections=[
+                    "summary",
+                    "insights_candidates",
+                    "insights_final",
+                    "quotes",
+                    "expert_comment",
+                    "linkedin_post",
+                ],
+                prompt_namespaces=[],
+                artifacts_path=str(tmp_path / "out" / "artifacts.json"),
+                artifacts_snapshot_path=str(
+                    tmp_path / "out" / "artifacts_regen_attempt_1.json"
+                ),
+            )
+        ),
         analysis_store_pack=lambda req, ctx: (
             stored.append(req.pack_name)
             or SimpleNamespace(
@@ -175,7 +225,7 @@ def test_complete_report_analysis_falls_back_when_validation_raises(tmp_path):
         ),
     )
 
-    state = complete_report_analysis(
+    state = run_report_analysis(
         runtime,
         source,
         selection,
@@ -193,7 +243,13 @@ def test_complete_report_analysis_falls_back_when_validation_raises(tmp_path):
     assert state.payload.publisher == "Doc Publisher"
     assert state.validation_report is not None
     assert state.validation_report.status == "fail"
+    assert len(regeneration_requests) == 1
+    assert regeneration_requests[0].plan.mode == "broad"
+    assert state.regeneration_loop_state is not None
+    assert state.regeneration_loop_state.attempt_count == 1
+    assert state.regeneration_loop_state.final_status == "skipped"
     assert "validation" in state.evidence_paths
+    assert "validation_regen_attempt_1" in state.evidence_paths
     assert "analysis_vector_store" in stored
 
 
@@ -213,7 +269,7 @@ def test_complete_report_analysis_surfaces_doc_map_empty(tmp_path, assert_app_er
     )
 
     with pytest.raises(AppError) as exc_info:
-        complete_report_analysis(
+        run_report_analysis(
             runtime,
             source,
             selection,
@@ -234,3 +290,298 @@ def test_complete_report_analysis_surfaces_doc_map_empty(tmp_path, assert_app_er
         severity="error",
     )
     assert exc_info.value.context["sections_count"] == 0
+
+
+def test_run_report_analysis_regenerates_failed_section_until_pass(
+    tmp_path,
+    caplog,
+    assert_logs_have_required_fields,
+):
+    caplog.set_level(logging.INFO, logger="market_lense.report_analysis_orchestrator")
+    runtime = _runtime(tmp_path)
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    validation_calls: list[str] = []
+    regeneration_requests = []
+
+    def _run_validation(req, settings, ctx, *, pack_name, report_name, md5):
+        del settings, ctx, report_name, md5
+        validation_calls.append(f"{pack_name}:{req.artifacts.get('summary', {}).get('tldr', '')}")
+        if len(validation_calls) == 1:
+            return ValidationReport(
+                schema_version="1.1",
+                status="fail",
+                issues=[
+                    ValidationIssue(
+                        schema_version="1.0",
+                        message="[grounding] Unsupported summary claim",
+                        severity="error",
+                        affected_section="executive_summary",
+                    )
+                ],
+                severity="error",
+                source_path=str(tmp_path / "out" / "validation.json"),
+            )
+        return ValidationReport(
+            schema_version="1.1",
+            status="pass",
+            issues=[],
+            severity="pass",
+            source_path=str(tmp_path / "out" / "validation.json"),
+        )
+
+    def _regenerate(request):
+        regeneration_requests.append(request)
+        return ArtifactRegenerationResponse(
+            updated_artifacts={
+                "schema_version": "1.0",
+                "toc_topics": ["Topic"],
+                "summary": {
+                    "tldr": "repaired",
+                    "executive_summary": "Grounded summary",
+                    "claim_evidence_map": [],
+                },
+                "insights_candidates": [],
+                "insights_final": [],
+                "quotes_final": [],
+                "expert_comment": "",
+                "linkedin_post": "",
+                "source_status": {"schema_version": "1.0", "not_available": False, "reason": ""},
+            },
+            regenerated_sections=["summary"],
+            prompt_namespaces=["report_vs/artifacts/regenerate/summary"],
+            artifacts_path=str(tmp_path / "out" / "artifacts.json"),
+            artifacts_snapshot_path=str(tmp_path / "out" / "artifacts_regen_attempt_1.json"),
+        )
+
+    deps = _deps(
+        generate_evidence_packs=lambda **kwargs: {
+            "doc_map": {"docMap": {"title": "Doc Title", "publisher": "Doc Publisher"}}
+        },
+        generate_artifacts=lambda **kwargs: {
+            "schema_version": "1.0",
+            "toc_topics": ["Topic"],
+            "summary": {
+                "tldr": "broken",
+                "executive_summary": "Broken summary",
+                "claim_evidence_map": [],
+            },
+            "insights_candidates": [],
+            "insights_final": [],
+            "quotes_final": [],
+            "expert_comment": "",
+            "linkedin_post": "",
+            "source_status": {"schema_version": "1.0", "not_available": False, "reason": ""},
+        },
+        run_validation=_run_validation,
+        regenerate_artifacts=_regenerate,
+    )
+
+    state = run_report_analysis(
+        runtime,
+        source,
+        selection,
+        VectorStoreIndexingState(
+            vector_store_id="vs_1",
+            openai_file_id="file_1",
+            vector_store_status="indexing",
+            indexed_at_utc=None,
+            last_error=None,
+        ),
+        deps,
+    )
+
+    assert state.validation_report is not None
+    assert state.validation_report.status == "pass"
+    assert state.regeneration_loop_state is not None
+    assert state.regeneration_loop_state.attempt_count == 1
+    assert state.regeneration_loop_state.final_status == "pass"
+    assert state.regeneration_attempts[0].regenerated_sections == ["summary"]
+    assert regeneration_requests[0].plan.mode == "targeted"
+    assert regeneration_requests[0].plan.targets[0].target_section == "summary"
+    assert "artifacts_regen_attempt_1" in state.evidence_paths
+    assert "validation_regen_attempt_1" in state.evidence_paths
+
+    events = _orchestrator_events(caplog)
+    regen_events = [
+        event
+        for event in events
+        if str(event.get("event", "")).startswith("validation_regen_")
+    ]
+    assert_logs_have_required_fields(regen_events)
+    assert {event["event"] for event in regen_events} >= {
+        "validation_regen_loop_start",
+        "validation_regen_plan_built",
+        "validation_regen_attempt_start",
+        "validation_regen_attempt_complete",
+        "validation_regen_pass",
+    }
+
+
+def test_run_report_analysis_stops_after_regeneration_max_attempts(tmp_path):
+    runtime = replace(
+        _runtime(tmp_path),
+        settings=replace(_runtime(tmp_path).settings, validation_regeneration_max_attempts=3),
+    )
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    attempts = []
+
+    def _run_validation(req, settings, ctx, *, pack_name, report_name, md5):
+        del req, settings, ctx, pack_name, report_name, md5
+        return ValidationReport(
+            schema_version="1.1",
+            status="fail",
+            issues=[
+                ValidationIssue(
+                    schema_version="1.0",
+                    message="[metrics] Unsupported insight value",
+                    severity="error",
+                    affected_section="insights:insight-1",
+                )
+            ],
+            severity="error",
+            source_path=str(tmp_path / "out" / "validation.json"),
+        )
+
+    def _regenerate(request):
+        attempts.append(request.attempt_index)
+        return ArtifactRegenerationResponse(
+            updated_artifacts=request.current_artifacts,
+            regenerated_sections=["insights_candidates", "insights_final"],
+            prompt_namespaces=[
+                "report_vs/artifacts/regenerate/insights_candidates",
+                "report_vs/artifacts/regenerate/insights_final",
+            ],
+            artifacts_path=str(tmp_path / "out" / "artifacts.json"),
+            artifacts_snapshot_path=str(
+                tmp_path / "out" / f"artifacts_regen_attempt_{request.attempt_index}.json"
+            ),
+        )
+
+    deps = _deps(
+        generate_evidence_packs=lambda **kwargs: {"doc_map": {}},
+        generate_artifacts=lambda **kwargs: {
+            "schema_version": "1.0",
+            "toc_topics": ["Topic"],
+            "summary": {"tldr": "x", "executive_summary": "x", "claim_evidence_map": []},
+            "insights_candidates": [{"id": "insight-1", "text": "x", "evidence_id": "e1", "evidence": "", "metric": {}, "pages": [], "score": 0.0}],
+            "insights_final": [{"id": "insight-1", "text": "x", "evidence_id": "e1", "evidence": "", "metric": {}, "pages": []}],
+            "quotes_final": [],
+            "expert_comment": "",
+            "linkedin_post": "",
+            "source_status": {"schema_version": "1.0", "not_available": False, "reason": ""},
+        },
+        run_validation=_run_validation,
+        regenerate_artifacts=_regenerate,
+    )
+
+    state = run_report_analysis(
+        runtime,
+        source,
+        selection,
+        VectorStoreIndexingState(
+            vector_store_id="vs_1",
+            openai_file_id="file_1",
+            vector_store_status="completed",
+            indexed_at_utc="2026-01-01T00:00:00Z",
+            last_error=None,
+        ),
+        deps,
+    )
+
+    assert state.validation_report is not None
+    assert state.validation_report.status == "fail"
+    assert attempts == [1, 2, 3]
+    assert state.regeneration_loop_state is not None
+    assert state.regeneration_loop_state.max_reached is True
+    assert state.regeneration_loop_state.attempt_count == 3
+
+
+def test_run_report_analysis_uses_one_broad_retry_for_unmappable_failures(tmp_path):
+    runtime = _runtime(tmp_path)
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    requests = []
+    validation_calls = {"count": 0}
+
+    def _run_validation(req, settings, ctx, *, pack_name, report_name, md5):
+        del req, settings, ctx, pack_name, report_name, md5
+        validation_calls["count"] += 1
+        return ValidationReport(
+            schema_version="1.1",
+            status="fail",
+            issues=[
+                ValidationIssue(
+                    schema_version="1.0",
+                    message="[semantic] Global semantic mismatch",
+                    severity="error",
+                    affected_section="semantic",
+                )
+            ],
+            severity="error",
+            source_path=str(tmp_path / "out" / "validation.json"),
+        )
+
+    def _regenerate(request):
+        requests.append(request)
+        return ArtifactRegenerationResponse(
+            updated_artifacts=request.current_artifacts,
+            regenerated_sections=[
+                "summary",
+                "insights_candidates",
+                "insights_final",
+                "quotes",
+                "expert_comment",
+                "linkedin_post",
+            ],
+            prompt_namespaces=[],
+            artifacts_path=str(tmp_path / "out" / "artifacts.json"),
+            artifacts_snapshot_path=str(tmp_path / "out" / "artifacts_regen_attempt_1.json"),
+        )
+
+    deps = _deps(
+        generate_evidence_packs=lambda **kwargs: {"doc_map": {}},
+        generate_artifacts=lambda **kwargs: {
+            "schema_version": "1.0",
+            "toc_topics": ["Topic"],
+            "summary": {"tldr": "x", "executive_summary": "x", "claim_evidence_map": []},
+            "insights_candidates": [],
+            "insights_final": [],
+            "quotes_final": [],
+            "expert_comment": "",
+            "linkedin_post": "",
+            "source_status": {"schema_version": "1.0", "not_available": False, "reason": ""},
+        },
+        run_validation=_run_validation,
+        regenerate_artifacts=_regenerate,
+    )
+
+    state = run_report_analysis(
+        runtime,
+        source,
+        selection,
+        VectorStoreIndexingState(
+            vector_store_id="vs_1",
+            openai_file_id="file_1",
+            vector_store_status="completed",
+            indexed_at_utc="2026-01-01T00:00:00Z",
+            last_error=None,
+        ),
+        deps,
+    )
+
+    assert validation_calls["count"] == 2
+    assert len(requests) == 1
+    assert requests[0].plan.mode == "broad"
+    assert [target.target_section for target in requests[0].plan.targets] == [
+        "summary",
+        "insights_bundle",
+        "quotes",
+        "expert_comment",
+        "linkedin_post",
+    ]
+    assert state.validation_report is not None
+    assert state.validation_report.status == "fail"
+    assert state.regeneration_loop_state is not None
+    assert state.regeneration_loop_state.final_status == "skipped"

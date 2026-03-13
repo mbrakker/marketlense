@@ -300,6 +300,46 @@ class TestConfigService(unittest.TestCase):
                 self.assertEqual(2, settings.evidence_pack_doc_map_max_attempts)
                 self.assertEqual(0, settings.evidence_pack_doc_map_retry_delay_ms)
 
+    def test_validation_regeneration_attempts_default_config_and_env_override(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_analysis=False)
+            with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
+                settings = load_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
+                )
+                self.assertEqual(3, settings.validation_regeneration_max_attempts)
+
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["ingest"]["validation"] = {"regeneration_max_attempts": 5}
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
+            with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
+                settings = load_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
+                )
+                self.assertEqual(5, settings.validation_regeneration_max_attempts)
+
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["ingest"]["validation"] = {}
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
+            env = {
+                "OPENAI_API_KEY": "key",
+                "VALIDATION_REGENERATION_MAX_ATTEMPTS": "0",
+            }
+            with patch.dict(os.environ, env, clear=True):
+                settings = load_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
+                )
+                self.assertEqual(1, settings.validation_regeneration_max_attempts)
+
     def test_rank_and_crop_refine_settings_load(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(tmp_dir, include_analysis=False)

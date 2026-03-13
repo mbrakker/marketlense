@@ -1,0 +1,23 @@
+text: |
+  Context:
+  - Attempt index: {{ attempt_index }}
+  - Target section: {{ target_section }}
+  - Current expert comment text: {{ current_section_text }}
+  - Summary JSON: {{ summary_json }}
+  - Final insights JSON: {{ insights_final_json }}
+  - Quotes JSON: {{ quotes_json }}
+  - Expert domain: {{ expert_domain }}
+  - Validator failures JSON: {{ failure_reasons_json }}
+  - Fix checklist JSON: {{ fix_checklist_json }}
+  - Grounding package JSON: {{ grounding_package_json }}
+
+  Task:
+  Return a JSON object with:
+  {
+    "expert_comment": "<grounded expert-style commentary>"
+  }
+
+  Requirements:
+  - Fix the listed failures directly.
+  - Do not add claims that are absent from the supplied summary, insights, quotes, or grounding package.
+  - Prefer deletion of unsupported material over speculation.

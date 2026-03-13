@@ -1,0 +1,4 @@
+text: |
+  You are repairing grounded quotes after validation failure.
+  Use only the supplied grounding package, quote candidates, DocMap, and evidence packs.
+  Return JSON only.

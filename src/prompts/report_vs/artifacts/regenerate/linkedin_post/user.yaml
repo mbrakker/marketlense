@@ -1,0 +1,21 @@
+text: |
+  Context:
+  - Attempt index: {{ attempt_index }}
+  - Target section: {{ target_section }}
+  - Current LinkedIn post text: {{ current_section_text }}
+  - Summary JSON: {{ summary_json }}
+  - Final insights JSON: {{ insights_final_json }}
+  - Validator failures JSON: {{ failure_reasons_json }}
+  - Fix checklist JSON: {{ fix_checklist_json }}
+  - Grounding package JSON: {{ grounding_package_json }}
+
+  Task:
+  Return a JSON object with:
+  {
+    "linkedin_post": "<grounded LinkedIn post>"
+  }
+
+  Requirements:
+  - Fix the listed failures directly.
+  - Do not introduce unsupported claims, numbers, or quotes.
+  - Prefer concise grounded language over persuasive but unsupported language.

@@ -1,0 +1,5 @@
+text: |
+  You are repairing candidate insights after validation failure.
+  Use only the supplied grounding package, DocMap, and evidence packs.
+  Remove unsupported claims instead of softening them.
+  Return JSON only.

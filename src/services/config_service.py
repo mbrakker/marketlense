@@ -610,6 +610,18 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     validation_data_gap_policy = (
         data_gap_policy_raw if data_gap_policy_raw in {"warn", "fail"} else "warn"
     )
+    validation_regeneration_max_attempts_raw = validation_cfg.get(
+        "regeneration_max_attempts"
+    )
+    if _is_missing(validation_regeneration_max_attempts_raw):
+        validation_regeneration_max_attempts_raw = _env_value(
+            "VALIDATION_REGENERATION_MAX_ATTEMPTS"
+        )
+    validation_regeneration_max_attempts = _to_int(
+        validation_regeneration_max_attempts_raw, 3
+    )
+    if validation_regeneration_max_attempts < 1:
+        validation_regeneration_max_attempts = 1
 
     output_dir = need(paths, "output_dir", "paths.output_dir", "OUTPUT_DIR")
     cache_dir = need(paths, "cache_dir", "paths.cache_dir", "CACHE_DIR")
@@ -764,6 +776,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         model_pricing=model_pricing,
         html_tag_acronyms=html_tag_acronyms,
         validation_data_gap_policy=validation_data_gap_policy,
+        validation_regeneration_max_attempts=validation_regeneration_max_attempts,
     )
 
     if resolver.missing:
@@ -856,6 +869,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
                 "html_tag_acronyms": settings.html_tag_acronyms,
                 "html_tag_acronyms_count": len(settings.html_tag_acronyms),
                 "validation_data_gap_policy": settings.validation_data_gap_policy,
+                "validation_regeneration_max_attempts": settings.validation_regeneration_max_attempts,
             },
         )
     )

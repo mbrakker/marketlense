@@ -1,0 +1,27 @@
+text: |
+  Context:
+  - Attempt index: {{ attempt_index }}
+  - Target section: {{ target_section }}
+  - Current candidate insights JSON: {{ current_section_json }}
+  - Validator failures JSON: {{ failure_reasons_json }}
+  - Fix checklist JSON: {{ fix_checklist_json }}
+  - Grounding package JSON: {{ grounding_package_json }}
+  - DocMap JSON: {{ doc_map_json }}
+  - Evidence packs JSON: {{ evidence_json }}
+
+  Task:
+  Return a JSON object with `insights_candidates` as an array of grounded candidate insights.
+  Each item must include:
+  - id
+  - text
+  - evidence_id
+  - evidence
+  - metric
+  - pages
+  - score
+
+  Requirements:
+  - Repair or remove unsupported items implicated by the failures.
+  - Keep each `evidence_id` to a single existing ID or an empty string.
+  - Keep each candidate tightly grounded to the supplied evidence.
+  - Do not invent metrics or page numbers.

@@ -22,7 +22,6 @@ from src.contracts.state import StateGetRequest
 from src.contracts.taxonomy import TaxonomyExtractResponse
 from src.contracts.validation import ValidationReport
 from src.generators import report_analysis_generator as rag
-from src.generators import report_generator as rg
 from src.generators.report_generation_dependencies import ReportGeneratorDependencies
 from src.generators.report_generation_shared import derive_title, report_slug
 from src.orchestrators import ingest_orchestrator as orch
@@ -30,6 +29,7 @@ from src.orchestrators.ingest_file_orchestrator import (
     IngestFileDependencies,
     run_ingest_file,
 )
+from src.orchestrators import report_generation_orchestrator as rgo
 from src.services.file_service import file_stat
 from src.services.state_service import get as state_get, record as state_record
 from src.utils.errors import AppError
@@ -680,7 +680,7 @@ def test_generate_report_vector_store_with_validation(
         ),
     )
 
-    outcome = rg.generate_report(
+    outcome = rgo.run_report_generation(
         file,
         str(pdf_path),
         settings,
@@ -797,7 +797,7 @@ def test_generate_report_doc_map_empty_halts(
         upsert_report_metadata=_unexpected,
     )
 
-    outcome = rg.generate_report(
+    outcome = rgo.run_report_generation(
         file,
         str(pdf_path),
         settings,

@@ -1,0 +1,21 @@
+text: |
+  Context:
+  - Attempt index: {{ attempt_index }}
+  - Target section: {{ target_section }}
+  - Current final insights JSON: {{ current_section_json }}
+  - Updated candidate insights JSON: {{ insights_candidates_json }}
+  - Validator failures JSON: {{ failure_reasons_json }}
+  - Fix checklist JSON: {{ fix_checklist_json }}
+  - Grounding package JSON: {{ grounding_package_json }}
+  - DocMap JSON: {{ doc_map_json }}
+  - Evidence packs JSON: {{ evidence_json }}
+
+  Task:
+  Return a JSON object with `insights_final` as an array of exactly five non-overlapping insights.
+  Each item must keep the candidate shape: id, text, evidence_id, evidence, metric, pages.
+
+  Requirements:
+  - Prefer repaired candidates that directly resolve the listed failures.
+  - Keep `evidence_id` to a single existing ID or an empty string.
+  - Remove unsupported wording rather than hedge it.
+  - Do not output unsupported metrics, quotes, or conclusions.

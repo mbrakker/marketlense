@@ -194,6 +194,67 @@ def test_publish_prefers_reports_db_file_id_mapping(
     assert "Drive fileId: file_from_db" in post_call.json_data["content"]
 
 
+def test_publish_uses_canonical_validation_json_over_regen_snapshots(
+    publish_settings_factory, run_context, wordpress_http
+) -> None:
+    settings = publish_settings_factory(validation_policy="block")
+    _write_html(settings.output_dir, "report.html", "Drive fileId: file123")
+    report_analysis_dir = Path(settings.output_dir) / "report" / "report_analysis"
+    report_analysis_dir.mkdir(parents=True, exist_ok=True)
+    (report_analysis_dir / "validation.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "1.1",
+                "status": "pass",
+                "severity": "pass",
+                "issues": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (report_analysis_dir / "validation_regen_attempt_1.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "1.1",
+                "status": "fail",
+                "severity": "error",
+                "issues": [
+                    {
+                        "schema_version": "1.0",
+                        "message": "stale attempt failure",
+                        "severity": "error",
+                        "affected_section": "summary",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    _record_processed(settings.state_db, "file123", run_context)
+    wordpress_http.add_json(
+        "GET",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=200,
+        payload=[],
+    )
+    wordpress_http.add_json(
+        "POST",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=201,
+        payload={"id": 88, "link": "https://example.com/post/88", "status": "publish"},
+    )
+
+    results = orch.run_publish(settings, limit=1)
+
+    assert len(results) == 1
+    assert results[0].status == "published"
+    assert results[0].validation_status == "pass"
+    assert results[0].validation_issues == []
+    assert len(
+        wordpress_http.calls_for("POST", "https://example.com/wp-json/wp/v2/ml_report")
+    ) == 1
+
+
 def test_publish_retries_retryable_app_error(
     publish_settings_factory,
     run_context,

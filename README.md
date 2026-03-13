@@ -16,6 +16,7 @@ Key traits:
 - Orchestrator that controls sequencing, retries, and state (including publishing).
 - Structured logging with run/task/span identifiers.
 - Built-in validation: semantic checks plus LLM grounding with persisted reports and publish-time policy controls.
+- Validation-driven targeted regeneration: after a failed validation pass, the analysis orchestrator can regenerate only the mapped failing artifact families, re-run validation, and keep the latest canonical `validation.json` for downstream render/publish policy.
 - Text extractability gate: before analysis, the pipeline samples deterministic pages and aborts early with `pdf_text_unextractable` when none contain extractable text.
 - DocMap validation gate: if the doc_map evidence pack is empty (no sections/title/doc_id/summary), processing halts for that PDF; the orchestrator logs a detailed summary and stores it in the state DB.
 - Cached execution: PDF info/contents/text extraction are cached by md5, and analysis outputs (evidence packs, artifacts, validation, HTML, crop-refine decisions) are cached by md5 + prompt/template hashes to skip redundant work.
@@ -69,6 +70,8 @@ Current control-plane modules in `src/orchestrators/` include:
 - `ingest_orchestrator.py`: batch-level ingest control (locking, DB access checks, worker fanout, cursor updates).
 - `ingest_file_orchestrator.py`: single-file ingest execution (cache/download/EOF checks, report pipeline call, state writes).
 - `report_pipeline_orchestrator.py`: report-generation pipeline boundary with retry-aware control around report generation.
+- `report_generation_orchestrator.py`: source -> selection -> analysis -> render sequencing for a single report.
+- `report_analysis_orchestrator.py`: vector-store analysis control including taxonomy/evidence/artifacts/validation and the bounded validation-regeneration loop.
 - `publish_orchestrator.py`: publish workflow and publish-state transitions.
 - `publish_queue_orchestrator.py`: publish queue snapshot assembly for UI/ops surfaces.
 - `cost_reporting_orchestrator.py`: filtered cost report + rollup orchestration.
@@ -142,7 +145,7 @@ For dev wiring, use `src.services.config_service.build_ingest_settings` with `In
 Key fields and env overrides:
 
 - Paths: `paths.output_dir` (`OUTPUT_DIR`, default `./out`), `paths.cache_dir` (`CACHE_DIR`, default `./cache`), `paths.state_db` (`STATE_DB`), `paths.reports_db` (`REPORTS_DB`), `paths.category_mappings` (defaults to `src/config/category-mappings.yaml`), `paths.html_tag_acronyms` (defaults to `src/config/html-tag-acronyms.yaml`).
-- Ingest: `ingest.google_sa_path` (`GOOGLE_SERVICE_ACCOUNT_JSON`), `ingest.gdrive_folder_id` (`GDRIVE_FOLDER_ID`), `ingest.openai_model` (`OPENAI_MODEL`), `ingest.batch_limit` (`BATCH_LIMIT`, default 20), `ingest.worker_limit` (`INGEST_WORKER_LIMIT`, default 2), `ingest.report_worker_limit` (`INGEST_REPORT_WORKER_LIMIT`, default 2), `ingest.temperature` (`TEMPERATURE`, default 1.0), `ingest.timeout_seconds` (`OPENAI_TIMEOUT_SECONDS`, default 600), `ingest.lock_ttl_seconds` (`INGEST_LOCK_TTL_SECONDS`, default 7200), `ingest.contents_page.*` (keywords, max_pages, min_headings, render_dpi, preview_enabled), `ingest.evidence_packs.parallel_workers` (`EVIDENCE_PACK_PARALLEL_WORKERS`, default 3), `ingest.evidence_packs.global_max_in_flight` (`EVIDENCE_PACK_GLOBAL_MAX_IN_FLIGHT`, default 2), `ingest.evidence_packs.global_min_interval_ms` (`EVIDENCE_PACK_GLOBAL_MIN_INTERVAL_MS`, default 250), `ingest.evidence_packs.doc_map_max_attempts` (`EVIDENCE_PACK_DOC_MAP_MAX_ATTEMPTS`, default 3), `ingest.evidence_packs.doc_map_retry_delay_ms` (`EVIDENCE_PACK_DOC_MAP_RETRY_DELAY_MS`, default 500), `ingest.evidence_packs.registry` (`EVIDENCE_PACK_REGISTRY`, comma-separated), `ingest.evidence_packs.enable_new_variety_packs` (`EVIDENCE_PACK_ENABLE_NEW_VARIETY_PACKS`, default `false`), `ingest.artifacts.parallel_workers` (`ARTIFACT_PARALLEL_WORKERS`, default 4), `ingest.artifacts.global_max_in_flight` (`ARTIFACT_GLOBAL_MAX_IN_FLIGHT`, default 2), `ingest.artifacts.global_min_interval_ms` (`ARTIFACT_GLOBAL_MIN_INTERVAL_MS`, default 250).
+- Ingest: `ingest.google_sa_path` (`GOOGLE_SERVICE_ACCOUNT_JSON`), `ingest.gdrive_folder_id` (`GDRIVE_FOLDER_ID`), `ingest.openai_model` (`OPENAI_MODEL`), `ingest.batch_limit` (`BATCH_LIMIT`, default 20), `ingest.worker_limit` (`INGEST_WORKER_LIMIT`, default 2), `ingest.report_worker_limit` (`INGEST_REPORT_WORKER_LIMIT`, default 2), `ingest.temperature` (`TEMPERATURE`, default 1.0), `ingest.timeout_seconds` (`OPENAI_TIMEOUT_SECONDS`, default 600), `ingest.lock_ttl_seconds` (`INGEST_LOCK_TTL_SECONDS`, default 7200), `ingest.contents_page.*` (keywords, max_pages, min_headings, render_dpi, preview_enabled), `ingest.evidence_packs.parallel_workers` (`EVIDENCE_PACK_PARALLEL_WORKERS`, default 3), `ingest.evidence_packs.global_max_in_flight` (`EVIDENCE_PACK_GLOBAL_MAX_IN_FLIGHT`, default 2), `ingest.evidence_packs.global_min_interval_ms` (`EVIDENCE_PACK_GLOBAL_MIN_INTERVAL_MS`, default 250), `ingest.evidence_packs.doc_map_max_attempts` (`EVIDENCE_PACK_DOC_MAP_MAX_ATTEMPTS`, default 3), `ingest.evidence_packs.doc_map_retry_delay_ms` (`EVIDENCE_PACK_DOC_MAP_RETRY_DELAY_MS`, default 500), `ingest.evidence_packs.registry` (`EVIDENCE_PACK_REGISTRY`, comma-separated), `ingest.evidence_packs.enable_new_variety_packs` (`EVIDENCE_PACK_ENABLE_NEW_VARIETY_PACKS`, default `false`), `ingest.artifacts.parallel_workers` (`ARTIFACT_PARALLEL_WORKERS`, default 4), `ingest.artifacts.global_max_in_flight` (`ARTIFACT_GLOBAL_MAX_IN_FLIGHT`, default 2), `ingest.artifacts.global_min_interval_ms` (`ARTIFACT_GLOBAL_MIN_INTERVAL_MS`, default 250), `ingest.validation.regeneration_max_attempts` (`VALIDATION_REGENERATION_MAX_ATTEMPTS`, default `3`, minimum `1`).
 - Publish: `publish.wp.site_url` (`WP_SITE_URL`), `publish.wp.username` (`WP_USERNAME`), `publish.wp.post_status` (`WP_POST_STATUS`, default `publish`), `publish.wp.post_type` (`WP_POST_TYPE`, fallback default `ml_report`; this repo currently sets `posts` in YAML), `publish.wp.ssl_verify` (`WP_SSL_VERIFY`, default `true`), `publish.wp.ca_bundle_path` (`WP_CA_BUNDLE_PATH`, optional CA bundle for self-signed/private certs), `publish.validation.policy` (`PUBLISH_VALIDATION_POLICY`, default `block`).
 - This repo currently publishes into core WordPress posts with `publish.wp.post_type=posts`. The bundled WordPress plugin now treats digest posts with a recovered digest contract (`ml_is_digest=1` and, when available, `ml_file_id`) as first-class report content across archive/home surfaces, so report cards and intelligence modules still work even when the underlying post type is `post`.
 - Ranking/crop refinement: `rank.max_candidates`, `rank.selected_max` (default `5`), `rank.min_overall_score`, `rank.min_quality_score`, `rank.min_insight_score`, `rank.min_data_score`, `rank.crop_refine_enabled`, `rank.crop_refine_mode` (`adaptive|always|off`), `rank.crop_refine_page_dpi`, `rank.crop_refine_temperature`, `rank.crop_refine_timeout_seconds` (defaults to `rank.timeout_seconds` when omitted).
@@ -160,7 +163,7 @@ Per-step model selection (new):
 - Validation grounding retrieval mode: `analysis.validation_grounding_use_vector_store` (`VALIDATION_GROUNDING_USE_VECTOR_STORE`, default `false`) controls whether grounding checks use vector-store retrieval. Default is closed-context JSON chat; set to `true` to restore legacy vector retrieval behavior.
 - Strict schema validation: `analysis.strict_schema_validation` (`STRICT_SCHEMA_VALIDATION`, default `true`) enables hard-fail schema enforcement for evidence/docpack payloads.
 - Cost tracking: `analysis.cost_ledger_path` (`COST_LEDGER_PATH`, default `./out/cost-ledger.jsonl`), `cost.daily_path` (default `./out/cost-daily.json`), `cost.pricing` (per-model pricing map used by `utils.costing`).
-- Validation: `ingest.validation.data_gap_policy` (default `warn`) controls whether missing evidence/text gaps downgrade errors to warnings; `publish.validation.policy` (`PUBLISH_VALIDATION_POLICY`, default `block`; set to `warn` to allow publish with issues).
+- Validation: `ingest.validation.data_gap_policy` (default `warn`) controls whether missing evidence/text gaps downgrade errors to warnings; `ingest.validation.regeneration_max_attempts` bounds post-validation regeneration passes and does not count the initial generation/validation pass; `publish.validation.policy` (`PUBLISH_VALIDATION_POLICY`, default `block`; set to `warn` to allow publish with issues).
 - Taxonomy extraction: set `openai_models.report_vs/taxonomy` to override the tag/region/time period extractor.
 - Cover images: `paths.cover_styles` points to `src/config/cover-styles.yaml` (defaults to that path). Fonts are local files; the default config uses `templates/GOTHICB.TTF` for both regular/bold. Ensure the font file exists on the host; otherwise cover rendering will fail with `cover_font_invalid`. Background image is optional; leave blank for a solid background.
 
@@ -182,6 +185,7 @@ Prompt locations:
 
 - Vector store evidence packs: `src/prompts/report_vs/**` (`doc_map/`, `evidence_packs/{scope,methods,findings,limitations,quote_candidates,key_metrics,risk_register,recommendations,contradictions}/`)
 - Artifact generation: `src/prompts/report_vs/artifacts/**` (toc, summary, insights candidates/final, quotes, expert comment, LinkedIn post)
+- Artifact regeneration: `src/prompts/report_vs/artifacts/regenerate/**` (summary, insights_candidates, insights_final, quotes, expert_comment, linkedin_post)
 - Taxonomy extraction: `src/prompts/report_vs/taxonomy/`
 
 Prompts are YAML (system/user), hashed and logged by `src/services/prompt_service.py`.
@@ -229,12 +233,12 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
    - A separate ingest cursor (`last_successful_ingest_utc`) is recorded on successful runs and used to filter subsequent Drive listings.
 
 6. **Report generation (per file)**
-   - `src/orchestrators/report_pipeline_orchestrator.py` controls report-generation retries and delegates domain generation to `src/generators/report_generator.py`.
-   - `src/generators/report_generator.py` is now a thin sequencer over four phase generators plus shared contracts/dependency wiring:
+   - `src/orchestrators/report_pipeline_orchestrator.py` controls report-generation retries and delegates the actual report workflow to `src/orchestrators/report_generation_orchestrator.py`.
+   - `src/orchestrators/report_generation_orchestrator.py` is the per-report control plane and sequences source, selection, analysis, and render phases:
      - `src/contracts/report_generation.py`: typed handoff contracts (`ReportRuntimeState`, `ReportSourceState`, `ReportSelectionState`, `ReportAnalysisState`).
      - `src/generators/report_source_generator.py`: PDF context bootstrap, md5-backed PDF info/contents/text caches, density/extractability checks, and base payload seeding.
      - `src/generators/report_selection_generator.py`: figure extraction, candidate prefilter/ranking, crop refinement, strict crops, and figure-gallery fallback selection.
-     - `src/generators/report_analysis_generator.py`: vector-store lifecycle, taxonomy/category resolution, evidence packs, artifacts, validation, and analysis snapshot persistence.
+     - `src/orchestrators/report_analysis_orchestrator.py`: vector-store lifecycle coordination, taxonomy/category resolution, evidence packs, artifacts, validation, validation-regeneration looping, and analysis snapshot persistence.
      - `src/generators/report_render_generator.py`: preview rendering, metadata DB readback, HTML cache/render, cover generation, and final `IngestOutcome` assembly.
      - Optional within-file parallelism still uses `ingest.report_worker_limit` to overlap PDF info/contents/text extraction, figure vs candidate extraction, and taxonomy vs evidence generation when enabled (default `2`).
      - **PDF info**: `pdf_service.extract_pdf_info` captures page count and sanitized PDF metadata for persistence (cached by md5 under `cache_dir/pdf_cache/`).
@@ -249,6 +253,7 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
        - After indexing is ready, taxonomy/category resolution and evidence-pack generation run concurrently when `ingest.report_worker_limit > 1` (serial when `= 1`).
       - Evidence packs are generated via `src/generators/evidence_pack_generator.py`, which now stays as the orchestration entrypoint while per-pack normalization/metadata live under `src/generators/evidence_packs/*.py`. The config-driven registry (`ingest.evidence_packs.registry`) and optional variety expansion (`ingest.evidence_packs.enable_new_variety_packs`) cover `doc_map`, `scope`, `methods`, `findings`, `limitations`, `quote_candidates`, and optional `key_metrics`, `risk_register`, `recommendations`, `contradictions`. `doc_map` runs first as a hard gate; remaining packs run in parallel (`ingest.evidence_packs.parallel_workers`). Global evidence-pack rate limiting is applied at the orchestrator boundary (`src/orchestrators/report_pipeline_orchestrator.py`) using `ingest.evidence_packs.global_max_in_flight` + `ingest.evidence_packs.global_min_interval_ms`.
       - Artifacts are generated via `src/generators/artifact_generator.py` using a dependency-aware parallel DAG: `toc` + `summary` + `insights_candidates` + `quotes` in parallel, then `insights_final`, then `expert_comment` + `linkedin_post` in parallel. Independent steps use `ingest.artifacts.parallel_workers`. Global artifact rate limiting is applied at the orchestrator boundary (`src/orchestrators/report_pipeline_orchestrator.py`) using `ingest.artifacts.global_max_in_flight` + `ingest.artifacts.global_min_interval_ms`. By default these artifact model calls run closed-context (`chat_json`); vector retrieval is opt-in via `analysis.artifacts_use_vector_store`.
+      - Targeted regeneration is handled by `src/generators/report_regeneration_generator.py`, which performs exactly one regeneration pass against mapped failing artifact families and reuses the same artifact normalization, schema validation, evidence-reference validation, and storage behavior as the main artifact generator.
       - Artifact evidence IDs are normalized to canonical known references (`findings`, `quote_candidates`, `doc_map.sections`) before schema-reference validation; unresolved IDs are cleared rather than failing the entire artifact payload.
        - Packs are stored under `out/<report-slug>/report_analysis/*.json` and persisted in the metadata DB (`reports` table columns `vector_store_id`, `evidence_packs_json`; state DB stores `vector_store_status`, `indexed_at_utc`, `openai_file_id`, `last_error`).
        - Orchestrator logs `VECTOR_STORE_CREATED`, `VECTOR_STORE_INDEXED`, `EVIDENCE_READY`.
@@ -270,7 +275,8 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
        - Semantic: LLM re-check via `src/prompts/report_vs/validate/semantic/{system,user}.yaml` (model resolved via `openai_models` longest-prefix match) that scores metric/quote support against evidence snippets and logs prompt hashes + evidence/metric/quote SHA-256. Semantic “supported” adds `info` issues; “unsupported” raises `warning|error`.
        - Grounding rubric (`src/prompts/report_vs/validate/grounding/{system,user}.yaml`): validator distinguishes `factual_claim`, `analyst_interpretation`, and `prescriptive_recommendation`. Hard fails are reserved for hallucinated entities/events, unsupported metrics, misattributed quotes, and “the report said/instructed X” misattributions; retrieval failures are tracked separately. Grounding defaults to closed-context (`chat_json`) and can be switched back to vector retrieval via `analysis.validation_grounding_use_vector_store`.
        - Parallel execution: when `ingest.report_worker_limit > 1`, the validation registry runs `semantic` as the bootstrap rule, `numbers` + `grounding` as independent rules, and `metrics` + `quotes` after semantic support is available. Issue merge order remains deterministic as `semantic -> metrics -> quotes -> numbers -> grounding` to prevent behavioral drift while keeping the large control block out of the entrypoint.
-       - Results persist to `out/<report-slug>/report_analysis/validation*.json` and flow into HTML and publish policy decisions. When `ingest.validation.data_gap_policy` is `warn`, missing evidence/text downgrades to warnings. Schema validation is performed via `schema_validator_service`.
+       - If validation fails after artifact generation, `report_analysis_orchestrator` can build a bounded regeneration plan from `affected_section` mappings, regenerate only the failing artifact families (or one broad retry for unmappable/global failures), and re-run validation until pass or `ingest.validation.regeneration_max_attempts` is reached.
+       - Results persist to `out/<report-slug>/report_analysis/validation*.json` and flow into HTML and publish policy decisions. The canonical `validation.json` is always updated to the latest attempt used by render/publish, while regeneration snapshots are also persisted as `validation_regen_attempt_<n>.json`. When `ingest.validation.data_gap_policy` is `warn`, missing evidence/text downgrades to warnings. Schema validation is performed via `schema_validator_service`.
      - **Normalization**: `normalize_generator` enforces strict schema and list sizing.
      - **Categorization**: taxonomy tags are scored against `src/config/category-mappings.yaml`; top 3 categories are stored and rendered, and unmapped tags are appended under `uncategorized` in that YAML.
      - **Figure selection**: `pdf_service.extract_best_figure` selects a representative visual and caption.
@@ -364,6 +370,7 @@ Prompts are stored in YAML by namespace:
 src/prompts/report_vs/doc_map/          # vector_store doc map
 src/prompts/report_vs/evidence_packs/   # vector_store packs (scope/methods/findings/limitations/quote_candidates/key_metrics/risk_register/recommendations/contradictions)
 src/prompts/report_vs/artifacts/        # artifact sections (toc, summary, insights, quotes, expert comment, LinkedIn)
+src/prompts/report_vs/artifacts/regenerate/  # targeted regeneration prompts per artifact family
 ```
 
 Prompts are rendered with Jinja2 (`{{ variable }}`), loaded and hashed by `src/services/prompt_service.py`, and logged with their SHA256 hashes for reproducibility.
@@ -403,6 +410,7 @@ Key contracts live under `src/contracts/`:
 - `pdf_utils.py`: EOF check and PDF info (page count + metadata) contracts
 - `report_store.py`: report metadata upsert/get/list contracts, including page count and flattened PDF metadata
 - `validation.py`: validation requests, issues, and reports (persisted per report)
+- `regeneration.py`: validation-regeneration issues, plans, attempt results, loop state, and typed single-pass request/response contracts
 - `docpacks.py`: typed contracts for core/variety docpack payloads and map aliases
 
 ---
@@ -434,6 +442,8 @@ Test suites live under `tests/` (unit + contract + integration marker support):
 - `test_publish_orchestrator.py`: publish orchestration
 - `test_html_utils.py`: HTML parsing helpers
 - `test_artifact_generator.py`: artifact JSON generation/validation
+- `test_report_regeneration_generator.py`: targeted regeneration generator behavior, prompt payloads, and error propagation
+- `test_regeneration_contracts.py`: regeneration contract round-trip and required-field coverage
 - `test_io_boundaries.py`: AST boundary gate that fails on direct filesystem/network I/O usage in `src/generators/*` and `src/utils/*`
 - `test_render_service_artifacts.py`: HTML sections for artifact rendering
 - `contracts/test_contract_roundtrip.py`: dataclass serialization/deserialization round-trip gate for `src/contracts/*`
@@ -492,11 +502,7 @@ See:
 - `docs/docpacks/prompt-authoring.md`
 - `docs/architecture/role-boundaries.md`
 - `docs/testing/integrity-rules.md`
-<<<<<<< ours
-- `docs/quality/ineffective-choices-top50.md` (source analysis archived after merge into `CONSOLIDATED_TODO.md`)
-=======
 - `docs/quality/ineffective-choices-top50.md` (repository improvement backlog focused on low-effort/high-impact fixes)
->>>>>>> theirs
 
 ---
 
@@ -645,7 +651,9 @@ Default output structure:
       recommendations.json              # optional (flagged)
       contradictions.json               # optional (flagged)
       artifacts.json
+      artifacts_regen_attempt_1.json   # optional, latest-attempt snapshot naming pattern
       validation.json
+      validation_regen_attempt_1.json  # optional, latest-attempt snapshot naming pattern
 ```
 
 ---

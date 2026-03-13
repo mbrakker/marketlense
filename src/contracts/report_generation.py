@@ -7,6 +7,10 @@ from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestSettings
 from src.contracts.pdf_text import PdfTextExtractResponse
 from src.contracts.pdf_utils import PdfInfoResponse
+from src.contracts.regeneration import (
+    RegenerationAttemptResult,
+    RegenerationLoopState,
+)
 from src.contracts.report_models import ReportPayload
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationReport
@@ -183,4 +187,16 @@ class ReportAnalysisState:
     last_error: Optional[str] = field(
         default=None,
         metadata={"doc": "Last vector-store error captured during indexing, if any."},
+    )
+    regeneration_loop_state: Optional[RegenerationLoopState] = field(
+        default=None,
+        metadata={
+            "doc": "Validation regeneration loop summary, if regeneration ran."
+        },
+    )
+    regeneration_attempts: List[RegenerationAttemptResult] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Per-attempt regeneration audit results for this analysis run."
+        },
     )

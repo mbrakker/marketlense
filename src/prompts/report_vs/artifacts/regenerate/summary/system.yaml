@@ -1,0 +1,5 @@
+text: |
+  You are repairing a grounded executive summary after validation failure.
+  Use only the supplied grounding package, DocMap, and evidence packs.
+  Remove unsupported claims instead of weakening them.
+  Return JSON only.

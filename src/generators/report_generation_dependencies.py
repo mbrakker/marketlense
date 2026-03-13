@@ -21,6 +21,10 @@ from src.contracts.pdf_text import (
 )
 from src.contracts.pdf_utils import PdfInfoRequest, PdfInfoResponse
 from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
+from src.contracts.regeneration import (
+    ArtifactRegenerationRequest,
+    ArtifactRegenerationResponse,
+)
 from src.contracts.report_analysis import (
     AnalysisPackPathRequest,
     AnalysisStorePackRequest,
@@ -57,6 +61,7 @@ from src.generators.artifact_generator import generate_artifacts
 from src.generators.categorize_generator import categorize_taxonomy
 from src.generators.cover_image_generator import generate_cover_images
 from src.generators.evidence_pack_generator import generate_evidence_packs
+from src.generators.report_regeneration_generator import regenerate_artifacts
 from src.generators.taxonomy_generator import extract_taxonomy
 from src.generators.validation_generator import validate_report as run_validation
 from src.services import report_analysis_store_service, state_service, vector_store_service
@@ -134,6 +139,9 @@ class ReportGeneratorDependencies:
     ]
     generate_evidence_packs: Callable[..., dict[str, dict]]
     generate_artifacts: Callable[..., dict[str, Any]]
+    regenerate_artifacts: Callable[
+        [ArtifactRegenerationRequest], ArtifactRegenerationResponse
+    ]
     run_validation: Callable[..., ValidationReport]
     analysis_pack_path: Callable[[AnalysisPackPathRequest, RunContext], Any]
     analysis_store_pack: Callable[[AnalysisStorePackRequest, RunContext], Any]
@@ -177,6 +185,7 @@ class ReportGeneratorDependencies:
             update_uncategorized_tags=update_uncategorized_tags,
             generate_evidence_packs=generate_evidence_packs,
             generate_artifacts=generate_artifacts,
+            regenerate_artifacts=regenerate_artifacts,
             run_validation=run_validation,
             analysis_pack_path=report_analysis_store_service.pack_path,
             analysis_store_pack=report_analysis_store_service.store_pack,

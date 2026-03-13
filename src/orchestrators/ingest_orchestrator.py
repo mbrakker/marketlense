@@ -24,11 +24,13 @@ from src.contracts.report_store import (
     ReportMetadataGetRequest,
 )
 from src.contracts.run_context import RunContext
-from src.generators.report_generator import generate_report
 from src.orchestrators.ingest_file_orchestrator import (
     FileProcessResult as _FileProcessResult,
     IngestFileDependencies,
     run_ingest_file,
+)
+from src.orchestrators.report_generation_orchestrator import (
+    run_report_generation as generate_report,
 )
 from src.orchestrators.retry_orchestrator import run_step_with_default_policy
 from src.orchestrators.report_pipeline_orchestrator import (
