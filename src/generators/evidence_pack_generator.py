@@ -6,7 +6,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, Optional, Tuple
 
 from src.contracts.config import AppSettings
-from src.contracts.files import ReadTextRequest
 from src.contracts.openai import OpenAIResponseRequest, OpenAIResponseResult
 from src.contracts.prompts import PromptLoadRequest
 from src.contracts.report_analysis import (
@@ -15,6 +14,14 @@ from src.contracts.report_analysis import (
 )
 from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
+from src.generators.analysis_pack_cache import (
+    CachedPackAdaptResult,
+    load_cached_pack,
+)
+from src.generators.analysis_store_adapter import (
+    resolve_pack_path as resolve_analysis_pack_path,
+    store_pack as store_analysis_pack,
+)
 from src.generators.evidence_packs.doc_map_strategy import (
     normalize_payload as normalize_doc_map_payload,
 )
@@ -37,6 +44,11 @@ from src.services.schema_validator_service import validate_schema
 from src.utils.cache_utils import sha256_json
 from src.utils.coercion import coerce_int
 from src.utils.errors import AppError
+from src.utils.json_recovery import (
+    extract_json_value as _extract_json_value,
+    parse_json_from_text,
+    strip_json_fence as _strip_json_fence,
+)
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.model_resolver import resolve_model
 
@@ -80,85 +92,9 @@ def _resolve_pack_steps(settings: AppSettings) -> list[tuple[str, str, str]]:
         for pack_name in registry
     ]
 
-
-def _strip_json_fence(text: str) -> str:
-    stripped = (text or "").strip()
-    if not stripped.startswith("```"):
-        return stripped
-    lines = stripped.splitlines()
-    if len(lines) < 2 or lines[-1].strip() != "```":
-        return stripped
-    first_line = lines[0].strip().lower()
-    if first_line not in {"```", "```json", "```jsonc", "```javascript", "```js"}:
-        return stripped
-    return "\n".join(lines[1:-1]).strip()
-
-
-def _extract_json_value(text: str) -> str:
-    source = (text or "").strip()
-    start = -1
-    for idx, ch in enumerate(source):
-        if ch in {"{", "["}:
-            start = idx
-            break
-    if start < 0:
-        return ""
-    stack: list[str] = []
-    in_string = False
-    escaped = False
-    for idx in range(start, len(source)):
-        ch = source[idx]
-        if in_string:
-            if escaped:
-                escaped = False
-            elif ch == "\\":
-                escaped = True
-            elif ch == '"':
-                in_string = False
-            continue
-        if ch == '"':
-            in_string = True
-            continue
-        if ch == "{":
-            stack.append("}")
-            continue
-        if ch == "[":
-            stack.append("]")
-            continue
-        if ch in {"}", "]"}:
-            if not stack or ch != stack[-1]:
-                return ""
-            stack.pop()
-            if not stack:
-                return source[start : idx + 1]
-    return ""
-
-
 def _parse_json_payload_from_text(text: str) -> Optional[object]:
-    normalized = (text or "").strip()
-    if not normalized:
-        return None
-    candidates = [normalized]
-    stripped_fence = _strip_json_fence(normalized)
-    if stripped_fence and stripped_fence != normalized:
-        candidates.append(stripped_fence)
-    for candidate in candidates:
-        try:
-            parsed = json.loads(candidate)
-        except json.JSONDecodeError:
-            parsed = None
-        if isinstance(parsed, (dict, list)):
-            return parsed
-        extracted = _extract_json_value(candidate)
-        if not extracted:
-            continue
-        try:
-            parsed_extracted = json.loads(extracted)
-        except json.JSONDecodeError:
-            parsed_extracted = None
-        if isinstance(parsed_extracted, (dict, list)):
-            return parsed_extracted
-    return None
+    parsed, _strategy = parse_json_from_text(text, accepted_types=(dict, list))
+    return parsed
 
 
 def generate_evidence_packs(
@@ -726,39 +662,17 @@ def _resolve_pack_path(
     analysis_store,
     ctx: RunContext,
 ) -> str:
-    if hasattr(analysis_store, "pack_path"):
-        try:
-            response = analysis_store.pack_path(
-                AnalysisPackPathRequest(
-                    schema_version="1.0",
-                    output_dir=output_dir,
-                    report_id=report_id,
-                    pack_name=pack_name,
-                    report_slug=report_name,
-                ),
-                ctx,
-            )
-            if isinstance(response, str):
-                return response
-            output_path = getattr(response, "output_path", None)
-            if isinstance(output_path, str):
-                return output_path
-        except TypeError:
-            return str(
-                analysis_store.pack_path(
-                    output_dir, report_id, pack_name, report_slug=report_name
-                )
-            )
-    return report_analysis_store_service.pack_path(
-        AnalysisPackPathRequest(
+    return resolve_analysis_pack_path(
+        analysis_store=analysis_store,
+        request=AnalysisPackPathRequest(
             schema_version="1.0",
             output_dir=output_dir,
             report_id=report_id,
             pack_name=pack_name,
             report_slug=report_name,
         ),
-        ctx,
-    ).output_path
+        ctx=ctx,
+    )
 
 
 def _store_pack(
@@ -771,37 +685,9 @@ def _store_pack(
     ctx: RunContext,
     report_name: str,
 ) -> str:
-    if hasattr(analysis_store, "store_pack"):
-        try:
-            response = analysis_store.store_pack(
-                AnalysisStorePackRequest(
-                    schema_version="1.0",
-                    output_dir=output_dir,
-                    report_id=report_id,
-                    pack_name=pack_name,
-                    payload=payload,
-                    report_slug=report_name,
-                ),
-                ctx,
-            )
-            if isinstance(response, str):
-                return response
-            output_path = getattr(response, "output_path", None)
-            if isinstance(output_path, str):
-                return output_path
-        except TypeError:
-            return str(
-                analysis_store.store_pack(
-                    output_dir,
-                    report_id,
-                    pack_name,
-                    payload,
-                    ctx,
-                    report_slug=report_name,
-                )
-            )
-    return report_analysis_store_service.store_pack(
-        AnalysisStorePackRequest(
+    return store_analysis_pack(
+        analysis_store=analysis_store,
+        request=AnalysisStorePackRequest(
             schema_version="1.0",
             output_dir=output_dir,
             report_id=report_id,
@@ -809,8 +695,8 @@ def _store_pack(
             payload=payload,
             report_slug=report_name,
         ),
-        ctx,
-    ).output_path
+        ctx=ctx,
+    )
 
 
 def _load_cached_pack(
@@ -823,18 +709,8 @@ def _load_cached_pack(
     ctx: RunContext,
     analysis_store,
 ) -> Optional[dict]:
-    if not cache_key:
-        return None
-    path = _resolve_pack_path(
-        output_dir, report_id, pack_name, report_name, analysis_store, ctx
-    )
-    try:
-        resp = file_service.read_text(
-            ReadTextRequest(schema_version="1.0", path=path), ctx
-        )
-    except AppError as exc:
-        if exc.code == "file_not_found":
-            return None
+    def _log_read_failed(exc: AppError, path: str) -> None:
+        del path
         logger.info(
             log_event(
                 ctx,
@@ -848,15 +724,48 @@ def _load_cached_pack(
                 },
             )
         )
-        return None
-    try:
-        payload = json.loads(resp.content)
-    except json.JSONDecodeError:
-        return None
-    if not isinstance(payload, dict):
-        return None
-    cached = payload.get("_cache") if isinstance(payload.get("_cache"), dict) else {}
-    if cached.get("key") != cache_key:
+
+    def _adapt_payload(
+        payload: Dict[str, object], path: str
+    ) -> CachedPackAdaptResult[dict]:
+        del path
+        not_found_reason = str(payload.get("not_found_reason") or "").strip()
+        if not_found_reason:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="evidence_pack_cache_rejected",
+                    module=logger.name,
+                    fields={
+                        "report_id": report_id,
+                        "pack": pack_name,
+                        "reason": not_found_reason,
+                    },
+                )
+            )
+            return CachedPackAdaptResult(
+                schema_version="1.0",
+                status="cache_rejected",
+                value=None,
+            )
+        return CachedPackAdaptResult(
+            schema_version="1.0",
+            status="hit",
+            value=dict(payload),
+        )
+
+    result = load_cached_pack(
+        cache_key=cache_key,
+        ctx=ctx,
+        resolve_path=lambda: _resolve_pack_path(
+            output_dir, report_id, pack_name, report_name, analysis_store, ctx
+        ),
+        read_text=file_service.read_text,
+        on_read_failed=_log_read_failed,
+        adapt_payload=_adapt_payload,
+    )
+    if result.status == "key_mismatch":
         logger.info(
             log_event(
                 ctx,
@@ -866,21 +775,4 @@ def _load_cached_pack(
                 fields={"report_id": report_id, "pack": pack_name},
             )
         )
-        return None
-    not_found_reason = str(payload.get("not_found_reason") or "").strip()
-    if not_found_reason:
-        logger.info(
-            log_event(
-                ctx,
-                role="generator",
-                event="evidence_pack_cache_rejected",
-                module=logger.name,
-                fields={
-                    "report_id": report_id,
-                    "pack": pack_name,
-                    "reason": not_found_reason,
-                },
-            )
-        )
-        return None
-    return payload
+    return result.value if result.status == "hit" else None

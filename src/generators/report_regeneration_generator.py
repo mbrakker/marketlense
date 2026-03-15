@@ -13,11 +13,10 @@ from src.contracts.regeneration import (
     RegenerationTarget,
 )
 from src.contracts.validation import ValidationRequest
-from src.generators.artifact_generator import (
+from src.generators.artifact_normalization import (
     artifact_base_variables,
     artifact_quote_candidates,
     artifact_vector_store_enabled,
-    assemble_artifacts_payload,
     normalize_artifact_evidence_ids,
     normalize_artifact_insights,
     normalize_artifact_quotes,
@@ -26,8 +25,11 @@ from src.generators.artifact_generator import (
     normalize_artifact_topics,
     normalize_expert_domain,
     pad_artifact_insights,
-    render_artifact_json_model,
     strip_artifact_inline_reference_ids,
+)
+from src.generators.artifact_generator import (
+    assemble_artifacts_payload,
+    render_artifact_json_model,
     store_artifacts_payload,
 )
 from src.generators.validation.evidence import retrieve_evidence_windows

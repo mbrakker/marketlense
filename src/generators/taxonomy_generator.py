@@ -4,20 +4,26 @@ import json
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
-from src.contracts.files import ReadTextRequest
 from src.contracts.openai import OpenAIResponseRequest, OpenAIResponseResult
-from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.contracts.report_analysis import AnalysisPackPathRequest, AnalysisStorePackRequest
 from src.contracts.run_context import RunContext
 from src.contracts.categories import CategoryMappingLoadRequest
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.contracts.taxonomy import TaxonomyExtractRequest, TaxonomyExtractResponse
+from src.generators.analysis_pack_cache import (
+    CachedPackAdaptResult,
+    load_cached_pack,
+)
+from src.generators.analysis_store_adapter import (
+    resolve_pack_path as resolve_analysis_pack_path,
+    store_pack as store_analysis_pack,
+)
+from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.services.category_mapping_service import load_mappings as load_category_mappings
 from src.services import file_service, openai_service, prompt_service, report_analysis_store_service
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.cache_utils import sha256_json
-from src.utils.model_resolver import resolve_model
 from src.services.schema_validator_service import validate_schema
 
 logger = logging.getLogger("market_lense.taxonomy_generator")
@@ -46,10 +52,6 @@ def extract_taxonomy(
             "report_slug": request.report_slug or "",
         },
     ))
-    prompt_set = prompt_client.load_prompt_set(
-        PromptLoadRequest(schema_version="1.0", namespace=request.prompt_namespace, reload_if_changed=True),
-        ctx,
-    )
     mappings_resp = load_category_mappings(
         CategoryMappingLoadRequest(
             schema_version="1.0",
@@ -69,6 +71,18 @@ def extract_taxonomy(
             "path": request.settings.category_mapping_path,
         },
     ))
+    prompt_bundle = prepare_prompt_bundle(
+        namespace=request.prompt_namespace,
+        settings=request.settings,
+        ctx=ctx,
+        prompt_client=prompt_client,
+        system_variables={},
+        user_variables={
+            "report_title": request.report_title,
+            "allowed_tags_json": json.dumps(allowed_tags, ensure_ascii=True),
+        },
+        reload_if_changed=True,
+    )
     logger.info(log_event(
         ctx,
         role="generator",
@@ -76,46 +90,22 @@ def extract_taxonomy(
         module=logger.name,
         fields={
             "namespace": request.prompt_namespace,
-            "system_path": prompt_set.system.path,
-            "system_sha256": prompt_set.system.sha256,
-            "user_path": prompt_set.user.path,
-            "user_sha256": prompt_set.user.sha256,
+            "system_path": prompt_bundle.prompt_set.system.path,
+            "system_sha256": prompt_bundle.prompt_set.system.sha256,
+            "user_path": prompt_bundle.prompt_set.user.path,
+            "user_sha256": prompt_bundle.prompt_set.user.sha256,
         },
     ))
-    system_render = prompt_client.render_prompt(
-        PromptRenderRequest(
-            schema_version="1.0",
-            template=prompt_set.system,
-            variables={},
-        ),
-        ctx,
-    )
-    user_render = prompt_client.render_prompt(
-        PromptRenderRequest(
-            schema_version="1.0",
-            template=prompt_set.user,
-            variables={
-                "report_title": request.report_title,
-                "allowed_tags_json": json.dumps(allowed_tags, ensure_ascii=True),
-            },
-        ),
-        ctx,
-    )
     logger.info(log_event(
         ctx,
         role="generator",
         event="taxonomy_prompt_rendered",
         module=logger.name,
         fields={
-            "system_prompt": system_render.text,
-            "user_prompt": user_render.text,
+            "system_prompt": prompt_bundle.system_prompt,
+            "user_prompt": prompt_bundle.user_prompt,
         },
     ))
-    resolved_model = resolve_model(
-        request.prompt_namespace,
-        getattr(request.settings, "openai_models", {}),
-        request.settings.openai_model,
-    )
     logger.info(log_event(
         ctx,
         role="generator",
@@ -123,7 +113,7 @@ def extract_taxonomy(
         module=logger.name,
         fields={
             "namespace": request.prompt_namespace,
-            "resolved_model": resolved_model,
+            "resolved_model": prompt_bundle.resolved_model,
             "default_model": request.settings.openai_model,
             "temperature": request.settings.temperature,
             "seed": request.settings.openai_seed,
@@ -135,9 +125,9 @@ def extract_taxonomy(
         cache_meta = _taxonomy_cache_meta(
             request=request,
             allowed_tags=allowed_tags,
-            prompt_system_sha256=prompt_set.system.sha256,
-            prompt_user_sha256=prompt_set.user.sha256,
-            resolved_model=resolved_model,
+            prompt_system_sha256=prompt_bundle.prompt_set.system.sha256,
+            prompt_user_sha256=prompt_bundle.prompt_set.user.sha256,
+            resolved_model=prompt_bundle.resolved_model,
         )
         cache_key = sha256_json(cache_meta)
         cached_response, miss_reason = _load_cached_taxonomy(
@@ -188,10 +178,10 @@ def extract_taxonomy(
         resp: OpenAIResponseResult = openai_client.openai_respond_with_vector_store(
             OpenAIResponseRequest(
                 schema_version="1.0",
-                system_prompt=system_render.text,
-                user_prompt=user_render.text,
+                system_prompt=prompt_bundle.system_prompt,
+                user_prompt=prompt_bundle.user_prompt,
                 vector_store_id=request.vector_store_id,
-                model=resolved_model,
+                model=prompt_bundle.resolved_model,
                 temperature=request.settings.temperature,
                 api_key=request.settings.openai_api_key,
                 seed=request.settings.openai_seed,
@@ -209,7 +199,7 @@ def extract_taxonomy(
             event="taxonomy_model_response",
             module=logger.name,
             fields={
-                "model": getattr(resp, "model", resolved_model),
+                "model": getattr(resp, "model", prompt_bundle.resolved_model),
                 "raw_response": raw_text,
                 "has_json": bool(resp.parsed_json),
             },
@@ -321,35 +311,17 @@ def _resolve_pack_path(
     report_slug: Optional[str],
     ctx: RunContext,
 ) -> str:
-    if hasattr(analysis_store, "pack_path"):
-        try:
-            response = analysis_store.pack_path(
-                AnalysisPackPathRequest(
-                    schema_version="1.0",
-                    output_dir=output_dir,
-                    report_id=report_id,
-                    pack_name="taxonomy",
-                    report_slug=report_slug,
-                ),
-                ctx,
-            )
-            if isinstance(response, str):
-                return response
-            output_path = getattr(response, "output_path", None)
-            if isinstance(output_path, str):
-                return output_path
-        except TypeError:
-            return str(analysis_store.pack_path(output_dir, report_id, "taxonomy", report_slug=report_slug))
-    return report_analysis_store_service.pack_path(
-        AnalysisPackPathRequest(
+    return resolve_analysis_pack_path(
+        analysis_store=analysis_store,
+        request=AnalysisPackPathRequest(
             schema_version="1.0",
             output_dir=output_dir,
             report_id=report_id,
             pack_name="taxonomy",
             report_slug=report_slug,
         ),
-        ctx,
-    ).output_path
+        ctx=ctx,
+    )
 
 
 def _store_pack(
@@ -361,35 +333,9 @@ def _store_pack(
     payload: Dict[str, Any],
     ctx: RunContext,
 ) -> str:
-    if hasattr(analysis_store, "store_pack"):
-        try:
-            response = analysis_store.store_pack(
-                AnalysisStorePackRequest(
-                    schema_version="1.0",
-                    output_dir=output_dir,
-                    report_id=report_id,
-                    pack_name="taxonomy",
-                    payload=payload,
-                    report_slug=report_slug,
-                ),
-                ctx,
-            )
-            if isinstance(response, str):
-                return response
-            output_path = getattr(response, "output_path", None)
-            if isinstance(output_path, str):
-                return output_path
-        except TypeError:
-            return str(analysis_store.store_pack(
-                output_dir,
-                report_id,
-                "taxonomy",
-                payload,
-                ctx,
-                report_slug=report_slug,
-            ))
-    return report_analysis_store_service.store_pack(
-        AnalysisStorePackRequest(
+    return store_analysis_pack(
+        analysis_store=analysis_store,
+        request=AnalysisStorePackRequest(
             schema_version="1.0",
             output_dir=output_dir,
             report_id=report_id,
@@ -397,8 +343,8 @@ def _store_pack(
             payload=payload,
             report_slug=report_slug,
         ),
-        ctx,
-    ).output_path
+        ctx=ctx,
+    )
 
 
 def _load_cached_taxonomy(
@@ -409,63 +355,87 @@ def _load_cached_taxonomy(
     file_client,
     ctx: RunContext,
 ) -> Tuple[Optional[TaxonomyExtractResponse], str]:
-    path = _resolve_pack_path(
-        analysis_store=analysis_store,
-        output_dir=request.settings.output_dir,
-        report_id=request.report_id,
-        report_slug=request.report_slug,
-        ctx=ctx,
-    )
-    try:
-        resp = file_client.read_text(ReadTextRequest(schema_version="1.0", path=path), ctx)
-    except AppError as exc:
-        if exc.code == "file_not_found":
-            return None, "file_not_found"
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="taxonomy_cache_read_failed",
-            module=logger.name,
-            fields={"report_id": request.report_id, "path": path, "error": exc.message},
-        ))
-        return None, "read_failed"
-    try:
-        payload = json.loads(resp.content)
-    except json.JSONDecodeError:
-        return None, "invalid_json"
-    if not isinstance(payload, dict):
-        return None, "invalid_payload"
-    cached_meta = payload.get("_cache") if isinstance(payload.get("_cache"), dict) else {}
-    if cached_meta.get("key") != cache_key:
-        return None, "key_mismatch"
-    taxonomy_payload = {
-        "schema_version": "1.0",
-        "taxonomy": payload.get("taxonomy"),
-        "region": payload.get("region"),
-        "time_period": payload.get("time_period"),
-        "not_found_reason": payload.get("not_found_reason"),
-    }
-    try:
-        validate_schema(
-            SchemaValidateRequest(schema_version="1.0", payload=taxonomy_payload, schema_name="taxonomy"),
-            ctx,
+    def _log_read_failed(exc: AppError, path: str) -> None:
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="taxonomy_cache_read_failed",
+                module=logger.name,
+                fields={
+                    "report_id": request.report_id,
+                    "path": path,
+                    "error": exc.message,
+                },
+            )
         )
-    except AppError as exc:
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="taxonomy_cache_invalid",
-            module=logger.name,
-            fields={"report_id": request.report_id, "path": path, "code": exc.code, "message": exc.message},
-        ))
-        return None, "schema_invalid"
-    return TaxonomyExtractResponse(
-        schema_version="1.0",
-        taxonomy=_normalize_tags(taxonomy_payload.get("taxonomy")),
-        region=_s(taxonomy_payload.get("region")),
-        time_period=_s(taxonomy_payload.get("time_period")),
-        not_found_reason=_s(taxonomy_payload.get("not_found_reason")) or None,
-    ), "hit"
+
+    def _adapt_payload(
+        payload: Dict[str, Any], path: str
+    ) -> CachedPackAdaptResult[TaxonomyExtractResponse]:
+        taxonomy_payload = {
+            "schema_version": "1.0",
+            "taxonomy": payload.get("taxonomy"),
+            "region": payload.get("region"),
+            "time_period": payload.get("time_period"),
+            "not_found_reason": payload.get("not_found_reason"),
+        }
+        try:
+            validate_schema(
+                SchemaValidateRequest(
+                    schema_version="1.0",
+                    payload=taxonomy_payload,
+                    schema_name="taxonomy",
+                ),
+                ctx,
+            )
+        except AppError as exc:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="taxonomy_cache_invalid",
+                    module=logger.name,
+                    fields={
+                        "report_id": request.report_id,
+                        "path": path,
+                        "code": exc.code,
+                        "message": exc.message,
+                    },
+                )
+            )
+            return CachedPackAdaptResult(
+                schema_version="1.0",
+                status="schema_invalid",
+                value=None,
+            )
+        return CachedPackAdaptResult(
+            schema_version="1.0",
+            status="hit",
+            value=TaxonomyExtractResponse(
+                schema_version="1.0",
+                taxonomy=_normalize_tags(taxonomy_payload.get("taxonomy")),
+                region=_s(taxonomy_payload.get("region")),
+                time_period=_s(taxonomy_payload.get("time_period")),
+                not_found_reason=_s(taxonomy_payload.get("not_found_reason")) or None,
+            ),
+        )
+
+    result = load_cached_pack(
+        cache_key=cache_key,
+        ctx=ctx,
+        resolve_path=lambda: _resolve_pack_path(
+            analysis_store=analysis_store,
+            output_dir=request.settings.output_dir,
+            report_id=request.report_id,
+            report_slug=request.report_slug,
+            ctx=ctx,
+        ),
+        read_text=file_client.read_text,
+        on_read_failed=_log_read_failed,
+        adapt_payload=_adapt_payload,
+    )
+    return result.value, result.status
 
 
 def _store_taxonomy_cache(

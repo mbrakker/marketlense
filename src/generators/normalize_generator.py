@@ -134,6 +134,19 @@ def _normalize_report_payload(data: ReportPayload) -> ReportPayload:
             )
     _figure_section_enabled = bool(getattr(data, "_figure_section_enabled", True))
     _contents_image = _s(data._contents_image)
+    _vector_store_id = _s(getattr(data, "_vector_store_id", "")).strip()
+    evidence_packs_raw = getattr(data, "_evidence_packs", {})
+    _evidence_packs = (
+        dict(evidence_packs_raw) if isinstance(evidence_packs_raw, dict) else {}
+    )
+    text_density_raw = getattr(data, "_text_density", 0.0)
+    _text_density = (
+        float(text_density_raw) if isinstance(text_density_raw, (int, float)) else 0.0
+    )
+    _text_pages_sampled = max(0, coerce_int(getattr(data, "_text_pages_sampled", 0), 0))
+    _text_char_count = max(0, coerce_int(getattr(data, "_text_char_count", 0), 0))
+    _text_not_available = bool(getattr(data, "_text_not_available", False))
+    schema_version = _s(getattr(data, "schema_version", "")).strip() or "1.1"
 
     if not _figure_top and _figure_image:
         _figure_top = _figure_image
@@ -159,4 +172,11 @@ def _normalize_report_payload(data: ReportPayload) -> ReportPayload:
         contents_page_number=contents_page_number,
         contents_heading=contents_heading,
         _contents_image=_contents_image,
+        _vector_store_id=_vector_store_id,
+        _evidence_packs=_evidence_packs,
+        _text_density=_text_density,
+        _text_pages_sampled=_text_pages_sampled,
+        _text_char_count=_text_char_count,
+        _text_not_available=_text_not_available,
+        schema_version=schema_version,
     )

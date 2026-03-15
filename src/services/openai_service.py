@@ -5,6 +5,7 @@ import json
 import logging
 import mimetypes
 import re
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict
@@ -53,6 +54,11 @@ from src.services.cost_ledger_service import (
 )
 from src.utils.costing import estimate_cost_usd
 from src.utils.errors import AppError
+from src.utils.json_recovery import (
+    extract_json_value as _extract_json_value,
+    parse_json_from_text,
+    strip_json_fence as _strip_json_fence,
+)
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.openai_service")
@@ -162,88 +168,9 @@ def _extract_unsupported_parameter(exc: Exception) -> str | None:
                 return body_param.strip()
     return None
 
-
-def _strip_json_fence(text: str) -> str:
-    stripped = (text or "").strip()
-    if not stripped.startswith("```"):
-        return stripped
-    lines = stripped.splitlines()
-    if len(lines) < 2 or lines[-1].strip() != "```":
-        return stripped
-    first_line = lines[0].strip().lower()
-    if first_line not in {"```", "```json", "```jsonc", "```javascript", "```js"}:
-        return stripped
-    return "\n".join(lines[1:-1]).strip()
-
-
-def _extract_json_value(text: str) -> str:
-    source = (text or "").strip()
-    start = -1
-    for idx, ch in enumerate(source):
-        if ch in {"{", "["}:
-            start = idx
-            break
-    if start < 0:
-        return ""
-    stack: list[str] = []
-    in_string = False
-    escaped = False
-    for idx in range(start, len(source)):
-        ch = source[idx]
-        if in_string:
-            if escaped:
-                escaped = False
-            elif ch == "\\":
-                escaped = True
-            elif ch == '"':
-                in_string = False
-            continue
-        if ch == '"':
-            in_string = True
-            continue
-        if ch == "{":
-            stack.append("}")
-            continue
-        if ch == "[":
-            stack.append("]")
-            continue
-        if ch in {"}", "]"}:
-            if not stack or ch != stack[-1]:
-                return ""
-            stack.pop()
-            if not stack:
-                return source[start : idx + 1]
-    return ""
-
-
 def _parse_json_object_from_text(text: str) -> tuple[dict | None, str]:
-    raw = (text or "").strip()
-    if not raw:
-        return None, "empty"
-    candidates: list[tuple[str, str]] = [("direct", raw)]
-    stripped = _strip_json_fence(raw)
-    if stripped and stripped != raw:
-        candidates.append(("fence", stripped))
-    for strategy, candidate in candidates:
-        try:
-            parsed = json.loads(candidate)
-        except json.JSONDecodeError:
-            parsed = None
-        if isinstance(parsed, dict):
-            return parsed, strategy
-        if parsed is not None:
-            return None, "json_non_object"
-        extracted = _extract_json_value(candidate)
-        if not extracted:
-            continue
-        try:
-            parsed_extracted = json.loads(extracted)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(parsed_extracted, dict):
-            return parsed_extracted, f"{strategy}_extracted"
-        return None, "json_non_object"
-    return None, "invalid_json"
+    parsed, strategy = parse_json_from_text(text, accepted_types=(dict,))
+    return parsed if isinstance(parsed, dict) else None, strategy
 
 
 def _responses_create_with_unsupported_param_retry(
@@ -422,20 +349,38 @@ def _coerce_pdf_ocr_pages(payload: dict | None) -> list[PdfOcrPageText]:
     return pages
 
 
-def _legacy_chat_completion(request: OpenAIAnalyzeRequest) -> Dict[str, Any]:
+@dataclass(frozen=True)
+class _ChatCompletionRun:
+    payload: str
+    request_id: str | None
+    prompt_tokens: int | None
+    completion_tokens: int | None
+    total_tokens: int | None
+
+
+def _legacy_chat_completion_call(
+    *,
+    api_key: str,
+    timeout_seconds: float | None,
+    model: str,
+    system_prompt: str,
+    user_prompt: str,
+    temperature: float,
+    seed: int | None,
+) -> _ChatCompletionRun:
     # Compatibility path for environments where OpenAI client instantiation
     # fails (e.g., unexpected kwargs like proxies in older dependencies).
-    openai_legacy.api_key = request.api_key
-    if request.timeout_seconds is not None:
-        openai_legacy.timeout = request.timeout_seconds
+    openai_legacy.api_key = api_key
+    if timeout_seconds is not None:
+        openai_legacy.timeout = timeout_seconds
     payload_args = {
-        "model": request.model,
+        "model": model,
         "messages": [
-            {"role": "system", "content": request.system_prompt},
-            {"role": "user", "content": request.user_prompt},
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
         ],
-        "temperature": request.temperature,
-        "seed": request.seed,
+        "temperature": temperature,
+        "seed": seed,
     }
     try:
         payload_args["response_format"] = {"type": "json_object"}
@@ -445,43 +390,85 @@ def _legacy_chat_completion(request: OpenAIAnalyzeRequest) -> Dict[str, Any]:
         resp = openai_legacy.ChatCompletion.create(**payload_args)
     payload = resp["choices"][0]["message"]["content"]
     usage = resp.get("usage") or {}
-    return {
-        "payload": payload,
-        "request_id": resp.get("id"),
-        "prompt_tokens": usage.get("prompt_tokens"),
-        "completion_tokens": usage.get("completion_tokens"),
-        "total_tokens": usage.get("total_tokens"),
-    }
+    return _ChatCompletionRun(
+        payload=payload,
+        request_id=resp.get("id"),
+        prompt_tokens=usage.get("prompt_tokens"),
+        completion_tokens=usage.get("completion_tokens"),
+        total_tokens=usage.get("total_tokens"),
+    )
 
 
-def _legacy_chat_json(request: OpenAIJSONPromptRequest) -> Dict[str, Any]:
-    openai_legacy.api_key = request.api_key
-    if request.timeout_seconds is not None:
-        openai_legacy.timeout = request.timeout_seconds
+def _modern_chat_completion_call(
+    *,
+    api_key: str,
+    timeout_seconds: float | None,
+    model: str,
+    system_prompt: str,
+    user_prompt: str,
+    temperature: float,
+    seed: int | None,
+) -> _ChatCompletionRun:
+    if OpenAI is None:
+        raise TypeError("OpenAI client not available")
+    client_kwargs: dict = {"api_key": api_key}
+    if timeout_seconds is not None:
+        client_kwargs["timeout"] = timeout_seconds
+    client = OpenAI(**client_kwargs)
     payload_args = {
-        "model": request.model,
+        "model": model,
         "messages": [
-            {"role": "system", "content": request.system_prompt},
-            {"role": "user", "content": request.user_prompt},
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
         ],
-        "temperature": request.temperature,
-        "seed": request.seed,
+        "response_format": {"type": "json_object"},
+        "temperature": temperature,
     }
+    if seed is not None:
+        payload_args["seed"] = seed
+    resp = client.chat.completions.create(**payload_args)
+    usage = getattr(resp, "usage", None)
+    return _ChatCompletionRun(
+        payload=resp.choices[0].message.content or "",
+        request_id=getattr(resp, "id", None),
+        prompt_tokens=getattr(usage, "prompt_tokens", None) if usage is not None else None,
+        completion_tokens=getattr(usage, "completion_tokens", None)
+        if usage is not None
+        else None,
+        total_tokens=getattr(usage, "total_tokens", None) if usage is not None else None,
+    )
+
+
+def _run_chat_completion(
+    *,
+    api_key: str,
+    timeout_seconds: float | None,
+    model: str,
+    system_prompt: str,
+    user_prompt: str,
+    temperature: float,
+    seed: int | None,
+) -> _ChatCompletionRun:
     try:
-        payload_args["response_format"] = {"type": "json_object"}
-        resp = openai_legacy.ChatCompletion.create(**payload_args)
+        return _modern_chat_completion_call(
+            api_key=api_key,
+            timeout_seconds=timeout_seconds,
+            model=model,
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            temperature=temperature,
+            seed=seed,
+        )
     except TypeError:
-        payload_args.pop("response_format", None)
-        resp = openai_legacy.ChatCompletion.create(**payload_args)
-    payload = resp["choices"][0]["message"]["content"]
-    usage = resp.get("usage") or {}
-    return {
-        "payload": payload,
-        "request_id": resp.get("id"),
-        "prompt_tokens": usage.get("prompt_tokens"),
-        "completion_tokens": usage.get("completion_tokens"),
-        "total_tokens": usage.get("total_tokens"),
-    }
+        return _legacy_chat_completion_call(
+            api_key=api_key,
+            timeout_seconds=timeout_seconds,
+            model=model,
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            temperature=temperature,
+            seed=seed,
+        )
 
 
 def analyze_report(
@@ -504,9 +491,6 @@ def analyze_report(
         )
     )
 
-    client_kwargs: dict = {"api_key": request.api_key}
-    if request.timeout_seconds is not None:
-        client_kwargs["timeout"] = request.timeout_seconds
     payload = None
     request_id = None
     prompt_tokens = None
@@ -515,45 +499,21 @@ def analyze_report(
     tool_calls = request.tool_calls or 0
     cached_tokens = request.cached_input_tokens
 
-    def _do_modern_call() -> None:
-        nonlocal payload, request_id, prompt_tokens, completion_tokens, total_tokens
-        if OpenAI is None:
-            raise TypeError("OpenAI client not available")
-        client = OpenAI(**client_kwargs)
-        payload_args = {
-            "model": request.model,
-            "messages": [
-                {"role": "system", "content": request.system_prompt},
-                {"role": "user", "content": request.user_prompt},
-            ],
-            "response_format": {"type": "json_object"},
-            "temperature": request.temperature,
-        }
-        if request.seed is not None:
-            payload_args["seed"] = request.seed
-        resp = client.chat.completions.create(**payload_args)
-        payload = resp.choices[0].message.content
-        request_id = getattr(resp, "id", None)
-        usage = getattr(resp, "usage", None)
-        prompt_tokens = (
-            getattr(usage, "prompt_tokens", None) if usage is not None else None
-        )
-        completion_tokens = (
-            getattr(usage, "completion_tokens", None) if usage is not None else None
-        )
-        total_tokens = (
-            getattr(usage, "total_tokens", None) if usage is not None else None
-        )
-
     try:
-        _do_modern_call()
-    except TypeError:
-        legacy = _legacy_chat_completion(request)
-        payload = legacy["payload"]
-        request_id = legacy.get("request_id")
-        prompt_tokens = legacy.get("prompt_tokens")
-        completion_tokens = legacy.get("completion_tokens")
-        total_tokens = legacy.get("total_tokens")
+        run = _run_chat_completion(
+            api_key=request.api_key,
+            timeout_seconds=request.timeout_seconds,
+            model=request.model,
+            system_prompt=request.system_prompt,
+            user_prompt=request.user_prompt,
+            temperature=request.temperature,
+            seed=request.seed,
+        )
+        payload = run.payload
+        request_id = run.request_id
+        prompt_tokens = run.prompt_tokens
+        completion_tokens = run.completion_tokens
+        total_tokens = run.total_tokens
     except Exception as exc:
         raise AppError(
             code="openai_request_failed",
@@ -728,9 +688,6 @@ def openai_chat_json(
             },
         )
     )
-    client_kwargs: dict = {"api_key": request.api_key}
-    if request.timeout_seconds is not None:
-        client_kwargs["timeout"] = request.timeout_seconds
     text = ""
     request_id = None
     prompt_tokens = None
@@ -738,46 +695,21 @@ def openai_chat_json(
     total_tokens = None
     tool_calls = 0
 
-    def _do_modern_call() -> None:
-        nonlocal text, request_id, prompt_tokens, completion_tokens, total_tokens
-        if OpenAI is None:
-            raise TypeError("OpenAI client not available")
-        client = OpenAI(**client_kwargs)
-        payload_args = {
-            "model": request.model,
-            "messages": [
-                {"role": "system", "content": request.system_prompt},
-                {"role": "user", "content": request.user_prompt},
-            ],
-            "response_format": {"type": "json_object"},
-            "temperature": request.temperature,
-        }
-        if request.seed is not None:
-            payload_args["seed"] = request.seed
-        resp = client.chat.completions.create(**payload_args)
-        text = resp.choices[0].message.content or ""
-        request_id = getattr(resp, "id", None)
-        usage = getattr(resp, "usage", None)
-        prompt_tokens = (
-            getattr(usage, "prompt_tokens", None) if usage is not None else None
-        )
-        completion_tokens = (
-            getattr(usage, "completion_tokens", None) if usage is not None else None
-        )
-        total_tokens = (
-            getattr(usage, "total_tokens", None) if usage is not None else None
-        )
-
     try:
-        try:
-            _do_modern_call()
-        except TypeError:
-            legacy = _legacy_chat_json(request)
-            text = legacy.get("payload") or ""
-            request_id = legacy.get("request_id")
-            prompt_tokens = legacy.get("prompt_tokens")
-            completion_tokens = legacy.get("completion_tokens")
-            total_tokens = legacy.get("total_tokens")
+        run = _run_chat_completion(
+            api_key=request.api_key,
+            timeout_seconds=request.timeout_seconds,
+            model=request.model,
+            system_prompt=request.system_prompt,
+            user_prompt=request.user_prompt,
+            temperature=request.temperature,
+            seed=request.seed,
+        )
+        text = run.payload
+        request_id = run.request_id
+        prompt_tokens = run.prompt_tokens
+        completion_tokens = run.completion_tokens
+        total_tokens = run.total_tokens
     except Exception as exc:
         raise AppError(
             code="openai_chat_failed",

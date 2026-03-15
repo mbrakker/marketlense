@@ -106,6 +106,36 @@ class TestNormalizeService(unittest.TestCase):
         self.assertEqual(2, normalized._figure_assets[0].page)
         self.assertEqual("Generated", normalized._figure_assets[0].display_caption)
 
+    def test_normalize_preserves_internal_analysis_metadata(self) -> None:
+        payload = ReportPayload(
+            tldr="tldr",
+            title="My Report",
+            insights=["a", "b", "c", "d", "e"],
+            quote=Quote(text="q", author="a"),
+            figure=Figure(title="t", evidence="e"),
+            commentary="c",
+            source="s",
+            _vector_store_id="vs_123",
+            _evidence_packs={"doc_map": "out/report_analysis/doc_map.json"},
+            _text_density=12.5,
+            _text_pages_sampled=3,
+            _text_char_count=450,
+            _text_not_available=True,
+        )
+        ctx = RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
+
+        normalized = normalize_report(payload, ctx)
+
+        self.assertEqual("vs_123", normalized._vector_store_id)
+        self.assertEqual(
+            {"doc_map": "out/report_analysis/doc_map.json"},
+            normalized._evidence_packs,
+        )
+        self.assertEqual(12.5, normalized._text_density)
+        self.assertEqual(3, normalized._text_pages_sampled)
+        self.assertEqual(450, normalized._text_char_count)
+        self.assertTrue(normalized._text_not_available)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,22 +1,28 @@
 from __future__ import annotations
 
-import json
 from typing import Any, Dict, List, Optional
 
-from src.contracts.files import ReadTextRequest
 from src.contracts.prompts import PromptLoadRequest
 from src.contracts.report_analysis import AnalysisPackPathRequest, AnalysisStorePackRequest
 from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.contracts.validation import ValidationIssue, ValidationReport, ValidationRequest
-from src.services import file_service, report_analysis_store_service
+from src.generators.analysis_pack_cache import (
+    CachedPackAdaptResult,
+    load_cached_pack,
+)
+from src.generators.analysis_store_adapter import (
+    resolve_pack_path as resolve_analysis_pack_path,
+    store_pack as store_analysis_pack,
+)
+from src.services import file_service
 from src.services.schema_validator_service import validate_schema
 from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.model_resolver import resolve_model
 
-from .shared import LOGGER_NAME, ensure_dict, logger
+from .shared import LOGGER_NAME, logger
 
 
 def validation_cache_meta(
@@ -77,39 +83,17 @@ def resolve_pack_path(
     analysis_store,
     ctx: RunContext,
 ) -> str:
-    if hasattr(analysis_store, "pack_path"):
-        try:
-            response = analysis_store.pack_path(
-                AnalysisPackPathRequest(
-                    schema_version="1.0",
-                    output_dir=output_dir,
-                    report_id=report_id,
-                    pack_name=pack_name,
-                    report_slug=report_name,
-                ),
-                ctx,
-            )
-            if isinstance(response, str):
-                return response
-            output_path = getattr(response, "output_path", None)
-            if isinstance(output_path, str):
-                return output_path
-        except TypeError:
-            return str(
-                analysis_store.pack_path(
-                    output_dir, report_id, pack_name, report_slug=report_name
-                )
-            )
-    return report_analysis_store_service.pack_path(
-        AnalysisPackPathRequest(
+    return resolve_analysis_pack_path(
+        analysis_store=analysis_store,
+        request=AnalysisPackPathRequest(
             schema_version="1.0",
             output_dir=output_dir,
             report_id=report_id,
             pack_name=pack_name,
             report_slug=report_name,
         ),
-        ctx,
-    ).output_path
+        ctx=ctx,
+    )
 
 
 def store_pack(
@@ -122,37 +106,9 @@ def store_pack(
     ctx: RunContext,
     report_name: Optional[str],
 ) -> str:
-    if hasattr(analysis_store, "store_pack"):
-        try:
-            response = analysis_store.store_pack(
-                AnalysisStorePackRequest(
-                    schema_version="1.0",
-                    output_dir=output_dir,
-                    report_id=report_id,
-                    pack_name=pack_name,
-                    payload=payload,
-                    report_slug=report_name,
-                ),
-                ctx,
-            )
-            if isinstance(response, str):
-                return response
-            output_path = getattr(response, "output_path", None)
-            if isinstance(output_path, str):
-                return output_path
-        except TypeError:
-            return str(
-                analysis_store.store_pack(
-                    output_dir,
-                    report_id,
-                    pack_name,
-                    payload,
-                    ctx,
-                    report_slug=report_name,
-                )
-            )
-    return report_analysis_store_service.store_pack(
-        AnalysisStorePackRequest(
+    return store_analysis_pack(
+        analysis_store=analysis_store,
+        request=AnalysisStorePackRequest(
             schema_version="1.0",
             output_dir=output_dir,
             report_id=report_id,
@@ -160,8 +116,8 @@ def store_pack(
             payload=payload,
             report_slug=report_name,
         ),
-        ctx,
-    ).output_path
+        ctx=ctx,
+    )
 
 
 def load_cached_validation(
@@ -174,18 +130,8 @@ def load_cached_validation(
     ctx: RunContext,
     analysis_store,
 ) -> Optional[ValidationReport]:
-    if not cache_key:
-        return None
-    path = resolve_pack_path(
-        output_dir, report_id, pack_name, report_name, analysis_store, ctx
-    )
-    try:
-        response = file_service.read_text(
-            ReadTextRequest(schema_version="1.0", path=path), ctx
-        )
-    except AppError as exc:
-        if exc.code == "file_not_found":
-            return None
+    def _log_read_failed(exc: AppError, path: str) -> None:
+        del path
         logger.info(
             log_event(
                 ctx,
@@ -199,17 +145,22 @@ def load_cached_validation(
                 },
             )
         )
-        return None
-    try:
-        payload = json.loads(response.content)
-    except json.JSONDecodeError:
-        return None
-    if not isinstance(payload, dict):
-        return None
-    cached = ensure_dict(payload.get("_cache"))
-    if cached.get("key") != cache_key:
-        return None
-    return validation_report_from_payload(payload, path)
+
+    result = load_cached_pack(
+        cache_key=cache_key,
+        ctx=ctx,
+        resolve_path=lambda: resolve_pack_path(
+            output_dir, report_id, pack_name, report_name, analysis_store, ctx
+        ),
+        read_text=file_service.read_text,
+        on_read_failed=_log_read_failed,
+        adapt_payload=lambda payload, path: CachedPackAdaptResult(
+            schema_version="1.0",
+            status="hit",
+            value=validation_report_from_payload(payload, path),
+        ),
+    )
+    return result.value if result.status == "hit" else None
 
 
 def validation_report_from_payload(payload: dict, path: str) -> ValidationReport:
@@ -244,4 +195,3 @@ def validate_validation_schema(report: ValidationReport, ctx: RunContext) -> Non
         ),
         ctx,
     )
-

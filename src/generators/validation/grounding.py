@@ -5,11 +5,10 @@ import re
 from typing import Any, List, Sequence
 
 from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIResponseRequest
-from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.contracts.validation import ValidationIssue, ValidationRequest
+from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
-from src.utils.model_resolver import resolve_model
 from src.utils.quantity import extract_quantities
 from src.utils.text_normalization import normalize_text
 
@@ -63,8 +62,18 @@ def run_grounding_check(
     issues: List[ValidationIssue] = []
     prompt_ctx = child_context(ctx, task_id=f"{ctx.task_id}:grounding")
     prompt_namespace = "report_vs/validate/grounding"
-    prompt_set = prompt_client.load_prompt_set(
-        PromptLoadRequest(schema_version="1.0", namespace=prompt_namespace), prompt_ctx
+    artifacts = request.artifacts if isinstance(request.artifacts, dict) else {}
+    prompt_vars = {
+        "report_json": json.dumps(grounding_payload(request, artifacts), ensure_ascii=False),
+        "evidence_json": json.dumps(list(evidence_texts), ensure_ascii=False),
+    }
+    prompt_bundle = prepare_prompt_bundle(
+        namespace=prompt_namespace,
+        settings=settings,
+        ctx=prompt_ctx,
+        prompt_client=prompt_client,
+        system_variables=prompt_vars,
+        user_variables=prompt_vars,
     )
     logger.info(
         log_event(
@@ -74,29 +83,12 @@ def run_grounding_check(
             module=LOGGER_NAME,
             fields={
                 "namespace": prompt_namespace,
-                "system_path": prompt_set.system.path,
-                "system_sha256": prompt_set.system.sha256,
-                "user_path": prompt_set.user.path,
-                "user_sha256": prompt_set.user.sha256,
+                "system_path": prompt_bundle.prompt_set.system.path,
+                "system_sha256": prompt_bundle.prompt_set.system.sha256,
+                "user_path": prompt_bundle.prompt_set.user.path,
+                "user_sha256": prompt_bundle.prompt_set.user.sha256,
             },
         )
-    )
-    artifacts = request.artifacts if isinstance(request.artifacts, dict) else {}
-    prompt_vars = {
-        "report_json": json.dumps(grounding_payload(request, artifacts), ensure_ascii=False),
-        "evidence_json": json.dumps(list(evidence_texts), ensure_ascii=False),
-    }
-    system_render = prompt_client.render_prompt(
-        PromptRenderRequest(
-            schema_version="1.0", template=prompt_set.system, variables=prompt_vars
-        ),
-        prompt_ctx,
-    )
-    user_render = prompt_client.render_prompt(
-        PromptRenderRequest(
-            schema_version="1.0", template=prompt_set.user, variables=prompt_vars
-        ),
-        prompt_ctx,
     )
     logger.info(
         log_event(
@@ -105,13 +97,10 @@ def run_grounding_check(
             event="prompt_rendered",
             module=LOGGER_NAME,
             fields={
-                "system_prompt": system_render.text,
-                "user_prompt": user_render.text,
+                "system_prompt": prompt_bundle.system_prompt,
+                "user_prompt": prompt_bundle.user_prompt,
             },
         )
-    )
-    resolved_model = resolve_model(
-        prompt_namespace, getattr(settings, "openai_models", {}), settings.openai_model
     )
     logger.info(
         log_event(
@@ -121,7 +110,7 @@ def run_grounding_check(
             module=LOGGER_NAME,
             fields={
                 "namespace": prompt_namespace,
-                "resolved_model": resolved_model,
+                "resolved_model": prompt_bundle.resolved_model,
                 "default_model": settings.openai_model,
             },
         )
@@ -133,7 +122,7 @@ def run_grounding_check(
             event="grounding_request_config",
             module=LOGGER_NAME,
             fields={
-                "model": resolved_model,
+                "model": prompt_bundle.resolved_model,
                 "temperature": settings.temperature,
                 "vector_store_id_present": bool(request.vector_store_id),
                 "setting_enabled": bool(
@@ -150,10 +139,10 @@ def run_grounding_check(
             response = openai_client.openai_respond_with_vector_store(
                 OpenAIResponseRequest(
                     schema_version="1.0",
-                    system_prompt=system_render.text,
-                    user_prompt=user_render.text,
+                    system_prompt=prompt_bundle.system_prompt,
+                    user_prompt=prompt_bundle.user_prompt,
                     vector_store_id=request.vector_store_id or "",
-                    model=resolved_model,
+                    model=prompt_bundle.resolved_model,
                     temperature=settings.temperature,
                     api_key=settings.openai_api_key,
                     seed=settings.openai_seed,
@@ -168,9 +157,9 @@ def run_grounding_check(
             response = openai_client.openai_chat_json(
                 OpenAIJSONPromptRequest(
                     schema_version="1.0",
-                    system_prompt=system_render.text,
-                    user_prompt=user_render.text,
-                    model=resolved_model,
+                    system_prompt=prompt_bundle.system_prompt,
+                    user_prompt=prompt_bundle.user_prompt,
+                    model=prompt_bundle.resolved_model,
                     temperature=settings.temperature,
                     api_key=settings.openai_api_key,
                     seed=settings.openai_seed,
@@ -470,4 +459,3 @@ def grounding_issue_severity(
     if violation_type == "non_fatal_interpretation":
         return "info"
     return "warning"
-

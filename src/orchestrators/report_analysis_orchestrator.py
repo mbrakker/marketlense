@@ -66,6 +66,17 @@ BROAD_TARGETS = [
 ]
 
 
+def _attach_payload_analysis_metadata(
+    payload,
+    *,
+    vector_store_id: Optional[str],
+    evidence_paths: Dict[str, str],
+):
+    payload._vector_store_id = str(vector_store_id or "")
+    payload._evidence_packs = dict(evidence_paths)
+    return payload
+
+
 def run_report_analysis(
     runtime: ReportRuntimeState,
     source: ReportSourceState,
@@ -334,8 +345,10 @@ def run_report_analysis(
             )
         )
 
-    normalized_payload = merge_artifacts_into_payload(
-        deepcopy(base_payload), artifacts_payload or {}
+    normalized_payload = _attach_payload_analysis_metadata(
+        merge_artifacts_into_payload(deepcopy(base_payload), artifacts_payload or {}),
+        vector_store_id=vector_state.vector_store_id,
+        evidence_paths=mode_evidence_paths,
     )
     caption_result = generate_figure_captions(
         runtime=runtime,
@@ -353,8 +366,12 @@ def run_report_analysis(
     if caption_result.pack_path:
         mode_evidence_paths["figure_captions"] = caption_result.pack_path
         base_payload = normalize_report(caption_result.payload, runtime.ctx)
-        normalized_payload = merge_artifacts_into_payload(
-            deepcopy(base_payload), artifacts_payload or {}
+        normalized_payload = _attach_payload_analysis_metadata(
+            merge_artifacts_into_payload(
+                deepcopy(base_payload), artifacts_payload or {}
+            ),
+            vector_store_id=vector_state.vector_store_id,
+            evidence_paths=mode_evidence_paths,
         )
     validation_report = _run_validation_with_fallback(
         runtime=runtime,
@@ -418,8 +435,10 @@ def run_report_analysis(
         if regeneration_attempts:
             mode_evidence_paths["artifacts"] = regeneration_attempts[-1].artifacts_path
 
-    normalized_payload = merge_artifacts_into_payload(
-        deepcopy(base_payload), artifacts_payload or {}
+    normalized_payload = _attach_payload_analysis_metadata(
+        merge_artifacts_into_payload(deepcopy(base_payload), artifacts_payload or {}),
+        vector_store_id=vector_state.vector_store_id,
+        evidence_paths=mode_evidence_paths,
     )
     data_dict = normalized_payload.to_dict()
     if artifacts_payload:

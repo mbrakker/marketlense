@@ -6,12 +6,11 @@ from typing import Dict, List, Sequence
 
 from src.contracts.config import AppSettings
 from src.contracts.openai import OpenAIJSONPromptRequest
-from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationIssue
+from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
-from src.utils.model_resolver import resolve_model
 
 from .evidence import quote_label
 from .models import SemanticCheckOutcome, SemanticSupport, ValidationRuntime
@@ -60,9 +59,19 @@ def run_semantic_validation(
         )
     )
     prompt_namespace = "report_vs/validate/semantic"
-    prompt_set = prompt_client.load_prompt_set(
-        PromptLoadRequest(schema_version="1.0", namespace=prompt_namespace),
-        semantic_ctx,
+    payload = semantic_payload(insights, quotes)
+    prompt_vars = {
+        "metrics_json": json.dumps(payload["metrics"], ensure_ascii=False),
+        "quotes_json": json.dumps(payload["quotes"], ensure_ascii=False),
+        "evidence_json": json.dumps(list(evidence_texts), ensure_ascii=False),
+    }
+    prompt_bundle = prepare_prompt_bundle(
+        namespace=prompt_namespace,
+        settings=settings,
+        ctx=semantic_ctx,
+        prompt_client=prompt_client,
+        system_variables=prompt_vars,
+        user_variables=prompt_vars,
     )
     logger.info(
         log_event(
@@ -72,30 +81,12 @@ def run_semantic_validation(
             module=LOGGER_NAME,
             fields={
                 "namespace": prompt_namespace,
-                "system_path": prompt_set.system.path,
-                "system_sha256": prompt_set.system.sha256,
-                "user_path": prompt_set.user.path,
-                "user_sha256": prompt_set.user.sha256,
+                "system_path": prompt_bundle.prompt_set.system.path,
+                "system_sha256": prompt_bundle.prompt_set.system.sha256,
+                "user_path": prompt_bundle.prompt_set.user.path,
+                "user_sha256": prompt_bundle.prompt_set.user.sha256,
             },
         )
-    )
-    payload = semantic_payload(insights, quotes)
-    prompt_vars = {
-        "metrics_json": json.dumps(payload["metrics"], ensure_ascii=False),
-        "quotes_json": json.dumps(payload["quotes"], ensure_ascii=False),
-        "evidence_json": json.dumps(list(evidence_texts), ensure_ascii=False),
-    }
-    system_render = prompt_client.render_prompt(
-        PromptRenderRequest(
-            schema_version="1.0", template=prompt_set.system, variables=prompt_vars
-        ),
-        semantic_ctx,
-    )
-    user_render = prompt_client.render_prompt(
-        PromptRenderRequest(
-            schema_version="1.0", template=prompt_set.user, variables=prompt_vars
-        ),
-        semantic_ctx,
     )
     logger.info(
         log_event(
@@ -104,13 +95,10 @@ def run_semantic_validation(
             event="prompt_rendered",
             module=LOGGER_NAME,
             fields={
-                "system_prompt": system_render.text,
-                "user_prompt": user_render.text,
+                "system_prompt": prompt_bundle.system_prompt,
+                "user_prompt": prompt_bundle.user_prompt,
             },
         )
-    )
-    resolved_model = resolve_model(
-        prompt_namespace, getattr(settings, "openai_models", {}), settings.openai_model
     )
     evidence_hash = hashlib.sha256(
         "||".join(evidence_texts).encode("utf-8")
@@ -133,7 +121,7 @@ def run_semantic_validation(
             module=LOGGER_NAME,
             fields={
                 "namespace": prompt_namespace,
-                "resolved_model": resolved_model,
+                "resolved_model": prompt_bundle.resolved_model,
                 "default_model": settings.openai_model,
                 "evidence_sha256": evidence_hash,
                 "metrics_sha256": metrics_hash,
@@ -148,7 +136,7 @@ def run_semantic_validation(
             event="semantic_request_config",
             module=LOGGER_NAME,
             fields={
-                "model": resolved_model,
+                "model": prompt_bundle.resolved_model,
                 "temperature": settings.temperature,
                 "seed": settings.openai_seed,
             },
@@ -158,9 +146,9 @@ def run_semantic_validation(
         response = openai_client.openai_chat_json(
             OpenAIJSONPromptRequest(
                 schema_version="1.0",
-                system_prompt=system_render.text,
-                user_prompt=user_render.text,
-                model=resolved_model,
+                system_prompt=prompt_bundle.system_prompt,
+                user_prompt=prompt_bundle.user_prompt,
+                model=prompt_bundle.resolved_model,
                 temperature=settings.temperature,
                 api_key=settings.openai_api_key,
                 seed=settings.openai_seed,
@@ -331,4 +319,3 @@ def parse_semantic_response(payload: dict) -> SemanticCheckOutcome:
         quote_support=quote_support,
         issues=issues,
     )
-

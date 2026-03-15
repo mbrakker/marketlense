@@ -30,6 +30,7 @@ from src.contracts.report_generation import (
     ReportSourceState,
 )
 from src.contracts.report_models import ReportFigureAsset, ReportPayload
+from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.generators.report_generation_dependencies import ReportGeneratorDependencies
 from src.generators.report_generation_shared import logger, read_cache_json
 from src.utils.cache_utils import sha256_json
@@ -162,11 +163,6 @@ def _rank_candidates_batch(
             },
         )
     rank_model = settings.rank_model or settings.openai_model
-    resolved_rank_model = resolve_model(
-        "rank_candidates",
-        getattr(settings, "openai_models", {}),
-        rank_model,
-    )
     rows = [
         {
             "id": candidate.id,
@@ -181,13 +177,15 @@ def _rank_candidates_batch(
         for candidate in candidates
     ]
     candidates_json = json.dumps(rows, ensure_ascii=True)
-    rank_prompt_set = dependencies.load_prompt_set(
-        PromptLoadRequest(
-            schema_version="1.0",
-            namespace="rank_candidates",
-            reload_if_changed=True,
-        ),
-        ctx,
+    prompt_bundle = prepare_prompt_bundle(
+        namespace="rank_candidates",
+        settings=settings,
+        ctx=ctx,
+        prompt_client=dependencies,
+        system_variables={},
+        user_variables={"candidates_json": candidates_json},
+        reload_if_changed=True,
+        default_model=rank_model,
     )
     logger.info(
         log_event(
@@ -198,28 +196,12 @@ def _rank_candidates_batch(
             fields={
                 "namespace": "rank_candidates",
                 "candidate_kind": kind,
-                "system_path": rank_prompt_set.system.path,
-                "system_sha256": rank_prompt_set.system.sha256,
-                "user_path": rank_prompt_set.user.path,
-                "user_sha256": rank_prompt_set.user.sha256,
+                "system_path": prompt_bundle.prompt_set.system.path,
+                "system_sha256": prompt_bundle.prompt_set.system.sha256,
+                "user_path": prompt_bundle.prompt_set.user.path,
+                "user_sha256": prompt_bundle.prompt_set.user.sha256,
             },
         )
-    )
-    rank_system_render = dependencies.render_prompt(
-        PromptRenderRequest(
-            schema_version="1.0",
-            template=rank_prompt_set.system,
-            variables={},
-        ),
-        ctx,
-    )
-    rank_user_render = dependencies.render_prompt(
-        PromptRenderRequest(
-            schema_version="1.0",
-            template=rank_prompt_set.user,
-            variables={"candidates_json": candidates_json},
-        ),
-        ctx,
     )
     logger.info(
         log_event(
@@ -229,8 +211,8 @@ def _rank_candidates_batch(
             module=logger.name,
             fields={
                 "candidate_kind": kind,
-                "system_prompt": rank_system_render.text,
-                "user_prompt": rank_user_render.text,
+                "system_prompt": prompt_bundle.system_prompt,
+                "user_prompt": prompt_bundle.user_prompt,
             },
         )
     )
@@ -242,7 +224,7 @@ def _rank_candidates_batch(
             module=logger.name,
             fields={
                 "candidate_kind": kind,
-                "model": resolved_rank_model,
+                "model": prompt_bundle.resolved_model,
                 "temperature": settings.rank_temperature,
                 "seed": settings.rank_seed,
                 "candidate_count": len(candidates),
@@ -252,11 +234,11 @@ def _rank_candidates_batch(
     ranked_resp = dependencies.rank_candidates(
         RankRequest(
             schema_version="1.0",
-            system_prompt=rank_system_render.text,
-            user_prompt=rank_user_render.text,
-            prompt_system_sha256=rank_prompt_set.system.sha256,
-            prompt_user_sha256=rank_prompt_set.user.sha256,
-            model=resolved_rank_model,
+            system_prompt=prompt_bundle.system_prompt,
+            user_prompt=prompt_bundle.user_prompt,
+            prompt_system_sha256=prompt_bundle.prompt_set.system.sha256,
+            prompt_user_sha256=prompt_bundle.prompt_set.user.sha256,
+            model=prompt_bundle.resolved_model,
             temperature=settings.rank_temperature,
             api_key=settings.openai_api_key,
             seed=settings.rank_seed,
