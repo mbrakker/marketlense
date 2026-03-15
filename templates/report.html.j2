@@ -41,9 +41,15 @@
 {% set primary_figure = data._figure_top if data._figure_top is defined and data._figure_top else (data._figure_image if data._figure_image is defined else "") %}
 {% set primary_figure = primary_figure|string|trim %}
 {% set figure_gallery = data._figure_gallery if data._figure_gallery is defined and data._figure_gallery else [] %}
+{% set figure_assets = data._figure_assets if data._figure_assets is defined and data._figure_assets else [] %}
+{% if figure_assets and figure_assets[0].image_path is defined and figure_assets[0].image_path %}
+  {% set primary_figure = figure_assets[0].image_path|string|trim %}
+{% endif %}
 {% set figure_section_enabled = data._figure_section_enabled if data._figure_section_enabled is defined else True %}
 {% set figure_caption = "" %}
-{% if data.figure is defined and data.figure %}
+{% if figure_assets and figure_assets[0].display_caption is defined and figure_assets[0].display_caption %}
+  {% set figure_caption = figure_assets[0].display_caption|string|trim %}
+{% elif data.figure is defined and data.figure %}
   {% if data.figure.title is defined and data.figure.title %}
     {% set figure_caption = data.figure.title|string|trim %}
   {% elif data.figure.evidence is defined and data.figure.evidence %}
@@ -59,7 +65,7 @@
 {% set has_metadata = (categories_list|length > 0) or (tags_list|length > 0) %}
 {% set has_topics = topics_list|length > 0 %}
 {% set has_topic_briefs = topics_expanded|length > 0 %}
-{% set has_primary_figure = figure_section_enabled and primary_figure %}
+{% set has_primary_figure = figure_section_enabled and (primary_figure or figure_assets|length > 0) %}
 {% set has_claim_map = claim_map|length > 0 %}
 {% set has_expert_comment = expert_comment and (expert_comment|string|trim) %}
 {% set has_linkedin_post = linkedin_post and (linkedin_post|string|trim) %}
@@ -1157,9 +1163,11 @@ h2{
         {% if has_primary_figure %}
         <section class="panel" id="section-figures" data-reveal data-section data-tone="figures" aria-label="Figure carousel">
           <h2>Figures</h2>
-          {% set slide_count = namespace(total=0) %}
-          {% if has_primary_figure %}{% set slide_count.total = slide_count.total + 1 %}{% endif %}
-          {% if figure_gallery and figure_gallery|length > 1 %}
+          {% set slide_count = namespace(total=figure_assets|length) %}
+          {% if slide_count.total == 0 and has_primary_figure %}
+            {% set slide_count.total = slide_count.total + 1 %}
+          {% endif %}
+          {% if slide_count.total == 1 and figure_gallery and figure_gallery|length > 1 %}
             {% for fig in figure_gallery %}
               {% set figure_path = fig|string|trim %}
               {% if figure_path and figure_path != primary_figure %}
@@ -1173,21 +1181,41 @@ h2{
               <button type="button" class="carousel-btn prev" aria-label="Previous figure" data-carousel-prev>&lsaquo;</button>
               <div class="carousel-slides" tabindex="0">
                 {% set slide_ns = namespace(index=0) %}
-                {% if has_primary_figure %}
-                {% set slide_ns.index = slide_ns.index + 1 %}
-                <figure class="carousel-slide{% if slide_ns.index == 1 %} is-active{% endif %}" data-carousel-slide="{{ slide_ns.index }}">
-                  <img src="{{ primary_figure }}"
-                    srcset="{{ primary_figure }} 1x, {{ primary_figure }} 2x"
-                    sizes="(max-width: 800px) 100vw, 980px"
-                    alt="Selected figure from {{ report_title }}"
-                    loading="lazy"
-                    decoding="async"
-                    width="{{ figure_width }}"
-                    height="{{ figure_height }}">
-                  <figcaption class="carousel-caption">{% if figure_caption %}{{ figure_caption }}{% else %}Representative figure from the source report.{% endif %}</figcaption>
-                </figure>
-                {% endif %}
-                {% if figure_gallery and figure_gallery|length > 1 %}
+                {% if figure_assets and figure_assets|length > 0 %}
+                  {% for asset in figure_assets %}
+                    {% set figure_path = asset.image_path|string|trim if asset.image_path is defined else "" %}
+                    {% if figure_path %}
+                    {% set slide_ns.index = slide_ns.index + 1 %}
+                    {% set asset_caption = asset.display_caption|string|trim if asset.display_caption is defined and asset.display_caption else "" %}
+                    <figure class="carousel-slide{% if slide_ns.index == 1 %} is-active{% endif %}" data-carousel-slide="{{ slide_ns.index }}">
+                      <img src="{{ figure_path }}"
+                        srcset="{{ figure_path }} 1x, {{ figure_path }} 2x"
+                        sizes="(max-width: 800px) 100vw, 980px"
+                        alt="{% if asset.is_primary is defined and asset.is_primary %}Selected figure from {{ report_title }}{% else %}Additional figure {{ slide_ns.index }} from {{ report_title }}{% endif %}"
+                        loading="lazy"
+                        decoding="async"
+                        width="{{ figure_width }}"
+                        height="{{ figure_height }}">
+                      <figcaption class="carousel-caption">{% if asset_caption %}{{ asset_caption }}{% elif slide_ns.index == 1 and figure_caption %}{{ figure_caption }}{% else %}Representative figure from the source report.{% endif %}</figcaption>
+                    </figure>
+                    {% endif %}
+                  {% endfor %}
+                {% else %}
+                  {% if has_primary_figure %}
+                  {% set slide_ns.index = slide_ns.index + 1 %}
+                  <figure class="carousel-slide{% if slide_ns.index == 1 %} is-active{% endif %}" data-carousel-slide="{{ slide_ns.index }}">
+                    <img src="{{ primary_figure }}"
+                      srcset="{{ primary_figure }} 1x, {{ primary_figure }} 2x"
+                      sizes="(max-width: 800px) 100vw, 980px"
+                      alt="Selected figure from {{ report_title }}"
+                      loading="lazy"
+                      decoding="async"
+                      width="{{ figure_width }}"
+                      height="{{ figure_height }}">
+                    <figcaption class="carousel-caption">{% if figure_caption %}{{ figure_caption }}{% else %}Representative figure from the source report.{% endif %}</figcaption>
+                  </figure>
+                  {% endif %}
+                  {% if figure_gallery and figure_gallery|length > 1 %}
                   {% for fig in figure_gallery %}
                     {% set figure_path = fig|string|trim %}
                     {% if figure_path and figure_path != primary_figure %}
@@ -1205,6 +1233,7 @@ h2{
                     </figure>
                     {% endif %}
                   {% endfor %}
+                  {% endif %}
                 {% endif %}
               </div>
               <button type="button" class="carousel-btn next" aria-label="Next figure" data-carousel-next>&rsaquo;</button>
@@ -1216,13 +1245,24 @@ h2{
             {% if slide_count.total > 1 %}
             <div class="carousel-thumbs" role="tablist" aria-label="Figure thumbnails">
               {% set thumb_ns = namespace(index=0) %}
-              {% if has_primary_figure %}
-              {% set thumb_ns.index = thumb_ns.index + 1 %}
-              <button type="button" class="carousel-thumb{% if thumb_ns.index == 1 %} is-active{% endif %}" data-carousel-thumb="{{ thumb_ns.index }}" aria-label="Open figure {{ thumb_ns.index }}">
-                <img src="{{ primary_figure }}" alt="Figure thumbnail {{ thumb_ns.index }}" loading="lazy" decoding="async" width="{{ thumb_width }}" height="{{ thumb_height }}">
-              </button>
-              {% endif %}
-              {% if figure_gallery and figure_gallery|length > 1 %}
+              {% if figure_assets and figure_assets|length > 0 %}
+                {% for asset in figure_assets %}
+                  {% set figure_path = asset.image_path|string|trim if asset.image_path is defined else "" %}
+                  {% if figure_path %}
+                  {% set thumb_ns.index = thumb_ns.index + 1 %}
+                  <button type="button" class="carousel-thumb{% if thumb_ns.index == 1 %} is-active{% endif %}" data-carousel-thumb="{{ thumb_ns.index }}" aria-label="Open figure {{ thumb_ns.index }}">
+                    <img src="{{ figure_path }}" alt="Figure thumbnail {{ thumb_ns.index }}" loading="lazy" decoding="async" width="{{ thumb_width }}" height="{{ thumb_height }}">
+                  </button>
+                  {% endif %}
+                {% endfor %}
+              {% else %}
+                {% if has_primary_figure %}
+                {% set thumb_ns.index = thumb_ns.index + 1 %}
+                <button type="button" class="carousel-thumb{% if thumb_ns.index == 1 %} is-active{% endif %}" data-carousel-thumb="{{ thumb_ns.index }}" aria-label="Open figure {{ thumb_ns.index }}">
+                  <img src="{{ primary_figure }}" alt="Figure thumbnail {{ thumb_ns.index }}" loading="lazy" decoding="async" width="{{ thumb_width }}" height="{{ thumb_height }}">
+                </button>
+                {% endif %}
+                {% if figure_gallery and figure_gallery|length > 1 %}
                 {% for fig in figure_gallery %}
                   {% set figure_path = fig|string|trim %}
                   {% if figure_path and figure_path != primary_figure %}
@@ -1232,6 +1272,7 @@ h2{
                   </button>
                   {% endif %}
                 {% endfor %}
+                {% endif %}
               {% endif %}
             </div>
             {% endif %}

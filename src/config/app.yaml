@@ -39,6 +39,12 @@ ingest:
       prompt_namespace: "pdf_text/ocr_fallback"
       cache_enabled: true
       chunk_page_count: 8
+  figure_captions:
+    enabled: true
+    temperature: 0.2
+    timeout_seconds: 600
+    prompt_namespace: "report_vs/figure_caption"
+    max_chars: 500
   validation:
     data_gap_policy: "warn"
     regeneration_max_attempts: 3
@@ -86,6 +92,7 @@ openai_models:
   report_vs/evidence_packs/limitations: "gpt-5-mini"
   report_vs/evidence_packs/methods: "gpt-5-mini"
   report_vs/evidence_packs/quote_candidates: "gpt-5-mini"
+  report_vs/figure_caption: "gpt-5-mini"
   report_vs/validate/grounding: "gpt-5-mini"
   report_vs/taxonomy: "gpt-5-mini"
   rank_candidates: "gpt-5-mini"

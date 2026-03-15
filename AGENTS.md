@@ -95,14 +95,26 @@ A Service is the **only** place where the system touches the outside world.
 
 #### Service consolidation (mandatory)
 
-* One external system = one service module. Splitting the same system across multiple service modules is forbidden.
-* Thin wrappers that merely delegate to another service for the same system are violations; consolidate into one module.
-* Examples (current modules):
+#### Service consolidation (revised)
 
-  * PDF libraries MUST live in a single service (e.g., `pdf_service.py`), not `pdf_utils_service.py` + `pdf_text_service.py` + `pdf_context_service.py` + `pdf_contents_service.py` + `extract_service.py`.
-  * OpenAI access belongs in `openai_service.py` only; do not add `openai_*` service shards.
-  * Vector store access belongs in `vector_store_service.py` only; do not split indexing/query/deletion into separate services.
-  * WordPress access belongs in `wordpress_service.py` only.
+One external system MUST have one **service boundary/namespace**, but not necessarily one physical file.
+
+Hard constraints:
+
+* The system MUST expose one canonical service entrypoint per external system.
+* Internals MAY be split into submodules only when:
+  * the split is capability-based,
+  * public ownership remains singular,
+  * cross-submodule coupling stays low,
+  * callers do not choose between competing service entrypoints.
+* External-system access MUST remain discoverable through one canonical boundary.
+* Creating multiple peer service entrypoints for the same external system is forbidden.
+
+Valid example:
+* `services/openai_service/__init__.py` as canonical boundary, with internal capability modules for parsing, ledgering, or response adaptation.
+
+Invalid example:
+* `openai_text_service.py`, `openai_image_service.py`, `openai_helper_service.py`, `llm_service.py` all acting as separate entrypoints.
 
 ---
 
@@ -282,6 +294,36 @@ If a feature requires multiple responsibilities:
 
 "Making it work in one file" is forbidden.
 
+### 1.6.4 Modular Monolith First (Default Architecture Rule)
+
+The default architecture is a **modular monolith with hard internal boundaries**.
+
+Hard constraints:
+
+* New functionality MUST be implemented inside the existing deployable system unless a separate deployable unit is justified by explicit operational need.
+* Independent modules inside the monolith are preferred over creating new services/processes/packages by default.
+* “Future microservice readiness” alone is NOT sufficient justification for extracting a new deployable component.
+* The system MUST optimize first for:
+  * correctness
+  * boundary clarity
+  * testability
+  * deployability simplicity
+  * observability
+* Distribution is allowed only when it reduces total system complexity in practice.
+
+Invalid rationale for extraction:
+
+* “It might scale later”
+* “It feels cleaner as its own service”
+* “We may want separate infra one day”
+
+Valid rationale for extraction requires explicit evidence of:
+* independent scaling need
+* independent deployment cadence
+* durable ownership by a separate team
+* hard isolation/reliability requirement
+* materially different runtime or compliance constraints
+
 ---
 
 ## 2. How to Decide What a Script Is (Non-Ambiguous)
@@ -350,6 +392,86 @@ Refactoring is mandatory if:
 
 Architectural drift must be corrected immediately.
 
+### 3.2.2 Bounded Context Integrity (Anti-Fragmentation Rule)
+
+Modules MUST be grouped by stable business/domain capability, not by arbitrary technical slicing.
+
+Hard constraints:
+
+* Code MUST first belong to a bounded context/capability (e.g., ingest, analysis, publishing, taxonomy, rendering).
+* File/module splits inside a bounded context are allowed only when they preserve one coherent capability.
+* Do NOT create artificial subdomains that exist only to make files smaller.
+* Do NOT split a coherent workflow across multiple peer modules if the split introduces navigation overhead without reducing coupling.
+* A module boundary is valid only if it improves one of:
+  * semantic clarity
+  * test isolation
+  * replacement independence
+  * defect containment
+
+Invalid examples:
+
+* splitting one coherent business capability into many tiny modules with pass-through wiring only
+* creating façade/helper/adapter layers that add naming indirection without reducing responsibility
+* moving logic out of a module solely to satisfy file size aesthetics
+
+Refactoring is required when:
+* the number of modules required to understand one capability becomes disproportionate to the capability itself
+* most modules in a flow are thin delegators
+* developers must traverse many files to follow one simple decision path
+
+### 3.2.3 Indirection Budget (Anti-Layering-for-Its-Own-Sake Rule)
+
+Abstraction is allowed only when it reduces real coupling or complexity.
+
+Hard constraints:
+
+* Do NOT introduce pass-through wrappers that only rename or forward calls.
+* Do NOT add interfaces/adapter layers unless:
+  * there are multiple real implementations, OR
+  * the boundary is external/unstable, OR
+  * tests require a genuine contract seam.
+* Do NOT create helper modules whose only purpose is to split one readable module into smaller fragments without semantic gain.
+* Each additional layer MUST have a concrete reason documented in code comments or module docstring.
+
+Indirection is excessive when:
+
+* a normal flow requires reading more than one orchestrator + one generator + one service + one contract path to understand a simple operation
+* most functions merely pass arguments through unchanged
+* naming complexity grows faster than behavior complexity
+
+Preferred refactor order:
+
+1. simplify within current bounded context
+2. extract pure utility/helper with clear semantic role
+3. extract submodule inside same capability
+4. extract deployable/runtime boundary only if justified under the extraction gate
+
+### 3.2.3 Indirection Budget (Anti-Layering-for-Its-Own-Sake Rule)
+
+Abstraction is allowed only when it reduces real coupling or complexity.
+
+Hard constraints:
+
+* Do NOT introduce pass-through wrappers that only rename or forward calls.
+* Do NOT add interfaces/adapter layers unless:
+  * there are multiple real implementations, OR
+  * the boundary is external/unstable, OR
+  * tests require a genuine contract seam.
+* Do NOT create helper modules whose only purpose is to split one readable module into smaller fragments without semantic gain.
+* Each additional layer MUST have a concrete reason documented in code comments or module docstring.
+
+Indirection is excessive when:
+
+* a normal flow requires reading more than one orchestrator + one generator + one service + one contract path to understand a simple operation
+* most functions merely pass arguments through unchanged
+* naming complexity grows faster than behavior complexity
+
+Preferred refactor order:
+
+1. simplify within current bounded context
+2. extract pure utility/helper with clear semantic role
+3. extract submodule inside same capability
+4. extract deployable/runtime boundary only if justified under the extraction gate
 ---
 
 ### 3.3 Explicit Inputs / Outputs
@@ -363,6 +485,37 @@ Architectural drift must be corrected immediately.
   * casing
   * trimming
   * type coercion
+
+## 3.4 Extraction Gate for New Deployable Components
+
+Creating a new deployable unit, standalone worker, separately versioned package, or independently operated subsystem is forbidden unless the extraction passes an explicit architecture review.
+
+The proposal MUST document:
+
+* capability name
+* current bounded context
+* reason extraction is needed now
+* ownership model
+* runtime boundary
+* data boundary
+* failure/isolation model
+* observability plan
+* migration/rollback plan
+
+At least two of the following MUST be true:
+
+* independent scaling is required
+* independent deployment cadence is required
+* failure isolation materially improves system resilience
+* separate ownership is durable and real
+* runtime/compliance constraints differ materially from the core system
+
+Extraction is invalid if the new boundary would:
+
+* share the same data model without ownership separation
+* require chatty back-and-forth calls for normal operation
+* add network/process boundaries without clear resilience benefit
+* exist mainly to mirror internal code roles
 
 ---
 
@@ -711,3 +864,23 @@ Coding agents:
 No shortcuts.
 No architectural drift.
 No hidden coupling.
+
+
+### 10.1 Mandatory Architecture Review Triggers
+
+An architecture review is REQUIRED before merge when any of the following occurs:
+
+* a new top-level package/directory is introduced under `src/`
+* a new external system boundary/service is introduced
+* a module is split into 3 or more new peer modules
+* a new queue/worker/process/deployable component is introduced
+* one bounded context begins importing internals from another bounded context
+* a change introduces duplicated orchestration paths for the same workflow
+* a change adds a second way to perform the same external interaction
+
+The review MUST explicitly answer:
+
+* Is this preserving a modular monolith, or drifting toward fragmentation?
+* Is the new boundary semantic, or only structural?
+* Can the same outcome be achieved with fewer modules and the same testability?
+* Does this reduce total cognitive load for the next engineer?

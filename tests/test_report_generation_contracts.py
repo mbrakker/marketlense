@@ -12,7 +12,7 @@ from src.contracts.report_generation import (
     ReportSelectionState,
     ReportSourceState,
 )
-from src.contracts.report_models import Figure, Quote, ReportPayload
+from src.contracts.report_models import Figure, Quote, ReportFigureAsset, ReportPayload
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationReport
 
@@ -35,6 +35,20 @@ def _payload() -> ReportPayload:
         contents_page_number=1,
         contents_heading="Contents",
         _contents_image="contents.png",
+        _figure_assets=[
+            ReportFigureAsset(
+                image_path="report/slices/primary.png",
+                page=2,
+                candidate_id="chart-1",
+                kind="chart",
+                is_primary=True,
+                detected_caption="Detected caption",
+                preview_text="Preview text",
+                generated_caption="Generated caption",
+                display_caption="Generated caption",
+                caption_source="generated",
+            )
+        ],
     )
 
 
@@ -159,6 +173,10 @@ def test_report_generation_contract_roundtrip(assert_no_defaulted_required_field
                 **source_dict["payload"],
                 "quote": Quote(**source_dict["payload"]["quote"]),
                 "figure": Figure(**source_dict["payload"]["figure"]),
+                "_figure_assets": [
+                    ReportFigureAsset(**asset)
+                    for asset in source_dict["payload"].get("_figure_assets", [])
+                ],
             }
         ),
         pdf_context=None,

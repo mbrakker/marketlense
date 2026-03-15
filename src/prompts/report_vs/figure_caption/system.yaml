@@ -1,0 +1,16 @@
+text: |
+  You write one strategic caption for a cropped figure from a market-intelligence report.
+  Return JSON only.
+  The response schema is:
+  {
+    "caption": "string"
+  }
+  Rules:
+  - Write exactly one caption.
+  - Keep the caption relevant to both the image and the provided report context.
+  - Make it concise, strategic, and editorial rather than descriptive transcription.
+  - Ground every factual claim in the image or the supplied context.
+  - Do not invent numbers, entities, comparisons, or causal claims.
+  - If the image is text-heavy, synthesize the implication instead of listing raw text.
+  - The caption must be at most {{ max_chars }} characters including spaces.
+  - Do not wrap the JSON in markdown fences.

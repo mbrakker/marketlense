@@ -3,38 +3,45 @@ from __future__ import annotations
 import logging
 from typing import Any, List
 
-from src.contracts.report_models import Figure, Quote, ReportPayload
+from src.contracts.report_models import Figure, Quote, ReportFigureAsset, ReportPayload
 from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.utils.logging import log_event
+from src.utils.coercion import coerce_int
 from src.services.schema_validator_service import validate_schema
 
 logger = logging.getLogger("market_lense.normalize_generator")
 
 
 def normalize_report(payload: ReportPayload, ctx: RunContext) -> ReportPayload:
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="normalize_report_start",
-        module=logger.name,
-        fields={"payload": payload.to_dict()},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="normalize_report_start",
+            module=logger.name,
+            fields={"payload": payload.to_dict()},
+        )
+    )
     normalized = _normalize_report_payload(payload)
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="normalize_report_complete",
-        module=logger.name,
-        fields={"payload": normalized.to_dict()},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="normalize_report_complete",
+            module=logger.name,
+            fields={"payload": normalized.to_dict()},
+        )
+    )
     return normalized
 
 
 def validate_with_schema(payload: dict, schema_name: str, ctx: RunContext) -> None:
     """Validate an arbitrary payload against a named schema."""
     validate_schema(
-        SchemaValidateRequest(schema_version="1.0", payload=payload, schema_name=schema_name),
+        SchemaValidateRequest(
+            schema_version="1.0", payload=payload, schema_name=schema_name
+        ),
         ctx,
     )
 
@@ -94,12 +101,37 @@ def _normalize_report_payload(data: ReportPayload) -> ReportPayload:
         evidence=_s(data.figure.evidence),
     )
 
-    contents_page_number = data.contents_page_number if isinstance(data.contents_page_number, int) and data.contents_page_number >= 0 else 0
+    contents_page_number = (
+        data.contents_page_number
+        if isinstance(data.contents_page_number, int) and data.contents_page_number >= 0
+        else 0
+    )
     contents_heading = _s(data.contents_heading)
 
     _figure_gallery = data._figure_gallery or []
     _figure_top = _s(data._figure_top)
     _figure_image = _s(data._figure_image)
+    _figure_assets = []
+    for asset in getattr(data, "_figure_assets", []) or []:
+        if isinstance(asset, ReportFigureAsset):
+            _figure_assets.append(asset)
+            continue
+        if isinstance(asset, dict):
+            _figure_assets.append(
+                ReportFigureAsset(
+                    image_path=_s(asset.get("image_path")).strip(),
+                    page=coerce_int(asset.get("page"), -1),
+                    candidate_id=_s(asset.get("candidate_id")).strip(),
+                    kind=_s(asset.get("kind")).strip() or "image",
+                    is_primary=bool(asset.get("is_primary")),
+                    detected_caption=_s(asset.get("detected_caption")).strip(),
+                    preview_text=_s(asset.get("preview_text")).strip(),
+                    generated_caption=_s(asset.get("generated_caption")).strip(),
+                    display_caption=_s(asset.get("display_caption")).strip(),
+                    caption_source=_s(asset.get("caption_source")).strip(),
+                    schema_version=_s(asset.get("schema_version")).strip() or "1.0",
+                )
+            )
     _figure_section_enabled = bool(getattr(data, "_figure_section_enabled", True))
     _contents_image = _s(data._contents_image)
 
@@ -122,6 +154,7 @@ def _normalize_report_payload(data: ReportPayload) -> ReportPayload:
         _figure_image=_figure_image,
         _figure_gallery=_figure_gallery,
         _figure_top=_figure_top,
+        _figure_assets=_figure_assets,
         _figure_section_enabled=_figure_section_enabled,
         contents_page_number=contents_page_number,
         contents_heading=contents_heading,

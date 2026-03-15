@@ -9,7 +9,11 @@ from src.contracts.categories import (
 )
 from src.contracts.cover_images import CoverImageGenerationRequest
 from src.contracts.files import FileStatRequest, ReadTextRequest, WriteBytesRequest
-from src.contracts.openai import OpenAIPdfOcrRequest, OpenAIPdfOcrResponse
+from src.contracts.openai import (
+    OpenAIJSONImagePromptRequest,
+    OpenAIPdfOcrRequest,
+    OpenAIPdfOcrResponse,
+)
 from src.contracts.pdf_contents import (
     PdfContentsDetectionRequest,
     PdfContentsDetectionResponse,
@@ -142,6 +146,9 @@ class ReportGeneratorDependencies:
     apply_crop_refine_bbox: Callable[[CropRefineBBoxApplyRequest, RunContext], Any]
     rank_candidates: Callable[[RankRequest, RunContext], Any]
     refine_candidate_crops: Callable[[CropRefineRequest, RunContext], Any]
+    openai_chat_json_with_images: Callable[
+        [OpenAIJSONImagePromptRequest, RunContext], Any
+    ]
     load_prompt_set: Callable[[PromptLoadRequest, RunContext], Any]
     render_prompt: Callable[[PromptRenderRequest, RunContext], Any]
     openai_ocr_pdf: Callable[[OpenAIPdfOcrRequest, RunContext], OpenAIPdfOcrResponse]
@@ -193,6 +200,7 @@ class ReportGeneratorDependencies:
             apply_crop_refine_bbox=apply_crop_refine_bbox_service,
             rank_candidates=rank_candidates_service,
             refine_candidate_crops=refine_candidate_crops_service,
+            openai_chat_json_with_images=openai_service.openai_chat_json_with_images,
             load_prompt_set=load_prompt_set,
             render_prompt=render_prompt,
             openai_ocr_pdf=openai_service.openai_ocr_pdf,

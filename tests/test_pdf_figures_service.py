@@ -18,7 +18,9 @@ from src.services.pdf_service import collect_candidates, extract_best_figure
 
 
 def _ctx() -> RunContext:
-    return RunContext(schema_version="1.0", run_id="run", task_id="task", span_id="span")
+    return RunContext(
+        schema_version="1.0", run_id="run", task_id="task", span_id="span"
+    )
 
 
 def _events(caplog, logger_name: str) -> list[dict[str, object]]:
@@ -77,7 +79,9 @@ def test_collect_candidates_returns_chart_and_table_contracts(
     out_dir = tmp_path / "out"
     _build_candidates_pdf(pdf_path)
 
-    caplog.set_level(logging.INFO, logger="market_lense.pdf_service.candidate_extraction")
+    caplog.set_level(
+        logging.INFO, logger="market_lense.pdf_service.candidate_extraction"
+    )
 
     response = collect_candidates(
         ExtractCandidatesRequest(
@@ -127,6 +131,7 @@ def test_extract_best_figure_writes_asset_and_logs(
 
     assert response.image_path == "report/assets/report.png"
     assert response.caption == "Figure 1. Synthetic chart"
+    assert response.page == 0
     assert (out_dir / response.image_path).exists()
     assert_no_defaulted_required_fields(response)
 

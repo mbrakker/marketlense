@@ -422,6 +422,35 @@ class TestConfigService(unittest.TestCase):
         self.assertFalse(settings.pdf_text_ocr_cache_enabled)
         self.assertEqual(6, settings.pdf_text_ocr_chunk_page_count)
 
+    def test_figure_caption_settings_load(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_analysis=False)
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["ingest"]["figure_captions"] = {
+                "enabled": True,
+                "temperature": 0.15,
+                "timeout_seconds": 321.0,
+                "prompt_namespace": "report_vs/figure_caption",
+                "max_chars": 420,
+            }
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
+
+            with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
+                settings = load_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
+                )
+
+        self.assertTrue(settings.figure_caption_enabled)
+        self.assertEqual(0.15, settings.figure_caption_temperature)
+        self.assertEqual(321.0, settings.figure_caption_timeout_seconds)
+        self.assertEqual(
+            "report_vs/figure_caption", settings.figure_caption_prompt_namespace
+        )
+        self.assertEqual(420, settings.figure_caption_max_chars)
+
     def test_publish_settings_derive_site_url_from_admin(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(tmp_dir, include_publish=True)

@@ -9,7 +9,10 @@ from typing import Any, Optional
 from src.contracts.candidates import Candidate
 from src.contracts.ingest import IngestSettings
 from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
-from src.contracts.report_analysis import AnalysisPackPathRequest, AnalysisStorePackRequest
+from src.contracts.report_analysis import (
+    AnalysisPackPathRequest,
+    AnalysisStorePackRequest,
+)
 from src.contracts.report_assets import (
     CropRefineBBoxApplyRequest,
     CropRefineCandidate,
@@ -26,7 +29,7 @@ from src.contracts.report_generation import (
     ReportSelectionState,
     ReportSourceState,
 )
-from src.contracts.report_models import ReportPayload
+from src.contracts.report_models import ReportFigureAsset, ReportPayload
 from src.generators.report_generation_dependencies import ReportGeneratorDependencies
 from src.generators.report_generation_shared import logger, read_cache_json
 from src.utils.cache_utils import sha256_json
@@ -309,6 +312,17 @@ def _merge_rank_usage(
     return totals
 
 
+def _bbox_tuple(values: Any) -> tuple[float, float, float, float]:
+    if not isinstance(values, (list, tuple)) or len(values) != 4:
+        raise ValueError(f"Expected bbox with 4 coordinates, received: {values!r}")
+    return (
+        float(values[0]),
+        float(values[1]),
+        float(values[2]),
+        float(values[3]),
+    )
+
+
 def _crop_refine_parallel_workers(settings: IngestSettings, selected_max: int) -> int:
     configured = coerce_int(getattr(settings, "report_worker_limit", 1), 1)
     if configured < 1:
@@ -409,10 +423,12 @@ def _load_crop_refine_cache(
     payload = read_cache_json(Path(crop_cache_path), ctx, dependencies)
     if not isinstance(payload, dict):
         return {}
-    profile = payload.get("_cache") if isinstance(payload.get("_cache"), dict) else {}
+    profile_value = payload.get("_cache")
+    profile = profile_value if isinstance(profile_value, dict) else {}
     if str(profile.get("key") or "") != profile_key:
         return {}
-    rows = payload.get("results") if isinstance(payload.get("results"), list) else []
+    rows_value = payload.get("results")
+    rows = rows_value if isinstance(rows_value, list) else []
     out: dict[str, dict] = {}
     for row in rows:
         if not isinstance(row, dict):
@@ -690,8 +706,12 @@ def select_refined_candidate_items(
         )
 
     def _run_crop_refine_llm(plan_index: int) -> dict[str, Any]:
+        if crop_refine_prompt_set is None or crop_refine_system_render is None:
+            raise RuntimeError("crop_refine prompt set was not initialized")
         _, candidate = thresholded[plan_index]
-        page_render = page_render_cache.get(candidate.page) or _render_refine_page(candidate.page)
+        page_render = page_render_cache.get(candidate.page) or _render_refine_page(
+            candidate.page
+        )
         base_payload = {
             "id": candidate.id,
             "type": candidate.kind,
@@ -701,7 +721,7 @@ def select_refined_candidate_items(
             "preview_text": (candidate.preview_text or "")[:600],
             "meta": candidate.meta or {},
         }
-        current_bbox = tuple(float(value) for value in candidate.bbox)
+        current_bbox = _bbox_tuple(candidate.bbox)
         current_reason = "missing_decision"
         is_valid = False
         for phase in ("coarse", "finalize"):
@@ -716,7 +736,9 @@ def select_refined_candidate_items(
                         "page_width": page_render.page_width,
                         "page_height": page_render.page_height,
                         "phase": phase,
-                        "candidates_json": json.dumps([payload_item], ensure_ascii=True),
+                        "candidates_json": json.dumps(
+                            [payload_item], ensure_ascii=True
+                        ),
                     },
                 ),
                 ctx,
@@ -742,9 +764,13 @@ def select_refined_candidate_items(
                     prompt_system_sha256=crop_refine_prompt_set.system.sha256,
                     prompt_user_sha256=crop_refine_prompt_set.user.sha256,
                     model=resolved_crop_refine_model,
-                    temperature=float(getattr(settings, "crop_refine_temperature", 0.0)),
+                    temperature=float(
+                        getattr(settings, "crop_refine_temperature", 0.0)
+                    ),
                     api_key=settings.openai_api_key,
-                    page_image_path=str(Path(settings.output_dir) / page_render.image_path),
+                    page_image_path=str(
+                        Path(settings.output_dir) / page_render.image_path
+                    ),
                     page=candidate.page,
                     page_width=page_render.page_width,
                     page_height=page_render.page_height,
@@ -788,7 +814,11 @@ def select_refined_candidate_items(
                 )
             )
             decision = next(
-                (result_item for result_item in crop_refine_resp.results if result_item.id == candidate.id),
+                (
+                    result_item
+                    for result_item in crop_refine_resp.results
+                    if result_item.id == candidate.id
+                ),
                 None,
             )
             if decision is None:
@@ -797,7 +827,7 @@ def select_refined_candidate_items(
                 break
             is_valid = bool(decision.is_valid_candidate)
             current_reason = decision.reason or ("valid" if is_valid else "rejected")
-            current_bbox = tuple(float(value) for value in decision.refined_bbox)
+            current_bbox = _bbox_tuple(decision.refined_bbox)
             if not is_valid:
                 break
             if phase == "coarse":
@@ -807,7 +837,10 @@ def select_refined_candidate_items(
                         role="generator",
                         event="crop_refine_second_pass_start",
                         module=logger.name,
-                        fields={"candidate_id": candidate.id, "bbox": list(current_bbox)},
+                        fields={
+                            "candidate_id": candidate.id,
+                            "bbox": list(current_bbox),
+                        },
                     )
                 )
         return {
@@ -825,10 +858,14 @@ def select_refined_candidate_items(
         nonlocal llm_cursor
         if llm_executor is None:
             return
-        while llm_cursor < len(llm_pending_indices) and len(llm_inflight) < refine_workers:
+        while (
+            llm_cursor < len(llm_pending_indices) and len(llm_inflight) < refine_workers
+        ):
             plan_index = llm_pending_indices[llm_cursor]
             if plan_index not in llm_inflight:
-                llm_inflight[plan_index] = llm_executor.submit(_run_crop_refine_llm, plan_index)
+                llm_inflight[plan_index] = llm_executor.submit(
+                    _run_crop_refine_llm, plan_index
+                )
             llm_cursor += 1
 
     if llm_pending_indices and refine_workers > 1:
@@ -892,7 +929,11 @@ def select_refined_candidate_items(
                 )
             )
             continue
-        if crop_refine_enabled and crop_refine_mode == "adaptive" and bool(plan["obvious_pass"]):
+        if (
+            crop_refine_enabled
+            and crop_refine_mode == "adaptive"
+            and bool(plan["obvious_pass"])
+        ):
             logger.info(
                 log_event(
                     ctx,
@@ -902,7 +943,7 @@ def select_refined_candidate_items(
                     fields={"candidate_id": candidate.id},
                 )
             )
-        refined_bbox = tuple(float(value) for value in candidate.bbox)
+        refined_bbox = _bbox_tuple(candidate.bbox)
         llm_valid = True
         llm_reason = "deterministic_pass"
         use_llm = (
@@ -917,19 +958,23 @@ def select_refined_candidate_items(
                 llm_reason = str(cached_row.get("reason") or "cache")
                 cached_bbox = cached_row.get("refined_bbox")
                 if isinstance(cached_bbox, (list, tuple)) and len(cached_bbox) == 4:
-                    refined_bbox = tuple(float(value) for value in cached_bbox)
+                    refined_bbox = _bbox_tuple(cached_bbox)
             else:
                 if llm_executor is not None:
-                    future = llm_inflight.pop(idx, None) or llm_executor.submit(_run_crop_refine_llm, idx)
+                    future = llm_inflight.pop(idx, None) or llm_executor.submit(
+                        _run_crop_refine_llm, idx
+                    )
                     llm_result = future.result()
                     _submit_llm_jobs()
                 else:
                     llm_result = _run_crop_refine_llm(idx)
                 llm_valid = bool(llm_result.get("is_valid_candidate"))
-                llm_reason = str(llm_result.get("reason") or ("valid" if llm_valid else "rejected"))
+                llm_reason = str(
+                    llm_result.get("reason") or ("valid" if llm_valid else "rejected")
+                )
                 result_bbox = llm_result.get("refined_bbox")
                 if isinstance(result_bbox, (list, tuple)) and len(result_bbox) == 4:
-                    refined_bbox = tuple(float(value) for value in result_bbox)
+                    refined_bbox = _bbox_tuple(result_bbox)
                 entry_key = str(plan.get("entry_key") or "")
                 if entry_key:
                     crop_refine_cache_rows[entry_key] = {
@@ -1000,7 +1045,10 @@ def select_refined_candidate_items(
                     role="generator",
                     event="crop_refine_candidate_rejected",
                     module=logger.name,
-                    fields={"candidate_id": candidate.id, "reason": "bbox_area_too_small"},
+                    fields={
+                        "candidate_id": candidate.id,
+                        "reason": "bbox_area_too_small",
+                    },
                 )
             )
             continue
@@ -1028,14 +1076,19 @@ def select_refined_candidate_items(
             )
         )
         accepted_candidates.append(candidate)
-        accepted_by_kind[candidate.kind] = int(accepted_by_kind.get(candidate.kind, 0)) + 1
+        accepted_by_kind[candidate.kind] = (
+            int(accepted_by_kind.get(candidate.kind, 0)) + 1
+        )
         logger.info(
             log_event(
                 ctx,
                 role="generator",
                 event="crop_refine_candidate_accepted",
                 module=logger.name,
-                fields={"candidate_id": candidate.id, "accepted_count": len(accepted_items)},
+                fields={
+                    "candidate_id": candidate.id,
+                    "accepted_count": len(accepted_items),
+                },
             )
         )
     if llm_executor is not None:
@@ -1081,7 +1134,8 @@ def _select_fallback_candidate_crop_paths(
     selected_max = max(1, int(selected_kind_max)) * 2
     selected_per_kind = max(1, int(selected_kind_max))
     prefiltered_by_id = {
-        str(candidate.id or "").strip(): candidate for candidate in prefiltered_candidates
+        str(candidate.id or "").strip(): candidate
+        for candidate in prefiltered_candidates
     }
     ordered_candidates: list[tuple[str, Candidate]] = []
     seen_ids: set[str] = set()
@@ -1118,7 +1172,9 @@ def _select_fallback_candidate_crop_paths(
             continue
         reject_now, reject_reason = _candidate_is_obvious_reject(candidate)
         if reject_now:
-            rejected_reasons[reject_reason] = int(rejected_reasons.get(reject_reason, 0)) + 1
+            rejected_reasons[reject_reason] = (
+                int(rejected_reasons.get(reject_reason, 0)) + 1
+            )
             continue
         candidate_kind = str(candidate.kind or "").strip()
         if selected_by_kind.get(candidate_kind, 0) >= selected_per_kind:
@@ -1126,14 +1182,18 @@ def _select_fallback_candidate_crop_paths(
             continue
         fallback_paths.append(crop_path)
         fallback_candidates.append(candidate)
-        selected_by_kind[candidate_kind] = int(selected_by_kind.get(candidate_kind, 0)) + 1
+        selected_by_kind[candidate_kind] = (
+            int(selected_by_kind.get(candidate_kind, 0)) + 1
+        )
         selected_by_source[source] = int(selected_by_source.get(source, 0)) + 1
     stats = {
         "ordered_candidate_count": len(ordered_candidates),
         "candidate_crop_count": len(candidate_path_by_id),
         "selected_count": len(fallback_paths),
         "selected_by_kind": selected_by_kind,
-        "selected_by_source": {key: value for key, value in selected_by_source.items() if value},
+        "selected_by_source": {
+            key: value for key, value in selected_by_source.items() if value
+        },
         "skipped_missing_crop": skipped_missing_crop,
         "skipped_kind_limit": skipped_kind_limit,
         "rejected_reasons": rejected_reasons,
@@ -1160,11 +1220,102 @@ def _resolve_figure_section_assets(
     sliced_paths: list[str],
     primary_figure_path: str,
 ) -> tuple[list[str], str, bool]:
-    gallery_paths = [str(path or "").strip() for path in sliced_paths if str(path or "").strip()]
+    gallery_paths = [
+        str(path or "").strip() for path in sliced_paths if str(path or "").strip()
+    ]
     if gallery_paths:
         return gallery_paths, gallery_paths[0], True
     normalized_primary = str(primary_figure_path or "").strip()
     return [], normalized_primary, bool(normalized_primary)
+
+
+def _legacy_primary_display_caption(
+    data: ReportPayload,
+    detected_caption: str = "",
+) -> str:
+    for candidate in (
+        str(getattr(data.figure, "title", "") or "").strip(),
+        str(getattr(data.figure, "evidence", "") or "").strip(),
+        str(detected_caption or "").strip(),
+    ):
+        if candidate:
+            return candidate
+    return "Representative figure from the source report."
+
+
+def _asset_from_candidate(
+    *,
+    image_path: str,
+    candidate: Optional[Candidate],
+    is_primary: bool,
+    index: int,
+    primary_display_caption: str,
+) -> ReportFigureAsset:
+    detected_caption = str(getattr(candidate, "caption", "") or "").strip()
+    preview_text = str(getattr(candidate, "preview_text", "") or "").strip()
+    display_caption = (
+        primary_display_caption if is_primary else f"Additional figure {index}"
+    )
+    caption_source = "legacy" if is_primary else "placeholder"
+    return ReportFigureAsset(
+        image_path=str(image_path or "").strip(),
+        page=int(getattr(candidate, "page", -1) if candidate is not None else -1),
+        candidate_id=str(getattr(candidate, "id", "") or "").strip(),
+        kind=str(getattr(candidate, "kind", "") or "image").strip() or "image",
+        is_primary=bool(is_primary),
+        detected_caption=detected_caption,
+        preview_text=preview_text,
+        generated_caption="",
+        display_caption=display_caption,
+        caption_source=caption_source,
+    )
+
+
+def _build_figure_assets(
+    *,
+    gallery_paths: list[str],
+    figure_candidates: list[Candidate],
+    primary_figure_path: str,
+    primary_caption: str,
+    fig_resp: Any,
+) -> list[ReportFigureAsset]:
+    assets: list[ReportFigureAsset] = []
+    for index, image_path in enumerate(gallery_paths, start=1):
+        candidate = (
+            figure_candidates[index - 1] if index - 1 < len(figure_candidates) else None
+        )
+        normalized_path = str(image_path or "").strip()
+        if not normalized_path:
+            continue
+        assets.append(
+            _asset_from_candidate(
+                image_path=normalized_path,
+                candidate=candidate,
+                is_primary=index == 1,
+                index=index,
+                primary_display_caption=primary_caption,
+            )
+        )
+    if assets:
+        return assets
+    normalized_primary = str(primary_figure_path or "").strip()
+    if not normalized_primary:
+        return []
+    fallback_caption = str(getattr(fig_resp, "caption", "") or "").strip()
+    return [
+        ReportFigureAsset(
+            image_path=normalized_primary,
+            page=int(getattr(fig_resp, "page", -1) or -1),
+            candidate_id="",
+            kind="image",
+            is_primary=True,
+            detected_caption=fallback_caption,
+            preview_text="",
+            generated_caption="",
+            display_caption=primary_caption,
+            caption_source="legacy",
+        )
+    ]
 
 
 def select_report_figures(
@@ -1225,6 +1376,7 @@ def select_report_figures(
     }
     sliced_paths: list[str] = []
     candidate_path_by_id: dict[str, str] = {}
+    figure_candidates: list[Candidate] = []
     data._figure_section_enabled = False
     if cands_resp.candidates:
         for candidate in cands_resp.candidates:
@@ -1252,7 +1404,9 @@ def select_report_figures(
             reverse=True,
         )
         if runtime.settings.rank_max_candidates > 0:
-            prefiltered_candidates = prefiltered_candidates[: int(runtime.settings.rank_max_candidates)]
+            prefiltered_candidates = prefiltered_candidates[
+                : int(runtime.settings.rank_max_candidates)
+            ]
         logger.info(
             log_event(
                 runtime.ctx,
@@ -1328,7 +1482,9 @@ def select_report_figures(
                     )
                 )
         if prefiltered_candidates:
-            table_candidates, chart_candidates = _split_candidates_by_kind(prefiltered_candidates)
+            table_candidates, chart_candidates = _split_candidates_by_kind(
+                prefiltered_candidates
+            )
             per_kind_limit = max(1, int(runtime.settings.rank_selected_max))
             logger.info(
                 log_event(
@@ -1345,7 +1501,10 @@ def select_report_figures(
             )
             usage_rows: list[dict[str, Optional[int]]] = []
             try:
-                for kind, batch in (("table", table_candidates), ("chart", chart_candidates)):
+                for kind, batch in (
+                    ("table", table_candidates),
+                    ("chart", chart_candidates),
+                ):
                     batch_result = _rank_candidates_batch(
                         candidates=batch,
                         kind=kind,
@@ -1388,50 +1547,70 @@ def select_report_figures(
             md5=runtime.md5,
             ctx=runtime.ctx,
             pdf_context=source.pdf_context,
-            fallback_model=(runtime.settings.rank_model or runtime.settings.openai_model),
+            fallback_model=(
+                runtime.settings.rank_model or runtime.settings.openai_model
+            ),
             selected_kind_max=max(1, int(runtime.settings.rank_selected_max)),
             dependencies=dependencies,
         )
         if selected_items:
             table_items = [item for item in selected_items if item.type == "table"]
             chart_items = [item for item in selected_items if item.type == "chart"]
+            selected_path_by_id: dict[str, str] = {}
             if table_items:
-                sliced_paths.extend(
-                    dependencies.crop_regions(
-                        CropRequest(
-                            schema_version="1.0",
-                            pdf_path=runtime.local_pdf_path,
-                            out_dir=runtime.settings.output_dir,
-                            report_name=runtime.report_name,
-                            items=table_items,
-                            mode="table_strict",
-                            pdf_context=source.pdf_context,
-                        ),
-                        runtime.ctx,
-                    ).paths
+                table_paths = dependencies.crop_regions(
+                    CropRequest(
+                        schema_version="1.0",
+                        pdf_path=runtime.local_pdf_path,
+                        out_dir=runtime.settings.output_dir,
+                        report_name=runtime.report_name,
+                        items=table_items,
+                        mode="table_strict",
+                        pdf_context=source.pdf_context,
+                    ),
+                    runtime.ctx,
+                ).paths
+                selected_path_by_id.update(
+                    {
+                        item.id: str(path or "").strip()
+                        for item, path in zip(table_items, table_paths)
+                        if str(path or "").strip()
+                    }
                 )
             if chart_items:
-                sliced_paths.extend(
-                    dependencies.crop_regions(
-                        CropRequest(
-                            schema_version="1.0",
-                            pdf_path=runtime.local_pdf_path,
-                            out_dir=runtime.settings.output_dir,
-                            report_name=runtime.report_name,
-                            items=chart_items,
-                            mode="chart_strict",
-                            pdf_context=source.pdf_context,
-                        ),
-                        runtime.ctx,
-                    ).paths
+                chart_paths = dependencies.crop_regions(
+                    CropRequest(
+                        schema_version="1.0",
+                        pdf_path=runtime.local_pdf_path,
+                        out_dir=runtime.settings.output_dir,
+                        report_name=runtime.report_name,
+                        items=chart_items,
+                        mode="chart_strict",
+                        pdf_context=source.pdf_context,
+                    ),
+                    runtime.ctx,
+                ).paths
+                selected_path_by_id.update(
+                    {
+                        item.id: str(path or "").strip()
+                        for item, path in zip(chart_items, chart_paths)
+                        if str(path or "").strip()
+                    }
                 )
+            sliced_paths = [
+                str(selected_path_by_id.get(item.id) or "").strip()
+                for item in selected_items
+                if str(selected_path_by_id.get(item.id) or "").strip()
+            ]
         figure_candidates = selected_candidates
         if not sliced_paths and candidate_path_by_id:
-            fallback_paths, fallback_candidates, fallback_stats = _select_fallback_candidate_crop_paths(
-                ranked_rows=ranked,
-                prefiltered_candidates=prefiltered_candidates,
-                candidate_path_by_id=candidate_path_by_id,
-                selected_kind_max=max(1, int(runtime.settings.rank_selected_max)),
+            fallback_paths, fallback_candidates, fallback_stats = (
+                _select_fallback_candidate_crop_paths(
+                    ranked_rows=ranked,
+                    prefiltered_candidates=prefiltered_candidates,
+                    candidate_path_by_id=candidate_path_by_id,
+                    selected_kind_max=max(1, int(runtime.settings.rank_selected_max)),
+                )
             )
             if fallback_paths:
                 sliced_paths = fallback_paths
@@ -1460,6 +1639,16 @@ def select_report_figures(
     )
     data._figure_gallery = figure_gallery
     data._figure_top = figure_top
+    data._figure_assets = _build_figure_assets(
+        gallery_paths=figure_gallery,
+        figure_candidates=figure_candidates,
+        primary_figure_path=figure_top,
+        primary_caption=_legacy_primary_display_caption(
+            data,
+            detected_caption=str(getattr(fig_resp, "caption", "") or "").strip(),
+        ),
+        fig_resp=fig_resp,
+    )
     data._figure_section_enabled = figure_section_enabled
     if data._figure_section_enabled and not figure_gallery and figure_top:
         logger.info(

@@ -29,10 +29,25 @@ def test_render_includes_artifact_sections(tmp_path):
                 "claim_evidence_map": [{"claim": "Claim 1", "evidence": "Evidence 1"}],
             },
             "insights_final": [
-                {"id": "i1", "text": "Artifact insight 1", "metric": {"value": "10", "unit": "%", "timeframe": "2024"}},
-                {"id": "i2", "text": "Artifact insight 2", "metric": {"value": "", "unit": "", "timeframe": ""}},
+                {
+                    "id": "i1",
+                    "text": "Artifact insight 1",
+                    "metric": {"value": "10", "unit": "%", "timeframe": "2024"},
+                },
+                {
+                    "id": "i2",
+                    "text": "Artifact insight 2",
+                    "metric": {"value": "", "unit": "", "timeframe": ""},
+                },
             ],
-            "quotes_final": [{"text": "Artifact quote", "speaker": "Speaker", "citation": "Report", "page": 2}],
+            "quotes_final": [
+                {
+                    "text": "Artifact quote",
+                    "speaker": "Speaker",
+                    "citation": "Report",
+                    "page": 2,
+                }
+            ],
             "expert_comment": "Expert take",
             "linkedin_post": "LinkedIn summary",
         },
@@ -173,6 +188,108 @@ def test_render_hides_figure_sections_when_disabled(tmp_path):
 
     assert 'id="section-figures"' not in html
     assert 'id="section-contents-preview"' not in html
+
+
+def test_render_uses_per_asset_figure_captions(tmp_path):
+    data = {
+        "title": "Figure Caption Report",
+        "tldr": "TLDR",
+        "insights": ["Insight A", "Insight B", "Insight C", "Insight D", "Insight E"],
+        "quote": {"text": "Quote", "author": "Author"},
+        "commentary": "Commentary",
+        "publisher": "Publisher",
+        "taxonomy": ["tag"],
+        "region": "US",
+        "time_period": "2024",
+        "contents_page_number": 0,
+        "_figure_top": "report/slices/primary.png",
+        "_figure_gallery": [
+            "report/slices/primary.png",
+            "report/slices/secondary.png",
+        ],
+        "_figure_assets": [
+            {
+                "schema_version": "1.0",
+                "image_path": "report/slices/primary.png",
+                "page": 2,
+                "candidate_id": "chart-1",
+                "kind": "chart",
+                "is_primary": True,
+                "detected_caption": "Detected primary caption",
+                "preview_text": "Primary preview",
+                "generated_caption": "Primary generated caption",
+                "display_caption": "Primary generated caption",
+                "caption_source": "generated",
+            },
+            {
+                "schema_version": "1.0",
+                "image_path": "report/slices/secondary.png",
+                "page": 3,
+                "candidate_id": "table-2",
+                "kind": "table",
+                "is_primary": False,
+                "detected_caption": "Detected secondary caption",
+                "preview_text": "Secondary preview",
+                "generated_caption": "",
+                "display_caption": "Detected secondary caption",
+                "caption_source": "detected",
+            },
+        ],
+        "_figure_section_enabled": True,
+        "figure": {"title": "Legacy caption", "evidence": "Legacy evidence"},
+    }
+    req = RenderRequest(
+        schema_version="1.0",
+        data=data,
+        doc_name="figures.pdf",
+        file_id="file_figures",
+        out_dir=str(tmp_path),
+        preview_png=None,
+    )
+    resp = render_report(req, _ctx())
+    html = Path(resp.html_path).read_text(encoding="utf-8")
+
+    assert "Primary generated caption" in html
+    assert "Detected secondary caption" in html
+    assert (
+        '<figcaption class="carousel-caption">Additional figure 2</figcaption>'
+        not in html
+    )
+
+
+def test_render_keeps_legacy_figure_captions_without_figure_assets(tmp_path):
+    data = {
+        "title": "Legacy Figure Caption Report",
+        "tldr": "TLDR",
+        "insights": ["Insight A", "Insight B", "Insight C", "Insight D", "Insight E"],
+        "quote": {"text": "Quote", "author": "Author"},
+        "commentary": "Commentary",
+        "publisher": "Publisher",
+        "taxonomy": ["tag"],
+        "region": "US",
+        "time_period": "2024",
+        "contents_page_number": 0,
+        "_figure_top": "report/slices/primary.png",
+        "_figure_gallery": [
+            "report/slices/primary.png",
+            "report/slices/secondary.png",
+        ],
+        "_figure_section_enabled": True,
+        "figure": {"title": "Legacy figure caption", "evidence": "Legacy evidence"},
+    }
+    req = RenderRequest(
+        schema_version="1.0",
+        data=data,
+        doc_name="legacy-figures.pdf",
+        file_id="file_legacy_figures",
+        out_dir=str(tmp_path),
+        preview_png=None,
+    )
+    resp = render_report(req, _ctx())
+    html = Path(resp.html_path).read_text(encoding="utf-8")
+
+    assert "Legacy figure caption" in html
+    assert "Additional figure 2" in html
 
 
 def test_render_formats_slug_chips_with_acronyms(tmp_path):

@@ -393,6 +393,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     ingest = data.get("ingest", {}) or {}
     drive_cfg = ingest.get("drive", {}) or {}
     pdf_text = ingest.get("pdf_text", {}) or {}
+    figure_captions_cfg = ingest.get("figure_captions", {}) or {}
     rank = data.get("rank", {}) or {}
     validation_cfg = ingest.get("validation", {}) or {}
     contents_page = ingest.get("contents_page", {}) or {}
@@ -468,6 +469,34 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     crop_refine_timeout_seconds = _to_float(
         crop_refine_timeout_raw, rank_timeout_seconds
     )
+    figure_caption_enabled_raw = figure_captions_cfg.get("enabled")
+    if _is_missing(figure_caption_enabled_raw):
+        figure_caption_enabled_raw = _env_value("FIGURE_CAPTION_ENABLED")
+    figure_caption_enabled = _as_bool(figure_caption_enabled_raw, default=False)
+    figure_caption_temperature_raw = figure_captions_cfg.get("temperature")
+    if _is_missing(figure_caption_temperature_raw):
+        figure_caption_temperature_raw = _env_value("FIGURE_CAPTION_TEMPERATURE")
+    figure_caption_temperature = _to_float(figure_caption_temperature_raw, 0.2)
+    figure_caption_timeout_raw = figure_captions_cfg.get("timeout_seconds")
+    if _is_missing(figure_caption_timeout_raw):
+        figure_caption_timeout_raw = _env_value("FIGURE_CAPTION_TIMEOUT_SECONDS")
+    figure_caption_timeout_seconds = _to_float(
+        figure_caption_timeout_raw, openai_timeout_seconds
+    )
+    figure_caption_prompt_namespace = (
+        str(
+            figure_captions_cfg.get("prompt_namespace")
+            or _env_value("FIGURE_CAPTION_PROMPT_NAMESPACE")
+            or "report_vs/figure_caption"
+        ).strip()
+        or "report_vs/figure_caption"
+    )
+    figure_caption_max_chars_raw = figure_captions_cfg.get("max_chars")
+    if _is_missing(figure_caption_max_chars_raw):
+        figure_caption_max_chars_raw = _env_value("FIGURE_CAPTION_MAX_CHARS")
+    figure_caption_max_chars = _to_int(figure_caption_max_chars_raw, 500)
+    if figure_caption_max_chars < 1:
+        figure_caption_max_chars = 500
     lock_ttl_raw = ingest.get("lock_ttl_seconds")
     if _is_missing(lock_ttl_raw):
         lock_ttl_raw = _env_value("INGEST_LOCK_TTL_SECONDS")
@@ -778,6 +807,11 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         crop_refine_page_dpi=crop_refine_page_dpi,
         crop_refine_temperature=crop_refine_temperature,
         crop_refine_timeout_seconds=crop_refine_timeout_seconds,
+        figure_caption_enabled=figure_caption_enabled,
+        figure_caption_temperature=figure_caption_temperature,
+        figure_caption_timeout_seconds=figure_caption_timeout_seconds,
+        figure_caption_prompt_namespace=figure_caption_prompt_namespace,
+        figure_caption_max_chars=figure_caption_max_chars,
         openai_timeout_seconds=openai_timeout_seconds,
         rank_timeout_seconds=rank_timeout_seconds,
         contents_max_pages=contents_max_pages,
@@ -867,6 +901,11 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
                 "crop_refine_page_dpi": settings.crop_refine_page_dpi,
                 "crop_refine_temperature": settings.crop_refine_temperature,
                 "crop_refine_timeout_seconds": settings.crop_refine_timeout_seconds,
+                "figure_caption_enabled": settings.figure_caption_enabled,
+                "figure_caption_temperature": settings.figure_caption_temperature,
+                "figure_caption_timeout_seconds": settings.figure_caption_timeout_seconds,
+                "figure_caption_prompt_namespace": settings.figure_caption_prompt_namespace,
+                "figure_caption_max_chars": settings.figure_caption_max_chars,
                 "pdf_text_max_pages": settings.pdf_text_max_pages,
                 "pdf_text_max_chars": settings.pdf_text_max_chars,
                 "pdf_text_min_density": settings.pdf_text_min_density,

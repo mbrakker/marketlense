@@ -1,0 +1,7 @@
+text: |
+  Generate one caption for the attached cropped figure.
+  Use the image as the primary evidence and the JSON context below as supporting report context.
+  Return a JSON object with a single `caption` field no longer than {{ max_chars }} characters.
+
+  Context:
+  {{ context_json }}

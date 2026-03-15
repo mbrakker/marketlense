@@ -198,3 +198,115 @@ Resolved on 2026-03-09: former items 37-45 were removed after converting `tests/
 - **Do first (highest return):** 14, 20, 26, 36, 46.
 - **Do next:** 3–10 (module decomposition), then 15, 19, 21, 23, 25 and the remaining test-integrity cleanup around item 36.
 - **Program-level success criteria:** lower regression rate, faster PR review cycle, clearer error taxonomy, and stronger CI confidence.
+
+---
+
+## Appendix: Additional behavior-preserving code-reduction opportunities (2026-03-15)
+
+These are supplemental to the original top-50 audit and intentionally use `R1`-`R20` identifiers so the preserved top-50 numbering above does not drift. Scope here is narrower: remove duplicated code and shrink modules without changing contracts, prompt behavior, logging requirements, or quality expectations.
+
+Verification basis for this appendix:
+- Static repository scan confirmed the duplication patterns before adding this list.
+- `pytest -q` passed on the current tree during the review pass.
+- `scripts/ci/check_forbidden_patching.py` passed on the current tree during the review pass.
+- Existing repo-wide formatting and mypy gates already fail on unrelated current-state issues, so they cannot be used as a clean refactor baseline until the tree is stabilized.
+
+### R1) Shared analysis-pack adapter helper is duplicated across generators
+- **Context:** Pack path/store adaptation logic is repeated in `artifact_generator`, `evidence_pack_generator`, `taxonomy_generator`, and `validation/cache`.
+- **Expected:** One pure helper for `pack_path` and one for `store_pack` request adaptation with the same typed fallback behavior.
+- **Success criteria:** Duplicate adapter bodies are removed; pack path/store behavior and returned dataclass contracts stay unchanged.
+
+### R2) Shared cached-pack loader logic is duplicated across generators
+- **Context:** Several modules repeat the same resolve-path/read/decode/cache-key-check flow for cached analysis packs.
+- **Expected:** One shared cached-pack loader utility with caller-supplied typed response adaptation.
+- **Success criteria:** Cache-hit/miss behavior stays identical while the repeated JSON/load logic is reduced to one implementation.
+
+### R3) JSON extraction from model text exists in more than one module
+- **Context:** Fence stripping, JSON substring extraction, and fallback parsing are duplicated between OpenAI service logic and evidence-pack generation.
+- **Expected:** One pure text-to-JSON utility used by all model-response recovery paths.
+- **Success criteria:** The same malformed/partial response cases still parse or fail exactly as before, but there is only one parser implementation.
+
+### R4) Prompt load/render/log/model-resolution setup is repeated across generators
+- **Context:** Generators repeatedly do the same sequence: load prompt set, log hashes, render prompts, log rendered text, resolve model.
+- **Expected:** A shared generator-side prompt preparation helper returning fully rendered prompts plus metadata.
+- **Success criteria:** Prompt logging remains exact, namespace/model resolution stays deterministic, and duplicated setup code is removed.
+
+### R5) Artifact normalization helpers should live outside `artifact_generator.py`
+- **Context:** Artifact normalization and regeneration share logic, but the implementation currently lives in `artifact_generator.py` and is imported back into regeneration flow.
+- **Expected:** Move the shared normalization/helpers into a dedicated pure module under generators or utils.
+- **Success criteria:** `artifact_generator.py` shrinks materially, regeneration keeps using the same helpers, and no normalization behavior changes.
+
+### R6) Public alias wrappers in `artifact_generator.py` add size without behavior
+- **Context:** Multiple exported helpers are thin pass-through wrappers over internal implementations with identical signatures.
+- **Expected:** Keep one canonical helper definition and export that directly.
+- **Success criteria:** Wrapper-only functions are deleted, import sites stay readable, and behavior remains identical.
+
+### R7) OpenAI chat completion flows repeat modern/legacy call orchestration
+- **Context:** `analyze_report` and `openai_chat_json` each build nearly identical chat-completion call paths and fallback handling.
+- **Expected:** Extract a shared chat-completion runner used by both typed service entry points.
+- **Success criteria:** Error mapping, token extraction, request IDs, and parsed payloads remain unchanged while duplicate call orchestration disappears.
+
+### R8) OpenAI cost-ledger persistence block is repeated across service operations
+- **Context:** Estimating cost, appending a ledger entry, and rolling up daily totals is duplicated in multiple OpenAI service paths.
+- **Expected:** One shared cost-recording helper that accepts the operation name, token counts, and request ID.
+- **Success criteria:** Cost records remain identical in content, failures remain best-effort and logged, and the repeated ledger block is removed.
+
+### R9) OpenAI response metadata parsing is repeated
+- **Context:** Request ID, token counts, tool call counts, and parsed JSON handling are repeatedly reconstructed from provider responses.
+- **Expected:** One response metadata adapter shared by JSON chat, image chat, and vector-store response flows.
+- **Success criteria:** Returned service dataclasses remain identical while response adaptation code is centralized.
+
+### R10) Vector-store CRUD-style operations in `openai_service.py` can share one operation runner
+- **Context:** Create/upload/attach/status/update each repeat the same client init, log, call, ID extraction, and `AppError` mapping pattern.
+- **Expected:** One generic vector-store operation runner with per-call payload and response extraction callbacks.
+- **Success criteria:** Operation-specific request/response contracts stay explicit, but the common scaffolding is removed.
+
+### R11) `load_settings` should use a declarative resolver table
+- **Context:** Configuration parsing is a long inline chain of `_env_value`, `_to_int`, `_to_float`, `_as_bool`, defaults, and clamps.
+- **Expected:** A field-spec table or section normalizers that define source path, env fallback, coercion, and default once.
+- **Success criteria:** Adding a new config field becomes localized and default behavior stays exactly the same under tests.
+
+### R12) Boolean and numeric coercion helpers are duplicated
+- **Context:** Similar `_to_bool`, `_as_bool`, and related coercion helpers exist in config, rank, and UI code.
+- **Expected:** Shared pure coercion helpers in `src/utils`.
+- **Success criteria:** Truthy/falsy parsing behavior remains unchanged, but duplicate local parsing helpers are removed.
+
+### R13) YAML loading/error wrapping should be centralized where semantics match
+- **Context:** Several services reimplement “load YAML, validate root shape, map parse failure to typed error.”
+- **Expected:** Shared YAML loader helpers with service-specific error-code mapping on top.
+- **Success criteria:** File-not-found and invalid-YAML behavior remains explicit, with less repeated parsing boilerplate.
+
+### R14) Evidence-pack strategies are mostly data-driven and can be factory-generated
+- **Context:** Many list-like evidence-pack strategy modules repeat the same empty-payload builder, alias selection, normalization shell, and strategy declaration pattern.
+- **Expected:** Factory helpers for common list-pack/scalar-pack strategy shapes, leaving only pack-specific field maps and transforms in each module.
+- **Success criteria:** Strategy behavior remains schema-specific and explicit, but per-pack boilerplate shrinks substantially.
+
+### R15) Evidence-pack generator should pass strategy objects directly
+- **Context:** The generator currently carries `(pack_name, prompt_namespace_suffix, schema_name)` tuples and thin wrapper helpers around strategy behavior.
+- **Expected:** Build execution steps directly from `EvidencePackStrategy` objects plus scheduling metadata.
+- **Success criteria:** Registry behavior stays the same, pack ordering stays the same, and helper indirection is reduced.
+
+### R16) Publish file-id mapping helpers are duplicated across two orchestrators
+- **Context:** `publish_orchestrator` and `publish_queue_orchestrator` both implement the same HTML path canonicalization and reports-db file-id map loading.
+- **Expected:** One shared publish-support helper module under orchestrators.
+- **Success criteria:** Queue and publish flows resolve file IDs exactly as before while duplicate helper bodies are removed.
+
+### R17) Local retry wrapper helpers should be removed in favor of the shared retry orchestrator API
+- **Context:** Some orchestrators define tiny `_run_step_with_retry` wrappers that only forward fixed arguments to shared retry logic.
+- **Expected:** Call the shared retry helper directly or create one common adapter in the retry orchestrator.
+- **Success criteria:** Retry counts, sleep behavior, log fields, and retryable-error handling remain unchanged.
+
+### R18) Dataclass-to-dict helper logic is duplicated across ops/dashboard/UI layers
+- **Context:** UI and dashboard code repeats the same “if dataclass -> `asdict`, if dict -> keep, if object -> `__dict__`” conversion helper.
+- **Expected:** One shared pure serialization helper for dashboard/UI table rows.
+- **Success criteria:** Rendered tables and downstream filtering stay unchanged while the helper exists in one place only.
+
+### R19) Tiny text/tag helpers are repeated and should be promoted to shared utilities
+- **Context:** Helpers like `_norm_tag`, `_category_label`, `_s`, and `_dump_json` recur across services and generators with the same intent.
+- **Expected:** Shared text/tag utility helpers where semantics are the same.
+- **Success criteria:** Normalization/stringification behavior stays stable and helper duplication is removed without mixing business logic.
+
+### R20) `report_regeneration_generator.py` should replace branch-heavy target dispatch with a handler registry
+- **Context:** Regeneration currently uses a long `if/elif` chain keyed by `target.target_section`, even though each branch follows the same broad template.
+- **Expected:** A registry of section handlers that each define namespace selection, variable assembly, normalization, and state update behavior.
+- **Success criteria:** Regeneration output remains identical for each target section, but branching complexity and duplicated render-call structure are reduced.

@@ -29,7 +29,12 @@ from src.utils.slugify import slugify
 from .shared import candidate_logger, figure_logger
 
 # BEGIN PDF CANDIDATE EXTRACTION
-_PDFMINER_LOGGERS = ("pdfminer", "pdfminer.pdfinterp", "pdfminer.cmapdb", "pdfminer.layout")
+_PDFMINER_LOGGERS = (
+    "pdfminer",
+    "pdfminer.pdfinterp",
+    "pdfminer.cmapdb",
+    "pdfminer.layout",
+)
 
 CAPTION_HINTS = ("figure", "fig.", "exhibit", "chart", "graph", "source")
 CHART_CAPTION_HINTS = ("figure", "fig.", "exhibit", "chart", "graph")
@@ -359,9 +364,25 @@ def _collect_chart_rects(page: fitz.Page) -> List[_ChartRect]:
     for rect in _image_block_rects(page):
         rects.append(_ChartRect(rect=rect, kind="block", xref=None))
     for rect, caption, cap_rect in _drawing_caption_rects(page):
-        rects.append(_ChartRect(rect=rect, kind="draw", xref=None, caption=caption, caption_rect=cap_rect))
+        rects.append(
+            _ChartRect(
+                rect=rect,
+                kind="draw",
+                xref=None,
+                caption=caption,
+                caption_rect=cap_rect,
+            )
+        )
     for rect, caption, cap_rect in _heading_chart_rects(page):
-        rects.append(_ChartRect(rect=rect, kind="heading", xref=None, caption=caption, caption_rect=cap_rect))
+        rects.append(
+            _ChartRect(
+                rect=rect,
+                kind="heading",
+                xref=None,
+                caption=caption,
+                caption_rect=cap_rect,
+            )
+        )
     return rects
 
 
@@ -388,7 +409,9 @@ def _drawing_rects(page: fitz.Page) -> List[fitz.Rect]:
         if area_frac >= DRAWING_BACKGROUND_MIN_AREA_FRAC:
             fill = drawing.get("fill")
             width = drawing.get("width")
-            if fill is not None and (width is None or float(width) <= DRAWING_BACKGROUND_MAX_STROKE):
+            if fill is not None and (
+                width is None or float(width) <= DRAWING_BACKGROUND_MAX_STROKE
+            ):
                 continue
         rects.append(r)
     return rects
@@ -451,7 +474,9 @@ def _drawing_caption_rects(page: fitz.Page) -> List[Tuple[fitz.Rect, str, fitz.R
     return deduped
 
 
-def _caption_blocks(page: fitz.Page, hints: Tuple[str, ...]) -> List[Tuple[fitz.Rect, str]]:
+def _caption_blocks(
+    page: fitz.Page, hints: Tuple[str, ...]
+) -> List[Tuple[fitz.Rect, str]]:
     rects: List[Tuple[fitz.Rect, str]] = []
     try:
         blocks = page.get_text("blocks")
@@ -460,7 +485,9 @@ def _caption_blocks(page: fitz.Page, hints: Tuple[str, ...]) -> List[Tuple[fitz.
     for x0, y0, x1, y1, text, *_ in blocks:
         if not text:
             continue
-        lines = [line.strip().lower() for line in str(text).splitlines() if line.strip()]
+        lines = [
+            line.strip().lower() for line in str(text).splitlines() if line.strip()
+        ]
         if any(any(line.startswith(hint) for hint in hints) for line in lines):
             first_line = next((line for line in lines if line), "")
             rects.append((fitz.Rect(x0, y0, x1, y1), first_line))
@@ -501,7 +528,9 @@ def _heading_lines(page: fitz.Page) -> List[Tuple[fitz.Rect, str]]:
             text = "".join(span.get("text", "") for span in spans).strip()
             if not text:
                 continue
-            size_vals = [float(span.get("size", 0.0)) for span in spans if span.get("text")]
+            size_vals = [
+                float(span.get("size", 0.0)) for span in spans if span.get("text")
+            ]
             size = sum(size_vals) / max(1, len(size_vals))
             bbox = line.get("bbox")
             if bbox and len(bbox) == 4:
@@ -555,10 +584,15 @@ def _heading_lines(page: fitz.Page) -> List[Tuple[fitz.Rect, str]]:
             last_rect, last_text, last_size = merged[-1]
             if (
                 abs(size - last_size) <= INFO_HEADING_MERGE_SIZE_DELTA
-                and _horizontal_overlap_ratio(rect, last_rect) >= INFO_HEADING_MERGE_H_OVERLAP
+                and _horizontal_overlap_ratio(rect, last_rect)
+                >= INFO_HEADING_MERGE_H_OVERLAP
                 and rect.y0 - last_rect.y1 <= gap_thresh
             ):
-                merged[-1] = (last_rect | rect, f"{last_text} {text}".strip(), max(last_size, size))
+                merged[-1] = (
+                    last_rect | rect,
+                    f"{last_text} {text}".strip(),
+                    max(last_size, size),
+                )
                 continue
         merged.append((rect, text, size))
     return [(rect, text) for rect, text, _ in merged]
@@ -600,13 +634,19 @@ def _has_intervening_paragraph(
         block = fitz.Rect(x0, y0, x1, y1)
         if block.y0 < head_rect.y1 or block.y1 > chart_rect.y0:
             continue
-        if _horizontal_overlap_ratio(block, chart_rect) < CHART_HEADING_TOP_BLOCK_H_OVERLAP:
+        if (
+            _horizontal_overlap_ratio(block, chart_rect)
+            < CHART_HEADING_TOP_BLOCK_H_OVERLAP
+        ):
             continue
         lines, chars = _text_stats(str(text))
         if lines == 0:
             continue
         avg_line_len = chars / max(1, lines)
-        if lines >= CHART_LABEL_PARAGRAPH_MIN_LINES and avg_line_len > CHART_LABEL_PARAGRAPH_MAX_AVG_LINE_LEN:
+        if (
+            lines >= CHART_LABEL_PARAGRAPH_MIN_LINES
+            and avg_line_len > CHART_LABEL_PARAGRAPH_MAX_AVG_LINE_LEN
+        ):
             return True
     return False
 
@@ -624,8 +664,15 @@ def _heading_chart_rects(page: fitz.Page) -> List[Tuple[fitz.Rect, str, fitz.Rec
     cluster_gap = page_rect.height * INFO_CHART_CLUSTER_GAP_FRAC
     candidates: List[Tuple[fitz.Rect, str, fitz.Rect]] = []
     for head_rect, head_text in headings:
-        band = fitz.Rect(page_rect.x0, head_rect.y1, page_rect.x1, min(page_rect.y1, head_rect.y1 + band_height))
-        selected = [r for r in drawings if r.intersects(band) and r.y0 >= head_rect.y1 - 2]
+        band = fitz.Rect(
+            page_rect.x0,
+            head_rect.y1,
+            page_rect.x1,
+            min(page_rect.y1, head_rect.y1 + band_height),
+        )
+        selected = [
+            r for r in drawings if r.intersects(band) and r.y0 >= head_rect.y1 - 2
+        ]
         if len(selected) < INFO_CHART_MIN_DRAWINGS:
             continue
         clusters = _cluster_rects_by_y(selected, cluster_gap)
@@ -637,7 +684,10 @@ def _heading_chart_rects(page: fitz.Page) -> List[Tuple[fitz.Rect, str, fitz.Rec
         merged = primary[0]
         for r in primary[1:]:
             merged |= r
-        if merged.get_area() / max(1.0, page_rect.get_area()) < INFO_CHART_MIN_AREA_FRAC:
+        if (
+            merged.get_area() / max(1.0, page_rect.get_area())
+            < INFO_CHART_MIN_AREA_FRAC
+        ):
             continue
         gap = merged.y0 - head_rect.y1
         if gap > max_gap:
@@ -732,7 +782,9 @@ def _clamp_top_to_caption(
     page: fitz.Page,
     page_rect: fitz.Rect,
 ) -> fitz.Rect:
-    pad = max(CHART_CAPTION_TOP_PAD_PX, cap_rect.height * CHART_CAPTION_TOP_PAD_FRAC, 0.0)
+    pad = max(
+        CHART_CAPTION_TOP_PAD_PX, cap_rect.height * CHART_CAPTION_TOP_PAD_FRAC, 0.0
+    )
     target_top = max(page_rect.y0, cap_rect.y0 - pad)
     block_limit = _caption_top_block_limit(page, cap_rect, page_rect)
     if block_limit is not None:
@@ -782,7 +834,10 @@ def _heading_top_block_limit(
             continue
         if head_rect.y0 - block.y1 > search:
             continue
-        if _horizontal_overlap_ratio(block, head_rect) < CHART_HEADING_TOP_BLOCK_H_OVERLAP:
+        if (
+            _horizontal_overlap_ratio(block, head_rect)
+            < CHART_HEADING_TOP_BLOCK_H_OVERLAP
+        ):
             continue
         if best_y1 is None or block.y1 > best_y1:
             best_y1 = block.y1
@@ -813,7 +868,10 @@ def _caption_top_block_limit(
             continue
         if cap_rect.y0 - block.y1 > search:
             continue
-        if _horizontal_overlap_ratio(block, cap_rect) < CHART_CAPTION_TOP_BLOCK_H_OVERLAP:
+        if (
+            _horizontal_overlap_ratio(block, cap_rect)
+            < CHART_CAPTION_TOP_BLOCK_H_OVERLAP
+        ):
             continue
         if best_y1 is None or block.y1 > best_y1:
             best_y1 = block.y1
@@ -838,13 +896,16 @@ def _extend_with_note_blocks(page: fitz.Page, rect: fitz.Rect) -> fitz.Rect:
         if not lines:
             continue
         first = lines[0].lower()
-        if not (first.startswith("note:") or first.startswith("source:") or first.startswith("statlink")):
+        if not (
+            first.startswith("note:")
+            or first.startswith("source:")
+            or first.startswith("statlink")
+        ):
             continue
         block = fitz.Rect(x0, y0, x1, y1)
         h_overlap = _horizontal_overlap_ratio(block, rect)
-        gap_ok = (
-            (block.x0 >= rect.x1 and block.x0 - rect.x1 <= max_gap_x)
-            or (block.x1 <= rect.x0 and rect.x0 - block.x1 <= max_gap_x)
+        gap_ok = (block.x0 >= rect.x1 and block.x0 - rect.x1 <= max_gap_x) or (
+            block.x1 <= rect.x0 and rect.x0 - block.x1 <= max_gap_x
         )
         if h_overlap < 0.3 and not gap_ok:
             continue
@@ -871,7 +932,10 @@ def _extend_with_adjacent_text_blocks(page: fitz.Page, rect: fitz.Rect) -> fitz.
         if lines == 0:
             continue
         avg_line_len = chars / max(1, lines)
-        if lines >= CHART_LABEL_PARAGRAPH_MIN_LINES and avg_line_len > CHART_LABEL_PARAGRAPH_MAX_AVG_LINE_LEN:
+        if (
+            lines >= CHART_LABEL_PARAGRAPH_MIN_LINES
+            and avg_line_len > CHART_LABEL_PARAGRAPH_MAX_AVG_LINE_LEN
+        ):
             continue
         if lines > CHART_LABEL_MAX_LINES:
             continue
@@ -928,7 +992,10 @@ def _has_internal_top_text(
         if lines == 0:
             continue
         avg_line_len = chars / max(1, lines)
-        if lines >= CHART_LABEL_PARAGRAPH_MIN_LINES and avg_line_len > CHART_LABEL_PARAGRAPH_MAX_AVG_LINE_LEN:
+        if (
+            lines >= CHART_LABEL_PARAGRAPH_MIN_LINES
+            and avg_line_len > CHART_LABEL_PARAGRAPH_MAX_AVG_LINE_LEN
+        ):
             continue
         return True
     return False
@@ -974,22 +1041,30 @@ def _adjust_rect_for_text_margins(
         gap = top_text - rect.y0
         if gap < min_gap:
             pad = min(max_pad, min_gap - gap)
-            rect = fitz.Rect(rect.x0, max(page_rect.y0, rect.y0 - pad), rect.x1, rect.y1)
+            rect = fitz.Rect(
+                rect.x0, max(page_rect.y0, rect.y0 - pad), rect.x1, rect.y1
+            )
     if bottom_text is not None:
         gap = rect.y1 - bottom_text
         if gap < min_gap:
             pad = min(max_pad, min_gap - gap)
-            rect = fitz.Rect(rect.x0, rect.y0, rect.x1, min(page_rect.y1, rect.y1 + pad))
+            rect = fitz.Rect(
+                rect.x0, rect.y0, rect.x1, min(page_rect.y1, rect.y1 + pad)
+            )
     if left_text is not None:
         gap = left_text - rect.x0
         if gap < min_gap_x:
             pad = min(max_pad_x, min_gap_x - gap)
-            rect = fitz.Rect(max(page_rect.x0, rect.x0 - pad), rect.y0, rect.x1, rect.y1)
+            rect = fitz.Rect(
+                max(page_rect.x0, rect.x0 - pad), rect.y0, rect.x1, rect.y1
+            )
     if right_text is not None:
         gap = rect.x1 - right_text
         if gap < min_gap_x:
             pad = min(max_pad_x, min_gap_x - gap)
-            rect = fitz.Rect(rect.x0, rect.y0, min(page_rect.x1, rect.x1 + pad), rect.y1)
+            rect = fitz.Rect(
+                rect.x0, rect.y0, min(page_rect.x1, rect.x1 + pad), rect.y1
+            )
     return rect
 
 
@@ -1107,7 +1182,10 @@ def _nearest_heading_above(page: fitz.Page, rect: fitz.Rect) -> Optional[fitz.Re
     best_rect: Optional[fitz.Rect] = None
     best_dist = 1e9
     for head_rect, _ in headings:
-        if _horizontal_overlap_ratio(head_rect, rect) < CHART_HEADING_TOP_BLOCK_H_OVERLAP:
+        if (
+            _horizontal_overlap_ratio(head_rect, rect)
+            < CHART_HEADING_TOP_BLOCK_H_OVERLAP
+        ):
             continue
         if head_rect.y1 <= rect.y0:
             if rect.y0 - head_rect.y1 <= max_gap:
@@ -1125,7 +1203,9 @@ def _nearest_heading_above(page: fitz.Page, rect: fitz.Rect) -> Optional[fitz.Re
     return best_rect
 
 
-def _note_block_bottom(page: fitz.Page, rect: fitz.Rect, *, min_y0_frac: float = 0.45) -> Optional[float]:
+def _note_block_bottom(
+    page: fitz.Page, rect: fitz.Rect, *, min_y0_frac: float = 0.45
+) -> Optional[float]:
     min_y0 = rect.y0 + rect.height * min_y0_frac
     best: Optional[float] = None
     page_rect = page.rect
@@ -1141,13 +1221,16 @@ def _note_block_bottom(page: fitz.Page, rect: fitz.Rect, *, min_y0_frac: float =
         if not lines:
             continue
         first = lines[0].lower()
-        if not (first.startswith("note:") or first.startswith("source:") or first.startswith("statlink")):
+        if not (
+            first.startswith("note:")
+            or first.startswith("source:")
+            or first.startswith("statlink")
+        ):
             continue
         block = fitz.Rect(x0, y0, x1, y1)
         h_overlap = _horizontal_overlap_ratio(block, rect)
-        gap_ok = (
-            (block.x0 >= rect.x1 and block.x0 - rect.x1 <= max_gap_x)
-            or (block.x1 <= rect.x0 and rect.x0 - block.x1 <= max_gap_x)
+        gap_ok = (block.x0 >= rect.x1 and block.x0 - rect.x1 <= max_gap_x) or (
+            block.x1 <= rect.x0 and rect.x0 - block.x1 <= max_gap_x
         )
         if h_overlap < 0.3 and not gap_ok:
             continue
@@ -1219,7 +1302,11 @@ def _expand_table_bbox(
         return bbox
     rect = fitz.Rect(*bbox)
     page_rect = page.rect
-    gap_frac = TABLE_EXPAND_MAX_GAP_FRAC if method == "stream" else TABLE_EXPAND_LATTICE_MAX_GAP_FRAC
+    gap_frac = (
+        TABLE_EXPAND_MAX_GAP_FRAC
+        if method == "stream"
+        else TABLE_EXPAND_LATTICE_MAX_GAP_FRAC
+    )
     max_gap_x = page_rect.width * gap_frac
     max_gap_y = page_rect.height * gap_frac
     expanded = rect
@@ -1241,7 +1328,10 @@ def _expand_table_bbox(
             continue
         avg_line_len = chars / max(1, lines)
         heading_like = _heading_like_block(text_str, lines, avg_line_len)
-        if not heading_like and (lines > TABLE_EXPAND_MAX_LINES or avg_line_len > TABLE_EXPAND_MAX_AVG_LINE_LEN):
+        if not heading_like and (
+            lines > TABLE_EXPAND_MAX_LINES
+            or avg_line_len > TABLE_EXPAND_MAX_AVG_LINE_LEN
+        ):
             continue
 
         inter_area = _rect_intersection_area(block, rect)
@@ -1297,11 +1387,18 @@ def _expand_table_bbox(
     if method == "stream":
         width_frac = expanded.width / max(1.0, page_rect.width)
         height_frac = expanded.height / max(1.0, page_rect.height)
-        if width_frac >= TABLE_EXPAND_STREAM_WIDE_MIN_WIDTH_FRAC and height_frac >= TABLE_EXPAND_STREAM_WIDE_MIN_HEIGHT_FRAC:
+        if (
+            width_frac >= TABLE_EXPAND_STREAM_WIDE_MIN_WIDTH_FRAC
+            and height_frac >= TABLE_EXPAND_STREAM_WIDE_MIN_HEIGHT_FRAC
+        ):
             if page_rect.x1 - expanded.x1 <= max_gap_x:
-                expanded = fitz.Rect(expanded.x0, expanded.y0, page_rect.x1, expanded.y1)
+                expanded = fitz.Rect(
+                    expanded.x0, expanded.y0, page_rect.x1, expanded.y1
+                )
             if expanded.x0 - page_rect.x0 <= max_gap_x:
-                expanded = fitz.Rect(page_rect.x0, expanded.y0, expanded.x1, expanded.y1)
+                expanded = fitz.Rect(
+                    page_rect.x0, expanded.y0, expanded.x1, expanded.y1
+                )
 
     expanded &= page_rect
     if expanded.is_empty:
@@ -1309,7 +1406,9 @@ def _expand_table_bbox(
     return (expanded.x0, expanded.y0, expanded.x1, expanded.y1)
 
 
-def _save_thumb(pix: fitz.Pixmap, out_dir: str, report_name: str, index: int, max_w: int = 480) -> str:
+def _save_thumb(
+    pix: fitz.Pixmap, out_dir: str, report_name: str, index: int, max_w: int = 480
+) -> str:
     if pix.alpha:
         pix = fitz.Pixmap(fitz.csRGB, pix)
     elif pix.colorspace and pix.colorspace != fitz.csRGB:
@@ -1341,7 +1440,7 @@ def _nearby_text(page: fitz.Page, rect: fitz.Rect, max_dist: float = 90) -> str:
             continue
         r = fitz.Rect(x0, y0, x1, y1)
         dy = r.y0 - rect.y1
-        dist = (dy if dy >= 0 else abs(dy) + 24)
+        dist = dy if dy >= 0 else abs(dy) + 24
         if dist <= max_dist and dist < best[1]:
             best = (text.strip(), dist)
     return best[0]
@@ -1386,7 +1485,9 @@ def _extract_charts_sequential(
                 base_rect = r
                 area_frac = r.get_area() / rect.get_area()
                 aspect = r.width / max(1, r.height)
-                aspect_max = INFO_CHART_MAX_ASPECT if rect_item.kind == "heading" else 2.5
+                aspect_max = (
+                    INFO_CHART_MAX_ASPECT if rect_item.kind == "heading" else 2.5
+                )
                 if area_frac < 0.05 or not (0.55 <= aspect <= aspect_max):
                     stats["rejected"] = _int_count(stats["rejected"]) + 1
                     _tally_reason(stats, "geometry")
@@ -1410,11 +1511,19 @@ def _extract_charts_sequential(
                     stats["rejected"] = _int_count(stats["rejected"]) + 1
                     _tally_reason(stats, "caption_hint")
                     continue
-                if rect_item.kind in ("block", "draw") and not has_hint and area_frac < 0.12:
+                if (
+                    rect_item.kind in ("block", "draw")
+                    and not has_hint
+                    and area_frac < 0.12
+                ):
                     stats["rejected"] = _int_count(stats["rejected"]) + 1
                     _tally_reason(stats, "block_small_no_caption")
                     continue
-                if rect_item.kind in ("block", "draw") and not has_hint and area_frac > 0.8:
+                if (
+                    rect_item.kind in ("block", "draw")
+                    and not has_hint
+                    and area_frac > 0.8
+                ):
                     stats["rejected"] = _int_count(stats["rejected"]) + 1
                     _tally_reason(stats, "block_full_page_no_caption")
                     continue
@@ -1425,7 +1534,11 @@ def _extract_charts_sequential(
                 text_lines, text_chars = _text_stats(bbox_text)
                 text_ratio = (text_chars / page_chars) if page_chars else 0.0
                 if rect_item.kind in ("xref", "block") and not has_hint:
-                    if (not cap or len(cap.strip()) < 8) and text_chars <= 8 and area_frac < 0.5:
+                    if (
+                        (not cap or len(cap.strip()) < 8)
+                        and text_chars <= 8
+                        and area_frac < 0.5
+                    ):
                         stats["rejected"] = _int_count(stats["rejected"]) + 1
                         _tally_reason(stats, "decorative_image")
                         continue
@@ -1471,7 +1584,11 @@ def _extract_charts_sequential(
                     else:
                         r_final = _adjust_rect_for_text_margins(page, r_final)
                         r_final = _expand_rect_into_whitespace(page, r_final)
-                if rect_item.kind == "heading" and cap_rect is not None and not expanded_with_heading:
+                if (
+                    rect_item.kind == "heading"
+                    and cap_rect is not None
+                    and not expanded_with_heading
+                ):
                     r_final = _clamp_top_to_heading(r_final, cap_rect, page, rect)
                 if not has_hint and rect_item.kind not in ("heading", "xref"):
                     head_rect = _nearest_heading_above(page, r_final)
@@ -1487,7 +1604,9 @@ def _extract_charts_sequential(
                 if cap_rect is not None and _caption_near_top(r_final, cap_rect):
                     if has_hint or rect_item.kind != "heading":
                         r_final = _clamp_top_to_caption(r_final, cap_rect, page, rect)
-                r_final = _trim_top_page_number(r_final, page, cap_rect if has_hint else None)
+                r_final = _trim_top_page_number(
+                    r_final, page, cap_rect if has_hint else None
+                )
                 try:
                     bbox_text = page.get_text("text", clip=r_final)
                 except Exception:
@@ -1503,7 +1622,9 @@ def _extract_charts_sequential(
                         and _rect_iou(render_rect, r) >= 0.98
                     ):
                         pix = fitz.Pixmap(local_doc, rect_item.xref)
-                        if pix.alpha or (pix.colorspace and pix.colorspace != fitz.csRGB):
+                        if pix.alpha or (
+                            pix.colorspace and pix.colorspace != fitz.csRGB
+                        ):
                             pix = fitz.Pixmap(fitz.csRGB, pix)
                     else:
                         try:
@@ -1511,7 +1632,11 @@ def _extract_charts_sequential(
                         except Exception:
                             pix = None
                 cid = f"chart-{pno}-{local}"
-                thumb = _save_thumb(pix, thumbs_dir, report_name, thumb_index) if save_thumbs and pix else None
+                thumb = (
+                    _save_thumb(pix, thumbs_dir, report_name, thumb_index)
+                    if save_thumbs and pix
+                    else None
+                )
                 if save_thumbs and thumb:
                     thumb_path = Path(thumb)
                     rel_thumb = Path(report_name) / "thumbs" / thumb_path.name
@@ -1533,7 +1658,9 @@ def _extract_charts_sequential(
                         "text_ratio": round(text_ratio, 3),
                     },
                 )
-                score = _chart_candidate_score(area_frac, has_hint, cap or "", note_included)
+                score = _chart_candidate_score(
+                    area_frac, has_hint, cap or "", note_included
+                )
                 overlap_idx = _find_overlapping_kept(r_final, kept)
                 if overlap_idx is not None:
                     existing_score = kept[overlap_idx][1]
@@ -1565,7 +1692,9 @@ def _candidate_index_from_id(candidate_id: str) -> int:
         return 0
 
 
-def _merge_stats(base: Dict[str, object], extra: Dict[str, object]) -> Dict[str, object]:
+def _merge_stats(
+    base: Dict[str, object], extra: Dict[str, object]
+) -> Dict[str, object]:
     merged = dict(base)
     for key, value in extra.items():
         if key == "reasons":
@@ -1644,7 +1773,12 @@ def _extract_charts(
             doc=doc,
         )
     chunks = _split_even_chunks(list(range(page_count)), worker_count)
-    merged_stats: Dict[str, object] = {"raw": 0, "kept": 0, "rejected": 0, "reasons": {}}
+    merged_stats: Dict[str, object] = {
+        "raw": 0,
+        "kept": 0,
+        "rejected": 0,
+        "reasons": {},
+    }
     merged_candidates: List[Candidate] = []
     with ThreadPoolExecutor(max_workers=worker_count) as executor:
         futures = {
@@ -1663,7 +1797,9 @@ def _extract_charts(
             chunk_candidates, chunk_stats = future.result()
             merged_candidates.extend(chunk_candidates)
             merged_stats = _merge_stats(merged_stats, chunk_stats)
-    merged_candidates.sort(key=lambda cand: (cand.page, _candidate_index_from_id(cand.id)))
+    merged_candidates.sort(
+        key=lambda cand: (cand.page, _candidate_index_from_id(cand.id))
+    )
     return merged_candidates, merged_stats
 
 
@@ -1705,8 +1841,12 @@ def _extract_tables_sequential(
 
                 lattice_tables = _find_tables_safe(p, TABLE_SETTINGS_LATTICE)
                 stream_tables = _find_tables_safe(p, TABLE_SETTINGS_STREAM)
-                stats["raw_lattice"] = _int_count(stats["raw_lattice"]) + len(lattice_tables)
-                stats["raw_stream"] = _int_count(stats["raw_stream"]) + len(stream_tables)
+                stats["raw_lattice"] = _int_count(stats["raw_lattice"]) + len(
+                    lattice_tables
+                )
+                stats["raw_stream"] = _int_count(stats["raw_stream"]) + len(
+                    stream_tables
+                )
 
                 raw_candidates: list[tuple[pdfplumber.table.Table, str]] = []
                 raw_candidates.extend((t, "lattice") for t in lattice_tables)
@@ -1733,30 +1873,34 @@ def _extract_tables_sequential(
                 for i, cand in enumerate(sorted(deduped, key=_table_sort_key)):
                     x0, y0, x1, y1 = cand.bbox
                     if fitz_page is not None:
-                        x0, y0, x1, y1 = _expand_table_bbox(fitz_page, (x0, y0, x1, y1), cand.method)
+                        x0, y0, x1, y1 = _expand_table_bbox(
+                            fitz_page, (x0, y0, x1, y1), cand.method
+                        )
                     cid = f"table-{pno}-{i}"
-                    out.append(Candidate(
-                        schema_version="1.0",
-                        id=cid,
-                        kind="table",
-                        page=pno,
-                        bbox=(x0, y0, x1, y1),
-                        preview_text=cand.preview,
-                        caption=None,
-                        thumb_path=None,
-                        meta={
-                            "method": cand.method,
-                            "rows": cand.row_count,
-                            "cols": cand.col_count,
-                            "non_empty_cells": cand.non_empty_cells,
-                            "numeric_ratio": round(cand.numeric_ratio, 3),
-                            "avg_words_per_cell": round(cand.avg_words_per_cell, 2),
-                            "index_page_ratio": round(cand.index_page_ratio, 2),
-                            "text_len": cand.text_len,
-                            "area_frac": round(cand.area_frac, 4),
-                            "aspect": round(cand.aspect, 2),
-                        },
-                    ))
+                    out.append(
+                        Candidate(
+                            schema_version="1.0",
+                            id=cid,
+                            kind="table",
+                            page=pno,
+                            bbox=(x0, y0, x1, y1),
+                            preview_text=cand.preview,
+                            caption=None,
+                            thumb_path=None,
+                            meta={
+                                "method": cand.method,
+                                "rows": cand.row_count,
+                                "cols": cand.col_count,
+                                "non_empty_cells": cand.non_empty_cells,
+                                "numeric_ratio": round(cand.numeric_ratio, 3),
+                                "avg_words_per_cell": round(cand.avg_words_per_cell, 2),
+                                "index_page_ratio": round(cand.index_page_ratio, 2),
+                                "text_len": cand.text_len,
+                                "area_frac": round(cand.area_frac, 4),
+                                "aspect": round(cand.aspect, 2),
+                            },
+                        )
+                    )
                     if max_candidates > 0 and len(out) >= max_candidates:
                         break
 
@@ -1807,7 +1951,9 @@ def _extract_tables(
             chunk_candidates, chunk_stats = future.result()
             merged_candidates.extend(chunk_candidates)
             merged_stats = _merge_stats(merged_stats, chunk_stats)
-    merged_candidates.sort(key=lambda cand: (cand.page, _candidate_index_from_id(cand.id)))
+    merged_candidates.sort(
+        key=lambda cand: (cand.page, _candidate_index_from_id(cand.id))
+    )
     if max_candidates > 0:
         merged_candidates = merged_candidates[:max_candidates]
     return merged_candidates, merged_stats
@@ -1843,7 +1989,9 @@ def _build_table_candidate(
     row_len_cv = _row_len_cv(_row_text_lengths(rows))
     non_empty_cells = sum(1 for row in non_empty_rows for c in row if _s(c).strip())
     total_cells = sum(len(row) for row in non_empty_rows)
-    numeric_cells = sum(1 for row in non_empty_rows for c in row if _cell_is_numeric(_s(c)))
+    numeric_cells = sum(
+        1 for row in non_empty_rows for c in row if _cell_is_numeric(_s(c))
+    )
     numeric_chars, total_chars = _numeric_char_ratio(non_empty_rows)
     numeric_ratio = numeric_chars / max(1, total_chars)
     avg_words_per_cell = _avg_words_per_cell(non_empty_rows)
@@ -1867,9 +2015,11 @@ def _build_table_candidate(
     caption_hint = False
     if fitz_page is not None:
         caption_hint = _has_caption_hint(fitz_page, (x0, y0, x1, y1))
-        text_block_area_frac, text_block_line_count, text_block_avg_line_len = _text_block_stats(
-            fitz_page,
-            (x0, y0, x1, y1),
+        text_block_area_frac, text_block_line_count, text_block_avg_line_len = (
+            _text_block_stats(
+                fitz_page,
+                (x0, y0, x1, y1),
+            )
         )
     return _TableCandidate(
         bbox=(x0, y0, x1, y1),
@@ -1910,7 +2060,9 @@ def _table_preview(rows: List[List[object]]) -> str:
     return "\n".join(preview_lines)
 
 
-def _extract_text_in_bbox(page: pdfplumber.page.Page, bbox: Tuple[float, float, float, float]) -> str:
+def _extract_text_in_bbox(
+    page: pdfplumber.page.Page, bbox: Tuple[float, float, float, float]
+) -> str:
     try:
         return page.within_bbox(bbox).extract_text() or ""
     except Exception:
@@ -2082,7 +2234,9 @@ def _index_page_ratio(rows: List[List[object]]) -> float:
         total_rows += 1
         first_text = _s(row_cells[0]).strip()
         last_text = _s(row_cells[-1]).strip()
-        if _cell_words(first_text) >= TABLE_INDEX_MIN_FIRST_COL_WORDS and _cell_is_page_number(last_text):
+        if _cell_words(
+            first_text
+        ) >= TABLE_INDEX_MIN_FIRST_COL_WORDS and _cell_is_page_number(last_text):
             index_rows += 1
     return (index_rows / total_rows) if total_rows else 0.0
 
@@ -2109,9 +2263,9 @@ def _heading_like_block(text: str, lines: int, avg_line_len: float) -> bool:
     return True
 
 
-
-
-def _text_block_stats(page: fitz.Page, bbox: Tuple[float, float, float, float]) -> Tuple[float, int, float]:
+def _text_block_stats(
+    page: fitz.Page, bbox: Tuple[float, float, float, float]
+) -> Tuple[float, int, float]:
     rect = fitz.Rect(*bbox)
     rect_area = max(1.0, rect.get_area())
     block_area = 0.0
@@ -2136,7 +2290,9 @@ def _text_block_stats(page: fitz.Page, bbox: Tuple[float, float, float, float]) 
     return block_area / rect_area, line_count, avg_line_len
 
 
-def _has_caption_hint(page: fitz.Page, bbox: Tuple[float, float, float, float], max_dist: float = 60) -> bool:
+def _has_caption_hint(
+    page: fitz.Page, bbox: Tuple[float, float, float, float], max_dist: float = 60
+) -> bool:
     rect = fitz.Rect(*bbox)
     page_rect = page.rect
     above = fitz.Rect(rect.x0, max(page_rect.y0, rect.y0 - max_dist), rect.x1, rect.y0)
@@ -2161,13 +2317,24 @@ def _validate_table_candidate(cand: _TableCandidate) -> Tuple[bool, str]:
         return False, "too_few_cells"
     if cand.text_len < TABLE_MIN_TEXT_CHARS:
         return False, "no_text"
-    if cand.area_frac < TABLE_MIN_AREA_FRAC and cand.text_len < TABLE_MIN_TEXT_CHARS * 2:
+    if (
+        cand.area_frac < TABLE_MIN_AREA_FRAC
+        and cand.text_len < TABLE_MIN_TEXT_CHARS * 2
+    ):
         return False, "too_small"
-    if (cand.aspect < TABLE_MIN_ASPECT or cand.aspect > TABLE_MAX_ASPECT) and cand.text_len < TABLE_MIN_TEXT_CHARS * 3:
+    if (
+        cand.aspect < TABLE_MIN_ASPECT or cand.aspect > TABLE_MAX_ASPECT
+    ) and cand.text_len < TABLE_MIN_TEXT_CHARS * 3:
         return False, "extreme_aspect"
-    if cand.width_frac < TABLE_MIN_WIDTH_FRAC and cand.text_len < TABLE_MIN_TEXT_CHARS * 2:
+    if (
+        cand.width_frac < TABLE_MIN_WIDTH_FRAC
+        and cand.text_len < TABLE_MIN_TEXT_CHARS * 2
+    ):
         return False, "too_narrow"
-    if cand.height_frac < TABLE_MIN_HEIGHT_FRAC and cand.text_len < TABLE_MIN_TEXT_CHARS * 2:
+    if (
+        cand.height_frac < TABLE_MIN_HEIGHT_FRAC
+        and cand.text_len < TABLE_MIN_TEXT_CHARS * 2
+    ):
         return False, "too_short"
     if cand.method == "stream":
         if (
@@ -2208,7 +2375,10 @@ def _validate_table_candidate(cand: _TableCandidate) -> Tuple[bool, str]:
 def _stream_text_layout_like(cand: _TableCandidate) -> bool:
     if cand.caption_hint:
         return False
-    if cand.row_count < TABLE_STREAM_TEXTY_MIN_ROWS or cand.col_count < TABLE_STREAM_TEXTY_MIN_COLS:
+    if (
+        cand.row_count < TABLE_STREAM_TEXTY_MIN_ROWS
+        or cand.col_count < TABLE_STREAM_TEXTY_MIN_COLS
+    ):
         return False
     if cand.area_frac < TABLE_STREAM_TEXTY_MIN_AREA:
         return False
@@ -2313,7 +2483,10 @@ def _stream_sparse_text_like(cand: _TableCandidate) -> bool:
 def _stream_low_consistency(cand: _TableCandidate) -> bool:
     if cand.caption_hint:
         return False
-    if cand.row_count < TABLE_STREAM_MIN_ROWS_FOR_LIKENESS or cand.col_count < TABLE_STREAM_MIN_COLS_FOR_LIKENESS:
+    if (
+        cand.row_count < TABLE_STREAM_MIN_ROWS_FOR_LIKENESS
+        or cand.col_count < TABLE_STREAM_MIN_COLS_FOR_LIKENESS
+    ):
         return False
     if cand.col_consistency >= TABLE_STREAM_MIN_COL_CONSISTENCY:
         return False
@@ -2358,7 +2531,9 @@ def _table_quality(cand: _TableCandidate) -> Tuple[int, int, int]:
     return (cand.row_count * cand.col_count, cand.non_empty_cells, cand.text_len)
 
 
-def _table_iou(a: Tuple[float, float, float, float], b: Tuple[float, float, float, float]) -> float:
+def _table_iou(
+    a: Tuple[float, float, float, float], b: Tuple[float, float, float, float]
+) -> float:
     ax0, ay0, ax1, ay1 = a
     bx0, by0, bx1, by1 = b
     inter_w = max(0.0, min(ax1, bx1) - max(ax0, bx0))
@@ -2374,7 +2549,9 @@ def _table_iou(a: Tuple[float, float, float, float], b: Tuple[float, float, floa
     return inter / union
 
 
-def _dedupe_table_candidates(candidates: List[_TableCandidate]) -> List[_TableCandidate]:
+def _dedupe_table_candidates(
+    candidates: List[_TableCandidate],
+) -> List[_TableCandidate]:
     kept: List[_TableCandidate] = []
     for cand in candidates:
         replaced = False
@@ -2406,28 +2583,40 @@ def _suppress_pdfminer_warnings() -> None:
             continue
 
 
-def collect_candidates(request: ExtractCandidatesRequest, ctx: RunContext) -> ExtractCandidatesResponse:
+def collect_candidates(
+    request: ExtractCandidatesRequest, ctx: RunContext
+) -> ExtractCandidatesResponse:
     parallel_workers = _resolve_candidate_parallel_workers(request.parallel_workers, 8)
-    excluded_pages = {int(page) for page in (request.exclude_page_indices or []) if isinstance(page, int) and page >= 0}
-    candidate_logger.info(log_event(
-        ctx,
-        role="service",
-        event="extract_candidates_start",
-        module=candidate_logger.name,
-        fields={
-            "pdf_path": request.pdf_path,
-            "using_context": bool(request.pdf_context and request.pdf_context.fitz_doc),
-            "parallel_workers": parallel_workers,
-            "exclude_page_indices": sorted(excluded_pages),
-        },
-    ))
+    excluded_pages = {
+        int(page)
+        for page in (request.exclude_page_indices or [])
+        if isinstance(page, int) and page >= 0
+    }
+    candidate_logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="extract_candidates_start",
+            module=candidate_logger.name,
+            fields={
+                "pdf_path": request.pdf_path,
+                "using_context": bool(
+                    request.pdf_context and request.pdf_context.fitz_doc
+                ),
+                "parallel_workers": parallel_workers,
+                "exclude_page_indices": sorted(excluded_pages),
+            },
+        )
+    )
     thumbs = Path(request.out_dir) / request.report_name / "thumbs"
     charts, chart_stats = _extract_charts(
         request.pdf_path,
         thumbs.as_posix(),
         request.report_name,
         save_thumbs=False,
-        doc=request.pdf_context.fitz_doc if request.pdf_context and parallel_workers <= 1 else None,
+        doc=request.pdf_context.fitz_doc
+        if request.pdf_context and parallel_workers <= 1
+        else None,
         parallel_workers=parallel_workers,
     )
     tables, table_stats = _extract_tables(
@@ -2438,53 +2627,100 @@ def collect_candidates(request: ExtractCandidatesRequest, ctx: RunContext) -> Ex
     excluded_count = 0
     if excluded_pages:
         before_count = len(candidates)
-        candidates = [candidate for candidate in candidates if int(candidate.page) not in excluded_pages]
+        candidates = [
+            candidate
+            for candidate in candidates
+            if int(candidate.page) not in excluded_pages
+        ]
         excluded_count = max(0, before_count - len(candidates))
     chart_count = sum(1 for candidate in candidates if candidate.kind == "chart")
     table_count = sum(1 for candidate in candidates if candidate.kind == "table")
-    candidate_logger.info(log_event(
-        ctx,
-        role="service",
-        event="extract_candidates_complete",
-        module=candidate_logger.name,
-        fields={
-            "count": len(candidates),
-            "chart_count": chart_count,
-            "table_count": table_count,
-            "chart_stats": chart_stats,
-            "table_stats": table_stats,
-            "excluded_count": excluded_count,
-        },
-    ))
+    candidate_logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="extract_candidates_complete",
+            module=candidate_logger.name,
+            fields={
+                "count": len(candidates),
+                "chart_count": chart_count,
+                "table_count": table_count,
+                "chart_stats": chart_stats,
+                "table_stats": table_stats,
+                "excluded_count": excluded_count,
+            },
+        )
+    )
     return ExtractCandidatesResponse(schema_version="1.0", candidates=candidates)
 
+
 # BEGIN PDF FIGURE EXTRACTION
-def extract_best_figure(request: FigureExtractRequest, ctx: RunContext) -> FigureExtractResponse:
-    figure_logger.info(log_event(
-        ctx,
-        role="service",
-        event="figure_extract_start",
-        module=figure_logger.name,
-        fields={"pdf_path": request.pdf_path, "using_context": bool(request.pdf_context and request.pdf_context.fitz_doc)},
-    ))
-    img_path, caption = _extract_best_figure_png(
+def extract_best_figure(
+    request: FigureExtractRequest, ctx: RunContext
+) -> FigureExtractResponse:
+    figure_logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="figure_extract_start",
+            module=figure_logger.name,
+            fields={
+                "pdf_path": request.pdf_path,
+                "using_context": bool(
+                    request.pdf_context and request.pdf_context.fitz_doc
+                ),
+            },
+        )
+    )
+    img_path, caption, page = _extract_best_figure_png(
         request.pdf_path,
         request.out_dir,
         request.report_name,
         doc=request.pdf_context.fitz_doc if request.pdf_context else None,
     )
-    figure_logger.info(log_event(
-        ctx,
-        role="service",
-        event="figure_extract_complete",
-        module=figure_logger.name,
-        fields={"image_path": img_path or ""},
-    ))
-    return FigureExtractResponse(schema_version="1.0", image_path=img_path, caption=caption)
+    figure_logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="figure_extract_complete",
+            module=figure_logger.name,
+            fields={"image_path": img_path or ""},
+        )
+    )
+    return FigureExtractResponse(
+        schema_version="1.0",
+        image_path=img_path,
+        caption=caption,
+        page=page,
+    )
 
 
-FIGURE_CAPTION_HINTS = {"figure", "fig.", "exhibit", "chart", "graph", "source", "panel", "table"}
-FIGURE_METRIC_HINTS = {"%", "$", "growth", "share", "yoy", "cagr", "roi", "roas", "ctr", "conversion", "revenue", "impressions", "spend", "units"}
+FIGURE_CAPTION_HINTS = {
+    "figure",
+    "fig.",
+    "exhibit",
+    "chart",
+    "graph",
+    "source",
+    "panel",
+    "table",
+}
+FIGURE_METRIC_HINTS = {
+    "%",
+    "$",
+    "growth",
+    "share",
+    "yoy",
+    "cagr",
+    "roi",
+    "roas",
+    "ctr",
+    "conversion",
+    "revenue",
+    "impressions",
+    "spend",
+    "units",
+}
 FIGURE_LINE_RX = re.compile(r"\\b(fig(?:ure)?|exhibit|chart)\\b\\s*\\d+", re.I)
 
 
@@ -2499,14 +2735,16 @@ def _figure_score_text(text: str) -> int:
     return s
 
 
-def _figure_nearest_block_text(page: fitz.Page, bbox: fitz.Rect, max_dist: float = 90.0) -> str:
+def _figure_nearest_block_text(
+    page: fitz.Page, bbox: fitz.Rect, max_dist: float = 90.0
+) -> str:
     best = ("", 0, 1e9)
     for x0, y0, x1, y1, text, *_ in page.get_text("blocks"):
         if not text or text.isspace():
             continue
         rect = fitz.Rect(x0, y0, x1, y1)
         dy = rect.y0 - bbox.y1
-        distance = (dy if dy >= 0 else abs(dy) + 24)
+        distance = dy if dy >= 0 else abs(dy) + 24
         if distance > max_dist:
             continue
         sc = _figure_score_text(text)
@@ -2537,12 +2775,12 @@ def _extract_best_figure_png(
     report_name: str,
     min_page_area_frac: float = 0.06,
     doc: Optional[fitz.Document] = None,
-) -> Tuple[Optional[str], Optional[str]]:
+) -> Tuple[Optional[str], Optional[str], int]:
     try:
         out_root = Path(out_dir)
         img_dir = out_root / report_name / "assets"
         img_dir.mkdir(parents=True, exist_ok=True)
-        best = (None, 0.0, "")
+        best = (None, 0.0, "", -1)
 
         local_doc = doc or fitz.open(pdf_path)
         try:
@@ -2581,7 +2819,7 @@ def _extract_best_figure_png(
                         elif d < 350:
                             prox_bonus = 1
 
-                    score = (area ** 0.9) * (1 + 0.15 * cap_score + 0.10 * prox_bonus)
+                    score = (area**0.9) * (1 + 0.15 * cap_score + 0.10 * prox_bonus)
 
                     if score > best[1]:
                         pix = fitz.Pixmap(local_doc, xref)
@@ -2589,17 +2827,22 @@ def _extract_best_figure_png(
                             continue
                         if pix.n >= 4:
                             pix = fitz.Pixmap(fitz.csRGB, pix)
-                        best = (pix, score, caption or f"Auto-selected image from page {pno+1}")
+                        best = (
+                            pix,
+                            score,
+                            caption or f"Auto-selected image from page {pno + 1}",
+                            pno,
+                        )
         finally:
-            if doc is None and 'local_doc' in locals():
+            if doc is None and "local_doc" in locals():
                 local_doc.close()
 
         if best[0] is None:
-            return None, None
+            return None, None, -1
 
         out_path = img_dir / f"{report_name}.png"
         best[0].save(out_path.as_posix())
         rel = Path(report_name) / "assets" / out_path.name
-        return rel.as_posix(), best[2]
+        return rel.as_posix(), best[2], int(best[3])
     except Exception:
-        return None, None
+        return None, None, -1

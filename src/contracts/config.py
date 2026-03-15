@@ -200,6 +200,32 @@ class AppSettings:
         default=600.0,
         metadata={"doc": "Timeout in seconds for crop refinement model calls."},
     )
+    figure_caption_enabled: bool = field(
+        default=False,
+        metadata={
+            "doc": "Whether multimodal per-image figure caption generation is enabled."
+        },
+    )
+    figure_caption_temperature: float = field(
+        default=0.2,
+        metadata={"doc": "Sampling temperature for figure caption generation."},
+    )
+    figure_caption_timeout_seconds: float = field(
+        default=600.0,
+        metadata={"doc": "Timeout in seconds for figure caption model calls."},
+    )
+    figure_caption_prompt_namespace: str = field(
+        default="report_vs/figure_caption",
+        metadata={
+            "doc": "Prompt namespace used for per-image figure caption generation."
+        },
+    )
+    figure_caption_max_chars: int = field(
+        default=500,
+        metadata={
+            "doc": "Maximum caption length, in characters including spaces, after normalization."
+        },
+    )
     openai_timeout_seconds: float = field(
         default=600.0,
         metadata={"doc": "Timeout in seconds for OpenAI report generation calls."},

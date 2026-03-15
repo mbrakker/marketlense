@@ -15,15 +15,23 @@ from src.contracts.regeneration import (
     RegenerationPlan,
     RegenerationTarget,
 )
-from src.contracts.report_analysis import AnalysisPackPathRequest, AnalysisStorePackRequest
+from src.contracts.report_analysis import (
+    AnalysisPackPathRequest,
+    AnalysisStorePackRequest,
+)
 from src.contracts.report_generation import (
     ReportAnalysisState,
     ReportRuntimeState,
     ReportSelectionState,
     ReportSourceState,
 )
-from src.contracts.validation import ValidationIssue, ValidationReport, ValidationRequest
+from src.contracts.validation import (
+    ValidationIssue,
+    ValidationReport,
+    ValidationRequest,
+)
 from src.generators.normalize_generator import normalize_report
+from src.generators.figure_caption_generator import generate_figure_captions
 from src.generators.report_analysis_generator import (
     VectorStoreIndexingState,
     _await_vector_store_indexing,
@@ -114,7 +122,9 @@ def run_report_analysis(
                 },
             )
         )
-        with ThreadPoolExecutor(max_workers=min(runtime.report_worker_limit, 2)) as executor:
+        with ThreadPoolExecutor(
+            max_workers=min(runtime.report_worker_limit, 2)
+        ) as executor:
             taxonomy_future = executor.submit(
                 _resolve_taxonomy_and_categories,
                 runtime,
@@ -192,12 +202,24 @@ def run_report_analysis(
                         "file_id": runtime.file.file_id,
                         "code": exc.code,
                         "message": exc.message,
-                        "has_content": doc_map_summary.get("has_content") if doc_map_summary else None,
-                        "sections_count": doc_map_summary.get("sections_count") if doc_map_summary else None,
-                        "title_present": doc_map_summary.get("title_present") if doc_map_summary else None,
-                        "doc_id_present": doc_map_summary.get("doc_id_present") if doc_map_summary else None,
-                        "summary_present": doc_map_summary.get("summary_present") if doc_map_summary else None,
-                        "not_found_reason": doc_map_summary.get("not_found_reason") if doc_map_summary else "",
+                        "has_content": doc_map_summary.get("has_content")
+                        if doc_map_summary
+                        else None,
+                        "sections_count": doc_map_summary.get("sections_count")
+                        if doc_map_summary
+                        else None,
+                        "title_present": doc_map_summary.get("title_present")
+                        if doc_map_summary
+                        else None,
+                        "doc_id_present": doc_map_summary.get("doc_id_present")
+                        if doc_map_summary
+                        else None,
+                        "summary_present": doc_map_summary.get("summary_present")
+                        if doc_map_summary
+                        else None,
+                        "not_found_reason": doc_map_summary.get("not_found_reason")
+                        if doc_map_summary
+                        else "",
                     },
                 )
             )
@@ -240,7 +262,9 @@ def run_report_analysis(
 
     doc_map_pack = packs.get("doc_map", {})
     if isinstance(doc_map_pack, dict):
-        doc_map_title, resolved_publisher, title_source, publisher_source = resolve_doc_map_metadata(doc_map_pack)
+        doc_map_title, resolved_publisher, title_source, publisher_source = (
+            resolve_doc_map_metadata(doc_map_pack)
+        )
         if doc_map_title:
             data.title = doc_map_title
         if resolved_publisher:
@@ -313,6 +337,25 @@ def run_report_analysis(
     normalized_payload = merge_artifacts_into_payload(
         deepcopy(base_payload), artifacts_payload or {}
     )
+    caption_result = generate_figure_captions(
+        runtime=runtime,
+        selection=selection,
+        payload=normalized_payload,
+        doc_map=packs.get("doc_map", {})
+        if isinstance(packs.get("doc_map"), dict)
+        else {},
+        findings_pack=packs.get("findings", {})
+        if isinstance(packs.get("findings"), dict)
+        else {},
+        artifacts_payload=artifacts_payload or {},
+        dependencies=dependencies,
+    )
+    if caption_result.pack_path:
+        mode_evidence_paths["figure_captions"] = caption_result.pack_path
+        base_payload = normalize_report(caption_result.payload, runtime.ctx)
+        normalized_payload = merge_artifacts_into_payload(
+            deepcopy(base_payload), artifacts_payload or {}
+        )
     validation_report = _run_validation_with_fallback(
         runtime=runtime,
         mode_ctx=mode_ctx,
@@ -386,7 +429,9 @@ def run_report_analysis(
     data_dict["categories_display"] = category_assignment.category_labels
     data_dict["analysis_mode"] = runtime.analysis_mode
     data_dict["regeneration_loop_state"] = asdict(regeneration_loop_state)
-    data_dict["regeneration_attempts"] = [asdict(item) for item in regeneration_attempts]
+    data_dict["regeneration_attempts"] = [
+        asdict(item) for item in regeneration_attempts
+    ]
     logger.info(
         log_event(
             mode_ctx,
@@ -563,9 +608,9 @@ def _run_validation_regeneration_loop(
         )
         current_artifacts = regeneration_response.updated_artifacts
         evidence_paths["artifacts"] = regeneration_response.artifacts_path
-        evidence_paths[
-            f"artifacts_regen_attempt_{attempt_index}"
-        ] = regeneration_response.artifacts_snapshot_path
+        evidence_paths[f"artifacts_regen_attempt_{attempt_index}"] = (
+            regeneration_response.artifacts_snapshot_path
+        )
         regenerated_payload = merge_artifacts_into_payload(
             deepcopy(base_payload), current_artifacts
         )
@@ -639,7 +684,9 @@ def _run_validation_regeneration_loop(
             break
         final_status = current_validation_report.status
 
-    max_reached = current_validation_report.status != "pass" and len(attempts) >= max_attempts
+    max_reached = (
+        current_validation_report.status != "pass" and len(attempts) >= max_attempts
+    )
     if max_reached:
         logger.info(
             log_event(
@@ -653,7 +700,8 @@ def _run_validation_regeneration_loop(
                     "max_attempts": max_attempts,
                     "remaining_status": current_validation_report.status,
                     "unresolved_sections": [
-                        issue.affected_section for issue in current_validation_report.issues
+                        issue.affected_section
+                        for issue in current_validation_report.issues
                     ],
                 },
             )
@@ -934,10 +982,15 @@ def _issue_grounding(
     if not section:
         return [], []
     lower_section = section.lower()
-    if lower_section in {"tldr", "executive_summary", "claim_evidence_map"} or lower_section.startswith("summary"):
+    if lower_section in {
+        "tldr",
+        "executive_summary",
+        "claim_evidence_map",
+    } or lower_section.startswith("summary"):
         evidence_ids: List[str] = []
         pages: List[int] = []
-        summary = artifacts.get("summary") if isinstance(artifacts.get("summary"), dict) else {}
+        summary_value = artifacts.get("summary")
+        summary = summary_value if isinstance(summary_value, dict) else {}
         for claim in summary.get("claim_evidence_map") or []:
             if not isinstance(claim, dict):
                 continue

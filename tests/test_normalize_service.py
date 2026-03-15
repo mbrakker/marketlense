@@ -1,6 +1,7 @@
 import unittest
+from typing import Any
 
-from src.contracts.report_models import Figure, Quote, ReportPayload
+from src.contracts.report_models import Figure, Quote, ReportFigureAsset, ReportPayload
 from src.contracts.run_context import RunContext
 from src.generators.normalize_generator import normalize_report
 
@@ -72,6 +73,38 @@ class TestNormalizeService(unittest.TestCase):
         ctx = RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
         normalized = normalize_report(payload, ctx)
         self.assertFalse(normalized._figure_section_enabled)
+
+    def test_normalize_coerces_figure_assets(self) -> None:
+        asset_row: Any = {
+            "image_path": "report/slices/primary.png",
+            "page": "2",
+            "candidate_id": "chart-1",
+            "kind": "chart",
+            "is_primary": True,
+            "detected_caption": "Detected",
+            "preview_text": "Preview",
+            "generated_caption": "Generated",
+            "display_caption": "Generated",
+            "caption_source": "generated",
+            "schema_version": "1.0",
+        }
+        payload = ReportPayload(
+            tldr="tldr",
+            title="My Report",
+            insights=["a", "b", "c", "d", "e"],
+            quote=Quote(text="q", author="a"),
+            figure=Figure(title="t", evidence="e"),
+            commentary="c",
+            source="s",
+            _figure_assets=[asset_row],
+        )
+        ctx = RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
+        normalized = normalize_report(payload, ctx)
+
+        self.assertEqual(1, len(normalized._figure_assets))
+        self.assertIsInstance(normalized._figure_assets[0], ReportFigureAsset)
+        self.assertEqual(2, normalized._figure_assets[0].page)
+        self.assertEqual("Generated", normalized._figure_assets[0].display_caption)
 
 
 if __name__ == "__main__":
