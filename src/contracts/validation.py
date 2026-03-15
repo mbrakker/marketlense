@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional, List
+from typing import List, Optional
 
 from src.contracts.docpacks import DocPackPayloadMap
 from src.contracts.report_models import ReportPayload
@@ -19,6 +19,24 @@ class ValidationIssue:
         metadata={
             "doc": "Section or artifact impacted by the issue (e.g., insights, quotes)."
         }
+    )
+    rule_id: str = field(
+        default="",
+        metadata={
+            "doc": "Machine-readable validation rule identifier for routing and reporting."
+        },
+    )
+    repair_target: str = field(
+        default="",
+        metadata={
+            "doc": "Normalized regeneration target key when the issue can be auto-repaired."
+        },
+    )
+    entity_id: str = field(
+        default="",
+        metadata={
+            "doc": "Optional stable entity identifier within the affected section."
+        },
     )
     schema_version: str = field(
         default="1.0", metadata={"doc": "Validation issue schema version."}
@@ -58,6 +76,9 @@ class ValidationReport:
                     "message": issue.message,
                     "severity": issue.severity,
                     "affected_section": issue.affected_section,
+                    "rule_id": issue.rule_id,
+                    "repair_target": issue.repair_target,
+                    "entity_id": issue.entity_id,
                 }
                 for issue in self.issues
             ],

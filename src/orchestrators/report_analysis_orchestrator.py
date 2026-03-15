@@ -51,6 +51,7 @@ logger = logging.getLogger("market_lense.report_analysis_orchestrator")
 
 RULE_ID_RE = re.compile(r"^\[([^\]]+)\]")
 TARGET_ORDER = [
+    "topics",
     "summary",
     "insights_bundle",
     "quotes",
@@ -870,7 +871,9 @@ def _build_regeneration_plan(
     unmappable: List[RegenerationIssue] = []
     for issue in issues:
         normalized = _normalize_regeneration_issue(issue, artifacts)
-        target_key = _target_section(normalized.affected_section)
+        target_key = normalized.repair_target or _target_section(
+            normalized.affected_section
+        )
         if target_key:
             grouped.setdefault(target_key, []).append(normalized)
         else:
@@ -923,10 +926,12 @@ def _normalize_regeneration_issue(
 ) -> RegenerationIssue:
     evidence_ids, pages = _issue_grounding(issue.affected_section, artifacts)
     return RegenerationIssue(
-        rule_id=_extract_rule_id(issue.message),
+        rule_id=issue.rule_id or _extract_rule_id(issue.message),
         affected_section=issue.affected_section,
         message=issue.message,
         severity=issue.severity,
+        repair_target=issue.repair_target,
+        entity_id=issue.entity_id,
         evidence_ids=evidence_ids,
         pages=pages,
     )
@@ -943,6 +948,13 @@ def _target_section(affected_section: str) -> str:
     section = str(affected_section or "").strip().lower()
     if not section:
         return ""
+    if (
+        section.startswith("topics")
+        or section.startswith("toc_entries")
+        or section.startswith("toc_topics")
+        or section.startswith("toc_topics_expanded")
+    ):
+        return "topics"
     if section in {"tldr", "executive_summary", "claim_evidence_map"}:
         return "summary"
     if section.startswith("summary"):
@@ -963,6 +975,8 @@ def _target_section(affected_section: str) -> str:
 
 
 def _target_steps(target_key: str) -> List[str]:
+    if target_key == "topics":
+        return ["toc_entries", "toc_topics", "toc_topics_expanded"]
     if target_key == "summary":
         return ["summary"]
     if target_key == "insights_bundle":
@@ -977,6 +991,8 @@ def _target_steps(target_key: str) -> List[str]:
 
 
 def _target_prompt_namespaces(target_key: str) -> List[str]:
+    if target_key == "topics":
+        return []
     if target_key == "summary":
         return ["report_vs/artifacts/regenerate/summary"]
     if target_key == "insights_bundle":
@@ -1001,6 +1017,14 @@ def _issue_grounding(
     if not section:
         return [], []
     lower_section = section.lower()
+    if (
+        lower_section.startswith("topics")
+        or lower_section.startswith("toc_entries")
+        or lower_section.startswith("toc_topics")
+        or lower_section.startswith("toc_topics_expanded")
+    ):
+        topic_index = section.split(":", 1)[1].strip() if ":" in section else ""
+        return _lookup_topic_grounding(topic_index, artifacts)
     if lower_section in {
         "tldr",
         "executive_summary",
@@ -1027,6 +1051,45 @@ def _issue_grounding(
         quote_id = section.split(":", 1)[1].strip() if ":" in section else ""
         return _lookup_quote_grounding(quote_id, artifacts)
     return [], []
+
+
+def _lookup_topic_grounding(
+    topic_index: str,
+    artifacts: Dict[str, Any],
+) -> tuple[List[str], List[int]]:
+    evidence_ids: List[str] = []
+    pages: List[int] = []
+    toc_entries = artifacts.get("toc_entries") or []
+    if isinstance(toc_entries, list) and toc_entries:
+        for entry in toc_entries:
+            if not isinstance(entry, dict):
+                continue
+            section_id = str(entry.get("section_id") or "").strip()
+            if topic_index and not topic_index.isdigit() and section_id != topic_index:
+                continue
+            if section_id and section_id not in evidence_ids:
+                evidence_ids.append(section_id)
+            for page in entry.get("pages") or []:
+                if isinstance(page, int) and page not in pages:
+                    pages.append(page)
+            if topic_index and not topic_index.isdigit():
+                return evidence_ids, pages
+    topic_briefs = artifacts.get("toc_topics_expanded") or []
+    resolved_index = int(topic_index) - 1 if topic_index.isdigit() else -1
+    for idx, entry in enumerate(topic_briefs):
+        if not isinstance(entry, dict):
+            continue
+        if resolved_index >= 0 and idx != resolved_index:
+            continue
+        section_id = str(entry.get("section_id") or "").strip()
+        if section_id and section_id not in evidence_ids:
+            evidence_ids.append(section_id)
+        for page in entry.get("pages") or []:
+            if isinstance(page, int) and page not in pages:
+                pages.append(page)
+        if resolved_index >= 0:
+            break
+    return evidence_ids, pages
 
 
 def _lookup_insight_grounding(

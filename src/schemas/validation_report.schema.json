@@ -17,7 +17,10 @@
           "schema_version": { "type": "string", "enum": ["1.0"] },
           "message": { "type": "string" },
           "severity": { "type": "string", "enum": ["error", "warning", "info"] },
-          "affected_section": { "type": "string" }
+          "affected_section": { "type": "string" },
+          "rule_id": { "type": "string" },
+          "repair_target": { "type": "string" },
+          "entity_id": { "type": "string" }
         }
       }
     }

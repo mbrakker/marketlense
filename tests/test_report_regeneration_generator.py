@@ -60,7 +60,11 @@ class _FakePromptClient:
         del ctx
         rendered = f"{req.template.text}|{json.dumps(req.variables, sort_keys=True, ensure_ascii=False)}"
         self.render_calls.append(
-            {"path": req.template.path, "variables": dict(req.variables), "text": rendered}
+            {
+                "path": req.template.path,
+                "variables": dict(req.variables),
+                "text": rendered,
+            }
         )
         return PromptRenderResponse(schema_version="1.0", text=rendered)
 
@@ -72,10 +76,7 @@ class _FakeOpenAIClient:
     def openai_chat_json(self, req, ctx):
         del ctx
         self.calls.append(req)
-        if (
-            "system::report_vs/artifacts/regenerate/insights_final"
-            in req.system_prompt
-        ):
+        if "system::report_vs/artifacts/regenerate/insights_final" in req.system_prompt:
             return OpenAIResponseResult(
                 schema_version="1.0",
                 text='{"insights_final":[{"id":"insight-1","text":"Repaired final insight","evidence_id":"f1","evidence":"Evidence text","metric":{"value":"","unit":"","trend":"","timeframe":"","geography":"","segment":"","sample_size":"","confidence":""},"pages":[1]}]}',
@@ -170,7 +171,9 @@ def _settings(tmp_path: Path) -> IngestSettings:
 
 
 def _ctx() -> RunContext:
-    return RunContext(schema_version="1.0", run_id="run", task_id="task", span_id="span")
+    return RunContext(
+        schema_version="1.0", run_id="run", task_id="task", span_id="span"
+    )
 
 
 def _current_artifacts() -> dict:
@@ -239,7 +242,14 @@ def _evidence_packs() -> dict:
         "doc_map": {
             "doc_id": "doc-1",
             "title": "Doc title",
-            "sections": [{"id": "sec-1", "title": "Topic", "summary": "Topic summary", "pages": [1]}],
+            "sections": [
+                {
+                    "id": "sec-1",
+                    "title": "Topic",
+                    "summary": "Topic summary",
+                    "pages": [1],
+                }
+            ],
         },
         "findings": {
             "findings": [
@@ -247,9 +257,7 @@ def _evidence_packs() -> dict:
             ]
         },
         "quote_candidates": {
-            "quote_candidates": [
-                {"id": "q1", "text": "Old quote", "source": "Section"}
-            ]
+            "quote_candidates": [{"id": "q1", "text": "Old quote", "source": "Section"}]
         },
     }
 
@@ -304,8 +312,14 @@ def test_regenerate_artifacts_insights_bundle_uses_targeted_steps_and_preserves_
     )
 
     assert response.regenerated_sections == ["insights_candidates", "insights_final"]
-    assert response.updated_artifacts["insights_candidates"][0]["text"] == "Repaired candidate"
-    assert response.updated_artifacts["insights_final"][0]["text"] == "Repaired final insight"
+    assert (
+        response.updated_artifacts["insights_candidates"][0]["text"]
+        == "Repaired candidate"
+    )
+    assert (
+        response.updated_artifacts["insights_final"][0]["text"]
+        == "Repaired final insight"
+    )
     assert response.updated_artifacts["expert_comment"] == "Old expert"
     assert response.updated_artifacts["linkedin_post"] == "Old linkedin"
     assert [call.path for call in response.updated_artifacts and []] == []
@@ -368,11 +382,151 @@ def test_regenerate_artifacts_summary_only_keeps_other_sections_unchanged(tmp_pa
 
     assert response.regenerated_sections == ["summary"]
     assert response.updated_artifacts["summary"]["tldr"] == "Repaired TLDR"
-    assert response.updated_artifacts["insights_final"][0]["text"] == "Old final insight"
+    assert (
+        response.updated_artifacts["insights_final"][0]["text"] == "Old final insight"
+    )
     assert response.updated_artifacts["quotes_final"][0]["text"] == "Old quote"
 
 
-def test_regenerate_artifacts_propagates_retryable_app_error(tmp_path, assert_app_error):
+def test_regenerate_artifacts_topics_rebuilds_topic_briefs_without_model_calls(
+    tmp_path,
+):
+    prompt_client = _FakePromptClient()
+    openai_client = _FakeOpenAIClient()
+    current_artifacts = _current_artifacts()
+    current_artifacts["toc_topics"] = [
+        "Media brand ad equity",
+        "Sentiments on generative AI",
+    ]
+    current_artifacts["toc_topics_expanded"] = [
+        {
+            "topic": "Media brand ad equity",
+            "summary": "Wrong summary",
+            "key_points": [],
+            "section_id": "section-4",
+            "section_title": "Sentiments on GenAI: How do APAC consumers perceive AI?",
+            "pages": [25],
+        },
+        {
+            "topic": "Sentiments on generative AI",
+            "summary": "Wrong summary",
+            "key_points": [],
+            "section_id": "section-5",
+            "section_title": "Implications for marketers",
+            "pages": [27],
+        },
+    ]
+    evidence_packs = _evidence_packs()
+    evidence_packs["doc_map"] = {
+        "doc_id": "doc-1",
+        "title": "Media Reactions",
+        "sections": [
+            {
+                "id": "section-3",
+                "title": "Media brands: How do brands interact with people?",
+                "summary": "Media-brand Ad Equity rankings with Netflix and OTT platforms leading.",
+                "key_points": [
+                    "Netflix is the #1 media brand for Ad Equity.",
+                    "OTT platforms dominate the rankings.",
+                ],
+                "pages": [17, 18],
+            },
+            {
+                "id": "section-4",
+                "title": "Sentiments on GenAI: How do APAC consumers perceive AI?",
+                "summary": "Consumer and marketer attitudes to generative AI in advertising.",
+                "key_points": [
+                    "Consumers worry about fake content.",
+                    "Marketers use generative AI for creativity and efficiency.",
+                ],
+                "pages": [25],
+            },
+            {
+                "id": "section-5",
+                "title": "Implications for marketers",
+                "summary": "Budget priorities and investment plans for marketers.",
+                "key_points": [
+                    "Online video and streaming remain top priorities.",
+                ],
+                "pages": [27],
+            },
+        ],
+    }
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=RegenerationPlan(
+                mode="targeted",
+                targets=[
+                    RegenerationTarget(
+                        target_section="topics",
+                        regenerate_steps=[
+                            "toc_entries",
+                            "toc_topics",
+                            "toc_topics_expanded",
+                        ],
+                        prompt_namespaces=[],
+                        issues=[
+                            RegenerationIssue(
+                                rule_id="toc_integrity",
+                                affected_section="toc_entries:section-3",
+                                message="[toc_integrity] TOC coverage is missing section 'Media brands: How do brands interact with people?'.",
+                                severity="error",
+                                repair_target="topics",
+                                entity_id="section-3",
+                                evidence_ids=["section-4"],
+                                pages=[25],
+                            )
+                        ],
+                    )
+                ],
+                unmappable_issues=[],
+                broad_retry_allowed=True,
+            ),
+            current_artifacts=current_artifacts,
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current_artifacts["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=openai_client,
+        prompt_client=prompt_client,
+    )
+
+    assert response.regenerated_sections == [
+        "toc_entries",
+        "toc_topics",
+        "toc_topics_expanded",
+    ]
+    assert response.updated_artifacts["toc_entries"][0]["section_id"] == "section-3"
+    assert (
+        response.updated_artifacts["toc_entries"][0]["display_title"] == "Media brands"
+    )
+    assert (
+        response.updated_artifacts["toc_topics_expanded"][0]["section_id"]
+        == "section-3"
+    )
+    assert (
+        response.updated_artifacts["toc_topics_expanded"][0]["section_title"]
+        == "Media brands: How do brands interact with people?"
+    )
+    assert (
+        response.updated_artifacts["toc_topics_expanded"][1]["section_title"]
+        == "Sentiments on GenAI: How do APAC consumers perceive AI?"
+    )
+    assert openai_client.calls == []
+    assert prompt_client.render_calls == []
+
+
+def test_regenerate_artifacts_propagates_retryable_app_error(
+    tmp_path, assert_app_error
+):
     class _RetryingOpenAI(_FakeOpenAIClient):
         def openai_chat_json(self, req, ctx):
             del req, ctx
@@ -394,7 +548,9 @@ def test_regenerate_artifacts_propagates_retryable_app_error(tmp_path, assert_ap
                         RegenerationTarget(
                             target_section="summary",
                             regenerate_steps=["summary"],
-                            prompt_namespaces=["report_vs/artifacts/regenerate/summary"],
+                            prompt_namespaces=[
+                                "report_vs/artifacts/regenerate/summary"
+                            ],
                             issues=[
                                 RegenerationIssue(
                                     rule_id="grounding",
@@ -457,7 +613,9 @@ def test_regenerate_artifacts_propagates_non_retryable_prompt_error(
                         RegenerationTarget(
                             target_section="summary",
                             regenerate_steps=["summary"],
-                            prompt_namespaces=["report_vs/artifacts/regenerate/summary"],
+                            prompt_namespaces=[
+                                "report_vs/artifacts/regenerate/summary"
+                            ],
                             issues=[
                                 RegenerationIssue(
                                     rule_id="grounding",

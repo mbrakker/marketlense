@@ -3,10 +3,17 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from src.contracts.prompts import PromptLoadRequest
-from src.contracts.report_analysis import AnalysisPackPathRequest, AnalysisStorePackRequest
+from src.contracts.report_analysis import (
+    AnalysisPackPathRequest,
+    AnalysisStorePackRequest,
+)
 from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
-from src.contracts.validation import ValidationIssue, ValidationReport, ValidationRequest
+from src.contracts.validation import (
+    ValidationIssue,
+    ValidationReport,
+    ValidationRequest,
+)
 from src.generators.analysis_pack_cache import (
     CachedPackAdaptResult,
     load_cached_pack,
@@ -23,6 +30,8 @@ from src.utils.logging import log_event
 from src.utils.model_resolver import resolve_model
 
 from .shared import LOGGER_NAME, logger
+
+VALIDATION_RULESET_VERSION = "3"
 
 
 def validation_cache_meta(
@@ -61,6 +70,7 @@ def validation_cache_meta(
     )
     return {
         "schema_version": "1.0",
+        "validation_ruleset_version": VALIDATION_RULESET_VERSION,
         "md5": md5,
         "inputs_sha256": inputs_hash,
         "prompts": prompt_meta,
@@ -164,7 +174,9 @@ def load_cached_validation(
 
 
 def validation_report_from_payload(payload: dict, path: str) -> ValidationReport:
-    issues_raw = payload.get("issues") if isinstance(payload.get("issues"), list) else []
+    issues_raw = (
+        payload.get("issues") if isinstance(payload.get("issues"), list) else []
+    )
     issues: List[ValidationIssue] = []
     for entry in issues_raw:
         if not isinstance(entry, dict):
@@ -175,6 +187,9 @@ def validation_report_from_payload(payload: dict, path: str) -> ValidationReport
                 message=str(entry.get("message") or ""),
                 severity=str(entry.get("severity") or "warning"),
                 affected_section=str(entry.get("affected_section") or ""),
+                rule_id=str(entry.get("rule_id") or ""),
+                repair_target=str(entry.get("repair_target") or ""),
+                entity_id=str(entry.get("entity_id") or ""),
             )
         )
     return ValidationReport(

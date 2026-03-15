@@ -15,11 +15,17 @@ class RegenerationIssue:
     affected_section: str = field(
         metadata={"doc": "Original validation affected_section string."}
     )
-    message: str = field(
-        metadata={"doc": "Human-readable validation failure message."}
-    )
+    message: str = field(metadata={"doc": "Human-readable validation failure message."})
     severity: str = field(
         metadata={"doc": "Validation severity level: error|warning|info."}
+    )
+    repair_target: str = field(
+        default="",
+        metadata={"doc": "Normalized regeneration target key for the issue."},
+    )
+    entity_id: str = field(
+        default="",
+        metadata={"doc": "Stable entity identifier associated with the issue."},
     )
     evidence_ids: List[str] = field(
         default_factory=list,
@@ -27,7 +33,9 @@ class RegenerationIssue:
     )
     pages: List[int] = field(
         default_factory=list,
-        metadata={"doc": "Relevant one-based page numbers associated with the failure."},
+        metadata={
+            "doc": "Relevant one-based page numbers associated with the failure."
+        },
     )
     schema_version: str = field(
         default="1.0", metadata={"doc": "Regeneration issue schema version."}
@@ -36,9 +44,7 @@ class RegenerationIssue:
 
 @dataclass(frozen=True)
 class RegenerationTarget:
-    target_section: str = field(
-        metadata={"doc": "Normalized regeneration target key."}
-    )
+    target_section: str = field(metadata={"doc": "Normalized regeneration target key."})
     regenerate_steps: List[str] = field(
         default_factory=list,
         metadata={"doc": "Ordered artifact steps that must be regenerated."},
@@ -58,9 +64,7 @@ class RegenerationTarget:
 
 @dataclass(frozen=True)
 class RegenerationPlan:
-    mode: str = field(
-        metadata={"doc": "Plan mode: targeted|broad|skip."}
-    )
+    mode: str = field(metadata={"doc": "Plan mode: targeted|broad|skip."})
     targets: List[RegenerationTarget] = field(
         default_factory=list,
         metadata={"doc": "Ordered regeneration targets for the current attempt."},
@@ -125,9 +129,7 @@ class RegenerationLoopState:
     max_attempts: int = field(
         metadata={"doc": "Configured maximum regeneration attempts."}
     )
-    final_status: str = field(
-        metadata={"doc": "Loop end status: pass|fail|skipped."}
-    )
+    final_status: str = field(metadata={"doc": "Loop end status: pass|fail|skipped."})
     max_reached: bool = field(
         metadata={"doc": "Whether the loop exited because max attempts were reached."}
     )

@@ -34,8 +34,20 @@
 {% set linkedin_post = art.linkedin_post if art.linkedin_post is defined else "" %}
 {% set commentary = data.commentary if data.commentary is defined else "" %}
 {% set commentary = commentary|string|trim %}
+{% set toc_entries = art.toc_entries if art.toc_entries is defined and art.toc_entries else [] %}
 {% set topics_list = art.toc_topics if art.toc_topics is defined and art.toc_topics else [] %}
 {% set topics_expanded = art.toc_topics_expanded if art.toc_topics_expanded is defined and art.toc_topics_expanded else [] %}
+{% if not topics_list and toc_entries %}
+  {% set toc_topics_ns = namespace(items=[]) %}
+  {% for entry in toc_entries %}
+    {% set entry_label = entry.display_title if entry.display_title is defined and entry.display_title else (entry.section_title if entry.section_title is defined else "") %}
+    {% set entry_label = entry_label|string|trim %}
+    {% if entry_label %}
+      {% set toc_topics_ns.items = toc_topics_ns.items + [entry_label] %}
+    {% endif %}
+  {% endfor %}
+  {% set topics_list = toc_topics_ns.items %}
+{% endif %}
 {% set categories_list = data.categories_display if data.categories_display is defined and data.categories_display else (data.categories if data.categories is defined else []) %}
 {% set tags_list = data.taxonomy if data.taxonomy is defined and data.taxonomy else [] %}
 {% set primary_figure = data._figure_top if data._figure_top is defined and data._figure_top else (data._figure_image if data._figure_image is defined else "") %}
@@ -64,7 +76,7 @@
 {% set thumb_height = 180 %}
 {% set has_metadata = (categories_list|length > 0) or (tags_list|length > 0) %}
 {% set has_topics = topics_list|length > 0 %}
-{% set has_topic_briefs = topics_expanded|length > 0 %}
+{% set has_topic_briefs = topics_expanded|length > 0 or toc_entries|length > 0 %}
 {% set has_primary_figure = figure_section_enabled and (primary_figure or figure_assets|length > 0) %}
 {% set has_claim_map = claim_map|length > 0 %}
 {% set has_expert_comment = expert_comment and (expert_comment|string|trim) %}
@@ -1082,8 +1094,8 @@ h2{
           </ul>
           {% if has_topic_briefs %}
           <div class="topic-brief-grid">
-            {% for item in topics_expanded %}
-              {% set topic_label = item.topic if item.topic is defined else "" %}
+            {% for item in (topics_expanded if topics_expanded else toc_entries) %}
+              {% set topic_label = item.topic if item.topic is defined else (item.display_title if item.display_title is defined else (item.section_title if item.section_title is defined else "")) %}
               {% set topic_label = topic_label|string|trim %}
               {% set topic_summary = item.summary if item.summary is defined else "" %}
               {% set topic_summary = topic_summary|string|trim %}

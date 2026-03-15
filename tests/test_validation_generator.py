@@ -931,9 +931,196 @@ def test_validation_warn_policy_keeps_errors_without_data_gap(tmp_path):
     assert any(issue.severity == "error" for issue in result.issues)
 
 
+def test_validation_fails_on_toc_integrity_breakage(tmp_path):
+    settings = _settings(tmp_path)
+    artifacts = {
+        "toc_entries": [
+            {
+                "section_id": "section-4",
+                "section_title": "Sentiments on GenAI: How do APAC consumers perceive AI?",
+                "display_title": "Media brand ad equity",
+                "summary": "GenAI summary",
+                "key_points": [],
+                "pages": [25],
+                "order": 1,
+            },
+            {
+                "section_id": "section-5",
+                "section_title": "Implications for marketers",
+                "display_title": "Sentiments on generative AI",
+                "summary": "Implications summary",
+                "key_points": [],
+                "pages": [27],
+                "order": 2,
+            },
+        ],
+        "toc_topics": [
+            "Media brand ad equity",
+            "Sentiments on generative AI",
+        ],
+        "toc_topics_expanded": [
+            {
+                "topic": "Media brand ad equity",
+                "summary": "GenAI summary",
+                "key_points": [],
+                "section_id": "section-4",
+                "section_title": "Sentiments on GenAI: How do APAC consumers perceive AI?",
+                "pages": [25],
+            },
+            {
+                "topic": "Sentiments on generative AI",
+                "summary": "Implications summary",
+                "key_points": [],
+                "section_id": "section-5",
+                "section_title": "Implications for marketers",
+                "pages": [27],
+            },
+        ],
+        "summary": {
+            "tldr": "",
+            "executive_summary": "",
+            "claim_evidence_map": [],
+        },
+        "insights_final": [],
+        "quotes_final": [],
+    }
+    evidence_packs = {
+        "doc_map": {
+            "doc_id": "doc-1",
+            "title": "Media Reactions",
+            "sections": [
+                {
+                    "id": "section-3",
+                    "title": "Media brands: How do brands interact with people?",
+                    "summary": (
+                        "Media-brand Ad Equity rankings with Netflix and OTT "
+                        "platforms leading."
+                    ),
+                    "key_points": [
+                        "Netflix is the #1 media brand for Ad Equity.",
+                        "OTT platforms dominate the rankings.",
+                    ],
+                    "pages": [17, 18],
+                },
+                {
+                    "id": "section-4",
+                    "title": "Sentiments on GenAI: How do APAC consumers perceive AI?",
+                    "summary": (
+                        "Consumer and marketer attitudes to generative AI in "
+                        "advertising."
+                    ),
+                    "key_points": [
+                        "Consumers worry about fake content.",
+                        "Marketers use generative AI for creativity and efficiency.",
+                    ],
+                    "pages": [25],
+                },
+                {
+                    "id": "section-5",
+                    "title": "Implications for marketers",
+                    "summary": (
+                        "Budget priorities, investment plans, and channel implications "
+                        "for marketers."
+                    ),
+                    "key_points": [
+                        "Online video and streaming remain top priorities.",
+                    ],
+                    "pages": [27],
+                },
+            ],
+        }
+    }
+    result = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="r-topic-mapping",
+            report=_report(),
+            artifacts=artifacts,
+            evidence_packs=evidence_packs,
+            vector_store_id=None,
+        ),
+        settings,
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAI(
+            semantic_payload={"metrics": [], "quotes": []},
+            grounding_payload={"unsupported": []},
+        ),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert result.status == "fail"
+    assert any(
+        issue.affected_section.startswith("toc_entries") for issue in result.issues
+    )
+    assert any(issue.rule_id == "toc_integrity" for issue in result.issues)
+    assert any(issue.repair_target == "topics" for issue in result.issues)
+    assert any(issue.message.startswith("[toc_integrity]") for issue in result.issues)
+
+
+def test_validation_fails_when_deterministic_toc_entries_are_missing(tmp_path):
+    settings = _settings(tmp_path)
+    artifacts = {
+        "toc_topics": [],
+        "toc_topics_expanded": [],
+        "summary": {
+            "tldr": "",
+            "executive_summary": "",
+            "claim_evidence_map": [],
+        },
+        "insights_final": [],
+        "quotes_final": [],
+    }
+    evidence_packs = {
+        "doc_map": {
+            "doc_id": "doc-1",
+            "title": "Media Reactions",
+            "sections": [
+                {
+                    "id": "section-3",
+                    "title": "Media brands: How do brands interact with people?",
+                    "summary": (
+                        "Media-brand Ad Equity rankings with Netflix and OTT "
+                        "platforms leading."
+                    ),
+                    "key_points": [
+                        "Netflix is the #1 media brand for Ad Equity.",
+                        "OTT platforms dominate the rankings.",
+                    ],
+                    "pages": [17, 18],
+                }
+            ],
+        }
+    }
+    result = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="r-topic-missing-entries",
+            report=_report(),
+            artifacts=artifacts,
+            evidence_packs=evidence_packs,
+            vector_store_id=None,
+        ),
+        settings,
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAI(
+            semantic_payload={"metrics": [], "quotes": []},
+            grounding_payload={"unsupported": []},
+        ),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert result.status == "fail"
+    assert any(issue.affected_section == "toc_entries" for issue in result.issues)
+    assert any(issue.rule_id == "toc_integrity" for issue in result.issues)
+    assert any(issue.repair_target == "topics" for issue in result.issues)
+
+
 def test_validation_rule_registry_is_deterministic():
     registry = build_validation_rule_registry()
     assert [rule.rule_id for rule in registry] == [
+        "toc_integrity",
         "semantic",
         "metrics",
         "quotes",
@@ -941,6 +1128,7 @@ def test_validation_rule_registry_is_deterministic():
         "grounding",
     ]
     assert [rule.stage for rule in registry] == [
+        "bootstrap",
         "bootstrap",
         "dependent",
         "dependent",
@@ -961,7 +1149,9 @@ def test_validation_failures_include_rule_identity_prefix(tmp_path):
                 "metric": {"value": "10", "unit": "%", "timeframe": "2024"},
             }
         ],
-        "quotes_final": [{"id": "q1", "text": "Outside quote", "speaker": "CEO", "citation": ""}],
+        "quotes_final": [
+            {"id": "q1", "text": "Outside quote", "speaker": "CEO", "citation": ""}
+        ],
         "expert_comment": "We expect revenue to reach 99 soon.",
     }
     result = validate_report(

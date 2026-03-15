@@ -49,9 +49,23 @@ Cross-pack checks require `artifacts` evidence references to resolve to known ID
 - `findings.findings[].id`
 - `quote_candidates.quote_candidates[].id`
 
-`artifacts.toc_topics_expanded[]` is an optional enriched view keyed by normalized `toc_topics`, with:
+`artifacts.toc_entries[]` is the authoritative Covered topics structure, deterministically derived from eligible `doc_map.sections[]`, with:
+
+- `section_id`
+- `section_title`
+- `display_title`
+- `summary`
+- `key_points`
+- `pages`
+- `order`
+
+`artifacts.toc_topics[]` is a legacy compatibility projection derived from `toc_entries[].display_title`.
+
+`artifacts.toc_topics_expanded[]` is a legacy enriched projection derived from `toc_entries[]`, with:
 
 - `topic`
 - `summary`
 - `key_points`
-- optional `section_id`, `section_title`, `pages`
+- `section_id`
+- `section_title`
+- `pages`

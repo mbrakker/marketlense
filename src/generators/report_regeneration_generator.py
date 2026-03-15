@@ -22,6 +22,7 @@ from src.generators.artifact_normalization import (
     normalize_artifact_quotes,
     normalize_artifact_source_status,
     normalize_artifact_summary,
+    normalize_artifact_toc_entries,
     normalize_artifact_topics,
     normalize_expert_domain,
     pad_artifact_insights,
@@ -29,6 +30,7 @@ from src.generators.artifact_normalization import (
 )
 from src.generators.artifact_generator import (
     assemble_artifacts_payload,
+    build_toc_artifacts,
     render_artifact_json_model,
     store_artifacts_payload,
 )
@@ -89,11 +91,22 @@ def regenerate_artifacts(
     base_vars = artifact_base_variables(safe_doc_map, safe_evidence)
     quote_candidates = artifact_quote_candidates(safe_evidence)
     expert_domain = normalize_expert_domain(request.categories)
+    fallback_toc_bundle = build_toc_artifacts(doc_map=safe_doc_map)
 
+    toc_entries = normalize_artifact_toc_entries(safe_artifacts.get("toc_entries"))
+    if not toc_entries:
+        toc_entries = normalize_artifact_toc_entries(
+            fallback_toc_bundle.get("toc_entries")
+        )
     toc_topics = normalize_artifact_topics(safe_artifacts.get("toc_topics"))
+    if not toc_topics:
+        toc_topics = normalize_artifact_topics(fallback_toc_bundle.get("toc_topics"))
     summary = _copy_dict(safe_artifacts.get("summary"))
     insights_candidates = _copy_list(safe_artifacts.get("insights_candidates"))
     insights_final = _copy_list(safe_artifacts.get("insights_final"))
+    topic_briefs = _copy_list(safe_artifacts.get("toc_topics_expanded"))
+    if not topic_briefs:
+        topic_briefs = _copy_list(fallback_toc_bundle.get("toc_topics_expanded"))
     quotes_final = _copy_list(safe_artifacts.get("quotes_final"))
     expert_comment = _s(safe_artifacts.get("expert_comment"))
     linkedin_post = _s(safe_artifacts.get("linkedin_post"))
@@ -101,7 +114,9 @@ def regenerate_artifacts(
     prompt_namespaces: List[str] = []
 
     for target in request.plan.targets:
-        target_ctx = child_context(ctx, task_id=f"{ctx.task_id}:{target.target_section}")
+        target_ctx = child_context(
+            ctx, task_id=f"{ctx.task_id}:{target.target_section}"
+        )
         logger.info(
             log_event(
                 target_ctx,
@@ -116,7 +131,9 @@ def regenerate_artifacts(
             )
         )
         current_artifact_state = _artifact_state(
+            toc_entries=toc_entries,
             toc_topics=toc_topics,
+            toc_topics_expanded=topic_briefs,
             summary=summary,
             insights_candidates=insights_candidates,
             insights_final=insights_final,
@@ -156,6 +173,14 @@ def regenerate_artifacts(
             summary = normalize_artifact_summary(result.get("summary"))
             regenerated_sections.append("summary")
             prompt_namespaces.append(namespace)
+        elif target.target_section == "topics":
+            toc_bundle = build_toc_artifacts(doc_map=safe_doc_map)
+            toc_entries = normalize_artifact_toc_entries(toc_bundle.get("toc_entries"))
+            toc_topics = normalize_artifact_topics(toc_bundle.get("toc_topics"))
+            topic_briefs = _copy_list(toc_bundle.get("toc_topics_expanded"))
+            regenerated_sections.extend(
+                ["toc_entries", "toc_topics", "toc_topics_expanded"]
+            )
         elif target.target_section == "insights_bundle":
             candidates_namespace = "report_vs/artifacts/regenerate/insights_candidates"
             candidates_result = render_artifact_json_model(
@@ -170,7 +195,9 @@ def regenerate_artifacts(
                     "grounding_package_json": _dump_json(grounding_package),
                 },
                 settings=request.settings,
-                ctx=child_context(target_ctx, task_id=f"{target_ctx.task_id}:candidates"),
+                ctx=child_context(
+                    target_ctx, task_id=f"{target_ctx.task_id}:candidates"
+                ),
                 openai_client=openai_client,
                 prompt_client=prompt_client,
                 allow_vector_store=artifact_use_vector_store,
@@ -318,7 +345,11 @@ def regenerate_artifacts(
         report_name=request.report_name,
         doc_map=safe_doc_map,
         evidence_packs=safe_evidence,
-        toc_topics=toc_topics,
+        toc_bundle={
+            "toc_entries": toc_entries,
+            "toc_topics": toc_topics,
+            "toc_topics_expanded": topic_briefs,
+        },
         summary=summary,
         insights_candidates=insights_candidates,
         insights_final=insights_final,
@@ -441,17 +472,12 @@ def _build_grounding_package(
         "current_section": current_section,
         "relevant_evidence": relevant_evidence,
         "evidence_windows": [
-            {"idx": window.idx, "text": window.text}
-            for window in evidence_windows[:4]
+            {"idx": window.idx, "text": window.text} for window in evidence_windows[:4]
         ],
         "evidence_ids": _unique_strings(
-            evidence_id
-            for issue in target.issues
-            for evidence_id in issue.evidence_ids
+            evidence_id for issue in target.issues for evidence_id in issue.evidence_ids
         ),
-        "pages": _unique_ints(
-            page for issue in target.issues for page in issue.pages
-        ),
+        "pages": _unique_ints(page for issue in target.issues for page in issue.pages),
     }
 
 
@@ -528,7 +554,9 @@ def _collect_pack_entries(
 
 def _artifact_state(
     *,
+    toc_entries: List[Dict[str, Any]],
     toc_topics: List[str],
+    toc_topics_expanded: List[Dict[str, Any]],
     summary: Dict[str, Any],
     insights_candidates: List[Dict[str, Any]],
     insights_final: List[Dict[str, Any]],
@@ -539,7 +567,9 @@ def _artifact_state(
 ) -> Dict[str, Any]:
     return {
         "schema_version": "1.0",
+        "toc_entries": deepcopy(toc_entries),
         "toc_topics": deepcopy(toc_topics),
+        "toc_topics_expanded": deepcopy(toc_topics_expanded),
         "summary": deepcopy(summary),
         "insights_candidates": deepcopy(insights_candidates),
         "insights_final": deepcopy(insights_final),
@@ -551,6 +581,12 @@ def _artifact_state(
 
 
 def _current_section_payload(target_section: str, artifacts: Dict[str, Any]) -> Any:
+    if target_section == "topics":
+        return {
+            "toc_entries": _copy_list(artifacts.get("toc_entries")),
+            "toc_topics": _copy_list(artifacts.get("toc_topics")),
+            "toc_topics_expanded": _copy_list(artifacts.get("toc_topics_expanded")),
+        }
     if target_section == "summary":
         return _copy_dict(artifacts.get("summary"))
     if target_section == "insights_bundle":
@@ -583,7 +619,9 @@ def _fix_checklist_json(target: RegenerationTarget) -> str:
             "Each final insight must map cleanly to evidence_id and supporting evidence text."
         )
     if target.target_section == "quotes":
-        checklist.append("Quotes must be verbatim or clearly supported by source evidence.")
+        checklist.append(
+            "Quotes must be verbatim or clearly supported by source evidence."
+        )
     if target.target_section in {"expert_comment", "linkedin_post"}:
         checklist.append(
             "Do not introduce new claims that are absent from the updated summary/insights/quotes."

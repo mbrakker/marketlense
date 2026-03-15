@@ -192,6 +192,53 @@ def normalize_artifact_topics(value: Any) -> List[str]:
     return normalized[:5]
 
 
+def normalize_artifact_toc_entries(value: Any) -> List[Dict[str, Any]]:
+    entries = value if isinstance(value, list) else []
+    normalized: List[Dict[str, Any]] = []
+    seen_keys: set[tuple[str, str]] = set()
+    for idx, item in enumerate(entries):
+        if not isinstance(item, dict):
+            continue
+        section_id = _s(item.get("section_id")).strip()
+        section_title = _s(item.get("section_title")).strip()
+        display_title = _s(item.get("display_title")).strip()
+        summary = _s(item.get("summary"))
+        key_points_raw = item.get("key_points")
+        key_points = []
+        if isinstance(key_points_raw, list):
+            key_points = [
+                _s(point).strip() for point in key_points_raw if _s(point).strip()
+            ]
+        pages_raw = item.get("pages")
+        pages = (
+            [int(page) for page in pages_raw if isinstance(page, int)]
+            if isinstance(pages_raw, list)
+            else []
+        )
+        order_raw = item.get("order")
+        order = int(order_raw) if isinstance(order_raw, int) else idx + 1
+        dedupe_key = (
+            section_id.casefold() if section_id else "",
+            display_title.casefold() if display_title else section_title.casefold(),
+        )
+        if dedupe_key in seen_keys and any(dedupe_key):
+            continue
+        if any(dedupe_key):
+            seen_keys.add(dedupe_key)
+        normalized.append(
+            {
+                "section_id": section_id,
+                "section_title": section_title,
+                "display_title": display_title,
+                "summary": summary,
+                "key_points": key_points,
+                "pages": pages,
+                "order": order,
+            }
+        )
+    return normalized
+
+
 def normalize_artifact_evidence_ids(
     *,
     summary: Dict[str, Any],
@@ -325,7 +372,13 @@ def _collect_known_evidence_ids(
         for pack in evidence_packs.values():
             if not isinstance(pack, dict):
                 continue
-            for item_key in ("findings", "quote_candidates", "key_metrics", "risk_register", "recommendations"):
+            for item_key in (
+                "findings",
+                "quote_candidates",
+                "key_metrics",
+                "risk_register",
+                "recommendations",
+            ):
                 items = pack.get(item_key)
                 if not isinstance(items, list):
                     continue

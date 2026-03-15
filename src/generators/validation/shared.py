@@ -76,12 +76,23 @@ def prefix_rule_id(rule_id: str, message: str) -> str:
     return f"{prefix} {clean_message}".strip()
 
 
-def issue(*, rule_id: str, message: str, severity: str, section: str) -> ValidationIssue:
+def issue(
+    *,
+    rule_id: str,
+    message: str,
+    severity: str,
+    section: str,
+    repair_target: str = "",
+    entity_id: str = "",
+) -> ValidationIssue:
     return ValidationIssue(
         schema_version="1.0",
         message=prefix_rule_id(rule_id, message),
         severity=severity if severity in {"error", "warning", "info"} else "warning",
         affected_section=section,
+        rule_id=rule_id,
+        repair_target=repair_target,
+        entity_id=entity_id,
     )
 
 
@@ -102,6 +113,9 @@ def downgrade_issues_for_data_gap(
             message=issue.message,
             severity="warning" if issue.severity == "error" else issue.severity,
             affected_section=issue.affected_section,
+            rule_id=issue.rule_id,
+            repair_target=issue.repair_target,
+            entity_id=issue.entity_id,
         )
         for issue in issues
     ]
@@ -185,4 +199,3 @@ def to_float(value: Any) -> float | None:
         return float(cleaned)
     except (TypeError, ValueError):
         return None
-

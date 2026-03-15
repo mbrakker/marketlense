@@ -119,7 +119,9 @@ def _source(runtime: ReportRuntimeState) -> ReportSourceState:
     )
 
 
-def _selection(runtime: ReportRuntimeState, source: ReportSourceState) -> ReportSelectionState:
+def _selection(
+    runtime: ReportRuntimeState, source: ReportSourceState
+) -> ReportSelectionState:
     return ReportSelectionState(
         schema_version="1.0",
         runtime=runtime,
@@ -195,9 +197,15 @@ def test_complete_report_analysis_falls_back_when_validation_raises(tmp_path):
             "quotes_final": [],
             "expert_comment": "",
             "linkedin_post": "",
-            "source_status": {"schema_version": "1.0", "not_available": False, "reason": ""},
+            "source_status": {
+                "schema_version": "1.0",
+                "not_available": False,
+                "reason": "",
+            },
         },
-        run_validation=lambda *args, **kwargs: (_ for _ in ()).throw(ValueError("boom")),
+        run_validation=lambda *args, **kwargs: (_ for _ in ()).throw(
+            ValueError("boom")
+        ),
         regenerate_artifacts=lambda request: (
             regeneration_requests.append(request)
             or ArtifactRegenerationResponse(
@@ -263,7 +271,10 @@ def test_complete_report_analysis_surfaces_doc_map_empty(tmp_path, assert_app_er
                 code="doc_map_empty",
                 message="doc_map_empty:no_content",
                 retryable=False,
-                context={"sections_count": 0, "not_found_reason": "model_returned_no_json"},
+                context={
+                    "sections_count": 0,
+                    "not_found_reason": "model_returned_no_json",
+                },
             )
         )
     )
@@ -306,7 +317,9 @@ def test_run_report_analysis_regenerates_failed_section_until_pass(
 
     def _run_validation(req, settings, ctx, *, pack_name, report_name, md5):
         del settings, ctx, report_name, md5
-        validation_calls.append(f"{pack_name}:{req.artifacts.get('summary', {}).get('tldr', '')}")
+        validation_calls.append(
+            f"{pack_name}:{req.artifacts.get('summary', {}).get('tldr', '')}"
+        )
         if len(validation_calls) == 1:
             return ValidationReport(
                 schema_version="1.1",
@@ -346,12 +359,18 @@ def test_run_report_analysis_regenerates_failed_section_until_pass(
                 "quotes_final": [],
                 "expert_comment": "",
                 "linkedin_post": "",
-                "source_status": {"schema_version": "1.0", "not_available": False, "reason": ""},
+                "source_status": {
+                    "schema_version": "1.0",
+                    "not_available": False,
+                    "reason": "",
+                },
             },
             regenerated_sections=["summary"],
             prompt_namespaces=["report_vs/artifacts/regenerate/summary"],
             artifacts_path=str(tmp_path / "out" / "artifacts.json"),
-            artifacts_snapshot_path=str(tmp_path / "out" / "artifacts_regen_attempt_1.json"),
+            artifacts_snapshot_path=str(
+                tmp_path / "out" / "artifacts_regen_attempt_1.json"
+            ),
         )
 
     deps = _deps(
@@ -371,7 +390,11 @@ def test_run_report_analysis_regenerates_failed_section_until_pass(
             "quotes_final": [],
             "expert_comment": "",
             "linkedin_post": "",
-            "source_status": {"schema_version": "1.0", "not_available": False, "reason": ""},
+            "source_status": {
+                "schema_version": "1.0",
+                "not_available": False,
+                "reason": "",
+            },
         },
         run_validation=_run_validation,
         regenerate_artifacts=_regenerate,
@@ -418,10 +441,157 @@ def test_run_report_analysis_regenerates_failed_section_until_pass(
     }
 
 
+def test_run_report_analysis_maps_topic_section_failures_to_topics_regeneration(
+    tmp_path,
+):
+    runtime = _runtime(tmp_path)
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    validation_calls: list[str] = []
+    regeneration_requests = []
+
+    def _run_validation(req, settings, ctx, *, pack_name, report_name, md5):
+        del settings, ctx, report_name, md5
+        validation_calls.append(pack_name)
+        if len(validation_calls) == 1:
+            return ValidationReport(
+                schema_version="1.1",
+                status="fail",
+                issues=[
+                    ValidationIssue(
+                        schema_version="1.0",
+                        message="[toc_integrity] TOC coverage is missing section 'Media brands'.",
+                        severity="error",
+                        affected_section="toc_entries:section-1",
+                        rule_id="toc_integrity",
+                        repair_target="topics",
+                        entity_id="section-1",
+                    )
+                ],
+                severity="error",
+                source_path=str(tmp_path / "out" / "validation.json"),
+            )
+        return ValidationReport(
+            schema_version="1.1",
+            status="pass",
+            issues=[],
+            severity="pass",
+            source_path=str(tmp_path / "out" / "validation.json"),
+        )
+
+    def _regenerate(request):
+        regeneration_requests.append(request)
+        return ArtifactRegenerationResponse(
+            updated_artifacts=request.current_artifacts,
+            regenerated_sections=[
+                "toc_entries",
+                "toc_topics",
+                "toc_topics_expanded",
+            ],
+            prompt_namespaces=[],
+            artifacts_path=str(tmp_path / "out" / "artifacts.json"),
+            artifacts_snapshot_path=str(
+                tmp_path / "out" / "artifacts_regen_attempt_1.json"
+            ),
+        )
+
+    deps = _deps(
+        generate_evidence_packs=lambda **kwargs: {
+            "doc_map": {
+                "title": "Doc Title",
+                "publisher": "Doc Publisher",
+                "sections": [
+                    {
+                        "id": "section-1",
+                        "title": "Media brands",
+                        "summary": "Media brand ad equity section.",
+                        "key_points": [],
+                        "pages": [17],
+                    }
+                ],
+            }
+        },
+        generate_artifacts=lambda **kwargs: {
+            "schema_version": "1.0",
+            "toc_entries": [
+                {
+                    "section_id": "section-2",
+                    "section_title": "Sentiments on GenAI",
+                    "display_title": "Media brand ad equity",
+                    "summary": "Wrong section summary",
+                    "key_points": [],
+                    "pages": [25],
+                    "order": 1,
+                }
+            ],
+            "toc_topics": ["Media brand ad equity"],
+            "toc_topics_expanded": [
+                {
+                    "topic": "Media brand ad equity",
+                    "summary": "Wrong section summary",
+                    "key_points": [],
+                    "section_id": "section-2",
+                    "section_title": "Sentiments on GenAI",
+                    "pages": [25],
+                }
+            ],
+            "summary": {
+                "tldr": "broken",
+                "executive_summary": "Broken summary",
+                "claim_evidence_map": [],
+            },
+            "insights_candidates": [],
+            "insights_final": [],
+            "quotes_final": [],
+            "expert_comment": "",
+            "linkedin_post": "",
+            "source_status": {
+                "schema_version": "1.0",
+                "not_available": False,
+                "reason": "",
+            },
+        },
+        run_validation=_run_validation,
+        regenerate_artifacts=_regenerate,
+    )
+
+    state = run_report_analysis(
+        runtime,
+        source,
+        selection,
+        VectorStoreIndexingState(
+            vector_store_id="vs_1",
+            openai_file_id="file_1",
+            vector_store_status="indexing",
+            indexed_at_utc=None,
+            last_error=None,
+        ),
+        deps,
+    )
+
+    assert state.validation_report is not None
+    assert state.validation_report.status == "pass"
+    assert len(regeneration_requests) == 1
+    assert regeneration_requests[0].plan.mode == "targeted"
+    assert regeneration_requests[0].plan.targets[0].target_section == "topics"
+    assert regeneration_requests[0].plan.targets[0].regenerate_steps == [
+        "toc_entries",
+        "toc_topics",
+        "toc_topics_expanded",
+    ]
+    assert state.regeneration_attempts[0].regenerated_sections == [
+        "toc_entries",
+        "toc_topics",
+        "toc_topics_expanded",
+    ]
+
+
 def test_run_report_analysis_stops_after_regeneration_max_attempts(tmp_path):
     runtime = replace(
         _runtime(tmp_path),
-        settings=replace(_runtime(tmp_path).settings, validation_regeneration_max_attempts=3),
+        settings=replace(
+            _runtime(tmp_path).settings, validation_regeneration_max_attempts=3
+        ),
     )
     source = _source(runtime)
     selection = _selection(runtime, source)
@@ -455,7 +625,9 @@ def test_run_report_analysis_stops_after_regeneration_max_attempts(tmp_path):
             ],
             artifacts_path=str(tmp_path / "out" / "artifacts.json"),
             artifacts_snapshot_path=str(
-                tmp_path / "out" / f"artifacts_regen_attempt_{request.attempt_index}.json"
+                tmp_path
+                / "out"
+                / f"artifacts_regen_attempt_{request.attempt_index}.json"
             ),
         )
 
@@ -464,13 +636,40 @@ def test_run_report_analysis_stops_after_regeneration_max_attempts(tmp_path):
         generate_artifacts=lambda **kwargs: {
             "schema_version": "1.0",
             "toc_topics": ["Topic"],
-            "summary": {"tldr": "x", "executive_summary": "x", "claim_evidence_map": []},
-            "insights_candidates": [{"id": "insight-1", "text": "x", "evidence_id": "e1", "evidence": "", "metric": {}, "pages": [], "score": 0.0}],
-            "insights_final": [{"id": "insight-1", "text": "x", "evidence_id": "e1", "evidence": "", "metric": {}, "pages": []}],
+            "summary": {
+                "tldr": "x",
+                "executive_summary": "x",
+                "claim_evidence_map": [],
+            },
+            "insights_candidates": [
+                {
+                    "id": "insight-1",
+                    "text": "x",
+                    "evidence_id": "e1",
+                    "evidence": "",
+                    "metric": {},
+                    "pages": [],
+                    "score": 0.0,
+                }
+            ],
+            "insights_final": [
+                {
+                    "id": "insight-1",
+                    "text": "x",
+                    "evidence_id": "e1",
+                    "evidence": "",
+                    "metric": {},
+                    "pages": [],
+                }
+            ],
             "quotes_final": [],
             "expert_comment": "",
             "linkedin_post": "",
-            "source_status": {"schema_version": "1.0", "not_available": False, "reason": ""},
+            "source_status": {
+                "schema_version": "1.0",
+                "not_available": False,
+                "reason": "",
+            },
         },
         run_validation=_run_validation,
         regenerate_artifacts=_regenerate,
@@ -537,7 +736,9 @@ def test_run_report_analysis_uses_one_broad_retry_for_unmappable_failures(tmp_pa
             ],
             prompt_namespaces=[],
             artifacts_path=str(tmp_path / "out" / "artifacts.json"),
-            artifacts_snapshot_path=str(tmp_path / "out" / "artifacts_regen_attempt_1.json"),
+            artifacts_snapshot_path=str(
+                tmp_path / "out" / "artifacts_regen_attempt_1.json"
+            ),
         )
 
     deps = _deps(
@@ -545,13 +746,21 @@ def test_run_report_analysis_uses_one_broad_retry_for_unmappable_failures(tmp_pa
         generate_artifacts=lambda **kwargs: {
             "schema_version": "1.0",
             "toc_topics": ["Topic"],
-            "summary": {"tldr": "x", "executive_summary": "x", "claim_evidence_map": []},
+            "summary": {
+                "tldr": "x",
+                "executive_summary": "x",
+                "claim_evidence_map": [],
+            },
             "insights_candidates": [],
             "insights_final": [],
             "quotes_final": [],
             "expert_comment": "",
             "linkedin_post": "",
-            "source_status": {"schema_version": "1.0", "not_available": False, "reason": ""},
+            "source_status": {
+                "schema_version": "1.0",
+                "not_available": False,
+                "reason": "",
+            },
         },
         run_validation=_run_validation,
         regenerate_artifacts=_regenerate,
@@ -599,12 +808,16 @@ def test_run_report_analysis_snapshot_preserves_internal_payload_metadata(tmp_pa
 
     def _analysis_pack_path(req, ctx):
         del ctx
-        return SimpleNamespace(output_path=str(tmp_path / "out" / f"{req.pack_name}.json"))
+        return SimpleNamespace(
+            output_path=str(tmp_path / "out" / f"{req.pack_name}.json")
+        )
 
     def _analysis_store_pack(req, ctx):
         del ctx
         stored_payloads[req.pack_name] = req.payload
-        return SimpleNamespace(output_path=str(tmp_path / "out" / f"{req.pack_name}.json"))
+        return SimpleNamespace(
+            output_path=str(tmp_path / "out" / f"{req.pack_name}.json")
+        )
 
     deps = _deps(
         generate_evidence_packs=lambda **kwargs: {

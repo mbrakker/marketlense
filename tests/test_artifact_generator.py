@@ -9,7 +9,7 @@ from src.contracts.openai import OpenAIResponseResult
 from src.contracts.prompts import PromptSet, PromptTemplate
 from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
-from src.generators.artifact_generator import generate_artifacts
+from src.generators.artifact_generator import build_topic_briefs, generate_artifacts
 from src.services.schema_validator_service import validate_schema
 from src.utils.slugify import slugify
 
@@ -454,8 +454,10 @@ def test_generate_artifacts_validates_schema_and_evidence_ids(tmp_path):
     )
     assert all(item["evidence_id"] for item in payload["insights_candidates"])
     assert all(item["evidence_id"] for item in payload["insights_final"])
-    assert len([req for req in fake_openai.requests if req[0] == "chat"]) == 7
+    assert len([req for req in fake_openai.requests if req[0] == "chat"]) == 6
     assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 0
+    assert payload["toc_entries"][0]["section_title"] == "Intro"
+    assert payload["toc_topics"] == ["Intro"]
     validate_schema(
         SchemaValidateRequest(
             schema_version="1.0", payload=payload, schema_name="artifacts"
@@ -583,16 +585,116 @@ def test_generate_artifacts_expands_topic_briefs_from_doc_map(tmp_path):
         analysis_store=FakeAnalysisStore(),
     )
 
+    toc_entries = payload["toc_entries"]
     topic_briefs = payload["toc_topics_expanded"]
-    assert len(topic_briefs) == 3
+    assert len(toc_entries) == 2
+    assert [entry["display_title"] for entry in toc_entries] == [
+        "Demand outlook",
+        "Margin resilience",
+    ]
     assert topic_briefs[0]["topic"] == "Demand outlook"
     assert topic_briefs[0]["summary"] == (
         "Demand is strongest in APAC and improving in North America."
     )
     assert topic_briefs[0]["key_points"][0] == "APAC growth leads at +12%"
     assert topic_briefs[1]["section_id"] == "margin-resilience"
-    assert topic_briefs[2]["summary"] == "Operating leverage improved through automation."
-    assert "Automation lifted leverage by 3 points." in topic_briefs[2]["key_points"]
+    assert payload["toc_topics"] == ["Demand outlook", "Margin resilience"]
+
+
+def test_build_topic_briefs_avoids_positional_section_swap():
+    topic_briefs = build_topic_briefs(
+        toc_topics=[
+            "Media receptivity and channel preferences",
+            "Channel ad equity rankings",
+            "Media brand ad equity",
+            "Sentiments on generative AI",
+            "Marketer investment priorities",
+        ],
+        doc_map={
+            "doc_id": "doc-1",
+            "title": "Media Reactions",
+            "sections": [
+                {
+                    "id": "section-1",
+                    "title": "Introduction",
+                    "summary": "Study background.",
+                    "key_points": [],
+                    "pages": [2],
+                },
+                {
+                    "id": "section-2",
+                    "title": "Media landscape: Where do people prefer seeing advertising?",
+                    "summary": (
+                        "Consumer receptivity, channel preferences, and channel-level "
+                        "Ad Equity rankings across APAC."
+                    ),
+                    "key_points": [
+                        "Channel preferences differ between consumers and marketers.",
+                        "DOOH leads channel Ad Equity.",
+                    ],
+                    "pages": [8, 10],
+                },
+                {
+                    "id": "section-3",
+                    "title": "Media brands: How do brands interact with people?",
+                    "summary": (
+                        "Media-brand Ad Equity rankings with Netflix and OTT "
+                        "platforms leading."
+                    ),
+                    "key_points": [
+                        "Netflix is the #1 media brand for Ad Equity.",
+                        "OTT platforms dominate the rankings.",
+                    ],
+                    "pages": [17, 18],
+                },
+                {
+                    "id": "section-4",
+                    "title": "Sentiments on GenAI: How do APAC consumers perceive AI?",
+                    "summary": (
+                        "Consumer and marketer attitudes to generative AI in "
+                        "advertising."
+                    ),
+                    "key_points": [
+                        "Consumers worry about fake content.",
+                        "Marketers use generative AI for creativity and efficiency.",
+                    ],
+                    "pages": [25],
+                },
+                {
+                    "id": "section-5",
+                    "title": "Implications for marketers",
+                    "summary": (
+                        "Budget priorities, investment plans, and channel implications "
+                        "for marketers."
+                    ),
+                    "key_points": [
+                        "Online video and streaming remain top priorities.",
+                        "Marketers plan to increase investment in TikTok, YouTube, and Instagram.",
+                    ],
+                    "pages": [22, 27],
+                },
+            ],
+        },
+        summary={"claim_evidence_map": []},
+        insights_final=[],
+    )
+
+    assert [item["section_id"] for item in topic_briefs] == [
+        "section-2",
+        "section-2",
+        "section-3",
+        "section-4",
+        "section-5",
+    ]
+    assert (
+        topic_briefs[2]["section_title"]
+        == "Media brands: How do brands interact with people?"
+    )
+    assert (
+        topic_briefs[3]["section_title"]
+        == "Sentiments on GenAI: How do APAC consumers perceive AI?"
+    )
+    assert topic_briefs[4]["section_title"] == "Implications for marketers"
 
 
 def test_generate_artifacts_normalizes_malformed_evidence_ids(tmp_path):
@@ -949,7 +1051,7 @@ def test_generate_artifacts_parallelizes_with_dependency_order(tmp_path):
         == "Consumer Behavior & Insights, Beauty, Fashion"
     )
     assert fake_openai.max_in_flight >= 2
-    assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 7
+    assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 6
 
 
 def test_generate_artifacts_strips_inline_reference_tokens_from_summary_and_linkedin(
@@ -1102,7 +1204,7 @@ def test_generate_artifacts_uses_vector_path_when_flag_enabled(tmp_path):
         prompt_client=FakePromptClient(),
         analysis_store=FakeAnalysisStore(),
     )
-    assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 7
+    assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 6
     assert len([req for req in fake_openai.requests if req[0] == "chat"]) == 0
 
 
@@ -1180,8 +1282,8 @@ def test_artifact_cache_isolated_by_retrieval_mode(tmp_path):
         prompt_client=FakePromptClient(),
         md5=md5,
     )
-    assert len(chat_openai.requests) == 7
-    assert len([req for req in chat_openai.requests if req[0] == "chat"]) == 7
+    assert len(chat_openai.requests) == 6
+    assert len([req for req in chat_openai.requests if req[0] == "chat"]) == 6
 
     vector_settings = _settings(tmp_path, artifacts_use_vector_store=True)
     vector_openai = FakeOpenAI(responses)
@@ -1197,8 +1299,8 @@ def test_artifact_cache_isolated_by_retrieval_mode(tmp_path):
         prompt_client=FakePromptClient(),
         md5=md5,
     )
-    assert len(vector_openai.requests) == 7
-    assert len([req for req in vector_openai.requests if req[0] == "vector"]) == 7
+    assert len(vector_openai.requests) == 6
+    assert len([req for req in vector_openai.requests if req[0] == "vector"]) == 6
 
 
 def test_generate_artifacts_with_auto_context_preserves_input_evidence(tmp_path):
@@ -1272,4 +1374,4 @@ def test_generate_artifacts_with_auto_context_preserves_input_evidence(tmp_path)
     )
     assert payload["source_status"]["evidence_present"] is True
     assert payload["source_status"]["not_available"] is False
-    assert len(fake_openai.requests) == 7
+    assert len(fake_openai.requests) == 6

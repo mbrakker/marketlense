@@ -14,6 +14,7 @@ from .numbers import run_number_rule
 from .quotes import run_quote_rule
 from .semantic import run_semantic_rule
 from .shared import LOGGER_NAME, logger
+from .topic_sections import run_topic_section_rule
 
 
 @dataclass(frozen=True)
@@ -25,7 +26,14 @@ class ValidationRule:
 
 def build_validation_rule_registry() -> tuple[ValidationRule, ...]:
     return (
-        ValidationRule(rule_id="semantic", stage="bootstrap", execute=run_semantic_rule),
+        ValidationRule(
+            rule_id="toc_integrity",
+            stage="bootstrap",
+            execute=run_topic_section_rule,
+        ),
+        ValidationRule(
+            rule_id="semantic", stage="bootstrap", execute=run_semantic_rule
+        ),
         ValidationRule(rule_id="metrics", stage="dependent", execute=run_metric_rule),
         ValidationRule(rule_id="quotes", stage="dependent", execute=run_quote_rule),
         ValidationRule(rule_id="numbers", stage="independent", execute=run_number_rule),
@@ -80,7 +88,9 @@ def run_validation_rules_in_parallel(
             },
         )
     )
-    max_workers = min(parallel_workers, max(1, len(bootstrap_rules) + len(independent_rules)))
+    max_workers = min(
+        parallel_workers, max(1, len(bootstrap_rules) + len(independent_rules))
+    )
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         bootstrap_futures = submit_rules(executor, bootstrap_rules, runtime)
         independent_futures = submit_rules(executor, independent_rules, runtime)
@@ -133,7 +143,9 @@ def cancel_futures(
         future.cancel()
 
 
-def execute_rule(rule: ValidationRule, runtime: ValidationRuntime) -> List[ValidationIssue]:
+def execute_rule(
+    rule: ValidationRule, runtime: ValidationRuntime
+) -> List[ValidationIssue]:
     logger.info(
         log_event(
             runtime.ctx,
