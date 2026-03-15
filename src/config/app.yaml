@@ -32,6 +32,13 @@ ingest:
     max_chars: 80000
     min_density: 250
     sample_pages: 3
+    ocr_fallback:
+      enabled: true
+      model: "gpt-5-mini"
+      timeout_seconds: 600
+      prompt_namespace: "pdf_text/ocr_fallback"
+      cache_enabled: true
+      chunk_page_count: 8
   validation:
     data_gap_policy: "warn"
     regeneration_max_attempts: 3

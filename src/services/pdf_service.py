@@ -13,6 +13,8 @@ from src.services._pdf.text import (
     check_pdf_eof,
     extract_pdf_info,
     extract_pdf_text,
+    render_text_pdf,
+    split_pdf_for_ocr,
     sample_pdf_text,
 )
 
@@ -28,5 +30,7 @@ __all__ = [
     "extract_pdf_text",
     "render_page_for_crop_refine",
     "render_preview",
+    "render_text_pdf",
+    "split_pdf_for_ocr",
     "sample_pdf_text",
 ]

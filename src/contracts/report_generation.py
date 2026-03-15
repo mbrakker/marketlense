@@ -59,9 +59,7 @@ class ReportRuntimeState:
 
 @dataclass(frozen=True)
 class ReportSourceState:
-    schema_version: str = field(
-        metadata={"doc": "Source-phase state schema version."}
-    )
+    schema_version: str = field(metadata={"doc": "Source-phase state schema version."})
     runtime: ReportRuntimeState = field(
         metadata={"doc": "Shared runtime state for the report."}
     )
@@ -95,6 +93,22 @@ class ReportSourceState:
     payload: ReportPayload = field(
         metadata={"doc": "Base report payload seeded from source-only inputs."}
     )
+    analysis_pdf_path: str = field(
+        default="",
+        metadata={
+            "doc": "PDF path used for text extraction and vector-store analysis."
+        },
+    )
+    ocr_fallback_used: bool = field(
+        default=False,
+        metadata={"doc": "Whether OCR fallback was used to prepare the analysis PDF."},
+    )
+    ocr_pdf_path: str = field(
+        default="",
+        metadata={
+            "doc": "Filesystem path to the OCR-generated PDF when fallback is active."
+        },
+    )
     pdf_context: Any = field(
         default=None,
         metadata={"doc": "Shared PDF context reused across phases when available."},
@@ -113,9 +127,7 @@ class ReportSelectionState:
     runtime: ReportRuntimeState = field(
         metadata={"doc": "Shared runtime state for the report."}
     )
-    source: ReportSourceState = field(
-        metadata={"doc": "Completed source-phase state."}
-    )
+    source: ReportSourceState = field(metadata={"doc": "Completed source-phase state."})
     payload: ReportPayload = field(
         metadata={"doc": "Report payload after figure/candidate selection updates."}
     )
@@ -135,9 +147,7 @@ class ReportAnalysisState:
     runtime: ReportRuntimeState = field(
         metadata={"doc": "Shared runtime state for the report."}
     )
-    source: ReportSourceState = field(
-        metadata={"doc": "Completed source-phase state."}
-    )
+    source: ReportSourceState = field(metadata={"doc": "Completed source-phase state."})
     selection: ReportSelectionState = field(
         metadata={"doc": "Completed selection-phase state."}
     )
@@ -190,9 +200,7 @@ class ReportAnalysisState:
     )
     regeneration_loop_state: Optional[RegenerationLoopState] = field(
         default=None,
-        metadata={
-            "doc": "Validation regeneration loop summary, if regeneration ran."
-        },
+        metadata={"doc": "Validation regeneration loop summary, if regeneration ran."},
     )
     regeneration_attempts: List[RegenerationAttemptResult] = field(
         default_factory=list,

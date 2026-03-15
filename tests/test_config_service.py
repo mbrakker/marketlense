@@ -300,7 +300,9 @@ class TestConfigService(unittest.TestCase):
                 self.assertEqual(2, settings.evidence_pack_doc_map_max_attempts)
                 self.assertEqual(0, settings.evidence_pack_doc_map_retry_delay_ms)
 
-    def test_validation_regeneration_attempts_default_config_and_env_override(self) -> None:
+    def test_validation_regeneration_attempts_default_config_and_env_override(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(tmp_dir, include_analysis=False)
             with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
@@ -382,6 +384,43 @@ class TestConfigService(unittest.TestCase):
         self.assertEqual(
             settings.rank_timeout_seconds, settings.crop_refine_timeout_seconds
         )
+
+    def test_pdf_text_ocr_settings_load(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_analysis=False)
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["ingest"]["pdf_text"] = {
+                "max_pages": 5,
+                "max_chars": 80000,
+                "min_density": 250,
+                "sample_pages": 3,
+                "ocr_fallback": {
+                    "enabled": True,
+                    "model": "gpt-5-mini",
+                    "timeout_seconds": 321.0,
+                    "prompt_namespace": "pdf_text/ocr_fallback",
+                    "cache_enabled": False,
+                    "chunk_page_count": 6,
+                },
+            }
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
+
+            with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
+                settings = load_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
+                )
+
+        self.assertTrue(settings.pdf_text_ocr_enabled)
+        self.assertEqual("gpt-5-mini", settings.pdf_text_ocr_model)
+        self.assertEqual(321.0, settings.pdf_text_ocr_timeout_seconds)
+        self.assertEqual(
+            "pdf_text/ocr_fallback", settings.pdf_text_ocr_prompt_namespace
+        )
+        self.assertFalse(settings.pdf_text_ocr_cache_enabled)
+        self.assertEqual(6, settings.pdf_text_ocr_chunk_page_count)
 
     def test_publish_settings_derive_site_url_from_admin(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

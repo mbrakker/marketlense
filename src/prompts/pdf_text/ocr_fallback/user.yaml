@@ -1,0 +1,7 @@
+text: |
+  Extract OCR text from the uploaded PDF chunk.
+  This uploaded chunk has {{ page_count }} pages and maps to source pages {{ source_page_start }} to {{ source_page_end }} in the original PDF.
+  Return a JSON object with a `pages` array that contains one item per uploaded chunk page:
+  - `page_number`: uploaded chunk one-based page number from 1 to {{ page_count }}
+  - `text`: full extracted text for that page
+  If a page has no readable text, still include the page with an empty string.

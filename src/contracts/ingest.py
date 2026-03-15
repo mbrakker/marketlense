@@ -96,6 +96,36 @@ class IngestSettings:
         default=3,
         metadata={"doc": "Number of pages to sample when validating extractable text."},
     )
+    pdf_text_ocr_enabled: bool = field(
+        default=False,
+        metadata={
+            "doc": "Whether OCR fallback should run when extractable text validation fails."
+        },
+    )
+    pdf_text_ocr_model: str = field(
+        default="gpt-5-mini",
+        metadata={"doc": "OpenAI model ID used for OCR fallback."},
+    )
+    pdf_text_ocr_timeout_seconds: float = field(
+        default=600.0,
+        metadata={"doc": "Timeout in seconds for the OCR fallback request."},
+    )
+    pdf_text_ocr_prompt_namespace: str = field(
+        default="pdf_text/ocr_fallback",
+        metadata={"doc": "Prompt namespace used for OCR fallback rendering."},
+    )
+    pdf_text_ocr_cache_enabled: bool = field(
+        default=True,
+        metadata={
+            "doc": "Whether OCR fallback responses and rendered PDFs are cached by md5/prompt hash."
+        },
+    )
+    pdf_text_ocr_chunk_page_count: int = field(
+        default=8,
+        metadata={
+            "doc": "Maximum number of PDF pages submitted per OCR chunk request."
+        },
+    )
     rank_model: str = field(
         default="",
         metadata={"doc": "OpenAI model ID for candidate ranking (optional override)."},
@@ -383,5 +413,15 @@ class IngestOutcome:
         default=None,
         metadata={
             "doc": "DocMap validation summary when doc_map is empty, if available."
+        },
+    )
+    ocr_fallback_used: bool = field(
+        default=False,
+        metadata={"doc": "Whether OCR fallback was used to produce the analysis PDF."},
+    )
+    ocr_pdf_path: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Filesystem path to the OCR-generated PDF used for analysis, if any."
         },
     )

@@ -237,6 +237,20 @@ def _base_vector_report_dependencies(
             ],
             any_text=True,
         ),
+        "split_pdf_for_ocr": lambda req, ctx: SimpleNamespace(
+            schema_version="1.0",
+            chunks=[
+                SimpleNamespace(
+                    schema_version="1.0",
+                    chunk_index=1,
+                    source_pdf_path=req.source_pdf_path,
+                    chunk_pdf_path=req.source_pdf_path,
+                    start_page_number=1,
+                    end_page_number=1,
+                    page_count=1,
+                )
+            ],
+        ),
     }
     base.update(overrides)
     return _report_dependencies(**base)
@@ -264,7 +278,9 @@ def _runtime_state(
         analysis_mode="vector_store",
         analysis_modes=["vector_store"],
         report_worker_limit=int(getattr(settings, "report_worker_limit", 1) or 1),
-        parallel_within_file=bool(int(getattr(settings, "report_worker_limit", 1) or 1) > 1),
+        parallel_within_file=bool(
+            int(getattr(settings, "report_worker_limit", 1) or 1) > 1
+        ),
     )
 
 
@@ -692,8 +708,10 @@ def test_generate_report_vector_store_with_validation(
     assert_no_defaulted_required_fields(outcome)
     assert outcome.status == "processed"
     assert outcome.vector_store_id == "vs_new"
+    assert outcome.evidence_packs is not None
     assert "doc_map" in outcome.evidence_packs
     assert "validation" in outcome.evidence_packs
+    assert outcome.html_path is not None
     assert Path(outcome.html_path).exists()
     assert metadata_upserts[0].title == "DocMap Title"
     assert metadata_upserts[0].publisher == "DocMap Publisher"
@@ -812,3 +830,161 @@ def test_generate_report_doc_map_empty_halts(
     assert outcome.doc_map_summary is not None
     assert outcome.doc_map_summary.get("sections_count") == 0
     assert outcome.doc_map_summary.get("not_found_reason") == "model_returned_no_json"
+
+
+def test_generate_report_ocr_fallback_uses_ocr_pdf_for_vector_and_original_for_visuals(
+    tmp_path,
+) -> None:
+    settings = _ingest_settings(tmp_path)
+    settings = settings.__class__(
+        **{
+            **settings.__dict__,
+            "openai_timeout_seconds": 3600.0,
+            "pdf_text_ocr_enabled": True,
+            "pdf_text_ocr_cache_enabled": False,
+        }
+    )
+    pdf_path = tmp_path / "sample.pdf"
+    writer = PdfWriter()
+    writer.add_blank_page(width=72, height=72)
+    with pdf_path.open("wb") as handle:
+        writer.write(handle)
+
+    file = DriveFile(
+        schema_version="1.0",
+        file_id="file_vs",
+        name="vector.pdf",
+        modified_time=None,
+        md5_checksum="md5",
+    )
+    ctx = RunContext(
+        schema_version="1.0",
+        run_id="run-vs",
+        task_id="task-vs",
+        span_id="span-vs",
+    )
+    ocr_pdf_path = str(tmp_path / "ocr.pdf")
+    preview_paths: list[str] = []
+    figure_paths: list[str] = []
+    candidate_paths: list[str] = []
+    vector_upload_paths: list[str] = []
+
+    def _sample(req, ctx):
+        if req.path == str(pdf_path):
+            return PdfTextSampleResponse(
+                schema_version="1.0",
+                samples=[
+                    PdfTextSample(
+                        page_index=0, page_number=1, char_count=0, has_text=False
+                    )
+                ],
+                any_text=False,
+            )
+        return PdfTextSampleResponse(
+            schema_version="1.0",
+            samples=[
+                PdfTextSample(page_index=0, page_number=1, char_count=18, has_text=True)
+            ],
+            any_text=True,
+        )
+
+    def _render_preview(req, ctx):
+        preview_paths.append(req.pdf_path)
+        return SimpleNamespace(
+            schema_version="1.1",
+            image_path=str(tmp_path / "preview.png"),
+            page_number=0,
+        )
+
+    def _extract_best_figure(req, ctx):
+        figure_paths.append(req.pdf_path)
+        return SimpleNamespace(image_path=None, caption=None)
+
+    def _collect_candidates(req, ctx):
+        candidate_paths.append(req.pdf_path)
+        return SimpleNamespace(candidates=[])
+
+    def _vector_store_upload_file(req, ctx):
+        vector_upload_paths.append(req.file_path)
+        return SimpleNamespace(openai_file_id="file_upload")
+
+    deps = _base_vector_report_dependencies(
+        tmp_path,
+        sample_pdf_text=_sample,
+        openai_ocr_pdf=lambda req, ctx: SimpleNamespace(
+            schema_version="1.0",
+            pages=[
+                SimpleNamespace(schema_version="1.0", page_number=1, text="ocr text")
+            ],
+            raw_text='{"pages":[{"page_number":1,"text":"ocr text"}]}',
+            model=req.model,
+            request_id="req_ocr",
+        ),
+        render_text_pdf=lambda req, ctx: SimpleNamespace(
+            schema_version="1.0",
+            output_path=ocr_pdf_path,
+            rendered_page_count=len(req.pages),
+        ),
+        extract_pdf_text=lambda req, ctx: SimpleNamespace(
+            schema_version="1.0",
+            text="ocr text",
+            pages_extracted=1,
+            char_count=8,
+            text_density=8.0,
+        ),
+        detect_contents_page=lambda req, ctx: SimpleNamespace(
+            schema_version="1.0",
+            path=req.path,
+            has_contents=False,
+            page_index=-1,
+            page_number=0,
+            heading="",
+            confidence=0.0,
+        ),
+        render_preview=_render_preview,
+        extract_best_figure=_extract_best_figure,
+        collect_candidates=_collect_candidates,
+        vector_store_upload_file=_vector_store_upload_file,
+        generate_evidence_packs=lambda **kwargs: {
+            "doc_map": {"docMap": {"title": "Doc Title", "publisher": "Doc Publisher"}}
+        },
+        generate_artifacts=lambda **kwargs: {
+            "schema_version": "1.0",
+            "summary": {"tldr": "tldr", "executive_summary": "exec"},
+            "insights_final": [],
+            "quotes_final": [],
+            "source_status": {
+                "schema_version": "1.0",
+                "not_available": False,
+                "reason": "",
+            },
+        },
+        run_validation=lambda *args, **kwargs: ValidationReport(
+            schema_version="1.1",
+            status="pass",
+            severity="pass",
+            issues=[],
+            source_path=str(tmp_path / "validation.json"),
+        ),
+        render_report=lambda req, ctx: RenderResponse(
+            schema_version="1.0",
+            html_path=str(tmp_path / "out.html"),
+        ),
+    )
+
+    outcome = rgo.run_report_generation(
+        file,
+        str(pdf_path),
+        settings,
+        md5="md5",
+        ctx=ctx,
+        dependencies=deps,
+    )
+
+    assert outcome.status == "processed"
+    assert outcome.ocr_fallback_used is True
+    assert outcome.ocr_pdf_path == ocr_pdf_path
+    assert vector_upload_paths == [ocr_pdf_path]
+    assert preview_paths == [str(pdf_path)]
+    assert figure_paths == [str(pdf_path)]
+    assert candidate_paths == [str(pdf_path)]

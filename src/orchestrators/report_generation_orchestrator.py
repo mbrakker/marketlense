@@ -10,7 +10,10 @@ from src.contracts.run_context import RunContext
 from src.generators.report_analysis_generator import start_vector_store_indexing
 from src.generators.report_generation_dependencies import ReportGeneratorDependencies
 from src.generators.report_generation_shared import derive_title, report_slug
-from src.generators.report_render_generator import render_preview_asset, render_report_output
+from src.generators.report_render_generator import (
+    render_preview_asset,
+    render_report_output,
+)
 from src.generators.report_selection_generator import select_report_figures
 from src.generators.report_source_generator import prepare_report_source
 from src.orchestrators.report_analysis_orchestrator import run_report_analysis
@@ -73,6 +76,29 @@ def _pdf_text_unextractable_outcome(
     )
 
 
+def _pdf_text_ocr_failed_outcome(
+    runtime: ReportRuntimeState,
+    exc: AppError,
+) -> IngestOutcome:
+    context = exc.context if isinstance(exc.context, dict) else {}
+    return IngestOutcome(
+        schema_version="1.0",
+        file_id=runtime.file.file_id,
+        name=runtime.file_name,
+        md5=runtime.md5,
+        html_path=None,
+        status="error",
+        error="pdf_text_ocr_failed",
+        text_validation_status=str(context.get("text_validation_status") or "fail"),
+        text_validation_reason=str(
+            context.get("text_validation_reason") or "pdf_text_ocr_failed"
+        ),
+        text_validation_pages=list(context.get("text_validation_pages") or []),
+        ocr_fallback_used=True,
+        ocr_pdf_path=str(context.get("ocr_pdf_path") or "") or None,
+    )
+
+
 def _doc_map_empty_outcome(
     runtime: ReportRuntimeState,
     source,
@@ -97,6 +123,8 @@ def _doc_map_empty_outcome(
         text_validation_reason=source.text_validation_reason,
         text_validation_pages=source.text_validation_pages,
         doc_map_summary=doc_map_summary,
+        ocr_fallback_used=source.ocr_fallback_used,
+        ocr_pdf_path=source.ocr_pdf_path or None,
     )
 
 
@@ -143,7 +171,7 @@ def run_report_generation(
     vector_state = None
     try:
         source = prepare_report_source(runtime, deps)
-        vector_state = start_vector_store_indexing(runtime, deps)
+        vector_state = start_vector_store_indexing(runtime, source, deps)
         selection = select_report_figures(runtime, source, deps)
         preview_resp = render_preview_asset(runtime, source, deps)
         analysis = run_report_analysis(
@@ -166,7 +194,13 @@ def run_report_generation(
     except AppError as exc:
         if exc.code == "pdf_text_unextractable":
             return _pdf_text_unextractable_outcome(runtime, exc)
-        if exc.code == "doc_map_empty" and source is not None and vector_state is not None:
+        if exc.code == "pdf_text_ocr_failed":
+            return _pdf_text_ocr_failed_outcome(runtime, exc)
+        if (
+            exc.code == "doc_map_empty"
+            and source is not None
+            and vector_state is not None
+        ):
             return _doc_map_empty_outcome(runtime, source, vector_state, exc)
         raise
     finally:

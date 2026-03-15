@@ -54,7 +54,9 @@ CREATE TABLE IF NOT EXISTS processed (
   text_validation_status TEXT,
   text_validation_reason TEXT,
   text_validation_pages_json TEXT,
-  doc_map_summary_json TEXT
+  doc_map_summary_json TEXT,
+  ocr_fallback_used INTEGER NOT NULL DEFAULT 0,
+  ocr_pdf_path TEXT
 );
 
 CREATE TABLE IF NOT EXISTS ingest_state (
@@ -108,6 +110,8 @@ def _migrate_schema(conn: sqlite3.Connection) -> None:
         "text_validation_reason": "TEXT",
         "text_validation_pages_json": "TEXT",
         "doc_map_summary_json": "TEXT",
+        "ocr_fallback_used": "INTEGER NOT NULL DEFAULT 0",
+        "ocr_pdf_path": "TEXT",
     }
     for col, col_type in required.items():
         if col not in cols:
@@ -154,7 +158,9 @@ def _parse_dict(raw: Optional[str]) -> Optional[dict]:
     return None
 
 
-def _normalize_batch_items(items: list[StateBatchCheckItem]) -> list[StateBatchCheckItem]:
+def _normalize_batch_items(
+    items: list[StateBatchCheckItem],
+) -> list[StateBatchCheckItem]:
     normalized: list[StateBatchCheckItem] = []
     seen: set[tuple[str, str]] = set()
     for item in items:
@@ -166,18 +172,27 @@ def _normalize_batch_items(items: list[StateBatchCheckItem]) -> list[StateBatchC
         if key in seen:
             continue
         seen.add(key)
-        normalized.append(StateBatchCheckItem(schema_version="1.0", file_id=file_id, md5=md5))
+        normalized.append(
+            StateBatchCheckItem(schema_version="1.0", file_id=file_id, md5=md5)
+        )
     return normalized
 
 
-def check_state_db_access(request: StateDbAccessRequest, ctx: RunContext) -> StateDbAccessResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="state_db_access_start",
-        module=logger.name,
-        fields={"state_db": request.state_db, "timeout_seconds": request.timeout_seconds},
-    ))
+def check_state_db_access(
+    request: StateDbAccessRequest, ctx: RunContext
+) -> StateDbAccessResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="state_db_access_start",
+            module=logger.name,
+            fields={
+                "state_db": request.state_db,
+                "timeout_seconds": request.timeout_seconds,
+            },
+        )
+    )
     if not request.state_db or not request.state_db.strip():
         raise AppError(
             code="state_db_missing",
@@ -185,24 +200,32 @@ def check_state_db_access(request: StateDbAccessRequest, ctx: RunContext) -> Sta
             retryable=False,
             severity="error",
         )
-    timeout = request.timeout_seconds if request.timeout_seconds >= 0 else ACCESS_TIMEOUT_SECONDS
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="state_db_access_config",
-        module=logger.name,
-        fields={"timeout_seconds": timeout},
-    ))
+    timeout = (
+        request.timeout_seconds
+        if request.timeout_seconds >= 0
+        else ACCESS_TIMEOUT_SECONDS
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="state_db_access_config",
+            module=logger.name,
+            fields={"timeout_seconds": timeout},
+        )
+    )
     try:
         conn = sqlite3.connect(request.state_db, timeout=timeout)
     except Exception as exc:
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="state_db_access_connect_failed",
-            module=logger.name,
-            fields={"state_db": request.state_db, "error": str(exc)},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="state_db_access_connect_failed",
+                module=logger.name,
+                fields={"state_db": request.state_db, "error": str(exc)},
+            )
+        )
         raise AppError(
             code="state_db_unavailable",
             message="Failed to open state DB",
@@ -211,25 +234,29 @@ def check_state_db_access(request: StateDbAccessRequest, ctx: RunContext) -> Sta
             context={"state_db": request.state_db},
         ) from exc
     try:
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="state_db_access_probe",
-            module=logger.name,
-            fields={"state_db": request.state_db},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="state_db_access_probe",
+                module=logger.name,
+                fields={"state_db": request.state_db},
+            )
+        )
         conn.execute("BEGIN IMMEDIATE")
         conn.execute("ROLLBACK")
     except sqlite3.OperationalError as exc:
         if _is_lock_error(exc):
             message = str(exc)
-            logger.info(log_event(
-                ctx,
-                role="service",
-                event="state_db_access_locked",
-                module=logger.name,
-                fields={"state_db": request.state_db, "error": message},
-            ))
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="state_db_access_locked",
+                    module=logger.name,
+                    fields={"state_db": request.state_db, "error": message},
+                )
+            )
             response = StateDbAccessResponse(
                 schema_version="1.0",
                 state_db=request.state_db,
@@ -237,26 +264,30 @@ def check_state_db_access(request: StateDbAccessRequest, ctx: RunContext) -> Sta
                 locked=True,
                 message=message,
             )
-            logger.info(log_event(
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="state_db_access_complete",
+                    module=logger.name,
+                    fields={
+                        "state_db": response.state_db,
+                        "accessible": response.accessible,
+                        "locked": response.locked,
+                        "message": response.message,
+                    },
+                )
+            )
+            return response
+        logger.info(
+            log_event(
                 ctx,
                 role="service",
-                event="state_db_access_complete",
+                event="state_db_access_failed",
                 module=logger.name,
-                fields={
-                    "state_db": response.state_db,
-                    "accessible": response.accessible,
-                    "locked": response.locked,
-                    "message": response.message,
-                },
-            ))
-            return response
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="state_db_access_failed",
-            module=logger.name,
-            fields={"state_db": request.state_db, "error": str(exc)},
-        ))
+                fields={"state_db": request.state_db, "error": str(exc)},
+            )
+        )
         raise AppError(
             code="state_db_unavailable",
             message="State DB is not accessible",
@@ -273,29 +304,35 @@ def check_state_db_access(request: StateDbAccessRequest, ctx: RunContext) -> Sta
         locked=False,
         message="",
     )
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="state_db_access_complete",
-        module=logger.name,
-        fields={
-            "state_db": response.state_db,
-            "accessible": response.accessible,
-            "locked": response.locked,
-            "message": response.message,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="state_db_access_complete",
+            module=logger.name,
+            fields={
+                "state_db": response.state_db,
+                "accessible": response.accessible,
+                "locked": response.locked,
+                "message": response.message,
+            },
+        )
+    )
     return response
 
 
-def get_ingest_cursor(request: StateIngestCursorGetRequest, ctx: RunContext) -> StateIngestCursorGetResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="ingest_cursor_get_start",
-        module=logger.name,
-        fields={"state_db": request.state_db},
-    ))
+def get_ingest_cursor(
+    request: StateIngestCursorGetRequest, ctx: RunContext
+) -> StateIngestCursorGetResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="ingest_cursor_get_start",
+            module=logger.name,
+            fields={"state_db": request.state_db},
+        )
+    )
     with _state_conn(request.state_db) as conn:
         cur = conn.execute(
             "SELECT value FROM ingest_state WHERE key=?",
@@ -308,69 +345,90 @@ def get_ingest_cursor(request: StateIngestCursorGetRequest, ctx: RunContext) -> 
         state_db=request.state_db,
         last_successful_ingest_utc=value,
     )
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="ingest_cursor_get_complete",
-        module=logger.name,
-        fields={"state_db": request.state_db, "last_successful_ingest_utc": value or ""},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="ingest_cursor_get_complete",
+            module=logger.name,
+            fields={
+                "state_db": request.state_db,
+                "last_successful_ingest_utc": value or "",
+            },
+        )
+    )
     return response
 
 
 def set_ingest_cursor(request: StateIngestCursorSetRequest, ctx: RunContext) -> None:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="ingest_cursor_set_start",
-        module=logger.name,
-        fields={"state_db": request.state_db, "last_successful_ingest_utc": request.last_successful_ingest_utc},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="ingest_cursor_set_start",
+            module=logger.name,
+            fields={
+                "state_db": request.state_db,
+                "last_successful_ingest_utc": request.last_successful_ingest_utc,
+            },
+        )
+    )
     with _state_conn(request.state_db) as conn:
         conn.execute(
             "INSERT OR REPLACE INTO ingest_state(key, value, updated_at) VALUES(?, ?, strftime('%s','now'))",
             ("last_successful_ingest_utc", request.last_successful_ingest_utc),
         )
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="ingest_cursor_set_complete",
-        module=logger.name,
-        fields={"state_db": request.state_db},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="ingest_cursor_set_complete",
+            module=logger.name,
+            fields={"state_db": request.state_db},
+        )
+    )
 
 
 def already_processed(request: StateCheckRequest, ctx: RunContext) -> bool:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="state_check_start",
-        module=logger.name,
-        fields={"file_id": request.file_id},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="state_check_start",
+            module=logger.name,
+            fields={"file_id": request.file_id},
+        )
+    )
     with _state_conn(request.state_db) as conn:
         cur = conn.execute(
-            "SELECT 1 FROM processed WHERE file_id=? AND md5=?", (request.file_id, request.md5)
+            "SELECT 1 FROM processed WHERE file_id=? AND md5=?",
+            (request.file_id, request.md5),
         )
         result = cur.fetchone() is not None
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="state_check_complete",
-        module=logger.name,
-        fields={"file_id": request.file_id, "already_processed": result},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="state_check_complete",
+            module=logger.name,
+            fields={"file_id": request.file_id, "already_processed": result},
+        )
+    )
     return result
 
 
-def already_processed_batch(request: StateBatchCheckRequest, ctx: RunContext) -> StateBatchCheckResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="state_check_batch_start",
-        module=logger.name,
-        fields={"state_db": request.state_db, "requested": len(request.items)},
-    ))
+def already_processed_batch(
+    request: StateBatchCheckRequest, ctx: RunContext
+) -> StateBatchCheckResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="state_check_batch_start",
+            module=logger.name,
+            fields={"state_db": request.state_db, "requested": len(request.items)},
+        )
+    )
     items = _normalize_batch_items(request.items)
     if not items:
         response = StateBatchCheckResponse(
@@ -378,19 +436,21 @@ def already_processed_batch(request: StateBatchCheckRequest, ctx: RunContext) ->
             state_db=request.state_db,
             processed_items=[],
         )
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="state_check_batch_complete",
-            module=logger.name,
-            fields={"state_db": request.state_db, "checked": 0, "matched": 0},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="state_check_batch_complete",
+                module=logger.name,
+                fields={"state_db": request.state_db, "checked": 0, "matched": 0},
+            )
+        )
         return response
 
     matched: list[StateBatchCheckItem] = []
     with _state_conn(request.state_db) as conn:
         for idx in range(0, len(items), BATCH_STATE_CHECK_MAX_PAIRS):
-            chunk = items[idx: idx + BATCH_STATE_CHECK_MAX_PAIRS]
+            chunk = items[idx : idx + BATCH_STATE_CHECK_MAX_PAIRS]
             where = " OR ".join("(file_id=? AND md5=?)" for _ in chunk)
             params: list[str] = []
             for item in chunk:
@@ -409,30 +469,39 @@ def already_processed_batch(request: StateBatchCheckRequest, ctx: RunContext) ->
         state_db=request.state_db,
         processed_items=matched,
     )
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="state_check_batch_complete",
-        module=logger.name,
-        fields={"state_db": request.state_db, "checked": len(items), "matched": len(matched)},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="state_check_batch_complete",
+            module=logger.name,
+            fields={
+                "state_db": request.state_db,
+                "checked": len(items),
+                "matched": len(matched),
+            },
+        )
+    )
     return response
 
 
 def record(request: StateRecordRequest, ctx: RunContext) -> None:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="state_record_start",
-        module=logger.name,
-        fields={"file_id": request.file_id},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="state_record_start",
+            module=logger.name,
+            fields={"file_id": request.file_id},
+        )
+    )
     with _state_conn(request.state_db) as conn:
         conn.execute(
             "INSERT OR REPLACE INTO processed("
             "file_id, md5, processed_at, openai_file_id, vector_store_id, vector_store_status, indexed_at_utc, "
-            "last_error, text_validation_status, text_validation_reason, text_validation_pages_json, doc_map_summary_json"
-            ") VALUES(?, ?, strftime('%s','now'), ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "last_error, text_validation_status, text_validation_reason, text_validation_pages_json, doc_map_summary_json, "
+            "ocr_fallback_used, ocr_pdf_path"
+            ") VALUES(?, ?, strftime('%s','now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 request.file_id,
                 request.md5,
@@ -443,43 +512,56 @@ def record(request: StateRecordRequest, ctx: RunContext) -> None:
                 request.last_error,
                 request.text_validation_status,
                 request.text_validation_reason,
-                json.dumps(request.text_validation_pages) if request.text_validation_pages is not None else None,
-                json.dumps(request.doc_map_summary) if request.doc_map_summary is not None else None,
+                json.dumps(request.text_validation_pages)
+                if request.text_validation_pages is not None
+                else None,
+                json.dumps(request.doc_map_summary)
+                if request.doc_map_summary is not None
+                else None,
+                1 if request.ocr_fallback_used else 0,
+                request.ocr_pdf_path,
             ),
         )
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="state_record_complete",
-        module=logger.name,
-        fields={"file_id": request.file_id},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="state_record_complete",
+            module=logger.name,
+            fields={"file_id": request.file_id},
+        )
+    )
 
 
 def get(request: StateGetRequest, ctx: RunContext) -> Optional[StateGetResponse]:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="state_get_start",
-        module=logger.name,
-        fields={"file_id": request.file_id},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="state_get_start",
+            module=logger.name,
+            fields={"file_id": request.file_id},
+        )
+    )
     with _state_conn(request.state_db) as conn:
         cur = conn.execute(
             "SELECT file_id, md5, processed_at, openai_file_id, vector_store_id, vector_store_status, indexed_at_utc, "
-            "last_error, text_validation_status, text_validation_reason, text_validation_pages_json, doc_map_summary_json "
+            "last_error, text_validation_status, text_validation_reason, text_validation_pages_json, doc_map_summary_json, "
+            "ocr_fallback_used, ocr_pdf_path "
             "FROM processed WHERE file_id=?",
             (request.file_id,),
         )
         row = cur.fetchone()
     if not row:
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="state_get_complete",
-            module=logger.name,
-            fields={"file_id": request.file_id, "found": False},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="state_get_complete",
+                module=logger.name,
+                fields={"file_id": request.file_id, "found": False},
+            )
+        )
         return None
     (
         file_id,
@@ -494,16 +576,20 @@ def get(request: StateGetRequest, ctx: RunContext) -> Optional[StateGetResponse]
         text_validation_reason,
         text_validation_pages_json,
         doc_map_summary_json,
+        ocr_fallback_used,
+        ocr_pdf_path,
     ) = row
     text_validation_pages = _parse_int_list(text_validation_pages_json)
     doc_map_summary = _parse_dict(doc_map_summary_json)
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="state_get_complete",
-        module=logger.name,
-        fields={"file_id": request.file_id, "found": True},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="state_get_complete",
+            module=logger.name,
+            fields={"file_id": request.file_id, "found": True},
+        )
+    )
     return StateGetResponse(
         schema_version="1.0",
         file_id=file_id,
@@ -518,17 +604,23 @@ def get(request: StateGetRequest, ctx: RunContext) -> Optional[StateGetResponse]
         text_validation_reason=text_validation_reason,
         text_validation_pages=text_validation_pages,
         doc_map_summary=doc_map_summary,
+        ocr_fallback_used=bool(ocr_fallback_used),
+        ocr_pdf_path=ocr_pdf_path,
     )
 
 
-def list_processed(request: StateProcessedListRequest, ctx: RunContext) -> StateProcessedListResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="state_processed_list_start",
-        module=logger.name,
-        fields={"state_db": request.state_db, "limit": request.limit},
-    ))
+def list_processed(
+    request: StateProcessedListRequest, ctx: RunContext
+) -> StateProcessedListResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="state_processed_list_start",
+            module=logger.name,
+            fields={"state_db": request.state_db, "limit": request.limit},
+        )
+    )
     limit = int(request.limit) if isinstance(request.limit, int) else 200
     if limit <= 0:
         limit = 200
@@ -536,7 +628,8 @@ def list_processed(request: StateProcessedListRequest, ctx: RunContext) -> State
     with _state_conn(request.state_db) as conn:
         cur = conn.execute(
             "SELECT file_id, md5, processed_at, openai_file_id, vector_store_id, vector_store_status, indexed_at_utc, "
-            "last_error, text_validation_status, text_validation_reason, text_validation_pages_json, doc_map_summary_json "
+            "last_error, text_validation_status, text_validation_reason, text_validation_pages_json, doc_map_summary_json, "
+            "ocr_fallback_used, ocr_pdf_path "
             "FROM processed ORDER BY processed_at DESC LIMIT ?",
             (limit,),
         )
@@ -553,75 +646,89 @@ def list_processed(request: StateProcessedListRequest, ctx: RunContext) -> State
             text_validation_reason,
             text_validation_pages_json,
             doc_map_summary_json,
+            ocr_fallback_used,
+            ocr_pdf_path,
         ) in cur.fetchall():
-            rows.append(StateProcessedRow(
-                schema_version="1.0",
-                file_id=file_id,
-                md5=md5,
-                processed_at=int(processed_at),
-                openai_file_id=openai_file_id,
-                vector_store_id=vector_store_id,
-                vector_store_status=vector_store_status,
-                indexed_at_utc=indexed_at_utc,
-                last_error=last_error,
-                text_validation_status=text_validation_status,
-                text_validation_reason=text_validation_reason,
-                text_validation_pages=_parse_int_list(text_validation_pages_json),
-                doc_map_summary=_parse_dict(doc_map_summary_json),
-            ))
+            rows.append(
+                StateProcessedRow(
+                    schema_version="1.0",
+                    file_id=file_id,
+                    md5=md5,
+                    processed_at=int(processed_at),
+                    openai_file_id=openai_file_id,
+                    vector_store_id=vector_store_id,
+                    vector_store_status=vector_store_status,
+                    indexed_at_utc=indexed_at_utc,
+                    last_error=last_error,
+                    text_validation_status=text_validation_status,
+                    text_validation_reason=text_validation_reason,
+                    text_validation_pages=_parse_int_list(text_validation_pages_json),
+                    doc_map_summary=_parse_dict(doc_map_summary_json),
+                    ocr_fallback_used=bool(ocr_fallback_used),
+                    ocr_pdf_path=ocr_pdf_path,
+                )
+            )
     response = StateProcessedListResponse(schema_version="1.0", rows=rows)
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="state_processed_list_complete",
-        module=logger.name,
-        fields={"state_db": request.state_db, "count": len(rows)},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="state_processed_list_complete",
+            module=logger.name,
+            fields={"state_db": request.state_db, "count": len(rows)},
+        )
+    )
     return response
 
 
 def already_published(request: StatePublishCheckRequest, ctx: RunContext) -> bool:
     post_type = _normalize_post_type(request.post_type)
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="state_publish_check_start",
-        module=logger.name,
-        fields={"file_id": request.file_id, "post_type": post_type},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="state_publish_check_start",
+            module=logger.name,
+            fields={"file_id": request.file_id, "post_type": post_type},
+        )
+    )
     with _state_conn(request.state_db) as conn:
         cur = conn.execute(
             "SELECT 1 FROM published WHERE file_id=? AND post_type=?",
             (request.file_id, post_type),
         )
         result = cur.fetchone() is not None
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="state_publish_check_complete",
-        module=logger.name,
-        fields={
-            "file_id": request.file_id,
-            "post_type": post_type,
-            "already_published": result,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="state_publish_check_complete",
+            module=logger.name,
+            fields={
+                "file_id": request.file_id,
+                "post_type": post_type,
+                "already_published": result,
+            },
+        )
+    )
     return result
 
 
 def record_publish(request: StatePublishRecordRequest, ctx: RunContext) -> None:
     post_type = _normalize_post_type(request.post_type)
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="state_publish_record_start",
-        module=logger.name,
-        fields={
-            "file_id": request.file_id,
-            "wp_post_id": request.wp_post_id,
-            "post_type": post_type,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="state_publish_record_start",
+            module=logger.name,
+            fields={
+                "file_id": request.file_id,
+                "wp_post_id": request.wp_post_id,
+                "post_type": post_type,
+            },
+        )
+    )
     with _state_conn(request.state_db) as conn:
         conn.execute(
             "INSERT OR REPLACE INTO published("
@@ -635,28 +742,34 @@ def record_publish(request: StatePublishRecordRequest, ctx: RunContext) -> None:
                 post_type,
             ),
         )
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="state_publish_record_complete",
-        module=logger.name,
-        fields={
-            "file_id": request.file_id,
-            "wp_post_id": request.wp_post_id,
-            "post_type": post_type,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="state_publish_record_complete",
+            module=logger.name,
+            fields={
+                "file_id": request.file_id,
+                "wp_post_id": request.wp_post_id,
+                "post_type": post_type,
+            },
+        )
+    )
 
 
-def get_publish(request: StatePublishCheckRequest, ctx: RunContext) -> Optional[StatePublishGetResponse]:
+def get_publish(
+    request: StatePublishCheckRequest, ctx: RunContext
+) -> Optional[StatePublishGetResponse]:
     post_type = _normalize_post_type(request.post_type)
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="state_publish_get_start",
-        module=logger.name,
-        fields={"file_id": request.file_id, "post_type": post_type},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="state_publish_get_start",
+            module=logger.name,
+            fields={"file_id": request.file_id, "post_type": post_type},
+        )
+    )
     with _state_conn(request.state_db) as conn:
         cur = conn.execute(
             "SELECT file_id, md5, published_at, wp_post_id, wp_post_url, post_type "
@@ -665,22 +778,30 @@ def get_publish(request: StatePublishCheckRequest, ctx: RunContext) -> Optional[
         )
         row = cur.fetchone()
     if not row:
-        logger.info(log_event(
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="state_publish_get_complete",
+                module=logger.name,
+                fields={
+                    "file_id": request.file_id,
+                    "post_type": post_type,
+                    "found": False,
+                },
+            )
+        )
+        return None
+    file_id, md5, published_at, wp_post_id, wp_post_url, stored_post_type = row
+    logger.info(
+        log_event(
             ctx,
             role="service",
             event="state_publish_get_complete",
             module=logger.name,
-            fields={"file_id": request.file_id, "post_type": post_type, "found": False},
-        ))
-        return None
-    file_id, md5, published_at, wp_post_id, wp_post_url, stored_post_type = row
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="state_publish_get_complete",
-        module=logger.name,
-        fields={"file_id": file_id, "post_type": stored_post_type, "found": True},
-    ))
+            fields={"file_id": file_id, "post_type": stored_post_type, "found": True},
+        )
+    )
     return StatePublishGetResponse(
         schema_version="1.0",
         file_id=file_id,
@@ -692,14 +813,18 @@ def get_publish(request: StatePublishCheckRequest, ctx: RunContext) -> Optional[
     )
 
 
-def list_published(request: StatePublishedListRequest, ctx: RunContext) -> StatePublishedListResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="state_published_list_start",
-        module=logger.name,
-        fields={"state_db": request.state_db, "limit": request.limit},
-    ))
+def list_published(
+    request: StatePublishedListRequest, ctx: RunContext
+) -> StatePublishedListResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="state_published_list_start",
+            module=logger.name,
+            fields={"state_db": request.state_db, "limit": request.limit},
+        )
+    )
     limit = int(request.limit) if isinstance(request.limit, int) else 200
     if limit <= 0:
         limit = 200
@@ -710,22 +835,33 @@ def list_published(request: StatePublishedListRequest, ctx: RunContext) -> State
             "FROM published ORDER BY published_at DESC LIMIT ?",
             (limit,),
         )
-        for file_id, md5, published_at, wp_post_id, wp_post_url, post_type in cur.fetchall():
-            rows.append(StatePublishedRow(
-                schema_version="1.0",
-                file_id=file_id,
-                md5=md5,
-                published_at=int(published_at),
-                wp_post_id=int(wp_post_id),
-                wp_post_url=wp_post_url,
-                post_type=str(post_type or ""),
-            ))
+        for (
+            file_id,
+            md5,
+            published_at,
+            wp_post_id,
+            wp_post_url,
+            post_type,
+        ) in cur.fetchall():
+            rows.append(
+                StatePublishedRow(
+                    schema_version="1.0",
+                    file_id=file_id,
+                    md5=md5,
+                    published_at=int(published_at),
+                    wp_post_id=int(wp_post_id),
+                    wp_post_url=wp_post_url,
+                    post_type=str(post_type or ""),
+                )
+            )
     response = StatePublishedListResponse(schema_version="1.0", rows=rows)
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="state_published_list_complete",
-        module=logger.name,
-        fields={"state_db": request.state_db, "count": len(rows)},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="state_published_list_complete",
+            module=logger.name,
+            fields={"state_db": request.state_db, "count": len(rows)},
+        )
+    )
     return response

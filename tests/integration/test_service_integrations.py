@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -14,7 +15,7 @@ except ModuleNotFoundError:  # pragma: no cover - depends on PyMuPDF packaging a
     import pymupdf as fitz
 
 from src.contracts.drive import DriveListRequest
-from src.contracts.openai import OpenAIJSONPromptRequest
+from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIPdfOcrRequest
 from src.contracts.pdf_text import PdfTextExtractRequest
 from src.contracts.pdf_utils import PdfInfoRequest
 from src.contracts.run_context import RunContext
@@ -267,3 +268,90 @@ def test_openai_service_live_smoke_guarded(tmp_path):
         ctx=_ctx(),
     )
     assert response.text != ""
+
+
+def _service_events(caplog, logger_name: str) -> list[dict[str, object]]:
+    events: list[dict[str, object]] = []
+    for record in caplog.records:
+        if record.name != logger_name:
+            continue
+        payload = json.loads(record.message)
+        if isinstance(payload, dict):
+            events.append(payload)
+    return events
+
+
+def _write_image_only_pdf(pdf_path: Path) -> None:
+    raster_doc = fitz.open()
+    raster_page = raster_doc.new_page(width=900, height=1200)
+    raster_page.insert_text(
+        (72, 120),
+        "OpenAI OCR integration sample 2026",
+        fontsize=28,
+    )
+    raster_page.insert_text(
+        (72, 180),
+        "This PDF intentionally contains only an embedded image layer.",
+        fontsize=18,
+    )
+    image_bytes = raster_page.get_pixmap(dpi=150).tobytes("png")
+    raster_doc.close()
+
+    pdf_doc = fitz.open()
+    page = pdf_doc.new_page(width=595, height=842)
+    page.insert_image(page.rect, stream=image_bytes)
+    pdf_doc.save(pdf_path)
+    pdf_doc.close()
+
+
+@pytest.mark.integration
+def test_openai_service_live_ocr_guarded(
+    tmp_path: Path,
+    caplog,
+    assert_logs_have_required_fields,
+):
+    if os.getenv("RUN_OPENAI_OCR_INTEGRATION") != "1":
+        pytest.skip(
+            "Set RUN_OPENAI_OCR_INTEGRATION=1 to run live OpenAI OCR integration."
+        )
+
+    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    if not api_key:
+        pytest.skip("OPENAI_API_KEY is required.")
+
+    pdf_path = tmp_path / "scan-only.pdf"
+    _write_image_only_pdf(pdf_path)
+    extracted = pdf_service.extract_pdf_text(
+        PdfTextExtractRequest(
+            schema_version="1.0",
+            path=str(pdf_path),
+            max_pages=2,
+            max_chars=1000,
+        ),
+        _ctx(),
+    )
+    assert extracted.text.strip() == ""
+
+    caplog.set_level(logging.INFO, logger="market_lense.openai_service")
+    response = openai_service.openai_ocr_pdf(
+        OpenAIPdfOcrRequest(
+            schema_version="1.0",
+            api_key=api_key,
+            pdf_path=str(pdf_path),
+            model="gpt-5-mini",
+            system_prompt=(
+                'Return JSON only as {"pages":[{"page_number":1,"text":"..."}]}.'
+            ),
+            user_prompt="OCR this PDF and return page-structured text for every page.",
+            timeout_seconds=120.0,
+            cost_ledger_path=str(tmp_path / "ledger.jsonl"),
+            cost_daily_path=str(tmp_path / "daily.json"),
+            model_pricing={},
+        ),
+        _ctx(),
+    )
+
+    assert response.pages
+    assert any(page.text.strip() for page in response.pages)
+    events = _service_events(caplog, "market_lense.openai_service")
+    assert_logs_have_required_fields(events)

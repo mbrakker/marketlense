@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pymupdf as fitz
-from pypdf import PdfReader
+from pypdf import PdfReader, PdfWriter
 from pypdf.errors import PdfReadError, PdfStreamError
 
 from src.contracts.pdf_context import (
@@ -18,6 +18,12 @@ from src.contracts.pdf_text import (
     PdfTextSampleRequest,
     PdfTextSampleResponse,
 )
+from src.contracts.pdf_ocr import PdfTextRenderRequest, PdfTextRenderResponse
+from src.contracts.pdf_ocr import (
+    PdfOcrChunk,
+    PdfOcrSplitRequest,
+    PdfOcrSplitResponse,
+)
 from src.contracts.pdf_utils import (
     PdfEofCheckRequest,
     PdfEofCheckResponse,
@@ -31,14 +37,17 @@ from src.utils.pdf_utils import pdf_has_eof_marker as _pdf_has_eof_marker
 
 from .shared import EOF_TAIL_BYTES, logger
 
+
 def check_pdf_eof(request: PdfEofCheckRequest, ctx: RunContext) -> PdfEofCheckResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="pdf_eof_check_start",
-        module=logger.name,
-        fields={"path": request.path, "tail_bytes": EOF_TAIL_BYTES},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="pdf_eof_check_start",
+            module=logger.name,
+            fields={"path": request.path, "tail_bytes": EOF_TAIL_BYTES},
+        )
+    )
     try:
         path = Path(request.path)
         with path.open("rb") as fh:
@@ -65,24 +74,38 @@ def check_pdf_eof(request: PdfEofCheckRequest, ctx: RunContext) -> PdfEofCheckRe
             retryable=True,
         ) from exc
     has_eof = _pdf_has_eof_marker(data)
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="pdf_eof_check_complete",
-        module=logger.name,
-        fields={"path": request.path, "has_eof": has_eof, "tail_bytes": EOF_TAIL_BYTES},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="pdf_eof_check_complete",
+            module=logger.name,
+            fields={
+                "path": request.path,
+                "has_eof": has_eof,
+                "tail_bytes": EOF_TAIL_BYTES,
+            },
+        )
+    )
     return PdfEofCheckResponse(schema_version="1.0", path=request.path, has_eof=has_eof)
 
 
-def build_pdf_context(request: PdfContextBuildRequest, ctx: RunContext) -> PdfContextBuildResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="pdf_context_build_start",
-        module=logger.name,
-        fields={"path": request.path, "load_fitz": request.load_fitz, "load_pypdf": request.load_pypdf},
-    ))
+def build_pdf_context(
+    request: PdfContextBuildRequest, ctx: RunContext
+) -> PdfContextBuildResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="pdf_context_build_start",
+            module=logger.name,
+            fields={
+                "path": request.path,
+                "load_fitz": request.load_fitz,
+                "load_pypdf": request.load_pypdf,
+            },
+        )
+    )
 
     fitz_doc = None
     fitz_error = None
@@ -116,18 +139,20 @@ def build_pdf_context(request: PdfContextBuildRequest, ctx: RunContext) -> PdfCo
         pypdf_reader=pypdf_reader,
     )
 
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="pdf_context_build_complete",
-        module=logger.name,
-        fields={
-            "fitz_ready": fitz_doc is not None,
-            "pypdf_ready": pypdf_reader is not None,
-            "fitz_error": fitz_error or "",
-            "pypdf_error": pypdf_error or "",
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="pdf_context_build_complete",
+            module=logger.name,
+            fields={
+                "fitz_ready": fitz_doc is not None,
+                "pypdf_ready": pypdf_reader is not None,
+                "fitz_error": fitz_error or "",
+                "pypdf_error": pypdf_error or "",
+            },
+        )
+    )
 
     return PdfContextBuildResponse(
         schema_version="1.0",
@@ -138,13 +163,20 @@ def build_pdf_context(request: PdfContextBuildRequest, ctx: RunContext) -> PdfCo
 
 
 def extract_pdf_info(request: PdfInfoRequest, ctx: RunContext) -> PdfInfoResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="pdf_info_extract_start",
-        module=logger.name,
-        fields={"path": request.path, "using_context": bool(request.pdf_context and request.pdf_context.pypdf_reader)},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="pdf_info_extract_start",
+            module=logger.name,
+            fields={
+                "path": request.path,
+                "using_context": bool(
+                    request.pdf_context and request.pdf_context.pypdf_reader
+                ),
+            },
+        )
+    )
     reader = request.pdf_context.pypdf_reader if request.pdf_context else None
     owns_reader = False
     if reader is None:
@@ -181,32 +213,44 @@ def extract_pdf_info(request: PdfInfoRequest, ctx: RunContext) -> PdfInfoRespons
             page_count=page_count,
             metadata=metadata,
         )
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="pdf_info_extract_complete",
-            module=logger.name,
-            fields={"path": request.path, "page_count": page_count, "metadata_keys": list(metadata.keys())},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="pdf_info_extract_complete",
+                module=logger.name,
+                fields={
+                    "path": request.path,
+                    "page_count": page_count,
+                    "metadata_keys": list(metadata.keys()),
+                },
+            )
+        )
         return response
     finally:
         if owns_reader and reader is not None:
             _close_pypdf_reader(reader)
 
 
-def extract_pdf_text(request: PdfTextExtractRequest, ctx: RunContext) -> PdfTextExtractResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="pdf_text_extract_start",
-        module=logger.name,
-        fields={
-            "path": request.path,
-            "max_pages": request.max_pages,
-            "max_chars": request.max_chars,
-            "using_context": bool(request.pdf_context and request.pdf_context.pypdf_reader),
-        },
-    ))
+def extract_pdf_text(
+    request: PdfTextExtractRequest, ctx: RunContext
+) -> PdfTextExtractResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="pdf_text_extract_start",
+            module=logger.name,
+            fields={
+                "path": request.path,
+                "max_pages": request.max_pages,
+                "max_chars": request.max_chars,
+                "using_context": bool(
+                    request.pdf_context and request.pdf_context.pypdf_reader
+                ),
+            },
+        )
+    )
     reader = request.pdf_context.pypdf_reader if request.pdf_context else None
     owns_reader = False
     if reader is None:
@@ -254,31 +298,43 @@ def extract_pdf_text(request: PdfTextExtractRequest, ctx: RunContext) -> PdfText
             char_count=len(text_out),
             text_density=density,
         )
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="pdf_text_extract_complete",
-            module=logger.name,
-            fields={"pages": response.pages_extracted, "chars": response.char_count, "text_density": response.text_density},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="pdf_text_extract_complete",
+                module=logger.name,
+                fields={
+                    "pages": response.pages_extracted,
+                    "chars": response.char_count,
+                    "text_density": response.text_density,
+                },
+            )
+        )
         return response
     finally:
         if owns_reader and reader is not None:
             _close_pypdf_reader(reader)
 
 
-def sample_pdf_text(request: PdfTextSampleRequest, ctx: RunContext) -> PdfTextSampleResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="pdf_text_sample_start",
-        module=logger.name,
-        fields={
-            "path": request.path,
-            "page_indices": request.page_indices,
-            "using_context": bool(request.pdf_context and request.pdf_context.pypdf_reader),
-        },
-    ))
+def sample_pdf_text(
+    request: PdfTextSampleRequest, ctx: RunContext
+) -> PdfTextSampleResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="pdf_text_sample_start",
+            module=logger.name,
+            fields={
+                "path": request.path,
+                "page_indices": request.page_indices,
+                "using_context": bool(
+                    request.pdf_context and request.pdf_context.pypdf_reader
+                ),
+            },
+        )
+    )
     reader = request.pdf_context.pypdf_reader if request.pdf_context else None
     owns_reader = False
     if reader is None:
@@ -315,33 +371,223 @@ def sample_pdf_text(request: PdfTextSampleRequest, ctx: RunContext) -> PdfTextSa
                 continue
             text = _extract_text(reader, idx)
             char_count = len(text)
-            samples.append(PdfTextSample(
-                page_index=idx,
-                page_number=idx + 1,
-                char_count=char_count,
-                has_text=bool(text.strip()),
-            ))
+            samples.append(
+                PdfTextSample(
+                    page_index=idx,
+                    page_number=idx + 1,
+                    char_count=char_count,
+                    has_text=bool(text.strip()),
+                )
+            )
         any_text = any(sample.has_text for sample in samples)
         response = PdfTextSampleResponse(
             schema_version="1.0",
             samples=samples,
             any_text=any_text,
         )
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="pdf_text_sample_complete",
-            module=logger.name,
-            fields={
-                "sample_count": len(samples),
-                "any_text": any_text,
-                "page_indices": [sample.page_index for sample in samples],
-            },
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="pdf_text_sample_complete",
+                module=logger.name,
+                fields={
+                    "sample_count": len(samples),
+                    "any_text": any_text,
+                    "page_indices": [sample.page_index for sample in samples],
+                },
+            )
+        )
         return response
     finally:
         if owns_reader and reader is not None:
             _close_pypdf_reader(reader)
+
+
+def render_text_pdf(
+    request: PdfTextRenderRequest,
+    ctx: RunContext,
+) -> PdfTextRenderResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="pdf_text_render_start",
+            module=logger.name,
+            fields={
+                "output_path": request.output_path,
+                "page_count": len(request.pages),
+            },
+        )
+    )
+    output_path = Path(request.output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    doc = fitz.open()
+    try:
+        for page in sorted(request.pages, key=lambda item: item.page_number):
+            _append_text_page(doc, page.text)
+        doc.save(output_path.as_posix())
+    except Exception as exc:
+        raise AppError(
+            code="pdf_text_render_failed",
+            message=f"Failed to render OCR PDF: {request.output_path}",
+            cause=exc,
+            retryable=False,
+        ) from exc
+    finally:
+        doc.close()
+    response = PdfTextRenderResponse(
+        schema_version="1.0",
+        output_path=str(output_path),
+        rendered_page_count=len(request.pages),
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="pdf_text_render_complete",
+            module=logger.name,
+            fields={
+                "output_path": response.output_path,
+                "rendered_page_count": response.rendered_page_count,
+            },
+        )
+    )
+    return response
+
+
+def split_pdf_for_ocr(
+    request: PdfOcrSplitRequest,
+    ctx: RunContext,
+) -> PdfOcrSplitResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="pdf_ocr_split_start",
+            module=logger.name,
+            fields={
+                "source_pdf_path": request.source_pdf_path,
+                "output_dir": request.output_dir,
+                "chunk_page_count": request.chunk_page_count,
+            },
+        )
+    )
+    source_pdf_path = Path(request.source_pdf_path)
+    if request.chunk_page_count < 1:
+        raise AppError(
+            code="pdf_ocr_split_invalid_request",
+            message="chunk_page_count must be at least 1",
+            retryable=False,
+        )
+    try:
+        reader = PdfReader(source_pdf_path.as_posix(), strict=False)
+    except FileNotFoundError as exc:
+        raise AppError(
+            code="pdf_not_found",
+            message=f"PDF not found: {request.source_pdf_path}",
+            cause=exc,
+            retryable=False,
+        ) from exc
+    except (PdfReadError, PdfStreamError) as exc:
+        raise AppError(
+            code="pdf_ocr_split_read_failed",
+            message=f"Failed to read PDF for OCR split: {request.source_pdf_path}",
+            cause=exc,
+            retryable=True,
+        ) from exc
+    except Exception as exc:
+        raise AppError(
+            code="pdf_ocr_split_read_failed",
+            message=f"Failed to read PDF for OCR split: {request.source_pdf_path}",
+            cause=exc,
+            retryable=True,
+        ) from exc
+
+    try:
+        total_pages = len(reader.pages)
+        if total_pages < 1:
+            raise AppError(
+                code="pdf_ocr_split_invalid_request",
+                message="Cannot split a PDF with zero pages for OCR",
+                retryable=False,
+            )
+        if total_pages <= request.chunk_page_count:
+            chunk = PdfOcrChunk(
+                schema_version="1.0",
+                chunk_index=1,
+                source_pdf_path=request.source_pdf_path,
+                chunk_pdf_path=request.source_pdf_path,
+                start_page_number=1,
+                end_page_number=total_pages,
+                page_count=total_pages,
+            )
+            response = PdfOcrSplitResponse(schema_version="1.0", chunks=[chunk])
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="pdf_ocr_split_complete",
+                    module=logger.name,
+                    fields={
+                        "source_pdf_path": request.source_pdf_path,
+                        "chunk_count": 1,
+                        "total_pages": total_pages,
+                        "single_chunk_passthrough": True,
+                    },
+                )
+            )
+            return response
+
+        output_dir = Path(request.output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        chunks: list[PdfOcrChunk] = []
+        stem = source_pdf_path.stem or "ocr"
+        for chunk_index, start_idx in enumerate(
+            range(0, total_pages, request.chunk_page_count), start=1
+        ):
+            end_idx = min(start_idx + request.chunk_page_count, total_pages)
+            writer = PdfWriter()
+            for page_idx in range(start_idx, end_idx):
+                writer.add_page(reader.pages[page_idx])
+            start_page_number = start_idx + 1
+            end_page_number = end_idx
+            chunk_pdf_path = output_dir / (
+                f"{stem}.ocr-pages-{start_page_number:04d}-{end_page_number:04d}.pdf"
+            )
+            with chunk_pdf_path.open("wb") as handle:
+                writer.write(handle)
+            chunks.append(
+                PdfOcrChunk(
+                    schema_version="1.0",
+                    chunk_index=chunk_index,
+                    source_pdf_path=request.source_pdf_path,
+                    chunk_pdf_path=chunk_pdf_path.as_posix(),
+                    start_page_number=start_page_number,
+                    end_page_number=end_page_number,
+                    page_count=end_idx - start_idx,
+                )
+            )
+    finally:
+        _close_pypdf_reader(reader)
+
+    response = PdfOcrSplitResponse(schema_version="1.0", chunks=chunks)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="pdf_ocr_split_complete",
+            module=logger.name,
+            fields={
+                "source_pdf_path": request.source_pdf_path,
+                "chunk_count": len(response.chunks),
+                "total_pages": total_pages,
+                "single_chunk_passthrough": False,
+            },
+        )
+    )
+    return response
+
 
 def _normalize_metadata(raw_meta) -> dict[str, str]:
     if not raw_meta:
@@ -374,6 +620,31 @@ def _extract_text(reader: PdfReader, page_index: int) -> str:
         return reader.pages[page_index].extract_text() or ""
     except Exception:
         return ""
+
+
+def _append_text_page(doc: fitz.Document, text: str) -> None:
+    margin = 36.0
+    page_width = 595.0
+    estimated_lines = _estimate_wrapped_lines(text)
+    line_height = 11.0
+    page_height = max(842.0, margin * 2 + (estimated_lines + 2) * line_height)
+    page = doc.new_page(width=page_width, height=page_height)
+    rect = fitz.Rect(margin, margin, page_width - margin, page_height - margin)
+    page.insert_textbox(rect, text, fontsize=9, fontname="helv", lineheight=1.2)
+
+
+def _estimate_wrapped_lines(text: str) -> int:
+    if not text.strip():
+        return 1
+    line_count = 0
+    for raw_line in text.splitlines() or [""]:
+        token = raw_line.rstrip()
+        if not token:
+            line_count += 1
+            continue
+        line_count += max(1, (len(token) // 90) + 1)
+    return max(line_count, 1)
+
 
 def _close_pypdf_reader(reader: PdfReader) -> None:
     try:

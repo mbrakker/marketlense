@@ -19,7 +19,11 @@ from src.contracts.report_generation import (
 )
 from src.contracts.state import StateGetRequest
 from src.contracts.taxonomy import TaxonomyExtractRequest
-from src.contracts.validation import ValidationIssue, ValidationReport, ValidationRequest
+from src.contracts.validation import (
+    ValidationIssue,
+    ValidationReport,
+    ValidationRequest,
+)
 from src.contracts.vector_store import (
     VectorStoreAttachFileRequest,
     VectorStoreCreateRequest,
@@ -65,6 +69,7 @@ def _is_vector_store_ready(status: Optional[str]) -> bool:
 
 def start_vector_store_indexing(
     runtime: ReportRuntimeState,
+    source: ReportSourceState | None,
     dependencies: ReportGeneratorDependencies,
 ) -> VectorStoreIndexingState:
     vector_store_id = None
@@ -72,6 +77,11 @@ def start_vector_store_indexing(
     vector_store_status = None
     indexed_at_utc = None
     last_error = None
+    analysis_pdf_path = (
+        source.analysis_pdf_path
+        if source is not None and source.analysis_pdf_path
+        else runtime.local_pdf_path
+    )
 
     mode_ctx = child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:vector_store")
     logger.info(
@@ -80,7 +90,10 @@ def start_vector_store_indexing(
             role="generator",
             event="vector_store_prepare_start",
             module=logger.name,
-            fields={"file_id": runtime.file.file_id, "analysis_mode": runtime.analysis_mode},
+            fields={
+                "file_id": runtime.file.file_id,
+                "analysis_mode": runtime.analysis_mode,
+            },
         )
     )
     existing = None
@@ -104,7 +117,10 @@ def start_vector_store_indexing(
                 role="generator",
                 event="vector_store_reuse",
                 module=logger.name,
-                fields={"file_id": runtime.file.file_id, "vector_store_id": vector_store_id},
+                fields={
+                    "file_id": runtime.file.file_id,
+                    "vector_store_id": vector_store_id,
+                },
             )
         )
         status_resp = dependencies.vector_store_get_status(
@@ -112,7 +128,7 @@ def start_vector_store_indexing(
                 schema_version="1.0",
                 vector_store_id=vector_store_id,
             ),
-            ctx=mode_ctx,
+            mode_ctx,
         )
         vector_store_status = status_resp.status
         indexed_at_utc = status_resp.indexed_at_utc
@@ -141,14 +157,17 @@ def start_vector_store_indexing(
                 role="generator",
                 event="vector_store_created",
                 module=logger.name,
-                fields={"file_id": runtime.file.file_id, "vector_store_id": vector_store_id},
+                fields={
+                    "file_id": runtime.file.file_id,
+                    "vector_store_id": vector_store_id,
+                },
             )
         )
         upload_resp = dependencies.vector_store_upload_file(
             VectorStoreUploadFileRequest(
                 schema_version="1.0",
                 vector_store_id=vector_store_id,
-                file_path=runtime.local_pdf_path,
+                file_path=analysis_pdf_path,
             ),
             mode_ctx,
         )
@@ -249,7 +268,10 @@ def _await_vector_store_indexing(
             role="generator",
             event="vector_store_wait_start",
             module=logger.name,
-            fields={"vector_store_id": vector_store_id, "status": state.vector_store_status or ""},
+            fields={
+                "vector_store_id": vector_store_id,
+                "status": state.vector_store_status or "",
+            },
         )
     )
     status_resp = dependencies.vector_store_wait_until_indexed(
@@ -259,7 +281,7 @@ def _await_vector_store_indexing(
             timeout_s=int(runtime.settings.openai_timeout_seconds),
             poll_interval_s=5,
         ),
-        ctx=mode_ctx,
+        mode_ctx,
     )
     ready_state = VectorStoreIndexingState(
         vector_store_id=vector_store_id,
@@ -288,7 +310,7 @@ def ensure_vector_store(
     runtime: ReportRuntimeState,
     dependencies: ReportGeneratorDependencies,
 ) -> tuple[Optional[str], Optional[str], Optional[str], Optional[str], Optional[str]]:
-    indexing_state = start_vector_store_indexing(runtime, dependencies)
+    indexing_state = start_vector_store_indexing(runtime, None, dependencies)
     ready_state = _await_vector_store_indexing(
         indexing_state,
         runtime,
@@ -404,4 +426,7 @@ def complete_report_analysis(
         dependencies,
         evidence_pack_openai_client=evidence_pack_openai_client,
         artifact_openai_client=artifact_openai_client,
+    )
+    analysis_pdf_path = (
+        source.analysis_pdf_path if source is not None else runtime.local_pdf_path
     )

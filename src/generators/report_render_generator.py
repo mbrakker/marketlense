@@ -139,7 +139,9 @@ def render_report_output(
     template_sha = None
     html_cache_meta = None
     html_key = ""
-    expected_html_path = Path(runtime.settings.output_dir) / f"{runtime.report_name}.html"
+    expected_html_path = (
+        Path(runtime.settings.output_dir) / f"{runtime.report_name}.html"
+    )
     if runtime.md5:
         template_path = (
             Path(__file__).resolve().parents[2] / "templates" / "report.html.j2"
@@ -178,7 +180,10 @@ def render_report_output(
                             role="generator",
                             event="render_html_cache_hit",
                             module=logger.name,
-                            fields={"file_id": runtime.file.file_id, "html_path": out_html},
+                            fields={
+                                "file_id": runtime.file.file_id,
+                                "html_path": out_html,
+                            },
                         )
                     )
                 else:
@@ -235,12 +240,17 @@ def render_report_output(
                     role="generator",
                     event="render_html_cache_written",
                     module=logger.name,
-                    fields={"file_id": runtime.file.file_id, "cache_path": str(cache_path)},
+                    fields={
+                        "file_id": runtime.file.file_id,
+                        "cache_path": str(cache_path),
+                    },
                 )
             )
 
     dependencies.upsert_report_metadata(
-        _build_metadata_upsert_request(runtime, source, analysis, html_path_value=out_html),
+        _build_metadata_upsert_request(
+            runtime, source, analysis, html_path_value=out_html
+        ),
         runtime.ctx,
     )
 
@@ -258,8 +268,12 @@ def render_report_output(
         if cover_meta
         else (analysis.payload.publisher or "")
     )
-    cover_time_period = cover_meta.time_period if cover_meta else (analysis.payload.time_period or None)
-    cover_region = cover_meta.region if cover_meta else (analysis.payload.region or None)
+    cover_time_period = (
+        cover_meta.time_period if cover_meta else (analysis.payload.time_period or None)
+    )
+    cover_region = (
+        cover_meta.region if cover_meta else (analysis.payload.region or None)
+    )
 
     cover_ctx = child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:cover_image")
     try:
@@ -321,7 +335,9 @@ def render_report_output(
             module=logger.name,
             fields={
                 "report_generation": None,
-                "rank_candidates": selection.rank_usage if selection.candidate_count else None,
+                "rank_candidates": selection.rank_usage
+                if selection.candidate_count
+                else None,
             },
         )
     )
@@ -355,4 +371,6 @@ def render_report_output(
         text_validation_status=source.text_validation_status,
         text_validation_reason=source.text_validation_reason,
         text_validation_pages=source.text_validation_pages,
+        ocr_fallback_used=source.ocr_fallback_used,
+        ocr_pdf_path=source.ocr_pdf_path or None,
     )

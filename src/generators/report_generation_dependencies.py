@@ -9,11 +9,18 @@ from src.contracts.categories import (
 )
 from src.contracts.cover_images import CoverImageGenerationRequest
 from src.contracts.files import FileStatRequest, ReadTextRequest, WriteBytesRequest
+from src.contracts.openai import OpenAIPdfOcrRequest, OpenAIPdfOcrResponse
 from src.contracts.pdf_contents import (
     PdfContentsDetectionRequest,
     PdfContentsDetectionResponse,
 )
 from src.contracts.pdf_context import PdfContextBuildRequest
+from src.contracts.pdf_ocr import (
+    PdfOcrSplitRequest,
+    PdfOcrSplitResponse,
+    PdfTextRenderRequest,
+    PdfTextRenderResponse,
+)
 from src.contracts.pdf_text import (
     PdfTextExtractRequest,
     PdfTextExtractResponse,
@@ -64,7 +71,12 @@ from src.generators.evidence_pack_generator import generate_evidence_packs
 from src.generators.report_regeneration_generator import regenerate_artifacts
 from src.generators.taxonomy_generator import extract_taxonomy
 from src.generators.validation_generator import validate_report as run_validation
-from src.services import report_analysis_store_service, state_service, vector_store_service
+from src.services import (
+    openai_service,
+    report_analysis_store_service,
+    state_service,
+    vector_store_service,
+)
 from src.services.category_mapping_service import (
     load_mappings as load_category_mappings,
     update_uncategorized_tags,
@@ -79,9 +91,11 @@ from src.services.pdf_service import (
     extract_best_figure as extract_best_figure_service,
     extract_pdf_info,
     extract_pdf_text,
+    render_text_pdf,
     render_page_for_crop_refine as render_page_for_crop_refine_service,
     render_preview as render_preview_service,
     sample_pdf_text,
+    split_pdf_for_ocr,
 )
 from src.services.prompt_service import load_prompt_set, render_prompt
 from src.services.rank_service import (
@@ -113,6 +127,8 @@ class ReportGeneratorDependencies:
         [PdfContentsDetectionRequest, RunContext], PdfContentsDetectionResponse
     ]
     render_preview: Callable[[PreviewRequest, RunContext], Any]
+    render_text_pdf: Callable[[PdfTextRenderRequest, RunContext], PdfTextRenderResponse]
+    split_pdf_for_ocr: Callable[[PdfOcrSplitRequest, RunContext], PdfOcrSplitResponse]
     extract_pdf_text: Callable[
         [PdfTextExtractRequest, RunContext], PdfTextExtractResponse
     ]
@@ -128,6 +144,7 @@ class ReportGeneratorDependencies:
     refine_candidate_crops: Callable[[CropRefineRequest, RunContext], Any]
     load_prompt_set: Callable[[PromptLoadRequest, RunContext], Any]
     render_prompt: Callable[[PromptRenderRequest, RunContext], Any]
+    openai_ocr_pdf: Callable[[OpenAIPdfOcrRequest, RunContext], OpenAIPdfOcrResponse]
     file_stat: Callable[[FileStatRequest, RunContext], Any]
     read_text: Callable[[ReadTextRequest, RunContext], Any]
     write_bytes: Callable[[WriteBytesRequest, RunContext], Any]
@@ -165,6 +182,8 @@ class ReportGeneratorDependencies:
             extract_pdf_info=extract_pdf_info,
             detect_contents_page=detect_contents_page_service,
             render_preview=render_preview_service,
+            render_text_pdf=render_text_pdf,
+            split_pdf_for_ocr=split_pdf_for_ocr,
             extract_pdf_text=extract_pdf_text,
             sample_pdf_text=sample_pdf_text,
             extract_best_figure=extract_best_figure_service,
@@ -176,6 +195,7 @@ class ReportGeneratorDependencies:
             refine_candidate_crops=refine_candidate_crops_service,
             load_prompt_set=load_prompt_set,
             render_prompt=render_prompt,
+            openai_ocr_pdf=openai_service.openai_ocr_pdf,
             file_stat=file_stat,
             read_text=read_text,
             write_bytes=write_bytes,

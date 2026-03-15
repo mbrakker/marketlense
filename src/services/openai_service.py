@@ -30,6 +30,8 @@ from src.contracts.openai import (
     OpenAIAnalyzeResponse,
     OpenAIJSONImagePromptRequest,
     OpenAIJSONPromptRequest,
+    OpenAIPdfOcrRequest,
+    OpenAIPdfOcrResponse,
     OpenAIResponseRequest,
     OpenAIResponseResult,
     OpenAIVectorStoreAttachFileRequest,
@@ -43,6 +45,7 @@ from src.contracts.openai import (
     OpenAIVectorStoreUpdateMetadataRequest,
     OpenAIVectorStoreUpdateMetadataResponse,
 )
+from src.contracts.pdf_ocr import PdfOcrPageText
 from src.contracts.run_context import RunContext
 from src.services.cost_ledger_service import (
     append_entry as append_cost_entry,
@@ -72,6 +75,35 @@ _RESPONSES_IMAGE_UNSUPPORTED_PARAM_PREFIXES: dict[str, tuple[str, ...]] = {
     # GPT-5 image calls via Responses API reject temperature/seed.
     "gpt-5": ("temperature", "seed"),
 }
+OPENAI_OCR_RESPONSE_FORMAT = {
+    "type": "json_schema",
+    "name": "pdf_ocr_pages",
+    "strict": True,
+    "schema": {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "pages": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "page_number": {"type": "integer"},
+                        "text": {"type": "string"},
+                    },
+                    "required": ["page_number", "text"],
+                },
+            }
+        },
+        "required": ["pages"],
+    },
+}
+
+
+def _bytes_to_data_url(raw: bytes, *, mime: str) -> str:
+    encoded = base64.b64encode(raw).decode("ascii")
+    return f"data:{mime};base64,{encoded}"
 
 
 def _image_path_to_data_url(path: str) -> str:
@@ -94,8 +126,7 @@ def _image_path_to_data_url(path: str) -> str:
         ) from exc
     mime, _ = mimetypes.guess_type(path)
     mime = mime or "image/png"
-    encoded = base64.b64encode(raw).decode("ascii")
-    return f"data:{mime};base64,{encoded}"
+    return _bytes_to_data_url(raw, mime=mime)
 
 
 def _validate_payload(data: dict) -> None:
@@ -259,6 +290,136 @@ def _known_unsupported_image_params(model: str) -> set[str]:
         if normalized.startswith(prefix):
             unsupported.update(params)
     return unsupported
+
+
+def _extract_responses_output_text(resp: Any) -> str:
+    text = getattr(resp, "output_text", None)
+    if isinstance(text, str) and text:
+        return text
+    output = (
+        getattr(resp, "output", None)
+        or getattr(resp, "choices", None)
+        or getattr(resp, "data", None)
+    )
+    if isinstance(output, list) and output:
+        first = output[0]
+        content = getattr(first, "content", None) or (
+            first.get("content") if isinstance(first, dict) else None
+        )
+        if isinstance(content, list) and content:
+            maybe_text = getattr(content[0], "text", None) or (
+                content[0].get("text") if isinstance(content[0], dict) else None
+            )
+            if isinstance(maybe_text, str):
+                return maybe_text
+    text = getattr(resp, "text", None)
+    return text if isinstance(text, str) else ""
+
+
+def _extract_responses_usage(resp: Any) -> tuple[int | None, int | None, int]:
+    usage = getattr(resp, "usage", None) or {}
+    input_tokens = getattr(usage, "input_tokens", None) if usage else None
+    output_tokens = getattr(usage, "output_tokens", None) if usage else None
+    tool_calls = 0
+    if isinstance(usage, dict):
+        input_tokens = usage.get("input_tokens")
+        output_tokens = usage.get("output_tokens")
+        tool_calls = usage.get("total_tool_calls") or usage.get("tool_calls") or 0
+    return input_tokens, output_tokens, int(tool_calls or 0)
+
+
+def _append_cost_entry_safe(
+    *,
+    ctx: RunContext,
+    step_name: str,
+    model: str,
+    input_tokens: int | None,
+    output_tokens: int | None,
+    tool_calls: int,
+    cost_ledger_path: str,
+    cost_daily_path: str,
+    model_pricing: dict,
+    request_id: str | None,
+    cached_input_tokens: int | None = None,
+) -> None:
+    estimated_cost = estimate_cost_usd(
+        model,
+        int(input_tokens or 0),
+        int(output_tokens or 0),
+        int(tool_calls or 0),
+        pricing=model_pricing or {},
+    )
+    try:
+        entry = CostLedgerEntry(
+            schema_version="1.0",
+            timestamp_utc=datetime.now(timezone.utc).isoformat(),
+            run_id=ctx.run_id,
+            task_id=ctx.task_id,
+            span_id=ctx.span_id,
+            step_name=step_name,
+            model=model,
+            input_tokens=int(input_tokens or 0),
+            output_tokens=int(output_tokens or 0),
+            cached_input_tokens=cached_input_tokens,
+            tool_calls=int(tool_calls or 0),
+            estimated_cost_usd=estimated_cost,
+            extra={"request_id": str(request_id) if request_id else None},
+        )
+        append_cost_entry(
+            CostLedgerAppendRequest(
+                schema_version="1.0", path=cost_ledger_path, entry=entry
+            ),
+            ctx,
+        )
+        rollup_daily(
+            CostRollupRequest(
+                schema_version="1.0",
+                ledger_path=cost_ledger_path,
+                out_path=cost_daily_path,
+            ),
+            ctx,
+        )
+    except (
+        Exception
+    ) as exc:  # pragma: no cover - ledger failures must not break main flow
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="cost_ledger_write_failed",
+                module=logger.name,
+                fields={"error": str(exc)},
+            )
+        )
+
+
+def _coerce_pdf_ocr_pages(payload: dict | None) -> list[PdfOcrPageText]:
+    if not isinstance(payload, dict):
+        return []
+    raw_pages = payload.get("pages")
+    if not isinstance(raw_pages, list):
+        return []
+    pages: list[PdfOcrPageText] = []
+    seen_numbers: set[int] = set()
+    for item in raw_pages:
+        if not isinstance(item, dict):
+            continue
+        try:
+            page_number = int(str(item.get("page_number") or "").strip())
+        except (TypeError, ValueError):
+            continue
+        if page_number < 1 or page_number in seen_numbers:
+            continue
+        seen_numbers.add(page_number)
+        pages.append(
+            PdfOcrPageText(
+                schema_version="1.0",
+                page_number=page_number,
+                text=str(item.get("text") or ""),
+            )
+        )
+    pages.sort(key=lambda page: page.page_number)
+    return pages
 
 
 def _legacy_chat_completion(request: OpenAIAnalyzeRequest) -> Dict[str, Any]:
@@ -747,7 +908,7 @@ def openai_chat_json_with_images(
         user_content.extend(
             {"type": "input_image", "image_url": image_url} for image_url in image_urls
         )
-        payload_args = {
+        payload_args: dict[str, Any] = {
             "model": request.model,
             "input": [
                 {
@@ -905,6 +1066,176 @@ def openai_chat_json_with_images(
         total_tokens=(int(input_tokens or 0) + int(output_tokens or 0)),
         request_id=str(request_id) if request_id else None,
     )
+
+
+def openai_ocr_pdf(
+    request: OpenAIPdfOcrRequest, ctx: RunContext
+) -> OpenAIPdfOcrResponse:
+    pdf_path_raw = str(request.pdf_path or "").strip()
+    if not pdf_path_raw:
+        raise AppError(
+            code="openai_ocr_invalid_request",
+            message="pdf_path is required for OpenAI OCR",
+            retryable=False,
+        )
+    pdf_path = Path(pdf_path_raw)
+    try:
+        pdf_bytes = pdf_path.read_bytes()
+    except FileNotFoundError as exc:
+        raise AppError(
+            code="openai_ocr_missing_pdf",
+            message=f"PDF not found for OCR: {pdf_path}",
+            cause=exc,
+            retryable=False,
+        ) from exc
+    except Exception as exc:
+        raise AppError(
+            code="openai_ocr_pdf_read_failed",
+            message=f"Failed to read PDF for OCR: {pdf_path}",
+            cause=exc,
+            retryable=False,
+        ) from exc
+
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="openai_ocr_pdf_start",
+            module=logger.name,
+            fields={
+                "pdf_path": str(pdf_path),
+                "pdf_size_bytes": len(pdf_bytes),
+                "model": request.model,
+                "timeout_seconds": request.timeout_seconds,
+                "structured_output": True,
+                "input_content_types": ["input_text", "input_file"],
+            },
+        )
+    )
+    try:
+        client = _build_openai_client(
+            api_key=request.api_key,
+            timeout_seconds=request.timeout_seconds,
+            operation="ocr_pdf",
+        )
+        resp = client.responses.create(
+            model=request.model,
+            instructions=request.system_prompt,
+            input=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "input_text", "text": request.user_prompt},
+                        {
+                            "type": "input_file",
+                            "filename": pdf_path.name,
+                            "file_data": _bytes_to_data_url(
+                                pdf_bytes, mime="application/pdf"
+                            ),
+                        },
+                    ],
+                }
+            ],
+            text={"format": OPENAI_OCR_RESPONSE_FORMAT},
+        )
+    except AppError:
+        raise
+    except Exception as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="openai_ocr_pdf_error",
+                module=logger.name,
+                fields={
+                    "model": request.model,
+                    "pdf_path": str(pdf_path),
+                    "error_type": type(exc).__name__,
+                    "error": str(exc),
+                },
+            )
+        )
+        raise AppError(
+            code="openai_ocr_request_failed",
+            message="OpenAI OCR request failed",
+            cause=exc,
+            retryable=True,
+            context={"model": request.model, "pdf_path": str(pdf_path)},
+        ) from exc
+
+    text = _extract_responses_output_text(resp)
+    request_id = getattr(resp, "id", None)
+    resolved_model = str(getattr(resp, "model", None) or request.model)
+    input_tokens, output_tokens, tool_calls = _extract_responses_usage(resp)
+    parsed_json, parse_strategy = _parse_json_object_from_text(text)
+    pages = _coerce_pdf_ocr_pages(parsed_json)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="openai_ocr_pdf_response_received",
+            module=logger.name,
+            fields={
+                "model": resolved_model,
+                "request_id": request_id or "",
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "tool_calls": tool_calls,
+                "parse_strategy": parse_strategy,
+                "page_count": len(pages),
+            },
+        )
+    )
+    if not pages or not any(page.text.strip() for page in pages):
+        raise AppError(
+            code="openai_ocr_invalid_response",
+            message="OpenAI OCR returned no structured pages",
+            retryable=False,
+            context={
+                "model": resolved_model,
+                "request_id": str(request_id) if request_id else "",
+                "parse_strategy": parse_strategy,
+                "response_text_preview": text[:400],
+            },
+        )
+
+    _append_cost_entry_safe(
+        ctx=ctx,
+        step_name="openai_ocr_pdf",
+        model=resolved_model,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        tool_calls=tool_calls,
+        cost_ledger_path=request.cost_ledger_path,
+        cost_daily_path=request.cost_daily_path,
+        model_pricing=request.model_pricing,
+        request_id=str(request_id) if request_id else None,
+    )
+    response = OpenAIPdfOcrResponse(
+        schema_version="1.0",
+        pages=pages,
+        raw_text=text,
+        model=resolved_model,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        tool_calls=tool_calls,
+        request_id=str(request_id) if request_id else None,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="openai_ocr_pdf_complete",
+            module=logger.name,
+            fields={
+                "request_id": response.request_id or "",
+                "model": response.model,
+                "page_count": len(response.pages),
+                "first_page": response.pages[0].page_number if response.pages else 0,
+            },
+        )
+    )
+    return response
 
 
 def openai_respond_with_vector_store(

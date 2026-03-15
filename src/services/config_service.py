@@ -604,6 +604,29 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         artifact_global_min_interval_ms = 0
     pdf_text_min_density = _to_float(pdf_text.get("min_density"), 250.0)
     pdf_text_sample_pages = _to_int(pdf_text.get("sample_pages"), 3)
+    ocr_fallback_cfg = pdf_text.get("ocr_fallback") or {}
+    pdf_text_ocr_enabled = _to_bool(ocr_fallback_cfg.get("enabled"), False)
+    pdf_text_ocr_model = (
+        str(ocr_fallback_cfg.get("model") or "gpt-5-mini").strip() or "gpt-5-mini"
+    )
+    pdf_text_ocr_timeout_seconds = _to_float(
+        ocr_fallback_cfg.get("timeout_seconds"),
+        _to_float(ingest.get("timeout_seconds"), 600.0),
+    )
+    pdf_text_ocr_prompt_namespace = (
+        str(ocr_fallback_cfg.get("prompt_namespace") or "pdf_text/ocr_fallback").strip()
+        or "pdf_text/ocr_fallback"
+    )
+    pdf_text_ocr_cache_enabled = _to_bool(
+        ocr_fallback_cfg.get("cache_enabled"),
+        True,
+    )
+    pdf_text_ocr_chunk_page_count = _to_int(
+        ocr_fallback_cfg.get("chunk_page_count"),
+        8,
+    )
+    if pdf_text_ocr_chunk_page_count < 1:
+        pdf_text_ocr_chunk_page_count = 1
     data_gap_policy_raw = (
         str(validation_cfg.get("data_gap_policy", "warn")).strip().lower()
     )
@@ -735,6 +758,12 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         pdf_text_max_chars=_to_int(pdf_text.get("max_chars"), 80_000),
         pdf_text_min_density=pdf_text_min_density,
         pdf_text_sample_pages=pdf_text_sample_pages,
+        pdf_text_ocr_enabled=pdf_text_ocr_enabled,
+        pdf_text_ocr_model=pdf_text_ocr_model,
+        pdf_text_ocr_timeout_seconds=pdf_text_ocr_timeout_seconds,
+        pdf_text_ocr_prompt_namespace=pdf_text_ocr_prompt_namespace,
+        pdf_text_ocr_cache_enabled=pdf_text_ocr_cache_enabled,
+        pdf_text_ocr_chunk_page_count=pdf_text_ocr_chunk_page_count,
         rank_model=rank_model,
         rank_temperature=rank_temperature,
         rank_seed=_opt_int(rank_seed_raw),
@@ -842,6 +871,12 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
                 "pdf_text_max_chars": settings.pdf_text_max_chars,
                 "pdf_text_min_density": settings.pdf_text_min_density,
                 "pdf_text_sample_pages": settings.pdf_text_sample_pages,
+                "pdf_text_ocr_enabled": settings.pdf_text_ocr_enabled,
+                "pdf_text_ocr_model": settings.pdf_text_ocr_model,
+                "pdf_text_ocr_timeout_seconds": settings.pdf_text_ocr_timeout_seconds,
+                "pdf_text_ocr_prompt_namespace": settings.pdf_text_ocr_prompt_namespace,
+                "pdf_text_ocr_cache_enabled": settings.pdf_text_ocr_cache_enabled,
+                "pdf_text_ocr_chunk_page_count": settings.pdf_text_ocr_chunk_page_count,
                 "openai_timeout_seconds": settings.openai_timeout_seconds,
                 "rank_timeout_seconds": settings.rank_timeout_seconds,
                 "contents_max_pages": settings.contents_max_pages,

@@ -67,9 +67,18 @@ def test_migration_adds_vector_columns_and_preserves_data(tmp_path: Path) -> Non
     conn = sqlite3.connect(db_path)
     cols = {row[1] for row in conn.execute("PRAGMA table_info(processed)")}
     conn.close()
-    assert {"vector_store_id", "vector_store_status", "indexed_at_utc", "last_error", "doc_map_summary_json"}.issubset(cols)
+    assert {
+        "vector_store_id",
+        "vector_store_status",
+        "indexed_at_utc",
+        "last_error",
+        "doc_map_summary_json",
+    }.issubset(cols)
 
-    resp = get(StateGetRequest(schema_version="1.0", state_db=str(db_path), file_id="file-1"), _ctx())
+    resp = get(
+        StateGetRequest(schema_version="1.0", state_db=str(db_path), file_id="file-1"),
+        _ctx(),
+    )
     assert resp is not None
     assert resp.file_id == "file-1"
     assert resp.vector_store_id == "vs_123"
@@ -92,10 +101,15 @@ def test_record_and_get_with_defaults(tmp_path: Path) -> None:
         _ctx(),
     )
     assert already_processed(
-        StateCheckRequest(schema_version="1.0", state_db=str(db_path), file_id="file-2", md5="md5-2"),
+        StateCheckRequest(
+            schema_version="1.0", state_db=str(db_path), file_id="file-2", md5="md5-2"
+        ),
         _ctx(),
     )
-    resp = get(StateGetRequest(schema_version="1.0", state_db=str(db_path), file_id="file-2"), _ctx())
+    resp = get(
+        StateGetRequest(schema_version="1.0", state_db=str(db_path), file_id="file-2"),
+        _ctx(),
+    )
     assert resp is not None
     assert resp.vector_store_id is None
     assert resp.vector_store_status is None
@@ -129,15 +143,23 @@ def test_already_processed_batch_returns_only_matched_pairs(tmp_path: Path) -> N
             schema_version="1.0",
             state_db=str(db_path),
             items=[
-                StateBatchCheckItem(schema_version="1.0", file_id="file-1", md5="md5-1"),
-                StateBatchCheckItem(schema_version="1.0", file_id="file-2", md5="no-match"),
-                StateBatchCheckItem(schema_version="1.0", file_id="file-1", md5="md5-1"),
+                StateBatchCheckItem(
+                    schema_version="1.0", file_id="file-1", md5="md5-1"
+                ),
+                StateBatchCheckItem(
+                    schema_version="1.0", file_id="file-2", md5="no-match"
+                ),
+                StateBatchCheckItem(
+                    schema_version="1.0", file_id="file-1", md5="md5-1"
+                ),
                 StateBatchCheckItem(schema_version="1.0", file_id=" ", md5=" "),
             ],
         ),
         _ctx(),
     )
-    assert {(item.file_id, item.md5) for item in response.processed_items} == {("file-1", "md5-1")}
+    assert {(item.file_id, item.md5) for item in response.processed_items} == {
+        ("file-1", "md5-1")
+    }
 
 
 def test_record_and_get_doc_map_summary(tmp_path: Path) -> None:
@@ -153,9 +175,38 @@ def test_record_and_get_doc_map_summary(tmp_path: Path) -> None:
         ),
         _ctx(),
     )
-    resp = get(StateGetRequest(schema_version="1.0", state_db=str(db_path), file_id="file-3"), _ctx())
+    resp = get(
+        StateGetRequest(schema_version="1.0", state_db=str(db_path), file_id="file-3"),
+        _ctx(),
+    )
     assert resp is not None
     assert resp.doc_map_summary == summary
+
+
+def test_record_and_get_ocr_fallback_fields(tmp_path: Path) -> None:
+    db_path = tmp_path / "state.sqlite"
+    record(
+        StateRecordRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            file_id="file-ocr",
+            md5="md5-ocr",
+            ocr_fallback_used=True,
+            ocr_pdf_path="/tmp/generated-ocr.pdf",
+        ),
+        _ctx(),
+    )
+    resp = get(
+        StateGetRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            file_id="file-ocr",
+        ),
+        _ctx(),
+    )
+    assert resp is not None
+    assert resp.ocr_fallback_used is True
+    assert resp.ocr_pdf_path == "/tmp/generated-ocr.pdf"
 
 
 def test_state_db_access_detects_lock(tmp_path: Path) -> None:
@@ -164,7 +215,9 @@ def test_state_db_access_detects_lock(tmp_path: Path) -> None:
     conn.execute("BEGIN EXCLUSIVE")
     try:
         resp = check_state_db_access(
-            StateDbAccessRequest(schema_version="1.0", state_db=str(db_path), timeout_seconds=0.0),
+            StateDbAccessRequest(
+                schema_version="1.0", state_db=str(db_path), timeout_seconds=0.0
+            ),
             _ctx(),
         )
         assert resp.accessible is False
@@ -177,7 +230,9 @@ def test_state_db_access_detects_lock(tmp_path: Path) -> None:
 def test_state_db_access_allows_unlocked_db(tmp_path: Path) -> None:
     db_path = tmp_path / "state.sqlite"
     resp = check_state_db_access(
-        StateDbAccessRequest(schema_version="1.0", state_db=str(db_path), timeout_seconds=0.0),
+        StateDbAccessRequest(
+            schema_version="1.0", state_db=str(db_path), timeout_seconds=0.0
+        ),
         _ctx(),
     )
     assert resp.accessible is True
@@ -232,7 +287,9 @@ def test_list_processed_and_published_rows(tmp_path: Path) -> None:
         _ctx(),
     )
     processed = list_processed(
-        StateProcessedListRequest(schema_version="1.0", state_db=str(db_path), limit=10),
+        StateProcessedListRequest(
+            schema_version="1.0", state_db=str(db_path), limit=10
+        ),
         _ctx(),
     )
     assert len(processed.rows) == 2
@@ -251,7 +308,9 @@ def test_list_processed_and_published_rows(tmp_path: Path) -> None:
         _ctx(),
     )
     published = list_published(
-        StatePublishedListRequest(schema_version="1.0", state_db=str(db_path), limit=10),
+        StatePublishedListRequest(
+            schema_version="1.0", state_db=str(db_path), limit=10
+        ),
         _ctx(),
     )
     assert len(published.rows) == 1

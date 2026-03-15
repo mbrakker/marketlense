@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import random
 from concurrent.futures import ThreadPoolExecutor
-from typing import Optional
+from typing import Optional, TypedDict, cast
 
 from src.contracts.pdf_contents import (
     PdfContentsDetectionRequest,
@@ -19,6 +19,7 @@ from src.contracts.pdf_utils import PdfInfoRequest, PdfInfoResponse
 from src.contracts.report_assets import PreviewRequest
 from src.contracts.report_generation import ReportRuntimeState, ReportSourceState
 from src.contracts.report_models import ReportPayload
+from src.generators.pdf_text_ocr_generator import recover_pdf_text_with_ocr
 from src.generators.report_generation_dependencies import ReportGeneratorDependencies
 from src.generators.report_generation_shared import (
     base_payload,
@@ -34,6 +35,16 @@ from src.generators.report_generation_shared import (
 )
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
+
+
+class TextStatus(TypedDict):
+    schema_version: str
+    text_density: float
+    density_threshold: float
+    pages_sampled: int
+    char_count: int
+    not_available: bool
+    reason: str
 
 
 def _select_sample_pages(
@@ -63,7 +74,9 @@ def _build_pdf_context(
     if runtime.parallel_within_file:
         return None
     try:
-        ctx_pdf = child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:pdf_context")
+        ctx_pdf = child_context(
+            runtime.ctx, task_id=f"{runtime.ctx.task_id}:pdf_context"
+        )
         pdf_ctx_resp = dependencies.build_pdf_context(
             PdfContextBuildRequest(
                 schema_version="1.0",
@@ -204,7 +217,12 @@ def _load_pdf_info(
 
 def _load_contents(
     runtime: ReportRuntimeState,
-    pdf_context_for_tasks: object | None,
+    *,
+    analysis_pdf_path: str,
+    preview_pdf_path: str,
+    detection_pdf_context: object | None,
+    preview_pdf_context: object | None,
+    cache_prefix: str,
     dependencies: ReportGeneratorDependencies,
 ) -> tuple[int, str, str]:
     contents_ctx = child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:contents")
@@ -219,12 +237,12 @@ def _load_contents(
         contents_cache_path = None
         if runtime.md5 and cache_root is not None:
             contents_key = contents_cache_key(runtime.md5, runtime.settings)
-            contents_cache_path = cache_path(cache_root, "contents", contents_key)
+            contents_cache_path = cache_path(cache_root, cache_prefix, contents_key)
             cached = read_cache_json(contents_cache_path, contents_ctx, dependencies)
             if cached and cached.get("key") == contents_key:
                 contents_resp = PdfContentsDetectionResponse(
                     schema_version="1.0",
-                    path=runtime.local_pdf_path,
+                    path=analysis_pdf_path,
                     has_contents=bool(cached.get("has_contents")),
                     page_index=int(cached.get("page_index") or -1),
                     page_number=int(cached.get("page_number") or 0),
@@ -263,15 +281,19 @@ def _load_contents(
             contents_resp = dependencies.detect_contents_page(
                 PdfContentsDetectionRequest(
                     schema_version="1.0",
-                    path=runtime.local_pdf_path,
+                    path=analysis_pdf_path,
                     max_pages=runtime.settings.contents_max_pages,
                     min_headings=runtime.settings.contents_min_headings,
                     keywords=runtime.settings.contents_keywords,
-                    pdf_context=pdf_context_for_tasks,
+                    pdf_context=detection_pdf_context,
                 ),
                 contents_ctx,
             )
-            if runtime.md5 and cache_root is not None and contents_cache_path is not None:
+            if (
+                runtime.md5
+                and cache_root is not None
+                and contents_cache_path is not None
+            ):
                 write_cache_json(
                     contents_cache_path,
                     {
@@ -305,13 +327,13 @@ def _load_contents(
                 contents_preview = dependencies.render_preview(
                     PreviewRequest(
                         schema_version="1.1",
-                        pdf_path=runtime.local_pdf_path,
+                        pdf_path=preview_pdf_path,
                         out_dir=runtime.settings.output_dir,
                         report_name=runtime.report_name,
                         page_number=max(contents_resp.page_index, 0),
                         variant="contents",
                         dpi=runtime.settings.contents_preview_dpi,
-                        pdf_context=pdf_context_for_tasks,
+                        pdf_context=preview_pdf_context,
                     ),
                     runtime.ctx,
                 )
@@ -361,9 +383,12 @@ def _load_contents(
 
 def _load_text(
     runtime: ReportRuntimeState,
+    *,
+    analysis_pdf_path: str,
     pdf_context_for_tasks: object | None,
+    cache_prefix: str,
     dependencies: ReportGeneratorDependencies,
-) -> tuple[PdfTextExtractResponse, dict[str, object]]:
+) -> tuple[PdfTextExtractResponse, TextStatus]:
     text_ctx = child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:text")
     text_resp = None
     text_cache_hit = False
@@ -372,7 +397,7 @@ def _load_text(
     text_cache_path = None
     if runtime.md5 and cache_root is not None:
         text_key = text_cache_key(runtime.md5, runtime.settings)
-        text_cache_path = cache_path(cache_root, "text", text_key)
+        text_cache_path = cache_path(cache_root, cache_prefix, text_key)
         cached = read_cache_json(text_cache_path, text_ctx, dependencies)
         if cached and cached.get("key") == text_key:
             text_resp = PdfTextExtractResponse(
@@ -412,7 +437,7 @@ def _load_text(
         text_resp = dependencies.extract_pdf_text(
             PdfTextExtractRequest(
                 schema_version="1.0",
-                path=runtime.local_pdf_path,
+                path=analysis_pdf_path,
                 max_pages=runtime.settings.pdf_text_max_pages,
                 max_chars=runtime.settings.pdf_text_max_chars,
                 pdf_context=pdf_context_for_tasks,
@@ -445,7 +470,7 @@ def _load_text(
                     },
                 )
             )
-    text_status = {
+    text_status: TextStatus = {
         "schema_version": "1.0",
         "text_density": float(text_resp.text_density or 0.0),
         "density_threshold": float(
@@ -517,11 +542,14 @@ def _raise_text_unextractable(
 def _validate_extractable_text(
     runtime: ReportRuntimeState,
     *,
+    pdf_path: str,
     page_count: int,
     pdf_context: object | None,
     dependencies: ReportGeneratorDependencies,
 ) -> tuple[str, str, list[int]]:
-    sample_ctx = child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:text_sample")
+    sample_ctx = child_context(
+        runtime.ctx, task_id=f"{runtime.ctx.task_id}:text_sample"
+    )
     sample_indices = _select_sample_pages(
         file_id=runtime.file.file_id,
         md5=runtime.md5,
@@ -539,7 +567,7 @@ def _validate_extractable_text(
     sample_resp = dependencies.sample_pdf_text(
         PdfTextSampleRequest(
             schema_version="1.0",
-            path=runtime.local_pdf_path,
+            path=pdf_path,
             page_indices=sample_indices,
             pdf_context=pdf_context,
         ),
@@ -559,6 +587,7 @@ def _validate_extractable_text(
                 "sample_pages": text_validation_pages,
                 "any_text": sample_resp.any_text,
                 "char_counts": sample_chars,
+                "pdf_path": pdf_path,
             },
         )
     )
@@ -579,47 +608,128 @@ def prepare_report_source(
     pdf_context = _build_pdf_context(runtime, dependencies)
     _, parallel_within_file = _report_worker_config(runtime)
     pdf_context_for_tasks = None if parallel_within_file else pdf_context
+    info_resp = _load_pdf_info(runtime, pdf_context_for_tasks, dependencies)
+    analysis_pdf_path = runtime.local_pdf_path
+    ocr_fallback_used = False
+    ocr_pdf_path = ""
+
+    try:
+        text_validation_status, text_validation_reason, text_validation_pages = (
+            _validate_extractable_text(
+                runtime,
+                pdf_path=runtime.local_pdf_path,
+                page_count=info_resp.page_count,
+                pdf_context=pdf_context,
+                dependencies=dependencies,
+            )
+        )
+    except AppError as exc:
+        if (
+            exc.code != "pdf_text_unextractable"
+            or not runtime.settings.pdf_text_ocr_enabled
+        ):
+            raise
+        logger.info(
+            log_event(
+                runtime.ctx,
+                role="generator",
+                event="ocr_fallback_triggered",
+                module=logger.name,
+                fields={
+                    "file_id": runtime.file.file_id,
+                    "reason": str(
+                        exc.context.get("text_validation_reason") or exc.code
+                    ),
+                    "sample_pages": list(
+                        exc.context.get("text_validation_pages") or []
+                    ),
+                },
+            )
+        )
+        ocr_result = recover_pdf_text_with_ocr(
+            runtime,
+            page_count=info_resp.page_count,
+            dependencies=dependencies,
+        )
+        analysis_pdf_path = ocr_result.render_response.output_path
+        ocr_fallback_used = True
+        ocr_pdf_path = analysis_pdf_path
+        try:
+            text_validation_status, text_validation_reason, text_validation_pages = (
+                _validate_extractable_text(
+                    runtime,
+                    pdf_path=analysis_pdf_path,
+                    page_count=info_resp.page_count,
+                    pdf_context=None,
+                    dependencies=dependencies,
+                )
+            )
+        except AppError as ocr_exc:
+            if ocr_exc.code != "pdf_text_unextractable":
+                raise
+            raise AppError(
+                code="pdf_text_ocr_failed",
+                message="OCR fallback produced no extractable text",
+                retryable=False,
+                context={
+                    "text_validation_status": "fail",
+                    "text_validation_reason": "ocr_output_unextractable",
+                    "text_validation_pages": list(
+                        ocr_exc.context.get("text_validation_pages") or []
+                    ),
+                    "ocr_pdf_path": analysis_pdf_path,
+                },
+            ) from ocr_exc
 
     if parallel_within_file:
         with ThreadPoolExecutor(max_workers=runtime.report_worker_limit) as executor:
-            info_future = executor.submit(
-                _load_pdf_info,
-                runtime,
-                pdf_context_for_tasks,
-                dependencies,
-            )
             contents_future = executor.submit(
                 _load_contents,
                 runtime,
-                pdf_context_for_tasks,
-                dependencies,
+                analysis_pdf_path=analysis_pdf_path,
+                preview_pdf_path=runtime.local_pdf_path,
+                detection_pdf_context=None
+                if analysis_pdf_path != runtime.local_pdf_path
+                else pdf_context_for_tasks,
+                preview_pdf_context=pdf_context_for_tasks,
+                cache_prefix="ocr_contents" if ocr_fallback_used else "contents",
+                dependencies=dependencies,
             )
             text_future = executor.submit(
                 _load_text,
                 runtime,
-                pdf_context_for_tasks,
-                dependencies,
+                analysis_pdf_path=analysis_pdf_path,
+                pdf_context_for_tasks=None
+                if analysis_pdf_path != runtime.local_pdf_path
+                else pdf_context_for_tasks,
+                cache_prefix="ocr_text" if ocr_fallback_used else "text",
+                dependencies=dependencies,
             )
-            info_resp = info_future.result()
-            contents_page_number, contents_heading, contents_image = contents_future.result()
+            contents_page_number, contents_heading, contents_image = (
+                contents_future.result()
+            )
             text_resp, text_status = text_future.result()
     else:
-        info_resp = _load_pdf_info(runtime, pdf_context_for_tasks, dependencies)
         contents_page_number, contents_heading, contents_image = _load_contents(
             runtime,
-            pdf_context_for_tasks,
-            dependencies,
-        )
-        text_resp, text_status = _load_text(runtime, pdf_context_for_tasks, dependencies)
-
-    text_validation_status, text_validation_reason, text_validation_pages = (
-        _validate_extractable_text(
-            runtime,
-            page_count=info_resp.page_count,
-            pdf_context=pdf_context,
+            analysis_pdf_path=analysis_pdf_path,
+            preview_pdf_path=runtime.local_pdf_path,
+            detection_pdf_context=pdf_context
+            if analysis_pdf_path == runtime.local_pdf_path
+            else None,
+            preview_pdf_context=pdf_context,
+            cache_prefix="ocr_contents" if ocr_fallback_used else "contents",
             dependencies=dependencies,
         )
-    )
+        text_resp, text_status = _load_text(
+            runtime,
+            analysis_pdf_path=analysis_pdf_path,
+            pdf_context_for_tasks=pdf_context
+            if analysis_pdf_path == runtime.local_pdf_path
+            else None,
+            cache_prefix="ocr_text" if ocr_fallback_used else "text",
+            dependencies=dependencies,
+        )
     payload: ReportPayload = base_payload(
         runtime.report_title,
         contents_page_number,
@@ -653,9 +763,12 @@ def prepare_report_source(
         contents_heading=contents_heading,
         contents_image=contents_image,
         text_response=text_resp,
-        text_status=text_status,
+        text_status=cast(dict[str, object], dict(text_status)),
         text_validation_status=text_validation_status,
         text_validation_reason=text_validation_reason,
         text_validation_pages=text_validation_pages,
         payload=payload,
+        analysis_pdf_path=analysis_pdf_path,
+        ocr_fallback_used=ocr_fallback_used,
+        ocr_pdf_path=ocr_pdf_path,
     )

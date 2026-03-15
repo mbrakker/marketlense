@@ -11,6 +11,11 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - depends on PyMuPDF packaging alias
     import pymupdf as fitz
 
+from src.contracts.pdf_ocr import (
+    PdfOcrPageText,
+    PdfOcrSplitRequest,
+    PdfTextRenderRequest,
+)
 from src.contracts.pdf_context import PdfContextBuildRequest
 from src.contracts.pdf_text import PdfTextExtractRequest, PdfTextSampleRequest
 from src.contracts.pdf_utils import PdfEofCheckRequest, PdfInfoRequest
@@ -20,13 +25,17 @@ from src.services.pdf_service import (
     check_pdf_eof,
     extract_pdf_info,
     extract_pdf_text,
+    render_text_pdf,
     sample_pdf_text,
+    split_pdf_for_ocr,
 )
 from src.utils.errors import AppError
 
 
 def _ctx() -> RunContext:
-    return RunContext(schema_version="1.0", run_id="run", task_id="task", span_id="span")
+    return RunContext(
+        schema_version="1.0", run_id="run", task_id="task", span_id="span"
+    )
 
 
 def _service_events(caplog, logger_name: str) -> list[dict[str, object]]:
@@ -57,6 +66,20 @@ def _build_text_pdf(path: Path) -> None:
         fontsize=12,
     )
     doc.set_metadata({"title": "Synthetic Title", "author": "Synthetic Author"})
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_multi_page_text_pdf(path: Path, page_count: int) -> None:
+    doc = fitz.open()
+    for page_number in range(1, page_count + 1):
+        page = doc.new_page(width=595, height=842)
+        page.insert_text((72, 72), f"Page {page_number}", fontsize=18)
+        page.insert_textbox(
+            fitz.Rect(72, 120, 520, 320),
+            f"Synthetic OCR split test content for page {page_number}. " * 6,
+            fontsize=12,
+        )
     doc.save(path.as_posix())
     doc.close()
 
@@ -156,3 +179,78 @@ def test_pdf_text_service_missing_file_raises_typed_error(assert_app_error) -> N
         code="pdf_not_found",
         retryable=False,
     )
+
+
+def test_pdf_text_render_roundtrip_produces_extractable_pdf(
+    tmp_path,
+    caplog,
+    assert_logs_have_required_fields,
+) -> None:
+    rendered_pdf = tmp_path / "ocr.pdf"
+    caplog.set_level(logging.INFO, logger="market_lense.pdf_service")
+
+    render_response = render_text_pdf(
+        PdfTextRenderRequest(
+            schema_version="1.0",
+            output_path=rendered_pdf.as_posix(),
+            pages=[
+                PdfOcrPageText(page_number=1, text="OCR page one"),
+                PdfOcrPageText(page_number=2, text="OCR page two"),
+            ],
+        ),
+        _ctx(),
+    )
+    extracted = extract_pdf_text(
+        PdfTextExtractRequest(
+            schema_version="1.0",
+            path=render_response.output_path,
+            max_pages=2,
+            max_chars=2_000,
+        ),
+        _ctx(),
+    )
+
+    assert render_response.rendered_page_count == 2
+    assert "OCR page one" in extracted.text
+    assert "OCR page two" in extracted.text
+
+    events = _service_events(caplog, "market_lense.pdf_service")
+    assert_logs_have_required_fields(events)
+    event_names = {str(event["event"]) for event in events}
+    assert {"pdf_text_render_start", "pdf_text_render_complete"}.issubset(event_names)
+
+
+def test_pdf_ocr_split_creates_page_aligned_chunks(
+    tmp_path,
+    caplog,
+    assert_logs_have_required_fields,
+) -> None:
+    source_pdf = tmp_path / "source.pdf"
+    _build_multi_page_text_pdf(source_pdf, page_count=5)
+    output_dir = tmp_path / "chunks"
+    caplog.set_level(logging.INFO, logger="market_lense.pdf_service")
+
+    split_response = split_pdf_for_ocr(
+        PdfOcrSplitRequest(
+            schema_version="1.0",
+            source_pdf_path=source_pdf.as_posix(),
+            output_dir=output_dir.as_posix(),
+            chunk_page_count=2,
+        ),
+        _ctx(),
+    )
+
+    assert [chunk.page_count for chunk in split_response.chunks] == [2, 2, 1]
+    assert [chunk.start_page_number for chunk in split_response.chunks] == [1, 3, 5]
+    assert [chunk.end_page_number for chunk in split_response.chunks] == [2, 4, 5]
+    for chunk in split_response.chunks:
+        chunk_info = extract_pdf_info(
+            PdfInfoRequest(schema_version="1.0", path=chunk.chunk_pdf_path),
+            _ctx(),
+        )
+        assert chunk_info.page_count == chunk.page_count
+
+    events = _service_events(caplog, "market_lense.pdf_service")
+    assert_logs_have_required_fields(events)
+    event_names = {str(event["event"]) for event in events}
+    assert {"pdf_ocr_split_start", "pdf_ocr_split_complete"}.issubset(event_names)
