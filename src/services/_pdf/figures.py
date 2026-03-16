@@ -6,7 +6,6 @@ import math
 import os
 import re
 import statistics
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
@@ -1454,235 +1453,16 @@ def _extract_charts_sequential(
     doc: Optional[fitz.Document] = None,
     pages: Optional[List[int]] = None,
 ) -> Tuple[List[Candidate], Dict[str, object]]:
-    out: List[Candidate] = []
-    stats: Dict[str, object] = {"raw": 0, "kept": 0, "rejected": 0, "reasons": {}}
-    page_text_cache: Dict[int, Tuple[int, int]] = {}
-    local_doc = doc or fitz.open(pdf_path)
-    try:
-        thumb_index = 0
-        page_numbers = pages if pages is not None else list(range(len(local_doc)))
-        for pno in page_numbers:
-            if pno < 0 or pno >= len(local_doc):
-                continue
-            page = local_doc[pno]
-            if pno not in page_text_cache:
-                try:
-                    page_text_cache[pno] = _text_stats(page.get_text("text"))
-                except Exception:
-                    page_text_cache[pno] = (0, 0)
-            page_chars = page_text_cache[pno][1]
-            rect = page.rect
-            top_cut = rect.y0 + rect.height * CHART_MARGIN_FRAC
-            bot_cut = rect.y1 - rect.height * CHART_MARGIN_FRAC
-            relaxed_top = rect.y0 + rect.height * CHART_MARGIN_RELAX_FRAC
-            relaxed_bot = rect.y1 - rect.height * CHART_MARGIN_RELAX_FRAC
-            local = 0
-            kept: List[Tuple[fitz.Rect, float, int]] = []
-            candidates = _collect_chart_rects(page)
-            for rect_item in candidates:
-                stats["raw"] = _int_count(stats["raw"]) + 1
-                r = rect_item.rect
-                base_rect = r
-                area_frac = r.get_area() / rect.get_area()
-                aspect = r.width / max(1, r.height)
-                aspect_max = (
-                    INFO_CHART_MAX_ASPECT if rect_item.kind == "heading" else 2.5
-                )
-                if area_frac < 0.05 or not (0.55 <= aspect <= aspect_max):
-                    stats["rejected"] = _int_count(stats["rejected"]) + 1
-                    _tally_reason(stats, "geometry")
-                    continue
-                cap_rect = rect_item.caption_rect
-                cap = rect_item.caption
-                if cap_rect is None:
-                    cap_rect, cap = _nearest_caption_block(page, r, CHART_CAPTION_HINTS)
-                if not cap:
-                    cap = _nearby_text(page, r)
-                if cap and _is_page_number_text(cap):
-                    cap = ""
-                cap_lower = (cap or "").lower()
-                has_hint = any(k in cap_lower for k in CAPTION_HINTS)
-                if r.y0 < top_cut or r.y1 > bot_cut:
-                    if not has_hint or r.y0 < relaxed_top or r.y1 > relaxed_bot:
-                        stats["rejected"] = _int_count(stats["rejected"]) + 1
-                        _tally_reason(stats, "margin")
-                        continue
-                if not has_hint and area_frac < 0.08:
-                    stats["rejected"] = _int_count(stats["rejected"]) + 1
-                    _tally_reason(stats, "caption_hint")
-                    continue
-                if (
-                    rect_item.kind in ("block", "draw")
-                    and not has_hint
-                    and area_frac < 0.12
-                ):
-                    stats["rejected"] = _int_count(stats["rejected"]) + 1
-                    _tally_reason(stats, "block_small_no_caption")
-                    continue
-                if (
-                    rect_item.kind in ("block", "draw")
-                    and not has_hint
-                    and area_frac > 0.8
-                ):
-                    stats["rejected"] = _int_count(stats["rejected"]) + 1
-                    _tally_reason(stats, "block_full_page_no_caption")
-                    continue
-                try:
-                    bbox_text = page.get_text("text", clip=r)
-                except Exception:
-                    bbox_text = ""
-                text_lines, text_chars = _text_stats(bbox_text)
-                text_ratio = (text_chars / page_chars) if page_chars else 0.0
-                if rect_item.kind in ("xref", "block") and not has_hint:
-                    if (
-                        (not cap or len(cap.strip()) < 8)
-                        and text_chars <= 8
-                        and area_frac < 0.5
-                    ):
-                        stats["rejected"] = _int_count(stats["rejected"]) + 1
-                        _tally_reason(stats, "decorative_image")
-                        continue
-                if _chart_text_heavy(text_lines, text_chars, text_ratio):
-                    if rect_item.kind == "draw" and has_hint and text_ratio <= 0.55:
-                        pass
-                    else:
-                        stats["rejected"] = _int_count(stats["rejected"]) + 1
-                        _tally_reason(stats, "text_dense")
-                        continue
-                r_final = r
-                expanded_with_heading = False
-                if cap_rect is not None and has_hint:
-                    r_final = _merge_caption_above(r_final, cap_rect, rect)
-                allow_adjacent = rect_item.kind in ("draw", "heading") or (
-                    rect_item.kind == "xref" and has_hint
-                )
-                if allow_adjacent:
-                    r_final = _extend_with_adjacent_text_blocks(page, r_final)
-                if not has_hint and rect_item.kind == "heading":
-                    expanded = _extend_with_heading_above(page, r_final)
-                    expanded_with_heading = expanded.y0 < r_final.y0 - 1
-                    r_final = expanded
-                if not has_hint and rect_item.kind not in ("heading", "xref"):
-                    head_rect = _nearest_heading_above(page, r_final)
-                    if head_rect is not None:
-                        r_final = r_final | head_rect
-                if rect_item.kind != "xref" or has_hint:
-                    r_final = _pad_rect(r_final, rect)
-                if not has_hint and rect_item.kind in ("draw", "heading"):
-                    if rect_item.kind == "heading":
-                        r_final = _adjust_rect_for_text_margins(
-                            page,
-                            r_final,
-                            gap_scale=CHART_EDGE_TEXT_HEADING_GAP_SCALE,
-                            gap_scale_x=CHART_EDGE_TEXT_HEADING_GAP_X_SCALE,
-                        )
-                        r_final = _expand_rect_into_whitespace(
-                            page,
-                            r_final,
-                            allow_top=False,
-                        )
-                    else:
-                        r_final = _adjust_rect_for_text_margins(page, r_final)
-                        r_final = _expand_rect_into_whitespace(page, r_final)
-                if (
-                    rect_item.kind == "heading"
-                    and cap_rect is not None
-                    and not expanded_with_heading
-                ):
-                    r_final = _clamp_top_to_heading(r_final, cap_rect, page, rect)
-                if not has_hint and rect_item.kind not in ("heading", "xref"):
-                    head_rect = _nearest_heading_above(page, r_final)
-                    if head_rect is not None:
-                        r_final = _clamp_top_to_heading(r_final, head_rect, page, rect)
-                r_final = _extend_with_note_blocks(page, r_final)
-                if cap_rect is not None and has_hint and cap_rect.y0 < base_rect.y0:
-                    r_final = _clamp_top_to_caption(r_final, cap_rect, page, rect)
-                note_bottom = _note_block_bottom(page, r_final)
-                note_included = note_bottom is not None
-                if note_bottom is not None:
-                    r_final = _clamp_bottom_to_note(page, r_final, note_bottom, rect)
-                if cap_rect is not None and _caption_near_top(r_final, cap_rect):
-                    if has_hint or rect_item.kind != "heading":
-                        r_final = _clamp_top_to_caption(r_final, cap_rect, page, rect)
-                r_final = _trim_top_page_number(
-                    r_final, page, cap_rect if has_hint else None
-                )
-                try:
-                    bbox_text = page.get_text("text", clip=r_final)
-                except Exception:
-                    bbox_text = ""
-                text_lines, text_chars = _text_stats(bbox_text)
-                text_ratio = (text_chars / page_chars) if page_chars else 0.0
-                pix = None
-                if save_thumbs:
-                    render_rect = r_final
-                    if (
-                        rect_item.kind == "xref"
-                        and rect_item.xref is not None
-                        and _rect_iou(render_rect, r) >= 0.98
-                    ):
-                        pix = fitz.Pixmap(local_doc, rect_item.xref)
-                        if pix.alpha or (
-                            pix.colorspace and pix.colorspace != fitz.csRGB
-                        ):
-                            pix = fitz.Pixmap(fitz.csRGB, pix)
-                    else:
-                        try:
-                            pix = page.get_pixmap(clip=render_rect, alpha=False)
-                        except Exception:
-                            pix = None
-                cid = f"chart-{pno}-{local}"
-                thumb = (
-                    _save_thumb(pix, thumbs_dir, report_name, thumb_index)
-                    if save_thumbs and pix
-                    else None
-                )
-                if save_thumbs and thumb:
-                    thumb_path = Path(thumb)
-                    rel_thumb = Path(report_name) / "thumbs" / thumb_path.name
-                    thumb = rel_thumb.as_posix()
-                candidate = Candidate(
-                    schema_version="1.0",
-                    id=cid,
-                    kind="chart",
-                    page=pno,
-                    bbox=(r_final.x0, r_final.y0, r_final.x1, r_final.y1),
-                    preview_text=cap or "",
-                    caption=cap,
-                    thumb_path=thumb,
-                    meta={
-                        "area_frac": round(area_frac, 3),
-                        "aspect": round(aspect, 2),
-                        "text_lines": text_lines,
-                        "text_chars": text_chars,
-                        "text_ratio": round(text_ratio, 3),
-                    },
-                )
-                score = _chart_candidate_score(
-                    area_frac, has_hint, cap or "", note_included
-                )
-                overlap_idx = _find_overlapping_kept(r_final, kept)
-                if overlap_idx is not None:
-                    existing_score = kept[overlap_idx][1]
-                    if score <= existing_score:
-                        stats["rejected"] = _int_count(stats["rejected"]) + 1
-                        _tally_reason(stats, "overlap_dup")
-                        continue
-                    out_idx = kept[overlap_idx][2]
-                    out[out_idx] = candidate
-                    kept[overlap_idx] = (r_final, score, out_idx)
-                    stats["replaced"] = _int_count(stats.get("replaced", 0)) + 1
-                else:
-                    out.append(candidate)
-                    kept.append((r_final, score, len(out) - 1))
-                    stats["kept"] = _int_count(stats["kept"]) + 1
-                if save_thumbs:
-                    thumb_index += 1
-                local += 1
-    finally:
-        if doc is None:
-            local_doc.close()
-    return out, stats
+    from .visual_candidates import _extract_visuals_sequential
+
+    return _extract_visuals_sequential(
+        pdf_path,
+        thumbs_dir,
+        report_name,
+        save_thumbs=save_thumbs,
+        doc=doc,
+        pages=pages,
+    )
 
 
 def _candidate_index_from_id(candidate_id: str) -> int:
@@ -1745,218 +1525,44 @@ def _extract_charts(
     doc: Optional[fitz.Document] = None,
     parallel_workers: int = 1,
 ) -> Tuple[List[Candidate], Dict[str, object]]:
-    # Thumb generation relies on stable global naming order; keep it single-threaded.
-    if save_thumbs:
-        return _extract_charts_sequential(
-            pdf_path,
-            thumbs_dir,
-            report_name,
-            save_thumbs=save_thumbs,
-            doc=doc,
-        )
-    page_count = 0
-    if doc is not None:
-        page_count = len(doc)
-    else:
-        temp_doc = fitz.open(pdf_path)
-        try:
-            page_count = len(temp_doc)
-        finally:
-            temp_doc.close()
-    worker_count = _resolve_candidate_parallel_workers(parallel_workers, page_count)
-    if worker_count <= 1 or page_count <= 1:
-        return _extract_charts_sequential(
-            pdf_path,
-            thumbs_dir,
-            report_name,
-            save_thumbs=save_thumbs,
-            doc=doc,
-        )
-    chunks = _split_even_chunks(list(range(page_count)), worker_count)
-    merged_stats: Dict[str, object] = {
-        "raw": 0,
-        "kept": 0,
-        "rejected": 0,
-        "reasons": {},
-    }
-    merged_candidates: List[Candidate] = []
-    with ThreadPoolExecutor(max_workers=worker_count) as executor:
-        futures = {
-            executor.submit(
-                _extract_charts_sequential,
-                pdf_path,
-                thumbs_dir,
-                report_name,
-                False,
-                None,
-                chunk,
-            ): chunk
-            for chunk in chunks
-        }
-        for future in as_completed(futures):
-            chunk_candidates, chunk_stats = future.result()
-            merged_candidates.extend(chunk_candidates)
-            merged_stats = _merge_stats(merged_stats, chunk_stats)
-    merged_candidates.sort(
-        key=lambda cand: (cand.page, _candidate_index_from_id(cand.id))
+    from .visual_candidates import extract_visual_candidates
+
+    return extract_visual_candidates(
+        pdf_path,
+        thumbs_dir,
+        report_name,
+        save_thumbs=save_thumbs,
+        doc=doc,
+        parallel_workers=parallel_workers,
     )
-    return merged_candidates, merged_stats
 
 
 def _extract_tables_sequential(
     pdf_path: str,
-    max_candidates: int = 10,
+    max_candidates: int = 0,
     pages: Optional[List[int]] = None,
 ) -> Tuple[List[Candidate], Dict[str, object]]:
-    out: List[Candidate] = []
-    stats: Dict[str, object] = {
-        "raw_lattice": 0,
-        "raw_stream": 0,
-        "validated": 0,
-        "deduped": 0,
-        "rejected": 0,
-        "reasons": {},
-    }
-    _suppress_pdfminer_warnings()
+    from .table_candidates import _extract_tables_sequential as _run_tables_sequential
 
-    fitz_doc = None
-    try:
-        fitz_doc = fitz.open(pdf_path)
-    except Exception:
-        fitz_doc = None
-
-    try:
-        with pdfplumber.open(pdf_path) as pdf:
-            page_numbers = pages if pages is not None else list(range(len(pdf.pages)))
-            for pno in page_numbers:
-                if pno < 0 or pno >= len(pdf.pages):
-                    continue
-                p = pdf.pages[pno]
-                fitz_page = None
-                if fitz_doc is not None and pno < len(fitz_doc):
-                    try:
-                        fitz_page = fitz_doc[pno]
-                    except Exception:
-                        fitz_page = None
-
-                lattice_tables = _find_tables_safe(p, TABLE_SETTINGS_LATTICE)
-                stream_tables = _find_tables_safe(p, TABLE_SETTINGS_STREAM)
-                stats["raw_lattice"] = _int_count(stats["raw_lattice"]) + len(
-                    lattice_tables
-                )
-                stats["raw_stream"] = _int_count(stats["raw_stream"]) + len(
-                    stream_tables
-                )
-
-                raw_candidates: list[tuple[pdfplumber.table.Table, str]] = []
-                raw_candidates.extend((t, "lattice") for t in lattice_tables)
-                raw_candidates.extend((t, "stream") for t in stream_tables)
-
-                validated: List[_TableCandidate] = []
-                for t, method in raw_candidates:
-                    cand = _build_table_candidate(p, t, method, fitz_page=fitz_page)
-                    if not cand:
-                        stats["rejected"] = _int_count(stats["rejected"]) + 1
-                        _tally_reason(stats, "build_failed")
-                        continue
-                    ok, reason = _validate_table_candidate(cand)
-                    if not ok:
-                        stats["rejected"] = _int_count(stats["rejected"]) + 1
-                        _tally_reason(stats, reason or "filtered")
-                        continue
-                    stats["validated"] = _int_count(stats["validated"]) + 1
-                    validated.append(cand)
-
-                deduped = _dedupe_table_candidates(validated)
-                stats["deduped"] = _int_count(stats["deduped"]) + len(deduped)
-
-                for i, cand in enumerate(sorted(deduped, key=_table_sort_key)):
-                    x0, y0, x1, y1 = cand.bbox
-                    if fitz_page is not None:
-                        x0, y0, x1, y1 = _expand_table_bbox(
-                            fitz_page, (x0, y0, x1, y1), cand.method
-                        )
-                    cid = f"table-{pno}-{i}"
-                    out.append(
-                        Candidate(
-                            schema_version="1.0",
-                            id=cid,
-                            kind="table",
-                            page=pno,
-                            bbox=(x0, y0, x1, y1),
-                            preview_text=cand.preview,
-                            caption=None,
-                            thumb_path=None,
-                            meta={
-                                "method": cand.method,
-                                "rows": cand.row_count,
-                                "cols": cand.col_count,
-                                "non_empty_cells": cand.non_empty_cells,
-                                "numeric_ratio": round(cand.numeric_ratio, 3),
-                                "avg_words_per_cell": round(cand.avg_words_per_cell, 2),
-                                "index_page_ratio": round(cand.index_page_ratio, 2),
-                                "text_len": cand.text_len,
-                                "area_frac": round(cand.area_frac, 4),
-                                "aspect": round(cand.aspect, 2),
-                            },
-                        )
-                    )
-                    if max_candidates > 0 and len(out) >= max_candidates:
-                        break
-
-                if max_candidates > 0 and len(out) >= max_candidates:
-                    break
-    finally:
-        if fitz_doc is not None:
-            try:
-                fitz_doc.close()
-            except Exception:
-                pass
-
-    return out, stats
+    return _run_tables_sequential(
+        pdf_path,
+        max_candidates=max_candidates,
+        pages=pages,
+    )
 
 
 def _extract_tables(
     pdf_path: str,
-    max_candidates: int = 10,
+    max_candidates: int = 0,
     parallel_workers: int = 1,
 ) -> Tuple[List[Candidate], Dict[str, object]]:
-    try:
-        temp_doc = fitz.open(pdf_path)
-        try:
-            page_count = len(temp_doc)
-        finally:
-            temp_doc.close()
-    except Exception:
-        return _extract_tables_sequential(pdf_path, max_candidates=max_candidates)
-    worker_count = _resolve_candidate_parallel_workers(parallel_workers, page_count)
-    if worker_count <= 1 or page_count <= 1:
-        return _extract_tables_sequential(pdf_path, max_candidates=max_candidates)
-    chunks = _split_even_chunks(list(range(page_count)), worker_count)
-    merged_stats: Dict[str, object] = {
-        "raw_lattice": 0,
-        "raw_stream": 0,
-        "validated": 0,
-        "deduped": 0,
-        "rejected": 0,
-        "reasons": {},
-    }
-    merged_candidates: List[Candidate] = []
-    with ThreadPoolExecutor(max_workers=worker_count) as executor:
-        futures = {
-            executor.submit(_extract_tables_sequential, pdf_path, 0, chunk): chunk
-            for chunk in chunks
-        }
-        for future in as_completed(futures):
-            chunk_candidates, chunk_stats = future.result()
-            merged_candidates.extend(chunk_candidates)
-            merged_stats = _merge_stats(merged_stats, chunk_stats)
-    merged_candidates.sort(
-        key=lambda cand: (cand.page, _candidate_index_from_id(cand.id))
+    from .table_candidates import extract_table_candidates
+
+    return extract_table_candidates(
+        pdf_path,
+        max_candidates=max_candidates,
+        parallel_workers=parallel_workers,
     )
-    if max_candidates > 0:
-        merged_candidates = merged_candidates[:max_candidates]
-    return merged_candidates, merged_stats
 
 
 def _find_tables_safe(page: pdfplumber.page.Page, settings: Dict[str, object]):

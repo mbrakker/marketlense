@@ -281,3 +281,89 @@ def collect_docpack_metrics(docpack_root: str) -> dict[str, Any]:
         ),
         "packs": pack_stats,
     }
+
+
+def _candidate_bbox_valid(candidate: dict[str, Any]) -> bool:
+    bbox = candidate.get("bbox")
+    if not isinstance(bbox, list) or len(bbox) != 4:
+        return False
+    try:
+        x0 = float(bbox[0])
+        y0 = float(bbox[1])
+        x1 = float(bbox[2])
+        y1 = float(bbox[3])
+    except (TypeError, ValueError):
+        return False
+    return x1 > x0 and y1 > y0
+
+
+def collect_candidate_pack_metrics(candidate_root: str) -> dict[str, Any]:
+    root = Path(candidate_root)
+    candidate_paths = sorted(root.glob("*/candidates/candidates.json"))
+    report_count = len(candidate_paths)
+    non_empty_reports = 0
+    total_candidates = 0
+    total_charts = 0
+    total_tables = 0
+    bbox_valid = 0
+    crop_paths_present = 0
+    preview_text_present = 0
+
+    for candidate_path in candidate_paths:
+        try:
+            payload = json.loads(candidate_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(payload, dict):
+            continue
+        candidates_value = payload.get("candidates")
+        candidates = candidates_value if isinstance(candidates_value, list) else []
+        if candidates:
+            non_empty_reports += 1
+        total_candidates += len(candidates)
+        chart_count = payload.get("chart_count")
+        table_count = payload.get("table_count")
+        if chart_count is None:
+            chart_count = sum(
+                1
+                for candidate in candidates
+                if isinstance(candidate, dict) and str(candidate.get("kind") or "") == "chart"
+            )
+        if table_count is None:
+            table_count = sum(
+                1
+                for candidate in candidates
+                if isinstance(candidate, dict) and str(candidate.get("kind") or "") == "table"
+            )
+        total_charts += int(chart_count or 0)
+        total_tables += int(table_count or 0)
+        for candidate in candidates:
+            if not isinstance(candidate, dict):
+                continue
+            if _candidate_bbox_valid(candidate):
+                bbox_valid += 1
+            if str(candidate.get("crop_path") or "").strip():
+                crop_paths_present += 1
+            if str(candidate.get("preview_text") or "").strip():
+                preview_text_present += 1
+
+    def _rate(num: int, den: int) -> float:
+        if den <= 0:
+            return 1.0
+        return round(num / den, 6)
+
+    def _mean(total: int, den: int) -> float:
+        if den <= 0:
+            return 0.0
+        return round(total / den, 6)
+
+    return {
+        "report_count": report_count,
+        "pack_non_empty_rate": _rate(non_empty_reports, report_count),
+        "candidate_count_mean": _mean(total_candidates, report_count),
+        "chart_count_mean": _mean(total_charts, report_count),
+        "table_count_mean": _mean(total_tables, report_count),
+        "bbox_valid_rate": _rate(bbox_valid, total_candidates),
+        "crop_path_coverage_rate": _rate(crop_paths_present, total_candidates),
+        "preview_text_rate": _rate(preview_text_present, total_candidates),
+    }

@@ -14,6 +14,8 @@ Golden corpus source:
 
 - copied from `out/1/*/report_analysis`
 - stored in `tests/fixtures/docpacks/golden/`
+- candidate packs copied from `out/1/*/candidates/candidates.json` (or another root via `--source-candidate-root`)
+- stored in `tests/fixtures/candidate_extraction/golden/`
 
 ## CI Gates
 
@@ -48,6 +50,20 @@ For the golden corpus, the comparator enforces non-regression for:
 - schema-valid rate
 - evidence reference integrity rate
 - per-pack present/non-empty/schema-valid rates
+
+Any drop below baseline fails CI.
+
+## Candidate Extraction Regression Metrics
+
+For the golden candidate corpus, the comparator enforces non-regression for:
+
+- non-empty candidate pack rate
+- mean candidates per report
+- mean chart candidates per report
+- mean table candidates per report
+- valid bbox rate
+- crop-path coverage rate
+- preview-text coverage rate
 
 Any drop below baseline fails CI.
 

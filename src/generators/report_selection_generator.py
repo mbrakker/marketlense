@@ -59,12 +59,44 @@ def _candidate_prefilter_reject_reason(candidate: Candidate) -> str:
         rows = coerce_int((candidate.meta or {}).get("rows"), 0)
         cols = coerce_int((candidate.meta or {}).get("cols"), 0)
         numeric_ratio = _candidate_meta(candidate, "numeric_ratio", 0.0)
+        avg_words_per_cell = coerce_float(
+            (candidate.meta or {}).get("avg_words_per_cell"), 0.0
+        )
+        preview_normalized = " ".join(
+            str(candidate.preview_text or "").replace("|", " ").lower().split()
+        )
         if rows < 2 or cols < 2:
             return "table_low_structure"
         if rows < 3 and numeric_ratio < 0.08:
             return "table_low_data"
         if area < 0.025 and numeric_ratio < 0.12:
             return "table_too_small"
+        if (
+            preview_normalized.startswith("figure ")
+            and numeric_ratio <= 0.05
+            and avg_words_per_cell >= 6.0
+        ):
+            return "table_figure_text_block"
+        if (
+            preview_normalized.startswith("box ")
+            and numeric_ratio <= 0.05
+            and avg_words_per_cell >= 6.0
+        ):
+            return "table_box_text_block"
+        if (
+            ("http" in preview_normalized or "doi.org" in preview_normalized)
+            and rows >= 8
+            and numeric_ratio <= 0.12
+        ):
+            return "table_reference_text_block"
+        if (
+            area >= 0.18
+            and rows >= 8
+            and cols <= 5
+            and numeric_ratio <= 0.03
+            and avg_words_per_cell >= 8.0
+        ):
+            return "table_large_text_block"
         return ""
     text_ratio = _candidate_meta(candidate, "text_ratio", 0.0)
     if area < 0.035:
@@ -143,6 +175,67 @@ def _split_candidates_by_kind(
     tables = [candidate for candidate in candidates if candidate.kind == "table"]
     charts = [candidate for candidate in candidates if candidate.kind == "chart"]
     return tables, charts
+
+
+def _truncate_prefiltered_candidates(
+    candidates: list[Candidate],
+    max_candidates: int,
+) -> tuple[list[Candidate], dict[str, int]]:
+    if max_candidates <= 0 or len(candidates) <= max_candidates:
+        return list(candidates), {
+            "table": sum(1 for candidate in candidates if candidate.kind == "table"),
+            "chart": sum(1 for candidate in candidates if candidate.kind == "chart"),
+        }
+    table_candidates, chart_candidates = _split_candidates_by_kind(candidates)
+    by_kind = {
+        "table": sorted(
+            table_candidates,
+            key=_candidate_prefilter_priority,
+            reverse=True,
+        ),
+        "chart": sorted(
+            chart_candidates,
+            key=_candidate_prefilter_priority,
+            reverse=True,
+        ),
+    }
+    selected_by_kind: dict[str, list[Candidate]] = {"table": [], "chart": []}
+    next_index_by_kind = {"table": 0, "chart": 0}
+    active_kinds = [kind for kind, rows in by_kind.items() if rows]
+    if not active_kinds:
+        return [], {"table": 0, "chart": 0}
+    base_slots = max_candidates // len(active_kinds)
+    for kind in active_kinds:
+        take = min(len(by_kind[kind]), base_slots)
+        selected_by_kind[kind] = by_kind[kind][:take]
+        next_index_by_kind[kind] = take
+    remaining_slots = max_candidates - sum(
+        len(selected_rows) for selected_rows in selected_by_kind.values()
+    )
+    while remaining_slots > 0:
+        best_kind = ""
+        best_priority = float("-inf")
+        for kind in active_kinds:
+            next_index = next_index_by_kind[kind]
+            rows = by_kind[kind]
+            if next_index >= len(rows):
+                continue
+            priority = _candidate_prefilter_priority(rows[next_index])
+            if priority > best_priority:
+                best_priority = priority
+                best_kind = kind
+        if not best_kind:
+            break
+        next_index = next_index_by_kind[best_kind]
+        selected_by_kind[best_kind].append(by_kind[best_kind][next_index])
+        next_index_by_kind[best_kind] = next_index + 1
+        remaining_slots -= 1
+    selected = selected_by_kind["table"] + selected_by_kind["chart"]
+    selected.sort(key=_candidate_prefilter_priority, reverse=True)
+    return selected, {
+        "table": len(selected_by_kind["table"]),
+        "chart": len(selected_by_kind["chart"]),
+    }
 
 
 def _rank_candidates_batch(
@@ -1112,6 +1205,7 @@ def _select_fallback_candidate_crop_paths(
     prefiltered_candidates: list[Candidate],
     candidate_path_by_id: dict[str, str],
     selected_kind_max: int,
+    settings: Optional[IngestSettings] = None,
 ) -> tuple[list[str], list[Candidate], dict[str, Any]]:
     selected_max = max(1, int(selected_kind_max)) * 2
     selected_per_kind = max(1, int(selected_kind_max))
@@ -1121,6 +1215,8 @@ def _select_fallback_candidate_crop_paths(
     }
     ordered_candidates: list[tuple[str, Candidate]] = []
     seen_ids: set[str] = set()
+    blocked_ids: set[str] = set()
+    rejected_reasons: dict[str, int] = {}
     for row in sorted(
         ranked_rows,
         key=lambda item: coerce_float(getattr(item, "score", 0.0), 0.0),
@@ -1130,10 +1226,18 @@ def _select_fallback_candidate_crop_paths(
         candidate = prefiltered_by_id.get(candidate_id)
         if candidate is None or candidate_id in seen_ids:
             continue
+        if settings is not None:
+            passed, reason = _rank_threshold_pass(row, settings)
+            if not passed:
+                blocked_ids.add(candidate_id)
+                rejected_reasons[reason] = int(rejected_reasons.get(reason, 0)) + 1
+                continue
         seen_ids.add(candidate_id)
         ordered_candidates.append(("ranked", candidate))
     for candidate in prefiltered_candidates:
         candidate_id = str(candidate.id or "").strip()
+        if candidate_id in blocked_ids:
+            continue
         if candidate_id and candidate_id not in seen_ids:
             seen_ids.add(candidate_id)
             ordered_candidates.append(("prefilter", candidate))
@@ -1141,7 +1245,6 @@ def _select_fallback_candidate_crop_paths(
     fallback_candidates: list[Candidate] = []
     selected_by_kind: dict[str, int] = {"table": 0, "chart": 0}
     selected_by_source: dict[str, int] = {"ranked": 0, "prefilter": 0}
-    rejected_reasons: dict[str, int] = {}
     skipped_missing_crop = 0
     skipped_kind_limit = 0
     for source, candidate in ordered_candidates:
@@ -1385,10 +1488,22 @@ def select_report_figures(
             key=_candidate_prefilter_priority,
             reverse=True,
         )
+        prefilter_kind_counts = {
+            "table": sum(
+                1 for candidate in prefiltered_candidates if candidate.kind == "table"
+            ),
+            "chart": sum(
+                1 for candidate in prefiltered_candidates if candidate.kind == "chart"
+            ),
+        }
+        truncated_kind_counts = dict(prefilter_kind_counts)
         if runtime.settings.rank_max_candidates > 0:
-            prefiltered_candidates = prefiltered_candidates[
-                : int(runtime.settings.rank_max_candidates)
-            ]
+            prefiltered_candidates, truncated_kind_counts = (
+                _truncate_prefiltered_candidates(
+                    prefiltered_candidates,
+                    int(runtime.settings.rank_max_candidates),
+                )
+            )
         logger.info(
             log_event(
                 runtime.ctx,
@@ -1400,10 +1515,13 @@ def select_report_figures(
                     "kept_count": len(prefiltered_candidates),
                     "rejected_count": sum(prefilter_reasons.values()),
                     "reasons": prefilter_reasons,
+                    "prefilter_kind_counts": prefilter_kind_counts,
+                    "truncated_kind_counts": truncated_kind_counts,
                     "rank_max_candidates": runtime.settings.rank_max_candidates,
                 },
             )
         )
+        candidate_crop_candidates = list(prefiltered_candidates)
         all_items = [
             CropItem(
                 id=candidate.id,
@@ -1412,7 +1530,7 @@ def select_report_figures(
                 page=candidate.page,
                 bbox=candidate.bbox,
             )
-            for candidate in cands_resp.candidates
+            for candidate in candidate_crop_candidates
         ]
         if all_items:
             logger.info(
@@ -1438,7 +1556,7 @@ def select_report_figures(
                     runtime.ctx,
                 )
                 candidate_path_by_id = _candidate_crop_path_map(
-                    cands_resp.candidates,
+                    candidate_crop_candidates,
                     candidate_crop_resp.paths,
                 )
                 logger.info(
@@ -1592,6 +1710,7 @@ def select_report_figures(
                     prefiltered_candidates=prefiltered_candidates,
                     candidate_path_by_id=candidate_path_by_id,
                     selected_kind_max=max(1, int(runtime.settings.rank_selected_max)),
+                    settings=runtime.settings,
                 )
             )
             if fallback_paths:

@@ -10,6 +10,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.quality.quality_metrics import (
+    collect_candidate_pack_metrics,
     collect_docpack_metrics,
     load_coverage_metrics,
     load_mutation_metrics,
@@ -40,6 +41,11 @@ def _parse_args() -> argparse.Namespace:
         default="tests/fixtures/docpacks/golden",
         help="Docpack corpus root path.",
     )
+    parser.add_argument(
+        "--candidate-root",
+        default="tests/fixtures/candidate_extraction/golden",
+        help="Candidate-extraction corpus root path.",
+    )
     return parser.parse_args()
 
 
@@ -55,6 +61,7 @@ def main() -> int:
     current_coverage = load_coverage_metrics(str(ROOT / args.coverage_xml))
     current_mutation = load_mutation_metrics(str(ROOT / args.mutation_json))
     current_docpacks = collect_docpack_metrics(str(ROOT / args.docpack_root))
+    current_candidates = collect_candidate_pack_metrics(str(ROOT / args.candidate_root))
 
     failures: list[str] = []
     print("Quality regression gate:")
@@ -124,6 +131,31 @@ def main() -> int:
             if status == "FAIL":
                 failures.append(
                     f"docpacks packs.{pack_name}.{key}: "
+                    f"{current_value:.6f} < baseline {baseline_value:.6f}"
+                )
+
+    baseline_candidates = baseline.get("candidate_extraction") or {}
+    if baseline_candidates:
+        print("Candidate extraction:")
+        for key in (
+            "pack_non_empty_rate",
+            "candidate_count_mean",
+            "chart_count_mean",
+            "table_count_mean",
+            "bbox_valid_rate",
+            "crop_path_coverage_rate",
+            "preview_text_rate",
+        ):
+            baseline_value = _get_rate(baseline_candidates, key)
+            current_value = _get_rate(current_candidates, key)
+            status = "PASS" if current_value >= baseline_value else "FAIL"
+            print(
+                f"  - {key}: current={current_value:.6f} "
+                f"baseline={baseline_value:.6f} [{status}]"
+            )
+            if status == "FAIL":
+                failures.append(
+                    f"candidate_extraction {key}: "
                     f"{current_value:.6f} < baseline {baseline_value:.6f}"
                 )
 

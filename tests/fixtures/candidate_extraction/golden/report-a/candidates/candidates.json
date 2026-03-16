@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0",
+  "report_id": "report-a",
+  "report_name": "report-a",
+  "pdf_path": "out/report-a/report.pdf",
+  "candidate_count": 2,
+  "chart_count": 1,
+  "table_count": 1,
+  "candidates": [
+    {
+      "schema_version": "1.0",
+      "id": "chart-0-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 0,
+      "bbox": [
+        10.0,
+        20.0,
+        210.0,
+        160.0
+      ],
+      "preview_text": "Figure 1. Revenue growth",
+      "caption": "Figure 1. Revenue growth",
+      "thumb_path": "",
+      "crop_path": "report-a/candidates/chart-0-0.png",
+      "meta": {
+        "area_frac": 0.12
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "id": "table-0-0",
+      "kind": "table",
+      "type": "table",
+      "page": 0,
+      "bbox": [
+        20.0,
+        220.0,
+        320.0,
+        420.0
+      ],
+      "preview_text": "Table 1. Revenue by segment",
+      "caption": "",
+      "thumb_path": "",
+      "crop_path": "report-a/candidates/table-0-0.png",
+      "meta": {
+        "rows": 5,
+        "cols": 4
+      }
+    }
+  ]
+}

@@ -401,6 +401,163 @@ def test_select_fallback_candidate_crop_paths_skips_obvious_rejects():
     assert stats["rejected_reasons"] == {"chart_text_fragment": 1}
 
 
+def test_select_fallback_candidate_crop_paths_blocks_threshold_rejects_with_settings(
+    tmp_path,
+):
+    settings = _settings(tmp_path, rank_min_overall_score=90)
+    candidates = [
+        _candidate(
+            cid="chart_low",
+            kind="chart",
+            page=0,
+            caption="Figure 1",
+            meta={"area_frac": 0.2, "text_ratio": 0.2},
+        ),
+        _candidate(
+            cid="table_ok",
+            kind="table",
+            page=1,
+            meta={"rows": 6, "cols": 4, "numeric_ratio": 0.3, "area_frac": 0.2},
+        ),
+        _candidate(
+            cid="chart_ok",
+            kind="chart",
+            page=2,
+            caption="Figure 2",
+            meta={"area_frac": 0.18, "text_ratio": 0.2},
+        ),
+    ]
+    ranked_rows = [
+        RankedCandidate(
+            id="chart_low",
+            type="chart",
+            score=70,
+            quality_score=95,
+            insight_score=95,
+            data_score=95,
+            keep=True,
+        ),
+        RankedCandidate(
+            id="table_ok",
+            type="table",
+            score=94,
+            quality_score=94,
+            insight_score=94,
+            data_score=94,
+            keep=True,
+        ),
+    ]
+
+    paths, selected, stats = rsg._select_fallback_candidate_crop_paths(
+        ranked_rows=ranked_rows,
+        prefiltered_candidates=candidates,
+        candidate_path_by_id={
+            "chart_low": "report/candidates/chart_low.png",
+            "table_ok": "report/candidates/table_ok.png",
+            "chart_ok": "report/candidates/chart_ok.png",
+        },
+        selected_kind_max=1,
+        settings=settings,
+    )
+
+    assert paths == [
+        "report/candidates/table_ok.png",
+        "report/candidates/chart_ok.png",
+    ]
+    assert [candidate.id for candidate in selected] == ["table_ok", "chart_ok"]
+    assert stats["selected_by_source"] == {"ranked": 1, "prefilter": 1}
+    assert stats["rejected_reasons"] == {"overall_below_threshold": 1}
+
+
+def test_candidate_prefilter_rejects_obvious_table_text_blocks():
+    figure_text_table = _candidate(
+        cid="table_figure",
+        kind="table",
+        preview_text="| Figure 2.4. The costs of regulation in Europe and Australia are similar to the United States |",
+        meta={
+            "rows": 8,
+            "cols": 5,
+            "numeric_ratio": 0.014,
+            "avg_words_per_cell": 17.25,
+            "area_frac": 0.4562,
+        },
+    )
+    reference_block = _candidate(
+        cid="table_refs",
+        kind="table",
+        preview_text="IEA (2025a), \"Energy and AI\", https://www.iea.org/reports/energy-and-ai.",
+        meta={
+            "rows": 48,
+            "cols": 5,
+            "numeric_ratio": 0.107,
+            "avg_words_per_cell": 2.31,
+            "area_frac": 0.7055,
+        },
+    )
+    large_text_block = _candidate(
+        cid="table_text_block",
+        kind="table",
+        preview_text="The growth of stablecoins may also pose risks to banks. Companies with crypto-related business models...",
+        meta={
+            "rows": 29,
+            "cols": 3,
+            "numeric_ratio": 0.017,
+            "avg_words_per_cell": 13.52,
+            "area_frac": 0.4184,
+        },
+    )
+
+    assert (
+        rsg._candidate_prefilter_reject_reason(figure_text_table)
+        == "table_figure_text_block"
+    )
+    assert (
+        rsg._candidate_prefilter_reject_reason(reference_block)
+        == "table_reference_text_block"
+    )
+    assert (
+        rsg._candidate_prefilter_reject_reason(large_text_block)
+        == "table_large_text_block"
+    )
+
+
+def test_truncate_prefiltered_candidates_keeps_kind_balance():
+    candidates = []
+    for idx in range(60):
+        candidates.append(
+            _candidate(
+                cid=f"table_{idx}",
+                kind="table",
+                page=idx,
+                preview_text="Large text-heavy table candidate",
+                meta={
+                    "rows": 30 + idx,
+                    "cols": 3,
+                    "numeric_ratio": 0.02,
+                    "avg_words_per_cell": 12.0,
+                    "area_frac": 0.35,
+                },
+            )
+        )
+    for idx in range(25):
+        candidates.append(
+            _candidate(
+                cid=f"chart_{idx}",
+                kind="chart",
+                page=idx,
+                caption=f"Figure {idx}",
+                meta={"area_frac": 0.22, "text_ratio": 0.2},
+            )
+        )
+
+    selected, kind_counts = rsg._truncate_prefiltered_candidates(candidates, 40)
+
+    assert len(selected) == 40
+    assert kind_counts == {"table": 20, "chart": 20}
+    assert sum(1 for candidate in selected if candidate.kind == "chart") == 20
+    assert sum(1 for candidate in selected if candidate.kind == "table") == 20
+
+
 def test_resolve_figure_section_assets_enables_primary_image_without_gallery():
     gallery, top, enabled = rsg._resolve_figure_section_assets(
         [],

@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "report_id": "report-b",
+  "report_name": "report-b",
+  "pdf_path": "out/report-b/report.pdf",
+  "candidate_count": 1,
+  "chart_count": 1,
+  "table_count": 0,
+  "candidates": [
+    {
+      "schema_version": "1.0",
+      "id": "chart-1-0",
+      "kind": "chart",
+      "type": "chart",
+      "page": 1,
+      "bbox": [
+        30.0,
+        40.0,
+        330.0,
+        240.0
+      ],
+      "preview_text": "Figure 2. Market outlook",
+      "caption": "Figure 2. Market outlook",
+      "thumb_path": "",
+      "crop_path": "report-b/candidates/chart-1-0.png",
+      "meta": {
+        "area_frac": 0.16
+      }
+    }
+  ]
+}

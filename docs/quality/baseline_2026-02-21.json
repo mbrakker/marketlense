@@ -5,6 +5,16 @@
     "src/orchestrators": 71.5439,
     "src/services": 44.6556
   },
+  "candidate_extraction": {
+    "bbox_valid_rate": 1.0,
+    "candidate_count_mean": 1.5,
+    "chart_count_mean": 1.0,
+    "crop_path_coverage_rate": 1.0,
+    "pack_non_empty_rate": 1.0,
+    "preview_text_rate": 1.0,
+    "report_count": 2,
+    "table_count_mean": 0.5
+  },
   "docpacks": {
     "evidence_reference_integrity_rate": 0.333333,
     "expected_packs": [
@@ -147,8 +157,11 @@
   },
   "paths": {
     "coverage_xml": "coverage.xml",
+    "golden_candidate_root": "tests\\fixtures\\candidate_extraction\\golden",
     "golden_docpack_root": "tests\\fixtures\\docpacks\\golden",
-    "mutation_json": "mutation_results.json"
+    "mutation_json": "mutation_results.json",
+    "source_candidate_root": "out\\1",
+    "source_docpack_root": "out\\1"
   },
   "schema_version": "1.0"
 }

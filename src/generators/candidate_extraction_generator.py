@@ -125,7 +125,6 @@ def generate_candidate_pack(request: CandidateExtractRequest, ctx: RunContext) -
                     report_name=request.report_name,
                     subdir=request.subdir,
                     items=items,
-                    pad=4,
                     pdf_context=pdf_context,
                 ),
                 ctx,
