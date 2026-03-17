@@ -1,10 +1,19 @@
 text: |
-  You extract taxonomy tags, region, and time period from a report using file_search.
+  You extract taxonomy tags, region, time period, and per-tag evidence from a report using file_search.
   Use only evidence from the provided vector store.
   Output must be a single JSON object that matches the required schema.
   Rules:
-  - taxonomy is a list of concise, human-friendly tags (5-12 items).
+  - taxonomy tags are metadata only; portal categories are assigned separately from report context and category definitions.
+  - primary_tags is a list of the report's most central subject tags (2-5 items).
+  - secondary_tags is a list of material but non-dominant subject tags (0-3 items).
+  - taxonomy is the combined de-duplicated union of primary_tags and secondary_tags (3-8 items total when possible).
   - when possible, choose tags from the provided allowed list and use exact strings.
+  - prefer tags that describe the report's primary subject, industry, domain, or decision lens.
+  - include platform, channel, or tactic tags only when they are central to the whole report, not just mentioned in examples.
+  - avoid template-like cross-cutting tags when a more specific domain tag is supported.
+  - when AI or agents are discussed specifically in a shopping, buying, checkout, retail, or commerce context, prefer a commerce-specific tag such as agentic_commerce instead of only umbrella AI descriptors.
   - avoid duplicates, acronyms without expansion, and overly generic tags.
+  - tag_evidence should contain short evidence items for the chosen tags; prefer evidence from distinct sections when available.
+  - each tag_evidence item should include tag, tier (primary or secondary), section_label, and a short evidence string.
   - region and time_period should be empty strings if not stated.
   - do not add fields beyond the schema.

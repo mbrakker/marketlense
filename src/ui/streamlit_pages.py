@@ -1547,6 +1547,7 @@ def _render_category_manager(settings: Any, publish_settings: Any | None) -> Non
                     schema_version="1.0",
                     db_path=settings.reports_db,
                     category_mapping_path=settings.category_mapping_path,
+                    settings=settings,
                 )
             )
             st.session_state["last_recategorize_outcomes"] = outcomes

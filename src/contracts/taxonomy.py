@@ -19,9 +19,41 @@ class TaxonomyExtractRequest:
 
 
 @dataclass(frozen=True)
+class TaxonomyTagEvidence:
+    tag: str = field(metadata={"doc": "Extracted taxonomy tag supported by this evidence item."})
+    tier: str = field(
+        default="primary",
+        metadata={"doc": "Tag tier: primary or secondary."},
+    )
+    section_label: str = field(
+        default="",
+        metadata={"doc": "Section or chapter label that supports the tag."},
+    )
+    evidence: str = field(
+        default="",
+        metadata={"doc": "Short evidence snippet or justification for the tag."},
+    )
+    schema_version: str = field(
+        default="1.0", metadata={"doc": "Taxonomy tag-evidence schema version."}
+    )
+
+
+@dataclass(frozen=True)
 class TaxonomyExtractResponse:
     schema_version: str = field(metadata={"doc": "Taxonomy extraction response schema version."})
     taxonomy: List[str] = field(metadata={"doc": "Extracted taxonomy tags for the report."})
     region: str = field(metadata={"doc": "Primary region/market focus for the report."})
     time_period: str = field(metadata={"doc": "Primary time period covered by the report."})
+    primary_tags: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Most central report tags that define the primary subject."},
+    )
+    secondary_tags: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Secondary report tags that are material but not dominant."},
+    )
+    tag_evidence: List[TaxonomyTagEvidence] = field(
+        default_factory=list,
+        metadata={"doc": "Per-tag evidence items used to support tiered categorization."},
+    )
     not_found_reason: Optional[str] = field(default=None, metadata={"doc": "Reason for fallback output, if any."})

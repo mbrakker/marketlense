@@ -2,14 +2,20 @@ from __future__ import annotations
 
 import json
 import logging
+import re
+import unicodedata
 from typing import Any, Dict, List, Optional, Tuple
 
 from src.contracts.openai import OpenAIResponseRequest, OpenAIResponseResult
 from src.contracts.report_analysis import AnalysisPackPathRequest, AnalysisStorePackRequest
 from src.contracts.run_context import RunContext
-from src.contracts.categories import CategoryMappingLoadRequest
+from src.contracts.categories import CategoryMappingLoadRequest, TaxonomyInferenceRule
 from src.contracts.schema_validation import SchemaValidateRequest
-from src.contracts.taxonomy import TaxonomyExtractRequest, TaxonomyExtractResponse
+from src.contracts.taxonomy import (
+    TaxonomyExtractRequest,
+    TaxonomyExtractResponse,
+    TaxonomyTagEvidence,
+)
 from src.generators.analysis_pack_cache import (
     CachedPackAdaptResult,
     load_cached_pack,
@@ -38,6 +44,7 @@ def extract_taxonomy(
     analysis_store=report_analysis_store_service,
     file_client=file_service,
 ) -> TaxonomyExtractResponse:
+    taxonomy_temperature = _resolve_taxonomy_temperature(request)
     logger.info(log_event(
         ctx,
         role="generator",
@@ -115,7 +122,7 @@ def extract_taxonomy(
             "namespace": request.prompt_namespace,
             "resolved_model": prompt_bundle.resolved_model,
             "default_model": request.settings.openai_model,
-            "temperature": request.settings.temperature,
+            "temperature": taxonomy_temperature,
             "seed": request.settings.openai_seed,
         },
     ))
@@ -128,11 +135,13 @@ def extract_taxonomy(
             prompt_system_sha256=prompt_bundle.prompt_set.system.sha256,
             prompt_user_sha256=prompt_bundle.prompt_set.user.sha256,
             resolved_model=prompt_bundle.resolved_model,
+            taxonomy_temperature=taxonomy_temperature,
         )
         cache_key = sha256_json(cache_meta)
         cached_response, miss_reason = _load_cached_taxonomy(
             request=request,
             cache_key=cache_key,
+            inference_rules=mappings_resp.mappings.inference_rules,
             analysis_store=analysis_store,
             file_client=file_client,
             ctx=ctx,
@@ -182,7 +191,7 @@ def extract_taxonomy(
                 user_prompt=prompt_bundle.user_prompt,
                 vector_store_id=request.vector_store_id,
                 model=prompt_bundle.resolved_model,
-                temperature=request.settings.temperature,
+                temperature=taxonomy_temperature,
                 api_key=request.settings.openai_api_key,
                 seed=request.settings.openai_seed,
                 timeout_seconds=request.settings.openai_timeout_seconds,
@@ -241,12 +250,40 @@ def extract_taxonomy(
             fields={"code": exc.code, "message": exc.message},
         ))
 
-    taxonomy = _normalize_tags(payload.get("taxonomy"))
+    primary_tags = _normalize_tags(payload.get("primary_tags"))
+    secondary_tags = _normalize_tags(payload.get("secondary_tags"))
+    initial_taxonomy = _merge_taxonomy_lists(
+        payload.get("taxonomy"),
+        primary_tags,
+        secondary_tags,
+        _extract_evidence_tags(payload.get("tag_evidence")),
+    )
+    tag_evidence = _normalize_tag_evidence(
+        payload.get("tag_evidence"),
+        primary_tags=primary_tags,
+        secondary_tags=secondary_tags,
+        known_tags=initial_taxonomy,
+    )
+    primary_tags, secondary_tags, tag_evidence = _apply_inference_rules(
+        primary_tags=primary_tags,
+        secondary_tags=secondary_tags,
+        tag_evidence=tag_evidence,
+        inference_rules=mappings_resp.mappings.inference_rules,
+    )
+    taxonomy = _finalize_taxonomy_list(
+        raw_taxonomy=payload.get("taxonomy"),
+        primary_tags=primary_tags,
+        secondary_tags=secondary_tags,
+        tag_evidence=tag_evidence,
+    )
     region = _s(payload.get("region"))
     time_period = _s(payload.get("time_period"))
     response = TaxonomyExtractResponse(
         schema_version="1.0",
         taxonomy=taxonomy,
+        primary_tags=primary_tags,
+        secondary_tags=secondary_tags,
+        tag_evidence=tag_evidence,
         region=region,
         time_period=time_period,
         not_found_reason=not_found_reason or None,
@@ -266,6 +303,9 @@ def extract_taxonomy(
         module=logger.name,
         fields={
             "taxonomy_count": len(taxonomy),
+            "primary_tag_count": len(primary_tags),
+            "secondary_tag_count": len(secondary_tags),
+            "tag_evidence_count": len(tag_evidence),
             "region": region,
             "time_period": time_period,
             "not_found_reason": not_found_reason or "",
@@ -289,6 +329,7 @@ def _taxonomy_cache_meta(
     prompt_system_sha256: str,
     prompt_user_sha256: str,
     resolved_model: str,
+    taxonomy_temperature: float,
 ) -> Dict[str, Any]:
     return {
         "schema_version": "1.0",
@@ -298,9 +339,17 @@ def _taxonomy_cache_meta(
         "prompt_system_sha256": prompt_system_sha256,
         "prompt_user_sha256": prompt_user_sha256,
         "resolved_model": resolved_model,
-        "temperature": request.settings.temperature,
+        "temperature": taxonomy_temperature,
         "seed": request.settings.openai_seed,
     }
+
+
+def _resolve_taxonomy_temperature(request: TaxonomyExtractRequest) -> float:
+    configured = getattr(request.settings, "taxonomy_temperature", request.settings.temperature)
+    try:
+        return float(configured)
+    except (TypeError, ValueError):
+        return float(request.settings.temperature)
 
 
 def _resolve_pack_path(
@@ -351,6 +400,7 @@ def _load_cached_taxonomy(
     *,
     request: TaxonomyExtractRequest,
     cache_key: str,
+    inference_rules: List[TaxonomyInferenceRule],
     analysis_store,
     file_client,
     ctx: RunContext,
@@ -376,6 +426,9 @@ def _load_cached_taxonomy(
         taxonomy_payload = {
             "schema_version": "1.0",
             "taxonomy": payload.get("taxonomy"),
+            "primary_tags": payload.get("primary_tags"),
+            "secondary_tags": payload.get("secondary_tags"),
+            "tag_evidence": payload.get("tag_evidence"),
             "region": payload.get("region"),
             "time_period": payload.get("time_period"),
             "not_found_reason": payload.get("not_found_reason"),
@@ -409,12 +462,41 @@ def _load_cached_taxonomy(
                 status="schema_invalid",
                 value=None,
             )
+        primary_tags = _normalize_tags(taxonomy_payload.get("primary_tags"))
+        secondary_tags = _normalize_tags(taxonomy_payload.get("secondary_tags"))
+        initial_taxonomy = _merge_taxonomy_lists(
+            taxonomy_payload.get("taxonomy"),
+            primary_tags,
+            secondary_tags,
+            _extract_evidence_tags(taxonomy_payload.get("tag_evidence")),
+        )
+        tag_evidence = _normalize_tag_evidence(
+            taxonomy_payload.get("tag_evidence"),
+            primary_tags=primary_tags,
+            secondary_tags=secondary_tags,
+            known_tags=initial_taxonomy,
+        )
+        primary_tags, secondary_tags, tag_evidence = _apply_inference_rules(
+            primary_tags=primary_tags,
+            secondary_tags=secondary_tags,
+            tag_evidence=tag_evidence,
+            inference_rules=inference_rules,
+        )
+        taxonomy = _finalize_taxonomy_list(
+            raw_taxonomy=taxonomy_payload.get("taxonomy"),
+            primary_tags=primary_tags,
+            secondary_tags=secondary_tags,
+            tag_evidence=tag_evidence,
+        )
         return CachedPackAdaptResult(
             schema_version="1.0",
             status="hit",
             value=TaxonomyExtractResponse(
                 schema_version="1.0",
-                taxonomy=_normalize_tags(taxonomy_payload.get("taxonomy")),
+                taxonomy=taxonomy,
+                primary_tags=primary_tags,
+                secondary_tags=secondary_tags,
+                tag_evidence=tag_evidence,
                 region=_s(taxonomy_payload.get("region")),
                 time_period=_s(taxonomy_payload.get("time_period")),
                 not_found_reason=_s(taxonomy_payload.get("not_found_reason")) or None,
@@ -449,6 +531,17 @@ def _store_taxonomy_cache(
     payload = {
         "schema_version": "1.0",
         "taxonomy": response.taxonomy,
+        "primary_tags": response.primary_tags,
+        "secondary_tags": response.secondary_tags,
+        "tag_evidence": [
+            {
+                "tag": item.tag,
+                "tier": item.tier,
+                "section_label": item.section_label,
+                "evidence": item.evidence,
+            }
+            for item in response.tag_evidence
+        ],
         "region": response.region,
         "time_period": response.time_period,
         "not_found_reason": response.not_found_reason or "",
@@ -479,22 +572,252 @@ def _normalize_tags(items: Any) -> List[str]:
     cleaned: List[str] = []
     seen = set()
     for item in items:
-        text = _s(item).strip()
+        text = _slug_tag(item)
         if not text:
             continue
-        key = text.lower()
+        if text in seen:
+            continue
+        seen.add(text)
+        cleaned.append(text)
+    return cleaned
+
+
+def _merge_taxonomy_lists(*groups: Any) -> List[str]:
+    merged: List[str] = []
+    seen = set()
+    for group in groups:
+        if not isinstance(group, list):
+            continue
+        for item in group:
+            text = _slug_tag(item)
+            if not text:
+                continue
+            if text in seen:
+                continue
+            seen.add(text)
+            merged.append(text)
+    return merged
+
+
+def _extract_evidence_tags(items: Any) -> List[str]:
+    if not isinstance(items, list):
+        return []
+    return _normalize_tags(
+        [
+            _s(item.get("tag")).strip()
+            for item in items
+            if isinstance(item, dict) and _s(item.get("tag")).strip()
+        ]
+    )
+
+
+def _normalize_tag_evidence(
+    items: Any,
+    *,
+    primary_tags: List[str],
+    secondary_tags: List[str],
+    known_tags: List[str],
+) -> List[TaxonomyTagEvidence]:
+    if not isinstance(items, list):
+        return []
+    primary_norms = {_slug_tag(tag) for tag in primary_tags if _slug_tag(tag)}
+    secondary_norms = {_slug_tag(tag) for tag in secondary_tags if _slug_tag(tag)}
+    known_norms = {_slug_tag(tag) for tag in known_tags if _slug_tag(tag)}
+    evidence_items: List[TaxonomyTagEvidence] = []
+    seen = set()
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        tag = _slug_tag(item.get("tag"))
+        if not tag:
+            continue
+        if known_norms and tag not in known_norms:
+            continue
+        section_label = _s(
+            item.get("section_label") or item.get("section") or item.get("section_title")
+        ).strip()
+        evidence = _s(item.get("evidence")).strip()
+        tier = _s(item.get("tier")).strip().lower()
+        if tier not in {"primary", "secondary"}:
+            tier = "secondary" if tag in secondary_norms else "primary"
+        dedupe_key = (tag, tier, section_label.lower())
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
+        evidence_items.append(
+            TaxonomyTagEvidence(
+                tag=tag,
+                tier=tier,
+                section_label=section_label,
+                evidence=evidence,
+            )
+        )
+    return evidence_items
+
+
+def _apply_inference_rules(
+    *,
+    primary_tags: List[str],
+    secondary_tags: List[str],
+    tag_evidence: List[TaxonomyTagEvidence],
+    inference_rules: List[TaxonomyInferenceRule],
+) -> tuple[List[str], List[str], List[TaxonomyTagEvidence]]:
+    updated_primary = list(primary_tags)
+    updated_secondary = list(secondary_tags)
+    updated_evidence = list(tag_evidence)
+    for rule in inference_rules:
+        trigger_evidence = _find_trigger_evidence_for_rule(rule, updated_evidence)
+        if trigger_evidence is None:
+            continue
+        updated_primary, updated_secondary, updated_evidence = _apply_inference_rule(
+            rule=rule,
+            trigger_evidence=trigger_evidence,
+            primary_tags=updated_primary,
+            secondary_tags=updated_secondary,
+            tag_evidence=updated_evidence,
+        )
+
+    return (
+        _normalize_tags(updated_primary),
+        _normalize_tags(updated_secondary),
+        _dedupe_tag_evidence(updated_evidence),
+    )
+
+
+def _finalize_taxonomy_list(
+    *,
+    raw_taxonomy: Any,
+    primary_tags: List[str],
+    secondary_tags: List[str],
+    tag_evidence: List[TaxonomyTagEvidence],
+) -> List[str]:
+    structured_taxonomy = _merge_taxonomy_lists(
+        primary_tags,
+        secondary_tags,
+        [item.tag for item in tag_evidence],
+    )
+    if structured_taxonomy:
+        return structured_taxonomy
+    return _merge_taxonomy_lists(raw_taxonomy)
+
+
+def _find_trigger_evidence_for_rule(
+    rule: TaxonomyInferenceRule,
+    tag_evidence: List[TaxonomyTagEvidence],
+) -> TaxonomyTagEvidence | None:
+    trigger_tags = {_slug_tag(tag) for tag in rule.trigger_tags if _slug_tag(tag)}
+    context_keywords_any = [
+        keyword for keyword in rule.context_keywords_any if keyword.strip()
+    ]
+    for item in tag_evidence:
+        if _slug_tag(item.tag) not in trigger_tags:
+            continue
+        if not context_keywords_any:
+            return item
+        haystack = f"{item.section_label} {item.evidence}"
+        if any(_keyword_matches_evidence(keyword, haystack) for keyword in context_keywords_any):
+            return item
+    return None
+
+
+def _keyword_matches_evidence(keyword: str, haystack: str) -> bool:
+    normalized_keyword = _normalize_match_text(keyword)
+    normalized_haystack = _normalize_match_text(haystack)
+    if not normalized_keyword or not normalized_haystack:
+        return False
+    return f" {normalized_keyword} " in f" {normalized_haystack} "
+
+
+def _normalize_match_text(value: str) -> str:
+    normalized = unicodedata.normalize("NFKC", value or "").lower()
+    normalized = re.sub(r"[^0-9a-z]+", " ", normalized)
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+    return normalized
+
+
+def _apply_inference_rule(
+    *,
+    rule: TaxonomyInferenceRule,
+    trigger_evidence: TaxonomyTagEvidence,
+    primary_tags: List[str],
+    secondary_tags: List[str],
+    tag_evidence: List[TaxonomyTagEvidence],
+) -> tuple[List[str], List[str], List[TaxonomyTagEvidence]]:
+    remove_norms = {
+        _slug_tag(tag) for tag in rule.remove_tags if _slug_tag(tag)
+    }
+    inferred_tag = _slug_tag(rule.inferred_tag)
+    inferred_norm = inferred_tag
+
+    updated_primary = [
+        tag for tag in primary_tags if _slug_tag(tag) not in remove_norms
+    ]
+    updated_secondary = [
+        tag for tag in secondary_tags if _slug_tag(tag) not in remove_norms
+    ]
+    updated_evidence = [
+        item for item in tag_evidence if _slug_tag(item.tag) not in remove_norms
+    ]
+
+    updated_primary = [
+        tag for tag in updated_primary if _slug_tag(tag) != inferred_norm
+    ]
+    updated_secondary = [
+        tag for tag in updated_secondary if _slug_tag(tag) != inferred_norm
+    ]
+
+    if rule.inferred_tier == "primary":
+        updated_primary.append(inferred_tag)
+    else:
+        updated_secondary.append(inferred_tag)
+
+    updated_evidence.append(
+        TaxonomyTagEvidence(
+            tag=inferred_tag,
+            tier=rule.inferred_tier,
+            section_label=trigger_evidence.section_label,
+            evidence=trigger_evidence.evidence,
+        )
+    )
+    return updated_primary, updated_secondary, updated_evidence
+
+
+def _dedupe_tag_evidence(
+    items: List[TaxonomyTagEvidence],
+) -> List[TaxonomyTagEvidence]:
+    deduped: List[TaxonomyTagEvidence] = []
+    seen = set()
+    for item in items:
+        key = (
+            _slug_tag(item.tag),
+            item.tier.strip().lower(),
+            item.section_label.strip().lower(),
+        )
         if key in seen:
             continue
         seen.add(key)
-        cleaned.append(text)
-    return cleaned
+        deduped.append(item)
+    return deduped
+
+
+def _slug_tag(value: Any) -> str:
+    normalized = unicodedata.normalize("NFKC", _s(value)).strip().lower()
+    normalized = re.sub(r"[\W]+", "_", normalized)
+    return normalized.strip("_")
 
 
 def _collect_allowed_tags(mappings_resp) -> List[str]:
     allowed: List[str] = []
     seen = set()
     for cat in mappings_resp.mappings.categories:
-        for tag in cat.tags:
+        for tag in (
+            list(cat.core_tags)
+            + list(cat.supporting_tags)
+            + list(cat.secondary_supporting_tags)
+            + list(cat.descriptor_tags)
+            + list(cat.tags)
+            + list(cat.generic_tags)
+        ):
             tag_s = str(tag or "").strip()
             if not tag_s:
                 continue
@@ -510,6 +833,9 @@ def _empty_payload(reason: str) -> Dict[str, Any]:
     return {
         "schema_version": "1.0",
         "taxonomy": [],
+        "primary_tags": [],
+        "secondary_tags": [],
+        "tag_evidence": [],
         "region": "",
         "time_period": "",
         "not_found_reason": reason,

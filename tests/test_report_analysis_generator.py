@@ -8,7 +8,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from src.contracts.categories import CategoryAssignment
+from src.contracts.context_category_fit import (
+    ContextCategoryFitResponse,
+    ReportCategoryContext,
+)
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestSettings
 from src.contracts.pdf_text import PdfTextExtractResponse
@@ -150,13 +153,29 @@ def _deps(**overrides) -> ReportGeneratorDependencies:
         load_category_mappings=lambda req, ctx: SimpleNamespace(
             mappings=SimpleNamespace(uncategorized=[], categories=[])
         ),
-        categorize_taxonomy=lambda taxonomy, mappings, ctx: CategoryAssignment(
+        build_report_category_context=lambda req, ctx: ReportCategoryContext(
             schema_version="1.0",
+            report_id="file-1",
+            title="Base Title",
+            publisher="",
+            region="US",
+            time_period="2026",
+            overview="Context overview",
+            methods=[],
+            key_findings=[],
+            limitations=[],
+            sections=[],
+        ),
+        fit_report_categories_from_context=lambda req, ctx: ContextCategoryFitResponse(
+            schema_version="1.0",
+            report_id="file-1",
             categories=["cat"],
             category_labels=["Category"],
-            unmapped_tags=[],
+            fits=[],
+            request_id="req-1",
+            model="gpt-5-mini",
+            raw_response="{}",
         ),
-        update_uncategorized_tags=lambda req, ctx: None,
         vector_store_update_metadata=lambda req, ctx: None,
     )
     return replace(seeded, **overrides)
@@ -301,6 +320,115 @@ def test_complete_report_analysis_surfaces_doc_map_empty(tmp_path, assert_app_er
         severity="error",
     )
     assert exc_info.value.context["sections_count"] == 0
+
+
+def test_run_report_analysis_uses_context_fit_categories_not_taxonomy_tags(tmp_path):
+    runtime = _runtime(tmp_path)
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    stored: list[str] = []
+    metadata_updates = []
+
+    deps = _deps(
+        extract_taxonomy=lambda req, ctx: TaxonomyExtractResponse(
+            schema_version="1.0",
+            taxonomy=["metadata_only_tag"],
+            region="US",
+            time_period="2026",
+        ),
+        build_report_category_context=lambda req, ctx: ReportCategoryContext(
+            schema_version="1.0",
+            report_id=req.report.file_id,
+            title=req.report.title,
+            publisher=req.report.publisher or "",
+            region=req.report.region or "",
+            time_period=req.report.time_period or "",
+            overview="Report context overview",
+            methods=["Survey"],
+            key_findings=["AI is reshaping retail execution."],
+            limitations=[],
+            sections=[],
+        ),
+        fit_report_categories_from_context=lambda req, ctx: ContextCategoryFitResponse(
+            schema_version="1.0",
+            report_id=req.context.report_id,
+            categories=["agentic_commerce", "ai_automation"],
+            category_labels=["Agentic Commerce", "AI & Automation"],
+            fits=[],
+            request_id="req-ctx",
+            model="gpt-5-mini",
+            raw_response="{}",
+        ),
+        generate_evidence_packs=lambda **kwargs: {
+            "doc_map": {
+                "title": "Doc Title",
+                "publisher": "Doc Publisher",
+                "summary": "A report about AI-led shopping journeys.",
+                "sections": [],
+            },
+            "scope": {"scope": "Retail commerce strategy"},
+            "methods": {"methods": ["Survey"]},
+            "findings": {"findings": [{"id": "f1", "text": "AI is reshaping retail execution."}]},
+            "limitations": {"limitations": []},
+        },
+        generate_artifacts=lambda **kwargs: {
+            "schema_version": "1.0",
+            "toc_topics": ["Topic"],
+            "summary": {
+                "tldr": "summary",
+                "executive_summary": "Summary",
+                "claim_evidence_map": [],
+            },
+            "insights_candidates": [],
+            "insights_final": [],
+            "quotes_final": [],
+            "expert_comment": "",
+            "linkedin_post": "",
+            "source_status": {
+                "schema_version": "1.0",
+                "not_available": False,
+                "reason": "",
+            },
+        },
+        run_validation=lambda *args, **kwargs: ValidationReport(
+            schema_version="1.1",
+            status="pass",
+            issues=[],
+            severity="pass",
+            source_path=str(tmp_path / "out" / "validation.json"),
+        ),
+        analysis_store_pack=lambda req, ctx: (
+            stored.append(req.pack_name)
+            or SimpleNamespace(
+                output_path=str(Path(req.output_dir) / req.pack_name / "payload.json")
+            )
+        ),
+        vector_store_update_metadata=lambda req, ctx: metadata_updates.append(req),
+    )
+
+    state = run_report_analysis(
+        runtime,
+        source,
+        selection,
+        VectorStoreIndexingState(
+            vector_store_id="vs_1",
+            openai_file_id="file_1",
+            vector_store_status="completed",
+            indexed_at_utc="2026-01-01T00:00:00Z",
+            last_error=None,
+        ),
+        deps,
+    )
+
+    assert state.payload.taxonomy == ["metadata_only_tag"]
+    assert state.payload.categories == ["agentic_commerce", "ai_automation"]
+    assert state.category_labels == ["Agentic Commerce", "AI & Automation"]
+    assert {"report_context", "context_category_fit"}.issubset(set(stored))
+    assert metadata_updates[0].metadata.taxonomy == ["metadata_only_tag"]
+    assert metadata_updates[0].metadata.categories == [
+        "agentic_commerce",
+        "ai_automation",
+    ]
 
 
 def test_run_report_analysis_regenerates_failed_section_until_pass(

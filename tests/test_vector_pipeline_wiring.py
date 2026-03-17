@@ -12,6 +12,10 @@ from pypdf import PdfWriter
 
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
+from src.contracts.context_category_fit import (
+    ContextCategoryFitResponse,
+    ReportCategoryContext,
+)
 from src.contracts.report_generation import ReportRuntimeState
 from src.contracts.pdf_text import PdfTextSample, PdfTextSampleResponse
 from src.contracts.report_analysis import AnalysisStorePackRequest
@@ -202,12 +206,29 @@ def _base_vector_report_dependencies(
                 uncategorized=[],
             )
         ),
-        "categorize_taxonomy": lambda taxonomy, mappings, ctx: SimpleNamespace(
+        "build_report_category_context": lambda req, ctx: ReportCategoryContext(
+            schema_version="1.0",
+            report_id=req.report.file_id,
+            title=req.report.title,
+            publisher=req.report.publisher or "",
+            region=req.report.region or "",
+            time_period=req.report.time_period or "",
+            overview="Context overview",
+            methods=[],
+            key_findings=[],
+            limitations=[],
+            sections=[],
+        ),
+        "fit_report_categories_from_context": lambda req, ctx: ContextCategoryFitResponse(
+            schema_version="1.0",
+            report_id=req.context.report_id,
             categories=["cat"],
             category_labels=["Category"],
-            unmapped_tags=[],
+            fits=[],
+            request_id="req-1",
+            model="gpt-5-mini",
+            raw_response="{}",
         ),
-        "update_uncategorized_tags": lambda req, ctx: None,
         "extract_best_figure": lambda req, ctx: SimpleNamespace(
             image_path=None,
             caption=None,

@@ -140,6 +140,35 @@ def test_openai_response_with_vector_store_parses_fenced_json(fake_openai) -> No
     assert result.parsed_json == {"result": "ok"}
 
 
+def test_openai_response_with_vector_store_retries_unsupported_temperature(
+    fake_openai,
+) -> None:
+    fake_openai.add(
+        "responses.create",
+        Exception(
+            "Error code: 400 - {'error': {'message': \"Unsupported parameter: 'temperature' is not supported with this model.\", 'type': 'invalid_request_error', 'param': 'temperature', 'code': None}}"
+        ),
+    )
+    fake_openai.queue_response_text(json.dumps({"result": "ok"}))
+    req = OpenAIResponseRequest(
+        schema_version="1.0",
+        system_prompt="system",
+        user_prompt="user",
+        vector_store_id="vs_123",
+        model="gpt-5-mini",
+        temperature=0.2,
+        api_key="key",
+        seed=None,
+    )
+
+    result = svc.openai_respond_with_vector_store(req, _ctx())
+
+    first_call, second_call = fake_openai.calls["responses.create"]
+    assert result.parsed_json == {"result": "ok"}
+    assert "temperature" in first_call
+    assert "temperature" not in second_call
+
+
 def test_openai_chat_json_with_images_skips_known_unsupported_params(
     tmp_path, fake_openai
 ) -> None:

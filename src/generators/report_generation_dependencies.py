@@ -8,6 +8,12 @@ from src.contracts.categories import (
     UncategorizedTagsUpdateRequest,
 )
 from src.contracts.cover_images import CoverImageGenerationRequest
+from src.contracts.context_category_fit import (
+    ContextCategoryFitRequest,
+    ContextCategoryFitResponse,
+    ReportContextBuildRequest,
+    ReportCategoryContext,
+)
 from src.contracts.files import FileStatRequest, ReadTextRequest, WriteBytesRequest
 from src.contracts.openai import (
     OpenAIJSONImagePromptRequest,
@@ -58,7 +64,7 @@ from src.contracts.report_store import (
 )
 from src.contracts.run_context import RunContext
 from src.contracts.state import StateGetRequest, StateRecordRequest
-from src.contracts.taxonomy import TaxonomyExtractRequest
+from src.contracts.taxonomy import TaxonomyExtractRequest, TaxonomyExtractResponse
 from src.contracts.validation import ValidationReport
 from src.contracts.vector_store import (
     VectorStoreAttachFileRequest,
@@ -70,8 +76,12 @@ from src.contracts.vector_store import (
 )
 from src.generators.artifact_generator import generate_artifacts
 from src.generators.categorize_generator import categorize_taxonomy
+from src.generators.context_category_fit_generator import (
+    fit_report_categories_from_context,
+)
 from src.generators.cover_image_generator import generate_cover_images
 from src.generators.evidence_pack_generator import generate_evidence_packs
+from src.generators.report_context_generator import build_report_category_context
 from src.generators.report_regeneration_generator import regenerate_artifacts
 from src.generators.taxonomy_generator import extract_taxonomy
 from src.generators.validation_generator import validate_report as run_validation
@@ -157,7 +167,13 @@ class ReportGeneratorDependencies:
     write_bytes: Callable[[WriteBytesRequest, RunContext], Any]
     extract_taxonomy: Callable[[TaxonomyExtractRequest, RunContext], Any]
     load_category_mappings: Callable[[CategoryMappingLoadRequest, RunContext], Any]
-    categorize_taxonomy: Callable[[list[str], Any, RunContext], Any]
+    categorize_taxonomy: Callable[[list[str] | TaxonomyExtractResponse, Any, RunContext], Any]
+    build_report_category_context: Callable[
+        [ReportContextBuildRequest, RunContext], ReportCategoryContext
+    ]
+    fit_report_categories_from_context: Callable[
+        [ContextCategoryFitRequest, RunContext], ContextCategoryFitResponse
+    ]
     update_uncategorized_tags: Callable[
         [UncategorizedTagsUpdateRequest, RunContext], Any
     ]
@@ -210,6 +226,8 @@ class ReportGeneratorDependencies:
             extract_taxonomy=extract_taxonomy,
             load_category_mappings=load_category_mappings,
             categorize_taxonomy=categorize_taxonomy,
+            build_report_category_context=build_report_category_context,
+            fit_report_categories_from_context=fit_report_categories_from_context,
             update_uncategorized_tags=update_uncategorized_tags,
             generate_evidence_packs=generate_evidence_packs,
             generate_artifacts=generate_artifacts,

@@ -30,12 +30,17 @@ from src.contracts.validation import (
     ValidationReport,
     ValidationRequest,
 )
+from src.contracts.vector_store import (
+    VectorStoreMetadata,
+    VectorStoreUpdateMetadataRequest,
+)
 from src.generators.normalize_generator import normalize_report
 from src.generators.figure_caption_generator import generate_figure_captions
 from src.generators.report_analysis_generator import (
     VectorStoreIndexingState,
     _await_vector_store_indexing,
-    _resolve_taxonomy_and_categories,
+    _resolve_categories_from_report_context,
+    _resolve_taxonomy,
 )
 from src.generators.report_generation_dependencies import ReportGeneratorDependencies
 from src.generators.report_generation_shared import (
@@ -138,9 +143,8 @@ def run_report_analysis(
             max_workers=min(runtime.report_worker_limit, 2)
         ) as executor:
             taxonomy_future = executor.submit(
-                _resolve_taxonomy_and_categories,
+                _resolve_taxonomy,
                 runtime,
-                selection,
                 mode_ctx,
                 vector_state.vector_store_id,
                 dependencies,
@@ -174,9 +178,8 @@ def run_report_analysis(
             )
         )
     else:
-        taxonomy_state = _resolve_taxonomy_and_categories(
+        taxonomy_state = _resolve_taxonomy(
             runtime,
-            selection,
             mode_ctx,
             vector_state.vector_store_id,
             dependencies,
@@ -185,8 +188,6 @@ def run_report_analysis(
     data.taxonomy = taxonomy_state.taxonomy
     data.region = taxonomy_state.region
     data.time_period = taxonomy_state.time_period
-    category_assignment = taxonomy_state.category_assignment
-    data.categories = category_assignment.categories
 
     try:
         if not runtime.parallel_within_file:
@@ -270,6 +271,64 @@ def run_report_analysis(
         indexed_at_utc=vector_state.indexed_at_utc,
         openai_file_id=vector_state.openai_file_id,
         last_error=vector_state.last_error,
+    )
+
+    context_category_state = _resolve_categories_from_report_context(
+        runtime,
+        title=data.title,
+        publisher=data.publisher,
+        taxonomy_state=taxonomy_state,
+        evidence_pack_paths=mode_evidence_paths,
+        mode_ctx=mode_ctx,
+        dependencies=dependencies,
+    )
+    category_assignment = context_category_state.category_assignment
+    data.categories = category_assignment.categories
+    for pack_name, payload in (
+        ("report_context", asdict(context_category_state.report_context)),
+        ("context_category_fit", asdict(context_category_state.fit_response)),
+    ):
+        stored_pack = dependencies.analysis_store_pack(
+            AnalysisStorePackRequest(
+                schema_version="1.0",
+                output_dir=runtime.settings.output_dir,
+                report_id=runtime.file.file_id,
+                pack_name=pack_name,
+                payload=payload,
+                report_slug=runtime.report_name,
+            ),
+            child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:{pack_name}"),
+        )
+        mode_evidence_paths[pack_name] = stored_pack.output_path
+    if vector_state.vector_store_id:
+        dependencies.vector_store_update_metadata(
+            VectorStoreUpdateMetadataRequest(
+                schema_version="1.0",
+                vector_store_id=vector_state.vector_store_id,
+                metadata=VectorStoreMetadata(
+                    schema_version="1.0",
+                    report_id=runtime.file.file_id,
+                    report_name=runtime.report_title,
+                    taxonomy=taxonomy_state.taxonomy,
+                    categories=category_assignment.categories,
+                    region=taxonomy_state.region,
+                    time_period=taxonomy_state.time_period,
+                ),
+            ),
+            child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:metadata"),
+        )
+    logger.info(
+        log_event(
+            mode_ctx,
+            role="orchestrator",
+            event="context_first_categories_resolved",
+            module=logger.name,
+            fields={
+                "file_id": runtime.file.file_id,
+                "categories": category_assignment.categories,
+                "category_labels": category_assignment.category_labels,
+            },
+        )
     )
 
     doc_map_pack = packs.get("doc_map", {})

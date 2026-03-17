@@ -1214,7 +1214,14 @@ def openai_respond_with_vector_store(
         if OpenAI is None:
             raise TypeError("OpenAI client not available")
         client = OpenAI(**client_kwargs)
-        resp = client.responses.create(**payload_args)
+        resp = _responses_create_with_unsupported_param_retry(
+            client=client,
+            payload_args=payload_args,
+            fallback_params=("temperature", "seed"),
+            ctx=ctx,
+            event_name="openai_response_retry_without_param",
+            model=request.model,
+        )
     except TypeError as exc:
         raise AppError(
             code="openai_client_unavailable",

@@ -40,6 +40,10 @@ class IngestSettings:
     temperature: float = field(
         metadata={"doc": "Sampling temperature for report generation."}
     )
+    taxonomy_temperature: float = field(
+        default=1.0,
+        metadata={"doc": "Sampling temperature for taxonomy extraction calls."},
+    )
     ingest_worker_limit: int = field(
         default=2,
         metadata={
@@ -143,7 +147,7 @@ class IngestSettings:
     rank_selected_max: int = field(
         default=5,
         metadata={
-            "doc": "Maximum number of final ranked candidates to include in HTML figure gallery."
+            "doc": "Maximum number of final ranked candidates to keep per kind (table and chart) for the HTML figure gallery."
         },
     )
     rank_min_overall_score: int = field(

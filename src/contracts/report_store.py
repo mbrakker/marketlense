@@ -24,10 +24,16 @@ class ReportMetadataUpsertRequest:
         metadata={"doc": "Publisher or organization for the report, if known."},
     )
     taxonomy: List[str] = field(
-        default_factory=list, metadata={"doc": "List of taxonomy tags/categories."}
+        default_factory=list,
+        metadata={
+            "doc": "List of report metadata tags extracted from evidence; these tags do not drive portal category assignment."
+        },
     )
     categories: List[str] = field(
-        default_factory=list, metadata={"doc": "List of assigned category IDs."}
+        default_factory=list,
+        metadata={
+            "doc": "List of assigned portal category IDs produced by the context-first category fit."
+        },
     )
     region: Optional[str] = field(
         default=None,
@@ -139,10 +145,16 @@ class ReportMetadataGetResponse:
         metadata={"doc": "Publisher or organization for the report, if known."},
     )
     taxonomy: List[str] = field(
-        default_factory=list, metadata={"doc": "List of taxonomy tags/categories."}
+        default_factory=list,
+        metadata={
+            "doc": "List of report metadata tags extracted from evidence; these tags do not drive portal category assignment."
+        },
     )
     categories: List[str] = field(
-        default_factory=list, metadata={"doc": "List of assigned category IDs."}
+        default_factory=list,
+        metadata={
+            "doc": "List of assigned portal category IDs produced by the context-first category fit."
+        },
     )
     region: Optional[str] = field(
         default=None,

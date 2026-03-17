@@ -2,7 +2,11 @@ text: |
   Report title: {{ report_title }}
 
   Task:
-  Use file_search to identify the report's primary taxonomy tags, its main region/market focus, and the primary time period covered.
+  Use file_search to identify the report's primary taxonomy tags, secondary taxonomy tags, brief evidence for those tags, its main region/market focus, and the primary time period covered.
+  Treat taxonomy as metadata for search and filtering, not as the portal-category decision.
+  Return only tags that describe the central topic of the report.
+  Do not include adjacent channels, platforms, or tactics unless the report is mainly about them.
+  If AI or agents are framed as changing shopping, buying, checkout, or commerce journeys, include the commerce-specific tag rather than only umbrella AI tags.
 
   Allowed tags (use exact strings where applicable):
   {{ allowed_tags_json }}
@@ -11,6 +15,16 @@ text: |
   {
     "schema_version": "1.0",
     "taxonomy": ["tag1", "tag2", "..."],
+    "primary_tags": ["tag1", "tag2"],
+    "secondary_tags": ["tag3"],
+    "tag_evidence": [
+      {
+        "tag": "tag1",
+        "tier": "primary",
+        "section_label": "Section title",
+        "evidence": "short evidence for why the tag is central"
+      }
+    ],
     "region": "Region name or empty string",
     "time_period": "Time period or empty string"
   }

@@ -86,10 +86,16 @@ class ReportPayload:
         metadata={"doc": "Publisher or organization that authored the report."},
     )
     taxonomy: List[str] = field(
-        default_factory=list, metadata={"doc": "List of taxonomy tags/categories."}
+        default_factory=list,
+        metadata={
+            "doc": "List of report metadata tags extracted from report evidence; these tags do not determine portal categories."
+        },
     )
     categories: List[str] = field(
-        default_factory=list, metadata={"doc": "Assigned category IDs (max 3)."}
+        default_factory=list,
+        metadata={
+            "doc": "Assigned portal category IDs selected from report context (max 2)."
+        },
     )
     region: str = field(
         default="", metadata={"doc": "Primary region/market focus of the report."}

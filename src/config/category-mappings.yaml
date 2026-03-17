@@ -1,61 +1,135 @@
-schema_version: '1.0'
+schema_version: '1.2'
+classification:
+  schema_version: '1.1'
+  max_categories: 2
+  min_primary_score: 2.2
+  min_secondary_score: 1.6
+  secondary_score_ratio: 0.72
+  secondary_rescue_score_ratio: 0.55
+  secondary_rescue_min_strong_matches: 2
+  secondary_rescue_min_evidence_tags: 2
+  secondary_rescue_min_evidence_sections: 2
+  core_tag_weight: 2.2
+  supporting_tag_weight: 1.2
+  legacy_tag_weight: 1.0
+  generic_tag_weight: 0.3
+  negative_tag_weight: -2.0
+  repeated_match_bonus: 0.25
+  global_generic_tags:
+  - digital_economy
+  - innovation
+  - video
+  - social_media
+  - forecasting
+  - media_forecast
+  - market_forecast
+  - growth_forecast
+  - forecasts
+  - optimization
+  - engagement
+  - risk_assessment
+  - trust
 categories:
 - id: chinese_online_platforms
   label: Chinese Online Platforms
   description: China-based ecommerce and social platforms, including marketplace and
     social commerce ecosystems.
-  tags:
+  core_tags:
   - chinese_online_platforms
   - china_marketplaces
   - tmall
-  - aliexpress
-  - shein
-  - temu
   - jd
   - pinduoduo
   - douyin
   - wechat_mini_programs
-  - wechat
   - alibaba
   - taobao
+  - aliexpress
+  - shein
+  - temu
+  - wechat
   - crossborder_from_china
+  definition: Reports whose dominant subject is the commercial, retail, advertising,
+    or ecosystem behavior of China-origin digital platforms and super-apps.
+  include_when:
+  - Repeated evidence focuses on platform dynamics inside Tmall, JD, Taobao, Douyin,
+    Pinduoduo, WeChat, or similar China-native ecosystems.
+  - The report explains how Chinese platform structure, merchant models, or shopper
+    behavior shape outcomes.
+  exclude_when:
+  - Reject when China platforms appear only as one example inside a broader marketplace
+    or cross-border report.
+  - Reject when the central subject is cross-border operations rather than the platform
+    ecosystem itself.
 - id: online_crossborder
   label: Online Cross-Border Commerce
   description: Cross-border ecommerce operations, localization, payments, duties,
     and logistics.
-  tags:
+  core_tags:
   - online_crossborder
   - crossborder
   - cross_border
   - crossborder_ecommerce
-  - localization
-  - multi_currency
   - duties_and_taxes
   - international_shipping
   - customs
   - global_logistics
   - crossborder_from_china
+  supporting_tags:
+  - localization
+  - multi_currency
+  - crossborder_from_china
+  - alibaba
+  - taobao
+  - aliexpress
+  - shein
+  - temu
+  - '1688'
+  definition: Reports mainly about selling across national borders through ecommerce,
+    including localization, duties, shipping, payments, and operational complexity.
+  include_when:
+  - Evidence repeatedly covers localization, customs, taxes, shipping, multi-market
+    rollout, or international merchant operations.
+  - Cross-border execution is the main business problem, not just a regional footnote.
+  exclude_when:
+  - Reject when international expansion is mentioned but the report is really about
+    one platform or one domestic market.
+  - Reject when logistics or payments are supporting topics inside a broader retail
+    strategy report.
 - id: tiktok_shop
   label: TikTok Shop
   description: TikTok-native commerce including shoppable video, creator-led selling,
     and in-app checkout.
-  tags:
+  core_tags:
   - tiktok_shop
-  - tiktok
   - shoppable_video
   - live_shopping
   - creator_commerce
-  - creator_affiliate
   - in_app_checkout
   - short_video_commerce
   - shop_tab
+  - tts
+  supporting_tags:
+  - tiktok
+  - creator_affiliate
   - creator_economy
   - vertical_video
+  definition: Reports whose central subject is TikTok Shop as a commerce platform,
+    including in-app purchasing, creator selling, and TikTok-native retail tactics.
+  include_when:
+  - TikTok Shop, TikTok commerce mechanics, or TikTok-native seller strategy are the
+    dominant focus across sections.
+  - The report is specifically about how buying happens inside TikTok rather than
+    social video in general.
+  exclude_when:
+  - Reject when TikTok is only one channel benchmark inside a broader social or media
+    report.
+  - Reject when creator strategy is central but direct TikTok Shop commerce is not.
 - id: social_commerce
   label: Social Commerce
   description: Shopping experiences embedded in social platforms, including live shopping,
     creator-led commerce, and in-app checkout.
-  tags:
+  core_tags:
   - social_commerce
   - social_shopping
   - live_shopping
@@ -63,51 +137,82 @@ categories:
   - creator_commerce
   - shoppable_video
   - social_marketplace
-  - shop_tab
   - link_in_bio
+  supporting_tags:
+  - shop_tab
   - tiktok_shop
+  generic_tags:
   - creator_economy
+  definition: Reports centered on shopping experiences embedded in social platforms,
+    where content, community, or creators directly drive purchase behavior.
+  include_when:
+  - Evidence repeatedly links social discovery to purchase, checkout, live shopping,
+    or in-platform transaction behavior.
+  - The report treats commerce inside social surfaces as the main subject rather than
+    a side tactic.
+  exclude_when:
+  - Reject when the report is mainly about social content, creator marketing, or audience
+    attention without purchase flow centrality.
+  - Reject when the report is platform-specific enough to fit TikTok Shop or another
+    narrower category instead.
 - id: online_marketplaces
   label: Online Marketplaces & Platforms
   description: Multi-seller marketplaces, platform operations, and marketplace growth
     strategies.
-  tags:
+  core_tags:
   - online_marketplaces
   - marketplaces
   - marketplace_growth
   - seller_acquisition
-  - category_expansion
-  - marketplace_trust
   - platform_fees
   - take_rate
   - buyer_seller_flywheel
+  supporting_tags:
+  - category_expansion
+  - marketplace_trust
   - sponsored_products
   - sponsored_brands
   - buy_box
+  definition: Reports whose main subject is the marketplace business model, including
+    multi-seller platforms, seller economics, assortment strategy, and platform growth.
+  include_when:
+  - Evidence focuses on platform economics, seller acquisition, buyer-seller dynamics,
+    assortment, fees, or marketplace expansion.
+  - The report is about marketplace operations as a model, not just one retail channel
+    among many.
+  exclude_when:
+  - Reject when the report is specifically about Amazon and its ecosystem.
+  - Reject when shopping inside social platforms or creator-led selling is the real
+    dominant subject.
 - id: amazon
   label: Amazon Marketplace & Advertising
   description: Amazon retail, marketplace operations, and Amazon Ads strategies.
-  tags:
+  core_tags:
   - amazon
+  - amazon_marketplace
   - amazon_ads
   - amazon_dsp
-  - vendor_central
   - seller_central
-  - amazon_marketplace
+  - vendor_central
+  - amazon_sponsored_products
+  - amazon_sponsored_brands
+  - amazon_live
+  - amazon_programmatic
+  - amazon_attribution
+  supporting_tags:
   - retail_readiness
   - fba
   - fulfillment_by_amazon
   - fbs
-  - amazon_sponsored_products
-  - amazon_sponsored_brands
-  - amazon_live
   - rufus
   - amc
-  - amazon_programmatic
   - amazon_publisher_services
-  - amazon_attribution
   - amazon_audio_ads
   - amazon_connected_tv
+  - amazon_vendor_negotiation
+  - avs
+  - amazon_vendor_services
+  generic_tags:
   - amazon_hardware
   - amazon_devices
   - alexa
@@ -116,26 +221,30 @@ categories:
   - kindle
   - avn
   - amazon_private_label
-  - amazon_vendor_negotiation
-  - avs
-  - amazon_vendor_services
+  definition: Reports centered on Amazon as a retail, marketplace, and advertising
+    ecosystem, including seller operations, Amazon Ads, and Amazon-specific levers.
+  include_when:
+  - Amazon retail, Amazon Ads, seller operations, or Amazon-specific planning decisions
+    are central across the report.
+  - The report repeatedly refers to Amazon-native tools, surfaces, economics, or operating
+    constraints.
+  exclude_when:
+  - Reject when Amazon appears only as one benchmark inside a broader marketplace
+    or retail report.
+  - Reject when the dominant subject is general retail media or ecommerce rather than
+    Amazon itself.
 - id: technology
   label: Technology & Innovation
   description: Core technology platforms, infrastructure, and emerging innovations
     shaping products and operations.
-  tags:
+  core_tags:
   - technology
-  - tech_trends
-  - emerging_tech
   - enterprise_tech
   - cloud_infrastructure
   - software_platforms
-  - hardware
-  - innovation
   - smart_cameras
   - ar_vr
   - ai_infrastructure
-  - ai_and_productivity
   - data_centers
   - data_centres
   - edge_ai
@@ -146,96 +255,168 @@ categories:
   - home_automation
   - domestic_robots
   - physical_ai
+  supporting_tags:
+  - hardware
+  - tech_trends
+  - emerging_tech
+  descriptor_tags:
+  - innovation
+  generic_tags:
+  - ai_and_productivity
+  definition: Reports whose primary subject is technology platforms, infrastructure,
+    product architecture, or emerging innovations that shape how systems operate.
+  include_when:
+  - Evidence repeatedly discusses infrastructure, enterprise technology, robotics,
+    cybersecurity, hardware, or major technology shifts.
+  - Technology change is the report main lens rather than a supporting enabler for
+    another category.
+  exclude_when:
+  - Reject when technology is only a supporting capability inside a category-specific
+    commerce, media, or healthcare report.
+  - Reject when the report is specifically about AI systems and automation rather
+    than broader technology change.
 - id: retail_logistics
   label: Retail Logistics & Fulfillment
   description: Inventory, warehousing, last-mile delivery, and omnichannel fulfillment
     operations.
-  tags:
+  core_tags:
   - retail_logistics
   - fulfillment
   - last_mile
   - warehousing
   - inventory_management
   - order_orchestration
-  - delivery_experience
   - returns_management
+  supporting_tags:
+  - delivery_experience
   - global_logistics
   - international_shipping
   - crossborder_ecommerce
+  definition: Reports mainly about fulfillment and physical retail operations, including
+    inventory, warehousing, delivery, returns, and execution complexity.
+  include_when:
+  - Evidence centers on how inventory, delivery, fulfillment, or returns drive performance
+    and shopper experience.
+  - Operational execution is the main decision lens across the report.
+  exclude_when:
+  - Reject when logistics is only one operational detail inside broader ecommerce
+    or cross-border strategy.
+  - Reject when the report is mainly about shopper demand, media, or front-end commerce
+    experience.
 - id: digital_payments
   label: Digital Payments & Wallets
   description: Online payments, mobile wallets, checkout experience, and payment security.
-  tags:
+  core_tags:
   - digital_payments
   - payments
   - digital_wallets
   - mobile_payments
   - online_checkout
   - payment_gateways
-  - fraud_prevention
   - payment_security
+  supporting_tags:
+  - fraud_prevention
   - payments_and_verification
+  descriptor_tags:
   - subscriptions
+  generic_tags:
   - identity
+  definition: Reports whose dominant subject is digital payment behavior, payment
+    products, wallet adoption, checkout friction, or payment security.
+  include_when:
+  - Evidence repeatedly covers payments, wallets, fraud, checkout conversion, payment
+    preferences, or transaction trust.
+  - Payment experience is treated as the central business problem or opportunity.
+  exclude_when:
+  - Reject when payments are only one enabling step in a broader retail or cross-border
+    report.
+  - Reject when the report is really about consumer sentiment or commerce strategy
+    with only minor payment references.
 - id: consumer_behavior
   label: Consumer Behavior & Insights
   description: Consumer attitudes, decision drivers, and shopping behaviors across
     journeys.
-  tags:
+  core_tags:
   - consumer_behavior
   - consumer_insights
   - shopper_behavior
-  - audience_segments
   - purchase_journey
   - decision_drivers
   - sentiment_analysis
   - behavioral_data
-  - super_users
-  - multi_tasking
-  - immersive_experiences
-  - livestream_shopping
   - consumer_attention
-  - multitasking
-  - video
-  - social_media
   - shopper_journey
-  - ratings_and_reviews
-  - price_comparison
-  - online_usage
-  - messaging_apps
-  - consumer_trends
   - consumer_trust
   - spending_behavior
-  - cost_of_living
-  - public_sentiment
-  - uk_consumers
   - consumer_sentiment
-  - institutional_trust
-  - trust
   - brand_loyalty
   - purchase_anxiety
   - value_perception
   - personalization
   - sensory_experience
   - experience_economy
-  - luxury_spending
+  - family_life
+  supporting_tags:
+  - audience_segments
+  - super_users
+  - multi_tasking
+  - multitasking
+  - ratings_and_reviews
+  - price_comparison
+  - online_usage
+  - messaging_apps
+  - cost_of_living
+  - public_sentiment
+  - uk_consumers
+  - institutional_trust
   - home_trends
   - home_decor
-  - mens_fashion
-  - accessories
   - food_trends
   - positive_masculinity
   - spirituality
   - astrology_and_tarot
   - astrology_tarot
   - awe_and_wonder
-  - family_life
   - government_sentiment
+  secondary_supporting_tags:
+  - consumer_behavior
+  - consumer_insights
+  - shopper_behavior
+  - consumer_sentiment
+  - decision_drivers
+  must_have_one_of:
+  - consumer_behavior
+  - consumer_insights
+  - shopper_behavior
+  - consumer_sentiment
+  descriptor_tags:
+  - video
+  - social_media
+  - consumer_trends
+  - trust
+  generic_tags:
+  - immersive_experiences
+  - livestream_shopping
+  - luxury_spending
+  - mens_fashion
+  - accessories
+  definition: Reports centered on what consumers think, feel, choose, trust, or do
+    across a purchase or usage journey.
+  include_when:
+  - Evidence repeatedly studies attitudes, motivations, needs, trust, decision drivers,
+    or behavioral shifts among consumers or shoppers.
+  - The report would still be useful even without any business performance or media
+    lens because the audience behavior itself is the core subject.
+  exclude_when:
+  - Reject when consumer metrics are just supporting evidence inside a brand, media,
+    or financial performance report.
+  - Reject when the report is mostly about channel execution or technology with only
+    a small audience section.
 - id: business_performance
   label: Business Performance & Growth
   description: Revenue growth, profitability, and commercial performance metrics and
     levers.
-  tags:
+  core_tags:
   - business_performance
   - revenue_growth
   - profitability
@@ -244,23 +425,37 @@ categories:
   - ltv_cac
   - margin_optimization
   - kpi_tracking
-  - gmv_concentration
-  - gmv
   - revenue_mix
   - brand_growth
+  - brand_growth_strategy
+  supporting_tags:
+  - gmv_concentration
+  - gmv
   - penetration
   - global_ranking
   - consumer_reach_points
   - retail_sales
-  - fmcg
-  - fast_moving_consumer_goods
   - shopper_penetration
   - shopper_recruitment
-  - brand_growth_strategy
+  generic_tags:
+  - fmcg
+  - fast_moving_consumer_goods
+  definition: Reports primarily about commercial outcomes, growth levers, profitability,
+    productivity, rankings, or business performance benchmarks.
+  include_when:
+  - Evidence repeatedly emphasizes growth, revenue, margin, productivity, performance
+    ranking, or strategic business levers.
+  - The report is meant to guide business performance decisions, not just describe
+    category trends.
+  exclude_when:
+  - Reject when performance numbers are only the output metric inside a more domain-specific
+    report.
+  - Reject when shopper behavior or vertical market structure is the central lens
+    rather than business outcomes.
 - id: macroeconomics
   label: Macroeconomics & Regional Outlooks
   description: Macro indicators, regional outlooks, and policy-driven market dynamics.
-  tags:
+  core_tags:
   - macroeconomic_outlook
   - gdp_growth
   - interest_rates
@@ -269,19 +464,32 @@ categories:
   - economic_dynamism
   - regulation_reform
   - regulatory_policy
-  - risk_management
-  - risk_assessment
-  - country_forecasts
-  - country_analysis
   - european_economy
   - commercial_real_estate
   - office_demand
-  - digital_economy
   - uk_market
+  supporting_tags:
+  - risk_management
+  - country_forecasts
+  - country_analysis
+  descriptor_tags:
+  - risk_assessment
+  - digital_economy
+  definition: Reports centered on macroeconomic conditions, regional outlooks, public
+    policy, inflation, employment, or broad economic drivers of markets.
+  include_when:
+  - Evidence repeatedly covers macro indicators, policy shifts, country outlooks,
+    or regional economic dynamics.
+  - The report interprets markets primarily through economy-wide forces rather than
+    one product category or channel.
+  exclude_when:
+  - Reject when economic figures are contextual only and the real focus is a specific
+    industry or consumer segment.
+  - Reject when one country is covered only as a demand market inside a commerce report.
 - id: healthcare
   label: Healthcare Systems & Outcomes
   description: Health system performance, spending, and population outcomes.
-  tags:
+  core_tags:
   - health_system_performance
   - gender_and_health
   - health_expenditure
@@ -290,30 +498,56 @@ categories:
   - international_benchmarking
   - population_health
   - health_workforce
-  - ageing_and_long-term_care
+  - ageing_and_long_term_care
   - quality_of_care
+  descriptor_tags:
   - risk_assessment
+  definition: Reports whose main subject is health systems, public health outcomes,
+    clinical access, healthcare resources, or population-level care performance.
+  include_when:
+  - Evidence repeatedly addresses health outcomes, system capacity, access, spending,
+    workforce, patient experience, or comparative health indicators.
+  - Healthcare delivery or population health is the report central frame.
+  exclude_when:
+  - Reject when health is only one vertical example inside a broader macro or consumer
+    report.
+  - Reject when the report is mainly about measurement technique with healthcare used
+    only as a case.
 - id: agentic_commerce
   label: Agentic Commerce & Shopping Automation
   description: Autonomous shopping agents, AI-assisted buying journeys, and automated
     checkout.
-  tags:
+  core_tags:
   - agentic_commerce
   - shopping_agents
   - ai_assisted_checkout
   - autonomous_agents
   - commerce_automation
-  - personalized_journeys
   - conversational_commerce
+  supporting_tags:
+  - personalized_journeys
   - in_cart_optimization
   - ai_agents
   - agentic_ai
+  generic_tags:
   - automation
+  definition: Reports mainly about AI agents or automated systems acting directly
+    in shopping, buying, checkout, or purchase-decision flows.
+  include_when:
+  - Evidence repeatedly connects agents, assistants, or automation to search, selection,
+    purchase, checkout, or shopping execution.
+  - Buying automation itself is a central theme, not just a downstream implication
+    of AI.
+  exclude_when:
+  - Reject when the report is broadly about AI or automation without commerce execution
+    at the center.
+  - Reject when commerce is mentioned but the report is really about media planning,
+    creator strategy, or general retail trends.
 - id: omni_channel
   label: Omni-Channel Marketing
   description: Unified planning and activation across digital, physical, and owned
     channels.
-  tags:
+  core_tags:
   - omnichannel
   - cross_channel
   - cross_channel_integration
@@ -322,13 +556,25 @@ categories:
   - channel_orchestration
   - unified_messaging
   - online_offline
+  supporting_tags:
   - holistic_measurement
   - omnichannel_commerce
   - shopper_journey
+  definition: Reports centered on coordinated marketing across multiple channels,
+    where planning, messaging, and activation must work together across surfaces.
+  include_when:
+  - Evidence repeatedly discusses integrated marketing planning across owned, paid,
+    digital, and physical channels.
+  - The report is about how marketers coordinate channel roles rather than one specific
+    media or commerce surface.
+  exclude_when:
+  - Reject when the report is really about omnichannel shopping or retail operations
+    rather than marketing orchestration.
+  - Reject when one media channel or commerce platform is clearly the dominant focus.
 - id: advertising_media
   label: Advertising Strategy & Media
   description: Cross-channel advertising strategy, media planning, buying, and optimization.
-  tags:
+  core_tags:
   - advertising
   - media_planning
   - media_buying
@@ -337,59 +583,107 @@ categories:
   - targeting
   - creative_optimization
   - campaign_management
-  - optimization
-  - advertising_revenue
   - digital_advertising
-  - consumer_internet
-  - sports_betting
-  - internet_and_media
-  - ad_equity
-  - ad_receptivity
-  - media_receptivity
-  - apac_media
-  - genai_sentiment
   - genai_in_advertising
   - digital_ad_spend
   - media_quality
-  - brand_experience
   - brand_strategy
-  - Brand building and marketing effectiveness
   - creative_strategy
   - creative_breakthrough
   - experiential_marketing
-  - irl_experiences
+  - ai_in_marketing
+  - inclusive_marketing
+  - data_activation
+  - digital_out_of_home
+  - dooh
+  - generative_ai_in_advertising
+  supporting_tags:
+  - advertising_revenue
+  - brand_experience
+  - contextual_offers
+  secondary_supporting_tags:
+  - ad_equity
+  - ad_receptivity
+  - media_receptivity
+  - digital_out_of_home
+  - dooh
+  must_have_one_of:
+  - advertising
+  - media_planning
+  - brand_advertising
+  - media_receptivity
+  descriptor_tags:
+  - optimization
+  - consumer_internet
+  - internet_and_media
+  - apac_media
+  - genai_sentiment
+  - brand_building_and_marketing_effectiveness
   - authenticity
   - polarization
   - cultural_polarization
-  - ai_in_marketing
-  - inclusive_marketing
   - engagement
   - engagement_strategy
-  - contextual_offers
-  - data_activation
-  - Digital_Out_of_Home
-  - DOOH
-  - Generative_AI_in_advertising
+  generic_tags:
+  - sports_betting
+  - ad_equity
+  - ad_receptivity
+  - media_receptivity
+  - irl_experiences
+  definition: Reports whose core subject is advertising and media strategy, including
+    channel planning, brand impact, media investment, and media effectiveness.
+  include_when:
+  - Evidence repeatedly covers media channels, ad receptivity, media planning, brand
+    lift, investment priorities, or advertising strategy.
+  - The report would be discovered primarily by a marketer looking for media or advertising
+    guidance.
+  exclude_when:
+  - Reject when the report is narrowly about measurement methodology, ad tech plumbing,
+    or one platform category.
+  - Reject when media appears only as one route inside a broader consumer or business
+    trends report.
 - id: retail_media
   label: Retail & Commerce Media
   description: Retailer-owned ad networks and commerce monetization.
-  tags:
+  core_tags:
   - retail_media
   - commerce_media
   - retail_media_network
+  - retail_media_networks
+  - retail_media_advertising
   - rmn
+  supporting_tags:
   - onsite_ads
   - offsite_media
   - retail_data
-  - retail_media_networks
   - shoppable_ads
-  - retail_media_advertising
   - marketplace_ads
   - advertising_revenue
+  secondary_supporting_tags:
+  - retail_media
+  - commerce_media
+  - retail_media_networks
+  - retail_media_advertising
+  - marketplace_ads
+  must_have_one_of:
+  - retail_media
+  - commerce_media
+  - retail_media_networks
+  definition: Reports centered on retailer-owned advertising networks, commerce media
+    monetization, and the strategic role of retail media inventory.
+  include_when:
+  - Evidence repeatedly discusses retail media networks, retailer ad products, commerce
+    media returns, or retailer monetization strategy.
+  - Retail media is treated as a standalone planning domain, not just one line item
+    in a media mix.
+  exclude_when:
+  - Reject when the report is mainly about general advertising strategy or ecommerce
+    growth with one retail media section.
+  - Reject when the report is more accurately about Amazon specifically.
 - id: connected_tv
-  label: Connected TV & Streaming
+  label: Streaming & Connected TV
   description: CTV, streaming video, and ad-supported OTT/FAST inventory.
-  tags:
+  core_tags:
   - connected_tv
   - ctv
   - streaming_tv
@@ -399,11 +693,6 @@ categories:
   - avod
   - fast
   - streaming_ads
-  - sports_streaming
-  - live_sports
-  - nfl
-  - nba
-  - regional_sports_networks
   - media_rights
   - traditional_tv
   - pay_tv
@@ -411,11 +700,29 @@ categories:
   - svod
   - podcasting
   - digital_video
-  - Video and streaming advertising
+  - video_and_streaming_advertising
+  supporting_tags:
+  - sports_streaming
+  - live_sports
+  generic_tags:
+  - nfl
+  - nba
+  - regional_sports_networks
+  definition: Reports whose dominant subject is streaming video, connected TV inventory,
+    OTT, FAST, or ad-supported television economics and effectiveness.
+  include_when:
+  - Evidence repeatedly covers streaming platforms, CTV inventory, OTT audiences,
+    FAST, or television-like video ad strategy.
+  - Connected TV or streaming is central enough that the report stands on its own
+    in that domain.
+  exclude_when:
+  - Reject when streaming is just one channel benchmark inside a broader media report.
+  - Reject when the report is about video culture, creators, or social video rather
+    than television-like streaming environments.
 - id: measurement_attribution
   label: Measurement & Attribution
   description: Performance measurement, incrementality, and optimization.
-  tags:
+  core_tags:
   - attribution
   - incrementality
   - multi_touch_attribution
@@ -426,19 +733,31 @@ categories:
   - brand_lift
   - roi
   - roas
+  - data_optimization
+  supporting_tags:
+  - data_collection_and_panel_methodology
+  - ad_equity_and_brand_lift_measurement
+  - media_channels_performance
+  descriptor_tags:
   - forecasting
   - media_forecast
   - market_forecast
   - forecasts
   - growth_forecast
-  - data_optimization
-  - Data Collection and Panel Methodology
-  - Ad equity and brand lift measurement
-  - Media channels performance
+  definition: Reports primarily about how performance is measured, attributed, validated,
+    or optimized through formal measurement frameworks.
+  include_when:
+  - Evidence repeatedly covers attribution, incrementality, measurement design, causal
+    evaluation, or measurement governance.
+  - The report helps the reader decide how to measure impact, not just what happened.
+  exclude_when:
+  - Reject when metrics are only supporting evidence inside a domain report.
+  - Reject when the central subject is ad tech execution or broader advertising strategy
+    rather than measurement itself.
 - id: privacy_identity
   label: Privacy, Identity & Data
   description: Identity resolution, data collaboration, and compliance.
-  tags:
+  core_tags:
   - privacy
   - identity
   - identity_graph
@@ -449,95 +768,174 @@ categories:
   - gdpr
   - third_party_cookies
   - cookieless
+  supporting_tags:
   - content_licensing
   - advertising_identity
   - age_assurance
   - vpn_behavior
+  definition: Reports centered on identity, consent, privacy-safe data usage, compliance,
+    clean rooms, or data collaboration under privacy constraints.
+  include_when:
+  - Evidence repeatedly discusses identity resolution, compliance, consent, clean
+    rooms, data collaboration, or privacy-safe targeting.
+  - Managing data and identity under regulation is the report core problem.
+  exclude_when:
+  - Reject when privacy or data governance is just a constraint mentioned inside a
+    broader AI, media, or measurement report.
+  - Reject when the report is mainly about analytics performance rather than privacy
+    and identity design.
 - id: ai_automation
   label: AI & Automation
   description: AI-driven optimization, copilots, and workflow automation.
-  tags:
+  core_tags:
   - generative_ai
+  - generative_ai_and_ai_agents
   - ai
   - machine_learning
-  - automation
   - predictive_modeling
   - copilots
   - llm
   - ai_agents
   - agentic_ai
+  supporting_tags:
+  - automation
   - ai_growth
-  - Generative AI and AI agents
+  - ai_and_productivity
   - synthetic_data
-  - Synthetic data and augmented audiences
+  - synthetic_data_and_augmented_audiences
+  definition: Reports whose main subject is AI, agents, copilots, or workflow automation
+    as a general capability across tasks, teams, or systems.
+  include_when:
+  - Evidence repeatedly discusses AI systems, automation, agentic workflows, copilots,
+    or machine-led process redesign.
+  - AI or automation is the report central topic rather than a supporting feature
+    inside another domain.
+  exclude_when:
+  - Reject when AI is present but the report is fundamentally about shopping automation,
+    where agentic_commerce is more precise.
+  - Reject when AI is only one enabler inside a broader media, technology, or vertical-market
+    report.
 - id: omnichannel_commerce
   label: Omnichannel Commerce
   description: Ecommerce, in-store digital, and shopper experience.
-  tags:
+  core_tags:
   - ecommerce
   - omnichannel
   - shopper_marketing
   - click_and_collect
   - bopus
-  - retail_media_attribution
   - digital_shelf
-  - marketplace_ads
   - marketplaces
   - product_content
+  supporting_tags:
+  - retail_media_attribution
+  - marketplace_ads
   - amazon
   - enhanced_content
   - holiday_shopping
   - uk_retail
   - ai_in_retail
+  descriptor_tags:
   - private_label
+  definition: Reports centered on commerce across digital and physical touchpoints,
+    where the shopper experience spans ecommerce, stores, and service layers.
+  include_when:
+  - Evidence repeatedly links online and offline shopping, store and ecommerce integration,
+    or end-to-end shopper journey design.
+  - Commerce experience across touchpoints is the main subject, not just one operational
+    subproblem.
+  exclude_when:
+  - Reject when the report is mainly about retail logistics, payments, or marketing
+    orchestration.
+  - Reject when the report is about one commerce platform or one media channel rather
+    than cross-touchpoint commerce.
 - id: programmatic_ad_tech
   label: Programmatic & Ad Tech
   description: Buying platforms, exchanges, and supply-path optimization.
-  tags:
+  core_tags:
   - programmatic
   - dsp
   - ssp
   - exchange
-  - ad_fraud
-  - brand_safety
   - supply_path_optimization
   - spo
   - programmatic_advertising
+  supporting_tags:
+  - ad_fraud
+  - brand_safety
+  - brand_safety_and_suitability
   - clean_room
   - advertising_identity
+  definition: Reports whose central subject is the ad tech stack, including DSPs,
+    exchanges, supply paths, auction mechanics, and programmatic infrastructure.
+  include_when:
+  - Evidence repeatedly discusses buying platforms, exchanges, auctions, supply-path
+    optimization, inventory plumbing, or ad tech market structure.
+  - The report is mainly about how programmatic systems operate and are optimized.
+  exclude_when:
+  - Reject when programmatic is only one execution method inside a broader media strategy
+    report.
+  - Reject when the report is mainly about measurement, privacy, or general advertising
+    effectiveness.
 - id: social_video_creator
   label: Social, Short Video & Creator
   description: Social platforms, creator economy, and short-form video.
-  tags:
-  - social
-  - social_ads
+  core_tags:
   - creator_economy
   - influencer_marketing
   - short_form_video
   - user_generated_content
   - ugc
+  - social_video
+  - creator_marketing
+  - creator_economy_and_creator_led_content
+  - vertical_video
+  supporting_tags:
+  - social
+  - social_ads
   - tiktok
   - reels
-  - social_video
-  - ad_revenue
-  - time_spent
-  - arpu
-  - platform_reach
   - gaming
-  - monetization
   - video_gaming
   - mobile_gaming
   - franchise_ip
-  - creator_marketing
-  - Creator economy and creator-led content
-  - Micro-communities and social engagement
-  - vertical_video
   - game_development
-  - Social media advertising
+  secondary_supporting_tags:
+  - creator_economy
+  - creator_marketing
+  - short_form_video
+  - creator_economy_and_creator_led_content
+  - micro_communities_and_social_engagement
+  must_have_one_of:
+  - creator_economy
+  - creator_marketing
+  - short_form_video
+  - creator_economy_and_creator_led_content
+  generic_tags:
+  - ad_revenue
+  - time_spent
+  - arpu
+  - monetization
+  - micro_communities_and_social_engagement
+  - social_media_advertising
+  descriptor_tags:
+  - platform_reach
+  definition: Reports centered on social platforms, creator ecosystems, community-led
+    media, and short-form or creator-led content behavior.
+  include_when:
+  - Evidence repeatedly focuses on creators, creator economics, short-form video,
+    social platform behavior, or community-driven content strategy.
+  - Social or creator systems are central in their own right, not just one input to
+    a broader commerce or media report.
+  exclude_when:
+  - Reject when creators or social platforms are only one activation tactic inside
+    a broader report.
+  - Reject when the report is truly about social-platform shopping behavior and purchase
+    flow rather than content ecosystems.
 - id: search_performance
   label: Search & Performance Marketing
   description: Paid search, performance media, and optimization tactics.
-  tags:
+  core_tags:
   - search
   - paid_search
   - sem
@@ -546,61 +944,102 @@ categories:
   - bid_strategy
   - conversion_rate_optimization
   - cro
+  - retailer_search
+  - keyword_strategy
+  - search_insights
+  - generative_engine_optimisation
+  - generative_engine_optimisation_geo
+  - geo
+  - conversion_optimization
+  supporting_tags:
   - discovery
   - conversion_rate
-  - retailer_search
   - organic_rank
-  - keyword_strategy
   - ecommerce_pricing
   - price_benchmarking
+  - traffic_acquisition
+  - web_traffic
+  - app_downloads
+  generic_tags:
   - inflation
   - joint_business_plans
   - organizational_transformation
   - automation_and_ai
-  - search_insights
-  - generative_engine_optimisation
-  - Generative Engine Optimisation (GEO)
-  - conversion_optimization
-  - traffic_acquisition
-  - web_traffic
-  - app_downloads
+  definition: Reports whose main subject is search, search visibility, paid search,
+    organic optimization, or performance marketing through search-like demand capture.
+  include_when:
+  - Evidence repeatedly covers paid search, SEO, GEO, search demand capture, or performance
+    optimization tied to search behavior.
+  - Search is a core strategic subject across the report rather than one tactic in
+    the mix.
+  exclude_when:
+  - Reject when search is only one channel within broader media planning.
+  - Reject when discovery change is mainly about AI agents or platforms rather than
+    search performance itself.
 - id: cpg
   label: Consumer Packed Goods (CPG)
   description: Packaged household and personal consumables sold through retail and
     ecommerce channels.
-  tags:
+  core_tags:
   - cpg
   - consumer_packed_goods
   - consumer_packaged_goods
   - packaged_goods
-  - household_consumables
-  - personal_care_products
-  - packaged_foods
   - cpg_brands
   - cpg_marketing
   - cpg_distribution
+  supporting_tags:
+  - household_consumables
+  - personal_care_products
+  - packaged_foods
+  generic_tags:
   - fmcg
+  definition: Reports centered on packaged consumer goods manufacturers, brands, and
+    category dynamics, especially in household and personal consumables.
+  include_when:
+  - Evidence repeatedly discusses packaged goods brands, manufacturer strategy, category
+    performance, or packaged goods demand dynamics.
+  - The packaged-goods business context is central, even if multiple subcategories
+    are covered.
+  exclude_when:
+  - Reject when the report is more clearly about FMCG rankings or high-frequency sell-through
+    dynamics specifically.
+  - Reject when beauty, grocery, or another narrower product vertical is the true
+    focus.
 - id: fmcg
   label: Fast Moving Consumer Goods (FMCG)
   description: High-frequency, low-cost consumer products with rapid inventory turnover
     across channels.
-  tags:
+  core_tags:
   - fmcg
   - fast_moving_consumer_goods
   - fast_turnover_goods
   - everyday_essentials
   - grocery_staples
   - household_essentials
+  supporting_tags:
   - volume_driven_growth
   - route_to_market
   - traditional_trade
   - modern_trade
+  generic_tags:
   - cpg
+  definition: Reports whose main subject is fast-moving consumer goods, especially
+    high-frequency consumer categories, brand penetration, and turnover-driven growth.
+  include_when:
+  - Evidence repeatedly frames findings in FMCG terms such as high-frequency categories,
+    penetration, reach, category turnover, or FMCG brand benchmarks.
+  - The report is explicitly about FMCG markets or FMCG brand performance.
+  exclude_when:
+  - Reject when the report is a broader business growth study with FMCG only as one
+    sector.
+  - Reject when the report is clearly about one narrower vertical such as beauty or
+    grocery.
 - id: luxury_premium
   label: Luxury & Premium
   description: Premium and luxury positioning, pricing, and demand dynamics across
     categories.
-  tags:
+  core_tags:
   - luxury_premium
   - luxury
   - premiumization
@@ -611,12 +1050,25 @@ categories:
   - aspirational_consumers
   - exclusivity
   - premium_pricing
+  generic_tags:
   - luxury_spending
+  definition: Reports centered on luxury or premium market demand, prestige positioning,
+    premium pricing, and high-end consumer or brand dynamics.
+  include_when:
+  - Evidence repeatedly focuses on premiumization, luxury demand, prestige positioning,
+    or affluent shopper behavior.
+  - Luxury or premium market logic is central to the report rather than a segment
+    mention.
+  exclude_when:
+  - Reject when premium is just a descriptor for one price tier inside a broader category
+    report.
+  - Reject when the report is mainly about fashion or beauty without premium positioning
+    as the real lens.
 - id: beauty
   label: Beauty
   description: Beauty and personal care categories, including skincare, haircare,
     and cosmetics.
-  tags:
+  core_tags:
   - beauty
   - beauty_and_personal_care
   - cosmetics
@@ -627,11 +1079,22 @@ categories:
   - dermocosmetics
   - beauty_brands
   - beauty_retail
+  generic_tags:
   - personal_care_products
+  definition: Reports whose dominant subject is beauty and personal care, including
+    skincare, cosmetics, haircare, wellness-adjacent beauty, and category behavior.
+  include_when:
+  - Evidence repeatedly discusses beauty products, beauty shoppers, personal care
+    routines, or beauty category trends.
+  - Beauty is the report main industry context, not a supporting example.
+  exclude_when:
+  - Reject when beauty is only one vertical inside a broader FMCG or luxury report.
+  - Reject when the report is really about general consumer behavior with scattered
+    beauty examples.
 - id: e_grocery
   label: eGrocery
   description: Online grocery shopping, fulfillment, and quick-commerce models.
-  tags:
+  core_tags:
   - egrocery
   - e_grocery
   - online_grocery
@@ -639,15 +1102,27 @@ categories:
   - quick_commerce
   - q_commerce
   - dark_stores
-  - fresh_food_delivery
   - digital_grocery_basket
   - grocery_fulfillment
+  supporting_tags:
+  - fresh_food_delivery
   - last_mile
+  definition: Reports centered on online grocery, quick-commerce, digital grocery
+    missions, and grocery-specific fulfillment or shopper behavior.
+  include_when:
+  - Evidence repeatedly covers grocery ecommerce, delivery windows, basket missions,
+    rapid fulfillment, or grocery-specific digital adoption.
+  - Grocery is the core commercial context of the report.
+  exclude_when:
+  - Reject when grocery appears only as one product category inside a broader retail
+    or FMCG report.
+  - Reject when the report is mainly about logistics or payments without grocery as
+    the central lens.
 - id: fashion
   label: Fashion
   description: Apparel, footwear, and accessories trends, merchandising, and commerce
     performance.
-  tags:
+  core_tags:
   - fashion
   - apparel
   - footwear
@@ -658,12 +1133,24 @@ categories:
   - seasonal_collections
   - size_and_fit
   - apparel_returns
+  generic_tags:
   - mens_fashion
+  definition: Reports whose main subject is apparel, footwear, accessories, fashion
+    retail, or fashion demand and merchandising dynamics.
+  include_when:
+  - Evidence repeatedly focuses on apparel, footwear, accessories, fashion shoppers,
+    merchandising, or fashion commerce performance.
+  - Fashion is the report main industry frame, not a passing example.
+  exclude_when:
+  - Reject when the report is primarily about luxury, marketplaces, or general retail
+    with a fashion section.
+  - Reject when aesthetics or culture are present but fashion commerce is not the
+    central subject.
 - id: electronics
   label: Electronics
   description: Consumer electronics categories, product innovation cycles, and retail
     demand.
-  tags:
+  core_tags:
   - electronics
   - consumer_electronics
   - smartphones
@@ -673,9 +1160,586 @@ categories:
   - home_electronics
   - smart_devices
   - electronics_retail
+  supporting_tags:
   - device_upgrade_cycles
+  generic_tags:
   - smart_home
-uncategorized:
-- title: IAS - Industry_Pulse_Report_2026_ACIG
-  tags:
+  definition: Reports centered on consumer electronics categories, device demand,
+    product cycles, retail performance, and electronics-specific innovation.
+  include_when:
+  - Evidence repeatedly discusses devices, electronics demand, replacement cycles,
+    product launches, or electronics retail dynamics.
+  - Consumer electronics are the main category context across the report.
+  exclude_when:
+  - Reject when the report is really about broad technology infrastructure or smart-home
+    trends rather than electronics categories.
+  - Reject when electronics is only one example inside broader retail, marketplace,
+    or consumer trend coverage.
+inference_rules:
+- name: china_marketplaces_to_chinese_online_platforms
+  target_category_id: chinese_online_platforms
+  trigger_tags:
+  - online_marketplaces
+  - social_commerce
+  - online_crossborder
+  inferred_tag: chinese_online_platforms
+  inferred_tier: secondary
+  context_keywords_any:
+  - china
+  - chinese
+  - tmall
+  - jd
+  - pinduoduo
+  - douyin
+  - wechat
+  - alibaba
+  - taobao
+  - temu
+  - shein
+  remove_tags: []
+- name: crossborder_context_to_online_crossborder
+  target_category_id: online_crossborder
+  trigger_tags:
+  - ecommerce
+  - online_marketplaces
+  - retail_logistics
+  inferred_tag: online_crossborder
+  inferred_tier: secondary
+  context_keywords_any:
+  - cross_border
+  - international_shipping
+  - customs
+  - duties
+  - localization
+  - multi_currency
+  - global_logistics
+  remove_tags: []
+- name: tiktok_context_to_tiktok_shop
+  target_category_id: tiktok_shop
+  trigger_tags:
+  - social_commerce
+  - creator_commerce
+  - live_shopping
+  - shoppable_video
+  inferred_tag: tiktok_shop
+  inferred_tier: secondary
+  context_keywords_any:
+  - tiktok
+  - shop_tab
+  - tts
+  - affiliate
+  - in_app_checkout
+  remove_tags: []
+- name: social_checkout_context_to_social_commerce
+  target_category_id: social_commerce
+  trigger_tags:
+  - creator_economy
+  - creator_commerce
+  - live_shopping
+  - shoppable_video
+  inferred_tag: social_commerce
+  inferred_tier: secondary
+  context_keywords_any:
+  - social_shopping
+  - social_commerce
+  - in_app_checkout
+  - link_in_bio
+  - social_platform
+  remove_tags: []
+- name: seller_platform_context_to_online_marketplaces
+  target_category_id: online_marketplaces
+  trigger_tags:
+  - ecommerce
+  - marketplaces
+  inferred_tag: online_marketplaces
+  inferred_tier: secondary
+  context_keywords_any:
+  - marketplace
+  - seller
+  - take_rate
+  - buy_box
+  - platform_fees
+  - sponsored_products
+  - sponsored_brands
+  remove_tags: []
+- name: amazon_context_to_amazon_marketplace
+  target_category_id: amazon
+  trigger_tags:
+  - ecommerce
+  - online_marketplaces
+  - retail_media
+  - programmatic_advertising
+  inferred_tag: amazon
+  inferred_tier: secondary
+  context_keywords_any:
+  - amazon
+  - seller_central
+  - vendor_central
+  - amazon_dsp
+  - sponsored_products
+  - sponsored_brands
+  - rufus
+  - amc
+  - fba
+  remove_tags: []
+- name: infrastructure_context_to_technology
+  target_category_id: technology
+  trigger_tags:
+  - ai
+  - enterprise_tech
+  - emerging_tech
+  - tech_trends
+  inferred_tag: technology
+  inferred_tier: secondary
+  context_keywords_any:
+  - cloud
+  - infrastructure
+  - robotics
+  - cybersecurity
+  - data_center
+  - edge_ai
+  - smart_home
+  remove_tags: []
+- name: fulfillment_context_to_retail_logistics
+  target_category_id: retail_logistics
+  trigger_tags:
+  - ecommerce
+  - omnichannel
+  - online_crossborder
+  inferred_tag: retail_logistics
+  inferred_tier: secondary
+  context_keywords_any:
+  - fulfillment
+  - warehousing
+  - last_mile
+  - delivery
+  - returns
+  - inventory
+  - order_orchestration
+  remove_tags: []
+- name: checkout_context_to_digital_payments
+  target_category_id: digital_payments
+  trigger_tags:
+  - ecommerce
+  - omnichannel_commerce
+  - identity
+  inferred_tag: digital_payments
+  inferred_tier: secondary
+  context_keywords_any:
+  - payment
+  - checkout
+  - wallet
+  - verification
+  - fraud
+  - gateway
+  remove_tags: []
+- name: shopper_attitudes_context_to_consumer_behavior
+  target_category_id: consumer_behavior
+  trigger_tags:
+  - consumer_trends
+  - social_media
+  - trust
+  - personalization
+  inferred_tag: consumer_behavior
+  inferred_tier: secondary
+  context_keywords_any:
+  - consumer
+  - shopper
+  - sentiment
+  - journey
+  - decision
+  - attitudes
+  - behavior
+  remove_tags: []
+- name: growth_metrics_context_to_business_performance
+  target_category_id: business_performance
+  trigger_tags:
+  - brand_growth
+  - retail_sales
+  - forecasts
+  - gmv
+  inferred_tag: business_performance
+  inferred_tier: secondary
+  context_keywords_any:
+  - revenue
+  - profit
+  - profitability
+  - margin
+  - unit_economics
+  - ltv
+  - kpi
+  remove_tags: []
+- name: economic_outlook_context_to_macroeconomics
+  target_category_id: macroeconomics
+  trigger_tags:
+  - digital_economy
+  - risk_assessment
+  - forecasts
+  - productivity
+  inferred_tag: macroeconomic_outlook
+  inferred_tier: secondary
+  context_keywords_any:
+  - gdp
+  - interest_rates
+  - labor_market
+  - policy
+  - regulation
+  - economy
+  - outlook
+  remove_tags: []
+- name: health_system_context_to_healthcare
+  target_category_id: healthcare
+  trigger_tags:
+  - population_health
+  - health_expenditure
+  - risk_factors
+  - international_benchmarking
+  inferred_tag: health_system_performance
+  inferred_tier: secondary
+  context_keywords_any:
+  - healthcare
+  - health_system
+  - care_quality
+  - hospital
+  - workforce
+  - long_term_care
+  - population_health
+  remove_tags: []
+- name: ai_agents_to_agentic_commerce
+  target_category_id: agentic_commerce
+  trigger_tags:
+  - generative_ai_and_ai_agents
+  inferred_tag: agentic_commerce
+  inferred_tier: secondary
+  context_keywords_any:
+  - purchase
+  - purchasing
+  - shopping
+  - shopper
+  - checkout
+  - commerce
+  - retail
+  - buying
+  - buyer
+  - cart
+  remove_tags:
+  - synthetic_data_and_augmented_audiences
+- name: cross_channel_context_to_omni_channel
+  target_category_id: omni_channel
+  trigger_tags:
+  - shopper_journey
+  - ecommerce
+  - retail_media
+  - consumer_behavior
+  inferred_tag: omnichannel
+  inferred_tier: secondary
+  context_keywords_any:
+  - omnichannel
+  - cross_channel
+  - online_and_offline
+  - unified_messaging
+  - channel_orchestration
+  remove_tags: []
+- name: media_planning_context_to_advertising_media
+  target_category_id: advertising_media
+  trigger_tags:
+  - digital_advertising
+  - brand_strategy
+  - ai_in_marketing
+  - data_activation
+  inferred_tag: advertising
+  inferred_tier: secondary
+  context_keywords_any:
+  - media_planning
+  - media_buying
+  - campaign
+  - advertising
+  - creative
+  - brand_building
+  - dooh
+  remove_tags: []
+- name: rmn_context_to_retail_media
+  target_category_id: retail_media
+  trigger_tags:
+  - advertising_revenue
+  - marketplace_ads
+  - ecommerce
+  - retail_data
+  inferred_tag: retail_media
+  inferred_tier: secondary
+  context_keywords_any:
+  - retail_media
+  - commerce_media
+  - retail_media_network
+  - rmn
+  - onsite_ads
+  - offsite_media
+  - shoppable_ads
+  remove_tags: []
+- name: streaming_ad_context_to_connected_tv
+  target_category_id: connected_tv
+  trigger_tags:
+  - digital_video
+  - media_rights
+  - advertising
+  inferred_tag: connected_tv
+  inferred_tier: secondary
+  context_keywords_any:
+  - ctv
+  - connected_tv
+  - streaming
+  - ott
+  - avod
+  - fast
+  - svod
+  - pay_tv
+  remove_tags: []
+- name: incrementality_context_to_measurement_attribution
+  target_category_id: measurement_attribution
+  trigger_tags:
+  - advertising
+  - retail_media
+  - campaign_management
+  - forecasts
+  inferred_tag: attribution
+  inferred_tier: secondary
+  context_keywords_any:
+  - attribution
+  - incrementality
+  - media_mix
+  - mmm
+  - roi
+  - roas
+  - lift
+  remove_tags: []
+- name: consent_identity_context_to_privacy_identity
+  target_category_id: privacy_identity
+  trigger_tags:
+  - identity
+  - clean_room
+  - advertising_identity
+  - content_licensing
+  inferred_tag: privacy
+  inferred_tier: secondary
+  context_keywords_any:
+  - privacy
+  - consent
+  - cookie
+  - cookieless
+  - identity_graph
+  - clean_room
+  - gdpr
+  remove_tags: []
+- name: automation_context_to_ai_automation
+  target_category_id: ai_automation
+  trigger_tags:
+  - technology
+  - ai_in_marketing
+  - ai_in_retail
+  - innovation
+  inferred_tag: ai
+  inferred_tier: secondary
+  context_keywords_any:
+  - ai
+  - artificial_intelligence
+  - machine_learning
+  - llm
+  - copilot
+  - automation
+  - synthetic_data
+  remove_tags: []
+- name: shopper_experience_context_to_omnichannel_commerce
+  target_category_id: omnichannel_commerce
+  trigger_tags:
+  - retail_media
+  - marketplaces
+  - shopper_journey
+  - ai_in_retail
+  inferred_tag: ecommerce
+  inferred_tier: secondary
+  context_keywords_any:
+  - ecommerce
+  - digital_shelf
+  - click_and_collect
+  - bopus
+  - shopper_marketing
+  - product_content
+  - retail_journey
+  remove_tags: []
+- name: adtech_context_to_programmatic_ad_tech
+  target_category_id: programmatic_ad_tech
+  trigger_tags:
+  - digital_advertising
+  - advertising_identity
+  - clean_room
   - brand_safety_and_suitability
+  inferred_tag: programmatic_advertising
+  inferred_tier: secondary
+  context_keywords_any:
+  - programmatic
+  - dsp
+  - ssp
+  - exchange
+  - supply_path
+  - spo
+  - brand_safety
+  - ad_fraud
+  remove_tags: []
+- name: creator_video_context_to_social_video_creator
+  target_category_id: social_video_creator
+  trigger_tags:
+  - social_media
+  - creator_economy
+  - short_form_video
+  - platform_reach
+  inferred_tag: creator_economy
+  inferred_tier: secondary
+  context_keywords_any:
+  - creator
+  - influencer
+  - ugc
+  - short_form_video
+  - vertical_video
+  - reels
+  - tiktok
+  remove_tags: []
+- name: query_intent_context_to_search_performance
+  target_category_id: search_performance
+  trigger_tags:
+  - ecommerce
+  - digital_advertising
+  - automation_and_ai
+  - generative_engine_optimisation_geo
+  inferred_tag: search
+  inferred_tier: secondary
+  context_keywords_any:
+  - search
+  - sem
+  - ppc
+  - geo
+  - keyword
+  - conversion_rate
+  - traffic_acquisition
+  - organic_rank
+  remove_tags: []
+- name: packaged_goods_context_to_cpg
+  target_category_id: cpg
+  trigger_tags:
+  - fmcg
+  - consumer_behavior
+  - retail_sales
+  inferred_tag: cpg
+  inferred_tier: secondary
+  context_keywords_any:
+  - cpg
+  - consumer_packaged_goods
+  - packaged_goods
+  - household_consumables
+  - personal_care
+  - packaged_foods
+  remove_tags: []
+- name: fast_turnover_context_to_fmcg
+  target_category_id: fmcg
+  trigger_tags:
+  - cpg
+  - consumer_behavior
+  - retail_sales
+  inferred_tag: fmcg
+  inferred_tier: secondary
+  context_keywords_any:
+  - fmcg
+  - fast_moving
+  - grocery_staples
+  - household_essentials
+  - route_to_market
+  - modern_trade
+  remove_tags: []
+- name: premium_positioning_context_to_luxury_premium
+  target_category_id: luxury_premium
+  trigger_tags:
+  - consumer_behavior
+  - fashion
+  - beauty
+  - luxury_spending
+  inferred_tag: luxury_premium
+  inferred_tier: secondary
+  context_keywords_any:
+  - luxury
+  - premium
+  - prestige
+  - affluent
+  - aspirational
+  - exclusivity
+  - high_end
+  remove_tags: []
+- name: beauty_category_context_to_beauty
+  target_category_id: beauty
+  trigger_tags:
+  - consumer_behavior
+  - fashion
+  - cpg
+  - personal_care_products
+  inferred_tag: beauty
+  inferred_tier: secondary
+  context_keywords_any:
+  - beauty
+  - skincare
+  - haircare
+  - cosmetics
+  - fragrance
+  - dermocosmetics
+  - beauty_retail
+  remove_tags: []
+- name: grocery_delivery_context_to_e_grocery
+  target_category_id: e_grocery
+  trigger_tags:
+  - ecommerce
+  - retail_logistics
+  - omnichannel_commerce
+  inferred_tag: e_grocery
+  inferred_tier: secondary
+  context_keywords_any:
+  - online_grocery
+  - grocery_delivery
+  - quick_commerce
+  - q_commerce
+  - dark_stores
+  - fresh_food_delivery
+  remove_tags: []
+- name: apparel_merchandising_context_to_fashion
+  target_category_id: fashion
+  trigger_tags:
+  - consumer_behavior
+  - ecommerce
+  - luxury_premium
+  - mens_fashion
+  inferred_tag: fashion
+  inferred_tier: secondary
+  context_keywords_any:
+  - fashion
+  - apparel
+  - footwear
+  - accessories
+  - size_and_fit
+  - seasonal_collections
+  - fast_fashion
+  remove_tags: []
+- name: device_cycle_context_to_electronics
+  target_category_id: electronics
+  trigger_tags:
+  - technology
+  - ecommerce
+  - smart_home
+  - retail_sales
+  inferred_tag: electronics
+  inferred_tier: secondary
+  context_keywords_any:
+  - electronics
+  - consumer_electronics
+  - smartphone
+  - laptop
+  - tablet
+  - wearable
+  - device_upgrade
+  remove_tags: []
+uncategorized: []

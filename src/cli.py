@@ -191,6 +191,7 @@ def recategorize():
         schema_version="1.0",
         db_path=s.reports_db,
         category_mapping_path=s.category_mapping_path,
+        settings=s,
     ))
     table = Table(title="Recategorization", box=box.SIMPLE_HEAVY)
     table.add_column("Title")

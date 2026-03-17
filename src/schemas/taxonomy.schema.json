@@ -10,6 +10,27 @@
       "type": "array",
       "items": { "type": "string" }
     },
+    "primary_tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "secondary_tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "tag_evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "tag": { "type": ["string", "null"] },
+          "tier": { "type": ["string", "null"] },
+          "section_label": { "type": ["string", "null"] },
+          "evidence": { "type": ["string", "null"] }
+        }
+      }
+    },
     "region": { "type": ["string", "null"] },
     "time_period": { "type": ["string", "null"] },
     "not_found_reason": { "type": ["string", "null"] }

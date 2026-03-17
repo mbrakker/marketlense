@@ -385,6 +385,35 @@ class TestConfigService(unittest.TestCase):
             settings.rank_timeout_seconds, settings.crop_refine_timeout_seconds
         )
 
+    def test_taxonomy_temperature_uses_config_and_env_override(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_analysis=False)
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["ingest"]["taxonomy_temperature"] = 0.2
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
+
+            with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
+                settings = load_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
+                )
+                self.assertEqual(0.2, settings.taxonomy_temperature)
+
+            env = {
+                "OPENAI_API_KEY": "key",
+                "TAXONOMY_TEMPERATURE": "0.05",
+            }
+            with patch.dict(os.environ, env, clear=True):
+                settings = load_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
+                )
+                self.assertEqual(0.05, settings.taxonomy_temperature)
+
     def test_pdf_text_ocr_settings_load(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(tmp_dir, include_analysis=False)

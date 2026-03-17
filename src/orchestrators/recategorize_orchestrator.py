@@ -6,17 +6,14 @@ from typing import List
 from src.contracts.categories import (
     RecategorizeOutcome,
     RecategorizeRequest,
-    CategoryMappingLoadRequest,
-    UncategorizedTagsFlushRequest,
-    UncategorizedTagsUpdateRequest,
 )
 from src.contracts.report_store import ReportMetadataUpsertRequest, ReportMetadataListRequest
-from src.generators.categorize_generator import categorize_taxonomy
-from src.services.category_mapping_service import (
-    load_mappings as load_category_mappings,
-    flush_uncategorized_tags,
-    update_uncategorized_tags,
+from src.contracts.context_category_fit import (
+    ContextCategoryFitRequest,
+    ReportContextBuildRequest,
 )
+from src.generators.context_category_fit_generator import fit_report_categories_from_context
+from src.generators.report_context_generator import build_report_category_context
 from src.services.report_store_service import list_metadata as list_report_metadata, upsert_metadata
 from src.utils.logging import child_context, log_event, new_run_context
 
@@ -33,104 +30,86 @@ def run_recategorize(request: RecategorizeRequest) -> List[RecategorizeOutcome]:
         fields={"db_path": request.db_path, "category_mapping_path": request.category_mapping_path},
     ))
 
-    try:
-        mappings_resp = load_category_mappings(
-            CategoryMappingLoadRequest(
-                schema_version="1.0",
-                path=request.category_mapping_path,
-                reload_if_changed=True,
-                force_reload=True,
-            ),
-            ctx,
-        )
-        list_resp = list_report_metadata(
-            ReportMetadataListRequest(schema_version="1.1", db_path=request.db_path),
-            ctx,
-        )
+    list_resp = list_report_metadata(
+        ReportMetadataListRequest(schema_version="1.1", db_path=request.db_path),
+        ctx,
+    )
 
-        outcomes: List[RecategorizeOutcome] = []
-        for record in list_resp.records:
-            record_ctx = child_context(ctx, task_id=record.file_id)
-            try:
-                assignment = categorize_taxonomy(record.taxonomy, mappings_resp, record_ctx)
-                if assignment.unmapped_tags or mappings_resp.mappings.uncategorized:
-                    update_uncategorized_tags(
-                        UncategorizedTagsUpdateRequest(
-                            schema_version="1.0",
-                            path=request.category_mapping_path,
-                            report_title=record.title,
-                            tags=assignment.unmapped_tags,
-                        ),
-                        record_ctx,
-                    )
-
-                upsert_metadata(
-                    ReportMetadataUpsertRequest(
-                        schema_version="1.1",
-                        db_path=request.db_path,
-                        file_id=record.file_id,
-                        title=record.title,
-                        file_name=record.file_name,
-                        publisher=record.publisher,
-                        taxonomy=record.taxonomy,
-                        categories=assignment.categories,
-                        region=record.region,
-                        time_period=record.time_period,
-                        source_url=record.source_url,
-                        html_path=record.html_path,
-                        md5=record.md5,
-                        contents_page_number=record.contents_page_number,
-                    ),
-                    record_ctx,
-                )
-                outcomes.append(RecategorizeOutcome(
-                    schema_version="1.0",
-                    file_id=record.file_id,
-                    title=record.title,
-                    categories=assignment.categories,
-                    unmapped_tags=assignment.unmapped_tags,
-                    status="updated",
-                ))
-            except Exception as exc:
-                logger.info(log_event(
-                    record_ctx,
-                    role="orchestrator",
-                    event="recategorize_error",
-                    module=logger.name,
-                    fields={"file_id": record.file_id, "error": str(exc)},
-                ))
-                outcomes.append(RecategorizeOutcome(
-                    schema_version="1.0",
-                    file_id=record.file_id,
-                    title=record.title,
-                    categories=[],
-                    unmapped_tags=[],
-                    status="error",
-                    error=str(exc),
-                ))
-
-        logger.info(log_event(
-            ctx,
-            role="orchestrator",
-            event="recategorize_complete",
-            module=logger.name,
-            fields={"count": len(outcomes)},
-        ))
-        return outcomes
-    finally:
+    outcomes: List[RecategorizeOutcome] = []
+    for record in list_resp.records:
+        record_ctx = child_context(ctx, task_id=record.file_id)
         try:
-            flush_uncategorized_tags(
-                UncategorizedTagsFlushRequest(
+            report_context = build_report_category_context(
+                ReportContextBuildRequest(
                     schema_version="1.0",
-                    path=request.category_mapping_path,
+                    report=record,
                 ),
-                ctx,
+                record_ctx,
             )
+            fit_response = fit_report_categories_from_context(
+                ContextCategoryFitRequest(
+                    schema_version="1.0",
+                    context=report_context,
+                    settings=request.settings,
+                    category_mapping_path=request.category_mapping_path,
+                ),
+                record_ctx,
+            )
+
+            upsert_metadata(
+                ReportMetadataUpsertRequest(
+                    schema_version="1.1",
+                    db_path=request.db_path,
+                    file_id=record.file_id,
+                    title=record.title,
+                    file_name=record.file_name,
+                    publisher=record.publisher,
+                    taxonomy=record.taxonomy,
+                    categories=fit_response.categories,
+                    region=record.region,
+                    time_period=record.time_period,
+                    source_url=record.source_url,
+                    html_path=record.html_path,
+                    md5=record.md5,
+                    contents_page_number=record.contents_page_number,
+                    pdf_metadata=record.pdf_metadata,
+                    analysis_mode=record.analysis_mode,
+                    vector_store_id=record.vector_store_id,
+                    evidence_pack_paths=record.evidence_pack_paths,
+                ),
+                record_ctx,
+            )
+            outcomes.append(RecategorizeOutcome(
+                schema_version="1.0",
+                file_id=record.file_id,
+                title=record.title,
+                categories=fit_response.categories,
+                unmapped_tags=[],
+                status="updated",
+            ))
         except Exception as exc:
             logger.info(log_event(
-                ctx,
+                record_ctx,
                 role="orchestrator",
-                event="recategorize_uncategorized_flush_failed",
+                event="recategorize_error",
                 module=logger.name,
-                fields={"path": request.category_mapping_path, "error": str(exc)},
+                fields={"file_id": record.file_id, "error": str(exc)},
             ))
+            outcomes.append(RecategorizeOutcome(
+                schema_version="1.0",
+                file_id=record.file_id,
+                title=record.title,
+                categories=[],
+                unmapped_tags=[],
+                status="error",
+                error=str(exc),
+            ))
+
+    logger.info(log_event(
+        ctx,
+        role="orchestrator",
+        event="recategorize_complete",
+        module=logger.name,
+        fields={"count": len(outcomes)},
+    ))
+    return outcomes

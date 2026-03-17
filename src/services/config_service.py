@@ -424,6 +424,10 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     if _is_missing(temperature_raw):
         temperature_raw = _env_value("TEMPERATURE")
     temperature = _to_float(temperature_raw, 1.0)
+    taxonomy_temperature_raw = _env_value("TAXONOMY_TEMPERATURE")
+    if _is_missing(taxonomy_temperature_raw):
+        taxonomy_temperature_raw = ingest.get("taxonomy_temperature")
+    taxonomy_temperature = _to_float(taxonomy_temperature_raw, temperature)
     rank_model = rank.get("model") or openai_model
     rank_temperature = _to_float(rank.get("temperature"), temperature)
     rank_max_candidates = _to_int(rank.get("max_candidates"), 40)
@@ -782,6 +786,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         ingest_lock_path=ingest_lock_path,
         ingest_lock_ttl_seconds=ingest_lock_ttl_seconds,
         temperature=temperature,
+        taxonomy_temperature=taxonomy_temperature,
         openai_seed=_opt_int(openai_seed_raw),
         pdf_text_max_pages=_to_int(pdf_text.get("max_pages"), 5),
         pdf_text_max_chars=_to_int(pdf_text.get("max_chars"), 80_000),
@@ -884,6 +889,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
                 "openai_model": settings.openai_model,
                 "openai_models": settings.openai_models,
                 "temperature": settings.temperature,
+                "taxonomy_temperature": settings.taxonomy_temperature,
                 "ingest_worker_limit": settings.ingest_worker_limit,
                 "report_worker_limit": settings.report_worker_limit,
                 "openai_seed": settings.openai_seed,

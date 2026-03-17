@@ -7,8 +7,12 @@ from typing import Any, Optional
 
 from src.contracts.categories import (
     CategoryAssignment,
-    CategoryMappingLoadRequest,
-    UncategorizedTagsUpdateRequest,
+)
+from src.contracts.context_category_fit import (
+    ContextCategoryFitResponse,
+    ContextCategoryFitRequest,
+    ReportCategoryContext,
+    ReportContextBuildRequest,
 )
 from src.contracts.report_analysis import AnalysisStorePackRequest
 from src.contracts.report_generation import (
@@ -17,6 +21,7 @@ from src.contracts.report_generation import (
     ReportSelectionState,
     ReportSourceState,
 )
+from src.contracts.report_store import ReportMetadataGetResponse
 from src.contracts.state import StateGetRequest
 from src.contracts.taxonomy import TaxonomyExtractRequest
 from src.contracts.validation import (
@@ -56,11 +61,17 @@ class VectorStoreIndexingState:
 
 
 @dataclass(frozen=True)
-class _TaxonomyCategoryState:
+class _TaxonomyState:
     taxonomy: list[str]
     region: str
     time_period: str
+
+
+@dataclass(frozen=True)
+class _ContextCategoryState:
     category_assignment: CategoryAssignment
+    report_context: ReportCategoryContext
+    fit_response: ContextCategoryFitResponse
 
 
 def _is_vector_store_ready(status: Optional[str]) -> bool:
@@ -326,13 +337,12 @@ def ensure_vector_store(
     )
 
 
-def _resolve_taxonomy_and_categories(
+def _resolve_taxonomy(
     runtime: ReportRuntimeState,
-    selection: ReportSelectionState,
     mode_ctx,
     vector_store_id: Optional[str],
     dependencies: ReportGeneratorDependencies,
-) -> _TaxonomyCategoryState:
+) -> _TaxonomyState:
     taxonomy_ctx = child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:taxonomy")
     taxonomy_resp = dependencies.extract_taxonomy(
         TaxonomyExtractRequest(
@@ -346,51 +356,72 @@ def _resolve_taxonomy_and_categories(
         ),
         taxonomy_ctx,
     )
-    mappings_resp = dependencies.load_category_mappings(
-        CategoryMappingLoadRequest(
-            schema_version="1.0",
-            path=runtime.settings.category_mapping_path,
-            reload_if_changed=True,
-        ),
-        taxonomy_ctx,
-    )
-    category_assignment = dependencies.categorize_taxonomy(
-        taxonomy_resp.taxonomy,
-        mappings_resp,
-        taxonomy_ctx,
-    )
-    if category_assignment.unmapped_tags or mappings_resp.mappings.uncategorized:
-        dependencies.update_uncategorized_tags(
-            UncategorizedTagsUpdateRequest(
-                schema_version="1.0",
-                path=runtime.settings.category_mapping_path,
-                report_title=runtime.report_title,
-                tags=category_assignment.unmapped_tags,
-            ),
-            taxonomy_ctx,
-        )
-    if vector_store_id:
-        dependencies.vector_store_update_metadata(
-            VectorStoreUpdateMetadataRequest(
-                schema_version="1.0",
-                vector_store_id=vector_store_id,
-                metadata=VectorStoreMetadata(
-                    schema_version="1.0",
-                    report_id=runtime.file.file_id,
-                    report_name=runtime.report_title,
-                    taxonomy=taxonomy_resp.taxonomy,
-                    categories=category_assignment.categories,
-                    region=taxonomy_resp.region,
-                    time_period=taxonomy_resp.time_period,
-                ),
-            ),
-            child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:metadata"),
-        )
-    return _TaxonomyCategoryState(
+    return _TaxonomyState(
         taxonomy=taxonomy_resp.taxonomy,
         region=taxonomy_resp.region,
         time_period=taxonomy_resp.time_period,
-        category_assignment=category_assignment,
+    )
+
+
+def _resolve_categories_from_report_context(
+    runtime: ReportRuntimeState,
+    *,
+    title: str,
+    publisher: str,
+    taxonomy_state: _TaxonomyState,
+    evidence_pack_paths: dict[str, str],
+    mode_ctx,
+    dependencies: ReportGeneratorDependencies,
+) -> _ContextCategoryState:
+    category_ctx = child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:categories")
+    report_metadata = ReportMetadataGetResponse(
+        schema_version="1.1",
+        file_id=runtime.file.file_id,
+        title=title,
+        created_at=0,
+        updated_at=0,
+        file_name=runtime.file_name,
+        publisher=publisher or None,
+        taxonomy=list(taxonomy_state.taxonomy),
+        categories=[],
+        region=taxonomy_state.region or None,
+        time_period=taxonomy_state.time_period or None,
+        source_url=None,
+        html_path=None,
+        md5=runtime.md5,
+        page_count=None,
+        contents_page_number=0,
+        pdf_metadata={},
+        analysis_mode=runtime.analysis_mode,
+        vector_store_id=None,
+        evidence_pack_paths=dict(evidence_pack_paths),
+    )
+    report_context = dependencies.build_report_category_context(
+        ReportContextBuildRequest(
+            schema_version="1.0",
+            report=report_metadata,
+        ),
+        category_ctx,
+    )
+    fit_response = dependencies.fit_report_categories_from_context(
+        ContextCategoryFitRequest(
+            schema_version="1.0",
+            context=report_context,
+            settings=runtime.settings,
+            category_mapping_path=runtime.settings.category_mapping_path,
+        ),
+        category_ctx,
+    )
+    return _ContextCategoryState(
+        category_assignment=CategoryAssignment(
+            schema_version="1.1",
+            categories=list(fit_response.categories),
+            category_labels=list(fit_response.category_labels),
+            unmapped_tags=[],
+            score_details=[],
+        ),
+        report_context=report_context,
+        fit_response=fit_response,
     )
 
 

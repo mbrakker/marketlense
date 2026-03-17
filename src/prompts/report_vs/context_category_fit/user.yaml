@@ -1,0 +1,29 @@
+text: |
+  Report context:
+  {{ report_context_json }}
+
+  Category profiles:
+  {{ category_profiles_json }}
+
+  Task:
+  Evaluate which portal categories best fit this report based only on the report context above.
+  Use each category's definition plus its include/exclude guidance to decide fit.
+  Return at most 2 selected categories.
+  A secondary category is valid only if the report would still be discoverable under it on its own merits.
+
+  Return a JSON object:
+  {
+    "schema_version": "1.0",
+    "selected_category_ids": ["category_id_1", "category_id_2"],
+    "category_fits": [
+      {
+        "category_id": "category_id",
+        "label": "Category Label",
+        "fit_score": 0.0,
+        "decision": "primary",
+        "why_fit": "short evidence-based rationale",
+        "why_not_fit": "short caveat or rejection rationale",
+        "evidence_sections": ["Section title"]
+      }
+    ]
+  }
