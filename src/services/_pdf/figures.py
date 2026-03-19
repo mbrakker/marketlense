@@ -56,7 +56,7 @@ CHART_CAPTION_TOP_SEARCH_FRAC = 0.2
 CHART_CAPTION_TOP_GUARD_FRAC = 0.01
 CHART_CAPTION_TOP_BLOCK_H_OVERLAP = 0.3
 CHART_CAPTION_MERGE_MAX_GAP_FRAC = 0.18
-CHART_CROP_PAD_COMPENSATION = 0
+CHART_CROP_PAD_COMPENSATION = 8
 CHART_NOTE_PAD_EXTRA = 24
 CHART_NOTE_BELOW_GUARD_PX = 3
 CHART_NOTE_BELOW_MIN_H_OVERLAP = 0.2
@@ -1576,7 +1576,10 @@ def _clamp_top_to_caption(
     target_top = max(page_rect.y0, cap_rect.y0 - pad)
     block_limit = _caption_top_block_limit(page, cap_rect, page_rect)
     if block_limit is not None:
-        target_top = max(target_top, block_limit)
+        target_top = max(
+            target_top,
+            min(cap_rect.y0 - 2.0, block_limit + CHART_CROP_PAD_COMPENSATION),
+        )
     if rect.y0 != target_top:
         return fitz.Rect(rect.x0, target_top, rect.x1, rect.y1)
     return rect
@@ -2060,6 +2063,10 @@ def _clamp_bottom_to_note(
     note_bottom: float,
     page_rect: fitz.Rect,
 ) -> fitz.Rect:
+    search_bottom = min(
+        page_rect.y1,
+        note_bottom + CHART_NOTE_PAD_EXTRA + CHART_NOTE_BELOW_GUARD_PX,
+    )
     max_bottom = min(
         page_rect.y1,
         note_bottom - CHART_CROP_PAD_COMPENSATION + CHART_NOTE_PAD_EXTRA,
@@ -2068,10 +2075,15 @@ def _clamp_bottom_to_note(
         page,
         rect,
         note_bottom + 1,
-        max_bottom + CHART_NOTE_BELOW_GUARD_PX,
+        search_bottom,
     )
     if blocker_top is not None:
-        max_bottom = min(max_bottom, blocker_top - CHART_NOTE_BELOW_GUARD_PX)
+        max_bottom = min(
+            max_bottom,
+            blocker_top
+            - CHART_NOTE_BELOW_GUARD_PX
+            - CHART_CROP_PAD_COMPENSATION,
+        )
     if max_bottom <= rect.y0:
         return rect
     if rect.y1 > max_bottom:
@@ -2485,6 +2497,7 @@ def _trim_top_page_number(
 ) -> fitz.Rect:
     page_rect = page.rect
     top_band = page_rect.height * 0.15
+    left_band = page_rect.x0 + page_rect.width * 0.25
     right_band = page_rect.x0 + page_rect.width * 0.55
     guard = max(page_rect.height * 0.008, 6.0)
     best_y1: Optional[float] = None
@@ -2500,7 +2513,9 @@ def _trim_top_page_number(
         block = fitz.Rect(x0, y0, x1, y1)
         if block.y0 > page_rect.y0 + top_band:
             continue
-        if block.x0 < right_band:
+        in_left_corner = block.x1 <= left_band
+        in_right_corner = block.x0 >= right_band
+        if not in_left_corner and not in_right_corner:
             continue
         if not block.intersects(rect):
             continue

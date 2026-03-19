@@ -16,6 +16,7 @@ from src.contracts.report_assets import ExtractCandidatesRequest, FigureExtractR
 from src.contracts.run_context import RunContext
 from src.services._pdf.figures import (
     _TableCandidate,
+    _clamp_top_to_caption,
     _expand_table_bbox,
     _validate_table_candidate,
 )
@@ -70,6 +71,79 @@ def _build_candidates_pdf(path: Path) -> None:
         page.insert_text((340, y), str(row * 20), fontsize=11)
         page.insert_text((470, y), str(row * 30), fontsize=11)
 
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_chart_context_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=620, height=900)
+    page.insert_text((18, 48), "54 |", fontsize=12)
+    page.insert_text(
+        (18, 82),
+        "Figure 1.35. Net purchases of sovereign bonds by investor type in selected advanced economies",
+        fontsize=18,
+    )
+    page.insert_text((18, 112), "Quarterly averages", fontsize=12)
+    page.insert_image(fitz.Rect(40, 150, 580, 430), stream=_chart_image_bytes())
+    page.insert_textbox(
+        fitz.Rect(18, 455, 590, 520),
+        (
+            "Note: Net purchases of short and long-term government debt securities, "
+            "consolidated to eliminate intra-government transactions."
+        ),
+        fontsize=10,
+    )
+    page.insert_textbox(
+        fitz.Rect(18, 520, 590, 575),
+        (
+            "Source: Australian Bureau of Statistics; European Central Bank; Federal Reserve; "
+            "Statistics Canada; OECD calculations."
+        ),
+        fontsize=10,
+    )
+    page.insert_text((420, 585), "StatLink https://stat.link/bfj2wr", fontsize=10)
+    page.insert_textbox(
+        fitz.Rect(18, 610, 590, 700),
+        (
+            "Emerging market economies should ensure that inflation durably returns to target "
+            "and further reform their public finances."
+        ),
+        fontsize=14,
+        lineheight=1.25,
+    )
+
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_chart_caption_spillover_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=620, height=900)
+    page.insert_textbox(
+        fitz.Rect(65, 116, 540, 176),
+        (
+            "Given the heterogeneity in regulation trends across states, there are again large "
+            "variations between regions. This paragraph should remain outside the final chart crop."
+        ),
+        fontsize=14,
+        lineheight=1.2,
+    )
+    page.insert_text(
+        (65, 208),
+        "Figure 2.6. Rising regulatory compliance costs have suppressed productivity and business",
+        fontsize=18,
+    )
+    page.insert_text(
+        (65, 228),
+        "dynamism in the United States over the past decade",
+        fontsize=18,
+    )
+    page.insert_text(
+        (65, 256),
+        "Estimated contribution of changes in regulation to productivity and business dynamism between 2012 and 2023",
+        fontsize=12,
+    )
     doc.save(path.as_posix())
     doc.close()
 
@@ -445,6 +519,55 @@ def test_collect_candidates_returns_chart_and_table_contracts(
     assert_logs_have_required_fields(events)
     event_names = {str(event["event"]) for event in events}
     assert {"extract_candidates_start", "extract_candidates_complete"} <= event_names
+
+
+def test_collect_candidates_chart_bbox_excludes_corner_page_number_and_body_text(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "chart-context.pdf"
+    out_dir = tmp_path / "out"
+    _build_chart_context_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="chart-context",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    assert len(charts) == 1
+    chart = charts[0]
+
+    assert chart.bbox[1] > 55.0
+    assert chart.bbox[1] < 95.0
+    assert chart.bbox[3] > 530.0
+    assert chart.bbox[3] < 602.0
+
+
+def test_clamp_top_to_caption_reserves_crop_padding_from_prior_paragraph(tmp_path) -> None:
+    pdf_path = tmp_path / "chart-caption-spillover.pdf"
+    _build_chart_caption_spillover_pdf(pdf_path)
+
+    doc = fitz.open(pdf_path.as_posix())
+    try:
+        page = doc[0]
+        cap_rect = None
+        for x0, y0, x1, y1, text, *_ in page.get_text("blocks"):
+            if "Figure 2.6." in str(text):
+                cap_rect = fitz.Rect(x0, y0, x1, y1)
+                break
+        assert cap_rect is not None
+        rect = fitz.Rect(59.2, cap_rect.y0 - 10.0, 538.8, 691.0)
+        clamped = _clamp_top_to_caption(rect, cap_rect, page, page.rect)
+    finally:
+        doc.close()
+
+    assert clamped.y0 > 186.0
+    assert clamped.y0 < 187.0
 
 
 def test_extract_best_figure_writes_asset_and_logs(

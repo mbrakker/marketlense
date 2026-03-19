@@ -12,6 +12,7 @@ from src.contracts.report_assets import (
 )
 from src.contracts.report_models import CropItem
 from src.contracts.run_context import RunContext
+from src.services._pdf.crop import _tighten_chart_crop_rect
 from src.services.pdf_service import (
     apply_crop_refine_bbox,
     crop_regions,
@@ -82,6 +83,42 @@ def _build_pdf_with_mid_statlink_and_spillover(path: Path) -> None:
         fitz.Rect(72, 462, 560, 760),
         "This section must remain outside the strict crop. " * 38,
         fontsize=12,
+    )
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_pdf_with_top_chart_spillover(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=620, height=900)
+    page.insert_textbox(
+        fitz.Rect(65, 116, 540, 176),
+        (
+            "Given the heterogeneity in regulation trends across states, there are again large "
+            "variations between regions. This paragraph should remain outside the saved chart crop."
+        ),
+        fontsize=14,
+        lineheight=1.2,
+    )
+    page.insert_text(
+        (65, 208),
+        "Figure 2.6. Rising regulatory compliance costs have suppressed productivity and business",
+        fontsize=18,
+    )
+    page.insert_text(
+        (65, 228),
+        "dynamism in the United States over the past decade",
+        fontsize=18,
+    )
+    page.insert_text(
+        (65, 256),
+        "Estimated contribution of changes in regulation to productivity and business dynamism",
+        fontsize=12,
+    )
+    page.draw_rect(
+        fitz.Rect(65, 300, 540, 700),
+        color=(0, 0, 0),
+        fill=(0.95, 0.95, 0.95),
     )
     doc.save(path.as_posix())
     doc.close()
@@ -187,6 +224,41 @@ def test_chart_strict_tightens_partial_bottom_text_spillover(tmp_path):
     with Image.open(legacy_path) as legacy_img, Image.open(strict_path) as strict_img:
         assert strict_img.height < legacy_img.height
         assert strict_img.height > int(legacy_img.height * 0.65)
+
+
+def test_tighten_chart_crop_rect_reclamps_padded_top_to_caption(tmp_path):
+    pdf_path = tmp_path / "top_chart_spillover.pdf"
+    _build_pdf_with_top_chart_spillover(pdf_path)
+
+    doc = fitz.open(pdf_path.as_posix())
+    try:
+        page = doc[0]
+        padded_rect = fitz.Rect(53.2, 178.54, 544.8, 707.04)
+        tightened = _tighten_chart_crop_rect(page, padded_rect)
+    finally:
+        doc.close()
+
+    assert tightened.y0 > 186.0
+    assert tightened.y0 < 187.0
+    assert tightened.y1 == pytest.approx(padded_rect.y1)
+
+
+def test_tighten_chart_crop_rect_leaves_plain_chart_without_context_unchanged(tmp_path):
+    pdf_path = tmp_path / "plain_chart.pdf"
+    _build_basic_pdf(pdf_path)
+
+    doc = fitz.open(pdf_path.as_posix())
+    try:
+        page = doc[0]
+        rect = fitz.Rect(60.0, 90.0, 360.0, 280.0)
+        tightened = _tighten_chart_crop_rect(page, rect)
+    finally:
+        doc.close()
+
+    assert tightened.x0 == pytest.approx(rect.x0)
+    assert tightened.y0 == pytest.approx(rect.y0)
+    assert tightened.x1 == pytest.approx(rect.x1)
+    assert tightened.y1 == pytest.approx(rect.y1)
 
 
 def test_table_strict_clamps_after_note_and_avoids_section_spillover(tmp_path):

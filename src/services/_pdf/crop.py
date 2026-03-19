@@ -23,6 +23,7 @@ from src.utils.logging import log_event
 from src.utils.slugify import slugify
 
 from .figures import (
+    CHART_CAPTION_HINTS,
     CROP_REFINE_BBOX_PAD_MAX,
     CROP_REFINE_BBOX_PAD_MIN,
     CROP_REFINE_BBOX_PAD_X_FRAC,
@@ -31,10 +32,15 @@ from .figures import (
     CROP_REFINE_EDGE_MIN_OVERLAP,
     CROP_REFINE_EDGE_TOUCH_TOL,
     CROP_REFINE_EDGE_TRIM_OVERLAP_RATIO,
+    _clamp_top_to_caption,
+    _clamp_top_to_heading,
     _clamp_bottom_to_note,
     _horizontal_overlap_ratio,
     _is_page_number_text,
+    _nearest_caption_block,
+    _nearest_heading_above,
     _note_block_bottom,
+    _trim_top_page_number,
     _vertical_overlap_ratio,
 )
 from .shared import crop_logger, preview_logger
@@ -195,6 +201,29 @@ def _tighten_crop_rect_for_strict_mode(page: fitz.Page, rect: fitz.Rect, *, mode
     return adjusted
 
 
+def _tighten_chart_crop_rect(page: fitz.Page, rect: fitz.Rect) -> fitz.Rect:
+    adjusted = fitz.Rect(rect) & page.rect
+    if adjusted.is_empty:
+        return adjusted
+    page_rect = page.rect
+    ref_rect: Optional[fitz.Rect] = None
+
+    cap_rect, _ = _nearest_caption_block(page, adjusted, CHART_CAPTION_HINTS)
+    if cap_rect is not None:
+        adjusted = _clamp_top_to_caption(adjusted, cap_rect, page, page_rect)
+        ref_rect = cap_rect
+    else:
+        head_rect = _nearest_heading_above(page, adjusted)
+        if head_rect is not None:
+            adjusted = _clamp_top_to_heading(adjusted, head_rect, page, page_rect)
+            ref_rect = head_rect
+
+    adjusted = _trim_top_page_number(adjusted, page, ref_rect) & page_rect
+    if adjusted.width < 1 or adjusted.height < 1:
+        return rect & page_rect
+    return adjusted
+
+
 def _crop_output_filename(report_name: str, item: CropItem, idx: int) -> str:
     item_slug = slugify(str(item.id or ""))
     if not item_slug:
@@ -260,6 +289,8 @@ def _crop_regions(
             page = local_doc[pno]
             r = fitz.Rect(x0 - pad, y0 - pad, x1 + pad, y1 + pad)
             r = r & page.rect
+            if mode == "chart_strict" or it.type == "chart":
+                r = _tighten_chart_crop_rect(page, r)
             if mode in {"table_strict", "chart_strict", "figure_strict"}:
                 r = _tighten_crop_rect_for_strict_mode(
                     page,
