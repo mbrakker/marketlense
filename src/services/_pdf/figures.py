@@ -245,6 +245,7 @@ TABLE_REFERENCE_TERMS = (
     "ssrn",
     "mercatus",
 )
+NOTE_LABEL_PREFIXES = ("note:", "notes:", "source:", "sources:", "statlink")
 _PAGE_NUMBER_RX = re.compile(
     r"^\s*[^0-9A-Za-z]*\d{1,4}(?:\s*[-–]\s*\d{1,4})?[^0-9A-Za-z]*\s*$"
 )
@@ -581,7 +582,7 @@ def _table_band_is_note_like(band: _TableTextBand) -> bool:
         return False
     if _TABLE_FOOTNOTE_RX.match(normalized):
         return True
-    if lowered.startswith(("note:", "source:", "statlink")):
+    if lowered.startswith(NOTE_LABEL_PREFIXES):
         return True
     if "statlink" in lowered or "http://" in lowered or "https://" in lowered:
         return True
@@ -877,7 +878,7 @@ def _table_block_is_note_like(block: _PageTextBlock) -> bool:
         return False
     if _TABLE_FOOTNOTE_RX.match(normalized):
         return True
-    if lowered.startswith(("note:", "source:", "statlink")):
+    if lowered.startswith(NOTE_LABEL_PREFIXES):
         return True
     if "statlink" in lowered or "doi.org" in lowered or "http://" in lowered or "https://" in lowered:
         return True
@@ -1681,17 +1682,13 @@ def _extend_with_note_blocks(page: fitz.Page, rect: fitz.Rect) -> fitz.Rect:
     except Exception:
         return rect
     for x0, y0, x1, y1, text, *_ in blocks:
-        if y0 < rect.y1 - 2 or y0 > limit:
+        if y1 < rect.y1 - 2 or y0 > limit:
             continue
         lines = [line.strip() for line in str(text).splitlines() if line.strip()]
         if not lines:
             continue
         first = lines[0].lower()
-        if not (
-            first.startswith("note:")
-            or first.startswith("source:")
-            or first.startswith("statlink")
-        ):
+        if not first.startswith(NOTE_LABEL_PREFIXES):
             continue
         block = fitz.Rect(x0, y0, x1, y1)
         h_overlap = _horizontal_overlap_ratio(block, rect)
@@ -2006,17 +2003,13 @@ def _note_block_bottom(
     except Exception:
         return None
     for x0, y0, x1, y1, text, *_ in blocks:
-        if y0 < min_y0 or y1 > rect.y1 + 2:
+        if y0 < min_y0 or y0 > rect.y1 + CHART_NOTE_MAX_DIST:
             continue
         lines = [line.strip() for line in str(text).splitlines() if line.strip()]
         if not lines:
             continue
         first = lines[0].lower()
-        if not (
-            first.startswith("note:")
-            or first.startswith("source:")
-            or first.startswith("statlink")
-        ):
+        if not first.startswith(NOTE_LABEL_PREFIXES):
             continue
         block = fitz.Rect(x0, y0, x1, y1)
         h_overlap = _horizontal_overlap_ratio(block, rect)

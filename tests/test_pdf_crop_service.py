@@ -88,6 +88,32 @@ def _build_pdf_with_mid_statlink_and_spillover(path: Path) -> None:
     doc.close()
 
 
+def _build_pdf_with_partial_note_overlap(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=620, height=820)
+    page.draw_rect(
+        fitz.Rect(60, 120, 560, 398),
+        color=(0, 0, 0),
+        fill=(0.95, 0.95, 0.95),
+    )
+    page.insert_text((74, 152), "Figure 1. Partial note overlap", fontsize=14)
+    page.insert_textbox(
+        fitz.Rect(72, 395, 560, 455),
+        (
+            "Notes: This note starts inside the chart bbox and continues below it. "
+            "The full note should remain in the strict crop."
+        ),
+        fontsize=10,
+    )
+    page.insert_textbox(
+        fitz.Rect(72, 500, 560, 760),
+        "This section must remain outside the strict crop. " * 24,
+        fontsize=12,
+    )
+    doc.save(path.as_posix())
+    doc.close()
+
+
 def _build_pdf_with_top_chart_spillover(path: Path) -> None:
     doc = fitz.open()
     page = doc.new_page(width=620, height=900)
@@ -353,6 +379,52 @@ def test_table_strict_detects_mid_statlink_for_bottom_clamp(tmp_path):
         assert strict_img.height < legacy_img.height
         assert strict_img.height < 620
         assert strict_img.height > 420
+
+
+def test_chart_strict_keeps_note_that_crosses_bbox_bottom(tmp_path):
+    pdf_path = tmp_path / "chart_partial_note_overlap.pdf"
+    _build_pdf_with_partial_note_overlap(pdf_path)
+    out_dir = tmp_path / "out"
+    item = CropItem(
+        id="chart-0-1",
+        type="chart",
+        score=92.0,
+        page=0,
+        bbox=(60.0, 120.0, 560.0, 405.0),
+    )
+
+    legacy_resp = crop_regions(
+        CropRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="report",
+            items=[item],
+            subdir="legacy_partial_note",
+            pad=0,
+            mode="legacy",
+        ),
+        _ctx(),
+    )
+    strict_resp = crop_regions(
+        CropRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="report",
+            items=[item],
+            subdir="strict_partial_note",
+            pad=0,
+            mode="chart_strict",
+        ),
+        _ctx(),
+    )
+
+    legacy_path = out_dir / legacy_resp.paths[0]
+    strict_path = out_dir / strict_resp.paths[0]
+    with Image.open(legacy_path) as legacy_img, Image.open(strict_path) as strict_img:
+        assert strict_img.height > legacy_img.height
+        assert strict_img.height < 760
 
 
 def test_render_preview_and_crop_refine_page_render_create_assets(tmp_path):

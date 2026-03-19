@@ -117,6 +117,36 @@ def _build_chart_context_pdf(path: Path) -> None:
     doc.close()
 
 
+def _build_chart_partial_note_overlap_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=620, height=900)
+    page.insert_text(
+        (18, 82),
+        "Figure 1.35. Partial note overlap case",
+        fontsize=18,
+    )
+    page.insert_text((18, 112), "Quarterly averages", fontsize=12)
+    page.insert_image(fitz.Rect(40, 150, 580, 398), stream=_chart_image_bytes())
+    page.insert_textbox(
+        fitz.Rect(18, 395, 590, 455),
+        (
+            "Notes: This note begins inside the padded chart bbox but should still be kept "
+            "in full, without clipping its wrapped continuation line. This sentence is "
+            "intentionally long so the note wraps across multiple lines and extends below "
+            "the original chart bottom."
+        ),
+        fontsize=10,
+    )
+    page.insert_textbox(
+        fitz.Rect(18, 500, 590, 620),
+        "This paragraph must remain outside the chart crop. " * 12,
+        fontsize=13,
+        lineheight=1.2,
+    )
+    doc.save(path.as_posix())
+    doc.close()
+
+
 def _build_chart_caption_spillover_pdf(path: Path) -> None:
     doc = fitz.open()
     page = doc.new_page(width=620, height=900)
@@ -568,6 +598,29 @@ def test_clamp_top_to_caption_reserves_crop_padding_from_prior_paragraph(tmp_pat
 
     assert clamped.y0 > 186.0
     assert clamped.y0 < 187.0
+
+
+def test_collect_candidates_chart_bbox_keeps_full_partial_note_overlap(tmp_path) -> None:
+    pdf_path = tmp_path / "chart-partial-note-overlap.pdf"
+    out_dir = tmp_path / "out"
+    _build_chart_partial_note_overlap_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="chart-partial-note-overlap",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    assert len(charts) == 1
+    chart = charts[0]
+
+    assert chart.bbox[3] > 430.0
+    assert chart.bbox[3] < 500.0
 
 
 def test_extract_best_figure_writes_asset_and_logs(
