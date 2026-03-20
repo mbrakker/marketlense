@@ -18,6 +18,7 @@ from src.contracts.candidates import Candidate
 from .figures import (
     TABLE_SETTINGS_LATTICE,
     TABLE_SETTINGS_STREAM,
+    TABLE_DEDUP_IOU,
     TABLE_WIDE_FIGURE_CONTEXT_HORIZONTAL_PAD,
     TABLE_WIDE_FIGURE_CONTEXT_MAX_DIST,
     TABLE_WIDE_FIGURE_CONTEXT_TOP_BAND,
@@ -28,6 +29,7 @@ from .figures import (
     _cell_is_numeric,
     _col_consistency,
     _dedupe_table_candidates,
+    _detect_ranked_table_candidates,
     _expand_table_bbox,
     _extract_text_in_bbox,
     _has_caption_hint,
@@ -44,6 +46,8 @@ from .figures import (
     _suppress_pdfminer_warnings,
     _table_preview,
     _table_containment_ratio,
+    _table_iou,
+    _table_quality,
     _table_sort_key,
     _prefer_inner_lattice_table,
     _tally_reason,
@@ -236,36 +240,52 @@ def _extract_tables_sequential(
                     final_candidates.append(
                         replace(candidate, bbox=(x0, y0, x1, y1))
                     )
+                if fitz_page is not None:
+                    final_candidates.extend(
+                        _detect_ranked_table_candidates(p, fitz_page)
+                    )
 
                 final_deduped: List[_TableCandidate] = []
                 for candidate in final_candidates:
                     merged = False
                     for idx, existing in enumerate(final_deduped):
+                        iou = _table_iou(candidate.bbox, existing.bbox)
                         containment = _table_containment_ratio(
                             candidate.bbox, existing.bbox
                         )
-                        if containment < 0.98:
+                        ranked_overlap = (
+                            containment >= 0.8
+                            and ("ranked" in (candidate.method, existing.method))
+                        )
+                        if iou < TABLE_DEDUP_IOU and containment < 0.98 and not ranked_overlap:
                             continue
-                        area_candidate = max(
-                            0.0,
-                            (candidate.bbox[2] - candidate.bbox[0])
-                            * (candidate.bbox[3] - candidate.bbox[1]),
-                        )
-                        area_existing = max(
-                            0.0,
-                            (existing.bbox[2] - existing.bbox[0])
-                            * (existing.bbox[3] - existing.bbox[1]),
-                        )
-                        smaller, larger = (
-                            (candidate, existing)
-                            if area_candidate <= area_existing
-                            else (existing, candidate)
-                        )
-                        final_deduped[idx] = (
-                            smaller
-                            if _prefer_inner_lattice_table(smaller, larger)
-                            else larger
-                        )
+                        preferred = candidate
+                        if containment >= 0.98:
+                            area_candidate = max(
+                                0.0,
+                                (candidate.bbox[2] - candidate.bbox[0])
+                                * (candidate.bbox[3] - candidate.bbox[1]),
+                            )
+                            area_existing = max(
+                                0.0,
+                                (existing.bbox[2] - existing.bbox[0])
+                                * (existing.bbox[3] - existing.bbox[1]),
+                            )
+                            smaller, larger = (
+                                (candidate, existing)
+                                if area_candidate <= area_existing
+                                else (existing, candidate)
+                            )
+                            preferred = (
+                                smaller
+                                if _prefer_inner_lattice_table(smaller, larger)
+                                else larger
+                            )
+                            if _table_quality(candidate) <= _table_quality(existing):
+                                preferred = existing
+                        elif _table_quality(candidate) <= _table_quality(existing):
+                            preferred = existing
+                        final_deduped[idx] = preferred
                         merged = True
                         break
                     if not merged:

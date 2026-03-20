@@ -199,6 +199,18 @@ INFO_CHART_BAND_FRAC = 0.6
 INFO_CHART_MAX_GAP_FRAC = 0.25
 INFO_CHART_CLUSTER_GAP_FRAC = 0.05
 INFO_CHART_MAX_ASPECT = 4.0
+PANEL_CHART_MIN_AREA_FRAC = 0.035
+PANEL_CHART_MAX_AREA_FRAC = 0.75
+PANEL_CHART_CONNECT_GAP_FRAC = 0.015
+PANEL_CHART_TITLE_MIN_SIZE = 15.0
+PANEL_CHART_TITLE_MIN_WORDS = 2
+PANEL_CHART_TITLE_MAX_WORDS = 12
+PANEL_CHART_TITLE_MAX_CHARS = 120
+PANEL_CHART_TITLE_MAX_SENTENCES = 1
+PANEL_CHART_TITLE_MAX_GAP = 72.0
+PANEL_CHART_TITLE_NEAREST_TOL = 24.0
+PANEL_CHART_TITLE_X_PAD = 72.0
+PANEL_CHART_SPLIT_MIN_CENTER_GAP_FRAC = 0.12
 TABLE_EXPAND_MAX_GAP_FRAC = 0.12
 TABLE_EXPAND_LATTICE_MAX_GAP_FRAC = 0.08
 TABLE_EXPAND_MAX_BLOCK_HEIGHT_FRAC = 0.4
@@ -289,6 +301,19 @@ TABLE_HORIZONTAL_EXPAND_DENSE_TABULAR_MAX_GAP_FRAC = 0.3
 TABLE_HORIZONTAL_EXPAND_DENSE_TABULAR_MIN_LINES = 6
 TABLE_HORIZONTAL_EXPAND_DENSE_TABULAR_MAX_AVG_LINE_LEN = 18.0
 TABLE_OVERLAPPING_NOTE_MAX_GAP = 10.0
+TABLE_RANKED_MIN_ROWS = 4
+TABLE_RANKED_MAX_RANK = 10
+TABLE_RANKED_X_CLUSTER_GAP_FRAC = 0.08
+TABLE_RANKED_MAX_ROW_GAP_FRAC = 0.16
+TABLE_RANKED_MIN_RULE_WIDTH_FRAC = 0.25
+TABLE_RANKED_HEADER_MAX_GAP = 60.0
+TABLE_RANKED_HEADER_SEED_MAX_GAP = 90.0
+TABLE_RANKED_RULE_X_TOL = 24.0
+TABLE_RANKED_BODY_MAX_GAP = 18.0
+TABLE_RANKED_NOTE_MAX_GAP = 80.0
+TABLE_RANKED_NOTE_X_TOL = 36.0
+CHART_RANKED_TABLE_DUP_IOU = 0.65
+CHART_RANKED_TABLE_DUP_CONTAINMENT = 0.82
 TABLE_TOP_SLACK_MAX = 8.0
 TABLE_TOP_HEADER_SLACK_MAX = 12.0
 TABLE_EXPLICIT_TITLE_MAX_GAP = 72.0
@@ -296,6 +321,10 @@ TABLE_EXPLICIT_SUBTITLE_MAX_GAP = 32.0
 NOTE_LABEL_PREFIXES = ("note:", "notes:", "source:", "sources:", "statlink")
 _PAGE_NUMBER_RX = re.compile(
     r"^\s*[^0-9A-Za-z]*\d{1,4}(?:\s*[-–]\s*\d{1,4})?[^0-9A-Za-z]*\s*$"
+)
+_PANEL_TITLE_EXCLUDE_RX = re.compile(
+    r"^\s*(?:figure|fig\.|exhibit|chart|graph|table|source|infographic)\b",
+    re.IGNORECASE,
 )
 _TABLE_FOOTNOTE_RX = re.compile(r"^\s*(?:\*+|\d+\.)\s+")
 _FIGURE_CONTEXT_RX = re.compile(r"^\s*(?:figure|fig\.|infographic)\s+\d", re.IGNORECASE)
@@ -369,6 +398,13 @@ class _TableTextBand:
     word_count: int
     max_font_size: float
     max_gap_x: float
+
+
+@dataclass(frozen=True)
+class _RankedTableRegion:
+    bbox: Tuple[float, float, float, float]
+    row_count: int
+    col_count: int
 
 
 def _s(value: object) -> str:
@@ -533,6 +569,298 @@ def _table_page_text_blocks(page: fitz.Page) -> List[_PageTextBlock]:
             )
         )
     return blocks
+
+
+def _table_rank_value(block: _PageTextBlock) -> Optional[int]:
+    normalized = _table_normalize_text(block.text)
+    if not re.fullmatch(r"\d{1,2}", normalized):
+        return None
+    try:
+        value = int(normalized)
+    except ValueError:
+        return None
+    if value < 1 or value > TABLE_RANKED_MAX_RANK:
+        return None
+    return value
+
+
+def _table_horizontal_rule_rects(page: fitz.Page) -> List[fitz.Rect]:
+    rules: List[fitz.Rect] = []
+    page_rect = page.rect
+    min_width = page_rect.width * TABLE_RANKED_MIN_RULE_WIDTH_FRAC
+    try:
+        drawings = page.get_drawings() or []
+    except Exception:
+        drawings = []
+    for drawing in drawings:
+        if drawing.get("type") != "s":
+            continue
+        try:
+            rect = fitz.Rect(drawing["rect"])
+        except Exception:
+            continue
+        if rect.width < min_width:
+            continue
+        if rect.height > 3.5:
+            continue
+        rules.append(rect)
+    return sorted(rules, key=lambda rect: (rect.y0, rect.x0))
+
+
+def _group_rank_blocks_into_sequences(
+    blocks: List[_PageTextBlock],
+    page_rect: fitz.Rect,
+) -> List[List[_PageTextBlock]]:
+    rank_blocks = [
+        block
+        for block in blocks
+        if _table_rank_value(block) is not None
+    ]
+    if not rank_blocks:
+        return []
+    x_tol = max(42.0, page_rect.width * TABLE_RANKED_X_CLUSTER_GAP_FRAC)
+    max_gap_y = max(32.0, page_rect.height * TABLE_RANKED_MAX_ROW_GAP_FRAC)
+    grouped: List[List[_PageTextBlock]] = []
+    for block in sorted(rank_blocks, key=lambda item: (item.rect.x0, item.rect.y0)):
+        placed = False
+        for group in grouped:
+            ref = group[0]
+            if abs(block.rect.x0 - ref.rect.x0) <= x_tol and abs(block.rect.x1 - ref.rect.x1) <= x_tol:
+                group.append(block)
+                placed = True
+                break
+        if not placed:
+            grouped.append([block])
+
+    sequences: List[List[_PageTextBlock]] = []
+    for group in grouped:
+        current: List[_PageTextBlock] = []
+        expected = 1
+        last_y: Optional[float] = None
+        for block in sorted(group, key=lambda item: item.rect.y0):
+            value = _table_rank_value(block)
+            if value is None:
+                continue
+            if value == 1:
+                current = [block]
+                expected = 2
+                last_y = block.rect.y0
+                continue
+            if not current:
+                continue
+            if value != expected:
+                continue
+            if last_y is not None and block.rect.y0 - last_y > max_gap_y:
+                continue
+            current.append(block)
+            expected += 1
+            last_y = block.rect.y0
+        if len(current) >= TABLE_RANKED_MIN_ROWS:
+            sequences.append(current)
+    return sequences
+
+
+def _ranked_table_panel_region(
+    page: fitz.Page,
+    rank_blocks: List[_PageTextBlock],
+    blocks: List[_PageTextBlock],
+    rules: List[fitz.Rect],
+) -> Optional[_RankedTableRegion]:
+    if not rank_blocks:
+        return None
+    first_rank = rank_blocks[0]
+    last_rank = rank_blocks[-1]
+    header_rules = [
+        rule
+        for rule in rules
+        if rule.y0 <= first_rank.rect.y0 + 4.0
+        and first_rank.rect.y0 - rule.y0 <= TABLE_RANKED_HEADER_MAX_GAP
+        and rule.x0 <= first_rank.rect.x0 + TABLE_RANKED_RULE_X_TOL
+    ]
+    header_rule: Optional[fitz.Rect] = None
+    if header_rules:
+        header_rule = min(
+            header_rules,
+            key=lambda rule: (
+                max(0.0, first_rank.rect.y0 - rule.y0),
+                abs(first_rank.rect.x0 - rule.x0),
+                -rule.width,
+            ),
+        )
+    seed_rules = [
+        rule
+        for rule in rules
+        if rule.x0 <= first_rank.rect.x0 + TABLE_RANKED_RULE_X_TOL
+        and rule.y0 >= first_rank.rect.y0 - 4.0
+        and rule.y0 <= last_rank.rect.y1 + TABLE_RANKED_BODY_MAX_GAP
+    ]
+    if header_rule is None and seed_rules:
+        header_rule = min(
+            seed_rules,
+            key=lambda rule: (
+                abs(first_rank.rect.x0 - rule.x0),
+                -rule.width,
+            ),
+        )
+    if header_rule is None:
+        return None
+    panel_rules = [
+        rule
+        for rule in rules
+        if abs(rule.x0 - header_rule.x0) <= TABLE_RANKED_RULE_X_TOL
+        and abs(rule.x1 - header_rule.x1) <= TABLE_RANKED_RULE_X_TOL
+        and rule.y0 >= header_rule.y0 - 1.0
+        and rule.y0 <= last_rank.rect.y1 + TABLE_RANKED_BODY_MAX_GAP
+    ]
+    if len(panel_rules) < 3:
+        return None
+
+    body_font_size = _table_page_body_font_size(blocks)
+    x0 = min(rule.x0 for rule in panel_rules)
+    x1 = max(rule.x1 for rule in panel_rules)
+    row_top = first_rank.rect.y0
+    row_bottom = last_rank.rect.y1
+    content_blocks = [
+        block
+        for block in blocks
+        if not _is_page_number_text(_table_normalize_text(block.text))
+        and block.rect.y1 >= row_top - 4.0
+        and block.rect.y0 <= row_bottom + 4.0
+        and block.rect.x1 >= x0
+        and block.rect.x0 <= x1
+    ]
+    if content_blocks:
+        row_top = min(row_top, min(block.rect.y0 for block in content_blocks))
+        row_bottom = max(row_bottom, max(block.rect.y1 for block in content_blocks))
+
+    header_block_max_gap = (
+        TABLE_RANKED_HEADER_MAX_GAP
+        if header_rules
+        else TABLE_RANKED_HEADER_SEED_MAX_GAP
+    )
+    header_blocks = [
+        block
+        for block in blocks
+        if not _table_block_is_margin_noise(block, page.rect)
+        and block.rect.y1 <= header_rule.y0 + 1.0
+        and header_rule.y0 - block.rect.y1 <= header_block_max_gap
+        and _horizontal_overlap_ratio(block.rect, fitz.Rect(x0, header_rule.y0, x1, row_bottom)) >= 0.2
+    ]
+    y0 = min([row_top] + [block.rect.y0 for block in header_blocks])
+    if header_rules:
+        y0 = min(y0, header_rule.y0)
+    y1 = max(row_bottom, max(rule.y0 for rule in panel_rules))
+
+    for block in sorted(blocks, key=lambda item: item.rect.y0):
+        if _table_block_is_margin_noise(block, page.rect):
+            continue
+        if block.rect.y0 < y1 - 1.0:
+            continue
+        gap = block.rect.y0 - y1
+        if gap > TABLE_RANKED_NOTE_MAX_GAP:
+            break
+        if block.rect.x0 < x0 - TABLE_RANKED_NOTE_X_TOL:
+            continue
+        if block.rect.x1 > x1 + TABLE_RANKED_NOTE_X_TOL:
+            continue
+        if _horizontal_overlap_ratio(block.rect, fitz.Rect(x0, y0, x1, y1)) < 0.2:
+            continue
+        if _table_block_is_note_like(block) or _table_block_is_body_paragraph(
+            block, body_font_size
+        ):
+            y1 = max(y1, block.rect.y1)
+            continue
+        break
+
+    header_label_count = max(
+        1,
+        sum(
+            1
+            for block in header_blocks
+            if _table_normalize_text(block.text)
+        ),
+    )
+    col_count = max(2, min(6, header_label_count + 1))
+    rect = fitz.Rect(x0, y0, x1, y1) & page.rect
+    if rect.is_empty:
+        return None
+    return _RankedTableRegion(
+        bbox=(rect.x0, rect.y0, rect.x1, rect.y1),
+        row_count=len(rank_blocks),
+        col_count=col_count,
+    )
+
+
+def _detect_ranked_table_candidates(
+    plumber_page: pdfplumber.page.Page,
+    page: fitz.Page,
+) -> List[_TableCandidate]:
+    blocks = _table_page_text_blocks(page)
+    if not blocks:
+        return []
+    rules = _table_horizontal_rule_rects(page)
+    if not rules:
+        return []
+    candidates: List[_TableCandidate] = []
+    page_rect = page.rect
+    body_font_size = _table_page_body_font_size(blocks)
+    for rank_sequence in _group_rank_blocks_into_sequences(blocks, page_rect):
+        region = _ranked_table_panel_region(page, rank_sequence, blocks, rules)
+        if region is None:
+            continue
+        expanded_bbox = _expand_table_bbox(page, region.bbox, "ranked")
+        x0, y0, x1, y1 = expanded_bbox
+        text = _extract_text_in_bbox(plumber_page, expanded_bbox)
+        text_len = len(text.strip())
+        if text_len < TABLE_MIN_TEXT_CHARS:
+            continue
+        line_count, text_chars = _text_stats(text)
+        avg_line_len = (text_chars / line_count) if line_count else 0.0
+        text_block_area_frac, text_block_line_count, text_block_avg_line_len = _text_block_stats(
+            page,
+            expanded_bbox,
+        )
+        normalized = _table_normalize_text(text)
+        word_count = len(normalized.split())
+        non_empty_cells = max(TABLE_MIN_NONEMPTY_CELLS, region.row_count * region.col_count)
+        total_cells = non_empty_cells
+        numeric_chars = sum(1 for char in text if char.isdigit())
+        alpha_num_chars = sum(1 for char in text if char.isalnum())
+        numeric_ratio = numeric_chars / max(1, alpha_num_chars)
+        candidate = _TableCandidate(
+            bbox=(x0, y0, x1, y1),
+            method="ranked",
+            row_count=region.row_count,
+            col_count=region.col_count,
+            col_consistency=1.0,
+            row_len_cv=0.0,
+            non_empty_cells=non_empty_cells,
+            total_cells=total_cells,
+            numeric_cells=min(non_empty_cells, numeric_chars),
+            numeric_ratio=numeric_ratio,
+            avg_words_per_cell=word_count / max(1, non_empty_cells),
+            avg_first_col_words=1.0,
+            index_page_ratio=0.0,
+            preview=text[:400],
+            text=text,
+            text_len=text_len,
+            line_count=line_count,
+            avg_line_len=avg_line_len,
+            text_block_area_frac=text_block_area_frac,
+            text_block_line_count=text_block_line_count,
+            text_block_avg_line_len=text_block_avg_line_len,
+            caption_hint=False,
+            figure_context_hint=False,
+            wide_figure_context_hint=False,
+            area_frac=((x1 - x0) * (y1 - y0)) / max(1.0, page_rect.width * page_rect.height),
+            width_frac=(x1 - x0) / max(1.0, page_rect.width),
+            height_frac=(y1 - y0) / max(1.0, page_rect.height),
+            aspect=(x1 - x0) / max(1.0, y1 - y0),
+        )
+        ok, _reason = _validate_table_candidate(candidate)
+        if ok:
+            candidates.append(candidate)
+    return candidates
 
 
 def _table_page_body_font_size(blocks: List[_PageTextBlock]) -> float:
@@ -1690,6 +2018,16 @@ def _collect_chart_rects(page: fitz.Page) -> List[_ChartRect]:
                 caption_rect=cap_rect,
             )
         )
+    for rect, caption, cap_rect in _panel_chart_rects(page):
+        rects.append(
+            _ChartRect(
+                rect=rect,
+                kind="panel",
+                xref=None,
+                caption=caption,
+                caption_rect=cap_rect,
+            )
+        )
     for rect, caption, cap_rect in _heading_chart_rects(page):
         rects.append(
             _ChartRect(
@@ -1732,6 +2070,194 @@ def _drawing_rects(page: fitz.Page) -> List[fitz.Rect]:
                 continue
         rects.append(r)
     return rects
+
+
+def _panel_title_lines(page: fitz.Page) -> List[_PageTextLine]:
+    titles: List[_PageTextLine] = []
+    for line in _table_page_text_lines(page):
+        text = _s(line.text).strip()
+        if not text:
+            continue
+        if _is_page_number_text(text):
+            continue
+        if _PANEL_TITLE_EXCLUDE_RX.match(text):
+            continue
+        if line.max_font_size < PANEL_CHART_TITLE_MIN_SIZE:
+            continue
+        if _alpha_ratio(text) < INFO_HEADING_MIN_ALPHA_RATIO:
+            continue
+        words = text.split()
+        if len(words) < PANEL_CHART_TITLE_MIN_WORDS:
+            continue
+        if len(words) > PANEL_CHART_TITLE_MAX_WORDS:
+            continue
+        if len(text) > PANEL_CHART_TITLE_MAX_CHARS:
+            continue
+        sentence_marks = text.count(".") + text.count("!") + text.count("?")
+        if sentence_marks > PANEL_CHART_TITLE_MAX_SENTENCES:
+            continue
+        titles.append(line)
+    return sorted(titles, key=lambda item: (item.rect.y0, item.rect.x0))
+
+
+def _panel_chart_is_label_dense_not_prose(text: str) -> bool:
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    if len(lines) < 8:
+        return False
+    chars = sum(len(line) for line in lines)
+    avg_line_len = chars / max(1, len(lines))
+    if avg_line_len > 22.0:
+        return False
+    long_lines = sum(1 for line in lines if len(line) >= 32)
+    long_line_ratio = long_lines / max(1, len(lines))
+    if long_line_ratio > 0.25:
+        return False
+    short_lines = sum(1 for line in lines if len(line) <= 14)
+    short_line_ratio = short_lines / max(1, len(lines))
+    return short_line_ratio >= 0.3
+
+
+def _drawing_components(page: fitz.Page) -> List[Tuple[fitz.Rect, List[fitz.Rect]]]:
+    rects = list(_drawing_rects(page))
+    if not rects:
+        return []
+    gap = max(8.0, page.rect.height * PANEL_CHART_CONNECT_GAP_FRAC)
+    remaining = list(rects)
+    components: List[Tuple[fitz.Rect, List[fitz.Rect]]] = []
+    while remaining:
+        current = [remaining.pop(0)]
+        changed = True
+        while changed:
+            merged = fitz.Rect(current[0])
+            for rect in current[1:]:
+                merged |= rect
+            grown = fitz.Rect(
+                merged.x0 - gap,
+                merged.y0 - gap,
+                merged.x1 + gap,
+                merged.y1 + gap,
+            )
+            next_remaining: List[fitz.Rect] = []
+            changed = False
+            for rect in remaining:
+                expanded = fitz.Rect(
+                    rect.x0 - gap,
+                    rect.y0 - gap,
+                    rect.x1 + gap,
+                    rect.y1 + gap,
+                )
+                if grown.intersects(expanded):
+                    current.append(rect)
+                    changed = True
+                else:
+                    next_remaining.append(rect)
+            remaining = next_remaining
+        merged = fitz.Rect(current[0])
+        for rect in current[1:]:
+            merged |= rect
+        components.append((merged, current))
+    return sorted(components, key=lambda item: item[0].get_area(), reverse=True)
+
+
+def _panel_chart_rects(page: fitz.Page) -> List[Tuple[fitz.Rect, str, fitz.Rect]]:
+    if _caption_blocks(page, CHART_CAPTION_HINTS):
+        return []
+    components = _drawing_components(page)
+    if not components:
+        return []
+    titles = _panel_title_lines(page)
+    if not titles:
+        return []
+    page_area = max(1.0, page.rect.get_area())
+    page_rect = page.rect
+    candidates: List[Tuple[fitz.Rect, str, fitz.Rect]] = []
+    for merged, rects in components:
+        area_frac = merged.get_area() / page_area
+        if area_frac < PANEL_CHART_MIN_AREA_FRAC or area_frac > PANEL_CHART_MAX_AREA_FRAC:
+            continue
+        nearby: List[Tuple[float, _PageTextLine]] = []
+        for title in titles:
+            gap = merged.y0 - title.rect.y1
+            if gap < -2.0 or gap > PANEL_CHART_TITLE_MAX_GAP:
+                continue
+            center_x = (title.rect.x0 + title.rect.x1) / 2.0
+            if center_x < merged.x0 - PANEL_CHART_TITLE_X_PAD:
+                continue
+            if center_x > merged.x1 + PANEL_CHART_TITLE_X_PAD:
+                continue
+            nearby.append((gap, title))
+        if not nearby:
+            continue
+        nearest_gap = min(gap for gap, _ in nearby)
+        filtered = [
+            title
+            for gap, title in nearby
+            if gap <= nearest_gap + PANEL_CHART_TITLE_NEAREST_TOL
+        ]
+        filtered.sort(key=lambda item: ((item.rect.x0 + item.rect.x1) / 2.0, item.rect.y0))
+        unique_titles: List[_PageTextLine] = []
+        for title in filtered:
+            if unique_titles and _rect_iou(unique_titles[-1].rect, title.rect) >= 0.8:
+                continue
+            unique_titles.append(title)
+        filtered = unique_titles
+        if not filtered:
+            continue
+        if len(filtered) == 1:
+            title = filtered[0]
+            candidate_rect = fitz.Rect(merged)
+            candidate_rect |= title.rect
+            candidates.append((candidate_rect, title.text, title.rect))
+            continue
+
+        centers = [((title.rect.x0 + title.rect.x1) / 2.0) for title in filtered]
+        min_center_gap = page.rect.width * PANEL_CHART_SPLIT_MIN_CENTER_GAP_FRAC
+        if any((right - left) < min_center_gap for left, right in zip(centers, centers[1:])):
+            title = min(
+                filtered,
+                key=lambda item: (
+                    merged.y0 - item.rect.y1 if item.rect.y1 <= merged.y0 else 1e9,
+                    item.rect.x0,
+                ),
+            )
+            candidate_rect = fitz.Rect(merged)
+            candidate_rect |= title.rect
+            candidates.append((candidate_rect, title.text, title.rect))
+            continue
+
+        boundaries = [merged.x0]
+        for left, right in zip(centers, centers[1:]):
+            boundaries.append((left + right) / 2.0)
+        boundaries.append(merged.x1)
+        for idx, title in enumerate(filtered):
+            slice_x0 = boundaries[idx]
+            slice_x1 = boundaries[idx + 1]
+            panel_rects = [
+                rect
+                for rect in rects
+                if ((rect.x0 + rect.x1) / 2.0) >= slice_x0 - 6.0
+                and ((rect.x0 + rect.x1) / 2.0) <= slice_x1 + 6.0
+            ]
+            if not panel_rects:
+                continue
+            panel_rect = fitz.Rect(panel_rects[0])
+            for rect in panel_rects[1:]:
+                panel_rect |= rect
+            if (panel_rect.get_area() / page_area) < (PANEL_CHART_MIN_AREA_FRAC * 0.6):
+                continue
+            if panel_rect.x1 <= panel_rect.x0 or panel_rect.y1 <= panel_rect.y0:
+                continue
+            candidate_rect = fitz.Rect(panel_rect)
+            candidate_rect |= title.rect
+            candidate_rect.x0 = max(page_rect.x0, min(candidate_rect.x0, title.rect.x0))
+            candidate_rect.x1 = min(page_rect.x1, max(candidate_rect.x1, title.rect.x1))
+            candidates.append((candidate_rect, title.text, title.rect))
+
+    deduped: List[Tuple[fitz.Rect, str, fitz.Rect]] = []
+    for rect, text, title_rect in candidates:
+        if not _rect_seen(rect, [existing for existing, _, _ in deduped]):
+            deduped.append((rect, text, title_rect))
+    return deduped
 
 
 def _drawing_caption_rects(page: fitz.Page) -> List[Tuple[fitz.Rect, str, fitz.Rect]]:
@@ -2334,6 +2860,61 @@ def _extend_with_adjacent_text_blocks(page: fitz.Page, rect: fitz.Rect) -> fitz.
     return expanded
 
 
+def _extend_panel_with_adjacent_text_blocks(page: fitz.Page, rect: fitz.Rect) -> fitz.Rect:
+    page_rect = page.rect
+    max_gap = page_rect.width * CHART_LABEL_MAX_GAP_FRAC
+    max_v_gap = page_rect.height * CHART_LABEL_MAX_V_GAP_FRAC
+    expanded = rect
+    try:
+        blocks = page.get_text("blocks")
+    except Exception:
+        return rect
+    for x0, y0, x1, y1, text, *_ in blocks:
+        if not text:
+            continue
+        block = fitz.Rect(x0, y0, x1, y1)
+        if block.height > rect.height * CHART_LABEL_MAX_HEIGHT_FRAC:
+            continue
+        lines, chars = _text_stats(str(text))
+        if lines == 0:
+            continue
+        avg_line_len = chars / max(1, lines)
+        if (
+            lines >= CHART_LABEL_PARAGRAPH_MIN_LINES
+            and avg_line_len > CHART_LABEL_PARAGRAPH_MAX_AVG_LINE_LEN
+        ):
+            continue
+        if lines > CHART_LABEL_MAX_LINES:
+            continue
+        if avg_line_len > CHART_LABEL_MAX_AVG_LINE_LEN:
+            continue
+        # Panel charts on slide decks often sit beside sibling panels; reject
+        # candidate text blocks that spill too far beyond the panel's own width.
+        if block.x0 < rect.x0 - max_gap or block.x1 > rect.x1 + max_gap:
+            continue
+        v_overlap = _vertical_overlap_ratio(block, rect)
+        h_overlap = _horizontal_overlap_ratio(block, rect)
+        if v_overlap >= CHART_LABEL_MIN_V_OVERLAP:
+            if block.x0 >= rect.x1 and block.x0 - rect.x1 <= max_gap:
+                expanded |= block
+            elif block.x1 <= rect.x0 and rect.x0 - block.x1 <= max_gap:
+                expanded |= block
+            elif block.x1 > rect.x1 and block.x1 - rect.x1 <= max_gap:
+                expanded |= block
+            elif block.x0 < rect.x0 and rect.x0 - block.x0 <= max_gap:
+                expanded |= block
+        if h_overlap >= CHART_LABEL_MIN_H_OVERLAP:
+            if block.y1 <= rect.y0 and rect.y0 - block.y1 <= max_v_gap:
+                expanded |= block
+            elif block.y0 >= rect.y1 and block.y0 - rect.y1 <= max_v_gap:
+                expanded |= block
+            elif block.y0 < rect.y0 and rect.y0 - block.y0 <= max_v_gap:
+                expanded |= block
+            elif block.y1 > rect.y1 and block.y1 - rect.y1 <= max_v_gap:
+                expanded |= block
+    return expanded
+
+
 def _has_internal_top_text(
     page: fitz.Page,
     rect: fitz.Rect,
@@ -2673,7 +3254,7 @@ def _expand_table_bbox(
     bbox: Tuple[float, float, float, float],
     method: str,
 ) -> Tuple[float, float, float, float]:
-    if method not in ("stream", "lattice"):
+    if method not in ("stream", "lattice", "ranked"):
         return bbox
     return _compose_table_bbox(page, bbox, method)
 
@@ -3351,6 +3932,8 @@ def _validate_table_candidate(cand: _TableCandidate) -> Tuple[bool, str]:
             return False, "stream_panel"
         if _stream_sparse_text_like(cand):
             return False, "stream_sparse_text"
+        if _stream_multilist_infographic_like(cand):
+            return False, "stream_multilist_infographic"
         if _stream_low_consistency(cand):
             return False, "stream_low_consistency"
         if _text_block_like_loose(cand):
@@ -3466,6 +4049,33 @@ def _stream_sparse_text_like(cand: _TableCandidate) -> bool:
     if cand.col_count > TABLE_STREAM_SPARSE_MAX_COLS:
         return False
     return True
+
+
+def _stream_multilist_infographic_like(cand: _TableCandidate) -> bool:
+    if cand.method != "stream":
+        return False
+    if cand.area_frac < 0.4:
+        return False
+    if cand.row_count < 12 or cand.col_count < 5:
+        return False
+    if cand.avg_words_per_cell > 2.5:
+        return False
+    if cand.numeric_ratio > 0.12:
+        return False
+    if cand.line_count < 18 or cand.avg_line_len > 16.0:
+        return False
+    lines = _nonempty_text_lines(cand.text)
+    if len(lines) < 12:
+        return False
+    numbered_list_hits = len(re.findall(r"\b[1-5]\.\s+\w", cand.text))
+    if numbered_list_hits < 6:
+        return False
+    heading_hits = 0
+    for line in lines:
+        words = line.split()
+        if 1 <= len(words) <= 3 and line[:1].isalpha() and line[:1].isupper():
+            heading_hits += 1
+    return heading_hits >= 3
 
 
 def _stream_low_consistency(cand: _TableCandidate) -> bool:
@@ -3681,8 +4291,14 @@ def _table_sort_key(cand: _TableCandidate) -> Tuple[float, float]:
     return (cand.bbox[1], cand.bbox[0])
 
 
-def _table_quality(cand: _TableCandidate) -> Tuple[int, int, int]:
-    return (cand.row_count * cand.col_count, cand.non_empty_cells, cand.text_len)
+def _table_quality(cand: _TableCandidate) -> Tuple[int, int, int, int]:
+    method_bonus = 100 if cand.method == "ranked" else 0
+    return (
+        method_bonus,
+        cand.row_count * cand.col_count,
+        cand.non_empty_cells,
+        cand.text_len,
+    )
 
 
 def _table_iou(
@@ -3721,6 +4337,44 @@ def _table_containment_ratio(
     return inter / smaller
 
 
+def _prune_charts_overlapping_ranked_tables(
+    charts: List[Candidate], tables: List[Candidate]
+) -> Tuple[List[Candidate], int]:
+    ranked_tables_by_page: Dict[int, List[Candidate]] = {}
+    for table in tables:
+        if table.kind != "table":
+            continue
+        method = _s((table.meta or {}).get("method")).strip().lower()
+        if method != "ranked":
+            continue
+        ranked_tables_by_page.setdefault(int(table.page), []).append(table)
+    if not ranked_tables_by_page:
+        return charts, 0
+
+    kept: List[Candidate] = []
+    pruned = 0
+    for chart in charts:
+        page_tables = ranked_tables_by_page.get(int(chart.page), [])
+        if not page_tables:
+            kept.append(chart)
+            continue
+        should_prune = False
+        for table in page_tables:
+            iou = _table_iou(chart.bbox, table.bbox)
+            containment = _table_containment_ratio(chart.bbox, table.bbox)
+            if (
+                iou >= CHART_RANKED_TABLE_DUP_IOU
+                or containment >= CHART_RANKED_TABLE_DUP_CONTAINMENT
+            ):
+                should_prune = True
+                break
+        if should_prune:
+            pruned += 1
+            continue
+        kept.append(chart)
+    return kept, pruned
+
+
 def _prefer_inner_lattice_table(
     smaller: _TableCandidate, larger: _TableCandidate
 ) -> bool:
@@ -3746,7 +4400,11 @@ def _dedupe_table_candidates(
         for idx, existing in enumerate(kept):
             iou = _table_iou(cand.bbox, existing.bbox)
             containment = _table_containment_ratio(cand.bbox, existing.bbox)
-            if iou >= TABLE_DEDUP_IOU or containment >= 0.98:
+            ranked_overlap = (
+                containment >= 0.8
+                and ("ranked" in (cand.method, existing.method))
+            )
+            if iou >= TABLE_DEDUP_IOU or containment >= 0.98 or ranked_overlap:
                 preferred = cand
                 if containment >= 0.98:
                     area_cand = max(
@@ -3831,6 +4489,11 @@ def collect_candidates(
         request.pdf_path,
         parallel_workers=parallel_workers,
     )
+    charts, chart_ranked_overlap_pruned = _prune_charts_overlapping_ranked_tables(
+        charts, tables
+    )
+    if chart_ranked_overlap_pruned:
+        chart_stats["ranked_table_overlap_pruned"] = chart_ranked_overlap_pruned
     candidates = charts + tables
     excluded_count = 0
     if excluded_pages:
@@ -3855,6 +4518,7 @@ def collect_candidates(
                 "table_count": table_count,
                 "chart_stats": chart_stats,
                 "table_stats": table_stats,
+                "ranked_table_overlap_pruned": chart_ranked_overlap_pruned,
                 "excluded_count": excluded_count,
             },
         )

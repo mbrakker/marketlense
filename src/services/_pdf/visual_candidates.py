@@ -31,6 +31,7 @@ from .figures import (
     _chart_candidate_score,
     _infographic_is_label_dense_not_prose,
     _chart_is_label_dense_not_prose,
+    _panel_chart_is_label_dense_not_prose,
     _chart_text_heavy,
     _clamp_bottom_to_next_chart_blocker,
     _clamp_bottom_to_note,
@@ -38,6 +39,7 @@ from .figures import (
     _clamp_top_to_heading,
     _collect_chart_rects,
     _expand_rect_into_whitespace,
+    _extend_panel_with_adjacent_text_blocks,
     _extend_with_adjacent_text_blocks,
     _extend_with_heading_above,
     _extend_with_note_blocks,
@@ -58,7 +60,52 @@ from .figures import (
     _tally_reason,
     _text_stats,
     _trim_top_page_number,
+    _vertical_overlap_ratio,
 )
+
+
+def _has_side_by_side_visual_sibling(
+    rect_item,
+    candidates,
+    page_rect: fitz.Rect,
+) -> bool:
+    for other in candidates:
+        if other is rect_item:
+            continue
+        if other.kind not in ("xref", "block"):
+            continue
+        other_rect = other.rect
+        if _vertical_overlap_ratio(other_rect, rect_item.rect) < 0.6:
+            continue
+        horizontal_gap = max(
+            0.0,
+            max(rect_item.rect.x0, other_rect.x0) - min(rect_item.rect.x1, other_rect.x1),
+        )
+        if horizontal_gap > page_rect.width * 0.12:
+            continue
+        if other_rect.get_area() <= 0.0:
+            continue
+        area_ratio = rect_item.rect.get_area() / other_rect.get_area()
+        if area_ratio < 0.45 or area_ratio > 2.2:
+            continue
+        return True
+    return False
+
+
+def _visual_text_dense_recovery_allowed(
+    kind: str,
+    text: str,
+    text_lines: int,
+    text_chars: int,
+    text_ratio: float,
+) -> bool:
+    return _chart_is_label_dense_not_prose(text) or (
+        kind == "panel" and _panel_chart_is_label_dense_not_prose(text)
+    ) or (
+        text_lines >= CHART_DENSE_RECOVERY_MIN_LINES
+        and text_chars >= CHART_DENSE_RECOVERY_MIN_CHARS
+        and not _chart_text_heavy(text_lines, text_chars, text_ratio)
+    )
 
 
 def _extract_visuals_sequential(
@@ -102,7 +149,9 @@ def _extract_visuals_sequential(
                 area_frac = rect_candidate.get_area() / rect.get_area()
                 aspect = rect_candidate.width / max(1, rect_candidate.height)
                 aspect_max = (
-                    INFO_CHART_MAX_ASPECT if rect_item.kind == "heading" else 2.5
+                    INFO_CHART_MAX_ASPECT
+                    if rect_item.kind in ("heading", "panel")
+                    else 2.5
                 )
                 if area_frac < 0.05 or not (0.55 <= aspect <= aspect_max):
                     stats["rejected"] = _int_count(stats["rejected"]) + 1
@@ -120,10 +169,11 @@ def _extract_visuals_sequential(
                     cap = ""
                 cap_lower = (cap or "").lower()
                 has_hint = any(hint in cap_lower for hint in VISUAL_CONTEXT_HINTS)
+                has_context_hint = has_hint or rect_item.kind == "panel"
                 is_infographic = "infographic" in cap_lower
                 if rect_candidate.y0 < top_cut or rect_candidate.y1 > bot_cut:
                     if (
-                        not has_hint
+                        not has_context_hint
                         or rect_candidate.y0 < relaxed_top
                         or rect_candidate.y1 > relaxed_bot
                     ):
@@ -136,7 +186,7 @@ def _extract_visuals_sequential(
                     continue
                 if (
                     rect_item.kind in ("block", "draw")
-                    and not has_hint
+                    and not has_context_hint
                     and area_frac < 0.12
                 ):
                     stats["rejected"] = _int_count(stats["rejected"]) + 1
@@ -144,7 +194,7 @@ def _extract_visuals_sequential(
                     continue
                 if (
                     rect_item.kind in ("block", "draw")
-                    and not has_hint
+                    and not has_context_hint
                     and area_frac > 0.8
                 ):
                     stats["rejected"] = _int_count(stats["rejected"]) + 1
@@ -166,8 +216,7 @@ def _extract_visuals_sequential(
                 text_dense_recovery_allowed = False
                 infographic_dense_recovery_allowed = False
                 if (
-                    rect_item.kind == "draw"
-                    and has_hint
+                    rect_item.kind in ("draw", "panel")
                     and cap_rect is not None
                     and raw_text_heavy
                 ):
@@ -184,12 +233,12 @@ def _extract_visuals_sequential(
                         bbox_text = raw_bbox_text
                     text_lines, text_chars = _text_stats(bbox_text)
                     text_ratio = (text_chars / page_chars) if page_chars else 0.0
-                    text_dense_recovery_allowed = _chart_is_label_dense_not_prose(
-                        bbox_text
-                    ) or (
-                        text_lines >= CHART_DENSE_RECOVERY_MIN_LINES
-                        and text_chars >= CHART_DENSE_RECOVERY_MIN_CHARS
-                        and not _chart_text_heavy(text_lines, text_chars, text_ratio)
+                    text_dense_recovery_allowed = _visual_text_dense_recovery_allowed(
+                        rect_item.kind,
+                        bbox_text,
+                        text_lines,
+                        text_chars,
+                        text_ratio,
                     )
                     if is_infographic:
                         infographic_dense_recovery_allowed = (
@@ -205,12 +254,22 @@ def _extract_visuals_sequential(
                         stats["rejected"] = _int_count(stats["rejected"]) + 1
                         _tally_reason(stats, "decorative_image")
                         continue
+                    if (
+                        text_chars <= 8
+                        and area_frac <= 0.2
+                        and _has_side_by_side_visual_sibling(
+                            rect_item, candidates, rect
+                        )
+                    ):
+                        stats["rejected"] = _int_count(stats["rejected"]) + 1
+                        _tally_reason(stats, "photo_panel")
+                        continue
                 if raw_text_heavy:
                     if (
-                        rect_item.kind == "draw"
-                        and has_hint
+                        rect_item.kind in ("draw", "panel")
+                        and cap_rect is not None
                         and (
-                            raw_text_ratio <= 0.55
+                            (has_context_hint and raw_text_ratio <= 0.55)
                             or text_dense_recovery_allowed
                             or infographic_dense_recovery_allowed
                         )
@@ -221,17 +280,24 @@ def _extract_visuals_sequential(
                         _tally_reason(stats, "text_dense")
                         continue
                 legacy_order_candidate = not raw_text_heavy or (
-                    rect_item.kind == "draw" and has_hint and raw_text_ratio <= 0.55
+                    rect_item.kind in ("draw", "panel")
+                    and has_context_hint
+                    and raw_text_ratio <= 0.55
                 )
                 final_rect = rect_candidate
                 expanded_with_heading = False
-                if cap_rect is not None and has_hint:
+                if cap_rect is not None and has_context_hint:
                     final_rect = _merge_caption_above(final_rect, cap_rect, rect)
-                allow_adjacent = rect_item.kind in ("draw", "heading") or (
-                    rect_item.kind == "xref" and has_hint
+                allow_adjacent = rect_item.kind in ("draw", "heading", "panel") or (
+                    rect_item.kind == "xref" and has_context_hint
                 )
                 if allow_adjacent:
-                    final_rect = _extend_with_adjacent_text_blocks(page, final_rect)
+                    if rect_item.kind == "panel":
+                        final_rect = _extend_panel_with_adjacent_text_blocks(
+                            page, final_rect
+                        )
+                    else:
+                        final_rect = _extend_with_adjacent_text_blocks(page, final_rect)
                 if not has_hint and rect_item.kind == "heading":
                     expanded = _extend_with_heading_above(page, final_rect)
                     expanded_with_heading = expanded.y0 < final_rect.y0 - 1
@@ -242,7 +308,7 @@ def _extract_visuals_sequential(
                         final_rect = final_rect | head_rect
                 if rect_item.kind != "xref" or has_hint:
                     final_rect = _pad_rect(final_rect, rect)
-                if not has_hint and rect_item.kind in ("draw", "heading"):
+                if not has_hint and rect_item.kind in ("draw", "heading", "panel"):
                     if rect_item.kind == "heading":
                         final_rect = _adjust_rect_for_text_margins(
                             page,
@@ -255,6 +321,8 @@ def _extract_visuals_sequential(
                             final_rect,
                             allow_top=False,
                         )
+                    elif rect_item.kind == "panel":
+                        pass
                     else:
                         final_rect = _adjust_rect_for_text_margins(page, final_rect)
                         final_rect = _expand_rect_into_whitespace(page, final_rect)
@@ -273,7 +341,11 @@ def _extract_visuals_sequential(
                             final_rect, head_rect, page, rect
                         )
                 final_rect = _extend_with_note_blocks(page, final_rect)
-                if cap_rect is not None and has_hint and cap_rect.y0 < base_rect.y0:
+                if (
+                    cap_rect is not None
+                    and has_context_hint
+                    and cap_rect.y0 < base_rect.y0
+                ):
                     final_rect = _clamp_top_to_caption(final_rect, cap_rect, page, rect)
                 note_bottom = _note_block_bottom(page, final_rect)
                 note_included = note_bottom is not None
@@ -282,8 +354,7 @@ def _extract_visuals_sequential(
                         page, final_rect, note_bottom, rect
                     )
                 if (
-                    rect_item.kind == "draw"
-                    and has_hint
+                    rect_item.kind in ("draw", "panel")
                     and cap_rect is not None
                     and text_dense_recovery_allowed
                 ):
@@ -291,12 +362,12 @@ def _extract_visuals_sequential(
                         page, final_rect, cap_rect
                     )
                 if cap_rect is not None and _caption_near_top(final_rect, cap_rect):
-                    if has_hint or rect_item.kind != "heading":
+                    if has_context_hint or rect_item.kind in ("panel", "draw"):
                         final_rect = _clamp_top_to_caption(
                             final_rect, cap_rect, page, rect
                         )
                 final_rect = _trim_top_page_number(
-                    final_rect, page, cap_rect if has_hint else None
+                    final_rect, page, cap_rect if has_context_hint else None
                 )
                 try:
                     bbox_text = page.get_text("text", clip=final_rect)
@@ -355,7 +426,7 @@ def _extract_visuals_sequential(
                     },
                 )
                 score = _chart_candidate_score(
-                    area_frac, has_hint, cap or "", note_included
+                    area_frac, has_context_hint, cap or "", note_included
                 )
                 overlap_index = _find_overlapping_kept(final_rect, kept)
                 if overlap_index is not None:

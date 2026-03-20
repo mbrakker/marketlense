@@ -12,6 +12,7 @@ except ModuleNotFoundError:  # pragma: no cover - depends on PyMuPDF packaging a
 
 from PIL import Image, ImageDraw
 
+from src.contracts.candidates import Candidate
 from src.contracts.report_assets import ExtractCandidatesRequest, FigureExtractRequest
 from src.contracts.run_context import RunContext
 from src.services._pdf.figures import (
@@ -19,9 +20,13 @@ from src.services._pdf.figures import (
     _clamp_top_to_caption,
     _dedupe_table_candidates,
     _expand_table_bbox,
+    _extend_panel_with_adjacent_text_blocks,
     _has_figure_context_hint,
+    _panel_chart_rects,
+    _prune_charts_overlapping_ranked_tables,
     _validate_table_candidate,
 )
+from src.services._pdf.visual_candidates import _visual_text_dense_recovery_allowed
 from src.services.pdf_service import collect_candidates, extract_best_figure
 
 
@@ -216,6 +221,229 @@ def _build_infographic_chart_pdf(path: Path) -> None:
             fill=(0.78, 0.28, 0.08),
             width=0.5,
         )
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_side_by_side_photo_examples_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=960, height=540)
+    page.insert_text(
+        (28, 56),
+        "Digital Out of Home is driving high-impact campaigns across APAC through creative use of ad format",
+        fontsize=18,
+    )
+    page.insert_image(
+        fitz.Rect(110, 160, 433, 353),
+        stream=_chart_image_bytes(),
+    )
+    page.insert_image(
+        fitz.Rect(527, 160, 849, 353),
+        stream=_chart_image_bytes(),
+    )
+    page.insert_textbox(
+        fitz.Rect(176, 366, 812, 406),
+        (
+            "Maybelline Superstay Teddy Tint\n"
+            "Central Square, Philippines (2024)\n"
+            "L'Oreal Thailand\n"
+            "Emsphere, Bangkok (2024)"
+        ),
+        fontsize=12,
+        align=1,
+    )
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_ranked_table_slide_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=960, height=540)
+    page.insert_text(
+        (30, 64),
+        "Ad Equity ranking APAC 2025 - All Media Brands (Global brands)",
+        fontsize=22,
+    )
+    page.insert_text((30, 118), "Preference", fontsize=20)
+    page.insert_text((220, 118), "APAC consumers", fontsize=20)
+    page.insert_text((760, 118), "Also #1 in", fontsize=20)
+    page.draw_line((30, 156), (930, 156), color=(0.2, 0.2, 0.2), width=2.0)
+    row_tops = [182, 260, 338, 416, 494]
+    colors = [
+        (0.09, 0.84, 0.76),
+        (0.14, 0.67, 0.92),
+        (0.42, 0.48, 0.79),
+        (0.64, 0.2, 0.86),
+        (0.84, 0.03, 0.82),
+    ]
+    brand_names = ["NETFLIX", "amazon", "Pinterest", "Google", "prime"]
+    categories = ["OTT", "E-commerce", "Social", "Search", "OTT"]
+    regions = [
+        "Japan, Korea",
+        "-",
+        "Australia, Indonesia, Singapore, Thailand",
+        "India, Philippines",
+        "-",
+    ]
+    for idx, (top, color) in enumerate(zip(row_tops, colors), start=1):
+        bottom = top + 48
+        page.draw_rect(
+            fitz.Rect(42, top, 160, bottom),
+            color=color,
+            fill=color,
+            width=0.5,
+        )
+        page.insert_text((92, top + 32), str(idx), fontsize=24, color=(1, 1, 1))
+        page.draw_line((30, bottom + 18), (930, bottom + 18), color=(0.82, 0.82, 0.82))
+        page.insert_text((270, top + 28), brand_names[idx - 1], fontsize=26)
+        page.draw_rect(
+            fitz.Rect(470, top + 4, 680, bottom - 4),
+            color=(0.98, 0.9, 0.4),
+            fill=(0.98, 0.9, 0.4),
+            width=0.5,
+        )
+        page.insert_text((540, top + 28), categories[idx - 1], fontsize=18)
+        page.insert_textbox(
+            fitz.Rect(760, top + 4, 920, bottom + 8),
+            regions[idx - 1],
+            fontsize=14,
+            align=1,
+        )
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_panel_chart_slide_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=960, height=540)
+    page.insert_text(
+        (28, 56),
+        "Panel charts without figure captions should still be detected",
+        fontsize=24,
+    )
+    page.insert_text((42, 138), "Trustworthy Ads", fontsize=18)
+    page.insert_text((510, 138), "Better Quality Ads", fontsize=18)
+    page.draw_rect(
+        fitz.Rect(28, 170, 462, 468),
+        color=(0.93, 0.93, 0.93),
+        fill=(0.93, 0.93, 0.93),
+        width=0.5,
+    )
+    page.draw_rect(
+        fitz.Rect(498, 170, 932, 468),
+        color=(0.93, 0.93, 0.93),
+        fill=(0.93, 0.93, 0.93),
+        width=0.5,
+    )
+    for idx, height in enumerate([95, 72, 64, 58, 52, 45], start=0):
+        x0 = 70 + idx * 55
+        page.draw_rect(
+            fitz.Rect(x0, 420 - height, x0 + 28, 420),
+            color=(0.78, 0.0, 0.86) if idx == 0 else (0.82, 0.82, 0.82),
+            fill=(0.78, 0.0, 0.86) if idx == 0 else (0.82, 0.82, 0.82),
+            width=0.5,
+        )
+    page.draw_line((62, 420), (430, 420), color=(0.75, 0.75, 0.75))
+    page.draw_line((62, 252), (430, 252), color=(0.9, 0.9, 0.9))
+    page.draw_circle((715, 318), 96, color=(0.12, 0.12, 0.12), width=1.2)
+    page.draw_circle((715, 318), 72, color=(1, 1, 1), width=18)
+    page.draw_circle((715, 318), 72, color=(0.82, 0.0, 0.86), width=18)
+    page.draw_line((715, 318), (802, 286), color=(0.82, 0.0, 0.86), width=3.0)
+    page.draw_line((715, 318), (632, 298), color=(0.14, 0.83, 0.76), width=3.0)
+    page.draw_line((715, 318), (690, 405), color=(0.14, 0.83, 0.76), width=3.0)
+    page.insert_textbox(
+        fitz.Rect(54, 210, 548, 246),
+        "37% 35%",
+        fontsize=26,
+        align=0,
+    )
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_wide_panel_chart_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=960, height=540)
+    page.insert_text(
+        (28, 56),
+        "Marketers continue to shift budget toward higher-performing channels",
+        fontsize=24,
+    )
+    page.insert_text(
+        (28, 138),
+        "Changes in budget/resource allocation (% net positive)",
+        fontsize=18,
+    )
+    page.draw_rect(
+        fitz.Rect(20, 170, 932, 476),
+        color=(1, 1, 1),
+        fill=(1, 1, 1),
+        width=0.5,
+    )
+    page.draw_line((42, 270), (920, 270), color=(0.2, 0.2, 0.2), width=1.0)
+    values = [68, 58, 54, 51, 48, 44, 41, 40, 37, 35, 29, 28, 20, 19, 14, 8, 4, -16, -30, -38]
+    for idx, value in enumerate(values):
+        x = 52 + idx * 42
+        if value >= 0:
+            page.draw_rect(
+                fitz.Rect(x, 270 - value * 1.3, x + 12, 270),
+                color=(0.78, 0.0, 0.86),
+                fill=(0.78, 0.0, 0.86),
+                width=0.5,
+            )
+        else:
+            page.draw_rect(
+                fitz.Rect(x, 270, x + 12, 270 - value * 1.3),
+                color=(0.78, 0.0, 0.86),
+                fill=(0.78, 0.0, 0.86),
+                width=0.5,
+            )
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_panel_chart_slide_with_figure_caption_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=960, height=540)
+    page.insert_text((28, 56), "Figure 1.1. Captioned panel chart", fontsize=20)
+    page.insert_text((42, 138), "Trustworthy Ads", fontsize=18)
+    page.insert_text((510, 138), "Better Quality Ads", fontsize=18)
+    page.draw_rect(
+        fitz.Rect(28, 170, 462, 468),
+        color=(0.93, 0.93, 0.93),
+        fill=(0.93, 0.93, 0.93),
+        width=0.5,
+    )
+    page.draw_rect(
+        fitz.Rect(498, 170, 932, 468),
+        color=(0.93, 0.93, 0.93),
+        fill=(0.93, 0.93, 0.93),
+        width=0.5,
+    )
+    page.draw_rect(
+        fitz.Rect(80, 360, 110, 420),
+        color=(0.78, 0.0, 0.86),
+        fill=(0.78, 0.0, 0.86),
+        width=0.5,
+    )
+    page.draw_circle((715, 318), 96, color=(0.12, 0.12, 0.12), width=1.2)
+    page.draw_circle((715, 318), 72, color=(0.82, 0.0, 0.86), width=18)
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_cross_panel_label_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=960, height=540)
+    page.insert_text((42, 138), "Trustworthy Ads", fontsize=18)
+    page.insert_text((510, 138), "Better Quality Ads", fontsize=18)
+    left = fitz.Rect(28, 170, 462, 468)
+    right = fitz.Rect(498, 170, 932, 468)
+    page.draw_rect(left, color=(0.93, 0.93, 0.93), fill=(0.93, 0.93, 0.93), width=0.5)
+    page.draw_rect(right, color=(0.93, 0.93, 0.93), fill=(0.93, 0.93, 0.93), width=0.5)
+    page.insert_textbox(fitz.Rect(52, 214, 550, 248), "37% 35%", fontsize=26)
+    page.insert_textbox(fitz.Rect(66, 430, 440, 460), "Netflix Pinterest Amazon", fontsize=12)
+    page.insert_textbox(fitz.Rect(536, 430, 906, 460), "Netflix Spotify Prime Video", fontsize=12)
     doc.save(path.as_posix())
     doc.close()
 
@@ -1098,6 +1326,222 @@ def test_collect_candidates_chart_flow_keeps_upper_dense_chart_before_next_figur
     assert upper.id == "chart-0-1"
     assert upper.bbox[3] < 460.0
     assert lower.bbox[1] > 430.0
+
+
+def test_collect_candidates_chart_flow_rejects_side_by_side_photo_examples_without_visual_hint(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "side-by-side-photo-examples.pdf"
+    out_dir = tmp_path / "out"
+    _build_side_by_side_photo_examples_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="side-by-side-photo-examples",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    assert charts == []
+
+
+def test_collect_candidates_detects_ranked_table_slide_without_chart_duplicate(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "ranked-table-slide.pdf"
+    out_dir = tmp_path / "out"
+    _build_ranked_table_slide_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="ranked-table-slide",
+        ),
+        _ctx(),
+    )
+
+    tables = [candidate for candidate in response.candidates if candidate.kind == "table"]
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+
+    assert len(tables) == 1
+    assert charts == []
+    table = tables[0]
+    assert int(table.meta["rows"]) >= 5
+    assert int(table.meta["cols"]) >= 2
+
+
+def test_prune_charts_overlapping_ranked_tables_removes_chart_duplicate() -> None:
+    charts = [
+        Candidate(
+            schema_version="1.0",
+            id="chart-0-0",
+            kind="chart",
+            page=0,
+            bbox=(0.0, 188.0, 553.0, 492.0),
+            preview_text="Also #1 in",
+            caption="Also #1 in",
+            thumb_path="",
+            meta={"text_ratio": 0.304},
+        ),
+        Candidate(
+            schema_version="1.0",
+            id="chart-0-1",
+            kind="chart",
+            page=1,
+            bbox=(0.0, 0.0, 300.0, 200.0),
+            preview_text="Other chart",
+            caption="Other chart",
+            thumb_path="",
+            meta={"text_ratio": 0.1},
+        ),
+    ]
+    tables = [
+        Candidate(
+            schema_version="1.0",
+            id="table-0-0",
+            kind="table",
+            page=0,
+            bbox=(29.0, 152.0, 553.0, 465.0),
+            preview_text="Ranked table",
+            caption="",
+            thumb_path="",
+            meta={"method": "ranked"},
+        )
+    ]
+
+    kept, pruned = _prune_charts_overlapping_ranked_tables(charts, tables)
+
+    assert pruned == 1
+    assert [candidate.id for candidate in kept] == ["chart-0-1"]
+
+
+def test_collect_candidates_detects_panel_charts_without_figure_captions(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "panel-chart-slide.pdf"
+    out_dir = tmp_path / "out"
+    _build_panel_chart_slide_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="panel-chart-slide",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    tables = [candidate for candidate in response.candidates if candidate.kind == "table"]
+
+    assert len(charts) == 2
+    assert tables == []
+    captions = sorted((candidate.caption or "").lower() for candidate in charts)
+    assert captions == ["better quality ads", "trustworthy ads"]
+    left = next(
+        candidate for candidate in charts if (candidate.caption or "").lower() == "trustworthy ads"
+    )
+    right = next(
+        candidate for candidate in charts if (candidate.caption or "").lower() == "better quality ads"
+    )
+    assert left.bbox[2] < 500.0
+    assert right.bbox[0] > 460.0
+
+
+def test_collect_candidates_detects_wide_panel_chart_with_resource_title(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "wide-panel-chart.pdf"
+    out_dir = tmp_path / "out"
+    _build_wide_panel_chart_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="wide-panel-chart",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    assert len(charts) == 1
+    assert (
+        "changes in budget/resource allocation"
+        in (charts[0].caption or "").lower()
+    )
+    assert charts[0].bbox[0] > 0.0
+    assert charts[0].bbox[2] < 960.0
+    assert charts[0].bbox[3] < 520.0
+
+
+def test_panel_chart_rects_skip_pages_with_explicit_figure_captions(tmp_path) -> None:
+    pdf_path = tmp_path / "panel-chart-with-caption.pdf"
+    _build_panel_chart_slide_with_figure_caption_pdf(pdf_path)
+
+    doc = fitz.open(pdf_path.as_posix())
+    try:
+        page = doc[0]
+        assert _panel_chart_rects(page) == []
+    finally:
+        doc.close()
+
+
+def test_extend_panel_with_adjacent_text_blocks_rejects_cross_panel_text(tmp_path) -> None:
+    pdf_path = tmp_path / "cross-panel-label.pdf"
+    _build_cross_panel_label_pdf(pdf_path)
+
+    doc = fitz.open(pdf_path.as_posix())
+    try:
+        page = doc[0]
+        base_rect = fitz.Rect(28.0, 136.9, 462.0, 467.6)
+        expanded = _extend_panel_with_adjacent_text_blocks(page, base_rect)
+    finally:
+        doc.close()
+
+    assert expanded.x1 < 500.0
+    assert expanded.y1 > 450.0
+
+
+def test_visual_text_dense_recovery_only_uses_panel_heuristic_for_panel_kind() -> None:
+    text = "\n".join(
+        [
+            "AU 41 12%",
+            "NZ 38 11%",
+            "JP 36 10%",
+            "KR 35 10%",
+            "CN 34 9%",
+            "IN 31 9%",
+            "TH 28 8%",
+            "MY 27 8%",
+            "PH 25 7%",
+            "ID 24 7%",
+        ]
+    )
+    line_count = len(text.splitlines())
+    char_count = len(text)
+    text_ratio = 0.34
+
+    assert (
+        _visual_text_dense_recovery_allowed(
+            "draw", text, line_count, char_count, text_ratio
+        )
+        is False
+    )
+    assert (
+        _visual_text_dense_recovery_allowed(
+            "panel", text, line_count, char_count, text_ratio
+        )
+        is True
+    )
 
 
 def test_extract_best_figure_writes_asset_and_logs(
