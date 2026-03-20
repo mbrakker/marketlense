@@ -7,6 +7,7 @@ while isolating pdfplumber/table heuristics into a dedicated upgrade surface.
 """
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import replace
 from typing import Dict, List, Optional
 
 import pdfplumber
@@ -17,6 +18,9 @@ from src.contracts.candidates import Candidate
 from .figures import (
     TABLE_SETTINGS_LATTICE,
     TABLE_SETTINGS_STREAM,
+    TABLE_WIDE_FIGURE_CONTEXT_HORIZONTAL_PAD,
+    TABLE_WIDE_FIGURE_CONTEXT_MAX_DIST,
+    TABLE_WIDE_FIGURE_CONTEXT_TOP_BAND,
     _TableCandidate,
     _avg_first_col_words,
     _avg_words_per_cell,
@@ -27,6 +31,7 @@ from .figures import (
     _expand_table_bbox,
     _extract_text_in_bbox,
     _has_caption_hint,
+    _has_figure_context_hint,
     _index_page_ratio,
     _int_count,
     _numeric_char_ratio,
@@ -38,7 +43,9 @@ from .figures import (
     _s,
     _suppress_pdfminer_warnings,
     _table_preview,
+    _table_containment_ratio,
     _table_sort_key,
+    _prefer_inner_lattice_table,
     _tally_reason,
     _text_block_stats,
     _text_stats,
@@ -100,8 +107,18 @@ def _build_table_candidate(
     text_block_line_count = 0
     text_block_avg_line_len = 0.0
     caption_hint = False
+    figure_context_hint = False
+    wide_figure_context_hint = False
     if fitz_page is not None:
         caption_hint = _has_caption_hint(fitz_page, (x0, y0, x1, y1))
+        figure_context_hint = _has_figure_context_hint(fitz_page, (x0, y0, x1, y1))
+        wide_figure_context_hint = _has_figure_context_hint(
+            fitz_page,
+            (x0, y0, x1, y1),
+            max_dist=TABLE_WIDE_FIGURE_CONTEXT_MAX_DIST,
+            top_band_height=TABLE_WIDE_FIGURE_CONTEXT_TOP_BAND,
+            horizontal_pad=TABLE_WIDE_FIGURE_CONTEXT_HORIZONTAL_PAD,
+        )
         text_block_area_frac, text_block_line_count, text_block_avg_line_len = (
             _text_block_stats(
                 fitz_page,
@@ -131,6 +148,8 @@ def _build_table_candidate(
         text_block_line_count=text_block_line_count,
         text_block_avg_line_len=text_block_avg_line_len,
         caption_hint=caption_hint,
+        figure_context_hint=figure_context_hint,
+        wide_figure_context_hint=wide_figure_context_hint,
         area_frac=area_frac,
         width_frac=width_frac,
         height_frac=height_frac,
@@ -207,12 +226,55 @@ def _extract_tables_sequential(
                 deduped = _dedupe_table_candidates(validated)
                 stats["deduped"] = _int_count(stats["deduped"]) + len(deduped)
 
-                for index, candidate in enumerate(sorted(deduped, key=_table_sort_key)):
+                final_candidates: List[_TableCandidate] = []
+                for candidate in deduped:
                     x0, y0, x1, y1 = candidate.bbox
                     if fitz_page is not None:
                         x0, y0, x1, y1 = _expand_table_bbox(
                             fitz_page, (x0, y0, x1, y1), candidate.method
                         )
+                    final_candidates.append(
+                        replace(candidate, bbox=(x0, y0, x1, y1))
+                    )
+
+                final_deduped: List[_TableCandidate] = []
+                for candidate in final_candidates:
+                    merged = False
+                    for idx, existing in enumerate(final_deduped):
+                        containment = _table_containment_ratio(
+                            candidate.bbox, existing.bbox
+                        )
+                        if containment < 0.98:
+                            continue
+                        area_candidate = max(
+                            0.0,
+                            (candidate.bbox[2] - candidate.bbox[0])
+                            * (candidate.bbox[3] - candidate.bbox[1]),
+                        )
+                        area_existing = max(
+                            0.0,
+                            (existing.bbox[2] - existing.bbox[0])
+                            * (existing.bbox[3] - existing.bbox[1]),
+                        )
+                        smaller, larger = (
+                            (candidate, existing)
+                            if area_candidate <= area_existing
+                            else (existing, candidate)
+                        )
+                        final_deduped[idx] = (
+                            smaller
+                            if _prefer_inner_lattice_table(smaller, larger)
+                            else larger
+                        )
+                        merged = True
+                        break
+                    if not merged:
+                        final_deduped.append(candidate)
+
+                for index, candidate in enumerate(
+                    sorted(final_deduped, key=_table_sort_key)
+                ):
+                    x0, y0, x1, y1 = candidate.bbox
                     cid = f"table-{pno}-{index}"
                     out.append(
                         Candidate(

@@ -7,6 +7,7 @@ while isolating visual-candidate orchestration into its own upgrade surface.
 """
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import replace
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -15,18 +16,23 @@ import pymupdf as fitz
 from src.contracts.candidates import Candidate
 
 from .figures import (
-    CAPTION_HINTS,
     CHART_CAPTION_HINTS,
+    CHART_DENSE_RECOVERY_MIN_CHARS,
+    CHART_DENSE_RECOVERY_MIN_LINES,
     CHART_EDGE_TEXT_HEADING_GAP_SCALE,
     CHART_EDGE_TEXT_HEADING_GAP_X_SCALE,
     CHART_MARGIN_FRAC,
     CHART_MARGIN_RELAX_FRAC,
     INFO_CHART_MAX_ASPECT,
+    VISUAL_CONTEXT_HINTS,
     _adjust_rect_for_text_margins,
     _candidate_index_from_id,
     _caption_near_top,
     _chart_candidate_score,
+    _infographic_is_label_dense_not_prose,
+    _chart_is_label_dense_not_prose,
     _chart_text_heavy,
+    _clamp_bottom_to_next_chart_blocker,
     _clamp_bottom_to_note,
     _clamp_top_to_caption,
     _clamp_top_to_heading,
@@ -85,8 +91,9 @@ def _extract_visuals_sequential(
             bot_cut = rect.y1 - rect.height * CHART_MARGIN_FRAC
             relaxed_top = rect.y0 + rect.height * CHART_MARGIN_RELAX_FRAC
             relaxed_bot = rect.y1 - rect.height * CHART_MARGIN_RELAX_FRAC
-            local = 0
             kept: List[tuple[fitz.Rect, float, int]] = []
+            page_candidates: List[Dict[str, object]] = []
+            local_sequence = 0
             candidates = _collect_chart_rects(page)
             for rect_item in candidates:
                 stats["raw"] = _int_count(stats["raw"]) + 1
@@ -112,7 +119,8 @@ def _extract_visuals_sequential(
                 if cap and _is_page_number_text(cap):
                     cap = ""
                 cap_lower = (cap or "").lower()
-                has_hint = any(hint in cap_lower for hint in CAPTION_HINTS)
+                has_hint = any(hint in cap_lower for hint in VISUAL_CONTEXT_HINTS)
+                is_infographic = "infographic" in cap_lower
                 if rect_candidate.y0 < top_cut or rect_candidate.y1 > bot_cut:
                     if (
                         not has_hint
@@ -143,11 +151,51 @@ def _extract_visuals_sequential(
                     _tally_reason(stats, "block_full_page_no_caption")
                     continue
                 try:
-                    bbox_text = page.get_text("text", clip=rect_candidate)
+                    raw_bbox_text = page.get_text("text", clip=rect_candidate)
                 except Exception:
-                    bbox_text = ""
-                text_lines, text_chars = _text_stats(bbox_text)
-                text_ratio = (text_chars / page_chars) if page_chars else 0.0
+                    raw_bbox_text = ""
+                raw_text_lines, raw_text_chars = _text_stats(raw_bbox_text)
+                raw_text_ratio = (raw_text_chars / page_chars) if page_chars else 0.0
+                bbox_text = raw_bbox_text
+                text_lines = raw_text_lines
+                text_chars = raw_text_chars
+                text_ratio = raw_text_ratio
+                raw_text_heavy = _chart_text_heavy(
+                    raw_text_lines, raw_text_chars, raw_text_ratio
+                )
+                text_dense_recovery_allowed = False
+                infographic_dense_recovery_allowed = False
+                if (
+                    rect_item.kind == "draw"
+                    and has_hint
+                    and cap_rect is not None
+                    and raw_text_heavy
+                ):
+                    try:
+                        analysis_rect = _merge_caption_above(rect_candidate, cap_rect, rect)
+                        analysis_rect = _clamp_top_to_caption(
+                            analysis_rect, cap_rect, page, rect
+                        )
+                        analysis_rect = _clamp_bottom_to_next_chart_blocker(
+                            page, analysis_rect, cap_rect
+                        )
+                        bbox_text = page.get_text("text", clip=analysis_rect)
+                    except Exception:
+                        bbox_text = raw_bbox_text
+                    text_lines, text_chars = _text_stats(bbox_text)
+                    text_ratio = (text_chars / page_chars) if page_chars else 0.0
+                    text_dense_recovery_allowed = _chart_is_label_dense_not_prose(
+                        bbox_text
+                    ) or (
+                        text_lines >= CHART_DENSE_RECOVERY_MIN_LINES
+                        and text_chars >= CHART_DENSE_RECOVERY_MIN_CHARS
+                        and not _chart_text_heavy(text_lines, text_chars, text_ratio)
+                    )
+                    if is_infographic:
+                        infographic_dense_recovery_allowed = (
+                            _infographic_is_label_dense_not_prose(bbox_text)
+                            or _infographic_is_label_dense_not_prose(raw_bbox_text)
+                        )
                 if rect_item.kind in ("xref", "block") and not has_hint:
                     if (
                         (not cap or len(cap.strip()) < 8)
@@ -157,13 +205,24 @@ def _extract_visuals_sequential(
                         stats["rejected"] = _int_count(stats["rejected"]) + 1
                         _tally_reason(stats, "decorative_image")
                         continue
-                if _chart_text_heavy(text_lines, text_chars, text_ratio):
-                    if rect_item.kind == "draw" and has_hint and text_ratio <= 0.55:
+                if raw_text_heavy:
+                    if (
+                        rect_item.kind == "draw"
+                        and has_hint
+                        and (
+                            raw_text_ratio <= 0.55
+                            or text_dense_recovery_allowed
+                            or infographic_dense_recovery_allowed
+                        )
+                    ):
                         pass
                     else:
                         stats["rejected"] = _int_count(stats["rejected"]) + 1
                         _tally_reason(stats, "text_dense")
                         continue
+                legacy_order_candidate = not raw_text_heavy or (
+                    rect_item.kind == "draw" and has_hint and raw_text_ratio <= 0.55
+                )
                 final_rect = rect_candidate
                 expanded_with_heading = False
                 if cap_rect is not None and has_hint:
@@ -222,6 +281,15 @@ def _extract_visuals_sequential(
                     final_rect = _clamp_bottom_to_note(
                         page, final_rect, note_bottom, rect
                     )
+                if (
+                    rect_item.kind == "draw"
+                    and has_hint
+                    and cap_rect is not None
+                    and text_dense_recovery_allowed
+                ):
+                    final_rect = _clamp_bottom_to_next_chart_blocker(
+                        page, final_rect, cap_rect
+                    )
                 if cap_rect is not None and _caption_near_top(final_rect, cap_rect):
                     if has_hint or rect_item.kind != "heading":
                         final_rect = _clamp_top_to_caption(
@@ -254,7 +322,7 @@ def _extract_visuals_sequential(
                             pix = page.get_pixmap(clip=render_rect, alpha=False)
                         except Exception:
                             pix = None
-                cid = f"chart-{pno}-{local}"
+                cid = f"chart-{pno}-pending-{local_sequence}"
                 thumb = (
                     _save_thumb(pix, thumbs_dir, report_name, thumb_index)
                     if save_thumbs and pix
@@ -296,17 +364,42 @@ def _extract_visuals_sequential(
                         stats["rejected"] = _int_count(stats["rejected"]) + 1
                         _tally_reason(stats, "overlap_dup")
                         continue
-                    out_index = kept[overlap_index][2]
-                    out[out_index] = candidate
-                    kept[overlap_index] = (final_rect, score, out_index)
+                    page_index = kept[overlap_index][2]
+                    existing_entry = page_candidates[page_index]
+                    page_candidates[page_index] = {
+                        "candidate": candidate,
+                        "rect": final_rect,
+                        "score": score,
+                        "sequence": existing_entry["sequence"],
+                        "recovered_only": bool(existing_entry["recovered_only"])
+                        and not legacy_order_candidate,
+                    }
+                    kept[overlap_index] = (final_rect, score, page_index)
                     stats["replaced"] = _int_count(stats.get("replaced", 0)) + 1
                 else:
-                    out.append(candidate)
-                    kept.append((final_rect, score, len(out) - 1))
+                    page_candidates.append(
+                        {
+                            "candidate": candidate,
+                            "rect": final_rect,
+                            "score": score,
+                            "sequence": local_sequence,
+                            "recovered_only": not legacy_order_candidate,
+                        }
+                    )
+                    kept.append((final_rect, score, len(page_candidates) - 1))
                     stats["kept"] = _int_count(stats["kept"]) + 1
+                    local_sequence += 1
                 if save_thumbs:
                     thumb_index += 1
-                local += 1
+            page_candidates.sort(
+                key=lambda entry: (
+                    bool(entry["recovered_only"]),
+                    int(entry["sequence"]),
+                )
+            )
+            for local_index, entry in enumerate(page_candidates):
+                candidate = entry["candidate"]
+                out.append(replace(candidate, id=f"chart-{pno}-{local_index}"))
     finally:
         if doc is None:
             local_doc.close()

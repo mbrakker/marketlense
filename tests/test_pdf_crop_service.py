@@ -12,7 +12,7 @@ from src.contracts.report_assets import (
 )
 from src.contracts.report_models import CropItem
 from src.contracts.run_context import RunContext
-from src.services._pdf.crop import _tighten_chart_crop_rect
+from src.services._pdf.crop import _tighten_chart_crop_rect, _tighten_table_crop_rect
 from src.services.pdf_service import (
     apply_crop_refine_bbox,
     crop_regions,
@@ -146,6 +146,129 @@ def _build_pdf_with_top_chart_spillover(path: Path) -> None:
         color=(0, 0, 0),
         fill=(0.95, 0.95, 0.95),
     )
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_pdf_with_table_header_band_and_page_number(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=595.276, height=793.701)
+    page.insert_text((530, 40), "47 |", fontsize=11)
+    page.draw_line((42, 66), (554, 66), color=(0, 0, 0), width=1)
+    page.insert_text((220, 78), "Risk factors", fontsize=8)
+    page.insert_text((480, 78), "Protective factor", fontsize=8)
+    page.insert_text((64, 93), "Country", fontsize=8)
+    page.insert_text((128, 93), "Smoking (%)", fontsize=8)
+    page.insert_text((205, 93), "Heavy episodic", fontsize=8)
+    page.insert_text((292, 93), "Overweight (%)", fontsize=8)
+    page.insert_text((378, 93), "Physical inactivity (%)²", fontsize=8)
+    page.insert_text((462, 93), "Vegetable consumption (%)", fontsize=8)
+    page.insert_text((208, 98), "drinking (%)", fontsize=8)
+    for x in [110, 190, 270, 360, 452]:
+        page.draw_line((x, 66), (x, 300), color=(0.7, 0.7, 0.7), width=0.5)
+    for y in range(108, 300, 22):
+        page.draw_line((42, y), (554, y), color=(0.8, 0.8, 0.8), width=0.5)
+    page.insert_text((48, 120), "Netherlands", fontsize=8.5)
+    page.insert_text((134, 120), "16", fontsize=8.5)
+    page.insert_text((174, 120), "11", fontsize=8.5)
+    page.insert_text((204, 120), "35", fontsize=8.5)
+    page.insert_text((250, 120), "16", fontsize=8.5)
+    page.insert_text((303, 120), "51", fontsize=8.5)
+    page.insert_text((348, 120), "46", fontsize=8.5)
+    page.insert_text((394, 120), "10", fontsize=8.5)
+    page.insert_text((440, 120), "13", fontsize=8.5)
+    page.insert_text((493, 120), "51", fontsize=8.5)
+    page.insert_text((539, 120), "62", fontsize=8.5)
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_pdf_with_split_table_title_and_note(path: Path) -> None:
+    doc = fitz.open()
+
+    page1 = doc.new_page(width=595.276, height=793.701)
+    page1.insert_textbox(
+        fitz.Rect(42, 70, 555, 250),
+        (
+            "3. Men have higher overweight rates in all OECD countries, with gaps largest "
+            "in Luxembourg and Germany and smallest in Türkiye and the Netherlands."
+        ),
+        fontsize=12,
+    )
+    page1.insert_text(
+        (42, 305),
+        "Table 2.3. Dashboard on protective and risk factors for health, 2023 (or nearest year)",
+        fontsize=14,
+    )
+    page1.draw_line((42, 322), (555, 322), color=(0, 0, 0), width=1)
+    page1.insert_text((220, 340), "Risk factors", fontsize=9)
+    page1.insert_text((470, 340), "Protective factor", fontsize=9)
+    page1.insert_text((62, 357), "Country", fontsize=8.5)
+    page1.insert_text((128, 357), "Smoking (%)", fontsize=8.5)
+    page1.insert_text((205, 357), "Heavy episodic", fontsize=8.5)
+    page1.insert_text((292, 357), "Overweight (%)", fontsize=8.5)
+    page1.insert_text((378, 357), "Physical inactivity (%)", fontsize=8.5)
+    page1.insert_text((460, 357), "Vegetable consumption (%)", fontsize=8.5)
+    page1.insert_text((208, 370), "drinking (%)", fontsize=8.5)
+    for x in [110, 190, 270, 360, 452]:
+        page1.draw_line((x, 322), (x, 700), color=(0.75, 0.75, 0.75), width=0.5)
+    for y in range(390, 701, 24):
+        page1.draw_line((42, y), (555, y), color=(0.8, 0.8, 0.8), width=0.5)
+    page1.insert_text((48, 408), "OECD", fontsize=8.5)
+    page1.insert_text((140, 408), "19", fontsize=8.5)
+    page1.insert_text((176, 408), "11", fontsize=8.5)
+    page1.insert_text((214, 408), "34", fontsize=8.5)
+    page1.insert_text((250, 408), "20", fontsize=8.5)
+    page1.insert_text((303, 408), "61", fontsize=8.5)
+    page1.insert_text((348, 408), "48", fontsize=8.5)
+    page1.insert_text((394, 408), "27", fontsize=8.5)
+    page1.insert_text((440, 408), "32", fontsize=8.5)
+    page1.insert_text((493, 408), "53", fontsize=8.5)
+    page1.insert_text((539, 408), "64", fontsize=8.5)
+
+    page2 = doc.new_page(width=595.276, height=793.701)
+    page2.insert_text((530, 40), "47 |", fontsize=11)
+    page2.draw_line((42, 66), (555, 66), color=(0, 0, 0), width=1)
+    page2.insert_text((220, 78), "Risk factors", fontsize=9)
+    page2.insert_text((470, 78), "Protective factor", fontsize=9)
+    page2.insert_text((62, 95), "Country", fontsize=8.5)
+    page2.insert_text((128, 95), "Smoking (%)", fontsize=8.5)
+    page2.insert_text((205, 95), "Heavy episodic", fontsize=8.5)
+    page2.insert_text((292, 95), "Overweight (%)", fontsize=8.5)
+    page2.insert_text((378, 95), "Physical inactivity (%)", fontsize=8.5)
+    page2.insert_text((460, 95), "Vegetable consumption (%)", fontsize=8.5)
+    page2.insert_text((208, 108), "drinking (%)", fontsize=8.5)
+    for x in [110, 190, 270, 360, 452]:
+        page2.draw_line((x, 66), (x, 290), color=(0.75, 0.75, 0.75), width=0.5)
+    for y in range(128, 291, 24):
+        page2.draw_line((42, y), (555, y), color=(0.8, 0.8, 0.8), width=0.5)
+    page2.insert_text((48, 146), "Netherlands", fontsize=8.5)
+    page2.insert_text((140, 146), "16", fontsize=8.5)
+    page2.insert_text((176, 146), "11", fontsize=8.5)
+    page2.insert_text((214, 146), "35", fontsize=8.5)
+    page2.insert_text((250, 146), "16", fontsize=8.5)
+    page2.insert_text((303, 146), "51", fontsize=8.5)
+    page2.insert_text((348, 146), "46", fontsize=8.5)
+    page2.insert_text((394, 146), "10", fontsize=8.5)
+    page2.insert_text((440, 146), "13", fontsize=8.5)
+    page2.insert_text((493, 146), "51", fontsize=8.5)
+    page2.insert_text((539, 146), "62", fontsize=8.5)
+    page2.insert_textbox(
+        fitz.Rect(42, 305, 555, 450),
+        (
+            "1. 2019 data. 2. 2020-2022 data. 3. 2024 data.\n"
+            "Note: * Accession/partner country. See the weblink to metadata in the Reader's guide.\n"
+            "Source: Synthetic OECD Health Statistics."
+        ),
+        fontsize=10,
+        lineheight=1.1,
+    )
+    page2.insert_textbox(
+        fitz.Rect(42, 470, 555, 620),
+        "This paragraph must remain outside the saved table crop. " * 12,
+        fontsize=12,
+    )
+
     doc.save(path.as_posix())
     doc.close()
 
@@ -285,6 +408,98 @@ def test_tighten_chart_crop_rect_leaves_plain_chart_without_context_unchanged(tm
     assert tightened.y0 == pytest.approx(rect.y0)
     assert tightened.x1 == pytest.approx(rect.x1)
     assert tightened.y1 == pytest.approx(rect.y1)
+
+
+def test_tighten_table_crop_rect_trims_top_page_number_but_keeps_header_band(tmp_path):
+    pdf_path = tmp_path / "table_header_page_number.pdf"
+    _build_pdf_with_table_header_band_and_page_number(pdf_path)
+
+    doc = fitz.open(pdf_path.as_posix())
+    try:
+        page = doc[0]
+        padded_rect = fitz.Rect(0.0, 54.8, 595.0, 300.0)
+        tightened = _tighten_table_crop_rect(page, padded_rect)
+    finally:
+        doc.close()
+
+    assert tightened.y0 > 53.4
+    assert tightened.y0 < 61.0
+    assert tightened.y1 == pytest.approx(padded_rect.y1)
+
+
+def test_table_crop_regions_stitch_split_table_title_and_note_for_adjacent_pages(tmp_path):
+    pdf_path = tmp_path / "split_table_pair.pdf"
+    _build_pdf_with_split_table_title_and_note(pdf_path)
+    out_dir = tmp_path / "out"
+    first = CropItem(
+        id="table-47-0",
+        type="table",
+        score=90.0,
+        page=0,
+        bbox=(0.0, 291.0, 595.0, 724.0),
+    )
+    second = CropItem(
+        id="table-48-0",
+        type="table",
+        score=91.0,
+        page=1,
+        bbox=(0.0, 54.8, 595.0, 431.0),
+    )
+
+    first_only = crop_regions(
+        CropRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="single-first",
+            items=[first],
+            subdir="tables",
+            pad=0,
+            mode="legacy",
+        ),
+        _ctx(),
+    )
+    second_only = crop_regions(
+        CropRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="single-second",
+            items=[second],
+            subdir="tables",
+            pad=0,
+            mode="legacy",
+        ),
+        _ctx(),
+    )
+    paired = crop_regions(
+        CropRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="paired",
+            items=[first, second],
+            subdir="tables",
+            pad=0,
+            mode="legacy",
+        ),
+        _ctx(),
+    )
+
+    first_single_path = out_dir / first_only.paths[0]
+    second_single_path = out_dir / second_only.paths[0]
+    paired_first_path = out_dir / paired.paths[0]
+    paired_second_path = out_dir / paired.paths[1]
+    with (
+        Image.open(first_single_path) as first_single,
+        Image.open(second_single_path) as second_single,
+        Image.open(paired_first_path) as paired_first,
+        Image.open(paired_second_path) as paired_second,
+    ):
+        assert paired_first.height > first_single.height + 80
+        assert paired_second.height > second_single.height + 20
+        assert paired_first.width >= first_single.width
+        assert paired_second.width >= second_single.width
 
 
 def test_table_strict_clamps_after_note_and_avoids_section_spillover(tmp_path):

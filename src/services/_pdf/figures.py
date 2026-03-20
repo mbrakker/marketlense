@@ -36,11 +36,25 @@ _PDFMINER_LOGGERS = (
 )
 
 CAPTION_HINTS = ("figure", "fig.", "exhibit", "chart", "graph", "source")
-CHART_CAPTION_HINTS = ("figure", "fig.", "exhibit", "chart", "graph")
+CHART_CAPTION_HINTS = ("figure", "fig.", "exhibit", "chart", "graph", "infographic")
+VISUAL_CONTEXT_HINTS = CAPTION_HINTS + ("infographic",)
 TABLE_CAPTION_HINTS = CAPTION_HINTS + ("table",)
 CHART_TEXT_MAX_LINES = 6
 CHART_TEXT_MIN_CHARS = 60
 CHART_TEXT_RATIO_THRESHOLD = 0.35
+CHART_LABEL_DENSE_MIN_LINES = 20
+CHART_LABEL_DENSE_MAX_AVG_LINE_LEN = 18.0
+CHART_LABEL_DENSE_MAX_MEDIAN_LINE_LEN = 10.0
+CHART_LABEL_DENSE_LONG_LINE_LEN = 32
+CHART_LABEL_DENSE_MAX_LONG_LINE_RATIO = 0.2
+CHART_LABEL_DENSE_SHORT_LINE_LEN = 12
+CHART_LABEL_DENSE_MIN_SHORT_LINE_RATIO = 0.4
+INFOGRAPHIC_LABEL_DENSE_MAX_AVG_LINE_LEN = 20.0
+INFOGRAPHIC_LABEL_DENSE_MAX_MEDIAN_LINE_LEN = 12.0
+INFOGRAPHIC_LABEL_DENSE_MAX_LONG_LINE_RATIO = 0.35
+INFOGRAPHIC_LABEL_DENSE_MIN_SHORT_LINE_RATIO = 0.3
+CHART_DENSE_RECOVERY_MIN_LINES = 12
+CHART_DENSE_RECOVERY_MIN_CHARS = 400
 CHART_DEDUP_IOU = 0.9
 CHART_OVERLAP_IOU = 0.85
 CHART_OVERLAP_CONTAINMENT = 0.88
@@ -69,6 +83,10 @@ CHART_LABEL_PARAGRAPH_MAX_AVG_LINE_LEN = 32
 CHART_LABEL_MAX_LINES = 6
 CHART_LABEL_MAX_AVG_LINE_LEN = 40
 CHART_LABEL_MAX_HEIGHT_FRAC = 0.5
+CHART_NEXT_BLOCKER_MIN_GAP_FRAC = 0.08
+CHART_NEXT_BLOCKER_MIN_GAP_PX = 48.0
+CHART_NEXT_BLOCKER_MIN_H_OVERLAP = 0.3
+CHART_NEXT_BLOCKER_GUARD_PX = 4.0
 CROP_REFINE_BBOX_PAD_X_FRAC = 0.012
 CROP_REFINE_BBOX_PAD_Y_FRAC = 0.015
 CROP_REFINE_BBOX_PAD_MIN = 4.0
@@ -211,7 +229,7 @@ TEXT_BLOCK_LOOSE_MAX_NUMERIC_RATIO = 0.05
 TABLE_PROSE_BOX_MIN_ROWS = 4
 TABLE_PROSE_BOX_MIN_COLS = 2
 TABLE_PROSE_BOX_MAX_FILLED_CELLS_PER_ROW = 1.75
-TABLE_PROSE_BOX_MAX_NUMERIC_RATIO = 0.05
+TABLE_PROSE_BOX_MAX_NUMERIC_RATIO = 0.08
 TABLE_PROSE_BOX_MIN_TEXT_BLOCK_AREA = 0.15
 TABLE_PROSE_BOX_MIN_TEXT_BLOCK_AVG_LINE_LEN = 45.0
 TABLE_PROSE_BOX_MIN_FIRST_COL_WORDS = 3.0
@@ -245,11 +263,42 @@ TABLE_REFERENCE_TERMS = (
     "ssrn",
     "mercatus",
 )
+TABLE_SECTION_LIST_MIN_ROWS = 8
+TABLE_SECTION_LIST_MAX_COLS = 6
+TABLE_SECTION_LIST_MAX_NUMERIC_RATIO = 0.15
+TABLE_SECTION_LIST_MAX_AVG_WORDS_PER_CELL = 3.5
+TABLE_SECTION_LIST_MIN_TEXT_BLOCK_AREA = 0.2
+TABLE_SECTION_LIST_MAX_AVG_LINE_LEN = 48.0
+TABLE_SECTION_LIST_MIN_SHORT_LINE_RATIO = 0.7
+TABLE_SECTION_LIST_MIN_TERMINAL_NUMBER_HITS = 4
+TABLE_SECTION_LIST_MAX_AREA_FRAC_WITHOUT_NUMBERS = 0.2
+TABLE_FIGURE_FRAGMENT_COMPACT_MAX_ROWS = 3
+TABLE_FIGURE_FRAGMENT_COMPACT_MAX_AREA_FRAC = 0.03
+TABLE_FIGURE_FRAGMENT_MIN_NUMERIC_RATIO = 0.35
+TABLE_FIGURE_FRAGMENT_MAX_AVG_WORDS_PER_CELL = 2.5
+TABLE_FIGURE_FRAGMENT_MIN_WIDE_COLS = 20
+TABLE_FIGURE_FRAGMENT_MAX_FILL_RATIO = 0.18
+TABLE_WIDE_FIGURE_CONTEXT_MAX_DIST = 320.0
+TABLE_WIDE_FIGURE_CONTEXT_TOP_BAND = 120.0
+TABLE_WIDE_FIGURE_CONTEXT_HORIZONTAL_PAD = 140.0
+TABLE_HORIZONTAL_EXPAND_MIN_V_OVERLAP = 0.35
+TABLE_HORIZONTAL_EXPAND_MAX_GAP_FRAC = 0.08
+TABLE_HORIZONTAL_EXPAND_MIN_GAIN = 8.0
+TABLE_HORIZONTAL_EXPAND_DENSE_TABULAR_MIN_V_OVERLAP = 0.8
+TABLE_HORIZONTAL_EXPAND_DENSE_TABULAR_MAX_GAP_FRAC = 0.3
+TABLE_HORIZONTAL_EXPAND_DENSE_TABULAR_MIN_LINES = 6
+TABLE_HORIZONTAL_EXPAND_DENSE_TABULAR_MAX_AVG_LINE_LEN = 18.0
+TABLE_OVERLAPPING_NOTE_MAX_GAP = 10.0
+TABLE_TOP_SLACK_MAX = 8.0
+TABLE_TOP_HEADER_SLACK_MAX = 12.0
+TABLE_EXPLICIT_TITLE_MAX_GAP = 72.0
+TABLE_EXPLICIT_SUBTITLE_MAX_GAP = 32.0
 NOTE_LABEL_PREFIXES = ("note:", "notes:", "source:", "sources:", "statlink")
 _PAGE_NUMBER_RX = re.compile(
     r"^\s*[^0-9A-Za-z]*\d{1,4}(?:\s*[-–]\s*\d{1,4})?[^0-9A-Za-z]*\s*$"
 )
 _TABLE_FOOTNOTE_RX = re.compile(r"^\s*(?:\*+|\d+\.)\s+")
+_FIGURE_CONTEXT_RX = re.compile(r"^\s*(?:figure|fig\.|infographic)\s+\d", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -276,6 +325,8 @@ class _TableCandidate:
     text_block_line_count: int
     text_block_avg_line_len: float
     caption_hint: bool
+    figure_context_hint: bool
+    wide_figure_context_hint: bool
     area_frac: float
     width_frac: float
     height_frac: float
@@ -357,6 +408,60 @@ def _rect_iou(a: fitz.Rect, b: fitz.Rect) -> float:
 def _table_normalize_text(text: str) -> str:
     normalized = str(text or "").replace("|", " ").replace("\u00a0", " ")
     return " ".join(normalized.split())
+
+
+def _table_text_lines(text: str) -> List[str]:
+    lines: List[str] = []
+    for raw_line in str(text or "").splitlines():
+        normalized = _table_normalize_text(raw_line)
+        if normalized:
+            lines.append(normalized)
+    return lines
+
+
+def _starts_with_lower_alpha(text: str) -> bool:
+    for char in str(text or ""):
+        if not char.isalpha():
+            continue
+        return char.islower()
+    return False
+
+
+def _table_text_has_note_marker(text: str) -> bool:
+    for line in _table_text_lines(text):
+        lowered = line.lower()
+        if _TABLE_FOOTNOTE_RX.match(line):
+            return True
+        if lowered.startswith(NOTE_LABEL_PREFIXES):
+            return True
+    return False
+
+
+def _table_text_has_figure_context(text: str) -> bool:
+    for line in _table_text_lines(text):
+        if _FIGURE_CONTEXT_RX.match(line):
+            return True
+    return False
+
+
+def _table_text_starts_with_footnote_marker(text: str) -> bool:
+    lines = _table_text_lines(text)
+    if not lines:
+        return False
+    return bool(_TABLE_FOOTNOTE_RX.match(lines[0]))
+
+
+def _table_text_has_embedded_note_marker(text: str) -> bool:
+    lines = _table_text_lines(text)
+    if len(lines) < 2:
+        return False
+    for line in lines[1:]:
+        lowered = line.lower()
+        if _TABLE_FOOTNOTE_RX.match(line):
+            return True
+        if lowered.startswith(NOTE_LABEL_PREFIXES):
+            return True
+    return False
 
 
 def _table_page_text_blocks(page: fitz.Page) -> List[_PageTextBlock]:
@@ -580,9 +685,7 @@ def _table_band_is_note_like(band: _TableTextBand) -> bool:
     lowered = normalized.lower()
     if not normalized:
         return False
-    if _TABLE_FOOTNOTE_RX.match(normalized):
-        return True
-    if lowered.startswith(NOTE_LABEL_PREFIXES):
+    if _table_text_has_note_marker(band.text):
         return True
     if "statlink" in lowered or "http://" in lowered or "https://" in lowered:
         return True
@@ -730,8 +833,8 @@ def _table_attach_note_bands(
             expanded |= band.rect
             current_bottom = band.rect.y1
             note_started = True
-            note_continuation_allowed = bool(
-                _TABLE_FOOTNOTE_RX.match(_table_normalize_text(band.text))
+            note_continuation_allowed = _table_text_starts_with_footnote_marker(
+                band.text
             )
             continue
         if note_continuation_allowed and _table_band_is_note_continuation(
@@ -876,13 +979,21 @@ def _table_block_is_note_like(block: _PageTextBlock) -> bool:
     lowered = normalized.lower()
     if not normalized:
         return False
-    if _TABLE_FOOTNOTE_RX.match(normalized):
-        return True
-    if lowered.startswith(NOTE_LABEL_PREFIXES):
+    if _table_text_has_note_marker(block.text):
         return True
     if "statlink" in lowered or "doi.org" in lowered or "http://" in lowered or "https://" in lowered:
         return True
     return False
+
+
+def _table_block_is_mixed_footer_cluster(block: _PageTextBlock) -> bool:
+    if not _table_text_has_embedded_note_marker(block.text):
+        return False
+    if block.lines > 10:
+        return False
+    if block.avg_line_len > 85:
+        return False
+    return True
 
 
 def _table_block_is_heading_like(
@@ -928,6 +1039,26 @@ def _table_block_is_body_paragraph(
     return False
 
 
+def _table_block_is_note_continuation(
+    block: _PageTextBlock,
+    rect: fitz.Rect,
+    body_font_size: float,
+) -> bool:
+    if _table_block_is_note_like(block):
+        return False
+    if _table_block_is_heading_like(block, body_font_size):
+        return False
+    if not _table_block_is_body_paragraph(block, body_font_size):
+        return False
+    if _horizontal_overlap_ratio(block.rect, rect) < TABLE_NOTE_CONTINUATION_MIN_H_OVERLAP:
+        return False
+    if block.rect.x0 > rect.x0 + TABLE_NOTE_CONTINUATION_MAX_X_OFFSET:
+        return False
+    if len(_table_normalize_text(block.text).split()) < TABLE_NOTE_CONTINUATION_MIN_WORDS:
+        return False
+    return True
+
+
 def _table_band_is_note_continuation(
     band: _TableTextBand,
     rect: fitz.Rect,
@@ -961,6 +1092,19 @@ def _table_block_is_title_like(
     if ":" in normalized and len(normalized.split()) <= 14:
         return True
     return _table_block_is_heading_like(block, body_font_size)
+
+
+def _table_block_looks_dense_tabular(block: _PageTextBlock) -> bool:
+    if block.lines < TABLE_HORIZONTAL_EXPAND_DENSE_TABULAR_MIN_LINES:
+        return False
+    if block.avg_line_len > TABLE_HORIZONTAL_EXPAND_DENSE_TABULAR_MAX_AVG_LINE_LEN:
+        return False
+    normalized = _table_normalize_text(block.text)
+    if not normalized:
+        return False
+    if len(normalized.split()) < block.lines:
+        return False
+    return True
 
 
 def _table_attach_title_blocks(
@@ -1028,6 +1172,361 @@ def _table_attach_note_blocks(
     return expanded
 
 
+def _table_attach_explicit_title_context(
+    rect: fitz.Rect,
+    blocks: List[_PageTextBlock],
+    body_font_size: float,
+) -> fitz.Rect:
+    expanded = fitz.Rect(rect)
+    title_candidates = sorted(
+        (
+            block
+            for block in blocks
+            if block.rect.y1 <= rect.y0 + 1.0
+            and rect.y0 - block.rect.y1 <= TABLE_EXPLICIT_TITLE_MAX_GAP
+            and _horizontal_overlap_ratio(block.rect, rect) >= 0.2
+            and _table_normalize_text(block.text).lower().startswith(("table ", "exhibit "))
+        ),
+        key=lambda block: block.rect.y1,
+        reverse=True,
+    )
+    if not title_candidates:
+        return rect
+    title_block = title_candidates[0]
+    expanded |= title_block.rect
+    current_bottom = title_block.rect.y1
+    subtitle_candidates = sorted(
+        (
+            block
+            for block in blocks
+            if block.rect.y0 >= title_block.rect.y1 - 1.0
+            and block.rect.y1 <= rect.y0 + 1.0
+            and _horizontal_overlap_ratio(block.rect, rect) >= 0.2
+            and _table_block_is_body_paragraph(block, body_font_size)
+        ),
+        key=lambda block: block.rect.y0,
+    )
+    for block in subtitle_candidates:
+        if block.rect.y0 - current_bottom > TABLE_EXPLICIT_SUBTITLE_MAX_GAP:
+            break
+        expanded |= block.rect
+        current_bottom = block.rect.y1
+    return expanded
+
+
+def _table_attach_mixed_footer_blocks(
+    page: fitz.Page,
+    rect: fitz.Rect,
+    blocks: List[_PageTextBlock],
+    body_font_size: float,
+) -> fitz.Rect:
+    page_rect = page.rect
+    expanded = fitz.Rect(rect)
+    max_gap_y = max(30.0, page_rect.height * 0.032)
+    current_bottom = expanded.y1
+    footer_started = False
+    candidates = sorted(blocks, key=lambda block: block.rect.y0)
+    for block in candidates:
+        if block.rect.y0 < current_bottom - 1:
+            continue
+        gap = block.rect.y0 - current_bottom
+        if gap > max_gap_y:
+            if footer_started:
+                break
+            continue
+        if _table_block_is_margin_noise(block, page_rect):
+            continue
+        if _horizontal_overlap_ratio(block.rect, rect) < 0.2:
+            continue
+        if _table_block_is_mixed_footer_cluster(block):
+            expanded |= block.rect
+            current_bottom = block.rect.y1
+            footer_started = True
+            continue
+        if footer_started:
+            break
+        if _table_block_is_heading_like(block, body_font_size) or _table_block_is_body_paragraph(
+            block, body_font_size
+        ):
+            break
+    return expanded
+
+
+def _table_expand_horizontal_to_content(
+    page: fitz.Page,
+    rect: fitz.Rect,
+    blocks: List[_PageTextBlock],
+) -> fitz.Rect:
+    page_rect = page.rect
+    expanded = fitz.Rect(rect)
+    max_gap_x = max(18.0, page_rect.width * TABLE_HORIZONTAL_EXPAND_MAX_GAP_FRAC)
+    dense_tabular_max_gap_x = max(
+        max_gap_x,
+        page_rect.width * TABLE_HORIZONTAL_EXPAND_DENSE_TABULAR_MAX_GAP_FRAC,
+    )
+    for block in blocks:
+        if _table_block_is_margin_noise(block, page_rect):
+            continue
+        v_overlap = _vertical_overlap_ratio(block.rect, rect)
+        if v_overlap < TABLE_HORIZONTAL_EXPAND_MIN_V_OVERLAP:
+            continue
+        dense_tabular = (
+            v_overlap >= TABLE_HORIZONTAL_EXPAND_DENSE_TABULAR_MIN_V_OVERLAP
+            and _table_block_looks_dense_tabular(block)
+            and block.rect.x1 >= expanded.x1 - 4.0
+        )
+        allowed_gap_x = dense_tabular_max_gap_x if dense_tabular else max_gap_x
+        if block.rect.x1 < expanded.x0 - max_gap_x:
+            continue
+        if block.rect.x0 > expanded.x1 + allowed_gap_x:
+            continue
+        left_gain = expanded.x0 - block.rect.x0
+        right_gain = block.rect.x1 - expanded.x1
+        if (
+            block.rect.x0 < expanded.x0
+            and left_gain <= allowed_gap_x
+            and left_gain >= TABLE_HORIZONTAL_EXPAND_MIN_GAIN
+        ):
+            expanded = fitz.Rect(block.rect.x0, expanded.y0, expanded.x1, expanded.y1)
+        if (
+            block.rect.x1 > expanded.x1
+            and right_gain <= allowed_gap_x
+            and right_gain >= TABLE_HORIZONTAL_EXPAND_MIN_GAIN
+        ):
+            expanded = fitz.Rect(expanded.x0, expanded.y0, block.rect.x1, expanded.y1)
+    return expanded
+
+
+def _table_extend_overlapping_note_blocks(
+    page: fitz.Page,
+    rect: fitz.Rect,
+    blocks: List[_PageTextBlock],
+    body_font_size: float,
+) -> fitz.Rect:
+    page_rect = page.rect
+    expanded = fitz.Rect(rect)
+    max_gap_y = TABLE_OVERLAPPING_NOTE_MAX_GAP
+    note_started = False
+    candidates = sorted(blocks, key=lambda block: block.rect.y0)
+    for block in candidates:
+        if _table_block_is_margin_noise(block, page_rect):
+            continue
+        if _horizontal_overlap_ratio(block.rect, rect) < 0.2:
+            continue
+        if block.rect.y0 > expanded.y1 + max_gap_y:
+            if note_started:
+                break
+            continue
+        if block.rect.y1 <= expanded.y1 + 1.0:
+            continue
+        if _table_block_is_note_like(block):
+            missing_height = block.rect.y1 - expanded.y1
+            if block.lines <= 1 and missing_height <= 18.0:
+                continue
+            expanded |= block.rect
+            note_started = True
+            continue
+        if note_started and _table_block_is_note_continuation(
+            block, rect, body_font_size
+        ):
+            expanded |= block.rect
+            continue
+        if note_started:
+            break
+    return expanded
+
+
+def _table_restore_top_slack(
+    page: fitz.Page,
+    rect: fitz.Rect,
+    blocks: List[_PageTextBlock],
+    body_font_size: float,
+) -> fitz.Rect:
+    page_rect = page.rect
+    candidates = [
+        block
+        for block in blocks
+        if not _table_block_is_margin_noise(block, page_rect)
+        and block.rect.y1 >= rect.y0 - 1.0
+        and block.rect.y0 <= rect.y0 + rect.height * 0.25
+        and _horizontal_overlap_ratio(block.rect, rect) >= 0.2
+    ]
+    if not candidates:
+        return rect
+    first = min(candidates, key=lambda block: (block.rect.y0, block.rect.x0))
+    normalized = _table_normalize_text(first.text).lower()
+    if first.rect.y0 > rect.y0 + 2.0:
+        return rect
+    if normalized.startswith(("table ", "exhibit ")):
+        return rect
+    if _table_block_is_title_like(first, body_font_size):
+        left_edge_guard = rect.x0 + rect.width * 0.18
+        if first.rect.x0 <= left_edge_guard:
+            return rect
+    nearest_above = min(
+        (
+            rect.y0 - block.rect.y1
+            for block in blocks
+            if not _table_block_is_margin_noise(block, page_rect)
+            and block.rect.y1 <= rect.y0 + 1.0
+            and _horizontal_overlap_ratio(block.rect, rect) >= 0.2
+        ),
+        default=None,
+    )
+    if nearest_above is not None and nearest_above <= 18.0:
+        return rect
+    slack_limit = TABLE_TOP_SLACK_MAX
+    if _table_block_is_title_like(first, body_font_size):
+        slack_limit = TABLE_TOP_HEADER_SLACK_MAX
+    slack = min(slack_limit, rect.y0 - page_rect.y0)
+    if slack <= 0.0:
+        return rect
+    return fitz.Rect(rect.x0, rect.y0 - slack, rect.x1, rect.y1)
+
+
+def _table_clamp_top_to_internal_title_band(
+    rect: fitz.Rect,
+    bands: List[_TableTextBand],
+    body_font_size: float,
+) -> fitz.Rect:
+    candidates = [
+        band
+        for band in bands
+        if band.rect.y0 >= rect.y0 - 1.0
+        and band.rect.y1 <= rect.y0 + rect.height * 0.45
+        and _horizontal_overlap_ratio(band.rect, rect) >= 0.2
+    ]
+    if not candidates:
+        return rect
+    title_bands = [
+        band
+        for band in candidates
+        if _table_band_is_title_like(band, body_font_size)
+        and not _starts_with_lower_alpha(band.text)
+    ]
+    if not title_bands:
+        return rect
+    title_band = min(title_bands, key=lambda band: band.rect.y0)
+    explicit_table_title_above = any(
+        band is not title_band
+        and band.rect.y1 <= title_band.rect.y0 + 1.0
+        and _table_band_is_title_like(band, body_font_size)
+        and _table_normalize_text(band.text).lower().startswith(("table ", "exhibit "))
+        for band in candidates
+    )
+    if explicit_table_title_above:
+        return rect
+    paragraph_above = any(
+        band.rect.y1 <= title_band.rect.y0 + 1.0
+        and _table_band_is_body_paragraph(band, body_font_size)
+        for band in candidates
+    )
+    if not paragraph_above:
+        return rect
+    if title_band.rect.y0 <= rect.y0 + 6.0:
+        return rect
+    return fitz.Rect(rect.x0, title_band.rect.y0, rect.x1, rect.y1)
+
+
+def _table_clamp_top_to_internal_title(
+    rect: fitz.Rect,
+    blocks: List[_PageTextBlock],
+    body_font_size: float,
+) -> fitz.Rect:
+    explicit_title_in_top_band = any(
+        block.rect.y1 >= rect.y0 - 1.0
+        and block.rect.y0 <= rect.y0 + TABLE_EXPLICIT_TITLE_MAX_GAP
+        and _horizontal_overlap_ratio(block.rect, rect) >= 0.2
+        and _table_normalize_text(block.text).lower().startswith(("table ", "exhibit "))
+        for block in blocks
+    )
+    if explicit_title_in_top_band:
+        return rect
+    explicit_title_nearby = any(
+        block.rect.y1 <= rect.y0 + 1.0
+        and rect.y0 - block.rect.y1 <= TABLE_EXPLICIT_TITLE_MAX_GAP
+        and _horizontal_overlap_ratio(block.rect, rect) >= 0.2
+        and _table_normalize_text(block.text).lower().startswith(("table ", "exhibit "))
+        for block in blocks
+    )
+    if explicit_title_nearby:
+        return rect
+    candidates = [
+        block
+        for block in blocks
+        if block.rect.y0 >= rect.y0 - 1.0
+        and block.rect.y1 <= rect.y0 + rect.height * 0.45
+        and _horizontal_overlap_ratio(block.rect, rect) >= 0.2
+    ]
+    if not candidates:
+        return rect
+    title_blocks = [
+        block
+        for block in candidates
+        if _table_block_is_title_like(block, body_font_size)
+        and not _starts_with_lower_alpha(block.text)
+    ]
+    if not title_blocks:
+        return rect
+    title_block = min(title_blocks, key=lambda block: block.rect.y0)
+    explicit_table_title_above = any(
+        block is not title_block
+        and block.rect.y1 <= title_block.rect.y0 + 1.0
+        and _table_block_is_title_like(block, body_font_size)
+        and _table_normalize_text(block.text).lower().startswith(("table ", "exhibit "))
+        for block in candidates
+    )
+    if explicit_table_title_above:
+        return rect
+    paragraph_above = any(
+        block.rect.y1 <= title_block.rect.y0 + 1.0
+        and _table_block_is_body_paragraph(block, body_font_size)
+        for block in candidates
+    )
+    if not paragraph_above:
+        return rect
+    if title_block.rect.y0 <= rect.y0 + 6.0:
+        return rect
+    return fitz.Rect(rect.x0, title_block.rect.y0, rect.x1, rect.y1)
+
+
+def _table_clamp_bottom_before_internal_heading(
+    rect: fitz.Rect,
+    blocks: List[_PageTextBlock],
+    body_font_size: float,
+) -> fitz.Rect:
+    candidates = [
+        block
+        for block in blocks
+        if block.rect.y0 >= rect.y0 + rect.height * 0.55
+        and block.rect.y1 <= rect.y1 + 1.0
+        and _horizontal_overlap_ratio(block.rect, rect) >= 0.2
+    ]
+    if not candidates:
+        return rect
+    for block in sorted(candidates, key=lambda item: item.rect.y0):
+        normalized = _table_normalize_text(block.text)
+        if len(normalized.split()) > 4:
+            continue
+        if not _table_block_is_heading_like(block, body_font_size):
+            continue
+        trailing_blocks = [
+            tail
+            for tail in candidates
+            if tail.rect.y0 >= block.rect.y1 - 1.0
+        ]
+        if not trailing_blocks:
+            continue
+        if not any(
+            _table_block_is_body_paragraph(tail, body_font_size)
+            or _table_block_is_note_like(tail)
+            for tail in trailing_blocks
+        ):
+            continue
+        return fitz.Rect(rect.x0, rect.y0, rect.x1, max(rect.y0, block.rect.y0 - 2.0))
+    return rect
+
+
 def _compose_table_bbox(
     page: fitz.Page,
     bbox: Tuple[float, float, float, float],
@@ -1042,10 +1541,39 @@ def _compose_table_bbox(
     body_font_size = _table_page_body_font_size(blocks)
     if method == "stream" and bands:
         expanded = _table_attach_title_bands(page, rect, bands, body_font_size)
+        expanded = _table_attach_explicit_title_context(
+            expanded, blocks, body_font_size
+        )
         expanded = _table_attach_note_bands(page, expanded, bands, body_font_size)
+        expanded = _table_attach_mixed_footer_blocks(
+            page, expanded, blocks, body_font_size
+        )
     else:
         expanded = _table_attach_title_blocks(page, rect, blocks, body_font_size)
+        expanded = _table_attach_explicit_title_context(
+            expanded, blocks, body_font_size
+        )
         expanded = _table_attach_note_blocks(page, expanded, blocks, body_font_size)
+    expanded = _table_expand_horizontal_to_content(page, expanded, blocks)
+    expanded = _table_attach_explicit_title_context(
+        expanded, blocks, body_font_size
+    )
+    expanded = _table_extend_overlapping_note_blocks(
+        page, expanded, blocks, body_font_size
+    )
+    if method == "stream":
+        expanded = _table_clamp_top_to_internal_title_band(
+            expanded, bands, body_font_size
+        )
+        expanded = _table_clamp_top_to_internal_title(
+            expanded, blocks, body_font_size
+        )
+        expanded = _table_clamp_bottom_before_internal_heading(
+            expanded, blocks, body_font_size
+        )
+        expanded = _table_restore_top_slack(
+            page, expanded, blocks, body_font_size
+        )
 
     if method == "stream":
         width_frac = expanded.width / max(1.0, page_rect.width)
@@ -1701,6 +2229,60 @@ def _extend_with_note_blocks(page: fitz.Page, rect: fitz.Rect) -> fitz.Rect:
     return expanded
 
 
+def _next_chart_blocker_top(
+    page: fitz.Page,
+    rect: fitz.Rect,
+    cap_rect: Optional[fitz.Rect],
+) -> Optional[float]:
+    start_y = cap_rect.y1 if cap_rect is not None else rect.y0
+    min_gap = max(
+        page.rect.height * CHART_NEXT_BLOCKER_MIN_GAP_FRAC,
+        CHART_NEXT_BLOCKER_MIN_GAP_PX,
+    )
+    best_y0: Optional[float] = None
+
+    for other_rect, _other_text in _caption_blocks(page, CHART_CAPTION_HINTS):
+        if cap_rect is not None and abs(other_rect.y0 - cap_rect.y0) < 1.0:
+            continue
+        if other_rect.y0 <= start_y + min_gap:
+            continue
+        if other_rect.y0 >= rect.y1 - 1.0:
+            continue
+        if _horizontal_overlap_ratio(other_rect, rect) < CHART_NEXT_BLOCKER_MIN_H_OVERLAP:
+            continue
+        if best_y0 is None or other_rect.y0 < best_y0:
+            best_y0 = other_rect.y0
+
+    for head_rect, head_text in _heading_lines(page):
+        lowered = head_text.strip().lower()
+        if any(lowered.startswith(hint) for hint in CHART_CAPTION_HINTS):
+            continue
+        if head_rect.y0 <= start_y + min_gap:
+            continue
+        if head_rect.y0 >= rect.y1 - 1.0:
+            continue
+        if _horizontal_overlap_ratio(head_rect, rect) < CHART_NEXT_BLOCKER_MIN_H_OVERLAP:
+            continue
+        if best_y0 is None or head_rect.y0 < best_y0:
+            best_y0 = head_rect.y0
+
+    return best_y0
+
+
+def _clamp_bottom_to_next_chart_blocker(
+    page: fitz.Page,
+    rect: fitz.Rect,
+    cap_rect: Optional[fitz.Rect],
+) -> fitz.Rect:
+    blocker_top = _next_chart_blocker_top(page, rect, cap_rect)
+    if blocker_top is None:
+        return rect
+    new_bottom = min(rect.y1, blocker_top - CHART_NEXT_BLOCKER_GUARD_PX)
+    if new_bottom <= rect.y0 + 1.0:
+        return rect
+    return fitz.Rect(rect.x0, rect.y0, rect.x1, new_bottom)
+
+
 def _extend_with_adjacent_text_blocks(page: fitz.Page, rect: fitz.Rect) -> fitz.Rect:
     page_rect = page.rect
     max_gap = page_rect.width * CHART_LABEL_MAX_GAP_FRAC
@@ -2310,8 +2892,18 @@ def _build_table_candidate(
     text_block_line_count = 0
     text_block_avg_line_len = 0.0
     caption_hint = False
+    figure_context_hint = False
+    wide_figure_context_hint = False
     if fitz_page is not None:
         caption_hint = _has_caption_hint(fitz_page, (x0, y0, x1, y1))
+        figure_context_hint = _has_figure_context_hint(fitz_page, (x0, y0, x1, y1))
+        wide_figure_context_hint = _has_figure_context_hint(
+            fitz_page,
+            (x0, y0, x1, y1),
+            max_dist=TABLE_WIDE_FIGURE_CONTEXT_MAX_DIST,
+            top_band_height=TABLE_WIDE_FIGURE_CONTEXT_TOP_BAND,
+            horizontal_pad=TABLE_WIDE_FIGURE_CONTEXT_HORIZONTAL_PAD,
+        )
         text_block_area_frac, text_block_line_count, text_block_avg_line_len = (
             _text_block_stats(
                 fitz_page,
@@ -2341,6 +2933,8 @@ def _build_table_candidate(
         text_block_line_count=text_block_line_count,
         text_block_avg_line_len=text_block_avg_line_len,
         caption_hint=caption_hint,
+        figure_context_hint=figure_context_hint,
+        wide_figure_context_hint=wide_figure_context_hint,
         area_frac=area_frac,
         width_frac=width_frac,
         height_frac=height_frac,
@@ -2372,12 +2966,56 @@ def _text_stats(text: str) -> Tuple[int, int]:
     return len(lines), char_count
 
 
+def _text_line_lengths(text: str) -> List[int]:
+    return [len(line.strip()) for line in text.splitlines() if line.strip()]
+
+
 def _chart_text_heavy(lines: int, chars: int, ratio: float) -> bool:
     if lines <= CHART_TEXT_MAX_LINES:
         return False
     if chars < CHART_TEXT_MIN_CHARS:
         return False
     return ratio >= CHART_TEXT_RATIO_THRESHOLD
+
+
+def _chart_is_label_dense_not_prose(text: str) -> bool:
+    lengths = _text_line_lengths(text)
+    if len(lengths) < CHART_LABEL_DENSE_MIN_LINES:
+        return False
+    avg_line_len = sum(lengths) / max(1, len(lengths))
+    median_line_len = statistics.median(lengths)
+    long_line_ratio = sum(
+        1 for length in lengths if length >= CHART_LABEL_DENSE_LONG_LINE_LEN
+    ) / max(1, len(lengths))
+    short_line_ratio = sum(
+        1 for length in lengths if length <= CHART_LABEL_DENSE_SHORT_LINE_LEN
+    ) / max(1, len(lengths))
+    return (
+        avg_line_len <= CHART_LABEL_DENSE_MAX_AVG_LINE_LEN
+        and median_line_len <= CHART_LABEL_DENSE_MAX_MEDIAN_LINE_LEN
+        and long_line_ratio <= CHART_LABEL_DENSE_MAX_LONG_LINE_RATIO
+        and short_line_ratio >= CHART_LABEL_DENSE_MIN_SHORT_LINE_RATIO
+    )
+
+
+def _infographic_is_label_dense_not_prose(text: str) -> bool:
+    lengths = _text_line_lengths(text)
+    if len(lengths) < CHART_LABEL_DENSE_MIN_LINES:
+        return False
+    avg_line_len = sum(lengths) / max(1, len(lengths))
+    median_line_len = statistics.median(lengths)
+    long_line_ratio = sum(
+        1 for length in lengths if length >= CHART_LABEL_DENSE_LONG_LINE_LEN
+    ) / max(1, len(lengths))
+    short_line_ratio = sum(
+        1 for length in lengths if length <= CHART_LABEL_DENSE_SHORT_LINE_LEN
+    ) / max(1, len(lengths))
+    return (
+        avg_line_len <= INFOGRAPHIC_LABEL_DENSE_MAX_AVG_LINE_LEN
+        and median_line_len <= INFOGRAPHIC_LABEL_DENSE_MAX_MEDIAN_LINE_LEN
+        and long_line_ratio <= INFOGRAPHIC_LABEL_DENSE_MAX_LONG_LINE_RATIO
+        and short_line_ratio >= INFOGRAPHIC_LABEL_DENSE_MIN_SHORT_LINE_RATIO
+    )
 
 
 def _cell_is_numeric(text: str) -> bool:
@@ -2610,6 +3248,44 @@ def _has_caption_hint(
     return any(hint in lowered for hint in TABLE_CAPTION_HINTS)
 
 
+def _has_figure_context_hint(
+    page: fitz.Page,
+    bbox: Tuple[float, float, float, float],
+    max_dist: float = 72,
+    top_band_height: float = 44,
+    horizontal_pad: float = 36,
+) -> bool:
+    rect = fitz.Rect(*bbox)
+    page_rect = page.rect
+    clip = fitz.Rect(
+        max(page_rect.x0, rect.x0 - horizontal_pad),
+        max(page_rect.y0, rect.y0 - max_dist),
+        min(page_rect.x1, rect.x1 + horizontal_pad),
+        min(page_rect.y1, rect.y0 + top_band_height),
+    )
+    if clip.is_empty or clip.y1 <= clip.y0:
+        return False
+    try:
+        text = page.get_text("text", clip=clip) or ""
+    except Exception:
+        text = ""
+    if _table_text_has_figure_context(text):
+        return True
+    full_width_clip = fitz.Rect(
+        page_rect.x0,
+        max(page_rect.y0, rect.y0 - max_dist),
+        page_rect.x1,
+        min(page_rect.y1, rect.y0 + top_band_height),
+    )
+    if full_width_clip.is_empty or full_width_clip.y1 <= full_width_clip.y0:
+        return False
+    try:
+        full_width_text = page.get_text("text", clip=full_width_clip) or ""
+    except Exception:
+        return False
+    return _table_text_has_figure_context(full_width_text)
+
+
 def _validate_table_candidate(cand: _TableCandidate) -> Tuple[bool, str]:
     if cand.row_count < TABLE_MIN_ROWS or cand.col_count < TABLE_MIN_COLS:
         return False, "too_few_rows_cols"
@@ -2638,10 +3314,16 @@ def _validate_table_candidate(cand: _TableCandidate) -> Tuple[bool, str]:
         return False, "too_short"
     if _contents_like(cand):
         return False, "contents_like"
+    if _section_list_like(cand):
+        return False, "section_list"
     if _reference_block_like(cand):
         return False, "reference_block"
     if _prose_box_like(cand):
         return False, "prose_box"
+    if cand.figure_context_hint:
+        return False, "figure_caption_context"
+    if _chart_fragment_like(cand):
+        return False, "figure_chart_fragment"
     if cand.method == "stream":
         if (
             cand.row_count >= TABLE_TEXT_HEAVY_MIN_ROWS
@@ -2837,6 +3519,14 @@ def _nonempty_text_lines(text: str) -> List[str]:
     return [line.strip() for line in text.splitlines() if line.strip()]
 
 
+def _terminal_page_number_hits(lines: List[str]) -> int:
+    hits = 0
+    for line in lines:
+        if re.search(r"\b\d{1,3}\s*$", line):
+            hits += 1
+    return hits
+
+
 def _contents_like(cand: _TableCandidate) -> bool:
     if cand.method != "stream":
         return False
@@ -2874,9 +3564,50 @@ def _contents_like(cand: _TableCandidate) -> bool:
     return terminal_page_hits >= required_hits
 
 
-def _reference_block_like(cand: _TableCandidate) -> bool:
+def _section_list_like(cand: _TableCandidate) -> bool:
     if cand.method != "stream":
         return False
+    if cand.row_count < TABLE_SECTION_LIST_MIN_ROWS:
+        return False
+    if cand.col_count > TABLE_SECTION_LIST_MAX_COLS:
+        return False
+    if cand.numeric_ratio > TABLE_SECTION_LIST_MAX_NUMERIC_RATIO:
+        return False
+    if cand.avg_words_per_cell > TABLE_SECTION_LIST_MAX_AVG_WORDS_PER_CELL:
+        return False
+    if cand.text_block_area_frac < TABLE_SECTION_LIST_MIN_TEXT_BLOCK_AREA:
+        return False
+    lines = _nonempty_text_lines(cand.text)
+    if len(lines) < TABLE_SECTION_LIST_MIN_ROWS:
+        return False
+    avg_line_len = sum(len(line) for line in lines) / max(1, len(lines))
+    if avg_line_len > TABLE_SECTION_LIST_MAX_AVG_LINE_LEN:
+        return False
+    short_line_ratio = sum(1 for line in lines if len(line) <= 60) / max(1, len(lines))
+    if short_line_ratio < TABLE_SECTION_LIST_MIN_SHORT_LINE_RATIO:
+        return False
+    terminal_hits = _terminal_page_number_hits(lines)
+    if terminal_hits >= TABLE_SECTION_LIST_MIN_TERMINAL_NUMBER_HITS:
+        return True
+    return (
+        cand.numeric_ratio <= TABLE_CONTENTS_MIN_NUMERIC_RATIO / 2.0
+        and cand.area_frac <= TABLE_SECTION_LIST_MAX_AREA_FRAC_WITHOUT_NUMBERS
+    )
+
+
+def _reference_block_like(cand: _TableCandidate) -> bool:
+    lowered = cand.text.lower()
+    url_hits = len(re.findall(r"https?://|doi\.org|www\.", lowered))
+    year_hits = len(re.findall(r"\b(?:19|20)\d{2}[a-z]?\b", lowered))
+    term_hits = sum(lowered.count(term) for term in TABLE_REFERENCE_TERMS)
+    if cand.method != "stream":
+        return False
+    if (
+        url_hits >= TABLE_REFERENCE_MIN_URL_HITS
+        and year_hits >= TABLE_REFERENCE_MIN_YEAR_HITS
+        and cand.col_count <= TABLE_REFERENCE_MAX_COLS
+    ):
+        return True
     if cand.row_count < TABLE_REFERENCE_MIN_ROWS:
         return False
     if cand.col_count > TABLE_REFERENCE_MAX_COLS:
@@ -2889,10 +3620,6 @@ def _reference_block_like(cand: _TableCandidate) -> bool:
         return False
     if cand.avg_line_len < TABLE_REFERENCE_MIN_AVG_LINE_LEN:
         return False
-    lowered = cand.text.lower()
-    url_hits = len(re.findall(r"https?://|doi\.org|www\.", lowered))
-    year_hits = len(re.findall(r"\b(?:19|20)\d{2}[a-z]?\b", lowered))
-    term_hits = sum(lowered.count(term) for term in TABLE_REFERENCE_TERMS)
     if url_hits >= TABLE_REFERENCE_MIN_URL_HITS:
         return year_hits >= TABLE_REFERENCE_MIN_YEAR_HITS
     return (
@@ -2926,6 +3653,30 @@ def _prose_box_like(cand: _TableCandidate) -> bool:
     return True
 
 
+def _chart_fragment_like(cand: _TableCandidate) -> bool:
+    if cand.method != "lattice":
+        return False
+    if not cand.wide_figure_context_hint:
+        return False
+    if cand.caption_hint:
+        return False
+    if cand.avg_words_per_cell > TABLE_FIGURE_FRAGMENT_MAX_AVG_WORDS_PER_CELL:
+        return False
+    fill_ratio = cand.non_empty_cells / max(1, cand.total_cells)
+    compact_numeric_fragment = (
+        cand.row_count <= TABLE_FIGURE_FRAGMENT_COMPACT_MAX_ROWS
+        and cand.area_frac <= TABLE_FIGURE_FRAGMENT_COMPACT_MAX_AREA_FRAC
+        and cand.numeric_ratio >= TABLE_FIGURE_FRAGMENT_MIN_NUMERIC_RATIO
+    )
+    wide_sparse_fragment = (
+        cand.col_count >= TABLE_FIGURE_FRAGMENT_MIN_WIDE_COLS
+        and cand.row_count <= TABLE_FIGURE_FRAGMENT_COMPACT_MAX_ROWS + 5
+        and cand.numeric_ratio >= TABLE_FIGURE_FRAGMENT_MIN_NUMERIC_RATIO
+        and fill_ratio <= TABLE_FIGURE_FRAGMENT_MAX_FILL_RATIO
+    )
+    return compact_numeric_fragment or wide_sparse_fragment
+
+
 def _table_sort_key(cand: _TableCandidate) -> Tuple[float, float]:
     return (cand.bbox[1], cand.bbox[0])
 
@@ -2952,6 +3703,40 @@ def _table_iou(
     return inter / union
 
 
+def _table_containment_ratio(
+    a: Tuple[float, float, float, float], b: Tuple[float, float, float, float]
+) -> float:
+    ax0, ay0, ax1, ay1 = a
+    bx0, by0, bx1, by1 = b
+    inter_w = max(0.0, min(ax1, bx1) - max(ax0, bx0))
+    inter_h = max(0.0, min(ay1, by1) - max(ay0, by0))
+    inter = inter_w * inter_h
+    if inter <= 0.0:
+        return 0.0
+    area_a = max(0.0, (ax1 - ax0)) * max(0.0, (ay1 - ay0))
+    area_b = max(0.0, (bx1 - bx0)) * max(0.0, (by1 - by0))
+    smaller = min(area_a, area_b)
+    if smaller <= 0.0:
+        return 0.0
+    return inter / smaller
+
+
+def _prefer_inner_lattice_table(
+    smaller: _TableCandidate, larger: _TableCandidate
+) -> bool:
+    if smaller.method != "lattice" or larger.method != "stream":
+        return False
+    sx0, sy0, sx1, sy1 = smaller.bbox
+    lx0, ly0, lx1, ly1 = larger.bbox
+    smaller_width = max(1.0, sx1 - sx0)
+    smaller_height = max(1.0, sy1 - sy0)
+    larger_width = max(1.0, lx1 - lx0)
+    larger_height = max(1.0, ly1 - ly0)
+    width_ratio = smaller_width / larger_width
+    height_ratio = smaller_height / larger_height
+    return width_ratio >= 0.7 and height_ratio >= 0.75
+
+
 def _dedupe_table_candidates(
     candidates: List[_TableCandidate],
 ) -> List[_TableCandidate]:
@@ -2959,9 +3744,29 @@ def _dedupe_table_candidates(
     for cand in candidates:
         replaced = False
         for idx, existing in enumerate(kept):
-            if _table_iou(cand.bbox, existing.bbox) >= TABLE_DEDUP_IOU:
-                if _table_quality(cand) > _table_quality(existing):
-                    kept[idx] = cand
+            iou = _table_iou(cand.bbox, existing.bbox)
+            containment = _table_containment_ratio(cand.bbox, existing.bbox)
+            if iou >= TABLE_DEDUP_IOU or containment >= 0.98:
+                preferred = cand
+                if containment >= 0.98:
+                    area_cand = max(
+                        0.0, (cand.bbox[2] - cand.bbox[0]) * (cand.bbox[3] - cand.bbox[1])
+                    )
+                    area_existing = max(
+                        0.0,
+                        (existing.bbox[2] - existing.bbox[0])
+                        * (existing.bbox[3] - existing.bbox[1]),
+                    )
+                    smaller, larger = (
+                        (cand, existing) if area_cand <= area_existing else (existing, cand)
+                    )
+                    if _prefer_inner_lattice_table(smaller, larger):
+                        preferred = smaller
+                    elif _table_quality(cand) <= _table_quality(existing):
+                        preferred = existing
+                elif _table_quality(cand) <= _table_quality(existing):
+                    preferred = existing
+                kept[idx] = preferred
                 replaced = True
                 break
         if not replaced:
