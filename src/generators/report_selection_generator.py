@@ -22,6 +22,7 @@ from src.contracts.report_assets import (
     CropRequest,
     ExtractCandidatesRequest,
     FigureExtractRequest,
+    FigureExtractResponse,
     RankRequest,
 )
 from src.contracts.report_generation import (
@@ -1199,14 +1200,22 @@ def _candidate_crop_path_map(
     return mapping
 
 
-def _select_fallback_candidate_crop_paths(
+def _empty_figure_response() -> FigureExtractResponse:
+    return FigureExtractResponse(
+        schema_version="1.0",
+        image_path=None,
+        caption=None,
+        page=-1,
+    )
+
+
+def _select_fallback_candidates(
     *,
     ranked_rows: list[Any],
     prefiltered_candidates: list[Candidate],
-    candidate_path_by_id: dict[str, str],
     selected_kind_max: int,
     settings: Optional[IngestSettings] = None,
-) -> tuple[list[str], list[Candidate], dict[str, Any]]:
+) -> tuple[list[Candidate], dict[str, Any]]:
     selected_max = max(1, int(selected_kind_max)) * 2
     selected_per_kind = max(1, int(selected_kind_max))
     prefiltered_by_id = {
@@ -1241,20 +1250,13 @@ def _select_fallback_candidate_crop_paths(
         if candidate_id and candidate_id not in seen_ids:
             seen_ids.add(candidate_id)
             ordered_candidates.append(("prefilter", candidate))
-    fallback_paths: list[str] = []
     fallback_candidates: list[Candidate] = []
     selected_by_kind: dict[str, int] = {"table": 0, "chart": 0}
     selected_by_source: dict[str, int] = {"ranked": 0, "prefilter": 0}
-    skipped_missing_crop = 0
     skipped_kind_limit = 0
     for source, candidate in ordered_candidates:
-        if len(fallback_paths) >= selected_max:
+        if len(fallback_candidates) >= selected_max:
             break
-        candidate_id = str(candidate.id or "").strip()
-        crop_path = str(candidate_path_by_id.get(candidate_id) or "").strip()
-        if not crop_path:
-            skipped_missing_crop += 1
-            continue
         reject_now, reject_reason = _candidate_is_obvious_reject(candidate)
         if reject_now:
             rejected_reasons[reject_reason] = (
@@ -1265,7 +1267,6 @@ def _select_fallback_candidate_crop_paths(
         if selected_by_kind.get(candidate_kind, 0) >= selected_per_kind:
             skipped_kind_limit += 1
             continue
-        fallback_paths.append(crop_path)
         fallback_candidates.append(candidate)
         selected_by_kind[candidate_kind] = (
             int(selected_by_kind.get(candidate_kind, 0)) + 1
@@ -1273,15 +1274,47 @@ def _select_fallback_candidate_crop_paths(
         selected_by_source[source] = int(selected_by_source.get(source, 0)) + 1
     stats = {
         "ordered_candidate_count": len(ordered_candidates),
-        "candidate_crop_count": len(candidate_path_by_id),
-        "selected_count": len(fallback_paths),
+        "selected_count": len(fallback_candidates),
         "selected_by_kind": selected_by_kind,
         "selected_by_source": {
             key: value for key, value in selected_by_source.items() if value
         },
-        "skipped_missing_crop": skipped_missing_crop,
         "skipped_kind_limit": skipped_kind_limit,
         "rejected_reasons": rejected_reasons,
+    }
+    return fallback_candidates, stats
+
+
+def _select_fallback_candidate_crop_paths(
+    *,
+    ranked_rows: list[Any],
+    prefiltered_candidates: list[Candidate],
+    candidate_path_by_id: dict[str, str],
+    selected_kind_max: int,
+    settings: Optional[IngestSettings] = None,
+) -> tuple[list[str], list[Candidate], dict[str, Any]]:
+    ordered_fallback_candidates, stats = _select_fallback_candidates(
+        ranked_rows=ranked_rows,
+        prefiltered_candidates=prefiltered_candidates,
+        selected_kind_max=selected_kind_max,
+        settings=settings,
+    )
+    fallback_paths: list[str] = []
+    fallback_candidates: list[Candidate] = []
+    skipped_missing_crop = 0
+    for candidate in ordered_fallback_candidates:
+        candidate_id = str(candidate.id or "").strip()
+        crop_path = str(candidate_path_by_id.get(candidate_id) or "").strip()
+        if not crop_path:
+            skipped_missing_crop += 1
+            continue
+        fallback_paths.append(crop_path)
+        fallback_candidates.append(candidate)
+    stats = {
+        **stats,
+        "candidate_crop_count": len(candidate_path_by_id),
+        "selected_count": len(fallback_paths),
+        "skipped_missing_crop": skipped_missing_crop,
     }
     return fallback_paths, fallback_candidates, stats
 
@@ -1409,6 +1442,8 @@ def select_report_figures(
     dependencies: ReportGeneratorDependencies,
 ) -> ReportSelectionState:
     data = source.payload
+    fig_resp: FigureExtractResponse = _empty_figure_response()
+    figure_extracted = False
 
     def _extract_figure_task():
         return dependencies.extract_best_figure(
@@ -1421,6 +1456,18 @@ def select_report_figures(
             ),
             runtime.ctx,
         )
+
+    def _ensure_figure_extracted() -> FigureExtractResponse:
+        nonlocal fig_resp, figure_extracted
+        if figure_extracted:
+            return fig_resp
+        fig_resp = _extract_figure_task()
+        figure_extracted = True
+        if fig_resp.image_path:
+            data._figure_image = fig_resp.image_path
+            if fig_resp.caption and not (data.figure.evidence or "").strip():
+                data.figure.evidence = fig_resp.caption
+        return fig_resp
 
     def _extract_candidates_task():
         exclude_page_indices: list[int] = []
@@ -1439,19 +1486,7 @@ def select_report_figures(
             runtime.ctx,
         )
 
-    if runtime.parallel_within_file:
-        with ThreadPoolExecutor(max_workers=runtime.report_worker_limit) as executor:
-            fig_future = executor.submit(_extract_figure_task)
-            cands_future = executor.submit(_extract_candidates_task)
-            fig_resp = fig_future.result()
-            cands_resp = cands_future.result()
-    else:
-        fig_resp = _extract_figure_task()
-        cands_resp = _extract_candidates_task()
-    if fig_resp.image_path:
-        data._figure_image = fig_resp.image_path
-        if fig_resp.caption and not (data.figure.evidence or "").strip():
-            data.figure.evidence = fig_resp.caption
+    cands_resp = _extract_candidates_task()
 
     ranked: list[Any] = []
     rank_usage: dict[str, Optional[int]] = {
@@ -1460,7 +1495,6 @@ def select_report_figures(
         "total_tokens": None,
     }
     sliced_paths: list[str] = []
-    candidate_path_by_id: dict[str, str] = {}
     figure_candidates: list[Candidate] = []
     data._figure_section_enabled = False
     if cands_resp.candidates:
@@ -1521,66 +1555,6 @@ def select_report_figures(
                 },
             )
         )
-        candidate_crop_candidates = list(prefiltered_candidates)
-        all_items = [
-            CropItem(
-                id=candidate.id,
-                type=candidate.kind,
-                score=0.0,
-                page=candidate.page,
-                bbox=candidate.bbox,
-            )
-            for candidate in candidate_crop_candidates
-        ]
-        if all_items:
-            logger.info(
-                log_event(
-                    runtime.ctx,
-                    role="generator",
-                    event="candidate_crops_start",
-                    module=logger.name,
-                    fields={"count": len(all_items), "subdir": "candidates"},
-                )
-            )
-            try:
-                candidate_crop_resp = dependencies.crop_regions(
-                    CropRequest(
-                        schema_version="1.0",
-                        pdf_path=runtime.local_pdf_path,
-                        out_dir=runtime.settings.output_dir,
-                        report_name=runtime.report_name,
-                        subdir="candidates",
-                        items=all_items,
-                        pdf_context=source.pdf_context,
-                    ),
-                    runtime.ctx,
-                )
-                candidate_path_by_id = _candidate_crop_path_map(
-                    candidate_crop_candidates,
-                    candidate_crop_resp.paths,
-                )
-                logger.info(
-                    log_event(
-                        runtime.ctx,
-                        role="generator",
-                        event="candidate_crops_complete",
-                        module=logger.name,
-                        fields={
-                            "count": len(candidate_crop_resp.paths),
-                            "subdir": "candidates",
-                        },
-                    )
-                )
-            except Exception as exc:
-                logger.info(
-                    log_event(
-                        runtime.ctx,
-                        role="generator",
-                        event="candidate_crops_failed",
-                        module=logger.name,
-                        fields={"error": str(exc), "subdir": "candidates"},
-                    )
-                )
         if prefiltered_candidates:
             table_candidates, chart_candidates = _split_candidates_by_kind(
                 prefiltered_candidates
@@ -1703,35 +1677,108 @@ def select_report_figures(
                 if str(selected_path_by_id.get(item.id) or "").strip()
             ]
         figure_candidates = selected_candidates
-        if not sliced_paths and candidate_path_by_id:
-            fallback_paths, fallback_candidates, fallback_stats = (
-                _select_fallback_candidate_crop_paths(
-                    ranked_rows=ranked,
-                    prefiltered_candidates=prefiltered_candidates,
-                    candidate_path_by_id=candidate_path_by_id,
-                    selected_kind_max=max(1, int(runtime.settings.rank_selected_max)),
-                    settings=runtime.settings,
-                )
+        if not sliced_paths:
+            fallback_candidates, fallback_stats = _select_fallback_candidates(
+                ranked_rows=ranked,
+                prefiltered_candidates=prefiltered_candidates,
+                selected_kind_max=max(1, int(runtime.settings.rank_selected_max)),
+                settings=runtime.settings,
             )
-            if fallback_paths:
-                sliced_paths = fallback_paths
-                figure_candidates = fallback_candidates
+            if fallback_candidates:
+                fallback_items = [
+                    CropItem(
+                        id=candidate.id,
+                        type=candidate.kind,
+                        score=0.0,
+                        page=candidate.page,
+                        bbox=candidate.bbox,
+                    )
+                    for candidate in fallback_candidates
+                ]
                 logger.info(
                     log_event(
                         runtime.ctx,
                         role="generator",
-                        event="figure_section_fallback_candidate_crops_enabled",
+                        event="candidate_crops_start",
                         module=logger.name,
-                        fields={
-                            "file_id": runtime.file.file_id,
-                            "ranked_count": len(ranked),
-                            "prefiltered_count": len(prefiltered_candidates),
-                            **fallback_stats,
-                        },
+                        fields={"count": len(fallback_items), "subdir": "candidates"},
                     )
                 )
+                try:
+                    fallback_crop_resp = dependencies.crop_regions(
+                        CropRequest(
+                            schema_version="1.0",
+                            pdf_path=runtime.local_pdf_path,
+                            out_dir=runtime.settings.output_dir,
+                            report_name=runtime.report_name,
+                            subdir="candidates",
+                            items=fallback_items,
+                            mode="legacy",
+                            pdf_context=source.pdf_context,
+                        ),
+                        runtime.ctx,
+                    )
+                    fallback_paths: list[str] = []
+                    fallback_candidates_with_paths: list[Candidate] = []
+                    for candidate, path in zip(
+                        fallback_candidates,
+                        fallback_crop_resp.paths,
+                    ):
+                        normalized_path = str(path or "").strip()
+                        if not normalized_path:
+                            continue
+                        fallback_paths.append(normalized_path)
+                        fallback_candidates_with_paths.append(candidate)
+                    if fallback_paths:
+                        sliced_paths = fallback_paths
+                        figure_candidates = fallback_candidates_with_paths
+                        logger.info(
+                            log_event(
+                                runtime.ctx,
+                                role="generator",
+                                event="candidate_crops_complete",
+                                module=logger.name,
+                                fields={
+                                    "count": len(fallback_paths),
+                                    "subdir": "candidates",
+                                },
+                            )
+                        )
+                        logger.info(
+                            log_event(
+                                runtime.ctx,
+                                role="generator",
+                                event="figure_section_fallback_candidate_crops_enabled",
+                                module=logger.name,
+                                fields={
+                                    "file_id": runtime.file.file_id,
+                                    "ranked_count": len(ranked),
+                                    "prefiltered_count": len(prefiltered_candidates),
+                                    "candidate_crop_count": len(fallback_items),
+                                    "skipped_missing_crop": max(
+                                        0,
+                                        len(fallback_items) - len(fallback_paths),
+                                    ),
+                                    **fallback_stats,
+                                },
+                            )
+                        )
+                except Exception as exc:
+                    logger.info(
+                        log_event(
+                            runtime.ctx,
+                            role="generator",
+                            event="candidate_crops_failed",
+                            module=logger.name,
+                            fields={"error": str(exc), "subdir": "candidates"},
+                        )
+                    )
         if figure_candidates:
             _apply_figure_candidate_metadata(data, figure_candidates[0])
+        if not sliced_paths:
+            _ensure_figure_extracted()
+    else:
+        _ensure_figure_extracted()
 
     primary_figure_path = str(data._figure_top or data._figure_image or "").strip()
     figure_gallery, figure_top, figure_section_enabled = _resolve_figure_section_assets(

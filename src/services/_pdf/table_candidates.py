@@ -47,6 +47,8 @@ from .figures import (
     _table_preview,
     _table_containment_ratio,
     _table_iou,
+    _table_page_text_blocks,
+    _table_text_bands,
     _table_quality,
     _table_sort_key,
     _prefer_inner_lattice_table,
@@ -55,6 +57,7 @@ from .figures import (
     _text_stats,
     _validate_table_candidate,
 )
+from .page_artifacts import build_page_artifacts, is_full_page_scan_without_text
 
 
 def _find_tables_safe(page: pdfplumber.page.Page, settings: Dict[str, object]):
@@ -69,6 +72,7 @@ def _build_table_candidate(
     table: pdfplumber.table.Table,
     method: str,
     fitz_page: Optional[fitz.Page] = None,
+    text_blocks: Optional[List[tuple[float, float, float, float, str]]] = None,
 ) -> Optional[_TableCandidate]:
     try:
         x0, y0, x1, y1 = map(float, table.bbox)
@@ -127,6 +131,7 @@ def _build_table_candidate(
             _text_block_stats(
                 fitz_page,
                 (x0, y0, x1, y1),
+                blocks=text_blocks,
             )
         )
     return _TableCandidate(
@@ -165,6 +170,7 @@ def _extract_tables_sequential(
     pdf_path: str,
     max_candidates: int = 0,
     pages: Optional[List[int]] = None,
+    doc: Optional[fitz.Document] = None,
 ) -> tuple[List[Candidate], Dict[str, object]]:
     out: List[Candidate] = []
     stats: Dict[str, object] = {
@@ -177,11 +183,14 @@ def _extract_tables_sequential(
     }
     _suppress_pdfminer_warnings()
 
-    fitz_doc = None
-    try:
-        fitz_doc = fitz.open(pdf_path)
-    except Exception:
-        fitz_doc = None
+    fitz_doc = doc
+    close_fitz_doc = False
+    if fitz_doc is None:
+        try:
+            fitz_doc = fitz.open(pdf_path)
+            close_fitz_doc = True
+        except Exception:
+            fitz_doc = None
 
     try:
         with pdfplumber.open(pdf_path) as pdf:
@@ -191,11 +200,31 @@ def _extract_tables_sequential(
                     continue
                 p = pdf.pages[pno]
                 fitz_page = None
+                page_artifacts = None
+                page_text_blocks = None
+                page_text_bands = None
+                text_blocks = None
                 if fitz_doc is not None and pno < len(fitz_doc):
                     try:
                         fitz_page = fitz_doc[pno]
+                        if is_full_page_scan_without_text(fitz_page):
+                            stats["skipped_pages"] = _int_count(stats.get("skipped_pages", 0)) + 1
+                            _tally_reason(stats, "page_full_scan_no_text")
+                            continue
+                        page_artifacts = build_page_artifacts(fitz_page)
                     except Exception:
                         fitz_page = None
+                        page_artifacts = None
+                if fitz_page is not None and page_artifacts is not None:
+                    page_text_blocks = _table_page_text_blocks(
+                        fitz_page,
+                        text_dict=page_artifacts.text_dict,
+                    )
+                    page_text_bands = _table_text_bands(
+                        fitz_page,
+                        text_dict=page_artifacts.text_dict,
+                    )
+                    text_blocks = list(page_artifacts.text_blocks)
 
                 lattice_tables = _find_tables_safe(p, TABLE_SETTINGS_LATTICE)
                 stream_tables = _find_tables_safe(p, TABLE_SETTINGS_STREAM)
@@ -213,7 +242,11 @@ def _extract_tables_sequential(
                 validated: List[_TableCandidate] = []
                 for table, method in raw_candidates:
                     candidate = _build_table_candidate(
-                        p, table, method, fitz_page=fitz_page
+                        p,
+                        table,
+                        method,
+                        fitz_page=fitz_page,
+                        text_blocks=text_blocks,
                     )
                     if not candidate:
                         stats["rejected"] = _int_count(stats["rejected"]) + 1
@@ -235,14 +268,22 @@ def _extract_tables_sequential(
                     x0, y0, x1, y1 = candidate.bbox
                     if fitz_page is not None:
                         x0, y0, x1, y1 = _expand_table_bbox(
-                            fitz_page, (x0, y0, x1, y1), candidate.method
+                            fitz_page,
+                            (x0, y0, x1, y1),
+                            candidate.method,
+                            page_text_blocks=page_text_blocks,
+                            page_text_bands=page_text_bands,
                         )
                     final_candidates.append(
                         replace(candidate, bbox=(x0, y0, x1, y1))
                     )
                 if fitz_page is not None:
                     final_candidates.extend(
-                        _detect_ranked_table_candidates(p, fitz_page)
+                        _detect_ranked_table_candidates(
+                            p,
+                            fitz_page,
+                            page_text_blocks=page_text_blocks,
+                        )
                     )
 
                 final_deduped: List[_TableCandidate] = []
@@ -330,7 +371,7 @@ def _extract_tables_sequential(
                 if max_candidates > 0 and len(out) >= max_candidates:
                     break
     finally:
-        if fitz_doc is not None:
+        if close_fitz_doc and fitz_doc is not None:
             try:
                 fitz_doc.close()
             except Exception:
@@ -344,19 +385,35 @@ def extract_table_candidates(
     *,
     max_candidates: int = 0,
     parallel_workers: int = 1,
+    pages: Optional[List[int]] = None,
+    doc: Optional[fitz.Document] = None,
 ) -> tuple[List[Candidate], Dict[str, object]]:
     try:
-        temp_doc = fitz.open(pdf_path)
-        try:
-            page_count = len(temp_doc)
-        finally:
-            temp_doc.close()
+        if doc is not None:
+            all_pages = list(range(len(doc)))
+        else:
+            temp_doc = fitz.open(pdf_path)
+            try:
+                all_pages = list(range(len(temp_doc)))
+            finally:
+                temp_doc.close()
     except Exception:
-        return _extract_tables_sequential(pdf_path, max_candidates=max_candidates)
-    worker_count = _resolve_candidate_parallel_workers(parallel_workers, page_count)
-    if worker_count <= 1 or page_count <= 1:
-        return _extract_tables_sequential(pdf_path, max_candidates=max_candidates)
-    chunks = _split_even_chunks(list(range(page_count)), worker_count)
+        return _extract_tables_sequential(
+            pdf_path,
+            max_candidates=max_candidates,
+            pages=pages,
+            doc=doc,
+        )
+    page_numbers = pages if pages is not None else all_pages
+    worker_count = _resolve_candidate_parallel_workers(parallel_workers, len(page_numbers))
+    if worker_count <= 1 or len(page_numbers) <= 1:
+        return _extract_tables_sequential(
+            pdf_path,
+            max_candidates=max_candidates,
+            pages=page_numbers,
+            doc=doc,
+        )
+    chunks = _split_even_chunks(page_numbers, worker_count)
     merged_stats: Dict[str, object] = {
         "raw_lattice": 0,
         "raw_stream": 0,
@@ -368,7 +425,7 @@ def extract_table_candidates(
     merged_candidates: List[Candidate] = []
     with ThreadPoolExecutor(max_workers=worker_count) as executor:
         futures = {
-            executor.submit(_extract_tables_sequential, pdf_path, 0, chunk): chunk
+            executor.submit(_extract_tables_sequential, pdf_path, 0, chunk, None): chunk
             for chunk in chunks
         }
         for future in as_completed(futures):

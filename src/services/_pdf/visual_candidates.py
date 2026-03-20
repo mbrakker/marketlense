@@ -62,6 +62,7 @@ from .figures import (
     _trim_top_page_number,
     _vertical_overlap_ratio,
 )
+from .page_artifacts import build_page_artifacts, is_full_page_scan_without_text
 
 
 def _has_side_by_side_visual_sibling(
@@ -118,7 +119,6 @@ def _extract_visuals_sequential(
 ) -> tuple[List[Candidate], Dict[str, object]]:
     out: List[Candidate] = []
     stats: Dict[str, object] = {"raw": 0, "kept": 0, "rejected": 0, "reasons": {}}
-    page_text_cache: Dict[int, tuple[int, int]] = {}
     local_doc = doc or fitz.open(pdf_path)
     try:
         thumb_index = 0
@@ -127,12 +127,18 @@ def _extract_visuals_sequential(
             if pno < 0 or pno >= len(local_doc):
                 continue
             page = local_doc[pno]
-            if pno not in page_text_cache:
-                try:
-                    page_text_cache[pno] = _text_stats(page.get_text("text"))
-                except Exception:
-                    page_text_cache[pno] = (0, 0)
-            page_chars = page_text_cache[pno][1]
+            try:
+                page_text = page.get_text("text") or ""
+            except Exception:
+                page_text = ""
+            if is_full_page_scan_without_text(page, page_text=page_text):
+                stats["skipped_pages"] = _int_count(stats.get("skipped_pages", 0)) + 1
+                _tally_reason(stats, "page_full_scan_no_text")
+                continue
+            artifacts = build_page_artifacts(page)
+            page_chars = artifacts.text_char_count
+            if page_chars <= 0:
+                page_chars = _text_stats(page_text)[1]
             rect = page.rect
             top_cut = rect.y0 + rect.height * CHART_MARGIN_FRAC
             bot_cut = rect.y1 - rect.height * CHART_MARGIN_FRAC
@@ -141,7 +147,11 @@ def _extract_visuals_sequential(
             kept: List[tuple[fitz.Rect, float, int]] = []
             page_candidates: List[Dict[str, object]] = []
             local_sequence = 0
-            candidates = _collect_chart_rects(page)
+            candidates = _collect_chart_rects(
+                page,
+                text_dict=artifacts.text_dict,
+                blocks=artifacts.text_blocks,
+            )
             for rect_item in candidates:
                 stats["raw"] = _int_count(stats["raw"]) + 1
                 rect_candidate = rect_item.rect
@@ -161,10 +171,17 @@ def _extract_visuals_sequential(
                 cap = rect_item.caption
                 if cap_rect is None:
                     cap_rect, cap = _nearest_caption_block(
-                        page, rect_candidate, CHART_CAPTION_HINTS
+                        page,
+                        rect_candidate,
+                        CHART_CAPTION_HINTS,
+                        blocks=artifacts.text_blocks,
                     )
                 if not cap:
-                    cap = _nearby_text(page, rect_candidate)
+                    cap = _nearby_text(
+                        page,
+                        rect_candidate,
+                        blocks=artifacts.text_blocks,
+                    )
                 if cap and _is_page_number_text(cap):
                     cap = ""
                 cap_lower = (cap or "").lower()
@@ -485,6 +502,7 @@ def extract_visual_candidates(
     save_thumbs: bool = False,
     doc: Optional[fitz.Document] = None,
     parallel_workers: int = 1,
+    pages: Optional[List[int]] = None,
 ) -> tuple[List[Candidate], Dict[str, object]]:
     if save_thumbs:
         return _extract_visuals_sequential(
@@ -493,26 +511,28 @@ def extract_visual_candidates(
             report_name,
             save_thumbs=save_thumbs,
             doc=doc,
+            pages=pages,
         )
-    page_count = 0
     if doc is not None:
-        page_count = len(doc)
+        all_pages = list(range(len(doc)))
     else:
         temp_doc = fitz.open(pdf_path)
         try:
-            page_count = len(temp_doc)
+            all_pages = list(range(len(temp_doc)))
         finally:
             temp_doc.close()
-    worker_count = _resolve_candidate_parallel_workers(parallel_workers, page_count)
-    if worker_count <= 1 or page_count <= 1:
+    page_numbers = pages if pages is not None else all_pages
+    worker_count = _resolve_candidate_parallel_workers(parallel_workers, len(page_numbers))
+    if worker_count <= 1 or len(page_numbers) <= 1:
         return _extract_visuals_sequential(
             pdf_path,
             thumbs_dir,
             report_name,
             save_thumbs=save_thumbs,
             doc=doc,
+            pages=page_numbers,
         )
-    chunks = _split_even_chunks(list(range(page_count)), worker_count)
+    chunks = _split_even_chunks(page_numbers, worker_count)
     merged_stats: Dict[str, object] = {
         "raw": 0,
         "kept": 0,

@@ -25,6 +25,7 @@ from src.contracts.run_context import RunContext
 from src.utils.logging import log_event
 from src.utils.slugify import slugify
 
+from .page_artifacts import is_full_page_scan_without_text
 from .shared import candidate_logger, figure_logger
 
 # BEGIN PDF CANDIDATE EXTRACTION
@@ -500,12 +501,16 @@ def _table_text_has_embedded_note_marker(text: str) -> bool:
     return False
 
 
-def _table_page_text_blocks(page: fitz.Page) -> List[_PageTextBlock]:
+def _table_page_text_blocks(
+    page: fitz.Page,
+    text_dict: Optional[dict[str, object]] = None,
+) -> List[_PageTextBlock]:
     blocks: List[_PageTextBlock] = []
-    try:
-        text_dict = page.get_text("dict")
-    except Exception:
-        text_dict = {}
+    if text_dict is None:
+        try:
+            text_dict = page.get_text("dict")
+        except Exception:
+            text_dict = {}
     raw_blocks = text_dict.get("blocks") or []
     for raw_block in raw_blocks:
         if raw_block.get("type") != 0:
@@ -794,8 +799,10 @@ def _ranked_table_panel_region(
 def _detect_ranked_table_candidates(
     plumber_page: pdfplumber.page.Page,
     page: fitz.Page,
+    *,
+    page_text_blocks: Optional[List[_PageTextBlock]] = None,
 ) -> List[_TableCandidate]:
-    blocks = _table_page_text_blocks(page)
+    blocks = page_text_blocks if page_text_blocks is not None else _table_page_text_blocks(page)
     if not blocks:
         return []
     rules = _table_horizontal_rule_rects(page)
@@ -808,7 +815,12 @@ def _detect_ranked_table_candidates(
         region = _ranked_table_panel_region(page, rank_sequence, blocks, rules)
         if region is None:
             continue
-        expanded_bbox = _expand_table_bbox(page, region.bbox, "ranked")
+        expanded_bbox = _expand_table_bbox(
+            page,
+            region.bbox,
+            "ranked",
+            page_text_blocks=blocks,
+        )
         x0, y0, x1, y1 = expanded_bbox
         text = _extract_text_in_bbox(plumber_page, expanded_bbox)
         text_len = len(text.strip())
@@ -816,9 +828,21 @@ def _detect_ranked_table_candidates(
             continue
         line_count, text_chars = _text_stats(text)
         avg_line_len = (text_chars / line_count) if line_count else 0.0
-        text_block_area_frac, text_block_line_count, text_block_avg_line_len = _text_block_stats(
-            page,
-            expanded_bbox,
+        text_block_area_frac, text_block_line_count, text_block_avg_line_len = (
+            _text_block_stats(
+                page,
+                expanded_bbox,
+                blocks=[
+                    (
+                        block.rect.x0,
+                        block.rect.y0,
+                        block.rect.x1,
+                        block.rect.y1,
+                        block.text,
+                    )
+                    for block in blocks
+                ],
+            )
         )
         normalized = _table_normalize_text(text)
         word_count = len(normalized.split())
@@ -881,11 +905,15 @@ def _table_fragment_is_numeric(text: str) -> bool:
     return _cell_is_numeric(compact)
 
 
-def _table_page_text_lines(page: fitz.Page) -> List[_PageTextLine]:
-    try:
-        text_dict = page.get_text("dict")
-    except Exception:
-        return []
+def _table_page_text_lines(
+    page: fitz.Page,
+    text_dict: Optional[dict[str, object]] = None,
+) -> List[_PageTextLine]:
+    if text_dict is None:
+        try:
+            text_dict = page.get_text("dict")
+        except Exception:
+            return []
     lines: List[_PageTextLine] = []
     for block in text_dict.get("blocks") or []:
         if block.get("type") != 0:
@@ -928,9 +956,16 @@ def _table_page_text_lines(page: fitz.Page) -> List[_PageTextLine]:
     return lines
 
 
-def _table_text_bands(page: fitz.Page) -> List[_TableTextBand]:
+def _table_text_bands(
+    page: fitz.Page,
+    *,
+    text_dict: Optional[dict[str, object]] = None,
+    page_text_lines: Optional[List[_PageTextLine]] = None,
+) -> List[_TableTextBand]:
     lines = sorted(
-        _table_page_text_lines(page),
+        page_text_lines
+        if page_text_lines is not None
+        else _table_page_text_lines(page, text_dict=text_dict),
         key=lambda line: (
             round((line.rect.y0 + line.rect.y1) / 2.0, 1),
             line.rect.x0,
@@ -1181,11 +1216,13 @@ def _table_attach_note_bands(
 def _shrink_stream_table_rect(
     page: fitz.Page,
     rect: fitz.Rect,
+    *,
+    bands: Optional[List[_TableTextBand]] = None,
 ) -> fitz.Rect:
     page_rect = page.rect
     relevant_bands = [
         band
-        for band in _table_text_bands(page)
+        for band in (bands if bands is not None else _table_text_bands(page))
         if band.rect.y1 >= rect.y0
         and band.rect.y0 <= rect.y1
         and _horizontal_overlap_ratio(band.rect, rect) >= 0.2
@@ -1859,13 +1896,20 @@ def _compose_table_bbox(
     page: fitz.Page,
     bbox: Tuple[float, float, float, float],
     method: str,
+    *,
+    page_text_blocks: Optional[List[_PageTextBlock]] = None,
+    page_text_bands: Optional[List[_TableTextBand]] = None,
 ) -> Tuple[float, float, float, float]:
     rect = fitz.Rect(*bbox)
     page_rect = page.rect
-    bands = _table_text_bands(page)
+    bands = page_text_bands if page_text_bands is not None else _table_text_bands(page)
     if method == "stream":
-        rect = _shrink_stream_table_rect(page, rect)
-    blocks = _table_page_text_blocks(page)
+        rect = _shrink_stream_table_rect(page, rect, bands=bands)
+    blocks = (
+        page_text_blocks
+        if page_text_blocks is not None
+        else _table_page_text_blocks(page)
+    )
     body_font_size = _table_page_body_font_size(blocks)
     if method == "stream" and bands:
         expanded = _table_attach_title_bands(page, rect, bands, body_font_size)
@@ -1976,11 +2020,15 @@ def _find_overlapping_kept(
     return None
 
 
-def _image_block_rects(page: fitz.Page) -> List[fitz.Rect]:
-    try:
-        text_dict = page.get_text("dict")
-    except Exception:
-        return []
+def _image_block_rects(
+    page: fitz.Page,
+    text_dict: Optional[dict[str, object]] = None,
+) -> List[fitz.Rect]:
+    if text_dict is None:
+        try:
+            text_dict = page.get_text("dict")
+        except Exception:
+            return []
     blocks = text_dict.get("blocks") or []
     rects: List[fitz.Rect] = []
     for block in blocks:
@@ -1996,7 +2044,12 @@ def _image_block_rects(page: fitz.Page) -> List[fitz.Rect]:
     return rects
 
 
-def _collect_chart_rects(page: fitz.Page) -> List[_ChartRect]:
+def _collect_chart_rects(
+    page: fitz.Page,
+    *,
+    text_dict: Optional[dict[str, object]] = None,
+    blocks: Optional[List[Tuple[float, float, float, float, str]]] = None,
+) -> List[_ChartRect]:
     rects: List[_ChartRect] = []
     for xref, *_ in page.get_images(full=True):
         try:
@@ -2006,9 +2059,9 @@ def _collect_chart_rects(page: fitz.Page) -> List[_ChartRect]:
         if not image_rects:
             continue
         rects.append(_ChartRect(rect=image_rects[0], kind="xref", xref=xref))
-    for rect in _image_block_rects(page):
+    for rect in _image_block_rects(page, text_dict=text_dict):
         rects.append(_ChartRect(rect=rect, kind="block", xref=None))
-    for rect, caption, cap_rect in _drawing_caption_rects(page):
+    for rect, caption, cap_rect in _drawing_caption_rects(page, blocks=blocks):
         rects.append(
             _ChartRect(
                 rect=rect,
@@ -2018,7 +2071,11 @@ def _collect_chart_rects(page: fitz.Page) -> List[_ChartRect]:
                 caption_rect=cap_rect,
             )
         )
-    for rect, caption, cap_rect in _panel_chart_rects(page):
+    for rect, caption, cap_rect in _panel_chart_rects(
+        page,
+        text_dict=text_dict,
+        blocks=blocks,
+    ):
         rects.append(
             _ChartRect(
                 rect=rect,
@@ -2028,7 +2085,11 @@ def _collect_chart_rects(page: fitz.Page) -> List[_ChartRect]:
                 caption_rect=cap_rect,
             )
         )
-    for rect, caption, cap_rect in _heading_chart_rects(page):
+    for rect, caption, cap_rect in _heading_chart_rects(
+        page,
+        text_dict=text_dict,
+        blocks=blocks,
+    ):
         rects.append(
             _ChartRect(
                 rect=rect,
@@ -2072,9 +2133,13 @@ def _drawing_rects(page: fitz.Page) -> List[fitz.Rect]:
     return rects
 
 
-def _panel_title_lines(page: fitz.Page) -> List[_PageTextLine]:
+def _panel_title_lines(
+    page: fitz.Page,
+    *,
+    text_dict: Optional[dict[str, object]] = None,
+) -> List[_PageTextLine]:
     titles: List[_PageTextLine] = []
-    for line in _table_page_text_lines(page):
+    for line in _table_page_text_lines(page, text_dict=text_dict):
         text = _s(line.text).strip()
         if not text:
             continue
@@ -2159,13 +2224,18 @@ def _drawing_components(page: fitz.Page) -> List[Tuple[fitz.Rect, List[fitz.Rect
     return sorted(components, key=lambda item: item[0].get_area(), reverse=True)
 
 
-def _panel_chart_rects(page: fitz.Page) -> List[Tuple[fitz.Rect, str, fitz.Rect]]:
-    if _caption_blocks(page, CHART_CAPTION_HINTS):
+def _panel_chart_rects(
+    page: fitz.Page,
+    *,
+    text_dict: Optional[dict[str, object]] = None,
+    blocks: Optional[List[Tuple[float, float, float, float, str]]] = None,
+) -> List[Tuple[fitz.Rect, str, fitz.Rect]]:
+    if _caption_blocks(page, CHART_CAPTION_HINTS, blocks=blocks):
         return []
     components = _drawing_components(page)
     if not components:
         return []
-    titles = _panel_title_lines(page)
+    titles = _panel_title_lines(page, text_dict=text_dict)
     if not titles:
         return []
     page_area = max(1.0, page.rect.get_area())
@@ -2260,8 +2330,12 @@ def _panel_chart_rects(page: fitz.Page) -> List[Tuple[fitz.Rect, str, fitz.Rect]
     return deduped
 
 
-def _drawing_caption_rects(page: fitz.Page) -> List[Tuple[fitz.Rect, str, fitz.Rect]]:
-    captions = _caption_blocks(page, CHART_CAPTION_HINTS)
+def _drawing_caption_rects(
+    page: fitz.Page,
+    *,
+    blocks: Optional[List[Tuple[float, float, float, float, str]]] = None,
+) -> List[Tuple[fitz.Rect, str, fitz.Rect]]:
+    captions = _caption_blocks(page, CHART_CAPTION_HINTS, blocks=blocks)
     if not captions:
         return []
     drawings = _drawing_rects(page)
@@ -2318,13 +2392,17 @@ def _drawing_caption_rects(page: fitz.Page) -> List[Tuple[fitz.Rect, str, fitz.R
 
 
 def _caption_blocks(
-    page: fitz.Page, hints: Tuple[str, ...]
+    page: fitz.Page,
+    hints: Tuple[str, ...],
+    *,
+    blocks: Optional[List[Tuple[float, float, float, float, str]]] = None,
 ) -> List[Tuple[fitz.Rect, str]]:
     rects: List[Tuple[fitz.Rect, str]] = []
-    try:
-        blocks = page.get_text("blocks")
-    except Exception:
-        return rects
+    if blocks is None:
+        try:
+            blocks = page.get_text("blocks")
+        except Exception:
+            return rects
     for x0, y0, x1, y1, text, *_ in blocks:
         if not text:
             continue
@@ -2354,14 +2432,19 @@ def _is_page_number_text(text: str) -> bool:
     return _alpha_ratio(cleaned) <= 0.3
 
 
-def _heading_lines(page: fitz.Page) -> List[Tuple[fitz.Rect, str]]:
-    try:
-        data = page.get_text("dict")
-    except Exception:
-        return []
+def _heading_lines(
+    page: fitz.Page,
+    *,
+    text_dict: Optional[dict[str, object]] = None,
+) -> List[Tuple[fitz.Rect, str]]:
+    if text_dict is None:
+        try:
+            text_dict = page.get_text("dict")
+        except Exception:
+            return []
     sizes = []
     lines_data = []
-    for block in data.get("blocks", []):
+    for block in text_dict.get("blocks", []):
         block_lines: List[Tuple[fitz.Rect, str, float]] = []
         block_chars = 0
         for line in block.get("lines", []):
@@ -2464,13 +2547,16 @@ def _has_intervening_paragraph(
     page: fitz.Page,
     head_rect: fitz.Rect,
     chart_rect: fitz.Rect,
+    *,
+    blocks: Optional[List[Tuple[float, float, float, float, str]]] = None,
 ) -> bool:
     if chart_rect.y0 <= head_rect.y1:
         return False
-    try:
-        blocks = page.get_text("blocks")
-    except Exception:
-        return False
+    if blocks is None:
+        try:
+            blocks = page.get_text("blocks")
+        except Exception:
+            return False
     for x0, y0, x1, y1, text, *_ in blocks:
         if not text:
             continue
@@ -2494,8 +2580,13 @@ def _has_intervening_paragraph(
     return False
 
 
-def _heading_chart_rects(page: fitz.Page) -> List[Tuple[fitz.Rect, str, fitz.Rect]]:
-    headings = _heading_lines(page)
+def _heading_chart_rects(
+    page: fitz.Page,
+    *,
+    text_dict: Optional[dict[str, object]] = None,
+    blocks: Optional[List[Tuple[float, float, float, float, str]]] = None,
+) -> List[Tuple[fitz.Rect, str, fitz.Rect]]:
+    headings = _heading_lines(page, text_dict=text_dict)
     if not headings:
         return []
     drawings = _drawing_rects(page)
@@ -2535,7 +2626,7 @@ def _heading_chart_rects(page: fitz.Page) -> List[Tuple[fitz.Rect, str, fitz.Rec
         gap = merged.y0 - head_rect.y1
         if gap > max_gap:
             continue
-        if _has_intervening_paragraph(page, head_rect, merged):
+        if _has_intervening_paragraph(page, head_rect, merged, blocks=blocks):
             continue
         merged |= head_rect
         merged = _pad_rect(merged, page_rect)
@@ -2553,8 +2644,10 @@ def _nearest_caption_block(
     rect: fitz.Rect,
     hints: Tuple[str, ...],
     max_dist: float = 180.0,
+    *,
+    blocks: Optional[List[Tuple[float, float, float, float, str]]] = None,
 ) -> Tuple[Optional[fitz.Rect], str]:
-    candidates = _caption_blocks(page, hints)
+    candidates = _caption_blocks(page, hints, blocks=blocks)
     if not candidates:
         return None, ""
     best_penalty = 2
@@ -3253,10 +3346,19 @@ def _expand_table_bbox(
     page: fitz.Page,
     bbox: Tuple[float, float, float, float],
     method: str,
+    *,
+    page_text_blocks: Optional[List[_PageTextBlock]] = None,
+    page_text_bands: Optional[List[_TableTextBand]] = None,
 ) -> Tuple[float, float, float, float]:
     if method not in ("stream", "lattice", "ranked"):
         return bbox
-    return _compose_table_bbox(page, bbox, method)
+    return _compose_table_bbox(
+        page,
+        bbox,
+        method,
+        page_text_blocks=page_text_blocks,
+        page_text_bands=page_text_bands,
+    )
 
 
 def _save_thumb(
@@ -3284,9 +3386,20 @@ def _save_thumb(
     return p.as_posix()
 
 
-def _nearby_text(page: fitz.Page, rect: fitz.Rect, max_dist: float = 90) -> str:
+def _nearby_text(
+    page: fitz.Page,
+    rect: fitz.Rect,
+    max_dist: float = 90,
+    *,
+    blocks: Optional[List[Tuple[float, float, float, float, str]]] = None,
+) -> str:
     best = ("", 1e9)
-    for x0, y0, x1, y1, text, *_ in page.get_text("blocks"):
+    if blocks is None:
+        try:
+            blocks = page.get_text("blocks")
+        except Exception:
+            return ""
+    for x0, y0, x1, y1, text, *_ in blocks:
         if not text:
             continue
         if _is_page_number_text(text):
@@ -3378,6 +3491,7 @@ def _extract_charts(
     save_thumbs: bool = False,
     doc: Optional[fitz.Document] = None,
     parallel_workers: int = 1,
+    pages: Optional[List[int]] = None,
 ) -> Tuple[List[Candidate], Dict[str, object]]:
     from .visual_candidates import extract_visual_candidates
 
@@ -3388,6 +3502,7 @@ def _extract_charts(
         save_thumbs=save_thumbs,
         doc=doc,
         parallel_workers=parallel_workers,
+        pages=pages,
     )
 
 
@@ -3409,6 +3524,8 @@ def _extract_tables(
     pdf_path: str,
     max_candidates: int = 0,
     parallel_workers: int = 1,
+    pages: Optional[List[int]] = None,
+    doc: Optional[fitz.Document] = None,
 ) -> Tuple[List[Candidate], Dict[str, object]]:
     from .table_candidates import extract_table_candidates
 
@@ -3416,6 +3533,8 @@ def _extract_tables(
         pdf_path,
         max_candidates=max_candidates,
         parallel_workers=parallel_workers,
+        pages=pages,
+        doc=doc,
     )
 
 
@@ -3783,17 +3902,21 @@ def _heading_like_block(text: str, lines: int, avg_line_len: float) -> bool:
 
 
 def _text_block_stats(
-    page: fitz.Page, bbox: Tuple[float, float, float, float]
+    page: fitz.Page,
+    bbox: Tuple[float, float, float, float],
+    *,
+    blocks: Optional[List[Tuple[float, float, float, float, str]]] = None,
 ) -> Tuple[float, int, float]:
     rect = fitz.Rect(*bbox)
     rect_area = max(1.0, rect.get_area())
     block_area = 0.0
     line_count = 0
     total_line_len = 0
-    try:
-        blocks = page.get_text("blocks")
-    except Exception:
-        blocks = []
+    if blocks is None:
+        try:
+            blocks = page.get_text("blocks")
+        except Exception:
+            blocks = []
     for x0, y0, x1, y1, text, *_ in blocks:
         if not text:
             continue
@@ -4474,36 +4597,79 @@ def collect_candidates(
             },
         )
     )
-    thumbs = Path(request.out_dir) / request.report_name / "thumbs"
-    charts, chart_stats = _extract_charts(
-        request.pdf_path,
-        thumbs.as_posix(),
-        request.report_name,
-        save_thumbs=False,
-        doc=request.pdf_context.fitz_doc
-        if request.pdf_context and parallel_workers <= 1
-        else None,
-        parallel_workers=parallel_workers,
+    shared_doc = (
+        request.pdf_context.fitz_doc if request.pdf_context and parallel_workers <= 1 else None
     )
-    tables, table_stats = _extract_tables(
-        request.pdf_path,
-        parallel_workers=parallel_workers,
-    )
-    charts, chart_ranked_overlap_pruned = _prune_charts_overlapping_ranked_tables(
-        charts, tables
-    )
-    if chart_ranked_overlap_pruned:
-        chart_stats["ranked_table_overlap_pruned"] = chart_ranked_overlap_pruned
-    candidates = charts + tables
+    triage_doc = shared_doc
+    close_doc = False
+    charts: List[Candidate] = []
+    tables: List[Candidate] = []
+    chart_stats: Dict[str, object] = {"raw": 0, "kept": 0, "rejected": 0, "reasons": {}}
+    table_stats: Dict[str, object] = {
+        "raw_lattice": 0,
+        "raw_stream": 0,
+        "validated": 0,
+        "deduped": 0,
+        "rejected": 0,
+        "reasons": {},
+    }
+    chart_ranked_overlap_pruned = 0
     excluded_count = 0
-    if excluded_pages:
-        before_count = len(candidates)
-        candidates = [
-            candidate
-            for candidate in candidates
-            if int(candidate.page) not in excluded_pages
-        ]
-        excluded_count = max(0, before_count - len(candidates))
+    triaged_full_scan_pages = 0
+    try:
+        if triage_doc is None:
+            try:
+                triage_doc = fitz.open(request.pdf_path)
+                close_doc = True
+            except Exception:
+                triage_doc = None
+        page_numbers: Optional[List[int]] = None
+        if triage_doc is not None:
+            requested_pages = [
+                index
+                for index in range(len(triage_doc))
+                if index not in excluded_pages
+            ]
+            excluded_count = max(0, len(triage_doc) - len(requested_pages))
+            triaged_pages: list[int] = []
+            for index in requested_pages:
+                try:
+                    if is_full_page_scan_without_text(triage_doc[index]):
+                        triaged_full_scan_pages += 1
+                        continue
+                except Exception:
+                    pass
+                triaged_pages.append(index)
+            page_numbers = triaged_pages
+        if page_numbers != []:
+            thumbs = Path(request.out_dir) / request.report_name / "thumbs"
+            charts, chart_stats = _extract_charts(
+                request.pdf_path,
+                thumbs.as_posix(),
+                request.report_name,
+                save_thumbs=False,
+                doc=triage_doc if parallel_workers <= 1 else None,
+                parallel_workers=parallel_workers,
+                pages=page_numbers,
+            )
+            tables, table_stats = _extract_tables(
+                request.pdf_path,
+                parallel_workers=parallel_workers,
+                pages=page_numbers,
+                doc=triage_doc if parallel_workers <= 1 else None,
+            )
+            charts, chart_ranked_overlap_pruned = _prune_charts_overlapping_ranked_tables(
+                charts, tables
+            )
+            if chart_ranked_overlap_pruned:
+                chart_stats["ranked_table_overlap_pruned"] = chart_ranked_overlap_pruned
+        candidates = charts + tables
+    finally:
+        if close_doc and triage_doc is not None:
+            try:
+                triage_doc.close()
+            except Exception:
+                pass
     chart_count = sum(1 for candidate in candidates if candidate.kind == "chart")
     table_count = sum(1 for candidate in candidates if candidate.kind == "table")
     candidate_logger.info(
@@ -4520,6 +4686,7 @@ def collect_candidates(
                 "table_stats": table_stats,
                 "ranked_table_overlap_pruned": chart_ranked_overlap_pruned,
                 "excluded_count": excluded_count,
+                "triaged_full_scan_pages": triaged_full_scan_pages,
             },
         )
     )

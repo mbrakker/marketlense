@@ -7,7 +7,7 @@ from pypdf import PdfWriter
 from src.contracts.candidates import Candidate
 from src.contracts.ingest import IngestSettings
 from src.contracts.report_assets import CropRefineResponse, CropRefineResult
-from src.contracts.report_models import RankedCandidate
+from src.contracts.report_models import Figure, Quote, RankedCandidate, ReportPayload
 from src.contracts.run_context import RunContext
 from src.generators import report_selection_generator as rsg
 from src.generators.report_generation_dependencies import ReportGeneratorDependencies
@@ -575,3 +575,98 @@ def test_resolve_figure_section_assets_disables_without_any_asset():
     assert gallery == []
     assert top == ""
     assert enabled is False
+
+
+def test_select_report_figures_skips_legacy_best_figure_when_candidate_gallery_exists(
+    tmp_path,
+):
+    settings = _settings(
+        tmp_path,
+        crop_refine_enabled=False,
+        crop_refine_mode="off",
+        rank_selected_max=1,
+        rank_max_candidates=4,
+    )
+    candidate = _candidate(
+        cid="chart_keep",
+        kind="chart",
+        page=0,
+        caption="Figure 1. Strong chart",
+        meta={"area_frac": 0.2, "text_ratio": 0.2},
+    )
+    figure_calls: list[str] = []
+    crop_calls: list[tuple[str, str, list[str]]] = []
+    deps = _deps(
+        collect_candidates=lambda req, ctx: SimpleNamespace(candidates=[candidate]),
+        extract_best_figure=lambda req, ctx: (
+            figure_calls.append(req.pdf_path)
+            or SimpleNamespace(
+                image_path="report/assets/legacy.png",
+                caption="legacy",
+                page=0,
+            )
+        ),
+        rank_candidates=lambda req, ctx: SimpleNamespace(
+            results=[
+                RankedCandidate(
+                    id="chart_keep",
+                    type="chart",
+                    score=98,
+                    quality_score=98,
+                    insight_score=98,
+                    data_score=98,
+                    keep=True,
+                )
+            ],
+            prompt_tokens=None,
+            completion_tokens=None,
+            total_tokens=None,
+            request_id="rank",
+            raw_content="[]",
+        ),
+        crop_regions=lambda req, ctx: (
+            crop_calls.append(
+                (
+                    str(req.subdir or ""),
+                    str(req.mode or ""),
+                    [str(item.id or "") for item in req.items],
+                )
+            )
+            or SimpleNamespace(
+                paths=[f"report/{req.subdir or 'slices'}/{req.items[0].id}.png"]
+            )
+        ),
+    )
+    payload = ReportPayload(
+        tldr="",
+        title="Report",
+        insights=[],
+        quote=Quote(text="q"),
+        figure=Figure(title="", evidence=""),
+        commentary="",
+        source="",
+    )
+    runtime = SimpleNamespace(
+        local_pdf_path=_pdf_path(tmp_path),
+        settings=settings,
+        report_name="report",
+        file=SimpleNamespace(file_id="file"),
+        md5=None,
+        ctx=_ctx(),
+        report_worker_limit=1,
+        parallel_within_file=False,
+    )
+    source = SimpleNamespace(
+        payload=payload,
+        contents_page_number=0,
+        pdf_context=None,
+        pdf_context_for_tasks=None,
+    )
+
+    selection = rsg.select_report_figures(runtime, source, deps)
+
+    assert figure_calls == []
+    assert crop_calls == [("slices", "chart_strict", ["chart_keep"])]
+    assert selection.payload._figure_gallery == ["report/slices/chart_keep.png"]
+    assert selection.payload._figure_top == "report/slices/chart_keep.png"
+    assert selection.payload._figure_section_enabled is True

@@ -57,6 +57,15 @@ def _chart_image_bytes() -> bytes:
     return buffer.getvalue()
 
 
+def _scan_image_bytes() -> bytes:
+    image = Image.new("RGB", (620, 900), color="white")
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((80, 120, 540, 780), outline="black", fill=(235, 235, 235))
+    buffer = io.BytesIO()
+    image.save(buffer, format="JPEG", quality=92)
+    return buffer.getvalue()
+
+
 def _build_candidates_pdf(path: Path) -> None:
     doc = fitz.open()
     page = doc.new_page(width=620, height=900)
@@ -78,6 +87,14 @@ def _build_candidates_pdf(path: Path) -> None:
         page.insert_text((340, y), str(row * 20), fontsize=11)
         page.insert_text((470, y), str(row * 30), fontsize=11)
 
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_full_page_scan_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=620, height=900)
+    page.insert_image(fitz.Rect(0, 0, 620, 900), stream=_scan_image_bytes())
     doc.save(path.as_posix())
     doc.close()
 
@@ -1173,6 +1190,33 @@ def test_collect_candidates_returns_chart_and_table_contracts(
     assert_logs_have_required_fields(events)
     event_names = {str(event["event"]) for event in events}
     assert {"extract_candidates_start", "extract_candidates_complete"} <= event_names
+
+
+def test_collect_candidates_skips_full_page_scan_without_text(tmp_path, caplog) -> None:
+    pdf_path = tmp_path / "full-page-scan.pdf"
+    out_dir = tmp_path / "out"
+    _build_full_page_scan_pdf(pdf_path)
+
+    caplog.set_level(
+        logging.INFO, logger="market_lense.pdf_service.candidate_extraction"
+    )
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="full-page-scan",
+        ),
+        _ctx(),
+    )
+
+    assert response.candidates == []
+    events = _events(caplog, "market_lense.pdf_service.candidate_extraction")
+    complete = next(
+        event for event in events if event.get("event") == "extract_candidates_complete"
+    )
+    assert int((complete.get("fields") or {}).get("triaged_full_scan_pages", 0)) == 1
 
 
 def test_collect_candidates_chart_bbox_excludes_corner_page_number_and_body_text(
