@@ -66,6 +66,61 @@ def _scan_image_bytes() -> bytes:
     return buffer.getvalue()
 
 
+def _photo_panel_image_bytes() -> bytes:
+    image = Image.new("RGB", (520, 360), color=(28, 188, 203))
+    draw = ImageDraw.Draw(image)
+    draw.ellipse((120, 70, 330, 290), fill=(219, 180, 150))
+    draw.ellipse((178, 120, 232, 174), fill=(255, 255, 255))
+    draw.ellipse((248, 120, 302, 174), fill=(255, 255, 255))
+    draw.rectangle((152, 244, 308, 352), fill=(96, 140, 188))
+    draw.rectangle((0, 292, 520, 360), fill=(18, 148, 162))
+    buffer = io.BytesIO()
+    image.save(buffer, format="JPEG", quality=92)
+    return buffer.getvalue()
+
+
+def _table_image_bytes() -> bytes:
+    image = Image.new("RGB", (900, 560), color=(19, 150, 159))
+    draw = ImageDraw.Draw(image)
+    left = 70
+    top = 34
+    right = 860
+    bottom = 522
+    col_edges = [left, 180, 320, 470, 615, 760, right]
+    row_step = 18
+    for idx, x in enumerate(col_edges):
+        width = 3 if idx in (0, len(col_edges) - 1) else 1
+        draw.line((x, top, x, bottom), fill=(220, 240, 242), width=width)
+    for y in range(top, bottom + 1, row_step):
+        width = 3 if y in (top, bottom) else 1
+        draw.line((left, y, right, y), fill=(220, 240, 242), width=width)
+    for row in range(1, 24):
+        y = top + row * row_step + 4
+        draw.text((left + 12, y), f"{row:02d}", fill="white")
+        draw.text((190, y), f"Brand {row}", fill="white")
+        draw.text((340, y), f"{row * 10}", fill="white")
+        draw.text((500, y), f"{row * 7}", fill="white")
+        draw.text((640, y), f"{row * 5}", fill="white")
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+def _portrait_chart_image_bytes() -> bytes:
+    image = Image.new("RGB", (220, 430), color="white")
+    draw = ImageDraw.Draw(image)
+    draw.text((18, 18), "% of markets seeing shopper growth", fill="black")
+    for idx, year in enumerate(["2023", "2024"]):
+        x = 40 + idx * 84
+        draw.rectangle((x, 124, x + 36, 304), fill=(238, 241, 246), outline=(210, 220, 232))
+        draw.rectangle((x, 204 - idx * 26, x + 36, 304), fill=(80, 167, 184))
+        draw.text((x - 4, 320), year, fill="black")
+    draw.text((102, 372), "Source: synthetic narrow chart panel.", fill="black")
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
 def _build_candidates_pdf(path: Path) -> None:
     doc = fitz.open()
     page = doc.new_page(width=620, height=900)
@@ -252,11 +307,11 @@ def _build_side_by_side_photo_examples_pdf(path: Path) -> None:
     )
     page.insert_image(
         fitz.Rect(110, 160, 433, 353),
-        stream=_chart_image_bytes(),
+        stream=_photo_panel_image_bytes(),
     )
     page.insert_image(
         fitz.Rect(527, 160, 849, 353),
-        stream=_chart_image_bytes(),
+        stream=_photo_panel_image_bytes(),
     )
     page.insert_textbox(
         fitz.Rect(176, 366, 812, 406),
@@ -268,6 +323,133 @@ def _build_side_by_side_photo_examples_pdf(path: Path) -> None:
         ),
         fontsize=12,
         align=1,
+    )
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_embedded_chart_image_card_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=960, height=540)
+    page.insert_text((34, 72), "How strong brands keep momentum", fontsize=24)
+    page.insert_textbox(
+        fitz.Rect(34, 128, 266, 286),
+        (
+            "Momentum remains one of the clearest signals of brand health. "
+            "The chart card on this page is embedded as a slide image rather "
+            "than a vector figure caption."
+        ),
+        fontsize=14,
+    )
+    page.insert_image(
+        fitz.Rect(320, 172, 874, 430),
+        stream=_chart_image_bytes(),
+    )
+    page.insert_text(
+        (320, 450),
+        "Source: synthetic embedded chart card data.",
+        fontsize=10,
+    )
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_relaxed_embedded_chart_geometries_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=842, height=595)
+    page.insert_text((34, 72), "Why the odds shifted in 2024", fontsize=24)
+    page.insert_textbox(
+        fitz.Rect(302, 88, 544, 315),
+        (
+            "Wide embedded chart cards should still be detected even when the "
+            "aspect is broader than the default image gate."
+        ),
+        fontsize=14,
+    )
+    page.insert_image(
+        fitz.Rect(302, 332, 813, 510),
+        stream=_chart_image_bytes(),
+    )
+
+    page = doc.new_page(width=842, height=595)
+    page.insert_text((34, 72), "Brand spotlight", fontsize=24)
+    page.insert_textbox(
+        fitz.Rect(34, 118, 262, 432),
+        (
+            "Narrow right-side data panels should be kept when they contain a "
+            "real chart and source area rather than a decorative photo."
+        ),
+        fontsize=14,
+    )
+    page.insert_image(
+        fitz.Rect(631, 133, 813, 515),
+        stream=_portrait_chart_image_bytes(),
+    )
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_decorative_photo_panel_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=960, height=540)
+    page.insert_text((34, 72), "A tale of two halves", fontsize=24)
+    page.insert_textbox(
+        fitz.Rect(34, 120, 430, 260),
+        (
+            "The headlines from the ranking reveal a fascinating divide. "
+            "This page pairs a narrative callout with a decorative hero photo "
+            "that should not be extracted as a chart."
+        ),
+        fontsize=14,
+    )
+    page.insert_image(
+        fitz.Rect(468, 90, 902, 486),
+        stream=_photo_panel_image_bytes(),
+    )
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_relaxed_embedded_chart_with_figure_caption_pdf(path: Path) -> None:
+    doc = fitz.open()
+
+    page = doc.new_page(width=842, height=595)
+    page.insert_text(
+        (302, 116),
+        "Figure 1.2. Captioned wide embedded image should not use relaxed geometry",
+        fontsize=16,
+    )
+    page.insert_image(
+        fitz.Rect(302, 332, 813, 510),
+        stream=_chart_image_bytes(),
+    )
+
+    page = doc.new_page(width=842, height=595)
+    page.insert_text(
+        (630, 112),
+        "Figure 1.3. Captioned narrow embedded image should not use relaxed geometry",
+        fontsize=16,
+    )
+    page.insert_image(
+        fitz.Rect(631, 133, 813, 515),
+        stream=_portrait_chart_image_bytes(),
+    )
+
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_full_page_image_table_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=960, height=540)
+    page.insert_image(
+        fitz.Rect(8, 20, 952, 520),
+        stream=_table_image_bytes(),
+    )
+    page = doc.new_page(width=960, height=540)
+    page.insert_image(
+        fitz.Rect(8, 20, 952, 520),
+        stream=_photo_panel_image_bytes(),
     )
     doc.save(path.as_posix())
     doc.close()
@@ -1568,6 +1750,107 @@ def test_collect_candidates_chart_flow_rejects_side_by_side_photo_examples_witho
     )
 
     charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    assert not any(candidate.page == 1 for candidate in charts)
+
+
+def test_collect_candidates_detects_captionless_embedded_chart_image_card(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "embedded-chart-image-card.pdf"
+    out_dir = tmp_path / "out"
+    _build_embedded_chart_image_card_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="embedded-chart-image-card",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    assert len(charts) == 1
+    chart = charts[0]
+    assert chart.bbox[0] >= 315.0
+    assert chart.bbox[1] >= 165.0
+    assert chart.bbox[2] <= 880.0
+    assert chart.bbox[3] > 430.0
+
+
+def test_collect_candidates_detects_relaxed_geometry_embedded_chart_images(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "relaxed-embedded-chart-geometries.pdf"
+    out_dir = tmp_path / "out"
+    _build_relaxed_embedded_chart_geometries_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="relaxed-embedded-chart-geometries",
+        ),
+        _ctx(),
+    )
+
+    charts = sorted(
+        [candidate for candidate in response.candidates if candidate.kind == "chart"],
+        key=lambda candidate: (candidate.page, candidate.id),
+    )
+    assert len(charts) == 2
+    wide = charts[0]
+    narrow = charts[1]
+    assert wide.page == 0
+    assert wide.bbox[0] >= 315.0
+    assert wide.bbox[2] <= 880.0
+    assert narrow.page == 1
+    assert narrow.bbox[0] >= 620.0
+    assert narrow.bbox[2] <= 880.0
+    assert narrow.bbox[3] >= 490.0
+
+
+def test_collect_candidates_does_not_relax_captioned_embedded_chart_geometry(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "relaxed-embedded-chart-with-figure-caption.pdf"
+    out_dir = tmp_path / "out"
+    _build_relaxed_embedded_chart_with_figure_caption_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="relaxed-embedded-chart-with-figure-caption",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    assert not any(candidate.page == 1 for candidate in charts)
+
+
+def test_collect_candidates_rejects_decorative_photo_panel_without_figure_context(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "decorative-photo-panel.pdf"
+    out_dir = tmp_path / "out"
+    _build_decorative_photo_panel_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="decorative-photo-panel",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
     assert charts == []
 
 
@@ -1596,6 +1879,33 @@ def test_collect_candidates_detects_ranked_table_slide_without_chart_duplicate(
     table = tables[0]
     assert int(table.meta["rows"]) >= 5
     assert int(table.meta["cols"]) >= 2
+
+
+def test_collect_candidates_detects_full_page_image_table_without_photo_false_positive(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "full-page-image-table.pdf"
+    out_dir = tmp_path / "out"
+    _build_full_page_image_table_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="full-page-image-table",
+        ),
+        _ctx(),
+    )
+
+    tables = [candidate for candidate in response.candidates if candidate.kind == "table"]
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+
+    assert len(tables) == 1
+    table = tables[0]
+    assert table.page == 0
+    assert (table.meta or {}).get("method") == "image"
+    assert charts == []
 
 
 def test_prune_charts_overlapping_ranked_tables_removes_chart_duplicate() -> None:
@@ -2371,6 +2681,46 @@ def test_validate_table_candidate_rejects_visual_quote_page() -> None:
 
     assert ok is False
     assert reason == "visual_quote_page"
+
+
+def test_validate_table_candidate_rejects_contact_block() -> None:
+    contact_text = "\n".join(
+        [
+            "Find out more",
+            "If you'd like additional information on Brand Footprint,",
+            "please get in touch with your usual contacts or email:",
+            "Benjamin Cawthray",
+            "Worldpanel by Numerator",
+            "Benjamin.Cawthray@wp.numerator.com",
+        ]
+    )
+    candidate = _table_candidate(
+        row_count=8,
+        col_count=2,
+        non_empty_cells=11,
+        total_cells=16,
+        numeric_cells=0,
+        numeric_ratio=0.0,
+        avg_words_per_cell=3.6,
+        avg_first_col_words=2.8,
+        preview="Find out more",
+        text=contact_text,
+        text_len=len(contact_text),
+        line_count=8,
+        avg_line_len=36.0,
+        text_block_area_frac=0.27,
+        text_block_line_count=8,
+        text_block_avg_line_len=37.5,
+        area_frac=0.226,
+        width_frac=0.38,
+        height_frac=0.60,
+        aspect=0.88,
+    )
+
+    ok, reason = _validate_table_candidate(candidate)
+
+    assert ok is False
+    assert reason == "contact_block"
 
 
 def test_validate_table_candidate_rejects_short_prose_box() -> None:

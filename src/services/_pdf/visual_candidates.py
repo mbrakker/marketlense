@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 import pymupdf as fitz
+from PIL import Image, ImageFilter, ImageStat
 
 from src.contracts.candidates import Candidate
 
@@ -77,6 +78,8 @@ def _has_side_by_side_visual_sibling(
         if other.kind not in ("xref", "block"):
             continue
         other_rect = other.rect
+        if _rect_iou(other_rect, rect_item.rect) >= 0.95:
+            continue
         if _vertical_overlap_ratio(other_rect, rect_item.rect) < 0.6:
             continue
         horizontal_gap = max(
@@ -91,6 +94,113 @@ def _has_side_by_side_visual_sibling(
         if area_ratio < 0.45 or area_ratio > 2.2:
             continue
         return True
+    return False
+
+
+def _render_visual_probe_image(
+    page: fitz.Page,
+    rect: fitz.Rect,
+    *,
+    max_dim_px: int = 320,
+) -> Optional[Image.Image]:
+    clip = fitz.Rect(rect) & page.rect
+    if clip.is_empty or clip.width <= 1.0 or clip.height <= 1.0:
+        return None
+    max_dim = max(float(clip.width), float(clip.height))
+    scale = min(1.0, max_dim_px / max(1.0, max_dim))
+    scale = max(0.35, scale)
+    try:
+        pix = page.get_pixmap(
+            clip=clip,
+            matrix=fitz.Matrix(scale, scale),
+            alpha=False,
+        )
+    except Exception:
+        return None
+    return Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+
+
+def _visual_probe_profile(page: fitz.Page, rect: fitz.Rect) -> Optional[dict[str, float]]:
+    image = _render_visual_probe_image(page, rect)
+    if image is None:
+        return None
+    rgb = image.convert("RGB")
+    gray = rgb.convert("L")
+    hsv = rgb.convert("HSV")
+    total_pixels = max(1, rgb.width * rgb.height)
+
+    gray_hist = gray.histogram()
+    white_frac = sum(gray_hist[241:]) / total_pixels
+    dark_frac = sum(gray_hist[:40]) / total_pixels
+
+    saturation = hsv.split()[1]
+    sat_mean = ImageStat.Stat(saturation).mean[0]
+
+    edges = gray.filter(ImageFilter.FIND_EDGES)
+    edge_hist = edges.histogram()
+    edge_density = sum(edge_hist[36:]) / total_pixels
+
+    return {
+        "white_frac": float(white_frac),
+        "dark_frac": float(dark_frac),
+        "sat_mean": float(sat_mean),
+        "edge_density": float(edge_density),
+    }
+
+
+def _embedded_visual_looks_chart_like(page: fitz.Page, rect: fitz.Rect) -> bool:
+    profile = _visual_probe_profile(page, rect)
+    if profile is None:
+        return False
+    white_frac = profile["white_frac"]
+    sat_mean = profile["sat_mean"]
+    edge_density = profile["edge_density"]
+    return (
+        (white_frac >= 0.28 and sat_mean <= 95.0 and edge_density >= 0.008)
+        or (white_frac >= 0.62 and sat_mean <= 70.0)
+    )
+
+
+def _embedded_visual_looks_decorative(page: fitz.Page, rect: fitz.Rect) -> bool:
+    profile = _visual_probe_profile(page, rect)
+    if profile is None:
+        return False
+    return (
+        profile["white_frac"] <= 0.22
+        and profile["sat_mean"] >= 90.0
+        and profile["edge_density"] <= 0.10
+    )
+
+
+def _embedded_visual_qualifies_relaxed_geometry(
+    page: fitz.Page,
+    rect: fitz.Rect,
+    *,
+    area_frac: float,
+) -> bool:
+    if area_frac < 0.12:
+        return False
+    profile = _visual_probe_profile(page, rect)
+    if profile is None:
+        return False
+    return (
+        profile["white_frac"] >= 0.40
+        and profile["sat_mean"] <= 60.0
+        and profile["edge_density"] >= 0.05
+    )
+
+
+def _page_has_chart_caption_blocks(
+    blocks: List[tuple[float, float, float, float, str]],
+) -> bool:
+    for _x0, _y0, _x1, _y1, text in blocks:
+        for line in str(text or "").splitlines():
+            normalized = line.strip().lower()
+            if not normalized:
+                continue
+            if any(normalized.startswith(hint) for hint in CHART_CAPTION_HINTS):
+                return True
+            break
     return False
 
 
@@ -145,6 +255,9 @@ def _extract_visuals_sequential(
             bot_cut = rect.y1 - rect.height * CHART_MARGIN_FRAC
             relaxed_top = rect.y0 + rect.height * CHART_MARGIN_RELAX_FRAC
             relaxed_bot = rect.y1 - rect.height * CHART_MARGIN_RELAX_FRAC
+            page_has_chart_captions = _page_has_chart_caption_blocks(
+                artifacts.text_blocks
+            )
             kept: List[tuple[fitz.Rect, float, int]] = []
             page_candidates: List[Dict[str, object]] = []
             local_sequence = 0
@@ -189,7 +302,20 @@ def _extract_visuals_sequential(
                     and any(cap_lower.startswith(hint) for hint in CHART_CAPTION_HINTS)
                 ):
                     aspect_max = max(aspect_max, CHART_CAPTIONED_DRAW_MAX_ASPECT)
-                if area_frac < 0.05 or not (0.55 <= aspect <= aspect_max):
+                relaxed_image_geometry = False
+                if (
+                    rect_item.kind in ("xref", "block")
+                    and not has_hint
+                    and not page_has_chart_captions
+                ):
+                    relaxed_image_geometry = _embedded_visual_qualifies_relaxed_geometry(
+                        page,
+                        rect_candidate,
+                        area_frac=area_frac,
+                    )
+                min_aspect = 0.45 if relaxed_image_geometry else 0.55
+                max_aspect = 3.4 if relaxed_image_geometry else aspect_max
+                if area_frac < 0.05 or not (min_aspect <= aspect <= max_aspect):
                     stats["rejected"] = _int_count(stats["rejected"]) + 1
                     _tally_reason(stats, "geometry")
                     continue
@@ -236,6 +362,16 @@ def _extract_visuals_sequential(
                 raw_text_heavy = _chart_text_heavy(
                     raw_text_lines, raw_text_chars, raw_text_ratio
                 )
+                image_chart_like = False
+                image_decorative = False
+                if rect_item.kind in ("xref", "block") and not has_hint:
+                    image_chart_like = _embedded_visual_looks_chart_like(
+                        page, rect_candidate
+                    )
+                    if not image_chart_like:
+                        image_decorative = _embedded_visual_looks_decorative(
+                            page, rect_candidate
+                        )
                 text_dense_recovery_allowed = False
                 infographic_dense_recovery_allowed = False
                 if (
@@ -270,6 +406,8 @@ def _extract_visuals_sequential(
                         )
                 if rect_item.kind in ("xref", "block") and not has_hint:
                     if (
+                        not image_chart_like
+                        and
                         (not cap or len(cap.strip()) < 8)
                         and text_chars <= 8
                         and area_frac < 0.5
@@ -278,6 +416,8 @@ def _extract_visuals_sequential(
                         _tally_reason(stats, "decorative_image")
                         continue
                     if (
+                        not image_chart_like
+                        and
                         text_chars <= 8
                         and area_frac <= 0.2
                         and _has_side_by_side_visual_sibling(
@@ -286,6 +426,14 @@ def _extract_visuals_sequential(
                     ):
                         stats["rejected"] = _int_count(stats["rejected"]) + 1
                         _tally_reason(stats, "photo_panel")
+                        continue
+                    if (
+                        image_decorative
+                        and text_chars <= 24
+                        and area_frac <= 0.5
+                    ):
+                        stats["rejected"] = _int_count(stats["rejected"]) + 1
+                        _tally_reason(stats, "decorative_image")
                         continue
                 if raw_text_heavy:
                     if (

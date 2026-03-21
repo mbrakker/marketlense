@@ -10,8 +10,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import replace
 from typing import Dict, List, Optional
 
+import numpy as np
 import pdfplumber
 import pymupdf as fitz
+from PIL import ImageFilter
 
 from src.contracts.candidates import Candidate
 
@@ -58,6 +60,91 @@ from .figures import (
     _validate_table_candidate,
 )
 from .page_artifacts import build_page_artifacts, is_full_page_scan_without_text
+from .visual_candidates import _render_visual_probe_image, _visual_probe_profile
+
+
+def _mask_run_count(mask: np.ndarray) -> int:
+    count = 0
+    in_run = False
+    for value in mask.tolist():
+        if value and not in_run:
+            count += 1
+            in_run = True
+        elif not value:
+            in_run = False
+    return count
+
+
+def _full_page_image_table_candidate(
+    fitz_page: fitz.Page,
+) -> Optional[_TableCandidate]:
+    text_dict = fitz_page.get_text("dict")
+    if any(block.get("type") == 0 for block in text_dict.get("blocks", [])):
+        return None
+    images = fitz_page.get_image_info(xrefs=True) or []
+    if len(images) != 1:
+        return None
+    rect = fitz.Rect(images[0]["bbox"]) & fitz_page.rect
+    if rect.is_empty:
+        return None
+    area_frac = rect.get_area() / max(1.0, fitz_page.rect.get_area())
+    if area_frac < 0.75:
+        return None
+    profile = _visual_probe_profile(fitz_page, rect)
+    if profile is None:
+        return None
+    image = _render_visual_probe_image(fitz_page, rect, max_dim_px=420)
+    if image is None:
+        return None
+    gray = np.asarray(image.convert("L"))
+    edges = np.asarray(image.convert("L").filter(ImageFilter.FIND_EDGES))
+    edge_mask = edges > 40
+    row_cov = edge_mask.mean(axis=1)
+    col_cov = edge_mask.mean(axis=0)
+    row_groups = _mask_run_count(row_cov > 0.08)
+    col_groups = _mask_run_count(col_cov > 0.08)
+    gray_std = float(gray.std())
+    if not (
+        profile["white_frac"] <= 0.05
+        and profile["sat_mean"] >= 180.0
+        and profile["edge_density"] >= 0.12
+        and gray_std <= 32.0
+        and row_groups >= 20
+        and col_groups >= 5
+    ):
+        return None
+    width = max(1.0, rect.width)
+    height = max(1.0, rect.height)
+    return _TableCandidate(
+        bbox=(rect.x0, rect.y0, rect.x1, rect.y1),
+        method="image",
+        row_count=row_groups,
+        col_count=col_groups,
+        col_consistency=1.0,
+        row_len_cv=0.0,
+        non_empty_cells=row_groups * col_groups,
+        total_cells=row_groups * col_groups,
+        numeric_cells=0,
+        numeric_ratio=0.0,
+        avg_words_per_cell=0.0,
+        avg_first_col_words=0.0,
+        index_page_ratio=0.0,
+        preview="",
+        text="",
+        text_len=0,
+        line_count=0,
+        avg_line_len=0.0,
+        text_block_area_frac=0.0,
+        text_block_line_count=0,
+        text_block_avg_line_len=0.0,
+        caption_hint=False,
+        figure_context_hint=False,
+        wide_figure_context_hint=False,
+        area_frac=area_frac,
+        width_frac=width / max(1.0, float(fitz_page.rect.width)),
+        height_frac=height / max(1.0, float(fitz_page.rect.height)),
+        aspect=width / max(1.0, height),
+    )
 
 
 def _find_tables_safe(page: pdfplumber.page.Page, settings: Dict[str, object]):
@@ -208,6 +295,45 @@ def _extract_tables_sequential(
                     try:
                         fitz_page = fitz_doc[pno]
                         if is_full_page_scan_without_text(fitz_page):
+                            image_table_candidate = _full_page_image_table_candidate(
+                                fitz_page
+                            )
+                            if image_table_candidate is not None:
+                                out.append(
+                                    Candidate(
+                                        schema_version="1.0",
+                                        id=f"table-{pno}-0",
+                                        kind="table",
+                                        page=pno,
+                                        bbox=image_table_candidate.bbox,
+                                        preview_text="",
+                                        caption=None,
+                                        thumb_path=None,
+                                        meta={
+                                            "method": image_table_candidate.method,
+                                            "rows": image_table_candidate.row_count,
+                                            "cols": image_table_candidate.col_count,
+                                            "non_empty_cells": image_table_candidate.non_empty_cells,
+                                            "numeric_ratio": round(
+                                                image_table_candidate.numeric_ratio, 3
+                                            ),
+                                            "avg_words_per_cell": round(
+                                                image_table_candidate.avg_words_per_cell, 2
+                                            ),
+                                            "index_page_ratio": round(
+                                                image_table_candidate.index_page_ratio, 2
+                                            ),
+                                            "text_len": image_table_candidate.text_len,
+                                            "area_frac": round(
+                                                image_table_candidate.area_frac, 4
+                                            ),
+                                            "aspect": round(
+                                                image_table_candidate.aspect, 2
+                                            ),
+                                        },
+                                    )
+                                )
+                                continue
                             stats["skipped_pages"] = _int_count(stats.get("skipped_pages", 0)) + 1
                             _tally_reason(stats, "page_full_scan_no_text")
                             continue
@@ -278,6 +404,9 @@ def _extract_tables_sequential(
                         replace(candidate, bbox=(x0, y0, x1, y1))
                     )
                 if fitz_page is not None:
+                    image_table_candidate = _full_page_image_table_candidate(fitz_page)
+                    if image_table_candidate is not None:
+                        final_candidates.append(image_table_candidate)
                     final_candidates.extend(
                         _detect_ranked_table_candidates(
                             p,

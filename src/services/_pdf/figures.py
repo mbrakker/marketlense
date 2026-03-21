@@ -294,6 +294,11 @@ TABLE_FRONT_MATTER_TERMS = (
     "acknowledgements",
     "endnotes",
 )
+TABLE_CONTACT_MAX_COLS = 3
+TABLE_CONTACT_MAX_NUMERIC_RATIO = 0.05
+TABLE_CONTACT_MIN_AREA_FRAC = 0.12
+TABLE_CONTACT_MIN_LINES = 6
+TABLE_CONTACT_MIN_AVG_LINE_LEN = 28.0
 TABLE_VISUAL_QUOTE_MAX_ROWS = 12
 TABLE_VISUAL_QUOTE_MAX_COLS = 3
 TABLE_VISUAL_QUOTE_MAX_NUMERIC_RATIO = 0.05
@@ -350,6 +355,7 @@ TABLE_TOP_HEADER_SLACK_MAX = 12.0
 TABLE_EXPLICIT_TITLE_MAX_GAP = 72.0
 TABLE_EXPLICIT_SUBTITLE_MAX_GAP = 32.0
 NOTE_LABEL_PREFIXES = ("note:", "notes:", "source:", "sources:", "statlink")
+EMAIL_ADDRESS_RX = re.compile(r"\b[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}\b")
 _PAGE_NUMBER_RX = re.compile(
     r"^\s*[^0-9A-Za-z]*\d{1,4}(?:\s*[-–]\s*\d{1,4})?[^0-9A-Za-z]*\s*$"
 )
@@ -4041,6 +4047,14 @@ def _has_figure_context_hint(
 
 
 def _validate_table_candidate(cand: _TableCandidate) -> Tuple[bool, str]:
+    if cand.method == "image":
+        if cand.area_frac < 0.75:
+            return False, "image_table_too_small"
+        if cand.row_count < 20 or cand.col_count < 5:
+            return False, "image_table_too_few_grid_groups"
+        if cand.aspect < 1.2 or cand.aspect > 3.5:
+            return False, "image_table_extreme_aspect"
+        return True, ""
     if cand.row_count < TABLE_MIN_ROWS or cand.col_count < TABLE_MIN_COLS:
         return False, "too_few_rows_cols"
     if cand.non_empty_cells < TABLE_MIN_NONEMPTY_CELLS:
@@ -4074,6 +4088,8 @@ def _validate_table_candidate(cand: _TableCandidate) -> Tuple[bool, str]:
         return False, "reference_block"
     if _front_matter_like(cand):
         return False, "front_matter"
+    if _contact_block_like(cand):
+        return False, "contact_block"
     if _prose_box_like(cand):
         return False, "prose_box"
     if _visual_quote_page_like(cand):
@@ -4449,6 +4465,22 @@ def _front_matter_like(cand: _TableCandidate) -> bool:
     return cand.area_frac >= TABLE_FRONT_MATTER_MIN_AREA_FRAC
 
 
+def _contact_block_like(cand: _TableCandidate) -> bool:
+    if cand.method != "stream":
+        return False
+    if cand.col_count > TABLE_CONTACT_MAX_COLS:
+        return False
+    if cand.numeric_ratio > TABLE_CONTACT_MAX_NUMERIC_RATIO:
+        return False
+    if cand.area_frac < TABLE_CONTACT_MIN_AREA_FRAC:
+        return False
+    if cand.line_count < TABLE_CONTACT_MIN_LINES:
+        return False
+    if cand.avg_line_len < TABLE_CONTACT_MIN_AVG_LINE_LEN:
+        return False
+    return EMAIL_ADDRESS_RX.search(cand.text) is not None
+
+
 def _prose_box_like(cand: _TableCandidate) -> bool:
     if cand.row_count < TABLE_PROSE_BOX_MIN_ROWS:
         return False
@@ -4737,7 +4769,8 @@ def collect_candidates(
                 close_doc = True
             except Exception:
                 triage_doc = None
-        page_numbers: Optional[List[int]] = None
+        chart_page_numbers: Optional[List[int]] = None
+        table_page_numbers: Optional[List[int]] = None
         if triage_doc is not None:
             requested_pages = [
                 index
@@ -4754,8 +4787,9 @@ def collect_candidates(
                 except Exception:
                     pass
                 triaged_pages.append(index)
-            page_numbers = triaged_pages
-        if page_numbers != []:
+            chart_page_numbers = triaged_pages
+            table_page_numbers = requested_pages
+        if chart_page_numbers != [] or table_page_numbers != []:
             thumbs = Path(request.out_dir) / request.report_name / "thumbs"
             charts, chart_stats = _extract_charts(
                 request.pdf_path,
@@ -4764,12 +4798,12 @@ def collect_candidates(
                 save_thumbs=False,
                 doc=triage_doc if parallel_workers <= 1 else None,
                 parallel_workers=parallel_workers,
-                pages=page_numbers,
+                pages=chart_page_numbers,
             )
             tables, table_stats = _extract_tables(
                 request.pdf_path,
                 parallel_workers=parallel_workers,
-                pages=page_numbers,
+                pages=table_page_numbers,
                 doc=triage_doc if parallel_workers <= 1 else None,
             )
             charts, chart_ranked_overlap_pruned = _prune_charts_overlapping_ranked_tables(
