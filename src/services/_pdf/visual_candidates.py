@@ -17,6 +17,7 @@ from src.contracts.candidates import Candidate
 
 from .figures import (
     CHART_CAPTION_HINTS,
+    CHART_CAPTIONED_DRAW_MAX_ASPECT,
     CHART_DENSE_RECOVERY_MIN_CHARS,
     CHART_DENSE_RECOVERY_MIN_LINES,
     CHART_EDGE_TEXT_HEADING_GAP_SCALE,
@@ -158,15 +159,6 @@ def _extract_visuals_sequential(
                 base_rect = rect_candidate
                 area_frac = rect_candidate.get_area() / rect.get_area()
                 aspect = rect_candidate.width / max(1, rect_candidate.height)
-                aspect_max = (
-                    INFO_CHART_MAX_ASPECT
-                    if rect_item.kind in ("heading", "panel")
-                    else 2.5
-                )
-                if area_frac < 0.05 or not (0.55 <= aspect <= aspect_max):
-                    stats["rejected"] = _int_count(stats["rejected"]) + 1
-                    _tally_reason(stats, "geometry")
-                    continue
                 cap_rect = rect_item.caption_rect
                 cap = rect_item.caption
                 if cap_rect is None:
@@ -187,6 +179,20 @@ def _extract_visuals_sequential(
                 cap_lower = (cap or "").lower()
                 has_hint = any(hint in cap_lower for hint in VISUAL_CONTEXT_HINTS)
                 has_context_hint = has_hint or rect_item.kind == "panel"
+                aspect_max = INFO_CHART_MAX_ASPECT if rect_item.kind in (
+                    "heading",
+                    "panel",
+                ) else 2.5
+                if (
+                    rect_item.kind == "draw"
+                    and cap_rect is not None
+                    and any(cap_lower.startswith(hint) for hint in CHART_CAPTION_HINTS)
+                ):
+                    aspect_max = max(aspect_max, CHART_CAPTIONED_DRAW_MAX_ASPECT)
+                if area_frac < 0.05 or not (0.55 <= aspect <= aspect_max):
+                    stats["rejected"] = _int_count(stats["rejected"]) + 1
+                    _tally_reason(stats, "geometry")
+                    continue
                 is_infographic = "infographic" in cap_lower
                 if rect_candidate.y0 < top_cut or rect_candidate.y1 > bot_cut:
                     if (

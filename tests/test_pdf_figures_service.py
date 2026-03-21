@@ -536,6 +536,125 @@ def _build_multi_figure_dense_chart_pdf(path: Path) -> None:
     doc.close()
 
 
+def _build_wide_captioned_draw_chart_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=620, height=900)
+    page.insert_textbox(
+        fitz.Rect(42, 110, 576, 360),
+        "This explanatory paragraph should remain outside the figure crop. " * 12,
+        fontsize=12,
+        lineheight=1.2,
+    )
+    page.draw_rect(
+        fitz.Rect(36, 430, 584, 640),
+        color=(0.8, 0.8, 0.8),
+        fill=(0.95, 0.95, 0.95),
+        width=1.0,
+    )
+    page.insert_text((48, 442), "Figure 1", fontsize=12)
+    page.insert_text(
+        (48, 468),
+        "How vision-language-action models work",
+        fontsize=18,
+    )
+    page.draw_rect(
+        fitz.Rect(54, 520, 274, 576),
+        color=(0.55, 0.75, 0.85),
+        width=1.0,
+    )
+    page.draw_rect(
+        fitz.Rect(332, 520, 552, 576),
+        color=(0.55, 0.75, 0.85),
+        width=1.0,
+    )
+    page.draw_line((288, 548), (320, 548), color=(0.2, 0.2, 0.2), width=1.0)
+    page.insert_text((92, 544), "Vision", fontsize=10)
+    page.insert_text((400, 544), "Action", fontsize=10)
+    page.insert_text((48, 620), "Source: Deloitte analysis.", fontsize=10)
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_stacked_captioned_draw_charts_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=620, height=900)
+    page.insert_textbox(
+        fitz.Rect(42, 72, 576, 148),
+        "Lead-in paragraph text that should stay outside both figure crops.",
+        fontsize=12,
+        lineheight=1.2,
+    )
+
+    page.draw_rect(
+        fitz.Rect(36, 170, 584, 382),
+        color=(0.8, 0.8, 0.8),
+        fill=(0.95, 0.95, 0.95),
+        width=1.0,
+    )
+    page.insert_text((48, 182), "Figure 1", fontsize=12)
+    page.insert_text(
+        (48, 208),
+        "Projected agentic AI adoption",
+        fontsize=17,
+    )
+    page.draw_line((240, 250), (240, 340), color=(0.6, 0.6, 0.6), width=0.8)
+    page.draw_line((360, 250), (360, 340), color=(0.6, 0.6, 0.6), width=0.8)
+    page.draw_line((210, 340), (390, 340), color=(0.25, 0.25, 0.25), width=1.0)
+    page.draw_line((240, 340), (360, 280), color=(0.15, 0.15, 0.15), width=1.0)
+    page.draw_line((240, 340), (360, 220), color=(0.15, 0.15, 0.15), width=1.0)
+    page.insert_text((370, 220), "33%", fontsize=10)
+    page.insert_text((370, 280), "15%", fontsize=10)
+    page.insert_text((48, 354), "Source: Deloitte analysis.", fontsize=10)
+
+    page.draw_rect(
+        fitz.Rect(36, 440, 584, 652),
+        color=(0.8, 0.8, 0.8),
+        fill=(0.95, 0.95, 0.95),
+        width=1.0,
+    )
+    page.insert_text((48, 452), "Figure 2", fontsize=12)
+    page.insert_text(
+        (48, 478),
+        "AI model security risks and associated mitigation strategies",
+        fontsize=17,
+    )
+    page.insert_text((48, 524), "Risks", fontsize=11)
+    page.insert_text((320, 524), "Mitigation", fontsize=11)
+    page.draw_line((48, 538), (552, 538), color=(0.2, 0.2, 0.2), width=1.0)
+    page.draw_line((300, 504), (300, 618), color=(0.4, 0.4, 0.4), width=0.8)
+    risk_labels = [
+        "Collapse",
+        "Stealing",
+        "Inversion",
+        "Agency abuse",
+        "Bias drift",
+        "Leakage",
+        "Skew",
+        "Outage",
+        "Misuse",
+        "Drift",
+    ]
+    mitigation_labels = [
+        "Isolation",
+        "Access mgmt",
+        "Audit logs",
+        "Safeguards",
+        "Red team",
+        "Hardening",
+        "Alerts",
+        "Monitoring",
+        "Testing",
+        "Reviews",
+    ]
+    for idx, label in enumerate(risk_labels):
+        page.insert_text((48, 550 + idx * 7), label, fontsize=8)
+    for idx, label in enumerate(mitigation_labels):
+        page.insert_text((320, 550 + idx * 7), label, fontsize=8)
+    page.insert_text((48, 624), "Source: Deloitte analysis.", fontsize=10)
+    doc.save(path.as_posix())
+    doc.close()
+
+
 def _build_table_context_pdf(path: Path) -> None:
     doc = fitz.open()
     page = doc.new_page(width=620, height=900)
@@ -1372,6 +1491,65 @@ def test_collect_candidates_chart_flow_keeps_upper_dense_chart_before_next_figur
     assert lower.bbox[1] > 430.0
 
 
+def test_collect_candidates_detects_wide_captioned_draw_chart_with_source(tmp_path) -> None:
+    pdf_path = tmp_path / "wide-captioned-draw-chart.pdf"
+    out_dir = tmp_path / "out"
+    _build_wide_captioned_draw_chart_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="wide-captioned-draw-chart",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    assert len(charts) == 1
+    chart = charts[0]
+    assert (chart.caption or "").lower() == "figure 1"
+    assert chart.bbox[1] <= 442.0
+    assert chart.bbox[3] >= 620.0
+
+
+def test_collect_candidates_splits_stacked_captioned_draw_charts(tmp_path) -> None:
+    pdf_path = tmp_path / "stacked-captioned-draw-charts.pdf"
+    out_dir = tmp_path / "out"
+    _build_stacked_captioned_draw_charts_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="stacked-captioned-draw-charts",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    assert len(charts) == 2
+    upper = next(
+        candidate
+        for candidate in charts
+        if (candidate.caption or "").lower() == "figure 1"
+    )
+    lower = next(
+        candidate
+        for candidate in charts
+        if (candidate.caption or "").lower() == "figure 2"
+    )
+    assert upper.id == "chart-0-0"
+    assert lower.id == "chart-0-1"
+    assert upper.bbox[1] <= 182.0
+    assert upper.bbox[3] >= 354.0
+    assert upper.bbox[3] < 400.0
+    assert lower.bbox[1] <= 452.0
+    assert lower.bbox[3] >= 624.0
+
+
 def test_collect_candidates_chart_flow_rejects_side_by_side_photo_examples_without_visual_hint(
     tmp_path,
 ) -> None:
@@ -1909,6 +2087,94 @@ def test_validate_table_candidate_rejects_contents_like_layout() -> None:
     assert reason == "contents_like"
 
 
+def test_validate_table_candidate_rejects_section_list_with_dot_leaders() -> None:
+    toc_text = "\n".join(
+        [
+            "02 . . . Executive summary",
+            "04 . . . Innovation compounds",
+            "09 . . . AI goes physical: Navigating the convergence of AI and robotics",
+            "21 . . . The agentic reality check: Preparing for a silicon-based workforce",
+            "33 . . . The AI infrastructure reckoning: Optimizing compute strategy",
+            "43 . . . The great rebuild: Architecting an AI-native tech organization",
+            "53 . . . The AI dilemma: Securing and leveraging AI for cyber defense",
+            "62 . . . Cutting through the noise: Tech signals worth tracking as AI advances",
+            "Table of contents",
+        ]
+    )
+    candidate = _table_candidate(
+        row_count=13,
+        col_count=3,
+        non_empty_cells=23,
+        total_cells=39,
+        numeric_cells=5,
+        numeric_ratio=0.09,
+        avg_words_per_cell=2.57,
+        avg_first_col_words=1.2,
+        preview="02 . . . Executive summary",
+        text=toc_text,
+        text_len=len(toc_text),
+        line_count=9,
+        avg_line_len=38.0,
+        text_block_area_frac=0.24,
+        text_block_line_count=9,
+        text_block_avg_line_len=38.0,
+        area_frac=0.1145,
+        width_frac=0.3,
+        height_frac=0.62,
+        aspect=0.27,
+    )
+
+    ok, reason = _validate_table_candidate(candidate)
+
+    assert ok is False
+    assert reason in {"section_list", "front_matter"}
+
+
+def test_validate_table_candidate_rejects_fragmented_dot_leader_section_list() -> None:
+    toc_text = "\n".join(
+        [
+            "stn",
+            "02 . .",
+            ". Executive summary",
+            "04 . .",
+            ". Innovation compounds",
+            "09 . .",
+            ". AI goes physical",
+            "21 . .",
+            ". The agentic reality check",
+            "33 . .",
+            ". The AI infrastructure reckoning",
+        ]
+    )
+    candidate = _table_candidate(
+        row_count=13,
+        col_count=3,
+        non_empty_cells=23,
+        total_cells=39,
+        numeric_cells=5,
+        numeric_ratio=0.09,
+        avg_words_per_cell=2.57,
+        avg_first_col_words=1.2,
+        preview="stn | 02 . . | . Executive s",
+        text=toc_text,
+        text_len=len(toc_text),
+        line_count=11,
+        avg_line_len=18.0,
+        text_block_area_frac=0.24,
+        text_block_line_count=11,
+        text_block_avg_line_len=18.0,
+        area_frac=0.1145,
+        width_frac=0.3,
+        height_frac=0.62,
+        aspect=0.27,
+    )
+
+    ok, reason = _validate_table_candidate(candidate)
+
+    assert ok is False
+    assert reason == "section_list"
+
+
 def test_validate_table_candidate_rejects_reference_block() -> None:
     reference_text = "\n".join(
         [
@@ -1945,6 +2211,166 @@ def test_validate_table_candidate_rejects_reference_block() -> None:
 
     assert ok is False
     assert reason == "reference_block"
+
+
+def test_validate_table_candidate_rejects_multicolumn_reference_block() -> None:
+    reference_text = "\n".join(
+        [
+            "1. Gartner, Inc., “Gartner predicts over 40% of agentic AI projects will be canceled by end of 2027,” press release, June 25, 2025.",
+            "2. Gartner, “Gartner survey reveals gen AI attacks are on the rise,” press release, Sept. 22, 2025.",
+            "3. Deloitte US, “Artificial intelligence: An emerging oversight responsibility for audit committees?” accessed Nov. 11, 2025.",
+            "4. Pat Niemann, “Cyber and AI oversight disclosures: What companies shared in 2025,” Harvard Law School Forum on Corporate Governance, Oct. 28, 2025.",
+            "5. Roberto Frossard, interview with Deloitte, Sept. 17, 2025.",
+        ]
+    )
+    candidate = _table_candidate(
+        row_count=33,
+        col_count=11,
+        non_empty_cells=186,
+        total_cells=363,
+        numeric_cells=18,
+        numeric_ratio=0.08,
+        avg_words_per_cell=2.25,
+        avg_first_col_words=1.1,
+        preview="1. Gartner, Inc., Gartner predicts over 40% of agentic AI projects",
+        text=reference_text,
+        text_len=len(reference_text),
+        line_count=33,
+        avg_line_len=67.0,
+        text_block_area_frac=0.69,
+        text_block_line_count=33,
+        text_block_avg_line_len=67.0,
+        area_frac=0.6961,
+        width_frac=1.0,
+        height_frac=0.86,
+        aspect=0.87,
+    )
+
+    ok, reason = _validate_table_candidate(candidate)
+
+    assert ok is False
+    assert reason == "reference_block"
+
+
+def test_validate_table_candidate_keeps_wide_table_with_numbered_footnotes() -> None:
+    table_text = "\n".join(
+        [
+            "Euro area 1",
+            "1. The job vacancy rate measures the proportion of total posts that are vacant.",
+            "2. Three-month moving average.",
+            "3. The dashed line indicates the ECB's inflation target of 2%.",
+            "Source: Eurostat Job vacancy statistics database; OECD Economic Outlook 118 database.",
+            "StatLink 2 https://stat.link/sohe47",
+            "Euro area: Demand, output and prices",
+            "2022 2023 2024 2025 2026 2027",
+            "GDP at market prices 13 634.9 0.5 0.8 1.3 1.2 1.4",
+            "Private consumption 7 188.7 0.5 1.2 1.2 1.1 1.2",
+            "Government consumption 2 918.6 1.5 2.2 1.6 1.2 1.0",
+            "General government gross debt (% of GDP) _ 94.4 93.6 94.3 95.5 96.5",
+        ]
+    )
+    candidate = _table_candidate(
+        row_count=40,
+        col_count=14,
+        non_empty_cells=323,
+        total_cells=560,
+        numeric_cells=80,
+        numeric_ratio=0.14,
+        avg_words_per_cell=1.44,
+        avg_first_col_words=1.7,
+        preview="Euro area 1",
+        text=table_text,
+        text_len=len(table_text),
+        line_count=40,
+        avg_line_len=54.4,
+        text_block_area_frac=0.46,
+        text_block_line_count=40,
+        text_block_avg_line_len=54.4,
+        area_frac=0.7059,
+        width_frac=0.76,
+        height_frac=0.93,
+        aspect=0.65,
+    )
+
+    ok, reason = _validate_table_candidate(candidate)
+
+    assert ok is True
+    assert reason == ""
+
+
+def test_validate_table_candidate_rejects_front_matter_page() -> None:
+    front_matter_text = "\n".join(
+        [
+            "Acknowledgments",
+            "Much gratitude goes to the many subject matter leaders across Deloitte who contributed to our research for this chapter: Jinlei Liu,",
+            "Baris Sarer, Kate Fusillo Schmidt, Prakul Sharma, Akash Tayal, and Ashish Verma.",
+        ]
+    )
+    candidate = _table_candidate(
+        row_count=12,
+        col_count=2,
+        non_empty_cells=12,
+        total_cells=24,
+        numeric_cells=0,
+        numeric_ratio=0.007,
+        avg_words_per_cell=3.67,
+        avg_first_col_words=3.67,
+        preview="Acknowledgments",
+        text=front_matter_text,
+        text_len=len(front_matter_text),
+        line_count=12,
+        avg_line_len=52.0,
+        text_block_area_frac=0.73,
+        text_block_line_count=12,
+        text_block_avg_line_len=52.0,
+        area_frac=0.7255,
+        width_frac=1.0,
+        height_frac=0.83,
+        aspect=0.83,
+    )
+
+    ok, reason = _validate_table_candidate(candidate)
+
+    assert ok is False
+    assert reason == "front_matter"
+
+
+def test_validate_table_candidate_rejects_visual_quote_page() -> None:
+    quote_text = "\n".join(
+        [
+            "As technology innovation and adoption",
+            "accelerate, five trends reveal how",
+            "successful organizations are moving from",
+            "experimentation to impact",
+        ]
+    )
+    candidate = _table_candidate(
+        row_count=8,
+        col_count=2,
+        non_empty_cells=8,
+        total_cells=16,
+        numeric_cells=0,
+        numeric_ratio=0.026,
+        avg_words_per_cell=2.75,
+        avg_first_col_words=2.75,
+        preview="As technology innovation and adoption",
+        text=quote_text,
+        text_len=len(quote_text),
+        line_count=8,
+        avg_line_len=31.0,
+        text_block_area_frac=0.08,
+        text_block_line_count=8,
+        text_block_avg_line_len=31.0,
+        area_frac=0.2896,
+        width_frac=0.325,
+        height_frac=0.93,
+        aspect=0.28,
+    )
+
+    ok, reason = _validate_table_candidate(candidate)
+
+    assert ok is False
+    assert reason == "visual_quote_page"
 
 
 def test_validate_table_candidate_rejects_short_prose_box() -> None:

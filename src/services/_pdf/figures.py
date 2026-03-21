@@ -71,6 +71,9 @@ CHART_CAPTION_TOP_SEARCH_FRAC = 0.2
 CHART_CAPTION_TOP_GUARD_FRAC = 0.01
 CHART_CAPTION_TOP_BLOCK_H_OVERLAP = 0.3
 CHART_CAPTION_MERGE_MAX_GAP_FRAC = 0.18
+CHART_CAPTION_INTERNAL_TOP_TOL_PX = 18.0
+CHART_CAPTION_INTERNAL_TOP_TOL_FRAC = 0.02
+CHART_CAPTIONED_DRAW_MAX_ASPECT = 3.4
 CHART_CROP_PAD_COMPENSATION = 8
 CHART_NOTE_PAD_EXTRA = 24
 CHART_NOTE_BELOW_GUARD_PX = 3
@@ -264,18 +267,43 @@ TABLE_REFERENCE_MIN_AVG_LINE_LEN = 60.0
 TABLE_REFERENCE_MIN_URL_HITS = 2
 TABLE_REFERENCE_MIN_YEAR_HITS = 3
 TABLE_REFERENCE_MIN_TERM_HITS = 3
+TABLE_REFERENCE_MIN_NUMBERED_HITS = 4
+TABLE_REFERENCE_MIN_AVG_WORDS_PER_CELL = 1.8
 TABLE_REFERENCE_TERMS = (
     "doi.org",
     "journal",
     "working paper",
     "oecd publishing",
     "publishing, paris",
+    "accessed",
+    "interview",
+    "press release",
     "vol.",
     "no.",
     "pp.",
     "ssrn",
     "mercatus",
 )
+TABLE_FRONT_MATTER_MAX_COLS = 4
+TABLE_FRONT_MATTER_MAX_NUMERIC_RATIO = 0.12
+TABLE_FRONT_MATTER_MAX_AVG_WORDS_PER_CELL = 4.0
+TABLE_FRONT_MATTER_MIN_AREA_FRAC = 0.08
+TABLE_FRONT_MATTER_TERMS = (
+    "table of contents",
+    "acknowledgments",
+    "acknowledgements",
+    "endnotes",
+)
+TABLE_VISUAL_QUOTE_MAX_ROWS = 12
+TABLE_VISUAL_QUOTE_MAX_COLS = 3
+TABLE_VISUAL_QUOTE_MAX_NUMERIC_RATIO = 0.05
+TABLE_VISUAL_QUOTE_MAX_AVG_WORDS_PER_CELL = 4.5
+TABLE_VISUAL_QUOTE_MAX_TEXT_LEN = 320
+TABLE_VISUAL_QUOTE_MAX_ASPECT = 0.45
+TABLE_VISUAL_QUOTE_MAX_WIDTH_FRAC = 0.42
+TABLE_VISUAL_QUOTE_MIN_HEIGHT_FRAC = 0.55
+TABLE_VISUAL_QUOTE_MAX_FILLED_CELLS_PER_ROW = 1.35
+TABLE_VISUAL_QUOTE_MAX_TEXT_BLOCK_AREA = 0.2
 TABLE_SECTION_LIST_MIN_ROWS = 8
 TABLE_SECTION_LIST_MAX_COLS = 6
 TABLE_SECTION_LIST_MAX_NUMERIC_RATIO = 0.15
@@ -285,6 +313,8 @@ TABLE_SECTION_LIST_MAX_AVG_LINE_LEN = 48.0
 TABLE_SECTION_LIST_MIN_SHORT_LINE_RATIO = 0.7
 TABLE_SECTION_LIST_MIN_TERMINAL_NUMBER_HITS = 4
 TABLE_SECTION_LIST_MAX_AREA_FRAC_WITHOUT_NUMBERS = 0.2
+TABLE_SECTION_LIST_MIN_FRAGMENTED_DOT_HITS = 4
+TABLE_SECTION_LIST_MAX_NARROW_ASPECT = 0.4
 TABLE_FIGURE_FRAGMENT_COMPACT_MAX_ROWS = 3
 TABLE_FIGURE_FRAGMENT_COMPACT_MAX_AREA_FRAC = 0.03
 TABLE_FIGURE_FRAGMENT_MIN_NUMERIC_RATIO = 0.35
@@ -2344,23 +2374,43 @@ def _drawing_caption_rects(
     page_rect = page.rect
     bottom_limit = page_rect.y1 - page_rect.height * 0.1
     candidates: List[Tuple[fitz.Rect, str, fitz.Rect]] = []
-    for cap_rect, cap_text in captions:
+    caption_top_tol = max(
+        CHART_CAPTION_INTERNAL_TOP_TOL_PX,
+        page_rect.height * CHART_CAPTION_INTERNAL_TOP_TOL_FRAC,
+    )
+    captions_sorted = sorted(captions, key=lambda item: (item[0].y0, item[0].x0))
+    for index, (cap_rect, cap_text) in enumerate(captions_sorted):
+        next_caption_y0: Optional[float] = None
+        for other_rect, _other_text in captions_sorted[index + 1 :]:
+            if other_rect.y0 > cap_rect.y0 + 1.0:
+                next_caption_y0 = other_rect.y0
+                break
         band_top = cap_rect.y1 - 2
         band_bot = min(bottom_limit, cap_rect.y1 + page_rect.height * 0.55)
+        if next_caption_y0 is not None:
+            band_bot = min(
+                band_bot,
+                next_caption_y0 - CHART_NEXT_BLOCKER_GUARD_PX,
+            )
         if band_bot <= band_top:
             continue
         band = fitz.Rect(page_rect.x0, band_top, page_rect.x1, band_bot)
-        selected = []
+        strict_selected = []
+        relaxed_selected = []
         for r in drawings:
             if not r.intersects(band):
                 continue
-            if r.y0 < cap_rect.y0 - 4:
-                continue
             if r.y1 <= cap_rect.y1:
+                continue
+            if next_caption_y0 is not None and r.y0 >= next_caption_y0 - caption_top_tol:
                 continue
             if _horizontal_overlap_ratio(r, cap_rect) < 0.25:
                 continue
-            selected.append(r)
+            if r.y0 >= cap_rect.y0 - 4.0:
+                strict_selected.append(r)
+            elif r.y0 >= cap_rect.y0 - caption_top_tol:
+                relaxed_selected.append(r)
+        selected = strict_selected or relaxed_selected
         if not selected:
             continue
         merged = selected[0]
@@ -4022,8 +4072,12 @@ def _validate_table_candidate(cand: _TableCandidate) -> Tuple[bool, str]:
         return False, "section_list"
     if _reference_block_like(cand):
         return False, "reference_block"
+    if _front_matter_like(cand):
+        return False, "front_matter"
     if _prose_box_like(cand):
         return False, "prose_box"
+    if _visual_quote_page_like(cand):
+        return False, "visual_quote_page"
     if cand.figure_context_hint:
         return False, "figure_caption_context"
     if _chart_fragment_like(cand):
@@ -4308,8 +4362,6 @@ def _section_list_like(cand: _TableCandidate) -> bool:
         return False
     if cand.avg_words_per_cell > TABLE_SECTION_LIST_MAX_AVG_WORDS_PER_CELL:
         return False
-    if cand.text_block_area_frac < TABLE_SECTION_LIST_MIN_TEXT_BLOCK_AREA:
-        return False
     lines = _nonempty_text_lines(cand.text)
     if len(lines) < TABLE_SECTION_LIST_MIN_ROWS:
         return False
@@ -4322,6 +4374,18 @@ def _section_list_like(cand: _TableCandidate) -> bool:
     terminal_hits = _terminal_page_number_hits(lines)
     if terminal_hits >= TABLE_SECTION_LIST_MIN_TERMINAL_NUMBER_HITS:
         return True
+    dot_leader_hits = len(re.findall(r"(?:^|\n)\s*\d{1,2}\s*\.\s*\.\s*\.", cand.text))
+    if dot_leader_hits >= 3:
+        return True
+    fragmented_dot_hits = len(re.findall(r"\.\s*\.", cand.text))
+    if (
+        fragmented_dot_hits >= TABLE_SECTION_LIST_MIN_FRAGMENTED_DOT_HITS
+        and cand.area_frac <= TABLE_SECTION_LIST_MAX_AREA_FRAC_WITHOUT_NUMBERS
+        and cand.aspect <= TABLE_SECTION_LIST_MAX_NARROW_ASPECT
+    ):
+        return True
+    if cand.text_block_area_frac < TABLE_SECTION_LIST_MIN_TEXT_BLOCK_AREA:
+        return False
     return (
         cand.numeric_ratio <= TABLE_CONTENTS_MIN_NUMERIC_RATIO / 2.0
         and cand.area_frac <= TABLE_SECTION_LIST_MAX_AREA_FRAC_WITHOUT_NUMBERS
@@ -4333,8 +4397,17 @@ def _reference_block_like(cand: _TableCandidate) -> bool:
     url_hits = len(re.findall(r"https?://|doi\.org|www\.", lowered))
     year_hits = len(re.findall(r"\b(?:19|20)\d{2}[a-z]?\b", lowered))
     term_hits = sum(lowered.count(term) for term in TABLE_REFERENCE_TERMS)
+    numbered_hits = len(re.findall(r"(?:^|\n)\s*\d+\.\s+", cand.text))
     if cand.method != "stream":
         return False
+    if (
+        numbered_hits >= TABLE_REFERENCE_MIN_NUMBERED_HITS
+        and year_hits >= TABLE_REFERENCE_MIN_YEAR_HITS
+        and (url_hits >= 1 or term_hits >= 1)
+        and cand.numeric_ratio <= TABLE_REFERENCE_MAX_NUMERIC_RATIO
+        and cand.avg_words_per_cell >= TABLE_REFERENCE_MIN_AVG_WORDS_PER_CELL
+    ):
+        return True
     if (
         url_hits >= TABLE_REFERENCE_MIN_URL_HITS
         and year_hits >= TABLE_REFERENCE_MIN_YEAR_HITS
@@ -4361,6 +4434,21 @@ def _reference_block_like(cand: _TableCandidate) -> bool:
     )
 
 
+def _front_matter_like(cand: _TableCandidate) -> bool:
+    if cand.method != "stream":
+        return False
+    lowered = cand.text.lower()
+    if not any(term in lowered for term in TABLE_FRONT_MATTER_TERMS):
+        return False
+    if cand.col_count > TABLE_FRONT_MATTER_MAX_COLS:
+        return False
+    if cand.numeric_ratio > TABLE_FRONT_MATTER_MAX_NUMERIC_RATIO:
+        return False
+    if cand.avg_words_per_cell > TABLE_FRONT_MATTER_MAX_AVG_WORDS_PER_CELL:
+        return False
+    return cand.area_frac >= TABLE_FRONT_MATTER_MIN_AREA_FRAC
+
+
 def _prose_box_like(cand: _TableCandidate) -> bool:
     if cand.row_count < TABLE_PROSE_BOX_MIN_ROWS:
         return False
@@ -4382,6 +4470,32 @@ def _prose_box_like(cand: _TableCandidate) -> bool:
         int(cand.row_count * TABLE_PROSE_BOX_MAX_LINECOUNT_ROW_MULT),
     )
     if cand.line_count > max_line_count:
+        return False
+    return True
+
+
+def _visual_quote_page_like(cand: _TableCandidate) -> bool:
+    if cand.method != "stream":
+        return False
+    if cand.row_count > TABLE_VISUAL_QUOTE_MAX_ROWS:
+        return False
+    if cand.col_count > TABLE_VISUAL_QUOTE_MAX_COLS:
+        return False
+    if cand.numeric_ratio > TABLE_VISUAL_QUOTE_MAX_NUMERIC_RATIO:
+        return False
+    if cand.avg_words_per_cell > TABLE_VISUAL_QUOTE_MAX_AVG_WORDS_PER_CELL:
+        return False
+    if cand.text_len > TABLE_VISUAL_QUOTE_MAX_TEXT_LEN:
+        return False
+    if cand.aspect > TABLE_VISUAL_QUOTE_MAX_ASPECT:
+        return False
+    if cand.width_frac > TABLE_VISUAL_QUOTE_MAX_WIDTH_FRAC:
+        return False
+    if cand.height_frac < TABLE_VISUAL_QUOTE_MIN_HEIGHT_FRAC:
+        return False
+    if _filled_cells_per_row(cand) > TABLE_VISUAL_QUOTE_MAX_FILLED_CELLS_PER_ROW:
+        return False
+    if cand.text_block_area_frac > TABLE_VISUAL_QUOTE_MAX_TEXT_BLOCK_AREA:
         return False
     return True
 
