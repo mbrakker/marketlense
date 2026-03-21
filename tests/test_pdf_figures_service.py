@@ -22,6 +22,7 @@ from src.services._pdf.figures import (
     _expand_table_bbox,
     _extend_panel_with_adjacent_text_blocks,
     _has_figure_context_hint,
+    _panel_chart_has_data_signal,
     _panel_chart_rects,
     _prune_charts_overlapping_ranked_tables,
     _validate_table_candidate,
@@ -560,6 +561,37 @@ def _build_panel_chart_slide_pdf(path: Path) -> None:
     doc.close()
 
 
+def _build_shared_title_split_panel_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=960, height=540)
+    page.insert_text((28, 56), "Top anticipated media challenges", fontsize=24)
+    page.insert_text((28, 84), "by company type", fontsize=24)
+    page.draw_rect(
+        fitz.Rect(28, 128, 462, 468),
+        color=(0.96, 0.96, 0.96),
+        fill=(0.96, 0.96, 0.96),
+        width=0.5,
+    )
+    page.draw_rect(
+        fitz.Rect(498, 128, 932, 468),
+        color=(0.96, 0.96, 0.96),
+        fill=(0.96, 0.96, 0.96),
+        width=0.5,
+    )
+    page.insert_text((56, 166), "78%", fontsize=28)
+    page.insert_text((152, 160), "Ad content adjacency", fontsize=20)
+    page.insert_text((152, 190), "AI-generated content (37%)", fontsize=14)
+    page.insert_text((152, 214), "Deepfakes (27%)", fontsize=14)
+    page.insert_text((152, 238), "Influencer content (20%)", fontsize=14)
+    page.insert_text((540, 166), "40%", fontsize=28)
+    page.insert_text((636, 160), "Publishers & platforms", fontsize=20)
+    page.insert_text((636, 190), "Brand suitability", fontsize=14)
+    page.insert_text((636, 214), "Premium inventory", fontsize=14)
+    page.insert_text((636, 238), "Trusted context", fontsize=14)
+    doc.save(path.as_posix())
+    doc.close()
+
+
 def _build_wide_panel_chart_pdf(path: Path) -> None:
     doc = fitz.open()
     page = doc.new_page(width=960, height=540)
@@ -601,6 +633,68 @@ def _build_wide_panel_chart_pdf(path: Path) -> None:
     doc.close()
 
 
+def _build_multiline_title_panel_with_side_card_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=720, height=405)
+    page.insert_text((28, 42), "As digital content grows, the need for innovation", fontsize=20)
+    page.insert_text((28, 66), "in ensuring media quality within digital video", fontsize=20)
+    page.insert_text((28, 90), "platforms is especially important", fontsize=20)
+    page.draw_rect(
+        fitz.Rect(28, 128, 418, 332),
+        color=(1, 1, 1),
+        fill=(1, 1, 1),
+        width=0.5,
+    )
+    page.draw_line((28, 168), (418, 168), color=(0.2, 0.2, 0.2), width=1.0)
+    page.insert_text((28, 158), "Media Quality Considerations on Social Media", fontsize=16)
+    page.insert_textbox(
+        fitz.Rect(28, 192, 208, 300),
+        "Viewability is an important metric when assessing social media campaigns",
+        fontsize=12,
+        align=2,
+    )
+    page.draw_rect(
+        fitz.Rect(240, 184, 404, 236),
+        color=(0.67, 0.98, 0.51),
+        fill=(0.67, 0.98, 0.51),
+        width=0.5,
+    )
+    page.insert_text((338, 221), "85%", fontsize=24)
+    page.draw_rect(
+        fitz.Rect(240, 252, 404, 304),
+        color=(0.67, 0.98, 0.51),
+        fill=(0.67, 0.98, 0.51),
+        width=0.5,
+    )
+    page.insert_text((338, 289), "85%", fontsize=24)
+    page.draw_rect(
+        fitz.Rect(458, 140, 690, 356),
+        color=(0.19, 0.37, 0.31),
+        fill=(0.19, 0.37, 0.31),
+        width=0.5,
+    )
+    page.insert_text((486, 176), "WHAT THIS MEANS", fontsize=18, color=(0.72, 1.0, 0.4))
+    page.insert_text((486, 202), "FOR MARKETERS", fontsize=18, color=(0.72, 1.0, 0.4))
+    page.insert_textbox(
+        fitz.Rect(478, 224, 678, 334),
+        (
+            "Media quality on digital video remains important as spending climbs to "
+            "$306.4 billion globally. Improved detection should help cut 14.9% of "
+            "avoidable risk by 2026."
+        ),
+        fontsize=12,
+        color=(1, 1, 1),
+        lineheight=1.2,
+    )
+    page.insert_textbox(
+        fitz.Rect(28, 364, 690, 398),
+        "Source: Synthetic IAS-style slide footer used to keep the page layout realistic.",
+        fontsize=10,
+    )
+    doc.save(path.as_posix())
+    doc.close()
+
+
 def _build_panel_chart_slide_with_figure_caption_pdf(path: Path) -> None:
     doc = fitz.open()
     page = doc.new_page(width=960, height=540)
@@ -627,6 +721,105 @@ def _build_panel_chart_slide_with_figure_caption_pdf(path: Path) -> None:
     )
     page.draw_circle((715, 318), 96, color=(0.12, 0.12, 0.12), width=1.2)
     page.draw_circle((715, 318), 72, color=(0.82, 0.0, 0.86), width=18)
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_panel_action_card_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=960, height=540)
+    page.insert_text((28, 56), "Take action", fontsize=24)
+    page.insert_text((42, 138), "Context control avoidance", fontsize=18)
+    page.draw_rect(
+        fitz.Rect(28, 170, 462, 468),
+        color=(0.15, 0.28, 0.24),
+        fill=(0.15, 0.28, 0.24),
+        width=0.5,
+    )
+    page.insert_textbox(
+        fitz.Rect(56, 214, 428, 430),
+        (
+            "Avoid content you deem risky or unsuitable with a contextual "
+            "solution that leverages semantic intelligence and custom controls. "
+            "Use the workflow to align teams, reduce manual review, and improve "
+            "consistency across channels."
+        ),
+        fontsize=14,
+        color=(1, 1, 1),
+        lineheight=1.2,
+    )
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_dense_numeric_panel_chart_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=720, height=405)
+    page.insert_text(
+        (28, 56),
+        "Adjacencies to unsuitable Gen AI content",
+        fontsize=20,
+    )
+    panel_rect = fitz.Rect(28, 88, 676, 328)
+    page.draw_rect(
+        panel_rect,
+        color=(0.95, 0.95, 0.95),
+        fill=(0.95, 0.95, 0.95),
+        width=0.5,
+    )
+    page.draw_rect(
+        fitz.Rect(478, 112, 652, 304),
+        color=(0.12, 0.34, 0.25),
+        fill=(0.12, 0.34, 0.25),
+        width=0.5,
+    )
+    categories = [
+        ("Content that contains inaccurate information", "22%", "9%", "68%"),
+        ("Content that provides an ad-spammy user experience", "26%", "11%", "63%"),
+        ("Content that regurgitates or plagiarizes existing content", "25%", "14%", "61%"),
+        ("Content that comes from unknown domains with no editorial team", "24%", "17%", "59%"),
+    ]
+    for idx, (label, safe, unsure, avoid) in enumerate(categories):
+        y = 124 + idx * 46
+        page.insert_textbox(
+            fitz.Rect(44, y, 236, y + 36),
+            label,
+            fontsize=8,
+            align=2,
+        )
+        bar_y0 = y + 6
+        page.draw_rect(
+            fitz.Rect(256, bar_y0, 354, bar_y0 + 24),
+            color=(0.67, 0.98, 0.51),
+            fill=(0.67, 0.98, 0.51),
+            width=0.5,
+        )
+        page.draw_rect(
+            fitz.Rect(354, bar_y0, 394, bar_y0 + 24),
+            color=(0.52, 0.69, 0.59),
+            fill=(0.52, 0.69, 0.59),
+            width=0.5,
+        )
+        page.draw_rect(
+            fitz.Rect(394, bar_y0, 470, bar_y0 + 24),
+            color=(0.86, 0.86, 0.86),
+            fill=(0.86, 0.86, 0.86),
+            width=0.5,
+        )
+        page.insert_text((300, y + 22), safe, fontsize=11)
+        page.insert_text((366, y + 22), unsure, fontsize=11)
+        page.insert_text((425, y + 22), avoid, fontsize=11)
+    page.insert_textbox(
+        fitz.Rect(500, 144, 638, 286),
+        (
+            "Not all AI-generated content is created equal. Prioritising "
+            "classification and robust avoidance strategies helps ensure "
+            "brands maintain trust."
+        ),
+        fontsize=11,
+        color=(1, 1, 1),
+        lineheight=1.2,
+    )
     doc.save(path.as_posix())
     doc.close()
 
@@ -1987,6 +2180,32 @@ def test_collect_candidates_detects_panel_charts_without_figure_captions(
     assert right.bbox[0] > 460.0
 
 
+def test_collect_candidates_groups_shared_title_split_panels_into_one_chart(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "shared-title-split-panel.pdf"
+    out_dir = tmp_path / "out"
+    _build_shared_title_split_panel_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="shared-title-split-panel",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+
+    assert len(charts) == 1
+    assert "top anticipated media challenges by company type" in (
+        charts[0].caption or ""
+    ).lower()
+    assert charts[0].bbox[2] > 900.0
+
+
 def test_collect_candidates_detects_wide_panel_chart_with_resource_title(
     tmp_path,
 ) -> None:
@@ -2013,6 +2232,78 @@ def test_collect_candidates_detects_wide_panel_chart_with_resource_title(
     assert charts[0].bbox[0] > 0.0
     assert charts[0].bbox[2] < 960.0
     assert charts[0].bbox[3] < 520.0
+
+
+def test_collect_candidates_rejects_panel_action_card_without_data_signal(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "panel-action-card.pdf"
+    out_dir = tmp_path / "out"
+    _build_panel_action_card_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="panel-action-card",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    assert charts == []
+
+
+def test_collect_candidates_keeps_dense_numeric_panel_chart(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "dense-numeric-panel-chart.pdf"
+    out_dir = tmp_path / "out"
+    _build_dense_numeric_panel_chart_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="dense-numeric-panel-chart",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    assert len(charts) == 1
+    assert "adjacencies to unsuitable gen ai content" in (charts[0].caption or "").lower()
+    assert charts[0].bbox[2] >= 648.0
+    assert charts[0].bbox[3] >= 300.0
+
+
+def test_collect_candidates_merges_multiline_panel_title_with_numeric_side_card(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "multiline-panel-side-card.pdf"
+    out_dir = tmp_path / "out"
+    _build_multiline_title_panel_with_side_card_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="multiline-panel-side-card",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+
+    assert len(charts) == 1
+    assert "as digital content grows, the need for innovation" in (
+        charts[0].caption or ""
+    ).lower()
+    assert charts[0].bbox[1] < 36.0
+    assert charts[0].bbox[2] > 660.0
 
 
 def test_panel_chart_rects_skip_pages_with_explicit_figure_captions(tmp_path) -> None:
@@ -2074,6 +2365,7 @@ def test_visual_text_dense_recovery_only_uses_panel_heuristic_for_panel_kind() -
         )
         is True
     )
+    assert _panel_chart_has_data_signal(text) is True
 
 
 def test_extract_best_figure_writes_asset_and_logs(
@@ -2385,7 +2677,7 @@ def test_validate_table_candidate_rejects_contents_like_layout() -> None:
         text_block_area_frac=0.58,
         text_block_line_count=16,
         text_block_avg_line_len=31.0,
-        area_frac=0.45,
+        area_frac=0.42,
         width_frac=0.82,
         height_frac=0.62,
         aspect=0.86,
@@ -2912,6 +3204,84 @@ def test_validate_table_candidate_rejects_section_list() -> None:
 
     assert ok is False
     assert reason == "section_list"
+
+
+def test_validate_table_candidate_rejects_stream_slide_card() -> None:
+    candidate = _table_candidate(
+        method="stream",
+        row_count=10,
+        col_count=6,
+        col_consistency=0.57,
+        non_empty_cells=40,
+        total_cells=60,
+        numeric_cells=1,
+        numeric_ratio=0.01,
+        avg_words_per_cell=3.0,
+        avg_first_col_words=3.0,
+        preview="84% | 82% | 76% | For marketers",
+        text=(
+            "84% 82% 76%\n"
+            "You might trust a premium channel, but quality still varies.\n"
+            "Brands should prioritise better transparency and optimisation.\n"
+            "For marketers\n"
+            "Concern for media quality will continue to be prevalent."
+        ),
+        text_len=196,
+        line_count=18,
+        avg_line_len=43.0,
+        text_block_area_frac=0.56,
+        text_block_line_count=38,
+        text_block_avg_line_len=43.0,
+        area_frac=0.42,
+        width_frac=0.86,
+        height_frac=0.52,
+        aspect=1.5,
+    )
+
+    ok, reason = _validate_table_candidate(candidate)
+
+    assert ok is False
+    assert reason == "stream_slide_card"
+
+
+def test_validate_table_candidate_rejects_contents_grid() -> None:
+    candidate = _table_candidate(
+        method="stream",
+        row_count=7,
+        col_count=4,
+        col_consistency=0.71,
+        non_empty_cells=28,
+        total_cells=28,
+        numeric_cells=4,
+        numeric_ratio=0.13,
+        avg_words_per_cell=1.38,
+        avg_first_col_words=1.29,
+        preview="01 | 02 | 03 | 04",
+        text=(
+            "01 02 03 04\n"
+            "TOP MEDIA THE RISE OF SOCIAL DIGITAL\n"
+            "CHALLENGES AND GENERATIVE AI MEDIA VIDEO\n"
+            "OPPORTUNITIES\n"
+            "05 06 07 08\n"
+            "CONNECTED RETAIL MEDIA LOOKING AHEAD ABOUT IAS\n"
+            "TV NETWORKS TO 2026"
+        ),
+        text_len=184,
+        line_count=7,
+        avg_line_len=24.7,
+        text_block_area_frac=1.08,
+        text_block_line_count=7,
+        text_block_avg_line_len=24.7,
+        area_frac=0.42,
+        width_frac=0.82,
+        height_frac=0.32,
+        aspect=2.66,
+    )
+
+    ok, reason = _validate_table_candidate(candidate)
+
+    assert ok is False
+    assert reason == "contents_grid"
 
 
 def test_has_figure_context_hint_detects_figure_but_not_table_title(tmp_path) -> None:

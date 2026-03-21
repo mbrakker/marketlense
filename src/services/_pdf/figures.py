@@ -50,6 +50,7 @@ CHART_LABEL_DENSE_LONG_LINE_LEN = 32
 CHART_LABEL_DENSE_MAX_LONG_LINE_RATIO = 0.2
 CHART_LABEL_DENSE_SHORT_LINE_LEN = 12
 CHART_LABEL_DENSE_MIN_SHORT_LINE_RATIO = 0.4
+PANEL_CHART_MIN_NUMERIC_HITS = 2
 INFOGRAPHIC_LABEL_DENSE_MAX_AVG_LINE_LEN = 20.0
 INFOGRAPHIC_LABEL_DENSE_MAX_MEDIAN_LINE_LEN = 12.0
 INFOGRAPHIC_LABEL_DENSE_MAX_LONG_LINE_RATIO = 0.35
@@ -182,6 +183,29 @@ TABLE_STREAM_PANEL_MIN_ROWS = 8
 TABLE_STREAM_PANEL_MAX_COLS = 4
 TABLE_STREAM_PANEL_MAX_AVG_WORDS = 2.6
 TABLE_STREAM_PANEL_MAX_NUMERIC_RATIO = 0.08
+TABLE_STREAM_SLIDE_CARD_MIN_AREA = 0.18
+TABLE_STREAM_SLIDE_CARD_MAX_AREA = 0.72
+TABLE_STREAM_SLIDE_CARD_MIN_ROWS = 6
+TABLE_STREAM_SLIDE_CARD_MAX_COLS = 6
+TABLE_STREAM_SLIDE_CARD_MAX_NUMERIC_RATIO = 0.12
+TABLE_STREAM_SLIDE_CARD_MIN_AVG_WORDS = 1.2
+TABLE_STREAM_SLIDE_CARD_MAX_AVG_WORDS = 4.6
+TABLE_STREAM_SLIDE_CARD_MIN_TEXT_BLOCK_AREA = 0.25
+TABLE_STREAM_SLIDE_CARD_MIN_AVG_LINE_LEN = 20.0
+TABLE_STREAM_SLIDE_CARD_MAX_COL_CONSISTENCY = 0.75
+TABLE_STREAM_SLIDE_CARD_MIN_LINES = 14
+TABLE_STREAM_SLIDE_CARD_LINE_PAD = 1
+TABLE_CONTENTS_GRID_MIN_ROWS = 7
+TABLE_CONTENTS_GRID_MIN_COLS = 4
+TABLE_CONTENTS_GRID_MAX_COLS = 6
+TABLE_CONTENTS_GRID_MIN_AREA = 0.25
+TABLE_CONTENTS_GRID_MIN_NUMERIC_RATIO = 0.08
+TABLE_CONTENTS_GRID_MAX_NUMERIC_RATIO = 0.18
+TABLE_CONTENTS_GRID_MAX_AVG_WORDS = 2.1
+TABLE_CONTENTS_GRID_MAX_FIRST_COL_WORDS = 2.0
+TABLE_CONTENTS_GRID_MAX_AVG_LINE_LEN = 32.0
+TABLE_CONTENTS_GRID_MIN_NUMBERED_LINES = 2
+TABLE_CONTENTS_GRID_MIN_UPPERCASE_SHORT_RATIO = 0.45
 TABLE_STREAM_SPARSE_MIN_AREA = 0.6
 TABLE_STREAM_SPARSE_MAX_LINES = 15
 TABLE_STREAM_SPARSE_MIN_AVG_LINE_LEN = 55
@@ -215,6 +239,16 @@ PANEL_CHART_TITLE_MAX_GAP = 72.0
 PANEL_CHART_TITLE_NEAREST_TOL = 24.0
 PANEL_CHART_TITLE_X_PAD = 72.0
 PANEL_CHART_SPLIT_MIN_CENTER_GAP_FRAC = 0.12
+PANEL_CHART_TITLE_STACK_MAX_GAP = 20.0
+PANEL_CHART_TITLE_STACK_MIN_H_OVERLAP = 0.45
+PANEL_CHART_TITLE_STACK_MAX_EDGE_DELTA = 72.0
+PANEL_CHART_SHARED_COMPONENT_MAX_SIDE_GAP_FRAC = 0.08
+PANEL_CHART_SHARED_COMPONENT_MIN_V_OVERLAP = 0.55
+PANEL_CONTEXT_CARD_MAX_SIDE_GAP_FRAC = 0.06
+PANEL_CONTEXT_CARD_MIN_V_OVERLAP = 0.55
+PANEL_CONTEXT_CARD_MIN_HEIGHT_RATIO = 0.55
+PANEL_CONTEXT_CARD_MIN_TEXT_CHARS = 60
+PANEL_CONTEXT_CARD_MAX_COMPONENT_OVERLAP = 0.35
 TABLE_EXPAND_MAX_GAP_FRAC = 0.12
 TABLE_EXPAND_LATTICE_MAX_GAP_FRAC = 0.08
 TABLE_EXPAND_MAX_BLOCK_HEIGHT_FRAC = 0.4
@@ -2198,7 +2232,44 @@ def _panel_title_lines(
         if sentence_marks > PANEL_CHART_TITLE_MAX_SENTENCES:
             continue
         titles.append(line)
-    return sorted(titles, key=lambda item: (item.rect.y0, item.rect.x0))
+    titles = sorted(titles, key=lambda item: (item.rect.y0, item.rect.x0))
+    if len(titles) < 2:
+        return titles
+    merged_titles: List[_PageTextLine] = []
+    index = 0
+    while index < len(titles):
+        current = titles[index]
+        merged_rect = fitz.Rect(current.rect)
+        merged_text = [current.text.strip()]
+        max_font_size = current.max_font_size
+        index += 1
+        while index < len(titles):
+            nxt = titles[index]
+            gap = nxt.rect.y0 - merged_rect.y1
+            if gap > PANEL_CHART_TITLE_STACK_MAX_GAP:
+                break
+            horizontal_overlap = _horizontal_overlap_ratio(merged_rect, nxt.rect)
+            edge_delta = min(
+                abs(nxt.rect.x0 - merged_rect.x0),
+                abs(nxt.rect.x1 - merged_rect.x1),
+            )
+            if (
+                horizontal_overlap < PANEL_CHART_TITLE_STACK_MIN_H_OVERLAP
+                and edge_delta > PANEL_CHART_TITLE_STACK_MAX_EDGE_DELTA
+            ):
+                break
+            merged_rect |= nxt.rect
+            merged_text.append(nxt.text.strip())
+            max_font_size = max(max_font_size, nxt.max_font_size)
+            index += 1
+        merged_titles.append(
+            _PageTextLine(
+                rect=merged_rect,
+                text=" ".join(part for part in merged_text if part),
+                max_font_size=max_font_size,
+            )
+        )
+    return merged_titles
 
 
 def _panel_chart_is_label_dense_not_prose(text: str) -> bool:
@@ -2216,6 +2287,39 @@ def _panel_chart_is_label_dense_not_prose(text: str) -> bool:
     short_lines = sum(1 for line in lines if len(line) <= 14)
     short_line_ratio = short_lines / max(1, len(lines))
     return short_line_ratio >= 0.3
+
+
+def _numeric_token_hits(text: str) -> int:
+    return len(re.findall(r"\b\d+(?:\.\d+)?%?\b", text))
+
+
+def _panel_chart_has_data_signal(text: str) -> bool:
+    if _panel_chart_is_label_dense_not_prose(text):
+        return True
+    return _numeric_token_hits(text) >= PANEL_CHART_MIN_NUMERIC_HITS
+
+
+def _panel_component_looks_like_independent_data_panel(text: str) -> bool:
+    if _panel_chart_is_label_dense_not_prose(text):
+        return True
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    if not lines:
+        return False
+    numeric_hits = _numeric_token_hits(text)
+    if numeric_hits < 3:
+        return False
+    avg_line_len = sum(len(line) for line in lines) / max(1, len(lines))
+    if numeric_hits >= 6:
+        return True
+    return len(lines) >= 8 and avg_line_len <= 28.0
+
+
+def _rect_overlap_area(left: fitz.Rect, right: fitz.Rect) -> float:
+    overlap = fitz.Rect(left)
+    overlap &= right
+    if overlap.x1 <= overlap.x0 or overlap.y1 <= overlap.y0:
+        return 0.0
+    return overlap.get_area()
 
 
 def _drawing_components(page: fitz.Page) -> List[Tuple[fitz.Rect, List[fitz.Rect]]]:
@@ -2260,6 +2364,45 @@ def _drawing_components(page: fitz.Page) -> List[Tuple[fitz.Rect, List[fitz.Rect
     return sorted(components, key=lambda item: item[0].get_area(), reverse=True)
 
 
+def _shared_title_component_group(
+    component_index: int,
+    title: _PageTextLine,
+    component_entries: List[Tuple[fitz.Rect, List[fitz.Rect], List[_PageTextLine]]],
+    *,
+    page_rect: fitz.Rect,
+) -> List[int]:
+    grouped = [component_index]
+    grouped_set = {component_index}
+    merged_group_rect = fitz.Rect(component_entries[component_index][0])
+    max_side_gap = page_rect.width * PANEL_CHART_SHARED_COMPONENT_MAX_SIDE_GAP_FRAC
+    changed = True
+    while changed:
+        changed = False
+        for index, (candidate_rect, _, candidate_titles) in enumerate(component_entries):
+            if index in grouped_set:
+                continue
+            if len(candidate_titles) != 1 or candidate_titles[0] is not title:
+                continue
+            if (
+                _vertical_overlap_ratio(candidate_rect, merged_group_rect)
+                < PANEL_CHART_SHARED_COMPONENT_MIN_V_OVERLAP
+            ):
+                continue
+            if candidate_rect.x0 > merged_group_rect.x1:
+                side_gap = candidate_rect.x0 - merged_group_rect.x1
+            elif merged_group_rect.x0 > candidate_rect.x1:
+                side_gap = merged_group_rect.x0 - candidate_rect.x1
+            else:
+                side_gap = 0.0
+            if side_gap > max_side_gap:
+                continue
+            grouped.append(index)
+            grouped_set.add(index)
+            merged_group_rect |= candidate_rect
+            changed = True
+    return sorted(grouped)
+
+
 def _panel_chart_rects(
     page: fitz.Page,
     *,
@@ -2276,7 +2419,7 @@ def _panel_chart_rects(
         return []
     page_area = max(1.0, page.rect.get_area())
     page_rect = page.rect
-    candidates: List[Tuple[fitz.Rect, str, fitz.Rect]] = []
+    component_entries: List[Tuple[fitz.Rect, List[fitz.Rect], List[_PageTextLine]]] = []
     for merged, rects in components:
         area_frac = merged.get_area() / page_area
         if area_frac < PANEL_CHART_MIN_AREA_FRAC or area_frac > PANEL_CHART_MAX_AREA_FRAC:
@@ -2286,10 +2429,9 @@ def _panel_chart_rects(
             gap = merged.y0 - title.rect.y1
             if gap < -2.0 or gap > PANEL_CHART_TITLE_MAX_GAP:
                 continue
-            center_x = (title.rect.x0 + title.rect.x1) / 2.0
-            if center_x < merged.x0 - PANEL_CHART_TITLE_X_PAD:
+            if title.rect.x1 < merged.x0 - PANEL_CHART_TITLE_X_PAD:
                 continue
-            if center_x > merged.x1 + PANEL_CHART_TITLE_X_PAD:
+            if title.rect.x0 > merged.x1 + PANEL_CHART_TITLE_X_PAD:
                 continue
             nearby.append((gap, title))
         if not nearby:
@@ -2309,9 +2451,40 @@ def _panel_chart_rects(
         filtered = unique_titles
         if not filtered:
             continue
+        component_entries.append((merged, rects, filtered))
+
+    title_usage: Dict[int, int] = {}
+    for _, _, filtered in component_entries:
+        seen_titles: set[int] = set()
+        for title in filtered:
+            key = id(title)
+            if key in seen_titles:
+                continue
+            title_usage[key] = title_usage.get(key, 0) + 1
+            seen_titles.add(key)
+
+    candidates: List[Tuple[fitz.Rect, str, fitz.Rect]] = []
+    seen_shared_groups: set[Tuple[int, ...]] = set()
+    for component_index, (merged, rects, filtered) in enumerate(component_entries):
         if len(filtered) == 1:
             title = filtered[0]
-            candidate_rect = fitz.Rect(merged)
+            if title_usage.get(id(title), 0) > 1:
+                grouped_indices = tuple(
+                    _shared_title_component_group(
+                        component_index,
+                        title,
+                        component_entries,
+                        page_rect=page_rect,
+                    )
+                )
+                if grouped_indices in seen_shared_groups:
+                    continue
+                seen_shared_groups.add(grouped_indices)
+                candidate_rect = fitz.Rect(component_entries[grouped_indices[0]][0])
+                for group_index in grouped_indices[1:]:
+                    candidate_rect |= component_entries[group_index][0]
+            else:
+                candidate_rect = fitz.Rect(merged)
             candidate_rect |= title.rect
             candidates.append((candidate_rect, title.text, title.rect))
             continue
@@ -3061,6 +3234,52 @@ def _extend_panel_with_adjacent_text_blocks(page: fitz.Page, rect: fitz.Rect) ->
                 expanded |= block
             elif block.y1 > rect.y1 and block.y1 - rect.y1 <= max_v_gap:
                 expanded |= block
+    side_gap = page_rect.width * PANEL_CONTEXT_CARD_MAX_SIDE_GAP_FRAC
+    try:
+        components = _drawing_components(page)
+    except Exception:
+        components = []
+    for component_rect, _component_parts in components:
+        if component_rect.get_area() <= 0:
+            continue
+        overlap_ratio = _rect_overlap_area(component_rect, expanded) / max(
+            1.0, component_rect.get_area()
+        )
+        if overlap_ratio >= PANEL_CONTEXT_CARD_MAX_COMPONENT_OVERLAP:
+            continue
+        if _vertical_overlap_ratio(component_rect, expanded) < PANEL_CONTEXT_CARD_MIN_V_OVERLAP:
+            continue
+        if component_rect.height < expanded.height * PANEL_CONTEXT_CARD_MIN_HEIGHT_RATIO:
+            continue
+        on_right = (
+            component_rect.x1 > expanded.x1
+            and component_rect.x0 <= expanded.x1 + side_gap
+            and ((component_rect.x0 + component_rect.x1) / 2.0)
+            >= ((expanded.x0 + expanded.x1) / 2.0)
+        )
+        on_left = (
+            component_rect.x0 < expanded.x0
+            and component_rect.x1 >= expanded.x0 - side_gap
+            and ((component_rect.x0 + component_rect.x1) / 2.0)
+            <= ((expanded.x0 + expanded.x1) / 2.0)
+        )
+        if not (on_left or on_right):
+            continue
+        component_text_parts: List[str] = []
+        for x0, y0, x1, y1, text, *_ in blocks:
+            if not text:
+                continue
+            block = fitz.Rect(x0, y0, x1, y1)
+            if _rect_overlap_area(block, component_rect) < block.get_area() * 0.5:
+                continue
+            component_text_parts.append(str(text))
+        component_text = "\n".join(component_text_parts)
+        _lines, chars = _text_stats(component_text)
+        if chars < PANEL_CONTEXT_CARD_MIN_TEXT_CHARS:
+            continue
+        if _panel_component_looks_like_independent_data_panel(component_text):
+            continue
+        expanded |= component_rect
     return expanded
 
 
@@ -4084,6 +4303,8 @@ def _validate_table_candidate(cand: _TableCandidate) -> Tuple[bool, str]:
         return False, "contents_like"
     if _section_list_like(cand):
         return False, "section_list"
+    if _contents_grid_like(cand):
+        return False, "contents_grid"
     if _reference_block_like(cand):
         return False, "reference_block"
     if _front_matter_like(cand):
@@ -4113,6 +4334,8 @@ def _validate_table_candidate(cand: _TableCandidate) -> Tuple[bool, str]:
             and cand.avg_first_col_words >= TABLE_INDEX_MIN_FIRST_COL_WORDS
         ):
             return False, "index_like"
+        if _stream_slide_card_like(cand):
+            return False, "stream_slide_card"
         if _stream_text_layout_like(cand):
             return False, "stream_text_layout"
         if _stream_text_block_like(cand):
@@ -4226,6 +4449,37 @@ def _stream_panel_like(cand: _TableCandidate) -> bool:
     if cand.numeric_ratio > TABLE_STREAM_PANEL_MAX_NUMERIC_RATIO:
         return False
     return True
+
+
+def _stream_slide_card_like(cand: _TableCandidate) -> bool:
+    if cand.method != "stream":
+        return False
+    if cand.caption_hint:
+        return False
+    if cand.area_frac < TABLE_STREAM_SLIDE_CARD_MIN_AREA:
+        return False
+    if cand.area_frac > TABLE_STREAM_SLIDE_CARD_MAX_AREA:
+        return False
+    if cand.row_count < TABLE_STREAM_SLIDE_CARD_MIN_ROWS:
+        return False
+    if cand.col_count > TABLE_STREAM_SLIDE_CARD_MAX_COLS:
+        return False
+    if cand.numeric_ratio > TABLE_STREAM_SLIDE_CARD_MAX_NUMERIC_RATIO:
+        return False
+    if cand.avg_words_per_cell < TABLE_STREAM_SLIDE_CARD_MIN_AVG_WORDS:
+        return False
+    if cand.avg_words_per_cell > TABLE_STREAM_SLIDE_CARD_MAX_AVG_WORDS:
+        return False
+    if cand.text_block_area_frac < TABLE_STREAM_SLIDE_CARD_MIN_TEXT_BLOCK_AREA:
+        return False
+    if cand.avg_line_len < TABLE_STREAM_SLIDE_CARD_MIN_AVG_LINE_LEN:
+        return False
+    if cand.col_consistency > TABLE_STREAM_SLIDE_CARD_MAX_COL_CONSISTENCY:
+        return False
+    return cand.line_count >= max(
+        TABLE_STREAM_SLIDE_CARD_MIN_LINES,
+        cand.row_count + TABLE_STREAM_SLIDE_CARD_LINE_PAD,
+    )
 
 
 def _stream_sparse_text_like(cand: _TableCandidate) -> bool:
@@ -4406,6 +4660,43 @@ def _section_list_like(cand: _TableCandidate) -> bool:
         cand.numeric_ratio <= TABLE_CONTENTS_MIN_NUMERIC_RATIO / 2.0
         and cand.area_frac <= TABLE_SECTION_LIST_MAX_AREA_FRAC_WITHOUT_NUMBERS
     )
+
+
+def _contents_grid_like(cand: _TableCandidate) -> bool:
+    if cand.method != "stream":
+        return False
+    if cand.row_count < TABLE_CONTENTS_GRID_MIN_ROWS:
+        return False
+    if cand.col_count < TABLE_CONTENTS_GRID_MIN_COLS:
+        return False
+    if cand.col_count > TABLE_CONTENTS_GRID_MAX_COLS:
+        return False
+    if cand.area_frac < TABLE_CONTENTS_GRID_MIN_AREA:
+        return False
+    if cand.numeric_ratio < TABLE_CONTENTS_GRID_MIN_NUMERIC_RATIO:
+        return False
+    if cand.numeric_ratio > TABLE_CONTENTS_GRID_MAX_NUMERIC_RATIO:
+        return False
+    if cand.avg_words_per_cell > TABLE_CONTENTS_GRID_MAX_AVG_WORDS:
+        return False
+    if cand.avg_first_col_words > TABLE_CONTENTS_GRID_MAX_FIRST_COL_WORDS:
+        return False
+    if cand.avg_line_len > TABLE_CONTENTS_GRID_MAX_AVG_LINE_LEN:
+        return False
+    lines = _nonempty_text_lines(cand.text)
+    if len(lines) < TABLE_CONTENTS_GRID_MIN_ROWS:
+        return False
+    numbered_line_hits = sum(
+        1 for line in lines if len(re.findall(r"\b\d{1,2}\b", line)) >= 2
+    )
+    if numbered_line_hits < TABLE_CONTENTS_GRID_MIN_NUMBERED_LINES:
+        return False
+    uppercase_short_ratio = sum(
+        1
+        for line in lines
+        if len(line) <= 42 and any(char.isalpha() for char in line) and line == line.upper()
+    ) / max(1, len(lines))
+    return uppercase_short_ratio >= TABLE_CONTENTS_GRID_MIN_UPPERCASE_SHORT_RATIO
 
 
 def _reference_block_like(cand: _TableCandidate) -> bool:

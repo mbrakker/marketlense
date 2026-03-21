@@ -55,6 +55,7 @@ from .figures import (
     _nearby_text,
     _note_block_bottom,
     _pad_rect,
+    _panel_chart_has_data_signal,
     _rect_iou,
     _resolve_candidate_parallel_workers,
     _save_thumb,
@@ -65,6 +66,8 @@ from .figures import (
     _vertical_overlap_ratio,
 )
 from .page_artifacts import build_page_artifacts, is_full_page_scan_without_text
+
+PANEL_CHART_CONTEXT_TEXT_RATIO_MAX = 0.85
 
 
 def _has_side_by_side_visual_sibling(
@@ -374,6 +377,7 @@ def _extract_visuals_sequential(
                         )
                 text_dense_recovery_allowed = False
                 infographic_dense_recovery_allowed = False
+                panel_data_signal = False
                 if (
                     rect_item.kind in ("draw", "panel")
                     and cap_rect is not None
@@ -384,9 +388,10 @@ def _extract_visuals_sequential(
                         analysis_rect = _clamp_top_to_caption(
                             analysis_rect, cap_rect, page, rect
                         )
-                        analysis_rect = _clamp_bottom_to_next_chart_blocker(
-                            page, analysis_rect, cap_rect
-                        )
+                        if rect_item.kind != "panel":
+                            analysis_rect = _clamp_bottom_to_next_chart_blocker(
+                                page, analysis_rect, cap_rect
+                            )
                         bbox_text = page.get_text("text", clip=analysis_rect)
                     except Exception:
                         bbox_text = raw_bbox_text
@@ -404,6 +409,24 @@ def _extract_visuals_sequential(
                             _infographic_is_label_dense_not_prose(bbox_text)
                             or _infographic_is_label_dense_not_prose(raw_bbox_text)
                         )
+                if rect_item.kind == "panel":
+                    panel_data_signal = _panel_chart_has_data_signal(
+                        bbox_text if bbox_text else raw_bbox_text
+                    )
+                    if (
+                        not panel_data_signal
+                        and (
+                            raw_text_heavy
+                            or (
+                                raw_text_lines >= 5
+                                and raw_text_chars >= 150
+                                and raw_text_ratio >= 0.25
+                            )
+                        )
+                    ):
+                        stats["rejected"] = _int_count(stats["rejected"]) + 1
+                        _tally_reason(stats, "panel_no_data_signal")
+                        continue
                 if rect_item.kind in ("xref", "block") and not has_hint:
                     if (
                         not image_chart_like
@@ -441,6 +464,11 @@ def _extract_visuals_sequential(
                         and cap_rect is not None
                         and (
                             (has_context_hint and raw_text_ratio <= 0.55)
+                            or (
+                                rect_item.kind == "panel"
+                                and panel_data_signal
+                                and raw_text_ratio <= PANEL_CHART_CONTEXT_TEXT_RATIO_MAX
+                            )
                             or text_dense_recovery_allowed
                             or infographic_dense_recovery_allowed
                         )
