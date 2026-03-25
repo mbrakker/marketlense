@@ -8,7 +8,9 @@ while isolating visual-candidate orchestration into its own upgrade surface.
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import replace
+import math
 from pathlib import Path
+import re
 from typing import Dict, List, Optional
 
 import pymupdf as fitz
@@ -26,10 +28,12 @@ from .figures import (
     CHART_MARGIN_FRAC,
     CHART_MARGIN_RELAX_FRAC,
     INFO_CHART_MAX_ASPECT,
+    PANEL_CHART_INTERNAL_TITLE_EXTRA_TOP_PAD,
     VISUAL_CONTEXT_HINTS,
     _adjust_rect_for_text_margins,
     _candidate_index_from_id,
     _caption_near_top,
+    _caption_blocks,
     _chart_candidate_score,
     _infographic_is_label_dense_not_prose,
     _chart_is_label_dense_not_prose,
@@ -40,6 +44,7 @@ from .figures import (
     _clamp_top_to_caption,
     _clamp_top_to_heading,
     _collect_chart_rects,
+    _extend_chart_rect_with_adjacent_drawings,
     _expand_rect_into_whitespace,
     _extend_panel_with_adjacent_text_blocks,
     _extend_with_adjacent_text_blocks,
@@ -48,6 +53,7 @@ from .figures import (
     _find_overlapping_kept,
     _int_count,
     _is_page_number_text,
+    _line_starts_with_caption_hint,
     _merge_caption_above,
     _merge_stats,
     _nearest_caption_block,
@@ -55,8 +61,21 @@ from .figures import (
     _nearby_text,
     _note_block_bottom,
     _pad_rect,
+    _panel_caption_looks_top_band,
     _panel_chart_has_data_signal,
+    _panel_chart_has_compact_stat_card_signal,
+    _panel_candidate_shadowed_by_heading_candidate,
+    _panel_candidate_shadowed_by_larger_panel,
+    _panel_chart_has_structured_card_signal,
+    _panel_caption_looks_metric_stub,
+    _panel_component_looks_like_guidance_card,
+    _panel_component_looks_like_independent_data_panel,
+    _panel_neighbor_x_bounds,
+    _panel_stacked_bottom_clip_y,
+    _panel_should_clamp_to_internal_caption,
+    _panel_title_slice_bounds,
     _rect_iou,
+    _rect_containment_ratio,
     _resolve_candidate_parallel_workers,
     _save_thumb,
     _split_even_chunks,
@@ -68,6 +87,85 @@ from .figures import (
 from .page_artifacts import build_page_artifacts, is_full_page_scan_without_text
 
 PANEL_CHART_CONTEXT_TEXT_RATIO_MAX = 0.85
+CONTEXTUAL_RASTER_CARD_MIN_AREA_FRAC = 0.18
+CONTEXTUAL_RASTER_CARD_MAX_AREA_FRAC = 0.45
+CONTEXTUAL_RASTER_CARD_MIN_WIDTH_FRAC = 0.35
+CONTEXTUAL_RASTER_CARD_MAX_WIDTH_FRAC = 0.55
+CONTEXTUAL_RASTER_CARD_MIN_HEIGHT_FRAC = 0.5
+CONTEXTUAL_RASTER_CARD_MAX_HEIGHT_FRAC = 0.82
+CONTEXTUAL_RASTER_CARD_MIN_X0_FRAC = 0.48
+CONTEXTUAL_RASTER_CARD_MIN_X1_FRAC = 0.88
+CONTEXTUAL_RASTER_CARD_MAX_SAT_MEAN = 95.0
+CONTEXTUAL_RASTER_CARD_MAX_DARK_FRAC = 0.12
+CONTEXTUAL_RASTER_CARD_MIN_EDGE_DENSITY = 0.07
+CONTEXTUAL_RASTER_CARD_MAX_EDGE_DENSITY = 0.095
+CONTEXTUAL_RASTER_CARD_MIN_LEFT_CONTEXT_CHARS = 140
+CONTEXTUAL_RASTER_CARD_MIN_LEFT_CONTEXT_BLOCKS = 1
+PHOTO_LIKE_RASTER_MAX_WHITE_FRAC = 0.30
+PHOTO_LIKE_RASTER_MIN_SAT_MEAN = 60.0
+PHOTO_LIKE_RASTER_MIN_EDGE_DENSITY = 0.08
+PHOTO_LIKE_RASTER_MIN_DARK_FRAC = 0.03
+SMALL_DECORATIVE_RASTER_MAX_AREA_FRAC = 0.12
+SMALL_DECORATIVE_RASTER_MAX_TEXT_CHARS = 180
+_VISUAL_CONTEXT_LINE_RX = re.compile(
+    r"^\s*(?:figure|fig\.|exhibit|chart|graph|source|infographic)\b",
+    re.IGNORECASE,
+)
+_FIGURE_HINT_RX = re.compile(
+    r"^\s*(?:figure|fig\.|exhibit|chart|graph|infographic)\b",
+    re.IGNORECASE,
+)
+_BOX_HINT_RX = re.compile(r"^\s*box\b", re.IGNORECASE)
+_URL_REF_RX = re.compile(r"https?://|doi\.org|www\.", re.IGNORECASE)
+_SOURCE_OR_STATLINK_RX = re.compile(
+    r"(?im)(?:^|\n)\s*(?:source:|statlink\b)"
+)
+_EXPLANATORY_FIGURE_REF_RX = re.compile(
+    r"^\s*(?:figure|fig\.|chart|exhibit|infographic)\s+\d+(?:\.\d+)?(?:\s*[,:\-]\s*|\s+)"
+    r"(?:[\w’'/-]+\s+){0,8}"
+    r"(?:is|was|are|were|shows?|showing|illustrates?|describes?|presents?|"
+    r"reflects?|compares?|compared|highlights?|based\s+on)\b",
+    re.IGNORECASE,
+)
+_YEAR_RX = re.compile(r"\b(?:19|20)\d{2}[a-z]?\b")
+_NUMBER_RX = re.compile(r"\b\d+(?:\.\d+)?\b")
+_TERMINAL_INTEGER_RX = re.compile(r"\b\d{1,4}\s*$")
+_BARE_TITLE_HEADING_RX = re.compile(
+    r"^[A-Z][A-Za-z'’.-]*(?:\s+[A-Z][A-Za-z'’.-]*){0,2}$"
+)
+_MID_SENTENCE_START_WORDS = {
+    "after",
+    "although",
+    "amid",
+    "because",
+    "but",
+    "continue",
+    "despite",
+    "following",
+    "growth",
+    "however",
+    "mainly",
+    "monthly",
+    "quarterly",
+    "strong",
+    "the",
+    "top-up",
+    "while",
+}
+
+
+def _iter_visual_context_lines(text: str, *, max_lines: int = 4, max_chars: int = 200):
+    seen_lines = 0
+    seen_chars = 0
+    for raw_line in str(text or "").splitlines():
+        normalized = raw_line.strip()
+        if not normalized:
+            continue
+        yield normalized
+        seen_lines += 1
+        seen_chars += len(normalized)
+        if seen_lines >= max_lines or seen_chars >= max_chars:
+            break
 
 
 def _has_side_by_side_visual_sibling(
@@ -175,6 +273,62 @@ def _embedded_visual_looks_decorative(page: fitz.Page, rect: fitz.Rect) -> bool:
     )
 
 
+def _embedded_visual_looks_photo_like(page: fitz.Page, rect: fitz.Rect) -> bool:
+    profile = _visual_probe_profile(page, rect)
+    if profile is None:
+        return False
+    if profile["white_frac"] > PHOTO_LIKE_RASTER_MAX_WHITE_FRAC:
+        return False
+    if profile["edge_density"] < PHOTO_LIKE_RASTER_MIN_EDGE_DENSITY:
+        return False
+    return (
+        profile["sat_mean"] >= PHOTO_LIKE_RASTER_MIN_SAT_MEAN
+        or profile["dark_frac"] >= PHOTO_LIKE_RASTER_MIN_DARK_FRAC
+    )
+
+
+def _embedded_visual_is_oversized_wrapper(
+    rect_item,
+    candidates,
+    page_rect: fitz.Rect,
+) -> bool:
+    if rect_item.kind != "xref":
+        return False
+    rect = fitz.Rect(rect_item.rect)
+    overflow_x = max(0.0, page_rect.x0 - rect.x0) + max(0.0, rect.x1 - page_rect.x1)
+    overflow_y = max(0.0, page_rect.y0 - rect.y0) + max(0.0, rect.y1 - page_rect.y1)
+    if (
+        overflow_x <= page_rect.width * 0.04
+        and overflow_y <= page_rect.height * 0.04
+    ):
+        return False
+    clipped_rect = rect & page_rect
+    clipped_area = clipped_rect.get_area()
+    if clipped_area <= 0.0:
+        return False
+    for other in candidates:
+        if other is rect_item or other.kind not in ("xref", "block"):
+            continue
+        other_rect = fitz.Rect(other.rect) & page_rect
+        if other_rect.is_empty or other_rect.get_area() <= 0.0:
+            continue
+        if _rect_containment_ratio(other_rect, clipped_rect) < 0.95:
+            continue
+        if other_rect.get_area() < clipped_area * 0.12:
+            continue
+        if other_rect.get_area() > clipped_area * 0.75:
+            continue
+        if (
+            other_rect.x0 < page_rect.x0 - 1.0
+            or other_rect.x1 > page_rect.x1 + 1.0
+            or other_rect.y0 < page_rect.y0 - 1.0
+            or other_rect.y1 > page_rect.y1 + 1.0
+        ):
+            continue
+        return True
+    return False
+
+
 def _embedded_visual_qualifies_relaxed_geometry(
     page: fitz.Page,
     rect: fitz.Rect,
@@ -193,18 +347,619 @@ def _embedded_visual_qualifies_relaxed_geometry(
     )
 
 
+def _left_side_context_signal(
+    blocks: List[tuple[float, float, float, float, str]],
+    rect: fitz.Rect,
+    page_rect: fitz.Rect,
+) -> tuple[int, int]:
+    left_boundary = rect.x0 - page_rect.width * 0.02
+    top = max(page_rect.y0, rect.y0 - page_rect.height * 0.08)
+    bottom = min(page_rect.y1, rect.y1 + page_rect.height * 0.08)
+    chars = 0
+    matched_blocks = 0
+    for x0, y0, x1, y1, text in blocks:
+        if x1 > left_boundary or x0 >= rect.x0:
+            continue
+        if y1 < top or y0 > bottom:
+            continue
+        compact = " ".join(str(text or "").split())
+        if not compact or _is_page_number_text(compact):
+            continue
+        _, block_chars = _text_stats(compact)
+        if block_chars < 40:
+            continue
+        chars += block_chars
+        matched_blocks += 1
+    return chars, matched_blocks
+
+
+def _embedded_visual_qualifies_contextual_card(
+    page: fitz.Page,
+    rect: fitz.Rect,
+    *,
+    area_frac: float,
+    blocks: List[tuple[float, float, float, float, str]],
+) -> bool:
+    if (
+        area_frac < CONTEXTUAL_RASTER_CARD_MIN_AREA_FRAC
+        or area_frac > CONTEXTUAL_RASTER_CARD_MAX_AREA_FRAC
+    ):
+        return False
+    page_rect = page.rect
+    width_frac = rect.width / max(1.0, page_rect.width)
+    height_frac = rect.height / max(1.0, page_rect.height)
+    x0_frac = rect.x0 / max(1.0, page_rect.width)
+    x1_frac = rect.x1 / max(1.0, page_rect.width)
+    if not (
+        CONTEXTUAL_RASTER_CARD_MIN_WIDTH_FRAC
+        <= width_frac
+        <= CONTEXTUAL_RASTER_CARD_MAX_WIDTH_FRAC
+    ):
+        return False
+    if not (
+        CONTEXTUAL_RASTER_CARD_MIN_HEIGHT_FRAC
+        <= height_frac
+        <= CONTEXTUAL_RASTER_CARD_MAX_HEIGHT_FRAC
+    ):
+        return False
+    if x0_frac < CONTEXTUAL_RASTER_CARD_MIN_X0_FRAC or x1_frac < CONTEXTUAL_RASTER_CARD_MIN_X1_FRAC:
+        return False
+    left_chars, left_blocks = _left_side_context_signal(blocks, rect, page_rect)
+    if (
+        left_blocks < CONTEXTUAL_RASTER_CARD_MIN_LEFT_CONTEXT_BLOCKS
+        or left_chars < CONTEXTUAL_RASTER_CARD_MIN_LEFT_CONTEXT_CHARS
+    ):
+        return False
+    profile = _visual_probe_profile(page, rect)
+    if profile is None:
+        return False
+    return (
+        profile["sat_mean"] <= CONTEXTUAL_RASTER_CARD_MAX_SAT_MEAN
+        and profile["dark_frac"] <= CONTEXTUAL_RASTER_CARD_MAX_DARK_FRAC
+        and profile["edge_density"] >= CONTEXTUAL_RASTER_CARD_MIN_EDGE_DENSITY
+        and profile["edge_density"] <= CONTEXTUAL_RASTER_CARD_MAX_EDGE_DENSITY
+    )
+
+
 def _page_has_chart_caption_blocks(
     blocks: List[tuple[float, float, float, float, str]],
 ) -> bool:
     for _x0, _y0, _x1, _y1, text in blocks:
-        for line in str(text or "").splitlines():
-            normalized = line.strip().lower()
-            if not normalized:
-                continue
-            if any(normalized.startswith(hint) for hint in CHART_CAPTION_HINTS):
+        for normalized in _iter_visual_context_lines(text):
+            normalized = normalized.lower()
+            if _line_starts_with_caption_hint(normalized, CHART_CAPTION_HINTS):
                 return True
-            break
     return False
+
+
+def _text_has_visual_context_hint(text: str) -> bool:
+    for normalized in _iter_visual_context_lines(text):
+        if _VISUAL_CONTEXT_LINE_RX.match(normalized):
+            return True
+    return False
+
+
+def _visual_nonempty_lines(text: str) -> List[str]:
+    return [line.strip() for line in str(text or "").splitlines() if line.strip()]
+
+
+def _caption_has_figure_hint(text: str) -> bool:
+    return bool(_FIGURE_HINT_RX.match(str(text or "").strip()))
+
+
+def _caption_looks_explanatory_figure_reference(text: str) -> bool:
+    return bool(_EXPLANATORY_FIGURE_REF_RX.match(str(text or "").strip()))
+
+
+def _caption_looks_bare_title_heading(text: str) -> bool:
+    caption = str(text or "").strip()
+    if not caption or _caption_has_figure_hint(caption):
+        return False
+    if any(ch.isdigit() for ch in caption):
+        return False
+    return bool(_BARE_TITLE_HEADING_RX.fullmatch(caption))
+
+
+def _caption_looks_mid_sentence_fragment(text: str) -> bool:
+    caption = str(text or "").strip()
+    if not caption or _caption_has_figure_hint(caption):
+        return False
+    if caption.lower().startswith(("source:", "statlink")):
+        return False
+    if caption[0].islower() or caption[0] in "(+%":
+        return True
+    words = [word for word in re.split(r"\s+", caption) if word]
+    if len(words) < 5:
+        return False
+    first = words[0].strip("“\"'([{").lower()
+    return first in _MID_SENTENCE_START_WORDS
+
+
+def _visual_candidate_looks_table_like(
+    caption: str,
+    text: str,
+    *,
+    kind: str = "",
+    panel_data_signal: bool = False,
+) -> bool:
+    if _caption_has_figure_hint(caption):
+        return False
+    lines = _visual_nonempty_lines(text)
+    if len(lines) < 6:
+        return False
+    total_chars = sum(len(line) for line in lines)
+    avg_line_len = total_chars / max(1, len(lines))
+    short_line_ratio = sum(1 for line in lines if len(line) <= 28) / max(1, len(lines))
+    numeric_row_hits = sum(
+        1 for line in lines if len(_NUMBER_RX.findall(line)) >= 3
+    )
+    terminal_numeric_hits = sum(
+        1
+        for line in lines
+        if _TERMINAL_INTEGER_RX.search(line) and len(_NUMBER_RX.findall(line)) >= 1
+    )
+    single_token_numeric_hits = sum(
+        1
+        for line in lines
+        if len(line.split()) == 1 and bool(_NUMBER_RX.fullmatch(line))
+    )
+    alpha_line_ratio = sum(
+        1 for line in lines if any(ch.isalpha() for ch in line)
+    ) / max(1, len(lines))
+    mixed_alpha_numeric_hits = sum(
+        1
+        for line in lines
+        if any(ch.isalpha() for ch in line) and bool(_NUMBER_RX.search(line))
+    )
+    dense_year_header = any(
+        len(_YEAR_RX.findall(line)) >= 3 for line in lines[: min(4, len(lines))]
+    )
+    lower_text = text.lower()
+    lower_lines = [line.lower() for line in lines]
+    if (
+        numeric_row_hits >= 4
+        and avg_line_len <= 44.0
+        and (short_line_ratio >= 0.15 or dense_year_header or len(lines) <= 8)
+    ):
+        return True
+    if (
+        dense_year_header
+        and any("current prices" in line for line in lower_lines)
+        and (
+            any("percentage changes" in line for line in lower_lines)
+            or any("volume" in line for line in lower_lines)
+        )
+        and (
+            numeric_row_hits >= 1
+            or "memorandum items" in lower_text
+            or len(lines) >= 10
+        )
+    ):
+        return True
+    if (
+        kind == "panel"
+        and panel_data_signal
+        and numeric_row_hits < 3
+        and dense_year_header is False
+        and alpha_line_ratio < 0.45
+        and single_token_numeric_hits >= max(6, len(lines) // 3)
+    ):
+        return False
+    if (
+        kind == "panel"
+        and panel_data_signal
+        and len(lines) <= 12
+        and numeric_row_hits == 0
+        and terminal_numeric_hits >= 4
+        and single_token_numeric_hits >= 4
+        and alpha_line_ratio >= 0.2
+        and mixed_alpha_numeric_hits >= 1
+    ):
+        return False
+    if (
+        terminal_numeric_hits >= max(6, math.ceil(len(lines) * 0.25))
+        and short_line_ratio >= 0.55
+        and avg_line_len <= 24.0
+    ):
+        return True
+    if dense_year_header and numeric_row_hits >= 2 and avg_line_len <= 30.0:
+        return True
+    return (
+        len(lines) >= 18
+        and short_line_ratio >= 0.7
+        and avg_line_len <= 18.0
+        and numeric_row_hits >= 3
+    )
+
+
+def _visual_candidate_looks_note_fragment(
+    caption: str,
+    text: str,
+    *,
+    kind: str,
+) -> bool:
+    if kind != "panel":
+        return False
+    if _caption_has_figure_hint(caption):
+        return False
+    caption_text = str(caption or "").strip()
+    lower_caption = caption_text.lower()
+    if not caption_text:
+        return False
+    if not _SOURCE_OR_STATLINK_RX.search(text):
+        return False
+    if (
+        _panel_chart_has_data_signal(text)
+        or _panel_chart_has_structured_card_signal(text)
+        or _panel_component_looks_like_guidance_card(text)
+        or _chart_is_label_dense_not_prose(text)
+        or (kind == "panel" and _panel_chart_is_label_dense_not_prose(text))
+    ):
+        return False
+    lines = _visual_nonempty_lines(text)
+    if not lines:
+        return False
+    total_chars = sum(len(line) for line in lines)
+    avg_line_len = total_chars / max(1, len(lines))
+    numeric_hits = len(_NUMBER_RX.findall(text))
+    numbered_hits = len(re.findall(r"(?m)^\s*\d+\.\s+", text))
+    if lower_caption.startswith(("source:", "statlink")):
+        return True
+    if (
+        _caption_looks_mid_sentence_fragment(caption_text)
+        and len(lines) <= 10
+        and avg_line_len <= 56.0
+        and numeric_hits <= 10
+    ):
+        return True
+    return (
+        numbered_hits >= 1
+        and len(lines) <= 8
+        and avg_line_len <= 52.0
+        and numeric_hits <= 12
+    )
+
+
+def _visual_candidate_looks_bare_heading_fragment(
+    caption: str,
+    text: str,
+    *,
+    kind: str,
+    area_frac: float,
+    aspect: float,
+) -> bool:
+    if kind != "panel":
+        return False
+    if not _caption_looks_bare_title_heading(caption):
+        return False
+    if _SOURCE_OR_STATLINK_RX.search(text):
+        return False
+    if (
+        _panel_chart_has_data_signal(text)
+        or _panel_chart_has_structured_card_signal(text)
+        or _panel_component_looks_like_guidance_card(text)
+        or _chart_is_label_dense_not_prose(text)
+        or (kind == "panel" and _panel_chart_is_label_dense_not_prose(text))
+    ):
+        return False
+    lines = _visual_nonempty_lines(text)
+    total_chars = sum(len(line) for line in lines)
+    return total_chars <= 24 and area_frac <= 0.18 and aspect >= 1.4
+
+
+def _visual_candidate_looks_reference_or_prose(
+    caption: str,
+    text: str,
+    *,
+    text_ratio: float,
+) -> bool:
+    explanatory_figure_reference = _caption_looks_explanatory_figure_reference(caption)
+    if _caption_has_figure_hint(caption) and not explanatory_figure_reference:
+        return False
+    lines = _visual_nonempty_lines(text)
+    total_chars = sum(len(line) for line in lines)
+    avg_line_len = total_chars / max(1, len(lines))
+    numeric_hits = len(_NUMBER_RX.findall(text))
+    year_hits = len(_YEAR_RX.findall(text))
+    url_hits = len(_URL_REF_RX.findall(text))
+    numbered_hits = len(re.findall(r"(?m)^\s*\d+\.\s+", text))
+    colon_hits = sum(1 for line in lines if ":" in line and len(line) <= 100)
+    short_line_ratio = sum(1 for line in lines if len(line) <= 28) / max(1, len(lines))
+    sentence_hits = len(re.findall(r"[.!?;](?:\s|$)", text))
+    if (
+        explanatory_figure_reference
+        and len(lines) >= 4
+        and avg_line_len >= 55.0
+        and text_ratio >= 0.18
+    ):
+        return True
+    if len(lines) < 6:
+        return False
+    if (
+        len(lines) >= 10
+        and avg_line_len >= 26.0
+        and text_ratio >= 0.16
+        and numeric_hits <= max(8, len(lines) // 2)
+        and not _panel_chart_has_data_signal(text)
+        and not _panel_component_looks_like_guidance_card(text)
+    ):
+        return True
+    if (
+        url_hits == 0
+        and len(lines) <= 18
+        and avg_line_len <= 60.0
+        and colon_hits >= 3
+        and short_line_ratio >= 0.15
+    ):
+        return False
+    if (
+        url_hits >= 1
+        and year_hits >= 2
+        and (numbered_hits >= 2 or avg_line_len >= 42.0)
+    ):
+        return True
+    if (
+        _BOX_HINT_RX.match(str(caption or "").strip())
+        and len(lines) >= 6
+        and avg_line_len >= 32.0
+        and text_ratio >= 0.2
+    ):
+        return True
+    if (
+        numbered_hits >= 2
+        and len(lines) >= 18
+        and avg_line_len >= 34.0
+        and text_ratio >= 0.28
+    ):
+        return True
+    if (
+        len(lines) >= 16
+        and avg_line_len >= 60.0
+        and text_ratio >= 0.22
+        and sentence_hits >= 4
+        and not _SOURCE_OR_STATLINK_RX.search(text)
+    ):
+        return True
+    if (
+        len(lines) >= 18
+        and avg_line_len >= 48.0
+        and text_ratio >= 0.22
+        and sentence_hits >= 3
+        and numbered_hits >= 1
+    ):
+        return True
+    return (
+        len(lines) >= 12
+        and avg_line_len >= 40.0
+        and text_ratio >= 0.25
+        and numeric_hits <= max(6, len(lines) // 3)
+    )
+
+
+def _visual_candidate_looks_cover_art(
+    rect_candidate: fitz.Rect,
+    page_rect: fitz.Rect,
+    caption: str,
+    *,
+    area_frac: float,
+    text_chars: int,
+) -> bool:
+    if _caption_has_figure_hint(caption):
+        return False
+    caption_text = str(caption or "").strip()
+    width_frac = rect_candidate.width / max(1.0, page_rect.width)
+    height_frac = rect_candidate.height / max(1.0, page_rect.height)
+    top_frac = (rect_candidate.y0 - page_rect.y0) / max(1.0, page_rect.height)
+    if area_frac < 0.12:
+        return False
+    if (
+        area_frac >= 0.25
+        and width_frac >= 0.6
+        and height_frac >= 0.42
+        and text_chars <= 90
+        and len(caption_text) <= 24
+        and len(caption_text.split()) <= 3
+    ):
+        return True
+    if top_frac > 0.1:
+        return False
+    if height_frac > 0.35:
+        return False
+    return text_chars <= 80 and len(caption_text) <= 20
+
+
+def _visual_candidate_looks_section_opener_banner(
+    rect_candidate: fitz.Rect,
+    page_rect: fitz.Rect,
+    caption: str,
+    text: str,
+    *,
+    kind: str,
+    area_frac: float,
+) -> bool:
+    if _caption_has_figure_hint(caption):
+        return False
+    if rect_candidate.y0 > page_rect.y0 + page_rect.height * 0.08:
+        return False
+    if rect_candidate.height > page_rect.height * 0.42:
+        return False
+    if area_frac < 0.12 or area_frac > 0.34:
+        return False
+    if rect_candidate.width / max(1.0, page_rect.width) < 0.65:
+        return False
+    caption_text = str(caption or "").strip()
+    words = caption_text.split()
+    if not caption_text or len(words) > 12:
+        return False
+    if _SOURCE_OR_STATLINK_RX.search(text):
+        return False
+    lines = _visual_nonempty_lines(text)
+    if not lines:
+        return False
+    total_chars = sum(len(line) for line in lines)
+    avg_line_len = total_chars / max(1, len(lines))
+    numeric_hits = len(_NUMBER_RX.findall(text))
+    short_line_ratio = sum(1 for line in lines if len(line) <= 20) / max(1, len(lines))
+    fragmented_banner_text = (
+        len(lines) >= 10
+        and avg_line_len <= 14.0
+        and short_line_ratio >= 0.7
+        and numeric_hits <= 4
+    )
+    if (
+        (_panel_chart_has_data_signal(text) and not fragmented_banner_text)
+        or _panel_component_looks_like_guidance_card(text)
+        or _panel_chart_has_structured_card_signal(text)
+    ):
+        return False
+    return (
+        numeric_hits <= 2
+        and (
+            (len(lines) <= 4 and total_chars <= 160 and avg_line_len <= 40.0)
+            or (len(lines) <= 24 and total_chars <= 280 and avg_line_len <= 22.0)
+        )
+    )
+
+
+def _visual_candidate_looks_photo_narrative_card(
+    page: fitz.Page,
+    rect_candidate: fitz.Rect,
+    caption: str,
+    *,
+    caption_rect: Optional[fitz.Rect],
+    kind: str,
+    area_frac: float,
+    aspect: float,
+    text_chars: int,
+    panel_data_signal: bool,
+) -> bool:
+    if kind != "panel":
+        return False
+    if _caption_has_figure_hint(caption):
+        return False
+    if panel_data_signal:
+        return False
+    if area_frac < 0.22 or area_frac > 0.5:
+        return False
+    if aspect < 0.72 or aspect > 1.25:
+        return False
+    if text_chars > 40:
+        return False
+    if caption_rect is None:
+        return False
+    inter = caption_rect & rect_candidate
+    if inter.is_empty or inter.get_area() < caption_rect.get_area() * 0.9:
+        return False
+    words = [word for word in str(caption or "").split() if word]
+    if len(words) < 5 or len(words) > 16:
+        return False
+    if ":" in str(caption or ""):
+        return False
+    return _embedded_visual_looks_photo_like(page, rect_candidate)
+
+
+def _visual_candidate_looks_narrative_panel_card(
+    caption: str,
+    text: str,
+    *,
+    kind: str,
+    text_ratio: float,
+    area_frac: float,
+) -> bool:
+    if kind != "panel":
+        return False
+    if _caption_has_figure_hint(caption):
+        return False
+    if area_frac < 0.12:
+        return False
+    lines = _visual_nonempty_lines(text)
+    if len(lines) < 8:
+        return False
+    total_chars = sum(len(line) for line in lines)
+    avg_line_len = total_chars / max(1, len(lines))
+    numeric_hits = len(_NUMBER_RX.findall(text))
+    numeric_row_hits = sum(1 for line in lines if len(_NUMBER_RX.findall(line)) >= 2)
+    sentence_hits = len(re.findall(r"[.!?;](?:\s|$)", text))
+    colon_hits = sum(1 for line in lines if ":" in line and len(line) <= 100)
+    short_line_ratio = sum(1 for line in lines if len(line) <= 28) / max(1, len(lines))
+    long_line_hits = sum(1 for line in lines if len(line) >= 30)
+    has_data_signal = _panel_chart_has_data_signal(text)
+    if _panel_component_looks_like_guidance_card(text):
+        return False
+    structured_card_signal = _panel_chart_has_structured_card_signal(text)
+    if structured_card_signal and sentence_hits < 3:
+        return False
+    if _panel_chart_has_compact_stat_card_signal(text):
+        return False
+    fragmented_prose = (
+        text_ratio >= 0.3
+        and sentence_hits >= 3
+        and long_line_hits >= 8
+    )
+    if _SOURCE_OR_STATLINK_RX.search(text):
+        return False
+    if colon_hits >= 3 and short_line_ratio >= 0.2:
+        return False
+    if (
+        has_data_signal
+        and (
+            numeric_row_hits >= 3
+            or (short_line_ratio >= 0.35 and not fragmented_prose)
+        )
+    ):
+        return False
+    return (
+        text_ratio >= 0.22
+        and sentence_hits >= 2
+        and numeric_hits <= max(12, len(lines))
+        and (
+            avg_line_len >= 28.0
+            or fragmented_prose
+        )
+    )
+
+
+def _visual_candidate_looks_inline_numbered_panel(
+    caption: str,
+    text: str,
+    *,
+    note_included: bool,
+    area_frac: float,
+    aspect: float,
+) -> bool:
+    if _caption_has_figure_hint(caption):
+        return False
+    caption_text = str(caption or "").strip()
+    if not re.search(r"\b\d\b\s*$", caption_text):
+        return False
+    if _YEAR_RX.search(caption_text):
+        return False
+    if not note_included:
+        return False
+    if area_frac > 0.24 or aspect < 1.8 or aspect > 2.8:
+        return False
+    if not _SOURCE_OR_STATLINK_RX.search(text):
+        return False
+    lines = _visual_nonempty_lines(text)
+    if len(lines) > 10:
+        return False
+    numeric_row_hits = sum(1 for line in lines if len(_NUMBER_RX.findall(line)) >= 3)
+    return numeric_row_hits <= 2
+
+
+def _next_figure_caption_below(
+    page: fitz.Page,
+    cap_rect: fitz.Rect,
+    *,
+    blocks: Optional[List[tuple[float, float, float, float, str]]] = None,
+) -> Optional[fitz.Rect]:
+    for other_rect, other_text in _caption_blocks(page, CHART_CAPTION_HINTS, blocks=blocks):
+        if other_rect.y0 <= cap_rect.y0 + 8.0:
+            continue
+        if not _caption_has_figure_hint(other_text):
+            continue
+        return other_rect
+    return None
 
 
 def _visual_text_dense_recovery_allowed(
@@ -214,12 +969,23 @@ def _visual_text_dense_recovery_allowed(
     text_chars: int,
     text_ratio: float,
 ) -> bool:
+    lines = _visual_nonempty_lines(text)
+    avg_line_len = text_chars / max(1, text_lines)
+    numeric_hits = len(_NUMBER_RX.findall(text))
     return _chart_is_label_dense_not_prose(text) or (
         kind == "panel" and _panel_chart_is_label_dense_not_prose(text)
     ) or (
         text_lines >= CHART_DENSE_RECOVERY_MIN_LINES
         and text_chars >= CHART_DENSE_RECOVERY_MIN_CHARS
         and not _chart_text_heavy(text_lines, text_chars, text_ratio)
+    ) or (
+        kind == "draw"
+        and bool(_SOURCE_OR_STATLINK_RX.search(text))
+        and text_lines >= 12
+        and numeric_hits >= 10
+        and avg_line_len <= 42.0
+        and text_ratio <= 0.68
+        and not _caption_looks_explanatory_figure_reference(lines[0] if lines else "")
     )
 
 
@@ -293,7 +1059,7 @@ def _extract_visuals_sequential(
                 if cap and _is_page_number_text(cap):
                     cap = ""
                 cap_lower = (cap or "").lower()
-                has_hint = any(hint in cap_lower for hint in VISUAL_CONTEXT_HINTS)
+                has_hint = _text_has_visual_context_hint(cap or "")
                 has_context_hint = has_hint or rect_item.kind == "panel"
                 aspect_max = INFO_CHART_MAX_ASPECT if rect_item.kind in (
                     "heading",
@@ -306,6 +1072,7 @@ def _extract_visuals_sequential(
                 ):
                     aspect_max = max(aspect_max, CHART_CAPTIONED_DRAW_MAX_ASPECT)
                 relaxed_image_geometry = False
+                contextual_image_card = False
                 if (
                     rect_item.kind in ("xref", "block")
                     and not has_hint
@@ -316,19 +1083,35 @@ def _extract_visuals_sequential(
                         rect_candidate,
                         area_frac=area_frac,
                     )
-                min_aspect = 0.45 if relaxed_image_geometry else 0.55
-                max_aspect = 3.4 if relaxed_image_geometry else aspect_max
+                    contextual_image_card = _embedded_visual_qualifies_contextual_card(
+                        page,
+                        rect_candidate,
+                        area_frac=area_frac,
+                        blocks=artifacts.text_blocks,
+                    )
+                min_aspect = 0.45 if (relaxed_image_geometry or contextual_image_card) else 0.55
+                max_aspect = 3.4 if (relaxed_image_geometry or contextual_image_card) else aspect_max
+                if rect_item.kind == "panel" and aspect > max_aspect:
+                    try:
+                        pre_geom_panel_text = page.get_text("text", clip=rect_candidate)
+                    except Exception:
+                        pre_geom_panel_text = ""
+                    if _panel_chart_has_compact_stat_card_signal(pre_geom_panel_text):
+                        max_aspect = max(max_aspect, 5.25)
                 if area_frac < 0.05 or not (min_aspect <= aspect <= max_aspect):
                     stats["rejected"] = _int_count(stats["rejected"]) + 1
                     _tally_reason(stats, "geometry")
                     continue
-                is_infographic = "infographic" in cap_lower
+                is_infographic = bool(
+                    re.match(r"^\s*infographic\b", cap or "", re.IGNORECASE)
+                )
                 if rect_candidate.y0 < top_cut or rect_candidate.y1 > bot_cut:
-                    if (
-                        not has_context_hint
-                        or rect_candidate.y0 < relaxed_top
-                        or rect_candidate.y1 > relaxed_bot
-                    ):
+                    if has_context_hint or contextual_image_card:
+                        if rect_candidate.y0 < rect.y0 - 2.0 or rect_candidate.y1 > rect.y1 + 2.0:
+                            stats["rejected"] = _int_count(stats["rejected"]) + 1
+                            _tally_reason(stats, "margin")
+                            continue
+                    elif rect_candidate.y0 < relaxed_top or rect_candidate.y1 > relaxed_bot:
                         stats["rejected"] = _int_count(stats["rejected"]) + 1
                         _tally_reason(stats, "margin")
                         continue
@@ -367,8 +1150,18 @@ def _extract_visuals_sequential(
                 )
                 image_chart_like = False
                 image_decorative = False
+                image_photo_like = False
                 if rect_item.kind in ("xref", "block") and not has_hint:
-                    image_chart_like = _embedded_visual_looks_chart_like(
+                    if _embedded_visual_is_oversized_wrapper(
+                        rect_item, candidates, rect
+                    ):
+                        stats["rejected"] = _int_count(stats["rejected"]) + 1
+                        _tally_reason(stats, "oversized_wrapper_image")
+                        continue
+                    image_chart_like = contextual_image_card or _embedded_visual_looks_chart_like(
+                        page, rect_candidate
+                    )
+                    image_photo_like = _embedded_visual_looks_photo_like(
                         page, rect_candidate
                     )
                     if not image_chart_like:
@@ -410,9 +1203,22 @@ def _extract_visuals_sequential(
                             or _infographic_is_label_dense_not_prose(raw_bbox_text)
                         )
                 if rect_item.kind == "panel":
-                    panel_data_signal = _panel_chart_has_data_signal(
-                        bbox_text if bbox_text else raw_bbox_text
+                    panel_text = bbox_text if bbox_text else raw_bbox_text
+                    panel_data_signal = _panel_chart_has_data_signal(panel_text) or (
+                        _panel_component_looks_like_guidance_card(panel_text)
                     )
+                    if _panel_candidate_shadowed_by_heading_candidate(
+                        rect_item, candidates
+                    ):
+                        stats["rejected"] = _int_count(stats["rejected"]) + 1
+                        _tally_reason(stats, "panel_shadowed_by_heading")
+                        continue
+                    if _panel_candidate_shadowed_by_larger_panel(
+                        rect_item, candidates, panel_text
+                    ):
+                        stats["rejected"] = _int_count(stats["rejected"]) + 1
+                        _tally_reason(stats, "panel_shadowed_by_larger_panel")
+                        continue
                     if (
                         not panel_data_signal
                         and (
@@ -428,6 +1234,14 @@ def _extract_visuals_sequential(
                         _tally_reason(stats, "panel_no_data_signal")
                         continue
                 if rect_item.kind in ("xref", "block") and not has_hint:
+                    if (
+                        image_photo_like
+                        and not contextual_image_card
+                        and not relaxed_image_geometry
+                    ):
+                        stats["rejected"] = _int_count(stats["rejected"]) + 1
+                        _tally_reason(stats, "photo_panel")
+                        continue
                     if (
                         not image_chart_like
                         and
@@ -451,6 +1265,16 @@ def _extract_visuals_sequential(
                         _tally_reason(stats, "photo_panel")
                         continue
                     if (
+                        rect_item.kind == "xref"
+                        and not contextual_image_card
+                        and not relaxed_image_geometry
+                        and area_frac <= SMALL_DECORATIVE_RASTER_MAX_AREA_FRAC
+                        and text_chars <= SMALL_DECORATIVE_RASTER_MAX_TEXT_CHARS
+                    ):
+                        stats["rejected"] = _int_count(stats["rejected"]) + 1
+                        _tally_reason(stats, "small_decorative_image")
+                        continue
+                    if (
                         image_decorative
                         and text_chars <= 24
                         and area_frac <= 0.5
@@ -466,8 +1290,21 @@ def _extract_visuals_sequential(
                             (has_context_hint and raw_text_ratio <= 0.55)
                             or (
                                 rect_item.kind == "panel"
-                                and panel_data_signal
-                                and raw_text_ratio <= PANEL_CHART_CONTEXT_TEXT_RATIO_MAX
+                                and (
+                                    (
+                                        panel_data_signal
+                                        and raw_text_ratio <= PANEL_CHART_CONTEXT_TEXT_RATIO_MAX
+                                    )
+                                    or _panel_chart_is_label_dense_not_prose(
+                                        bbox_text if bbox_text else raw_bbox_text
+                                    )
+                                    or _panel_component_looks_like_independent_data_panel(
+                                        bbox_text if bbox_text else raw_bbox_text
+                                    )
+                                    or _panel_chart_has_structured_card_signal(
+                                        bbox_text if bbox_text else raw_bbox_text
+                                    )
+                                )
                             )
                             or text_dense_recovery_allowed
                             or infographic_dense_recovery_allowed
@@ -492,16 +1329,72 @@ def _extract_visuals_sequential(
                 )
                 if allow_adjacent:
                     if rect_item.kind == "panel":
+                        panel_min_x = None
+                        panel_max_x = None
+                        compact_stat_caption = _panel_caption_looks_metric_stub(cap or "")
+                        if (
+                            cap_rect is not None
+                            and not _caption_has_figure_hint(cap or "")
+                            and not compact_stat_caption
+                        ):
+                            slice_bounds = _panel_title_slice_bounds(page, cap_rect)
+                            if slice_bounds is not None:
+                                panel_min_x, panel_max_x = slice_bounds
+                                bound_pad = max(
+                                    rect.width * 0.015,
+                                    rect_candidate.width * 0.12,
+                                )
+                                panel_min_x = max(
+                                    page.rect.x0,
+                                    min(panel_min_x, rect_candidate.x0),
+                                )
+                                panel_min_x = max(
+                                    panel_min_x,
+                                    rect_candidate.x0 - bound_pad,
+                                )
+                                panel_max_x = min(
+                                    page.rect.x1,
+                                    max(panel_max_x, rect_candidate.x1),
+                                )
+                                panel_max_x = min(
+                                    panel_max_x,
+                                    rect_candidate.x1 + bound_pad,
+                                )
+                        neighbor_min_x, neighbor_max_x = _panel_neighbor_x_bounds(
+                            rect_item,
+                            candidates,
+                            rect,
+                        )
+                        if neighbor_min_x is not None:
+                            panel_min_x = (
+                                neighbor_min_x
+                                if panel_min_x is None
+                                else max(panel_min_x, neighbor_min_x)
+                            )
+                        if neighbor_max_x is not None:
+                            panel_max_x = (
+                                neighbor_max_x
+                                if panel_max_x is None
+                                else min(panel_max_x, neighbor_max_x)
+                            )
                         final_rect = _extend_panel_with_adjacent_text_blocks(
-                            page, final_rect
+                            page,
+                            final_rect,
+                            min_x=panel_min_x,
+                            max_x=panel_max_x,
                         )
                     else:
                         final_rect = _extend_with_adjacent_text_blocks(page, final_rect)
+                    if rect_item.kind == "draw":
+                        final_rect = _extend_chart_rect_with_adjacent_drawings(
+                            page,
+                            final_rect,
+                        )
                 if not has_hint and rect_item.kind == "heading":
                     expanded = _extend_with_heading_above(page, final_rect)
                     expanded_with_heading = expanded.y0 < final_rect.y0 - 1
                     final_rect = expanded
-                if not has_hint and rect_item.kind not in ("heading", "xref"):
+                if not has_hint and rect_item.kind not in ("heading", "xref", "panel"):
                     head_rect = _nearest_heading_above(page, final_rect)
                     if head_rect is not None:
                         final_rect = final_rect | head_rect
@@ -533,7 +1426,7 @@ def _extract_visuals_sequential(
                     final_rect = _clamp_top_to_heading(
                         final_rect, cap_rect, page, rect
                     )
-                if not has_hint and rect_item.kind not in ("heading", "xref"):
+                if not has_hint and rect_item.kind not in ("heading", "xref", "panel"):
                     head_rect = _nearest_heading_above(page, final_rect)
                     if head_rect is not None:
                         final_rect = _clamp_top_to_heading(
@@ -548,23 +1441,71 @@ def _extract_visuals_sequential(
                     final_rect = _clamp_top_to_caption(final_rect, cap_rect, page, rect)
                 note_bottom = _note_block_bottom(page, final_rect)
                 note_included = note_bottom is not None
+                stacked_bottom_clip_y = (
+                    _panel_stacked_bottom_clip_y(page, rect_item, candidates)
+                    if rect_item.kind == "panel"
+                    else None
+                )
+                panel_caption_is_top_band = (
+                    rect_item.kind == "panel"
+                    and cap_rect is not None
+                    and _panel_caption_looks_top_band(
+                        cap or "",
+                        rect=rect_candidate,
+                        cap_rect=cap_rect,
+                    )
+                )
+                panel_caption_is_internal_label = (
+                    rect_item.kind == "panel"
+                    and cap_rect is not None
+                    and cap_rect.y0 >= rect_candidate.y0 + 1.0
+                    and not _caption_has_figure_hint(cap or "")
+                    and not panel_caption_is_top_band
+                )
                 if note_bottom is not None:
                     final_rect = _clamp_bottom_to_note(
                         page, final_rect, note_bottom, rect
+                    )
+                if stacked_bottom_clip_y is not None:
+                    final_rect.y1 = min(
+                        final_rect.y1,
+                        max(final_rect.y0 + 24.0, stacked_bottom_clip_y - 8.0),
                     )
                 if (
                     rect_item.kind in ("draw", "panel")
                     and cap_rect is not None
                     and text_dense_recovery_allowed
+                    and not panel_caption_is_internal_label
                 ):
                     final_rect = _clamp_bottom_to_next_chart_blocker(
                         page, final_rect, cap_rect
                     )
                 if cap_rect is not None and _caption_near_top(final_rect, cap_rect):
-                    if has_context_hint or rect_item.kind in ("panel", "draw"):
+                    if rect_item.kind == "panel" and panel_caption_is_internal_label:
+                        pass
+                    elif has_context_hint or rect_item.kind in ("panel", "draw"):
                         final_rect = _clamp_top_to_caption(
-                            final_rect, cap_rect, page, rect
+                            final_rect,
+                            cap_rect,
+                            page,
+                            rect,
+                            extra_pad=(
+                                PANEL_CHART_INTERNAL_TITLE_EXTRA_TOP_PAD
+                                if panel_caption_is_top_band
+                                else 0.0
+                            ),
                         )
+                if (
+                    cap_rect is not None
+                    and _panel_should_clamp_to_internal_caption(rect_item, candidates)
+                ):
+                    final_rect = _clamp_top_to_caption(
+                        final_rect,
+                        cap_rect,
+                        page,
+                        rect,
+                        extra_pad=PANEL_CHART_INTERNAL_TITLE_EXTRA_TOP_PAD,
+                    )
                 final_rect = _trim_top_page_number(
                     final_rect, page, cap_rect if has_context_hint else None
                 )
@@ -574,6 +1515,127 @@ def _extract_visuals_sequential(
                     bbox_text = ""
                 text_lines, text_chars = _text_stats(bbox_text)
                 text_ratio = (text_chars / page_chars) if page_chars else 0.0
+                if _visual_candidate_looks_table_like(
+                    cap or "",
+                    bbox_text,
+                    kind=rect_item.kind,
+                    panel_data_signal=panel_data_signal,
+                ):
+                    stats["rejected"] = _int_count(stats["rejected"]) + 1
+                    _tally_reason(stats, "table_like_visual")
+                    continue
+                if _visual_candidate_looks_reference_or_prose(
+                    cap or "",
+                    bbox_text,
+                    text_ratio=text_ratio,
+                ):
+                    stats["rejected"] = _int_count(stats["rejected"]) + 1
+                    _tally_reason(stats, "reference_or_prose_visual")
+                    continue
+                if _visual_candidate_looks_note_fragment(
+                    cap or "",
+                    bbox_text,
+                    kind=rect_item.kind,
+                ):
+                    stats["rejected"] = _int_count(stats["rejected"]) + 1
+                    _tally_reason(stats, "note_fragment_visual")
+                    continue
+                if _visual_candidate_looks_bare_heading_fragment(
+                    cap or "",
+                    bbox_text,
+                    kind=rect_item.kind,
+                    area_frac=area_frac,
+                    aspect=aspect,
+                ):
+                    stats["rejected"] = _int_count(stats["rejected"]) + 1
+                    _tally_reason(stats, "bare_heading_fragment")
+                    continue
+                if _visual_candidate_looks_cover_art(
+                    final_rect,
+                    rect,
+                    cap or "",
+                    area_frac=area_frac,
+                    text_chars=text_chars,
+                ):
+                    stats["rejected"] = _int_count(stats["rejected"]) + 1
+                    _tally_reason(stats, "front_matter_visual")
+                    continue
+                if _visual_candidate_looks_photo_narrative_card(
+                    page,
+                    final_rect,
+                    cap or "",
+                    caption_rect=cap_rect,
+                    kind=rect_item.kind,
+                    area_frac=area_frac,
+                    aspect=aspect,
+                    text_chars=text_chars,
+                    panel_data_signal=panel_data_signal,
+                ):
+                    stats["rejected"] = _int_count(stats["rejected"]) + 1
+                    _tally_reason(stats, "photo_panel")
+                    continue
+                if _visual_candidate_looks_narrative_panel_card(
+                    cap or "",
+                    bbox_text,
+                    kind=rect_item.kind,
+                    text_ratio=text_ratio,
+                    area_frac=area_frac,
+                ):
+                    stats["rejected"] = _int_count(stats["rejected"]) + 1
+                    _tally_reason(stats, "narrative_panel")
+                    continue
+                if _visual_candidate_looks_section_opener_banner(
+                    final_rect,
+                    rect,
+                    cap or "",
+                    bbox_text,
+                    kind=rect_item.kind,
+                    area_frac=area_frac,
+                ):
+                    stats["rejected"] = _int_count(stats["rejected"]) + 1
+                    _tally_reason(stats, "section_opener_visual")
+                    continue
+                if _visual_candidate_looks_inline_numbered_panel(
+                    cap or "",
+                    bbox_text,
+                    note_included=note_included,
+                    area_frac=area_frac,
+                    aspect=aspect,
+                ):
+                    stats["rejected"] = _int_count(stats["rejected"]) + 1
+                    _tally_reason(stats, "inline_numbered_panel")
+                    continue
+                if (
+                    rect_item.kind in ("draw", "heading")
+                    and cap_rect is not None
+                    and _caption_has_figure_hint(cap or "")
+                    and cap_rect.y0 <= rect.y0 + rect.height * 0.1
+                    and _SOURCE_OR_STATLINK_RX.search(bbox_text)
+                ):
+                    next_caption_rect = _next_figure_caption_below(
+                        page,
+                        cap_rect,
+                        blocks=artifacts.text_blocks,
+                    )
+                else:
+                    next_caption_rect = None
+                weak_stacked_upper = (
+                    next_caption_rect is not None
+                    and _SOURCE_OR_STATLINK_RX.search(bbox_text)
+                    and text_chars <= 260
+                    and not _chart_is_label_dense_not_prose(bbox_text)
+                    and not _panel_chart_has_data_signal(bbox_text)
+                )
+                if (
+                    next_caption_rect is not None
+                    and (
+                        final_rect.y1 >= next_caption_rect.y0 - 6.0
+                        or weak_stacked_upper
+                    )
+                ):
+                    stats["rejected"] = _int_count(stats["rejected"]) + 1
+                    _tally_reason(stats, "stacked_top_figure")
+                    continue
                 pix = None
                 if save_thumbs:
                     render_rect = final_rect
@@ -627,6 +1689,12 @@ def _extract_visuals_sequential(
                 score = _chart_candidate_score(
                     area_frac, has_context_hint, cap or "", note_included
                 )
+                if rect_item.kind == "panel":
+                    score += 0.35
+                elif rect_item.kind == "draw":
+                    score += 0.15
+                elif rect_item.kind == "heading":
+                    score -= 0.05
                 overlap_index = _find_overlapping_kept(final_rect, kept)
                 if overlap_index is not None:
                     existing_score = kept[overlap_index][1]

@@ -12,7 +12,12 @@ from src.contracts.report_assets import (
 )
 from src.contracts.report_models import CropItem
 from src.contracts.run_context import RunContext
-from src.services._pdf.crop import _tighten_chart_crop_rect, _tighten_table_crop_rect
+from src.services._pdf.crop import (
+    _dominant_border_color,
+    _legacy_chart_border_trim,
+    _tighten_chart_crop_rect,
+    _tighten_table_crop_rect,
+)
 from src.services.pdf_service import (
     apply_crop_refine_bbox,
     crop_regions,
@@ -146,6 +151,62 @@ def _build_pdf_with_top_chart_spillover(path: Path) -> None:
         color=(0, 0, 0),
         fill=(0.95, 0.95, 0.95),
     )
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_pdf_with_internal_heading_card(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=720, height=540)
+    page.draw_rect(
+        fitz.Rect(40, 180, 640, 430),
+        color=(0.95, 0.95, 0.95),
+        fill=(0.95, 0.95, 0.95),
+        width=0.5,
+    )
+    page.insert_text((178, 212), "Experience over ownership", fontsize=18)
+    page.insert_text((72, 268), "44%", fontsize=36)
+    page.insert_text((214, 266), "Shoppers want richer in-store experiences", fontsize=16)
+    page.insert_text((214, 292), "that blend service, entertainment, and value", fontsize=16)
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_pdf_with_internal_sentence_card(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=720, height=540)
+    page.draw_rect(
+        fitz.Rect(40, 180, 640, 430),
+        color=(0.70, 0.98, 0.52),
+        fill=(0.70, 0.98, 0.52),
+        width=0.5,
+    )
+    page.insert_textbox(
+        fitz.Rect(186, 212, 564, 254),
+        "Consumers are concerned about the lack of clarity in how AI collects and uses their personal data",
+        fontsize=14,
+    )
+    page.insert_text((72, 266), "60%", fontsize=34)
+    page.insert_text((214, 294), "marketers should make data collection clearer", fontsize=16)
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_pdf_with_bottom_edge_chart_text(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=520, height=620)
+    page.draw_rect(
+        fitz.Rect(60, 90, 420, 420),
+        color=(0.95, 0.80, 0.80),
+        fill=(0.95, 0.80, 0.80),
+        width=0.5,
+    )
+    page.insert_text((74, 132), "Impact of subscription auto-renewals", fontsize=18)
+    page.insert_text((74, 164), "on consumer trust", fontsize=18)
+    page.draw_circle((240, 275), 110, color=(0.10, 0.35, 0.85), fill=(0.10, 0.35, 0.85), width=0.5)
+    page.draw_circle((240, 275), 64, color=(0.95, 0.80, 0.80), fill=(0.95, 0.80, 0.80), width=0.5)
+    page.insert_text((184, 382), "Slight", fontsize=14)
+    page.insert_text((184, 410), "23%", fontsize=24)
     doc.save(path.as_posix())
     doc.close()
 
@@ -408,6 +469,91 @@ def test_tighten_chart_crop_rect_leaves_plain_chart_without_context_unchanged(tm
     assert tightened.y0 == pytest.approx(rect.y0)
     assert tightened.x1 == pytest.approx(rect.x1)
     assert tightened.y1 == pytest.approx(rect.y1)
+
+
+def test_tighten_chart_crop_rect_does_not_trim_internal_panel_label_block(tmp_path):
+    pdf_path = tmp_path / "internal-panel-side-labels.pdf"
+    from tests.test_pdf_figures_service import _build_internal_panel_with_side_labels_pdf
+
+    _build_internal_panel_with_side_labels_pdf(pdf_path)
+
+    doc = fitz.open(pdf_path.as_posix())
+    try:
+        page = doc[0]
+        rect = fitz.Rect(70.1, 127.8, 584.6, 472.2)
+        tightened = _tighten_chart_crop_rect(page, rect)
+    finally:
+        doc.close()
+
+    assert tightened.y0 <= 130.0
+    assert tightened.y1 >= 470.0
+
+
+def test_tighten_chart_crop_rect_keeps_draw_backed_internal_heading_band(tmp_path):
+    pdf_path = tmp_path / "internal-heading-card.pdf"
+    _build_pdf_with_internal_heading_card(pdf_path)
+
+    doc = fitz.open(pdf_path.as_posix())
+    try:
+        page = doc[0]
+        rect = fitz.Rect(36.0, 188.0, 644.0, 430.0)
+        tightened = _tighten_chart_crop_rect(page, rect)
+    finally:
+        doc.close()
+
+    assert tightened.y0 <= 188.5
+    assert tightened.y0 >= 176.0
+    assert tightened.y1 == pytest.approx(rect.y1)
+
+
+def test_tighten_chart_crop_rect_expands_to_fill_top_when_internal_sentence_is_not_heading(tmp_path):
+    pdf_path = tmp_path / "internal-sentence-card.pdf"
+    _build_pdf_with_internal_sentence_card(pdf_path)
+
+    doc = fitz.open(pdf_path.as_posix())
+    try:
+        page = doc[0]
+        rect = fitz.Rect(36.0, 186.0, 644.0, 430.0)
+        tightened = _tighten_chart_crop_rect(page, rect)
+    finally:
+        doc.close()
+
+    assert tightened.y0 < rect.y0
+    assert tightened.y0 <= 180.5
+    assert tightened.y0 >= 176.0
+    assert tightened.y1 == pytest.approx(rect.y1)
+
+
+def test_legacy_chart_border_trim_keeps_extra_bottom_padding_for_bottom_edge_text(tmp_path):
+    pdf_path = tmp_path / "bottom-edge-chart-text.pdf"
+    _build_pdf_with_bottom_edge_chart_text(pdf_path)
+
+    doc = fitz.open(pdf_path.as_posix())
+    try:
+        page = doc[0]
+        rect = fitz.Rect(60.0, 90.0, 420.0, 420.0)
+        pix = page.get_pixmap(matrix=fitz.Matrix(2, 2), clip=rect, alpha=False)
+        img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+        trimmed = _legacy_chart_border_trim(page, rect, img)
+    finally:
+        doc.close()
+
+    bg = _dominant_border_color(trimmed)
+    width, height = trimmed.size
+    bottommost = -1
+    for y in range(height - 1, -1, -1):
+        found = False
+        for x in range(width):
+            px = trimmed.getpixel((x, y))
+            if any(abs(px[i] - bg[i]) > 8 for i in range(3)):
+                bottommost = y
+                found = True
+                break
+        if found:
+            break
+
+    assert bottommost >= 0
+    assert height - 1 - bottommost >= 16
 
 
 def test_tighten_table_crop_rect_trims_top_page_number_but_keeps_header_band(tmp_path):

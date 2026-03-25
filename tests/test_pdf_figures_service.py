@@ -16,18 +16,48 @@ from src.contracts.candidates import Candidate
 from src.contracts.report_assets import ExtractCandidatesRequest, FigureExtractRequest
 from src.contracts.run_context import RunContext
 from src.services._pdf.figures import (
+    _ChartRect,
     _TableCandidate,
+    _chart_axis_label_band_like,
+    _clamp_panel_rect_to_dominant_fill_rect,
     _clamp_top_to_caption,
     _dedupe_table_candidates,
+    _extend_chart_rect_with_adjacent_drawings,
+    _extend_panel_rect_with_nearby_label_blocks,
+    _extend_with_adjacent_text_blocks,
     _expand_table_bbox,
     _extend_panel_with_adjacent_text_blocks,
+    _final_chart_candidate_looks_forecast_table,
+    _final_chart_candidate_looks_heading_slice,
     _has_figure_context_hint,
+    _panel_chart_has_compact_stat_card_signal,
     _panel_chart_has_data_signal,
+    _panel_candidate_shadowed_by_heading_candidate,
+    _panel_candidate_shadowed_by_larger_panel,
+    _panel_component_looks_like_guidance_card,
+    _panel_label_block_looks_like_footer_banner,
     _panel_chart_rects,
+    _panel_preferred_local_title_line,
+    _panel_stacked_bottom_clip_y,
+    _panel_should_clamp_to_internal_caption,
+    _panel_title_slice_bounds,
     _prune_charts_overlapping_ranked_tables,
     _validate_table_candidate,
 )
-from src.services._pdf.visual_candidates import _visual_text_dense_recovery_allowed
+from src.services._pdf.visual_candidates import (
+    _embedded_visual_looks_chart_like,
+    _page_has_chart_caption_blocks,
+    _text_has_visual_context_hint,
+    _visual_candidate_looks_bare_heading_fragment,
+    _visual_candidate_looks_cover_art,
+    _visual_candidate_looks_inline_numbered_panel,
+    _visual_candidate_looks_narrative_panel_card,
+    _visual_candidate_looks_note_fragment,
+    _visual_candidate_looks_reference_or_prose,
+    _visual_candidate_looks_section_opener_banner,
+    _visual_candidate_looks_table_like,
+    _visual_text_dense_recovery_allowed,
+)
 from src.services.pdf_service import collect_candidates, extract_best_figure
 
 
@@ -80,6 +110,20 @@ def _photo_panel_image_bytes() -> bytes:
     return buffer.getvalue()
 
 
+def _light_photo_card_image_bytes() -> bytes:
+    image = Image.new("RGB", (520, 360), color=(248, 244, 232))
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((0, 0, 520, 360), fill=(246, 232, 196))
+    draw.ellipse((132, 70, 344, 288), fill=(214, 182, 162))
+    draw.ellipse((190, 122, 244, 174), fill=(255, 255, 255))
+    draw.ellipse((258, 122, 312, 174), fill=(255, 255, 255))
+    draw.rectangle((164, 244, 324, 352), fill=(118, 88, 62))
+    draw.rectangle((0, 296, 520, 360), fill=(226, 208, 164))
+    buffer = io.BytesIO()
+    image.save(buffer, format="JPEG", quality=92)
+    return buffer.getvalue()
+
+
 def _table_image_bytes() -> bytes:
     image = Image.new("RGB", (900, 560), color=(19, 150, 159))
     draw = ImageDraw.Draw(image)
@@ -117,6 +161,50 @@ def _portrait_chart_image_bytes() -> bytes:
         draw.rectangle((x, 204 - idx * 26, x + 36, 304), fill=(80, 167, 184))
         draw.text((x - 4, 320), year, fill="black")
     draw.text((102, 372), "Source: synthetic narrow chart panel.", fill="black")
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+def _dark_chart_card_image_bytes() -> bytes:
+    image = Image.new("RGB", (360, 420), color=(64, 92, 88))
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((0, 0, 360, 62), fill=(28, 58, 54))
+    draw.text((24, 18), "WHAT THIS MEANS", fill=(168, 214, 132))
+    draw.text((24, 110), "81%", fill=(176, 224, 138))
+    draw.text((24, 148), "buyers want clearer", fill=(246, 248, 248))
+    draw.text((24, 180), "signals to trust AI", fill=(246, 248, 248))
+    draw.text((24, 212), "next to paid content", fill=(246, 248, 248))
+    draw.text((24, 370), "Source: synthetic chart card.", fill=(246, 248, 248))
+    draw.rectangle((24, 252, 186, 268), fill=(170, 214, 132))
+    draw.rectangle((24, 286, 236, 302), fill=(170, 214, 132))
+    draw.rectangle((24, 320, 214, 336), fill=(170, 214, 132))
+    for y in (242, 276, 310, 344):
+        draw.line((24, y, 210, y), fill=(246, 248, 248), width=1)
+    for x in (24, 72, 120, 168, 216, 264, 312):
+        draw.line((x, 238, x, 348), fill=(210, 220, 220), width=1)
+    draw.line((244, 338, 244, 250), fill=(246, 248, 248), width=2)
+    draw.line((274, 338, 274, 284), fill=(246, 248, 248), width=2)
+    draw.line((304, 338, 304, 270), fill=(246, 248, 248), width=2)
+    draw.line((334, 338, 334, 230), fill=(246, 248, 248), width=2)
+    draw.line((238, 230, 270, 202), fill=(170, 214, 132), width=4)
+    draw.line((270, 202, 298, 222), fill=(170, 214, 132), width=4)
+    draw.line((298, 222, 334, 188), fill=(170, 214, 132), width=4)
+    draw.rectangle((232, 174, 340, 352), outline=(246, 248, 248), width=3)
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+def _decorative_shape_card_image_bytes() -> bytes:
+    image = Image.new("RGB", (360, 180), color=(244, 244, 244))
+    draw = ImageDraw.Draw(image)
+    draw.ellipse((10, 64, 74, 128), outline=(46, 224, 194), width=4)
+    draw.pieslice((86, 64, 150, 128), start=270, end=90, fill=(255, 214, 48))
+    draw.pieslice((158, 64, 222, 128), start=90, end=270, fill=(13, 91, 104))
+    draw.ellipse((236, 42, 316, 122), outline=(49, 222, 74), width=6)
+    draw.arc((236, 98, 316, 176), start=180, end=360, fill=(13, 91, 104), width=3)
+    draw.arc((318, 34, 438, 194), start=180, end=350, fill=(55, 225, 193), width=18)
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")
     return buffer.getvalue()
@@ -192,6 +280,478 @@ def _build_chart_context_pdf(path: Path) -> None:
         fontsize=14,
         lineheight=1.25,
     )
+
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_panel_local_title_preference_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=720, height=420)
+    page.insert_text((40, 40), "TOP MEDIA PRIORITIES IN 2026", fontsize=20)
+    page.insert_text((40, 112), "Top Digital Formats", fontsize=12)
+    page.draw_rect(fitz.Rect(40, 126, 320, 300), color=(0, 0, 0))
+    page.insert_text((72, 188), "87%", fontsize=34)
+    page.insert_text((72, 236), "Digital Video", fontsize=12)
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_panel_internal_title_preference_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=720, height=420)
+    page.insert_text(
+        (260, 120),
+        "of shoppers are buying private-label or low-cost brands",
+        fontsize=14,
+    )
+    page.draw_rect(
+        fitz.Rect(40, 150, 360, 320),
+        color=(0.08, 0.12, 0.28),
+        fill=(0.08, 0.12, 0.28),
+        width=0.5,
+    )
+    page.draw_rect(
+        fitz.Rect(40, 150, 360, 188),
+        color=(0.25, 0.66, 0.90),
+        fill=(0.25, 0.66, 0.90),
+        width=0.5,
+    )
+    page.insert_text(
+        (132, 176),
+        "Private labels go premium",
+        fontsize=16,
+        color=(1, 1, 1),
+    )
+    page.insert_textbox(
+        fitz.Rect(74, 212, 326, 286),
+        "Quality and trust remain the strongest decision drivers.",
+        fontsize=13,
+        color=(1, 1, 1),
+        align=1,
+    )
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_axis_label_band_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=620, height=420)
+    page.draw_rect(fitz.Rect(90, 90, 320, 250), color=(0, 0, 0))
+    page.insert_text((110, 120), "Chart 1", fontsize=14)
+    page.insert_textbox(
+        fitz.Rect(104, 230, 520, 262),
+        "1990\n1995\n2000\n2005\n2010\n2015\n2020\n2025\n2030\n2035",
+        fontsize=10,
+    )
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_axis_stroke_extension_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=620, height=420)
+    page.insert_text((54, 52), "Chart 1: Fiscal outlook", fontsize=16)
+    page.insert_text((92, 88), "Outlays in USD trillion", fontsize=11)
+    baseline_y = 332
+    page.draw_line((86, baseline_y), (520, baseline_y), color=(0.3, 0.3, 0.3), width=0.7)
+    for idx, height in enumerate([18, 24, 20, 16, 44, 39, 20, 26, 18]):
+        x0 = 96 + idx * 34
+        page.draw_rect(
+            fitz.Rect(x0, baseline_y - height, x0 + 24, baseline_y),
+            color=(0.11, 0.14, 0.40),
+            fill=(0.11, 0.14, 0.40),
+            width=0.5,
+        )
+    for idx, height in enumerate([26, 28, 30, 32]):
+        x0 = 402 + idx * 28
+        page.draw_rect(
+            fitz.Rect(x0, baseline_y - height, x0 + 18, baseline_y),
+            color=(0.82, 0.79, 0.64),
+            fill=(0.82, 0.79, 0.64),
+            width=0.5,
+        )
+    for x in [414, 458, 502]:
+        page.draw_line((x, baseline_y - 1), (x, baseline_y + 4), color=(0.3, 0.3, 0.3), width=0.5)
+    page.insert_text((414, 352), "2025", fontsize=10)
+    page.insert_text((458, 352), "2030", fontsize=10)
+    page.insert_text((502, 352), "2035", fontsize=10)
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_internal_panel_cards_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=620, height=900)
+    page.insert_text(
+        (36, 64),
+        "Retail trends",
+        fontsize=28,
+        color=(1, 1, 1),
+    )
+
+    top_rect = fitz.Rect(42, 150, 560, 340)
+    page.draw_rect(top_rect, color=(0.15, 0.42, 0.76), fill=(0.15, 0.42, 0.76))
+    page.draw_line((214, 150), (214, 340), color=(0.45, 0.65, 0.92), width=1.2)
+    page.insert_text((66, 246), "44%", fontsize=56, color=(1, 1, 1))
+    page.insert_textbox(
+        fitz.Rect(240, 182, 534, 316),
+        (
+            "of shoppers are buying lower-cost alternatives over name brands\n"
+            "Early findings: What matters to today's consumers, 2026"
+        ),
+        fontsize=17,
+        color=(1, 1, 1),
+        lineheight=1.25,
+        align=fitz.TEXT_ALIGN_LEFT,
+    )
+
+    bottom_rect = fitz.Rect(42, 390, 560, 710)
+    page.draw_rect(bottom_rect, color=(0.15, 0.42, 0.76), fill=(0.10, 0.16, 0.32))
+    page.draw_rect(
+        fitz.Rect(42, 390, 560, 438),
+        color=(0.25, 0.66, 0.90),
+        fill=(0.25, 0.66, 0.90),
+    )
+    page.insert_text((168, 422), "3 ways retailers can prepare for 2026", fontsize=18, color=(1, 1, 1))
+    page.draw_line((214, 438), (214, 710), color=(0.25, 0.35, 0.58), width=1.0)
+    page.draw_line((388, 438), (388, 710), color=(0.25, 0.35, 0.58), width=1.0)
+    page.insert_textbox(
+        fitz.Rect(60, 470, 196, 676),
+        (
+            "Shift from search to suggestion:\n"
+            "Leverage AI to drive proactive discovery and surface relevant products."
+        ),
+        fontsize=15,
+        color=(1, 1, 1),
+        lineheight=1.2,
+    )
+    page.insert_textbox(
+        fitz.Rect(234, 470, 370, 676),
+        (
+            "Optimize for algorithmic visibility:\n"
+            "Structure content so recommendations engines can understand it."
+        ),
+        fontsize=15,
+        color=(1, 1, 1),
+        lineheight=1.2,
+    )
+    page.insert_textbox(
+        fitz.Rect(408, 470, 544, 676),
+        (
+            "Engineer moments of serendipity:\n"
+            "Design timely nudges and discovery paths that feel contextual."
+        ),
+        fontsize=15,
+        color=(1, 1, 1),
+        lineheight=1.2,
+    )
+
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_panel_metric_band_with_quote_card_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=620, height=420)
+    page.insert_text((42, 68), "Invisible AI", fontsize=26, color=(1, 1, 1))
+    page.insert_text((42, 148), "71% of consumers", fontsize=24, color=(1, 1, 1))
+    page.insert_text((42, 178), "want Gen AI-integrated shopping interactions", fontsize=14, color=(1, 1, 1))
+    page.insert_text((250, 158), "compared to", fontsize=14, color=(1, 1, 1))
+    page.insert_text((250, 194), "56% who said", fontsize=24, color=(1, 1, 1))
+    page.insert_text((250, 224), "the same last year.", fontsize=14, color=(1, 1, 1))
+    page.insert_text((470, 194), "Source: Example dataset", fontsize=11, color=(0.2, 0.9, 0.9))
+    page.draw_rect(
+        fitz.Rect(42, 244, 560, 338),
+        color=(0.35, 0.4, 0.62),
+        fill=(0.10, 0.16, 0.32),
+        width=0.8,
+    )
+    page.insert_textbox(
+        fitz.Rect(72, 270, 520, 318),
+        (
+            "Transparency builds confidence, even when the tech stays in the background.\n"
+            "Mark Ruston, Global Retail Lead"
+        ),
+        fontsize=15,
+        color=(1, 1, 1),
+        align=0,
+    )
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_internal_label_grid_panel_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=720, height=520)
+    panel_rect = fitz.Rect(60, 72, 660, 420)
+    page.draw_rect(panel_rect, color=(0.95, 0.95, 0.95), fill=(0.95, 0.95, 0.95))
+    page.insert_textbox(
+        fitz.Rect(86, 98, 286, 166),
+        (
+            "To arrive at Ad Equity, we asked consumers their perceptions "
+            "of the ads on each media platform."
+        ),
+        fontsize=14,
+        lineheight=1.2,
+    )
+    labels = [
+        ("Trustworthy", 140, 178),
+        ("Relevant and useful", 360, 178),
+        ("Fun and entertaining", 580, 178),
+        ("Better quality", 140, 314),
+        ("Innovative", 360, 314),
+        ("Captures my attention", 580, 314),
+    ]
+    for text, cx, cy in labels:
+        page.draw_line((cx - 92, cy - 40), (cx - 92, cy + 40), color=(0.1, 0.1, 0.1), width=1.2)
+        box = fitz.Rect(cx - 76, cy - 22, cx + 16, cy + 30)
+        page.draw_rect(box, color=(0.82, 0.42, 0.92), fill=(0.82, 0.42, 0.92))
+        page.insert_textbox(
+            fitz.Rect(cx - 76, cy + 46, cx + 92, cy + 126),
+            text,
+            fontsize=14,
+            align=fitz.TEXT_ALIGN_CENTER,
+        )
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_internal_panel_with_side_labels_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=640, height=520)
+    page.draw_rect(
+        fitz.Rect(140, 184, 500, 430),
+        color=(0.10, 0.16, 0.32),
+        fill=(0.10, 0.16, 0.32),
+    )
+    page.draw_circle((214, 338), 34, color=(0.98, 0.50, 0.42), width=3)
+    page.draw_circle((320, 268), 34, color=(0.24, 0.76, 0.98), width=3)
+    page.draw_circle((426, 338), 34, color=(0.20, 0.88, 0.86), width=3)
+    page.draw_circle((320, 362), 106, color=(0.24, 0.38, 0.74), width=3)
+    page.insert_text((198, 348), "01", fontsize=22, color=(1, 1, 1))
+    page.insert_text((304, 278), "02", fontsize=22, color=(1, 1, 1))
+    page.insert_text((410, 348), "03", fontsize=22, color=(1, 1, 1))
+    page.insert_textbox(
+        fitz.Rect(236, 302, 404, 388),
+        "What’s inside:\n3 ways retailers can prepare",
+        fontsize=18,
+        color=(1, 1, 1),
+        align=fitz.TEXT_ALIGN_CENTER,
+    )
+    page.insert_textbox(
+        fitz.Rect(74, 186, 174, 278),
+        "Moments over\nmerchandise:\nUnlocking growth",
+        fontsize=15,
+        color=(0.12, 0.12, 0.12),
+        align=fitz.TEXT_ALIGN_CENTER,
+    )
+    page.insert_text((486, 196), "Trust as a", fontsize=15, color=(0.12, 0.12, 0.12))
+    page.insert_text((496, 218), "profit", fontsize=15, color=(0.12, 0.12, 0.12))
+    page.insert_text((488, 240), "driver:", fontsize=15, color=(0.12, 0.12, 0.12))
+    page.insert_text((474, 268), "Driving margins", fontsize=15, color=(0.12, 0.12, 0.12))
+    page.insert_textbox(
+        fitz.Rect(266, 132, 374, 214),
+        "Searchless\nretail:\n03",
+        fontsize=15,
+        color=(0.12, 0.12, 0.12),
+        align=fitz.TEXT_ALIGN_CENTER,
+    )
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_internal_panel_with_bottom_labels_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=640, height=560)
+    page.insert_text(
+        (92, 86),
+        "Consumer response to unexpected fees",
+        fontsize=22,
+        color=(0.12, 0.12, 0.12),
+    )
+    page.draw_circle((322, 302), 128, color=(0.94, 0.28, 0.28), width=36)
+    page.draw_circle((322, 302), 76, color=(0.96, 0.84, 0.82), fill=(0.96, 0.84, 0.82), width=2)
+    page.insert_text((146, 180), "Stayed and", fontsize=16, color=(0.14, 0.14, 0.14))
+    page.insert_text((146, 204), "maintained trust", fontsize=16, color=(0.14, 0.14, 0.14))
+    page.insert_text((150, 238), "29%", fontsize=28, color=(0.14, 0.14, 0.14))
+    page.insert_text((430, 180), "Stayed but", fontsize=16, color=(0.14, 0.14, 0.14))
+    page.insert_text((430, 204), "lost trust", fontsize=16, color=(0.14, 0.14, 0.14))
+    page.insert_text((432, 238), "40%", fontsize=28, color=(0.14, 0.14, 0.14))
+    page.insert_text((270, 422), "Switched", fontsize=16, color=(0.14, 0.14, 0.14))
+    page.insert_text((275, 446), "provider", fontsize=16, color=(0.14, 0.14, 0.14))
+    page.insert_text((278, 480), "31%", fontsize=28, color=(0.14, 0.14, 0.14))
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_contents_panel_page_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=720, height=520)
+    page.draw_rect(page.rect, color=(0.20, 0.45, 0.34), fill=(0.20, 0.45, 0.34))
+    page.insert_text((28, 42), "TABLE OF CONTENTS", fontsize=22, color=(1, 1, 1))
+    cards = [
+        ("01", "TOP MEDIA\nCHALLENGES"),
+        ("02", "GENERATIVE\nAI"),
+        ("03", "SOCIAL\nMEDIA"),
+        ("04", "DIGITAL\nVIDEO"),
+    ]
+    for idx, (num, label) in enumerate(cards):
+        x0 = 70 + idx * 150
+        y0 = 110
+        card = fitz.Rect(x0, y0, x0 + 105, y0 + 120)
+        page.draw_rect(card, color=(0.20, 0.45, 0.34), fill=(0.20, 0.45, 0.34))
+        page.insert_text((x0 + 10, y0 + 38), num, fontsize=46, color=(0.45, 0.98, 0.20))
+        page.insert_textbox(
+            fitz.Rect(x0 + 4, y0 + 62, x0 + 110, y0 + 122),
+            label,
+            fontsize=14,
+            color=(1, 1, 1),
+            align=fitz.TEXT_ALIGN_LEFT,
+        )
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_chart_with_internal_title_band_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=720, height=520)
+    page.insert_text(
+        (72, 110),
+        "Top Media Types with Potential for Innovation",
+        fontsize=14,
+        color=(0.12, 0.12, 0.12),
+    )
+    page.draw_line((70, 132), (620, 132), color=(0.12, 0.12, 0.12), width=1.2)
+    bars = [
+        (90, 300, 150, 160, "50%"),
+        (185, 300, 245, 205, "35%"),
+        (280, 300, 340, 215, "32%"),
+        (375, 300, 435, 225, "30%"),
+        (470, 300, 530, 225, "30%"),
+    ]
+    for x0, y1, x1, y0, label in bars:
+        rect = fitz.Rect(x0, y0, x1, y1)
+        page.draw_rect(rect, color=(0.68, 0.96, 0.46), fill=(0.68, 0.96, 0.46))
+        page.insert_text((x0 + 12, y0 + 28), label, fontsize=18, color=(0.1, 0.1, 0.1))
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_panel_chart_with_wide_internal_title_band_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=720, height=520)
+    page.draw_rect(
+        fitz.Rect(24, 24, 436, 88),
+        color=(0.96, 0.96, 0.96),
+        fill=(0.99, 0.99, 0.99),
+        width=1.0,
+    )
+    page.insert_text(
+        (28, 52),
+        "Media Types with the Most Potential for Innovation",
+        fontsize=18,
+        color=(0.12, 0.12, 0.12),
+    )
+    page.draw_line((28, 78), (430, 78), color=(0.12, 0.12, 0.12), width=1.2)
+    page.draw_rect(
+        fitz.Rect(88, 188, 628, 340),
+        color=(0.90, 0.90, 0.90),
+        fill=(0.98, 0.98, 0.98),
+        width=1.0,
+    )
+    bars = [
+        (96, 336, 156, 196, "50%"),
+        (190, 336, 250, 236, "35%"),
+        (284, 336, 344, 246, "32%"),
+        (378, 336, 438, 256, "30%"),
+        (472, 336, 532, 256, "30%"),
+    ]
+    for x0, y1, x1, y0, label in bars:
+        rect = fitz.Rect(x0, y0, x1, y1)
+        page.draw_rect(rect, color=(0.68, 0.96, 0.46), fill=(0.68, 0.96, 0.46))
+        page.insert_text(
+            (x0 + 12, y0 + 28),
+            label,
+            fontsize=18,
+            color=(0.1, 0.1, 0.1),
+        )
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_stacked_independent_panel_cards_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=620, height=900)
+    upper_rect = fitz.Rect(42, 300, 552, 520)
+    lower_rect = fitz.Rect(42, 560, 552, 820)
+
+    page.draw_rect(
+        upper_rect,
+        color=(0.92, 0.92, 0.92),
+        fill=(0.92, 0.92, 0.92),
+        width=0.5,
+    )
+    page.draw_rect(
+        fitz.Rect(70, 320, 226, 418),
+        color=(0.70, 0.98, 0.55),
+        fill=(0.70, 0.98, 0.55),
+        width=0.5,
+    )
+    page.insert_text((88, 374), "46%", fontsize=34)
+    page.insert_text((264, 344), "of shoppers make purchases based on AI", fontsize=16)
+    page.insert_text((264, 364), "recommendations", fontsize=16)
+    page.insert_text((264, 392), "Early findings: What matters to today's", fontsize=12)
+    page.insert_text((264, 408), "consumers, 2026", fontsize=12)
+
+    page.draw_rect(
+        lower_rect,
+        color=(0.95, 0.97, 0.91),
+        fill=(0.95, 0.97, 0.91),
+        width=0.5,
+    )
+    page.insert_text((136, 584), "3 ways retailers can prepare for a searchless future:", fontsize=16)
+    columns = [
+        (
+            74,
+            "01",
+            [
+                "Shift from search",
+                "to suggestion:",
+                "Use contextual",
+                "signals to surface",
+                "relevant products.",
+            ],
+        ),
+        (
+            252,
+            "02",
+            [
+                "Optimize for",
+                "algorithmic",
+                "visibility:",
+                "Strengthen product",
+                "and content tagging.",
+            ],
+        ),
+        (
+            426,
+            "03",
+            [
+                "Engineer moments",
+                "of serendipity:",
+                "Use timed prompts",
+                "and content to spark",
+                "discovery.",
+            ],
+        ),
+    ]
+    for x, number, lines in columns:
+        page.insert_text((x, 636), number, fontsize=18)
+        y = 658
+        for line in lines:
+            page.insert_text((x + 8, y), line, fontsize=12)
+            y += 18
 
     doc.save(path.as_posix())
     doc.close()
@@ -561,6 +1121,38 @@ def _build_panel_chart_slide_pdf(path: Path) -> None:
     doc.close()
 
 
+def _build_stacked_shared_title_panel_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=842, height=595)
+    page.insert_text(
+        (42, 74),
+        "Brand switching reaches critical mass",
+        fontsize=26,
+    )
+    page.insert_text(
+        (42, 116),
+        "Year-on-year growth in brand switching behaviour",
+        fontsize=20,
+    )
+    bands = [
+        fitz.Rect(492, 172, 748, 252),
+        fitz.Rect(492, 284, 736, 364),
+        fitz.Rect(492, 396, 712, 476),
+    ]
+    labels = [("2025", "78%"), ("2024", "50%"), ("2023", "40%")]
+    fills = [
+        (0.82, 0.10, 0.62),
+        (0.84, 0.84, 0.84),
+        (0.84, 0.84, 0.84),
+    ]
+    for band, (year, value), fill in zip(bands, labels, fills):
+        page.draw_rect(band, color=fill, fill=fill, width=0.5)
+        page.insert_text((band.x0 + 12, band.y0 + 52), year, fontsize=28)
+        page.insert_text((band.x1 - 74, band.y0 + 52), value, fontsize=28)
+    doc.save(path.as_posix())
+    doc.close()
+
+
 def _build_shared_title_split_panel_pdf(path: Path) -> None:
     doc = fitz.open()
     page = doc.new_page(width=960, height=540)
@@ -588,6 +1180,136 @@ def _build_shared_title_split_panel_pdf(path: Path) -> None:
     page.insert_text((636, 190), "Brand suitability", fontsize=14)
     page.insert_text((636, 214), "Premium inventory", fontsize=14)
     page.insert_text((636, 238), "Trusted context", fontsize=14)
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_right_column_raster_chart_card_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=842, height=595)
+    page.insert_text((40, 82), "What this means for brands", fontsize=24)
+    page.insert_textbox(
+        fitz.Rect(40, 126, 404, 410),
+        (
+            "In 2026, trust is more fragmented than ever. Consumers want "
+            "measurement partners that can identify harmful generative-AI "
+            "content, prove safe adjacencies, and make brand suitability "
+            "controls easier to audit across campaigns."
+        ),
+        fontsize=14,
+        lineheight=1.2,
+    )
+    page.insert_image(
+        fitz.Rect(444, 16, 843, 404),
+        stream=_dark_chart_card_image_bytes(),
+    )
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_right_column_raster_photo_card_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=842, height=595)
+    page.insert_text((40, 82), "Why people are holding back", fontsize=24)
+    page.insert_textbox(
+        fitz.Rect(40, 126, 404, 420),
+        (
+            "Consumers continue to feel pressure on household budgets. "
+            "Even as inflation eases, many say they will not return to "
+            "freer spending until prices fall, incomes grow, and savings "
+            "buffers improve."
+        ),
+        fontsize=14,
+        lineheight=1.2,
+    )
+    page.insert_image(
+        fitz.Rect(458, 0, 843, 401),
+        stream=_photo_panel_image_bytes(),
+    )
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_small_decorative_raster_card_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=842, height=595)
+    page.insert_text((42, 82), "What momentum means", fontsize=24)
+    page.insert_textbox(
+        fitz.Rect(42, 122, 430, 260),
+        (
+            "This paragraph should remain body copy. The decorative motif "
+            "below is not a standalone chart even though it uses geometric "
+            "shapes and a high-contrast card design."
+        ),
+        fontsize=14,
+        lineheight=1.2,
+    )
+    page.insert_image(
+        fitz.Rect(500, 395, 846, 555),
+        stream=_decorative_shape_card_image_bytes(),
+    )
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_light_raster_photo_card_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=842, height=595)
+    page.insert_text((42, 82), "How everyday moments shape preferences", fontsize=24)
+    page.insert_textbox(
+        fitz.Rect(42, 126, 404, 420),
+        (
+            "This page uses narrative body copy beside a lifestyle image. "
+            "The image should not be extracted as a chart candidate even "
+            "though it sits inside a clean card layout."
+        ),
+        fontsize=14,
+        lineheight=1.2,
+    )
+    page.insert_image(
+        fitz.Rect(458, 0, 843, 401),
+        stream=_light_photo_card_image_bytes(),
+    )
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_prose_mentioning_figure_photo_card_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=842, height=595)
+    page.insert_text((42, 82), "Where shoppers begin", fontsize=24)
+    page.insert_textbox(
+        fitz.Rect(42, 126, 404, 420),
+        (
+            "When it comes to starting a shopping journey, only a small "
+            "share of consumers say they would begin with a chatbot. "
+            "That figure rises slightly among younger audiences, but the "
+            "adjacent lifestyle photo is still not a chart."
+        ),
+        fontsize=14,
+        lineheight=1.2,
+    )
+    page.insert_image(
+        fitz.Rect(458, 0, 843, 401),
+        stream=_light_photo_card_image_bytes(),
+    )
+    doc.save(path.as_posix())
+    doc.close()
+
+
+def _build_oversized_raster_wrapper_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=842, height=595)
+    # Oversized embedded image rect that bleeds off-page.
+    page.insert_image(
+        fitz.Rect(260, 50, 1157, 554),
+        stream=_chart_image_bytes(),
+    )
+    # Real chart card fully inside the page; this is the crop we want to keep.
+    page.insert_image(
+        fitz.Rect(302, 121, 654, 510),
+        stream=_chart_image_bytes(),
+    )
     doc.save(path.as_posix())
     doc.close()
 
@@ -1565,6 +2287,44 @@ def _build_boxed_prose_pdf(path: Path) -> None:
     doc.close()
 
 
+def _build_top_stacked_captioned_draw_charts_pdf(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=620, height=900)
+    page.insert_text((24, 34), "34 |", fontsize=12)
+
+    page.insert_text((36, 58), "Figure 1. Upper stacked draw chart", fontsize=16)
+    page.draw_line((60, 120), (280, 120), color=(0.6, 0.6, 0.6), width=0.8)
+    page.draw_line((60, 160), (280, 160), color=(0.6, 0.6, 0.6), width=0.8)
+    page.draw_rect(
+        fitz.Rect(62, 190, 268, 300),
+        color=(0.2, 0.2, 0.2),
+        fill=(0.8, 0.88, 0.98),
+        width=1.0,
+    )
+    page.insert_text(
+        (36, 332),
+        "Source: synthetic upper chart source.",
+        fontsize=10,
+    )
+
+    page.insert_text((36, 414), "Figure 2. Lower stacked draw chart", fontsize=16)
+    page.draw_rect(
+        fitz.Rect(62, 460, 520, 700),
+        color=(0.8, 0.8, 0.8),
+        fill=(0.96, 0.96, 0.96),
+        width=1.0,
+    )
+    page.draw_line((84, 640), (494, 640), color=(0.25, 0.25, 0.25), width=1.0)
+    page.draw_line((150, 640), (150, 520), color=(0.2, 0.2, 0.2), width=1.0)
+    page.draw_line((150, 640), (260, 560), color=(0.1, 0.1, 0.1), width=1.0)
+    page.draw_line((260, 560), (360, 520), color=(0.1, 0.1, 0.1), width=1.0)
+    page.draw_line((360, 520), (464, 548), color=(0.1, 0.1, 0.1), width=1.0)
+    page.insert_text((36, 726), "Source: synthetic lower chart source.", fontsize=10)
+
+    doc.save(path.as_posix())
+    doc.close()
+
+
 def _build_contents_like_pdf(path: Path) -> None:
     doc = fitz.open()
     page = doc.new_page(width=620, height=900)
@@ -1925,6 +2685,26 @@ def test_collect_candidates_splits_stacked_captioned_draw_charts(tmp_path) -> No
     assert lower.bbox[3] >= 624.0
 
 
+def test_collect_candidates_rejects_top_stacked_captioned_draw_chart(tmp_path) -> None:
+    pdf_path = tmp_path / "top-stacked-captioned-draw-charts.pdf"
+    out_dir = tmp_path / "out"
+    _build_top_stacked_captioned_draw_charts_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="top-stacked-captioned-draw-charts",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    assert len(charts) == 1
+    assert (charts[0].caption or "").lower().startswith("figure 2")
+
+
 def test_collect_candidates_chart_flow_rejects_side_by_side_photo_examples_without_visual_hint(
     tmp_path,
 ) -> None:
@@ -2146,6 +2926,502 @@ def test_prune_charts_overlapping_ranked_tables_removes_chart_duplicate() -> Non
     assert [candidate.id for candidate in kept] == ["chart-0-1"]
 
 
+def test_prune_charts_overlapping_ranked_tables_prunes_table_shadow_for_any_table_method() -> None:
+    charts = [
+        Candidate(
+            schema_version="1.0",
+            id="chart-108-0",
+            kind="chart",
+            page=108,
+            bbox=(43.0, 88.0, 548.0, 384.0),
+            preview_text="Argentina",
+            caption="Argentina",
+            thumb_path="",
+            meta={"text_lines": 97, "text_chars": 877, "text_ratio": 0.282},
+        )
+    ]
+    tables = [
+        Candidate(
+            schema_version="1.0",
+            id="table-108-0",
+            kind="table",
+            page=108,
+            bbox=(49.0, 92.0, 545.0, 380.0),
+            preview_text="Argentina table",
+            caption="",
+            thumb_path="",
+            meta={"method": "stream"},
+        )
+    ]
+
+    kept, pruned = _prune_charts_overlapping_ranked_tables(charts, tables)
+
+    assert pruned == 1
+    assert kept == []
+
+
+def test_visual_candidate_looks_table_like_rejects_country_table_text() -> None:
+    text = (
+        "2022 2023 2024 2025 2026 2027\n"
+        "Current prices EUR billion\n"
+        "GDP at market prices 561.3 1.7 1.1 1.1 1.1 1.2\n"
+        "Private consumption 289.7 1.1 2.0 1.9 1.1 0.9\n"
+        "Government consumption 131.6 2.7 1.8 1.0 1.0 0.5\n"
+        "Gross fixed capital formation 134.3 3.1 2.0 -1.1 1.1 1.4\n"
+    )
+    assert _visual_candidate_looks_table_like("Belgium", text) is True
+
+
+def test_visual_candidate_looks_table_like_keeps_compact_panel_rank_card() -> None:
+    text = (
+        "Advertising equity\n"
+        "43.3\n"
+        "47.6\n"
+        "2024\n"
+        "2025\n"
+        "#3\n"
+        "#1\n"
+        "Rank 1 of 25 of total\n"
+        "media channel\n"
+    )
+    assert (
+        _visual_candidate_looks_table_like(
+            "Advertising equity",
+            text,
+            kind="panel",
+            panel_data_signal=True,
+        )
+        is False
+    )
+
+
+def test_visual_candidate_looks_reference_or_prose_rejects_box_text() -> None:
+    text = (
+        "The growth of stablecoins may also pose risks to banks. Companies with crypto-related "
+        "business models also hold bank deposits.\n"
+        "Many countries have begun to develop tailored regulations relating to stablecoins.\n"
+        "These include liquidity shortages and fire sales of collateral.\n"
+        "Investors' redemption runs and funding costs may also rise.\n"
+        "Another paragraph explains the risks in prose rather than chart labels.\n"
+        "This page is a narrative box and not a chart.\n"
+        "Source: OECD Publishing, Paris, https://doi.org/10.1787/example-en.\n"
+    )
+    assert (
+        _visual_candidate_looks_reference_or_prose(
+            "Box 2.3. Pro-competitive product market regulations support economic growth",
+            text,
+            text_ratio=0.42,
+        )
+        is True
+    )
+
+
+def test_visual_candidate_looks_reference_or_prose_rejects_long_prose_with_numbered_notes() -> None:
+    text = (
+        "The growth of stablecoins may also pose risks to banks. Companies with crypto-related "
+        "business models, including stablecoin issuers, also hold bank deposits.\n"
+        "The growing adoption and use of stablecoins also raise economic policy challenges.\n"
+        "Exchange rate volatility in emerging-market economies could rise if capital controls "
+        "are less effective at times of stress.\n"
+        "More broadly, the use of foreign currency denominated stablecoins could weaken the "
+        "control of monetary conditions by domestic central banks.\n"
+        "Many countries have begun to develop tailored regulations relating to stablecoins, and "
+        "crypto-assets more generally, with prominent recent examples in the United States and "
+        "the European Union.\n"
+        "Regulatory approaches differ across countries and significant gaps and inconsistencies "
+        "remain.\n"
+        "One key issue is the limited oversight of cross-border transactions, which could hamper "
+        "responses to systemic risks and encourage regulatory arbitrage.\n"
+        "The rapid growth of the stablecoin market highlights the need for enhanced international "
+        "cooperation to ensure effective regulation, supervision, and oversight.\n"
+        "A further issue is the interaction with bank-based financial intermediation.\n"
+        "Runs on perceived high-risk stablecoins may transmit stress to broader markets.\n"
+        "Liquidity strains could be amplified by collateral sales and funding pressures.\n"
+        "Cross-border regulatory arbitrage remains a material policy concern.\n"
+        "Supervisory gaps are still present in several jurisdictions.\n"
+        "Large issuers have become more interconnected with critical funding markets.\n"
+        "These feedback loops can complicate monetary-policy transmission.\n"
+        "The role of reserve assets and redemption dynamics remains central.\n"
+        "Operational resilience and cyber-risk considerations also matter.\n"
+        "These topics require broad international coordination and oversight.\n"
+        "1. Transaction volumes of fiat-collateralised stablecoins accounted for 31% of total "
+        "stablecoin transaction volumes in 2024.\n"
+        "2. Traditional investment funds rely on established authorised participants.\n"
+        "3. The GENIUS Act was enacted in July 2025.\n"
+    )
+    assert (
+        _visual_candidate_looks_reference_or_prose(
+            "The growth of stablecoins may also pose risks to banks.",
+            text,
+            text_ratio=0.62,
+        )
+        is True
+    )
+
+
+def test_visual_candidate_looks_reference_or_prose_keeps_structured_instruction_card() -> None:
+    text = (
+        "3 ways retailers can win with invisible AI experiences\n"
+        "Shift from personalization to contextualization: Shift from personalization to contextualization.\n"
+        "Establish visible guardrails: Prioritize and promote clear, non-negotiable standards.\n"
+        "Keep humans in the loop: Ensure there are smooth escalation paths and backup systems.\n"
+        "01\n"
+        "02\n"
+        "03\n"
+        "behavioral, contextual, and transactional signals to surface relevant products.\n"
+        "standards around data privacy, security, and ethical use.\n"
+        "human support in place to maintain a seamless experience.\n"
+    )
+    assert (
+        _visual_candidate_looks_reference_or_prose(
+            "3 ways retailers can win with invisible AI experiences",
+            text,
+            text_ratio=0.5,
+        )
+        is False
+    )
+
+
+def test_visual_candidate_looks_reference_or_prose_rejects_explanatory_figure_reference() -> None:
+    text = (
+        "Figure 10.4 is based on the European Union Statistics on Income and Living Conditions data.\n"
+        "Self-reported health reflects people’s overall perception of their own health.\n"
+        "Perceived health status by income quintile is derived from the respondent’s self-perceived health.\n"
+        "This indicator looks at the difference in the proportion of adults aged 65 and over reporting poor health.\n"
+        "Limitations in daily activities assess an individual’s independence across both ADL and IADL.\n"
+        "Comparability is somewhat limited because different samples were used.\n"
+    )
+    assert (
+        _visual_candidate_looks_reference_or_prose(
+            "Figure 10.4 is based on the European Union Statistics on Income and Living Conditions data.",
+            text,
+            text_ratio=0.31,
+        )
+        is True
+    )
+
+
+def test_visual_candidate_looks_reference_or_prose_rejects_explanatory_figure_reference_with_comma() -> None:
+    text = (
+        "Figure 10.19, Japan’s data are added on an exceptional basis for comparability.\n"
+        "This indicator is shown only for descriptive context and should not be treated as a chart.\n"
+        "Comparability remains limited because different sources were used across the period.\n"
+        "The figure therefore functions as explanatory reference text rather than a visual caption.\n"
+    )
+    assert (
+        _visual_candidate_looks_reference_or_prose(
+            "Figure 10.19, Japan’s data are added on an exceptional basis for comparability.",
+            text,
+            text_ratio=0.33,
+        )
+        is True
+    )
+
+
+def test_visual_candidate_looks_note_fragment_rejects_statlink_strip() -> None:
+    text = "Source: OECD Economic Outlook 118 database.\nStatLink 2 https://stat.link/abcd12"
+
+    assert (
+        _visual_candidate_looks_note_fragment(
+            "StatLink 2 https://stat.link/abcd12",
+            text,
+            kind="panel",
+        )
+        is True
+    )
+
+
+def test_visual_candidate_looks_note_fragment_rejects_mid_sentence_note_slice() -> None:
+    text = (
+        "1. Year-on-year growth rates.\n"
+        "Source: OECD Economic Outlook 118 database.\n"
+        "StatLink 2 https://stat.link/9xcsw1"
+    )
+
+    assert (
+        _visual_candidate_looks_note_fragment(
+            "(+0.5%). The downturn was driven by sharp declines in exports and business investment, as tariffs on",
+            text,
+            kind="panel",
+        )
+        is True
+    )
+
+
+def test_visual_candidate_looks_note_fragment_keeps_bare_heading_chart_with_source() -> None:
+    text = (
+        "Austria\n"
+        "The pick up in inflation is driven by energy costs\n"
+        "The fiscal situation has deteriorated\n"
+        "Source: Eurostat; and OECD STEP 118 database.\n"
+        "StatLink 2 https://stat.link/diupkh"
+    )
+
+    assert (
+        _visual_candidate_looks_note_fragment(
+            "Austria",
+            text,
+            kind="panel",
+        )
+        is False
+    )
+
+
+def test_visual_candidate_looks_bare_heading_fragment_rejects_empty_country_slice() -> None:
+    assert (
+        _visual_candidate_looks_bare_heading_fragment(
+            "Argentina",
+            "Argentina\n",
+            kind="panel",
+            area_frac=0.12,
+            aspect=2.4,
+        )
+        is True
+    )
+
+
+def test_visual_candidate_looks_table_like_rejects_forecast_header_block() -> None:
+    text = (
+        "2022 2023 2024 2025 2026 2027\n"
+        "Current prices\n"
+        "Percentage changes, volume\n"
+        "GDP at market prices 5 4 3 2 1 0\n"
+        "Memorandum items\n"
+        "Consumer price index 6 5 4 3 2 1\n"
+    )
+
+    assert (
+        _visual_candidate_looks_table_like(
+            "Ukraine: Demand, output and prices",
+            text,
+            kind="panel",
+            panel_data_signal=False,
+        )
+        is True
+    )
+
+
+def test_final_chart_candidate_looks_heading_slice_rejects_bare_country_banner() -> None:
+    candidate = Candidate(
+        schema_version="1.0",
+        id="chart-258-0",
+        kind="chart",
+        page=258,
+        bbox=(40.0, 40.0, 200.0, 100.0),
+        preview_text="Sweden",
+        caption="Sweden",
+    )
+
+    assert _final_chart_candidate_looks_heading_slice(candidate, "Sweden\n") is True
+
+
+def test_final_chart_candidate_looks_heading_slice_keeps_large_panel_chart() -> None:
+    candidate = Candidate(
+        schema_version="1.0",
+        id="chart-0-0",
+        kind="chart",
+        page=0,
+        bbox=(18.4, 102.65, 471.6, 472.32),
+        preview_text="Trustworthy Ads",
+        caption="Trustworthy Ads",
+    )
+
+    assert _final_chart_candidate_looks_heading_slice(candidate, "Trustworthy Ads\n") is False
+
+
+def test_final_chart_candidate_looks_forecast_table_rejects_country_table_shadow() -> None:
+    candidate = Candidate(
+        schema_version="1.0",
+        id="chart-271-0",
+        kind="chart",
+        page=271,
+        bbox=(40.0, 40.0, 400.0, 260.0),
+        preview_text="Ukraine",
+        caption="Ukraine: Demand, output and prices",
+    )
+    text = (
+        "2022 2023 2024 2025 2026 2027\n"
+        "Current prices\n"
+        "Percentage changes, volume\n"
+        "GDP at market prices 5 4 3 2 1 0\n"
+        "Memorandum items\n"
+        "Consumer price index 6 5 4 3 2 1\n"
+    )
+
+    assert _final_chart_candidate_looks_forecast_table(candidate, text) is True
+
+
+def test_final_chart_candidate_looks_forecast_table_rejects_split_year_header_shadow() -> None:
+    candidate = Candidate(
+        schema_version="1.0",
+        id="chart-271-0",
+        kind="chart",
+        page=271,
+        bbox=(40.0, 40.0, 400.0, 260.0),
+        preview_text="Ukraine",
+        caption="Ukraine: Demand, output and prices",
+    )
+    text = (
+        "Ukraine: Demand, output and prices\n"
+        "StatLink https://stat.link/example\n"
+        "2022\n2023\n2024\n2025\n2026\n2027\n"
+        "Ukraine\n"
+        "Current prices\n"
+        "UAH billion\n"
+        "GDP at market prices\n"
+        "Memorandum items\n"
+        "Consumer price index\n"
+        "Source: OECD Economic Outlook 118 database.\n"
+        "Percentage changes, volume\n"
+        "(2020 prices)\n"
+    )
+
+    assert _final_chart_candidate_looks_forecast_table(candidate, text) is True
+
+
+def test_visual_candidate_looks_cover_art_rejects_top_banner() -> None:
+    rect = fitz.Rect(0.0, 0.0, 595.0, 162.0)
+    page_rect = fitz.Rect(0.0, 0.0, 595.0, 842.0)
+    assert (
+        _visual_candidate_looks_cover_art(
+            rect,
+            page_rect,
+            "v",
+            area_frac=0.405,
+            text_chars=34,
+        )
+        is True
+    )
+
+
+def test_visual_candidate_looks_cover_art_rejects_large_lower_start_hero_art() -> None:
+    rect = fitz.Rect(36.6, 177.1, 478.7, 636.5)
+    page_rect = fitz.Rect(0.0, 0.0, 595.0, 842.0)
+    assert (
+        _visual_candidate_looks_cover_art(
+            rect,
+            page_rect,
+            "Retail",
+            area_frac=0.404,
+            text_chars=12,
+        )
+        is True
+    )
+
+
+def test_visual_candidate_looks_section_opener_banner_rejects_top_card() -> None:
+    rect = fitz.Rect(0.0, 0.0, 595.0, 180.0)
+    page_rect = fitz.Rect(0.0, 0.0, 595.0, 842.0)
+    text = (
+        "Introduction\n"
+        "This chapter reviews the current outlook.\n"
+        "It highlights the main pressures and themes.\n"
+    )
+    assert (
+        _visual_candidate_looks_section_opener_banner(
+            rect,
+            page_rect,
+            "Introduction",
+            text,
+            kind="panel",
+            area_frac=0.21,
+        )
+        is True
+    )
+
+
+def test_visual_candidate_looks_section_opener_banner_rejects_fragmented_banner() -> None:
+    rect = fitz.Rect(0.0, 0.0, 595.0, 248.0)
+    page_rect = fitz.Rect(0.0, 0.0, 595.0, 842.0)
+    text = (
+        "Introduction\n"
+        "signal quality\n"
+        "brand safety\n"
+        "trust metrics\n"
+        "clean supply\n"
+        "video reach\n"
+        "social lift\n"
+        "context fit\n"
+        "attention time\n"
+        "fraud controls\n"
+        "cross media\n"
+        "quality score\n"
+        "ROI\n"
+        "37%\n"
+    )
+    assert _panel_chart_has_data_signal(text) is True
+    assert (
+        _visual_candidate_looks_section_opener_banner(
+            rect,
+            page_rect,
+            "Introduction",
+            text,
+            kind="panel",
+            area_frac=0.27,
+        )
+        is True
+    )
+
+
+def test_visual_candidate_looks_narrative_panel_card_rejects_long_worldpanel_style_card() -> None:
+    text = (
+        "The inflation headwind returns\n"
+        "Brand growth is about to face its sternest test since 2022.\n"
+        "With inflation showing renewed upward momentum across key markets, we predict 2025 will "
+        "see fewer than 50% of brands achieving growth.\n"
+        "This isn't speculation; it's what economic history teaches us about consumer behaviour "
+        "under pressure.\n"
+        "For brand managers, this means recalibrating expectations now.\n"
+        "The 43% growth rate observed during the last inflation spike may prove to be a preview.\n"
+        "Only the most adaptive brands will avoid being caught off guard.\n"
+        "History suggests pressure makes shopper recruitment harder for weaker brands.\n"
+        "The coming year will reward strategic discipline over passive expectation-setting.\n"
+    )
+    assert (
+        _visual_candidate_looks_narrative_panel_card(
+            "The inflation",
+            text,
+            kind="panel",
+            text_ratio=0.46,
+            area_frac=0.28,
+        )
+        is True
+    )
+
+
+def test_panel_chart_has_data_signal_rejects_non_numeric_label_grid() -> None:
+    text = (
+        "Trustworthy\n"
+        "Relevant and useful\n"
+        "Fun and entertaining\n"
+        "Better quality\n"
+        "Innovative\n"
+        "Captures my attention\n"
+    )
+    assert _panel_chart_has_data_signal(text) is False
+
+
+def test_visual_candidate_looks_inline_numbered_panel_rejects_short_numbered_sidebar() -> None:
+    text = (
+        "Euro area 2\n"
+        "The euro has appreciated strongly\n"
+        "High uncertainty calls for prudent monetary policy\n"
+        "Note: The indicator is standardised over the period 2007-2024.\n"
+        "Source: OECD Economic Outlook 118 database.\n"
+        "StatLink https://stat.link/example\n"
+    )
+    assert (
+        _visual_candidate_looks_inline_numbered_panel(
+            "Euro area 2",
+            text,
+            note_included=True,
+            area_frac=0.205,
+            aspect=2.15,
+        )
+        is True
+    )
+
+
 def test_collect_candidates_detects_panel_charts_without_figure_captions(
     tmp_path,
 ) -> None:
@@ -2206,6 +3482,98 @@ def test_collect_candidates_groups_shared_title_split_panels_into_one_chart(
     assert charts[0].bbox[2] > 900.0
 
 
+def test_extend_panel_rect_with_nearby_label_blocks_respects_horizontal_guard() -> None:
+    rect = fitz.Rect(430.0, 160.0, 900.0, 420.0)
+    page_rect = fitz.Rect(0.0, 0.0, 960.0, 540.0)
+    blocks = [
+        (112.0, 248.0, 292.0, 280.0, "Left panel label"),
+        (846.0, 194.0, 934.0, 210.0, "Total Average"),
+    ]
+
+    expanded = _extend_panel_rect_with_nearby_label_blocks(
+        rect,
+        blocks=blocks,
+        page_rect=page_rect,
+        min_x=420.0,
+        max_x=940.0,
+    )
+
+    assert expanded.x0 >= 420.0
+    assert expanded.x1 <= 940.0
+    assert expanded.x0 > 320.0
+    assert expanded.x1 > rect.x1
+
+
+def test_collect_candidates_groups_stacked_shared_title_panels_into_one_chart(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "stacked-shared-title-panel.pdf"
+    out_dir = tmp_path / "out"
+    _build_stacked_shared_title_panel_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="stacked-shared-title-panel",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+
+    assert len(charts) == 1
+    assert "year-on-year growth in brand switching behaviour" in (
+        charts[0].caption or ""
+    ).lower()
+    assert charts[0].bbox[2] >= 748.0
+    assert charts[0].bbox[3] >= 476.0
+
+
+def test_collect_candidates_keeps_stacked_independent_panel_cards_separate(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "stacked-independent-panel-cards.pdf"
+    out_dir = tmp_path / "out"
+    _build_stacked_independent_panel_cards_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="stacked-independent-panel-cards",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+
+    assert len(charts) == 2
+    captions = sorted((candidate.caption or "").lower() for candidate in charts)
+    assert captions == [
+        "3 ways retailers can prepare for a searchless future:",
+        "of shoppers make purchases based on ai",
+    ]
+    lower = next(
+        candidate
+        for candidate in charts
+        if (candidate.caption or "").lower().startswith(
+            "3 ways retailers can prepare for a searchless future"
+        )
+    )
+    upper = next(
+        candidate
+        for candidate in charts
+        if (candidate.caption or "").lower().startswith(
+            "of shoppers make purchases based on ai"
+        )
+    )
+    assert lower.bbox[1] >= 540.0
+    assert upper.bbox[3] <= 560.0
+
+
 def test_collect_candidates_detects_wide_panel_chart_with_resource_title(
     tmp_path,
 ) -> None:
@@ -2234,6 +3602,146 @@ def test_collect_candidates_detects_wide_panel_chart_with_resource_title(
     assert charts[0].bbox[3] < 520.0
 
 
+def test_collect_candidates_detects_right_column_raster_chart_card_with_left_context(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "right-column-raster-chart-card.pdf"
+    out_dir = tmp_path / "out"
+    _build_right_column_raster_chart_card_pdf(pdf_path)
+
+    doc = fitz.open(pdf_path.as_posix())
+    try:
+        page = doc[0]
+        image_rect = page.get_image_rects(page.get_images(full=True)[0][0])[0]
+        assert _embedded_visual_looks_chart_like(page, image_rect) is False
+    finally:
+        doc.close()
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="right-column-raster-chart-card",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+
+    assert len(charts) == 1
+    assert charts[0].bbox[0] >= 440.0
+    assert charts[0].bbox[2] >= 800.0
+    assert charts[0].bbox[3] >= 398.0
+
+
+def test_collect_candidates_rejects_right_column_raster_photo_card_with_left_context(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "right-column-raster-photo-card.pdf"
+    out_dir = tmp_path / "out"
+    _build_right_column_raster_photo_card_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="right-column-raster-photo-card",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    assert charts == []
+
+
+def test_collect_candidates_rejects_light_raster_photo_card(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "light-raster-photo-card.pdf"
+    out_dir = tmp_path / "out"
+    _build_light_raster_photo_card_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="light-raster-photo-card",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    assert charts == []
+
+
+def test_collect_candidates_does_not_treat_prose_mention_of_figure_as_caption_hint(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "prose-mentioning-figure-photo-card.pdf"
+    out_dir = tmp_path / "out"
+    _build_prose_mentioning_figure_photo_card_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="prose-mentioning-figure-photo-card",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    assert charts == []
+
+
+def test_collect_candidates_rejects_small_uncaptioned_decorative_raster_card(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "small-decorative-raster-card.pdf"
+    out_dir = tmp_path / "out"
+    _build_small_decorative_raster_card_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="small-decorative-raster-card",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    assert charts == []
+
+
+def test_collect_candidates_prefers_inside_chart_over_oversized_xref_wrapper(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "oversized-raster-wrapper.pdf"
+    out_dir = tmp_path / "out"
+    _build_oversized_raster_wrapper_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="oversized-raster-wrapper",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    assert len(charts) == 1
+    assert charts[0].bbox[0] >= 290.0
+    assert charts[0].bbox[2] <= 665.0
+
+
 def test_collect_candidates_rejects_panel_action_card_without_data_signal(
     tmp_path,
 ) -> None:
@@ -2253,6 +3761,398 @@ def test_collect_candidates_rejects_panel_action_card_without_data_signal(
 
     charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
     assert charts == []
+
+
+def test_page_has_chart_caption_blocks_detects_hint_on_later_line() -> None:
+    blocks = [(0.0, 0.0, 100.0, 50.0, "Intro line\nFigure 1. Test chart")]
+    assert _page_has_chart_caption_blocks(blocks) is True
+
+
+def test_text_has_visual_context_hint_detects_hint_on_later_line() -> None:
+    text = "Intro line\nSource: Example dataset"
+    assert _text_has_visual_context_hint(text) is True
+
+
+def test_panel_chart_has_compact_stat_card_signal_accepts_metric_card() -> None:
+    text = (
+        "44%\n"
+        "of shoppers are buying private-label or low-cost brands over name brands\n"
+        "Early findings: What matters to today's consumers, 2026\n"
+    )
+    assert _panel_chart_has_compact_stat_card_signal(text) is True
+
+
+def test_clamp_panel_rect_to_dominant_fill_rect_prefers_local_compact_card() -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=600, height=800)
+    page.draw_rect(fitz.Rect(40, 100, 360, 160), color=None, fill=(0.1, 0.3, 0.6))
+    page.draw_rect(fitz.Rect(40, 185, 360, 220), color=None, fill=(0.2, 0.7, 0.9))
+    page.insert_text((52, 125), "44%", fontsize=22)
+    page.insert_text(
+        (150, 125),
+        "of shoppers are buying private-label brands",
+        fontsize=12,
+    )
+    page.insert_text(
+        (150, 145),
+        "Early findings: What matters today",
+        fontsize=10,
+    )
+    page.insert_text((150, 208), "Private labels go premium", fontsize=13)
+
+    polluted_text = (
+        "44%\n"
+        "of shoppers are buying private-label brands\n"
+        "Early findings: What matters today\n"
+        "Private labels go premium\n"
+        "Longer narrative body text that should not remain part of the compact stat card.\n"
+    )
+
+    clamped = _clamp_panel_rect_to_dominant_fill_rect(
+        page,
+        fitz.Rect(40, 100, 360, 220),
+        text=polluted_text,
+    )
+
+    assert clamped.y0 <= 102.5
+    assert clamped.y1 <= 163.0
+    assert clamped.y1 < 180.0
+
+
+def test_clamp_panel_rect_to_dominant_fill_rect_leaves_multi_stat_card_unchanged() -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=600, height=800)
+    page.draw_rect(fitz.Rect(40, 100, 360, 240), color=None, fill=(0.1, 0.3, 0.6))
+    lines = [
+        "46%",
+        "of shoppers make purchases based on AI recommendations",
+        "Early findings: What matters today",
+        "52%",
+        "of shoppers switch retailers for better data protection",
+        "Early findings: What matters today",
+        "33%",
+        "of shoppers want explanations before completing purchases",
+    ]
+    y = 122
+    for line in lines:
+        page.insert_text((52, y), line, fontsize=12)
+        y += 18
+
+    text = "\n".join(lines)
+    original = fitz.Rect(40, 100, 360, 240)
+
+    clamped = _clamp_panel_rect_to_dominant_fill_rect(page, original, text=text)
+
+    assert clamped == original
+
+
+def test_panel_component_looks_like_guidance_card_accepts_step_and_key_cards() -> None:
+    numbered_text = (
+        "3 ways retailers can win with invisible AI experiences\n"
+        "01\n"
+        "Establish visible safeguards\n"
+        "02\n"
+        "Use contextual signals to guide discovery\n"
+        "03\n"
+        "Offer real-time controls customers can understand\n"
+    )
+    colon_text = (
+        "4 keys to building trust for retailers\n"
+        "Consistency: Ensure reliable experiences across every channel.\n"
+        "Contextualization: Respond to each shopper's moment.\n"
+        "Care: Reflect the values that matter to customers.\n"
+    )
+
+    assert _panel_component_looks_like_guidance_card(numbered_text) is True
+    assert _panel_component_looks_like_guidance_card(colon_text) is True
+
+
+def test_panel_label_block_looks_like_footer_banner_accepts_mixed_year_page_line() -> None:
+    assert (
+        _panel_label_block_looks_like_footer_banner(
+            fitz.Rect(28.0, 503.0, 114.0, 519.0),
+            "Kantar 2025 | 9",
+            page_rect=fitz.Rect(0.0, 0.0, 960.0, 540.0),
+        )
+        is True
+    )
+
+
+def test_panel_should_clamp_to_internal_caption_for_stacked_panel_pair() -> None:
+    lower = _ChartRect(
+        rect=fitz.Rect(42.5, 384.5, 552.8, 785.1),
+        kind="panel",
+        caption="Private labels go premium",
+        caption_rect=fitz.Rect(110.0, 517.5, 330.0, 538.0),
+    )
+    upper = _ChartRect(
+        rect=fitz.Rect(42.5, 385.8, 552.8, 556.1),
+        kind="panel",
+        caption="44% of shoppers are buying private-label",
+        caption_rect=fitz.Rect(88.0, 437.0, 300.0, 458.0),
+    )
+
+    assert _panel_should_clamp_to_internal_caption(lower, [lower, upper]) is True
+    assert _panel_should_clamp_to_internal_caption(upper, [lower, upper]) is False
+
+
+def test_panel_candidate_shadowed_by_heading_candidate_for_metric_stub_panel() -> None:
+    panel = _ChartRect(
+        rect=fitz.Rect(500.0, 236.0, 808.0, 510.0),
+        kind="panel",
+        caption="Probably 20%",
+        caption_rect=fitz.Rect(568.0, 299.0, 672.0, 335.0),
+    )
+    heading = _ChartRect(
+        rect=fitz.Rect(497.0, 95.0, 790.0, 515.0),
+        kind="heading",
+        caption="Consumer likelihood to use Buy Now, Pay Later loans in 2026",
+        caption_rect=fitz.Rect(506.0, 111.0, 756.0, 156.0),
+    )
+
+    assert (
+        _panel_candidate_shadowed_by_heading_candidate(panel, [panel, heading])
+        is True
+    )
+    assert (
+        _panel_candidate_shadowed_by_heading_candidate(heading, [panel, heading])
+        is False
+    )
+
+
+def test_panel_candidate_shadowed_by_larger_panel_for_compact_banner() -> None:
+    compact_panel = _ChartRect(
+        rect=fitz.Rect(40.0, 380.0, 555.0, 490.0),
+        kind="panel",
+        caption="of shoppers are buying private-label or low-",
+        caption_rect=fitz.Rect(260.0, 407.0, 523.0, 423.0),
+    )
+    larger_panel = _ChartRect(
+        rect=fitz.Rect(42.0, 518.0, 553.0, 785.0),
+        kind="panel",
+        caption="Private labels go premium",
+        caption_rect=fitz.Rect(214.0, 527.0, 381.0, 544.0),
+    )
+
+    assert (
+        _panel_candidate_shadowed_by_larger_panel(
+            compact_panel,
+            [compact_panel, larger_panel],
+            "44%\nof shoppers are buying private-label or low-\ncost brands over name brands",
+        )
+        is True
+    )
+
+
+def test_panel_candidate_shadowed_by_larger_panel_keeps_equal_stacked_cards() -> None:
+    upper_panel = _ChartRect(
+        rect=fitz.Rect(36.0, 318.0, 559.0, 429.0),
+        kind="panel",
+        caption="of shoppers make purchases based on AI",
+        caption_rect=fitz.Rect(421.0, 352.0, 827.0, 364.0),
+    )
+    lower_panel = _ChartRect(
+        rect=fitz.Rect(36.0, 429.0, 559.0, 540.0),
+        kind="panel",
+        caption="are willing to order products via AI tools",
+        caption_rect=fitz.Rect(421.0, 463.0, 851.0, 497.0),
+    )
+
+    assert (
+        _panel_candidate_shadowed_by_larger_panel(
+            upper_panel,
+            [upper_panel, lower_panel],
+            "46%\nof shoppers make purchases based on AI recommendations\nEarly findings: What matters to today's consumers, 2026",
+        )
+        is False
+    )
+
+
+def test_panel_stacked_bottom_clip_y_prefers_next_lower_panel() -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    upper = _ChartRect(
+        rect=fitz.Rect(42.5, 385.8, 552.8, 556.1),
+        kind="panel",
+        caption="44% of shoppers are buying private-label",
+        caption_rect=fitz.Rect(88.0, 407.0, 300.0, 428.0),
+    )
+    lower = _ChartRect(
+        rect=fitz.Rect(42.5, 384.5, 552.8, 785.1),
+        kind="panel",
+        caption="Private labels go premium",
+        caption_rect=fitz.Rect(110.0, 517.5, 330.0, 538.0),
+    )
+
+    try:
+        assert _panel_stacked_bottom_clip_y(page, upper, [upper, lower]) == 517.5
+        assert _panel_stacked_bottom_clip_y(page, lower, [upper, lower]) is None
+    finally:
+        doc.close()
+
+
+def test_panel_stacked_bottom_clip_y_skips_clip_when_bottom_axis_band_exists() -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    page.insert_text((120, 540), "Retail Media", fontsize=10)
+    page.insert_text((220, 540), "CTV", fontsize=10)
+    page.insert_text((300, 540), "Social", fontsize=10)
+
+    upper = _ChartRect(
+        rect=fitz.Rect(42.5, 385.8, 552.8, 556.1),
+        kind="panel",
+        caption="Top Digital Environments",
+        caption_rect=fitz.Rect(88.0, 407.0, 300.0, 428.0),
+    )
+    lower = _ChartRect(
+        rect=fitz.Rect(42.5, 384.5, 552.8, 785.1),
+        kind="panel",
+        caption="Social Media",
+        caption_rect=fitz.Rect(110.0, 532.0, 330.0, 552.0),
+    )
+
+    try:
+        assert _panel_stacked_bottom_clip_y(page, upper, [upper, lower]) is None
+    finally:
+        doc.close()
+
+
+def test_panel_chart_has_data_signal_accepts_dense_axis_only_panel() -> None:
+    text = (
+        "Better quality\n"
+        "Innovative\n"
+        "Capture my attention\n"
+        "Too much advertising\n"
+        "Intrusive\n"
+        "Dull and boring\n"
+        "Repetitive\n"
+        "Excessive targeting\n"
+        "Something I try to ignore\n"
+        "Trustworthy\n"
+        "Relevant and useful\n"
+        "Fun and entertaining\n"
+        "Total Average\n"
+        "DOOH\n"
+    )
+
+    assert _panel_chart_has_data_signal(text) is True
+
+
+def test_chart_axis_label_band_like_accepts_dense_short_label_block() -> None:
+    text = (
+        "Japan\nSingapore\nGreece\nItaly\nFrance\nUnited States\nBelgium\nSpain\n"
+        "Canada\nPortugal\nBrazil\nIndia\nArgentina\n"
+    )
+    assert (
+        _chart_axis_label_band_like(
+            text,
+            lines=len(text.splitlines()),
+            chars=len(text),
+            avg_line_len=len(text) / len(text.splitlines()),
+        )
+        is True
+    )
+
+
+def test_panel_preferred_local_title_line_prefers_near_component_title(tmp_path) -> None:
+    pdf_path = tmp_path / "panel-local-title-preference.pdf"
+    _build_panel_local_title_preference_pdf(pdf_path)
+
+    doc = fitz.open(pdf_path.as_posix())
+    try:
+        page = doc[0]
+        title = _panel_preferred_local_title_line(
+            page,
+            fitz.Rect(40.0, 126.0, 320.0, 300.0),
+        )
+    finally:
+        doc.close()
+
+    assert title is not None
+    assert title.text == "Top Digital Formats"
+
+
+def test_panel_preferred_local_title_line_prefers_internal_card_title_over_metric_fragment(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "panel-internal-title-preference.pdf"
+    _build_panel_internal_title_preference_pdf(pdf_path)
+
+    doc = fitz.open(pdf_path.as_posix())
+    try:
+        page = doc[0]
+        title = _panel_preferred_local_title_line(
+            page,
+            fitz.Rect(40.0, 150.0, 360.0, 320.0),
+        )
+    finally:
+        doc.close()
+
+    assert title is not None
+    assert title.text == "Private labels go premium"
+
+
+def test_panel_title_slice_bounds_separates_peer_titles(tmp_path) -> None:
+    pdf_path = tmp_path / "panel-title-slices.pdf"
+    doc = fitz.open()
+    page = doc.new_page(width=960, height=540)
+    page.insert_text((28, 150), "Advertising equity", fontsize=22)
+    page.insert_text((435, 150), "Advertising attitudes", fontsize=22)
+    doc.save(pdf_path.as_posix())
+    doc.close()
+
+    doc = fitz.open(pdf_path.as_posix())
+    try:
+        page = doc[0]
+        bounds = _panel_title_slice_bounds(page, fitz.Rect(435, 130, 595, 160))
+    finally:
+        doc.close()
+
+    assert bounds is not None
+    left, right = bounds
+    assert left > 250.0
+    assert right <= 960.0
+
+
+def test_collect_candidates_merges_multiline_metric_band_with_quote_card(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "metric-band-quote-card.pdf"
+    out_dir = tmp_path / "out"
+    _build_panel_metric_band_with_quote_card_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="metric-band-quote-card",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    assert len(charts) == 1
+    assert charts[0].bbox[0] < 60.0
+    assert charts[0].bbox[1] < 150.0
+    assert charts[0].bbox[3] > 320.0
+
+
+def test_extend_chart_rect_with_adjacent_drawings_recovers_axis_tail(tmp_path) -> None:
+    pdf_path = tmp_path / "axis-stroke-extension.pdf"
+    _build_axis_stroke_extension_pdf(pdf_path)
+
+    doc = fitz.open(pdf_path.as_posix())
+    try:
+        page = doc[0]
+        expanded = _extend_chart_rect_with_adjacent_drawings(
+            page,
+            fitz.Rect(96.0, 110.0, 420.0, 332.0),
+        )
+    finally:
+        doc.close()
+
+    assert expanded.x1 > 500.0
 
 
 def test_collect_candidates_keeps_dense_numeric_panel_chart(
@@ -2318,6 +4218,168 @@ def test_panel_chart_rects_skip_pages_with_explicit_figure_captions(tmp_path) ->
         doc.close()
 
 
+def test_collect_candidates_recovers_internal_panel_cards_without_external_titles(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "internal-panel-cards.pdf"
+    out_dir = tmp_path / "out"
+    _build_internal_panel_cards_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="internal-panel-cards",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    tables = [candidate for candidate in response.candidates if candidate.kind == "table"]
+    assert len(charts) == 2
+    captions = [(chart.caption or "").lower() for chart in charts]
+    assert any("lower-cost" in caption for caption in captions)
+    assert any("3 ways retailers can prepare for 2026" in caption for caption in captions)
+    assert all(chart.bbox[2] > 520.0 for chart in charts)
+    assert tables == []
+
+
+def test_collect_candidates_rejects_internal_label_grid_without_metric_signal(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "internal-label-grid-panel.pdf"
+    out_dir = tmp_path / "out"
+    _build_internal_label_grid_panel_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="internal-label-grid-panel",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    assert charts == []
+
+
+def test_collect_candidates_extends_internal_panel_to_side_labels(tmp_path) -> None:
+    pdf_path = tmp_path / "internal-panel-with-side-labels.pdf"
+    out_dir = tmp_path / "out"
+    _build_internal_panel_with_side_labels_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="internal-panel-with-side-labels",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    assert len(charts) == 1
+    chart = charts[0]
+    assert chart.bbox[2] > 560.0
+    assert chart.bbox[1] <= 170.0
+    assert chart.bbox[3] >= 440.0
+
+
+def test_collect_candidates_extends_titled_panel_to_bottom_labels(tmp_path) -> None:
+    pdf_path = tmp_path / "internal-panel-with-bottom-labels.pdf"
+    out_dir = tmp_path / "out"
+    _build_internal_panel_with_bottom_labels_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="internal-panel-with-bottom-labels",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    assert len(charts) == 1
+    chart = charts[0]
+    assert chart.bbox[1] <= 90.0
+    assert chart.bbox[3] >= 512.0
+
+
+def test_collect_candidates_keeps_internal_panel_title_band_padding(tmp_path) -> None:
+    pdf_path = tmp_path / "panel-chart-with-wide-internal-title-band-e2e.pdf"
+    out_dir = tmp_path / "out"
+    _build_panel_chart_with_wide_internal_title_band_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="panel-chart-with-wide-internal-title-band-e2e",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+
+    assert len(charts) == 1
+    assert charts[0].bbox[1] < 40.0
+
+
+def test_collect_candidates_rejects_contents_panel_page(tmp_path) -> None:
+    pdf_path = tmp_path / "contents-panel-page.pdf"
+    out_dir = tmp_path / "out"
+    _build_contents_panel_page_pdf(pdf_path)
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="contents-panel-page",
+        ),
+        _ctx(),
+    )
+
+    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    assert charts == []
+
+
+def test_extend_with_adjacent_text_blocks_keeps_internal_title_band(tmp_path) -> None:
+    pdf_path = tmp_path / "chart-with-internal-title-band.pdf"
+    _build_chart_with_internal_title_band_pdf(pdf_path)
+    doc = fitz.open(pdf_path.as_posix())
+    try:
+        page = doc[0]
+        base_rect = fitz.Rect(90.0, 140.0, 530.0, 300.0)
+        expanded = _extend_with_adjacent_text_blocks(page, base_rect)
+    finally:
+        doc.close()
+    assert expanded.y0 < 120.0
+
+
+def test_extend_panel_with_adjacent_text_blocks_keeps_wide_internal_title_band(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "panel-chart-with-wide-internal-title-band.pdf"
+    _build_panel_chart_with_wide_internal_title_band_pdf(pdf_path)
+    doc = fitz.open(pdf_path.as_posix())
+    try:
+        page = doc[0]
+        base_rect = fitz.Rect(94.0, 194.0, 624.0, 336.0)
+        expanded = _extend_panel_with_adjacent_text_blocks(page, base_rect)
+    finally:
+        doc.close()
+
+    assert expanded.y0 < 120.0
+
+
 def test_extend_panel_with_adjacent_text_blocks_rejects_cross_panel_text(tmp_path) -> None:
     pdf_path = tmp_path / "cross-panel-label.pdf"
     _build_cross_panel_label_pdf(pdf_path)
@@ -2332,6 +4394,88 @@ def test_extend_panel_with_adjacent_text_blocks_rejects_cross_panel_text(tmp_pat
 
     assert expanded.x1 < 500.0
     assert expanded.y1 > 450.0
+
+
+def test_extend_panel_with_adjacent_text_blocks_attaches_overlapping_left_stat_block(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "panel-overlapping-left-stat.pdf"
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    page.insert_text((232.0, 390.0), "compared to", fontsize=20, color=(0, 0, 0))
+    page.insert_text((232.0, 418.0), "56%", fontsize=26, color=(0, 0, 0))
+    page.insert_text((232.0, 446.0), "who said", fontsize=20, color=(0, 0, 0))
+    page.insert_text(
+        (232.0, 474.0),
+        "the same last year.",
+        fontsize=20,
+        color=(0, 0, 0),
+    )
+    page.insert_text(
+        (42.0, 390.0),
+        "71% of consumers",
+        fontsize=20,
+        color=(0, 0, 0),
+    )
+    page.insert_text(
+        (42.0, 418.0),
+        "want Gen AI-integrated",
+        fontsize=18,
+        color=(0, 0, 0),
+    )
+    page.insert_text(
+        (42.0, 446.0),
+        "shopping interactions",
+        fontsize=18,
+        color=(0, 0, 0),
+    )
+    doc.save(pdf_path.as_posix())
+    doc.close()
+
+    doc = fitz.open(pdf_path.as_posix())
+    try:
+        page = doc[0]
+        base_rect = fitz.Rect(190.0, 352.0, 556.0, 574.0)
+        expanded = _extend_panel_with_adjacent_text_blocks(page, base_rect)
+    finally:
+        doc.close()
+
+    assert expanded.x0 < 80.0
+
+
+def test_extend_panel_with_adjacent_text_blocks_attaches_narrow_centered_top_title(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "panel-narrow-centered-top-title.pdf"
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    base_rect = fitz.Rect(54.0, 420.0, 558.0, 760.0)
+    page.draw_rect(base_rect, color=(0.1, 0.2, 0.5), fill=(0.1, 0.2, 0.5))
+    page.insert_text((268.0, 332.0), "Searchless", fontsize=18, color=(1, 1, 1))
+    page.insert_text((285.0, 356.0), "retail:", fontsize=18, color=(1, 1, 1))
+    page.insert_text(
+        (262.0, 392.0),
+        "Anticipating intent",
+        fontsize=16,
+        color=(1, 1, 1),
+    )
+    page.insert_text(
+        (276.0, 416.0),
+        "and delivering via GEO",
+        fontsize=16,
+        color=(1, 1, 1),
+    )
+    doc.save(pdf_path.as_posix())
+    doc.close()
+
+    doc = fitz.open(pdf_path.as_posix())
+    try:
+        page = doc[0]
+        expanded = _extend_panel_with_adjacent_text_blocks(page, base_rect)
+    finally:
+        doc.close()
+
+    assert expanded.y0 < 340.0
 
 
 def test_visual_text_dense_recovery_only_uses_panel_heuristic_for_panel_kind() -> None:
