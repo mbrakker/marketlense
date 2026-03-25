@@ -73,6 +73,15 @@ def test_render_includes_artifact_sections(tmp_path):
     assert "Artifact quote" in html
     assert "Expert comment (generated)" in html
     assert "LinkedIn post" in html
+    assert 'id="section-expert"' in html
+    assert 'id="section-linkedin"' in html
+    assert '<p class="summary-copy" style="max-width:none">Artifact TLDR</p>' in html
+    assert (
+        '<p class="summary-copy" style="max-width:none">Artifact executive summary</p>'
+        in html
+    )
+    assert '<ul class="claim-list" style="max-width:none">' in html
+    assert 'style="max-width:none"' in html
 
 
 def test_render_expands_covered_topics_with_briefs(tmp_path):

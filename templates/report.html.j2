@@ -1074,7 +1074,7 @@ h2{
         <section class="panel" id="section-summary" data-reveal data-section data-tone="summary" aria-label="TL;DR">
           <h2>TL;DR</h2>
           {% if tldr_text %}
-            <p class="summary-copy">{{ tldr_text }}</p>
+            <p class="summary-copy" style="max-width:none">{{ tldr_text }}</p>
           {% else %}
             <p class="muted">Not available from text.</p>
           {% endif %}
@@ -1130,9 +1130,9 @@ h2{
         {% if exec_summary %}
         <section class="panel" id="section-executive" data-reveal data-section data-tone="summary" aria-label="Executive summary">
           <h2>Executive summary</h2>
-          <p class="summary-copy">{{ exec_summary }}</p>
+          <p class="summary-copy" style="max-width:none">{{ exec_summary }}</p>
           {% if has_claim_map %}
-          <ul class="claim-list">
+          <ul class="claim-list" style="max-width:none">
             {% for claim in claim_map %}
               {% set claim_text = claim.claim if claim.claim is defined else "" %}
               {% set claim_text = claim_text|string|trim %}
@@ -1327,14 +1327,14 @@ h2{
         {% if has_expert_comment %}
         <section class="panel" id="section-expert" data-reveal data-section aria-label="Expert comment">
           <h2>Expert comment (generated)</h2>
-          <div class="prose-block" data-chunk-prose>{{ expert_comment }}</div>
+          <div class="prose-block" data-chunk-prose style="max-width:none">{{ expert_comment }}</div>
         </section>
         {% endif %}
 
         {% if has_linkedin_post %}
         <section class="panel" id="section-linkedin" data-reveal data-section aria-label="LinkedIn post">
           <h2>LinkedIn post</h2>
-          <div class="prose-block" data-chunk-prose>{{ linkedin_post }}</div>
+          <div class="prose-block" data-chunk-prose style="max-width:none">{{ linkedin_post }}</div>
         </section>
         {% endif %}
 

@@ -38,6 +38,7 @@ from src.utils.html_utils import (
     extract_preview_image,
     extract_title,
     replace_image_sources,
+    strip_image_srcset_and_sizes,
 )
 from src.utils.logging import log_event
 from src.utils.slugify import slugify
@@ -221,6 +222,9 @@ def publish_html(
         )
     )
     rendered_html = replace_image_sources(html_text, image_map)
+    # Proxy-backed digest images stay more reliable on the WP frontend without
+    # responsive srcset/sizes candidates that still point at synthetic query URLs.
+    rendered_html = strip_image_srcset_and_sizes(rendered_html)
     body_html, file_id_marker_inserted = _ensure_hidden_file_id_marker(
         extract_body_html(rendered_html),
         file_id,
@@ -362,7 +366,7 @@ def _upload_images(
             ),
             ctx,
         )
-        mapping[src] = _wordpress_media_proxy_url(base_url, upload_resp.media_id)
+        mapping[src] = _wordpress_media_proxy_url(upload_resp.media_id)
         media_ids[src] = upload_resp.media_id
         if preview_src and src == preview_src:
             featured_media_id = upload_resp.media_id
@@ -374,8 +378,10 @@ def _upload_images(
     return mapping, featured_media_id
 
 
-def _wordpress_media_proxy_url(base_url: str, media_id: int) -> str:
-    return f"{base_url.rstrip('/')}/?ml_media={int(media_id)}"
+def _wordpress_media_proxy_url(media_id: int) -> str:
+    # Same-origin proxy URLs avoid mixed-scheme failures when WP still emits
+    # frontend pages on http while media proxy requests are forced to https.
+    return f"/?ml_media={int(media_id)}"
 
 
 def _ensure_hidden_file_id_marker(content_html: str, file_id: str) -> Tuple[str, bool]:

@@ -7,6 +7,7 @@ from src.utils.html_utils import (
     extract_preview_image,
     extract_title,
     replace_image_sources,
+    strip_image_srcset_and_sizes,
 )
 
 
@@ -43,6 +44,16 @@ class TestHtmlUtils(unittest.TestCase):
     def test_extract_preview_image(self) -> None:
         html = '<div class="preview"><img src="prev.png"></div>'
         self.assertEqual("prev.png", extract_preview_image(html))
+
+    def test_strip_image_srcset_and_sizes(self) -> None:
+        html = (
+            '<img src="cover.png" srcset="cover.png 1x, cover@2x.png 2x" '
+            'sizes="100vw" alt="cover">'
+        )
+        stripped = strip_image_srcset_and_sizes(html)
+        self.assertIn('src="cover.png"', stripped)
+        self.assertNotIn("srcset=", stripped)
+        self.assertNotIn("sizes=", stripped)
 
 
 if __name__ == "__main__":

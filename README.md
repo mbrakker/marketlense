@@ -409,7 +409,7 @@ Published ingest reports render in an ingest-first mode in the single template:
 - `assets/css/theme.css` contains a scoped parity layer under `.ml-ingest-report-content`
 - `assets/js/report-interactions.js` covers stripped interactive behavior and is enqueued only for `ml_report` and legacy default `post` singular views
 - Reveal panels are fail-open
-- Publish HTML source rewriting updates both `img src` and `img srcset` URLs
+- Publish HTML source rewriting swaps digest image URLs to same-origin frontend media proxy paths and strips `srcset` / `sizes` from those proxy-backed images so hosted frontend rendering stays deterministic
 - Legacy frontend JS removes broken `srcset` when older posts contain mixed absolute/relative image attributes
 
 This keeps the WordPress article view aligned with the latest ingest-generated HTML report styling and behavior after upload.

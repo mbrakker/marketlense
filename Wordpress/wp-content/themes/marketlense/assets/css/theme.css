@@ -4233,6 +4233,23 @@ body {
   max-width: var(--ml-type-measure);
 }
 
+.ml-ingest-report-content #section-expert .prose-block,
+.ml-ingest-report-content #section-linkedin .prose-block {
+  max-width: none;
+}
+
+.ml-page-frame .wp-block-post-content #section-summary .summary-copy,
+.ml-page-frame .wp-block-post-content #section-executive .summary-copy,
+.ml-ingest-report-content #section-summary .summary-copy,
+.ml-ingest-report-content #section-executive .summary-copy {
+  max-width: none;
+}
+
+.ml-page-frame .wp-block-post-content #section-executive .claim-list,
+.ml-ingest-report-content #section-executive .claim-list {
+  max-width: none;
+}
+
 .ml-page-frame .wp-block-post-content :is(p, li),
 .ml-ingest-report-content .summary-copy,
 .ml-ingest-report-content .topic-brief-summary,

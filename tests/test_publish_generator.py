@@ -205,7 +205,9 @@ def test_publish_html_rewrites_uploaded_images_to_media_proxy(
     html_text = (
         "<html><head><title>Report</title></head>"
         "<body>Drive fileId: file123"
-        "<img src=\"assets/cover.png\" alt=\"cover\"></body></html>"
+        "<img src=\"assets/cover.png\" "
+        "srcset=\"assets/cover.png 1x, assets/cover.png 2x\" "
+        "sizes=\"100vw\" alt=\"cover\"></body></html>"
     )
     html_path.write_text(html_text, encoding="utf-8")
     wordpress_http.add_json(
@@ -244,5 +246,7 @@ def test_publish_html_rewrites_uploaded_images_to_media_proxy(
     assert_no_defaulted_required_fields(outcome)
     assert outcome.status == "published"
     assert post_call.json_data["featured_media"] == 55
-    assert "https://example.com/?ml_media=55" in post_call.json_data["content"]
+    assert "/?ml_media=55" in post_call.json_data["content"]
     assert "wp-content/uploads/cover.png" not in post_call.json_data["content"]
+    assert "srcset=" not in post_call.json_data["content"]
+    assert "sizes=" not in post_call.json_data["content"]

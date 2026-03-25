@@ -7,6 +7,10 @@ from typing import Dict, List, Optional
 
 _IMG_SRC_RX = re.compile(r'<img[^>]+src=["\']([^"\']+)["\']', re.IGNORECASE)
 _IMG_SRCSET_RX = re.compile(r'(<img[^>]+srcset=["\'])([^"\']+)(["\'])', re.IGNORECASE)
+_IMG_SRCSET_OR_SIZES_ATTR_RX = re.compile(
+    r'\s(?:srcset|sizes)=["\'][^"\']*["\']',
+    re.IGNORECASE,
+)
 _TITLE_RX = re.compile(r"<title>(.*?)</title>", re.IGNORECASE | re.DOTALL)
 _H1_RX = re.compile(r"<h1[^>]*>(.*?)</h1>", re.IGNORECASE | re.DOTALL)
 _BODY_RX = re.compile(r"<body[^>]*>(.*?)</body>", re.IGNORECASE | re.DOTALL)
@@ -52,6 +56,15 @@ def replace_image_sources(html_text: str, mapping: Dict[str, str]) -> str:
         return f"{prefix}{', '.join(entries)}{suffix}"
 
     return _IMG_SRCSET_RX.sub(_replace_srcset, updated)
+
+
+def strip_image_srcset_and_sizes(html_text: str) -> str:
+    def _strip_attrs(match: re.Match[str]) -> str:
+        tag = match.group(0)
+        stripped = _IMG_SRCSET_OR_SIZES_ATTR_RX.sub("", tag)
+        return stripped
+
+    return re.sub(r"<img\b[^>]*>", _strip_attrs, html_text, flags=re.IGNORECASE)
 
 
 def extract_title(html_text: str) -> Optional[str]:
