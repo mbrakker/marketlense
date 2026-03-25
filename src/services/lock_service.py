@@ -21,6 +21,7 @@ from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.lock_service")
+LOCK_FILE_EXCEPTIONS = (OSError, json.JSONDecodeError, TypeError, ValueError)
 
 
 def _read_lock(path: str) -> Optional[LockInfo]:
@@ -36,7 +37,7 @@ def _read_lock(path: str) -> Optional[LockInfo]:
             pid=int(data.get("pid", -1)),
             created_at=float(data.get("created_at", 0.0)),
         )
-    except Exception:
+    except LOCK_FILE_EXCEPTIONS:
         return None
 
 
@@ -99,7 +100,7 @@ def acquire_lock(request: LockAcquireRequest, ctx: RunContext) -> LockAcquireRes
         ))
         try:
             lock_path.unlink(missing_ok=True)
-        except Exception as exc:
+        except OSError as exc:
             raise AppError(
                 code="lock_stale_remove_failed",
                 message=f"Failed to remove stale lock at {request.lock_path}",
@@ -139,8 +140,7 @@ def acquire_lock(request: LockAcquireRequest, ctx: RunContext) -> LockAcquireRes
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as fh:
                 json.dump(payload, fh, ensure_ascii=True)
-        except Exception:
-            os.close(fd)
+        except (OSError, TypeError, ValueError):
             raise
     except FileExistsError:
         conflict = _read_lock(request.lock_path)
@@ -161,7 +161,7 @@ def acquire_lock(request: LockAcquireRequest, ctx: RunContext) -> LockAcquireRes
             lock=None,
             conflict=conflict,
         )
-    except Exception as exc:
+    except (OSError, ValueError, TypeError) as exc:
         raise AppError(
             code="lock_acquire_failed",
             message=f"Failed to acquire lock at {request.lock_path}",
@@ -233,7 +233,7 @@ def release_lock(request: LockReleaseRequest, ctx: RunContext) -> LockReleaseRes
 
     try:
         lock_path.unlink(missing_ok=True)
-    except Exception as exc:
+    except OSError as exc:
         raise AppError(
             code="lock_release_failed",
             message=f"Failed to release lock at {request.lock_path}",

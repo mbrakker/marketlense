@@ -70,6 +70,7 @@ BROAD_TARGETS = [
     "expert_comment",
     "linkedin_post",
 ]
+REPORT_PAYLOAD_SENTINELS = {"not available from text"}
 
 
 def _attach_payload_analysis_metadata(
@@ -81,6 +82,68 @@ def _attach_payload_analysis_metadata(
     payload._vector_store_id = str(vector_store_id or "")
     payload._evidence_packs = dict(evidence_paths)
     return payload
+
+
+def _ensure_report_payload_complete(
+    payload,
+    *,
+    ctx,
+    file_id: str,
+    stage: str,
+) -> None:
+    missing_fields: List[str] = []
+
+    def _missing_text(value: Any) -> bool:
+        text = str(value or "").strip()
+        return not text or text.lower() in REPORT_PAYLOAD_SENTINELS
+
+    if _missing_text(payload.title):
+        missing_fields.append("title")
+    if _missing_text(payload.tldr):
+        missing_fields.append("tldr")
+    if _missing_text(payload.commentary):
+        missing_fields.append("commentary")
+    insights = list(payload.insights or [])
+    if len(insights) < 5:
+        missing_fields.append("insights")
+    for index in range(5):
+        insight = insights[index] if index < len(insights) else ""
+        if _missing_text(insight):
+            missing_fields.append(f"insights[{index}]")
+    if _missing_text(payload.quote.text):
+        missing_fields.append("quote.text")
+    if bool(getattr(payload, "_figure_section_enabled", True)):
+        if _missing_text(payload.figure.title):
+            missing_fields.append("figure.title")
+        if _missing_text(payload.figure.evidence):
+            missing_fields.append("figure.evidence")
+
+    if not missing_fields:
+        return
+
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="report_payload_incomplete",
+            module=logger.name,
+            fields={
+                "file_id": file_id,
+                "stage": stage,
+                "missing_fields": missing_fields,
+            },
+        )
+    )
+    raise AppError(
+        code="report_payload_incomplete",
+        message="Report payload is missing required semantic fields",
+        retryable=False,
+        context={
+            "file_id": file_id,
+            "stage": stage,
+            "missing_fields": missing_fields,
+        },
+    )
 
 
 def run_report_analysis(
@@ -433,6 +496,12 @@ def run_report_analysis(
             vector_store_id=vector_state.vector_store_id,
             evidence_paths=mode_evidence_paths,
         )
+    _ensure_report_payload_complete(
+        normalized_payload,
+        ctx=mode_ctx,
+        file_id=runtime.file.file_id,
+        stage="pre_validation",
+    )
     validation_report = _run_validation_with_fallback(
         runtime=runtime,
         mode_ctx=mode_ctx,
@@ -692,6 +761,12 @@ def _run_validation_regeneration_loop(
         )
         regenerated_payload = merge_artifacts_into_payload(
             deepcopy(base_payload), current_artifacts
+        )
+        _ensure_report_payload_complete(
+            regenerated_payload,
+            ctx=attempt_ctx,
+            file_id=runtime.file.file_id,
+            stage=f"regeneration_attempt_{attempt_index}",
         )
         current_validation_report = _run_validation_with_fallback(
             runtime=runtime,

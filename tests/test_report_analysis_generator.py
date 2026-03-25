@@ -92,6 +92,89 @@ def _payload() -> ReportPayload:
     )
 
 
+def _artifacts(**overrides) -> dict:
+    payload = {
+        "schema_version": "1.0",
+        "toc_topics": ["Topic"],
+        "summary": {
+            "tldr": "summary",
+            "executive_summary": "Summary",
+            "claim_evidence_map": [],
+        },
+        "insights_candidates": [
+            {
+                "id": "candidate-1",
+                "text": "Candidate 1",
+                "evidence_id": "f1",
+                "evidence": "Evidence 1",
+                "metric": {},
+                "pages": [1],
+                "score": 0.9,
+            }
+        ],
+        "insights_final": [
+            {
+                "id": "insight-1",
+                "text": "Insight 1",
+                "evidence_id": "f1",
+                "evidence": "Evidence 1",
+                "metric": {},
+                "pages": [1],
+            },
+            {
+                "id": "insight-2",
+                "text": "Insight 2",
+                "evidence_id": "f2",
+                "evidence": "Evidence 2",
+                "metric": {},
+                "pages": [2],
+            },
+            {
+                "id": "insight-3",
+                "text": "Insight 3",
+                "evidence_id": "f3",
+                "evidence": "Evidence 3",
+                "metric": {},
+                "pages": [3],
+            },
+            {
+                "id": "insight-4",
+                "text": "Insight 4",
+                "evidence_id": "f4",
+                "evidence": "Evidence 4",
+                "metric": {},
+                "pages": [4],
+            },
+            {
+                "id": "insight-5",
+                "text": "Insight 5",
+                "evidence_id": "f5",
+                "evidence": "Evidence 5",
+                "metric": {},
+                "pages": [5],
+            },
+        ],
+        "quotes_final": [
+            {
+                "text": "Quote",
+                "speaker": "Author",
+                "citation": "p. 1",
+                "page": 1,
+                "evidence_id": "q1",
+            }
+        ],
+        "expert_comment": "Expert comment",
+        "linkedin_post": "LinkedIn post",
+        "source_status": {
+            "schema_version": "1.0",
+            "not_available": False,
+            "reason": "",
+        },
+    }
+    payload.update(overrides)
+    return payload
+
+
 def _source(runtime: ReportRuntimeState) -> ReportSourceState:
     return ReportSourceState(
         schema_version="1.0",
@@ -203,25 +286,7 @@ def test_complete_report_analysis_falls_back_when_validation_raises(tmp_path):
         generate_evidence_packs=lambda **kwargs: {
             "doc_map": {"docMap": {"title": "Doc Title", "publisher": "Doc Publisher"}}
         },
-        generate_artifacts=lambda **kwargs: {
-            "schema_version": "1.0",
-            "toc_topics": ["Topic"],
-            "summary": {
-                "tldr": "summary",
-                "executive_summary": "Summary",
-                "claim_evidence_map": [],
-            },
-            "insights_candidates": [],
-            "insights_final": [],
-            "quotes_final": [],
-            "expert_comment": "",
-            "linkedin_post": "",
-            "source_status": {
-                "schema_version": "1.0",
-                "not_available": False,
-                "reason": "",
-            },
-        },
+        generate_artifacts=lambda **kwargs: _artifacts(),
         run_validation=lambda *args, **kwargs: (_ for _ in ()).throw(
             ValueError("boom")
         ),
@@ -371,25 +436,7 @@ def test_run_report_analysis_uses_context_fit_categories_not_taxonomy_tags(tmp_p
             "findings": {"findings": [{"id": "f1", "text": "AI is reshaping retail execution."}]},
             "limitations": {"limitations": []},
         },
-        generate_artifacts=lambda **kwargs: {
-            "schema_version": "1.0",
-            "toc_topics": ["Topic"],
-            "summary": {
-                "tldr": "summary",
-                "executive_summary": "Summary",
-                "claim_evidence_map": [],
-            },
-            "insights_candidates": [],
-            "insights_final": [],
-            "quotes_final": [],
-            "expert_comment": "",
-            "linkedin_post": "",
-            "source_status": {
-                "schema_version": "1.0",
-                "not_available": False,
-                "reason": "",
-            },
-        },
+        generate_artifacts=lambda **kwargs: _artifacts(),
         run_validation=lambda *args, **kwargs: ValidationReport(
             schema_version="1.1",
             status="pass",
@@ -429,6 +476,117 @@ def test_run_report_analysis_uses_context_fit_categories_not_taxonomy_tags(tmp_p
         "agentic_commerce",
         "ai_automation",
     ]
+
+
+def test_run_report_analysis_returns_complete_report_payload_contract(
+    tmp_path,
+    assert_no_defaulted_required_fields,
+):
+    runtime = _runtime(tmp_path)
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    deps = _deps(
+        generate_evidence_packs=lambda **kwargs: {
+            "doc_map": {"docMap": {"title": "Doc Title", "publisher": "Doc Publisher"}}
+        },
+        generate_artifacts=lambda **kwargs: _artifacts(),
+        run_validation=lambda *args, **kwargs: ValidationReport(
+            schema_version="1.1",
+            status="pass",
+            issues=[],
+            severity="pass",
+            source_path=str(tmp_path / "out" / "validation.json"),
+        ),
+    )
+
+    state = run_report_analysis(
+        runtime,
+        source,
+        selection,
+        VectorStoreIndexingState(
+            vector_store_id="vs_1",
+            openai_file_id="file_1",
+            vector_store_status="completed",
+            indexed_at_utc="2026-01-01T00:00:00Z",
+            last_error=None,
+        ),
+        deps,
+    )
+
+    assert_no_defaulted_required_fields(
+        state.payload,
+        sentinel_values={"Not available from text"},
+    )
+    assert_no_defaulted_required_fields(state.payload.quote, sentinel_values={"Unknown"})
+    assert_no_defaulted_required_fields(state.payload.figure)
+
+
+def test_run_report_analysis_fails_on_incomplete_report_payload_contract(
+    tmp_path,
+    assert_app_error,
+):
+    runtime = replace(
+        _runtime(tmp_path),
+        settings=replace(_runtime(tmp_path).settings, figure_caption_enabled=False),
+    )
+    source = _source(runtime)
+    source.payload.tldr = "Not available from text"
+    source.payload.commentary = ""
+    source.payload.insights = ["", "", "", "", ""]
+    source.payload.quote.text = ""
+    selection = _selection(runtime, source)
+    deps = _deps(
+        generate_evidence_packs=lambda **kwargs: {
+            "doc_map": {"docMap": {"title": "Doc Title", "publisher": "Doc Publisher"}}
+        },
+        generate_artifacts=lambda **kwargs: {
+            "schema_version": "1.0",
+            "toc_topics": ["Topic"],
+            "summary": {
+                "tldr": "summary",
+                "executive_summary": "Summary",
+                "claim_evidence_map": [],
+            },
+            "insights_candidates": [],
+            "insights_final": [],
+            "quotes_final": [],
+            "expert_comment": "Expert comment",
+            "linkedin_post": "LinkedIn post",
+            "source_status": {
+                "schema_version": "1.0",
+                "not_available": False,
+                "reason": "",
+            },
+        },
+        run_validation=lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("validation should not run for incomplete payloads")
+        ),
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        run_report_analysis(
+            runtime,
+            source,
+            selection,
+            VectorStoreIndexingState(
+                vector_store_id="vs_1",
+                openai_file_id="file_1",
+                vector_store_status="completed",
+                indexed_at_utc="2026-01-01T00:00:00Z",
+                last_error=None,
+            ),
+            deps,
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="report_payload_incomplete",
+        retryable=False,
+        severity="error",
+    )
+    assert exc_info.value.context["stage"] == "pre_validation"
+    assert "insights[0]" in exc_info.value.context["missing_fields"]
+    assert "quote.text" in exc_info.value.context["missing_fields"]
 
 
 def test_run_report_analysis_regenerates_failed_section_until_pass(
@@ -474,25 +632,13 @@ def test_run_report_analysis_regenerates_failed_section_until_pass(
     def _regenerate(request):
         regeneration_requests.append(request)
         return ArtifactRegenerationResponse(
-            updated_artifacts={
-                "schema_version": "1.0",
-                "toc_topics": ["Topic"],
-                "summary": {
+            updated_artifacts=_artifacts(
+                summary={
                     "tldr": "repaired",
                     "executive_summary": "Grounded summary",
                     "claim_evidence_map": [],
-                },
-                "insights_candidates": [],
-                "insights_final": [],
-                "quotes_final": [],
-                "expert_comment": "",
-                "linkedin_post": "",
-                "source_status": {
-                    "schema_version": "1.0",
-                    "not_available": False,
-                    "reason": "",
-                },
-            },
+                }
+            ),
             regenerated_sections=["summary"],
             prompt_namespaces=["report_vs/artifacts/regenerate/summary"],
             artifacts_path=str(tmp_path / "out" / "artifacts.json"),
@@ -505,25 +651,13 @@ def test_run_report_analysis_regenerates_failed_section_until_pass(
         generate_evidence_packs=lambda **kwargs: {
             "doc_map": {"docMap": {"title": "Doc Title", "publisher": "Doc Publisher"}}
         },
-        generate_artifacts=lambda **kwargs: {
-            "schema_version": "1.0",
-            "toc_topics": ["Topic"],
-            "summary": {
+        generate_artifacts=lambda **kwargs: _artifacts(
+            summary={
                 "tldr": "broken",
                 "executive_summary": "Broken summary",
                 "claim_evidence_map": [],
-            },
-            "insights_candidates": [],
-            "insights_final": [],
-            "quotes_final": [],
-            "expert_comment": "",
-            "linkedin_post": "",
-            "source_status": {
-                "schema_version": "1.0",
-                "not_available": False,
-                "reason": "",
-            },
-        },
+            }
+        ),
         run_validation=_run_validation,
         regenerate_artifacts=_regenerate,
     )
@@ -639,9 +773,8 @@ def test_run_report_analysis_maps_topic_section_failures_to_topics_regeneration(
                 ],
             }
         },
-        generate_artifacts=lambda **kwargs: {
-            "schema_version": "1.0",
-            "toc_entries": [
+        generate_artifacts=lambda **kwargs: _artifacts(
+            toc_entries=[
                 {
                     "section_id": "section-2",
                     "section_title": "Sentiments on GenAI",
@@ -652,8 +785,8 @@ def test_run_report_analysis_maps_topic_section_failures_to_topics_regeneration(
                     "order": 1,
                 }
             ],
-            "toc_topics": ["Media brand ad equity"],
-            "toc_topics_expanded": [
+            toc_topics=["Media brand ad equity"],
+            toc_topics_expanded=[
                 {
                     "topic": "Media brand ad equity",
                     "summary": "Wrong section summary",
@@ -663,22 +796,12 @@ def test_run_report_analysis_maps_topic_section_failures_to_topics_regeneration(
                     "pages": [25],
                 }
             ],
-            "summary": {
+            summary={
                 "tldr": "broken",
                 "executive_summary": "Broken summary",
                 "claim_evidence_map": [],
             },
-            "insights_candidates": [],
-            "insights_final": [],
-            "quotes_final": [],
-            "expert_comment": "",
-            "linkedin_post": "",
-            "source_status": {
-                "schema_version": "1.0",
-                "not_available": False,
-                "reason": "",
-            },
-        },
+        ),
         run_validation=_run_validation,
         regenerate_artifacts=_regenerate,
     )
@@ -761,15 +884,13 @@ def test_run_report_analysis_stops_after_regeneration_max_attempts(tmp_path):
 
     deps = _deps(
         generate_evidence_packs=lambda **kwargs: {"doc_map": {}},
-        generate_artifacts=lambda **kwargs: {
-            "schema_version": "1.0",
-            "toc_topics": ["Topic"],
-            "summary": {
+        generate_artifacts=lambda **kwargs: _artifacts(
+            summary={
                 "tldr": "x",
                 "executive_summary": "x",
                 "claim_evidence_map": [],
             },
-            "insights_candidates": [
+            insights_candidates=[
                 {
                     "id": "insight-1",
                     "text": "x",
@@ -780,7 +901,7 @@ def test_run_report_analysis_stops_after_regeneration_max_attempts(tmp_path):
                     "score": 0.0,
                 }
             ],
-            "insights_final": [
+            insights_final=[
                 {
                     "id": "insight-1",
                     "text": "x",
@@ -788,17 +909,41 @@ def test_run_report_analysis_stops_after_regeneration_max_attempts(tmp_path):
                     "evidence": "",
                     "metric": {},
                     "pages": [],
-                }
+                },
+                {
+                    "id": "insight-2",
+                    "text": "Insight 2",
+                    "evidence_id": "e2",
+                    "evidence": "Evidence 2",
+                    "metric": {},
+                    "pages": [2],
+                },
+                {
+                    "id": "insight-3",
+                    "text": "Insight 3",
+                    "evidence_id": "e3",
+                    "evidence": "Evidence 3",
+                    "metric": {},
+                    "pages": [3],
+                },
+                {
+                    "id": "insight-4",
+                    "text": "Insight 4",
+                    "evidence_id": "e4",
+                    "evidence": "Evidence 4",
+                    "metric": {},
+                    "pages": [4],
+                },
+                {
+                    "id": "insight-5",
+                    "text": "Insight 5",
+                    "evidence_id": "e5",
+                    "evidence": "Evidence 5",
+                    "metric": {},
+                    "pages": [5],
+                },
             ],
-            "quotes_final": [],
-            "expert_comment": "",
-            "linkedin_post": "",
-            "source_status": {
-                "schema_version": "1.0",
-                "not_available": False,
-                "reason": "",
-            },
-        },
+        ),
         run_validation=_run_validation,
         regenerate_artifacts=_regenerate,
     )
@@ -871,25 +1016,13 @@ def test_run_report_analysis_uses_one_broad_retry_for_unmappable_failures(tmp_pa
 
     deps = _deps(
         generate_evidence_packs=lambda **kwargs: {"doc_map": {}},
-        generate_artifacts=lambda **kwargs: {
-            "schema_version": "1.0",
-            "toc_topics": ["Topic"],
-            "summary": {
+        generate_artifacts=lambda **kwargs: _artifacts(
+            summary={
                 "tldr": "x",
                 "executive_summary": "x",
                 "claim_evidence_map": [],
-            },
-            "insights_candidates": [],
-            "insights_final": [],
-            "quotes_final": [],
-            "expert_comment": "",
-            "linkedin_post": "",
-            "source_status": {
-                "schema_version": "1.0",
-                "not_available": False,
-                "reason": "",
-            },
-        },
+            }
+        ),
         run_validation=_run_validation,
         regenerate_artifacts=_regenerate,
     )
@@ -955,25 +1088,7 @@ def test_run_report_analysis_snapshot_preserves_internal_payload_metadata(tmp_pa
             },
             "findings": {"schema_version": "1.0", "findings": []},
         },
-        generate_artifacts=lambda **kwargs: {
-            "schema_version": "1.0",
-            "toc_topics": ["Topic"],
-            "summary": {
-                "tldr": "summary",
-                "executive_summary": "Summary",
-                "claim_evidence_map": [],
-            },
-            "insights_candidates": [],
-            "insights_final": [],
-            "quotes_final": [],
-            "expert_comment": "",
-            "linkedin_post": "",
-            "source_status": {
-                "schema_version": "1.0",
-                "not_available": False,
-                "reason": "",
-            },
-        },
+        generate_artifacts=lambda **kwargs: _artifacts(),
         run_validation=lambda *args, **kwargs: ValidationReport(
             schema_version="1.1",
             status="pass",

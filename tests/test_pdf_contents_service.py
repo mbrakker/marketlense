@@ -4,6 +4,8 @@ import json
 import logging
 from pathlib import Path
 
+import pytest
+
 try:
     import fitz
 except ModuleNotFoundError:  # pragma: no cover - depends on PyMuPDF packaging alias
@@ -12,6 +14,7 @@ except ModuleNotFoundError:  # pragma: no cover - depends on PyMuPDF packaging a
 from src.contracts.pdf_contents import PdfContentsDetectionRequest
 from src.contracts.run_context import RunContext
 from src.services.pdf_service import detect_contents_page
+from src.utils.errors import AppError
 
 
 def _ctx() -> RunContext:
@@ -113,3 +116,19 @@ def test_detect_contents_page_returns_empty_when_not_found(tmp_path) -> None:
     assert response.page_number == 0
     assert response.heading == ""
     assert response.confidence == 0.0
+
+
+def test_detect_contents_page_missing_file_raises_typed_error(assert_app_error) -> None:
+    with pytest.raises(AppError) as exc_info:
+        detect_contents_page(
+            PdfContentsDetectionRequest(
+                schema_version="1.0",
+                path="C:/definitely-missing/contents.pdf",
+                max_pages=3,
+                min_headings=3,
+                keywords=["contents"],
+            ),
+            _ctx(),
+        )
+
+    assert_app_error(exc_info.value, code="pdf_not_found", retryable=False)

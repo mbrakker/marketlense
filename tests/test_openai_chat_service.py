@@ -3,9 +3,12 @@ from __future__ import annotations
 import json
 from types import SimpleNamespace
 
+import pytest
+
 from src.contracts.openai import OpenAIAnalyzeRequest, OpenAIJSONPromptRequest
 from src.contracts.run_context import RunContext
 from src.services import openai_service as svc
+from src.utils.errors import AppError
 
 
 def _ctx() -> RunContext:
@@ -127,3 +130,22 @@ def test_analyze_report_falls_back_to_legacy_chat_completion(
     assert result.payload.title == "Title"
     assert result.payload.insights == ["1", "2", "3", "4", "5"]
     assert legacy_calls[0]["response_format"] == {"type": "json_object"}
+
+
+def test_openai_chat_json_maps_provider_failure_to_typed_app_error(
+    monkeypatch, tmp_path, assert_app_error
+) -> None:
+    class _FailingChatCompletions:
+        def create(self, **kwargs):
+            raise RuntimeError("provider boom")
+
+    class _FailingClient:
+        def __init__(self, **kwargs):
+            self.chat = SimpleNamespace(completions=_FailingChatCompletions())
+
+    monkeypatch.setattr(svc, "OpenAI", _FailingClient)
+
+    with pytest.raises(AppError) as exc_info:
+        svc.openai_chat_json(_chat_request(tmp_path), _ctx())
+
+    assert_app_error(exc_info.value, code="openai_chat_failed", retryable=True)

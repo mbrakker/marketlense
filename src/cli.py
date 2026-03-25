@@ -20,7 +20,11 @@ from src.orchestrators.cover_image_orchestrator import run_cover_image_generatio
 from src.orchestrators.publish_orchestrator import run_publish
 from src.orchestrators.recategorize_orchestrator import run_recategorize
 from src.orchestrators.wp_category_update_orchestrator import run_update_wp_categories
-from src.services.config_service import build_ingest_settings, load_settings, load_publish_settings
+from src.services.config_service import (
+    build_ingest_settings,
+    load_settings,
+    load_publish_settings,
+)
 from src.services.logging_service import setup_logging
 from src.utils.logging import log_event, new_run_context
 
@@ -38,13 +42,15 @@ def ingest(
     ctx = new_run_context(task_id="cli_ingest")
     setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
     console.print("[cyan]Loading settings...[/cyan]")
-    logger.info(log_event(
-        ctx,
-        role="orchestrator",
-        event="cli_load_settings_start",
-        module=logger.name,
-        fields={},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="cli_load_settings_start",
+            module=logger.name,
+            fields={},
+        )
+    )
     s = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
     settings = build_ingest_settings(
         IngestSettingsBuildRequest(schema_version="1.0", app_settings=s),
@@ -56,7 +62,9 @@ def ingest(
         outcomes = run_ingest(settings, folder_id=folder, limit=limit, ctx=ctx)
     except AppError as exc:
         if exc.code == "ingest_locked":
-            console.print(f"[red]{exc.message} (lock: {settings.ingest_lock_path})[/red]")
+            console.print(
+                f"[red]{exc.message} (lock: {settings.ingest_lock_path})[/red]"
+            )
             raise typer.Exit(code=1)
         if exc.code == "db_locked":
             console.print(f"[red]{exc.message}[/red]")
@@ -85,18 +93,27 @@ def extract_candidates(
     limit: int = typer.Option(None, help="Max PDFs to process this run"),
     file_id: str = typer.Option(None, help="Optional Drive file ID to process"),
     pdf: str = typer.Option(None, help="Local PDF path to process instead of Drive"),
-    report_id: str = typer.Option(None, help="Optional report ID override for local PDFs"),
+    report_id: str = typer.Option(
+        None, help="Optional report ID override for local PDFs"
+    ),
 ):
     ctx = new_run_context(task_id="cli_extract_candidates")
     setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
     console.print("[cyan]Loading settings...[/cyan]")
-    logger.info(log_event(
-        ctx,
-        role="orchestrator",
-        event="cli_candidate_extract_start",
-        module=logger.name,
-        fields={"folder": folder or "", "limit": limit, "file_id": file_id or "", "pdf": pdf or ""},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="cli_candidate_extract_start",
+            module=logger.name,
+            fields={
+                "folder": folder or "",
+                "limit": limit,
+                "file_id": file_id or "",
+                "pdf": pdf or "",
+            },
+        )
+    )
     s = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
     settings = build_ingest_settings(
         IngestSettingsBuildRequest(schema_version="1.0", app_settings=s),
@@ -141,17 +158,21 @@ def publish_wp(
     ctx = new_run_context(task_id="cli_publish")
     setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
     console.print("[cyan]Loading settings...[/cyan]")
-    logger.info(log_event(
-        ctx,
-        role="orchestrator",
-        event="cli_load_publish_settings_start",
-        module=logger.name,
-        fields={},
-    ))
-    settings = load_publish_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="cli_load_publish_settings_start",
+            module=logger.name,
+            fields={},
+        )
+    )
+    settings = load_publish_settings(
+        ConfigLoadRequest(schema_version="1.0", path=""), ctx
+    )
 
     console.print("[cyan]Publishing reports to WordPress...[/cyan]")
-    outcomes = run_publish(settings, limit=limit)
+    outcomes = run_publish(settings, limit=limit, ctx=ctx)
 
     table = Table(title="Published Reports", box=box.SIMPLE_HEAVY)
     table.add_column("HTML")
@@ -178,21 +199,25 @@ def recategorize():
     ctx = new_run_context(task_id="cli_recategorize")
     setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
     console.print("[cyan]Loading settings...[/cyan]")
-    logger.info(log_event(
-        ctx,
-        role="orchestrator",
-        event="cli_load_settings_start",
-        module=logger.name,
-        fields={},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="cli_load_settings_start",
+            module=logger.name,
+            fields={},
+        )
+    )
     s = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
     console.print("[cyan]Recomputing categories...[/cyan]")
-    outcomes = run_recategorize(RecategorizeRequest(
-        schema_version="1.0",
-        db_path=s.reports_db,
-        category_mapping_path=s.category_mapping_path,
-        settings=s,
-    ))
+    outcomes = run_recategorize(
+        RecategorizeRequest(
+            schema_version="1.0",
+            db_path=s.reports_db,
+            category_mapping_path=s.category_mapping_path,
+            settings=s,
+        )
+    )
     table = Table(title="Recategorization", box=box.SIMPLE_HEAVY)
     table.add_column("Title")
     table.add_column("File ID")
@@ -205,7 +230,15 @@ def recategorize():
             updated += 1
         cats = ", ".join(outcome.categories)
         unmapped = ", ".join(outcome.unmapped_tags)
-        table.add_row(outcome.title, outcome.file_id, cats, unmapped, outcome.status if not outcome.error else f"{outcome.status}:{outcome.error}")
+        table.add_row(
+            outcome.title,
+            outcome.file_id,
+            cats,
+            unmapped,
+            outcome.status
+            if not outcome.error
+            else f"{outcome.status}:{outcome.error}",
+        )
     console.print(table)
     console.print(f"[green]Done: {updated} record(s) updated.[/green]")
 
@@ -219,13 +252,19 @@ def generate_covers(
     ctx = new_run_context(task_id="cli_generate_covers")
     setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
     console.print("[cyan]Loading settings...[/cyan]")
-    logger.info(log_event(
-        ctx,
-        role="orchestrator",
-        event="cli_cover_generate_start",
-        module=logger.name,
-        fields={"style_config": style_config or "", "limit": limit, "file_id": file_id or ""},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="cli_cover_generate_start",
+            module=logger.name,
+            fields={
+                "style_config": style_config or "",
+                "limit": limit,
+                "file_id": file_id or "",
+            },
+        )
+    )
     settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
 
     console.print("[cyan]Generating cover images...[/cyan]")
@@ -262,14 +301,18 @@ def update_wp_categories():
     ctx = new_run_context(task_id="cli_update_wp_categories")
     setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
     console.print("[cyan]Loading publish settings...[/cyan]")
-    logger.info(log_event(
-        ctx,
-        role="orchestrator",
-        event="cli_load_publish_settings_start",
-        module=logger.name,
-        fields={},
-    ))
-    settings = load_publish_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="cli_load_publish_settings_start",
+            module=logger.name,
+            fields={},
+        )
+    )
+    settings = load_publish_settings(
+        ConfigLoadRequest(schema_version="1.0", path=""), ctx
+    )
     console.print("[cyan]Updating WordPress categories...[/cyan]")
     outcomes = run_update_wp_categories(settings)
     table = Table(title="WP Category Updates", box=box.SIMPLE_HEAVY)
@@ -286,7 +329,9 @@ def update_wp_categories():
             outcome.file_id,
             str(outcome.post_id or ""),
             cats,
-            outcome.status if not outcome.error else f"{outcome.status}:{outcome.error}",
+            outcome.status
+            if not outcome.error
+            else f"{outcome.status}:{outcome.error}",
         )
     console.print(table)
     console.print(f"[green]Done: {updated} post(s) updated.[/green]")
@@ -306,13 +351,15 @@ def cost_report(
     console.print("[cyan]Loading settings...[/cyan]")
     ctx = new_run_context(task_id="cli_cost_report")
     setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
-    logger.info(log_event(
-        ctx,
-        role="orchestrator",
-        event="cli_cost_report_start",
-        module=logger.name,
-        fields={"date": date, "run_id": run_id, "top": top},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="cli_cost_report_start",
+            module=logger.name,
+            fields={"date": date, "run_id": run_id, "top": top},
+        )
+    )
     settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
 
     try:
@@ -337,7 +384,9 @@ def cost_report(
         console.print("[red]Cost report was not generated.[/red]")
         raise typer.Exit(code=1)
 
-    console.print(f"[cyan]Cost report for {report.filter_type}={report.filter_value}[/cyan]")
+    console.print(
+        f"[cyan]Cost report for {report.filter_type}={report.filter_value}[/cyan]"
+    )
     totals = report.totals
     totals_table = Table(title="Totals", box=box.SIMPLE_HEAVY)
     totals_table.add_column("Metric")
@@ -367,18 +416,20 @@ def cost_report(
     else:
         console.print("[yellow]No matching ledger entries found.[/yellow]")
 
-    logger.info(log_event(
-        ctx,
-        role="orchestrator",
-        event="cli_cost_report_complete",
-        module=logger.name,
-        fields={
-            "filter_type": report.filter_type,
-            "filter_value": report.filter_value,
-            "matched_entries": report.matched_entries,
-            "top_steps": len(report.top_steps),
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="cli_cost_report_complete",
+            module=logger.name,
+            fields={
+                "filter_type": report.filter_type,
+                "filter_value": report.filter_value,
+                "matched_entries": report.matched_entries,
+                "top_steps": len(report.top_steps),
+            },
+        )
+    )
 
 
 @cli_app.callback(invoke_without_command=True)

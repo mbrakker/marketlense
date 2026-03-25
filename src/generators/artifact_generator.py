@@ -219,40 +219,34 @@ def generate_artifacts(
     if fallback_reasons and not vector_store_id:
         availability["not_available"] = True
         availability["reason"] = ",".join(sorted(set(fallback_reasons)))
-        payload = _placeholder_artifacts(availability)
-        if cache_meta and isinstance(payload, dict):
-            payload = dict(payload)
-            payload["_cache"] = {**cache_meta, "key": cache_key}
-        validate_schema(
-            SchemaValidateRequest(
-                schema_version="1.0", payload=payload, schema_name="artifacts"
-            ),
-            ctx,
-        )
-        _store_pack(
-            analysis_store=analysis_store,
-            output_dir=settings.output_dir,
-            report_id=report_id,
-            pack_name="artifacts",
-            payload=payload,
-            ctx=ctx,
-            report_slug=report_name,
-        )
         logger.info(
             log_event(
                 ctx,
                 role="generator",
-                event="artifact_short_circuit",
+                event="artifact_inputs_unavailable",
                 module=logger.name,
                 fields={
                     "report_id": report_id,
                     "reason": availability["reason"],
                     "text_density": availability["text_density"],
+                    "density_threshold": availability["density_threshold"],
                     "evidence_present": evidence_present,
                 },
             )
         )
-        return payload
+        raise AppError(
+            code="artifact_inputs_unavailable",
+            message="Artifact generation requires extractable text or evidence-backed inputs",
+            retryable=False,
+            context={
+                "report_id": report_id,
+                "reason": availability["reason"],
+                "text_density": availability["text_density"],
+                "density_threshold": availability["density_threshold"],
+                "evidence_present": evidence_present,
+                "vector_store_id_present": bool(vector_store_id),
+            },
+        )
 
     base_vars = artifact_base_variables(safe_doc_map, safe_evidence)
 
@@ -603,6 +597,7 @@ def assemble_artifacts_payload(
             ctx,
         )
         validate_evidence_references(artifacts_payload, evidence_packs, ctx)
+        _validate_artifact_semantic_fields(artifacts_payload, ctx)
     except AppError as exc:
         logger.info(
             log_event(
@@ -1685,65 +1680,70 @@ def _store_pack(
     )
 
 
-def _placeholder_artifacts(status: Dict[str, Any]) -> Dict[str, Any]:
-    reason = status.get("reason") or "not_available_from_text"
-    placeholder_text = "Not available from text"
-    return {
-        "schema_version": "1.0",
-        "toc_entries": [],
-        "toc_topics": [placeholder_text],
-        "toc_topics_expanded": [],
-        "summary": {
-            "tldr": placeholder_text,
-            "executive_summary": placeholder_text,
-            "claim_evidence_map": [
-                {
-                    "claim": placeholder_text,
-                    "evidence_id": "not_available",
-                    "evidence": placeholder_text,
-                    "pages": [],
-                }
-            ],
-        },
-        "insights_candidates": [
-            {
-                "id": "candidate_1",
-                "text": placeholder_text,
-                "evidence_id": "not_available",
-                "evidence": placeholder_text,
-                "metric": {key: "" for key in METRIC_FIELDS},
-                "pages": [],
-                "score": 0.0,
-            }
-        ],
-        "insights_final": [
-            {
-                "id": "insight_1",
-                "text": placeholder_text,
-                "evidence_id": "not_available",
-                "evidence": placeholder_text,
-                "metric": {key: "" for key in METRIC_FIELDS},
-                "pages": [],
-            }
-        ],
-        "quotes_final": [
-            {
-                "text": placeholder_text,
-                "speaker": "Unknown",
-                "citation": reason.replace("_", " "),
-                "page": 0,
-                "evidence_id": "not_available",
-            }
-        ],
-        "expert_comment": placeholder_text,
-        "linkedin_post": placeholder_text,
-        "source_status": {
-            **status,
-            "not_available": True,
-            "reason": reason,
-            "evidence_present": bool(status.get("evidence_present", False)),
-        },
-    }
+def _validate_artifact_semantic_fields(
+    artifacts_payload: Dict[str, Any],
+    ctx: RunContext,
+) -> None:
+    missing_fields: List[str] = []
+    sentinel_values = {"not available from text"}
+    summary = (
+        artifacts_payload.get("summary")
+        if isinstance(artifacts_payload.get("summary"), dict)
+        else {}
+    )
+    insights_final = (
+        artifacts_payload.get("insights_final")
+        if isinstance(artifacts_payload.get("insights_final"), list)
+        else []
+    )
+    quotes_final = (
+        artifacts_payload.get("quotes_final")
+        if isinstance(artifacts_payload.get("quotes_final"), list)
+        else []
+    )
+
+    def _missing_text(value: Any) -> bool:
+        text = _s(value).strip()
+        return not text or text.lower() in sentinel_values
+
+    if _missing_text(summary.get("tldr")):
+        missing_fields.append("summary.tldr")
+    if _missing_text(summary.get("executive_summary")):
+        missing_fields.append("summary.executive_summary")
+    if len(insights_final) < 5:
+        missing_fields.append("insights_final")
+    for index, insight in enumerate(insights_final[:5]):
+        if not isinstance(insight, dict) or _missing_text(insight.get("text")):
+            missing_fields.append(f"insights_final[{index}].text")
+    if not quotes_final:
+        missing_fields.append("quotes_final")
+    elif not isinstance(quotes_final[0], dict) or _missing_text(
+        quotes_final[0].get("text")
+    ):
+        missing_fields.append("quotes_final[0].text")
+    if _missing_text(artifacts_payload.get("expert_comment")):
+        missing_fields.append("expert_comment")
+    if _missing_text(artifacts_payload.get("linkedin_post")):
+        missing_fields.append("linkedin_post")
+
+    if not missing_fields:
+        return
+
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="artifact_contract_incomplete",
+            module=logger.name,
+            fields={"missing_fields": missing_fields},
+        )
+    )
+    raise AppError(
+        code="artifact_contract_incomplete",
+        message="Artifact payload is missing required semantic fields",
+        retryable=False,
+        context={"missing_fields": missing_fields},
+    )
 
 
 def _dump_json(data: Any) -> str:

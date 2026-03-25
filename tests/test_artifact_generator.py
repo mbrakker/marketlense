@@ -4,6 +4,8 @@ import time
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 from src.contracts.config import AppSettings
 from src.contracts.openai import OpenAIResponseResult
 from src.contracts.prompts import PromptSet, PromptTemplate
@@ -11,6 +13,7 @@ from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.generators.artifact_generator import build_topic_briefs, generate_artifacts
 from src.services.schema_validator_service import validate_schema
+from src.utils.errors import AppError
 from src.utils.slugify import slugify
 
 
@@ -830,8 +833,8 @@ def test_generate_artifacts_backfills_missing_ids(tmp_path):
         "toc": {"toc_topics": ["Topic"]},
         "summary": {
             "summary": {
-                "tldr": "",
-                "executive_summary": "",
+                "tldr": "TLDR",
+                "executive_summary": "Exec",
                 "claim_evidence_map": [{"claim": "Claim", "evidence": "Support"}],
             }
         },
@@ -840,7 +843,15 @@ def test_generate_artifacts_backfills_missing_ids(tmp_path):
                 {"id": "c1", "text": "Candidate 1", "metric": {}, "pages": []}
             ]
         },
-        "insights_final": {"insights_final": []},
+        "insights_final": {
+            "insights_final": [
+                {"id": "f1", "text": "Final 1", "metric": {}, "pages": []},
+                {"id": "f2", "text": "Final 2", "metric": {}, "pages": []},
+                {"id": "f3", "text": "Final 3", "metric": {}, "pages": []},
+                {"id": "f4", "text": "Final 4", "metric": {}, "pages": []},
+                {"id": "f5", "text": "Final 5", "metric": {}, "pages": []},
+            ]
+        },
         "quotes": {
             "quotes_final": [
                 {"text": "Quote", "speaker": "Analyst", "citation": "", "page": 1}
@@ -957,6 +968,39 @@ def test_generate_artifacts_ignores_low_text_when_vector_store(tmp_path):
         _ctx(),
     )
     assert analysis_store.stored
+
+
+def test_generate_artifacts_fails_when_inputs_unavailable_without_vector_store(
+    tmp_path,
+    assert_app_error,
+):
+    analysis_store = FakeAnalysisStore()
+
+    with pytest.raises(AppError) as exc_info:
+        generate_artifacts(
+            report_id="low_text",
+            report_name="report",
+            doc_map={},
+            evidence_packs={},
+            settings=_settings(tmp_path),
+            vector_store_id=None,
+            source_status=_low_text_status(),
+            ctx=_ctx(),
+            openai_client=FakeOpenAI({}),
+            prompt_client=FakePromptClient(),
+            analysis_store=analysis_store,
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="artifact_inputs_unavailable",
+        retryable=False,
+        severity="error",
+    )
+    assert exc_info.value.context["report_id"] == "low_text"
+    assert exc_info.value.context["reason"] == "evidence_packs_empty,text_density_below_threshold"
+    assert exc_info.value.context["evidence_present"] is False
+    assert analysis_store.stored == []
 
 
 def test_generate_artifacts_parallelizes_with_dependency_order(tmp_path):

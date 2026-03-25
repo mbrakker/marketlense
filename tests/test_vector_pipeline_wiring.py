@@ -83,6 +83,89 @@ def _pdf_bytes() -> bytes:
     return b"%PDF-1.4\n1 0 obj <</Type/Catalog>> endobj\n%%EOF\n"
 
 
+def _analysis_artifacts(**overrides) -> dict:
+    payload = {
+        "schema_version": "1.0",
+        "toc_topics": ["Topic"],
+        "summary": {
+            "tldr": "tldr",
+            "executive_summary": "exec",
+            "claim_evidence_map": [],
+        },
+        "insights_candidates": [
+            {
+                "id": "candidate-1",
+                "text": "Candidate 1",
+                "evidence_id": "f1",
+                "evidence": "Evidence 1",
+                "metric": {},
+                "pages": [1],
+                "score": 0.9,
+            }
+        ],
+        "insights_final": [
+            {
+                "id": "insight-1",
+                "text": "Insight 1",
+                "evidence_id": "f1",
+                "evidence": "Evidence 1",
+                "metric": {},
+                "pages": [1],
+            },
+            {
+                "id": "insight-2",
+                "text": "Insight 2",
+                "evidence_id": "f2",
+                "evidence": "Evidence 2",
+                "metric": {},
+                "pages": [2],
+            },
+            {
+                "id": "insight-3",
+                "text": "Insight 3",
+                "evidence_id": "f3",
+                "evidence": "Evidence 3",
+                "metric": {},
+                "pages": [3],
+            },
+            {
+                "id": "insight-4",
+                "text": "Insight 4",
+                "evidence_id": "f4",
+                "evidence": "Evidence 4",
+                "metric": {},
+                "pages": [4],
+            },
+            {
+                "id": "insight-5",
+                "text": "Insight 5",
+                "evidence_id": "f5",
+                "evidence": "Evidence 5",
+                "metric": {},
+                "pages": [5],
+            },
+        ],
+        "quotes_final": [
+            {
+                "text": "Quote",
+                "speaker": "Author",
+                "citation": "p. 1",
+                "page": 1,
+                "evidence_id": "q1",
+            }
+        ],
+        "expert_comment": "Expert comment",
+        "linkedin_post": "LinkedIn post",
+        "source_status": {
+            "schema_version": "1.0",
+            "not_available": False,
+            "reason": "",
+        },
+    }
+    payload.update(overrides)
+    return payload
+
+
 def _report_dependencies(**overrides) -> ReportGeneratorDependencies:
     return replace(ReportGeneratorDependencies.default(), **overrides)
 
@@ -632,11 +715,7 @@ def test_generate_report_vector_store_with_validation(
         report_name=None,
         **kwargs,
     ):
-        payload = {
-            "summary": {"tldr": "tldr", "executive_summary": "exec"},
-            "insights_final": [{"text": "insight"}],
-            "quotes_final": [{"text": "qt", "speaker": "sp"}],
-        }
+        payload = _analysis_artifacts()
         _store_pack(
             AnalysisStorePackRequest(
                 schema_version="1.0",
@@ -776,14 +855,13 @@ def test_generate_report_vector_store_with_validation(
             },
         ),
     ]
-    assert (
-        "artifacts",
-        {
-            "summary": {"tldr": "tldr", "executive_summary": "exec"},
-            "insights_final": [{"text": "insight"}],
-            "quotes_final": [{"text": "qt", "speaker": "sp"}],
-        },
-    ) in analysis_store
+    artifacts_entries = [
+        payload for pack_name, payload in analysis_store if pack_name == "artifacts"
+    ]
+    assert len(artifacts_entries) == 1
+    assert artifacts_entries[0]["summary"]["tldr"] == "tldr"
+    assert len(artifacts_entries[0]["insights_final"]) == 5
+    assert artifacts_entries[0]["quotes_final"][0]["text"] == "Quote"
 
 
 def test_generate_report_doc_map_empty_halts(
@@ -969,17 +1047,7 @@ def test_generate_report_ocr_fallback_uses_ocr_pdf_for_vector_and_original_for_v
         generate_evidence_packs=lambda **kwargs: {
             "doc_map": {"docMap": {"title": "Doc Title", "publisher": "Doc Publisher"}}
         },
-        generate_artifacts=lambda **kwargs: {
-            "schema_version": "1.0",
-            "summary": {"tldr": "tldr", "executive_summary": "exec"},
-            "insights_final": [],
-            "quotes_final": [],
-            "source_status": {
-                "schema_version": "1.0",
-                "not_available": False,
-                "reason": "",
-            },
-        },
+        generate_artifacts=lambda **kwargs: _analysis_artifacts(),
         run_validation=lambda *args, **kwargs: ValidationReport(
             schema_version="1.1",
             status="pass",
@@ -1077,15 +1145,7 @@ def test_generate_report_vector_store_figure_caption_fail_open_runs_before_valid
         **kwargs,
     ):
         execution_trace.append("artifacts")
-        payload = {
-            "summary": {
-                "tldr": "tldr",
-                "executive_summary": "exec",
-                "claim_evidence_map": [],
-            },
-            "insights_final": [{"text": "insight"}],
-            "quotes_final": [{"text": "qt", "speaker": "sp"}],
-        }
+        payload = _analysis_artifacts()
         _store_pack(
             AnalysisStorePackRequest(
                 schema_version="1.0",

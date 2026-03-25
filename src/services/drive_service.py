@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Iterable, Optional
 
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseDownload
 from google.oauth2.service_account import Credentials
 
@@ -28,6 +29,7 @@ from src.utils.logging import log_event
 logger = logging.getLogger("market_lense.drive_service")
 _DRIVE_CLIENTS: dict[tuple[str, int], object] = {}
 _DRIVE_CLIENTS_LOCK = threading.Lock()
+DRIVE_BOUNDARY_EXCEPTIONS = (HttpError, OSError, RuntimeError, ValueError, TypeError)
 
 
 class _HashingWriter:
@@ -116,7 +118,7 @@ def _list_files_paginated(drive, list_kwargs: dict, request: DriveListRequest, c
             kwargs = dict(list_kwargs)
             kwargs["pageToken"] = page_token
             resp = drive.files().list(**kwargs).execute()
-        except Exception as exc:
+        except DRIVE_BOUNDARY_EXCEPTIONS as exc:
             logger.info(log_event(
                 ctx,
                 role="service",
@@ -273,7 +275,7 @@ def get_file_metadata(request: DriveFileMetadataRequest, ctx: RunContext) -> Dri
     drive = _get_drive_client(request.service_account_path, ctx)
     try:
         resp = drive.files().get(fileId=request.file_id, fields="id,name,modifiedTime,md5Checksum").execute()
-    except Exception as exc:
+    except DRIVE_BOUNDARY_EXCEPTIONS as exc:
         logger.info(log_event(
             ctx,
             role="service",
@@ -342,7 +344,7 @@ def download_pdf(request: DriveDownloadRequest, ctx: RunContext) -> DriveDownloa
         done = False
         while not done:
             _, done = downloader.next_chunk()
-    except Exception as exc:
+    except DRIVE_BOUNDARY_EXCEPTIONS as exc:
         raise AppError(
             code="drive_download_failed",
             message="Drive download failed",
@@ -423,7 +425,7 @@ def download_pdf_to_path(request: DriveDownloadToPathRequest, ctx: RunContext) -
             writer.flush()
             size = writer.bytes_written
             md5 = writer.md5
-    except Exception as exc:
+    except DRIVE_BOUNDARY_EXCEPTIONS as exc:
         logger.info(log_event(
             ctx,
             role="service",

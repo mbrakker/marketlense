@@ -51,6 +51,9 @@ from .figures import (
 )
 from .shared import crop_logger, preview_logger
 
+PDF_CROP_EXCEPTIONS = (RuntimeError, ValueError, TypeError, AttributeError, OSError)
+PREVIEW_RENDER_EXCEPTIONS = (AppError,) + PDF_CROP_EXCEPTIONS
+
 # BEGIN PDF CROPPING
 CROP_TRIM_MAX_FRAC = 0.08
 CROP_TRIM_MIN_PX = 12
@@ -541,7 +544,7 @@ def _page_text_blocks(page: fitz.Page) -> list[Tuple[fitz.Rect, str]]:
             for x0, y0, x1, y1, text, *_ in page.get_text("blocks")
             if text
         ]
-    except Exception:
+    except PDF_CROP_EXCEPTIONS:
         return []
 
 
@@ -824,7 +827,7 @@ def _crop_regions(
                         allow_left=True,
                         allow_right=True,
                     )
-                except Exception:
+                except PDF_CROP_EXCEPTIONS:
                     img = None
             elif mode == "table_strict":
                 try:
@@ -836,7 +839,7 @@ def _crop_regions(
                         allow_left=True,
                         allow_right=True,
                     )
-                except Exception:
+                except PDF_CROP_EXCEPTIONS:
                     img = None
             elif mode == "chart_strict" or it.type == "chart":
                 try:
@@ -851,7 +854,7 @@ def _crop_regions(
                         )
                     else:
                         img = _legacy_chart_border_trim(page, region.rect, img)
-                except Exception:
+                except PDF_CROP_EXCEPTIONS:
                     img = None
 
             augment = augments.get(region.index)
@@ -869,7 +872,7 @@ def _crop_regions(
                             _render_clip_image(local_doc[augment.append_page], augment.append_rect)
                         )
                     img = _stack_crop_images(stack)
-                except Exception:
+                except PDF_CROP_EXCEPTIONS:
                     img = img or Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
 
             filename = region.filename
@@ -1015,7 +1018,7 @@ def _crop_refine_text_blocks(page: fitz.Page) -> list[fitz.Rect]:
     blocks: list[fitz.Rect] = []
     try:
         raw_blocks = page.get_text("blocks")
-    except Exception:
+    except PDF_CROP_EXCEPTIONS:
         return blocks
     for x0, y0, x1, y1, text, *_ in raw_blocks:
         text_str = str(text or "").strip()
@@ -1130,7 +1133,7 @@ def render_preview(request: PreviewRequest, ctx: RunContext) -> PreviewResponse:
             variant=request.variant,
             doc=request.pdf_context.fitz_doc if request.pdf_context else None,
         )
-    except Exception as exc:
+    except PREVIEW_RENDER_EXCEPTIONS as exc:
         preview_logger.info(log_event(
             ctx,
             role="service",

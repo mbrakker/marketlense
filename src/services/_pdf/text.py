@@ -37,6 +37,8 @@ from src.utils.pdf_utils import pdf_has_eof_marker as _pdf_has_eof_marker
 
 from .shared import EOF_TAIL_BYTES, logger
 
+PDF_TEXT_EXCEPTIONS = (OSError, RuntimeError, ValueError, TypeError, AttributeError)
+
 
 def check_pdf_eof(request: PdfEofCheckRequest, ctx: RunContext) -> PdfEofCheckResponse:
     logger.info(
@@ -66,7 +68,7 @@ def check_pdf_eof(request: PdfEofCheckRequest, ctx: RunContext) -> PdfEofCheckRe
             cause=exc,
             retryable=False,
         ) from exc
-    except Exception as exc:
+    except OSError as exc:
         raise AppError(
             code="pdf_read_failed",
             message=f"Failed to read PDF bytes: {request.path}",
@@ -112,7 +114,7 @@ def build_pdf_context(
     if request.load_fitz:
         try:
             fitz_doc = fitz.open(request.path)
-        except Exception as exc:
+        except (RuntimeError, ValueError, TypeError) as exc:
             fitz_error = str(exc)
 
     pypdf_reader = None
@@ -129,7 +131,7 @@ def build_pdf_context(
             ) from exc
         except (PdfReadError, PdfStreamError) as exc:
             pypdf_error = str(exc)
-        except Exception as exc:
+        except PDF_TEXT_EXCEPTIONS as exc:
             pypdf_error = str(exc)
 
     context = PdfContext(
@@ -197,7 +199,7 @@ def extract_pdf_info(request: PdfInfoRequest, ctx: RunContext) -> PdfInfoRespons
                 cause=exc,
                 retryable=True,
             ) from exc
-        except Exception as exc:
+        except PDF_TEXT_EXCEPTIONS as exc:
             raise AppError(
                 code="pdf_info_read_failed",
                 message=f"Failed to read PDF for info: {request.path}",
@@ -271,7 +273,7 @@ def extract_pdf_text(
                 cause=exc,
                 retryable=True,
             ) from exc
-        except Exception as exc:
+        except PDF_TEXT_EXCEPTIONS as exc:
             raise AppError(
                 code="pdf_read_failed",
                 message=f"Failed to read PDF: {request.path}",
@@ -285,7 +287,7 @@ def extract_pdf_text(
         for i in range(pages):
             try:
                 text = reader.pages[i].extract_text() or ""
-            except Exception:
+            except PDF_TEXT_EXCEPTIONS:
                 text = ""
             chunks.append(text)
         raw_text = "\n\n".join(chunks)
@@ -355,7 +357,7 @@ def sample_pdf_text(
                 cause=exc,
                 retryable=True,
             ) from exc
-        except Exception as exc:
+        except PDF_TEXT_EXCEPTIONS as exc:
             raise AppError(
                 code="pdf_read_failed",
                 message=f"Failed to read PDF: {request.path}",
@@ -427,7 +429,7 @@ def render_text_pdf(
         for page in sorted(request.pages, key=lambda item: item.page_number):
             _append_text_page(doc, page.text)
         doc.save(output_path.as_posix())
-    except Exception as exc:
+    except (RuntimeError, ValueError, TypeError, OSError) as exc:
         raise AppError(
             code="pdf_text_render_failed",
             message=f"Failed to render OCR PDF: {request.output_path}",
@@ -496,7 +498,7 @@ def split_pdf_for_ocr(
             cause=exc,
             retryable=True,
         ) from exc
-    except Exception as exc:
+    except PDF_TEXT_EXCEPTIONS as exc:
         raise AppError(
             code="pdf_ocr_split_read_failed",
             message=f"Failed to read PDF for OCR split: {request.source_pdf_path}",
@@ -595,7 +597,7 @@ def _normalize_metadata(raw_meta) -> dict[str, str]:
     normalized: dict[str, str] = {}
     try:
         items = raw_meta.items() if hasattr(raw_meta, "items") else []
-    except Exception:
+    except (AttributeError, TypeError, ValueError):
         return {}
     for key, value in items:
         if key is None or value is None:
@@ -607,7 +609,7 @@ def _normalize_metadata(raw_meta) -> dict[str, str]:
             key_str = key_str[1:]
         try:
             val_str = str(value).strip()
-        except Exception:
+        except (TypeError, ValueError):
             val_str = ""
         if not val_str:
             continue
@@ -618,7 +620,7 @@ def _normalize_metadata(raw_meta) -> dict[str, str]:
 def _extract_text(reader: PdfReader, page_index: int) -> str:
     try:
         return reader.pages[page_index].extract_text() or ""
-    except Exception:
+    except PDF_TEXT_EXCEPTIONS:
         return ""
 
 
@@ -654,7 +656,7 @@ def _close_pypdf_reader(reader: PdfReader) -> None:
         close_fn = getattr(stream, "close", None)
         if callable(close_fn):
             close_fn()
-    except Exception:
+    except (AttributeError, RuntimeError, ValueError, TypeError):
         pass
 
 
@@ -663,5 +665,5 @@ def _compute_text_density(text: str, pages: int) -> float:
         return 0.0
     try:
         return len(text or "") / float(pages)
-    except Exception:
+    except (TypeError, ValueError):
         return 0.0

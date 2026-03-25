@@ -186,7 +186,7 @@ def _row_to_metadata_response(row: tuple, ctx: RunContext) -> ReportMetadataGetR
             page_int = int(page_count_raw)
             if page_int >= 0:
                 page_count = page_int
-    except Exception:
+    except (TypeError, ValueError):
         logger.info(log_event(
             ctx,
             role="service",
@@ -199,7 +199,7 @@ def _row_to_metadata_response(row: tuple, ctx: RunContext) -> ReportMetadataGetR
             page_int = int(contents_page_raw)
             if page_int >= 0:
                 contents_page_number = page_int
-    except Exception:
+    except (TypeError, ValueError):
         logger.info(log_event(
             ctx,
             role="service",
@@ -269,7 +269,7 @@ def check_report_db_access(request: ReportMetadataDbAccessRequest, ctx: RunConte
     ))
     try:
         conn = sqlite3.connect(request.db_path, timeout=timeout)
-    except Exception as exc:
+    except sqlite3.Error as exc:
         logger.info(log_event(
             ctx,
             role="service",

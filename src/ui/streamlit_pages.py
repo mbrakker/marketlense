@@ -97,6 +97,8 @@ from src.utils.cover_path_utils import build_cover_asset_path
 from src.utils.logging import new_run_context
 from src.utils.slugify import slugify
 
+UI_SURFACE_EXCEPTIONS = (AppError, OSError, RuntimeError, ValueError, TypeError, yaml.YAMLError)
+
 
 NAV_SECTIONS = [
     "Cockpit Overview",
@@ -459,7 +461,7 @@ def _try_load_settings() -> tuple[Any | None, str | None]:
         settings = load_settings(
             ConfigLoadRequest(schema_version="1.0", path=""), _ctx("load_settings")
         )
-    except Exception as exc:  # pragma: no cover - runtime safeguard for UI
+    except UI_SURFACE_EXCEPTIONS as exc:  # pragma: no cover - runtime safeguard for UI
         return None, str(exc)
     return settings, None
 
@@ -470,7 +472,7 @@ def _try_load_publish_settings() -> tuple[Any | None, str | None]:
             ConfigLoadRequest(schema_version="1.0", path=""),
             _ctx("load_publish_settings"),
         )
-    except Exception as exc:  # pragma: no cover - runtime safeguard for UI
+    except UI_SURFACE_EXCEPTIONS as exc:  # pragma: no cover - runtime safeguard for UI
         return None, str(exc)
     return settings, None
 
@@ -480,7 +482,7 @@ def _try_read_app_config() -> tuple[Any | None, str | None]:
         response = read_app_config(
             AppConfigReadRequest(schema_version="1.0", path=""), _ctx("read_app_config")
         )
-    except Exception as exc:  # pragma: no cover - runtime safeguard for UI
+    except UI_SURFACE_EXCEPTIONS as exc:  # pragma: no cover - runtime safeguard for UI
         return None, str(exc)
     return response, None
 
@@ -498,7 +500,7 @@ def _try_write_app_config(
             ),
             _ctx("write_app_config"),
         )
-    except Exception as exc:  # pragma: no cover - runtime safeguard for UI
+    except UI_SURFACE_EXCEPTIONS as exc:  # pragma: no cover - runtime safeguard for UI
         return None, str(exc)
     return response, None
 
@@ -560,7 +562,7 @@ def _as_utc(ts: int | float | None) -> str:
         return datetime.fromtimestamp(float(ts), tz=timezone.utc).strftime(
             "%Y-%m-%d %H:%M:%S UTC"
         )
-    except Exception:
+    except (OSError, OverflowError, TypeError, ValueError):
         return ""
 
 
@@ -836,7 +838,7 @@ def _render_ingest_control(settings: Any) -> None:
                 f"Ingest complete. processed={processed_count} total={len(outcomes)}"
             )
             st.success(f"Ingest completed with {processed_count} processed file(s).")
-        except Exception as exc:
+        except UI_SURFACE_EXCEPTIONS as exc:
             _append_terminal(f"Ingest failed: {exc}")
             st.error(str(exc))
 
@@ -965,7 +967,7 @@ def _render_candidate_extraction(settings: Any) -> None:
             st.session_state["last_candidate_outcomes"] = outcomes
             _append_terminal(f"Candidate extraction complete. outputs={len(outcomes)}")
             st.success(f"Candidate extraction complete for {len(outcomes)} item(s).")
-        except Exception as exc:
+        except UI_SURFACE_EXCEPTIONS as exc:
             _append_terminal(f"Candidate extraction failed: {exc}")
             st.error(str(exc))
 
@@ -1212,7 +1214,7 @@ def _render_cover_images(settings: Any) -> None:
             st.session_state["last_cover_outcomes"] = outcomes
             _append_terminal(f"Cover generation complete. outcomes={len(outcomes)}")
             st.success(f"Cover generation completed for {len(outcomes)} report(s).")
-        except Exception as exc:
+        except UI_SURFACE_EXCEPTIONS as exc:
             _append_terminal(f"Cover generation failed: {exc}")
             st.error(str(exc))
 
@@ -1232,7 +1234,7 @@ def _render_cover_images(settings: Any) -> None:
                     "categories": sorted(list(style_config.config.categories.keys())),
                 }
             )
-        except Exception as exc:
+        except UI_SURFACE_EXCEPTIONS as exc:
             st.warning(f"Unable to load style config: {exc}")
         if outcomes:
             st.subheader("Generation Outcomes")
@@ -1454,14 +1456,18 @@ def _render_publishing_control(
     if clicked and publish_settings:
         _append_terminal("Publish requested from UI.")
         try:
-            outcomes = run_publish(publish_settings, limit=int(limit))
+            outcomes = run_publish(
+                publish_settings,
+                limit=int(limit),
+                ctx=_ctx("publish"),
+            )
             st.session_state["last_publish_outcomes"] = outcomes
             published_count = len([o for o in outcomes if o.status == "published"])
             _append_terminal(
                 f"Publish complete. published={published_count} total={len(outcomes)}"
             )
             st.success(f"Publishing completed: {published_count} published.")
-        except Exception as exc:
+        except UI_SURFACE_EXCEPTIONS as exc:
             _append_terminal(f"Publish failed: {exc}")
             st.error(str(exc))
 
@@ -1553,7 +1559,7 @@ def _render_category_manager(settings: Any, publish_settings: Any | None) -> Non
             st.session_state["last_recategorize_outcomes"] = outcomes
             _append_terminal(f"Recategorize complete. outcomes={len(outcomes)}")
             st.success(f"Recategorization completed for {len(outcomes)} reports.")
-        except Exception as exc:
+        except UI_SURFACE_EXCEPTIONS as exc:
             _append_terminal(f"Recategorize failed: {exc}")
             st.error(str(exc))
 
@@ -1566,7 +1572,7 @@ def _render_category_manager(settings: Any, publish_settings: Any | None) -> Non
             st.success(
                 f"WordPress category sync completed for {len(outcomes)} reports."
             )
-        except Exception as exc:
+        except UI_SURFACE_EXCEPTIONS as exc:
             _append_terminal(f"WP category sync failed: {exc}")
             st.error(str(exc))
 
@@ -1690,7 +1696,7 @@ def _render_cost_and_usage(settings: Any) -> None:
                 f"Cost report generated: filter={report.filter_type}:{report.filter_value} entries={report.matched_entries}"
             )
             st.success("Cost report generated.")
-        except Exception as exc:
+        except UI_SURFACE_EXCEPTIONS as exc:
             _append_terminal(f"Cost report failed: {exc}")
             st.error(str(exc))
 
@@ -2592,7 +2598,7 @@ def _render_settings_and_prompts(
         )
         prompt_rows = _to_dicts(prompt_namespaces.namespaces)
         prompt_error = None
-    except Exception as exc:  # pragma: no cover - runtime safeguard for UI
+    except UI_SURFACE_EXCEPTIONS as exc:  # pragma: no cover - runtime safeguard for UI
         prompt_rows = []
         prompt_error = str(exc)
     env_keys = [

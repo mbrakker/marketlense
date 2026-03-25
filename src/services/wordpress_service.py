@@ -67,7 +67,7 @@ def _sanitize_response_headers(headers: Any) -> Dict[str, str]:
     sanitized: Dict[str, str] = {}
     try:
         items = list(getattr(headers, "items", lambda: [])())
-    except Exception:
+    except (AttributeError, TypeError):
         return sanitized
     for raw_key, raw_value in items:
         key = str(raw_key)
@@ -460,7 +460,7 @@ def find_post_by_file_id(
 
     try:
         payload = json.loads(resp.text)
-    except Exception:
+    except json.JSONDecodeError:
         payload = []
 
     post_id = None
@@ -560,7 +560,7 @@ def _ensure_terms(
             term_id: Optional[int] = None
             try:
                 payload = json.loads(resp.text)
-            except Exception:
+            except json.JSONDecodeError:
                 payload = []
             if isinstance(payload, list) and payload:
                 term_id = payload[0].get("id")
@@ -858,5 +858,5 @@ def _update_media_alt_text(
 def _safe_json(text: str) -> Dict[str, Any]:
     try:
         return json.loads(text)
-    except Exception:
+    except json.JSONDecodeError:
         return {}

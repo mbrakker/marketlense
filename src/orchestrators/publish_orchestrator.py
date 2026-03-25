@@ -173,11 +173,12 @@ def run_publish(
     settings: PublishSettings,
     *,
     limit: Optional[int] = None,
+    ctx: Optional[RunContext] = None,
 ) -> List[PublishOutcome]:
-    ctx = new_run_context()
+    root_ctx = ctx or new_run_context()
     logger.info(
         log_event(
-            ctx,
+            root_ctx,
             role="orchestrator",
             event="publish_start",
             module=logger.name,
@@ -186,7 +187,7 @@ def run_publish(
     )
 
     list_resp = list_html(
-        ListHtmlRequest(schema_version="1.0", root_dir=settings.output_dir), ctx
+        ListHtmlRequest(schema_version="1.0", root_dir=settings.output_dir), root_ctx
     )
     max_n = limit if limit is not None else len(list_resp.html_paths)
 
@@ -199,7 +200,7 @@ def run_publish(
         bearer_token=settings.wp.bearer_token,
     )
     html_file_id_map: dict[str, str] = {}
-    mapping_ctx = child_context(ctx, task_id="publish_file_id_map")
+    mapping_ctx = child_context(root_ctx, task_id="publish_file_id_map")
     try:
         html_file_id_map = _load_html_file_id_map(settings.reports_db, mapping_ctx)
     except Exception as exc:
@@ -218,7 +219,7 @@ def run_publish(
         if processed >= max_n:
             break
 
-        file_ctx = child_context(ctx, task_id=html_path)
+        file_ctx = child_context(root_ctx, task_id=html_path)
         preloaded_html: Optional[str] = None
         file_id = html_file_id_map.get(_canonical_html_path(html_path), "")
         if file_id:
@@ -546,7 +547,7 @@ def run_publish(
 
     logger.info(
         log_event(
-            ctx,
+            root_ctx,
             role="orchestrator",
             event="publish_complete",
             module=logger.name,

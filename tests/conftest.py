@@ -200,18 +200,24 @@ def assert_logs_have_required_fields():
 
 @pytest.fixture
 def assert_no_defaulted_required_fields():
-    def _is_empty(value: Any) -> bool:
+    def _is_empty(value: Any, sentinel_values: set[str]) -> bool:
         if value is None:
             return True
         if isinstance(value, str):
-            return value.strip() == ""
+            normalized = value.strip()
+            return not normalized or normalized.lower() in sentinel_values
         if isinstance(value, (list, tuple, dict, set)):
             return len(value) == 0
         return False
 
-    def _assert(obj: Any) -> None:
+    def _assert(obj: Any, *, sentinel_values: Iterable[str] = ()) -> None:
         if not is_dataclass(obj):
             raise AssertionError("expected dataclass instance")
+        normalized_sentinels = {
+            str(value).strip().lower()
+            for value in sentinel_values
+            if str(value).strip()
+        }
         for field_def in fields(obj):
             is_required = (
                 field_def.default is MISSING and field_def.default_factory is MISSING
@@ -219,7 +225,7 @@ def assert_no_defaulted_required_fields():
             if not is_required:
                 continue
             value = getattr(obj, field_def.name)
-            if _is_empty(value):
+            if _is_empty(value, normalized_sentinels):
                 raise AssertionError(
                     f"required field defaulted/empty: {field_def.name}"
                 )

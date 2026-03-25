@@ -94,7 +94,9 @@ def test_list_pdfs_includes_nested_subfolders(monkeypatch):
     assert [f.file_id for f in files] == ["root-pdf", "child-pdf", "grandchild-pdf"]
 
 
-def test_list_pdfs_subfolder_discovery_error_is_retryable_app_error(monkeypatch):
+def test_list_pdfs_subfolder_discovery_error_is_retryable_app_error(
+    monkeypatch, assert_app_error
+):
     failing_query = "'root-folder' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
     fake_drive = _FakeDriveClient({}, raise_on_query=failing_query)
 
@@ -109,5 +111,4 @@ def test_list_pdfs_subfolder_discovery_error_is_retryable_app_error(monkeypatch)
     with pytest.raises(AppError) as err:
         list(drive_service.list_pdfs(_request(), _ctx()))
 
-    assert err.value.code == "drive_list_failed"
-    assert err.value.retryable is True
+    assert_app_error(err.value, code="drive_list_failed", retryable=True)

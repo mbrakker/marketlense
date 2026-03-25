@@ -358,7 +358,7 @@ def _existing_report_html(
             ),
             ctx,
         )
-    except Exception as exc:
+    except AppError as exc:
         logger.info(
             log_event(
                 ctx,
@@ -745,7 +745,7 @@ def run_ingest(
                     idx, file = futures[future]
                     try:
                         result = future.result()
-                    except Exception as exc:  # pragma: no cover - defensive fallback
+                    except (AppError, OSError, RuntimeError, ValueError, TypeError) as exc:  # pragma: no cover - defensive fallback
                         file_ctx = child_context(root_ctx, task_id=file.file_id)
                         logger.info(
                             log_event(
@@ -816,7 +816,7 @@ def run_ingest(
                         fields={"last_successful_ingest_utc": now_utc},
                     )
                 )
-            except Exception as exc:
+            except AppError as exc:
                 logger.info(
                     log_event(
                         root_ctx,
@@ -852,7 +852,7 @@ def run_ingest(
                 ),
                 root_ctx,
             )
-        except Exception as exc:
+        except AppError as exc:
             logger.info(
                 log_event(
                     root_ctx,
@@ -882,7 +882,7 @@ def run_ingest(
                         fields={"lock_path": lock_info.lock_path},
                     )
                 )
-            except Exception as exc:
+            except AppError as exc:
                 logger.info(
                     log_event(
                         lock_ctx,

@@ -55,7 +55,7 @@ def read_text(request: ReadTextRequest, ctx: RunContext) -> ReadTextResponse:
             cause=exc,
             retryable=False,
         ) from exc
-    except Exception as exc:
+    except (OSError, UnicodeDecodeError) as exc:
         raise AppError(
             code="file_read_failed",
             message=f"Failed to read text file: {request.path}",
@@ -94,7 +94,7 @@ def read_bytes(request: ReadBytesRequest, ctx: RunContext) -> ReadBytesResponse:
             cause=exc,
             retryable=False,
         ) from exc
-    except Exception as exc:
+    except OSError as exc:
         raise AppError(
             code="file_read_failed",
             message=f"Failed to read binary file: {request.path}",
@@ -254,7 +254,7 @@ def write_bytes(request: WriteBytesRequest, ctx: RunContext) -> WriteBytesRespon
         path.parent.mkdir(parents=True, exist_ok=True)
     try:
         path.write_bytes(request.content)
-    except Exception as exc:
+    except OSError as exc:
         raise AppError(
             code="file_write_failed",
             message=f"Failed to write binary file: {request.path}",
@@ -298,7 +298,7 @@ def file_md5(request: FileHashRequest, ctx: RunContext) -> FileHashResponse:
         )
     try:
         md5 = _md5_file(path)
-    except Exception as exc:
+    except OSError as exc:
         raise AppError(
             code="file_hash_failed",
             message=f"Failed to hash file: {request.path}",
@@ -349,7 +349,7 @@ def file_stat(request: FileStatRequest, ctx: RunContext) -> FileStatResponse:
         return response
     try:
         stat = path.stat()
-    except Exception as exc:
+    except OSError as exc:
         raise AppError(
             code="file_stat_failed",
             message=f"Failed to stat file: {request.path}",
@@ -360,7 +360,7 @@ def file_stat(request: FileStatRequest, ctx: RunContext) -> FileStatResponse:
     if request.compute_md5:
         try:
             md5 = _md5_file(path)
-        except Exception as exc:
+        except OSError as exc:
             raise AppError(
                 code="file_hash_failed",
                 message=f"Failed to hash file: {request.path}",
@@ -409,7 +409,7 @@ def delete_file(request: DeleteFileRequest, ctx: RunContext) -> DeleteFileRespon
         try:
             path.unlink()
             deleted = True
-        except Exception as exc:
+        except OSError as exc:
             raise AppError(
                 code="file_delete_failed",
                 message=f"Failed to delete file: {request.path}",
@@ -485,7 +485,7 @@ def read_latest_pdf_cache_text(
     source_path = candidates[0]
     try:
         payload = json.loads(source_path.read_text(encoding="utf-8"))
-    except Exception as exc:
+    except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
         logger.info(
             log_event(
                 ctx,

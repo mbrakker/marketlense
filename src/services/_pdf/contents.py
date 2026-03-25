@@ -17,6 +17,8 @@ from src.utils.logging import log_event
 from .shared import logger
 from .text import _close_pypdf_reader, _extract_text
 
+PDF_CONTENTS_EXCEPTIONS = (OSError, ValueError, TypeError)
+
 def detect_contents_page(request: PdfContentsDetectionRequest, ctx: RunContext) -> PdfContentsDetectionResponse:
     logger.info(log_event(
         ctx,
@@ -51,7 +53,7 @@ def detect_contents_page(request: PdfContentsDetectionRequest, ctx: RunContext) 
                 cause=exc,
                 retryable=True,
             ) from exc
-        except Exception as exc:
+        except PDF_CONTENTS_EXCEPTIONS as exc:
             raise AppError(
                 code="pdf_read_failed",
                 message=f"Failed to read PDF for contents detection: {request.path}",

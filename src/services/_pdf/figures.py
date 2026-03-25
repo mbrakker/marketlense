@@ -22,6 +22,7 @@ from src.contracts.report_assets import (
     FigureExtractResponse,
 )
 from src.contracts.run_context import RunContext
+from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.slugify import slugify
 
@@ -29,6 +30,17 @@ from .page_artifacts import is_full_page_scan_without_text
 from .shared import candidate_logger, figure_logger
 
 # BEGIN PDF CANDIDATE EXTRACTION
+PDF_FIGURE_EXCEPTIONS = (
+    RuntimeError,
+    ValueError,
+    TypeError,
+    AttributeError,
+    IndexError,
+    KeyError,
+    OSError,
+    statistics.StatisticsError,
+)
+PDF_FIGURE_TRIAGE_EXCEPTIONS = (AppError,) + PDF_FIGURE_EXCEPTIONS
 _PDFMINER_LOGGERS = (
     "pdfminer",
     "pdfminer.pdfinterp",
@@ -559,7 +571,7 @@ def _s(value: object) -> str:
         return ""
     try:
         return str(value)
-    except Exception:
+    except PDF_FIGURE_EXCEPTIONS:
         return ""
 
 
@@ -655,7 +667,7 @@ def _table_page_text_blocks(
     if text_dict is None:
         try:
             text_dict = page.get_text("dict")
-        except Exception:
+        except PDF_FIGURE_EXCEPTIONS:
             text_dict = {}
     raw_blocks = text_dict.get("blocks") or []
     for raw_block in raw_blocks:
@@ -676,7 +688,7 @@ def _table_page_text_blocks(
                 span_texts.append(span_text)
                 try:
                     font_sizes.append(float(span.get("size") or 0.0))
-                except Exception:
+                except (TypeError, ValueError):
                     continue
             if span_texts:
                 line_texts.append(" ".join(span_texts).strip())
@@ -700,7 +712,7 @@ def _table_page_text_blocks(
         return blocks
     try:
         fallback_blocks = page.get_text("blocks")
-    except Exception:
+    except PDF_FIGURE_EXCEPTIONS:
         fallback_blocks = []
     for x0, y0, x1, y1, text, *_ in fallback_blocks:
         text_str = str(text or "").strip()
@@ -741,14 +753,14 @@ def _table_horizontal_rule_rects(page: fitz.Page) -> List[fitz.Rect]:
     min_width = page_rect.width * TABLE_RANKED_MIN_RULE_WIDTH_FRAC
     try:
         drawings = page.get_drawings() or []
-    except Exception:
+    except PDF_FIGURE_EXCEPTIONS:
         drawings = []
     for drawing in drawings:
         if drawing.get("type") != "s":
             continue
         try:
             rect = fitz.Rect(drawing["rect"])
-        except Exception:
+        except PDF_FIGURE_EXCEPTIONS:
             continue
         if rect.width < min_width:
             continue
@@ -1039,7 +1051,7 @@ def _table_page_body_font_size(blocks: List[_PageTextBlock]) -> float:
         return 0.0
     try:
         return float(statistics.median(sizes))
-    except Exception:
+    except statistics.StatisticsError:
         return float(sizes[0])
 
 
@@ -1058,7 +1070,7 @@ def _table_page_text_lines(
     if text_dict is None:
         try:
             text_dict = page.get_text("dict")
-        except Exception:
+        except PDF_FIGURE_EXCEPTIONS:
             return []
     lines: List[_PageTextLine] = []
     for block in text_dict.get("blocks") or []:
@@ -2352,7 +2364,7 @@ def _panel_stacked_bottom_clip_y(
             return None
         try:
             drawings = page.get_drawings()
-        except Exception:
+        except PDF_FIGURE_EXCEPTIONS:
             drawings = []
         for drawing in drawings:
             if drawing.get("type") not in {"f", "fs"}:
@@ -2430,7 +2442,7 @@ def _image_block_rects(
     if text_dict is None:
         try:
             text_dict = page.get_text("dict")
-        except Exception:
+        except PDF_FIGURE_EXCEPTIONS:
             return []
     blocks = text_dict.get("blocks") or []
     rects: List[fitz.Rect] = []
@@ -2442,7 +2454,7 @@ def _image_block_rects(
             continue
         try:
             rects.append(fitz.Rect(*bbox))
-        except Exception:
+        except PDF_FIGURE_EXCEPTIONS:
             continue
     return rects
 
@@ -2457,7 +2469,7 @@ def _collect_chart_rects(
     for xref, *_ in page.get_images(full=True):
         try:
             image_rects = page.get_image_rects(xref)
-        except Exception:
+        except PDF_FIGURE_EXCEPTIONS:
             image_rects = []
         if not image_rects:
             continue
@@ -2508,7 +2520,7 @@ def _collect_chart_rects(
 def _drawing_rects(page: fitz.Page) -> List[fitz.Rect]:
     try:
         drawings = page.get_drawings()
-    except Exception:
+    except PDF_FIGURE_EXCEPTIONS:
         return []
     page_area = max(1.0, page.rect.get_area())
     rects: List[fitz.Rect] = []
@@ -2518,7 +2530,7 @@ def _drawing_rects(page: fitz.Page) -> List[fitz.Rect]:
             continue
         try:
             r = fitz.Rect(rect)
-        except Exception:
+        except PDF_FIGURE_EXCEPTIONS:
             continue
         if r.width < DRAWING_MIN_RECT_DIM and r.height < DRAWING_MIN_RECT_DIM:
             continue
@@ -3432,7 +3444,7 @@ def _page_looks_like_contents_layout(
 ) -> bool:
     try:
         source_blocks = blocks or page.get_text("blocks")
-    except Exception:
+    except PDF_FIGURE_EXCEPTIONS:
         return False
     top_limit = page.rect.height * 0.35
     top_lines: List[str] = []
@@ -4279,7 +4291,7 @@ def _caption_blocks(
     if blocks is None:
         try:
             blocks = page.get_text("blocks")
-        except Exception:
+        except PDF_FIGURE_EXCEPTIONS:
             return rects
     for x0, y0, x1, y1, text, *_ in blocks:
         if not text:
@@ -4321,7 +4333,7 @@ def _heading_lines(
     if text_dict is None:
         try:
             text_dict = page.get_text("dict")
-        except Exception:
+        except PDF_FIGURE_EXCEPTIONS:
             return []
     sizes = []
     lines_data = []
@@ -4359,7 +4371,7 @@ def _heading_lines(
         return []
     try:
         median_size = statistics.median(sizes)
-    except Exception:
+    except statistics.StatisticsError:
         median_size = 0.0
     min_size = max(INFO_HEADING_MIN_SIZE, median_size + INFO_HEADING_SIZE_DELTA)
     headings: List[Tuple[fitz.Rect, str, float]] = []
@@ -4436,7 +4448,7 @@ def _has_intervening_paragraph(
     if blocks is None:
         try:
             blocks = page.get_text("blocks")
-        except Exception:
+        except PDF_FIGURE_EXCEPTIONS:
             return False
     for x0, y0, x1, y1, text, *_ in blocks:
         if not text:
@@ -4648,7 +4660,7 @@ def _heading_top_block_limit(
     best_y1 = None
     try:
         blocks = page.get_text("blocks")
-    except Exception:
+    except PDF_FIGURE_EXCEPTIONS:
         return None
     for x0, y0, x1, y1, text, *_ in blocks:
         if not text:
@@ -4682,7 +4694,7 @@ def _caption_top_block_limit(
     best_y1 = None
     try:
         blocks = page.get_text("blocks")
-    except Exception:
+    except PDF_FIGURE_EXCEPTIONS:
         return None
     for x0, y0, x1, y1, text, *_ in blocks:
         if not text:
@@ -4713,7 +4725,7 @@ def _extend_with_note_blocks(page: fitz.Page, rect: fitz.Rect) -> fitz.Rect:
     expanded = rect
     try:
         blocks = page.get_text("blocks")
-    except Exception:
+    except PDF_FIGURE_EXCEPTIONS:
         return rect
     for x0, y0, x1, y1, text, *_ in blocks:
         if y1 < rect.y1 - 2 or y0 > limit:
@@ -4796,7 +4808,7 @@ def _extend_with_adjacent_text_blocks(page: fitz.Page, rect: fitz.Rect) -> fitz.
     expanded = rect
     try:
         blocks = page.get_text("blocks")
-    except Exception:
+    except PDF_FIGURE_EXCEPTIONS:
         return rect
     for x0, y0, x1, y1, text, *_ in blocks:
         if not text:
@@ -4890,7 +4902,7 @@ def _extend_chart_rect_with_adjacent_drawings(
     baseline_top = rect.y0 + rect.height * 0.45
     try:
         drawings = page.get_drawings()
-    except Exception:
+    except PDF_FIGURE_EXCEPTIONS:
         return rect
     changed = True
     while changed:
@@ -4953,7 +4965,7 @@ def _extend_panel_rect_with_adjacent_drawings(
     expanded = fitz.Rect(rect)
     try:
         drawings = page.get_drawings()
-    except Exception:
+    except PDF_FIGURE_EXCEPTIONS:
         return rect
     changed = True
     while changed:
@@ -5032,7 +5044,7 @@ def _clamp_panel_rect_to_dominant_fill_rect(
     overlap_fill_count = 0
     try:
         drawings = page.get_drawings()
-    except Exception:
+    except PDF_FIGURE_EXCEPTIONS:
         return rect
     rect_texts: dict[tuple[float, float, float, float], str] = {}
     for drawing in drawings:
@@ -5062,7 +5074,7 @@ def _clamp_panel_rect_to_dominant_fill_rect(
         if rect_key not in rect_texts:
             try:
                 rect_texts[rect_key] = page.get_text("text", clip=draw_rect) or ""
-            except Exception:
+            except PDF_FIGURE_EXCEPTIONS:
                 rect_texts[rect_key] = ""
         clipped_text = rect_texts[rect_key]
         local_signal = _panel_chart_has_compact_stat_card_signal(clipped_text)
@@ -5100,7 +5112,7 @@ def _extend_panel_with_adjacent_text_blocks(
     bottom_label_attached = False
     try:
         components = _drawing_components(page)
-    except Exception:
+    except PDF_FIGURE_EXCEPTIONS:
         components = []
 
     def _panel_compact_top_title_like(
@@ -5187,7 +5199,7 @@ def _extend_panel_with_adjacent_text_blocks(
 
     try:
         blocks = page.get_text("blocks")
-    except Exception:
+    except PDF_FIGURE_EXCEPTIONS:
         return rect
     for x0, y0, x1, y1, text, *_ in blocks:
         if not text:
@@ -5428,7 +5440,7 @@ def _has_internal_top_text(
     search = page.rect.height * CHART_HEADING_TOP_SEARCH_FRAC
     try:
         blocks = page.get_text("blocks")
-    except Exception:
+    except PDF_FIGURE_EXCEPTIONS:
         return False
     for x0, y0, x1, y1, text, *_ in blocks:
         if not text:
@@ -5481,7 +5493,7 @@ def _adjust_rect_for_text_margins(
     right_text = None
     try:
         blocks = page.get_text("blocks")
-    except Exception:
+    except PDF_FIGURE_EXCEPTIONS:
         return rect
     for x0, y0, x1, y1, text, *_ in blocks:
         if not text:
@@ -5548,7 +5560,7 @@ def _expand_rect_into_whitespace(
             if not text:
                 continue
             blockers.append(fitz.Rect(x0, y0, x1, y1))
-    except Exception:
+    except PDF_FIGURE_EXCEPTIONS:
         blockers = []
 
     blockers.extend(_drawing_rects(page))
@@ -5668,7 +5680,7 @@ def _note_block_bottom(
     max_gap_x = page_rect.width * CHART_NOTE_MAX_GAP_X_FRAC
     try:
         blocks = page.get_text("blocks")
-    except Exception:
+    except PDF_FIGURE_EXCEPTIONS:
         return None
     for x0, y0, x1, y1, text, *_ in blocks:
         if y0 < min_y0 or y0 > rect.y1 + CHART_NOTE_MAX_DIST:
@@ -5704,7 +5716,7 @@ def _next_block_top_below(
             if not text:
                 continue
             blocks.append(fitz.Rect(x0, y0, x1, y1))
-    except Exception:
+    except PDF_FIGURE_EXCEPTIONS:
         blocks = []
     blocks.extend(_drawing_rects(page))
     blocks.extend(_image_block_rects(page))
@@ -5809,7 +5821,7 @@ def _nearby_text(
     if blocks is None:
         try:
             blocks = page.get_text("blocks")
-        except Exception:
+        except PDF_FIGURE_EXCEPTIONS:
             return ""
     for x0, y0, x1, y1, text, *_ in blocks:
         if not text:
@@ -5964,7 +5976,7 @@ def _extract_text_in_bbox(
 ) -> str:
     try:
         return page.within_bbox(bbox).extract_text() or ""
-    except Exception:
+    except (AttributeError, ValueError, RuntimeError, TypeError):
         return ""
 
 
@@ -6142,7 +6154,7 @@ def _trim_top_page_number(
     best_y1: Optional[float] = None
     try:
         blocks = page.get_text("blocks")
-    except Exception:
+    except PDF_FIGURE_EXCEPTIONS:
         return rect
     for x0, y0, x1, y1, text, *_ in blocks:
         if not text:
@@ -6223,7 +6235,7 @@ def _text_block_stats(
     if blocks is None:
         try:
             blocks = page.get_text("blocks")
-        except Exception:
+        except PDF_FIGURE_EXCEPTIONS:
             blocks = []
     for x0, y0, x1, y1, text, *_ in blocks:
         if not text:
@@ -6250,11 +6262,11 @@ def _has_caption_hint(
     text = ""
     try:
         text += page.get_text("text", clip=above) or ""
-    except Exception:
+    except PDF_FIGURE_EXCEPTIONS:
         pass
     try:
         text += " " + (page.get_text("text", clip=below) or "")
-    except Exception:
+    except PDF_FIGURE_EXCEPTIONS:
         pass
     lowered = text.lower()
     return any(hint in lowered for hint in TABLE_CAPTION_HINTS)
@@ -6279,7 +6291,7 @@ def _has_figure_context_hint(
         return False
     try:
         text = page.get_text("text", clip=clip) or ""
-    except Exception:
+    except PDF_FIGURE_EXCEPTIONS:
         text = ""
     if _table_text_has_figure_context(text):
         return True
@@ -6293,7 +6305,7 @@ def _has_figure_context_hint(
         return False
     try:
         full_width_text = page.get_text("text", clip=full_width_clip) or ""
-    except Exception:
+    except PDF_FIGURE_EXCEPTIONS:
         return False
     return _table_text_has_figure_context(full_width_text)
 
@@ -7137,7 +7149,7 @@ def _suppress_pdfminer_warnings() -> None:
     for name in _PDFMINER_LOGGERS:
         try:
             logging.getLogger(name).setLevel(logging.ERROR)
-        except Exception:
+        except (OSError, ValueError):
             continue
 
 
@@ -7255,7 +7267,7 @@ def _prune_final_chart_candidates(
         try:
             page = doc[int(candidate.page)]
             text = page.get_text("text", clip=fitz.Rect(candidate.bbox))
-        except Exception:
+        except PDF_FIGURE_EXCEPTIONS:
             kept.append(candidate)
             continue
         header_line = _final_chart_header_reanchor_line(candidate, page, text)
@@ -7280,7 +7292,7 @@ def _prune_final_chart_candidates(
             adjusted += 1
             try:
                 text = page.get_text("text", clip=fitz.Rect(candidate.bbox))
-            except Exception:
+            except PDF_FIGURE_EXCEPTIONS:
                 pass
         if _final_chart_candidate_looks_forecast_table(candidate, text):
             pruned += 1
@@ -7335,7 +7347,7 @@ def _open_candidate_triage_doc(
         return shared_doc, False
     try:
         return fitz.open(pdf_path), True
-    except Exception:
+    except PDF_FIGURE_EXCEPTIONS:
         return None, False
 
 
@@ -7353,7 +7365,7 @@ def _plan_candidate_pages(
             if is_full_page_scan_without_text(triage_doc[index]):
                 triaged_full_scan_pages += 1
                 continue
-        except Exception:
+        except PDF_FIGURE_TRIAGE_EXCEPTIONS:
             pass
         triaged_pages.append(index)
     return _CandidatePagePlan(
@@ -7431,7 +7443,7 @@ def _finalize_chart_collection(
         if close_doc and final_doc is not None:
             try:
                 final_doc.close()
-            except Exception:
+            except PDF_FIGURE_EXCEPTIONS:
                 pass
 
 
@@ -7512,7 +7524,7 @@ def collect_candidates(
         if close_doc and triage_doc is not None:
             try:
                 triage_doc.close()
-            except Exception:
+            except PDF_FIGURE_EXCEPTIONS:
                 pass
     chart_count = sum(1 for candidate in candidates if candidate.kind == "chart")
     table_count = sum(1 for candidate in candidates if candidate.kind == "table")
@@ -7736,5 +7748,5 @@ def _extract_best_figure_png(
         best[0].save(out_path.as_posix())
         rel = Path(report_name) / "assets" / out_path.name
         return rel.as_posix(), best[2], int(best[3])
-    except Exception:
+    except PDF_FIGURE_EXCEPTIONS:
         return None, None, -1

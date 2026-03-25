@@ -6,6 +6,27 @@ This file combines all TODOs found in the repository (from `TODO.md`, `html_todo
 
 Completed items are removed from this backlog once their acceptance criteria are met. The PDF service internal split, the report-generator phase split, the validation-generator rule split, the evidence-pack strategy split, the duration-tooling consolidation, the legacy `analysis.compare` / `ingest.debug_candidate_gallery` cleanup, and the monkeypatch-heavy test hotspot cleanup were completed on or before 2026-03-25 and are no longer tracked here as open work. This file is the single source of truth for open backlog items, including the remaining work previously tracked in `docs/quality/ineffective-choices-top50.md`.
 
+How to use this backlog:
+
+- Treat this file as the only active TODO source.
+- Remove items once their acceptance criteria are fully met.
+- Prefer adding new tasks under the most relevant workstream instead of creating new append-only audit sections.
+- Keep overlapping work merged into one item with explicit source notes in the explanation when needed.
+
+Section guide:
+
+- `1-7`: product, pipeline, publishing, and quality workstreams
+- `8`: audit-driven refactors and compliance backlog
+- `9`: supplemental code-reduction opportunities
+
+Suggested reading order when prioritizing:
+
+1. `5. Orchestration, Durability & Performance`
+2. `6. Publishing & WordPress`
+3. `7. Schema, Validation & Output Quality`
+4. `8. Audit-Driven Refactors & Compliance`
+5. `9. Supplemental Code-Reduction Intake`
+
 ---
 
 ## 1. Prompts & Prompting
@@ -191,11 +212,12 @@ Completed items are removed from this backlog once their acceptance criteria are
     - A run can resume from a checkpoint and produce consistent results.
 
 - **Title:** Centralize LLM orchestration with retry/backoff/circuit-breaker
-  - Explanation: Provide a shared LLM orchestration layer to handle retries, backoff, timeouts, and circuit-breaking logic for all model calls.
+  - Explanation: Provide a shared LLM orchestration layer to handle retries, backoff, timeouts, and circuit-breaking logic for all model calls, and remove thin local pass-through retry wrappers in favor of one shared retry API.
   - Pros: Consistent error handling and simpler generator code.
   - Cons: One centralized layer must be robust and well-tested.
   - Acceptance Criteria:
     - New orchestration layer used by generators and services.
+    - Local pass-through retry wrappers are removed from affected modules.
     - Retries and backoff are exercised in unit/integration tests.
 
 - **Title:** Stream LLM responses with early validation / fail-fast
@@ -240,8 +262,9 @@ Completed items are removed from this backlog once their acceptance criteria are
 
 ---
 
-## 8. Codebase Audit: High-Impact Refactors
+## 8. Audit-Driven Refactors & Compliance
 
+### 8.1 Core High-Impact Refactors
 - **Title:** Cache Jinja `Environment` at module scope and unify render service
   - Explanation: Avoid recreating Jinja environment per render; centralize render service to return deterministic outputs and reduce overhead.
   - Pros: Performance and fewer subtle diffs.
@@ -257,7 +280,7 @@ Completed items are removed from this backlog once their acceptance criteria are
     - WAL mode enabled with safe busy timeouts.
     - Concurrency tests show reduced contention.
 
-### Additional Code Audit Items (explicit)
+### 8.2 Additional Audit Items
 
 - **Title:** Fix O(n^2) table dedupe hotspot
   - Explanation: Replace the O(n^2) table dedupe algorithm in candidate extraction with a more efficient approach (hashing/indexing) to improve performance on large documents.
@@ -290,9 +313,7 @@ Completed items are removed from this backlog once their acceptance criteria are
     - Per-stage flags configurable and respected by orchestrators.
     - Tests validate enabling/disabling stages.
 
----
-
-## 9. Low-Effort / High-Impact Opportunities (Quick Wins)
+### 8.3 Quick Wins
 
 - **Title:** Reuse contents-page preview when it overlaps with general preview rendering
   - Explanation: Detect when the contents-page preview output overlaps or duplicates the main preview and reuse the same rendered asset instead of generating a second one.
@@ -320,8 +341,7 @@ Completed items are removed from this backlog once their acceptance criteria are
 
 Each quick-win should be documented with a short task when prioritized.
 
----
-## 10. Architecture-Fit Additions (Incremental)
+### 8.4 Architecture-Fit Additions
 
 - **Title:** Enforce schema-version parity for all dataclass contracts
   - Explanation: Add a contract linter/test that fails when any dataclass in `src/contracts/**` lacks a `schema_version` field. Current audit found classes such as `PdfTextSample`, `CategoryDefinition`, and `UncategorizedTagsEntry` without explicit schema versioning.
@@ -331,43 +351,28 @@ Each quick-win should be documented with a short task when prioritized.
     - Linter/test added and wired into CI.
     - All contracts include explicit `schema_version` (or documented exemption list with rationale).
 
-- **Title:** Propagate CLI/GUI run context into publish pipeline
-  - Explanation: Standardize `run_id/task_id/span_id` propagation from entry points into `run_publish` and downstream calls so publish logs correlate to the triggering command/session instead of creating a fresh top-level context per call.
-  - Pros: Better traceability, easier incident debugging, consistent observability.
-  - Cons: Requires small signature changes across orchestrator boundaries.
-  - Acceptance Criteria:
-    - `run_publish` accepts external context and uses it when provided.
-    - Publish logs for CLI/GUI flows share the initiating `run_id`.
-    - Tests assert context continuity in emitted log fields.
-
-- **Title:** Harden config portability by removing environment-specific defaults from tracked YAML
-  - Explanation: Move concrete deployment values (e.g., Drive folder IDs, site URLs, usernames) out of committed defaults into environment overlays (`app.example.yaml` + env vars) and document profile-based config loading.
-  - Pros: Safer repo defaults, easier onboarding across environments, lower risk of accidental prod coupling.
-  - Cons: Requires migration docs and bootstrap scripts for current deployments.
+- **Title:** Normalize config defaults, portability, and tracked operational artifacts
+  - Explanation: Move concrete deployment values (e.g., Drive folder IDs, site URLs, usernames) out of committed defaults into environment overlays (`app.example.yaml` + env vars), move hardcoded defaults and keyword lists out of `src/services/config_service.py` into one documented source of truth, and stop tracking generated operational artifacts such as `logs/*.csv` and `logs/*.json` unless they are intentional fixtures.
+  - Pros: Safer repo defaults, easier onboarding across environments, lower risk of accidental prod coupling, and less repository noise.
+  - Cons: Requires migration docs, bootstrap scripts, and a review of any current tracked artifacts treated as fixtures.
   - Acceptance Criteria:
     - `src/config/app.yaml` contains environment-neutral defaults only.
+    - Config defaults are defined in one source of truth and documented in the README.
     - Example/local override pattern documented in README.
+    - Generated log artifacts are ignored or moved to a documented fixture/snapshot location with rationale.
     - Bootstrapping tests verify env/profile overrides resolve correctly.
 
 - **Title:** Add architecture boundary checks (import + I/O role linting)
-  - Explanation: Introduce automated checks that enforce layer dependency rules (`services -> contracts/utils`, etc.) and flag direct filesystem/network usage in generators and utilities that should remain pure.
+  - Explanation: Introduce automated checks that enforce layer dependency rules (`services -> contracts/utils`, etc.), flag direct filesystem/network usage in generators and utilities that should remain pure, and drive removal of existing cross-role coupling so the same rule exists only once in the backlog.
   - Pros: Prevents architectural drift and role leakage over time.
   - Cons: Requires curating false-positive exemptions for legitimate edge cases.
   - Acceptance Criteria:
     - Boundary linter runs in CI.
     - Violations report exact module and forbidden dependency/API usage.
+    - Forbidden cross-role imports/coupling are removed from current hotspots.
     - Existing violations are fixed or explicitly documented with expiry dates.
 
-### AGENTS.md Compliance Backlog (Audit 2026-02-21)
-
-- **Title:** Remove placeholder/sentinel production outputs and fail explicitly
-  - Explanation: Replace placeholder payloads/default-filled semantic fields with explicit typed `AppError` failures when required data cannot be produced.
-  - Pros: Prevents silent quality degradation and improves correctness guarantees.
-  - Cons: More hard-fail scenarios may require upstream handling and UX messaging.
-  - Acceptance Criteria:
-    - Placeholder text/sentinel payload paths removed from production generators.
-    - Missing required contract fields cause typed `AppError` with context.
-    - Tests verify no default/sentinel-filled required contract fields.
+### 8.5 AGENTS.md Compliance Backlog
 
 - **Title:** Ensure retryable `AppError` propagation from generators
   - Explanation: Remove generator-side swallowing of retryable failures and propagate retryable `AppError` to orchestrators for policy-driven retry.
@@ -377,15 +382,6 @@ Each quick-win should be documented with a short task when prioritized.
     - Generators do not suppress retryable `AppError`.
     - Orchestrator tests verify retries/backoff/state transitions for propagated errors.
     - Error taxonomy assertions (`code`, `retryable`, `severity`) added for failure paths.
-
-- **Title:** Enforce role-bound import rules and remove cross-role coupling
-  - Explanation: Eliminate forbidden imports and coupling (service-to-service orchestration logic, generator-to-generator orchestration dependencies) to match AGENTS dependency boundaries.
-  - Pros: Cleaner architecture and easier isolation testing.
-  - Cons: Requires extracting shared behavior into proper utility/service boundaries.
-  - Acceptance Criteria:
-    - Services import only contracts/utils (and approved low-level primitives).
-    - Generators import services/contracts/utils only; orchestration lives in orchestrators.
-    - Boundary checks prevent regressions.
 
 - **Title:** Enforce prompt immutability outside prompt service and complete prompt observability
   - Explanation: Ban runtime prompt text mutation/concatenation outside prompt service and ensure every model call logs prompt namespace, file paths, prompt hashes, exact rendered prompts, model params, and raw response.
@@ -432,9 +428,7 @@ Each quick-win should be documented with a short task when prioritized.
     - Integration tests are explicitly marked and excluded from default CI unit run.
     - Unit tests avoid live external calls.
 
----
-
-## 11. Merged Audit Intake: Ineffective Choices Top 50
+### 8.6 Merged Audit Intake: Ineffective Choices Top 50
 
 This section absorbs the 2026-03-08 low-effort/high-impact repository audit into the canonical backlog. Overlapping findings were deduplicated against existing items above; the tasks below capture the remaining gaps and name the concrete hotspots to refactor.
 
@@ -456,47 +450,19 @@ This section absorbs the 2026-03-08 low-effort/high-impact repository audit into
     - Generator logs continue to expose the same prompt and validation observability after the split.
     - Sentinel or default-filled intermediate payloads are not introduced during refactoring.
 
-- **Title:** Replace broad exception hotspots with typed `AppError` mapping
-  - Explanation: Audit and narrow `except Exception` usage in `src/services/_pdf/text.py`, `src/services/_pdf/contents.py`, `src/services/_pdf/figures.py`, `src/services/_pdf/crop.py`, `src/services/openai_service.py`, `src/ui/streamlit_pages.py`, `src/services/file_service.py`, `src/services/lock_service.py`, `src/services/drive_service.py`, `src/orchestrators/ingest_orchestrator.py`, `src/services/wordpress_service.py`, and `src/services/report_store_service.py`. The report-generator split removed that module from this hotspot list. This merges audit items 26-28 and 30-35.
-  - Pros: Better retry decisions, clearer root causes, and stronger compliance with the typed error taxonomy.
-  - Cons: Requires revisiting negative-path tests and some UI error rendering assumptions.
-  - Acceptance Criteria:
-    - Broad catches are replaced with specific exception handling or explicit typed boundary mapping.
-    - Negative-path tests assert `AppError.code`, `retryable`, and `severity` for the affected modules.
-    - Retryable errors propagate to orchestrators instead of being downgraded to generic failures.
-
 - **Title:** Decouple cross-role side effects in OpenAI, CLI, and control-flow helpers
-  - Explanation: Remove cost-ledger persistence from `src/services/openai_service.py`, centralize repeated CLI status rendering instead of scattered `console.print(...)` calls in `src/cli.py`, and extract large branch-policy helpers from `src/ui/streamlit_pages.py` and the remaining oversized generation flows. This merges audit items 46, 47, and 49.
+  - Explanation: Remove cost-ledger persistence from `src/services/openai_service.py`, centralize repeated OpenAI cost-estimation/ledger-update blocks behind one helper while keeping side effects outside the service boundary, centralize repeated CLI status rendering instead of scattered `console.print(...)` calls in `src/cli.py`, and extract large branch-policy helpers from `src/ui/streamlit_pages.py` and the remaining oversized generation flows. This merges audit items 46, 47, and 49.
   - Pros: Cleaner service boundaries, more consistent operator UX, easier policy testing.
   - Cons: Requires small API changes between orchestrators, services, and UI helpers.
   - Acceptance Criteria:
     - OpenAI service emits cost/accounting data without directly persisting ledger side effects.
+    - OpenAI cost/accounting adaptation uses one shared helper instead of repeated ledger-write blocks.
     - CLI status formatting is routed through shared rendering helpers.
     - Major branch policies in UI/report generation are moved into named helpers with focused tests.
 
-- **Title:** Normalize config defaults and stop tracking generated operational artifacts
-  - Explanation: Move hardcoded defaults and keyword lists out of `src/services/config_service.py` into schema-backed config constants or YAML, and remove generated `logs/*.csv` and `logs/*.json` artifacts from tracked repository state unless they are intentional documented fixtures. This merges audit items 48 and 50.
-  - Pros: Safer configuration drift control, less repository noise, clearer operational hygiene.
-  - Cons: Requires migration notes for current defaults and a review of any log files currently treated as fixtures.
-  - Acceptance Criteria:
-    - Config defaults are defined in one source of truth and documented in the README.
-    - Generated log artifacts are ignored or moved to a documented fixture/snapshot location with rationale.
-    - Tests or tooling verify config defaults and log artifact policies do not regress.
-
----
-
-## 12. Supplemental Code-Reduction Intake
+## 9. Supplemental Code-Reduction Intake
 
 This section absorbs the remaining open appendix items from `docs/quality/ineffective-choices-top50.md` so the consolidated TODO remains the only active backlog.
-
-- **Title:** Consolidate repeated OpenAI cost-ledger persistence
-  - Explanation: Replace repeated cost-estimation, ledger-append, and daily-rollup blocks in `src/services/openai_service.py` with one shared helper while preserving the current best-effort logging behavior and payload shape.
-  - Pros: Less duplication, lower drift risk across OpenAI operations, easier cost-path testing.
-  - Cons: Requires careful verification that ledger payloads remain identical.
-  - Acceptance Criteria:
-    - OpenAI service cost writes route through one shared helper.
-    - Cost ledger entries remain identical in content for existing covered paths.
-    - Failure to persist cost data remains non-fatal and logged.
 
 - **Title:** Centralize OpenAI response metadata adaptation
   - Explanation: Deduplicate request-id, token-count, tool-call, and parsed-JSON extraction logic across JSON chat, image chat, and vector-store response flows.
@@ -569,15 +535,6 @@ This section absorbs the remaining open appendix items from `docs/quality/ineffe
     - One shared helper module owns HTML-path canonicalization and file-id map loading.
     - Publish queue and publish flows resolve file IDs exactly as before.
     - Duplicate helper bodies are removed from both orchestrators.
-
-- **Title:** Remove thin local retry wrappers in favor of shared retry API
-  - Explanation: Eliminate tiny `_run_step_with_retry` wrappers that only forward fixed arguments to shared retry logic, either by calling the shared retry orchestrator directly or by using one common adapter.
-  - Pros: Less duplicated control-flow code and easier retry-policy consistency.
-  - Cons: Refactor must preserve current sleep, logging, and retryable-error semantics.
-  - Acceptance Criteria:
-    - Local pass-through retry wrappers are removed from affected modules.
-    - Retry counts, log fields, and backoff behavior remain unchanged.
-    - Orchestrator retry tests continue to pass.
 
 - **Title:** Centralize dataclass-to-dict row serialization for UI and dashboards
   - Explanation: Replace repeated “dataclass/dict/object to row dict” helpers across UI, ops dashboard, and related table-rendering code with one shared pure serializer.

@@ -68,6 +68,20 @@ def _seed_report_metadata(
     )
 
 
+def _json_events(caplog, logger_name: str) -> list[dict[str, object]]:
+    events: list[dict[str, object]] = []
+    for record in caplog.records:
+        if record.name != logger_name:
+            continue
+        try:
+            payload = json.loads(record.getMessage())
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            events.append(payload)
+    return events
+
+
 def test_publish_runs_when_processed(
     publish_settings_factory, run_context, wordpress_http
 ) -> None:
@@ -382,3 +396,38 @@ def test_publish_ignores_publish_state_for_different_post_type(
     assert publish_row is not None
     assert publish_row.wp_post_id == 101
     assert publish_row.post_type == settings.wp.post_type
+
+
+def test_publish_uses_provided_run_context_for_logs(
+    publish_settings_factory,
+    run_context,
+    wordpress_http,
+    caplog,
+    assert_logs_have_required_fields,
+) -> None:
+    settings = publish_settings_factory(validation_policy="warn")
+    _write_html(settings.output_dir, "report.html", "Drive fileId: file123")
+    _record_processed(settings.state_db, "file123", run_context)
+    wordpress_http.add_json(
+        "GET",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=200,
+        payload=[],
+    )
+    wordpress_http.add_json(
+        "POST",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=201,
+        payload={"id": 10, "link": "https://example.com/post/10", "status": "publish"},
+    )
+
+    caplog.set_level(logging.INFO, logger=orch.logger.name)
+    results = orch.run_publish(settings, limit=1, ctx=run_context)
+
+    events = _json_events(caplog, orch.logger.name)
+    assert len(results) == 1
+    assert results[0].status == "published"
+    assert_logs_have_required_fields(events)
+    assert any(event.get("event") == "publish_start" for event in events)
+    assert any(event.get("event") == "publish_complete" for event in events)
+    assert all(event.get("run_id") == run_context.run_id for event in events)

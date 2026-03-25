@@ -17,7 +17,7 @@ try:
     from openai import OpenAI as _OpenAI
 
     OpenAI = _OpenAI
-except Exception:  # pragma: no cover - compatibility fallback
+except ImportError:  # pragma: no cover - compatibility fallback
     OpenAI = None
 
 from src.contracts.costs import (
@@ -62,6 +62,30 @@ from src.utils.json_recovery import (
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.openai_service")
+OPENAI_ERROR_TYPES = tuple(
+    error_type
+    for error_type in (
+        getattr(openai_legacy, "OpenAIError", None),
+        getattr(openai_legacy, "APIError", None),
+        getattr(openai_legacy, "APIConnectionError", None),
+        getattr(openai_legacy, "APIStatusError", None),
+        getattr(openai_legacy, "APITimeoutError", None),
+        getattr(openai_legacy, "RateLimitError", None),
+        getattr(openai_legacy, "InternalServerError", None),
+        getattr(openai_legacy, "BadRequestError", None),
+        getattr(openai_legacy, "AuthenticationError", None),
+    )
+    if isinstance(error_type, type)
+)
+OPENAI_REQUEST_EXCEPTIONS = OPENAI_ERROR_TYPES + (
+    RuntimeError,
+    OSError,
+    ValueError,
+    TypeError,
+    AttributeError,
+)
+OPENAI_CLIENT_INIT_EXCEPTIONS = OPENAI_ERROR_TYPES + (OSError, ValueError)
+OPENAI_LEDGER_EXCEPTIONS = (AppError, OSError, ValueError, TypeError)
 
 REQUIRED_KEYS = (
     "tldr",
@@ -123,7 +147,7 @@ def _image_path_to_data_url(path: str) -> str:
             cause=exc,
             retryable=False,
         ) from exc
-    except Exception as exc:
+    except OSError as exc:
         raise AppError(
             code="image_read_failed",
             message=f"Failed to read image: {path}",
@@ -186,7 +210,7 @@ def _responses_create_with_unsupported_param_retry(
     while True:
         try:
             return client.responses.create(**attempt_args)
-        except Exception as exc:
+        except OPENAI_REQUEST_EXCEPTIONS as exc:
             unsupported_param = _extract_unsupported_parameter(exc)
             if (
                 unsupported_param not in fallback_params
@@ -306,9 +330,7 @@ def _append_cost_entry_safe(
             ),
             ctx,
         )
-    except (
-        Exception
-    ) as exc:  # pragma: no cover - ledger failures must not break main flow
+    except OPENAI_LEDGER_EXCEPTIONS as exc:  # pragma: no cover - ledger failures must not break main flow
         logger.info(
             log_event(
                 ctx,
@@ -514,7 +536,7 @@ def analyze_report(
         prompt_tokens = run.prompt_tokens
         completion_tokens = run.completion_tokens
         total_tokens = run.total_tokens
-    except Exception as exc:
+    except OPENAI_REQUEST_EXCEPTIONS as exc:
         raise AppError(
             code="openai_request_failed",
             message="OpenAI request failed",
@@ -710,7 +732,7 @@ def openai_chat_json(
         prompt_tokens = run.prompt_tokens
         completion_tokens = run.completion_tokens
         total_tokens = run.total_tokens
-    except Exception as exc:
+    except OPENAI_REQUEST_EXCEPTIONS as exc:
         raise AppError(
             code="openai_chat_failed",
             message="OpenAI chat request failed",
@@ -763,7 +785,7 @@ def openai_chat_json(
             ),
             ctx,
         )
-    except Exception as exc:  # pragma: no cover
+    except OPENAI_LEDGER_EXCEPTIONS as exc:  # pragma: no cover
         logger.info(
             log_event(
                 ctx,
@@ -884,7 +906,7 @@ def openai_chat_json_with_images(
             retryable=False,
             context={"model": request.model},
         ) from exc
-    except Exception as exc:
+    except OPENAI_REQUEST_EXCEPTIONS as exc:
         logger.info(
             log_event(
                 ctx,
@@ -960,7 +982,7 @@ def openai_chat_json_with_images(
             ),
             ctx,
         )
-    except Exception as exc:  # pragma: no cover
+    except OPENAI_LEDGER_EXCEPTIONS as exc:  # pragma: no cover
         logger.info(
             log_event(
                 ctx,
@@ -1020,7 +1042,7 @@ def openai_ocr_pdf(
             cause=exc,
             retryable=False,
         ) from exc
-    except Exception as exc:
+    except OSError as exc:
         raise AppError(
             code="openai_ocr_pdf_read_failed",
             message=f"Failed to read PDF for OCR: {pdf_path}",
@@ -1072,7 +1094,7 @@ def openai_ocr_pdf(
         )
     except AppError:
         raise
-    except Exception as exc:
+    except OPENAI_REQUEST_EXCEPTIONS as exc:
         logger.info(
             log_event(
                 ctx,
@@ -1230,7 +1252,7 @@ def openai_respond_with_vector_store(
             retryable=False,
             context={"model": request.model},
         ) from exc
-    except Exception as exc:
+    except OPENAI_REQUEST_EXCEPTIONS as exc:
         logger.info(
             log_event(
                 ctx,
@@ -1339,7 +1361,7 @@ def openai_respond_with_vector_store(
             ),
             ctx,
         )
-    except Exception as exc:  # pragma: no cover
+    except OPENAI_LEDGER_EXCEPTIONS as exc:  # pragma: no cover
         logger.info(
             log_event(
                 ctx,
@@ -1425,7 +1447,7 @@ def _build_openai_client(
             retryable=False,
             context={"operation": operation},
         ) from exc
-    except Exception as exc:
+    except OPENAI_CLIENT_INIT_EXCEPTIONS as exc:
         raise AppError(
             code="openai_client_init_failed",
             message="Failed to initialize OpenAI client",
@@ -1481,7 +1503,7 @@ def openai_vector_store_create(
         )
     except AppError:
         raise
-    except Exception as exc:
+    except OPENAI_REQUEST_EXCEPTIONS as exc:
         raise AppError(
             code="openai_vector_store_create_failed",
             message="OpenAI vector store create request failed",
@@ -1549,7 +1571,7 @@ def openai_vector_store_upload_file(
         ) from exc
     except AppError:
         raise
-    except Exception as exc:
+    except OPENAI_REQUEST_EXCEPTIONS as exc:
         raise AppError(
             code="openai_vector_store_upload_failed",
             message="OpenAI file upload request failed",
@@ -1605,7 +1627,7 @@ def openai_vector_store_attach_file(
         )
     except AppError:
         raise
-    except Exception as exc:
+    except OPENAI_REQUEST_EXCEPTIONS as exc:
         raise AppError(
             code="openai_vector_store_attach_failed",
             message="OpenAI vector store attach request failed",
@@ -1660,7 +1682,7 @@ def openai_vector_store_status(
         last_error = _value_from_response(resp, "last_error")
     except AppError:
         raise
-    except Exception as exc:
+    except OPENAI_REQUEST_EXCEPTIONS as exc:
         raise AppError(
             code="openai_vector_store_status_failed",
             message="OpenAI vector store status request failed",
@@ -1721,7 +1743,7 @@ def openai_vector_store_update_metadata(
         )
     except AppError:
         raise
-    except Exception as exc:
+    except OPENAI_REQUEST_EXCEPTIONS as exc:
         raise AppError(
             code="openai_vector_store_update_metadata_failed",
             message="OpenAI vector store metadata update request failed",

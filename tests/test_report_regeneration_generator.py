@@ -211,7 +211,39 @@ def _current_artifacts() -> dict:
                 "evidence": "Evidence text",
                 "metric": dict(METRIC),
                 "pages": [1],
-            }
+            },
+            {
+                "id": "insight-2",
+                "text": "Old final insight 2",
+                "evidence_id": "f2",
+                "evidence": "Evidence text 2",
+                "metric": dict(METRIC),
+                "pages": [2],
+            },
+            {
+                "id": "insight-3",
+                "text": "Old final insight 3",
+                "evidence_id": "f3",
+                "evidence": "Evidence text 3",
+                "metric": dict(METRIC),
+                "pages": [3],
+            },
+            {
+                "id": "insight-4",
+                "text": "Old final insight 4",
+                "evidence_id": "f4",
+                "evidence": "Evidence text 4",
+                "metric": dict(METRIC),
+                "pages": [4],
+            },
+            {
+                "id": "insight-5",
+                "text": "Old final insight 5",
+                "evidence_id": "f5",
+                "evidence": "Evidence text 5",
+                "metric": dict(METRIC),
+                "pages": [5],
+            },
         ],
         "quotes_final": [
             {

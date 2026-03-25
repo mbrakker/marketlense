@@ -145,7 +145,7 @@ def test_openai_response_with_vector_store_retries_unsupported_temperature(
 ) -> None:
     fake_openai.add(
         "responses.create",
-        Exception(
+        RuntimeError(
             "Error code: 400 - {'error': {'message': \"Unsupported parameter: 'temperature' is not supported with this model.\", 'type': 'invalid_request_error', 'param': 'temperature', 'code': None}}"
         ),
     )
@@ -205,7 +205,7 @@ def test_openai_chat_json_with_images_retries_unknown_unsupported_param(
     image_path.write_bytes(b"fake-image")
     fake_openai.add(
         "responses.create",
-        Exception(
+        RuntimeError(
             "Error code: 400 - {'error': {'message': \"Unsupported parameter: 'temperature' is not supported with this model.\", 'type': 'invalid_request_error', 'param': 'temperature', 'code': None}}"
         ),
     )
