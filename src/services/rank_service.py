@@ -16,24 +16,11 @@ from src.contracts.report_assets import (
 from src.contracts.report_models import RankedCandidate
 from src.contracts.run_context import RunContext
 from src.services.openai_service import openai_chat_json, openai_chat_json_with_images
-from src.utils.coercion import coerce_int
+from src.utils.coercion import coerce_bool, coerce_int
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.rank_service")
-
-
-def _to_bool(value: Any, default: bool = False) -> bool:
-    if isinstance(value, bool):
-        return value
-    if value is None:
-        return default
-    raw = str(value).strip().lower()
-    if raw in {"1", "true", "yes", "y", "on"}:
-        return True
-    if raw in {"0", "false", "no", "n", "off"}:
-        return False
-    return default
 
 
 def _to_bbox(value: Any, fallback: tuple[float, float, float, float]) -> tuple[float, float, float, float]:
@@ -85,7 +72,12 @@ def _to_ranked_candidate(item: dict[str, Any]) -> RankedCandidate | None:
             quality_score=coerce_int(item.get("quality_score"), score_value),
             insight_score=coerce_int(item.get("insight_score"), score_value),
             data_score=coerce_int(item.get("data_score"), score_value),
-            keep=_to_bool(item.get("keep"), True),
+            keep=coerce_bool(
+                item.get("keep"),
+                True,
+                true_tokens={"1", "true", "yes", "y", "on"},
+                false_tokens={"0", "false", "no", "n", "off"},
+            ),
             reject_reason=str(item.get("reject_reason") or ""),
         )
     except (ValueError, TypeError):
@@ -245,10 +237,25 @@ def refine_candidate_crops(request: CropRefineRequest, ctx: RunContext) -> CropR
             results.append(CropRefineResult(
                 schema_version="1.0",
                 id=cid,
-                is_valid_candidate=_to_bool(item.get("is_valid_candidate"), False),
+                is_valid_candidate=coerce_bool(
+                    item.get("is_valid_candidate"),
+                    False,
+                    true_tokens={"1", "true", "yes", "y", "on"},
+                    false_tokens={"0", "false", "no", "n", "off"},
+                ),
                 refined_bbox=refined_bbox,
-                include_title=_to_bool(item.get("include_title"), True),
-                include_note_if_present=_to_bool(item.get("include_note_if_present"), True),
+                include_title=coerce_bool(
+                    item.get("include_title"),
+                    True,
+                    true_tokens={"1", "true", "yes", "y", "on"},
+                    false_tokens={"0", "false", "no", "n", "off"},
+                ),
+                include_note_if_present=coerce_bool(
+                    item.get("include_note_if_present"),
+                    True,
+                    true_tokens={"1", "true", "yes", "y", "on"},
+                    false_tokens={"0", "false", "no", "n", "off"},
+                ),
                 confidence=float(item.get("confidence", 0.0) or 0.0),
                 reason=str(item.get("reason") or ""),
             ))

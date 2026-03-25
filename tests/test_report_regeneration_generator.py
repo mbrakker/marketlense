@@ -368,6 +368,58 @@ def test_regenerate_artifacts_insights_bundle_uses_targeted_steps_and_preserves_
     assert "Evidence text" in first_user_prompt
 
 
+def test_regenerate_artifacts_dispatches_summary_via_target_section_registry(tmp_path):
+    prompt_client = _FakePromptClient()
+    openai_client = _FakeOpenAIClient()
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=RegenerationPlan(
+                mode="targeted",
+                targets=[
+                    RegenerationTarget(
+                        target_section="summary",
+                        regenerate_steps=["summary"],
+                        prompt_namespaces=["report_vs/artifacts/regenerate/wrong"],
+                        issues=[
+                            RegenerationIssue(
+                                rule_id="grounding",
+                                affected_section="executive_summary",
+                                message="[grounding] Unsupported summary claim",
+                                severity="error",
+                                evidence_ids=["f1"],
+                                pages=[1],
+                            )
+                        ],
+                    )
+                ],
+                unmappable_issues=[],
+                broad_retry_allowed=True,
+            ),
+            current_artifacts=_current_artifacts(),
+            doc_map=_evidence_packs()["doc_map"],
+            evidence_packs=_evidence_packs(),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=_current_artifacts()["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=openai_client,
+        prompt_client=prompt_client,
+    )
+
+    assert response.regenerated_sections == ["summary"]
+    assert response.prompt_namespaces == ["report_vs/artifacts/regenerate/summary"]
+    assert [call["path"] for call in prompt_client.render_calls] == [
+        "report_vs/artifacts/regenerate/summary/system.yaml",
+        "report_vs/artifacts/regenerate/summary/user.yaml",
+    ]
+
+
 def test_regenerate_artifacts_summary_only_keeps_other_sections_unchanged(tmp_path):
     prompt_client = _FakePromptClient()
     openai_client = _FakeOpenAIClient()
@@ -680,6 +732,60 @@ def test_regenerate_artifacts_propagates_non_retryable_prompt_error(
     assert_app_error(
         exc_info.value,
         code="prompt_not_found",
+        retryable=False,
+        severity="error",
+    )
+
+
+def test_regenerate_artifacts_rejects_unknown_target_section(
+    tmp_path,
+    assert_app_error,
+):
+    with pytest.raises(AppError) as exc_info:
+        regenerate_artifacts(
+            ArtifactRegenerationRequest(
+                report_id="report-1",
+                report_name="report-1",
+                attempt_index=1,
+                plan=RegenerationPlan(
+                    mode="targeted",
+                    targets=[
+                        RegenerationTarget(
+                            target_section="unsupported_section",
+                            regenerate_steps=["summary"],
+                            prompt_namespaces=["report_vs/artifacts/regenerate/summary"],
+                            issues=[
+                                RegenerationIssue(
+                                    rule_id="grounding",
+                                    affected_section="executive_summary",
+                                    message="[grounding] Unsupported summary claim",
+                                    severity="error",
+                                    evidence_ids=["f1"],
+                                    pages=[1],
+                                )
+                            ],
+                        )
+                    ],
+                    unmappable_issues=[],
+                    broad_retry_allowed=True,
+                ),
+                current_artifacts=_current_artifacts(),
+                doc_map=_evidence_packs()["doc_map"],
+                evidence_packs=_evidence_packs(),
+                settings=_settings(tmp_path),
+                ctx=_ctx(),
+                source_status=_current_artifacts()["source_status"],
+                categories=["Category"],
+                vector_store_id=None,
+                md5="md5",
+            ),
+            openai_client=_FakeOpenAIClient(),
+            prompt_client=_FakePromptClient(),
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="artifact_regeneration_target_unsupported",
         retryable=False,
         severity="error",
     )

@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import os
 import logging
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, Sequence
 
 from dotenv import load_dotenv, find_dotenv
 import yaml
@@ -23,6 +23,12 @@ from src.contracts.ingest import IngestSettings
 from src.contracts.publish import PublishSettings
 from src.contracts.run_context import RunContext
 from src.contracts.wordpress import WordPressAuthSettings
+from src.utils.coercion import (
+    coerce_bool as _to_bool,
+    coerce_extended_bool as _to_config_bool,
+    coerce_float as _to_float,
+    coerce_int as _to_int,
+)
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -46,35 +52,63 @@ def _env_value(key: str) -> str:
     return os.getenv(key, "").strip()
 
 
-def _to_float(value: Any, default: float) -> float:
+def _to_str(value: Any, default: str) -> str:
     if _is_missing(value):
         return default
+    token = str(value).strip()
+    return token or default
+
+
+def _opt_int(value: object) -> int | None:
+    if _is_missing(value):
+        return None
     try:
-        return float(value)
+        return int(str(value).strip())
     except (TypeError, ValueError):
-        return default
+        return None
 
 
-def _to_int(value: Any, default: int) -> int:
-    if _is_missing(value):
-        return default
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return default
+@dataclass(frozen=True)
+class _SettingSpec:
+    field_name: str
+    config_key: str
+    default: Any
+    coerce: Callable[[Any, Any], Any]
+    env_key: str | None = None
+    env_first: bool = False
+    minimum: int | float | None = None
+    minimum_mode: str = "clamp"
 
 
-def _to_bool(value: Any, default: bool) -> bool:
-    if _is_missing(value):
-        return default
-    if isinstance(value, bool):
+def _resolve_setting_raw(section: dict[str, Any], spec: _SettingSpec) -> Any:
+    config_value = section.get(spec.config_key)
+    env_value = _env_value(spec.env_key) if spec.env_key else ""
+    if spec.env_first and not _is_missing(env_value):
+        return env_value
+    if not spec.env_first and _is_missing(config_value) and spec.env_key:
+        return env_value
+    return config_value
+
+
+def _apply_setting_minimum(value: Any, spec: _SettingSpec) -> Any:
+    if spec.minimum is None or not isinstance(value, (int, float)):
         return value
-    token = str(value).strip().lower()
-    if token in {"1", "true", "yes", "on"}:
-        return True
-    if token in {"0", "false", "no", "off"}:
-        return False
-    return default
+    if value >= spec.minimum:
+        return value
+    if spec.minimum_mode == "default":
+        return spec.default
+    return spec.minimum
+
+
+def _resolve_scalar_settings(
+    section: dict[str, Any],
+    specs: Sequence[_SettingSpec],
+) -> dict[str, Any]:
+    resolved: dict[str, Any] = {}
+    for spec in specs:
+        value = spec.coerce(_resolve_setting_raw(section, spec), spec.default)
+        resolved[spec.field_name] = _apply_setting_minimum(value, spec)
+    return resolved
 
 
 def _resolve_optional_path(raw_value: Any, *, base_path: Path) -> str:
@@ -320,6 +354,635 @@ class _ConfigResolver:
         return str(value)
 
 
+def _normalize_openai_models(raw_value: Any) -> dict[str, str]:
+    openai_models: dict[str, str] = {}
+    if not isinstance(raw_value, dict):
+        return openai_models
+    for key, value in raw_value.items():
+        key_str = str(key).strip()
+        val_str = str(value).strip()
+        if key_str and val_str:
+            openai_models[key_str] = val_str
+    return openai_models
+
+
+def _normalize_keyword_list(raw_value: Any, *, default_values: list[str]) -> list[str]:
+    values = raw_value or default_values
+    normalized = [str(value).strip() for value in values if str(value).strip()]
+    return normalized or default_values[:]
+
+
+def _normalize_evidence_pack_registry(raw_value: Any) -> list[str]:
+    default_pack_registry = [
+        "doc_map",
+        "scope",
+        "methods",
+        "findings",
+        "limitations",
+        "quote_candidates",
+    ]
+    evidence_pack_registry: list[str] = []
+    if isinstance(raw_value, list):
+        for value in raw_value:
+            token = str(value).strip()
+            if token and token not in evidence_pack_registry:
+                evidence_pack_registry.append(token)
+    if not evidence_pack_registry:
+        evidence_pack_registry = default_pack_registry[:]
+    if "doc_map" not in evidence_pack_registry:
+        evidence_pack_registry = ["doc_map", *evidence_pack_registry]
+    elif evidence_pack_registry[0] != "doc_map":
+        evidence_pack_registry = ["doc_map"] + [
+            item for item in evidence_pack_registry if item != "doc_map"
+        ]
+    return evidence_pack_registry
+
+
+def _resolve_allowed_string(value: Any, *, default: str, allowed: set[str]) -> str:
+    token = _to_str(value, default).lower()
+    return token if token in allowed else default
+
+
+def _resolve_paths_settings(
+    paths: dict[str, Any],
+    resolver: _ConfigResolver,
+) -> dict[str, str]:
+    output_dir = resolver.need(paths, "output_dir", "paths.output_dir", "OUTPUT_DIR")
+    cache_dir = resolver.need(paths, "cache_dir", "paths.cache_dir", "CACHE_DIR")
+    state_db = resolver.need(paths, "state_db", "paths.state_db", "STATE_DB")
+    reports_db = resolver.need(paths, "reports_db", "paths.reports_db", "REPORTS_DB")
+    lock_path_raw = paths.get("ingest_lock")
+    if _is_missing(lock_path_raw):
+        lock_path_raw = _env_value("INGEST_LOCK_PATH")
+    if _is_missing(lock_path_raw):
+        lock_path_raw = str(Path(state_db).parent / "ingest.lock")
+    return {
+        "output_dir": output_dir,
+        "cache_dir": cache_dir,
+        "state_db": state_db,
+        "reports_db": reports_db,
+        "category_mapping_path": paths.get("category_mappings")
+        or str(Path(__file__).resolve().parents[1] / "config" / "category-mappings.yaml"),
+        "html_tag_acronyms_path": paths.get("html_tag_acronyms")
+        or str(DEFAULT_HTML_TAG_ACRONYMS_PATH),
+        "cover_style_path": paths.get("cover_styles")
+        or str(Path(__file__).resolve().parents[1] / "config" / "cover-styles.yaml"),
+        "ingest_lock_path": str(lock_path_raw),
+    }
+
+
+def _resolve_ingest_runtime_settings(
+    ingest: dict[str, Any],
+) -> dict[str, Any]:
+    resolved = _resolve_scalar_settings(
+        ingest,
+        [
+            _SettingSpec(
+                field_name="temperature",
+                config_key="temperature",
+                default=1.0,
+                coerce=_to_float,
+                env_key="TEMPERATURE",
+            ),
+            _SettingSpec(
+                field_name="batch_limit",
+                config_key="batch_limit",
+                default=20,
+                coerce=_to_int,
+                env_key="BATCH_LIMIT",
+            ),
+            _SettingSpec(
+                field_name="ingest_worker_limit",
+                config_key="worker_limit",
+                default=2,
+                coerce=_to_int,
+                env_key="INGEST_WORKER_LIMIT",
+                minimum=1,
+            ),
+            _SettingSpec(
+                field_name="report_worker_limit",
+                config_key="report_worker_limit",
+                default=2,
+                coerce=_to_int,
+                env_key="INGEST_REPORT_WORKER_LIMIT",
+                minimum=1,
+            ),
+            _SettingSpec(
+                field_name="openai_timeout_seconds",
+                config_key="timeout_seconds",
+                default=600.0,
+                coerce=_to_float,
+                env_key="OPENAI_TIMEOUT_SECONDS",
+            ),
+            _SettingSpec(
+                field_name="ingest_lock_ttl_seconds",
+                config_key="lock_ttl_seconds",
+                default=7200.0,
+                coerce=_to_float,
+                env_key="INGEST_LOCK_TTL_SECONDS",
+            ),
+            _SettingSpec(
+                field_name="taxonomy_temperature",
+                config_key="taxonomy_temperature",
+                default=0.0,
+                coerce=_to_float,
+                env_key="TAXONOMY_TEMPERATURE",
+                env_first=True,
+            ),
+            _SettingSpec(
+                field_name="cover_cache_enabled",
+                config_key="cover_cache_enabled",
+                default=True,
+                coerce=_to_config_bool,
+            ),
+        ],
+    )
+    resolved["taxonomy_temperature"] = _to_float(
+        _resolve_setting_raw(
+            ingest,
+            _SettingSpec(
+                field_name="taxonomy_temperature",
+                config_key="taxonomy_temperature",
+                default=resolved["temperature"],
+                coerce=_to_float,
+                env_key="TAXONOMY_TEMPERATURE",
+                env_first=True,
+            ),
+        ),
+        resolved["temperature"],
+    )
+    resolved["openai_seed"] = _opt_int(ingest.get("seed"))
+    return resolved
+
+
+def _resolve_rank_settings(
+    rank: dict[str, Any],
+    *,
+    openai_model: str,
+    temperature: float,
+    openai_timeout_seconds: float,
+) -> dict[str, Any]:
+    resolved = _resolve_scalar_settings(
+        rank,
+        [
+            _SettingSpec(
+                field_name="rank_temperature",
+                config_key="temperature",
+                default=temperature,
+                coerce=_to_float,
+            ),
+            _SettingSpec(
+                field_name="rank_max_candidates",
+                config_key="max_candidates",
+                default=40,
+                coerce=_to_int,
+            ),
+            _SettingSpec(
+                field_name="rank_selected_max",
+                config_key="selected_max",
+                default=5,
+                coerce=_to_int,
+            ),
+            _SettingSpec(
+                field_name="rank_min_overall_score",
+                config_key="min_overall_score",
+                default=78,
+                coerce=_to_int,
+            ),
+            _SettingSpec(
+                field_name="rank_min_quality_score",
+                config_key="min_quality_score",
+                default=75,
+                coerce=_to_int,
+            ),
+            _SettingSpec(
+                field_name="rank_min_insight_score",
+                config_key="min_insight_score",
+                default=75,
+                coerce=_to_int,
+            ),
+            _SettingSpec(
+                field_name="rank_min_data_score",
+                config_key="min_data_score",
+                default=70,
+                coerce=_to_int,
+            ),
+            _SettingSpec(
+                field_name="crop_refine_enabled",
+                config_key="crop_refine_enabled",
+                default=True,
+                coerce=_to_config_bool,
+            ),
+            _SettingSpec(
+                field_name="crop_refine_page_dpi",
+                config_key="crop_refine_page_dpi",
+                default=110,
+                coerce=_to_int,
+            ),
+            _SettingSpec(
+                field_name="crop_refine_temperature",
+                config_key="crop_refine_temperature",
+                default=0.0,
+                coerce=_to_float,
+            ),
+            _SettingSpec(
+                field_name="rank_timeout_seconds",
+                config_key="timeout_seconds",
+                default=openai_timeout_seconds,
+                coerce=_to_float,
+            ),
+        ],
+    )
+    resolved["rank_model"] = rank.get("model") or openai_model
+    resolved["rank_seed"] = _opt_int(rank.get("seed"))
+    resolved["crop_refine_mode"] = _resolve_allowed_string(
+        rank.get("crop_refine_mode", "adaptive"),
+        default="adaptive",
+        allowed={"adaptive", "always", "off"},
+    )
+    resolved["crop_refine_timeout_seconds"] = _to_float(
+        rank.get("crop_refine_timeout_seconds"),
+        resolved["rank_timeout_seconds"],
+    )
+    return resolved
+
+
+def _resolve_figure_caption_settings(
+    figure_captions_cfg: dict[str, Any],
+    *,
+    openai_timeout_seconds: float,
+) -> dict[str, Any]:
+    resolved = _resolve_scalar_settings(
+        figure_captions_cfg,
+        [
+            _SettingSpec(
+                field_name="figure_caption_enabled",
+                config_key="enabled",
+                default=False,
+                coerce=_to_config_bool,
+                env_key="FIGURE_CAPTION_ENABLED",
+            ),
+            _SettingSpec(
+                field_name="figure_caption_temperature",
+                config_key="temperature",
+                default=0.2,
+                coerce=_to_float,
+                env_key="FIGURE_CAPTION_TEMPERATURE",
+            ),
+            _SettingSpec(
+                field_name="figure_caption_timeout_seconds",
+                config_key="timeout_seconds",
+                default=openai_timeout_seconds,
+                coerce=_to_float,
+                env_key="FIGURE_CAPTION_TIMEOUT_SECONDS",
+            ),
+            _SettingSpec(
+                field_name="figure_caption_max_chars",
+                config_key="max_chars",
+                default=500,
+                coerce=_to_int,
+                env_key="FIGURE_CAPTION_MAX_CHARS",
+                minimum=1,
+                minimum_mode="default",
+            ),
+        ],
+    )
+    resolved["figure_caption_prompt_namespace"] = _to_str(
+        _resolve_setting_raw(
+            figure_captions_cfg,
+            _SettingSpec(
+                field_name="figure_caption_prompt_namespace",
+                config_key="prompt_namespace",
+                default="report_vs/figure_caption",
+                coerce=_to_str,
+                env_key="FIGURE_CAPTION_PROMPT_NAMESPACE",
+            ),
+        ),
+        "report_vs/figure_caption",
+    )
+    return resolved
+
+
+def _resolve_contents_settings(contents_page: dict[str, Any]) -> dict[str, Any]:
+    resolved = _resolve_scalar_settings(
+        contents_page,
+        [
+            _SettingSpec(
+                field_name="contents_max_pages",
+                config_key="max_pages",
+                default=8,
+                coerce=_to_int,
+            ),
+            _SettingSpec(
+                field_name="contents_min_headings",
+                config_key="min_headings",
+                default=3,
+                coerce=_to_int,
+            ),
+            _SettingSpec(
+                field_name="contents_preview_enabled",
+                config_key="preview_enabled",
+                default=True,
+                coerce=_to_config_bool,
+            ),
+            _SettingSpec(
+                field_name="contents_preview_dpi",
+                config_key="render_dpi",
+                default=144,
+                coerce=_to_int,
+            ),
+        ],
+    )
+    resolved["contents_keywords"] = _normalize_keyword_list(
+        contents_page.get("keywords"),
+        default_values=["table of contents", "contents", "index"],
+    )
+    return resolved
+
+
+def _resolve_evidence_pack_settings(
+    evidence_packs_cfg: dict[str, Any],
+) -> dict[str, Any]:
+    resolved = _resolve_scalar_settings(
+        evidence_packs_cfg,
+        [
+            _SettingSpec(
+                field_name="evidence_pack_parallel_workers",
+                config_key="parallel_workers",
+                default=3,
+                coerce=_to_int,
+                env_key="EVIDENCE_PACK_PARALLEL_WORKERS",
+                minimum=1,
+            ),
+            _SettingSpec(
+                field_name="evidence_pack_global_max_in_flight",
+                config_key="global_max_in_flight",
+                default=2,
+                coerce=_to_int,
+                env_key="EVIDENCE_PACK_GLOBAL_MAX_IN_FLIGHT",
+                minimum=1,
+            ),
+            _SettingSpec(
+                field_name="evidence_pack_global_min_interval_ms",
+                config_key="global_min_interval_ms",
+                default=250,
+                coerce=_to_int,
+                env_key="EVIDENCE_PACK_GLOBAL_MIN_INTERVAL_MS",
+                minimum=0,
+            ),
+            _SettingSpec(
+                field_name="evidence_pack_doc_map_max_attempts",
+                config_key="doc_map_max_attempts",
+                default=3,
+                coerce=_to_int,
+                env_key="EVIDENCE_PACK_DOC_MAP_MAX_ATTEMPTS",
+                minimum=1,
+            ),
+            _SettingSpec(
+                field_name="evidence_pack_doc_map_retry_delay_ms",
+                config_key="doc_map_retry_delay_ms",
+                default=500,
+                coerce=_to_int,
+                env_key="EVIDENCE_PACK_DOC_MAP_RETRY_DELAY_MS",
+                minimum=0,
+            ),
+            _SettingSpec(
+                field_name="evidence_pack_enable_new_variety_packs",
+                config_key="enable_new_variety_packs",
+                default=False,
+                coerce=_to_config_bool,
+                env_key="EVIDENCE_PACK_ENABLE_NEW_VARIETY_PACKS",
+            ),
+        ],
+    )
+    evidence_pack_registry_raw = evidence_packs_cfg.get("registry")
+    env_evidence_pack_registry = _env_value("EVIDENCE_PACK_REGISTRY")
+    if env_evidence_pack_registry:
+        evidence_pack_registry_raw = [
+            token.strip()
+            for token in env_evidence_pack_registry.split(",")
+            if token.strip()
+        ]
+    resolved["evidence_pack_registry"] = _normalize_evidence_pack_registry(
+        evidence_pack_registry_raw
+    )
+    return resolved
+
+
+def _resolve_artifact_settings(artifacts_cfg: dict[str, Any]) -> dict[str, Any]:
+    return _resolve_scalar_settings(
+        artifacts_cfg,
+        [
+            _SettingSpec(
+                field_name="artifact_parallel_workers",
+                config_key="parallel_workers",
+                default=4,
+                coerce=_to_int,
+                env_key="ARTIFACT_PARALLEL_WORKERS",
+                minimum=1,
+            ),
+            _SettingSpec(
+                field_name="artifact_global_max_in_flight",
+                config_key="global_max_in_flight",
+                default=2,
+                coerce=_to_int,
+                env_key="ARTIFACT_GLOBAL_MAX_IN_FLIGHT",
+                minimum=1,
+            ),
+            _SettingSpec(
+                field_name="artifact_global_min_interval_ms",
+                config_key="global_min_interval_ms",
+                default=250,
+                coerce=_to_int,
+                env_key="ARTIFACT_GLOBAL_MIN_INTERVAL_MS",
+                minimum=0,
+            ),
+        ],
+    )
+
+
+def _resolve_pdf_text_settings(
+    pdf_text: dict[str, Any],
+    ingest: dict[str, Any],
+) -> dict[str, Any]:
+    resolved = _resolve_scalar_settings(
+        pdf_text,
+        [
+            _SettingSpec(
+                field_name="pdf_text_max_pages",
+                config_key="max_pages",
+                default=5,
+                coerce=_to_int,
+            ),
+            _SettingSpec(
+                field_name="pdf_text_max_chars",
+                config_key="max_chars",
+                default=80_000,
+                coerce=_to_int,
+            ),
+            _SettingSpec(
+                field_name="pdf_text_min_density",
+                config_key="min_density",
+                default=250.0,
+                coerce=_to_float,
+            ),
+            _SettingSpec(
+                field_name="pdf_text_sample_pages",
+                config_key="sample_pages",
+                default=3,
+                coerce=_to_int,
+            ),
+        ],
+    )
+    ocr_fallback_cfg = pdf_text.get("ocr_fallback") or {}
+    resolved.update(
+        _resolve_scalar_settings(
+            ocr_fallback_cfg,
+            [
+                _SettingSpec(
+                    field_name="pdf_text_ocr_enabled",
+                    config_key="enabled",
+                    default=False,
+                    coerce=_to_bool,
+                ),
+                _SettingSpec(
+                    field_name="pdf_text_ocr_timeout_seconds",
+                    config_key="timeout_seconds",
+                    default=_to_float(ingest.get("timeout_seconds"), 600.0),
+                    coerce=_to_float,
+                ),
+                _SettingSpec(
+                    field_name="pdf_text_ocr_cache_enabled",
+                    config_key="cache_enabled",
+                    default=True,
+                    coerce=_to_bool,
+                ),
+                _SettingSpec(
+                    field_name="pdf_text_ocr_chunk_page_count",
+                    config_key="chunk_page_count",
+                    default=8,
+                    coerce=_to_int,
+                    minimum=1,
+                ),
+            ],
+        )
+    )
+    resolved["pdf_text_ocr_model"] = _to_str(
+        ocr_fallback_cfg.get("model"),
+        "gpt-5-mini",
+    )
+    resolved["pdf_text_ocr_prompt_namespace"] = _to_str(
+        ocr_fallback_cfg.get("prompt_namespace"),
+        "pdf_text/ocr_fallback",
+    )
+    return resolved
+
+
+def _resolve_validation_settings(validation_cfg: dict[str, Any]) -> dict[str, Any]:
+    resolved = _resolve_scalar_settings(
+        validation_cfg,
+        [
+            _SettingSpec(
+                field_name="validation_regeneration_max_attempts",
+                config_key="regeneration_max_attempts",
+                default=3,
+                coerce=_to_int,
+                env_key="VALIDATION_REGENERATION_MAX_ATTEMPTS",
+                minimum=1,
+            ),
+        ],
+    )
+    resolved["validation_data_gap_policy"] = _resolve_allowed_string(
+        validation_cfg.get("data_gap_policy", "warn"),
+        default="warn",
+        allowed={"warn", "fail"},
+    )
+    return resolved
+
+
+def _resolve_analysis_settings(
+    analysis_cfg: dict[str, Any],
+    cost_cfg: dict[str, Any],
+    *,
+    html_tag_acronyms_path: str,
+) -> dict[str, Any]:
+    resolved = _resolve_scalar_settings(
+        analysis_cfg,
+        [
+            _SettingSpec(
+                field_name="vector_store_keep",
+                config_key="vector_store_keep",
+                default=True,
+                coerce=_to_config_bool,
+                env_key="VECTOR_STORE_KEEP",
+                env_first=True,
+            ),
+            _SettingSpec(
+                field_name="artifacts_use_vector_store",
+                config_key="artifacts_use_vector_store",
+                default=False,
+                coerce=_to_config_bool,
+                env_key="ARTIFACTS_USE_VECTOR_STORE",
+                env_first=True,
+            ),
+            _SettingSpec(
+                field_name="validation_grounding_use_vector_store",
+                config_key="validation_grounding_use_vector_store",
+                default=False,
+                coerce=_to_config_bool,
+                env_key="VALIDATION_GROUNDING_USE_VECTOR_STORE",
+                env_first=True,
+            ),
+            _SettingSpec(
+                field_name="strict_schema_validation",
+                config_key="strict_schema_validation",
+                default=True,
+                coerce=_to_config_bool,
+                env_key="STRICT_SCHEMA_VALIDATION",
+                env_first=True,
+            ),
+        ],
+    )
+    resolved["cost_ledger_path"] = str(
+        _resolve_setting_raw(
+            analysis_cfg,
+            _SettingSpec(
+                field_name="cost_ledger_path",
+                config_key="cost_ledger_path",
+                default="./out/cost-ledger.jsonl",
+                coerce=_to_str,
+                env_key="COST_LEDGER_PATH",
+                env_first=True,
+            ),
+        )
+        or "./out/cost-ledger.jsonl"
+    )
+    resolved["cost_daily_path"] = str(
+        cost_cfg.get("daily_path") or "./out/cost-daily.json"
+    )
+    resolved["model_pricing"] = cost_cfg.get("pricing") or {}
+    resolved["html_tag_acronyms"] = _load_html_tag_acronyms(html_tag_acronyms_path)
+    return resolved
+
+
+def _resolve_drive_settings(drive_cfg: dict[str, Any]) -> dict[str, Any]:
+    drive_id_raw = drive_cfg.get("drive_id")
+    return {
+        "drive_supports_all_drives": _to_config_bool(
+            drive_cfg.get("supports_all_drives"), True
+        ),
+        "drive_include_items_from_all_drives": _to_config_bool(
+            drive_cfg.get("include_items_from_all_drives"), True
+        ),
+        "drive_id": str(drive_id_raw).strip() if not _is_missing(drive_id_raw) else None,
+        "drive_list_mode": _resolve_allowed_string(
+            drive_cfg.get("list_mode", "metadata"),
+            default="metadata",
+            allowed={"full", "metadata"},
+        ),
+    }
+
+
 def _to_ingest_settings(app_settings: AppSettings) -> IngestSettings:
     return IngestSettings(**asdict(app_settings))
 
@@ -363,18 +1026,6 @@ def build_ingest_settings(
 def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     load_dotenv(find_dotenv(filename=".env", usecwd=True))
 
-    def _as_bool(value: object, default: bool) -> bool:
-        if isinstance(value, bool):
-            return value
-        if _is_missing(value):
-            return default
-        value_str = str(value).strip().lower()
-        if value_str in {"1", "true", "yes", "y", "on", "t"}:
-            return True
-        if value_str in {"0", "false", "no", "n", "off", "f"}:
-            return False
-        return default
-
     logger.info(
         log_event(
             ctx,
@@ -399,362 +1050,32 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     contents_page = ingest.get("contents_page", {}) or {}
     evidence_packs_cfg = ingest.get("evidence_packs", {}) or {}
     artifacts_cfg = ingest.get("artifacts", {}) or {}
-    category_mapping_path = paths.get("category_mappings") or str(
-        Path(__file__).resolve().parents[1] / "config" / "category-mappings.yaml"
-    )
-    html_tag_acronyms_path = paths.get("html_tag_acronyms") or str(
-        DEFAULT_HTML_TAG_ACRONYMS_PATH
-    )
-    cover_style_path = paths.get("cover_styles") or str(
-        Path(__file__).resolve().parents[1] / "config" / "cover-styles.yaml"
-    )
     analysis_cfg = data.get("analysis", {}) or {}
     cost_cfg = data.get("cost", {}) or {}
-
+    paths_settings = _resolve_paths_settings(paths, resolver)
     openai_model = need(ingest, "openai_model", "ingest.openai_model", "OPENAI_MODEL")
-    openai_models_raw = data.get("openai_models") or {}
-    openai_models: dict[str, str] = {}
-    if isinstance(openai_models_raw, dict):
-        for key, value in openai_models_raw.items():
-            key_str = str(key).strip()
-            val_str = str(value).strip()
-            if key_str and val_str:
-                openai_models[key_str] = val_str
-    temperature_raw = ingest.get("temperature")
-    if _is_missing(temperature_raw):
-        temperature_raw = _env_value("TEMPERATURE")
-    temperature = _to_float(temperature_raw, 1.0)
-    taxonomy_temperature_raw = _env_value("TAXONOMY_TEMPERATURE")
-    if _is_missing(taxonomy_temperature_raw):
-        taxonomy_temperature_raw = ingest.get("taxonomy_temperature")
-    taxonomy_temperature = _to_float(taxonomy_temperature_raw, temperature)
-    rank_model = rank.get("model") or openai_model
-    rank_temperature = _to_float(rank.get("temperature"), temperature)
-    rank_max_candidates = _to_int(rank.get("max_candidates"), 40)
-    rank_selected_max = _to_int(rank.get("selected_max"), 5)
-    rank_min_overall_score = _to_int(rank.get("min_overall_score"), 78)
-    rank_min_quality_score = _to_int(rank.get("min_quality_score"), 75)
-    rank_min_insight_score = _to_int(rank.get("min_insight_score"), 75)
-    rank_min_data_score = _to_int(rank.get("min_data_score"), 70)
-    crop_refine_enabled = _as_bool(rank.get("crop_refine_enabled"), default=True)
-    crop_refine_mode_raw = str(rank.get("crop_refine_mode", "adaptive")).strip().lower()
-    crop_refine_mode = (
-        crop_refine_mode_raw
-        if crop_refine_mode_raw in {"adaptive", "always", "off"}
-        else "adaptive"
+    ingest_runtime = _resolve_ingest_runtime_settings(ingest)
+    rank_settings = _resolve_rank_settings(
+        rank,
+        openai_model=openai_model,
+        temperature=ingest_runtime["temperature"],
+        openai_timeout_seconds=ingest_runtime["openai_timeout_seconds"],
     )
-    crop_refine_page_dpi = _to_int(rank.get("crop_refine_page_dpi"), 110)
-    crop_refine_temperature = _to_float(rank.get("crop_refine_temperature"), 0.0)
-    openai_seed_raw = ingest.get("seed")
-    rank_seed_raw = rank.get("seed")
-    batch_limit_raw = ingest.get("batch_limit")
-    if _is_missing(batch_limit_raw):
-        batch_limit_raw = _env_value("BATCH_LIMIT")
-    batch_limit = _to_int(batch_limit_raw, 20)
-    worker_limit_raw = ingest.get("worker_limit")
-    if _is_missing(worker_limit_raw):
-        worker_limit_raw = _env_value("INGEST_WORKER_LIMIT")
-    ingest_worker_limit = _to_int(worker_limit_raw, 2)
-    if ingest_worker_limit < 1:
-        ingest_worker_limit = 1
-    report_worker_limit_raw = ingest.get("report_worker_limit")
-    if _is_missing(report_worker_limit_raw):
-        report_worker_limit_raw = _env_value("INGEST_REPORT_WORKER_LIMIT")
-    report_worker_limit = _to_int(report_worker_limit_raw, 2)
-    if report_worker_limit < 1:
-        report_worker_limit = 1
-    timeout_raw = ingest.get("timeout_seconds")
-    if _is_missing(timeout_raw):
-        timeout_raw = _env_value("OPENAI_TIMEOUT_SECONDS")
-    openai_timeout_seconds = _to_float(timeout_raw, 600.0)
-    rank_timeout_raw = rank.get("timeout_seconds")
-    rank_timeout_seconds = _to_float(rank_timeout_raw, openai_timeout_seconds)
-    crop_refine_timeout_raw = rank.get("crop_refine_timeout_seconds")
-    crop_refine_timeout_seconds = _to_float(
-        crop_refine_timeout_raw, rank_timeout_seconds
+    figure_caption_settings = _resolve_figure_caption_settings(
+        figure_captions_cfg,
+        openai_timeout_seconds=ingest_runtime["openai_timeout_seconds"],
     )
-    figure_caption_enabled_raw = figure_captions_cfg.get("enabled")
-    if _is_missing(figure_caption_enabled_raw):
-        figure_caption_enabled_raw = _env_value("FIGURE_CAPTION_ENABLED")
-    figure_caption_enabled = _as_bool(figure_caption_enabled_raw, default=False)
-    figure_caption_temperature_raw = figure_captions_cfg.get("temperature")
-    if _is_missing(figure_caption_temperature_raw):
-        figure_caption_temperature_raw = _env_value("FIGURE_CAPTION_TEMPERATURE")
-    figure_caption_temperature = _to_float(figure_caption_temperature_raw, 0.2)
-    figure_caption_timeout_raw = figure_captions_cfg.get("timeout_seconds")
-    if _is_missing(figure_caption_timeout_raw):
-        figure_caption_timeout_raw = _env_value("FIGURE_CAPTION_TIMEOUT_SECONDS")
-    figure_caption_timeout_seconds = _to_float(
-        figure_caption_timeout_raw, openai_timeout_seconds
+    contents_settings = _resolve_contents_settings(contents_page)
+    evidence_pack_settings = _resolve_evidence_pack_settings(evidence_packs_cfg)
+    artifact_settings = _resolve_artifact_settings(artifacts_cfg)
+    pdf_text_settings = _resolve_pdf_text_settings(pdf_text, ingest)
+    validation_settings = _resolve_validation_settings(validation_cfg)
+    analysis_settings = _resolve_analysis_settings(
+        analysis_cfg,
+        cost_cfg,
+        html_tag_acronyms_path=paths_settings["html_tag_acronyms_path"],
     )
-    figure_caption_prompt_namespace = (
-        str(
-            figure_captions_cfg.get("prompt_namespace")
-            or _env_value("FIGURE_CAPTION_PROMPT_NAMESPACE")
-            or "report_vs/figure_caption"
-        ).strip()
-        or "report_vs/figure_caption"
-    )
-    figure_caption_max_chars_raw = figure_captions_cfg.get("max_chars")
-    if _is_missing(figure_caption_max_chars_raw):
-        figure_caption_max_chars_raw = _env_value("FIGURE_CAPTION_MAX_CHARS")
-    figure_caption_max_chars = _to_int(figure_caption_max_chars_raw, 500)
-    if figure_caption_max_chars < 1:
-        figure_caption_max_chars = 500
-    lock_ttl_raw = ingest.get("lock_ttl_seconds")
-    if _is_missing(lock_ttl_raw):
-        lock_ttl_raw = _env_value("INGEST_LOCK_TTL_SECONDS")
-    ingest_lock_ttl_seconds = _to_float(lock_ttl_raw, 7200.0)
-    contents_max_pages = _to_int(contents_page.get("max_pages"), 8)
-    contents_min_headings = _to_int(contents_page.get("min_headings"), 3)
-    contents_keywords_cfg = contents_page.get("keywords") or [
-        "table of contents",
-        "contents",
-        "index",
-    ]
-    contents_keywords = [
-        str(k).strip() for k in contents_keywords_cfg if str(k).strip()
-    ]
-    if not contents_keywords:
-        contents_keywords = ["table of contents", "contents", "index"]
-    contents_preview_enabled = _as_bool(
-        contents_page.get("preview_enabled"), default=True
-    )
-    contents_preview_dpi = _to_int(contents_page.get("render_dpi"), 144)
-    evidence_pack_parallel_workers_raw = evidence_packs_cfg.get("parallel_workers")
-    if _is_missing(evidence_pack_parallel_workers_raw):
-        evidence_pack_parallel_workers_raw = _env_value(
-            "EVIDENCE_PACK_PARALLEL_WORKERS"
-        )
-    evidence_pack_parallel_workers = _to_int(evidence_pack_parallel_workers_raw, 3)
-    if evidence_pack_parallel_workers < 1:
-        evidence_pack_parallel_workers = 1
-    evidence_pack_global_max_in_flight_raw = evidence_packs_cfg.get(
-        "global_max_in_flight"
-    )
-    if _is_missing(evidence_pack_global_max_in_flight_raw):
-        evidence_pack_global_max_in_flight_raw = _env_value(
-            "EVIDENCE_PACK_GLOBAL_MAX_IN_FLIGHT"
-        )
-    evidence_pack_global_max_in_flight = _to_int(
-        evidence_pack_global_max_in_flight_raw, 2
-    )
-    if evidence_pack_global_max_in_flight < 1:
-        evidence_pack_global_max_in_flight = 1
-    evidence_pack_global_min_interval_ms_raw = evidence_packs_cfg.get(
-        "global_min_interval_ms"
-    )
-    if _is_missing(evidence_pack_global_min_interval_ms_raw):
-        evidence_pack_global_min_interval_ms_raw = _env_value(
-            "EVIDENCE_PACK_GLOBAL_MIN_INTERVAL_MS"
-        )
-    evidence_pack_global_min_interval_ms = _to_int(
-        evidence_pack_global_min_interval_ms_raw, 250
-    )
-    if evidence_pack_global_min_interval_ms < 0:
-        evidence_pack_global_min_interval_ms = 0
-    evidence_pack_doc_map_max_attempts_raw = evidence_packs_cfg.get(
-        "doc_map_max_attempts"
-    )
-    if _is_missing(evidence_pack_doc_map_max_attempts_raw):
-        evidence_pack_doc_map_max_attempts_raw = _env_value(
-            "EVIDENCE_PACK_DOC_MAP_MAX_ATTEMPTS"
-        )
-    evidence_pack_doc_map_max_attempts = _to_int(
-        evidence_pack_doc_map_max_attempts_raw, 3
-    )
-    if evidence_pack_doc_map_max_attempts < 1:
-        evidence_pack_doc_map_max_attempts = 1
-    evidence_pack_doc_map_retry_delay_ms_raw = evidence_packs_cfg.get(
-        "doc_map_retry_delay_ms"
-    )
-    if _is_missing(evidence_pack_doc_map_retry_delay_ms_raw):
-        evidence_pack_doc_map_retry_delay_ms_raw = _env_value(
-            "EVIDENCE_PACK_DOC_MAP_RETRY_DELAY_MS"
-        )
-    evidence_pack_doc_map_retry_delay_ms = _to_int(
-        evidence_pack_doc_map_retry_delay_ms_raw, 500
-    )
-    if evidence_pack_doc_map_retry_delay_ms < 0:
-        evidence_pack_doc_map_retry_delay_ms = 0
-    evidence_pack_registry_raw = evidence_packs_cfg.get("registry")
-    env_evidence_pack_registry = _env_value("EVIDENCE_PACK_REGISTRY")
-    if env_evidence_pack_registry:
-        evidence_pack_registry_raw = [
-            token.strip()
-            for token in env_evidence_pack_registry.split(",")
-            if token.strip()
-        ]
-    default_pack_registry = [
-        "doc_map",
-        "scope",
-        "methods",
-        "findings",
-        "limitations",
-        "quote_candidates",
-    ]
-    evidence_pack_registry: list[str] = []
-    if isinstance(evidence_pack_registry_raw, list):
-        for value in evidence_pack_registry_raw:
-            token = str(value).strip()
-            if token and token not in evidence_pack_registry:
-                evidence_pack_registry.append(token)
-    if not evidence_pack_registry:
-        evidence_pack_registry = default_pack_registry[:]
-    if "doc_map" not in evidence_pack_registry:
-        evidence_pack_registry = ["doc_map", *evidence_pack_registry]
-    elif evidence_pack_registry[0] != "doc_map":
-        evidence_pack_registry = ["doc_map"] + [
-            item for item in evidence_pack_registry if item != "doc_map"
-        ]
-    enable_new_variety_packs_raw = evidence_packs_cfg.get("enable_new_variety_packs")
-    if _is_missing(enable_new_variety_packs_raw):
-        enable_new_variety_packs_raw = _env_value(
-            "EVIDENCE_PACK_ENABLE_NEW_VARIETY_PACKS"
-        )
-    evidence_pack_enable_new_variety_packs = _as_bool(
-        enable_new_variety_packs_raw, default=False
-    )
-    artifact_parallel_workers_raw = artifacts_cfg.get("parallel_workers")
-    if _is_missing(artifact_parallel_workers_raw):
-        artifact_parallel_workers_raw = _env_value("ARTIFACT_PARALLEL_WORKERS")
-    artifact_parallel_workers = _to_int(artifact_parallel_workers_raw, 4)
-    if artifact_parallel_workers < 1:
-        artifact_parallel_workers = 1
-    artifact_global_max_in_flight_raw = artifacts_cfg.get("global_max_in_flight")
-    if _is_missing(artifact_global_max_in_flight_raw):
-        artifact_global_max_in_flight_raw = _env_value("ARTIFACT_GLOBAL_MAX_IN_FLIGHT")
-    artifact_global_max_in_flight = _to_int(artifact_global_max_in_flight_raw, 2)
-    if artifact_global_max_in_flight < 1:
-        artifact_global_max_in_flight = 1
-    artifact_global_min_interval_ms_raw = artifacts_cfg.get("global_min_interval_ms")
-    if _is_missing(artifact_global_min_interval_ms_raw):
-        artifact_global_min_interval_ms_raw = _env_value(
-            "ARTIFACT_GLOBAL_MIN_INTERVAL_MS"
-        )
-    artifact_global_min_interval_ms = _to_int(artifact_global_min_interval_ms_raw, 250)
-    if artifact_global_min_interval_ms < 0:
-        artifact_global_min_interval_ms = 0
-    pdf_text_min_density = _to_float(pdf_text.get("min_density"), 250.0)
-    pdf_text_sample_pages = _to_int(pdf_text.get("sample_pages"), 3)
-    ocr_fallback_cfg = pdf_text.get("ocr_fallback") or {}
-    pdf_text_ocr_enabled = _to_bool(ocr_fallback_cfg.get("enabled"), False)
-    pdf_text_ocr_model = (
-        str(ocr_fallback_cfg.get("model") or "gpt-5-mini").strip() or "gpt-5-mini"
-    )
-    pdf_text_ocr_timeout_seconds = _to_float(
-        ocr_fallback_cfg.get("timeout_seconds"),
-        _to_float(ingest.get("timeout_seconds"), 600.0),
-    )
-    pdf_text_ocr_prompt_namespace = (
-        str(ocr_fallback_cfg.get("prompt_namespace") or "pdf_text/ocr_fallback").strip()
-        or "pdf_text/ocr_fallback"
-    )
-    pdf_text_ocr_cache_enabled = _to_bool(
-        ocr_fallback_cfg.get("cache_enabled"),
-        True,
-    )
-    pdf_text_ocr_chunk_page_count = _to_int(
-        ocr_fallback_cfg.get("chunk_page_count"),
-        8,
-    )
-    if pdf_text_ocr_chunk_page_count < 1:
-        pdf_text_ocr_chunk_page_count = 1
-    data_gap_policy_raw = (
-        str(validation_cfg.get("data_gap_policy", "warn")).strip().lower()
-    )
-    validation_data_gap_policy = (
-        data_gap_policy_raw if data_gap_policy_raw in {"warn", "fail"} else "warn"
-    )
-    validation_regeneration_max_attempts_raw = validation_cfg.get(
-        "regeneration_max_attempts"
-    )
-    if _is_missing(validation_regeneration_max_attempts_raw):
-        validation_regeneration_max_attempts_raw = _env_value(
-            "VALIDATION_REGENERATION_MAX_ATTEMPTS"
-        )
-    validation_regeneration_max_attempts = _to_int(
-        validation_regeneration_max_attempts_raw, 3
-    )
-    if validation_regeneration_max_attempts < 1:
-        validation_regeneration_max_attempts = 1
-
-    output_dir = need(paths, "output_dir", "paths.output_dir", "OUTPUT_DIR")
-    cache_dir = need(paths, "cache_dir", "paths.cache_dir", "CACHE_DIR")
-    state_db = need(paths, "state_db", "paths.state_db", "STATE_DB")
-    reports_db = need(paths, "reports_db", "paths.reports_db", "REPORTS_DB")
-    lock_path_raw = paths.get("ingest_lock")
-    if _is_missing(lock_path_raw):
-        lock_path_raw = _env_value("INGEST_LOCK_PATH")
-    if _is_missing(lock_path_raw):
-        lock_path_raw = str(Path(state_db).parent / "ingest.lock")
-    ingest_lock_path = str(lock_path_raw)
-
-    def _opt_int(value: object) -> int | None:
-        if _is_missing(value):
-            return None
-        try:
-            return int(str(value).strip())
-        except (TypeError, ValueError):
-            return None
-
-    env_vector_store_keep = _env_value("VECTOR_STORE_KEEP")
-    env_artifacts_use_vector_store = _env_value("ARTIFACTS_USE_VECTOR_STORE")
-    env_validation_grounding_use_vector_store = _env_value(
-        "VALIDATION_GROUNDING_USE_VECTOR_STORE"
-    )
-    env_cost_ledger_path = _env_value("COST_LEDGER_PATH")
-    env_strict_schema_validation = _env_value("STRICT_SCHEMA_VALIDATION")
-    vector_store_keep_raw = (
-        env_vector_store_keep
-        if env_vector_store_keep
-        else analysis_cfg.get("vector_store_keep")
-    )
-    vector_store_keep = _as_bool(vector_store_keep_raw, default=True)
-    artifacts_use_vector_store_raw = (
-        env_artifacts_use_vector_store
-        if env_artifacts_use_vector_store
-        else analysis_cfg.get("artifacts_use_vector_store")
-    )
-    artifacts_use_vector_store = _as_bool(artifacts_use_vector_store_raw, default=False)
-    validation_grounding_use_vector_store_raw = (
-        env_validation_grounding_use_vector_store
-        if env_validation_grounding_use_vector_store
-        else analysis_cfg.get("validation_grounding_use_vector_store")
-    )
-    validation_grounding_use_vector_store = _as_bool(
-        validation_grounding_use_vector_store_raw, default=False
-    )
-    strict_schema_validation_raw = (
-        env_strict_schema_validation
-        if env_strict_schema_validation
-        else analysis_cfg.get("strict_schema_validation")
-    )
-    strict_schema_validation = _as_bool(strict_schema_validation_raw, default=True)
-    cost_ledger_path = str(
-        env_cost_ledger_path
-        or analysis_cfg.get("cost_ledger_path")
-        or "./out/cost-ledger.jsonl"
-    )
-    cost_daily_path = str(cost_cfg.get("daily_path") or "./out/cost-daily.json")
-    model_pricing = cost_cfg.get("pricing") or {}
-    cover_cache_enabled = _as_bool(ingest.get("cover_cache_enabled"), default=True)
-    html_tag_acronyms = _load_html_tag_acronyms(html_tag_acronyms_path)
-
-    drive_supports_all_drives = _as_bool(
-        drive_cfg.get("supports_all_drives"), default=True
-    )
-    drive_include_items_from_all_drives = _as_bool(
-        drive_cfg.get("include_items_from_all_drives"), default=True
-    )
-    drive_id_raw = drive_cfg.get("drive_id")
-    drive_id = str(drive_id_raw).strip() if not _is_missing(drive_id_raw) else None
-    drive_list_mode_raw = str(drive_cfg.get("list_mode", "metadata")).strip().lower()
-    drive_list_mode = (
-        drive_list_mode_raw
-        if drive_list_mode_raw in {"full", "metadata"}
-        else "metadata"
-    )
+    drive_settings = _resolve_drive_settings(drive_cfg)
 
     settings = AppSettings(
         schema_version=str(data.get("schema_version", "1.0")),
@@ -767,84 +1088,118 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         gdrive_folder_id=need(
             ingest, "gdrive_folder_id", "ingest.gdrive_folder_id", "GDRIVE_FOLDER_ID"
         ),
-        drive_supports_all_drives=drive_supports_all_drives,
-        drive_include_items_from_all_drives=drive_include_items_from_all_drives,
-        drive_id=drive_id,
-        drive_list_mode=drive_list_mode,
+        drive_supports_all_drives=drive_settings["drive_supports_all_drives"],
+        drive_include_items_from_all_drives=drive_settings[
+            "drive_include_items_from_all_drives"
+        ],
+        drive_id=drive_settings["drive_id"],
+        drive_list_mode=drive_settings["drive_list_mode"],
         openai_api_key=need_env("OPENAI_API_KEY"),
         openai_model=openai_model,
-        openai_models=openai_models,
-        batch_limit=batch_limit,
-        ingest_worker_limit=ingest_worker_limit,
-        report_worker_limit=report_worker_limit,
-        output_dir=output_dir,
-        cache_dir=cache_dir,
-        state_db=state_db,
-        reports_db=reports_db,
-        category_mapping_path=category_mapping_path,
-        cover_style_path=cover_style_path,
-        ingest_lock_path=ingest_lock_path,
-        ingest_lock_ttl_seconds=ingest_lock_ttl_seconds,
-        temperature=temperature,
-        taxonomy_temperature=taxonomy_temperature,
-        openai_seed=_opt_int(openai_seed_raw),
-        pdf_text_max_pages=_to_int(pdf_text.get("max_pages"), 5),
-        pdf_text_max_chars=_to_int(pdf_text.get("max_chars"), 80_000),
-        pdf_text_min_density=pdf_text_min_density,
-        pdf_text_sample_pages=pdf_text_sample_pages,
-        pdf_text_ocr_enabled=pdf_text_ocr_enabled,
-        pdf_text_ocr_model=pdf_text_ocr_model,
-        pdf_text_ocr_timeout_seconds=pdf_text_ocr_timeout_seconds,
-        pdf_text_ocr_prompt_namespace=pdf_text_ocr_prompt_namespace,
-        pdf_text_ocr_cache_enabled=pdf_text_ocr_cache_enabled,
-        pdf_text_ocr_chunk_page_count=pdf_text_ocr_chunk_page_count,
-        rank_model=rank_model,
-        rank_temperature=rank_temperature,
-        rank_seed=_opt_int(rank_seed_raw),
-        rank_max_candidates=rank_max_candidates,
-        rank_selected_max=rank_selected_max,
-        rank_min_overall_score=rank_min_overall_score,
-        rank_min_quality_score=rank_min_quality_score,
-        rank_min_insight_score=rank_min_insight_score,
-        rank_min_data_score=rank_min_data_score,
-        crop_refine_enabled=crop_refine_enabled,
-        crop_refine_mode=crop_refine_mode,
-        crop_refine_page_dpi=crop_refine_page_dpi,
-        crop_refine_temperature=crop_refine_temperature,
-        crop_refine_timeout_seconds=crop_refine_timeout_seconds,
-        figure_caption_enabled=figure_caption_enabled,
-        figure_caption_temperature=figure_caption_temperature,
-        figure_caption_timeout_seconds=figure_caption_timeout_seconds,
-        figure_caption_prompt_namespace=figure_caption_prompt_namespace,
-        figure_caption_max_chars=figure_caption_max_chars,
-        openai_timeout_seconds=openai_timeout_seconds,
-        rank_timeout_seconds=rank_timeout_seconds,
-        contents_max_pages=contents_max_pages,
-        contents_min_headings=contents_min_headings,
-        contents_keywords=contents_keywords,
-        contents_preview_enabled=contents_preview_enabled,
-        contents_preview_dpi=contents_preview_dpi,
-        evidence_pack_parallel_workers=evidence_pack_parallel_workers,
-        evidence_pack_global_max_in_flight=evidence_pack_global_max_in_flight,
-        evidence_pack_global_min_interval_ms=evidence_pack_global_min_interval_ms,
-        evidence_pack_doc_map_max_attempts=evidence_pack_doc_map_max_attempts,
-        evidence_pack_doc_map_retry_delay_ms=evidence_pack_doc_map_retry_delay_ms,
-        evidence_pack_registry=evidence_pack_registry,
-        evidence_pack_enable_new_variety_packs=evidence_pack_enable_new_variety_packs,
-        artifact_parallel_workers=artifact_parallel_workers,
-        artifact_global_max_in_flight=artifact_global_max_in_flight,
-        artifact_global_min_interval_ms=artifact_global_min_interval_ms,
-        vector_store_keep=vector_store_keep,
-        artifacts_use_vector_store=artifacts_use_vector_store,
-        validation_grounding_use_vector_store=validation_grounding_use_vector_store,
-        strict_schema_validation=strict_schema_validation,
-        cover_cache_enabled=cover_cache_enabled,
-        cost_ledger_path=cost_ledger_path,
-        cost_daily_path=cost_daily_path,
-        model_pricing=model_pricing,
-        html_tag_acronyms=html_tag_acronyms,
-        validation_data_gap_policy=validation_data_gap_policy,
-        validation_regeneration_max_attempts=validation_regeneration_max_attempts,
+        openai_models=_normalize_openai_models(data.get("openai_models") or {}),
+        batch_limit=ingest_runtime["batch_limit"],
+        ingest_worker_limit=ingest_runtime["ingest_worker_limit"],
+        report_worker_limit=ingest_runtime["report_worker_limit"],
+        output_dir=paths_settings["output_dir"],
+        cache_dir=paths_settings["cache_dir"],
+        state_db=paths_settings["state_db"],
+        reports_db=paths_settings["reports_db"],
+        category_mapping_path=paths_settings["category_mapping_path"],
+        cover_style_path=paths_settings["cover_style_path"],
+        ingest_lock_path=paths_settings["ingest_lock_path"],
+        ingest_lock_ttl_seconds=ingest_runtime["ingest_lock_ttl_seconds"],
+        temperature=ingest_runtime["temperature"],
+        taxonomy_temperature=ingest_runtime["taxonomy_temperature"],
+        openai_seed=ingest_runtime["openai_seed"],
+        pdf_text_max_pages=pdf_text_settings["pdf_text_max_pages"],
+        pdf_text_max_chars=pdf_text_settings["pdf_text_max_chars"],
+        pdf_text_min_density=pdf_text_settings["pdf_text_min_density"],
+        pdf_text_sample_pages=pdf_text_settings["pdf_text_sample_pages"],
+        pdf_text_ocr_enabled=pdf_text_settings["pdf_text_ocr_enabled"],
+        pdf_text_ocr_model=pdf_text_settings["pdf_text_ocr_model"],
+        pdf_text_ocr_timeout_seconds=pdf_text_settings[
+            "pdf_text_ocr_timeout_seconds"
+        ],
+        pdf_text_ocr_prompt_namespace=pdf_text_settings[
+            "pdf_text_ocr_prompt_namespace"
+        ],
+        pdf_text_ocr_cache_enabled=pdf_text_settings["pdf_text_ocr_cache_enabled"],
+        pdf_text_ocr_chunk_page_count=pdf_text_settings[
+            "pdf_text_ocr_chunk_page_count"
+        ],
+        rank_model=rank_settings["rank_model"],
+        rank_temperature=rank_settings["rank_temperature"],
+        rank_seed=rank_settings["rank_seed"],
+        rank_max_candidates=rank_settings["rank_max_candidates"],
+        rank_selected_max=rank_settings["rank_selected_max"],
+        rank_min_overall_score=rank_settings["rank_min_overall_score"],
+        rank_min_quality_score=rank_settings["rank_min_quality_score"],
+        rank_min_insight_score=rank_settings["rank_min_insight_score"],
+        rank_min_data_score=rank_settings["rank_min_data_score"],
+        crop_refine_enabled=rank_settings["crop_refine_enabled"],
+        crop_refine_mode=rank_settings["crop_refine_mode"],
+        crop_refine_page_dpi=rank_settings["crop_refine_page_dpi"],
+        crop_refine_temperature=rank_settings["crop_refine_temperature"],
+        crop_refine_timeout_seconds=rank_settings["crop_refine_timeout_seconds"],
+        figure_caption_enabled=figure_caption_settings["figure_caption_enabled"],
+        figure_caption_temperature=figure_caption_settings[
+            "figure_caption_temperature"
+        ],
+        figure_caption_timeout_seconds=figure_caption_settings[
+            "figure_caption_timeout_seconds"
+        ],
+        figure_caption_prompt_namespace=figure_caption_settings[
+            "figure_caption_prompt_namespace"
+        ],
+        figure_caption_max_chars=figure_caption_settings["figure_caption_max_chars"],
+        openai_timeout_seconds=ingest_runtime["openai_timeout_seconds"],
+        rank_timeout_seconds=rank_settings["rank_timeout_seconds"],
+        contents_max_pages=contents_settings["contents_max_pages"],
+        contents_min_headings=contents_settings["contents_min_headings"],
+        contents_keywords=contents_settings["contents_keywords"],
+        contents_preview_enabled=contents_settings["contents_preview_enabled"],
+        contents_preview_dpi=contents_settings["contents_preview_dpi"],
+        evidence_pack_parallel_workers=evidence_pack_settings[
+            "evidence_pack_parallel_workers"
+        ],
+        evidence_pack_global_max_in_flight=evidence_pack_settings[
+            "evidence_pack_global_max_in_flight"
+        ],
+        evidence_pack_global_min_interval_ms=evidence_pack_settings[
+            "evidence_pack_global_min_interval_ms"
+        ],
+        evidence_pack_doc_map_max_attempts=evidence_pack_settings[
+            "evidence_pack_doc_map_max_attempts"
+        ],
+        evidence_pack_doc_map_retry_delay_ms=evidence_pack_settings[
+            "evidence_pack_doc_map_retry_delay_ms"
+        ],
+        evidence_pack_registry=evidence_pack_settings["evidence_pack_registry"],
+        evidence_pack_enable_new_variety_packs=evidence_pack_settings[
+            "evidence_pack_enable_new_variety_packs"
+        ],
+        artifact_parallel_workers=artifact_settings["artifact_parallel_workers"],
+        artifact_global_max_in_flight=artifact_settings[
+            "artifact_global_max_in_flight"
+        ],
+        artifact_global_min_interval_ms=artifact_settings[
+            "artifact_global_min_interval_ms"
+        ],
+        vector_store_keep=analysis_settings["vector_store_keep"],
+        artifacts_use_vector_store=analysis_settings["artifacts_use_vector_store"],
+        validation_grounding_use_vector_store=analysis_settings[
+            "validation_grounding_use_vector_store"
+        ],
+        strict_schema_validation=analysis_settings["strict_schema_validation"],
+        cover_cache_enabled=ingest_runtime["cover_cache_enabled"],
+        cost_ledger_path=analysis_settings["cost_ledger_path"],
+        cost_daily_path=analysis_settings["cost_daily_path"],
+        model_pricing=analysis_settings["model_pricing"],
+        html_tag_acronyms=analysis_settings["html_tag_acronyms"],
+        validation_data_gap_policy=validation_settings["validation_data_gap_policy"],
+        validation_regeneration_max_attempts=validation_settings[
+            "validation_regeneration_max_attempts"
+        ],
     )
 
     if resolver.missing:
@@ -879,7 +1234,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
                 "state_db": settings.state_db,
                 "reports_db": settings.reports_db,
                 "category_mapping_path": settings.category_mapping_path,
-                "html_tag_acronyms_path": html_tag_acronyms_path,
+                "html_tag_acronyms_path": paths_settings["html_tag_acronyms_path"],
                 "ingest_lock_path": settings.ingest_lock_path,
                 "ingest_lock_ttl_seconds": settings.ingest_lock_ttl_seconds,
                 "drive_supports_all_drives": settings.drive_supports_all_drives,

@@ -31,16 +31,12 @@ Key traits:
 - Per-image figure captioning: after artifacts are generated, the pipeline can run a fail-open multimodal captioning pass for each final cropped figure asset using the image plus compact report context (`title/publisher/region/time period`, TL;DR + executive summary, nearest DocMap section, top findings/claim-evidence highlights, and figure-local signals). Captions are stored per slide, rendered in the carousel, and audited in `report_analysis/figure_captions.json`; on failure the pipeline keeps rendering with legacy/detected/placeholder fallback captions.
 - OpenAI image-call compatibility: crop-refine image requests to the Responses API now omit known unsupported params (e.g., `temperature`/`seed` on `gpt-5*`) preflight and still retain fallback retry-without-param handling for unknown model/param mismatches.
 - OpenAI service consolidation: `src/services/openai_service.py` is the single OpenAI client boundary (request/response parsing, cost ledger writes, and provider error normalization). Other modules route OpenAI calls through it.
-- Refactor simplification layer: shared coercion/list-normalization helpers now live in `src/utils/coercion.py`, orchestrator retry wrappers are centralized through `retry_orchestrator.run_step_with_default_policy`, and duplicate WordPress term ensure logic is consolidated into a shared internal helper.
+- Refactor simplification layer: shared boolean/numeric coercion and list-normalization helpers now live in `src/utils/coercion.py`, orchestrator retry wrappers are centralized through `retry_orchestrator.run_step_with_default_policy`, and duplicate WordPress term ensure logic is consolidated into a shared internal helper.
 - Ops tooling cleanup: duration diagnostics now share one implementation in `scripts/duration_tools.py` (legacy entry scripts delegate to it), and legacy Streamlit config cleanup flags (`ingest.debug_candidate_gallery`, `analysis.compare`) were removed from the structured editor path.
-- Figure quality gate: candidate visuals now pass deterministic prefilters plus LLM thresholds (overall + quality + insight + data), kind-split ranking (tables and charts ranked independently), adaptive GPT crop refinement, and strict final cropping. Per-kind caps now ensure balanced outputs (up to `rank.selected_max` tables and `rank.selected_max` charts). If strict selection yields no final slices, the renderer now falls back to the best available pre-cropped candidate visuals and still enables the figure section whenever a primary extracted figure image exists.
-- Candidate extraction split: `pdf_service.collect_candidates` remains the canonical PDF-candidate service boundary, while table heuristics and chart/infographic heuristics now evolve in separate internal capability modules under `src/services/_pdf/` so each flow can be upgraded without creating competing service entrypoints.
-- Contextual table crop composition: stream-table candidates are first shrunk to the dominant tabular row cluster on the page, then build their final bbox from that structural core plus nearby title/note/source/statlink text blocks, while explicitly stopping at page-number/header noise and downstream body paragraphs or next-section headings. The table crop composer also restores clipped right-edge columns from overlapping tabular text, can recover clipped first columns from dense tabular text blocks when lattice extraction only catches the inner columns, preserves explicit `Table`/`Exhibit` title bands above the body, extends real overlapping footnote blocks below the body, keeps dense infographic value panels that behave like compact tables instead of prose, and detects ranked/leaderboard slides as table candidates even when most brand cells are image-only. When a full-width table is split across two adjacent pages, crop rendering can now prepend the explicit title band from the first page onto the continuation crop and append the footnote block from the continuation page onto the first crop, but only for strong same-table continuation pairs. The visual flow also rejects side-by-side photo-example panels that lack any figure/chart/infographic cue and contain no chart-like text signal, recovers no-caption slide/presentation charts from short panel titles plus drawing clusters, applies the looser panel label-density recovery only to those recovered panel charts rather than ordinary captioned draw figures, merges stacked multi-line panel titles into one shared caption block, lets a shared title claim multiple aligned sibling panels when there are no nearer per-panel titles, preserves attached drawing-backed prose side cards even when they contain a few numeric tokens, uses a stricter panel-only adjacent-text attachment that refuses cross-panel text blocks, and prunes chart candidates that are really duplicates of an overlapping ranked table on the same page. This tightens valid table crops without relying on report-specific keywords.
-- Prose-box rejection: bordered narrative callouts, long boxed paragraphs, bullet lists, and numbered text panels with little or no row-value signal are now rejected during table validation instead of being emitted as table candidates.
-- Candidate window control: after deterministic prefiltering, `rank.max_candidates` is now applied with kind-aware truncation so one noisy flow cannot crowd the other out before ranking. The same prefilter also rejects obvious table false positives such as figure/box text blocks and reference-style text blocks before crop generation and ranking.
-- Crop-refine edge guard: final LLM-refined bboxes now apply conservative padding plus text-edge correction so partial cut letters/lines at crop borders are automatically expanded (or trimmed if only tiny accidental overlap), reducing visibly clipped figure outputs.
-- Strict crop output safety: final crop filenames are now candidate-ID based, preventing table/chart overwrite collisions when strict table and strict chart crops are written to the same `slices/` directory.
-- Strict crop spillover control: strict crop modes additionally tighten bottom-edge partial text spillover so body paragraph fragments below a figure/table are trimmed while preserving the main visual content.
+- Figure quality gate: candidate visuals now pass deterministic prefilters, kind-split ranking, adaptive GPT crop refinement, and strict final cropping before HTML render. The detailed extraction, crop, and fallback heuristics live in [Technical Design Notes](#technical-design-notes).
+- Candidate extraction split: `pdf_service.collect_candidates` remains the canonical PDF-candidate service boundary, while table and chart/infographic heuristics evolve in separate internal modules under `src/services/_pdf/`. Heuristic rationale and known limits are grouped in [Technical Design Notes](#technical-design-notes).
+- Candidate window control: post-prefilter truncation is kind-aware so one noisy flow cannot crowd the other out before ranking. The exact prefilter, recovery, and spillover rules are documented in [Visual Candidate Pipeline](#visual-candidate-pipeline).
+- Crop output safety: strict crop modes use candidate-ID outputs and conservative text-edge correction so table/chart saves do not collide and partial border text is trimmed or recovered safely. See [Ranking, Crop Refinement, and Fallback](#ranking-crop-refinement-and-fallback).
 - SEO-ready HTML: rendered digests include shortened `<title>` handling, `meta description`, Open Graph/Twitter cards, optional canonical URL, JSON-LD (`Article`) structured data, explicit image `width`/`height` attributes to reduce CLS, and automatic `noindex,nofollow` on low-content fallback pages.
 - Vector store is the default and only analysis path; legacy local_text prompt stuffing has been removed now that vector_store is validated.
 - Taxonomy extraction now separates report-level signal tags from portal categorization: the prompt returns `primary_tags`, `secondary_tags`, a merged `taxonomy` list, and per-tag `tag_evidence` as metadata for search/filtering, while portal categories are assigned separately from report context using category definitions in `src/config/category-mappings.yaml`.
@@ -85,27 +81,115 @@ Current control-plane modules in `src/orchestrators/` include:
 - `ops_dashboard_orchestrator.py`: dashboard snapshot aggregation (reports/state/lock/storage).
 - `candidate_extraction_orchestrator.py`, `cover_image_orchestrator.py`, `recategorize_orchestrator.py`, `wp_category_update_orchestrator.py`: feature-specific workflows.
 
-## Local WordPress Dev
-WordPress local development, packaging, smoke tests, and sync workflows are documented in `Wordpress/README_WORDPRESS.md`.
+## WordPress Subproject
 
-For the local WordPress instance at `C:\Users\Михаил\Studio\marker-lense`, do not symlink the block theme into the local site. Some local stacks resolve theme symlinks through `/internal/symlinks/...`, which breaks `theme.json` loading in the web runtime.
+The `Wordpress/` folder contains the rendering and portal layer for Market Lense:
 
-Use the repo sync script instead:
+- block theme: `wp-content/themes/marketlense`
+- core domain plugin: `wp-content/plugins/marketlense-core`
+- packaging, provisioning, sync, and smoke-test scripts: `Wordpress/scripts/*`
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\Wordpress\scripts\sync-local-wordpress.ps1 `
-  -LocalWpPath 'C:\Users\Михаил\Studio\marker-lense'
+### Scope
+
+Included:
+
+- FSE block theme templates/parts/patterns for editorial rendering
+- WordPress plugin for the report CPT/taxonomy/meta domain model
+- ZIP packaging scripts for backoffice installation
+- local sync, provisioning, and smoke-test scripts
+
+Excluded:
+
+- Docker/runtime stack
+- Python ingest/publish orchestration logic in `src/`
+
+### Runtime Expectation
+
+This repo does not ship a local WordPress runtime. Use an existing local or hosted WordPress 6.6+ / PHP 8.2 environment, then install the packaged plugin/theme ZIPs through WP Admin.
+
+### Current Structure
+
+```text
+Wordpress/
+  config/
+    publisher-homepages.json
+    publisher-profiles.json
+  wp-content/
+    themes/
+      marketlense/
+        style.css
+        theme.json
+        functions.php
+        screenshot.png
+        assets/{css,js}
+        templates/*
+        parts/*
+        patterns/*
+    plugins/
+      marketlense-core/
+        marketlense-core.php
+        uninstall.php
+        readme.txt
+        includes/*
+  scripts/
+    build-theme-zip.sh
+    build-plugin-zip.sh
+    build-plugin-zip.ps1
+    provision-site-structure.sh
+    seed-publisher-homepages.sh
+    sync-publisher-profiles.sh
+    smoke-test.sh
+  dist/
 ```
 
-For near-realtime updates during theme/plugin development:
+### Plugin Contract
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\Wordpress\scripts\sync-local-wordpress.ps1 `
-  -LocalWpPath 'C:\Users\Михаил\Studio\marker-lense' `
-  -Watch
-```
+Plugin slug: `marketlense-core`
 
-The WordPress subproject now uses a consultancy-style block theme with:
+Primary responsibilities:
+
+- Registers custom post type `ml_report` (`show_in_rest=true`, REST base `ml_report`)
+- Registers taxonomies:
+  - native WordPress `category` support on `ml_report` for public topic/archive/filter UX
+  - `ml_publisher`
+- Keeps legacy `ml_topic` taxonomy data internal only for backward compatibility; it is not a public archive/filter surface
+- Registers publisher term metadata:
+  - `ml_publisher_homepage`
+  - `ml_publisher_insights_url`
+  - `ml_publisher_icon_source`
+  - `ml_publisher_notion_page_id`
+  - `ml_publisher_notion_page_url`
+- Registers and exposes report metadata keys:
+  - `ml_file_id`
+  - `ml_publisher_name`
+  - `ml_time_period`
+  - `ml_region`
+- Synchronizes metadata/taxonomy projections from published digest content and existing tags/categories on save
+- Provides shortcodes:
+  - `[ml_report_browser]`
+  - `[ml_home_metrics]`
+  - `[ml_hero_snapshot]`
+  - `[ml_featured_digest]`
+  - `[ml_intelligence_signals]`
+  - `[ml_strategic_themes]`
+  - `[ml_publisher_authority]`
+  - `[ml_topics_directory]`
+  - `[ml_publishers_directory]`
+  - `[ml_publisher_profile]`
+
+### Theme Contract
+
+The block theme is organized as an editorial intelligence portal:
+
+- Full-site editing templates and template parts for header, footer, archives, trust pages, search, and ingest-first singles
+- Homepage assembled from reorderable patterns with a consultancy-style hero, proof bands, and discovery bands
+- Theme-driven editorial token system in `theme.json` with semantic enterprise-blue tokens mirrored into `assets/css/theme.css` for non-block components
+- Sans-first typography roles for display, page titles, section titles, card titles, body copy, metadata, navigation, and buttons are defined centrally in `theme.json` and reinforced in `assets/css/theme.css`
+- Homepage chapter anchors are standardized through `.ml-section-anchor`, `.ml-section-eyebrow`, `.ml-section-title`, and `.ml-section-rule`
+- Homepage and shared editorial cards opt into a reusable premium surface system via `.ml-surface-card`
+- Minimal JS only for singular report interaction parity
+
+Current theme highlights:
 
 - shortcode-driven header/footer navigation resolution
 - a proof-led homepage hero and dynamic homepage intelligence surfaces
@@ -121,7 +205,7 @@ The WordPress subproject now uses a consultancy-style block theme with:
 - shortcode-driven premium homepage latest-report cards with a fixed archive information stack (date, period, title, publisher, metrics, excerpt, CTA), consistent 4:3 covers, a longer archive-specific excerpt source, an 8-line reserved TLDR area, and inline digest CTAs instead of the older Query-block grid
 - a flagship Featured Digest module with a two-column editorial cover/content layout, a top-right fixed badge column for insights/quotes/topics aligned to the publish/publisher/period rows, a stronger 30px title, a compact 3-line summary, limited topic display, and labeled insight bullets sourced from existing report data without changing featured-report selection logic
 - a more procedural `How It Works` methodology band with numbered step markers, stronger step-title/support hierarchy, equal-height premium cards, and an icon-free institutional presentation without changing the underlying copy or structure
-- a restrained motif/micro-interaction layer in `assets/css/theme.css` that now uses explicit shared hooks (`.ml-card`, `.ml-chip`, `.ml-link-arrow`, `.ml-button`), a tiny node-ended section rule, hero/briefing-band node motifs, calmer shared card hover states, quieter editorial link arrow movement, and consistent reduced-motion handling without changing module structure
+- a restrained motif/micro-interaction layer in `assets/css/theme.css` that uses explicit shared hooks (`.ml-card`, `.ml-chip`, `.ml-link-arrow`, `.ml-button`), a tiny node-ended section rule, hero/briefing-band node motifs, calmer shared card hover states, quieter editorial link arrow movement, and consistent reduced-motion handling without changing module structure
 - refined header/footer shell polish in `assets/css/theme.css` so the two-row header now reads as one integrated premium surface with a stronger brand lockup, calmer nav/current-state treatment, a more attached archive-search row, polished CTA states, and aligned footer navigation/copy without changing IA or template hierarchy
 - a final responsive premium pass in `assets/css/theme.css` at `1100px` and `782px` so the header shell, hero, featured digest, signals, themes, publishers, reports grid, methodology cards, briefing band, and footer preserve hierarchy and readable spacing on tablet/mobile without changing module order or data flow
 - `assets/js/reveal.js` now uses a lower IntersectionObserver threshold on compact viewports so tall homepage sections like Latest Reports still reveal correctly on mobile instead of remaining hidden
@@ -132,22 +216,245 @@ The WordPress subproject now uses a consultancy-style block theme with:
 - a native PowerShell plugin packaging script at `Wordpress/scripts/build-plugin-zip.ps1` so Windows builds do not depend on `bash.exe`/WSL
 - automatic backfill of legacy report publisher/meta projections during plugin upgrade/runtime so homepage authority surfaces recover without manual post edits
 
-To sync publisher directory/profile content from the Notion `REPORT SOURCES` workspace snapshot into WordPress term pages, run:
+### Provision Site IA
+
+After plugin/theme activation, provision the editorial IA:
 
 ```bash
+bash Wordpress/scripts/provision-site-structure.sh
+bash Wordpress/scripts/seed-publisher-homepages.sh
 bash Wordpress/scripts/sync-publisher-profiles.sh
 ```
 
-The sync reads `Wordpress/config/publisher-profiles.json` and updates each `ml_publisher` term with its Notion-derived homepage, self-presentation text, insights link(s), icon source, and source page identifiers.
-When those provisioning scripts fall back to REST, they now auto-discover both `/wp-json/` and `?rest_route=/` API roots and honor `WP_SSL_VERIFY` / `WP_CA_BUNDLE_PATH` for hosted sites with custom TLS.
+What `provision-site-structure.sh` does:
 
-Use this root README for pipeline architecture and CLI usage; use the WordPress subproject README for all theme/plugin operations.
+- Creates/updates required pages (About, Methodology, Topics directory, Publishers directory, Submit a Report, Contact, Privacy, Terms)
+- Publishes pages idempotently
+- Uses static block-theme template parts for navigation; it does not create classic menu locations
+- Falls back to REST when `wp-cli` is unavailable
+- Auto-discovers both `/wp-json/` and `?rest_route=/` style REST roots
+
+What `seed-publisher-homepages.sh` does:
+
+- Reads `Wordpress/config/publisher-homepages.json`
+- Ensures current publisher terms exist in `ml_publisher`
+- Upserts `ml_publisher_homepage` term meta
+- Is idempotent and safe to rerun
+- Falls back to REST when `wp-cli` cannot access a local WP core
+- Auto-activates `marketlense-core` in REST mode when needed
+
+What `sync-publisher-profiles.sh` does:
+
+- Reads `Wordpress/config/publisher-profiles.json`
+- Ensures current publisher terms exist in `ml_publisher`
+- Upserts the full publisher profile contract onto each term
+- Uses REST so large icon/data URI payloads and long descriptions sync safely
+- Inlines remote publisher icons to `data:image/...` payloads when possible
+- Is idempotent and safe to rerun after refreshing the Notion-derived JSON snapshot
+
+`publisher-profiles.json` is generated from the Notion `REPORT SOURCES` snapshot and captures icon source, publisher name, homepage link, self-presentation text, and insights/report link per publisher.
+
+When the provisioning scripts fall back to REST, they auto-discover both `/wp-json/` and `?rest_route=/` API roots and honor `WP_SSL_VERIFY` / `WP_CA_BUNDLE_PATH` for hosted sites with custom TLS.
+
+### Local Windows Workflow
+
+If your local WordPress runtime cannot safely follow theme symlinks, keep the local theme/plugin as real directories and sync from the repo instead of linking.
+
+For the local WordPress instance at `C:\Users\Михаил\Studio\marker-lense`, do not symlink the block theme into the local site. Some local stacks resolve theme symlinks through `/internal/symlinks/...`, which breaks `theme.json` loading in the web runtime.
+
+One-shot sync:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Wordpress\scripts\sync-local-wordpress.ps1 `
+  -LocalWpPath 'C:\Users\Михаил\Studio\marker-lense'
+```
+
+Watch mode:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Wordpress\scripts\sync-local-wordpress.ps1 `
+  -LocalWpPath 'C:\Users\Михаил\Studio\marker-lense' `
+  -Watch
+```
+
+Notes:
+
+- The script mirrors repo changes into the local theme/plugin directories with `robocopy /MIR`
+- `-SyncTarget theme` or `-SyncTarget plugin` limits sync to one side
+- The local target directories must be real directories, not symlinks/junctions
+- This avoids block-theme `theme.json` failures caused by local stacks that resolve symlinks through `/internal/symlinks/...`
+
+### Build ZIPs For WP Admin Upload
+
+From repo root:
+
+```bash
+bash Wordpress/scripts/build-plugin-zip.sh
+bash Wordpress/scripts/build-theme-zip.sh
+```
+
+From PowerShell on Windows, you can build the plugin archive without `bash.exe` / WSL:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Wordpress\scripts\build-plugin-zip.ps1
+```
+
+Build scripts use `zip` when available and automatically fall back to Python (`python` / `python3` / `py`) or local virtualenv interpreters when `zip` is not installed.
+
+On Windows in this workspace, repo-local helper shims are also available under `tools/`: `php`, `composer`, and `wp` point to `tools/php82/php.exe` plus the user-space PHAR installs in `%USERPROFILE%\.local\bin`.
+
+Outputs:
+
+```text
+Wordpress/dist/marketlense-core.zip
+Wordpress/dist/marketlense.zip
+```
+
+Install order in WordPress Admin:
+
+1. `Plugins -> Add New -> Upload Plugin` -> upload `marketlense-core.zip` -> activate.
+2. `Appearance -> Themes -> Add New -> Upload Theme` -> upload `marketlense.zip` -> activate.
+3. Run IA/data provisioning from this repo:
+   `bash Wordpress/scripts/provision-site-structure.sh`
+   `bash Wordpress/scripts/seed-publisher-homepages.sh`
+   `bash Wordpress/scripts/sync-publisher-profiles.sh`
+
+### Smoke Test
+
+If `wp-cli` is available:
+
+```bash
+bash Wordpress/scripts/smoke-test.sh
+```
+
+What it validates:
+
+- Plugin `marketlense-core` is installed and can activate
+- Theme `marketlense` is installed and can activate
+- Required theme templates exist
+- REST endpoints resolve for `ml_report` and `ml_publisher`
+- Front page, report archive, report filter URLs, and required site pages return HTTP `200`
+- Topics and publishers directory shortcodes render
+- Primary navigation links are present in rendered output
+- Front page editorial sections render
+- A published `ml_report` URL returns HTTP `200` (seeded if missing)
+
+Optional environment controls:
+
+- `WP_CLI_BIN` (default `wp`)
+- `WP_PATH`
+- `WP_CLI_FLAGS`
+- `PROVISION_STRUCTURE`
+- `SEED_PUBLISHERS`
+- `WP_SITE_URL`
+- `WP_USERNAME`
+- `WP_APP_PASSWORD` or `WP_BEARER_TOKEN`
+- `WP_SSL_VERIFY`
+- `WP_CA_BUNDLE_PATH`
+
+If `wp-cli` is unavailable, smoke test exits with a skip message.
+
+### Automated Verification
+
+The repo includes a minimal WordPress verification harness for CI and local use:
+
+```bash
+python scripts/ci/check_wordpress_subproject.py
+```
+
+What it validates:
+
+- no hardcoded root-relative internal links remain in theme `parts/`, `patterns/`, or `templates/`
+- no public `taxonomy-ml_topic.html` template is shipped
+- PHP syntax for theme/plugin PHP files
+- shell syntax for `Wordpress/scripts/*.sh`
+- optional live smoke test only when `RUN_WORDPRESS_SMOKE=1` and `wp-cli` is available
+
+The main CI workflow runs this harness automatically after installing PHP CLI.
+
+### Archive and Directory UX
+
+- `templates/archive-ml_report.html`, `templates/archive.html`, `templates/category.html`, `templates/taxonomy-ml_publisher.html`, and `templates/search.html` route through the richer shortcode-based report browser instead of plain `core/query` grids
+- `templates/archive.html` intentionally mirrors the reports archive browser as a hierarchy fallback because the widened archive can fall back from the CPT-specific block template to the generic archive template in WordPress
+- `templates/taxonomy-ml_publisher.html` renders `[ml_publisher_profile]` above the archive browser so each publisher term page can expose the imported icon, homepage CTA, and insights CTA
+- Publisher archive/profile icon rendering falls back to a monogram when a remote image source fails
+- `[ml_report_browser]` owns filtering, sort order, result summaries, active-filter chips, and the responsive archive layout for archive/search/topic/publisher views
+- Older `?ml_topic=<slug>` links remain accepted and still map onto native categories
+- Homepage editorial sections remain shortcode-driven intelligence components
+- `marketlense-core` applies its registered `ml_*` shortcodes during block rendering when template/pattern output leaves a raw shortcode unresolved
+- On activation and on the first runtime after upgrade, `marketlense-core` backfills missing report metadata and publisher taxonomy projections for existing `ml_report` posts and digest-style core `post` entries
+- `templates/page-topics-directory.html` renders `[ml_topics_directory]`
+- `templates/page-publishers-directory.html` renders `[ml_publishers_directory]` with publisher homepage CTAs, trimmed self-presentation copy, and optional insights links
+- The publishers directory is term-driven, so synced publishers remain visible even before they have published reports attached
+- In WP Admin, publisher management uses a dedicated `Market Lense Reports -> Publishers` screen instead of native taxonomy `edit-tags.php`
+- `templates/category.html` routes native category archives through the same report browser, so topic archive pages stay limited to uploaded reports
+- No dedicated `taxonomy-ml_topic.html` template is shipped; topic browsing is category-first
+- Digest content can now live in either `ml_report` or core `post`; front-end report surfaces scope to entries carrying the recovered digest contract
+
+### Responsive Layout Defaults
+
+The `marketlense` theme uses an explicit reading frame and a wider discovery frame in `theme.json`:
+
+- `settings.layout.contentSize`: `48rem`
+- `settings.layout.wideSize`: `82rem`
+
+The homepage hero uses a two-column proof-led composition, the proof rail is rendered by `[ml_hero_snapshot]`, homepage sections are grouped into proof and discovery bands, and the header/footer use the same home frame width as the hero and homepage section bands.
+
+### `ml_report` Ingest Rendering
+
+Published ingest reports render in an ingest-first mode in the single template:
+
+- `parts/single-content.html` is the single source of truth for singular report content rendering
+- `templates/single-ml_report.html` and `templates/single.html` both route through that shared template part
+- `assets/css/theme.css` contains a scoped parity layer under `.ml-ingest-report-content`
+- `assets/js/report-interactions.js` covers stripped interactive behavior and is enqueued only for `ml_report` and legacy default `post` singular views
+- Reveal panels are fail-open
+- Publish HTML source rewriting updates both `img src` and `img srcset` URLs
+- Legacy frontend JS removes broken `srcset` when older posts contain mixed absolute/relative image attributes
+
+This keeps the WordPress article view aligned with the latest ingest-generated HTML report styling and behavior after upload.
+
+### Pipeline Integration
+
+Publishing remains controlled by Python orchestration in `src/`:
+
+```powershell
+python -m src.cli publish-wp
+python -m src.cli update-wp-categories
+```
+
+WordPress credentials and publish controls come from root `.env` / `app.yaml`:
+
+- `WP_SITE_URL`
+- `WP_USERNAME`
+- `WP_APP_PASSWORD` or `WP_BEARER_TOKEN`
+- `WP_POST_STATUS`
+- `WP_POST_TYPE`
+- `WP_SSL_VERIFY`
+- `WP_CA_BUNDLE_PATH`
+
+This repo currently publishes into core WordPress posts with `publish.wp.post_type=posts`. The bundled WordPress plugin treats digest posts with a recovered digest contract (`ml_is_digest=1` and, when available, `ml_file_id`) as first-class report content across archive/home surfaces, so report cards and intelligence modules still work even when the underlying post type is `post`.
+
+The checked-in `publish.wp.site_url` value targets `https://marketlense.medianewsonline.com` so publish flows and follow-on tooling stop reinforcing the legacy `http` scheme.
+
+If root config disables WordPress TLS verification (`publish.wp.ssl_verify: false`), the Python publish service suppresses `urllib3` insecure-request warnings for those calls, but the HTTPS connection remains untrusted until the host certificate chain is fixed. The WordPress shell/Python provisioning scripts also honor `WP_SSL_VERIFY` and `WP_CA_BUNDLE_PATH`, so hosted admin/provisioning runs can match the same TLS policy as publish flows.
+
+When the hosting layer blocks direct `/wp-content/uploads/...` access, the plugin serves attachments through a frontend proxy route (`/?ml_media=<attachment_id>`) and rewrites frontend digest content/thumbnail URLs to that proxy so uploaded media still renders publicly.
+
+The Python publisher appends a hidden `Drive fileId: ...` marker to post content when the rendered HTML lacks one so plugin backfill and REST lookup remain deterministic for digest posts created under the core `post` type.
+
+During publish, the pipeline writes native category IDs for report topics and `ml_publisher` term IDs for report publishers through the WordPress REST API so archive filters and directory pages stay aligned with uploaded reports.
+
+### Maintenance Rule
+
+Any WordPress change in this subproject must update this root README WordPress section.
 
 ## Configuration (YAML + .env)
 
 Primary config: `src/config/app.yaml`. Missing values can be provided via `.env` (loaded by `config_service`). Secrets must come from environment variables.
 
 For dev wiring, use `src.services.config_service.build_ingest_settings` with `IngestSettingsBuildRequest` to adapt `AppSettings` into `IngestSettings` without hand-copying fields; new config keys are picked up automatically.
+`src/services/config_service.py` now resolves ingest settings through section resolvers plus reusable field specs, so env fallback, coercion, defaults, and minimum-value behavior are localized to the relevant config section instead of one long inline parsing chain.
 
 Key fields and env overrides:
 
@@ -155,8 +462,7 @@ Key fields and env overrides:
 - Ingest: `ingest.google_sa_path` (`GOOGLE_SERVICE_ACCOUNT_JSON`), `ingest.gdrive_folder_id` (`GDRIVE_FOLDER_ID`), `ingest.openai_model` (`OPENAI_MODEL`), `ingest.batch_limit` (`BATCH_LIMIT`, default 20), `ingest.worker_limit` (`INGEST_WORKER_LIMIT`, default 2), `ingest.report_worker_limit` (`INGEST_REPORT_WORKER_LIMIT`, default 2), `ingest.temperature` (`TEMPERATURE`, default 1.0), `ingest.timeout_seconds` (`OPENAI_TIMEOUT_SECONDS`, default 600), `ingest.lock_ttl_seconds` (`INGEST_LOCK_TTL_SECONDS`, default 7200), `ingest.contents_page.*` (keywords, max_pages, min_headings, render_dpi, preview_enabled), `ingest.evidence_packs.parallel_workers` (`EVIDENCE_PACK_PARALLEL_WORKERS`, default 3), `ingest.evidence_packs.global_max_in_flight` (`EVIDENCE_PACK_GLOBAL_MAX_IN_FLIGHT`, default 2), `ingest.evidence_packs.global_min_interval_ms` (`EVIDENCE_PACK_GLOBAL_MIN_INTERVAL_MS`, default 250), `ingest.evidence_packs.doc_map_max_attempts` (`EVIDENCE_PACK_DOC_MAP_MAX_ATTEMPTS`, default 3), `ingest.evidence_packs.doc_map_retry_delay_ms` (`EVIDENCE_PACK_DOC_MAP_RETRY_DELAY_MS`, default 500), `ingest.evidence_packs.registry` (`EVIDENCE_PACK_REGISTRY`, comma-separated), `ingest.evidence_packs.enable_new_variety_packs` (`EVIDENCE_PACK_ENABLE_NEW_VARIETY_PACKS`, default `false`), `ingest.artifacts.parallel_workers` (`ARTIFACT_PARALLEL_WORKERS`, default 4), `ingest.artifacts.global_max_in_flight` (`ARTIFACT_GLOBAL_MAX_IN_FLIGHT`, default 2), `ingest.artifacts.global_min_interval_ms` (`ARTIFACT_GLOBAL_MIN_INTERVAL_MS`, default 250), `ingest.validation.regeneration_max_attempts` (`VALIDATION_REGENERATION_MAX_ATTEMPTS`, default `3`, minimum `1`).
 - PDF OCR fallback: `ingest.pdf_text.ocr_fallback.enabled`, `ingest.pdf_text.ocr_fallback.model` (default `gpt-5-mini`), `ingest.pdf_text.ocr_fallback.timeout_seconds`, `ingest.pdf_text.ocr_fallback.prompt_namespace`, `ingest.pdf_text.ocr_fallback.cache_enabled`, `ingest.pdf_text.ocr_fallback.chunk_page_count` (default `8`). OCR calls go through `src/services/openai_service.py` using the OpenAI Responses API. This fallback only runs when the native text gate would otherwise return `pdf_text_unextractable`; low-density but still extractable PDFs stay on the normal path.
 - Figure captions: `ingest.figure_captions.enabled`, `ingest.figure_captions.temperature`, `ingest.figure_captions.timeout_seconds`, `ingest.figure_captions.prompt_namespace` (default `report_vs/figure_caption`), `ingest.figure_captions.max_chars` (default `500`). The bundled `src/config/app.yaml` enables this phase by default. Model resolution follows `openai_models.report_vs/figure_caption` first, then falls back to `ingest.openai_model`. The phase is fail-open: primary figures fall back to the legacy shared caption, secondary figures fall back to detected captions or the existing placeholder label.
-- Publish: `publish.wp.site_url` (`WP_SITE_URL`), `publish.wp.username` (`WP_USERNAME`), `publish.wp.post_status` (`WP_POST_STATUS`, default `publish`), `publish.wp.post_type` (`WP_POST_TYPE`, fallback default `ml_report`; this repo currently sets `posts` in YAML), `publish.wp.ssl_verify` (`WP_SSL_VERIFY`, default `true`), `publish.wp.ca_bundle_path` (`WP_CA_BUNDLE_PATH`, optional CA bundle for self-signed/private certs), `publish.validation.policy` (`PUBLISH_VALIDATION_POLICY`, default `block`).
-- This repo currently publishes into core WordPress posts with `publish.wp.post_type=posts`. The bundled WordPress plugin now treats digest posts with a recovered digest contract (`ml_is_digest=1` and, when available, `ml_file_id`) as first-class report content across archive/home surfaces, so report cards and intelligence modules still work even when the underlying post type is `post`.
+- Publish: WordPress publish settings and TLS notes are documented together in the `WordPress Subproject` section below (`publish.wp.*`, `WP_*`, and `publish.validation.policy`).
 - Ranking/crop refinement: `rank.max_candidates`, `rank.selected_max` (default `5`), `rank.min_overall_score`, `rank.min_quality_score`, `rank.min_insight_score`, `rank.min_data_score`, `rank.crop_refine_enabled`, `rank.crop_refine_mode` (`adaptive|always|off`), `rank.crop_refine_page_dpi`, `rank.crop_refine_temperature`, `rank.crop_refine_timeout_seconds` (defaults to `rank.timeout_seconds` when omitted).
 - Drive listing: `ingest.drive.supports_all_drives`, `ingest.drive.include_items_from_all_drives` (shared drive flags), `ingest.drive.drive_id` (shared drive scope), and `ingest.drive.list_mode` (`full` vs `metadata` to omit names until needed).
 - PDF text extraction: `ingest.pdf_text.max_pages` and `ingest.pdf_text.max_chars` cap how much text is sampled per PDF; `ingest.pdf_text.min_density` (default `250` chars/page) triggers "not available from text" fallbacks when extraction is sparse; `ingest.pdf_text.sample_pages` (default `3`) controls the deterministic sample used to validate extractability before analysis.
@@ -183,13 +489,6 @@ Secrets (env only):
 - `WP_APP_PASSWORD` or `WP_BEARER_TOKEN` (publishing)
 - `WP_POST_TYPE` (optional publish endpoint override; current YAML sets `posts`, code fallback is `ml_report`)
 - Optional provider keys (e.g., `MINERU_API_KEY`) if used.
-
-WordPress HTTPS note:
-
-- Leave `publish.wp.ssl_verify` enabled in normal environments.
-- For self-signed/private certificates, prefer `publish.wp.ca_bundle_path` or `WP_CA_BUNDLE_PATH` to trust a specific CA bundle.
-- As a last resort for local/admin environments with a self-signed certificate, set `publish.wp.ssl_verify: false` (or `WP_SSL_VERIFY=false`) to disable TLS verification for WordPress REST calls.
-- When `publish.wp.ssl_verify` is `false`, `src/services/wordpress_service.py` suppresses `urllib3`'s `InsecureRequestWarning` for those WordPress calls so CLI output stays readable; the connection is still unverified and should be treated as insecure.
 
 Prompt locations:
 
@@ -264,6 +563,7 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
       - Evidence packs are generated via `src/generators/evidence_pack_generator.py`, which now stays as the orchestration entrypoint while per-pack normalization/metadata live under `src/generators/evidence_packs/*.py`. The config-driven registry (`ingest.evidence_packs.registry`) and optional variety expansion (`ingest.evidence_packs.enable_new_variety_packs`) cover `doc_map`, `scope`, `methods`, `findings`, `limitations`, `quote_candidates`, and optional `key_metrics`, `risk_register`, `recommendations`, `contradictions`. `doc_map` runs first as a hard gate; remaining packs run in parallel (`ingest.evidence_packs.parallel_workers`). Global evidence-pack rate limiting is applied at the orchestrator boundary (`src/orchestrators/report_pipeline_orchestrator.py`) using `ingest.evidence_packs.global_max_in_flight` + `ingest.evidence_packs.global_min_interval_ms`.
       - Artifacts are generated via `src/generators/artifact_generator.py` using a dependency-aware parallel DAG: `toc` + `summary` + `insights_candidates` + `quotes` in parallel, then `insights_final`, then `expert_comment` + `linkedin_post` in parallel. Independent steps use `ingest.artifacts.parallel_workers`. Global artifact rate limiting is applied at the orchestrator boundary (`src/orchestrators/report_pipeline_orchestrator.py`) using `ingest.artifacts.global_max_in_flight` + `ingest.artifacts.global_min_interval_ms`. By default these artifact model calls run closed-context (`chat_json`); vector retrieval is opt-in via `analysis.artifacts_use_vector_store`.
       - Targeted regeneration is handled by `src/generators/report_regeneration_generator.py`, which performs exactly one regeneration pass against mapped failing artifact families and reuses the same artifact normalization, schema validation, evidence-reference validation, and storage behavior as the main artifact generator.
+      - Regeneration target dispatch inside `report_regeneration_generator.py` is registry-driven by `target_section`, so each supported section keeps prompt namespace selection, variable assembly, normalization, and artifact-state updates in one handler path instead of a shared branch chain.
       - Artifact evidence IDs are normalized to canonical known references (`findings`, `quote_candidates`, `doc_map.sections`) before schema-reference validation; unresolved IDs are cleared rather than failing the entire artifact payload.
        - Packs are stored under `out/<report-slug>/report_analysis/*.json` and persisted in the metadata DB (`reports` table columns `vector_store_id`, `evidence_packs_json`; state DB stores `vector_store_status`, `indexed_at_utc`, `openai_file_id`, `last_error`).
        - Orchestrator logs `VECTOR_STORE_CREATED`, `VECTOR_STORE_INDEXED`, `EVIDENCE_READY`.
@@ -291,9 +591,8 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
      - **Normalization**: `normalize_generator` enforces strict schema and list sizing.
     - **Categorization**: stored evidence packs are compacted into a `ReportCategoryContext`, then a single batched category-fit prompt evaluates all portal categories against that context using each category's `definition`, `include_when`, and `exclude_when` guidance from `src/config/category-mappings.yaml`. The selector returns at most two portal categories. Taxonomy tags are kept as metadata and do not determine category assignment.
      - **Figure selection**: `pdf_service.extract_best_figure` selects a representative visual and caption.
-      - **Candidate extraction**: `pdf_service.collect_candidates` finds chart/table regions, parallelizes page-level extraction (bounded by `ingest.report_worker_limit`), excludes the detected contents/index page from candidate output when present, and now routes table extraction through `src/services/_pdf/table_candidates.py` and chart/infographic extraction through `src/services/_pdf/visual_candidates.py` while keeping `src/services/_pdf/figures.py` as the single public coordination boundary. Before the heavy chart/table heuristics run, the service now performs a cheap page-triage pass and skips obvious full-page scanned-image pages with no extractable text, which cuts negative-path work without changing crop logic on real candidate pages. Stream-table bboxes are first shrunk to their dominant row cluster, then composed contextually with attached title/note/source blocks and hard stop rules for margin noise, body text, and next-section headings. Stream-table note attachment now falls back to nearby text blocks as well, which preserves mixed legend-plus-footnote footer blocks that do not start with `Note:` on the first line. The stream-table crop composer now also strips top page-number markers, preserves isolated trailing numeric rows that still belong to the same table, restores clipped right-edge columns when overlapping text still behaves like the same tabular grid, can recover clipped first columns from dense lattice-body text blocks, keeps wrapped footnote continuation lines, extends real overlapping note blocks below the body, preserves explicit `Table ...` / `Exhibit ...` title bands above the body, clamps internal `Table ...` titles away from preceding paragraph text, trims internal `References`/next-heading spillover from the bottom of a crop, detects ranked/leaderboard panels as table candidates even when most non-rank cells are image-based logos or labels, and can now recover full-page raster tables when a slide is effectively a single table image rather than extractable vector text. Candidate table crop rendering now trims top-corner page numbers again after padding so continuation-page header bands can keep a little top slack without reintroducing margin page numbers, and it can conservatively stitch a title strip / footnote strip across adjacent full-width continuation pages when the second page is clearly the same table. Table validation also rejects stream slide-card layouts, short numeric contents-grid pages, section-list / chapter-opener layouts, front-matter pages such as contents/acknowledgments/endnotes, bibliography/reference blocks including multi-column numbered endnotes, boxed prose snippets, decorative image pages with only a short quote block, and small chart-like figure fragments that appear inside a wider figure/infographic context, while still allowing dense infographic value panels when their text behaves like a compact table rather than prose. After bbox expansion, table candidates run one more containment dedupe pass so broad stream shadows collapse into the final expanded crop that will actually be saved, and a final overlap prune removes weak lattice/stream table shadows when a recovered chart panel already owns the same infographic card. Chart candidate bboxes now trim corner page-number markers on either side of the header, recognize `Infographic <n>` captions in the visual flow, tolerate dense label/value text when the clipped region still looks chart-like rather than prose, recover slide/deck charts from short panel titles plus drawing clusters even when no `Figure ...` caption exists, and can now recover self-contained infographic cards whose headline lives inside the card rather than above it. The chart flow also allows a shared panel title to pull in stacked aligned panel bands even when only the first band sits directly under the title, requires recovered panel charts to show either label-dense chart text, a small numeric data signal, or a structured card-style signal so action-card/callout slides do not leak into the chart set, keeps compact multi-step instruction cards when their text is short-lined and structured around repeated colon-headed steps rather than long narrative prose, can attach a compact internal title band even when that title is wider than the numeric chart body as long as it still aligns to the same panel card, distinguishes compact top title bands from internal label blocks so panel cards keep a little top headroom without letting aggressive top/bottom clamping cut off side-label content, now lets titled panel cards pull in compact side/bottom label blocks plus pure numeric `%` labels when they sit just outside the panel edge instead of treating them like page numbers, can attach narrow centered title lines above a panel when they behave like part of the same title band, rejects short metric-stub panel crops when they are fully shadowed by a larger titled heading candidate, and also rejects compact percent-banner panels when they sit directly above a much larger titled panel card that clearly owns the same infographic section. For multi-panel slides split under separate titles, that nearby-label expansion is now clamped back to the local title slice so one cross-panel line or label block cannot make a sibling panel swallow the whole page, while compact stat-card panels can be clamped back to their dominant filled card so lower narrative sections do not inflate the crop. Panel candidates also no longer borrow the generic page-heading expansion path used for captioned drawings, which keeps split infographic/stat cards from collapsing into one page-wide crop while preserving explicitly attached internal title bands. Candidate crop tightening now also ignores fallback “heading” lines that are actually internal text inside a strongly overlapping filled card, which preserves the full top edge of slide-style chart cards instead of snapping the crop down to the first internal sentence/title line, and the legacy chart saver now preserves extra bottom padding when real chart text is anchored near the lower edge so donut cards and percentage labels are not shaved at save time. The chart flow can still attach a horizontally adjacent drawing-backed prose side card when it is vertically aligned with the chart panel but does not itself look like another data panel. This keeps infographic-style “what this means” callouts in the chart crop without re-merging side-by-side numeric panels. The visual flow also applies the looser panel label-density recovery only to recovered panel charts instead of ordinary captioned draw figures, now rejects captionless chart candidates whose extracted text still behaves like a table, reference block, boxed narrative, front-matter banner, short numbered sidebar with attached source/statlink, large lower-start cover art, photo-led narrative panel, or prose-heavy narrative card that only contains sparse numeric mentions, rejects long narrative visual blocks that trail into numbered notes/footnotes even when they do not present as a formal `Box` heading, treats explanatory `Figure ...` reference prose the same even when the figure number is followed by punctuation instead of whitespace, prunes fragmented opener banners whose short line fragments would otherwise look label-dense, and prunes chart candidates that are really table shadows even when the overlapping table was detected via non-ranked table heuristics. A final chart cleanup pass also removes heading-only country/title slices and forecast-table shadow crops that still leak through the earlier panel recovery logic. It also allows chart-like embedded image cards to pass a relaxed aspect gate only on pages that do not already contain explicit `Figure ...` / `Chart ...` caption blocks, while separately recovering right-column raster chart cards with strong left-side narrative context when the raster itself is structured like a chart card rather than a decorative photo. This recovers slide/deck chart cards without broadening the photo-example false positives rejected elsewhere. Captioned draw figures can now keep figure cards whose border starts slightly above the `Figure ...` label, split stacked figure cards at the next caption instead of collapsing them into one crop, suppress a top-of-page captioned figure when it is immediately followed by another explicit figure caption and the upper crop is really just a source/statlink-heavy spillover band, and consistently keep attached `Source:` blocks as part of the figure crop. Oversized draw candidates are clamped to the next figure caption or section heading below when a page contains multiple visuals, and page-local chart IDs now keep the legacy-accepted visuals first so newly recovered charts append after existing IDs instead of renumbering older page matches. Chart note/source handling still reserves crop padding when clamping below note/source/statlink blocks, preventing candidate crops from reintroducing the next paragraph line.
-       - **Known limitation: OECD-family heuristics**: the current extraction stack is mostly layout-based, but a few transitional heuristics still reflect the OECD Economic Outlook family used for tuning. In production code, note handling explicitly recognizes `StatLink`, and bibliography false-positive rejection still uses OECD-style reference terms such as `oecd publishing` and `publishing, paris`. These heuristics are documented as temporary and should be generalized so candidate extraction is fully publisher-agnostic.
-     - **Candidate prefilter + ranking**: deterministic prefilter removes obvious low/no-data fragments, table figure/box text-block leaks, and reference-style table blocks, then applies kind-aware truncation before `rank_service` scores candidates via LLM (overall + quality + insight + data + keep/reject_reason; model resolves from `openai_models.rank_candidates` if set, else `rank.model`, then `ingest.openai_model`).
+      - **Candidate extraction**: `pdf_service.collect_candidates` remains the single public coordination boundary for chart/table discovery, page-level extraction, and contents-page exclusion. Table extraction lives under `src/services/_pdf/table_candidates.py`; chart/infographic extraction lives under `src/services/_pdf/visual_candidates.py`; both are summarized in [Visual Candidate Pipeline](#visual-candidate-pipeline) and expanded in [Technical Design Notes](#technical-design-notes).
+     - **Candidate prefilter + ranking**: deterministic prefilter removes obvious low/no-data fragments, reference-style/table-shadow leaks, and other early false positives before kind-aware truncation and LLM ranking (overall + quality + insight + data + keep/reject_reason; model resolves from `openai_models.rank_candidates` if set, else `rank.model`, then `ingest.openai_model`). The detailed prefilter, ranking, and threshold behavior is documented in [Ranking, Crop Refinement, and Fallback](#ranking-crop-refinement-and-fallback).
      - **Candidate fallback policy**: fallback crops no longer revive candidates that already failed the configured rank thresholds; fallback is limited to threshold-passing ranked candidates first, then remaining deterministic prefilter survivors by kind-balanced caps.
      - **Adaptive crop refinement**: ambiguous candidates call `rank_candidates/crop_refine` with page image context; obvious pass/reject candidates skip LLM. Ambiguous page renders are pre-rendered in parallel and ambiguous LLM refinement calls run in bounded parallel mode. Crop refinement now runs in two passes (coarse -> finalize) to improve edge precision and reduce clipped text artifacts.
      - **Strict cropping**: final crops are routed by visual kind (`table_strict` for tables, `chart_strict` for charts) so each class uses tailored border trimming instead of a monolithic crop mode.
@@ -332,6 +631,41 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
 6. **State record**
    - Published posts are recorded with post ID and URL for idempotency.
    - Validation policy: `publish.validation.policy` set to `block` skips publish when validation fails/missing; `warn` logs issues but proceeds. Publish outcomes include validation status/issues.
+
+---
+
+## Technical Design Notes
+
+This section keeps implementation-heavy extraction and crop heuristics out of the main workflow narrative while preserving one place to document the current design.
+
+### Visual Candidate Pipeline
+
+- `pdf_service.collect_candidates` is the single public PDF-candidate boundary; internal heuristics are split by capability under `src/services/_pdf/` so table and chart flows can evolve independently without creating competing service entrypoints.
+- The candidate path starts with cheap page triage, skips obvious scanned-image negatives, excludes the detected contents/index page from output, and then runs table/chart discovery in parallel within `ingest.report_worker_limit`.
+- Deterministic prefiltering removes obvious non-data fragments before ranking, including figure/box text leaks, reference-style table blocks, narrative callouts, and weak table-shadow/chart-shadow overlaps.
+- Kind-aware truncation is applied after deterministic prefiltering so noisy table pages cannot starve chart candidates or vice versa before LLM ranking.
+
+### Table Crop Composition Heuristics
+
+- Stream-table candidates are first reduced to the dominant tabular row cluster, then expanded with nearby title, note, source, and statlink text while hard-stopping at margin noise, page-number/header bands, downstream body prose, and next-section headings.
+- Table recovery is intentionally layout-based: it can restore clipped right-edge columns, recover dense first-column text when lattice extraction misses it, preserve explicit `Table` or `Exhibit` title bands, keep wrapped footnotes, and extend real overlapping footer blocks below the body.
+- Table validation rejects prose-shaped layouts such as boxed narratives, bullet lists, section-list pages, front matter, bibliography blocks, and decorative figure fragments; dense infographic value panels are still allowed when their text behaves like compact tabular data.
+- Continuation handling is conservative: full-width adjacent-page tables can stitch a title strip or footnote strip across pages only when the second page is a strong same-table continuation.
+
+### Chart and Infographic Recovery Heuristics
+
+- Chart candidates trim page-number/header noise, recognize captioned visuals plus captionless slide/deck charts, and recover infographic cards whose headline may live inside the card rather than above it.
+- Panel recovery is deliberately local: shared titles can claim aligned sibling panels, but cross-panel text attachment is clamped so one title or label line cannot swallow the whole page.
+- The visual flow tolerates dense chart-like labels and compact instruction-card structures, can preserve a drawing-backed prose side card when it is part of the same chart panel, and prunes chart candidates that are really overlapping table shadows.
+- Cleanup favors publisher-agnostic layout signals over report-family keywords, but the current stack still includes a few transitional heuristics such as explicit `StatLink` handling and OECD-style bibliography terms; those should be generalized over time.
+
+### Ranking, Crop Refinement, and Fallback
+
+- Ranked selection is kind-split: tables and charts are scored independently with overall, quality, insight, and data signals before thresholding and per-kind caps are applied.
+- Ambiguous candidates enter a two-pass crop-refinement flow (coarse then finalize) using page-image context; obvious keep/reject cases skip the extra LLM round trip.
+- Final crop saving is candidate-ID based so strict table/chart outputs cannot overwrite each other in the shared `slices/` directory.
+- Conservative edge correction expands partially clipped border text when needed and trims small spillover fragments when they clearly belong to surrounding body prose rather than the figure itself.
+- If strict selection yields no usable final slices, fallback is bounded: threshold-passing ranked candidates are preferred first, then remaining deterministic survivors by balanced kind caps, and finally the HTML can still render a primary-only figure section when `extract_best_figure` produced a usable lead visual.
 
 ---
 
@@ -547,6 +881,85 @@ Required environment variables:
 
 ---
 
+## Troubleshooting
+
+Start with the structured logs: every failure path logs `run_id`, `task_id`, `span_id`, `event`, and the `AppError.code`. For per-report analysis issues, also inspect `out/<report-slug>/report_analysis/` for `doc_map.json`, `artifacts.json`, `validation.json`, and any `*_regen_attempt_*.json` snapshots.
+
+### `db_locked`
+
+- Meaning: ingest checked SQLite write access up front and refused to start because `state_db`, `reports_db`, or both could not acquire `BEGIN IMMEDIATE`.
+- Typical fix: stop the other process holding the DB, close any GUI/DB browser session, or wait for the other run to finish before starting a new ingest.
+- Related code path: `src/orchestrators/ingest_orchestrator.py` raises `db_locked` before any report work begins.
+
+### `ingest_locked`
+
+- Meaning: another ingest run already holds the ingest lock file, so the orchestrator exits instead of running two overlapping ingests.
+- Typical fix: wait for the active run to finish, or clear a stale lock only after confirming no ingest process is still active.
+- Related code path: `src/orchestrators/ingest_orchestrator.py`, `src/services/lock_service.py`.
+
+### `pdf_text_unextractable`
+
+- Meaning: the deterministic sampled pages contained no extractable text, so the report was rejected before vector-store or artifact generation.
+- Typical fix: verify the source PDF is not image-only, confirm the sampled pages are representative, or enable OCR fallback with `ingest.pdf_text.ocr_fallback.enabled=true` if scanned PDFs are expected.
+- Where to look: logs include `text_extractability_checked` / `text_extractability_failed` with sampled pages and character counts.
+
+### `pdf_text_ocr_failed`
+
+- Meaning: OCR fallback was attempted but failed to produce a usable page-aligned OCR PDF with extractable text.
+- Typical fix: confirm `OPENAI_API_KEY` is set, the configured OCR model is valid, and the source PDF can be split/read successfully. If OCR keeps failing on one file, inspect whether the PDF is corrupted or image quality is too poor.
+- Related code path: `src/generators/pdf_text_ocr_generator.py`, `src/generators/report_source_generator.py`.
+
+### `doc_map_empty`
+
+- Meaning: the `doc_map` evidence pack came back empty or normalized into an empty payload, so analysis stops for that report.
+- Typical fix: inspect `out/<report-slug>/report_analysis/doc_map.json` when present, review the logged `doc_map_empty:<reason>` message, and verify the source PDF has enough recoverable section structure after text extraction/OCR.
+- Additional signal: the state DB stores `doc_map_summary_json` for these halted reports.
+
+### Validation Failed Or Publish Blocked
+
+- Meaning: `validation.json` did not end in `status=pass`, or publish was blocked because `publish.validation.policy=block`.
+- Typical fix: inspect `out/<report-slug>/report_analysis/validation.json` first, then compare against `artifacts.json` and any `artifacts_regen_attempt_*.json` / `validation_regen_attempt_*.json` snapshots to see whether regeneration already tried to repair the failure.
+- Config lever: set `publish.validation.policy=warn` only if you intentionally want publish to continue with validation issues.
+
+### `vector_store_index_timeout` Or `vector_store_index_failed`
+
+- Meaning: the OpenAI vector store was created and attached, but indexing never reached a ready state or returned an explicit failed status.
+- Typical fix: retry the run, confirm `OPENAI_API_KEY` is present, and check whether provider-side indexing latency is temporarily high. If timeouts are recurrent, inspect the logged `last_status` and vector-store metadata in state/report DB records.
+- Related code path: `src/services/vector_store_service.py` waits for `completed` / `ready` / `indexed` and raises on timeout or failed indexing.
+
+### OpenAI Credential Or Response Errors
+
+- Common codes: `openai_missing_api_key`, `vector_store_missing_api_key`, `openai_client_init_failed`, `openai_response_invalid_json`, `openai_response_validation_failed`.
+- Typical fix: confirm `OPENAI_API_KEY` is set in the shell that launched the process, verify the installed OpenAI client is usable in the current environment, and inspect the logged prompt/response metadata when a model returns invalid or schema-breaking JSON.
+- Where it shows up: general analysis, OCR fallback, crop refinement, and vector-store operations all route through `src/services/openai_service.py`.
+
+### Drive Auth Or Config Errors
+
+- Common codes: `drive_sa_path_missing`, `drive_folder_id_missing`, `drive_list_failed`, `drive_metadata_failed`, `drive_download_failed`.
+- Typical fix: confirm the service account JSON path exists, the target Drive folder/file ID is correct, and the service account has access to the folder or shared drive being queried.
+- Where it shows up: `src/services/drive_service.py` validates these inputs before listing/downloading.
+
+### WordPress Auth, TLS, Redirect, Or REST Errors
+
+- Common codes: `wp_post_lookup_redirected`, `wp_post_client_error`, `wp_post_server_error`, `wp_media_client_error`, `wp_media_server_error`, plus matching taxonomy/tag lookup/create errors.
+- Typical fix: confirm `WP_SITE_URL`, `WP_USERNAME`, and `WP_APP_PASSWORD` or `WP_BEARER_TOKEN` are correct; ensure the site is serving the expected REST root without redirect loops; and fix the server certificate chain before relying on `publish.wp.ssl_verify=false`.
+- TLS-specific controls: `WP_SSL_VERIFY` and `WP_CA_BUNDLE_PATH` are honored by the shell/Python provisioning scripts, and `publish.wp.ssl_verify` / `publish.wp.ca_bundle_path` govern the Python publish path.
+- Extra signal: WordPress 5xx and redirect failures log bounded response headers/body excerpts to make REST misroutes and hosting issues visible.
+
+### Smoke Test Skipped
+
+- Meaning: `Wordpress/scripts/smoke-test.sh` exits successfully with a skip message when `wp-cli` is not available.
+- Typical fix: install `wp-cli`, point `WP_CLI_BIN` at it if needed, and set `WP_PATH` when the target WordPress runtime is not the current directory.
+- CI note: the optional live smoke test only runs when `RUN_WORDPRESS_SMOKE=1` and `wp-cli` is available.
+
+### Report Payload Or Artifact Contract Incomplete
+
+- Common codes: `report_payload_incomplete`, `artifact_contract_incomplete`, `artifact_inputs_unavailable`.
+- Meaning: the pipeline produced a semantically incomplete payload or artifact even after normalization/regeneration safeguards.
+- Typical fix: inspect `artifacts.json`, `validation.json`, and the logs around the failing stage to identify which required fields were empty or degraded to sentinel text such as `not available from text`.
+
+---
+
 ## CLI Usage
 
 Primary entrypoint (defaults to `ingest` if no subcommand):
@@ -720,14 +1133,3 @@ To extend the system:
 - Artifacts: `src/generators/artifact_generator.py` writes `artifacts.json` under the same analysis path, parallelizing independent steps with dependency ordering and process-wide rate limiting via `ingest.artifacts.*`.
 - Cost ledger: `src/services/cost_ledger_service.py` appends JSONL entries for every LLM call and writes daily rollups (`./out/cost-ledger.jsonl`, `./out/cost-daily.json`) using per-model pricing from config.
 
-## WordPress Rendering Environment
-All WordPress subproject details live in `Wordpress/README_WORDPRESS.md`, including:
-
-- plugin/theme structure and contracts
-- local Windows sync workflow
-- ZIP packaging commands
-- provisioning and smoke-test scripts
-- archive/directory UX behavior
-- ingest-rendering parity details
-
-Keep WordPress-specific implementation guidance centralized in the subproject README to avoid documentation drift.

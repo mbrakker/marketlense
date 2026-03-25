@@ -84,6 +84,11 @@ from src.services.logging_service import (
 )
 from src.services.prompt_service import list_prompt_namespaces
 from src.services.state_service import get as get_state
+from src.utils.coercion import (
+    coerce_extended_bool as _as_bool,
+    coerce_float as _as_float,
+    coerce_int as _as_int,
+)
 from src.utils.errors import AppError
 from src.utils.gui_utils import (
     mapping_from_editor_records,
@@ -574,33 +579,6 @@ def _as_str(value: Any, default: str = "") -> str:
     if value is None:
         return default
     return str(value)
-
-
-def _as_int(value: Any, default: int) -> int:
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return default
-
-
-def _as_float(value: Any, default: float) -> float:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return default
-
-
-def _as_bool(value: Any, default: bool) -> bool:
-    if isinstance(value, bool):
-        return value
-    if value is None:
-        return default
-    text = str(value).strip().lower()
-    if text in {"1", "true", "yes", "y", "on", "t"}:
-        return True
-    if text in {"0", "false", "no", "n", "off", "f"}:
-        return False
-    return default
 
 
 def _optional_int_from_text(value: str, *, field: str, errors: list[str]) -> int | None:

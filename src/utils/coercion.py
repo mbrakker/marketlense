@@ -3,6 +3,12 @@ from __future__ import annotations
 from typing import Iterable
 
 
+DEFAULT_TRUE_TOKENS = frozenset({"1", "true", "yes", "on"})
+DEFAULT_FALSE_TOKENS = frozenset({"0", "false", "no", "off"})
+EXTENDED_TRUE_TOKENS = frozenset({"1", "true", "yes", "y", "on", "t"})
+EXTENDED_FALSE_TOKENS = frozenset({"0", "false", "no", "n", "off", "f"})
+
+
 def coerce_int(value: object, default: int = 0, *, min_value: int | None = None) -> int:
     try:
         parsed = int(value)
@@ -18,6 +24,36 @@ def coerce_float(value: object, default: float = 0.0) -> float:
         return float(value)
     except (TypeError, ValueError):
         return default
+
+
+def coerce_bool(
+    value: object,
+    default: bool = False,
+    *,
+    true_tokens: Iterable[str] = DEFAULT_TRUE_TOKENS,
+    false_tokens: Iterable[str] = DEFAULT_FALSE_TOKENS,
+) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return default
+    token = str(value).strip().lower()
+    if not token:
+        return default
+    if token in {str(item).strip().lower() for item in true_tokens}:
+        return True
+    if token in {str(item).strip().lower() for item in false_tokens}:
+        return False
+    return default
+
+
+def coerce_extended_bool(value: object, default: bool = False) -> bool:
+    return coerce_bool(
+        value,
+        default,
+        true_tokens=EXTENDED_TRUE_TOKENS,
+        false_tokens=EXTENDED_FALSE_TOKENS,
+    )
 
 
 def clean_string_list(values: Iterable[object], *, dedupe_casefold: bool = False) -> list[str]:

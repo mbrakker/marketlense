@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 import logging
 from copy import deepcopy
-from dataclasses import asdict
-from typing import Any, Dict, List
+from dataclasses import asdict, dataclass, field
+from typing import Any, Callable, Dict, List
 
 from src.contracts.regeneration import (
     ArtifactRegenerationRequest,
@@ -12,6 +12,7 @@ from src.contracts.regeneration import (
     RegenerationIssue,
     RegenerationTarget,
 )
+from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationRequest
 from src.generators.artifact_normalization import (
     artifact_base_variables,
@@ -37,9 +38,58 @@ from src.generators.artifact_generator import (
 from src.generators.validation.evidence import retrieve_evidence_windows
 from src.generators.validation.preparation import prepare_validation_inputs
 from src.services import openai_service, prompt_service, report_analysis_store_service
+from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 
 logger = logging.getLogger("market_lense.report_regeneration_generator")
+
+
+@dataclass
+class _RegenerationState:
+    toc_entries: List[Dict[str, Any]]
+    toc_topics: List[str]
+    topic_briefs: List[Dict[str, Any]]
+    summary: Dict[str, Any]
+    insights_candidates: List[Dict[str, Any]]
+    insights_final: List[Dict[str, Any]]
+    quotes_final: List[Dict[str, Any]]
+    expert_comment: str
+    linkedin_post: str
+    source_status: Dict[str, Any]
+    regenerated_sections: List[str] = field(default_factory=list)
+    prompt_namespaces: List[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class _RegenerationRuntime:
+    request: ArtifactRegenerationRequest
+    safe_doc_map: Dict[str, Any]
+    safe_evidence: Dict[str, Any]
+    base_vars: Dict[str, Any]
+    quote_candidates: List[Dict[str, Any]]
+    expert_domain: str
+    artifact_use_vector_store: bool
+    openai_client: Any
+    prompt_client: Any
+
+
+@dataclass(frozen=True)
+class _RegenerationHandlerExecution:
+    handler: "_RegenerationHandler"
+    runtime: _RegenerationRuntime
+    state: _RegenerationState
+    target: RegenerationTarget
+    target_ctx: RunContext
+    grounding_package: Dict[str, Any]
+
+
+@dataclass(frozen=True)
+class _RegenerationHandler:
+    target_section: str
+    prompt_namespaces: tuple[str, ...]
+    current_section_payload: Callable[[Dict[str, Any]], Any]
+    extra_fix_checklist: tuple[str, ...]
+    handle: Callable[[_RegenerationHandlerExecution], None]
 
 
 def regenerate_artifacts(
@@ -92,26 +142,22 @@ def regenerate_artifacts(
     quote_candidates = artifact_quote_candidates(safe_evidence)
     expert_domain = normalize_expert_domain(request.categories)
     fallback_toc_bundle = build_toc_artifacts(doc_map=safe_doc_map)
-
-    toc_entries = normalize_artifact_toc_entries(safe_artifacts.get("toc_entries"))
-    if not toc_entries:
-        toc_entries = normalize_artifact_toc_entries(
-            fallback_toc_bundle.get("toc_entries")
-        )
-    toc_topics = normalize_artifact_topics(safe_artifacts.get("toc_topics"))
-    if not toc_topics:
-        toc_topics = normalize_artifact_topics(fallback_toc_bundle.get("toc_topics"))
-    summary = _copy_dict(safe_artifacts.get("summary"))
-    insights_candidates = _copy_list(safe_artifacts.get("insights_candidates"))
-    insights_final = _copy_list(safe_artifacts.get("insights_final"))
-    topic_briefs = _copy_list(safe_artifacts.get("toc_topics_expanded"))
-    if not topic_briefs:
-        topic_briefs = _copy_list(fallback_toc_bundle.get("toc_topics_expanded"))
-    quotes_final = _copy_list(safe_artifacts.get("quotes_final"))
-    expert_comment = _s(safe_artifacts.get("expert_comment"))
-    linkedin_post = _s(safe_artifacts.get("linkedin_post"))
-    regenerated_sections: List[str] = []
-    prompt_namespaces: List[str] = []
+    state = _build_regeneration_state(
+        safe_artifacts=safe_artifacts,
+        fallback_toc_bundle=fallback_toc_bundle,
+        source_status=availability,
+    )
+    runtime = _RegenerationRuntime(
+        request=request,
+        safe_doc_map=safe_doc_map,
+        safe_evidence=safe_evidence,
+        base_vars=base_vars,
+        quote_candidates=quote_candidates,
+        expert_domain=expert_domain,
+        artifact_use_vector_store=artifact_use_vector_store,
+        openai_client=openai_client,
+        prompt_client=prompt_client,
+    )
 
     for target in request.plan.targets:
         target_ctx = child_context(
@@ -130,18 +176,7 @@ def regenerate_artifacts(
                 },
             )
         )
-        current_artifact_state = _artifact_state(
-            toc_entries=toc_entries,
-            toc_topics=toc_topics,
-            toc_topics_expanded=topic_briefs,
-            summary=summary,
-            insights_candidates=insights_candidates,
-            insights_final=insights_final,
-            quotes_final=quotes_final,
-            expert_comment=expert_comment,
-            linkedin_post=linkedin_post,
-            source_status=availability,
-        )
+        current_artifact_state = _artifact_state_from_state(state)
         prepared = _prepare_grounding(request, current_artifact_state)
         grounding_package = _build_grounding_package(
             target=target,
@@ -150,183 +185,17 @@ def regenerate_artifacts(
             evidence_packs=safe_evidence,
             doc_map=safe_doc_map,
         )
-        if target.target_section == "summary":
-            namespace = "report_vs/artifacts/regenerate/summary"
-            result = render_artifact_json_model(
-                namespace=namespace,
-                variables={
-                    **base_vars,
-                    "attempt_index": request.attempt_index,
-                    "target_section": target.target_section,
-                    "current_section_json": _dump_json(summary),
-                    "failure_reasons_json": _issues_json(target.issues),
-                    "fix_checklist_json": _fix_checklist_json(target),
-                    "grounding_package_json": _dump_json(grounding_package),
-                },
-                settings=request.settings,
-                ctx=target_ctx,
-                openai_client=openai_client,
-                prompt_client=prompt_client,
-                allow_vector_store=artifact_use_vector_store,
-                vector_store_id=request.vector_store_id,
+        handler = _resolve_regeneration_handler(target.target_section)
+        handler.handle(
+            _RegenerationHandlerExecution(
+                handler=handler,
+                runtime=runtime,
+                state=state,
+                target=target,
+                target_ctx=target_ctx,
+                grounding_package=grounding_package,
             )
-            summary = normalize_artifact_summary(result.get("summary"))
-            regenerated_sections.append("summary")
-            prompt_namespaces.append(namespace)
-        elif target.target_section == "topics":
-            toc_bundle = build_toc_artifacts(doc_map=safe_doc_map)
-            toc_entries = normalize_artifact_toc_entries(toc_bundle.get("toc_entries"))
-            toc_topics = normalize_artifact_topics(toc_bundle.get("toc_topics"))
-            topic_briefs = _copy_list(toc_bundle.get("toc_topics_expanded"))
-            regenerated_sections.extend(
-                ["toc_entries", "toc_topics", "toc_topics_expanded"]
-            )
-        elif target.target_section == "insights_bundle":
-            candidates_namespace = "report_vs/artifacts/regenerate/insights_candidates"
-            candidates_result = render_artifact_json_model(
-                namespace=candidates_namespace,
-                variables={
-                    **base_vars,
-                    "attempt_index": request.attempt_index,
-                    "target_section": target.target_section,
-                    "current_section_json": _dump_json(insights_candidates),
-                    "failure_reasons_json": _issues_json(target.issues),
-                    "fix_checklist_json": _fix_checklist_json(target),
-                    "grounding_package_json": _dump_json(grounding_package),
-                },
-                settings=request.settings,
-                ctx=child_context(
-                    target_ctx, task_id=f"{target_ctx.task_id}:candidates"
-                ),
-                openai_client=openai_client,
-                prompt_client=prompt_client,
-                allow_vector_store=artifact_use_vector_store,
-                vector_store_id=request.vector_store_id,
-            )
-            insights_candidates = normalize_artifact_insights(
-                candidates_result.get("insights_candidates"),
-                prefix="candidate",
-            )
-            final_namespace = "report_vs/artifacts/regenerate/insights_final"
-            final_result = render_artifact_json_model(
-                namespace=final_namespace,
-                variables={
-                    **base_vars,
-                    "attempt_index": request.attempt_index,
-                    "target_section": target.target_section,
-                    "current_section_json": _dump_json(insights_final),
-                    "insights_candidates_json": _dump_json(insights_candidates),
-                    "failure_reasons_json": _issues_json(target.issues),
-                    "fix_checklist_json": _fix_checklist_json(target),
-                    "grounding_package_json": _dump_json(grounding_package),
-                },
-                settings=request.settings,
-                ctx=child_context(target_ctx, task_id=f"{target_ctx.task_id}:final"),
-                openai_client=openai_client,
-                prompt_client=prompt_client,
-                allow_vector_store=artifact_use_vector_store,
-                vector_store_id=request.vector_store_id,
-            )
-            insights_final = pad_artifact_insights(
-                normalize_artifact_insights(
-                    final_result.get("insights_final"), prefix="insight"
-                ),
-                insights_candidates,
-            )
-            regenerated_sections.extend(["insights_candidates", "insights_final"])
-            prompt_namespaces.extend([candidates_namespace, final_namespace])
-        elif target.target_section == "quotes":
-            namespace = "report_vs/artifacts/regenerate/quotes"
-            result = render_artifact_json_model(
-                namespace=namespace,
-                variables={
-                    **base_vars,
-                    "attempt_index": request.attempt_index,
-                    "target_section": target.target_section,
-                    "current_section_json": _dump_json(quotes_final),
-                    "quote_candidates_json": _dump_json(quote_candidates),
-                    "failure_reasons_json": _issues_json(target.issues),
-                    "fix_checklist_json": _fix_checklist_json(target),
-                    "grounding_package_json": _dump_json(grounding_package),
-                },
-                settings=request.settings,
-                ctx=target_ctx,
-                openai_client=openai_client,
-                prompt_client=prompt_client,
-                allow_vector_store=artifact_use_vector_store,
-                vector_store_id=request.vector_store_id,
-            )
-            quotes_final = normalize_artifact_quotes(result.get("quotes_final"))
-            regenerated_sections.append("quotes")
-            prompt_namespaces.append(namespace)
-        elif target.target_section == "expert_comment":
-            normalize_artifact_evidence_ids(
-                summary=summary,
-                insights_candidates=insights_candidates,
-                insights_final=insights_final,
-                quotes_final=quotes_final,
-                doc_map=safe_doc_map,
-                evidence_packs=safe_evidence,
-            )
-            namespace = "report_vs/artifacts/regenerate/expert_comment"
-            result = render_artifact_json_model(
-                namespace=namespace,
-                variables={
-                    "attempt_index": request.attempt_index,
-                    "target_section": target.target_section,
-                    "summary_json": _dump_json(summary),
-                    "insights_final_json": _dump_json(insights_final),
-                    "quotes_json": _dump_json(quotes_final),
-                    "expert_domain": expert_domain,
-                    "current_section_text": expert_comment,
-                    "failure_reasons_json": _issues_json(target.issues),
-                    "fix_checklist_json": _fix_checklist_json(target),
-                    "grounding_package_json": _dump_json(grounding_package),
-                },
-                settings=request.settings,
-                ctx=target_ctx,
-                openai_client=openai_client,
-                prompt_client=prompt_client,
-                allow_vector_store=artifact_use_vector_store,
-                vector_store_id=request.vector_store_id,
-            )
-            expert_comment = _s(result.get("expert_comment"))
-            regenerated_sections.append("expert_comment")
-            prompt_namespaces.append(namespace)
-        elif target.target_section == "linkedin_post":
-            normalize_artifact_evidence_ids(
-                summary=summary,
-                insights_candidates=insights_candidates,
-                insights_final=insights_final,
-                quotes_final=quotes_final,
-                doc_map=safe_doc_map,
-                evidence_packs=safe_evidence,
-            )
-            namespace = "report_vs/artifacts/regenerate/linkedin_post"
-            result = render_artifact_json_model(
-                namespace=namespace,
-                variables={
-                    "attempt_index": request.attempt_index,
-                    "target_section": target.target_section,
-                    "summary_json": _dump_json(summary),
-                    "insights_final_json": _dump_json(insights_final),
-                    "current_section_text": linkedin_post,
-                    "failure_reasons_json": _issues_json(target.issues),
-                    "fix_checklist_json": _fix_checklist_json(target),
-                    "grounding_package_json": _dump_json(grounding_package),
-                },
-                settings=request.settings,
-                ctx=target_ctx,
-                openai_client=openai_client,
-                prompt_client=prompt_client,
-                allow_vector_store=artifact_use_vector_store,
-                vector_store_id=request.vector_store_id,
-            )
-            linkedin_post = strip_artifact_inline_reference_ids(
-                _s(result.get("linkedin_post"))
-            )
-            regenerated_sections.append("linkedin_post")
-            prompt_namespaces.append(namespace)
+        )
         logger.info(
             log_event(
                 target_ctx,
@@ -335,7 +204,7 @@ def regenerate_artifacts(
                 module=logger.name,
                 fields={
                     "target_section": target.target_section,
-                    "regenerated_sections": list(regenerated_sections),
+                    "regenerated_sections": list(state.regenerated_sections),
                 },
             )
         )
@@ -346,16 +215,16 @@ def regenerate_artifacts(
         doc_map=safe_doc_map,
         evidence_packs=safe_evidence,
         toc_bundle={
-            "toc_entries": toc_entries,
-            "toc_topics": toc_topics,
-            "toc_topics_expanded": topic_briefs,
+            "toc_entries": state.toc_entries,
+            "toc_topics": state.toc_topics,
+            "toc_topics_expanded": state.topic_briefs,
         },
-        summary=summary,
-        insights_candidates=insights_candidates,
-        insights_final=insights_final,
-        quotes_final=quotes_final,
-        expert_comment=expert_comment,
-        linkedin_post=linkedin_post,
+        summary=state.summary,
+        insights_candidates=state.insights_candidates,
+        insights_final=state.insights_final,
+        quotes_final=state.quotes_final,
+        expert_comment=state.expert_comment,
+        linkedin_post=state.linkedin_post,
         source_status=availability,
         ctx=ctx,
     )
@@ -379,8 +248,8 @@ def regenerate_artifacts(
     )
     response = ArtifactRegenerationResponse(
         updated_artifacts=updated_artifacts,
-        regenerated_sections=regenerated_sections,
-        prompt_namespaces=prompt_namespaces,
+        regenerated_sections=state.regenerated_sections,
+        prompt_namespaces=state.prompt_namespaces,
         artifacts_path=artifacts_path,
         artifacts_snapshot_path=artifacts_snapshot_path,
     )
@@ -393,7 +262,7 @@ def regenerate_artifacts(
             fields={
                 "report_id": request.report_id,
                 "attempt_index": request.attempt_index,
-                "regenerated_sections": regenerated_sections,
+                "regenerated_sections": state.regenerated_sections,
                 "artifacts_path": artifacts_path,
                 "artifacts_snapshot_path": artifacts_snapshot_path,
             },
@@ -580,27 +449,25 @@ def _artifact_state(
     }
 
 
+def _artifact_state_from_state(state: _RegenerationState) -> Dict[str, Any]:
+    return _artifact_state(
+        toc_entries=state.toc_entries,
+        toc_topics=state.toc_topics,
+        toc_topics_expanded=state.topic_briefs,
+        summary=state.summary,
+        insights_candidates=state.insights_candidates,
+        insights_final=state.insights_final,
+        quotes_final=state.quotes_final,
+        expert_comment=state.expert_comment,
+        linkedin_post=state.linkedin_post,
+        source_status=state.source_status,
+    )
+
+
 def _current_section_payload(target_section: str, artifacts: Dict[str, Any]) -> Any:
-    if target_section == "topics":
-        return {
-            "toc_entries": _copy_list(artifacts.get("toc_entries")),
-            "toc_topics": _copy_list(artifacts.get("toc_topics")),
-            "toc_topics_expanded": _copy_list(artifacts.get("toc_topics_expanded")),
-        }
-    if target_section == "summary":
-        return _copy_dict(artifacts.get("summary"))
-    if target_section == "insights_bundle":
-        return {
-            "insights_candidates": _copy_list(artifacts.get("insights_candidates")),
-            "insights_final": _copy_list(artifacts.get("insights_final")),
-        }
-    if target_section == "quotes":
-        return _copy_list(artifacts.get("quotes_final"))
-    if target_section == "expert_comment":
-        return _s(artifacts.get("expert_comment"))
-    if target_section == "linkedin_post":
-        return _s(artifacts.get("linkedin_post"))
-    return {}
+    return _resolve_regeneration_handler(target_section).current_section_payload(
+        artifacts
+    )
 
 
 def _issues_json(issues: List[RegenerationIssue]) -> str:
@@ -614,18 +481,9 @@ def _fix_checklist_json(target: RegenerationTarget) -> str:
         "Use only grounded evidence from the supplied package.",
         "Preserve the required JSON schema exactly.",
     ]
-    if target.target_section == "insights_bundle":
-        checklist.append(
-            "Each final insight must map cleanly to evidence_id and supporting evidence text."
-        )
-    if target.target_section == "quotes":
-        checklist.append(
-            "Quotes must be verbatim or clearly supported by source evidence."
-        )
-    if target.target_section in {"expert_comment", "linkedin_post"}:
-        checklist.append(
-            "Do not introduce new claims that are absent from the updated summary/insights/quotes."
-        )
+    checklist.extend(
+        _resolve_regeneration_handler(target.target_section).extra_fix_checklist
+    )
     return _dump_json(checklist)
 
 
@@ -677,3 +535,331 @@ def _s(value: Any) -> str:
     if value is None:
         return ""
     return value if isinstance(value, str) else str(value)
+
+
+def _build_regeneration_state(
+    *,
+    safe_artifacts: Dict[str, Any],
+    fallback_toc_bundle: Dict[str, Any],
+    source_status: Dict[str, Any],
+) -> _RegenerationState:
+    toc_entries = normalize_artifact_toc_entries(safe_artifacts.get("toc_entries"))
+    if not toc_entries:
+        toc_entries = normalize_artifact_toc_entries(
+            fallback_toc_bundle.get("toc_entries")
+        )
+    toc_topics = normalize_artifact_topics(safe_artifacts.get("toc_topics"))
+    if not toc_topics:
+        toc_topics = normalize_artifact_topics(fallback_toc_bundle.get("toc_topics"))
+    topic_briefs = _copy_list(safe_artifacts.get("toc_topics_expanded"))
+    if not topic_briefs:
+        topic_briefs = _copy_list(fallback_toc_bundle.get("toc_topics_expanded"))
+    return _RegenerationState(
+        toc_entries=toc_entries,
+        toc_topics=toc_topics,
+        topic_briefs=topic_briefs,
+        summary=_copy_dict(safe_artifacts.get("summary")),
+        insights_candidates=_copy_list(safe_artifacts.get("insights_candidates")),
+        insights_final=_copy_list(safe_artifacts.get("insights_final")),
+        quotes_final=_copy_list(safe_artifacts.get("quotes_final")),
+        expert_comment=_s(safe_artifacts.get("expert_comment")),
+        linkedin_post=_s(safe_artifacts.get("linkedin_post")),
+        source_status=deepcopy(source_status),
+    )
+
+
+def _render_regeneration_model(
+    *,
+    execution: _RegenerationHandlerExecution,
+    namespace: str,
+    variables: Dict[str, Any],
+    ctx: RunContext,
+) -> Dict[str, Any]:
+    request = execution.runtime.request
+    return render_artifact_json_model(
+        namespace=namespace,
+        variables=variables,
+        settings=request.settings,
+        ctx=ctx,
+        openai_client=execution.runtime.openai_client,
+        prompt_client=execution.runtime.prompt_client,
+        allow_vector_store=execution.runtime.artifact_use_vector_store,
+        vector_store_id=request.vector_store_id,
+    )
+
+
+def _normalize_state_evidence_ids(execution: _RegenerationHandlerExecution) -> None:
+    normalize_artifact_evidence_ids(
+        summary=execution.state.summary,
+        insights_candidates=execution.state.insights_candidates,
+        insights_final=execution.state.insights_final,
+        quotes_final=execution.state.quotes_final,
+        doc_map=execution.runtime.safe_doc_map,
+        evidence_packs=execution.runtime.safe_evidence,
+    )
+
+
+def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> None:
+    namespace = execution.handler.prompt_namespaces[0]
+    result = _render_regeneration_model(
+        execution=execution,
+        namespace=namespace,
+        ctx=execution.target_ctx,
+        variables={
+            **execution.runtime.base_vars,
+            "attempt_index": execution.runtime.request.attempt_index,
+            "target_section": execution.target.target_section,
+            "current_section_json": _dump_json(execution.state.summary),
+            "failure_reasons_json": _issues_json(execution.target.issues),
+            "fix_checklist_json": _fix_checklist_json(execution.target),
+            "grounding_package_json": _dump_json(execution.grounding_package),
+        },
+    )
+    execution.state.summary = normalize_artifact_summary(result.get("summary"))
+    execution.state.regenerated_sections.append("summary")
+    execution.state.prompt_namespaces.append(namespace)
+
+
+def _handle_topics_regeneration(execution: _RegenerationHandlerExecution) -> None:
+    toc_bundle = build_toc_artifacts(doc_map=execution.runtime.safe_doc_map)
+    execution.state.toc_entries = normalize_artifact_toc_entries(
+        toc_bundle.get("toc_entries")
+    )
+    execution.state.toc_topics = normalize_artifact_topics(toc_bundle.get("toc_topics"))
+    execution.state.topic_briefs = _copy_list(toc_bundle.get("toc_topics_expanded"))
+    execution.state.regenerated_sections.extend(
+        ["toc_entries", "toc_topics", "toc_topics_expanded"]
+    )
+
+
+def _handle_insights_bundle_regeneration(
+    execution: _RegenerationHandlerExecution,
+) -> None:
+    candidates_namespace, final_namespace = execution.handler.prompt_namespaces
+    candidates_ctx = child_context(
+        execution.target_ctx, task_id=f"{execution.target_ctx.task_id}:candidates"
+    )
+    candidates_result = _render_regeneration_model(
+        execution=execution,
+        namespace=candidates_namespace,
+        ctx=candidates_ctx,
+        variables={
+            **execution.runtime.base_vars,
+            "attempt_index": execution.runtime.request.attempt_index,
+            "target_section": execution.target.target_section,
+            "current_section_json": _dump_json(execution.state.insights_candidates),
+            "failure_reasons_json": _issues_json(execution.target.issues),
+            "fix_checklist_json": _fix_checklist_json(execution.target),
+            "grounding_package_json": _dump_json(execution.grounding_package),
+        },
+    )
+    execution.state.insights_candidates = normalize_artifact_insights(
+        candidates_result.get("insights_candidates"),
+        prefix="candidate",
+    )
+    final_ctx = child_context(
+        execution.target_ctx, task_id=f"{execution.target_ctx.task_id}:final"
+    )
+    final_result = _render_regeneration_model(
+        execution=execution,
+        namespace=final_namespace,
+        ctx=final_ctx,
+        variables={
+            **execution.runtime.base_vars,
+            "attempt_index": execution.runtime.request.attempt_index,
+            "target_section": execution.target.target_section,
+            "current_section_json": _dump_json(execution.state.insights_final),
+            "insights_candidates_json": _dump_json(
+                execution.state.insights_candidates
+            ),
+            "failure_reasons_json": _issues_json(execution.target.issues),
+            "fix_checklist_json": _fix_checklist_json(execution.target),
+            "grounding_package_json": _dump_json(execution.grounding_package),
+        },
+    )
+    execution.state.insights_final = pad_artifact_insights(
+        normalize_artifact_insights(
+            final_result.get("insights_final"), prefix="insight"
+        ),
+        execution.state.insights_candidates,
+    )
+    execution.state.regenerated_sections.extend(
+        ["insights_candidates", "insights_final"]
+    )
+    execution.state.prompt_namespaces.extend([candidates_namespace, final_namespace])
+
+
+def _handle_quotes_regeneration(execution: _RegenerationHandlerExecution) -> None:
+    namespace = execution.handler.prompt_namespaces[0]
+    result = _render_regeneration_model(
+        execution=execution,
+        namespace=namespace,
+        ctx=execution.target_ctx,
+        variables={
+            **execution.runtime.base_vars,
+            "attempt_index": execution.runtime.request.attempt_index,
+            "target_section": execution.target.target_section,
+            "current_section_json": _dump_json(execution.state.quotes_final),
+            "quote_candidates_json": _dump_json(execution.runtime.quote_candidates),
+            "failure_reasons_json": _issues_json(execution.target.issues),
+            "fix_checklist_json": _fix_checklist_json(execution.target),
+            "grounding_package_json": _dump_json(execution.grounding_package),
+        },
+    )
+    execution.state.quotes_final = normalize_artifact_quotes(result.get("quotes_final"))
+    execution.state.regenerated_sections.append("quotes")
+    execution.state.prompt_namespaces.append(namespace)
+
+
+def _handle_expert_comment_regeneration(
+    execution: _RegenerationHandlerExecution,
+) -> None:
+    _normalize_state_evidence_ids(execution)
+    namespace = execution.handler.prompt_namespaces[0]
+    result = _render_regeneration_model(
+        execution=execution,
+        namespace=namespace,
+        ctx=execution.target_ctx,
+        variables={
+            "attempt_index": execution.runtime.request.attempt_index,
+            "target_section": execution.target.target_section,
+            "summary_json": _dump_json(execution.state.summary),
+            "insights_final_json": _dump_json(execution.state.insights_final),
+            "quotes_json": _dump_json(execution.state.quotes_final),
+            "expert_domain": execution.runtime.expert_domain,
+            "current_section_text": execution.state.expert_comment,
+            "failure_reasons_json": _issues_json(execution.target.issues),
+            "fix_checklist_json": _fix_checklist_json(execution.target),
+            "grounding_package_json": _dump_json(execution.grounding_package),
+        },
+    )
+    execution.state.expert_comment = _s(result.get("expert_comment"))
+    execution.state.regenerated_sections.append("expert_comment")
+    execution.state.prompt_namespaces.append(namespace)
+
+
+def _handle_linkedin_post_regeneration(
+    execution: _RegenerationHandlerExecution,
+) -> None:
+    _normalize_state_evidence_ids(execution)
+    namespace = execution.handler.prompt_namespaces[0]
+    result = _render_regeneration_model(
+        execution=execution,
+        namespace=namespace,
+        ctx=execution.target_ctx,
+        variables={
+            "attempt_index": execution.runtime.request.attempt_index,
+            "target_section": execution.target.target_section,
+            "summary_json": _dump_json(execution.state.summary),
+            "insights_final_json": _dump_json(execution.state.insights_final),
+            "current_section_text": execution.state.linkedin_post,
+            "failure_reasons_json": _issues_json(execution.target.issues),
+            "fix_checklist_json": _fix_checklist_json(execution.target),
+            "grounding_package_json": _dump_json(execution.grounding_package),
+        },
+    )
+    execution.state.linkedin_post = strip_artifact_inline_reference_ids(
+        _s(result.get("linkedin_post"))
+    )
+    execution.state.regenerated_sections.append("linkedin_post")
+    execution.state.prompt_namespaces.append(namespace)
+
+
+def _topics_section_payload(artifacts: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "toc_entries": _copy_list(artifacts.get("toc_entries")),
+        "toc_topics": _copy_list(artifacts.get("toc_topics")),
+        "toc_topics_expanded": _copy_list(artifacts.get("toc_topics_expanded")),
+    }
+
+
+def _summary_section_payload(artifacts: Dict[str, Any]) -> Dict[str, Any]:
+    return _copy_dict(artifacts.get("summary"))
+
+
+def _insights_bundle_section_payload(artifacts: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "insights_candidates": _copy_list(artifacts.get("insights_candidates")),
+        "insights_final": _copy_list(artifacts.get("insights_final")),
+    }
+
+
+def _quotes_section_payload(artifacts: Dict[str, Any]) -> List[Dict[str, Any]]:
+    return _copy_list(artifacts.get("quotes_final"))
+
+
+def _expert_comment_section_payload(artifacts: Dict[str, Any]) -> str:
+    return _s(artifacts.get("expert_comment"))
+
+
+def _linkedin_post_section_payload(artifacts: Dict[str, Any]) -> str:
+    return _s(artifacts.get("linkedin_post"))
+
+
+_REGENERATION_HANDLER_REGISTRY: Dict[str, _RegenerationHandler] = {
+    "summary": _RegenerationHandler(
+        target_section="summary",
+        prompt_namespaces=("report_vs/artifacts/regenerate/summary",),
+        current_section_payload=_summary_section_payload,
+        extra_fix_checklist=(),
+        handle=_handle_summary_regeneration,
+    ),
+    "topics": _RegenerationHandler(
+        target_section="topics",
+        prompt_namespaces=(),
+        current_section_payload=_topics_section_payload,
+        extra_fix_checklist=(),
+        handle=_handle_topics_regeneration,
+    ),
+    "insights_bundle": _RegenerationHandler(
+        target_section="insights_bundle",
+        prompt_namespaces=(
+            "report_vs/artifacts/regenerate/insights_candidates",
+            "report_vs/artifacts/regenerate/insights_final",
+        ),
+        current_section_payload=_insights_bundle_section_payload,
+        extra_fix_checklist=(
+            "Each final insight must map cleanly to evidence_id and supporting evidence text.",
+        ),
+        handle=_handle_insights_bundle_regeneration,
+    ),
+    "quotes": _RegenerationHandler(
+        target_section="quotes",
+        prompt_namespaces=("report_vs/artifacts/regenerate/quotes",),
+        current_section_payload=_quotes_section_payload,
+        extra_fix_checklist=(
+            "Quotes must be verbatim or clearly supported by source evidence.",
+        ),
+        handle=_handle_quotes_regeneration,
+    ),
+    "expert_comment": _RegenerationHandler(
+        target_section="expert_comment",
+        prompt_namespaces=("report_vs/artifacts/regenerate/expert_comment",),
+        current_section_payload=_expert_comment_section_payload,
+        extra_fix_checklist=(
+            "Do not introduce new claims that are absent from the updated summary/insights/quotes.",
+        ),
+        handle=_handle_expert_comment_regeneration,
+    ),
+    "linkedin_post": _RegenerationHandler(
+        target_section="linkedin_post",
+        prompt_namespaces=("report_vs/artifacts/regenerate/linkedin_post",),
+        current_section_payload=_linkedin_post_section_payload,
+        extra_fix_checklist=(
+            "Do not introduce new claims that are absent from the updated summary/insights/quotes.",
+        ),
+        handle=_handle_linkedin_post_regeneration,
+    ),
+}
+
+
+def _resolve_regeneration_handler(target_section: str) -> _RegenerationHandler:
+    handler = _REGENERATION_HANDLER_REGISTRY.get(target_section)
+    if handler is None:
+        raise AppError(
+            code="artifact_regeneration_target_unsupported",
+            message=f"Unsupported artifact regeneration target_section: {target_section}",
+            retryable=False,
+            context={"target_section": target_section},
+        )
+    return handler

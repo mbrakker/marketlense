@@ -482,23 +482,6 @@ This section absorbs the remaining open appendix items from `docs/quality/ineffe
     - Operation-specific request/response contracts remain explicit.
     - Existing vector-store tests continue to validate behavior without regressions.
 
-- **Title:** Replace inline config parsing chains with declarative resolvers
-  - Explanation: Refactor `load_settings` and adjacent config normalization code to use field-spec tables or section resolvers that define source path, env fallback, coercion, and default behavior once.
-  - Pros: Less default drift and easier config extension.
-  - Cons: Broad config refactor needs exact compatibility preservation.
-  - Acceptance Criteria:
-    - Config field resolution is table-driven or section-driven instead of one long inline chain.
-    - Adding a new config field becomes localized.
-    - Existing config-behavior tests continue to pass without semantic drift.
-
-- **Title:** Promote duplicated coercion helpers into shared utils
-  - Explanation: Replace repeated boolean/numeric coercion helpers in config, rank, and UI code with shared pure utility functions.
-  - Pros: Consistent parsing semantics and smaller modules.
-  - Cons: Requires checking for behavior mismatches in edge-case coercion.
-  - Acceptance Criteria:
-    - Shared coercion helpers live in `src/utils`.
-    - Duplicate local coercion helpers are removed where semantics match.
-    - Truthy/falsy and numeric parsing behavior is covered by tests.
 
 - **Title:** Centralize YAML loading and parse-error wrapping where semantics match
   - Explanation: Introduce shared YAML-loading helpers for the common pattern of load, root-shape validation, and typed parse-error mapping, while preserving service-specific error codes at the boundary.
@@ -553,12 +536,3 @@ This section absorbs the remaining open appendix items from `docs/quality/ineffe
     - Repeated small helper functions are centralized only where semantics match.
     - Business-specific behavior remains in its bounded context.
     - Existing helper behavior is preserved by tests.
-
-- **Title:** Replace regeneration branch chain with a handler registry
-  - Explanation: Refactor `src/generators/report_regeneration_generator.py` to dispatch by `target.target_section` through a handler registry that owns namespace selection, variable assembly, normalization, and state updates.
-  - Pros: Lower branching complexity and clearer per-section behavior.
-  - Cons: Requires preserving exact regeneration behavior across all target sections.
-  - Acceptance Criteria:
-    - Regeneration section dispatch uses a handler registry instead of a long `if/elif` chain.
-    - Output remains identical for existing covered target sections.
-    - Tests cover handler selection and per-section behavior.
