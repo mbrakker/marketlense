@@ -45,6 +45,9 @@ PANEL_GUIDANCE_TITLE_RX = re.compile(
     r"(?:ways?|keys?|steps?|actions?|principles?|tips?|strategies?|takeaways?|lessons?|rules?)\b",
     re.IGNORECASE,
 )
+PANEL_SHORT_PROPER_NAME_RX = re.compile(
+    r"^[A-Z][A-Za-zÀ-ÖØ-öø-ÿ'’.-]+(?:\s+[A-Z][A-Za-zÀ-ÖØ-öø-ÿ'’.-]+){0,2}$"
+)
 PAGE_FOOTER_BANNER_LINE_RX = re.compile(
     r"(?:\b20\d{2}\b\s*[|/]\s*\d{1,3}\b)|(?:[|/]\s*\d{1,3}\s*$)"
 )
@@ -2793,6 +2796,20 @@ def _panel_preferred_local_title_line(
             best = line
             best_key = key
     return best
+
+
+def _panel_title_looks_short_proper_name(text: str) -> bool:
+    normalized = _s(text).strip()
+    if not normalized or len(normalized) > 28:
+        return False
+    if any(ch.isdigit() for ch in normalized):
+        return False
+    words = normalized.split()
+    if not (1 <= len(words) <= 3):
+        return False
+    if normalized.upper() == normalized:
+        return False
+    return PANEL_SHORT_PROPER_NAME_RX.fullmatch(normalized) is not None
 
 
 def _panel_titles_form_multiline_band(
@@ -7290,13 +7307,51 @@ def _final_chart_candidate_looks_forecast_table(
     )
 
 
+def _final_chart_header_reanchor_line(
+    candidate: Candidate,
+    page: fitz.Page,
+    text: str,
+) -> Optional[_PageTextLine]:
+    if candidate.kind != "chart":
+        return None
+    caption = _s(candidate.caption or "").strip()
+    if not caption or FIGURE_LINE_RX.search(caption):
+        return None
+    words = caption.split()
+    if len(words) < 8 and not caption[:1].islower():
+        return None
+    lower_text = str(text or "").lower()
+    if "source:" not in lower_text and "statlink" not in lower_text:
+        return None
+    rect = fitz.Rect(candidate.bbox)
+    best: Optional[_PageTextLine] = None
+    best_key: tuple[float, float, float] | None = None
+    for line in _table_page_text_lines(page):
+        line_text = _s(line.text).strip()
+        if not _panel_title_looks_short_proper_name(line_text):
+            continue
+        if line.rect.y1 > rect.y0 + 2.0:
+            continue
+        gap = rect.y0 - line.rect.y1
+        if gap > 72.0:
+            continue
+        if line.rect.x0 > rect.x0 + rect.width * 0.2:
+            continue
+        key = (gap, abs(line.rect.x0 - rect.x0), line.rect.y0)
+        if best_key is None or key < best_key:
+            best = line
+            best_key = key
+    return best
+
+
 def _prune_final_chart_candidates(
     charts: List[Candidate],
     *,
     doc: fitz.Document,
-) -> tuple[List[Candidate], int]:
+) -> tuple[List[Candidate], int, int]:
     kept: List[Candidate] = []
     pruned = 0
+    adjusted = 0
     for candidate in charts:
         if candidate.kind != "chart":
             kept.append(candidate)
@@ -7307,6 +7362,30 @@ def _prune_final_chart_candidates(
         except Exception:
             kept.append(candidate)
             continue
+        header_line = _final_chart_header_reanchor_line(candidate, page, text)
+        if header_line is not None:
+            x0, y0, x1, y1 = candidate.bbox
+            candidate = Candidate(
+                schema_version=candidate.schema_version,
+                id=candidate.id,
+                kind=candidate.kind,
+                page=candidate.page,
+                bbox=(
+                    min(x0, header_line.rect.x0),
+                    min(y0, header_line.rect.y0),
+                    x1,
+                    y1,
+                ),
+                preview_text=header_line.text,
+                caption=header_line.text,
+                thumb_path=candidate.thumb_path,
+                meta=candidate.meta,
+            )
+            adjusted += 1
+            try:
+                text = page.get_text("text", clip=fitz.Rect(candidate.bbox))
+            except Exception:
+                pass
         if _final_chart_candidate_looks_forecast_table(candidate, text):
             pruned += 1
             continue
@@ -7314,7 +7393,7 @@ def _prune_final_chart_candidates(
             pruned += 1
             continue
         kept.append(candidate)
-    return kept, pruned
+    return kept, pruned, adjusted
 
 
 def collect_candidates(
@@ -7422,7 +7501,7 @@ def collect_candidates(
             final_doc = fitz.open(request.pdf_path)
             final_doc_close = True
         try:
-            charts, final_chart_fragment_pruned = _prune_final_chart_candidates(
+            charts, final_chart_fragment_pruned, final_chart_header_reanchored = _prune_final_chart_candidates(
                 charts,
                 doc=final_doc,
             )
@@ -7434,6 +7513,8 @@ def collect_candidates(
                     pass
         if final_chart_fragment_pruned:
             chart_stats["final_fragment_pruned"] = final_chart_fragment_pruned
+        if final_chart_header_reanchored:
+            chart_stats["final_header_reanchored"] = final_chart_header_reanchored
         candidates = charts + tables
     finally:
         if close_doc and triage_doc is not None:

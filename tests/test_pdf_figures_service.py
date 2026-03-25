@@ -28,6 +28,7 @@ from src.services._pdf.figures import (
     _expand_table_bbox,
     _extend_panel_with_adjacent_text_blocks,
     _final_chart_candidate_looks_forecast_table,
+    _final_chart_header_reanchor_line,
     _final_chart_candidate_looks_heading_slice,
     _has_figure_context_hint,
     _panel_chart_has_compact_stat_card_signal,
@@ -40,6 +41,7 @@ from src.services._pdf.figures import (
     _panel_preferred_local_title_line,
     _panel_stacked_bottom_clip_y,
     _panel_should_clamp_to_internal_caption,
+    _panel_title_looks_short_proper_name,
     _panel_title_slice_bounds,
     _prune_charts_overlapping_ranked_tables,
     _validate_table_candidate,
@@ -3279,6 +3281,43 @@ def test_final_chart_candidate_looks_forecast_table_rejects_split_year_header_sh
     assert _final_chart_candidate_looks_forecast_table(candidate, text) is True
 
 
+def test_final_chart_header_reanchor_line_prefers_short_country_label_above_note_crop(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "final-chart-header-reanchor.pdf"
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    page.insert_text((65, 460), "Belgium", fontsize=16)
+    page.insert_text(
+        (65, 640),
+        "1. Year-on-year growth rates. Source: OECD Economic Outlook 118 database.",
+        fontsize=10,
+    )
+    page.insert_text((385, 705), "StatLink 2 https://stat.link/example", fontsize=10)
+    doc.save(pdf_path.as_posix())
+    doc.close()
+
+    doc = fitz.open(pdf_path.as_posix())
+    try:
+        page = doc[0]
+        candidate = Candidate(
+            schema_version="1.0",
+            id="chart-116-0",
+            kind="chart",
+            page=0,
+            bbox=(80.0, 500.0, 532.0, 720.0),
+            preview_text="investment continued in the first half of the year",
+            caption="investment continued in the first half of the year",
+        )
+        text = page.get_text("text", clip=fitz.Rect(candidate.bbox))
+        header = _final_chart_header_reanchor_line(candidate, page, text)
+    finally:
+        doc.close()
+
+    assert header is not None
+    assert header.text == "Belgium"
+
+
 def test_visual_candidate_looks_cover_art_rejects_top_banner() -> None:
     rect = fitz.Rect(0.0, 0.0, 595.0, 162.0)
     page_rect = fitz.Rect(0.0, 0.0, 595.0, 842.0)
@@ -4090,6 +4129,13 @@ def test_panel_preferred_local_title_line_prefers_internal_card_title_over_metri
 
     assert title is not None
     assert title.text == "Private labels go premium"
+
+
+def test_panel_title_looks_short_proper_name_accepts_country_like_title() -> None:
+    assert _panel_title_looks_short_proper_name("Belgium") is True
+    assert _panel_title_looks_short_proper_name("New Zealand") is True
+    assert _panel_title_looks_short_proper_name("HIGH") is False
+    assert _panel_title_looks_short_proper_name("2025") is False
 
 
 def test_panel_title_slice_bounds_separates_peer_titles(tmp_path) -> None:
