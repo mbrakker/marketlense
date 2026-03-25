@@ -1,10 +1,10 @@
 # Consolidated TODO
 
-Last compiled: 2026-03-13
+Last compiled: 2026-03-25
 
 This file combines all TODOs found in the repository (from `TODO.md`, `html_todo.md`, and `potential-TODO.md`). Items are grouped by theme. Duplicates were merged. Each task includes: title, explanation (what & why), pros & cons, and acceptance criteria.
 
-Completed items are removed from this backlog once their acceptance criteria are met. The PDF service internal split, the report-generator phase split, the validation-generator rule split, the evidence-pack strategy split, the duration-tooling consolidation, and the legacy `analysis.compare` / `ingest.debug_candidate_gallery` cleanup were completed on or before 2026-03-13 and are no longer tracked here as open work.
+Completed items are removed from this backlog once their acceptance criteria are met. The PDF service internal split, the report-generator phase split, the validation-generator rule split, the evidence-pack strategy split, the duration-tooling consolidation, the legacy `analysis.compare` / `ingest.debug_candidate_gallery` cleanup, and the monkeypatch-heavy test hotspot cleanup were completed on or before 2026-03-25 and are no longer tracked here as open work. This file is the single source of truth for open backlog items, including the remaining work previously tracked in `docs/quality/ineffective-choices-top50.md`.
 
 ---
 
@@ -465,15 +465,6 @@ This section absorbs the 2026-03-08 low-effort/high-impact repository audit into
     - Negative-path tests assert `AppError.code`, `retryable`, and `severity` for the affected modules.
     - Retryable errors propagate to orchestrators instead of being downgraded to generic failures.
 
-- **Title:** Replace monkeypatch-heavy tests with boundary fixtures and real-path assertions
-  - Explanation: Prioritize `tests/test_vector_pipeline_wiring.py`, `tests/test_ingest_parallel.py`, `tests/test_candidate_extraction_orchestrator.py`, `tests/test_publish_orchestrator.py`, `tests/test_openai_vector_store.py`, `tests/test_candidate_refine_selection.py`, `tests/test_wordpress_service.py`, and `tests/test_publish_generator.py` for anti-cheat cleanup. Remove `sys.path.append(...)` setup hacks, patch only external boundaries, and assert real contracts, logs, retries, and side effects. This merges audit items 36 through 45.
-  - Pros: Higher-confidence tests, better mutation resistance, less brittle fixture setup.
-  - Cons: Test rewrites take time and may initially expose real defects.
-  - Acceptance Criteria:
-    - The targeted tests stop patching private helpers or internal orchestration paths.
-    - Shared fixtures enforce external-boundary-only mocking and required structured log assertions.
-    - At least one real-path integration or pipeline test covers each hotspot currently dominated by monkeypatching.
-
 - **Title:** Decouple cross-role side effects in OpenAI, CLI, and control-flow helpers
   - Explanation: Remove cost-ledger persistence from `src/services/openai_service.py`, centralize repeated CLI status rendering instead of scattered `console.print(...)` calls in `src/cli.py`, and extract large branch-policy helpers from `src/ui/streamlit_pages.py` and the remaining oversized generation flows. This merges audit items 46, 47, and 49.
   - Pros: Cleaner service boundaries, more consistent operator UX, easier policy testing.
@@ -491,3 +482,126 @@ This section absorbs the 2026-03-08 low-effort/high-impact repository audit into
     - Config defaults are defined in one source of truth and documented in the README.
     - Generated log artifacts are ignored or moved to a documented fixture/snapshot location with rationale.
     - Tests or tooling verify config defaults and log artifact policies do not regress.
+
+---
+
+## 12. Supplemental Code-Reduction Intake
+
+This section absorbs the remaining open appendix items from `docs/quality/ineffective-choices-top50.md` so the consolidated TODO remains the only active backlog.
+
+- **Title:** Consolidate repeated OpenAI cost-ledger persistence
+  - Explanation: Replace repeated cost-estimation, ledger-append, and daily-rollup blocks in `src/services/openai_service.py` with one shared helper while preserving the current best-effort logging behavior and payload shape.
+  - Pros: Less duplication, lower drift risk across OpenAI operations, easier cost-path testing.
+  - Cons: Requires careful verification that ledger payloads remain identical.
+  - Acceptance Criteria:
+    - OpenAI service cost writes route through one shared helper.
+    - Cost ledger entries remain identical in content for existing covered paths.
+    - Failure to persist cost data remains non-fatal and logged.
+
+- **Title:** Centralize OpenAI response metadata adaptation
+  - Explanation: Deduplicate request-id, token-count, tool-call, and parsed-JSON extraction logic across JSON chat, image chat, and vector-store response flows.
+  - Pros: More consistent provider adaptation and simpler service maintenance.
+  - Cons: Shared adapters must preserve subtle response-shape differences.
+  - Acceptance Criteria:
+    - Shared response metadata adapter used by the repeated OpenAI response paths.
+    - Returned dataclass contracts remain unchanged.
+    - Tests cover identical metadata extraction across the affected flows.
+
+- **Title:** Unify vector-store operation scaffolding in OpenAI service
+  - Explanation: Collapse repeated create/upload/attach/status/update scaffolding in `src/services/openai_service.py` into shared operation helpers while keeping one canonical OpenAI service boundary.
+  - Pros: Lower duplication and more consistent error mapping.
+  - Cons: Needs explicit contracts so the shared layer does not become vague pass-through indirection.
+  - Acceptance Criteria:
+    - Common vector-store client init/log/error mapping is centralized.
+    - Operation-specific request/response contracts remain explicit.
+    - Existing vector-store tests continue to validate behavior without regressions.
+
+- **Title:** Replace inline config parsing chains with declarative resolvers
+  - Explanation: Refactor `load_settings` and adjacent config normalization code to use field-spec tables or section resolvers that define source path, env fallback, coercion, and default behavior once.
+  - Pros: Less default drift and easier config extension.
+  - Cons: Broad config refactor needs exact compatibility preservation.
+  - Acceptance Criteria:
+    - Config field resolution is table-driven or section-driven instead of one long inline chain.
+    - Adding a new config field becomes localized.
+    - Existing config-behavior tests continue to pass without semantic drift.
+
+- **Title:** Promote duplicated coercion helpers into shared utils
+  - Explanation: Replace repeated boolean/numeric coercion helpers in config, rank, and UI code with shared pure utility functions.
+  - Pros: Consistent parsing semantics and smaller modules.
+  - Cons: Requires checking for behavior mismatches in edge-case coercion.
+  - Acceptance Criteria:
+    - Shared coercion helpers live in `src/utils`.
+    - Duplicate local coercion helpers are removed where semantics match.
+    - Truthy/falsy and numeric parsing behavior is covered by tests.
+
+- **Title:** Centralize YAML loading and parse-error wrapping where semantics match
+  - Explanation: Introduce shared YAML-loading helpers for the common pattern of load, root-shape validation, and typed parse-error mapping, while preserving service-specific error codes at the boundary.
+  - Pros: Less boilerplate and more consistent config/schema loading behavior.
+  - Cons: Shared loader must not blur domain-specific error semantics.
+  - Acceptance Criteria:
+    - Repeated YAML loading boilerplate is replaced with shared helpers.
+    - Service-specific error codes remain explicit at the public boundary.
+    - File-not-found and invalid-YAML tests still distinguish the correct failure modes.
+
+- **Title:** Factory-generate repetitive evidence-pack strategy scaffolding
+  - Explanation: Replace repeated list-pack/scalar-pack strategy boilerplate with factory helpers, leaving pack-specific field maps and transforms explicit in each strategy module.
+  - Pros: Smaller strategy modules and less repeated normalization shell code.
+  - Cons: Must avoid over-abstracting genuinely different pack behavior.
+  - Acceptance Criteria:
+    - Common evidence-pack strategy scaffolding is centralized.
+    - Pack-specific transforms and schema choices remain explicit.
+    - Existing strategy outputs remain unchanged under tests.
+
+- **Title:** Pass evidence-pack strategy objects directly through the generator
+  - Explanation: Simplify evidence-pack execution by building work directly from `EvidencePackStrategy` objects and scheduling metadata instead of tuple-based indirection and thin wrappers.
+  - Pros: Lower indirection and clearer execution flow.
+  - Cons: Requires careful refactor of registry/execution plumbing.
+  - Acceptance Criteria:
+    - Evidence-pack execution steps are derived directly from strategy objects.
+    - Pack ordering and registry behavior remain unchanged.
+    - Helper indirection around strategy metadata is reduced.
+
+- **Title:** Share publish file-id mapping helpers across publish orchestrators
+  - Explanation: Deduplicate HTML path canonicalization and reports-DB file-id mapping logic currently split across `publish_orchestrator` and `publish_queue_orchestrator`.
+  - Pros: Consistent file-id resolution and less orchestration duplication.
+  - Cons: Shared helper boundary must stay narrow and orchestration-specific logic must not leak across modules.
+  - Acceptance Criteria:
+    - One shared helper module owns HTML-path canonicalization and file-id map loading.
+    - Publish queue and publish flows resolve file IDs exactly as before.
+    - Duplicate helper bodies are removed from both orchestrators.
+
+- **Title:** Remove thin local retry wrappers in favor of shared retry API
+  - Explanation: Eliminate tiny `_run_step_with_retry` wrappers that only forward fixed arguments to shared retry logic, either by calling the shared retry orchestrator directly or by using one common adapter.
+  - Pros: Less duplicated control-flow code and easier retry-policy consistency.
+  - Cons: Refactor must preserve current sleep, logging, and retryable-error semantics.
+  - Acceptance Criteria:
+    - Local pass-through retry wrappers are removed from affected modules.
+    - Retry counts, log fields, and backoff behavior remain unchanged.
+    - Orchestrator retry tests continue to pass.
+
+- **Title:** Centralize dataclass-to-dict row serialization for UI and dashboards
+  - Explanation: Replace repeated “dataclass/dict/object to row dict” helpers across UI, ops dashboard, and related table-rendering code with one shared pure serializer.
+  - Pros: Less duplication and more consistent row-shaping behavior.
+  - Cons: Shared helper must preserve current UI table expectations.
+  - Acceptance Criteria:
+    - One shared serializer handles the repeated row-conversion pattern.
+    - Duplicate local helpers are removed from UI/dashboard modules.
+    - Rendered rows remain unchanged in existing tests.
+
+- **Title:** Promote repeated small text/tag helpers into shared utilities
+  - Explanation: Consolidate recurring helpers like tag normalization, category label normalization, pluralization shorthands, and JSON dump wrappers where their semantics are truly shared.
+  - Pros: Smaller modules and more consistent helper behavior.
+  - Cons: Needs discipline to avoid moving business logic into generic utils.
+  - Acceptance Criteria:
+    - Repeated small helper functions are centralized only where semantics match.
+    - Business-specific behavior remains in its bounded context.
+    - Existing helper behavior is preserved by tests.
+
+- **Title:** Replace regeneration branch chain with a handler registry
+  - Explanation: Refactor `src/generators/report_regeneration_generator.py` to dispatch by `target.target_section` through a handler registry that owns namespace selection, variable assembly, normalization, and state updates.
+  - Pros: Lower branching complexity and clearer per-section behavior.
+  - Cons: Requires preserving exact regeneration behavior across all target sections.
+  - Acceptance Criteria:
+    - Regeneration section dispatch uses a handler registry instead of a long `if/elif` chain.
+    - Output remains identical for existing covered target sections.
+    - Tests cover handler selection and per-section behavior.

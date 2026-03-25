@@ -479,7 +479,9 @@ pytest
 
 `pytest.ini` sets `pythonpath = .` so `src.*` imports resolve without exporting `PYTHONPATH`.
 Default runs exclude `integration`-marked tests (`addopts = -m "not integration"`).
-Batch ingest and report-generator boundary tests now inject explicit dependency dataclasses (`IngestBatchDependencies`, `ReportGeneratorDependencies`) instead of monkeypatching module globals.
+Workflow tests should prefer explicit dependency dataclasses and shared boundary fixtures over monkeypatching module globals.
+Current boundary seams include `IngestBatchDependencies`, `CandidateExtractionDependencies`, and `ReportGeneratorDependencies`.
+Use `tests/conftest.py` fixtures like `external_boundary_mocks_only`, `wordpress_http`, and `fake_openai` to patch only external boundaries (service entrypoints, HTTP clients, OpenAI clients, time/random/os), while leaving orchestrator and generator logic on the real path.
 
 Run the live OpenAI smoke test explicitly (opt-in):
 
@@ -527,7 +529,7 @@ See:
 - `docs/docpacks/prompt-authoring.md`
 - `docs/architecture/role-boundaries.md`
 - `docs/testing/integrity-rules.md`
-- `docs/quality/ineffective-choices-top50.md` (repository improvement backlog focused on low-effort/high-impact fixes)
+- `docs/quality/ineffective-choices-top50.md` (archived audit note pointing to the consolidated backlog)
 
 ---
 

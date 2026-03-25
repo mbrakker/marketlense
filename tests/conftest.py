@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import inspect
 from dataclasses import MISSING, fields, is_dataclass
 from pathlib import Path
 from typing import Any, Callable, Iterable
@@ -14,6 +15,64 @@ from src.contracts.wordpress import WordPressAuthSettings
 from src.services import openai_service, wordpress_service
 from src.utils.errors import AppError
 from tests.support.fakes import FakeOpenAIBoundary, RequestsRouter
+
+
+class ExternalBoundaryMocksOnly:
+    def __init__(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        self._monkeypatch = monkeypatch
+
+    def _target_module_name(self, target: object) -> str:
+        return str(getattr(target, "__name__", target.__class__.__module__) or "")
+
+    def _assert_allowed(self, target: object, attr_name: str) -> None:
+        if str(attr_name or "").startswith("_"):
+            raise AssertionError(
+                f"private/helper patching is forbidden: {self._target_module_name(target)}.{attr_name}"
+            )
+
+        target_module = self._target_module_name(target)
+        if target_module in {"time", "random", "os"}:
+            return
+        if target_module.startswith(
+            ("requests", "urllib3", "openai", "google", "googleapiclient")
+        ):
+            return
+        if not target_module.startswith("src."):
+            return
+        if target_module.startswith("src.services."):
+            original = getattr(target, attr_name, None)
+            original_module = str(getattr(original, "__module__", "") or "")
+            if inspect.isfunction(original) or inspect.ismethod(original):
+                return
+            if original is None:
+                return
+            if original_module and not original_module.startswith("src."):
+                return
+            raise AssertionError(
+                "only public service boundaries or external client symbols may be patched"
+            )
+        raise AssertionError(
+            f"patching internal non-service code is forbidden: {target_module}.{attr_name}"
+        )
+
+    def setattr(
+        self,
+        target: object,
+        name: str,
+        value: object,
+        raising: bool = True,
+    ) -> None:
+        self._assert_allowed(target, name)
+        self._monkeypatch.setattr(target, name, value, raising=raising)
+
+    def setenv(self, name: str, value: str, prepend: str | None = None) -> None:
+        self._monkeypatch.setenv(name, value, prepend=prepend)
+
+    def delenv(self, name: str, raising: bool = True) -> None:
+        self._monkeypatch.delenv(name, raising=raising)
+
+    def chdir(self, path: str | Path) -> None:
+        self._monkeypatch.chdir(path)
 
 
 @pytest.fixture
@@ -203,15 +262,30 @@ def idempotency_guard():
 
 
 @pytest.fixture
-def wordpress_http(monkeypatch: pytest.MonkeyPatch) -> RequestsRouter:
+def external_boundary_mocks_only(
+    monkeypatch: pytest.MonkeyPatch,
+) -> ExternalBoundaryMocksOnly:
+    return ExternalBoundaryMocksOnly(monkeypatch)
+
+
+@pytest.fixture
+def wordpress_http(
+    external_boundary_mocks_only: ExternalBoundaryMocksOnly,
+) -> RequestsRouter:
     router = RequestsRouter()
-    monkeypatch.setattr(wordpress_service.requests, "get", router.get)
-    monkeypatch.setattr(wordpress_service.requests, "post", router.post)
+    external_boundary_mocks_only.setattr(wordpress_service.requests, "get", router.get)
+    external_boundary_mocks_only.setattr(
+        wordpress_service.requests, "post", router.post
+    )
     return router
 
 
 @pytest.fixture
-def fake_openai(monkeypatch: pytest.MonkeyPatch) -> FakeOpenAIBoundary:
+def fake_openai(
+    external_boundary_mocks_only: ExternalBoundaryMocksOnly,
+) -> FakeOpenAIBoundary:
     boundary = FakeOpenAIBoundary()
-    monkeypatch.setattr(openai_service, "OpenAI", boundary.client_factory)
+    external_boundary_mocks_only.setattr(
+        openai_service, "OpenAI", boundary.client_factory
+    )
     return boundary

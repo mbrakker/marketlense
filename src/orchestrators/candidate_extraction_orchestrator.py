@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import logging
 import time
+from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Callable, Iterable, List, Optional
 
 from src.contracts.candidate_extraction import (
     CandidateExtractOutcome,
@@ -26,6 +27,31 @@ from src.utils.slugify import slugify
 logger = logging.getLogger("market_lense.candidate_extraction_orchestrator")
 
 
+@dataclass(frozen=True)
+class CandidateExtractionDependencies:
+    list_pdfs: Callable[[DriveListRequest, RunContext], Iterable[DriveFile]]
+    download_pdf: Callable[[DriveDownloadRequest, RunContext], Any]
+    file_exists: Callable[[FileExistsRequest, RunContext], Any]
+    file_md5: Callable[[FileHashRequest, RunContext], Any]
+    write_bytes: Callable[[WriteBytesRequest, RunContext], Any]
+    check_pdf_eof: Callable[[PdfEofCheckRequest, RunContext], Any]
+    generate_candidate_pack: Callable[[CandidateExtractRequest, RunContext], Any]
+    sleep_fn: Callable[[float], None]
+
+    @classmethod
+    def default(cls) -> "CandidateExtractionDependencies":
+        return cls(
+            list_pdfs=list_pdfs,
+            download_pdf=download_pdf,
+            file_exists=file_exists,
+            file_md5=file_md5,
+            write_bytes=write_bytes,
+            check_pdf_eof=check_pdf_eof,
+            generate_candidate_pack=generate_candidate_pack,
+            sleep_fn=time.sleep,
+        )
+
+
 def _slugify_pdf_name(pdf_path: str) -> str:
     return slugify(Path(pdf_path).name)
 
@@ -38,7 +64,13 @@ def _resolve_report_name(file: DriveFile, pdf_path: str | None = None) -> str:
     return file.file_id
 
 
-def _run_step_with_retry(step_name: str, ctx: RunContext, func, retries: int = 1):
+def _run_step_with_retry(
+    step_name: str,
+    ctx: RunContext,
+    func,
+    dependencies: CandidateExtractionDependencies,
+    retries: int = 1,
+):
     return run_step_with_default_policy(
         step_name=step_name,
         operation=func,
@@ -47,21 +79,26 @@ def _run_step_with_retry(step_name: str, ctx: RunContext, func, retries: int = 1
         module_name=logger.name,
         retries=retries,
         include_error_text=True,
-        sleep_fn=time.sleep,
+        sleep_fn=dependencies.sleep_fn,
     )
 
 
 def _download_if_needed(
-    file: DriveFile, settings: IngestSettings, ctx: RunContext
+    file: DriveFile,
+    settings: IngestSettings,
+    ctx: RunContext,
+    dependencies: CandidateExtractionDependencies,
 ) -> tuple[str, Optional[str]]:
     cache_name = safe_pdf_name(file.name or f"{file.file_id}.pdf")
     cache_path = str(Path(settings.cache_dir) / cache_name)
     md5 = None
-    exists_resp = file_exists(
+    exists_resp = dependencies.file_exists(
         FileExistsRequest(schema_version="1.0", path=cache_path), ctx
     )
     if exists_resp.exists and file.md5_checksum:
-        md5_resp = file_md5(FileHashRequest(schema_version="1.0", path=cache_path), ctx)
+        md5_resp = dependencies.file_md5(
+            FileHashRequest(schema_version="1.0", path=cache_path), ctx
+        )
         if md5_resp.md5 == file.md5_checksum:
             md5 = md5_resp.md5
             logger.info(
@@ -88,16 +125,19 @@ def _download_if_needed(
         schema_version="1.0", file=file, service_account_path=settings.google_sa_path
     )
     dl_resp = _run_step_with_retry(
-        "download_pdf", ctx, lambda: download_pdf(dl_req, ctx)
+        "download_pdf",
+        ctx,
+        lambda: dependencies.download_pdf(dl_req, ctx),
+        dependencies,
     )
-    write_resp = write_bytes(
+    write_resp = dependencies.write_bytes(
         WriteBytesRequest(
             schema_version="1.0", path=cache_path, content=dl_resp.content
         ),
         ctx,
     )
     md5 = write_resp.md5
-    eof_check = check_pdf_eof(
+    eof_check = dependencies.check_pdf_eof(
         PdfEofCheckRequest(schema_version="1.0", path=cache_path), ctx
     )
     if not eof_check.has_eof:
@@ -126,7 +166,9 @@ def run_candidate_extraction(
     pdf_path: Optional[str] = None,
     report_id: Optional[str] = None,
     ctx: Optional[RunContext] = None,
+    dependencies: Optional[CandidateExtractionDependencies] = None,
 ) -> List[CandidateExtractOutcome]:
+    deps = dependencies or CandidateExtractionDependencies.default()
     root_ctx = ctx or new_run_context()
     outcomes: List[CandidateExtractOutcome] = []
 
@@ -148,7 +190,7 @@ def run_candidate_extraction(
     if pdf_path:
         file_ctx = child_context(root_ctx, task_id="candidate_extract_local")
         name = _slugify_pdf_name(pdf_path)
-        exists_resp = file_exists(
+        exists_resp = deps.file_exists(
             FileExistsRequest(schema_version="1.0", path=pdf_path), file_ctx
         )
         if not exists_resp.exists:
@@ -177,12 +219,12 @@ def run_candidate_extraction(
                 )
             )
             return outcomes
-        md5_resp = file_md5(
+        md5_resp = deps.file_md5(
             FileHashRequest(schema_version="1.0", path=pdf_path), file_ctx
         )
         resolved_report_id = report_id or f"{name}-{md5_resp.md5[:8]}"
         try:
-            outcome = generate_candidate_pack(
+            outcome = deps.generate_candidate_pack(
                 CandidateExtractRequest(
                     schema_version="1.0",
                     report_id=resolved_report_id,
@@ -234,16 +276,16 @@ def run_candidate_extraction(
     )
     processed = 0
 
-    for file in list_pdfs(list_req, root_ctx):
+    for file in deps.list_pdfs(list_req, root_ctx):
         if processed >= max_n:
             break
         if file_id and file.file_id != file_id:
             continue
         file_ctx = child_context(root_ctx, task_id=file.file_id)
         try:
-            cache_path, _ = _download_if_needed(file, settings, file_ctx)
+            cache_path, _ = _download_if_needed(file, settings, file_ctx, deps)
             report_name = _resolve_report_name(file, cache_path)
-            outcome = generate_candidate_pack(
+            outcome = deps.generate_candidate_pack(
                 CandidateExtractRequest(
                     schema_version="1.0",
                     report_id=file.file_id,

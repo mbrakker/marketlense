@@ -250,9 +250,14 @@ def test_publish_uses_canonical_validation_json_over_regen_snapshots(
     assert results[0].status == "published"
     assert results[0].validation_status == "pass"
     assert results[0].validation_issues == []
-    assert len(
-        wordpress_http.calls_for("POST", "https://example.com/wp-json/wp/v2/ml_report")
-    ) == 1
+    assert (
+        len(
+            wordpress_http.calls_for(
+                "POST", "https://example.com/wp-json/wp/v2/ml_report"
+            )
+        )
+        == 1
+    )
 
 
 def test_publish_retries_retryable_app_error(
@@ -260,7 +265,7 @@ def test_publish_retries_retryable_app_error(
     run_context,
     wordpress_http,
     caplog,
-    monkeypatch,
+    external_boundary_mocks_only,
     assert_logs_have_required_fields,
 ) -> None:
     settings = publish_settings_factory(validation_policy="warn")
@@ -288,8 +293,10 @@ def test_publish_retries_retryable_app_error(
     )
     sleep_calls: list[int] = []
     caplog.set_level(logging.INFO)
-    monkeypatch.setattr(retry_orchestrator.random, "uniform", lambda _a, _b: 0.0)
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
+        retry_orchestrator.random, "uniform", lambda _a, _b: 0.0
+    )
+    external_boundary_mocks_only.setattr(
         orch.time, "sleep", lambda seconds: sleep_calls.append(int(seconds))
     )
 
