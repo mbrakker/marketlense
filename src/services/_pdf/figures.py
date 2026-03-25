@@ -5950,110 +5950,6 @@ def _extract_tables(
     )
 
 
-def _find_tables_safe(page: pdfplumber.page.Page, settings: Dict[str, object]):
-    try:
-        return page.find_tables(table_settings=settings) or []
-    except Exception:
-        return []
-
-
-def _build_table_candidate(
-    page: pdfplumber.page.Page,
-    table: pdfplumber.table.Table,
-    method: str,
-    fitz_page: Optional[fitz.Page] = None,
-) -> Optional[_TableCandidate]:
-    try:
-        x0, y0, x1, y1 = map(float, table.bbox)
-    except Exception:
-        return None
-    rows: list[list[object]] = []
-    try:
-        rows = table.extract() or []
-    except Exception:
-        rows = []
-    non_empty_rows = [row for row in rows if row and any(_s(c).strip() for c in row)]
-    row_count = len(non_empty_rows)
-    col_count = max((len(row) for row in non_empty_rows), default=0)
-    row_col_counts = _row_nonempty_counts(rows)
-    col_consistency = _col_consistency(row_col_counts)
-    row_len_cv = _row_len_cv(_row_text_lengths(rows))
-    non_empty_cells = sum(1 for row in non_empty_rows for c in row if _s(c).strip())
-    total_cells = sum(len(row) for row in non_empty_rows)
-    numeric_cells = sum(
-        1 for row in non_empty_rows for c in row if _cell_is_numeric(_s(c))
-    )
-    numeric_chars, total_chars = _numeric_char_ratio(non_empty_rows)
-    numeric_ratio = numeric_chars / max(1, total_chars)
-    avg_words_per_cell = _avg_words_per_cell(non_empty_rows)
-    avg_first_col_words = _avg_first_col_words(non_empty_rows)
-    index_page_ratio = _index_page_ratio(non_empty_rows)
-    preview = _table_preview(rows)
-    text = _extract_text_in_bbox(page, (x0, y0, x1, y1))
-    line_count, text_chars = _text_stats(text)
-    avg_line_len = (text_chars / line_count) if line_count else 0.0
-    text_len = len(text.strip())
-    page_area = max(1.0, float(page.width * page.height))
-    width = max(1.0, x1 - x0)
-    height = max(1.0, y1 - y0)
-    area_frac = (width * height) / page_area
-    width_frac = width / max(1.0, float(page.width))
-    height_frac = height / max(1.0, float(page.height))
-    aspect = width / max(1.0, height)
-    text_block_area_frac = 0.0
-    text_block_line_count = 0
-    text_block_avg_line_len = 0.0
-    caption_hint = False
-    figure_context_hint = False
-    wide_figure_context_hint = False
-    if fitz_page is not None:
-        caption_hint = _has_caption_hint(fitz_page, (x0, y0, x1, y1))
-        figure_context_hint = _has_figure_context_hint(fitz_page, (x0, y0, x1, y1))
-        wide_figure_context_hint = _has_figure_context_hint(
-            fitz_page,
-            (x0, y0, x1, y1),
-            max_dist=TABLE_WIDE_FIGURE_CONTEXT_MAX_DIST,
-            top_band_height=TABLE_WIDE_FIGURE_CONTEXT_TOP_BAND,
-            horizontal_pad=TABLE_WIDE_FIGURE_CONTEXT_HORIZONTAL_PAD,
-        )
-        text_block_area_frac, text_block_line_count, text_block_avg_line_len = (
-            _text_block_stats(
-                fitz_page,
-                (x0, y0, x1, y1),
-            )
-        )
-    return _TableCandidate(
-        bbox=(x0, y0, x1, y1),
-        method=method,
-        row_count=row_count,
-        col_count=col_count,
-        col_consistency=col_consistency,
-        row_len_cv=row_len_cv,
-        non_empty_cells=non_empty_cells,
-        total_cells=total_cells,
-        numeric_cells=numeric_cells,
-        numeric_ratio=numeric_ratio,
-        avg_words_per_cell=avg_words_per_cell,
-        avg_first_col_words=avg_first_col_words,
-        index_page_ratio=index_page_ratio,
-        preview=preview[:400],
-        text=text,
-        text_len=text_len,
-        line_count=line_count,
-        avg_line_len=avg_line_len,
-        text_block_area_frac=text_block_area_frac,
-        text_block_line_count=text_block_line_count,
-        text_block_avg_line_len=text_block_avg_line_len,
-        caption_hint=caption_hint,
-        figure_context_hint=figure_context_hint,
-        wide_figure_context_hint=wide_figure_context_hint,
-        area_frac=area_frac,
-        width_frac=width_frac,
-        height_frac=height_frac,
-        aspect=aspect,
-    )
-
-
 def _table_preview(rows: List[List[object]]) -> str:
     preview_lines = []
     for row in rows[:3]:
@@ -7396,6 +7292,149 @@ def _prune_final_chart_candidates(
     return kept, pruned, adjusted
 
 
+@dataclass(frozen=True)
+class _CandidatePagePlan:
+    chart_pages: Optional[List[int]]
+    table_pages: Optional[List[int]]
+    excluded_count: int
+    triaged_full_scan_pages: int
+
+
+@dataclass
+class _CandidateExtractionArtifacts:
+    charts: List[Candidate]
+    tables: List[Candidate]
+    chart_stats: Dict[str, object]
+    table_stats: Dict[str, object]
+    chart_ranked_overlap_pruned: int = 0
+    table_chart_overlap_pruned: int = 0
+    final_chart_fragment_pruned: int = 0
+    final_chart_header_reanchored: int = 0
+
+
+def _initial_chart_candidate_stats() -> Dict[str, object]:
+    return {"raw": 0, "kept": 0, "rejected": 0, "reasons": {}}
+
+
+def _initial_table_candidate_stats() -> Dict[str, object]:
+    return {
+        "raw_lattice": 0,
+        "raw_stream": 0,
+        "validated": 0,
+        "deduped": 0,
+        "rejected": 0,
+        "reasons": {},
+    }
+
+
+def _open_candidate_triage_doc(
+    pdf_path: str,
+    shared_doc: Optional[fitz.Document],
+) -> tuple[Optional[fitz.Document], bool]:
+    if shared_doc is not None:
+        return shared_doc, False
+    try:
+        return fitz.open(pdf_path), True
+    except Exception:
+        return None, False
+
+
+def _plan_candidate_pages(
+    triage_doc: fitz.Document,
+    excluded_pages: set[int],
+) -> _CandidatePagePlan:
+    requested_pages = [
+        index for index in range(len(triage_doc)) if index not in excluded_pages
+    ]
+    triaged_pages: list[int] = []
+    triaged_full_scan_pages = 0
+    for index in requested_pages:
+        try:
+            if is_full_page_scan_without_text(triage_doc[index]):
+                triaged_full_scan_pages += 1
+                continue
+        except Exception:
+            pass
+        triaged_pages.append(index)
+    return _CandidatePagePlan(
+        chart_pages=triaged_pages,
+        table_pages=requested_pages,
+        excluded_count=max(0, len(triage_doc) - len(requested_pages)),
+        triaged_full_scan_pages=triaged_full_scan_pages,
+    )
+
+
+def _extract_candidate_artifacts(
+    request: ExtractCandidatesRequest,
+    *,
+    triage_doc: Optional[fitz.Document],
+    parallel_workers: int,
+    page_plan: _CandidatePagePlan,
+) -> _CandidateExtractionArtifacts:
+    artifacts = _CandidateExtractionArtifacts(
+        charts=[],
+        tables=[],
+        chart_stats=_initial_chart_candidate_stats(),
+        table_stats=_initial_table_candidate_stats(),
+    )
+    if page_plan.chart_pages == [] and page_plan.table_pages == []:
+        return artifacts
+    thumbs = Path(request.out_dir) / request.report_name / "thumbs"
+    artifacts.charts, artifacts.chart_stats = _extract_charts(
+        request.pdf_path,
+        thumbs.as_posix(),
+        request.report_name,
+        save_thumbs=False,
+        doc=triage_doc if parallel_workers <= 1 else None,
+        parallel_workers=parallel_workers,
+        pages=page_plan.chart_pages,
+    )
+    artifacts.tables, artifacts.table_stats = _extract_tables(
+        request.pdf_path,
+        parallel_workers=parallel_workers,
+        pages=page_plan.table_pages,
+        doc=triage_doc if parallel_workers <= 1 else None,
+    )
+    (
+        artifacts.charts,
+        artifacts.chart_ranked_overlap_pruned,
+    ) = _prune_charts_overlapping_ranked_tables(artifacts.charts, artifacts.tables)
+    if artifacts.chart_ranked_overlap_pruned:
+        artifacts.chart_stats["ranked_table_overlap_pruned"] = (
+            artifacts.chart_ranked_overlap_pruned
+        )
+    (
+        artifacts.tables,
+        artifacts.table_chart_overlap_pruned,
+    ) = _prune_tables_overlapping_chart_panels(artifacts.tables, artifacts.charts)
+    if artifacts.table_chart_overlap_pruned:
+        artifacts.table_stats["chart_overlap_pruned"] = (
+            artifacts.table_chart_overlap_pruned
+        )
+    return artifacts
+
+
+def _finalize_chart_collection(
+    pdf_path: str,
+    *,
+    triage_doc: Optional[fitz.Document],
+    charts: List[Candidate],
+) -> tuple[List[Candidate], int, int]:
+    final_doc = triage_doc
+    close_doc = False
+    if final_doc is None:
+        final_doc = fitz.open(pdf_path)
+        close_doc = True
+    try:
+        return _prune_final_chart_candidates(charts, doc=final_doc)
+    finally:
+        if close_doc and final_doc is not None:
+            try:
+                final_doc.close()
+            except Exception:
+                pass
+
+
 def collect_candidates(
     request: ExtractCandidatesRequest, ctx: RunContext
 ) -> ExtractCandidatesResponse:
@@ -7424,98 +7463,51 @@ def collect_candidates(
     shared_doc = (
         request.pdf_context.fitz_doc if request.pdf_context and parallel_workers <= 1 else None
     )
-    triage_doc = shared_doc
+    triage_doc: Optional[fitz.Document] = None
     close_doc = False
-    charts: List[Candidate] = []
-    tables: List[Candidate] = []
-    chart_stats: Dict[str, object] = {"raw": 0, "kept": 0, "rejected": 0, "reasons": {}}
-    table_stats: Dict[str, object] = {
-        "raw_lattice": 0,
-        "raw_stream": 0,
-        "validated": 0,
-        "deduped": 0,
-        "rejected": 0,
-        "reasons": {},
-    }
-    chart_ranked_overlap_pruned = 0
-    table_chart_overlap_pruned = 0
-    excluded_count = 0
-    triaged_full_scan_pages = 0
+    page_plan = _CandidatePagePlan(
+        chart_pages=None,
+        table_pages=None,
+        excluded_count=0,
+        triaged_full_scan_pages=0,
+    )
+    artifacts = _CandidateExtractionArtifacts(
+        charts=[],
+        tables=[],
+        chart_stats=_initial_chart_candidate_stats(),
+        table_stats=_initial_table_candidate_stats(),
+    )
+    candidates: List[Candidate] = []
     try:
-        if triage_doc is None:
-            try:
-                triage_doc = fitz.open(request.pdf_path)
-                close_doc = True
-            except Exception:
-                triage_doc = None
-        chart_page_numbers: Optional[List[int]] = None
-        table_page_numbers: Optional[List[int]] = None
-        if triage_doc is not None:
-            requested_pages = [
-                index
-                for index in range(len(triage_doc))
-                if index not in excluded_pages
-            ]
-            excluded_count = max(0, len(triage_doc) - len(requested_pages))
-            triaged_pages: list[int] = []
-            for index in requested_pages:
-                try:
-                    if is_full_page_scan_without_text(triage_doc[index]):
-                        triaged_full_scan_pages += 1
-                        continue
-                except Exception:
-                    pass
-                triaged_pages.append(index)
-            chart_page_numbers = triaged_pages
-            table_page_numbers = requested_pages
-        if chart_page_numbers != [] or table_page_numbers != []:
-            thumbs = Path(request.out_dir) / request.report_name / "thumbs"
-            charts, chart_stats = _extract_charts(
-                request.pdf_path,
-                thumbs.as_posix(),
-                request.report_name,
-                save_thumbs=False,
-                doc=triage_doc if parallel_workers <= 1 else None,
-                parallel_workers=parallel_workers,
-                pages=chart_page_numbers,
-            )
-            tables, table_stats = _extract_tables(
-                request.pdf_path,
-                parallel_workers=parallel_workers,
-                pages=table_page_numbers,
-                doc=triage_doc if parallel_workers <= 1 else None,
-            )
-            charts, chart_ranked_overlap_pruned = _prune_charts_overlapping_ranked_tables(
-                charts, tables
-            )
-        if chart_ranked_overlap_pruned:
-            chart_stats["ranked_table_overlap_pruned"] = chart_ranked_overlap_pruned
-        tables, table_chart_overlap_pruned = _prune_tables_overlapping_chart_panels(
-            tables, charts
+        triage_doc, close_doc = _open_candidate_triage_doc(
+            request.pdf_path, shared_doc
         )
-        if table_chart_overlap_pruned:
-            table_stats["chart_overlap_pruned"] = table_chart_overlap_pruned
-        final_doc = triage_doc
-        final_doc_close = False
-        if final_doc is None:
-            final_doc = fitz.open(request.pdf_path)
-            final_doc_close = True
-        try:
-            charts, final_chart_fragment_pruned, final_chart_header_reanchored = _prune_final_chart_candidates(
-                charts,
-                doc=final_doc,
+        if triage_doc is not None:
+            page_plan = _plan_candidate_pages(triage_doc, excluded_pages)
+        artifacts = _extract_candidate_artifacts(
+            request,
+            triage_doc=triage_doc,
+            parallel_workers=parallel_workers,
+            page_plan=page_plan,
+        )
+        (
+            artifacts.charts,
+            artifacts.final_chart_fragment_pruned,
+            artifacts.final_chart_header_reanchored,
+        ) = _finalize_chart_collection(
+            request.pdf_path,
+            triage_doc=triage_doc,
+            charts=artifacts.charts,
+        )
+        if artifacts.final_chart_fragment_pruned:
+            artifacts.chart_stats["final_fragment_pruned"] = (
+                artifacts.final_chart_fragment_pruned
             )
-        finally:
-            if final_doc_close and final_doc is not None:
-                try:
-                    final_doc.close()
-                except Exception:
-                    pass
-        if final_chart_fragment_pruned:
-            chart_stats["final_fragment_pruned"] = final_chart_fragment_pruned
-        if final_chart_header_reanchored:
-            chart_stats["final_header_reanchored"] = final_chart_header_reanchored
-        candidates = charts + tables
+        if artifacts.final_chart_header_reanchored:
+            artifacts.chart_stats["final_header_reanchored"] = (
+                artifacts.final_chart_header_reanchored
+            )
+        candidates = artifacts.charts + artifacts.tables
     finally:
         if close_doc and triage_doc is not None:
             try:
@@ -7534,12 +7526,12 @@ def collect_candidates(
                 "count": len(candidates),
                 "chart_count": chart_count,
                 "table_count": table_count,
-                "chart_stats": chart_stats,
-                "table_stats": table_stats,
-                "ranked_table_overlap_pruned": chart_ranked_overlap_pruned,
-                "table_chart_overlap_pruned": table_chart_overlap_pruned,
-                "excluded_count": excluded_count,
-                "triaged_full_scan_pages": triaged_full_scan_pages,
+                "chart_stats": artifacts.chart_stats,
+                "table_stats": artifacts.table_stats,
+                "ranked_table_overlap_pruned": artifacts.chart_ranked_overlap_pruned,
+                "table_chart_overlap_pruned": artifacts.table_chart_overlap_pruned,
+                "excluded_count": page_plan.excluded_count,
+                "triaged_full_scan_pages": page_plan.triaged_full_scan_pages,
             },
         )
     )

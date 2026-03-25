@@ -7,7 +7,7 @@ while isolating visual-candidate orchestration into its own upgrade surface.
 """
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import replace
+from dataclasses import dataclass, replace
 import math
 from pathlib import Path
 import re
@@ -84,7 +84,11 @@ from .figures import (
     _trim_top_page_number,
     _vertical_overlap_ratio,
 )
-from .page_artifacts import build_page_artifacts, is_full_page_scan_without_text
+from .page_artifacts import (
+    PdfPageArtifacts,
+    build_page_artifacts,
+    is_full_page_scan_without_text,
+)
 
 PANEL_CHART_CONTEXT_TEXT_RATIO_MAX = 0.85
 CONTEXTUAL_RASTER_CARD_MIN_AREA_FRAC = 0.18
@@ -152,6 +156,30 @@ _MID_SENTENCE_START_WORDS = {
     "top-up",
     "while",
 }
+
+
+@dataclass(frozen=True)
+class _VisualPageContext:
+    page_number: int
+    page: fitz.Page
+    page_rect: fitz.Rect
+    page_chars: int
+    top_cut: float
+    bot_cut: float
+    relaxed_top: float
+    relaxed_bot: float
+    page_has_chart_captions: bool
+    artifacts: PdfPageArtifacts
+    rect_items: List[object]
+
+
+@dataclass
+class _VisualPageCandidateEntry:
+    candidate: Candidate
+    rect: fitz.Rect
+    score: float
+    sequence: int
+    recovered_only: bool
 
 
 def _iter_visual_context_lines(text: str, *, max_lines: int = 4, max_chars: int = 200):
@@ -989,6 +1017,104 @@ def _visual_text_dense_recovery_allowed(
     )
 
 
+def _initial_visual_stats() -> Dict[str, object]:
+    return {"raw": 0, "kept": 0, "rejected": 0, "reasons": {}}
+
+
+def _build_visual_page_context(
+    page: fitz.Page,
+    page_number: int,
+    stats: Dict[str, object],
+) -> Optional[_VisualPageContext]:
+    try:
+        page_text = page.get_text("text") or ""
+    except Exception:
+        page_text = ""
+    if is_full_page_scan_without_text(page, page_text=page_text):
+        stats["skipped_pages"] = _int_count(stats.get("skipped_pages", 0)) + 1
+        _tally_reason(stats, "page_full_scan_no_text")
+        return None
+    artifacts = build_page_artifacts(page)
+    page_chars = artifacts.text_char_count
+    if page_chars <= 0:
+        page_chars = _text_stats(page_text)[1]
+    page_rect = page.rect
+    return _VisualPageContext(
+        page_number=page_number,
+        page=page,
+        page_rect=page_rect,
+        page_chars=page_chars,
+        top_cut=page_rect.y0 + page_rect.height * CHART_MARGIN_FRAC,
+        bot_cut=page_rect.y1 - page_rect.height * CHART_MARGIN_FRAC,
+        relaxed_top=page_rect.y0 + page_rect.height * CHART_MARGIN_RELAX_FRAC,
+        relaxed_bot=page_rect.y1 - page_rect.height * CHART_MARGIN_RELAX_FRAC,
+        page_has_chart_captions=_page_has_chart_caption_blocks(artifacts.text_blocks),
+        artifacts=artifacts,
+        rect_items=_collect_chart_rects(
+            page,
+            text_dict=artifacts.text_dict,
+            blocks=artifacts.text_blocks,
+        ),
+    )
+
+
+def _append_visual_page_candidate(
+    *,
+    page_candidates: List[_VisualPageCandidateEntry],
+    kept: list[tuple[fitz.Rect, float, int]],
+    candidate: Candidate,
+    final_rect: fitz.Rect,
+    score: float,
+    local_sequence: int,
+    legacy_order_candidate: bool,
+    stats: Dict[str, object],
+) -> int:
+    overlap_index = _find_overlapping_kept(final_rect, kept)
+    if overlap_index is not None:
+        existing_score = kept[overlap_index][1]
+        if score <= existing_score:
+            stats["rejected"] = _int_count(stats["rejected"]) + 1
+            _tally_reason(stats, "overlap_dup")
+            return local_sequence
+        page_index = kept[overlap_index][2]
+        existing_entry = page_candidates[page_index]
+        page_candidates[page_index] = _VisualPageCandidateEntry(
+            candidate=candidate,
+            rect=final_rect,
+            score=score,
+            sequence=existing_entry.sequence,
+            recovered_only=existing_entry.recovered_only and not legacy_order_candidate,
+        )
+        kept[overlap_index] = (final_rect, score, page_index)
+        stats["replaced"] = _int_count(stats.get("replaced", 0)) + 1
+        return local_sequence
+    page_candidates.append(
+        _VisualPageCandidateEntry(
+            candidate=candidate,
+            rect=final_rect,
+            score=score,
+            sequence=local_sequence,
+            recovered_only=not legacy_order_candidate,
+        )
+    )
+    kept.append((final_rect, score, len(page_candidates) - 1))
+    stats["kept"] = _int_count(stats["kept"]) + 1
+    return local_sequence + 1
+
+
+def _emit_visual_page_candidates(
+    out: List[Candidate],
+    *,
+    page_number: int,
+    page_candidates: List[_VisualPageCandidateEntry],
+) -> None:
+    page_candidates.sort(
+        key=lambda entry: (entry.recovered_only, entry.sequence)
+    )
+    for local_index, entry in enumerate(page_candidates):
+        out.append(replace(entry.candidate, id=f"chart-{page_number}-{local_index}"))
+
+
 def _extract_visuals_sequential(
     pdf_path: str,
     thumbs_dir: str,
@@ -998,7 +1124,7 @@ def _extract_visuals_sequential(
     pages: Optional[List[int]] = None,
 ) -> tuple[List[Candidate], Dict[str, object]]:
     out: List[Candidate] = []
-    stats: Dict[str, object] = {"raw": 0, "kept": 0, "rejected": 0, "reasons": {}}
+    stats = _initial_visual_stats()
     local_doc = doc or fitz.open(pdf_path)
     try:
         thumb_index = 0
@@ -1007,54 +1133,32 @@ def _extract_visuals_sequential(
             if pno < 0 or pno >= len(local_doc):
                 continue
             page = local_doc[pno]
-            try:
-                page_text = page.get_text("text") or ""
-            except Exception:
-                page_text = ""
-            if is_full_page_scan_without_text(page, page_text=page_text):
-                stats["skipped_pages"] = _int_count(stats.get("skipped_pages", 0)) + 1
-                _tally_reason(stats, "page_full_scan_no_text")
+            page_ctx = _build_visual_page_context(page, pno, stats)
+            if page_ctx is None:
                 continue
-            artifacts = build_page_artifacts(page)
-            page_chars = artifacts.text_char_count
-            if page_chars <= 0:
-                page_chars = _text_stats(page_text)[1]
-            rect = page.rect
-            top_cut = rect.y0 + rect.height * CHART_MARGIN_FRAC
-            bot_cut = rect.y1 - rect.height * CHART_MARGIN_FRAC
-            relaxed_top = rect.y0 + rect.height * CHART_MARGIN_RELAX_FRAC
-            relaxed_bot = rect.y1 - rect.height * CHART_MARGIN_RELAX_FRAC
-            page_has_chart_captions = _page_has_chart_caption_blocks(
-                artifacts.text_blocks
-            )
             kept: List[tuple[fitz.Rect, float, int]] = []
-            page_candidates: List[Dict[str, object]] = []
+            page_candidates: List[_VisualPageCandidateEntry] = []
             local_sequence = 0
-            candidates = _collect_chart_rects(
-                page,
-                text_dict=artifacts.text_dict,
-                blocks=artifacts.text_blocks,
-            )
-            for rect_item in candidates:
+            for rect_item in page_ctx.rect_items:
                 stats["raw"] = _int_count(stats["raw"]) + 1
                 rect_candidate = rect_item.rect
                 base_rect = rect_candidate
-                area_frac = rect_candidate.get_area() / rect.get_area()
+                area_frac = rect_candidate.get_area() / page_ctx.page_rect.get_area()
                 aspect = rect_candidate.width / max(1, rect_candidate.height)
                 cap_rect = rect_item.caption_rect
                 cap = rect_item.caption
                 if cap_rect is None:
                     cap_rect, cap = _nearest_caption_block(
-                        page,
+                        page_ctx.page,
                         rect_candidate,
                         CHART_CAPTION_HINTS,
-                        blocks=artifacts.text_blocks,
+                        blocks=page_ctx.artifacts.text_blocks,
                     )
                 if not cap:
                     cap = _nearby_text(
-                        page,
+                        page_ctx.page,
                         rect_candidate,
-                        blocks=artifacts.text_blocks,
+                        blocks=page_ctx.artifacts.text_blocks,
                     )
                 if cap and _is_page_number_text(cap):
                     cap = ""
@@ -1076,24 +1180,26 @@ def _extract_visuals_sequential(
                 if (
                     rect_item.kind in ("xref", "block")
                     and not has_hint
-                    and not page_has_chart_captions
+                    and not page_ctx.page_has_chart_captions
                 ):
                     relaxed_image_geometry = _embedded_visual_qualifies_relaxed_geometry(
-                        page,
+                        page_ctx.page,
                         rect_candidate,
                         area_frac=area_frac,
                     )
                     contextual_image_card = _embedded_visual_qualifies_contextual_card(
-                        page,
+                        page_ctx.page,
                         rect_candidate,
                         area_frac=area_frac,
-                        blocks=artifacts.text_blocks,
+                        blocks=page_ctx.artifacts.text_blocks,
                     )
                 min_aspect = 0.45 if (relaxed_image_geometry or contextual_image_card) else 0.55
                 max_aspect = 3.4 if (relaxed_image_geometry or contextual_image_card) else aspect_max
                 if rect_item.kind == "panel" and aspect > max_aspect:
                     try:
-                        pre_geom_panel_text = page.get_text("text", clip=rect_candidate)
+                        pre_geom_panel_text = page_ctx.page.get_text(
+                            "text", clip=rect_candidate
+                        )
                     except Exception:
                         pre_geom_panel_text = ""
                     if _panel_chart_has_compact_stat_card_signal(pre_geom_panel_text):
@@ -1105,13 +1211,22 @@ def _extract_visuals_sequential(
                 is_infographic = bool(
                     re.match(r"^\s*infographic\b", cap or "", re.IGNORECASE)
                 )
-                if rect_candidate.y0 < top_cut or rect_candidate.y1 > bot_cut:
+                if (
+                    rect_candidate.y0 < page_ctx.top_cut
+                    or rect_candidate.y1 > page_ctx.bot_cut
+                ):
                     if has_context_hint or contextual_image_card:
-                        if rect_candidate.y0 < rect.y0 - 2.0 or rect_candidate.y1 > rect.y1 + 2.0:
+                        if (
+                            rect_candidate.y0 < page_ctx.page_rect.y0 - 2.0
+                            or rect_candidate.y1 > page_ctx.page_rect.y1 + 2.0
+                        ):
                             stats["rejected"] = _int_count(stats["rejected"]) + 1
                             _tally_reason(stats, "margin")
                             continue
-                    elif rect_candidate.y0 < relaxed_top or rect_candidate.y1 > relaxed_bot:
+                    elif (
+                        rect_candidate.y0 < page_ctx.relaxed_top
+                        or rect_candidate.y1 > page_ctx.relaxed_bot
+                    ):
                         stats["rejected"] = _int_count(stats["rejected"]) + 1
                         _tally_reason(stats, "margin")
                         continue
@@ -1136,11 +1251,13 @@ def _extract_visuals_sequential(
                     _tally_reason(stats, "block_full_page_no_caption")
                     continue
                 try:
-                    raw_bbox_text = page.get_text("text", clip=rect_candidate)
+                    raw_bbox_text = page_ctx.page.get_text("text", clip=rect_candidate)
                 except Exception:
                     raw_bbox_text = ""
                 raw_text_lines, raw_text_chars = _text_stats(raw_bbox_text)
-                raw_text_ratio = (raw_text_chars / page_chars) if page_chars else 0.0
+                raw_text_ratio = (
+                    raw_text_chars / page_ctx.page_chars
+                ) if page_ctx.page_chars else 0.0
                 bbox_text = raw_bbox_text
                 text_lines = raw_text_lines
                 text_chars = raw_text_chars
@@ -1153,20 +1270,22 @@ def _extract_visuals_sequential(
                 image_photo_like = False
                 if rect_item.kind in ("xref", "block") and not has_hint:
                     if _embedded_visual_is_oversized_wrapper(
-                        rect_item, candidates, rect
+                        rect_item,
+                        page_ctx.rect_items,
+                        page_ctx.page_rect,
                     ):
                         stats["rejected"] = _int_count(stats["rejected"]) + 1
                         _tally_reason(stats, "oversized_wrapper_image")
                         continue
                     image_chart_like = contextual_image_card or _embedded_visual_looks_chart_like(
-                        page, rect_candidate
+                        page_ctx.page, rect_candidate
                     )
                     image_photo_like = _embedded_visual_looks_photo_like(
-                        page, rect_candidate
+                        page_ctx.page, rect_candidate
                     )
                     if not image_chart_like:
                         image_decorative = _embedded_visual_looks_decorative(
-                            page, rect_candidate
+                            page_ctx.page, rect_candidate
                         )
                 text_dense_recovery_allowed = False
                 infographic_dense_recovery_allowed = False
@@ -1177,19 +1296,30 @@ def _extract_visuals_sequential(
                     and raw_text_heavy
                 ):
                     try:
-                        analysis_rect = _merge_caption_above(rect_candidate, cap_rect, rect)
+                        analysis_rect = _merge_caption_above(
+                            rect_candidate,
+                            cap_rect,
+                            page_ctx.page_rect,
+                        )
                         analysis_rect = _clamp_top_to_caption(
-                            analysis_rect, cap_rect, page, rect
+                            analysis_rect,
+                            cap_rect,
+                            page_ctx.page,
+                            page_ctx.page_rect,
                         )
                         if rect_item.kind != "panel":
                             analysis_rect = _clamp_bottom_to_next_chart_blocker(
-                                page, analysis_rect, cap_rect
+                                page_ctx.page,
+                                analysis_rect,
+                                cap_rect,
                             )
-                        bbox_text = page.get_text("text", clip=analysis_rect)
+                        bbox_text = page_ctx.page.get_text("text", clip=analysis_rect)
                     except Exception:
                         bbox_text = raw_bbox_text
                     text_lines, text_chars = _text_stats(bbox_text)
-                    text_ratio = (text_chars / page_chars) if page_chars else 0.0
+                    text_ratio = (
+                        text_chars / page_ctx.page_chars
+                    ) if page_ctx.page_chars else 0.0
                     text_dense_recovery_allowed = _visual_text_dense_recovery_allowed(
                         rect_item.kind,
                         bbox_text,
@@ -1208,13 +1338,13 @@ def _extract_visuals_sequential(
                         _panel_component_looks_like_guidance_card(panel_text)
                     )
                     if _panel_candidate_shadowed_by_heading_candidate(
-                        rect_item, candidates
+                        rect_item, page_ctx.rect_items
                     ):
                         stats["rejected"] = _int_count(stats["rejected"]) + 1
                         _tally_reason(stats, "panel_shadowed_by_heading")
                         continue
                     if _panel_candidate_shadowed_by_larger_panel(
-                        rect_item, candidates, panel_text
+                        rect_item, page_ctx.rect_items, panel_text
                     ):
                         stats["rejected"] = _int_count(stats["rejected"]) + 1
                         _tally_reason(stats, "panel_shadowed_by_larger_panel")
@@ -1258,7 +1388,9 @@ def _extract_visuals_sequential(
                         text_chars <= 8
                         and area_frac <= 0.2
                         and _has_side_by_side_visual_sibling(
-                            rect_item, candidates, rect
+                            rect_item,
+                            page_ctx.rect_items,
+                            page_ctx.page_rect,
                         )
                     ):
                         stats["rejected"] = _int_count(stats["rejected"]) + 1
@@ -1323,7 +1455,11 @@ def _extract_visuals_sequential(
                 final_rect = rect_candidate
                 expanded_with_heading = False
                 if cap_rect is not None and has_context_hint:
-                    final_rect = _merge_caption_above(final_rect, cap_rect, rect)
+                    final_rect = _merge_caption_above(
+                        final_rect,
+                        cap_rect,
+                        page_ctx.page_rect,
+                    )
                 allow_adjacent = rect_item.kind in ("draw", "heading", "panel") or (
                     rect_item.kind == "xref" and has_context_hint
                 )
@@ -1337,15 +1473,18 @@ def _extract_visuals_sequential(
                             and not _caption_has_figure_hint(cap or "")
                             and not compact_stat_caption
                         ):
-                            slice_bounds = _panel_title_slice_bounds(page, cap_rect)
+                            slice_bounds = _panel_title_slice_bounds(
+                                page_ctx.page,
+                                cap_rect,
+                            )
                             if slice_bounds is not None:
                                 panel_min_x, panel_max_x = slice_bounds
                                 bound_pad = max(
-                                    rect.width * 0.015,
+                                    page_ctx.page_rect.width * 0.015,
                                     rect_candidate.width * 0.12,
                                 )
                                 panel_min_x = max(
-                                    page.rect.x0,
+                                    page_ctx.page.rect.x0,
                                     min(panel_min_x, rect_candidate.x0),
                                 )
                                 panel_min_x = max(
@@ -1353,7 +1492,7 @@ def _extract_visuals_sequential(
                                     rect_candidate.x0 - bound_pad,
                                 )
                                 panel_max_x = min(
-                                    page.rect.x1,
+                                    page_ctx.page.rect.x1,
                                     max(panel_max_x, rect_candidate.x1),
                                 )
                                 panel_max_x = min(
@@ -1362,8 +1501,8 @@ def _extract_visuals_sequential(
                                 )
                         neighbor_min_x, neighbor_max_x = _panel_neighbor_x_bounds(
                             rect_item,
-                            candidates,
-                            rect,
+                            page_ctx.rect_items,
+                            page_ctx.page_rect,
                         )
                         if neighbor_min_x is not None:
                             panel_min_x = (
@@ -1378,71 +1517,95 @@ def _extract_visuals_sequential(
                                 else min(panel_max_x, neighbor_max_x)
                             )
                         final_rect = _extend_panel_with_adjacent_text_blocks(
-                            page,
+                            page_ctx.page,
                             final_rect,
                             min_x=panel_min_x,
                             max_x=panel_max_x,
                         )
                     else:
-                        final_rect = _extend_with_adjacent_text_blocks(page, final_rect)
+                        final_rect = _extend_with_adjacent_text_blocks(
+                            page_ctx.page,
+                            final_rect,
+                        )
                     if rect_item.kind == "draw":
                         final_rect = _extend_chart_rect_with_adjacent_drawings(
-                            page,
+                            page_ctx.page,
                             final_rect,
                         )
                 if not has_hint and rect_item.kind == "heading":
-                    expanded = _extend_with_heading_above(page, final_rect)
+                    expanded = _extend_with_heading_above(page_ctx.page, final_rect)
                     expanded_with_heading = expanded.y0 < final_rect.y0 - 1
                     final_rect = expanded
                 if not has_hint and rect_item.kind not in ("heading", "xref", "panel"):
-                    head_rect = _nearest_heading_above(page, final_rect)
+                    head_rect = _nearest_heading_above(page_ctx.page, final_rect)
                     if head_rect is not None:
                         final_rect = final_rect | head_rect
                 if rect_item.kind != "xref" or has_hint:
-                    final_rect = _pad_rect(final_rect, rect)
+                    final_rect = _pad_rect(final_rect, page_ctx.page_rect)
                 if not has_hint and rect_item.kind in ("draw", "heading", "panel"):
                     if rect_item.kind == "heading":
                         final_rect = _adjust_rect_for_text_margins(
-                            page,
+                            page_ctx.page,
                             final_rect,
                             gap_scale=CHART_EDGE_TEXT_HEADING_GAP_SCALE,
                             gap_scale_x=CHART_EDGE_TEXT_HEADING_GAP_X_SCALE,
                         )
                         final_rect = _expand_rect_into_whitespace(
-                            page,
+                            page_ctx.page,
                             final_rect,
                             allow_top=False,
                         )
                     elif rect_item.kind == "panel":
                         pass
                     else:
-                        final_rect = _adjust_rect_for_text_margins(page, final_rect)
-                        final_rect = _expand_rect_into_whitespace(page, final_rect)
+                        final_rect = _adjust_rect_for_text_margins(
+                            page_ctx.page,
+                            final_rect,
+                        )
+                        final_rect = _expand_rect_into_whitespace(
+                            page_ctx.page,
+                            final_rect,
+                        )
                 if (
                     rect_item.kind == "heading"
                     and cap_rect is not None
                     and not expanded_with_heading
                 ):
                     final_rect = _clamp_top_to_heading(
-                        final_rect, cap_rect, page, rect
+                        final_rect,
+                        cap_rect,
+                        page_ctx.page,
+                        page_ctx.page_rect,
                     )
                 if not has_hint and rect_item.kind not in ("heading", "xref", "panel"):
-                    head_rect = _nearest_heading_above(page, final_rect)
+                    head_rect = _nearest_heading_above(page_ctx.page, final_rect)
                     if head_rect is not None:
                         final_rect = _clamp_top_to_heading(
-                            final_rect, head_rect, page, rect
+                            final_rect,
+                            head_rect,
+                            page_ctx.page,
+                            page_ctx.page_rect,
                         )
-                final_rect = _extend_with_note_blocks(page, final_rect)
+                final_rect = _extend_with_note_blocks(page_ctx.page, final_rect)
                 if (
                     cap_rect is not None
                     and has_context_hint
                     and cap_rect.y0 < base_rect.y0
                 ):
-                    final_rect = _clamp_top_to_caption(final_rect, cap_rect, page, rect)
-                note_bottom = _note_block_bottom(page, final_rect)
+                    final_rect = _clamp_top_to_caption(
+                        final_rect,
+                        cap_rect,
+                        page_ctx.page,
+                        page_ctx.page_rect,
+                    )
+                note_bottom = _note_block_bottom(page_ctx.page, final_rect)
                 note_included = note_bottom is not None
                 stacked_bottom_clip_y = (
-                    _panel_stacked_bottom_clip_y(page, rect_item, candidates)
+                    _panel_stacked_bottom_clip_y(
+                        page_ctx.page,
+                        rect_item,
+                        page_ctx.rect_items,
+                    )
                     if rect_item.kind == "panel"
                     else None
                 )
@@ -1464,7 +1627,10 @@ def _extract_visuals_sequential(
                 )
                 if note_bottom is not None:
                     final_rect = _clamp_bottom_to_note(
-                        page, final_rect, note_bottom, rect
+                        page_ctx.page,
+                        final_rect,
+                        note_bottom,
+                        page_ctx.page_rect,
                     )
                 if stacked_bottom_clip_y is not None:
                     final_rect.y1 = min(
@@ -1478,7 +1644,9 @@ def _extract_visuals_sequential(
                     and not panel_caption_is_internal_label
                 ):
                     final_rect = _clamp_bottom_to_next_chart_blocker(
-                        page, final_rect, cap_rect
+                        page_ctx.page,
+                        final_rect,
+                        cap_rect,
                     )
                 if cap_rect is not None and _caption_near_top(final_rect, cap_rect):
                     if rect_item.kind == "panel" and panel_caption_is_internal_label:
@@ -1487,8 +1655,8 @@ def _extract_visuals_sequential(
                         final_rect = _clamp_top_to_caption(
                             final_rect,
                             cap_rect,
-                            page,
-                            rect,
+                            page_ctx.page,
+                            page_ctx.page_rect,
                             extra_pad=(
                                 PANEL_CHART_INTERNAL_TITLE_EXTRA_TOP_PAD
                                 if panel_caption_is_top_band
@@ -1497,24 +1665,31 @@ def _extract_visuals_sequential(
                         )
                 if (
                     cap_rect is not None
-                    and _panel_should_clamp_to_internal_caption(rect_item, candidates)
+                    and _panel_should_clamp_to_internal_caption(
+                        rect_item,
+                        page_ctx.rect_items,
+                    )
                 ):
                     final_rect = _clamp_top_to_caption(
                         final_rect,
                         cap_rect,
-                        page,
-                        rect,
+                        page_ctx.page,
+                        page_ctx.page_rect,
                         extra_pad=PANEL_CHART_INTERNAL_TITLE_EXTRA_TOP_PAD,
                     )
                 final_rect = _trim_top_page_number(
-                    final_rect, page, cap_rect if has_context_hint else None
+                    final_rect,
+                    page_ctx.page,
+                    cap_rect if has_context_hint else None,
                 )
                 try:
-                    bbox_text = page.get_text("text", clip=final_rect)
+                    bbox_text = page_ctx.page.get_text("text", clip=final_rect)
                 except Exception:
                     bbox_text = ""
                 text_lines, text_chars = _text_stats(bbox_text)
-                text_ratio = (text_chars / page_chars) if page_chars else 0.0
+                text_ratio = (
+                    text_chars / page_ctx.page_chars
+                ) if page_ctx.page_chars else 0.0
                 if _visual_candidate_looks_table_like(
                     cap or "",
                     bbox_text,
@@ -1552,7 +1727,7 @@ def _extract_visuals_sequential(
                     continue
                 if _visual_candidate_looks_cover_art(
                     final_rect,
-                    rect,
+                    page_ctx.page_rect,
                     cap or "",
                     area_frac=area_frac,
                     text_chars=text_chars,
@@ -1561,7 +1736,7 @@ def _extract_visuals_sequential(
                     _tally_reason(stats, "front_matter_visual")
                     continue
                 if _visual_candidate_looks_photo_narrative_card(
-                    page,
+                    page_ctx.page,
                     final_rect,
                     cap or "",
                     caption_rect=cap_rect,
@@ -1586,7 +1761,7 @@ def _extract_visuals_sequential(
                     continue
                 if _visual_candidate_looks_section_opener_banner(
                     final_rect,
-                    rect,
+                    page_ctx.page_rect,
                     cap or "",
                     bbox_text,
                     kind=rect_item.kind,
@@ -1609,13 +1784,14 @@ def _extract_visuals_sequential(
                     rect_item.kind in ("draw", "heading")
                     and cap_rect is not None
                     and _caption_has_figure_hint(cap or "")
-                    and cap_rect.y0 <= rect.y0 + rect.height * 0.1
+                    and cap_rect.y0
+                    <= page_ctx.page_rect.y0 + page_ctx.page_rect.height * 0.1
                     and _SOURCE_OR_STATLINK_RX.search(bbox_text)
                 ):
                     next_caption_rect = _next_figure_caption_below(
-                        page,
+                        page_ctx.page,
                         cap_rect,
-                        blocks=artifacts.text_blocks,
+                        blocks=page_ctx.artifacts.text_blocks,
                     )
                 else:
                     next_caption_rect = None
@@ -1651,7 +1827,10 @@ def _extract_visuals_sequential(
                             pix = fitz.Pixmap(fitz.csRGB, pix)
                     else:
                         try:
-                            pix = page.get_pixmap(clip=render_rect, alpha=False)
+                            pix = page_ctx.page.get_pixmap(
+                                clip=render_rect,
+                                alpha=False,
+                            )
                         except Exception:
                             pix = None
                 cid = f"chart-{pno}-pending-{local_sequence}"
@@ -1695,49 +1874,23 @@ def _extract_visuals_sequential(
                     score += 0.15
                 elif rect_item.kind == "heading":
                     score -= 0.05
-                overlap_index = _find_overlapping_kept(final_rect, kept)
-                if overlap_index is not None:
-                    existing_score = kept[overlap_index][1]
-                    if score <= existing_score:
-                        stats["rejected"] = _int_count(stats["rejected"]) + 1
-                        _tally_reason(stats, "overlap_dup")
-                        continue
-                    page_index = kept[overlap_index][2]
-                    existing_entry = page_candidates[page_index]
-                    page_candidates[page_index] = {
-                        "candidate": candidate,
-                        "rect": final_rect,
-                        "score": score,
-                        "sequence": existing_entry["sequence"],
-                        "recovered_only": bool(existing_entry["recovered_only"])
-                        and not legacy_order_candidate,
-                    }
-                    kept[overlap_index] = (final_rect, score, page_index)
-                    stats["replaced"] = _int_count(stats.get("replaced", 0)) + 1
-                else:
-                    page_candidates.append(
-                        {
-                            "candidate": candidate,
-                            "rect": final_rect,
-                            "score": score,
-                            "sequence": local_sequence,
-                            "recovered_only": not legacy_order_candidate,
-                        }
-                    )
-                    kept.append((final_rect, score, len(page_candidates) - 1))
-                    stats["kept"] = _int_count(stats["kept"]) + 1
-                    local_sequence += 1
+                local_sequence = _append_visual_page_candidate(
+                    page_candidates=page_candidates,
+                    kept=kept,
+                    candidate=candidate,
+                    final_rect=final_rect,
+                    score=score,
+                    local_sequence=local_sequence,
+                    legacy_order_candidate=legacy_order_candidate,
+                    stats=stats,
+                )
                 if save_thumbs:
                     thumb_index += 1
-            page_candidates.sort(
-                key=lambda entry: (
-                    bool(entry["recovered_only"]),
-                    int(entry["sequence"]),
-                )
+            _emit_visual_page_candidates(
+                out,
+                page_number=pno,
+                page_candidates=page_candidates,
             )
-            for local_index, entry in enumerate(page_candidates):
-                candidate = entry["candidate"]
-                out.append(replace(candidate, id=f"chart-{pno}-{local_index}"))
     finally:
         if doc is None:
             local_doc.close()
