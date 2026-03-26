@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from src.utils.gui_utils import (
     coerce_editor_records,
     compute_task_duration_rollups,
@@ -9,9 +11,20 @@ from src.utils.gui_utils import (
     normalize_text_lines,
     parse_structured_log_line,
     pricing_from_editor_records,
+    row_dicts,
     safe_json_loads,
     status_chip_level,
 )
+
+
+@dataclass(frozen=True)
+class _RowDataclass:
+    file_id: str
+
+
+class _RowObject:
+    def __init__(self, file_id: str) -> None:
+        self.file_id = file_id
 
 
 def test_status_chip_level_maps_known_states() -> None:
@@ -61,6 +74,16 @@ def test_compute_task_duration_rollups_groups_rows() -> None:
 def test_safe_json_loads_returns_none_on_invalid_input() -> None:
     assert safe_json_loads("{") is None
     assert safe_json_loads('{"ok":1}') == {"ok": 1}
+
+
+def test_row_dicts_serializes_dataclasses_and_dicts() -> None:
+    rows = row_dicts([_RowDataclass(file_id="a"), {"file_id": "b"}])
+    assert rows == [{"file_id": "a"}, {"file_id": "b"}]
+
+
+def test_row_dicts_optionally_includes_object_attrs() -> None:
+    assert row_dicts([_RowObject("a")]) == []
+    assert row_dicts([_RowObject("a")], include_object_attrs=True) == [{"file_id": "a"}]
 
 
 def test_normalize_text_lines_deduplicates_and_trims() -> None:

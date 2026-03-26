@@ -3,10 +3,10 @@ from __future__ import annotations
 import os
 from html import escape
 from copy import deepcopy
-from dataclasses import asdict, is_dataclass
+from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Any, Optional
 
 import streamlit as st
 import yaml
@@ -94,6 +94,7 @@ from src.utils.gui_utils import (
     mapping_from_editor_records,
     normalize_text_lines,
     pricing_from_editor_records,
+    row_dicts,
     compute_task_duration_rollups,
     filter_log_events,
     status_chip_level,
@@ -144,18 +145,6 @@ CANDIDATE_STEPS = [
 
 def _ctx(task_id: str) -> Any:
     return new_run_context(task_id=f"gui:{task_id}")
-
-
-def _to_dicts(items: Iterable[Any]) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    for item in items:
-        if is_dataclass(item) and not isinstance(item, type):
-            rows.append(asdict(item))
-            continue
-        if isinstance(item, dict):
-            rows.append(item)
-    return rows
-
 
 def _chip_html(label: str, level: str, *, tooltip: str | None = None) -> str:
     tip = tooltip or _tip(
@@ -520,7 +509,7 @@ def _discover_log_files() -> list[dict[str, Any]]:
         ),
         _ctx("discover_logs"),
     )
-    return _to_dicts(response.records)
+    return row_dicts(response.records)
 
 
 def _load_log_events(
@@ -613,7 +602,7 @@ def _storage_health(settings: Any) -> list[dict[str, Any]]:
         ),
         _ctx("storage_health"),
     )
-    return _to_dicts(response.rows)
+    return row_dicts(response.rows)
 
 
 def _recent_validation_files(output_dir: str) -> list[dict[str, Any]]:
@@ -623,7 +612,7 @@ def _recent_validation_files(output_dir: str) -> list[dict[str, Any]]:
         ),
         _ctx("validation_summary"),
     )
-    return _to_dicts(response.rows)
+    return row_dicts(response.rows)
 
 
 def _load_report_rows(settings: Any) -> list[dict[str, Any]]:
@@ -833,7 +822,7 @@ def _render_ingest_control(settings: Any) -> None:
         )
         if outcomes:
             st.subheader("Ingest Outcomes")
-            st.dataframe(_to_dicts(outcomes), use_container_width=True, hide_index=True)
+            st.dataframe(row_dicts(outcomes), use_container_width=True, hide_index=True)
         else:
             st.info("No ingest run executed in this session yet.")
 
@@ -957,7 +946,7 @@ def _render_candidate_extraction(settings: Any) -> None:
         )
         if outcomes:
             st.subheader("Extraction Outcomes")
-            st.dataframe(_to_dicts(outcomes), use_container_width=True, hide_index=True)
+            st.dataframe(row_dicts(outcomes), use_container_width=True, hide_index=True)
         else:
             st.info("No extraction run executed in this session yet.")
 
@@ -1216,7 +1205,7 @@ def _render_cover_images(settings: Any) -> None:
             st.warning(f"Unable to load style config: {exc}")
         if outcomes:
             st.subheader("Generation Outcomes")
-            st.dataframe(_to_dicts(outcomes), use_container_width=True, hide_index=True)
+            st.dataframe(row_dicts(outcomes), use_container_width=True, hide_index=True)
         else:
             st.info("No cover generation run executed in this session yet.")
 
@@ -1465,7 +1454,7 @@ def _render_publishing_control(
             ),
             _ctx("publish_queue"),
         )
-        queue_rows = _to_dicts(queue_snapshot.items)
+        queue_rows = row_dicts(queue_snapshot.items)
     except AppError:
         queue_rows = []
 
@@ -1478,7 +1467,7 @@ def _render_publishing_control(
         outcomes = st.session_state.get("last_publish_outcomes", [])
         if outcomes:
             st.subheader("Last Publish Results")
-            st.dataframe(_to_dicts(outcomes), use_container_width=True, hide_index=True)
+            st.dataframe(row_dicts(outcomes), use_container_width=True, hide_index=True)
 
     with detail_col:
         st.subheader("Settings Summary")
@@ -1563,7 +1552,7 @@ def _render_category_manager(settings: Any, publish_settings: Any | None) -> Non
         ),
         ctx=_ctx("load_mapping"),
     )
-    categories = _to_dicts(mapping_response.mappings.categories)
+    categories = row_dicts(mapping_response.mappings.categories)
 
     with main_col:
         st.subheader("Category Mapping")
@@ -1571,14 +1560,14 @@ def _render_category_manager(settings: Any, publish_settings: Any | None) -> Non
         recat = st.session_state.get("last_recategorize_outcomes", [])
         if recat:
             st.subheader("Recategorize Outcomes")
-            st.dataframe(_to_dicts(recat), use_container_width=True, hide_index=True)
+            st.dataframe(row_dicts(recat), use_container_width=True, hide_index=True)
     with detail_col:
         st.subheader("WP Sync")
         if publish_settings is None:
             st.caption("Publish settings missing; WP sync disabled.")
         sync = st.session_state.get("last_wp_sync_outcomes", [])
         if sync:
-            st.dataframe(_to_dicts(sync), use_container_width=True, hide_index=True)
+            st.dataframe(row_dicts(sync), use_container_width=True, hide_index=True)
 
 
 def _load_ledger_entries(
@@ -2574,7 +2563,7 @@ def _render_settings_and_prompts(
             ),
             _ctx("prompt_namespaces"),
         )
-        prompt_rows = _to_dicts(prompt_namespaces.namespaces)
+        prompt_rows = row_dicts(prompt_namespaces.namespaces)
         prompt_error = None
     except UI_SURFACE_EXCEPTIONS as exc:  # pragma: no cover - runtime safeguard for UI
         prompt_rows = []
@@ -2841,7 +2830,7 @@ def _render_system_and_storage(settings: Any) -> None:
         ),
         _ctx("directory_counts"),
     )
-    path_checks = _to_dicts(path_checks_response.rows)
+    path_checks = row_dicts(path_checks_response.rows)
 
     with main_col:
         st.subheader("State DB - Processed")

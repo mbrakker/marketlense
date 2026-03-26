@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import json
 import re
 from typing import Any, Dict, List, Optional
 
 from src.contracts.config import AppSettings
+from src.utils.json_utils import safe_json_dumps
 
 METRIC_FIELDS = (
     "value",
@@ -463,10 +463,7 @@ def _canonicalize_evidence_id(
 
 
 def _dump_json(data: Any) -> str:
-    try:
-        return json.dumps(data, ensure_ascii=False)
-    except TypeError:
-        return "{}"
+    return safe_json_dumps(data, ensure_ascii=False, fallback="{}")
 
 
 def _s(value: Any) -> str:

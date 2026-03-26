@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import logging
-import re
-import unicodedata
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Dict, List
@@ -17,6 +15,7 @@ from src.contracts.categories import (
 from src.contracts.run_context import RunContext
 from src.contracts.taxonomy import TaxonomyExtractResponse
 from src.utils.logging import log_event
+from src.utils.tag_utils import normalize_slug_tag
 
 logger = logging.getLogger("market_lense.categorize_generator")
 
@@ -92,7 +91,7 @@ def categorize_taxonomy(
         tag = (raw_tag or "").strip()
         if not tag:
             continue
-        norm = _norm_tag(tag)
+        norm = normalize_slug_tag(tag)
         if not norm:
             continue
         bindings = signal_index.get(norm) or []
@@ -167,13 +166,15 @@ def _build_signal_index(
     config: CategoryClassificationConfig,
 ) -> Dict[str, List[_SignalBinding]]:
     global_generic_norms = {
-        _norm_tag(tag) for tag in config.global_generic_tags if _norm_tag(tag)
+        normalize_slug_tag(tag)
+        for tag in config.global_generic_tags
+        if normalize_slug_tag(tag)
     }
     tag_to_bindings: Dict[str, List[_SignalBinding]] = defaultdict(list)
     for category in categories:
         category_signals: dict[str, _SignalBinding] = {}
         for tag in category.generic_tags:
-            norm = _norm_tag(tag)
+            norm = normalize_slug_tag(tag)
             if not norm:
                 continue
             category_signals[norm] = _SignalBinding(
@@ -183,7 +184,7 @@ def _build_signal_index(
                 weight=config.generic_tag_weight,
             )
         for tag in category.tags:
-            norm = _norm_tag(tag)
+            norm = normalize_slug_tag(tag)
             if not norm:
                 continue
             category_signals[norm] = _SignalBinding(
@@ -193,7 +194,7 @@ def _build_signal_index(
                 weight=config.legacy_tag_weight,
             )
         for tag in category.supporting_tags:
-            norm = _norm_tag(tag)
+            norm = normalize_slug_tag(tag)
             if not norm:
                 continue
             category_signals[norm] = _SignalBinding(
@@ -203,7 +204,7 @@ def _build_signal_index(
                 weight=config.supporting_tag_weight,
             )
         for tag in category.secondary_supporting_tags:
-            norm = _norm_tag(tag)
+            norm = normalize_slug_tag(tag)
             if not norm:
                 continue
             category_signals[norm] = _SignalBinding(
@@ -213,7 +214,7 @@ def _build_signal_index(
                 weight=config.supporting_tag_weight,
             )
         for tag in category.core_tags:
-            norm = _norm_tag(tag)
+            norm = normalize_slug_tag(tag)
             if not norm:
                 continue
             category_signals[norm] = _SignalBinding(
@@ -234,7 +235,7 @@ def _build_signal_index(
                     weight=config.generic_tag_weight,
                 )
         for tag in category.negative_tags:
-            norm = _norm_tag(tag)
+            norm = normalize_slug_tag(tag)
             if not norm or norm in category_signals:
                 continue
             category_signals[norm] = _SignalBinding(
@@ -266,7 +267,7 @@ def _build_descriptor_norms(categories: List[CategoryDefinition]) -> set[str]:
     descriptor_norms: set[str] = set()
     for category in categories:
         for tag in category.descriptor_tags:
-            norm = _norm_tag(tag)
+            norm = normalize_slug_tag(tag)
             if norm:
                 descriptor_norms.add(norm)
     return descriptor_norms
@@ -301,7 +302,12 @@ def _build_score_details(
             {
                 norm
                 for norm in accumulator.strong_norms
-                if norm in {_norm_tag(tag) for tag in category.must_have_one_of}
+                if norm
+                in {
+                    normalize_slug_tag(tag)
+                    for tag in category.must_have_one_of
+                    if normalize_slug_tag(tag)
+                }
             }
         )
         secondary_rescue_eligible = _is_secondary_rescue_eligible(
@@ -391,13 +397,13 @@ def _normalize_taxonomy_input(
     if isinstance(taxonomy, TaxonomyExtractResponse):
         contexts: Dict[str, _TaxonomyTagContext] = {}
         for item in taxonomy.tag_evidence:
-            norm = _norm_tag(item.tag)
+            norm = normalize_slug_tag(item.tag)
             if not norm:
                 continue
             context = contexts.setdefault(norm, _TaxonomyTagContext())
             if item.tier in {"primary", "secondary"}:
                 context.tier = item.tier
-            section_key = _norm_tag(item.section_label)
+            section_key = normalize_slug_tag(item.section_label)
             if section_key:
                 context.section_keys.add(section_key)
         tags = []
@@ -411,7 +417,7 @@ def _normalize_taxonomy_input(
             tag = (raw_tag or "").strip()
             if not tag:
                 continue
-            norm = _norm_tag(tag)
+            norm = normalize_slug_tag(tag)
             if not norm or norm in seen:
                 continue
             seen.add(norm)
@@ -460,12 +466,6 @@ def _is_secondary_rescue_eligible(
     if category.must_have_one_of and must_have_match_count < 1:
         return False
     return True
-
-
-def _norm_tag(tag: str) -> str:
-    normalized = unicodedata.normalize("NFKC", tag).strip().lower()
-    normalized = re.sub(r"[\W]+", "_", normalized)
-    return normalized.strip("_")
 
 
 def _category_label(cat_id: str, defs: Dict[str, CategoryDefinition]) -> str:

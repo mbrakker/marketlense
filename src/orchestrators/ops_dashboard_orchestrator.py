@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import asdict, is_dataclass
-from typing import Any, Iterable, List
+from typing import List
 
 from src.contracts.files import FileStatRequest
 from src.contracts.lock import LockGetRequest
@@ -20,22 +19,10 @@ from src.services.lock_service import get_lock
 from src.services.report_store_service import list_metadata
 from src.services.state_service import list_processed, list_published
 from src.utils.errors import AppError
+from src.utils.gui_utils import row_dicts
 from src.utils.logging import child_context, log_event
 
 logger = logging.getLogger("market_lense.ops_dashboard_orchestrator")
-
-
-def _to_dicts(items: Iterable[Any]) -> List[dict]:
-    rows: List[dict] = []
-    for item in items:
-        if is_dataclass(item):
-            rows.append(asdict(item))
-        elif isinstance(item, dict):
-            rows.append(item)
-        elif hasattr(item, "__dict__"):
-            rows.append(dict(item.__dict__))
-    return rows
-
 
 def collect_ops_dashboard_snapshot(
     request: OpsDashboardSnapshotRequest,
@@ -57,7 +44,7 @@ def collect_ops_dashboard_snapshot(
         ReportMetadataListRequest(schema_version="1.1", db_path=request.reports_db),
         child_context(ctx, task_id="ops:list_reports"),
     )
-    reports = _to_dicts(reports_resp.records)
+    reports = row_dicts(reports_resp.records, include_object_attrs=True)
     reports.sort(key=lambda row: int(row.get("updated_at") or 0), reverse=True)
     reports = reports[: max(request.report_limit, 0)]
 
@@ -65,13 +52,13 @@ def collect_ops_dashboard_snapshot(
         StateProcessedListRequest(schema_version="1.0", state_db=request.state_db, limit=request.processed_limit),
         child_context(ctx, task_id="ops:list_processed"),
     )
-    processed = _to_dicts(processed_resp.rows)
+    processed = row_dicts(processed_resp.rows, include_object_attrs=True)
 
     published_resp = list_published(
         StatePublishedListRequest(schema_version="1.0", state_db=request.state_db, limit=request.published_limit),
         child_context(ctx, task_id="ops:list_published"),
     )
-    published = _to_dicts(published_resp.rows)
+    published = row_dicts(published_resp.rows, include_object_attrs=True)
 
     lock_ctx = child_context(ctx, task_id="ops:get_lock")
     try:

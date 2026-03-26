@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import re
-import unicodedata
 from pathlib import Path
 
 import pytest
@@ -19,6 +17,7 @@ from src.contracts.taxonomy import TaxonomyExtractResponse, TaxonomyTagEvidence
 from src.generators.categorize_generator import categorize_taxonomy
 from src.services.category_mapping_service import load_mappings
 from src.utils.errors import AppError
+from src.utils.tag_utils import normalize_slug_tag
 
 
 def _ctx() -> RunContext:
@@ -26,9 +25,7 @@ def _ctx() -> RunContext:
 
 
 def _slug(value: str) -> str:
-    normalized = unicodedata.normalize("NFKC", str(value or "")).strip().lower()
-    normalized = re.sub(r"[\W]+", "_", normalized)
-    return normalized.strip("_")
+    return normalize_slug_tag(value)
 
 
 def _mappings(categories: list[CategoryDefinition]) -> CategoryMappingLoadResponse:

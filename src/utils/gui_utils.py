@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import json
 import re
+from dataclasses import asdict, is_dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, Iterable
 
 
 LOG_LINE_RE = re.compile(
@@ -147,6 +148,24 @@ def safe_json_loads(value: str) -> dict[str, Any] | list[Any] | None:
     if isinstance(parsed, (dict, list)):
         return parsed
     return None
+
+
+def row_dicts(
+    items: Iterable[Any],
+    *,
+    include_object_attrs: bool = False,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for item in items:
+        if is_dataclass(item) and not isinstance(item, type):
+            rows.append(asdict(item))
+            continue
+        if isinstance(item, dict):
+            rows.append(item)
+            continue
+        if include_object_attrs and hasattr(item, "__dict__"):
+            rows.append(dict(item.__dict__))
+    return rows
 
 
 def normalize_text_lines(value: str) -> list[str]:

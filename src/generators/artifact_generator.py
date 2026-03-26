@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -16,7 +15,6 @@ from src.contracts.report_analysis import (
 from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.generators.artifact_normalization import (
-    METRIC_FIELDS,
     artifact_base_variables,
     artifact_quote_candidates,
     artifact_retrieval_mode,
@@ -47,6 +45,7 @@ from src.services import (
     report_analysis_store_service,
 )
 from src.utils.errors import AppError
+from src.utils.json_utils import safe_json_dumps
 from src.utils.model_resolver import resolve_model
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.coercion import coerce_int
@@ -252,12 +251,7 @@ def generate_artifacts(
 
     insights_final_ctx = child_context(ctx, task_id=f"{ctx.task_id}:insights_final")
 
-    quote_candidates: list[Any] = []
-    quote_pack = safe_evidence.get("quote_candidates")
-    if isinstance(quote_pack, dict):
-        quote_candidates = quote_pack.get("quote_candidates") or []
-    elif isinstance(quote_pack, list):
-        quote_candidates = quote_pack
+    quote_candidates = artifact_quote_candidates(safe_evidence)
 
     toc_bundle = build_toc_artifacts(doc_map=safe_doc_map)
     toc_topics = [entry["display_title"] for entry in toc_bundle["toc_entries"]]
@@ -1747,10 +1741,7 @@ def _validate_artifact_semantic_fields(
 
 
 def _dump_json(data: Any) -> str:
-    try:
-        return json.dumps(data, ensure_ascii=False)
-    except Exception:
-        return ""
+    return safe_json_dumps(data, ensure_ascii=False, fallback="")
 
 
 def _s(value: Any) -> str:

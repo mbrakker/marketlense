@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 from copy import deepcopy
 from dataclasses import asdict, dataclass, field
@@ -39,6 +38,7 @@ from src.generators.validation.evidence import retrieve_evidence_windows
 from src.generators.validation.preparation import prepare_validation_inputs
 from src.services import openai_service, prompt_service, report_analysis_store_service
 from src.utils.errors import AppError
+from src.utils.json_utils import safe_json_dumps
 from src.utils.logging import child_context, log_event
 
 logger = logging.getLogger("market_lense.report_regeneration_generator")
@@ -525,10 +525,7 @@ def _unique_ints(values) -> List[int]:
 
 
 def _dump_json(data: Any) -> str:
-    try:
-        return json.dumps(data, ensure_ascii=False)
-    except Exception:
-        return ""
+    return safe_json_dumps(data, ensure_ascii=False, fallback="")
 
 
 def _s(value: Any) -> str:

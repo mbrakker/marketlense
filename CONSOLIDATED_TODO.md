@@ -1,10 +1,10 @@
 # Consolidated TODO
 
-Last compiled: 2026-03-25
+Last compiled: 2026-03-26
 
 This file combines all TODOs found in the repository (from `TODO.md`, `html_todo.md`, and `potential-TODO.md`). Items are grouped by theme. Duplicates were merged. Each task includes: title, explanation (what & why), pros & cons, and acceptance criteria.
 
-Completed items are removed from this backlog once their acceptance criteria are met. The PDF service internal split, the report-generator phase split, the validation-generator rule split, the evidence-pack strategy split, the duration-tooling consolidation, the legacy `analysis.compare` / `ingest.debug_candidate_gallery` cleanup, and the monkeypatch-heavy test hotspot cleanup were completed on or before 2026-03-25 and are no longer tracked here as open work. This file is the single source of truth for open backlog items, including the remaining work previously tracked in `docs/quality/ineffective-choices-top50.md`.
+Completed items are removed from this backlog once their acceptance criteria are met. The PDF service internal split, the report-generator phase split, the validation-generator rule split, the evidence-pack strategy split, the duration-tooling consolidation, the legacy `analysis.compare` / `ingest.debug_candidate_gallery` cleanup, the monkeypatch-heavy test hotspot cleanup, the publish file-id helper extraction, the contract `schema_version` parity sweep, the lock-service FD cleanup, and the direct-I/O boundary enforcement were completed on or before 2026-03-26 and are no longer tracked here as open work. This file is the single source of truth for open backlog items, including the remaining work previously tracked in `docs/quality/ineffective-choices-top50.md`.
 
 How to use this backlog:
 
@@ -232,16 +232,17 @@ Suggested reading order when prioritizing:
 
 ## 6. Publishing & WordPress
 
-- **Title:** Parallelize WordPress media uploads & pass auth header from orchestrator
-  - Explanation: Speed up publishing by parallelizing uploads and propagate auth header from orchestrator to generator to avoid duplicate auth derivation.
+- **Title:** Parallelize WordPress media uploads and remove duplicated auth-header derivation
+  - Explanation: Speed up publishing by parallelizing uploads and pass the resolved auth header through the publish request flow. The current code still derives auth in both `publish_orchestrator` and `publish_generator`.
   - Pros: Faster publish time; simpler auth flows.
   - Cons: Concurrency and API rate-limit handling required.
   - Acceptance Criteria:
     - Media uploads run in parallel and respect rate limits.
-    - Orchestrator passes required auth to publishers; no duplicate auth logic remains.
+    - Auth header is resolved once at the orchestration boundary and passed through to publish operations.
+    - No duplicate auth derivation remains in the publish path.
 
-- **Title:** Move publishing to a durable queue with retry/backoff/idempotency
-  - Explanation: Make publish operations durable by pushing publish tasks into a queue with retries, backoff, and idempotency to handle transient failures gracefully.
+- **Title:** Turn publish queue snapshot into a durable publish job queue with retry/backoff/idempotency
+  - Explanation: The repo already has `publish_queue_orchestrator`, but today it is a snapshot/read-model only. Extend publishing so jobs are enqueued, persisted, retried with backoff, and executed idempotently.
   - Pros: More reliable publishing and easier retry handling.
   - Cons: Operational overhead and queue infrastructure.
   - Acceptance Criteria:
@@ -298,13 +299,6 @@ Suggested reading order when prioritizing:
     - Unused crop pass removed or guarded behind config.
     - Crop output paths are consumed by report generator or persisted for debug.
 
-- **Title:** Fix lock service double-close fd path and other minor fd issues
-  - Explanation: Address potential double-close and FD-handling bugs in lock service and related code paths to avoid resource leaks and errors.
-  - Pros: Reliability and fewer low-level crashes.
-  - Cons: Low-level changes need careful testing.
-  - Acceptance Criteria:
-    - Lock service no longer has double-close paths (validated by code review and tests).
-
 - **Title:** Add per-stage feature flags for controlled rollout
   - Explanation: Add feature-flagging at the stage level to enable controlled rollouts, A/B tests, and emergency disable switches for costly steps.
   - Pros: Safer deployments and cost governance.
@@ -343,14 +337,6 @@ Each quick-win should be documented with a short task when prioritized.
 
 ### 8.4 Architecture-Fit Additions
 
-- **Title:** Enforce schema-version parity for all dataclass contracts
-  - Explanation: Add a contract linter/test that fails when any dataclass in `src/contracts/**` lacks a `schema_version` field. Current audit found classes such as `PdfTextSample`, `CategoryDefinition`, and `UncategorizedTagsEntry` without explicit schema versioning.
-  - Pros: Consistent contract evolution and safer migrations.
-  - Cons: Small refactor burden for existing contracts and fixtures.
-  - Acceptance Criteria:
-    - Linter/test added and wired into CI.
-    - All contracts include explicit `schema_version` (or documented exemption list with rationale).
-
 - **Title:** Normalize config defaults, portability, and tracked operational artifacts
   - Explanation: Move concrete deployment values (e.g., Drive folder IDs, site URLs, usernames) out of committed defaults into environment overlays (`app.example.yaml` + env vars), move hardcoded defaults and keyword lists out of `src/services/config_service.py` into one documented source of truth, and stop tracking generated operational artifacts such as `logs/*.csv` and `logs/*.json` unless they are intentional fixtures.
   - Pros: Safer repo defaults, easier onboarding across environments, lower risk of accidental prod coupling, and less repository noise.
@@ -362,12 +348,13 @@ Each quick-win should be documented with a short task when prioritized.
     - Generated log artifacts are ignored or moved to a documented fixture/snapshot location with rationale.
     - Bootstrapping tests verify env/profile overrides resolve correctly.
 
-- **Title:** Add architecture boundary checks (import + I/O role linting)
-  - Explanation: Introduce automated checks that enforce layer dependency rules (`services -> contracts/utils`, etc.), flag direct filesystem/network usage in generators and utilities that should remain pure, and drive removal of existing cross-role coupling so the same rule exists only once in the backlog.
+- **Title:** Expand architecture boundary checks from I/O linting to full import-role enforcement
+  - Explanation: The repo already has direct-I/O boundary coverage in `tests/test_io_boundaries.py`. Extend that enforcement to import-direction checks (`services -> contracts/utils`, etc.) and explicit cross-role dependency violations.
   - Pros: Prevents architectural drift and role leakage over time.
   - Cons: Requires curating false-positive exemptions for legitimate edge cases.
   - Acceptance Criteria:
-    - Boundary linter runs in CI.
+    - Existing I/O boundary lint remains in CI.
+    - Import/dependency boundary lint also runs in CI.
     - Violations report exact module and forbidden dependency/API usage.
     - Forbidden cross-role imports/coupling are removed from current hotspots.
     - Existing violations are fixed or explicitly documented with expiry dates.
@@ -392,15 +379,6 @@ Each quick-win should be documented with a short task when prioritized.
     - Generator logs include required prompt and model metadata for every model call.
     - Raw model response logging present with redaction safeguards.
 
-- **Title:** Remove direct file/network I/O from generators and pure utilities
-  - Explanation: Replace direct filesystem operations in generators with service calls and keep utilities deterministic/pure without I/O.
-  - Pros: Stronger layering and testability.
-  - Cons: Refactor touches multiple cache/read paths.
-  - Acceptance Criteria:
-    - Generators perform no direct file reads/writes outside service interfaces.
-    - Utility modules remain stateless and I/O-free.
-    - Boundary lint/tests catch prohibited I/O usage.
-
 - **Title:** Split remaining monolithic generator/service modules to single-responsibility units
   - Explanation: Break the remaining oversized mixed-responsibility modules (notably `artifact_generator` and `openai_service`) into role-appropriate, single-purpose modules wired by orchestrators. The PDF service internal split, the report-generator phase split, the validation-generator rule split, and the evidence-pack strategy split are complete and removed from this backlog item.
   - Pros: Easier maintenance, lower regression risk, clearer ownership.
@@ -409,13 +387,13 @@ Each quick-win should be documented with a short task when prioritized.
     - Remaining oversized service/generator modules extract cross-cutting orchestration and I/O concerns to proper layers.
     - Equivalent behavior validated by pipeline tests.
 
-- **Title:** Harden test integrity and required AGENTS fixtures
-  - Explanation: Add mandatory shared fixtures (`assert_logs_have_required_fields`, `assert_no_defaulted_required_fields`, `assert_app_error`, `external_boundary_mocks_only`, `idempotency_guard`) and refactor tests to avoid private-helper monkeypatching and over-mocked narratives.
+- **Title:** Finish rollout of AGENTS test-integrity fixtures and boundary-only mocking
+  - Explanation: The shared fixtures now exist in `tests/conftest.py`, but the suite still contains raw `monkeypatch` usage against generator/orchestrator internals. Finish migrating remaining hotspots to boundary-only mocks and fixture-based assertions.
   - Pros: Higher confidence that tests validate real behavior.
   - Cons: Test rewrite effort, especially around orchestration-heavy paths.
   - Acceptance Criteria:
-    - Required fixtures implemented in shared test infrastructure.
-    - Private/helper patching removed from tests.
+    - New and touched tests use the shared fixtures instead of ad-hoc assertion helpers.
+    - Private/helper patching and internal orchestrator/generator patching are removed from remaining hotspots.
     - Orchestrator and service tests assert required structured log fields.
     - Idempotency behavior asserted where applicable.
 
@@ -510,29 +488,3 @@ This section absorbs the remaining open appendix items from `docs/quality/ineffe
     - Pack ordering and registry behavior remain unchanged.
     - Helper indirection around strategy metadata is reduced.
 
-- **Title:** Share publish file-id mapping helpers across publish orchestrators
-  - Explanation: Deduplicate HTML path canonicalization and reports-DB file-id mapping logic currently split across `publish_orchestrator` and `publish_queue_orchestrator`.
-  - Pros: Consistent file-id resolution and less orchestration duplication.
-  - Cons: Shared helper boundary must stay narrow and orchestration-specific logic must not leak across modules.
-  - Acceptance Criteria:
-    - One shared helper module owns HTML-path canonicalization and file-id map loading.
-    - Publish queue and publish flows resolve file IDs exactly as before.
-    - Duplicate helper bodies are removed from both orchestrators.
-
-- **Title:** Centralize dataclass-to-dict row serialization for UI and dashboards
-  - Explanation: Replace repeated “dataclass/dict/object to row dict” helpers across UI, ops dashboard, and related table-rendering code with one shared pure serializer.
-  - Pros: Less duplication and more consistent row-shaping behavior.
-  - Cons: Shared helper must preserve current UI table expectations.
-  - Acceptance Criteria:
-    - One shared serializer handles the repeated row-conversion pattern.
-    - Duplicate local helpers are removed from UI/dashboard modules.
-    - Rendered rows remain unchanged in existing tests.
-
-- **Title:** Promote repeated small text/tag helpers into shared utilities
-  - Explanation: Consolidate recurring helpers like tag normalization, category label normalization, pluralization shorthands, and JSON dump wrappers where their semantics are truly shared.
-  - Pros: Smaller modules and more consistent helper behavior.
-  - Cons: Needs discipline to avoid moving business logic into generic utils.
-  - Acceptance Criteria:
-    - Repeated small helper functions are centralized only where semantics match.
-    - Business-specific behavior remains in its bounded context.
-    - Existing helper behavior is preserved by tests.

@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import logging
-import re
 import threading
-import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Set, Tuple
@@ -24,6 +22,7 @@ from src.contracts.categories import (
 from src.contracts.run_context import RunContext
 from src.utils.errors import AppError
 from src.utils.logging import log_event
+from src.utils.tag_utils import normalize_slug_tag
 
 logger = logging.getLogger("market_lense.category_mapping_service")
 
@@ -50,7 +49,7 @@ def _clean_tags(tags: List[str]) -> List[str]:
         t_s = str(t).strip()
         if not t_s:
             continue
-        norm = _norm_tag(t_s)
+        norm = normalize_slug_tag(t_s)
         if norm in seen:
             continue
         seen.add(norm)
@@ -82,12 +81,6 @@ def _clean_bool(value: object, default: bool) -> bool:
         if normalized in {"false", "0", "no", "n", "off"}:
             return False
     return default
-
-
-def _norm_tag(tag: str) -> str:
-    normalized = unicodedata.normalize("NFKC", tag).strip().lower()
-    normalized = re.sub(r"[\W]+", "_", normalized)
-    return normalized.strip("_")
 
 
 def _category_positive_tags(item: dict) -> List[str]:
@@ -351,10 +344,10 @@ def _merge_uncategorized(
     tags: List[str],
 ) -> List[dict]:
     known_tags = {
-        _norm_tag(tag)
+        normalize_slug_tag(tag)
         for item in categories
         for tag in _category_positive_tags(item)
-        if _norm_tag(tag)
+        if normalize_slug_tag(tag)
     }
 
     cleaned_uncategorized = []
@@ -366,7 +359,7 @@ def _merge_uncategorized(
         seen = set()
         for t in entry.get("tags") or []:
             t_s = str(t).strip()
-            norm = _norm_tag(t_s)
+            norm = normalize_slug_tag(t_s)
             if not t_s or norm in known_tags or norm in seen:
                 continue
             seen.add(norm)
@@ -378,7 +371,7 @@ def _merge_uncategorized(
     seen_new = set()
     for t in tags or []:
         t_s = str(t).strip()
-        norm = _norm_tag(t_s)
+        norm = normalize_slug_tag(t_s)
         if not t_s or norm in known_tags or norm in seen_new:
             continue
         seen_new.add(norm)
@@ -388,8 +381,14 @@ def _merge_uncategorized(
         merged = False
         for entry in cleaned_uncategorized:
             if entry.get("title") == report_title:
-                existing_norms = {_norm_tag(t) for t in entry["tags"]}
-                entry["tags"].extend([tag for tag in new_tags if _norm_tag(tag) not in existing_norms])
+                existing_norms = {normalize_slug_tag(t) for t in entry["tags"]}
+                entry["tags"].extend(
+                    [
+                        tag
+                        for tag in new_tags
+                        if normalize_slug_tag(tag) not in existing_norms
+                    ]
+                )
                 merged = True
                 break
         if not merged:
@@ -456,10 +455,10 @@ def _sanitize_mapping_data(raw: dict) -> dict:
             "portal_exposed": _clean_bool(item.get("portal_exposed"), True),
         })
     known_tags: Set[str] = {
-        _norm_tag(tag)
+        normalize_slug_tag(tag)
         for item in categories
         for tag in _category_positive_tags(item)
-        if _norm_tag(tag)
+        if normalize_slug_tag(tag)
     }
     uncategorized_raw = raw.get("uncategorized") or []
     uncategorized: List[dict] = []
@@ -471,7 +470,7 @@ def _sanitize_mapping_data(raw: dict) -> dict:
         seen = set()
         for t in item.get("tags") or []:
             t_s = str(t).strip()
-            norm = _norm_tag(t_s)
+            norm = normalize_slug_tag(t_s)
             if not t_s or norm in known_tags or norm in seen:
                 continue
             seen.add(norm)

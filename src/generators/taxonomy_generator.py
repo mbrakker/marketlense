@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import logging
 import re
-import unicodedata
 from typing import Any, Dict, List, Optional, Tuple
 
 from src.contracts.openai import OpenAIResponseRequest, OpenAIResponseResult
@@ -28,6 +27,7 @@ from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.services.category_mapping_service import load_mappings as load_category_mappings
 from src.services import file_service, openai_service, prompt_service, report_analysis_store_service
 from src.utils.errors import AppError
+from src.utils.tag_utils import normalize_slug_tag
 from src.utils.logging import log_event
 from src.utils.cache_utils import sha256_json
 from src.services.schema_validator_service import validate_schema
@@ -572,7 +572,7 @@ def _normalize_tags(items: Any) -> List[str]:
     cleaned: List[str] = []
     seen = set()
     for item in items:
-        text = _slug_tag(item)
+        text = normalize_slug_tag(item)
         if not text:
             continue
         if text in seen:
@@ -589,7 +589,7 @@ def _merge_taxonomy_lists(*groups: Any) -> List[str]:
         if not isinstance(group, list):
             continue
         for item in group:
-            text = _slug_tag(item)
+            text = normalize_slug_tag(item)
             if not text:
                 continue
             if text in seen:
@@ -620,15 +620,18 @@ def _normalize_tag_evidence(
 ) -> List[TaxonomyTagEvidence]:
     if not isinstance(items, list):
         return []
-    primary_norms = {_slug_tag(tag) for tag in primary_tags if _slug_tag(tag)}
-    secondary_norms = {_slug_tag(tag) for tag in secondary_tags if _slug_tag(tag)}
-    known_norms = {_slug_tag(tag) for tag in known_tags if _slug_tag(tag)}
+    secondary_norms = {
+        normalize_slug_tag(tag) for tag in secondary_tags if normalize_slug_tag(tag)
+    }
+    known_norms = {
+        normalize_slug_tag(tag) for tag in known_tags if normalize_slug_tag(tag)
+    }
     evidence_items: List[TaxonomyTagEvidence] = []
     seen = set()
     for item in items:
         if not isinstance(item, dict):
             continue
-        tag = _slug_tag(item.get("tag"))
+        tag = normalize_slug_tag(item.get("tag"))
         if not tag:
             continue
         if known_norms and tag not in known_norms:
@@ -705,12 +708,14 @@ def _find_trigger_evidence_for_rule(
     rule: TaxonomyInferenceRule,
     tag_evidence: List[TaxonomyTagEvidence],
 ) -> TaxonomyTagEvidence | None:
-    trigger_tags = {_slug_tag(tag) for tag in rule.trigger_tags if _slug_tag(tag)}
+    trigger_tags = {
+        normalize_slug_tag(tag) for tag in rule.trigger_tags if normalize_slug_tag(tag)
+    }
     context_keywords_any = [
         keyword for keyword in rule.context_keywords_any if keyword.strip()
     ]
     for item in tag_evidence:
-        if _slug_tag(item.tag) not in trigger_tags:
+        if normalize_slug_tag(item.tag) not in trigger_tags:
             continue
         if not context_keywords_any:
             return item
@@ -729,7 +734,9 @@ def _keyword_matches_evidence(keyword: str, haystack: str) -> bool:
 
 
 def _normalize_match_text(value: str) -> str:
-    normalized = unicodedata.normalize("NFKC", value or "").lower()
+    normalized = str(value or "")
+    normalized = re.sub(r"\s+", " ", normalized)
+    normalized = normalize_slug_tag(normalized).replace("_", " ")
     normalized = re.sub(r"[^0-9a-z]+", " ", normalized)
     normalized = re.sub(r"\s+", " ", normalized).strip()
     return normalized
@@ -744,26 +751,30 @@ def _apply_inference_rule(
     tag_evidence: List[TaxonomyTagEvidence],
 ) -> tuple[List[str], List[str], List[TaxonomyTagEvidence]]:
     remove_norms = {
-        _slug_tag(tag) for tag in rule.remove_tags if _slug_tag(tag)
+        normalize_slug_tag(tag)
+        for tag in rule.remove_tags
+        if normalize_slug_tag(tag)
     }
-    inferred_tag = _slug_tag(rule.inferred_tag)
+    inferred_tag = normalize_slug_tag(rule.inferred_tag)
     inferred_norm = inferred_tag
 
     updated_primary = [
-        tag for tag in primary_tags if _slug_tag(tag) not in remove_norms
+        tag for tag in primary_tags if normalize_slug_tag(tag) not in remove_norms
     ]
     updated_secondary = [
-        tag for tag in secondary_tags if _slug_tag(tag) not in remove_norms
+        tag for tag in secondary_tags if normalize_slug_tag(tag) not in remove_norms
     ]
     updated_evidence = [
-        item for item in tag_evidence if _slug_tag(item.tag) not in remove_norms
+        item
+        for item in tag_evidence
+        if normalize_slug_tag(item.tag) not in remove_norms
     ]
 
     updated_primary = [
-        tag for tag in updated_primary if _slug_tag(tag) != inferred_norm
+        tag for tag in updated_primary if normalize_slug_tag(tag) != inferred_norm
     ]
     updated_secondary = [
-        tag for tag in updated_secondary if _slug_tag(tag) != inferred_norm
+        tag for tag in updated_secondary if normalize_slug_tag(tag) != inferred_norm
     ]
 
     if rule.inferred_tier == "primary":
@@ -789,7 +800,7 @@ def _dedupe_tag_evidence(
     seen = set()
     for item in items:
         key = (
-            _slug_tag(item.tag),
+            normalize_slug_tag(item.tag),
             item.tier.strip().lower(),
             item.section_label.strip().lower(),
         )
@@ -798,12 +809,6 @@ def _dedupe_tag_evidence(
         seen.add(key)
         deduped.append(item)
     return deduped
-
-
-def _slug_tag(value: Any) -> str:
-    normalized = unicodedata.normalize("NFKC", _s(value)).strip().lower()
-    normalized = re.sub(r"[\W]+", "_", normalized)
-    return normalized.strip("_")
 
 
 def _collect_allowed_tags(mappings_resp) -> List[str]:

@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import asdict, is_dataclass
 from datetime import datetime, timezone
-from typing import Any, Iterable, Optional
+from typing import Any, Optional
 
 from src.contracts.files import FileStatRequest, ListDirectoryRequest, ReadTextRequest
 from src.contracts.lock import LockGetRequest
@@ -44,6 +43,7 @@ from src.utils.errors import AppError
 from src.utils.gui_utils import (
     extract_log_date_from_filename,
     parse_structured_log_line,
+    row_dicts,
     safe_json_loads,
     status_chip_level,
 )
@@ -92,7 +92,7 @@ def discover_log_files(
         ))
         return LogFileDiscoveryResponse(schema_version="1.0", records=[])
 
-    rows = _to_dicts(response.entries)
+    rows = row_dicts(response.entries, include_object_attrs=True)
     rows.sort(key=lambda row: float(row.get("mtime_utc") or 0.0), reverse=True)
     records = [
         LogFileRecord(
@@ -287,7 +287,7 @@ def summarize_validation_artifacts(
         ))
         return ValidationArtifactSummaryResponse(schema_version="1.0", rows=[])
 
-    files = _to_dicts(response.entries)
+    files = row_dicts(response.entries, include_object_attrs=True)
     files.sort(key=lambda row: float(row.get("mtime_utc") or 0.0), reverse=True)
     rows: list[ValidationArtifactSummaryRow] = []
     for file_row in files[:limit]:
@@ -333,7 +333,7 @@ def load_report_rows(
         ReportMetadataListRequest(schema_version="1.1", db_path=request.reports_db),
         child_context(ctx, task_id="streamlit:list_reports"),
     )
-    rows = _to_dicts(reports_resp.records)
+    rows = row_dicts(reports_resp.records, include_object_attrs=True)
     rows.sort(key=lambda row: int(row.get("updated_at") or 0), reverse=True)
     logger.info(log_event(
         ctx,
@@ -376,7 +376,7 @@ def load_state_rows(
             retryable=False,
             context={"kind": request.kind},
         )
-    rows = _to_dicts(response.rows)
+    rows = row_dicts(response.rows, include_object_attrs=True)
     logger.info(log_event(
         ctx,
         role="generator",
@@ -530,19 +530,6 @@ def collect_directory_counts(
         fields={"row_count": len(rows)},
     ))
     return DirectoryCountsResponse(schema_version="1.0", rows=rows)
-
-
-def _to_dicts(items: Iterable[Any]) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    for item in items:
-        if is_dataclass(item):
-            rows.append(asdict(item))
-        elif isinstance(item, dict):
-            rows.append(item)
-        elif hasattr(item, "__dict__"):
-            rows.append(dict(item.__dict__))
-    return rows
-
 
 def _normalized_limit(value: int, *, default: int, maximum: int) -> int:
     if value <= 0:
