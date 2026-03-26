@@ -15,6 +15,7 @@ except ModuleNotFoundError:  # pragma: no cover - depends on PyMuPDF packaging a
     import pymupdf as fitz
 
 from src.contracts.drive import DriveListRequest
+from src.contracts.llm import LLMClientPolicy
 from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIPdfOcrRequest
 from src.contracts.pdf_text import PdfTextExtractRequest
 from src.contracts.pdf_utils import PdfInfoRequest
@@ -30,11 +31,13 @@ from src.contracts.wordpress import (
 )
 from src.services import (
     drive_service,
+    llm_service,
     openai_service,
     pdf_service,
     vector_store_service,
 )
 from src.services.wordpress_service import ensure_taxonomy_terms, update_post_categories
+from tests.support.fakes import FakeOpenAIResult
 
 
 def _ctx() -> RunContext:
@@ -268,6 +271,56 @@ def test_openai_service_live_smoke_guarded(tmp_path):
         ctx=_ctx(),
     )
     assert response.text != ""
+
+
+@pytest.mark.integration
+def test_llm_service_wraps_openai_service_retry_and_backoff(
+    tmp_path: Path,
+    fake_openai,
+) -> None:
+    fake_openai.add("responses.create", RuntimeError("provider boom"))
+    fake_openai.add(
+        "responses.create",
+        FakeOpenAIResult(
+            output_text='{"ok":true}',
+            usage={"input_tokens": 1, "output_tokens": 1, "total_tool_calls": 0},
+            id="resp_retry_ok",
+        ),
+    )
+    sleep_calls: list[float] = []
+    client = llm_service.build_openai_client(
+        base_client=openai_service,
+        policy=LLMClientPolicy(
+            schema_version="1.0",
+            scope="integration-openai-chat",
+            retries=1,
+            base_delay_seconds=0.5,
+            backoff_step_seconds=0.0,
+            jitter_seconds=0.0,
+            circuit_breaker_failure_threshold=0,
+            circuit_breaker_recovery_seconds=0.0,
+        ),
+        sleep_fn=lambda seconds: sleep_calls.append(float(seconds)),
+    )
+
+    response = client.openai_chat_json(
+        request=OpenAIJSONPromptRequest(
+            schema_version="1.0",
+            system_prompt="Return JSON only",
+            user_prompt='{"ping":"pong"}',
+            model="gpt-4.1-mini",
+            temperature=0.0,
+            api_key="openai-key",
+            timeout_seconds=30.0,
+            cost_ledger_path=str(tmp_path / "ledger.jsonl"),
+            cost_daily_path=str(tmp_path / "daily.json"),
+            model_pricing={},
+        ),
+        ctx=_ctx(),
+    )
+
+    assert response.parsed_json == {"ok": True}
+    assert sleep_calls == [0.5]
 
 
 def _service_events(caplog, logger_name: str) -> list[dict[str, object]]:

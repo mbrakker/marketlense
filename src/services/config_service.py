@@ -515,6 +515,56 @@ def _resolve_ingest_runtime_settings(
     return resolved
 
 
+def _resolve_llm_runtime_settings(llm_cfg: dict[str, Any]) -> dict[str, Any]:
+    return _resolve_scalar_settings(
+        llm_cfg,
+        [
+            _SettingSpec(
+                field_name="llm_retry_retries",
+                config_key="retries",
+                default=1,
+                coerce=_to_int,
+                minimum=0,
+            ),
+            _SettingSpec(
+                field_name="llm_retry_base_delay_seconds",
+                config_key="base_delay_seconds",
+                default=1.0,
+                coerce=_to_float,
+                minimum=0.0,
+            ),
+            _SettingSpec(
+                field_name="llm_retry_backoff_step_seconds",
+                config_key="backoff_step_seconds",
+                default=1.0,
+                coerce=_to_float,
+                minimum=0.0,
+            ),
+            _SettingSpec(
+                field_name="llm_retry_jitter_seconds",
+                config_key="jitter_seconds",
+                default=0.25,
+                coerce=_to_float,
+                minimum=0.0,
+            ),
+            _SettingSpec(
+                field_name="llm_circuit_breaker_failure_threshold",
+                config_key="circuit_breaker_failure_threshold",
+                default=3,
+                coerce=_to_int,
+                minimum=0,
+            ),
+            _SettingSpec(
+                field_name="llm_circuit_breaker_recovery_seconds",
+                config_key="circuit_breaker_recovery_seconds",
+                default=30.0,
+                coerce=_to_float,
+                minimum=0.0,
+            ),
+        ],
+    )
+
+
 def _resolve_rank_settings(
     rank: dict[str, Any],
     *,
@@ -1042,6 +1092,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
 
     paths = data.get("paths", {}) or {}
     ingest = data.get("ingest", {}) or {}
+    llm_cfg = ingest.get("llm", {}) or {}
     drive_cfg = ingest.get("drive", {}) or {}
     pdf_text = ingest.get("pdf_text", {}) or {}
     figure_captions_cfg = ingest.get("figure_captions", {}) or {}
@@ -1055,6 +1106,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     paths_settings = _resolve_paths_settings(paths, resolver)
     openai_model = need(ingest, "openai_model", "ingest.openai_model", "OPENAI_MODEL")
     ingest_runtime = _resolve_ingest_runtime_settings(ingest)
+    llm_runtime = _resolve_llm_runtime_settings(llm_cfg)
     rank_settings = _resolve_rank_settings(
         rank,
         openai_model=openai_model,
@@ -1153,6 +1205,18 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         ],
         figure_caption_max_chars=figure_caption_settings["figure_caption_max_chars"],
         openai_timeout_seconds=ingest_runtime["openai_timeout_seconds"],
+        llm_retry_retries=llm_runtime["llm_retry_retries"],
+        llm_retry_base_delay_seconds=llm_runtime["llm_retry_base_delay_seconds"],
+        llm_retry_backoff_step_seconds=llm_runtime[
+            "llm_retry_backoff_step_seconds"
+        ],
+        llm_retry_jitter_seconds=llm_runtime["llm_retry_jitter_seconds"],
+        llm_circuit_breaker_failure_threshold=llm_runtime[
+            "llm_circuit_breaker_failure_threshold"
+        ],
+        llm_circuit_breaker_recovery_seconds=llm_runtime[
+            "llm_circuit_breaker_recovery_seconds"
+        ],
         rank_timeout_seconds=rank_settings["rank_timeout_seconds"],
         contents_max_pages=contents_settings["contents_max_pages"],
         contents_min_headings=contents_settings["contents_min_headings"],
@@ -1278,6 +1342,12 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
                 "pdf_text_ocr_cache_enabled": settings.pdf_text_ocr_cache_enabled,
                 "pdf_text_ocr_chunk_page_count": settings.pdf_text_ocr_chunk_page_count,
                 "openai_timeout_seconds": settings.openai_timeout_seconds,
+                "llm_retry_retries": settings.llm_retry_retries,
+                "llm_retry_base_delay_seconds": settings.llm_retry_base_delay_seconds,
+                "llm_retry_backoff_step_seconds": settings.llm_retry_backoff_step_seconds,
+                "llm_retry_jitter_seconds": settings.llm_retry_jitter_seconds,
+                "llm_circuit_breaker_failure_threshold": settings.llm_circuit_breaker_failure_threshold,
+                "llm_circuit_breaker_recovery_seconds": settings.llm_circuit_breaker_recovery_seconds,
                 "rank_timeout_seconds": settings.rank_timeout_seconds,
                 "contents_max_pages": settings.contents_max_pages,
                 "contents_min_headings": settings.contents_min_headings,

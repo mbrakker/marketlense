@@ -13,6 +13,7 @@ from src.contracts.report_analysis import AnalysisStorePackRequest
 from src.contracts.report_generation import ReportRuntimeState
 from src.contracts.report_models import ReportFigureAsset, ReportPayload
 from src.generators.report_generation_dependencies import ReportGeneratorDependencies
+from src.services import llm_service
 from src.utils.logging import child_context, log_event
 from src.utils.model_resolver import resolve_model
 
@@ -362,6 +363,13 @@ def generate_figure_captions(
         legacy_primary_caption = "Representative figure from the source report."
     results: list[dict[str, Any]] = []
     updated_assets: list[ReportFigureAsset] = []
+    llm_client = llm_service.build_openai_client_from_callables(
+        policy=llm_service.openai_client_policy_from_settings(
+            runtime.settings,
+            scope="figure_caption",
+        ),
+        openai_chat_json_with_images=dependencies.openai_chat_json_with_images,
+    )
     for index, asset in enumerate(assets, start=1):
         asset_ctx = child_context(caption_ctx, task_id=f"{caption_ctx.task_id}:{index}")
         context_bundle = _build_context_bundle(
@@ -408,7 +416,7 @@ def generate_figure_captions(
         total_tokens = None
         error_message = ""
         try:
-            response = dependencies.openai_chat_json_with_images(
+            response = llm_client.openai_chat_json_with_images(
                 OpenAIJSONImagePromptRequest(
                     schema_version="1.0",
                     system_prompt=system_render.text,

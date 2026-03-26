@@ -24,6 +24,7 @@ from src.generators.report_generation_shared import (
     read_cache_json,
     write_cache_json,
 )
+from src.services import llm_service
 from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
@@ -179,6 +180,13 @@ def recover_pdf_text_with_ocr(
     models_used: list[str] = []
     request_ids: list[str] = []
     raw_chunks: list[dict[str, object]] = []
+    llm_client = llm_service.build_openai_client_from_callables(
+        policy=llm_service.openai_client_policy_from_settings(
+            runtime.settings,
+            scope="pdf_text_ocr",
+        ),
+        openai_ocr_pdf=dependencies.openai_ocr_pdf,
+    )
     for chunk in split_response.chunks:
         chunk_ctx = child_context(
             ocr_ctx,
@@ -214,7 +222,7 @@ def recover_pdf_text_with_ocr(
         )
         chunk_response = _run_ocr_chunk(
             runtime=runtime,
-            dependencies=dependencies,
+            llm_client=llm_client,
             chunk=chunk,
             system_prompt=system_render.text,
             user_prompt=user_render.text,
@@ -322,7 +330,7 @@ def recover_pdf_text_with_ocr(
 def _run_ocr_chunk(
     *,
     runtime: ReportRuntimeState,
-    dependencies: ReportGeneratorDependencies,
+    llm_client,
     chunk: PdfOcrChunk,
     system_prompt: str,
     user_prompt: str,
@@ -349,7 +357,7 @@ def _run_ocr_chunk(
             )
         )
         try:
-            response = dependencies.openai_ocr_pdf(
+            response = llm_client.openai_ocr_pdf(
                 OpenAIPdfOcrRequest(
                     schema_version="1.0",
                     api_key=runtime.settings.openai_api_key,

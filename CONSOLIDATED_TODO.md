@@ -211,15 +211,6 @@ Suggested reading order when prioritizing:
     - Stage-level checkpoints stored in state DB with artifact references.
     - A run can resume from a checkpoint and produce consistent results.
 
-- **Title:** Centralize LLM orchestration with retry/backoff/circuit-breaker
-  - Explanation: Provide a shared LLM orchestration layer to handle retries, backoff, timeouts, and circuit-breaking logic for all model calls, and remove thin local pass-through retry wrappers in favor of one shared retry API.
-  - Pros: Consistent error handling and simpler generator code.
-  - Cons: One centralized layer must be robust and well-tested.
-  - Acceptance Criteria:
-    - New orchestration layer used by generators and services.
-    - Local pass-through retry wrappers are removed from affected modules.
-    - Retries and backoff are exercised in unit/integration tests.
-
 - **Title:** Stream LLM responses with early validation / fail-fast
   - Explanation: Support streaming model responses and implement early validation to fail fast on invalid shapes or low-confidence content during generation.
   - Pros: Faster feedback, reduced wasted compute on clearly invalid outputs.

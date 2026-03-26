@@ -228,6 +228,30 @@ class IngestSettings:
         default=600.0,
         metadata={"doc": "Timeout in seconds for OpenAI report generation calls."},
     )
+    llm_retry_retries: int = field(
+        default=1,
+        metadata={"doc": "Maximum retry count for individual LLM calls."},
+    )
+    llm_retry_base_delay_seconds: float = field(
+        default=1.0,
+        metadata={"doc": "Base delay in seconds before the first LLM retry."},
+    )
+    llm_retry_backoff_step_seconds: float = field(
+        default=1.0,
+        metadata={"doc": "Additional linear backoff delay added per LLM retry attempt."},
+    )
+    llm_retry_jitter_seconds: float = field(
+        default=0.25,
+        metadata={"doc": "Maximum jitter in seconds added to each LLM retry delay."},
+    )
+    llm_circuit_breaker_failure_threshold: int = field(
+        default=3,
+        metadata={"doc": "Consecutive retryable LLM failures required to open the circuit breaker."},
+    )
+    llm_circuit_breaker_recovery_seconds: float = field(
+        default=30.0,
+        metadata={"doc": "Cooldown in seconds before the LLM circuit breaker allows a probe call."},
+    )
     rank_timeout_seconds: float = field(
         default=600.0, metadata={"doc": "Timeout in seconds for OpenAI ranking calls."}
     )

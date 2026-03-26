@@ -350,3 +350,77 @@ def test_run_report_pipeline_uses_orchestrator_rate_limiter() -> None:
     assert response.status == "processed"
     assert tracking_client.max_active["vector"] <= 2
     assert tracking_client.max_active["chat"] <= 2
+
+
+def test_run_report_pipeline_uses_shared_llm_retry_policy(monkeypatch) -> None:
+    file = DriveFile(schema_version="1.0", file_id="f1", name="a.pdf", modified_time=None, md5_checksum="md5")
+    settings = replace(
+        _settings(),
+        llm_retry_retries=1,
+        llm_retry_base_delay_seconds=1.0,
+        llm_retry_backoff_step_seconds=1.0,
+        llm_retry_jitter_seconds=0.0,
+        evidence_pack_global_min_interval_ms=0,
+        artifact_global_min_interval_ms=0,
+    )
+    sleep_calls: list[float] = []
+    monkeypatch.setattr(orch.time, "sleep", lambda seconds: sleep_calls.append(float(seconds)))
+
+    class _RetryThenSucceedClient:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def openai_chat_json(self, req, ctx):
+            self.calls += 1
+            if self.calls == 1:
+                raise AppError(
+                    code="openai_chat_failed",
+                    message="retry model call",
+                    retryable=True,
+                )
+            return SimpleNamespace(schema_version="1.0", parsed_json={"ok": True})
+
+        def openai_respond_with_vector_store(self, req, ctx):
+            return SimpleNamespace(schema_version="1.0", parsed_json={})
+
+    base_client = _RetryThenSucceedClient()
+
+    def _gen(
+        file,
+        local_pdf_path,
+        settings,
+        md5,
+        ctx,
+        *,
+        evidence_pack_openai_client=None,
+        artifact_openai_client=None,
+    ):
+        assert artifact_openai_client is not None
+        response = artifact_openai_client.openai_chat_json(
+            SimpleNamespace(model="gpt-5-mini"),
+            ctx,
+        )
+        assert response.parsed_json == {"ok": True}
+        return IngestOutcome(
+            schema_version="1.0",
+            file_id=file.file_id,
+            name=file.name or file.file_id,
+            md5=md5,
+            html_path="./out/a.html",
+            status="processed",
+        )
+
+    response = orch.run_report_pipeline(
+        file,
+        local_pdf_path="./cache/a.pdf",
+        settings=settings,
+        md5="md5",
+        ctx=_ctx(),
+        retries=0,
+        generate_report_fn=_gen,
+        openai_client_override=base_client,
+    )
+
+    assert response.status == "processed"
+    assert base_client.calls == 2
+    assert sleep_calls == [1.0]
