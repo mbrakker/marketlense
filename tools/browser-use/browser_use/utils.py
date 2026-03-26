@@ -14,9 +14,9 @@ from typing import Any, ParamSpec, TypeVar
 from urllib.parse import urlparse
 
 import httpx
-from dotenv import load_dotenv
+from browser_use.env import load_market_lense_dotenv
 
-load_dotenv()
+load_market_lense_dotenv()
 
 # Pre-compiled regex for URL detection - used in URL shortening
 URL_PATTERN = re.compile(r'https?://[^\s<>"\']+|www\.[^\s<>"\']+|[^\s<>"\']+\.[a-z]{2,}(?:/[^\s<>"\']*)?', re.IGNORECASE)

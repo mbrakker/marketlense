@@ -13,6 +13,8 @@ import psutil
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from browser_use.env import get_market_lense_env_file
+
 logger = logging.getLogger(__name__)
 
 
@@ -184,7 +186,12 @@ class OldConfig:
 class FlatEnvConfig(BaseSettings):
 	"""All environment variables in a flat namespace."""
 
-	model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8', case_sensitive=True, extra='allow')
+	model_config = SettingsConfigDict(
+		env_file=str(get_market_lense_env_file()),
+		env_file_encoding='utf-8',
+		case_sensitive=True,
+		extra='allow',
+	)
 
 	# Logging and telemetry
 	BROWSER_USE_LOGGING_LEVEL: str = Field(default='info')

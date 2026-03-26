@@ -19,9 +19,9 @@ from functools import wraps
 from typing import Any, Literal, TypeVar, cast
 
 logger = logging.getLogger(__name__)
-from dotenv import load_dotenv
+from browser_use.env import load_market_lense_dotenv
 
-load_dotenv()
+load_market_lense_dotenv()
 
 # Type definitions
 F = TypeVar('F', bound=Callable[..., Any])

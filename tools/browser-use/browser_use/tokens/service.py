@@ -13,8 +13,8 @@ from typing import Any
 
 import anyio
 import httpx
-from dotenv import load_dotenv
 
+from browser_use.env import load_market_lense_dotenv
 from browser_use.llm.base import BaseChatModel
 from browser_use.llm.views import ChatInvokeUsage
 from browser_use.tokens.custom_pricing import CUSTOM_MODEL_PRICING
@@ -30,7 +30,7 @@ from browser_use.tokens.views import (
 )
 from browser_use.utils import create_task_with_error_handling
 
-load_dotenv()
+load_market_lense_dotenv()
 
 from browser_use.config import CONFIG
 

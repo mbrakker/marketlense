@@ -7,7 +7,7 @@ Simple try of the agent.
 import asyncio
 import os
 
-from dotenv import load_dotenv
+from browser_use.env import load_market_lense_dotenv as load_dotenv
 
 from browser_use import Agent, ChatOpenAI
 

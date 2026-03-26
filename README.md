@@ -812,6 +812,7 @@ pip install -r requirements-dev.txt
 Browser Use is vendored locally at `tools/browser-use` from `https://github.com/mbrakker/browser-use` as a subordinate tool inside Market Lense.
 Root project conventions and the root `AGENTS.md` are authoritative; vendored Browser Use docs and agent-instruction files are wrappers that defer to this repo.
 Preserved upstream reference material lives in `tools/browser-use/UPSTREAM_README.md`, `tools/browser-use/UPSTREAM_AGENTS.md`, `tools/browser-use/UPSTREAM_CLAUDE.md`, and `tools/browser-use/UPSTREAM_CLOUD.md`.
+Browser Use runtime configuration also lives in the root `.env`; the vendored subtree is wired to read `C:\Programing\Market lense\.env` instead of maintaining its own local `.env`.
 To use that local source inside this project virtualenv, install it editable:
 
 ```bash

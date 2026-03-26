@@ -4,7 +4,7 @@ Setup:
 2. Set environment variable: export BROWSER_USE_API_KEY="your-key"
 """
 
-from dotenv import load_dotenv
+from browser_use.env import load_market_lense_dotenv as load_dotenv
 
 from browser_use import Agent, ChatBrowserUse
 

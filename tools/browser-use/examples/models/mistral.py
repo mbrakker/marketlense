@@ -6,7 +6,7 @@ You need to set MISTRAL_API_KEY in your environment (and optionally MISTRAL_BASE
 
 import asyncio
 
-from dotenv import load_dotenv
+from browser_use.env import load_market_lense_dotenv as load_dotenv
 
 from browser_use import Agent
 from browser_use.llm.mistral import ChatMistral

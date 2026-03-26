@@ -15,7 +15,7 @@ import warnings
 
 import anyio
 import yaml
-from dotenv import load_dotenv
+from browser_use.env import load_market_lense_dotenv as load_dotenv
 from pydantic import BaseModel
 
 load_dotenv()

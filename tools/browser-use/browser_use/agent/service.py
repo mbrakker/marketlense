@@ -14,7 +14,7 @@ from urllib.parse import urlparse
 if TYPE_CHECKING:
 	from browser_use.skills.views import Skill
 
-from dotenv import load_dotenv
+from browser_use.env import load_market_lense_dotenv
 
 from browser_use.agent.cloud_events import (
 	CreateAgentOutputFileEvent,
@@ -29,7 +29,7 @@ from browser_use.llm.exceptions import ModelProviderError, ModelRateLimitError
 from browser_use.llm.messages import BaseMessage, ContentPartImageParam, ContentPartTextParam, UserMessage
 from browser_use.tokens.service import TokenCost
 
-load_dotenv()
+load_market_lense_dotenv()
 
 from bubus import EventBus
 from pydantic import BaseModel, ValidationError

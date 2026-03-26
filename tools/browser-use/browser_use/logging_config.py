@@ -3,9 +3,9 @@ import os
 import sys
 from pathlib import Path
 
-from dotenv import load_dotenv
+from browser_use.env import load_market_lense_dotenv
 
-load_dotenv()
+load_market_lense_dotenv()
 
 from browser_use.config import CONFIG
 

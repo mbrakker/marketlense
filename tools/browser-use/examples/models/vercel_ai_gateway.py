@@ -14,7 +14,7 @@ To see all available models, visit: https://ai-gateway.vercel.sh/v1/models
 import asyncio
 import os
 
-from dotenv import load_dotenv
+from browser_use.env import load_market_lense_dotenv as load_dotenv
 
 from browser_use import Agent, ChatVercel
 
