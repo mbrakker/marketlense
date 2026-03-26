@@ -807,6 +807,23 @@ Install dev/test tooling:
 pip install -r requirements-dev.txt
 ```
 
+### Local browser-use
+
+Browser Use is vendored locally at `tools/browser-use` from `https://github.com/mbrakker/browser-use` as a subordinate tool inside Market Lense.
+Root project conventions and the root `AGENTS.md` are authoritative; vendored Browser Use docs and agent-instruction files are wrappers that defer to this repo.
+Preserved upstream reference material lives in `tools/browser-use/UPSTREAM_README.md`, `tools/browser-use/UPSTREAM_AGENTS.md`, `tools/browser-use/UPSTREAM_CLAUDE.md`, and `tools/browser-use/UPSTREAM_CLOUD.md`.
+To use that local source inside this project virtualenv, install it editable:
+
+```bash
+.\.venv\Scripts\python.exe -m pip install -e .\tools\browser-use
+```
+
+After installation, the CLI is available from the project virtualenv as:
+
+```bash
+.\.venv\Scripts\browser-use.exe --help
+```
+
 Run tests locally:
 
 ```bash

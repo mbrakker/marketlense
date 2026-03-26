@@ -1,0 +1,7 @@
+browser-use vendored upstream
+repository: https://github.com/mbrakker/browser-use
+branch: main
+commit: 4106186b3dd745f6bee1f54e3e28c45d286488d5
+vendored_on: 2026-03-26
+local_path: tools/browser-use
+install_hint: .\.venv\Scripts\python.exe -m pip install -e .\tools\browser-use
