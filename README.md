@@ -825,6 +825,8 @@ After installation, the CLI is available from the project virtualenv as:
 .\.venv\Scripts\browser-use.exe --help
 ```
 
+For OpenRouter-backed usage, see `tools/browser-use/examples/models/openrouter.py`, which is configured to use `stepfun/step-3.5-flash:free` through `OPENROUTER_API_KEY`.
+
 Run tests locally:
 
 ```bash

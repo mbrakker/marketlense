@@ -5,10 +5,6 @@ from typing import Any, TypeVar, overload
 import httpx
 from openai import APIConnectionError, APIStatusError, AsyncOpenAI, RateLimitError
 from openai.types.chat.chat_completion import ChatCompletion
-from openai.types.shared_params.response_format_json_schema import (
-	JSONSchema,
-	ResponseFormatJSONSchema,
-)
 from pydantic import BaseModel
 
 from browser_use.llm.base import BaseChatModel
@@ -141,6 +137,20 @@ class ChatOpenRouter(BaseChatModel):
 		if self.http_referer:
 			extra_headers['HTTP-Referer'] = self.http_referer
 
+		if output_format is not None:
+			# StepFun's OpenRouter route accepts text or json_object, not json_schema.
+			# Keep the schema in the prompt so the model still has the full contract,
+			# then ask for JSON object output at the API level.
+			schema = SchemaOptimizer.create_optimized_json_schema(output_format)
+			schema_text = f'\n<json_schema>\n{schema}\n</json_schema>'
+			if openrouter_messages and openrouter_messages[0].get('role') == 'system':
+				system_message = openrouter_messages[0]
+				system_content = system_message.get('content')
+				if isinstance(system_content, str):
+					system_message['content'] = system_content + schema_text
+				elif isinstance(system_content, list):
+					system_content.append({'type': 'text', 'text': schema_text})
+
 		try:
 			if output_format is None:
 				# Return string response
@@ -161,15 +171,6 @@ class ChatOpenRouter(BaseChatModel):
 				)
 
 			else:
-				# Create a JSON schema for structured output
-				schema = SchemaOptimizer.create_optimized_json_schema(output_format)
-
-				response_format_schema: JSONSchema = {
-					'name': 'agent_output',
-					'strict': True,
-					'schema': schema,
-				}
-
 				# Return structured response
 				response = await self.get_client().chat.completions.create(
 					model=self.model,
@@ -177,10 +178,7 @@ class ChatOpenRouter(BaseChatModel):
 					temperature=self.temperature,
 					top_p=self.top_p,
 					seed=self.seed,
-					response_format=ResponseFormatJSONSchema(
-						json_schema=response_format_schema,
-						type='json_schema',
-					),
+					response_format={'type': 'json_object'},
 					extra_headers=extra_headers,
 					**(self.extra_body or {}),
 				)
