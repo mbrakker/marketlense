@@ -6,15 +6,22 @@ import time
 import unittest
 
 from src.contracts.report_store import (
+    PublisherDownloadRouteGetRequest,
+    PublisherDownloadRouteRecordRequest,
+    PublishersReplaceRequest,
     ReportMetadataDbAccessRequest,
     ReportMetadataGetRequest,
     ReportSourceRecordRequest,
     ReportMetadataUpsertRequest,
 )
+from src.contracts.publisher_profiles import PublisherProfileRecord
 from src.services.report_store_service import (
     check_report_db_access,
     get_metadata,
+    get_publisher_download_route,
     record_report_source,
+    record_publisher_download_route,
+    replace_publishers,
     upsert_metadata,
 )
 from src.utils.errors import AppError
@@ -241,6 +248,413 @@ class TestReportStoreService(unittest.TestCase):
                     ),
                     ctx,
                 )
+
+    def test_replace_publishers_replaces_rows(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_publishers_replace")
+
+            response = replace_publishers(
+                PublishersReplaceRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_page_url="https://www.notion.so/87c35358a78c4afc9eb7451dc1ade33d",
+                    publishers=[
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-1",
+                            notion_page_url="https://www.notion.so/page-1",
+                            name="Activate Consulting",
+                            homepage="https://www.activate.com/",
+                            self_presentation="Activate description",
+                            insights_url="https://www.activate.com/insights",
+                            icon_source="https://cdn.example.com/activate.png",
+                        ),
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-2",
+                            notion_page_url="https://www.notion.so/page-2",
+                            name="Criteo",
+                            homepage="https://www.criteo.com/",
+                            self_presentation="Criteo description",
+                            insights_url="https://www.criteo.com/resources/",
+                            icon_source="https://cdn.example.com/criteo.png",
+                        ),
+                    ],
+                ),
+                ctx,
+            )
+
+            self.assertEqual(0, response.previous_count)
+            self.assertEqual(2, response.replaced_count)
+
+            response_second = replace_publishers(
+                PublishersReplaceRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_page_url="https://www.notion.so/87c35358a78c4afc9eb7451dc1ade33d",
+                    publishers=[
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-3",
+                            notion_page_url="https://www.notion.so/page-3",
+                            name="Adobe",
+                            homepage="https://business.adobe.com/",
+                            self_presentation="Adobe description",
+                            insights_url="https://business.adobe.com/resources/reports.html",
+                            icon_source="data:image/png;base64,abc",
+                        ),
+                    ],
+                ),
+                ctx,
+            )
+
+            self.assertEqual(2, response_second.previous_count)
+            self.assertEqual(1, response_second.replaced_count)
+            conn = sqlite3.connect(db_path)
+            try:
+                rows = conn.execute(
+                    """
+                    SELECT name, homepage, insights_url
+                    FROM publishers
+                    ORDER BY name ASC
+                    """
+                ).fetchall()
+            finally:
+                conn.close()
+
+            self.assertEqual(
+                [
+                    (
+                        "Adobe",
+                        "https://business.adobe.com/",
+                        "https://business.adobe.com/resources/reports.html",
+                    )
+                ],
+                rows,
+            )
+
+    def test_publisher_download_route_roundtrip_and_preserved_on_replace(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_publisher_route_roundtrip")
+
+            replace_publishers(
+                PublishersReplaceRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_page_url="https://www.notion.so/87c35358a78c4afc9eb7451dc1ade33d",
+                    publishers=[
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-1",
+                            notion_page_url="https://www.notion.so/page-1",
+                            name="Activate Consulting",
+                            homepage="https://www.activate.com/",
+                            self_presentation="Activate description",
+                            insights_url="https://www.activate.com/insights",
+                            icon_source="https://cdn.example.com/activate.png",
+                        )
+                    ],
+                ),
+                ctx,
+            )
+
+            record_publisher_download_route(
+                PublisherDownloadRouteRecordRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_url="https://www.activate.com/insights",
+                    source_url="https://www.activate.com/insights",
+                    route_kind="email_delivery",
+                    route_summary="Open the report modal and submit the email form.",
+                    outcome="email_required",
+                    last_downloaded_file_path=None,
+                    last_final_page_url="https://www.activate.com/insights",
+                ),
+                ctx,
+            )
+
+            response = get_publisher_download_route(
+                PublisherDownloadRouteGetRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_url="https://www.activate.com/insights",
+                ),
+                ctx,
+            )
+            assert response is not None
+            self.assertEqual("email_delivery", response.route_kind)
+            self.assertEqual(
+                "Open the report modal and submit the email form.",
+                response.route_summary,
+            )
+            self.assertEqual("email_required", response.outcome)
+
+            replace_publishers(
+                PublishersReplaceRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_page_url="https://www.notion.so/87c35358a78c4afc9eb7451dc1ade33d",
+                    publishers=[
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-1",
+                            notion_page_url="https://www.notion.so/page-1",
+                            name="Activate Consulting Updated",
+                            homepage="https://www.activate.com/",
+                            self_presentation="Updated description",
+                            insights_url="https://www.activate.com/insights",
+                            icon_source="https://cdn.example.com/activate.png",
+                        )
+                    ],
+                ),
+                ctx,
+            )
+
+            response_after_replace = get_publisher_download_route(
+                PublisherDownloadRouteGetRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_url="https://www.activate.com/insights",
+                ),
+                ctx,
+            )
+            assert response_after_replace is not None
+            self.assertEqual("email_delivery", response_after_replace.route_kind)
+            self.assertEqual("email_required", response_after_replace.outcome)
+            self.assertEqual(
+                "Open the report modal and submit the email form.",
+                response_after_replace.route_summary,
+            )
+
+    def test_replace_publishers_preserves_google_folder_by_name_or_insights_url(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_publishers_google_folder_preserve")
+
+            replace_publishers(
+                PublishersReplaceRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_page_url="https://www.notion.so/87c35358a78c4afc9eb7451dc1ade33d",
+                    publishers=[
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-1",
+                            notion_page_url="https://www.notion.so/page-1",
+                            name="Activate Consulting",
+                            homepage="https://www.activate.com/",
+                            self_presentation="Activate description",
+                            insights_url="https://www.activate.com/insights",
+                            icon_source="https://cdn.example.com/activate.png",
+                        ),
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-2",
+                            notion_page_url="https://www.notion.so/page-2",
+                            name="Edge by Ascential",
+                            homepage="https://www.ascential.com/",
+                            self_presentation="Edge description",
+                            insights_url="",
+                            icon_source="https://cdn.example.com/edge.png",
+                        ),
+                    ],
+                ),
+                ctx,
+            )
+
+            conn = sqlite3.connect(db_path)
+            try:
+                conn.execute(
+                    """
+                    UPDATE publishers
+                    SET google_folder=?
+                    WHERE name=?
+                    """,
+                    (
+                        "https://drive.google.com/drive/folders/1UKaCLZBE3lM-nRoLtUkC2as8p9YMX9Qq",
+                        "Activate Consulting",
+                    ),
+                )
+                conn.execute(
+                    """
+                    UPDATE publishers
+                    SET google_folder=?
+                    WHERE name=?
+                    """,
+                    (
+                        "https://drive.google.com/drive/folders/1JvPCZFJ4LQMOackWw24-IV7GPJgvCB6z",
+                        "Edge by Ascential",
+                    ),
+                )
+                conn.commit()
+            finally:
+                conn.close()
+
+            replace_publishers(
+                PublishersReplaceRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_page_url="https://www.notion.so/87c35358a78c4afc9eb7451dc1ade33d",
+                    publishers=[
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-1",
+                            notion_page_url="https://www.notion.so/page-1b",
+                            name="Activate Consulting Updated",
+                            homepage="https://www.activate.com/",
+                            self_presentation="Updated activate description",
+                            insights_url="https://www.activate.com/insights",
+                            icon_source="https://cdn.example.com/activate.png",
+                        ),
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-2",
+                            notion_page_url="https://www.notion.so/page-2b",
+                            name="Edge by Ascential",
+                            homepage="https://www.ascential.com/",
+                            self_presentation="Updated edge description",
+                            insights_url="",
+                            icon_source="https://cdn.example.com/edge.png",
+                        ),
+                    ],
+                ),
+                ctx,
+            )
+
+            conn = sqlite3.connect(db_path)
+            try:
+                rows = conn.execute(
+                    """
+                    SELECT name, insights_url, google_folder
+                    FROM publishers
+                    ORDER BY name ASC
+                    """
+                ).fetchall()
+            finally:
+                conn.close()
+
+            self.assertEqual(
+                [
+                    (
+                        "Activate Consulting Updated",
+                        "https://www.activate.com/insights",
+                        "https://drive.google.com/drive/folders/1UKaCLZBE3lM-nRoLtUkC2as8p9YMX9Qq",
+                    ),
+                    (
+                        "Edge by Ascential",
+                        "",
+                        "https://drive.google.com/drive/folders/1JvPCZFJ4LQMOackWw24-IV7GPJgvCB6z",
+                    ),
+                ],
+                rows,
+            )
+
+    def test_replace_publishers_migrates_old_schema_and_drops_removed_columns(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            conn = sqlite3.connect(db_path)
+            try:
+                conn.executescript(
+                    """
+                    CREATE TABLE publishers (
+                      notion_page_id TEXT PRIMARY KEY,
+                      notion_page_url TEXT NOT NULL,
+                      name TEXT NOT NULL,
+                      homepage TEXT NOT NULL,
+                      self_presentation TEXT NOT NULL,
+                      insights_url TEXT NOT NULL,
+                      icon_source TEXT NOT NULL,
+                      source_page_url TEXT NOT NULL
+                    );
+                    INSERT INTO publishers(
+                      notion_page_id,
+                      notion_page_url,
+                      name,
+                      homepage,
+                      self_presentation,
+                      insights_url,
+                      icon_source,
+                      source_page_url
+                    ) VALUES(
+                      'page-legacy',
+                      'https://www.notion.so/page-legacy',
+                      'Legacy Publisher',
+                      'https://legacy.example.com/',
+                      'Legacy description',
+                      'https://legacy.example.com/insights',
+                      'https://legacy.example.com/icon.png',
+                      'https://www.notion.so/legacy-source'
+                    );
+                    """
+                )
+                conn.commit()
+            finally:
+                conn.close()
+
+            replace_publishers(
+                PublishersReplaceRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_page_url="https://www.notion.so/87c35358a78c4afc9eb7451dc1ade33d",
+                    publishers=[
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-1",
+                            notion_page_url="https://www.notion.so/page-1",
+                            name="Activate Consulting",
+                            homepage="https://www.activate.com/",
+                            self_presentation="Activate description",
+                            insights_url="https://www.activate.com/insights",
+                            icon_source="https://cdn.example.com/activate.png",
+                        )
+                    ],
+                ),
+                new_run_context(task_id="test_publishers_migration"),
+            )
+
+            conn = sqlite3.connect(db_path)
+            try:
+                columns = [
+                    row[1]
+                    for row in conn.execute("PRAGMA table_info(publishers)").fetchall()
+                ]
+                row = conn.execute(
+                    """
+                    SELECT name, homepage, self_presentation, insights_url
+                    FROM publishers
+                    """
+                ).fetchone()
+            finally:
+                conn.close()
+
+            self.assertEqual(
+                [
+                    "id",
+                    "name",
+                    "homepage",
+                    "self_presentation",
+                    "insights_url",
+                    "google_folder",
+                    "download_route_kind",
+                    "download_route_summary",
+                    "download_route_outcome",
+                    "download_route_last_downloaded_file_path",
+                    "download_route_last_final_page_url",
+                    "download_route_updated_at",
+                ],
+                columns,
+            )
+            self.assertEqual(
+                (
+                    "Activate Consulting",
+                    "https://www.activate.com/",
+                    "Activate description",
+                    "https://www.activate.com/insights",
+                ),
+                row,
+            )
 
 
 if __name__ == "__main__":

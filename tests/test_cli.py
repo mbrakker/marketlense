@@ -34,6 +34,7 @@ class TestCli(unittest.TestCase):
             cache_dir="./cache",
             state_db="./state/index.sqlite",
             reports_db="./state/reports.sqlite",
+            publisher_profiles_path="./Wordpress/config/publisher-profiles.json",
             category_mapping_path="./src/config/category-mappings.yaml",
             cover_style_path="./src/config/cover-styles.yaml",
             ingest_lock_path="./state/ingest.lock",
@@ -126,6 +127,7 @@ class TestCli(unittest.TestCase):
             cache_dir="./cache",
             state_db="./state/index.sqlite",
             reports_db="./state/reports.sqlite",
+            publisher_profiles_path="./Wordpress/config/publisher-profiles.json",
             category_mapping_path="./src/config/category-mappings.yaml",
             cover_style_path="./src/config/cover-styles.yaml",
             ingest_lock_path="./state/ingest.lock",
@@ -248,6 +250,54 @@ class TestCli(unittest.TestCase):
         self.assertEqual("./state/index.sqlite", request.state_db)
         self.assertEqual("./state/reports.sqlite", request.reports_db)
         self.assertEqual("openai/gpt-5-mini", request.settings.model)
+
+    def test_sync_publishers_wires_settings_and_orchestrator(self) -> None:
+        import src.cli as cli
+
+        settings = AppSettings(
+            schema_version="1.0",
+            google_sa_path="sa.json",
+            gdrive_folder_id="folder",
+            openai_api_key="key",
+            openai_model="gpt-5",
+            batch_limit=5,
+            output_dir="./out",
+            cache_dir="./cache",
+            state_db="./state/index.sqlite",
+            reports_db="./state/reports.sqlite",
+            publisher_profiles_path="./Wordpress/config/publisher-profiles.json",
+            category_mapping_path="./src/config/category-mappings.yaml",
+            cover_style_path="./src/config/cover-styles.yaml",
+            ingest_lock_path="./state/ingest.lock",
+            ingest_lock_ttl_seconds=7200.0,
+            temperature=1.0,
+            cost_ledger_path="./out/cost-ledger.jsonl",
+            cost_daily_path="./out/cost-daily.json",
+            model_pricing={},
+        )
+        result = type(
+            "PublisherSyncResult",
+            (),
+            {
+                "snapshot_path": "./Wordpress/config/publisher-profiles.json",
+                "reports_db": "./state/reports.sqlite",
+                "source_page_url": "https://www.notion.so/87c35358a78c4afc9eb7451dc1ade33d",
+                "replaced_count": 83,
+            },
+        )()
+
+        with patch.object(cli, "load_settings", return_value=settings) as load_mock:
+            with patch.object(
+                cli, "run_publisher_sync", return_value=result
+            ) as sync_mock:
+                with patch.object(cli.console, "print"):
+                    cli.sync_publishers(snapshot_path=None)
+
+        load_mock.assert_called_once()
+        sync_mock.assert_called_once()
+        request = sync_mock.call_args.args[0]
+        self.assertEqual("./Wordpress/config/publisher-profiles.json", request.snapshot_path)
+        self.assertEqual("./state/reports.sqlite", request.reports_db)
 
 
 if __name__ == "__main__":

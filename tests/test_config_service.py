@@ -35,6 +35,7 @@ class TestConfigService(unittest.TestCase):
         config_path = Path(tmp_dir) / "app.yaml"
         acronyms_path = Path(tmp_dir) / "html-tag-acronyms.yaml"
         identity_path = Path(tmp_dir) / "browser_download_identity.yaml"
+        publisher_profiles_path = Path(tmp_dir) / "publisher-profiles.json"
         acronyms_path.write_text(
             yaml.safe_dump(
                 {
@@ -69,6 +70,10 @@ class TestConfigService(unittest.TestCase):
             ),
             encoding="utf-8",
         )
+        publisher_profiles_path.write_text(
+            '{"schema_version":"1.0","source_page_url":"https://www.notion.so/87c35358a78c4afc9eb7451dc1ade33d","publisher_count":0,"publishers":[]}',
+            encoding="utf-8",
+        )
         config = {
             "schema_version": "1.0",
             "paths": {
@@ -76,6 +81,7 @@ class TestConfigService(unittest.TestCase):
                 "cache_dir": str(Path(tmp_dir, "cache")),
                 "state_db": str(Path(tmp_dir, "state", "index.sqlite")),
                 "reports_db": str(Path(tmp_dir, "state", "reports.sqlite")),
+                "publisher_profiles": str(publisher_profiles_path),
                 "html_tag_acronyms": str(acronyms_path),
             },
             "ingest": {
@@ -119,6 +125,7 @@ class TestConfigService(unittest.TestCase):
         self.assertEqual("./out/cost-ledger.jsonl", settings.cost_ledger_path)
         self.assertIn("AI", settings.html_tag_acronyms)
         self.assertIn("ROI", settings.html_tag_acronyms)
+        self.assertTrue(settings.publisher_profiles_path.endswith("publisher-profiles.json"))
 
     def test_html_tag_acronyms_can_be_configured(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

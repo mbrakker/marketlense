@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import logging
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, fields
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Sequence
@@ -541,6 +541,13 @@ def _resolve_paths_settings(
         "cache_dir": cache_dir,
         "state_db": state_db,
         "reports_db": reports_db,
+        "publisher_profiles_path": paths.get("publisher_profiles")
+        or str(
+            Path(__file__).resolve().parents[2]
+            / "Wordpress"
+            / "config"
+            / "publisher-profiles.json"
+        ),
         "category_mapping_path": paths.get("category_mappings")
         or str(
             Path(__file__).resolve().parents[1] / "config" / "category-mappings.yaml"
@@ -1158,7 +1165,12 @@ def _resolve_drive_settings(drive_cfg: dict[str, Any]) -> dict[str, Any]:
 
 
 def _to_ingest_settings(app_settings: AppSettings) -> IngestSettings:
-    return IngestSettings(**asdict(app_settings))
+    payload = asdict(app_settings)
+    allowed = {field.name for field in fields(IngestSettings)}
+    filtered_payload = {
+        key: value for key, value in payload.items() if key in allowed
+    }
+    return IngestSettings(**filtered_payload)
 
 
 def build_ingest_settings(
@@ -1280,6 +1292,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         cache_dir=paths_settings["cache_dir"],
         state_db=paths_settings["state_db"],
         reports_db=paths_settings["reports_db"],
+        publisher_profiles_path=paths_settings["publisher_profiles_path"],
         category_mapping_path=paths_settings["category_mapping_path"],
         cover_style_path=paths_settings["cover_style_path"],
         ingest_lock_path=paths_settings["ingest_lock_path"],
@@ -1417,6 +1430,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
                 "cache_dir": settings.cache_dir,
                 "state_db": settings.state_db,
                 "reports_db": settings.reports_db,
+                "publisher_profiles_path": settings.publisher_profiles_path,
                 "category_mapping_path": settings.category_mapping_path,
                 "html_tag_acronyms_path": paths_settings["html_tag_acronyms_path"],
                 "ingest_lock_path": settings.ingest_lock_path,

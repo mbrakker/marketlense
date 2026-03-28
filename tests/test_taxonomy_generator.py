@@ -154,6 +154,7 @@ def _settings(
         cache_dir=str(tmp_path / "cache"),
         state_db=str(tmp_path / "state.sqlite"),
         reports_db=str(tmp_path / "reports.sqlite"),
+        publisher_profiles_path=str(tmp_path / "publisher-profiles.json"),
         category_mapping_path=str(mapping_path),
         cover_style_path=str(
             Path(__file__).resolve().parents[1] / "src" / "config" / "cover-styles.yaml"

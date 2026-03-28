@@ -14,11 +14,13 @@ from src.contracts.categories import RecategorizeRequest
 from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
 from src.contracts.cover_images import CoverImageOrchestratorRequest
 from src.contracts.logging import LoggingSetupRequest
+from src.contracts.publisher_profiles import PublisherSyncRequest
 from src.orchestrators.report_download_orchestrator import run_report_download
 from src.orchestrators.cost_reporting_orchestrator import run_cost_reporting
 from src.orchestrators.ingest_orchestrator import run_ingest
 from src.orchestrators.candidate_extraction_orchestrator import run_candidate_extraction
 from src.orchestrators.cover_image_orchestrator import run_cover_image_generation
+from src.orchestrators.publisher_sync_orchestrator import run_publisher_sync
 from src.orchestrators.publish_orchestrator import run_publish
 from src.orchestrators.recategorize_orchestrator import run_recategorize
 from src.orchestrators.wp_category_update_orchestrator import run_update_wp_categories
@@ -492,6 +494,44 @@ def download_report(
     )
     table.add_row("File", result.downloaded_file_path or "")
     table.add_row("Summary", result.route_summary)
+    console.print(table)
+
+
+@cli_app.command("sync-publishers")
+def sync_publishers(
+    snapshot_path: str = typer.Option(
+        None,
+        help="Optional override path to the publisher snapshot JSON sourced from Notion",
+    ),
+):
+    ctx = new_run_context(task_id="cli_sync_publishers")
+    setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="cli_sync_publishers_start",
+            module=logger.name,
+            fields={"snapshot_path_override": snapshot_path or ""},
+        )
+    )
+    settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    result = run_publisher_sync(
+        PublisherSyncRequest(
+            schema_version="1.0",
+            snapshot_path=snapshot_path or settings.publisher_profiles_path,
+            reports_db=settings.reports_db,
+        ),
+        ctx=ctx,
+    )
+
+    table = Table(title="Publishers Sync", box=box.SIMPLE_HEAVY)
+    table.add_column("Field")
+    table.add_column("Value")
+    table.add_row("Snapshot", result.snapshot_path)
+    table.add_row("Reports DB", result.reports_db)
+    table.add_row("Source page", result.source_page_url)
+    table.add_row("Replaced publishers", str(result.replaced_count))
     console.print(table)
 
 

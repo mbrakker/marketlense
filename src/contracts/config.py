@@ -34,6 +34,9 @@ class AppSettings:
     cache_dir: str = field(metadata={"doc": "Cache directory for downloaded PDFs."})
     state_db: str = field(metadata={"doc": "SQLite path for processing state."})
     reports_db: str = field(metadata={"doc": "SQLite path for report metadata."})
+    publisher_profiles_path: str = field(
+        metadata={"doc": "Filesystem path to the publisher snapshot JSON sourced from Notion."}
+    )
     category_mapping_path: str = field(
         metadata={"doc": "Filesystem path to category mappings YAML."}
     )

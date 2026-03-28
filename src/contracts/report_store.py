@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import List, Optional
 
 from src.contracts.docpacks import DocPackPathMap
+from src.contracts.publisher_profiles import PublisherProfileRecord
 
 
 @dataclass(frozen=True)
@@ -268,4 +269,118 @@ class ReportSourceRecordResponse:
     )
     md5: str = field(
         metadata={"doc": "MD5 checksum of the downloaded report file."}
+    )
+
+
+@dataclass(frozen=True)
+class PublishersReplaceRequest:
+    schema_version: str = field(
+        metadata={"doc": "Publishers replace request schema version."}
+    )
+    db_path: str = field(
+        metadata={"doc": "Filesystem path to the report metadata SQLite database."}
+    )
+    source_page_url: str = field(
+        metadata={"doc": "Original Notion page URL that the snapshot was sourced from."}
+    )
+    publishers: List[PublisherProfileRecord] = field(
+        metadata={"doc": "Validated publisher rows to replace the current publishers table contents."}
+    )
+
+
+@dataclass(frozen=True)
+class PublishersReplaceResponse:
+    schema_version: str = field(
+        metadata={"doc": "Publishers replace response schema version."}
+    )
+    db_path: str = field(
+        metadata={"doc": "Filesystem path to the report metadata SQLite database."}
+    )
+    source_page_url: str = field(
+        metadata={"doc": "Original Notion page URL that the snapshot was sourced from."}
+    )
+    previous_count: int = field(
+        metadata={"doc": "Number of publisher rows present before replacement."}
+    )
+    replaced_count: int = field(
+        metadata={"doc": "Number of publisher rows stored after replacement."}
+    )
+
+
+@dataclass(frozen=True)
+class PublisherDownloadRouteGetRequest:
+    schema_version: str = field(
+        metadata={"doc": "Publisher download-route get request schema version."}
+    )
+    db_path: str = field(
+        metadata={"doc": "Filesystem path to the report metadata SQLite database."}
+    )
+    normalized_url: str = field(
+        metadata={"doc": "Normalized URL used to find the matching publisher insights_url."}
+    )
+
+
+@dataclass(frozen=True)
+class PublisherDownloadRouteRecordRequest:
+    schema_version: str = field(
+        metadata={"doc": "Publisher download-route record request schema version."}
+    )
+    db_path: str = field(
+        metadata={"doc": "Filesystem path to the report metadata SQLite database."}
+    )
+    normalized_url: str = field(
+        metadata={"doc": "Normalized URL used to identify the publisher insights_url."}
+    )
+    source_url: str = field(
+        metadata={"doc": "Last source URL observed for the route; expected to match publisher insights_url."}
+    )
+    route_kind: str = field(
+        metadata={"doc": "Detected route kind: `pdf_download` or `email_delivery`."}
+    )
+    route_summary: str = field(
+        metadata={"doc": "Remembered summary of the best-known route for this publisher URL."}
+    )
+    outcome: str = field(
+        metadata={"doc": "Observed outcome: `downloaded`, `email_requested`, or `email_required`."}
+    )
+    last_downloaded_file_path: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Last downloaded local file path for this publisher route, if any."},
+    )
+    last_final_page_url: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Last final browser URL observed for this publisher route, if any."},
+    )
+
+
+@dataclass(frozen=True)
+class PublisherDownloadRouteResponse:
+    schema_version: str = field(
+        metadata={"doc": "Publisher download-route response schema version."}
+    )
+    normalized_url: str = field(
+        metadata={"doc": "Normalized URL used as the publisher-route memory key."}
+    )
+    source_url: str = field(
+        metadata={"doc": "Publisher insights URL used as the stored source URL."}
+    )
+    route_kind: str = field(
+        metadata={"doc": "Detected route kind: `pdf_download` or `email_delivery`."}
+    )
+    route_summary: str = field(
+        metadata={"doc": "Remembered summary of the best-known route for this publisher URL."}
+    )
+    outcome: str = field(
+        metadata={"doc": "Last observed outcome for this publisher route."}
+    )
+    updated_at: int = field(
+        metadata={"doc": "Unix timestamp when the publisher route-memory record was last updated."}
+    )
+    last_downloaded_file_path: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Last downloaded local file path for this publisher route, if any."},
+    )
+    last_final_page_url: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Last final browser URL observed for this publisher route, if any."},
     )

@@ -2,13 +2,20 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import sqlite3
 import threading
 from contextlib import contextmanager
 from pathlib import Path
 from typing import List, Optional
+from urllib.parse import urlsplit
 
 from src.contracts.report_store import (
+    PublisherDownloadRouteGetRequest,
+    PublisherDownloadRouteRecordRequest,
+    PublisherDownloadRouteResponse,
+    PublishersReplaceRequest,
+    PublishersReplaceResponse,
     ReportMetadataDbAccessRequest,
     ReportMetadataDbAccessResponse,
     ReportMetadataGetRequest,
@@ -24,6 +31,7 @@ from src.utils.coercion import clean_string_list
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.time_period import normalize_time_period
+from src.utils.url_utils import normalize_url
 
 logger = logging.getLogger("market_lense.report_store_service")
 
@@ -69,6 +77,25 @@ CREATE TABLE IF NOT EXISTS report_sources (
 CREATE INDEX IF NOT EXISTS idx_report_sources_domain ON report_sources(source_domain);
 CREATE INDEX IF NOT EXISTS idx_report_sources_md5 ON report_sources(md5);
 CREATE INDEX IF NOT EXISTS idx_report_sources_downloaded_at ON report_sources(downloaded_at_utc);
+
+CREATE TABLE IF NOT EXISTS publishers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  homepage TEXT NOT NULL,
+  self_presentation TEXT NOT NULL,
+  insights_url TEXT NOT NULL,
+  google_folder TEXT,
+  download_route_kind TEXT,
+  download_route_summary TEXT,
+  download_route_outcome TEXT,
+  download_route_last_downloaded_file_path TEXT,
+  download_route_last_final_page_url TEXT,
+  download_route_updated_at INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_publishers_name ON publishers(name);
+CREATE INDEX IF NOT EXISTS idx_publishers_homepage ON publishers(homepage);
+CREATE INDEX IF NOT EXISTS idx_publishers_insights_url ON publishers(insights_url);
 """
 
 
@@ -96,7 +123,86 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
     if "evidence_packs_json" not in cols:
         conn.execute("ALTER TABLE reports ADD COLUMN evidence_packs_json TEXT")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_reports_file_name ON reports(file_name)")
+    _ensure_publishers_schema(conn)
     conn.commit()
+
+
+def _ensure_publishers_schema(conn: sqlite3.Connection) -> None:
+    cur = conn.execute("PRAGMA table_info(publishers)")
+    rows = cur.fetchall()
+    expected = {
+        "id",
+        "name",
+        "homepage",
+        "self_presentation",
+        "insights_url",
+        "google_folder",
+        "download_route_kind",
+        "download_route_summary",
+        "download_route_outcome",
+        "download_route_last_downloaded_file_path",
+        "download_route_last_final_page_url",
+        "download_route_updated_at",
+    }
+    current = {str(row[1]) for row in rows}
+    if current == expected:
+        return
+
+    conn.execute("DROP TABLE IF EXISTS publishers_new")
+    conn.execute(
+        """
+        CREATE TABLE publishers_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          homepage TEXT NOT NULL,
+          self_presentation TEXT NOT NULL,
+          insights_url TEXT NOT NULL,
+          google_folder TEXT,
+          download_route_kind TEXT,
+          download_route_summary TEXT,
+          download_route_outcome TEXT,
+          download_route_last_downloaded_file_path TEXT,
+          download_route_last_final_page_url TEXT,
+          download_route_updated_at INTEGER
+        )
+        """
+    )
+    if rows:
+        selectable = [
+            col
+            for col in (
+                "name",
+                "homepage",
+                "self_presentation",
+                "insights_url",
+                "google_folder",
+                "download_route_kind",
+                "download_route_summary",
+                "download_route_outcome",
+                "download_route_last_downloaded_file_path",
+                "download_route_last_final_page_url",
+                "download_route_updated_at",
+            )
+            if col in current
+        ]
+        if selectable:
+            quoted = ", ".join(selectable)
+            conn.execute(
+                f"""
+                INSERT INTO publishers_new({quoted})
+                SELECT {quoted}
+                FROM publishers
+                """
+            )
+    conn.execute("DROP TABLE IF EXISTS publishers")
+    conn.execute("ALTER TABLE publishers_new RENAME TO publishers")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_publishers_name ON publishers(name)")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_publishers_homepage ON publishers(homepage)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_publishers_insights_url ON publishers(insights_url)"
+    )
 
 
 @contextmanager
@@ -679,3 +785,465 @@ def record_report_source(
         },
     ))
     return response
+
+
+def replace_publishers(
+    request: PublishersReplaceRequest,
+    ctx: RunContext,
+) -> PublishersReplaceResponse:
+    db_path = request.db_path.strip()
+    source_page_url = request.source_page_url.strip()
+    publishers = request.publishers
+
+    if not db_path:
+        raise AppError(
+            code="publishers_db_missing",
+            message="Report metadata DB path is required for publisher sync",
+            retryable=False,
+            severity="error",
+        )
+    if not source_page_url:
+        raise AppError(
+            code="publishers_source_page_missing",
+            message="source_page_url is required for publisher sync",
+            retryable=False,
+            severity="error",
+        )
+
+    seen_ids: set[str] = set()
+    rows: list[tuple[str, str, str, str]] = []
+    for publisher in publishers:
+        notion_page_id = publisher.notion_page_id.strip()
+        name = publisher.name.strip()
+        homepage = publisher.homepage.strip()
+        self_presentation = publisher.self_presentation.strip()
+        insights_url = publisher.insights_url.strip()
+
+        if not notion_page_id:
+            raise AppError(
+                code="publisher_notion_page_id_missing",
+                message="Each publisher row requires notion_page_id",
+                retryable=False,
+                severity="error",
+            )
+        if notion_page_id in seen_ids:
+            raise AppError(
+                code="publisher_notion_page_id_duplicate",
+                message=f"Duplicate notion_page_id in publisher sync payload: {notion_page_id}",
+                retryable=False,
+                severity="error",
+            )
+        if not name:
+            raise AppError(
+                code="publisher_name_missing",
+                message=f"Publisher '{notion_page_id}' requires name",
+                retryable=False,
+                severity="error",
+            )
+
+        seen_ids.add(notion_page_id)
+        rows.append(
+            (
+                name,
+                homepage,
+                self_presentation,
+                insights_url,
+            )
+        )
+
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publishers_replace_start",
+            module=logger.name,
+            fields={
+                "db_path": db_path,
+                "source_page_url": source_page_url,
+                "publisher_count": len(rows),
+            },
+        )
+    )
+    try:
+        with _metadata_conn(db_path) as conn:
+            existing_row = conn.execute("SELECT COUNT(*) FROM publishers").fetchone()
+            previous_count = int(existing_row[0] if existing_row else 0)
+            preserved_rows = conn.execute(
+                """
+                SELECT
+                    name,
+                    insights_url,
+                    google_folder,
+                    download_route_kind,
+                    download_route_summary,
+                    download_route_outcome,
+                    download_route_last_downloaded_file_path,
+                    download_route_last_final_page_url,
+                    download_route_updated_at
+                FROM publishers
+                """
+            ).fetchall()
+            preserved_by_insights_url: dict[str, tuple[Optional[str], Optional[str], Optional[str], Optional[str], Optional[str], Optional[str], Optional[int]]] = {}
+            preserved_by_name: dict[str, tuple[Optional[str], Optional[str], Optional[str], Optional[str], Optional[str], Optional[str], Optional[int]]] = {}
+            for row in preserved_rows:
+                name_key = _normalize_publisher_key(str(row[0] or ""))
+                insights_url_key = _normalize_optional_url_key(str(row[1] or ""))
+                preserved_payload = (
+                    str(row[2] or "").strip() or None,
+                    str(row[3] or "").strip() or None,
+                    str(row[4] or "").strip() or None,
+                    str(row[5] or "").strip() or None,
+                    str(row[6] or "").strip() or None,
+                    str(row[7] or "").strip() or None,
+                    int(row[8]) if row[8] is not None else None,
+                )
+                if insights_url_key and insights_url_key not in preserved_by_insights_url:
+                    preserved_by_insights_url[insights_url_key] = preserved_payload
+                if name_key and name_key not in preserved_by_name:
+                    preserved_by_name[name_key] = preserved_payload
+            conn.execute("DELETE FROM publishers")
+            if rows:
+                rows_with_routes = []
+                for row in rows:
+                    insights_url_key = _normalize_optional_url_key(row[3])
+                    name_key = _normalize_publisher_key(row[0])
+                    preserved = (
+                        preserved_by_insights_url.get(insights_url_key)
+                        if insights_url_key
+                        else None
+                    )
+                    if preserved is None and name_key:
+                        preserved = preserved_by_name.get(name_key)
+                    if preserved is None:
+                        preserved = (None, None, None, None, None, None, None)
+                    rows_with_routes.append((*row, *preserved))
+                conn.executemany(
+                    """
+                    INSERT INTO publishers(
+                        name,
+                        homepage,
+                        self_presentation,
+                        insights_url,
+                        google_folder,
+                        download_route_kind,
+                        download_route_summary,
+                        download_route_outcome,
+                        download_route_last_downloaded_file_path,
+                        download_route_last_final_page_url,
+                        download_route_updated_at
+                    )
+                    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    rows_with_routes,
+                )
+    except sqlite3.Error as exc:
+        raise AppError(
+            code="publishers_replace_failed",
+            message="Failed to replace publishers in the reports database",
+            cause=exc,
+            retryable=True,
+            context={
+                "db_path": db_path,
+                "source_page_url": source_page_url,
+                "publisher_count": len(rows),
+            },
+        ) from exc
+
+    response = PublishersReplaceResponse(
+        schema_version="1.0",
+        db_path=db_path,
+        source_page_url=source_page_url,
+        previous_count=previous_count,
+        replaced_count=len(rows),
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publishers_replace_complete",
+            module=logger.name,
+            fields={
+                "db_path": response.db_path,
+                "source_page_url": response.source_page_url,
+                "previous_count": response.previous_count,
+                "replaced_count": response.replaced_count,
+            },
+        )
+    )
+    return response
+
+
+def _normalize_publisher_key(name: str) -> str:
+    token = str(name).strip().lower()
+    if not token:
+        return ""
+    token = token.replace("&", " and ")
+    token = re.sub(r"[^a-z0-9]+", "", token)
+    return token
+
+
+def _normalize_optional_url_key(url: str) -> str:
+    token = str(url).strip()
+    if not token:
+        return ""
+    return normalize_url(token)
+
+
+def get_publisher_download_route(
+    request: PublisherDownloadRouteGetRequest,
+    ctx: RunContext,
+) -> Optional[PublisherDownloadRouteResponse]:
+    db_path = request.db_path.strip()
+    normalized_url = request.normalized_url.strip()
+    if not db_path:
+        raise AppError(
+            code="publisher_route_db_missing",
+            message="Report metadata DB path is required for publisher route lookup",
+            retryable=False,
+            severity="error",
+        )
+    if not normalized_url:
+        raise AppError(
+            code="publisher_route_normalized_url_missing",
+            message="normalized_url is required for publisher route lookup",
+            retryable=False,
+            severity="error",
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_route_get_start",
+            module=logger.name,
+            fields={"db_path": db_path, "normalized_url": normalized_url},
+        )
+    )
+    with _metadata_conn(db_path) as conn:
+        rows = conn.execute(
+            """
+            SELECT
+                insights_url,
+                download_route_kind,
+                download_route_summary,
+                download_route_outcome,
+                download_route_last_downloaded_file_path,
+                download_route_last_final_page_url,
+                download_route_updated_at
+            FROM publishers
+            WHERE insights_url <> ''
+              AND download_route_summary IS NOT NULL
+            ORDER BY id ASC
+            """
+        ).fetchall()
+    for row in rows:
+        insights_url = str(row[0] or "").strip()
+        if not insights_url:
+            continue
+        if normalize_url(insights_url) != normalized_url:
+            continue
+        response = PublisherDownloadRouteResponse(
+            schema_version="1.0",
+            normalized_url=normalized_url,
+            source_url=insights_url,
+            route_kind=str(row[1] or "").strip(),
+            route_summary=str(row[2] or "").strip(),
+            outcome=str(row[3] or "").strip(),
+            updated_at=int(row[6] or 0),
+            last_downloaded_file_path=str(row[4] or "").strip() or None,
+            last_final_page_url=str(row[5] or "").strip() or None,
+        )
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="publisher_route_get_complete",
+                module=logger.name,
+                fields={
+                    "db_path": db_path,
+                    "normalized_url": normalized_url,
+                    "found": True,
+                    "source_url": response.source_url,
+                    "route_kind": response.route_kind,
+                    "outcome": response.outcome,
+                },
+            )
+        )
+        return response
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_route_get_complete",
+            module=logger.name,
+            fields={"db_path": db_path, "normalized_url": normalized_url, "found": False},
+        )
+    )
+    return None
+
+
+def record_publisher_download_route(
+    request: PublisherDownloadRouteRecordRequest,
+    ctx: RunContext,
+) -> None:
+    db_path = request.db_path.strip()
+    normalized_url = request.normalized_url.strip()
+    source_url = request.source_url.strip()
+    route_kind = request.route_kind.strip()
+    route_summary = request.route_summary.strip()
+    outcome = request.outcome.strip()
+    last_downloaded_file_path = (
+        request.last_downloaded_file_path.strip()
+        if request.last_downloaded_file_path and request.last_downloaded_file_path.strip()
+        else None
+    )
+    last_final_page_url = (
+        request.last_final_page_url.strip()
+        if request.last_final_page_url and request.last_final_page_url.strip()
+        else None
+    )
+    if not db_path:
+        raise AppError(
+            code="publisher_route_db_missing",
+            message="Report metadata DB path is required for publisher route recording",
+            retryable=False,
+            severity="error",
+        )
+    if not normalized_url:
+        raise AppError(
+            code="publisher_route_normalized_url_missing",
+            message="normalized_url is required for publisher route recording",
+            retryable=False,
+            severity="error",
+        )
+    if not source_url:
+        raise AppError(
+            code="publisher_route_source_url_missing",
+            message="source_url is required for publisher route recording",
+            retryable=False,
+            severity="error",
+        )
+    if not route_kind:
+        raise AppError(
+            code="publisher_route_kind_missing",
+            message="route_kind is required for publisher route recording",
+            retryable=False,
+            severity="error",
+        )
+    if not route_summary:
+        raise AppError(
+            code="publisher_route_summary_missing",
+            message="route_summary is required for publisher route recording",
+            retryable=False,
+            severity="error",
+        )
+    if not outcome:
+        raise AppError(
+            code="publisher_route_outcome_missing",
+            message="outcome is required for publisher route recording",
+            retryable=False,
+            severity="error",
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_route_record_start",
+            module=logger.name,
+            fields={
+                "db_path": db_path,
+                "normalized_url": normalized_url,
+                "source_url": source_url,
+                "route_kind": route_kind,
+                "outcome": outcome,
+            },
+        )
+    )
+    try:
+        with _metadata_conn(db_path) as conn:
+            matched_id: Optional[int] = None
+            rows = conn.execute(
+                "SELECT id, insights_url FROM publishers WHERE insights_url <> '' ORDER BY id ASC"
+            ).fetchall()
+            for row in rows:
+                if normalize_url(str(row[1] or "").strip()) == normalized_url:
+                    matched_id = int(row[0])
+                    source_url = str(row[1] or "").strip() or source_url
+                    break
+            if matched_id is None:
+                parsed = urlsplit(source_url)
+                placeholder_name = parsed.netloc or source_url
+                homepage = f"{parsed.scheme}://{parsed.netloc}/" if parsed.scheme and parsed.netloc else ""
+                cur = conn.execute(
+                    """
+                    INSERT INTO publishers(
+                        name,
+                        homepage,
+                        self_presentation,
+                        insights_url,
+                        download_route_kind,
+                        download_route_summary,
+                        download_route_outcome,
+                        download_route_last_downloaded_file_path,
+                        download_route_last_final_page_url,
+                        download_route_updated_at
+                    )
+                    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%s','now'))
+                    """,
+                    (
+                        placeholder_name,
+                        homepage,
+                        "",
+                        source_url,
+                        route_kind,
+                        route_summary,
+                        outcome,
+                        last_downloaded_file_path,
+                        last_final_page_url,
+                    ),
+                )
+                matched_id = int(cur.lastrowid or 0)
+            else:
+                conn.execute(
+                    """
+                    UPDATE publishers
+                    SET
+                        download_route_kind=?,
+                        download_route_summary=?,
+                        download_route_outcome=?,
+                        download_route_last_downloaded_file_path=?,
+                        download_route_last_final_page_url=?,
+                        download_route_updated_at=strftime('%s','now')
+                    WHERE id=?
+                    """,
+                    (
+                        route_kind,
+                        route_summary,
+                        outcome,
+                        last_downloaded_file_path,
+                        last_final_page_url,
+                        matched_id,
+                    ),
+                )
+    except sqlite3.Error as exc:
+        raise AppError(
+            code="publisher_route_record_failed",
+            message="Failed to record publisher route memory",
+            cause=exc,
+            retryable=True,
+            context={"db_path": db_path, "source_url": source_url},
+        ) from exc
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_route_record_complete",
+            module=logger.name,
+            fields={
+                "db_path": db_path,
+                "normalized_url": normalized_url,
+                "source_url": source_url,
+                "route_kind": route_kind,
+                "outcome": outcome,
+            },
+        )
+    )

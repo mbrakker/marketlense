@@ -13,15 +13,17 @@ from src.contracts.browser_download import (
     ReportDownloadOrchestratorRequest,
 )
 from src.contracts.files import FileHashResponse
-from src.contracts.report_store import ReportSourceRecordResponse
-from src.contracts.state import StateReportDownloadRouteResponse
+from src.contracts.report_store import (
+    PublisherDownloadRouteResponse,
+    ReportSourceRecordResponse,
+)
 from src.orchestrators.report_download_orchestrator import (
     ReportDownloadDependencies,
     run_report_download,
 )
-from src.services.state_service import (
-    get_report_download_route,
-    record_report_download_route,
+from src.services.report_store_service import (
+    get_publisher_download_route,
+    record_publisher_download_route,
 )
 from src.utils.errors import AppError
 
@@ -110,7 +112,7 @@ def test_run_report_download_uses_memory_and_records_route(
         )
 
     def _get_route(req, ctx):
-        return StateReportDownloadRouteResponse(
+        return PublisherDownloadRouteResponse(
             schema_version="1.0",
             normalized_url=req.normalized_url,
             source_url="https://example.com/report",
@@ -157,8 +159,8 @@ def test_run_report_download_uses_memory_and_records_route(
 
     deps = ReportDownloadDependencies(
         download_report_with_browser_use=_download,
-        get_report_download_route=_get_route,
-        record_report_download_route=_record_route,
+        get_publisher_download_route=_get_route,
+        record_publisher_download_route=_record_route,
         file_md5=_file_md5,
         record_report_source=_record_source,
         upsert_browser_download_identity_fields=_upsert_identity,
@@ -228,7 +230,7 @@ def test_run_report_download_falls_back_after_memory_failure_and_retries(
         )
 
     def _get_route(req, ctx):
-        return StateReportDownloadRouteResponse(
+        return PublisherDownloadRouteResponse(
             schema_version="1.0",
             normalized_url=req.normalized_url,
             source_url="https://example.com/report",
@@ -276,8 +278,8 @@ def test_run_report_download_falls_back_after_memory_failure_and_retries(
 
     deps = ReportDownloadDependencies(
         download_report_with_browser_use=_download,
-        get_report_download_route=_get_route,
-        record_report_download_route=_record_route,
+        get_publisher_download_route=_get_route,
+        record_publisher_download_route=_record_route,
         file_md5=_file_md5,
         record_report_source=_record_source,
         upsert_browser_download_identity_fields=_upsert_identity,
@@ -330,8 +332,8 @@ def test_run_report_download_is_idempotent_for_route_memory(
 
     deps = ReportDownloadDependencies(
         download_report_with_browser_use=_download,
-        get_report_download_route=get_report_download_route,
-        record_report_download_route=record_report_download_route,
+        get_publisher_download_route=get_publisher_download_route,
+        record_publisher_download_route=record_publisher_download_route,
         file_md5=lambda req, ctx: FileHashResponse(
             schema_version="1.0",
             path=req.path,
@@ -372,10 +374,15 @@ def test_run_report_download_is_idempotent_for_route_memory(
         )
 
     def _route_count() -> int:
-        conn = sqlite3.connect(settings.state_db)
+        conn = sqlite3.connect(settings.reports_db)
         try:
             row = conn.execute(
-                "SELECT COUNT(*) FROM report_download_routes WHERE normalized_url=?",
+                """
+                SELECT COUNT(*)
+                FROM publishers
+                WHERE insights_url=?
+                  AND download_route_summary IS NOT NULL
+                """,
                 ("https://example.com/report",),
             ).fetchone()
         finally:
@@ -400,8 +407,8 @@ def test_run_report_download_does_not_record_source_for_email_outcome(
             used_route_hint=False,
             path=None,
         ),
-        get_report_download_route=lambda req, ctx: None,
-        record_report_download_route=lambda req, ctx: None,
+        get_publisher_download_route=lambda req, ctx: None,
+        record_publisher_download_route=lambda req, ctx: None,
         file_md5=lambda req, ctx: FileHashResponse(
             schema_version="1.0",
             path=req.path,

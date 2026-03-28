@@ -18,24 +18,22 @@ from src.contracts.browser_download import (
 )
 from src.contracts.files import FileHashRequest, FileHashResponse
 from src.contracts.report_store import (
+    PublisherDownloadRouteGetRequest,
+    PublisherDownloadRouteRecordRequest,
+    PublisherDownloadRouteResponse,
     ReportSourceRecordRequest,
     ReportSourceRecordResponse,
 )
 from src.contracts.run_context import RunContext
-from src.contracts.state import (
-    StateReportDownloadRouteGetRequest,
-    StateReportDownloadRouteRecordRequest,
-    StateReportDownloadRouteResponse,
-)
 from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
 from src.services.browser_report_download_service import (
     download_report_with_browser_use,
 )
 from src.services.file_service import file_md5
-from src.services.report_store_service import record_report_source
-from src.services.state_service import (
-    get_report_download_route,
-    record_report_download_route,
+from src.services.report_store_service import (
+    get_publisher_download_route,
+    record_publisher_download_route,
+    record_report_source,
 )
 from src.services.config_service import upsert_browser_download_identity_fields
 from src.utils.logging import log_event
@@ -50,12 +48,12 @@ class ReportDownloadDependencies:
         [BrowserReportDownloadRequest, RunContext],
         BrowserReportDownloadResult,
     ]
-    get_report_download_route: Callable[
-        [StateReportDownloadRouteGetRequest, RunContext],
-        Optional[StateReportDownloadRouteResponse],
+    get_publisher_download_route: Callable[
+        [PublisherDownloadRouteGetRequest, RunContext],
+        Optional[PublisherDownloadRouteResponse],
     ]
-    record_report_download_route: Callable[
-        [StateReportDownloadRouteRecordRequest, RunContext],
+    record_publisher_download_route: Callable[
+        [PublisherDownloadRouteRecordRequest, RunContext],
         None,
     ]
     file_md5: Callable[[FileHashRequest, RunContext], FileHashResponse]
@@ -73,8 +71,8 @@ class ReportDownloadDependencies:
     def default(cls) -> "ReportDownloadDependencies":
         return cls(
             download_report_with_browser_use=download_report_with_browser_use,
-            get_report_download_route=get_report_download_route,
-            record_report_download_route=record_report_download_route,
+            get_publisher_download_route=get_publisher_download_route,
+            record_publisher_download_route=record_publisher_download_route,
             file_md5=file_md5,
             record_report_source=record_report_source,
             upsert_browser_download_identity_fields=upsert_browser_download_identity_fields,
@@ -99,15 +97,15 @@ def run_report_download(
             fields={
                 "url": request.url,
                 "normalized_url": normalized_url,
-                "state_db": request.state_db,
+                "reports_db": request.reports_db,
                 "has_delivery_email": bool(request.delivery_email),
             },
         )
     )
-    remembered_route = deps.get_report_download_route(
-        StateReportDownloadRouteGetRequest(
+    remembered_route = deps.get_publisher_download_route(
+        PublisherDownloadRouteGetRequest(
             schema_version="1.0",
-            state_db=request.state_db,
+            db_path=request.reports_db,
             normalized_url=normalized_url,
         ),
         ctx,
@@ -182,10 +180,10 @@ def run_report_download(
             step_name="report_download_discovery",
         )
 
-    deps.record_report_download_route(
-        StateReportDownloadRouteRecordRequest(
+    deps.record_publisher_download_route(
+        PublisherDownloadRouteRecordRequest(
             schema_version="1.0",
-            state_db=request.state_db,
+            db_path=request.reports_db,
             normalized_url=result.normalized_url,
             source_url=result.source_url,
             route_kind=result.route_kind,
@@ -200,10 +198,11 @@ def run_report_download(
         log_event(
             ctx,
             role="orchestrator",
-            event="report_download_state_recorded",
+            event="report_download_publisher_route_recorded",
             module=logger.name,
             fields={
                 "normalized_url": result.normalized_url,
+                "reports_db": request.reports_db,
                 "route_kind": result.route_kind,
                 "outcome": result.outcome,
             },
