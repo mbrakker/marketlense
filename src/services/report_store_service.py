@@ -15,6 +15,8 @@ from src.contracts.report_store import (
     ReportMetadataGetResponse,
     ReportMetadataListRequest,
     ReportMetadataListResponse,
+    ReportSourceRecordRequest,
+    ReportSourceRecordResponse,
     ReportMetadataUpsertRequest,
 )
 from src.contracts.run_context import RunContext
@@ -54,6 +56,19 @@ CREATE TABLE IF NOT EXISTS reports (
 
 CREATE INDEX IF NOT EXISTS idx_reports_title ON reports(title);
 CREATE INDEX IF NOT EXISTS idx_reports_publisher ON reports(publisher);
+
+CREATE TABLE IF NOT EXISTS report_sources (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  source_domain TEXT NOT NULL,
+  report_name TEXT NOT NULL,
+  landing_page_url TEXT NOT NULL,
+  downloaded_at_utc TEXT NOT NULL,
+  md5 TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_report_sources_domain ON report_sources(source_domain);
+CREATE INDEX IF NOT EXISTS idx_report_sources_md5 ON report_sources(md5);
+CREATE INDEX IF NOT EXISTS idx_report_sources_downloaded_at ON report_sources(downloaded_at_utc);
 """
 
 
@@ -541,3 +556,126 @@ def list_metadata(request: ReportMetadataListRequest, ctx: RunContext) -> Report
         fields={"db_path": request.db_path, "count": len(rows)},
     ))
     return ReportMetadataListResponse(schema_version="1.1", records=rows)
+
+
+def record_report_source(
+    request: ReportSourceRecordRequest, ctx: RunContext
+) -> ReportSourceRecordResponse:
+    db_path = request.db_path.strip()
+    source_domain = request.source_domain.strip()
+    report_name = request.report_name.strip()
+    landing_page_url = request.landing_page_url.strip()
+    downloaded_at_utc = request.downloaded_at_utc.strip()
+    md5 = request.md5.strip().lower()
+
+    if not db_path:
+        raise AppError(
+            code="report_source_db_missing",
+            message="Report metadata DB path is required for source recording",
+            retryable=False,
+            severity="error",
+        )
+    if not source_domain:
+        raise AppError(
+            code="report_source_domain_missing",
+            message="source_domain is required for report source recording",
+            retryable=False,
+            severity="error",
+        )
+    if not report_name:
+        raise AppError(
+            code="report_source_name_missing",
+            message="report_name is required for report source recording",
+            retryable=False,
+            severity="error",
+        )
+    if not landing_page_url:
+        raise AppError(
+            code="report_source_url_missing",
+            message="landing_page_url is required for report source recording",
+            retryable=False,
+            severity="error",
+        )
+    if not downloaded_at_utc:
+        raise AppError(
+            code="report_source_downloaded_at_missing",
+            message="downloaded_at_utc is required for report source recording",
+            retryable=False,
+            severity="error",
+        )
+    if not md5:
+        raise AppError(
+            code="report_source_md5_missing",
+            message="md5 is required for report source recording",
+            retryable=False,
+            severity="error",
+        )
+
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="report_source_record_start",
+        module=logger.name,
+        fields={
+            "db_path": db_path,
+            "source_domain": source_domain,
+            "report_name": report_name,
+            "landing_page_url": landing_page_url,
+            "downloaded_at_utc": downloaded_at_utc,
+            "md5": md5,
+        },
+    ))
+    try:
+        with _metadata_conn(db_path) as conn:
+            cur = conn.execute(
+                """
+                INSERT INTO report_sources(source_domain, report_name, landing_page_url, downloaded_at_utc, md5)
+                VALUES(?, ?, ?, ?, ?)
+                """,
+                (
+                    source_domain,
+                    report_name,
+                    landing_page_url,
+                    downloaded_at_utc,
+                    md5,
+                ),
+            )
+            record_id = int(cur.lastrowid or 0)
+    except sqlite3.Error as exc:
+        raise AppError(
+            code="report_source_record_failed",
+            message="Failed to record downloaded report source",
+            cause=exc,
+            retryable=True,
+            context={
+                "db_path": db_path,
+                "source_domain": source_domain,
+                "landing_page_url": landing_page_url,
+                "md5": md5,
+            },
+        ) from exc
+
+    response = ReportSourceRecordResponse(
+        schema_version="1.0",
+        record_id=record_id,
+        source_domain=source_domain,
+        report_name=report_name,
+        landing_page_url=landing_page_url,
+        downloaded_at_utc=downloaded_at_utc,
+        md5=md5,
+    )
+    logger.info(log_event(
+        ctx,
+        role="service",
+        event="report_source_record_complete",
+        module=logger.name,
+        fields={
+            "record_id": response.record_id,
+            "source_domain": response.source_domain,
+            "report_name": response.report_name,
+            "landing_page_url": response.landing_page_url,
+            "downloaded_at_utc": response.downloaded_at_utc,
+            "md5": response.md5,
+        },
+    ))
+    return response

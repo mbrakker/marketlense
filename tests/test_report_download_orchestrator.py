@@ -12,6 +12,8 @@ from src.contracts.browser_download import (
     BrowserReportDownloadResult,
     ReportDownloadOrchestratorRequest,
 )
+from src.contracts.files import FileHashResponse
+from src.contracts.report_store import ReportSourceRecordResponse
 from src.contracts.state import StateReportDownloadRouteResponse
 from src.orchestrators.report_download_orchestrator import (
     ReportDownloadDependencies,
@@ -34,6 +36,7 @@ def _settings(tmp_path: Path) -> BrowserDownloadSettings:
         max_steps=5,
         output_dir=str(tmp_path / "downloads"),
         state_db=str(tmp_path / "state.sqlite"),
+        reports_db=str(tmp_path / "reports.sqlite"),
         identity_config_path=str(tmp_path / "browser_download_identity.yaml"),
         identity_profile=BrowserDownloadIdentity(
             schema_version="1.0",
@@ -96,6 +99,7 @@ def test_run_report_download_uses_memory_and_records_route(
 ) -> None:
     settings = _settings(tmp_path)
     saved_records = []
+    saved_sources = []
 
     def _download(req, ctx):
         assert req.route_hint == "Use the first Download report button."
@@ -121,6 +125,25 @@ def test_run_report_download_uses_memory_and_records_route(
     def _record_route(req, ctx):
         saved_records.append(req)
 
+    def _file_md5(req, ctx):
+        return FileHashResponse(
+            schema_version="1.0",
+            path=req.path,
+            md5="abc123",
+        )
+
+    def _record_source(req, ctx):
+        saved_sources.append(req)
+        return ReportSourceRecordResponse(
+            schema_version="1.0",
+            record_id=1,
+            source_domain=req.source_domain,
+            report_name=req.report_name,
+            landing_page_url=req.landing_page_url,
+            downloaded_at_utc=req.downloaded_at_utc,
+            md5=req.md5,
+        )
+
     def _upsert_identity(req, ctx):
         return type(
             "IdentityUpdate",
@@ -136,6 +159,8 @@ def test_run_report_download_uses_memory_and_records_route(
         download_report_with_browser_use=_download,
         get_report_download_route=_get_route,
         record_report_download_route=_record_route,
+        file_md5=_file_md5,
+        record_report_source=_record_source,
         upsert_browser_download_identity_fields=_upsert_identity,
         sleep_fn=lambda seconds: None,
     )
@@ -147,6 +172,7 @@ def test_run_report_download_uses_memory_and_records_route(
             url="https://example.com/report",
             settings=settings,
             state_db=settings.state_db,
+            reports_db=settings.reports_db,
         ),
         ctx=run_context,
         dependencies=deps,
@@ -155,7 +181,12 @@ def test_run_report_download_uses_memory_and_records_route(
     assert response.used_memory_route is True
     assert response.outcome == "downloaded"
     assert len(saved_records) == 1
+    assert len(saved_sources) == 1
     assert saved_records[0].normalized_url == "https://example.com/report"
+    assert saved_sources[0].source_domain == "example.com"
+    assert saved_sources[0].report_name == "report"
+    assert saved_sources[0].landing_page_url == "https://example.com/report"
+    assert saved_sources[0].md5 == "abc123"
     assert_no_defaulted_required_fields(response)
     assert_logs_have_required_fields(
         _events(caplog, "market_lense.report_download_orchestrator")
@@ -173,6 +204,7 @@ def test_run_report_download_falls_back_after_memory_failure_and_retries(
     sleep_calls: list[float] = []
     saved_records = []
     identity_updates = []
+    saved_sources = []
 
     def _download(req, ctx):
         if req.route_hint:
@@ -211,6 +243,25 @@ def test_run_report_download_falls_back_after_memory_failure_and_retries(
     def _record_route(req, ctx):
         saved_records.append(req)
 
+    def _file_md5(req, ctx):
+        return FileHashResponse(
+            schema_version="1.0",
+            path=req.path,
+            md5="def456",
+        )
+
+    def _record_source(req, ctx):
+        saved_sources.append(req)
+        return ReportSourceRecordResponse(
+            schema_version="1.0",
+            record_id=2,
+            source_domain=req.source_domain,
+            report_name=req.report_name,
+            landing_page_url=req.landing_page_url,
+            downloaded_at_utc=req.downloaded_at_utc,
+            md5=req.md5,
+        )
+
     def _upsert_identity(req, ctx):
         identity_updates.append(req)
         return type(
@@ -227,6 +278,8 @@ def test_run_report_download_falls_back_after_memory_failure_and_retries(
         download_report_with_browser_use=_download,
         get_report_download_route=_get_route,
         record_report_download_route=_record_route,
+        file_md5=_file_md5,
+        record_report_source=_record_source,
         upsert_browser_download_identity_fields=_upsert_identity,
         sleep_fn=lambda seconds: sleep_calls.append(float(seconds)),
     )
@@ -238,6 +291,7 @@ def test_run_report_download_falls_back_after_memory_failure_and_retries(
             url="https://example.com/report",
             settings=settings,
             state_db=settings.state_db,
+            reports_db=settings.reports_db,
         ),
         ctx=run_context,
         dependencies=deps,
@@ -249,6 +303,7 @@ def test_run_report_download_falls_back_after_memory_failure_and_retries(
     assert response.used_memory_route is False
     assert response.outcome == "downloaded"
     assert len(saved_records) == 1
+    assert len(saved_sources) == 1
     assert identity_updates[0].encountered_form_fields == []
     assert_logs_have_required_fields(
         _events(caplog, "market_lense.report_download_orchestrator")
@@ -277,6 +332,20 @@ def test_run_report_download_is_idempotent_for_route_memory(
         download_report_with_browser_use=_download,
         get_report_download_route=get_report_download_route,
         record_report_download_route=record_report_download_route,
+        file_md5=lambda req, ctx: FileHashResponse(
+            schema_version="1.0",
+            path=req.path,
+            md5="idempotent-md5",
+        ),
+        record_report_source=lambda req, ctx: ReportSourceRecordResponse(
+            schema_version="1.0",
+            record_id=1,
+            source_domain=req.source_domain,
+            report_name=req.report_name,
+            landing_page_url=req.landing_page_url,
+            downloaded_at_utc=req.downloaded_at_utc,
+            md5=req.md5,
+        ),
         upsert_browser_download_identity_fields=lambda req, ctx: type(
             "IdentityUpdate",
             (),
@@ -296,6 +365,7 @@ def test_run_report_download_is_idempotent_for_route_memory(
                 url="https://example.com/report",
                 settings=settings,
                 state_db=settings.state_db,
+                reports_db=settings.reports_db,
             ),
             ctx=run_context,
             dependencies=deps,
@@ -315,3 +385,52 @@ def test_run_report_download_is_idempotent_for_route_memory(
     first, second = idempotency_guard(_run_once, side_effect_count=_route_count)
     assert first.outcome == "downloaded"
     assert second.outcome == "downloaded"
+
+
+def test_run_report_download_does_not_record_source_for_email_outcome(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    settings = _settings(tmp_path)
+    source_record_calls: list[object] = []
+
+    deps = ReportDownloadDependencies(
+        download_report_with_browser_use=lambda req, ctx: _result(
+            url="https://example.com/report",
+            used_route_hint=False,
+            path=None,
+        ),
+        get_report_download_route=lambda req, ctx: None,
+        record_report_download_route=lambda req, ctx: None,
+        file_md5=lambda req, ctx: FileHashResponse(
+            schema_version="1.0",
+            path=req.path,
+            md5="unused",
+        ),
+        record_report_source=lambda req, ctx: source_record_calls.append(req),
+        upsert_browser_download_identity_fields=lambda req, ctx: type(
+            "IdentityUpdate",
+            (),
+            {
+                "path": settings.identity_config_path,
+                "added_field_keys": [],
+                "total_fields": len(settings.identity_profile.fields),
+            },
+        )(),
+        sleep_fn=lambda seconds: None,
+    )
+
+    response = run_report_download(
+        ReportDownloadOrchestratorRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=settings,
+            state_db=settings.state_db,
+            reports_db=settings.reports_db,
+        ),
+        ctx=run_context,
+        dependencies=deps,
+    )
+
+    assert response.outcome == "email_required"
+    assert source_record_calls == []

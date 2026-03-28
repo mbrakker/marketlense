@@ -112,6 +112,7 @@ def test_browser_report_download_service_local_guarded(
             max_steps=10,
             output_dir=str(tmp_path / "downloads"),
             state_db=str(tmp_path / "state.sqlite"),
+            reports_db=str(tmp_path / "reports.sqlite"),
             identity_config_path=str(tmp_path / "browser_download_identity.yaml"),
             identity_profile=BrowserDownloadIdentity(
                 schema_version="1.0",

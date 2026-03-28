@@ -1690,6 +1690,12 @@ def load_browser_download_settings(
     )
     if _is_missing(state_db):
         resolver.missing.append("paths.state_db|env:STATE_DB")
+    reports_db = _resolve_optional_path(
+        paths.get("reports_db") or _env_value("REPORTS_DB"),
+        base_path=runtime_base_path,
+    )
+    if _is_missing(reports_db):
+        resolver.missing.append("paths.reports_db|env:REPORTS_DB")
     identity_config_path = _resolve_optional_path(
         browser_download.get("identity_config_path")
         or _env_value("BROWSER_DOWNLOAD_IDENTITY_CONFIG_PATH")
@@ -1764,6 +1770,7 @@ def load_browser_download_settings(
         ),
         output_dir=output_dir,
         state_db=state_db,
+        reports_db=reports_db,
         identity_config_path=identity_config_path,
         identity_profile=identity_profile,
         openrouter_http_referer=http_referer,
@@ -1813,6 +1820,7 @@ def load_browser_download_settings(
 
     Path(settings.output_dir).mkdir(parents=True, exist_ok=True)
     Path(settings.state_db).parent.mkdir(parents=True, exist_ok=True)
+    Path(settings.reports_db).parent.mkdir(parents=True, exist_ok=True)
     logger.info(
         log_event(
             ctx,
@@ -1822,6 +1830,7 @@ def load_browser_download_settings(
             fields={
                 "output_dir": settings.output_dir,
                 "state_db": settings.state_db,
+                "reports_db": settings.reports_db,
                 "identity_config_path": settings.identity_config_path,
                 "identity_field_count": len(settings.identity_profile.fields),
                 "model": settings.model,

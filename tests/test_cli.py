@@ -191,6 +191,7 @@ class TestCli(unittest.TestCase):
             max_steps=12,
             output_dir="./out/browser_downloads",
             state_db="./state/index.sqlite",
+            reports_db="./state/reports.sqlite",
             identity_config_path="./src/config/browser_download_identity.yaml",
             identity_profile=BrowserDownloadIdentity(
                 schema_version="1.0",
@@ -245,6 +246,7 @@ class TestCli(unittest.TestCase):
         request = run_download_mock.call_args.args[0]
         self.assertEqual("https://example.com/report", request.url)
         self.assertEqual("./state/index.sqlite", request.state_db)
+        self.assertEqual("./state/reports.sqlite", request.reports_db)
         self.assertEqual("openai/gpt-5-mini", request.settings.model)
 
 

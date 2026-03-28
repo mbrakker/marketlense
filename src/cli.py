@@ -467,6 +467,7 @@ def download_report(
             url=url,
             settings=settings,
             state_db=settings.state_db,
+            reports_db=settings.reports_db,
             delivery_email=delivery_email,
         ),
         ctx=ctx,

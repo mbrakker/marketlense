@@ -219,3 +219,53 @@ class ReportMetadataListResponse:
     records: List[ReportMetadataGetResponse] = field(
         metadata={"doc": "All report metadata records."}
     )
+
+
+@dataclass(frozen=True)
+class ReportSourceRecordRequest:
+    schema_version: str = field(
+        metadata={"doc": "Report-source record request schema version."}
+    )
+    db_path: str = field(
+        metadata={"doc": "Filesystem path to the report metadata SQLite database."}
+    )
+    source_domain: str = field(
+        metadata={"doc": "Source domain where the report landing page lives."}
+    )
+    report_name: str = field(
+        metadata={"doc": "Human-readable report name derived from the downloaded file."}
+    )
+    landing_page_url: str = field(
+        metadata={"doc": "Landing-page URL where the report download path was found."}
+    )
+    downloaded_at_utc: str = field(
+        metadata={"doc": "UTC timestamp when the report download completed."}
+    )
+    md5: str = field(
+        metadata={"doc": "MD5 checksum of the downloaded report file."}
+    )
+
+
+@dataclass(frozen=True)
+class ReportSourceRecordResponse:
+    schema_version: str = field(
+        metadata={"doc": "Report-source record response schema version."}
+    )
+    record_id: int = field(
+        metadata={"doc": "Auto-incremented SQLite row ID for the stored source record."}
+    )
+    source_domain: str = field(
+        metadata={"doc": "Source domain where the report landing page lives."}
+    )
+    report_name: str = field(
+        metadata={"doc": "Human-readable report name derived from the downloaded file."}
+    )
+    landing_page_url: str = field(
+        metadata={"doc": "Landing-page URL where the report download path was found."}
+    )
+    downloaded_at_utc: str = field(
+        metadata={"doc": "UTC timestamp when the report download completed."}
+    )
+    md5: str = field(
+        metadata={"doc": "MD5 checksum of the downloaded report file."}
+    )

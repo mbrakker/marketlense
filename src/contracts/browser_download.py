@@ -102,6 +102,9 @@ class BrowserDownloadSettings:
     state_db: str = field(
         metadata={"doc": "SQLite state DB used to remember successful per-URL routes."}
     )
+    reports_db: str = field(
+        metadata={"doc": "SQLite reports DB used to store downloaded-report source rows."}
+    )
     identity_config_path: str = field(
         metadata={
             "doc": "Absolute YAML path used to load browser form identity values."
@@ -234,6 +237,9 @@ class ReportDownloadOrchestratorRequest:
     )
     state_db: str = field(
         metadata={"doc": "SQLite state DB used to remember successful per-URL routes."}
+    )
+    reports_db: str = field(
+        metadata={"doc": "SQLite reports DB used to store downloaded-report source rows."}
     )
     delivery_email: Optional[str] = field(
         default=None,

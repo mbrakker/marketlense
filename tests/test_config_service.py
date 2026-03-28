@@ -663,6 +663,10 @@ class TestConfigService(unittest.TestCase):
             Path(settings.state_db).resolve(),
         )
         self.assertEqual(
+            Path(tmp_dir, "state", "reports.sqlite").resolve(),
+            Path(settings.reports_db).resolve(),
+        )
+        self.assertEqual(
             Path(tmp_dir, "browser_download_identity.yaml").resolve(),
             Path(settings.identity_config_path).resolve(),
         )

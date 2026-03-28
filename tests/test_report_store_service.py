@@ -8,11 +8,13 @@ import unittest
 from src.contracts.report_store import (
     ReportMetadataDbAccessRequest,
     ReportMetadataGetRequest,
+    ReportSourceRecordRequest,
     ReportMetadataUpsertRequest,
 )
 from src.services.report_store_service import (
     check_report_db_access,
     get_metadata,
+    record_report_source,
     upsert_metadata,
 )
 from src.utils.errors import AppError
@@ -177,6 +179,68 @@ class TestReportStoreService(unittest.TestCase):
             )
             self.assertTrue(resp.accessible)
             self.assertFalse(resp.locked)
+
+    def test_record_report_source_inserts_row(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_report_source_record")
+
+            response = record_report_source(
+                ReportSourceRecordRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_domain="www.criteo.com",
+                    report_name="Criteo Global Winter Travel Pulse 2025",
+                    landing_page_url="https://www.criteo.com/resources/report",
+                    downloaded_at_utc="2026-03-28T12:00:00Z",
+                    md5="abc123def456",
+                ),
+                ctx,
+            )
+
+            self.assertGreater(response.record_id, 0)
+            conn = sqlite3.connect(db_path)
+            try:
+                row = conn.execute(
+                    """
+                    SELECT source_domain, report_name, landing_page_url, downloaded_at_utc, md5
+                    FROM report_sources
+                    WHERE id=?
+                    """,
+                    (response.record_id,),
+                ).fetchone()
+            finally:
+                conn.close()
+
+            self.assertEqual(
+                (
+                    "www.criteo.com",
+                    "Criteo Global Winter Travel Pulse 2025",
+                    "https://www.criteo.com/resources/report",
+                    "2026-03-28T12:00:00Z",
+                    "abc123def456",
+                ),
+                row,
+            )
+
+    def test_record_report_source_requires_md5(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_report_source_validation")
+
+            with self.assertRaises(AppError):
+                record_report_source(
+                    ReportSourceRecordRequest(
+                        schema_version="1.0",
+                        db_path=db_path,
+                        source_domain="www.criteo.com",
+                        report_name="Broken Report",
+                        landing_page_url="https://www.criteo.com/resources/report",
+                        downloaded_at_utc="2026-03-28T12:00:00Z",
+                        md5="",
+                    ),
+                    ctx,
+                )
 
 
 if __name__ == "__main__":
