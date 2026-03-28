@@ -10,11 +10,16 @@ from src.contracts.config import (
     AppConfigWriteRequest,
     ConfigLoadRequest,
 )
+from src.contracts.browser_download import (
+    BrowserDownloadIdentityFieldUpsertRequest,
+)
 from src.contracts.run_context import RunContext
 from src.services.config_service import (
+    load_browser_download_settings,
     load_publish_settings,
     load_settings,
     read_app_config,
+    upsert_browser_download_identity_fields,
     write_app_config,
 )
 from src.utils.errors import AppError
@@ -29,12 +34,38 @@ class TestConfigService(unittest.TestCase):
     ) -> str:
         config_path = Path(tmp_dir) / "app.yaml"
         acronyms_path = Path(tmp_dir) / "html-tag-acronyms.yaml"
+        identity_path = Path(tmp_dir) / "browser_download_identity.yaml"
         acronyms_path.write_text(
             yaml.safe_dump(
                 {
                     "schema_version": "1.0",
                     "html_tag_acronyms": ["AI", "ROI", "CPC"],
                 }
+            ),
+            encoding="utf-8",
+        )
+        identity_path.write_text(
+            yaml.safe_dump(
+                {
+                    "schema_version": "1.0",
+                    "fields": [
+                        {
+                            "schema_version": "1.0",
+                            "key": "work_email",
+                            "label": "Work email",
+                            "value": "ops@example.com",
+                            "aliases": ["email", "email address"],
+                        },
+                        {
+                            "schema_version": "1.0",
+                            "key": "company",
+                            "label": "Company",
+                            "value": "Market Lense",
+                            "aliases": ["company", "business"],
+                        },
+                    ],
+                },
+                sort_keys=False,
             ),
             encoding="utf-8",
         )
@@ -52,6 +83,9 @@ class TestConfigService(unittest.TestCase):
                 "gdrive_folder_id": "folder",
                 "openai_model": "gpt-5",
                 "temperature": 0.5,
+            },
+            "browser_download": {
+                "identity_config_path": str(identity_path),
             },
         }
         if include_analysis:
@@ -581,6 +615,103 @@ class TestConfigService(unittest.TestCase):
                     )
 
         self.assertIn("publish.wp.ca_bundle_path", str(ctx.exception))
+
+    def test_browser_download_settings_load(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_publish=False)
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["browser_download"] = {
+                "model": "gpt-5-mini",
+                "identity_config_path": str(
+                    Path(tmp_dir) / "browser_download_identity.yaml"
+                ),
+                "temperature": 0.1,
+                "timeout_seconds": 45,
+                "max_steps": 12,
+                "output_dir": "./out/browser_downloads",
+                "headed": True,
+                "retry": {
+                    "retries": 2,
+                    "base_delay_seconds": 0.5,
+                    "backoff_step_seconds": 0.25,
+                    "jitter_seconds": 0.0,
+                },
+            }
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
+
+            with patch.dict(os.environ, {"OPENROUTER_API_KEY": "key"}, clear=True):
+                settings = load_browser_download_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
+                )
+
+        self.assertEqual("gpt-5-mini", settings.model)
+        self.assertEqual(0.1, settings.temperature)
+        self.assertEqual(45, settings.timeout_seconds)
+        self.assertEqual(12, settings.max_steps)
+        self.assertTrue(settings.headed)
+        self.assertEqual(2, settings.retry_retries)
+        self.assertEqual(0.5, settings.retry_base_delay_seconds)
+        self.assertEqual(
+            Path(tmp_dir, "out", "browser_downloads").resolve(),
+            Path(settings.output_dir).resolve(),
+        )
+        self.assertEqual(
+            Path(tmp_dir, "state", "index.sqlite").resolve(),
+            Path(settings.state_db).resolve(),
+        )
+        self.assertEqual(
+            Path(tmp_dir, "browser_download_identity.yaml").resolve(),
+            Path(settings.identity_config_path).resolve(),
+        )
+        self.assertEqual(2, len(settings.identity_profile.fields))
+
+    def test_browser_download_settings_require_openrouter_key(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_publish=False)
+            with patch("src.services.config_service.load_dotenv", return_value=False):
+                with patch.dict(os.environ, {}, clear=True):
+                    with self.assertRaises(RuntimeError) as ctx:
+                        load_browser_download_settings(
+                            ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                            RunContext(
+                                schema_version="1.0",
+                                run_id="r",
+                                task_id="t",
+                                span_id="s",
+                            ),
+                        )
+        self.assertIn("OPENROUTER_API_KEY", str(ctx.exception))
+
+    def test_upsert_browser_download_identity_fields_adds_new_keys(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_publish=False)
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            identity_path = cfg_data["browser_download"]["identity_config_path"]
+            response = upsert_browser_download_identity_fields(
+                BrowserDownloadIdentityFieldUpsertRequest(
+                    schema_version="1.0",
+                    path=identity_path,
+                    encountered_form_fields=[
+                        "Name",
+                        "Business",
+                        "Budget Range",
+                        "Budget Range",
+                    ],
+                ),
+                RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+            )
+
+            payload = yaml.safe_load(Path(identity_path).read_text(encoding="utf-8"))
+
+        self.assertEqual(["name", "budget_range"], response.added_field_keys)
+        self.assertEqual(4, response.total_fields)
+        self.assertEqual(
+            ["work_email", "company", "name", "budget_range"],
+            [field["key"] for field in payload["fields"]],
+        )
 
     def test_read_and_write_app_config_round_trip(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

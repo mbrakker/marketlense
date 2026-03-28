@@ -32,6 +32,7 @@ Key traits:
 - OpenAI image-call compatibility: crop-refine image requests to the Responses API now omit known unsupported params (e.g., `temperature`/`seed` on `gpt-5*`) preflight and still retain fallback retry-without-param handling for unknown model/param mismatches.
 - OpenAI service consolidation: `src/services/openai_service.py` is the single OpenAI client boundary (request/response parsing, cost ledger writes, and provider error normalization). Other modules route OpenAI calls through it.
 - Shared LLM orchestration: `src/services/llm_service.py` wraps model-call clients with one retry/backoff/circuit-breaker API plus optional scope-level rate limiting. Report-pipeline evidence/artifact clients and default generator LLM clients now use this shared wrapper instead of local pass-through retry wrappers.
+- Local browser-download automation: `src/services/browser_report_download_service.py` runs the vendored local `browser-use` runtime against a report landing page through OpenRouter, classifies the acquisition path as `pdf_download` vs `email_delivery`, stores the winning route summary per normalized URL in `state_db`, and exposes the flow through `src/orchestrators/report_download_orchestrator.py` plus the `download-report` CLI command. Browser form-filling values are loaded from `src/config/browser_download_identity.yaml`, and any newly encountered form field labels are appended there automatically as new keys with empty values for later completion.
 - Refactor simplification layer: shared boolean/numeric coercion and list-normalization helpers now live in `src/utils/coercion.py`, shared slug-tag normalization and fail-open JSON prompt serialization live in `src/utils/tag_utils.py` and `src/utils/json_utils.py`, UI/dashboard row serialization is centralized in `src/utils/gui_utils.py`, orchestrator retry wrappers are centralized through `retry_orchestrator.run_step_with_default_policy`, and duplicate WordPress term ensure logic is consolidated into a shared internal helper.
 - Ops tooling cleanup: duration diagnostics now share one implementation in `scripts/duration_tools.py` (legacy entry scripts delegate to it), and legacy Streamlit config cleanup flags (`ingest.debug_candidate_gallery`, `analysis.compare`) were removed from the structured editor path.
 - Figure quality gate: candidate visuals now pass deterministic prefilters, kind-split ranking, adaptive GPT crop refinement, and strict final cropping before HTML render. The detailed extraction, crop, and fallback heuristics live in [Technical Design Notes](#technical-design-notes).
@@ -78,6 +79,7 @@ Current control-plane modules in `src/orchestrators/` include:
 - `report_analysis_orchestrator.py`: vector-store analysis control including taxonomy/evidence/artifacts/validation and the bounded validation-regeneration loop.
 - `publish_orchestrator.py`: publish workflow and publish-state transitions.
 - `publish_queue_orchestrator.py`: publish queue snapshot assembly for UI/ops surfaces.
+- `report_download_orchestrator.py`: local browser-use report acquisition with per-URL route memory, retry-aware fallback from remembered route to fresh discovery, and typed outcome classification (`pdf_download` vs `email_delivery`).
 - `cost_reporting_orchestrator.py`: filtered cost report + rollup orchestration.
 - `ops_dashboard_orchestrator.py`: dashboard snapshot aggregation (reports/state/lock/storage).
 - `candidate_extraction_orchestrator.py`, `cover_image_orchestrator.py`, `recategorize_orchestrator.py`, `wp_category_update_orchestrator.py`: feature-specific workflows.
@@ -464,6 +466,7 @@ Key fields and env overrides:
 - Shared LLM policy: `ingest.llm.retries` (default `1`), `ingest.llm.base_delay_seconds` (default `1.0`), `ingest.llm.backoff_step_seconds` (default `1.0`), `ingest.llm.jitter_seconds` (default `0.25`), `ingest.llm.circuit_breaker_failure_threshold` (default `3`), and `ingest.llm.circuit_breaker_recovery_seconds` (default `30.0`) control the shared `llm_service` wrapper used for model calls.
 - PDF OCR fallback: `ingest.pdf_text.ocr_fallback.enabled`, `ingest.pdf_text.ocr_fallback.model` (default `gpt-5-mini`), `ingest.pdf_text.ocr_fallback.timeout_seconds`, `ingest.pdf_text.ocr_fallback.prompt_namespace`, `ingest.pdf_text.ocr_fallback.cache_enabled`, `ingest.pdf_text.ocr_fallback.chunk_page_count` (default `8`). OCR calls go through `src/services/openai_service.py` using the OpenAI Responses API. This fallback only runs when the native text gate would otherwise return `pdf_text_unextractable`; low-density but still extractable PDFs stay on the normal path.
 - Figure captions: `ingest.figure_captions.enabled`, `ingest.figure_captions.temperature`, `ingest.figure_captions.timeout_seconds`, `ingest.figure_captions.prompt_namespace` (default `report_vs/figure_caption`), `ingest.figure_captions.max_chars` (default `500`). The bundled `src/config/app.yaml` enables this phase by default. Model resolution follows `openai_models.report_vs/figure_caption` first, then falls back to `ingest.openai_model`. The phase is fail-open: primary figures fall back to the legacy shared caption, secondary figures fall back to detected captions or the existing placeholder label.
+- Browser downloads: `OPENROUTER_API_KEY` is required, `OPENROUTER_HTTP_REFERER` is optional, `browser_download.model` (`BROWSER_DOWNLOAD_MODEL`, default `openai/gpt-5-mini`), `browser_download.identity_config_path` (`BROWSER_DOWNLOAD_IDENTITY_CONFIG_PATH`, default `src/config/browser_download_identity.yaml` relative to `app.yaml`), `browser_download.temperature` (`BROWSER_DOWNLOAD_TEMPERATURE`, default `0.0`), `browser_download.timeout_seconds` (`BROWSER_DOWNLOAD_TIMEOUT_SECONDS`, default `180`), `browser_download.max_steps` (`BROWSER_DOWNLOAD_MAX_STEPS`, default `30`), `browser_download.output_dir` (`BROWSER_DOWNLOAD_OUTPUT_DIR`, default `./out/browser_downloads`), `browser_download.headed` (`BROWSER_DOWNLOAD_HEADED`, default `false`; the bundled `src/config/app.yaml` currently enables headed mode with `true`), and `browser_download.retry.*` (`BROWSER_DOWNLOAD_RETRIES`, `BROWSER_DOWNLOAD_BASE_DELAY_SECONDS`, `BROWSER_DOWNLOAD_BACKOFF_STEP_SECONDS`, `BROWSER_DOWNLOAD_JITTER_SECONDS`). The browser-download flow uses the shared `paths.state_db` to persist one remembered route summary per normalized URL, and appends newly seen form labels into the identity YAML for later manual completion.
 - Publish: WordPress publish settings and TLS notes are documented together in the `WordPress Subproject` section below (`publish.wp.*`, `WP_*`, and `publish.validation.policy`).
 - Ranking/crop refinement: `rank.max_candidates`, `rank.selected_max` (default `5`), `rank.min_overall_score`, `rank.min_quality_score`, `rank.min_insight_score`, `rank.min_data_score`, `rank.crop_refine_enabled`, `rank.crop_refine_mode` (`adaptive|always|off`), `rank.crop_refine_page_dpi`, `rank.crop_refine_temperature`, `rank.crop_refine_timeout_seconds` (defaults to `rank.timeout_seconds` when omitted).
 - Drive listing: `ingest.drive.supports_all_drives`, `ingest.drive.include_items_from_all_drives` (shared drive flags), `ingest.drive.drive_id` (shared drive scope), and `ingest.drive.list_mode` (`full` vs `metadata` to omit names until needed).
@@ -488,6 +491,8 @@ Per-step model selection (new):
 Secrets (env only):
 
 - `OPENAI_API_KEY` (required)
+- `OPENROUTER_API_KEY` (required for `download-report` / browser-download automation)
+- `OPENROUTER_HTTP_REFERER` (optional for OpenRouter tracking)
 - `WP_APP_PASSWORD` or `WP_BEARER_TOKEN` (publishing)
 - `WP_POST_TYPE` (optional publish endpoint override; current YAML sets `posts`, code fallback is `ml_report`)
 - Optional provider keys (e.g., `MINERU_API_KEY`) if used.
@@ -825,6 +830,8 @@ After installation, the CLI is available from the project virtualenv as:
 .\.venv\Scripts\browser-use.exe --help
 ```
 
+The repo-level report download automation uses that same local runtime through `src/services/browser_report_download_service.py`. It classifies each URL as either a direct PDF route or an email-delivery route, then stores the successful route summary in `paths.state_db` so later runs can try the remembered path first.
+
 For OpenRouter-backed usage, see `tools/browser-use/examples/models/openrouter.py`, which is configured to use `stepfun/step-3.5-flash:free` through `OPENROUTER_API_KEY`.
 
 Run tests locally:
@@ -898,6 +905,7 @@ Configuration lives in `src/config/app.yaml` with `.env` fallback for any missin
 Required environment variables:
 
 - `OPENAI_API_KEY`
+- `OPENROUTER_API_KEY` for browser-download automation
 - `WP_APP_PASSWORD` (or `WP_BEARER_TOKEN` if using bearer auth)
 - Optional: other provider keys (e.g., `MINERU_API_KEY`), `WP_USERNAME`/`WP_SITE_URL`/`WP_POST_TYPE` if not set in YAML.
 
@@ -1016,6 +1024,17 @@ python -m src.cli cost-report --run-id <run_id>
 ```
 
 `cost-report` is routed through `src/orchestrators/cost_reporting_orchestrator.py`, which centralizes filtered report generation and daily rollup orchestration.
+
+Download a report from a landing page with the local vendored `browser-use` runtime:
+
+```bash
+python -m src.cli download-report https://example.com/report
+python -m src.cli download-report https://example.com/report --delivery-email analyst@example.com
+```
+
+`download-report` is routed through `src/orchestrators/report_download_orchestrator.py`. It looks up a remembered route in `state_db`, tries that route first when available, falls back to fresh discovery on failure, and returns one of three outcomes: `downloaded`, `email_requested`, or `email_required`.
+
+When a site opens a PDF viewer wrapper instead of writing the real PDF bytes directly, the browser-download service now validates the saved file signature. If the saved `.pdf` is actually an HTML wrapper page with an embedded real PDF URL, the service fetches that embedded PDF and replaces the wrapper file before reporting success.
 
 Extract chart/table candidates without running LLM analysis (writes JSON + crops):
 

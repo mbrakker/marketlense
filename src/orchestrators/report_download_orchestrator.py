@@ -1,0 +1,281 @@
+from __future__ import annotations
+
+import logging
+import time
+from dataclasses import dataclass
+from typing import Callable, Optional
+
+from src.contracts.browser_download import (
+    BrowserDownloadIdentityFieldUpsertRequest,
+    BrowserDownloadIdentityFieldUpsertResponse,
+    BrowserReportDownloadRequest,
+    BrowserReportDownloadResult,
+    ReportDownloadOrchestratorRequest,
+    ReportDownloadOrchestratorResult,
+)
+from src.contracts.run_context import RunContext
+from src.contracts.state import (
+    StateReportDownloadRouteGetRequest,
+    StateReportDownloadRouteRecordRequest,
+    StateReportDownloadRouteResponse,
+)
+from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
+from src.services.browser_report_download_service import (
+    download_report_with_browser_use,
+)
+from src.services.state_service import (
+    get_report_download_route,
+    record_report_download_route,
+)
+from src.services.config_service import upsert_browser_download_identity_fields
+from src.utils.logging import log_event
+from src.utils.url_utils import normalize_url
+
+logger = logging.getLogger("market_lense.report_download_orchestrator")
+
+
+@dataclass(frozen=True)
+class ReportDownloadDependencies:
+    download_report_with_browser_use: Callable[
+        [BrowserReportDownloadRequest, RunContext],
+        BrowserReportDownloadResult,
+    ]
+    get_report_download_route: Callable[
+        [StateReportDownloadRouteGetRequest, RunContext],
+        Optional[StateReportDownloadRouteResponse],
+    ]
+    record_report_download_route: Callable[
+        [StateReportDownloadRouteRecordRequest, RunContext],
+        None,
+    ]
+    upsert_browser_download_identity_fields: Callable[
+        [BrowserDownloadIdentityFieldUpsertRequest, RunContext],
+        BrowserDownloadIdentityFieldUpsertResponse,
+    ]
+    sleep_fn: Callable[[float], None]
+
+    @classmethod
+    def default(cls) -> "ReportDownloadDependencies":
+        return cls(
+            download_report_with_browser_use=download_report_with_browser_use,
+            get_report_download_route=get_report_download_route,
+            record_report_download_route=record_report_download_route,
+            upsert_browser_download_identity_fields=upsert_browser_download_identity_fields,
+            sleep_fn=time.sleep,
+        )
+
+
+def run_report_download(
+    request: ReportDownloadOrchestratorRequest,
+    *,
+    ctx: RunContext,
+    dependencies: ReportDownloadDependencies | None = None,
+) -> ReportDownloadOrchestratorResult:
+    deps = dependencies or ReportDownloadDependencies.default()
+    normalized_url = normalize_url(request.url)
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="report_download_start",
+            module=logger.name,
+            fields={
+                "url": request.url,
+                "normalized_url": normalized_url,
+                "state_db": request.state_db,
+                "has_delivery_email": bool(request.delivery_email),
+            },
+        )
+    )
+    remembered_route = deps.get_report_download_route(
+        StateReportDownloadRouteGetRequest(
+            schema_version="1.0",
+            state_db=request.state_db,
+            normalized_url=normalized_url,
+        ),
+        ctx,
+    )
+    if remembered_route is None:
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="report_download_memory_miss",
+                module=logger.name,
+                fields={"normalized_url": normalized_url},
+            )
+        )
+    else:
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="report_download_memory_hit",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "route_kind": remembered_route.route_kind,
+                    "outcome": remembered_route.outcome,
+                },
+            )
+        )
+
+    policy = RetryPolicy(
+        retries=request.settings.retry_retries,
+        base_delay_seconds=request.settings.retry_base_delay_seconds,
+        backoff_step_seconds=request.settings.retry_backoff_step_seconds,
+        jitter_seconds=request.settings.retry_jitter_seconds,
+    )
+
+    result: BrowserReportDownloadResult | None = None
+    if remembered_route is not None:
+        try:
+            result = _run_download_attempt(
+                request=request,
+                ctx=ctx,
+                policy=policy,
+                dependencies=deps,
+                route_hint=remembered_route.route_summary,
+                route_kind_hint=remembered_route.route_kind,
+                step_name="report_download_with_memory_route",
+            )
+        except Exception as exc:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="orchestrator",
+                    event="report_download_memory_route_failed",
+                    module=logger.name,
+                    fields={
+                        "normalized_url": normalized_url,
+                        "route_kind": remembered_route.route_kind,
+                        "error": str(exc),
+                    },
+                )
+            )
+
+    if result is None:
+        result = _run_download_attempt(
+            request=request,
+            ctx=ctx,
+            policy=policy,
+            dependencies=deps,
+            route_hint=None,
+            route_kind_hint=None,
+            step_name="report_download_discovery",
+        )
+
+    deps.record_report_download_route(
+        StateReportDownloadRouteRecordRequest(
+            schema_version="1.0",
+            state_db=request.state_db,
+            normalized_url=result.normalized_url,
+            source_url=result.source_url,
+            route_kind=result.route_kind,
+            route_summary=result.route_summary,
+            outcome=result.outcome,
+            last_downloaded_file_path=result.downloaded_file_path,
+            last_final_page_url=result.final_page_url,
+        ),
+        ctx,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="report_download_state_recorded",
+            module=logger.name,
+            fields={
+                "normalized_url": result.normalized_url,
+                "route_kind": result.route_kind,
+                "outcome": result.outcome,
+            },
+        )
+    )
+    identity_update = deps.upsert_browser_download_identity_fields(
+        BrowserDownloadIdentityFieldUpsertRequest(
+            schema_version="1.0",
+            path=request.settings.identity_config_path,
+            encountered_form_fields=result.encountered_form_fields,
+        ),
+        ctx,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="report_download_identity_updated",
+            module=logger.name,
+            fields={
+                "path": identity_update.path,
+                "added_field_keys": identity_update.added_field_keys,
+                "total_fields": identity_update.total_fields,
+            },
+        )
+    )
+
+    response = ReportDownloadOrchestratorResult(
+        schema_version="1.0",
+        source_url=result.source_url,
+        normalized_url=result.normalized_url,
+        route_kind=result.route_kind,
+        outcome=result.outcome,
+        route_summary=result.route_summary,
+        final_page_url=result.final_page_url,
+        used_memory_route=result.used_route_hint,
+        encountered_form_fields=result.encountered_form_fields,
+        identity_fields_added=identity_update.added_field_keys,
+        downloaded_file_path=result.downloaded_file_path,
+        downloaded_file_name=result.downloaded_file_name,
+        downloaded_mime_type=result.downloaded_mime_type,
+        downloaded_size_bytes=result.downloaded_size_bytes,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="report_download_complete",
+            module=logger.name,
+            fields={
+                "normalized_url": response.normalized_url,
+                "route_kind": response.route_kind,
+                "outcome": response.outcome,
+                "used_memory_route": response.used_memory_route,
+                "downloaded_file_path": response.downloaded_file_path or "",
+            },
+        )
+    )
+    return response
+
+
+def _run_download_attempt(
+    *,
+    request: ReportDownloadOrchestratorRequest,
+    ctx: RunContext,
+    policy: RetryPolicy,
+    dependencies: ReportDownloadDependencies,
+    route_hint: str | None,
+    route_kind_hint: str | None,
+    step_name: str,
+) -> BrowserReportDownloadResult:
+    service_request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url=request.url,
+        settings=request.settings,
+        delivery_email=request.delivery_email,
+        route_hint=route_hint,
+        route_kind_hint=route_kind_hint,
+    )
+    return run_with_retry(
+        step_name=step_name,
+        operation=lambda: dependencies.download_report_with_browser_use(
+            service_request, ctx
+        ),
+        ctx=ctx,
+        logger=logger,
+        module_name=logger.name,
+        policy=policy,
+        retry_event="report_download_retry",
+        failure_event="report_download_attempt_failed",
+        sleep_fn=dependencies.sleep_fn,
+    )

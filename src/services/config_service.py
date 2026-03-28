@@ -19,6 +19,13 @@ from src.contracts.config import (
     ConfigLoadRequest,
     IngestSettingsBuildRequest,
 )
+from src.contracts.browser_download import (
+    BrowserDownloadIdentity,
+    BrowserDownloadIdentityField,
+    BrowserDownloadIdentityFieldUpsertRequest,
+    BrowserDownloadIdentityFieldUpsertResponse,
+    BrowserDownloadSettings,
+)
 from src.contracts.ingest import IngestSettings
 from src.contracts.publish import PublishSettings
 from src.contracts.run_context import RunContext
@@ -37,6 +44,9 @@ logger = logging.getLogger("market_lense.config_service")
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "config" / "app.yaml"
 DEFAULT_HTML_TAG_ACRONYMS_PATH = (
     Path(__file__).resolve().parents[1] / "config" / "html-tag-acronyms.yaml"
+)
+DEFAULT_BROWSER_DOWNLOAD_IDENTITY_PATH = (
+    Path(__file__).resolve().parents[1] / "config" / "browser_download_identity.yaml"
 )
 
 
@@ -118,6 +128,116 @@ def _resolve_optional_path(raw_value: Any, *, base_path: Path) -> str:
     if not candidate.is_absolute():
         candidate = (base_path / candidate).resolve()
     return str(candidate)
+
+
+def _resolve_runtime_base_path(config_path: Path) -> Path:
+    normalized = config_path.resolve()
+    if normalized.parent.name == "config" and normalized.parent.parent.name == "src":
+        return normalized.parent.parent.parent
+    return normalized.parent
+
+
+def _load_yaml_mapping(path: str, *, label: str) -> dict[str, Any]:
+    cfg_path = Path(path)
+    if not cfg_path.exists():
+        raise RuntimeError(f"{label} YAML not found: {path}")
+    try:
+        payload = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError as exc:
+        raise RuntimeError(f"{label} YAML invalid: {path}") from exc
+    if not isinstance(payload, dict):
+        raise RuntimeError(f"{label} YAML must be a mapping: {path}")
+    return payload
+
+
+def _normalize_browser_download_identity_key(raw_value: Any) -> str:
+    token = str(raw_value or "").strip().lower()
+    characters: list[str] = []
+    previous_was_separator = False
+    for char in token:
+        if char.isalnum():
+            characters.append(char)
+            previous_was_separator = False
+            continue
+        if previous_was_separator:
+            continue
+        characters.append("_")
+        previous_was_separator = True
+    normalized = "".join(characters).strip("_")
+    return normalized
+
+
+def _normalize_browser_download_identity_aliases(raw_value: Any) -> list[str]:
+    if not isinstance(raw_value, list):
+        return []
+    aliases: list[str] = []
+    seen: set[str] = set()
+    for item in raw_value:
+        token = str(item or "").strip()
+        if not token:
+            continue
+        normalized = token.casefold()
+        if normalized in seen:
+            continue
+        aliases.append(token)
+        seen.add(normalized)
+    return aliases
+
+
+def _load_browser_download_identity(path: str) -> BrowserDownloadIdentity:
+    payload = _load_yaml_mapping(path, label="Browser download identity")
+    raw_fields = payload.get("fields")
+    if not isinstance(raw_fields, list) or not raw_fields:
+        raise RuntimeError(
+            f"Browser download identity YAML must contain a non-empty 'fields' list: {path}"
+        )
+    fields: list[BrowserDownloadIdentityField] = []
+    seen_keys: set[str] = set()
+    for entry in raw_fields:
+        if not isinstance(entry, dict):
+            raise RuntimeError(
+                f"Browser download identity fields must be mappings: {path}"
+            )
+        key = _normalize_browser_download_identity_key(entry.get("key"))
+        label = str(entry.get("label") or "").strip()
+        if not key or not label:
+            raise RuntimeError(
+                f"Browser download identity fields require non-empty key and label: {path}"
+            )
+        if key in seen_keys:
+            raise RuntimeError(
+                f"Browser download identity field keys must be unique; duplicate '{key}' in {path}"
+            )
+        seen_keys.add(key)
+        raw_value = entry.get("value")
+        value = None if _is_missing(raw_value) else str(raw_value).strip()
+        fields.append(
+            BrowserDownloadIdentityField(
+                schema_version=str(entry.get("schema_version") or "1.0"),
+                key=key,
+                label=label,
+                value=value,
+                aliases=_normalize_browser_download_identity_aliases(
+                    entry.get("aliases")
+                ),
+            )
+        )
+    return BrowserDownloadIdentity(
+        schema_version=str(payload.get("schema_version") or "1.0"),
+        fields=fields,
+    )
+
+
+def _identity_field_match_tokens(field: BrowserDownloadIdentityField) -> set[str]:
+    tokens = {
+        _normalize_browser_download_identity_key(field.key),
+        _normalize_browser_download_identity_key(field.label),
+    }
+    for alias in field.aliases:
+        token = _normalize_browser_download_identity_key(alias)
+        if token:
+            tokens.add(token)
+    return {token for token in tokens if token}
 
 
 def _normalize_html_tag_acronyms(values: object) -> list[str]:
@@ -422,7 +542,9 @@ def _resolve_paths_settings(
         "state_db": state_db,
         "reports_db": reports_db,
         "category_mapping_path": paths.get("category_mappings")
-        or str(Path(__file__).resolve().parents[1] / "config" / "category-mappings.yaml"),
+        or str(
+            Path(__file__).resolve().parents[1] / "config" / "category-mappings.yaml"
+        ),
         "html_tag_acronyms_path": paths.get("html_tag_acronyms")
         or str(DEFAULT_HTML_TAG_ACRONYMS_PATH),
         "cover_style_path": paths.get("cover_styles")
@@ -1024,7 +1146,9 @@ def _resolve_drive_settings(drive_cfg: dict[str, Any]) -> dict[str, Any]:
         "drive_include_items_from_all_drives": _to_config_bool(
             drive_cfg.get("include_items_from_all_drives"), True
         ),
-        "drive_id": str(drive_id_raw).strip() if not _is_missing(drive_id_raw) else None,
+        "drive_id": str(drive_id_raw).strip()
+        if not _is_missing(drive_id_raw)
+        else None,
         "drive_list_mode": _resolve_allowed_string(
             drive_cfg.get("list_mode", "metadata"),
             default="metadata",
@@ -1169,9 +1293,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         pdf_text_sample_pages=pdf_text_settings["pdf_text_sample_pages"],
         pdf_text_ocr_enabled=pdf_text_settings["pdf_text_ocr_enabled"],
         pdf_text_ocr_model=pdf_text_settings["pdf_text_ocr_model"],
-        pdf_text_ocr_timeout_seconds=pdf_text_settings[
-            "pdf_text_ocr_timeout_seconds"
-        ],
+        pdf_text_ocr_timeout_seconds=pdf_text_settings["pdf_text_ocr_timeout_seconds"],
         pdf_text_ocr_prompt_namespace=pdf_text_settings[
             "pdf_text_ocr_prompt_namespace"
         ],
@@ -1207,9 +1329,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         openai_timeout_seconds=ingest_runtime["openai_timeout_seconds"],
         llm_retry_retries=llm_runtime["llm_retry_retries"],
         llm_retry_base_delay_seconds=llm_runtime["llm_retry_base_delay_seconds"],
-        llm_retry_backoff_step_seconds=llm_runtime[
-            "llm_retry_backoff_step_seconds"
-        ],
+        llm_retry_backoff_step_seconds=llm_runtime["llm_retry_backoff_step_seconds"],
         llm_retry_jitter_seconds=llm_runtime["llm_retry_jitter_seconds"],
         llm_circuit_breaker_failure_threshold=llm_runtime[
             "llm_circuit_breaker_failure_threshold"
@@ -1408,6 +1528,7 @@ def load_publish_settings(
     )
     data = _load_config(request.path or str(CONFIG_PATH))
     config_path = Path(request.path or str(CONFIG_PATH)).resolve()
+    runtime_base_path = _resolve_runtime_base_path(config_path)
     resolver = _ConfigResolver()
     need = resolver.need
     missing = resolver.missing
@@ -1527,3 +1648,272 @@ def load_publish_settings(
         )
     )
     return settings
+
+
+def load_browser_download_settings(
+    request: ConfigLoadRequest, ctx: RunContext
+) -> BrowserDownloadSettings:
+    load_dotenv(find_dotenv(filename=".env", usecwd=True))
+
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_download_config_load_start",
+            module=logger.name,
+            fields={"path": request.path or str(CONFIG_PATH)},
+        )
+    )
+    data = _load_config(request.path or str(CONFIG_PATH))
+    config_path = Path(request.path or str(CONFIG_PATH)).resolve()
+    runtime_base_path = _resolve_runtime_base_path(config_path)
+    resolver = _ConfigResolver()
+
+    paths = data.get("paths", {}) or {}
+    ingest = data.get("ingest", {}) or {}
+    browser_download = data.get("browser_download", {}) or {}
+    retry_cfg = browser_download.get("retry", {}) or {}
+
+    output_root = (
+        browser_download.get("output_dir")
+        or _env_value("BROWSER_DOWNLOAD_OUTPUT_DIR")
+        or str(Path(paths.get("output_dir") or "./out") / "browser_downloads")
+    )
+    output_dir = _resolve_optional_path(output_root, base_path=runtime_base_path)
+    if _is_missing(output_dir):
+        resolver.missing.append(
+            "browser_download.output_dir|env:BROWSER_DOWNLOAD_OUTPUT_DIR"
+        )
+    state_db = _resolve_optional_path(
+        paths.get("state_db") or _env_value("STATE_DB"),
+        base_path=runtime_base_path,
+    )
+    if _is_missing(state_db):
+        resolver.missing.append("paths.state_db|env:STATE_DB")
+    identity_config_path = _resolve_optional_path(
+        browser_download.get("identity_config_path")
+        or _env_value("BROWSER_DOWNLOAD_IDENTITY_CONFIG_PATH")
+        or DEFAULT_BROWSER_DOWNLOAD_IDENTITY_PATH.name,
+        base_path=config_path.parent,
+    )
+    if _is_missing(identity_config_path):
+        resolver.missing.append(
+            "browser_download.identity_config_path|env:BROWSER_DOWNLOAD_IDENTITY_CONFIG_PATH"
+        )
+
+    api_key = _env_value("OPENROUTER_API_KEY")
+    if _is_missing(api_key):
+        resolver.missing.append("env:OPENROUTER_API_KEY")
+
+    http_referer = _env_value("OPENROUTER_HTTP_REFERER")
+    if _is_missing(http_referer):
+        http_referer = None
+
+    model = str(
+        browser_download.get("model")
+        or _env_value("BROWSER_DOWNLOAD_MODEL")
+        or "openai/gpt-5-mini"
+        or ""
+    ).strip()
+    if not model:
+        resolver.missing.append("browser_download.model|env:BROWSER_DOWNLOAD_MODEL")
+
+    if resolver.missing:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_download_config_load_failed",
+                module=logger.name,
+                fields={"missing": resolver.missing},
+            )
+        )
+        raise RuntimeError(
+            f"Missing required config/env values: {', '.join(resolver.missing)}"
+        )
+
+    identity_profile = _load_browser_download_identity(identity_config_path)
+
+    settings = BrowserDownloadSettings(
+        schema_version=str(data.get("schema_version", "1.0")),
+        openrouter_api_key=api_key,
+        model=model,
+        temperature=_to_float(
+            browser_download.get("temperature")
+            if not _is_missing(browser_download.get("temperature"))
+            else _env_value("BROWSER_DOWNLOAD_TEMPERATURE"),
+            0.0,
+        ),
+        timeout_seconds=max(
+            _to_float(
+                browser_download.get("timeout_seconds")
+                if not _is_missing(browser_download.get("timeout_seconds"))
+                else _env_value("BROWSER_DOWNLOAD_TIMEOUT_SECONDS"),
+                180.0,
+            ),
+            1.0,
+        ),
+        max_steps=max(
+            _to_int(
+                browser_download.get("max_steps")
+                if not _is_missing(browser_download.get("max_steps"))
+                else _env_value("BROWSER_DOWNLOAD_MAX_STEPS"),
+                30,
+            ),
+            1,
+        ),
+        output_dir=output_dir,
+        state_db=state_db,
+        identity_config_path=identity_config_path,
+        identity_profile=identity_profile,
+        openrouter_http_referer=http_referer,
+        headed=_to_bool(
+            browser_download.get("headed")
+            if not _is_missing(browser_download.get("headed"))
+            else _env_value("BROWSER_DOWNLOAD_HEADED"),
+            False,
+        ),
+        retry_retries=max(
+            _to_int(
+                retry_cfg.get("retries")
+                if not _is_missing(retry_cfg.get("retries"))
+                else _env_value("BROWSER_DOWNLOAD_RETRIES"),
+                1,
+            ),
+            0,
+        ),
+        retry_base_delay_seconds=max(
+            _to_float(
+                retry_cfg.get("base_delay_seconds")
+                if not _is_missing(retry_cfg.get("base_delay_seconds"))
+                else _env_value("BROWSER_DOWNLOAD_BASE_DELAY_SECONDS"),
+                1.0,
+            ),
+            0.0,
+        ),
+        retry_backoff_step_seconds=max(
+            _to_float(
+                retry_cfg.get("backoff_step_seconds")
+                if not _is_missing(retry_cfg.get("backoff_step_seconds"))
+                else _env_value("BROWSER_DOWNLOAD_BACKOFF_STEP_SECONDS"),
+                1.0,
+            ),
+            0.0,
+        ),
+        retry_jitter_seconds=max(
+            _to_float(
+                retry_cfg.get("jitter_seconds")
+                if not _is_missing(retry_cfg.get("jitter_seconds"))
+                else _env_value("BROWSER_DOWNLOAD_JITTER_SECONDS"),
+                0.25,
+            ),
+            0.0,
+        ),
+    )
+
+    Path(settings.output_dir).mkdir(parents=True, exist_ok=True)
+    Path(settings.state_db).parent.mkdir(parents=True, exist_ok=True)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_download_config_load_complete",
+            module=logger.name,
+            fields={
+                "output_dir": settings.output_dir,
+                "state_db": settings.state_db,
+                "identity_config_path": settings.identity_config_path,
+                "identity_field_count": len(settings.identity_profile.fields),
+                "model": settings.model,
+                "temperature": settings.temperature,
+                "timeout_seconds": settings.timeout_seconds,
+                "max_steps": settings.max_steps,
+                "headed": settings.headed,
+                "retry_retries": settings.retry_retries,
+                "retry_base_delay_seconds": settings.retry_base_delay_seconds,
+                "retry_backoff_step_seconds": settings.retry_backoff_step_seconds,
+                "retry_jitter_seconds": settings.retry_jitter_seconds,
+            },
+        )
+    )
+    return settings
+
+
+def upsert_browser_download_identity_fields(
+    request: BrowserDownloadIdentityFieldUpsertRequest,
+    ctx: RunContext,
+) -> BrowserDownloadIdentityFieldUpsertResponse:
+    identity_path = Path(request.path).expanduser().resolve()
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_download_identity_upsert_start",
+            module=logger.name,
+            fields={
+                "path": str(identity_path),
+                "encountered_form_fields": request.encountered_form_fields,
+            },
+        )
+    )
+    identity_profile = _load_browser_download_identity(str(identity_path))
+    existing_tokens: set[str] = set()
+    for field in identity_profile.fields:
+        existing_tokens.update(_identity_field_match_tokens(field))
+
+    added_fields: list[BrowserDownloadIdentityField] = []
+    seen_new_tokens: set[str] = set()
+    for raw_label in request.encountered_form_fields:
+        label = str(raw_label or "").strip()
+        normalized = _normalize_browser_download_identity_key(label)
+        if not label or not normalized:
+            continue
+        if normalized in existing_tokens or normalized in seen_new_tokens:
+            continue
+        seen_new_tokens.add(normalized)
+        added_fields.append(
+            BrowserDownloadIdentityField(
+                schema_version="1.0",
+                key=normalized,
+                label=label,
+                value=None,
+                aliases=[],
+            )
+        )
+
+    if added_fields:
+        payload = {
+            "schema_version": identity_profile.schema_version,
+            "fields": [
+                {
+                    "schema_version": field.schema_version,
+                    "key": field.key,
+                    "label": field.label,
+                    "value": field.value,
+                    "aliases": field.aliases,
+                }
+                for field in [*identity_profile.fields, *added_fields]
+            ],
+        }
+        identity_path.parent.mkdir(parents=True, exist_ok=True)
+        identity_path.write_text(
+            yaml.safe_dump(payload, sort_keys=False, allow_unicode=False),
+            encoding="utf-8",
+        )
+
+    response = BrowserDownloadIdentityFieldUpsertResponse(
+        schema_version="1.0",
+        path=str(identity_path),
+        added_field_keys=[field.key for field in added_fields],
+        total_fields=len(identity_profile.fields) + len(added_fields),
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_download_identity_upsert_complete",
+            module=logger.name,
+            fields=asdict(response),
+        )
+    )
+    return response

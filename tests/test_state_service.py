@@ -14,6 +14,8 @@ from src.contracts.state import (
     StatePublishedListRequest,
     StatePublishRecordRequest,
     StateRecordRequest,
+    StateReportDownloadRouteGetRequest,
+    StateReportDownloadRouteRecordRequest,
 )
 from src.services.state_service import (
     already_processed_batch,
@@ -21,10 +23,12 @@ from src.services.state_service import (
     check_state_db_access,
     get,
     get_ingest_cursor,
+    get_report_download_route,
     list_processed,
     list_published,
     record,
     record_publish,
+    record_report_download_route,
     set_ingest_cursor,
 )
 
@@ -317,3 +321,36 @@ def test_list_processed_and_published_rows(tmp_path: Path) -> None:
     assert published.rows[0].file_id == "file-1"
     assert published.rows[0].wp_post_id == 123
     assert published.rows[0].post_type == "ml_report"
+
+
+def test_report_download_route_roundtrip(tmp_path: Path) -> None:
+    db_path = tmp_path / "state.sqlite"
+    record_report_download_route(
+        StateReportDownloadRouteRecordRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            normalized_url="https://example.com/report",
+            source_url="https://example.com/report",
+            route_kind="pdf_download",
+            route_summary="Click the top download button.",
+            outcome="downloaded",
+            last_downloaded_file_path=str(tmp_path / "report.pdf"),
+            last_final_page_url="https://example.com/report/final",
+        ),
+        _ctx(),
+    )
+
+    response = get_report_download_route(
+        StateReportDownloadRouteGetRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            normalized_url="https://example.com/report",
+        ),
+        _ctx(),
+    )
+
+    assert response is not None
+    assert response.route_kind == "pdf_download"
+    assert response.route_summary == "Click the top download button."
+    assert response.outcome == "downloaded"
+    assert response.last_final_page_url == "https://example.com/report/final"

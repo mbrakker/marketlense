@@ -3,6 +3,12 @@ import types
 import unittest
 from unittest.mock import patch
 
+from src.contracts.browser_download import (
+    BrowserDownloadIdentity,
+    BrowserDownloadIdentityField,
+    BrowserDownloadSettings,
+    ReportDownloadOrchestratorResult,
+)
 from src.contracts.config import AppSettings
 from src.contracts.costs import CostReportResponse, CostTotals, StepCostTotal
 from src.contracts.ingest import IngestOutcome, IngestSettings
@@ -172,6 +178,74 @@ class TestCli(unittest.TestCase):
         self.assertEqual("2026-01-01", request.date_utc)
         self.assertEqual(1, request.top_n)
         self.assertIsNone(request.run_id)
+
+    def test_download_report_wires_settings_and_orchestrator(self) -> None:
+        import src.cli as cli
+
+        settings = BrowserDownloadSettings(
+            schema_version="1.0",
+            openrouter_api_key="key",
+            model="openai/gpt-5-mini",
+            temperature=0.0,
+            timeout_seconds=45.0,
+            max_steps=12,
+            output_dir="./out/browser_downloads",
+            state_db="./state/index.sqlite",
+            identity_config_path="./src/config/browser_download_identity.yaml",
+            identity_profile=BrowserDownloadIdentity(
+                schema_version="1.0",
+                fields=[
+                    BrowserDownloadIdentityField(
+                        schema_version="1.0",
+                        key="work_email",
+                        label="Work email",
+                        value="ops@example.com",
+                        aliases=["email"],
+                    )
+                ],
+            ),
+            openrouter_http_referer="https://marketlense.local",
+            headed=False,
+            retry_retries=1,
+            retry_base_delay_seconds=1.0,
+            retry_backoff_step_seconds=0.0,
+            retry_jitter_seconds=0.0,
+        )
+        result = ReportDownloadOrchestratorResult(
+            schema_version="1.0",
+            source_url="https://example.com/report",
+            normalized_url="https://example.com/report",
+            route_kind="pdf_download",
+            outcome="downloaded",
+            route_summary="Click the report download button.",
+            final_page_url="https://example.com/report/final",
+            used_memory_route=False,
+            encountered_form_fields=["Email", "Business"],
+            identity_fields_added=["business"],
+            downloaded_file_path="./out/browser_downloads/report.pdf",
+            downloaded_file_name="report.pdf",
+            downloaded_mime_type="application/pdf",
+            downloaded_size_bytes=128,
+        )
+
+        with patch.object(
+            cli, "load_browser_download_settings", return_value=settings
+        ) as load_settings_mock:
+            with patch.object(
+                cli, "run_report_download", return_value=result
+            ) as run_download_mock:
+                with patch.object(cli.console, "print"):
+                    cli.download_report(
+                        url="https://example.com/report",
+                        delivery_email=None,
+                    )
+
+        load_settings_mock.assert_called_once()
+        run_download_mock.assert_called_once()
+        request = run_download_mock.call_args.args[0]
+        self.assertEqual("https://example.com/report", request.url)
+        self.assertEqual("./state/index.sqlite", request.state_db)
+        self.assertEqual("openai/gpt-5-mini", request.settings.model)
 
 
 if __name__ == "__main__":

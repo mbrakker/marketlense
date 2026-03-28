@@ -9,10 +9,12 @@ from rich import box
 
 from src.utils.errors import AppError
 from src.contracts.costs import CostReportRequest, CostReportingRequest
+from src.contracts.browser_download import ReportDownloadOrchestratorRequest
 from src.contracts.categories import RecategorizeRequest
 from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
 from src.contracts.cover_images import CoverImageOrchestratorRequest
 from src.contracts.logging import LoggingSetupRequest
+from src.orchestrators.report_download_orchestrator import run_report_download
 from src.orchestrators.cost_reporting_orchestrator import run_cost_reporting
 from src.orchestrators.ingest_orchestrator import run_ingest
 from src.orchestrators.candidate_extraction_orchestrator import run_candidate_extraction
@@ -22,6 +24,7 @@ from src.orchestrators.recategorize_orchestrator import run_recategorize
 from src.orchestrators.wp_category_update_orchestrator import run_update_wp_categories
 from src.services.config_service import (
     build_ingest_settings,
+    load_browser_download_settings,
     load_settings,
     load_publish_settings,
 )
@@ -430,6 +433,65 @@ def cost_report(
             },
         )
     )
+
+
+@cli_app.command("download-report")
+def download_report(
+    url: str = typer.Argument(..., help="Absolute report landing-page URL"),
+    delivery_email: str = typer.Option(
+        None,
+        help="Optional email address used when the report is gated behind an email form",
+    ),
+):
+    ctx = new_run_context(task_id="cli_download_report")
+    setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="cli_download_report_start",
+            module=logger.name,
+            fields={
+                "url": url,
+                "has_delivery_email": bool(delivery_email),
+            },
+        )
+    )
+    settings = load_browser_download_settings(
+        ConfigLoadRequest(schema_version="1.0", path=""),
+        ctx,
+    )
+    result = run_report_download(
+        ReportDownloadOrchestratorRequest(
+            schema_version="1.0",
+            url=url,
+            settings=settings,
+            state_db=settings.state_db,
+            delivery_email=delivery_email,
+        ),
+        ctx=ctx,
+    )
+
+    table = Table(title="Report Download", box=box.SIMPLE_HEAVY)
+    table.add_column("Field")
+    table.add_column("Value")
+    table.add_row("URL", result.source_url)
+    table.add_row("Normalized URL", result.normalized_url)
+    table.add_row("Route", result.route_kind)
+    table.add_row("Outcome", result.outcome)
+    table.add_row("Used memory route", "yes" if result.used_memory_route else "no")
+    table.add_row("Final page", result.final_page_url)
+    table.add_row(
+        "Encountered form fields",
+        ", ".join(result.encountered_form_fields),
+    )
+    table.add_row(
+        "Identity fields added",
+        ", ".join(result.identity_fields_added),
+    )
+    table.add_row("File", result.downloaded_file_path or "")
+    table.add_row("Summary", result.route_summary)
+    console.print(table)
 
 
 @cli_app.callback(invoke_without_command=True)

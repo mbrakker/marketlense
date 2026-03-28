@@ -1,0 +1,99 @@
+schema_version: "1.0"
+fields:
+  - schema_version: "1.0"
+    key: full_name
+    label: Full name
+    value: Dustin Von Richman
+    aliases:
+      - "name"
+      - "full name"
+  - schema_version: "1.0"
+    key: first_name
+    label: First name
+    value: Dustin
+    aliases:
+      - "first name"
+      - "given name"
+  - schema_version: "1.0"
+    key: last_name
+    label: Last name
+    value: Von Richman
+    aliases:
+      - "last name"
+      - "surname"
+      - "family name"
+  - schema_version: "1.0"
+    key: work_email
+    label: Work email
+    value: dustin.von.richman@proton.me
+    aliases:
+      - "email"
+      - "email address"
+      - "business email"
+      - "work email"
+  - schema_version: "1.0"
+    key: company
+    label: Company
+    value: Secret
+    aliases:
+      - "company"
+      - "organization"
+      - "business"
+      - "employer"
+  - schema_version: "1.0"
+    key: job_title
+    label: Job title
+    value: Researcher
+    aliases:
+      - "title"
+      - "role"
+      - "title/role"
+      - "job title"
+  - schema_version: "1.0"
+    key: phone
+    label: Phone
+    value: 0378378394
+    aliases:
+      - "phone"
+      - "phone number"
+      - "mobile"
+      - "telephone"
+  - schema_version: "1.0"
+    key: country
+    label: Country
+    value: Austria
+    aliases:
+      - "country"
+      - "country/region"
+  - schema_version: "1.0"
+    key: city
+    label: City
+    value: Vienna
+    aliases:
+      - "city"
+      - "town"
+  - schema_version: "1.0"
+    key: state_region
+    label: State or region
+    value: null
+    aliases:
+      - "state"
+      - "region"
+      - "state/region"
+  - schema_version: "1.0"
+    key: website_url
+    label: Website URL
+    value: null
+    aliases:
+      - "website"
+      - "site"
+      - "company website"
+      - "website url"
+  - schema_version: "1.0"
+    key: linkedin_url
+    label: LinkedIn URL
+    value: null
+    aliases:
+      - "linkedin"
+      - "linkedin profile"
+      - "linkedin url"

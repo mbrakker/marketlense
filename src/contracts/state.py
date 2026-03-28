@@ -380,3 +380,84 @@ class StatePublishedListResponse:
     rows: List[StatePublishedRow] = field(
         metadata={"doc": "Published-state rows ordered by recency."}
     )
+
+
+@dataclass(frozen=True)
+class StateReportDownloadRouteGetRequest:
+    schema_version: str = field(
+        metadata={"doc": "Report-download route get request schema version."}
+    )
+    state_db: str = field(metadata={"doc": "SQLite path for processing state."})
+    normalized_url: str = field(
+        metadata={"doc": "Normalized URL used as the route-memory key."}
+    )
+
+
+@dataclass(frozen=True)
+class StateReportDownloadRouteRecordRequest:
+    schema_version: str = field(
+        metadata={"doc": "Report-download route record request schema version."}
+    )
+    state_db: str = field(metadata={"doc": "SQLite path for processing state."})
+    normalized_url: str = field(
+        metadata={"doc": "Normalized URL used as the route-memory key."}
+    )
+    source_url: str = field(
+        metadata={"doc": "Last source URL observed for the normalized route key."}
+    )
+    route_kind: str = field(
+        metadata={"doc": "Detected route kind: `pdf_download` or `email_delivery`."}
+    )
+    route_summary: str = field(
+        metadata={"doc": "Remembered summary of the best-known route for this URL."}
+    )
+    outcome: str = field(
+        metadata={
+            "doc": "Observed outcome: `downloaded`, `email_requested`, or `email_required`."
+        }
+    )
+    last_downloaded_file_path: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Last downloaded local file path for this route, if any."},
+    )
+    last_final_page_url: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Last final browser URL observed for this route, if any."},
+    )
+
+
+@dataclass(frozen=True)
+class StateReportDownloadRouteResponse:
+    schema_version: str = field(
+        metadata={"doc": "Report-download route response schema version."}
+    )
+    normalized_url: str = field(
+        metadata={"doc": "Normalized URL used as the route-memory key."}
+    )
+    source_url: str = field(
+        metadata={"doc": "Last source URL observed for the normalized route key."}
+    )
+    route_kind: str = field(
+        metadata={"doc": "Detected route kind: `pdf_download` or `email_delivery`."}
+    )
+    route_summary: str = field(
+        metadata={"doc": "Remembered summary of the best-known route for this URL."}
+    )
+    outcome: str = field(
+        metadata={
+            "doc": "Last observed outcome: `downloaded`, `email_requested`, or `email_required`."
+        }
+    )
+    updated_at: int = field(
+        metadata={
+            "doc": "Unix timestamp when the route-memory record was last updated."
+        }
+    )
+    last_downloaded_file_path: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Last downloaded local file path for this route, if any."},
+    )
+    last_final_page_url: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Last final browser URL observed for this route, if any."},
+    )
