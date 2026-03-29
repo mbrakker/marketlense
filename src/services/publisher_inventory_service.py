@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import sys
 from dataclasses import asdict
 from hashlib import sha1
 from html.parser import HTMLParser
@@ -177,9 +178,12 @@ def discover_publisher_inventory(
                 "timeout_seconds": request.settings.timeout_seconds,
                 "max_steps": request.settings.max_steps,
                 "headed": request.settings.headed,
+                "force_browser": request.settings.force_browser,
             },
         )
     )
+    if request.settings.force_browser:
+        return _discover_with_browser(request, ctx, normalized_url, use_hint=bool(request.route_hint))
     hinted_route = str(request.route_kind_hint or "").strip()
     if hinted_route:
         _validate_route_kind(hinted_route)
@@ -508,6 +512,12 @@ def _discover_with_browser(
         and str(candidate.source_page_url).strip()
         and int(candidate.discovered_on_page_number) > 0
     ]
+    candidates = _supplement_browser_candidates_with_http(
+        request=request,
+        ctx=ctx,
+        pages=pages,
+        browser_candidates=candidates,
+    )
     if not pages or not candidates:
         raise AppError(
             code="publisher_inventory_browser_incomplete",
@@ -581,6 +591,133 @@ def _extract_candidates_from_html(
                 published_at_text=None,
             )
         )
+    return candidates
+
+
+def _supplement_browser_candidates_with_http(
+    *,
+    request: PublisherInventoryServiceRequest,
+    ctx: RunContext,
+    pages: list[PublisherInventoryPage],
+    browser_candidates: list[PublisherInventoryRawCandidate],
+) -> list[PublisherInventoryRawCandidate]:
+    browser_candidates_by_page: dict[str, list[PublisherInventoryRawCandidate]] = {}
+    for candidate in browser_candidates:
+        browser_candidates_by_page.setdefault(candidate.source_page_url, []).append(candidate)
+
+    supplemented_candidates: list[PublisherInventoryRawCandidate] = []
+    for page in pages:
+        page_candidates = browser_candidates_by_page.pop(page.page_url, [])
+        http_candidates = _fetch_page_candidates_for_browser_page(
+            request=request,
+            ctx=ctx,
+            page=page,
+        )
+        if http_candidates:
+            supplemented_candidates.extend(http_candidates)
+            continue
+        supplemented_candidates.extend(page_candidates)
+
+    for leftover_candidates in browser_candidates_by_page.values():
+        supplemented_candidates.extend(leftover_candidates)
+
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_inventory_browser_http_supplement_complete",
+            module=logger.name,
+            fields={
+                "page_count": len(pages),
+                "browser_candidate_count": len(browser_candidates),
+                "supplemented_candidate_count": len(supplemented_candidates),
+            },
+        )
+    )
+    return supplemented_candidates
+
+
+def _fetch_page_candidates_for_browser_page(
+    *,
+    request: PublisherInventoryServiceRequest,
+    ctx: RunContext,
+    page: PublisherInventoryPage,
+) -> list[PublisherInventoryRawCandidate]:
+    headers = {"User-Agent": "MarketLensePublisherInventory/1.0"}
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_inventory_browser_http_supplement_request",
+            module=logger.name,
+            fields={
+                "page_url": page.page_url,
+                "page_number": page.page_number,
+                "headers": headers,
+            },
+        )
+    )
+    try:
+        response = requests.get(
+            page.page_url,
+            timeout=request.settings.http_timeout_seconds,
+            headers=headers,
+        )
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="publisher_inventory_browser_http_supplement_failed",
+                module=logger.name,
+                fields={
+                    "page_url": page.page_url,
+                    "page_number": page.page_number,
+                    "error": str(exc),
+                },
+            )
+        )
+        return []
+
+    final_page_url = _validate_and_normalize_url(str(response.url or page.page_url))
+    html = response.text or ""
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_inventory_browser_http_supplement_response",
+            module=logger.name,
+            fields={
+                "page_url": page.page_url,
+                "page_number": page.page_number,
+                "final_page_url": final_page_url,
+                "status_code": response.status_code,
+                "html_length": len(html),
+            },
+        )
+    )
+    parser = _InventoryHtmlParser()
+    parser.feed(html)
+    candidates = _extract_candidates_from_html(
+        anchors=parser.anchors,
+        page_url=final_page_url,
+        page_number=page.page_number,
+        next_page_url=None,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_inventory_browser_http_supplement_extracted",
+            module=logger.name,
+            fields={
+                "page_url": page.page_url,
+                "page_number": page.page_number,
+                "candidate_count": len(candidates),
+            },
+        )
+    )
     return candidates
 
 
@@ -729,16 +866,44 @@ def _prepare_session_dir(*, root_dir: str, normalized_url: str) -> Path:
 
 def _load_browser_use_runtime(normalized_url: str) -> Any:
     os.environ.setdefault("BROWSER_USE_SETUP_LOGGING", "false")
-    try:
-        return import_module("browser_use")
-    except Exception as exc:
-        raise AppError(
-            code="browser_use_unavailable",
-            message="The local browser_use runtime is not installed in this environment",
-            cause=exc,
-            retryable=False,
-            context={"normalized_url": normalized_url},
-        ) from exc
+    vendored_root = (Path(__file__).resolve().parents[2] / "tools" / "browser-use").resolve()
+    load_errors: list[tuple[str, Exception]] = []
+    for import_mode, extra_path in (
+        ("direct", None),
+        ("vendored", vendored_root),
+    ):
+        if extra_path is not None:
+            extra_path_str = str(extra_path)
+            if extra_path_str not in sys.path:
+                sys.path.insert(0, extra_path_str)
+        try:
+            return import_module("browser_use")
+        except Exception as exc:
+            load_errors.append((import_mode, exc))
+
+    final_mode, final_error = load_errors[-1]
+    missing_dependency = (
+        final_error.name
+        if isinstance(final_error, ModuleNotFoundError)
+        else ""
+    )
+    raise AppError(
+        code="browser_use_unavailable",
+        message=(
+            "The local browser_use runtime is not available in the active Python interpreter. "
+            "Run publisher discovery from the project virtualenv or install the vendored browser-use dependencies."
+        ),
+        cause=final_error,
+        retryable=False,
+        context={
+            "normalized_url": normalized_url,
+            "current_python": sys.executable,
+            "vendored_root": str(vendored_root),
+            "attempted_import_modes": [mode for mode, _ in load_errors],
+            "final_import_mode": final_mode,
+            "missing_dependency": missing_dependency,
+        },
+    ) from final_error
 
 
 def _kill_browser(browser: Any, ctx: RunContext) -> None:

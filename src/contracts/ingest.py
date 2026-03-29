@@ -10,7 +10,7 @@ from src.contracts.docpacks import DocPackPathMap
 class IngestSettings:
     schema_version: str = field(metadata={"doc": "Settings schema version."})
     google_sa_path: str = field(
-        metadata={"doc": "Filesystem path to the Google service account JSON."}
+        metadata={"doc": "Filesystem path to the Google service account JSON when drive_auth_mode=service_account."}
     )
     gdrive_folder_id: str = field(
         metadata={"doc": "Google Drive folder ID containing source PDFs."}
@@ -39,6 +39,18 @@ class IngestSettings:
     )
     temperature: float = field(
         metadata={"doc": "Sampling temperature for report generation."}
+    )
+    drive_auth_mode: str = field(
+        default="service_account",
+        metadata={"doc": "Drive auth mode: service_account or oauth_user."},
+    )
+    google_oauth_client_path: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Optional OAuth desktop client JSON path when drive_auth_mode=oauth_user."},
+    )
+    google_oauth_token_path: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Optional OAuth authorized-user token JSON path when drive_auth_mode=oauth_user."},
     )
     taxonomy_temperature: float = field(
         default=1.0,

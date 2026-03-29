@@ -141,7 +141,7 @@ class PublisherInventorySettings:
         metadata={"doc": "SQLite reports DB path used for publisher lookups and snapshot indexing."}
     )
     google_sa_path: str = field(
-        metadata={"doc": "Filesystem path to the Google service account JSON used for Drive access."}
+        metadata={"doc": "Filesystem path to the Google service account JSON used for Drive access when drive_auth_mode=service_account."}
     )
     prompt_namespace: str = field(
         metadata={"doc": "Prompt namespace used for browser-render inventory discovery."}
@@ -152,6 +152,18 @@ class PublisherInventorySettings:
     http_timeout_seconds: float = field(
         metadata={"doc": "HTTP timeout in seconds for direct HTML fetch discovery."}
     )
+    drive_auth_mode: str = field(
+        default="service_account",
+        metadata={"doc": "Drive auth mode: service_account or oauth_user."},
+    )
+    google_oauth_client_path: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Optional OAuth desktop client JSON path when drive_auth_mode=oauth_user."},
+    )
+    google_oauth_token_path: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Optional OAuth authorized-user token JSON path when drive_auth_mode=oauth_user."},
+    )
     openrouter_http_referer: Optional[str] = field(
         default=None,
         metadata={"doc": "Optional HTTP-Referer header sent to OpenRouter."},
@@ -159,6 +171,10 @@ class PublisherInventorySettings:
     headed: bool = field(
         default=False,
         metadata={"doc": "Whether browser-render discovery should run in a visible browser."},
+    )
+    force_browser: bool = field(
+        default=False,
+        metadata={"doc": "Whether discovery must use the browser-render route instead of direct HTTP parsing."},
     )
     retry_retries: int = field(
         default=1,
@@ -338,4 +354,3 @@ class PublisherInventoryBuildResponse:
     snapshot_json: str = field(
         metadata={"doc": "Deterministic JSON serialization of the normalized snapshot."}
     )
-

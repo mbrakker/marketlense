@@ -214,6 +214,9 @@ def run_ingest_file(
                 schema_version="1.0",
                 file=file,
                 service_account_path=settings.google_sa_path,
+                auth_mode=settings.drive_auth_mode,
+                oauth_client_path=settings.google_oauth_client_path,
+                oauth_token_path=settings.google_oauth_token_path,
                 output_path=cache_path,
             )
             eof_check = None

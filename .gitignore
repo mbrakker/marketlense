@@ -38,6 +38,8 @@ Thumbs.db
 # Environment variables / secrets
 .env
 .env.*
+google_oauth_client.json
+google_oauth_token.json
 
 # Application output, caches and runtime state
 out/

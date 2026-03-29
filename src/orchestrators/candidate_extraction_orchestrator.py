@@ -122,7 +122,12 @@ def _download_if_needed(
         )
     )
     dl_req = DriveDownloadRequest(
-        schema_version="1.0", file=file, service_account_path=settings.google_sa_path
+        schema_version="1.0",
+        file=file,
+        service_account_path=settings.google_sa_path,
+        auth_mode=settings.drive_auth_mode,
+        oauth_client_path=settings.google_oauth_client_path,
+        oauth_token_path=settings.google_oauth_token_path,
     )
     dl_resp = _run_step_with_retry(
         "download_pdf",
@@ -267,6 +272,9 @@ def run_candidate_extraction(
         schema_version="1.0",
         folder_id=folder_id or settings.gdrive_folder_id,
         service_account_path=settings.google_sa_path,
+        auth_mode=settings.drive_auth_mode,
+        oauth_client_path=settings.google_oauth_client_path,
+        oauth_token_path=settings.google_oauth_token_path,
         page_size=min(max_n, 1000) if limit is not None else None,
         order_by="modifiedTime desc" if limit is not None else None,
         list_mode="full",

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import pytest
 
 from src.contracts.drive import (
+    DriveOAuthAuthorizeRequest,
     DriveFolderFileListRequest,
     DriveListRequest,
     DriveUploadBytesRequest,
@@ -52,6 +53,21 @@ class _FakeDriveClient:
 
     def files(self):
         return self._files_resource
+
+
+class _FakeAuthorizedUserCredentials:
+    def __init__(self, *, valid: bool = True, expired: bool = False, refresh_token: str | None = "refresh-token"):
+        self.valid = valid
+        self.expired = expired
+        self.refresh_token = refresh_token
+        self.scopes = ["https://www.googleapis.com/auth/drive"]
+
+    def refresh(self, _request):
+        self.valid = True
+        self.expired = False
+
+    def to_json(self) -> str:
+        return '{"refresh_token":"refresh-token","client_id":"client","client_secret":"secret","scopes":["https://www.googleapis.com/auth/drive"]}'
 
 
 def _ctx() -> RunContext:
@@ -196,3 +212,75 @@ def test_upload_bytes_creates_drive_file(monkeypatch):
     assert response.file.file_id == "uploaded-file"
     assert response.file.mime_type == "application/json"
     assert fake_drive.files().created_payloads[0]["body"]["parents"] == ["root-folder"]
+
+
+def test_list_pdfs_uses_oauth_user_credentials(monkeypatch, tmp_path):
+    responses = {
+        "'root-folder' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false": {
+            "files": [],
+            "nextPageToken": None,
+        },
+        "'root-folder' in parents and mimeType='application/pdf' and trashed=false": {
+            "files": [{"id": "root-pdf", "name": "Root.pdf", "modifiedTime": "2025-01-01T00:00:00Z", "md5Checksum": "aaa"}],
+            "nextPageToken": None,
+        },
+    }
+    fake_drive = _FakeDriveClient(responses)
+    token_path = tmp_path / "token.json"
+    token_path.write_text("{}", encoding="utf-8")
+
+    monkeypatch.setattr(
+        drive_service.AuthorizedUserCredentials,
+        "from_authorized_user_file",
+        staticmethod(lambda _path, scopes: _FakeAuthorizedUserCredentials()),
+    )
+    monkeypatch.setattr(drive_service, "build", lambda *_args, **_kwargs: fake_drive)
+    drive_service._DRIVE_CLIENTS = {}
+
+    files = list(
+        drive_service.list_pdfs(
+            DriveListRequest(
+                schema_version="1.0",
+                folder_id="root-folder",
+                service_account_path="",
+                auth_mode="oauth_user",
+                oauth_token_path=str(token_path),
+                list_mode="full",
+            ),
+            _ctx(),
+        )
+    )
+
+    assert [f.file_id for f in files] == ["root-pdf"]
+
+
+def test_authorize_oauth_user_writes_token(monkeypatch, tmp_path):
+    client_secret_path = tmp_path / "client.json"
+    token_output_path = tmp_path / "token.json"
+    client_secret_path.write_text("{}", encoding="utf-8")
+
+    class _FakeFlow:
+        @staticmethod
+        def from_client_secrets_file(_path, _scopes):
+            class _Runner:
+                def run_local_server(self, port, open_browser):
+                    assert port == 0
+                    assert open_browser is True
+                    return _FakeAuthorizedUserCredentials()
+
+            return _Runner()
+
+    monkeypatch.setattr(drive_service, "InstalledAppFlow", _FakeFlow)
+
+    response = drive_service.authorize_oauth_user(
+        DriveOAuthAuthorizeRequest(
+            schema_version="1.0",
+            client_secret_path=str(client_secret_path),
+            token_output_path=str(token_output_path),
+        ),
+        _ctx(),
+    )
+
+    assert token_output_path.exists()
+    assert response.token_output_path == str(token_output_path)
+    assert response.refresh_token_present is True

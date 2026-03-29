@@ -15,6 +15,9 @@ ingest:
   google_sa_path: "./sa.json"
   gdrive_folder_id: "11eruy9ojkd6HdOXK_Uwqvq1TWEKiINTW"
   drive:
+    auth_mode: "oauth_user"
+    oauth_client_path: "./google_oauth_client.json"
+    oauth_token_path: "./google_oauth_token.json"
     supports_all_drives: true
     include_items_from_all_drives: true
     drive_id: ""
@@ -157,6 +160,7 @@ publisher_discovery:
   pagination_max_pages: 10
   http_timeout_seconds: 30
   headed: true
+  force_browser: true
   retry:
     retries: 1
     base_delay_seconds: 1.0

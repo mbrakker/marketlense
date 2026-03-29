@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 
 import typer
 from rich.console import Console
@@ -13,6 +14,7 @@ from src.contracts.browser_download import ReportDownloadOrchestratorRequest
 from src.contracts.categories import RecategorizeRequest
 from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
 from src.contracts.cover_images import CoverImageOrchestratorRequest
+from src.contracts.drive import DriveOAuthAuthorizeRequest
 from src.contracts.logging import LoggingSetupRequest
 from src.contracts.publisher_inventory import PublisherInventoryDiscoveryRequest
 from src.contracts.publisher_profiles import PublisherSyncRequest
@@ -35,6 +37,7 @@ from src.services.config_service import (
     load_settings,
     load_publish_settings,
 )
+from src.services.drive_service import authorize_oauth_user
 from src.services.logging_service import setup_logging
 from src.utils.logging import log_event, new_run_context
 
@@ -544,6 +547,55 @@ def discover_publisher_inventory(
             item.canonical_url,
         )
     console.print(diff_table)
+
+
+@cli_app.command("drive-oauth-login")
+def drive_oauth_login(
+    client_json: str = typer.Option(
+        "",
+        help="Path to the Google OAuth desktop client JSON",
+    ),
+    token_json: str = typer.Option(
+        "",
+        help="Path where the authorized-user token JSON should be written",
+    ),
+    open_browser: bool = typer.Option(
+        True,
+        "--open-browser/--no-browser",
+        help="Open the system browser for the OAuth consent flow",
+    ),
+    port: int = typer.Option(
+        0,
+        help="Local loopback port for the OAuth callback server; 0 picks a free port",
+    ),
+):
+    ctx = new_run_context(task_id="cli_drive_oauth_login")
+    setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
+    resolved_client_json = client_json.strip() or os.getenv("GOOGLE_OAUTH_CLIENT_JSON", "").strip()
+    resolved_token_json = token_json.strip() or os.getenv("GOOGLE_OAUTH_TOKEN_JSON", "").strip()
+    if not resolved_client_json:
+        console.print("[red]Missing OAuth client JSON path. Pass --client-json or set GOOGLE_OAUTH_CLIENT_JSON.[/red]")
+        raise typer.Exit(code=1)
+    if not resolved_token_json:
+        console.print("[red]Missing OAuth token output path. Pass --token-json or set GOOGLE_OAUTH_TOKEN_JSON.[/red]")
+        raise typer.Exit(code=1)
+    result = authorize_oauth_user(
+        DriveOAuthAuthorizeRequest(
+            schema_version="1.0",
+            client_secret_path=resolved_client_json,
+            token_output_path=resolved_token_json,
+            open_browser=open_browser,
+            port=port,
+        ),
+        ctx,
+    )
+    table = Table(title="Drive OAuth Login", box=box.SIMPLE_HEAVY)
+    table.add_column("Field")
+    table.add_column("Value")
+    table.add_row("Token path", result.token_output_path)
+    table.add_row("Scopes", ", ".join(result.scopes))
+    table.add_row("Refresh token", "yes" if result.refresh_token_present else "no")
+    console.print(table)
 
 
 @cli_app.command("sync-publishers")

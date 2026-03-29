@@ -749,6 +749,7 @@ class TestConfigService(unittest.TestCase):
                 "pagination_max_pages": 7,
                 "http_timeout_seconds": 22,
                 "prompt_namespace": "publisher_inventory/discovery",
+                "force_browser": True,
             }
             Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
 
@@ -768,6 +769,7 @@ class TestConfigService(unittest.TestCase):
         self.assertEqual(7, settings.pagination_max_pages)
         self.assertEqual(22, settings.http_timeout_seconds)
         self.assertTrue(settings.headed)
+        self.assertTrue(settings.force_browser)
         self.assertEqual(2, settings.retry_retries)
         self.assertEqual(
             Path(tmp_dir, "out", "browser_downloads").resolve(),
@@ -780,6 +782,72 @@ class TestConfigService(unittest.TestCase):
         self.assertEqual(
             Path(tmp_dir, "sa.json").resolve(),
             Path(settings.google_sa_path).resolve(),
+        )
+
+    def test_load_settings_supports_oauth_drive_auth_without_service_account(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_analysis=False)
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["ingest"].pop("google_sa_path", None)
+            cfg_data["ingest"]["drive"] = {
+                "auth_mode": "oauth_user",
+                "oauth_client_path": str(Path(tmp_dir) / "oauth-client.json"),
+                "oauth_token_path": str(Path(tmp_dir) / "oauth-token.json"),
+            }
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
+
+            with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
+                settings = load_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
+                )
+
+        self.assertEqual("oauth_user", settings.drive_auth_mode)
+        self.assertIsNone(settings.google_sa_path or None)
+        self.assertEqual(
+            Path(tmp_dir, "oauth-client.json").resolve(),
+            Path(str(settings.google_oauth_client_path)).resolve(),
+        )
+        self.assertEqual(
+            Path(tmp_dir, "oauth-token.json").resolve(),
+            Path(str(settings.google_oauth_token_path)).resolve(),
+        )
+
+    def test_publisher_inventory_settings_support_oauth_drive_auth(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_publish=False)
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["ingest"].pop("google_sa_path", None)
+            cfg_data["ingest"]["drive"] = {
+                "auth_mode": "oauth_user",
+                "oauth_client_path": str(Path(tmp_dir) / "oauth-client.json"),
+                "oauth_token_path": str(Path(tmp_dir) / "oauth-token.json"),
+            }
+            cfg_data["publisher_discovery"] = {
+                "pagination_max_pages": 3,
+                "http_timeout_seconds": 15,
+            }
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
+
+            with patch.dict(os.environ, {"OPENROUTER_API_KEY": "key"}, clear=True):
+                settings = load_publisher_inventory_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
+                )
+
+        self.assertEqual("oauth_user", settings.drive_auth_mode)
+        self.assertIsNone(settings.google_sa_path or None)
+        self.assertEqual(
+            Path(tmp_dir, "oauth-client.json").resolve(),
+            Path(str(settings.google_oauth_client_path)).resolve(),
+        )
+        self.assertEqual(
+            Path(tmp_dir, "oauth-token.json").resolve(),
+            Path(str(settings.google_oauth_token_path)).resolve(),
         )
 
     def test_read_and_write_app_config_round_trip(self) -> None:

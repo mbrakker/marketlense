@@ -909,8 +909,14 @@ Required environment variables:
 - `OPENAI_API_KEY`
 - `OPENROUTER_API_KEY` for browser-download automation
 - `WP_APP_PASSWORD` (or `WP_BEARER_TOKEN` if using bearer auth)
-- `GOOGLE_SERVICE_ACCOUNT_JSON` or a configured `google_sa_path` with write access for publisher inventory snapshot uploads
+- `GOOGLE_SERVICE_ACCOUNT_JSON` when `ingest.drive.auth_mode=service_account`
+- `GOOGLE_OAUTH_CLIENT_JSON` and `GOOGLE_OAUTH_TOKEN_JSON` when `ingest.drive.auth_mode=oauth_user`
 - Optional: other provider keys (e.g., `MINERU_API_KEY`), `WP_USERNAME`/`WP_SITE_URL`/`WP_POST_TYPE` if not set in YAML.
+
+Drive auth modes:
+
+- `service_account`: suitable for Shared Drives or service-account-readable folders.
+- `oauth_user`: suitable for personal Google Drive and any workflow that must read/write as your Google user account.
 
 ---
 
@@ -1055,6 +1061,16 @@ Snapshot behavior:
 - If the normalized snapshot hash matches the previous snapshot hash, no new snapshot file is uploaded and the diff is empty.
 - Snapshot payloads record the traversed page list and each item's `discovered_on_page_number`.
 
+Run the one-time local browser consent flow for personal Google Drive OAuth and store the refreshable token JSON:
+
+```bash
+python -m src.cli drive-oauth-login --client-json ./google_oauth_client.json --token-json ./google_oauth_token.json
+```
+
+`drive-oauth-login` is routed through `src/services/drive_service.py`. It uses the standard installed-app OAuth flow, opens the local browser, and writes an authorized-user token JSON that the Drive service can later refresh headlessly.
+
+`google_oauth_client.json` and `google_oauth_token.json` are local secret material. Keep them in the repo root only for local development and do not commit them; `.gitignore` excludes both files by default.
+
 Sync publisher/source metadata from the checked-in Notion snapshot into the reports database:
 
 ```bash
@@ -1086,6 +1102,7 @@ Publisher inventory discovery is configured under `publisher_discovery` in `src/
 Supported keys:
 
 - `model`, `temperature`, `timeout_seconds`, `max_steps`, `headed`
+- `force_browser`
 - `prompt_namespace`
 - `output_dir`
 - `pagination_max_pages`
@@ -1093,6 +1110,34 @@ Supported keys:
 - `retry.retries`, `retry.base_delay_seconds`, `retry.backoff_step_seconds`, `retry.jitter_seconds`
 
 Any omitted browser settings fall back to the existing `browser_download` section so the discovery flow can share the same OpenRouter/browser defaults without duplicating mandatory configuration.
+
+When `publisher_discovery.force_browser=true`, discovery skips the direct HTTP parser and always uses the `browser-use` route. Combined with `publisher_discovery.headed=true`, this makes publisher discovery run in a visible headed browser session on every attempt.
+
+### Drive Auth Config
+
+Drive access is configured under `ingest.drive` in `src/config/app.yaml`.
+
+Supported keys:
+
+- `auth_mode`: `service_account` or `oauth_user`
+- `oauth_client_path`
+- `oauth_token_path`
+- `supports_all_drives`
+- `include_items_from_all_drives`
+- `drive_id`
+- `list_mode`
+
+For personal Google Drive, set:
+
+```yaml
+ingest:
+  drive:
+    auth_mode: "oauth_user"
+    oauth_client_path: "./google_oauth_client.json"
+    oauth_token_path: "./google_oauth_token.json"
+```
+
+In `oauth_user` mode, the Drive service reads and refreshes the authorized-user token JSON automatically for list/download/upload calls. In `service_account` mode, it continues to use `ingest.google_sa_path`.
 
 ## Streamlit Cockpit
 

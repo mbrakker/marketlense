@@ -1166,6 +1166,55 @@ def _resolve_drive_settings(drive_cfg: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _resolve_drive_auth_settings(
+    ingest: dict[str, Any],
+    drive_cfg: dict[str, Any],
+    *,
+    runtime_base_path: Path,
+    resolver: _ConfigResolver,
+) -> dict[str, Any]:
+    auth_mode = _resolve_allowed_string(
+        drive_cfg.get("auth_mode") or _env_value("GOOGLE_DRIVE_AUTH_MODE"),
+        default="service_account",
+        allowed={"service_account", "oauth_user"},
+    )
+    google_sa_path = _resolve_optional_path(
+        ingest.get("google_sa_path") or _env_value("GOOGLE_SERVICE_ACCOUNT_JSON"),
+        base_path=runtime_base_path,
+    )
+    oauth_client_path = _resolve_optional_path(
+        drive_cfg.get("oauth_client_path") or _env_value("GOOGLE_OAUTH_CLIENT_JSON"),
+        base_path=runtime_base_path,
+    )
+    oauth_token_path = _resolve_optional_path(
+        drive_cfg.get("oauth_token_path") or _env_value("GOOGLE_OAUTH_TOKEN_JSON"),
+        base_path=runtime_base_path,
+    )
+    if auth_mode == "service_account":
+        if _is_missing(google_sa_path):
+            resolver.missing.append(
+                "ingest.google_sa_path|env:GOOGLE_SERVICE_ACCOUNT_JSON"
+            )
+        oauth_client_path = ""
+        oauth_token_path = ""
+    else:
+        if _is_missing(oauth_client_path):
+            resolver.missing.append(
+                "ingest.drive.oauth_client_path|env:GOOGLE_OAUTH_CLIENT_JSON"
+            )
+        if _is_missing(oauth_token_path):
+            resolver.missing.append(
+                "ingest.drive.oauth_token_path|env:GOOGLE_OAUTH_TOKEN_JSON"
+            )
+        google_sa_path = ""
+    return {
+        "drive_auth_mode": auth_mode,
+        "google_sa_path": google_sa_path,
+        "google_oauth_client_path": oauth_client_path or None,
+        "google_oauth_token_path": oauth_token_path or None,
+    }
+
+
 def _to_ingest_settings(app_settings: AppSettings) -> IngestSettings:
     payload = asdict(app_settings)
     allowed = {field.name for field in fields(IngestSettings)}
@@ -1223,7 +1272,9 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             fields={"path": request.path or str(CONFIG_PATH)},
         )
     )
-    data = _load_config(request.path or str(CONFIG_PATH))
+    config_path = Path(request.path or str(CONFIG_PATH)).resolve()
+    runtime_base_path = _resolve_runtime_base_path(config_path)
+    data = _load_config(str(config_path))
     resolver = _ConfigResolver()
     need = resolver.need
     need_env = resolver.need_env
@@ -1266,18 +1317,22 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         html_tag_acronyms_path=paths_settings["html_tag_acronyms_path"],
     )
     drive_settings = _resolve_drive_settings(drive_cfg)
+    drive_auth_settings = _resolve_drive_auth_settings(
+        ingest,
+        drive_cfg,
+        runtime_base_path=runtime_base_path,
+        resolver=resolver,
+    )
 
     settings = AppSettings(
         schema_version=str(data.get("schema_version", "1.0")),
-        google_sa_path=need(
-            ingest,
-            "google_sa_path",
-            "ingest.google_sa_path",
-            "GOOGLE_SERVICE_ACCOUNT_JSON",
-        ),
+        google_sa_path=drive_auth_settings["google_sa_path"],
         gdrive_folder_id=need(
             ingest, "gdrive_folder_id", "ingest.gdrive_folder_id", "GDRIVE_FOLDER_ID"
         ),
+        drive_auth_mode=drive_auth_settings["drive_auth_mode"],
+        google_oauth_client_path=drive_auth_settings["google_oauth_client_path"],
+        google_oauth_token_path=drive_auth_settings["google_oauth_token_path"],
         drive_supports_all_drives=drive_settings["drive_supports_all_drives"],
         drive_include_items_from_all_drives=drive_settings[
             "drive_include_items_from_all_drives"
@@ -1885,6 +1940,7 @@ def load_publisher_inventory_settings(
 
     paths = data.get("paths", {}) or {}
     ingest = data.get("ingest", {}) or {}
+    drive_cfg = ingest.get("drive", {}) or {}
     browser_download = data.get("browser_download", {}) or {}
     browser_retry_cfg = browser_download.get("retry", {}) or {}
     publisher_discovery = data.get("publisher_discovery", {}) or {}
@@ -1913,14 +1969,12 @@ def load_publisher_inventory_settings(
     if _is_missing(reports_db):
         resolver.missing.append("paths.reports_db|env:REPORTS_DB")
 
-    google_sa_path = _resolve_optional_path(
-        ingest.get("google_sa_path") or _env_value("GOOGLE_SERVICE_ACCOUNT_JSON"),
-        base_path=runtime_base_path,
+    drive_auth_settings = _resolve_drive_auth_settings(
+        ingest,
+        drive_cfg,
+        runtime_base_path=runtime_base_path,
+        resolver=resolver,
     )
-    if _is_missing(google_sa_path):
-        resolver.missing.append(
-            "ingest.google_sa_path|env:GOOGLE_SERVICE_ACCOUNT_JSON"
-        )
 
     api_key = _env_value("OPENROUTER_API_KEY")
     if _is_missing(api_key):
@@ -1996,7 +2050,7 @@ def load_publisher_inventory_settings(
         ),
         output_dir=output_dir,
         reports_db=reports_db,
-        google_sa_path=google_sa_path,
+        google_sa_path=drive_auth_settings["google_sa_path"],
         prompt_namespace=str(
             publisher_discovery.get("prompt_namespace")
             or _env_value("PUBLISHER_DISCOVERY_PROMPT_NAMESPACE")
@@ -2020,6 +2074,9 @@ def load_publisher_inventory_settings(
             ),
             1.0,
         ),
+        drive_auth_mode=drive_auth_settings["drive_auth_mode"],
+        google_oauth_client_path=drive_auth_settings["google_oauth_client_path"],
+        google_oauth_token_path=drive_auth_settings["google_oauth_token_path"],
         openrouter_http_referer=http_referer,
         headed=_to_bool(
             publisher_discovery.get("headed")
@@ -2029,6 +2086,12 @@ def load_publisher_inventory_settings(
                 or browser_download.get("headed")
                 or _env_value("BROWSER_DOWNLOAD_HEADED")
             ),
+            False,
+        ),
+        force_browser=_to_bool(
+            publisher_discovery.get("force_browser")
+            if not _is_missing(publisher_discovery.get("force_browser"))
+            else _env_value("PUBLISHER_DISCOVERY_FORCE_BROWSER"),
             False,
         ),
         retry_retries=max(
@@ -2093,6 +2156,9 @@ def load_publisher_inventory_settings(
                 "output_dir": settings.output_dir,
                 "reports_db": settings.reports_db,
                 "google_sa_path": settings.google_sa_path,
+                "drive_auth_mode": settings.drive_auth_mode,
+                "google_oauth_client_path": settings.google_oauth_client_path or "",
+                "google_oauth_token_path": settings.google_oauth_token_path or "",
                 "model": settings.model,
                 "temperature": settings.temperature,
                 "timeout_seconds": settings.timeout_seconds,
@@ -2101,6 +2167,7 @@ def load_publisher_inventory_settings(
                 "pagination_max_pages": settings.pagination_max_pages,
                 "http_timeout_seconds": settings.http_timeout_seconds,
                 "headed": settings.headed,
+                "force_browser": settings.force_browser,
                 "retry_retries": settings.retry_retries,
                 "retry_base_delay_seconds": settings.retry_base_delay_seconds,
                 "retry_backoff_step_seconds": settings.retry_backoff_step_seconds,

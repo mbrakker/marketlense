@@ -364,6 +364,36 @@ class TestCli(unittest.TestCase):
         self.assertEqual("./state/reports.sqlite", request.reports_db)
         self.assertEqual("gpt-5-mini", request.settings.model)
 
+    def test_drive_oauth_login_wires_service(self) -> None:
+        import src.cli as cli
+
+        result = type(
+            "DriveOAuthAuthorizeResult",
+            (),
+            {
+                "token_output_path": "./google_oauth_token.json",
+                "scopes": ["https://www.googleapis.com/auth/drive"],
+                "refresh_token_present": True,
+            },
+        )()
+
+        with patch.object(
+            cli, "authorize_oauth_user", return_value=result
+        ) as authorize_mock:
+            with patch.object(cli.console, "print"):
+                cli.drive_oauth_login(
+                    client_json="./google_oauth_client.json",
+                    token_json="./google_oauth_token.json",
+                    open_browser=True,
+                    port=0,
+                )
+
+        authorize_mock.assert_called_once()
+        request = authorize_mock.call_args.args[0]
+        self.assertEqual("./google_oauth_client.json", request.client_secret_path)
+        self.assertEqual("./google_oauth_token.json", request.token_output_path)
+        self.assertTrue(request.open_browser)
+
 
 if __name__ == "__main__":
     unittest.main()
