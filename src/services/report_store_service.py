@@ -14,6 +14,9 @@ from src.contracts.report_store import (
     PublisherDownloadRouteGetRequest,
     PublisherDownloadRouteRecordRequest,
     PublisherDownloadRouteResponse,
+    PublisherInventoryStateGetRequest,
+    PublisherInventoryStateRecordRequest,
+    PublisherInventoryStateResponse,
     PublishersReplaceRequest,
     PublishersReplaceResponse,
     ReportMetadataDbAccessRequest,
@@ -90,7 +93,15 @@ CREATE TABLE IF NOT EXISTS publishers (
   download_route_outcome TEXT,
   download_route_last_downloaded_file_path TEXT,
   download_route_last_final_page_url TEXT,
-  download_route_updated_at INTEGER
+  download_route_updated_at INTEGER,
+  inventory_route_kind TEXT,
+  inventory_route_summary TEXT,
+  inventory_route_last_final_page_url TEXT,
+  inventory_route_updated_at INTEGER,
+  inventory_snapshot_drive_file_id TEXT,
+  inventory_snapshot_drive_file_name TEXT,
+  inventory_snapshot_sha256 TEXT,
+  inventory_snapshot_updated_at INTEGER
 );
 
 CREATE INDEX IF NOT EXISTS idx_publishers_name ON publishers(name);
@@ -143,6 +154,14 @@ def _ensure_publishers_schema(conn: sqlite3.Connection) -> None:
         "download_route_last_downloaded_file_path",
         "download_route_last_final_page_url",
         "download_route_updated_at",
+        "inventory_route_kind",
+        "inventory_route_summary",
+        "inventory_route_last_final_page_url",
+        "inventory_route_updated_at",
+        "inventory_snapshot_drive_file_id",
+        "inventory_snapshot_drive_file_name",
+        "inventory_snapshot_sha256",
+        "inventory_snapshot_updated_at",
     }
     current = {str(row[1]) for row in rows}
     if current == expected:
@@ -163,7 +182,15 @@ def _ensure_publishers_schema(conn: sqlite3.Connection) -> None:
           download_route_outcome TEXT,
           download_route_last_downloaded_file_path TEXT,
           download_route_last_final_page_url TEXT,
-          download_route_updated_at INTEGER
+          download_route_updated_at INTEGER,
+          inventory_route_kind TEXT,
+          inventory_route_summary TEXT,
+          inventory_route_last_final_page_url TEXT,
+          inventory_route_updated_at INTEGER,
+          inventory_snapshot_drive_file_id TEXT,
+          inventory_snapshot_drive_file_name TEXT,
+          inventory_snapshot_sha256 TEXT,
+          inventory_snapshot_updated_at INTEGER
         )
         """
     )
@@ -182,6 +209,14 @@ def _ensure_publishers_schema(conn: sqlite3.Connection) -> None:
                 "download_route_last_downloaded_file_path",
                 "download_route_last_final_page_url",
                 "download_route_updated_at",
+                "inventory_route_kind",
+                "inventory_route_summary",
+                "inventory_route_last_final_page_url",
+                "inventory_route_updated_at",
+                "inventory_snapshot_drive_file_id",
+                "inventory_snapshot_drive_file_name",
+                "inventory_snapshot_sha256",
+                "inventory_snapshot_updated_at",
             )
             if col in current
         ]
@@ -879,12 +914,39 @@ def replace_publishers(
                     download_route_outcome,
                     download_route_last_downloaded_file_path,
                     download_route_last_final_page_url,
-                    download_route_updated_at
+                    download_route_updated_at,
+                    inventory_route_kind,
+                    inventory_route_summary,
+                    inventory_route_last_final_page_url,
+                    inventory_route_updated_at,
+                    inventory_snapshot_drive_file_id,
+                    inventory_snapshot_drive_file_name,
+                    inventory_snapshot_sha256,
+                    inventory_snapshot_updated_at
                 FROM publishers
                 """
             ).fetchall()
-            preserved_by_insights_url: dict[str, tuple[Optional[str], Optional[str], Optional[str], Optional[str], Optional[str], Optional[str], Optional[int]]] = {}
-            preserved_by_name: dict[str, tuple[Optional[str], Optional[str], Optional[str], Optional[str], Optional[str], Optional[str], Optional[int]]] = {}
+            preserved_by_insights_url: dict[
+                str,
+                tuple[
+                    Optional[str],
+                    Optional[str],
+                    Optional[str],
+                    Optional[str],
+                    Optional[str],
+                    Optional[str],
+                    Optional[int],
+                    Optional[str],
+                    Optional[str],
+                    Optional[str],
+                    Optional[int],
+                    Optional[str],
+                    Optional[str],
+                    Optional[str],
+                    Optional[int],
+                ],
+            ] = {}
+            preserved_by_name = dict(preserved_by_insights_url)
             for row in preserved_rows:
                 name_key = _normalize_publisher_key(str(row[0] or ""))
                 insights_url_key = _normalize_optional_url_key(str(row[1] or ""))
@@ -896,6 +958,14 @@ def replace_publishers(
                     str(row[6] or "").strip() or None,
                     str(row[7] or "").strip() or None,
                     int(row[8]) if row[8] is not None else None,
+                    str(row[9] or "").strip() or None,
+                    str(row[10] or "").strip() or None,
+                    str(row[11] or "").strip() or None,
+                    int(row[12]) if row[12] is not None else None,
+                    str(row[13] or "").strip() or None,
+                    str(row[14] or "").strip() or None,
+                    str(row[15] or "").strip() or None,
+                    int(row[16]) if row[16] is not None else None,
                 )
                 if insights_url_key and insights_url_key not in preserved_by_insights_url:
                     preserved_by_insights_url[insights_url_key] = preserved_payload
@@ -915,7 +985,23 @@ def replace_publishers(
                     if preserved is None and name_key:
                         preserved = preserved_by_name.get(name_key)
                     if preserved is None:
-                        preserved = (None, None, None, None, None, None, None)
+                        preserved = (
+                            None,
+                            None,
+                            None,
+                            None,
+                            None,
+                            None,
+                            None,
+                            None,
+                            None,
+                            None,
+                            None,
+                            None,
+                            None,
+                            None,
+                            None,
+                        )
                     rows_with_routes.append((*row, *preserved))
                 conn.executemany(
                     """
@@ -930,9 +1016,17 @@ def replace_publishers(
                         download_route_outcome,
                         download_route_last_downloaded_file_path,
                         download_route_last_final_page_url,
-                        download_route_updated_at
+                        download_route_updated_at,
+                        inventory_route_kind,
+                        inventory_route_summary,
+                        inventory_route_last_final_page_url,
+                        inventory_route_updated_at,
+                        inventory_snapshot_drive_file_id,
+                        inventory_snapshot_drive_file_name,
+                        inventory_snapshot_sha256,
+                        inventory_snapshot_updated_at
                     )
-                    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     rows_with_routes,
                 )
@@ -1244,6 +1338,270 @@ def record_publisher_download_route(
                 "source_url": source_url,
                 "route_kind": route_kind,
                 "outcome": outcome,
+            },
+        )
+    )
+
+
+def get_publisher_inventory_state(
+    request: PublisherInventoryStateGetRequest,
+    ctx: RunContext,
+) -> Optional[PublisherInventoryStateResponse]:
+    db_path = request.db_path.strip()
+    normalized_url = request.normalized_url.strip()
+    if not db_path:
+        raise AppError(
+            code="publisher_inventory_db_missing",
+            message="Report metadata DB path is required for publisher inventory lookup",
+            retryable=False,
+            severity="error",
+        )
+    if not normalized_url:
+        raise AppError(
+            code="publisher_inventory_normalized_url_missing",
+            message="normalized_url is required for publisher inventory lookup",
+            retryable=False,
+            severity="error",
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_inventory_state_get_start",
+            module=logger.name,
+            fields={"db_path": db_path, "normalized_url": normalized_url},
+        )
+    )
+    with _metadata_conn(db_path) as conn:
+        rows = conn.execute(
+            """
+            SELECT
+                name,
+                insights_url,
+                google_folder,
+                inventory_route_kind,
+                inventory_route_summary,
+                inventory_route_last_final_page_url,
+                inventory_route_updated_at,
+                inventory_snapshot_drive_file_id,
+                inventory_snapshot_drive_file_name,
+                inventory_snapshot_sha256,
+                inventory_snapshot_updated_at
+            FROM publishers
+            WHERE insights_url <> ''
+            ORDER BY id ASC
+            """
+        ).fetchall()
+    for row in rows:
+        insights_url = str(row[1] or "").strip()
+        if not insights_url or normalize_url(insights_url) != normalized_url:
+            continue
+        response = PublisherInventoryStateResponse(
+            schema_version="1.0",
+            publisher_name=str(row[0] or "").strip(),
+            insights_url=insights_url,
+            normalized_url=normalized_url,
+            google_folder=str(row[2] or "").strip() or None,
+            inventory_route_kind=str(row[3] or "").strip() or None,
+            inventory_route_summary=str(row[4] or "").strip() or None,
+            inventory_route_last_final_page_url=str(row[5] or "").strip() or None,
+            inventory_route_updated_at=int(row[6]) if row[6] is not None else None,
+            inventory_snapshot_drive_file_id=str(row[7] or "").strip() or None,
+            inventory_snapshot_drive_file_name=str(row[8] or "").strip() or None,
+            inventory_snapshot_sha256=str(row[9] or "").strip() or None,
+            inventory_snapshot_updated_at=int(row[10]) if row[10] is not None else None,
+        )
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="publisher_inventory_state_get_complete",
+                module=logger.name,
+                fields={
+                    "db_path": db_path,
+                    "normalized_url": normalized_url,
+                    "found": True,
+                    "publisher_name": response.publisher_name,
+                    "has_google_folder": bool(response.google_folder),
+                    "has_inventory_route": bool(response.inventory_route_summary),
+                    "has_inventory_snapshot": bool(
+                        response.inventory_snapshot_drive_file_id
+                    ),
+                },
+            )
+        )
+        return response
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_inventory_state_get_complete",
+            module=logger.name,
+            fields={"db_path": db_path, "normalized_url": normalized_url, "found": False},
+        )
+    )
+    return None
+
+
+def record_publisher_inventory_state(
+    request: PublisherInventoryStateRecordRequest,
+    ctx: RunContext,
+) -> None:
+    db_path = request.db_path.strip()
+    normalized_url = request.normalized_url.strip()
+    source_url = request.source_url.strip()
+    route_kind = request.route_kind.strip()
+    route_summary = request.route_summary.strip()
+    last_final_page_url = (
+        request.last_final_page_url.strip()
+        if request.last_final_page_url and request.last_final_page_url.strip()
+        else None
+    )
+    snapshot_drive_file_id = (
+        request.snapshot_drive_file_id.strip()
+        if request.snapshot_drive_file_id and request.snapshot_drive_file_id.strip()
+        else None
+    )
+    snapshot_drive_file_name = (
+        request.snapshot_drive_file_name.strip()
+        if request.snapshot_drive_file_name and request.snapshot_drive_file_name.strip()
+        else None
+    )
+    snapshot_sha256 = (
+        request.snapshot_sha256.strip()
+        if request.snapshot_sha256 and request.snapshot_sha256.strip()
+        else None
+    )
+    if not db_path:
+        raise AppError(
+            code="publisher_inventory_db_missing",
+            message="Report metadata DB path is required for publisher inventory state recording",
+            retryable=False,
+            severity="error",
+        )
+    if not normalized_url:
+        raise AppError(
+            code="publisher_inventory_normalized_url_missing",
+            message="normalized_url is required for publisher inventory state recording",
+            retryable=False,
+            severity="error",
+        )
+    if not source_url:
+        raise AppError(
+            code="publisher_inventory_source_url_missing",
+            message="source_url is required for publisher inventory state recording",
+            retryable=False,
+            severity="error",
+        )
+    if not route_kind:
+        raise AppError(
+            code="publisher_inventory_route_kind_missing",
+            message="route_kind is required for publisher inventory state recording",
+            retryable=False,
+            severity="error",
+        )
+    if not route_summary:
+        raise AppError(
+            code="publisher_inventory_route_summary_missing",
+            message="route_summary is required for publisher inventory state recording",
+            retryable=False,
+            severity="error",
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_inventory_state_record_start",
+            module=logger.name,
+            fields={
+                "db_path": db_path,
+                "normalized_url": normalized_url,
+                "source_url": source_url,
+                "route_kind": route_kind,
+                "has_snapshot_drive_file_id": bool(snapshot_drive_file_id),
+            },
+        )
+    )
+    try:
+        with _metadata_conn(db_path) as conn:
+            matched = None
+            rows = conn.execute(
+                """
+                SELECT
+                    id,
+                    insights_url,
+                    inventory_snapshot_drive_file_id,
+                    inventory_snapshot_drive_file_name,
+                    inventory_snapshot_sha256
+                FROM publishers
+                WHERE insights_url <> ''
+                ORDER BY id ASC
+                """
+            ).fetchall()
+            for row in rows:
+                if normalize_url(str(row[1] or "").strip()) != normalized_url:
+                    continue
+                matched = row
+                source_url = str(row[1] or "").strip() or source_url
+                if snapshot_drive_file_id is None:
+                    snapshot_drive_file_id = str(row[2] or "").strip() or None
+                if snapshot_drive_file_name is None:
+                    snapshot_drive_file_name = str(row[3] or "").strip() or None
+                if snapshot_sha256 is None:
+                    snapshot_sha256 = str(row[4] or "").strip() or None
+                break
+            if matched is None:
+                raise AppError(
+                    code="publisher_inventory_state_not_found",
+                    message="Publisher inventory state cannot be recorded because the publisher row was not found",
+                    retryable=False,
+                    severity="error",
+                    context={"normalized_url": normalized_url, "source_url": source_url},
+                )
+            conn.execute(
+                """
+                UPDATE publishers
+                SET
+                    inventory_route_kind=?,
+                    inventory_route_summary=?,
+                    inventory_route_last_final_page_url=?,
+                    inventory_route_updated_at=strftime('%s','now'),
+                    inventory_snapshot_drive_file_id=?,
+                    inventory_snapshot_drive_file_name=?,
+                    inventory_snapshot_sha256=?,
+                    inventory_snapshot_updated_at=strftime('%s','now')
+                WHERE id=?
+                """,
+                (
+                    route_kind,
+                    route_summary,
+                    last_final_page_url,
+                    snapshot_drive_file_id,
+                    snapshot_drive_file_name,
+                    snapshot_sha256,
+                    int(matched[0]),
+                ),
+            )
+    except sqlite3.Error as exc:
+        raise AppError(
+            code="publisher_inventory_state_record_failed",
+            message="Failed to record publisher inventory state",
+            cause=exc,
+            retryable=True,
+            context={"db_path": db_path, "source_url": source_url},
+        ) from exc
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_inventory_state_record_complete",
+            module=logger.name,
+            fields={
+                "db_path": db_path,
+                "normalized_url": normalized_url,
+                "source_url": source_url,
+                "route_kind": route_kind,
+                "has_snapshot_drive_file_id": bool(snapshot_drive_file_id),
             },
         )
     )

@@ -14,12 +14,16 @@ from src.contracts.categories import RecategorizeRequest
 from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
 from src.contracts.cover_images import CoverImageOrchestratorRequest
 from src.contracts.logging import LoggingSetupRequest
+from src.contracts.publisher_inventory import PublisherInventoryDiscoveryRequest
 from src.contracts.publisher_profiles import PublisherSyncRequest
 from src.orchestrators.report_download_orchestrator import run_report_download
 from src.orchestrators.cost_reporting_orchestrator import run_cost_reporting
 from src.orchestrators.ingest_orchestrator import run_ingest
 from src.orchestrators.candidate_extraction_orchestrator import run_candidate_extraction
 from src.orchestrators.cover_image_orchestrator import run_cover_image_generation
+from src.orchestrators.publisher_inventory_orchestrator import (
+    run_publisher_inventory_discovery,
+)
 from src.orchestrators.publisher_sync_orchestrator import run_publisher_sync
 from src.orchestrators.publish_orchestrator import run_publish
 from src.orchestrators.recategorize_orchestrator import run_recategorize
@@ -27,6 +31,7 @@ from src.orchestrators.wp_category_update_orchestrator import run_update_wp_cate
 from src.services.config_service import (
     build_ingest_settings,
     load_browser_download_settings,
+    load_publisher_inventory_settings,
     load_settings,
     load_publish_settings,
 )
@@ -495,6 +500,50 @@ def download_report(
     table.add_row("File", result.downloaded_file_path or "")
     table.add_row("Summary", result.route_summary)
     console.print(table)
+
+
+@cli_app.command("discover-publisher-inventory")
+def discover_publisher_inventory(
+    insights_url: str = typer.Argument(..., help="Publisher insights URL to crawl"),
+):
+    ctx = new_run_context(task_id="cli_discover_publisher_inventory")
+    setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
+    settings = load_publisher_inventory_settings(
+        ConfigLoadRequest(schema_version="1.0", path=""),
+        ctx,
+    )
+    result = run_publisher_inventory_discovery(
+        PublisherInventoryDiscoveryRequest(
+            schema_version="1.0",
+            insights_url=insights_url,
+            reports_db=settings.reports_db,
+            settings=settings,
+        ),
+        ctx=ctx,
+    )
+    table = Table(title="Publisher Inventory Discovery", box=box.SIMPLE_HEAVY)
+    table.add_column("Field")
+    table.add_column("Value")
+    table.add_row("Publisher", result.publisher_name)
+    table.add_row("Insights URL", result.insights_url)
+    table.add_row("Normalized URL", result.normalized_insights_url)
+    table.add_row("Current reports", str(result.current_report_count))
+    table.add_row("Previous reports", str(result.previous_report_count))
+    table.add_row("Used memory route", "yes" if result.used_memory_route else "no")
+    table.add_row("Snapshot changed", "yes" if result.snapshot_changed else "no")
+    console.print(table)
+
+    diff_table = Table(title="New Report URLs", box=box.SIMPLE_HEAVY)
+    diff_table.add_column("Page")
+    diff_table.add_column("Title")
+    diff_table.add_column("URL")
+    for item in result.new_report_urls:
+        diff_table.add_row(
+            str(item.discovered_on_page_number),
+            item.title,
+            item.canonical_url,
+        )
+    console.print(diff_table)
 
 
 @cli_app.command("sync-publishers")

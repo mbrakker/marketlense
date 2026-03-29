@@ -1,0 +1,9 @@
+text: |
+  Open this exact publisher insights URL: {{ insights_url }}
+
+  Traverse inventory pagination until there is no next page or you have visited {{ pagination_max_pages }} page(s).
+
+  Remembered route kind: {{ route_kind_hint or "none" }}
+  Remembered route summary: {{ route_hint or "none" }}
+
+  Return the complete current report inventory across all visited pages.

@@ -147,6 +147,22 @@ browser_download:
     backoff_step_seconds: 1.0
     jitter_seconds: 0.25
 
+publisher_discovery:
+  model: "google/gemini-2.5-flash-lite"
+  temperature: 0.0
+  timeout_seconds: 180
+  max_steps: 30
+  output_dir: "./out/publisher_inventory_discovery"
+  prompt_namespace: "publisher_inventory/discovery"
+  pagination_max_pages: 10
+  http_timeout_seconds: 30
+  headed: true
+  retry:
+    retries: 1
+    base_delay_seconds: 1.0
+    backoff_step_seconds: 1.0
+    jitter_seconds: 0.25
+
 analysis:
   vector_store_keep: true
   artifacts_use_vector_store: false

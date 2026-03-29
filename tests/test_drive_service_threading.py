@@ -9,7 +9,7 @@ def test_drive_client_is_thread_local(monkeypatch):
     created = []
 
     def _fake_credentials_from_file(_sa_path: str, scopes):
-        assert scopes == ["https://www.googleapis.com/auth/drive.readonly"]
+        assert scopes == ["https://www.googleapis.com/auth/drive"]
         return object()
 
     def _fake_build(service_name: str, version: str, credentials, cache_discovery: bool):

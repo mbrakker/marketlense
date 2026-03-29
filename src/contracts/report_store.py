@@ -384,3 +384,102 @@ class PublisherDownloadRouteResponse:
         default=None,
         metadata={"doc": "Last final browser URL observed for this publisher route, if any."},
     )
+
+
+@dataclass(frozen=True)
+class PublisherInventoryStateGetRequest:
+    schema_version: str = field(
+        metadata={"doc": "Publisher inventory-state get request schema version."}
+    )
+    db_path: str = field(
+        metadata={"doc": "Filesystem path to the report metadata SQLite database."}
+    )
+    normalized_url: str = field(
+        metadata={"doc": "Normalized publisher insights URL used to find the matching publisher row."}
+    )
+
+
+@dataclass(frozen=True)
+class PublisherInventoryStateResponse:
+    schema_version: str = field(
+        metadata={"doc": "Publisher inventory-state response schema version."}
+    )
+    publisher_name: str = field(metadata={"doc": "Publisher display name."})
+    insights_url: str = field(metadata={"doc": "Stored publisher insights URL."})
+    normalized_url: str = field(
+        metadata={"doc": "Normalized publisher insights URL used as the lookup key."}
+    )
+    google_folder: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Curated Google Drive folder URL or folder ID for this publisher."},
+    )
+    inventory_route_kind: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Remembered discovery route kind for this publisher URL."},
+    )
+    inventory_route_summary: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Remembered discovery route summary for this publisher URL."},
+    )
+    inventory_route_last_final_page_url: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Last final page URL observed for the remembered discovery route."},
+    )
+    inventory_route_updated_at: Optional[int] = field(
+        default=None,
+        metadata={"doc": "Unix timestamp when the remembered discovery route was last updated."},
+    )
+    inventory_snapshot_drive_file_id: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Drive file ID of the latest stored inventory snapshot."},
+    )
+    inventory_snapshot_drive_file_name: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Drive file name of the latest stored inventory snapshot."},
+    )
+    inventory_snapshot_sha256: Optional[str] = field(
+        default=None,
+        metadata={"doc": "SHA-256 hash of the latest stored inventory snapshot JSON."},
+    )
+    inventory_snapshot_updated_at: Optional[int] = field(
+        default=None,
+        metadata={"doc": "Unix timestamp when the latest stored inventory snapshot index was updated."},
+    )
+
+
+@dataclass(frozen=True)
+class PublisherInventoryStateRecordRequest:
+    schema_version: str = field(
+        metadata={"doc": "Publisher inventory-state record request schema version."}
+    )
+    db_path: str = field(
+        metadata={"doc": "Filesystem path to the report metadata SQLite database."}
+    )
+    normalized_url: str = field(
+        metadata={"doc": "Normalized publisher insights URL used to identify the publisher row."}
+    )
+    source_url: str = field(
+        metadata={"doc": "Stored source insights URL for the publisher."}
+    )
+    route_kind: str = field(
+        metadata={"doc": "Discovery route kind used successfully: http_parse or browser_render."}
+    )
+    route_summary: str = field(
+        metadata={"doc": "Summary of the successful discovery route for reuse on later runs."}
+    )
+    last_final_page_url: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Last final page URL observed for the successful discovery route."},
+    )
+    snapshot_drive_file_id: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Drive file ID of the latest stored snapshot, when changed or already known."},
+    )
+    snapshot_drive_file_name: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Drive file name of the latest stored snapshot, when changed or already known."},
+    )
+    snapshot_sha256: Optional[str] = field(
+        default=None,
+        metadata={"doc": "SHA-256 hash of the latest stored snapshot JSON, when changed or already known."},
+    )

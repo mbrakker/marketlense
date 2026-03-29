@@ -13,9 +13,11 @@ from src.contracts.config import (
 from src.contracts.browser_download import (
     BrowserDownloadIdentityFieldUpsertRequest,
 )
+from src.contracts.publisher_inventory import PublisherInventorySettings
 from src.contracts.run_context import RunContext
 from src.services.config_service import (
     load_browser_download_settings,
+    load_publisher_inventory_settings,
     load_publish_settings,
     load_settings,
     read_app_config,
@@ -722,6 +724,62 @@ class TestConfigService(unittest.TestCase):
         self.assertEqual(
             ["work_email", "company", "name", "budget_range"],
             [field["key"] for field in payload["fields"]],
+        )
+
+    def test_publisher_inventory_settings_load_and_fallback_to_browser_download(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_publish=False)
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["browser_download"] = {
+                "model": "gpt-5-mini",
+                "identity_config_path": str(Path(tmp_dir) / "browser_download_identity.yaml"),
+                "temperature": 0.1,
+                "timeout_seconds": 45,
+                "max_steps": 12,
+                "output_dir": "./out/browser_downloads",
+                "headed": True,
+                "retry": {
+                    "retries": 2,
+                    "base_delay_seconds": 0.5,
+                    "backoff_step_seconds": 0.25,
+                    "jitter_seconds": 0.0,
+                },
+            }
+            cfg_data["publisher_discovery"] = {
+                "pagination_max_pages": 7,
+                "http_timeout_seconds": 22,
+                "prompt_namespace": "publisher_inventory/discovery",
+            }
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
+
+            with patch.dict(os.environ, {"OPENROUTER_API_KEY": "key"}, clear=True):
+                settings = load_publisher_inventory_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
+                )
+
+        self.assertIsInstance(settings, PublisherInventorySettings)
+        self.assertEqual("gpt-5-mini", settings.model)
+        self.assertEqual(0.1, settings.temperature)
+        self.assertEqual(45, settings.timeout_seconds)
+        self.assertEqual(12, settings.max_steps)
+        self.assertEqual(7, settings.pagination_max_pages)
+        self.assertEqual(22, settings.http_timeout_seconds)
+        self.assertTrue(settings.headed)
+        self.assertEqual(2, settings.retry_retries)
+        self.assertEqual(
+            Path(tmp_dir, "out", "browser_downloads").resolve(),
+            Path(settings.output_dir).resolve(),
+        )
+        self.assertEqual(
+            Path(tmp_dir, "state", "reports.sqlite").resolve(),
+            Path(settings.reports_db).resolve(),
+        )
+        self.assertEqual(
+            Path(tmp_dir, "sa.json").resolve(),
+            Path(settings.google_sa_path).resolve(),
         )
 
     def test_read_and_write_app_config_round_trip(self) -> None:

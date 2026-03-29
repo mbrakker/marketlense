@@ -11,6 +11,10 @@ class DriveFile:
     name: Optional[str] = field(metadata={"doc": "Drive file name, if fetched."})
     modified_time: Optional[str] = field(metadata={"doc": "Drive modified time, if available."})
     md5_checksum: Optional[str] = field(metadata={"doc": "Drive MD5 checksum, if provided."})
+    mime_type: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Drive MIME type when fetched."},
+    )
 
 
 @dataclass(frozen=True)
@@ -72,3 +76,80 @@ class DriveDownloadToPathResponse:
     output_path: str = field(metadata={"doc": "Filesystem path written."})
     md5: Optional[str] = field(metadata={"doc": "MD5 checksum of the downloaded content."})
     size: int = field(metadata={"doc": "Size of the downloaded content in bytes."})
+
+
+@dataclass(frozen=True)
+class DriveFolderFileListRequest:
+    schema_version: str = field(
+        metadata={"doc": "Drive folder file-list request schema version."}
+    )
+    folder_id: str = field(metadata={"doc": "Drive folder ID to list files from."})
+    service_account_path: str = field(
+        metadata={"doc": "Filesystem path to the Google service account JSON."}
+    )
+    name_prefix: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Optional file-name prefix used to filter results."},
+    )
+    page_size: Optional[int] = field(
+        default=None, metadata={"doc": "Optional page size for Drive list calls."}
+    )
+    order_by: Optional[str] = field(
+        default="modifiedTime desc",
+        metadata={"doc": "Optional orderBy for Drive list calls."},
+    )
+    supports_all_drives: bool = field(
+        default=True,
+        metadata={"doc": "Whether to set supportsAllDrives on list calls."},
+    )
+    include_items_from_all_drives: bool = field(
+        default=True,
+        metadata={"doc": "Whether to includeItemsFromAllDrives on list calls."},
+    )
+    drive_id: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Optional shared Drive ID for corpora=drive scope."},
+    )
+    limit: int = field(
+        default=50,
+        metadata={"doc": "Maximum number of files to return after filtering."},
+    )
+
+
+@dataclass(frozen=True)
+class DriveFolderFileListResponse:
+    schema_version: str = field(
+        metadata={"doc": "Drive folder file-list response schema version."}
+    )
+    folder_id: str = field(metadata={"doc": "Drive folder ID searched."})
+    files: list[DriveFile] = field(metadata={"doc": "Matching files in the folder."})
+
+
+@dataclass(frozen=True)
+class DriveUploadBytesRequest:
+    schema_version: str = field(
+        metadata={"doc": "Drive upload-bytes request schema version."}
+    )
+    folder_id: str = field(metadata={"doc": "Drive folder ID where the file should be uploaded."})
+    service_account_path: str = field(
+        metadata={"doc": "Filesystem path to the Google service account JSON."}
+    )
+    file_name: str = field(metadata={"doc": "File name to create in Drive."})
+    content: bytes = field(metadata={"doc": "Binary content to upload."})
+    mime_type: str = field(metadata={"doc": "MIME type for the uploaded file."})
+    supports_all_drives: bool = field(
+        default=True,
+        metadata={"doc": "Whether to set supportsAllDrives on upload calls."},
+    )
+
+
+@dataclass(frozen=True)
+class DriveUploadBytesResponse:
+    schema_version: str = field(
+        metadata={"doc": "Drive upload-bytes response schema version."}
+    )
+    file: DriveFile = field(metadata={"doc": "Metadata for the created Drive file."})
+    size: int = field(metadata={"doc": "Uploaded content size in bytes."})
+    md5: Optional[str] = field(
+        metadata={"doc": "MD5 checksum of the uploaded content when known."}
+    )

@@ -12,6 +12,11 @@ from src.contracts.browser_download import (
 from src.contracts.config import AppSettings
 from src.contracts.costs import CostReportResponse, CostTotals, StepCostTotal
 from src.contracts.ingest import IngestOutcome, IngestSettings
+from src.contracts.publisher_inventory import (
+    PublisherInventoryDiffItem,
+    PublisherInventoryDiscoveryResult,
+    PublisherInventorySettings,
+)
 from src.contracts.publish import PublishOutcome, PublishSettings
 from src.contracts.wordpress import WordPressAuthSettings
 
@@ -298,6 +303,66 @@ class TestCli(unittest.TestCase):
         request = sync_mock.call_args.args[0]
         self.assertEqual("./Wordpress/config/publisher-profiles.json", request.snapshot_path)
         self.assertEqual("./state/reports.sqlite", request.reports_db)
+
+    def test_discover_publisher_inventory_wires_settings_and_orchestrator(self) -> None:
+        import src.cli as cli
+
+        settings = PublisherInventorySettings(
+            schema_version="1.0",
+            openrouter_api_key="key",
+            model="gpt-5-mini",
+            temperature=0.0,
+            timeout_seconds=45.0,
+            max_steps=12,
+            output_dir="./out/publisher_inventory_discovery",
+            reports_db="./state/reports.sqlite",
+            google_sa_path="./sa.json",
+            prompt_namespace="publisher_inventory/discovery",
+            pagination_max_pages=10,
+            http_timeout_seconds=30.0,
+            openrouter_http_referer=None,
+            headed=False,
+            retry_retries=1,
+            retry_base_delay_seconds=1.0,
+            retry_backoff_step_seconds=0.0,
+            retry_jitter_seconds=0.0,
+        )
+        result = PublisherInventoryDiscoveryResult(
+            schema_version="1.0",
+            publisher_name="Activate Consulting",
+            insights_url="https://www.activate.com/insights",
+            normalized_insights_url="https://www.activate.com/insights",
+            new_report_urls=[
+                PublisherInventoryDiffItem(
+                    schema_version="1.0",
+                    canonical_url="https://www.activate.com/reports/new-report",
+                    title="New Report",
+                    discovered_on_page_number=2,
+                )
+            ],
+            current_report_count=10,
+            previous_report_count=9,
+            used_memory_route=True,
+            snapshot_changed=True,
+        )
+
+        with patch.object(
+            cli, "load_publisher_inventory_settings", return_value=settings
+        ) as load_mock:
+            with patch.object(
+                cli, "run_publisher_inventory_discovery", return_value=result
+            ) as discover_mock:
+                with patch.object(cli.console, "print"):
+                    cli.discover_publisher_inventory(
+                        insights_url="https://www.activate.com/insights"
+                    )
+
+        load_mock.assert_called_once()
+        discover_mock.assert_called_once()
+        request = discover_mock.call_args.args[0]
+        self.assertEqual("https://www.activate.com/insights", request.insights_url)
+        self.assertEqual("./state/reports.sqlite", request.reports_db)
+        self.assertEqual("gpt-5-mini", request.settings.model)
 
 
 if __name__ == "__main__":

@@ -909,6 +909,7 @@ Required environment variables:
 - `OPENAI_API_KEY`
 - `OPENROUTER_API_KEY` for browser-download automation
 - `WP_APP_PASSWORD` (or `WP_BEARER_TOKEN` if using bearer auth)
+- `GOOGLE_SERVICE_ACCOUNT_JSON` or a configured `google_sa_path` with write access for publisher inventory snapshot uploads
 - Optional: other provider keys (e.g., `MINERU_API_KEY`), `WP_USERNAME`/`WP_SITE_URL`/`WP_POST_TYPE` if not set in YAML.
 
 ---
@@ -1038,6 +1039,22 @@ python -m src.cli download-report https://example.com/report --delivery-email an
 
 When a site opens a PDF viewer wrapper instead of writing the real PDF bytes directly, the browser-download service now validates the saved file signature. If the saved `.pdf` is actually an HTML wrapper page with an embedded real PDF URL, the service fetches that embedded PDF and replaces the wrapper file before reporting success.
 
+Discover the current publisher insights inventory, compare it to the last Drive-backed snapshot, and print only new report links:
+
+```bash
+python -m src.cli discover-publisher-inventory https://example.com/insights
+```
+
+`discover-publisher-inventory` is routed through `src/orchestrators/publisher_inventory_orchestrator.py`. It resolves the publisher by `publishers.insights_url`, reuses the remembered inventory route when available, traverses paginated insights sections across all reachable pages, normalizes the combined inventory, and compares it with the latest snapshot stored in that publisher's Google Drive folder. The diff output includes the inventory page number where each new report link was found.
+
+Snapshot behavior:
+
+- `publishers.google_folder` is required; the command fails explicitly when it is missing.
+- The latest snapshot index and remembered extraction route are stored on the `publishers` row in `reports_db`.
+- Snapshot artifacts are uploaded as immutable JSON files named like `publisher_inventory_snapshot__YYYYMMDDTHHMMSSZ.json` inside the publisher folder.
+- If the normalized snapshot hash matches the previous snapshot hash, no new snapshot file is uploaded and the diff is empty.
+- Snapshot payloads record the traversed page list and each item's `discovered_on_page_number`.
+
 Sync publisher/source metadata from the checked-in Notion snapshot into the reports database:
 
 ```bash
@@ -1061,6 +1078,21 @@ CLI options summary:
 
 - `--limit`: optional integer across batch commands.
 - `--folder`: optional Drive folder override for ingest.
+
+### Publisher Discovery Config
+
+Publisher inventory discovery is configured under `publisher_discovery` in `src/config/app.yaml`.
+
+Supported keys:
+
+- `model`, `temperature`, `timeout_seconds`, `max_steps`, `headed`
+- `prompt_namespace`
+- `output_dir`
+- `pagination_max_pages`
+- `http_timeout_seconds`
+- `retry.retries`, `retry.base_delay_seconds`, `retry.backoff_step_seconds`, `retry.jitter_seconds`
+
+Any omitted browser settings fall back to the existing `browser_download` section so the discovery flow can share the same OpenRouter/browser defaults without duplicating mandatory configuration.
 
 ## Streamlit Cockpit
 

@@ -8,6 +8,8 @@ import unittest
 from src.contracts.report_store import (
     PublisherDownloadRouteGetRequest,
     PublisherDownloadRouteRecordRequest,
+    PublisherInventoryStateGetRequest,
+    PublisherInventoryStateRecordRequest,
     PublishersReplaceRequest,
     ReportMetadataDbAccessRequest,
     ReportMetadataGetRequest,
@@ -19,8 +21,10 @@ from src.services.report_store_service import (
     check_report_db_access,
     get_metadata,
     get_publisher_download_route,
+    get_publisher_inventory_state,
     record_report_source,
     record_publisher_download_route,
+    record_publisher_inventory_state,
     replace_publishers,
     upsert_metadata,
 )
@@ -643,6 +647,14 @@ class TestReportStoreService(unittest.TestCase):
                     "download_route_last_downloaded_file_path",
                     "download_route_last_final_page_url",
                     "download_route_updated_at",
+                    "inventory_route_kind",
+                    "inventory_route_summary",
+                    "inventory_route_last_final_page_url",
+                    "inventory_route_updated_at",
+                    "inventory_snapshot_drive_file_id",
+                    "inventory_snapshot_drive_file_name",
+                    "inventory_snapshot_sha256",
+                    "inventory_snapshot_updated_at",
                 ],
                 columns,
             )
@@ -655,6 +667,117 @@ class TestReportStoreService(unittest.TestCase):
                 ),
                 row,
             )
+
+    def test_publisher_inventory_state_roundtrip_and_preserved_on_replace(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_publisher_inventory_state")
+
+            replace_publishers(
+                PublishersReplaceRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_page_url="https://www.notion.so/source",
+                    publishers=[
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-1",
+                            notion_page_url="https://www.notion.so/page-1",
+                            name="Activate Consulting",
+                            homepage="https://www.activate.com/",
+                            self_presentation="Activate description",
+                            insights_url="https://www.activate.com/insights",
+                            icon_source="https://cdn.example.com/activate.png",
+                        )
+                    ],
+                ),
+                ctx,
+            )
+
+            conn = sqlite3.connect(db_path)
+            try:
+                conn.execute(
+                    """
+                    UPDATE publishers
+                    SET google_folder=?
+                    WHERE insights_url=?
+                    """,
+                    (
+                        "https://drive.google.com/drive/folders/abc123",
+                        "https://www.activate.com/insights",
+                    ),
+                )
+                conn.commit()
+            finally:
+                conn.close()
+
+            record_publisher_inventory_state(
+                PublisherInventoryStateRecordRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_url="https://www.activate.com/insights",
+                    source_url="https://www.activate.com/insights",
+                    route_kind="browser_render",
+                    route_summary="Open the insights page, click next pagination until the last page, and extract report links.",
+                    last_final_page_url="https://www.activate.com/insights?page=2",
+                    snapshot_drive_file_id="drive-file-1",
+                    snapshot_drive_file_name="publisher_inventory_snapshot__20260329T120000Z.json",
+                    snapshot_sha256="sha256-1",
+                ),
+                ctx,
+            )
+
+            state = get_publisher_inventory_state(
+                PublisherInventoryStateGetRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_url="https://www.activate.com/insights",
+                ),
+                ctx,
+            )
+
+            assert state is not None
+            self.assertEqual("Activate Consulting", state.publisher_name)
+            self.assertEqual(
+                "https://drive.google.com/drive/folders/abc123", state.google_folder
+            )
+            self.assertEqual("browser_render", state.inventory_route_kind)
+            self.assertEqual("drive-file-1", state.inventory_snapshot_drive_file_id)
+            self.assertEqual("sha256-1", state.inventory_snapshot_sha256)
+
+            replace_publishers(
+                PublishersReplaceRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_page_url="https://www.notion.so/source",
+                    publishers=[
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-1",
+                            notion_page_url="https://www.notion.so/page-1",
+                            name="Activate Consulting Updated",
+                            homepage="https://www.activate.com/",
+                            self_presentation="Updated description",
+                            insights_url="https://www.activate.com/insights",
+                            icon_source="https://cdn.example.com/activate.png",
+                        )
+                    ],
+                ),
+                ctx,
+            )
+
+            preserved = get_publisher_inventory_state(
+                PublisherInventoryStateGetRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_url="https://www.activate.com/insights",
+                ),
+                ctx,
+            )
+            assert preserved is not None
+            self.assertEqual("Activate Consulting Updated", preserved.publisher_name)
+            self.assertEqual("browser_render", preserved.inventory_route_kind)
+            self.assertEqual("drive-file-1", preserved.inventory_snapshot_drive_file_id)
 
 
 if __name__ == "__main__":

@@ -26,6 +26,7 @@ from src.contracts.browser_download import (
     BrowserDownloadIdentityFieldUpsertResponse,
     BrowserDownloadSettings,
 )
+from src.contracts.publisher_inventory import PublisherInventorySettings
 from src.contracts.ingest import IngestSettings
 from src.contracts.publish import PublishSettings
 from src.contracts.run_context import RunContext
@@ -48,6 +49,7 @@ DEFAULT_HTML_TAG_ACRONYMS_PATH = (
 DEFAULT_BROWSER_DOWNLOAD_IDENTITY_PATH = (
     Path(__file__).resolve().parents[1] / "config" / "browser_download_identity.yaml"
 )
+DEFAULT_PUBLISHER_INVENTORY_PROMPT_NAMESPACE = "publisher_inventory/discovery"
 
 
 def _is_missing(value: object) -> bool:
@@ -1851,6 +1853,253 @@ def load_browser_download_settings(
                 "temperature": settings.temperature,
                 "timeout_seconds": settings.timeout_seconds,
                 "max_steps": settings.max_steps,
+                "headed": settings.headed,
+                "retry_retries": settings.retry_retries,
+                "retry_base_delay_seconds": settings.retry_base_delay_seconds,
+                "retry_backoff_step_seconds": settings.retry_backoff_step_seconds,
+                "retry_jitter_seconds": settings.retry_jitter_seconds,
+            },
+        )
+    )
+    return settings
+
+
+def load_publisher_inventory_settings(
+    request: ConfigLoadRequest, ctx: RunContext
+) -> PublisherInventorySettings:
+    load_dotenv(find_dotenv(filename=".env", usecwd=True))
+
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_inventory_config_load_start",
+            module=logger.name,
+            fields={"path": request.path or str(CONFIG_PATH)},
+        )
+    )
+    data = _load_config(request.path or str(CONFIG_PATH))
+    config_path = Path(request.path or str(CONFIG_PATH)).resolve()
+    runtime_base_path = _resolve_runtime_base_path(config_path)
+    resolver = _ConfigResolver()
+
+    paths = data.get("paths", {}) or {}
+    ingest = data.get("ingest", {}) or {}
+    browser_download = data.get("browser_download", {}) or {}
+    browser_retry_cfg = browser_download.get("retry", {}) or {}
+    publisher_discovery = data.get("publisher_discovery", {}) or {}
+    retry_cfg = publisher_discovery.get("retry", {}) or browser_retry_cfg
+
+    browser_output_root = (
+        browser_download.get("output_dir")
+        or _env_value("BROWSER_DOWNLOAD_OUTPUT_DIR")
+        or str(Path(paths.get("output_dir") or "./out") / "browser_downloads")
+    )
+    output_root = (
+        publisher_discovery.get("output_dir")
+        or _env_value("PUBLISHER_DISCOVERY_OUTPUT_DIR")
+        or browser_output_root
+    )
+    output_dir = _resolve_optional_path(output_root, base_path=runtime_base_path)
+    if _is_missing(output_dir):
+        resolver.missing.append(
+            "publisher_discovery.output_dir|env:PUBLISHER_DISCOVERY_OUTPUT_DIR"
+        )
+
+    reports_db = _resolve_optional_path(
+        paths.get("reports_db") or _env_value("REPORTS_DB"),
+        base_path=runtime_base_path,
+    )
+    if _is_missing(reports_db):
+        resolver.missing.append("paths.reports_db|env:REPORTS_DB")
+
+    google_sa_path = _resolve_optional_path(
+        ingest.get("google_sa_path") or _env_value("GOOGLE_SERVICE_ACCOUNT_JSON"),
+        base_path=runtime_base_path,
+    )
+    if _is_missing(google_sa_path):
+        resolver.missing.append(
+            "ingest.google_sa_path|env:GOOGLE_SERVICE_ACCOUNT_JSON"
+        )
+
+    api_key = _env_value("OPENROUTER_API_KEY")
+    if _is_missing(api_key):
+        resolver.missing.append("env:OPENROUTER_API_KEY")
+
+    http_referer = _env_value("OPENROUTER_HTTP_REFERER")
+    if _is_missing(http_referer):
+        http_referer = None
+
+    model = str(
+        publisher_discovery.get("model")
+        or _env_value("PUBLISHER_DISCOVERY_MODEL")
+        or browser_download.get("model")
+        or _env_value("BROWSER_DOWNLOAD_MODEL")
+        or "openai/gpt-5-mini"
+    ).strip()
+    if not model:
+        resolver.missing.append("publisher_discovery.model|env:PUBLISHER_DISCOVERY_MODEL")
+
+    if resolver.missing:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="publisher_inventory_config_load_failed",
+                module=logger.name,
+                fields={"missing": resolver.missing},
+            )
+        )
+        raise RuntimeError(
+            f"Missing required config/env values: {', '.join(resolver.missing)}"
+        )
+
+    settings = PublisherInventorySettings(
+        schema_version=str(data.get("schema_version", "1.0")),
+        openrouter_api_key=api_key,
+        model=model,
+        temperature=_to_float(
+            publisher_discovery.get("temperature")
+            if not _is_missing(publisher_discovery.get("temperature"))
+            else (
+                _env_value("PUBLISHER_DISCOVERY_TEMPERATURE")
+                or browser_download.get("temperature")
+                or _env_value("BROWSER_DOWNLOAD_TEMPERATURE")
+            ),
+            0.0,
+        ),
+        timeout_seconds=max(
+            _to_float(
+                publisher_discovery.get("timeout_seconds")
+                if not _is_missing(publisher_discovery.get("timeout_seconds"))
+                else (
+                    _env_value("PUBLISHER_DISCOVERY_TIMEOUT_SECONDS")
+                    or browser_download.get("timeout_seconds")
+                    or _env_value("BROWSER_DOWNLOAD_TIMEOUT_SECONDS")
+                ),
+                180.0,
+            ),
+            1.0,
+        ),
+        max_steps=max(
+            _to_int(
+                publisher_discovery.get("max_steps")
+                if not _is_missing(publisher_discovery.get("max_steps"))
+                else (
+                    _env_value("PUBLISHER_DISCOVERY_MAX_STEPS")
+                    or browser_download.get("max_steps")
+                    or _env_value("BROWSER_DOWNLOAD_MAX_STEPS")
+                ),
+                30,
+            ),
+            1,
+        ),
+        output_dir=output_dir,
+        reports_db=reports_db,
+        google_sa_path=google_sa_path,
+        prompt_namespace=str(
+            publisher_discovery.get("prompt_namespace")
+            or _env_value("PUBLISHER_DISCOVERY_PROMPT_NAMESPACE")
+            or DEFAULT_PUBLISHER_INVENTORY_PROMPT_NAMESPACE
+        ).strip(),
+        pagination_max_pages=max(
+            _to_int(
+                publisher_discovery.get("pagination_max_pages")
+                if not _is_missing(publisher_discovery.get("pagination_max_pages"))
+                else _env_value("PUBLISHER_DISCOVERY_PAGINATION_MAX_PAGES"),
+                10,
+            ),
+            1,
+        ),
+        http_timeout_seconds=max(
+            _to_float(
+                publisher_discovery.get("http_timeout_seconds")
+                if not _is_missing(publisher_discovery.get("http_timeout_seconds"))
+                else _env_value("PUBLISHER_DISCOVERY_HTTP_TIMEOUT_SECONDS"),
+                30.0,
+            ),
+            1.0,
+        ),
+        openrouter_http_referer=http_referer,
+        headed=_to_bool(
+            publisher_discovery.get("headed")
+            if not _is_missing(publisher_discovery.get("headed"))
+            else (
+                _env_value("PUBLISHER_DISCOVERY_HEADED")
+                or browser_download.get("headed")
+                or _env_value("BROWSER_DOWNLOAD_HEADED")
+            ),
+            False,
+        ),
+        retry_retries=max(
+            _to_int(
+                retry_cfg.get("retries")
+                if not _is_missing(retry_cfg.get("retries"))
+                else (
+                    _env_value("PUBLISHER_DISCOVERY_RETRIES")
+                    or _env_value("BROWSER_DOWNLOAD_RETRIES")
+                ),
+                1,
+            ),
+            0,
+        ),
+        retry_base_delay_seconds=max(
+            _to_float(
+                retry_cfg.get("base_delay_seconds")
+                if not _is_missing(retry_cfg.get("base_delay_seconds"))
+                else (
+                    _env_value("PUBLISHER_DISCOVERY_BASE_DELAY_SECONDS")
+                    or _env_value("BROWSER_DOWNLOAD_BASE_DELAY_SECONDS")
+                ),
+                1.0,
+            ),
+            0.0,
+        ),
+        retry_backoff_step_seconds=max(
+            _to_float(
+                retry_cfg.get("backoff_step_seconds")
+                if not _is_missing(retry_cfg.get("backoff_step_seconds"))
+                else (
+                    _env_value("PUBLISHER_DISCOVERY_BACKOFF_STEP_SECONDS")
+                    or _env_value("BROWSER_DOWNLOAD_BACKOFF_STEP_SECONDS")
+                ),
+                1.0,
+            ),
+            0.0,
+        ),
+        retry_jitter_seconds=max(
+            _to_float(
+                retry_cfg.get("jitter_seconds")
+                if not _is_missing(retry_cfg.get("jitter_seconds"))
+                else (
+                    _env_value("PUBLISHER_DISCOVERY_JITTER_SECONDS")
+                    or _env_value("BROWSER_DOWNLOAD_JITTER_SECONDS")
+                ),
+                0.25,
+            ),
+            0.0,
+        ),
+    )
+
+    Path(settings.output_dir).mkdir(parents=True, exist_ok=True)
+    Path(settings.reports_db).parent.mkdir(parents=True, exist_ok=True)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_inventory_config_load_complete",
+            module=logger.name,
+            fields={
+                "output_dir": settings.output_dir,
+                "reports_db": settings.reports_db,
+                "google_sa_path": settings.google_sa_path,
+                "model": settings.model,
+                "temperature": settings.temperature,
+                "timeout_seconds": settings.timeout_seconds,
+                "max_steps": settings.max_steps,
+                "prompt_namespace": settings.prompt_namespace,
+                "pagination_max_pages": settings.pagination_max_pages,
+                "http_timeout_seconds": settings.http_timeout_seconds,
                 "headed": settings.headed,
                 "retry_retries": settings.retry_retries,
                 "retry_base_delay_seconds": settings.retry_base_delay_seconds,

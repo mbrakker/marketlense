@@ -9,7 +9,7 @@ from typing import Iterable, Optional
 
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from googleapiclient.http import MediaIoBaseDownload
+from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
 from google.oauth2.service_account import Credentials
 
 from src.contracts.drive import (
@@ -20,7 +20,11 @@ from src.contracts.drive import (
     DriveFile,
     DriveFileMetadataRequest,
     DriveFileMetadataResponse,
+    DriveFolderFileListRequest,
+    DriveFolderFileListResponse,
     DriveListRequest,
+    DriveUploadBytesRequest,
+    DriveUploadBytesResponse,
 )
 from src.contracts.run_context import RunContext
 from src.utils.errors import AppError
@@ -69,7 +73,7 @@ class _HashingWriter:
 
 
 def _build_drive_client(sa_path: str):
-    scopes = ["https://www.googleapis.com/auth/drive.readonly"]
+    scopes = ["https://www.googleapis.com/auth/drive"]
     creds = Credentials.from_service_account_file(sa_path, scopes=scopes)
     return build("drive", "v3", credentials=creds, cache_discovery=False)
 
@@ -240,6 +244,7 @@ def list_pdfs(request: DriveListRequest, ctx: RunContext) -> Iterable[DriveFile]
                     name=f.get("name"),
                     modified_time=f.get("modifiedTime"),
                     md5_checksum=f.get("md5Checksum"),
+                    mime_type=f.get("mimeType"),
                 )
         completed = True
     finally:
@@ -274,7 +279,7 @@ def get_file_metadata(request: DriveFileMetadataRequest, ctx: RunContext) -> Dri
         )
     drive = _get_drive_client(request.service_account_path, ctx)
     try:
-        resp = drive.files().get(fileId=request.file_id, fields="id,name,modifiedTime,md5Checksum").execute()
+        resp = drive.files().get(fileId=request.file_id, fields="id,name,modifiedTime,md5Checksum,mimeType").execute()
     except DRIVE_BOUNDARY_EXCEPTIONS as exc:
         logger.info(log_event(
             ctx,
@@ -296,6 +301,7 @@ def get_file_metadata(request: DriveFileMetadataRequest, ctx: RunContext) -> Dri
         name=resp.get("name"),
         modified_time=resp.get("modifiedTime"),
         md5_checksum=resp.get("md5Checksum"),
+        mime_type=resp.get("mimeType"),
     )
     logger.info(log_event(
         ctx,
@@ -456,3 +462,201 @@ def download_pdf_to_path(request: DriveDownloadToPathRequest, ctx: RunContext) -
         md5=md5,
         size=size,
     )
+
+
+def list_files_in_folder(
+    request: DriveFolderFileListRequest, ctx: RunContext
+) -> DriveFolderFileListResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="drive_folder_file_list_start",
+            module=logger.name,
+            fields={
+                "folder_id": request.folder_id,
+                "name_prefix": request.name_prefix or "",
+                "page_size": request.page_size,
+                "order_by": request.order_by or "",
+                "limit": request.limit,
+                "supports_all_drives": request.supports_all_drives,
+                "include_items_from_all_drives": request.include_items_from_all_drives,
+                "drive_id": request.drive_id or "",
+            },
+        )
+    )
+    if not request.service_account_path:
+        raise AppError(
+            code="drive_sa_path_missing",
+            message="Service account path is required to list Drive folder files",
+            retryable=False,
+        )
+    if not request.folder_id:
+        raise AppError(
+            code="drive_folder_id_missing",
+            message="Drive folder ID is required to list folder files",
+            retryable=False,
+        )
+    drive = _get_drive_client(request.service_account_path, ctx)
+    name_prefix = str(request.name_prefix or "").replace("'", "\\'")
+    query = f"'{request.folder_id}' in parents and trashed=false"
+    if name_prefix:
+        query += f" and name contains '{name_prefix}'"
+    list_kwargs = {
+        "q": query,
+        "fields": "files(id,name,modifiedTime,md5Checksum,mimeType),nextPageToken",
+        "supportsAllDrives": request.supports_all_drives,
+        "includeItemsFromAllDrives": request.include_items_from_all_drives,
+    }
+    if request.page_size:
+        list_kwargs["pageSize"] = int(request.page_size)
+    if request.order_by:
+        list_kwargs["orderBy"] = request.order_by
+    if request.drive_id:
+        list_kwargs["driveId"] = request.drive_id
+        list_kwargs["corpora"] = "drive"
+    rows = _list_files_paginated(drive, list_kwargs, DriveListRequest(
+        schema_version="1.0",
+        folder_id=request.folder_id,
+        service_account_path=request.service_account_path,
+        page_size=request.page_size,
+        order_by=request.order_by,
+        modified_after=None,
+        list_mode="full",
+        supports_all_drives=request.supports_all_drives,
+        include_items_from_all_drives=request.include_items_from_all_drives,
+        drive_id=request.drive_id,
+    ), ctx)
+    files = [
+        DriveFile(
+            schema_version="1.0",
+            file_id=str(row.get("id", "")),
+            name=row.get("name"),
+            modified_time=row.get("modifiedTime"),
+            md5_checksum=row.get("md5Checksum"),
+            mime_type=row.get("mimeType"),
+        )
+        for row in rows
+        if str(row.get("id", "")).strip()
+    ]
+    limit = request.limit if request.limit > 0 else 50
+    files = files[:limit]
+    response = DriveFolderFileListResponse(
+        schema_version="1.0",
+        folder_id=request.folder_id,
+        files=files,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="drive_folder_file_list_complete",
+            module=logger.name,
+            fields={"folder_id": request.folder_id, "count": len(files)},
+        )
+    )
+    return response
+
+
+def upload_bytes(request: DriveUploadBytesRequest, ctx: RunContext) -> DriveUploadBytesResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="drive_upload_start",
+            module=logger.name,
+            fields={
+                "folder_id": request.folder_id,
+                "file_name": request.file_name,
+                "mime_type": request.mime_type,
+                "size": len(request.content),
+                "supports_all_drives": request.supports_all_drives,
+            },
+        )
+    )
+    if not request.service_account_path:
+        raise AppError(
+            code="drive_sa_path_missing",
+            message="Service account path is required to upload Drive files",
+            retryable=False,
+        )
+    if not request.folder_id:
+        raise AppError(
+            code="drive_folder_id_missing",
+            message="Drive folder ID is required to upload Drive files",
+            retryable=False,
+        )
+    if not request.file_name.strip():
+        raise AppError(
+            code="drive_upload_file_name_missing",
+            message="Drive upload file name is required",
+            retryable=False,
+        )
+    drive = _get_drive_client(request.service_account_path, ctx)
+    metadata = {"name": request.file_name.strip(), "parents": [request.folder_id]}
+    media = MediaIoBaseUpload(
+        io.BytesIO(request.content),
+        mimetype=request.mime_type.strip() or "application/octet-stream",
+        resumable=False,
+    )
+    try:
+        resp = (
+            drive.files()
+            .create(
+                body=metadata,
+                media_body=media,
+                fields="id,name,modifiedTime,md5Checksum,mimeType",
+                supportsAllDrives=request.supports_all_drives,
+            )
+            .execute()
+        )
+    except DRIVE_BOUNDARY_EXCEPTIONS as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="drive_upload_failed",
+                module=logger.name,
+                fields={
+                    "folder_id": request.folder_id,
+                    "file_name": request.file_name,
+                    "error": str(exc),
+                },
+            )
+        )
+        raise AppError(
+            code="drive_upload_failed",
+            message="Drive upload failed",
+            cause=exc,
+            retryable=True,
+            context={"folder_id": request.folder_id, "file_name": request.file_name},
+        ) from exc
+    response = DriveUploadBytesResponse(
+        schema_version="1.0",
+        file=DriveFile(
+            schema_version="1.0",
+            file_id=str(resp.get("id", "")),
+            name=resp.get("name"),
+            modified_time=resp.get("modifiedTime"),
+            md5_checksum=resp.get("md5Checksum"),
+            mime_type=resp.get("mimeType"),
+        ),
+        size=len(request.content),
+        md5=_md5_for_bytes(request.content) if request.content else None,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="drive_upload_complete",
+            module=logger.name,
+            fields={
+                "folder_id": request.folder_id,
+                "file_id": response.file.file_id,
+                "file_name": response.file.name or "",
+                "size": response.size,
+                "md5": response.md5 or "",
+            },
+        )
+    )
+    return response
