@@ -326,6 +326,12 @@ class TestCli(unittest.TestCase):
             retry_base_delay_seconds=1.0,
             retry_backoff_step_seconds=0.0,
             retry_jitter_seconds=0.0,
+            openai_api_key="openai-key",
+            candidate_screening_enabled=True,
+            candidate_screening_model="gpt-5-nano",
+            candidate_screening_temperature=1.0,
+            candidate_screening_timeout_seconds=30.0,
+            candidate_screening_prompt_namespace="publisher_inventory/meaningful_candidate_screen",
         )
         result = PublisherInventoryDiscoveryResult(
             schema_version="1.0",

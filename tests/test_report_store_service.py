@@ -12,6 +12,7 @@ from src.contracts.report_store import (
     PublisherInventoryStateRecordRequest,
     PublishersReplaceRequest,
     ReportMetadataDbAccessRequest,
+    ReportSourceDiscoveryRecordRequest,
     ReportMetadataGetRequest,
     ReportSourceRecordRequest,
     ReportMetadataUpsertRequest,
@@ -20,6 +21,7 @@ from src.contracts.publisher_profiles import PublisherProfileRecord
 from src.services.report_store_service import (
     check_report_db_access,
     get_metadata,
+    record_discovered_report_source,
     get_publisher_download_route,
     get_publisher_inventory_state,
     record_report_source,
@@ -481,6 +483,7 @@ class TestReportStoreService(unittest.TestCase):
                         "Activate Consulting",
                     ),
                 )
+
                 conn.execute(
                     """
                     UPDATE publishers
@@ -554,6 +557,200 @@ class TestReportStoreService(unittest.TestCase):
                 ],
                 rows,
             )
+
+    def test_record_discovered_report_source_inserts_pending_row(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_report_source_discovery_record")
+
+            response = record_discovered_report_source(
+                ReportSourceDiscoveryRecordRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    publisher_name="Activate Consulting",
+                    source_domain="cdn.sanity.io",
+                    report_name="2025 Outlook",
+                    landing_page_url="https://cdn.sanity.io/files/report-2025.pdf",
+                    source_page_url="https://www.activate.com/insights",
+                    discovered_at_utc="2026-03-29T14:00:00Z",
+                    discovered_on_page_number=1,
+                ),
+                ctx,
+            )
+
+            self.assertGreater(response.record_id, 0)
+            self.assertTrue(response.created_new)
+            conn = sqlite3.connect(db_path)
+            try:
+                row = conn.execute(
+                    """
+                    SELECT
+                        publisher_name,
+                        source_domain,
+                        report_name,
+                        landing_page_url,
+                        source_page_url,
+                        source_status,
+                        discovered_at_utc,
+                        discovered_on_page_number,
+                        downloaded_at_utc,
+                        md5
+                    FROM report_sources
+                    WHERE id=?
+                    """,
+                    (response.record_id,),
+                ).fetchone()
+            finally:
+                conn.close()
+
+            self.assertEqual(
+                (
+                    "Activate Consulting",
+                    "cdn.sanity.io",
+                    "2025 Outlook",
+                    "https://cdn.sanity.io/files/report-2025.pdf",
+                    "https://www.activate.com/insights",
+                    "discovered",
+                    "2026-03-29T14:00:00Z",
+                    1,
+                    None,
+                    None,
+                ),
+                row,
+            )
+
+    def test_record_report_source_upgrades_existing_discovered_row(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_report_source_upgrade")
+
+            discovered = record_discovered_report_source(
+                ReportSourceDiscoveryRecordRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    publisher_name="Activate Consulting",
+                    source_domain="cdn.sanity.io",
+                    report_name="2025 Outlook",
+                    landing_page_url="https://cdn.sanity.io/files/report-2025.pdf",
+                    source_page_url="https://www.activate.com/insights",
+                    discovered_at_utc="2026-03-29T14:00:00Z",
+                    discovered_on_page_number=1,
+                ),
+                ctx,
+            )
+
+            downloaded = record_report_source(
+                ReportSourceRecordRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_domain="cdn.sanity.io",
+                    report_name="2025 Outlook",
+                    landing_page_url="https://cdn.sanity.io/files/report-2025.pdf",
+                    downloaded_at_utc="2026-03-29T15:00:00Z",
+                    md5="ABC123DEF456",
+                ),
+                ctx,
+            )
+
+            self.assertEqual(discovered.record_id, downloaded.record_id)
+            conn = sqlite3.connect(db_path)
+            try:
+                row = conn.execute(
+                    """
+                    SELECT
+                        source_status,
+                        discovered_at_utc,
+                        downloaded_at_utc,
+                        md5
+                    FROM report_sources
+                    WHERE id=?
+                    """,
+                    (downloaded.record_id,),
+                ).fetchone()
+            finally:
+                conn.close()
+
+            self.assertEqual(
+                (
+                    "downloaded",
+                    "2026-03-29T14:00:00Z",
+                    "2026-03-29T15:00:00Z",
+                    "abc123def456",
+                ),
+                row,
+            )
+
+    def test_get_publisher_inventory_state_tolerates_empty_string_timestamps(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_inventory_state_empty_string_timestamps")
+
+            replace_publishers(
+                PublishersReplaceRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_page_url="https://www.notion.so/source",
+                    publishers=[
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-1",
+                            notion_page_url="https://www.notion.so/page-1",
+                            name="Activate Consulting",
+                            homepage="https://www.activate.com/",
+                            self_presentation="Activate description",
+                            insights_url="https://www.activate.com/insights",
+                            icon_source="https://cdn.example.com/activate.png",
+                        )
+                    ],
+                ),
+                ctx,
+            )
+
+            conn = sqlite3.connect(db_path)
+            try:
+                conn.execute(
+                    """
+                    UPDATE publishers
+                    SET
+                        google_folder=?,
+                        inventory_route_kind='',
+                        inventory_route_summary='',
+                        inventory_route_last_final_page_url='',
+                        inventory_route_updated_at='',
+                        inventory_snapshot_drive_file_id='',
+                        inventory_snapshot_drive_file_name='',
+                        inventory_snapshot_sha256='',
+                        inventory_snapshot_updated_at=''
+                    WHERE insights_url=?
+                    """,
+                    (
+                        "https://drive.google.com/drive/folders/test-folder",
+                        "https://www.activate.com/insights",
+                    ),
+                )
+                conn.commit()
+            finally:
+                conn.close()
+
+            state = get_publisher_inventory_state(
+                PublisherInventoryStateGetRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_url="https://www.activate.com/insights",
+                ),
+                ctx,
+            )
+
+            self.assertIsNotNone(state)
+            assert state is not None
+            self.assertEqual("Activate Consulting", state.publisher_name)
+            self.assertEqual(
+                "https://drive.google.com/drive/folders/test-folder",
+                state.google_folder,
+            )
+            self.assertIsNone(state.inventory_route_updated_at)
+            self.assertIsNone(state.inventory_snapshot_updated_at)
+            self.assertIsNone(state.inventory_snapshot_drive_file_id)
 
     def test_replace_publishers_migrates_old_schema_and_drops_removed_columns(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

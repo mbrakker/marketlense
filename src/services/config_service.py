@@ -50,6 +50,9 @@ DEFAULT_BROWSER_DOWNLOAD_IDENTITY_PATH = (
     Path(__file__).resolve().parents[1] / "config" / "browser_download_identity.yaml"
 )
 DEFAULT_PUBLISHER_INVENTORY_PROMPT_NAMESPACE = "publisher_inventory/discovery"
+DEFAULT_PUBLISHER_INVENTORY_CANDIDATE_SCREENING_PROMPT_NAMESPACE = (
+    "publisher_inventory/meaningful_candidate_screen"
+)
 
 
 def _is_missing(value: object) -> bool:
@@ -1941,9 +1944,13 @@ def load_publisher_inventory_settings(
     paths = data.get("paths", {}) or {}
     ingest = data.get("ingest", {}) or {}
     drive_cfg = ingest.get("drive", {}) or {}
+    llm_cfg = ingest.get("llm", {}) or {}
     browser_download = data.get("browser_download", {}) or {}
     browser_retry_cfg = browser_download.get("retry", {}) or {}
     publisher_discovery = data.get("publisher_discovery", {}) or {}
+    candidate_screening_cfg = publisher_discovery.get("candidate_screening", {}) or {}
+    analysis_cfg = data.get("analysis", {}) or {}
+    cost_cfg = data.get("cost", {}) or {}
     retry_cfg = publisher_discovery.get("retry", {}) or browser_retry_cfg
 
     browser_output_root = (
@@ -1975,6 +1982,13 @@ def load_publisher_inventory_settings(
         runtime_base_path=runtime_base_path,
         resolver=resolver,
     )
+    llm_runtime = _resolve_llm_runtime_settings(llm_cfg)
+    paths_settings = _resolve_paths_settings(paths, resolver)
+    analysis_settings = _resolve_analysis_settings(
+        analysis_cfg,
+        cost_cfg,
+        html_tag_acronyms_path=paths_settings["html_tag_acronyms_path"],
+    )
 
     api_key = _env_value("OPENROUTER_API_KEY")
     if _is_missing(api_key):
@@ -1993,6 +2007,16 @@ def load_publisher_inventory_settings(
     ).strip()
     if not model:
         resolver.missing.append("publisher_discovery.model|env:PUBLISHER_DISCOVERY_MODEL")
+
+    candidate_screening_enabled = _to_bool(
+        candidate_screening_cfg.get("enabled")
+        if not _is_missing(candidate_screening_cfg.get("enabled"))
+        else _env_value("PUBLISHER_DISCOVERY_CANDIDATE_SCREENING_ENABLED"),
+        True,
+    )
+    openai_api_key = _env_value("OPENAI_API_KEY")
+    if candidate_screening_enabled and _is_missing(openai_api_key):
+        resolver.missing.append("env:OPENAI_API_KEY")
 
     if resolver.missing:
         logger.info(
@@ -2142,10 +2166,58 @@ def load_publisher_inventory_settings(
             ),
             0.0,
         ),
+        openai_api_key=openai_api_key,
+        openai_models=_normalize_openai_models(data.get("openai_models") or {}),
+        openai_seed=_opt_int(
+            ingest.get("seed") if not _is_missing(ingest.get("seed")) else None
+        ),
+        candidate_screening_enabled=candidate_screening_enabled,
+        candidate_screening_model=str(
+            candidate_screening_cfg.get("model")
+            or _env_value("PUBLISHER_DISCOVERY_CANDIDATE_SCREENING_MODEL")
+            or "gpt-5-nano"
+        ).strip(),
+        candidate_screening_temperature=_to_float(
+            candidate_screening_cfg.get("temperature")
+            if not _is_missing(candidate_screening_cfg.get("temperature"))
+            else _env_value("PUBLISHER_DISCOVERY_CANDIDATE_SCREENING_TEMPERATURE"),
+            1.0,
+        ),
+        candidate_screening_timeout_seconds=max(
+            _to_float(
+                candidate_screening_cfg.get("timeout_seconds")
+                if not _is_missing(candidate_screening_cfg.get("timeout_seconds"))
+                else _env_value(
+                    "PUBLISHER_DISCOVERY_CANDIDATE_SCREENING_TIMEOUT_SECONDS"
+                ),
+                120.0,
+            ),
+            1.0,
+        ),
+        candidate_screening_prompt_namespace=str(
+            candidate_screening_cfg.get("prompt_namespace")
+            or _env_value("PUBLISHER_DISCOVERY_CANDIDATE_SCREENING_PROMPT_NAMESPACE")
+            or DEFAULT_PUBLISHER_INVENTORY_CANDIDATE_SCREENING_PROMPT_NAMESPACE
+        ).strip(),
+        cost_ledger_path=analysis_settings["cost_ledger_path"],
+        cost_daily_path=analysis_settings["cost_daily_path"],
+        model_pricing=analysis_settings["model_pricing"],
+        llm_retry_retries=llm_runtime["llm_retry_retries"],
+        llm_retry_base_delay_seconds=llm_runtime["llm_retry_base_delay_seconds"],
+        llm_retry_backoff_step_seconds=llm_runtime["llm_retry_backoff_step_seconds"],
+        llm_retry_jitter_seconds=llm_runtime["llm_retry_jitter_seconds"],
+        llm_circuit_breaker_failure_threshold=llm_runtime[
+            "llm_circuit_breaker_failure_threshold"
+        ],
+        llm_circuit_breaker_recovery_seconds=llm_runtime[
+            "llm_circuit_breaker_recovery_seconds"
+        ],
     )
 
     Path(settings.output_dir).mkdir(parents=True, exist_ok=True)
     Path(settings.reports_db).parent.mkdir(parents=True, exist_ok=True)
+    Path(settings.cost_ledger_path).parent.mkdir(parents=True, exist_ok=True)
+    Path(settings.cost_daily_path).parent.mkdir(parents=True, exist_ok=True)
     logger.info(
         log_event(
             ctx,
@@ -2172,6 +2244,15 @@ def load_publisher_inventory_settings(
                 "retry_base_delay_seconds": settings.retry_base_delay_seconds,
                 "retry_backoff_step_seconds": settings.retry_backoff_step_seconds,
                 "retry_jitter_seconds": settings.retry_jitter_seconds,
+                "candidate_screening_enabled": settings.candidate_screening_enabled,
+                "candidate_screening_model": settings.candidate_screening_model,
+                "candidate_screening_temperature": settings.candidate_screening_temperature,
+                "candidate_screening_timeout_seconds": settings.candidate_screening_timeout_seconds,
+                "candidate_screening_prompt_namespace": settings.candidate_screening_prompt_namespace,
+                "llm_retry_retries": llm_runtime["llm_retry_retries"],
+                "llm_retry_base_delay_seconds": llm_runtime["llm_retry_base_delay_seconds"],
+                "llm_retry_backoff_step_seconds": llm_runtime["llm_retry_backoff_step_seconds"],
+                "llm_retry_jitter_seconds": llm_runtime["llm_retry_jitter_seconds"],
             },
         )
     )

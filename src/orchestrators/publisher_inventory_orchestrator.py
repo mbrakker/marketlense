@@ -5,6 +5,7 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Callable, Optional
+from urllib.parse import urlsplit
 
 from src.contracts.drive import (
     DriveDownloadRequest,
@@ -17,6 +18,9 @@ from src.contracts.drive import (
 from src.contracts.publisher_inventory import (
     PublisherInventoryBuildRequest,
     PublisherInventoryBuildResponse,
+    PublisherInventoryCandidateScreeningItem,
+    PublisherInventoryCandidateScreeningRequest,
+    PublisherInventoryCandidateScreeningResponse,
     PublisherInventoryDiscoveryRequest,
     PublisherInventoryDiscoveryResult,
     PublisherInventoryServiceRequest,
@@ -24,6 +28,8 @@ from src.contracts.publisher_inventory import (
     PublisherInventorySnapshot,
 )
 from src.contracts.report_store import (
+    ReportSourceDiscoveryRecordRequest,
+    ReportSourceDiscoveryRecordResponse,
     PublisherInventoryStateGetRequest,
     PublisherInventoryStateRecordRequest,
     PublisherInventoryStateResponse,
@@ -33,11 +39,15 @@ from src.generators.publisher_inventory_generator import (
     build_publisher_inventory_snapshot,
     parse_publisher_inventory_snapshot,
 )
+from src.generators.publisher_inventory_candidate_screening_generator import (
+    screen_publisher_inventory_candidates,
+)
 from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
 from src.services.drive_service import download_pdf, list_files_in_folder, upload_bytes
 from src.services.publisher_inventory_service import discover_publisher_inventory
 from src.services.report_store_service import (
     get_publisher_inventory_state,
+    record_discovered_report_source,
     record_publisher_inventory_state,
 )
 from src.utils.drive_utils import extract_drive_folder_id
@@ -64,6 +74,10 @@ class PublisherInventoryDependencies:
         [str, str, RunContext],
         PublisherInventorySnapshot,
     ]
+    screen_publisher_inventory_candidates: Callable[
+        [PublisherInventoryCandidateScreeningRequest, RunContext],
+        PublisherInventoryCandidateScreeningResponse,
+    ]
     get_publisher_inventory_state: Callable[
         [PublisherInventoryStateGetRequest, RunContext],
         Optional[PublisherInventoryStateResponse],
@@ -71,6 +85,10 @@ class PublisherInventoryDependencies:
     record_publisher_inventory_state: Callable[
         [PublisherInventoryStateRecordRequest, RunContext],
         None,
+    ]
+    record_discovered_report_source: Callable[
+        [ReportSourceDiscoveryRecordRequest, RunContext],
+        ReportSourceDiscoveryRecordResponse,
     ]
     list_files_in_folder: Callable[
         [DriveFolderFileListRequest, RunContext],
@@ -87,8 +105,10 @@ class PublisherInventoryDependencies:
             parse_publisher_inventory_snapshot=lambda snapshot_json, source, ctx: (
                 parse_publisher_inventory_snapshot(snapshot_json, source=source, ctx=ctx)
             ),
+            screen_publisher_inventory_candidates=screen_publisher_inventory_candidates,
             get_publisher_inventory_state=get_publisher_inventory_state,
             record_publisher_inventory_state=record_publisher_inventory_state,
+            record_discovered_report_source=record_discovered_report_source,
             list_files_in_folder=list_files_in_folder,
             download_pdf=download_pdf,
             upload_bytes=upload_bytes,
@@ -210,6 +230,54 @@ def run_publisher_inventory_discovery(
         ),
         ctx,
     )
+    page_url_by_number = {
+        page.page_number: page.page_url for page in build_response.snapshot.pages
+    }
+    screening_response = deps.screen_publisher_inventory_candidates(
+        PublisherInventoryCandidateScreeningRequest(
+            schema_version="1.0",
+            publisher_name=publisher_state.publisher_name,
+            insights_url=publisher_state.insights_url,
+            candidates=[
+                PublisherInventoryCandidateScreeningItem(
+                    schema_version="1.0",
+                    canonical_url=item.canonical_url,
+                    title=item.title,
+                    discovered_on_page_number=item.discovered_on_page_number,
+                    source_page_url=page_url_by_number.get(
+                        item.discovered_on_page_number, publisher_state.insights_url
+                    ),
+                )
+                for item in build_response.new_items
+            ],
+            settings=request.settings,
+        ),
+        ctx,
+    )
+    approved_item_urls = {
+        candidate.canonical_url for candidate in screening_response.approved_items
+    }
+    approved_items = [
+        item
+        for item in build_response.new_items
+        if item.canonical_url in approved_item_urls
+    ]
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="publisher_inventory_candidate_screening_complete",
+            module=logger.name,
+            fields={
+                "publisher_name": publisher_state.publisher_name,
+                "raw_new_report_count": len(build_response.new_items),
+                "approved_new_report_count": len(approved_items),
+                "rejected_new_report_count": len(screening_response.rejected_items),
+                "screening_model": screening_response.model,
+                "screening_request_id": screening_response.request_id or "",
+            },
+        )
+    )
     snapshot_changed = build_response.snapshot_sha256 != (previous_snapshot_sha256 or "")
     snapshot_drive_file_id = previous_snapshot_file_id
     snapshot_drive_file_name = previous_snapshot_file_name
@@ -256,6 +324,49 @@ def run_publisher_inventory_discovery(
                 },
             )
         )
+    for item in approved_items:
+        source_record = run_with_retry(
+            step_name="publisher_inventory_report_source_record",
+            operation=lambda item=item: deps.record_discovered_report_source(
+                ReportSourceDiscoveryRecordRequest(
+                    schema_version="1.0",
+                    db_path=request.reports_db,
+                    publisher_name=publisher_state.publisher_name,
+                    source_domain=_source_domain_for_url(item.canonical_url),
+                    report_name=item.title,
+                    landing_page_url=item.canonical_url,
+                    source_page_url=page_url_by_number.get(
+                        item.discovered_on_page_number, publisher_state.insights_url
+                    ),
+                    discovered_at_utc=build_response.snapshot.discovered_at_utc,
+                    discovered_on_page_number=item.discovered_on_page_number,
+                ),
+                ctx,
+            ),
+            ctx=ctx,
+            logger=logger,
+            module_name=logger.name,
+            policy=policy,
+            retry_event="publisher_inventory_report_source_record_retry",
+            failure_event="publisher_inventory_report_source_record_failed",
+        )
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="publisher_inventory_report_source_recorded",
+                module=logger.name,
+                fields={
+                    "record_id": source_record.record_id,
+                    "publisher_name": source_record.publisher_name,
+                    "report_name": source_record.report_name,
+                    "landing_page_url": source_record.landing_page_url,
+                    "source_page_url": source_record.source_page_url,
+                    "discovered_on_page_number": source_record.discovered_on_page_number,
+                    "created_new": source_record.created_new,
+                },
+            )
+        )
     deps.record_publisher_inventory_state(
         PublisherInventoryStateRecordRequest(
             schema_version="1.0",
@@ -276,7 +387,7 @@ def run_publisher_inventory_discovery(
         publisher_name=publisher_state.publisher_name,
         insights_url=publisher_state.insights_url,
         normalized_insights_url=normalized_url,
-        new_report_urls=build_response.new_items,
+        new_report_urls=approved_items,
         current_report_count=build_response.current_report_count,
         previous_report_count=build_response.previous_report_count,
         used_memory_route=discovery_result.used_route_hint,
@@ -417,3 +528,7 @@ def _snapshot_file_name() -> str:
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _source_domain_for_url(url: str) -> str:
+    return str(urlsplit(str(url).strip()).hostname or "").strip().lower()

@@ -26,6 +26,119 @@ class _FakeResponse:
             raise RuntimeError(f"status={self.status_code}")
 
 
+class _FakeBrowserPage:
+    def __init__(self, browser: "_FakeBrowser", start_state: str, states: dict[str, dict[str, object]]) -> None:
+        self._browser = browser
+        self._state_id = start_state
+        self._states = states
+
+    def _payload(self) -> dict[str, object]:
+        payload = dict(self._states[self._state_id]["payload"])
+        payload.setdefault("anchors", [])
+        payload.setdefault("load_more_labels", [])
+        payload.setdefault("tab_labels", [])
+        payload.setdefault("active_tab_label", "")
+        payload.setdefault("report_link_url", "")
+        payload.setdefault("has_report_filter", False)
+        payload.setdefault("has_apply_button", False)
+        return payload
+
+    async def evaluate(self, script: str, *args):
+        script_name = str(self._states[self._state_id].get("script_name", ""))
+        if "readyState" in script and "anchorCount" in script:
+            payload = self._payload()
+            return json.dumps(
+                {
+                    "readyState": "complete",
+                    "title": str(payload.get("page_title") or ""),
+                    "anchorCount": len(payload.get("anchors", [])),
+                }
+            )
+        if script == service._browser_inventory_state_script():
+            return json.dumps(self._payload())
+        if script == service._browser_click_named_control_script():
+            labels = [str(label).strip().lower() for label in args[0]]
+            transitions = self._states[self._state_id].get("named_clicks", {})
+            assert isinstance(transitions, dict)
+            for label in labels:
+                if label in transitions:
+                    self._state_id = str(transitions[label])
+                    return "true"
+            return "false"
+        if script == service._browser_click_tab_script():
+            target = str(args[0]).strip().lower()
+            transitions = self._states[self._state_id].get("tab_clicks", {})
+            assert isinstance(transitions, dict)
+            if target in transitions:
+                self._state_id = str(transitions[target])
+                return "true"
+            return "false"
+        if script == service._browser_apply_report_filter_script():
+            next_state = self._states[self._state_id].get("apply_filter_next_state")
+            if next_state:
+                self._state_id = str(next_state)
+                return "true"
+            return "false"
+        raise AssertionError(f"Unexpected script: {script_name or script[:40]}")
+
+    async def get_url(self) -> str:
+        return str(self._payload()["page_url"])
+
+    async def goto(self, url: str) -> None:
+        normalized = service._normalize_absolute_url(str(url).strip()) or str(url).strip()
+        for state_id, state in self._states.items():
+            payload = state["payload"]
+            assert isinstance(payload, dict)
+            payload_url = service._normalize_absolute_url(str(payload.get("page_url"))) or str(payload.get("page_url"))
+            if payload_url == normalized:
+                self._state_id = state_id
+                return
+        raise AssertionError(f"Unexpected goto url: {url}")
+
+
+class _FakeBrowser:
+    last_instance: "_FakeBrowser | None" = None
+
+    def __init__(self, downloads_path, headless, auto_download_pdfs, *, states: dict[str, dict[str, object]], start_state: str):
+        self.downloads_path = downloads_path
+        self.headless = headless
+        self.auto_download_pdfs = auto_download_pdfs
+        self._states = states
+        self._start_state = start_state
+        self._started = False
+        self.page: _FakeBrowserPage | None = None
+        _FakeBrowser.last_instance = self
+
+    async def start(self) -> None:
+        self._started = True
+
+    async def new_page(self, url: str):
+        assert self._started is True
+        self.page = _FakeBrowserPage(self, self._start_state, self._states)
+        return self.page
+
+    async def kill(self) -> None:
+        return None
+
+
+def _runtime_for_states(states: dict[str, dict[str, object]], start_state: str = "initial") -> SimpleNamespace:
+    class RuntimeBrowser(_FakeBrowser):
+        def __init__(self, downloads_path, headless, auto_download_pdfs):
+            super().__init__(
+                downloads_path,
+                headless,
+                auto_download_pdfs,
+                states=states,
+                start_state=start_state,
+            )
+
+    return SimpleNamespace(Browser=RuntimeBrowser)
+
+
+async def _fast_sleep(_seconds: float) -> None:
+    return None
+
+
 def _settings(tmp_path: Path) -> PublisherInventorySettings:
     return PublisherInventorySettings(
         schema_version="1.0",
@@ -126,61 +239,31 @@ def test_discover_publisher_inventory_browser_fallback_when_http_empty(
             text="<html><body><a href='/about'>About</a></body></html>",
         ),
     )
-
-    payload = {
-        "route_kind": "browser_render",
-        "route_summary": "Open the landing page, click next pagination, and extract the report cards.",
-        "final_page_url": "https://example.com/insights?page=2",
-        "pages": [
-            {"page_number": 1, "page_url": "https://example.com/insights"},
-            {"page_number": 2, "page_url": "https://example.com/insights?page=2"},
-        ],
-        "candidates": [
-            {
-                "url": "https://example.com/reports/report-one",
-                "title": "Report One 2026",
-                "source_page_url": "https://example.com/insights",
-                "discovered_on_page_number": 1,
-                "pdf_url": None,
-                "published_at_text": None,
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://example.com/insights",
+                "page_title": "Insights",
+                "anchors": [
+                    {"href": "https://example.com/reports/report-one", "text": "Report One 2026", "rel": ""}
+                ],
+                "load_more_labels": ["Load more"],
+            },
+            "named_clicks": {"load more": "page_2"},
+        },
+        "page_2": {
+            "payload": {
+                "page_url": "https://example.com/insights",
+                "page_title": "Insights",
+                "anchors": [
+                    {"href": "https://example.com/reports/report-one", "text": "Report One 2026", "rel": ""},
+                    {"href": "https://example.com/reports/report-two", "text": "Report Two 2026", "rel": ""},
+                ],
             }
-        ],
+        },
     }
-
-    class FakeHistory:
-        def final_result(self) -> str:
-            return json.dumps(payload)
-
-    class FakeBrowser:
-        def __init__(self, downloads_path, headless, auto_download_pdfs):
-            self.downloads_path = downloads_path
-            self.headless = headless
-            self.auto_download_pdfs = auto_download_pdfs
-            self.url = "https://example.com/insights?page=2"
-
-        async def kill(self) -> None:
-            return None
-
-    class FakeChatOpenRouter:
-        def __init__(self, **kwargs):
-            self.kwargs = kwargs
-
-    class FakeAgent:
-        def __init__(self, *, task, llm, browser, output_model_schema):
-            self.task = task
-            self.llm = llm
-            self.browser = browser
-            self.output_model_schema = output_model_schema
-
-        def run_sync(self, max_steps: int):
-            return FakeHistory()
-
-    runtime = SimpleNamespace(
-        Browser=FakeBrowser,
-        ChatOpenRouter=FakeChatOpenRouter,
-        Agent=FakeAgent,
-    )
-    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: runtime)
+    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
 
     response = service.discover_publisher_inventory(
         PublisherInventoryServiceRequest(
@@ -196,7 +279,11 @@ def test_discover_publisher_inventory_browser_fallback_when_http_empty(
     assert response.route_kind == "browser_render"
     assert response.used_route_hint is True
     assert len(response.pages) == 2
-    assert response.candidates[0].discovered_on_page_number == 1
+    assert any(
+        candidate.url == "https://example.com/reports/report-two"
+        and candidate.discovered_on_page_number == 2
+        for candidate in response.candidates
+    )
     assert_no_defaulted_required_fields(response)
 
 
@@ -266,65 +353,21 @@ def test_discover_publisher_inventory_force_browser_skips_http(
             or _FakeResponse(
                 url="https://example.com/insights",
                 text="<html><body><a href='/reports/report-one'>Report One 2026</a></body></html>",
-            )
+                )
         ),
     )
-
-    payload = {
-        "route_kind": "browser_render",
-        "route_summary": "Open the page in headed mode and extract the report cards.",
-        "final_page_url": "https://example.com/insights",
-        "pages": [
-            {"page_number": 1, "page_url": "https://example.com/insights"},
-        ],
-        "candidates": [
-            {
-                "url": "https://example.com/reports/report-one",
-                "title": "Report One 2026",
-                "source_page_url": "https://example.com/insights",
-                "discovered_on_page_number": 1,
-                "pdf_url": None,
-                "published_at_text": None,
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://example.com/insights",
+                "page_title": "Insights",
+                "anchors": [
+                    {"href": "https://example.com/reports/report-one", "text": "Report One 2026", "rel": ""}
+                ],
             }
-        ],
+        }
     }
-
-    class FakeHistory:
-        def final_result(self) -> str:
-            return json.dumps(payload)
-
-    class FakeBrowser:
-        last_instance = None
-
-        def __init__(self, downloads_path, headless, auto_download_pdfs):
-            self.downloads_path = downloads_path
-            self.headless = headless
-            self.auto_download_pdfs = auto_download_pdfs
-            self.url = "https://example.com/insights"
-            FakeBrowser.last_instance = self
-
-        async def kill(self) -> None:
-            return None
-
-    class FakeChatOpenRouter:
-        def __init__(self, **kwargs):
-            self.kwargs = kwargs
-
-    class FakeAgent:
-        def __init__(self, *, task, llm, browser, output_model_schema):
-            self.task = task
-            self.llm = llm
-            self.browser = browser
-            self.output_model_schema = output_model_schema
-
-        def run_sync(self, max_steps: int):
-            return FakeHistory()
-
-    runtime = SimpleNamespace(
-        Browser=FakeBrowser,
-        ChatOpenRouter=FakeChatOpenRouter,
-        Agent=FakeAgent,
-    )
+    runtime = _runtime_for_states(states)
     vendored_root = str(
         (Path(service.__file__).resolve().parents[2] / "tools" / "browser-use").resolve()
     )
@@ -339,6 +382,7 @@ def test_discover_publisher_inventory_force_browser_skips_http(
         return runtime
 
     external_boundary_mocks_only.setattr(service, "import_module", _import_module)
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
 
     try:
         service.sys.path[:] = [
@@ -356,90 +400,61 @@ def test_discover_publisher_inventory_force_browser_skips_http(
         service.sys.path[:] = original_sys_path
 
     assert response.route_kind == "browser_render"
-    assert FakeBrowser.last_instance is not None
-    assert FakeBrowser.last_instance.headless is False
+    assert _FakeBrowser.last_instance is not None
+    assert _FakeBrowser.last_instance.headless is False
     assert import_attempts == [False, True]
-    assert http_calls == ["https://example.com/insights"]
+    assert http_calls == []
 
 
-def test_discover_publisher_inventory_browser_supplements_candidates_from_http_page_html(
+def test_discover_publisher_inventory_browser_traverses_tabs(
     tmp_path: Path,
     run_context,
     external_boundary_mocks_only,
 ) -> None:
-    html = """
-    <html><body>
-      <a href="/reports/report-one.pdf">Report One 2026</a>
-      <a href="/reports/report-two.pdf">Report Two 2026</a>
-    </body></html>
-    """
-    external_boundary_mocks_only.setattr(
-        service.requests,
-        "get",
-        lambda url, timeout, headers: _FakeResponse(
-            url="https://example.com/insights",
-            text=html,
-        ),
-    )
-
-    payload = {
-        "route_kind": "browser_render",
-        "route_summary": "Open the page in headed mode and extract the report cards.",
-        "final_page_url": "https://example.com/insights",
-        "pages": [
-            {"page_number": 1, "page_url": "https://example.com/insights"},
-        ],
-        "candidates": [
-            {
-                "url": "https://example.com/insights/download-now",
-                "title": "Technology & Media Outlook - Download now",
-                "source_page_url": "https://example.com/insights",
-                "discovered_on_page_number": 1,
-                "pdf_url": None,
-                "published_at_text": None,
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://www.salesforce.com/eu/company/analyst-reports/#!page=1",
+                "page_title": "Analyst Reports | Salesforce EU",
+                "anchors": [
+                    {"href": "https://www.salesforce.com/eu/form/gartner-report", "text": "2025 Gartner Report", "rel": ""}
+                ],
+                "tab_labels": ["Gartner", "Forrester", "IDC"],
+                "active_tab_label": "Gartner",
+            },
+            "tab_clicks": {"forrester": "forrester", "idc": "idc"},
+        },
+        "forrester": {
+            "payload": {
+                "page_url": "https://www.salesforce.com/eu/company/analyst-reports/#!page=1",
+                "page_title": "Analyst Reports | Salesforce EU",
+                "anchors": [
+                    {"href": "https://www.salesforce.com/eu/form/forrester-report", "text": "2025 Forrester Wave", "rel": ""}
+                ],
+                "tab_labels": ["Gartner", "Forrester", "IDC"],
+                "active_tab_label": "Forrester",
+            },
+            "tab_clicks": {"idc": "idc"},
+        },
+        "idc": {
+            "payload": {
+                "page_url": "https://www.salesforce.com/eu/company/analyst-reports/#!page=1",
+                "page_title": "Analyst Reports | Salesforce EU",
+                "anchors": [
+                    {"href": "https://www.salesforce.com/eu/form/idc-report", "text": "2025 IDC MarketScape", "rel": ""}
+                ],
+                "tab_labels": ["Gartner", "Forrester", "IDC"],
+                "active_tab_label": "IDC",
             }
-        ],
+        },
     }
-
-    class FakeHistory:
-        def final_result(self) -> str:
-            return json.dumps(payload)
-
-    class FakeBrowser:
-        def __init__(self, downloads_path, headless, auto_download_pdfs):
-            self.downloads_path = downloads_path
-            self.headless = headless
-            self.auto_download_pdfs = auto_download_pdfs
-            self.url = "https://example.com/insights"
-
-        async def kill(self) -> None:
-            return None
-
-    class FakeChatOpenRouter:
-        def __init__(self, **kwargs):
-            self.kwargs = kwargs
-
-    class FakeAgent:
-        def __init__(self, *, task, llm, browser, output_model_schema):
-            self.task = task
-            self.llm = llm
-            self.browser = browser
-            self.output_model_schema = output_model_schema
-
-        def run_sync(self, max_steps: int):
-            return FakeHistory()
-
-    runtime = SimpleNamespace(
-        Browser=FakeBrowser,
-        ChatOpenRouter=FakeChatOpenRouter,
-        Agent=FakeAgent,
-    )
-    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: runtime)
+    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
 
     response = service.discover_publisher_inventory(
         PublisherInventoryServiceRequest(
             schema_version="1.0",
-            insights_url="https://example.com/insights",
+            insights_url="https://www.salesforce.com/eu/company/analyst-reports/#!page=1",
             settings=PublisherInventorySettings(
                 schema_version="1.0",
                 openrouter_api_key="openrouter-key",
@@ -466,11 +481,97 @@ def test_discover_publisher_inventory_browser_supplements_candidates_from_http_p
     )
 
     assert response.route_kind == "browser_render"
-    assert [candidate.title for candidate in response.candidates] == [
-        "Report One 2026",
-        "Report Two 2026",
-    ]
+    assert len(response.pages) == 3
     assert [candidate.url for candidate in response.candidates] == [
-        "https://example.com/reports/report-one.pdf",
-        "https://example.com/reports/report-two.pdf",
+        "https://www.salesforce.com/eu/form/gartner-report",
+        "https://www.salesforce.com/eu/form/forrester-report",
+        "https://www.salesforce.com/eu/form/idc-report",
+    ]
+    assert "tabbed publisher section(s)" in response.route_summary
+
+
+def test_discover_publisher_inventory_browser_follows_report_listing_route(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://www.gfk-media-measurement.com/global/en/insights/",
+                "page_title": "Insights",
+                "anchors": [
+                    {"href": "https://www.gfk-media-measurement.com/global/en/insights/commentary/2025/example/", "text": "Commentary", "rel": ""}
+                ],
+                "report_link_url": "https://www.gfk-media-measurement.com/global/en/insights/report/2025/reports/",
+            }
+        },
+        "report_listing": {
+            "payload": {
+                "page_url": "https://www.gfk-media-measurement.com/global/en/insights/report/2025/reports/",
+                "page_title": "Reports",
+                "anchors": [
+                    {
+                        "href": "https://www.gfk-media-measurement.com/global/en/insights/report/2025/reports/q2-audience-report/",
+                        "text": "Q2 Audience Report 2025",
+                        "rel": "",
+                    }
+                ],
+            }
+        },
+    }
+    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://www.gfk-media-measurement.com/global/en/insights/",
+            settings=_settings(tmp_path),
+            route_kind_hint="browser_render",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "browser_render"
+    assert response.final_page_url == "https://www.gfk-media-measurement.com/global/en/insights/report/2025/reports"
+    assert response.candidates[0].url == "https://www.gfk-media-measurement.com/global/en/insights/report/2025/reports/q2-audience-report"
+    assert "report listing route" in response.route_summary
+
+
+def test_extract_candidates_from_html_filters_false_positive_hub_and_social_links() -> None:
+    html = """
+    <html><body>
+      <a href="/it/insights">Italy (Italiano)</a>
+      <a href="/de/insights/type/report">Deutsch</a>
+      <a href="https://www.facebook.com/bainandcompany">icon-facebook-f</a>
+      <a href="/insights/type/article">Article archive</a>
+      <a href="/insights/topic/big-data/">Big Data</a>
+      <a href="/">.st0{fill:#FFFFFF;}</a>
+      <a href="/global/en/insights/report/2025/reports/">Reports</a>
+      <a href="/global/en">02_Elements/Icons/Close</a>
+      <a href="/vector-digital/ai-insights-and-solutions">AI, Insights, and Solutions</a>
+      <a href="/insights/featured-topics/">View all featured topics</a>
+      <a href="/insights/why-agentic-ai-demands-a-new-architecture/">Why Agentic AI Demands a New Architecture</a>
+      <a href="/insights/topics/global-private-equity-report/">Global Private Equity Report 2026</a>
+      <a href="https://www.weforum.org/stories/2026/03/how-corporate-strategy-is-changing-in-a-world-of-constant-shocks/">Redefining Corporate Strategy in a More Volatile World</a>
+    </body></html>
+    """
+    parser = service._InventoryHtmlParser()
+    parser.feed(html)
+
+    candidates = service._extract_candidates_from_html(
+        anchors=parser.anchors,
+        page_url="https://www.bain.com/insights?filters=|types(424%2C420)",
+        page_number=1,
+        next_page_url=None,
+    )
+
+    assert [candidate.title for candidate in candidates] == [
+        "Why Agentic AI Demands a New Architecture",
+        "Global Private Equity Report 2026",
+    ]
+    assert [candidate.url for candidate in candidates] == [
+        "https://www.bain.com/insights/why-agentic-ai-demands-a-new-architecture",
+        "https://www.bain.com/insights/topics/global-private-equity-report",
     ]

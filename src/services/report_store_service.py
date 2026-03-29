@@ -25,6 +25,8 @@ from src.contracts.report_store import (
     ReportMetadataGetResponse,
     ReportMetadataListRequest,
     ReportMetadataListResponse,
+    ReportSourceDiscoveryRecordRequest,
+    ReportSourceDiscoveryRecordResponse,
     ReportSourceRecordRequest,
     ReportSourceRecordResponse,
     ReportMetadataUpsertRequest,
@@ -73,13 +75,17 @@ CREATE TABLE IF NOT EXISTS report_sources (
   source_domain TEXT NOT NULL,
   report_name TEXT NOT NULL,
   landing_page_url TEXT NOT NULL,
-  downloaded_at_utc TEXT NOT NULL,
-  md5 TEXT NOT NULL
+  normalized_landing_page_url TEXT NOT NULL,
+  source_status TEXT NOT NULL,
+  source_page_url TEXT,
+  publisher_name TEXT,
+  discovered_at_utc TEXT,
+  discovered_on_page_number INTEGER,
+  downloaded_at_utc TEXT,
+  md5 TEXT,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
 );
-
-CREATE INDEX IF NOT EXISTS idx_report_sources_domain ON report_sources(source_domain);
-CREATE INDEX IF NOT EXISTS idx_report_sources_md5 ON report_sources(md5);
-CREATE INDEX IF NOT EXISTS idx_report_sources_downloaded_at ON report_sources(downloaded_at_utc);
 
 CREATE TABLE IF NOT EXISTS publishers (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -134,8 +140,150 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
     if "evidence_packs_json" not in cols:
         conn.execute("ALTER TABLE reports ADD COLUMN evidence_packs_json TEXT")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_reports_file_name ON reports(file_name)")
+    _ensure_report_sources_schema(conn)
     _ensure_publishers_schema(conn)
     conn.commit()
+
+
+def _ensure_report_sources_schema(conn: sqlite3.Connection) -> None:
+    cur = conn.execute("PRAGMA table_info(report_sources)")
+    rows = cur.fetchall()
+    expected = {
+        "id",
+        "source_domain",
+        "report_name",
+        "landing_page_url",
+        "normalized_landing_page_url",
+        "source_status",
+        "source_page_url",
+        "publisher_name",
+        "discovered_at_utc",
+        "discovered_on_page_number",
+        "downloaded_at_utc",
+        "md5",
+        "created_at",
+        "updated_at",
+    }
+    current = {str(row[1]) for row in rows}
+    if current == expected:
+        _ensure_report_sources_indexes(conn)
+        return
+
+    conn.execute("DROP TABLE IF EXISTS report_sources_new")
+    conn.execute(
+        """
+        CREATE TABLE report_sources_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          source_domain TEXT NOT NULL,
+          report_name TEXT NOT NULL,
+          landing_page_url TEXT NOT NULL,
+          normalized_landing_page_url TEXT NOT NULL,
+          source_status TEXT NOT NULL,
+          source_page_url TEXT,
+          publisher_name TEXT,
+          discovered_at_utc TEXT,
+          discovered_on_page_number INTEGER,
+          downloaded_at_utc TEXT,
+          md5 TEXT,
+          created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+          updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+        )
+        """
+    )
+    if rows:
+        fetched_rows = conn.execute(
+            "SELECT * FROM report_sources ORDER BY id ASC"
+        ).fetchall()
+        column_order = [str(row[1]) for row in rows]
+        current_epoch = int(conn.execute("SELECT strftime('%s','now')").fetchone()[0])
+        for fetched in fetched_rows:
+            source = dict(zip(column_order, fetched))
+            landing_page_url = str(source.get("landing_page_url") or "").strip()
+            normalized_landing_page_url = _normalize_optional_url_key(landing_page_url)
+            if not landing_page_url or not normalized_landing_page_url:
+                continue
+            downloaded_at_utc = str(source.get("downloaded_at_utc") or "").strip() or None
+            md5 = str(source.get("md5") or "").strip().lower() or None
+            source_status = str(source.get("source_status") or "").strip() or "downloaded"
+            source_page_url = (
+                str(source.get("source_page_url") or "").strip() or landing_page_url
+            )
+            discovered_at_utc = (
+                str(source.get("discovered_at_utc") or "").strip() or downloaded_at_utc
+            )
+            discovered_on_page_number = source.get("discovered_on_page_number")
+            created_at = int(source.get("created_at") or 0) or current_epoch
+            updated_at = int(source.get("updated_at") or 0) or created_at
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO report_sources_new(
+                    id,
+                    source_domain,
+                    report_name,
+                    landing_page_url,
+                    normalized_landing_page_url,
+                    source_status,
+                    source_page_url,
+                    publisher_name,
+                    discovered_at_utc,
+                    discovered_on_page_number,
+                    downloaded_at_utc,
+                    md5,
+                    created_at,
+                    updated_at
+                )
+                VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    int(source.get("id") or 0) or None,
+                    str(source.get("source_domain") or "").strip(),
+                    str(source.get("report_name") or "").strip(),
+                    landing_page_url,
+                    normalized_landing_page_url,
+                    source_status,
+                    source_page_url,
+                    str(source.get("publisher_name") or "").strip() or None,
+                    discovered_at_utc,
+                    int(discovered_on_page_number)
+                    if discovered_on_page_number is not None
+                    else None,
+                    downloaded_at_utc,
+                    md5,
+                    created_at,
+                    updated_at,
+                ),
+            )
+    conn.execute("DROP TABLE IF EXISTS report_sources")
+    conn.execute("ALTER TABLE report_sources_new RENAME TO report_sources")
+    _ensure_report_sources_indexes(conn)
+
+
+def _ensure_report_sources_indexes(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_report_sources_domain ON report_sources(source_domain)"
+    )
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_report_sources_normalized_url ON report_sources(normalized_landing_page_url)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_report_sources_status ON report_sources(source_status)"
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_report_sources_md5 ON report_sources(md5)")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_report_sources_discovered_at ON report_sources(discovered_at_utc)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_report_sources_downloaded_at ON report_sources(downloaded_at_utc)"
+    )
+
+
+def _optional_int(value: object) -> Optional[int]:
+    if value is None:
+        return None
+    value_str = str(value).strip()
+    if not value_str:
+        return None
+    return int(value_str)
 
 
 def _ensure_publishers_schema(conn: sqlite3.Connection) -> None:
@@ -708,6 +856,7 @@ def record_report_source(
     landing_page_url = request.landing_page_url.strip()
     downloaded_at_utc = request.downloaded_at_utc.strip()
     md5 = request.md5.strip().lower()
+    normalized_landing_page_url = _normalize_optional_url_key(landing_page_url)
 
     if not db_path:
         raise AppError(
@@ -734,6 +883,13 @@ def record_report_source(
         raise AppError(
             code="report_source_url_missing",
             message="landing_page_url is required for report source recording",
+            retryable=False,
+            severity="error",
+        )
+    if not normalized_landing_page_url:
+        raise AppError(
+            code="report_source_url_invalid",
+            message="landing_page_url must be a valid absolute URL for report source recording",
             retryable=False,
             severity="error",
         )
@@ -768,20 +924,77 @@ def record_report_source(
     ))
     try:
         with _metadata_conn(db_path) as conn:
-            cur = conn.execute(
+            existing_row = conn.execute(
                 """
-                INSERT INTO report_sources(source_domain, report_name, landing_page_url, downloaded_at_utc, md5)
-                VALUES(?, ?, ?, ?, ?)
+                SELECT id, discovered_at_utc
+                FROM report_sources
+                WHERE normalized_landing_page_url=?
                 """,
-                (
-                    source_domain,
-                    report_name,
-                    landing_page_url,
-                    downloaded_at_utc,
-                    md5,
-                ),
-            )
-            record_id = int(cur.lastrowid or 0)
+                (normalized_landing_page_url,),
+            ).fetchone()
+            if existing_row:
+                record_id = int(existing_row[0])
+                discovered_at_utc_value = (
+                    str(existing_row[1] or "").strip() or downloaded_at_utc
+                )
+                conn.execute(
+                    """
+                    UPDATE report_sources
+                    SET
+                        source_domain=?,
+                        report_name=?,
+                        landing_page_url=?,
+                        source_status='downloaded',
+                        source_page_url=COALESCE(NULLIF(source_page_url, ''), ?),
+                        discovered_at_utc=COALESCE(NULLIF(discovered_at_utc, ''), ?),
+                        downloaded_at_utc=?,
+                        md5=?,
+                        updated_at=strftime('%s','now')
+                    WHERE id=?
+                    """,
+                    (
+                        source_domain,
+                        report_name,
+                        landing_page_url,
+                        landing_page_url,
+                        discovered_at_utc_value,
+                        downloaded_at_utc,
+                        md5,
+                        record_id,
+                    ),
+                )
+            else:
+                cur = conn.execute(
+                    """
+                    INSERT INTO report_sources(
+                        source_domain,
+                        report_name,
+                        landing_page_url,
+                        normalized_landing_page_url,
+                        source_status,
+                        source_page_url,
+                        publisher_name,
+                        discovered_at_utc,
+                        discovered_on_page_number,
+                        downloaded_at_utc,
+                        md5
+                    )
+                    VALUES(?, ?, ?, ?, 'downloaded', ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        source_domain,
+                        report_name,
+                        landing_page_url,
+                        normalized_landing_page_url,
+                        landing_page_url,
+                        None,
+                        downloaded_at_utc,
+                        None,
+                        downloaded_at_utc,
+                        md5,
+                    ),
+                )
+                record_id = int(cur.lastrowid or 0)
     except sqlite3.Error as exc:
         raise AppError(
             code="report_source_record_failed",
@@ -819,6 +1032,227 @@ def record_report_source(
             "md5": response.md5,
         },
     ))
+    return response
+
+
+def record_discovered_report_source(
+    request: ReportSourceDiscoveryRecordRequest,
+    ctx: RunContext,
+) -> ReportSourceDiscoveryRecordResponse:
+    db_path = request.db_path.strip()
+    publisher_name = request.publisher_name.strip()
+    source_domain = request.source_domain.strip().lower()
+    report_name = request.report_name.strip()
+    landing_page_url = request.landing_page_url.strip()
+    source_page_url = request.source_page_url.strip()
+    discovered_at_utc = request.discovered_at_utc.strip()
+    discovered_on_page_number = int(request.discovered_on_page_number)
+    normalized_landing_page_url = _normalize_optional_url_key(landing_page_url)
+
+    if not db_path:
+        raise AppError(
+            code="report_source_discovery_db_missing",
+            message="Report metadata DB path is required for discovered source recording",
+            retryable=False,
+            severity="error",
+        )
+    if not publisher_name:
+        raise AppError(
+            code="report_source_discovery_publisher_missing",
+            message="publisher_name is required for discovered source recording",
+            retryable=False,
+            severity="error",
+        )
+    if not source_domain:
+        raise AppError(
+            code="report_source_discovery_domain_missing",
+            message="source_domain is required for discovered source recording",
+            retryable=False,
+            severity="error",
+        )
+    if not report_name:
+        raise AppError(
+            code="report_source_discovery_name_missing",
+            message="report_name is required for discovered source recording",
+            retryable=False,
+            severity="error",
+        )
+    if not landing_page_url:
+        raise AppError(
+            code="report_source_discovery_url_missing",
+            message="landing_page_url is required for discovered source recording",
+            retryable=False,
+            severity="error",
+        )
+    if not normalized_landing_page_url:
+        raise AppError(
+            code="report_source_discovery_url_invalid",
+            message="landing_page_url must be a valid absolute URL for discovered source recording",
+            retryable=False,
+            severity="error",
+        )
+    if not source_page_url:
+        raise AppError(
+            code="report_source_discovery_source_page_missing",
+            message="source_page_url is required for discovered source recording",
+            retryable=False,
+            severity="error",
+        )
+    if not discovered_at_utc:
+        raise AppError(
+            code="report_source_discovery_discovered_at_missing",
+            message="discovered_at_utc is required for discovered source recording",
+            retryable=False,
+            severity="error",
+        )
+    if discovered_on_page_number <= 0:
+        raise AppError(
+            code="report_source_discovery_page_number_invalid",
+            message="discovered_on_page_number must be at least 1 for discovered source recording",
+            retryable=False,
+            severity="error",
+        )
+
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="report_source_discovery_record_start",
+            module=logger.name,
+            fields={
+                "db_path": db_path,
+                "publisher_name": publisher_name,
+                "source_domain": source_domain,
+                "report_name": report_name,
+                "landing_page_url": landing_page_url,
+                "source_page_url": source_page_url,
+                "discovered_at_utc": discovered_at_utc,
+                "discovered_on_page_number": discovered_on_page_number,
+            },
+        )
+    )
+    try:
+        with _metadata_conn(db_path) as conn:
+            existing_row = conn.execute(
+                """
+                SELECT id, source_status, downloaded_at_utc, md5
+                FROM report_sources
+                WHERE normalized_landing_page_url=?
+                """,
+                (normalized_landing_page_url,),
+            ).fetchone()
+            created_new = existing_row is None
+            if existing_row:
+                record_id = int(existing_row[0])
+                existing_status = str(existing_row[1] or "").strip()
+                downloaded_at_existing = str(existing_row[2] or "").strip() or None
+                md5_existing = str(existing_row[3] or "").strip().lower() or None
+                source_status = (
+                    "downloaded"
+                    if existing_status == "downloaded"
+                    or downloaded_at_existing
+                    or md5_existing
+                    else "discovered"
+                )
+                conn.execute(
+                    """
+                    UPDATE report_sources
+                    SET
+                        source_domain=?,
+                        report_name=?,
+                        landing_page_url=?,
+                        source_status=?,
+                        source_page_url=?,
+                        publisher_name=?,
+                        discovered_at_utc=?,
+                        discovered_on_page_number=?,
+                        updated_at=strftime('%s','now')
+                    WHERE id=?
+                    """,
+                    (
+                        source_domain,
+                        report_name,
+                        landing_page_url,
+                        source_status,
+                        source_page_url,
+                        publisher_name,
+                        discovered_at_utc,
+                        discovered_on_page_number,
+                        record_id,
+                    ),
+                )
+            else:
+                cur = conn.execute(
+                    """
+                    INSERT INTO report_sources(
+                        source_domain,
+                        report_name,
+                        landing_page_url,
+                        normalized_landing_page_url,
+                        source_status,
+                        source_page_url,
+                        publisher_name,
+                        discovered_at_utc,
+                        discovered_on_page_number
+                    )
+                    VALUES(?, ?, ?, ?, 'discovered', ?, ?, ?, ?)
+                    """,
+                    (
+                        source_domain,
+                        report_name,
+                        landing_page_url,
+                        normalized_landing_page_url,
+                        source_page_url,
+                        publisher_name,
+                        discovered_at_utc,
+                        discovered_on_page_number,
+                    ),
+                )
+                record_id = int(cur.lastrowid or 0)
+    except sqlite3.Error as exc:
+        raise AppError(
+            code="report_source_discovery_record_failed",
+            message="Failed to record discovered report source",
+            cause=exc,
+            retryable=True,
+            context={
+                "db_path": db_path,
+                "publisher_name": publisher_name,
+                "landing_page_url": landing_page_url,
+            },
+        ) from exc
+
+    response = ReportSourceDiscoveryRecordResponse(
+        schema_version="1.0",
+        record_id=record_id,
+        publisher_name=publisher_name,
+        source_domain=source_domain,
+        report_name=report_name,
+        landing_page_url=landing_page_url,
+        source_page_url=source_page_url,
+        discovered_at_utc=discovered_at_utc,
+        discovered_on_page_number=discovered_on_page_number,
+        created_new=created_new,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="report_source_discovery_record_complete",
+            module=logger.name,
+            fields={
+                "record_id": response.record_id,
+                "publisher_name": response.publisher_name,
+                "source_domain": response.source_domain,
+                "report_name": response.report_name,
+                "landing_page_url": response.landing_page_url,
+                "source_page_url": response.source_page_url,
+                "discovered_at_utc": response.discovered_at_utc,
+                "discovered_on_page_number": response.discovered_on_page_number,
+                "created_new": response.created_new,
+            },
+        )
+    )
     return response
 
 
@@ -1405,11 +1839,11 @@ def get_publisher_inventory_state(
             inventory_route_kind=str(row[3] or "").strip() or None,
             inventory_route_summary=str(row[4] or "").strip() or None,
             inventory_route_last_final_page_url=str(row[5] or "").strip() or None,
-            inventory_route_updated_at=int(row[6]) if row[6] is not None else None,
+            inventory_route_updated_at=_optional_int(row[6]),
             inventory_snapshot_drive_file_id=str(row[7] or "").strip() or None,
             inventory_snapshot_drive_file_name=str(row[8] or "").strip() or None,
             inventory_snapshot_sha256=str(row[9] or "").strip() or None,
-            inventory_snapshot_updated_at=int(row[10]) if row[10] is not None else None,
+            inventory_snapshot_updated_at=_optional_int(row[10]),
         )
         logger.info(
             log_event(

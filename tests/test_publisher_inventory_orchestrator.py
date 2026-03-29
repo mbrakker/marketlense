@@ -8,13 +8,19 @@ import pytest
 from src.contracts.drive import DriveDownloadResponse, DriveFile, DriveFolderFileListResponse, DriveUploadBytesResponse
 from src.contracts.publisher_inventory import (
     PublisherInventoryBuildRequest,
+    PublisherInventoryCandidateScreeningDecision,
+    PublisherInventoryCandidateScreeningItem,
+    PublisherInventoryCandidateScreeningResponse,
     PublisherInventoryDiscoveryRequest,
     PublisherInventoryPage,
     PublisherInventoryRawCandidate,
     PublisherInventoryServiceResponse,
     PublisherInventorySettings,
 )
-from src.contracts.report_store import PublisherInventoryStateResponse
+from src.contracts.report_store import (
+    PublisherInventoryStateResponse,
+    ReportSourceDiscoveryRecordResponse,
+)
 from src.orchestrators.publisher_inventory_orchestrator import (
     PublisherInventoryDependencies,
     run_publisher_inventory_discovery,
@@ -42,6 +48,12 @@ def _settings() -> PublisherInventorySettings:
         retry_base_delay_seconds=0.0,
         retry_backoff_step_seconds=0.0,
         retry_jitter_seconds=0.0,
+        openai_api_key="openai-key",
+        candidate_screening_enabled=True,
+        candidate_screening_model="gpt-5-nano",
+        candidate_screening_temperature=1.0,
+        candidate_screening_timeout_seconds=30.0,
+        candidate_screening_prompt_namespace="publisher_inventory/meaningful_candidate_screen",
     )
 
 
@@ -93,6 +105,41 @@ def _service_response(
                 discovered_on_page_number=2,
             )
         ],
+    )
+
+
+def _screening_response(*, accepted_urls: set[str], request) -> PublisherInventoryCandidateScreeningResponse:
+    approved_items = [
+        candidate
+        for candidate in request.candidates
+        if candidate.canonical_url in accepted_urls
+    ]
+    rejected_items = [
+        candidate
+        for candidate in request.candidates
+        if candidate.canonical_url not in accepted_urls
+    ]
+    decisions = [
+        PublisherInventoryCandidateScreeningDecision(
+            schema_version="1.0",
+            canonical_url=candidate.canonical_url,
+            accepted=candidate.canonical_url in accepted_urls,
+            reason=(
+                "meaningful report asset"
+                if candidate.canonical_url in accepted_urls
+                else "non-report candidate"
+            ),
+        )
+        for candidate in request.candidates
+    ]
+    return PublisherInventoryCandidateScreeningResponse(
+        schema_version="1.0",
+        approved_items=approved_items,
+        rejected_items=rejected_items,
+        decisions=decisions,
+        model="gpt-5-nano",
+        request_id="req-screen-1",
+        raw_response='{"decisions":[]}',
     )
 
 
@@ -177,6 +224,7 @@ def test_run_publisher_inventory_discovery_first_run_uploads_snapshot_and_return
 ):
     uploads = []
     records = []
+    source_records = []
 
     deps = PublisherInventoryDependencies(
         discover_publisher_inventory=lambda req, ctx: _service_response(
@@ -191,10 +239,29 @@ def test_run_publisher_inventory_discovery_first_run_uploads_snapshot_and_return
             "src.generators.publisher_inventory_generator",
             fromlist=["parse_publisher_inventory_snapshot"],
         ).parse_publisher_inventory_snapshot(payload, source=source, ctx=ctx),
+        screen_publisher_inventory_candidates=lambda req, ctx: _screening_response(
+            accepted_urls={"https://www.activate.com/reports/new-report"},
+            request=req,
+        ),
         get_publisher_inventory_state=lambda req, ctx: _publisher_state(
             with_route=False, with_snapshot=False
         ),
         record_publisher_inventory_state=lambda req, ctx: records.append(req),
+        record_discovered_report_source=lambda req, ctx: (
+            source_records.append(req)
+            or ReportSourceDiscoveryRecordResponse(
+                schema_version="1.0",
+                record_id=1,
+                publisher_name=req.publisher_name,
+                source_domain=req.source_domain,
+                report_name=req.report_name,
+                landing_page_url=req.landing_page_url,
+                source_page_url=req.source_page_url,
+                discovered_at_utc=req.discovered_at_utc,
+                discovered_on_page_number=req.discovered_on_page_number,
+                created_new=True,
+            )
+        ),
         list_files_in_folder=lambda req, ctx: DriveFolderFileListResponse(
             schema_version="1.0", folder_id=req.folder_id, files=[]
         ),
@@ -236,6 +303,9 @@ def test_run_publisher_inventory_discovery_first_run_uploads_snapshot_and_return
     assert result.new_report_urls[0].discovered_on_page_number == 2
     assert len(uploads) == 1
     assert len(records) == 1
+    assert len(source_records) == 1
+    assert source_records[0].landing_page_url == "https://www.activate.com/reports/new-report"
+    assert source_records[0].source_page_url == "https://www.activate.com/insights?page=2"
     assert_no_defaulted_required_fields(result)
     assert_logs_have_required_fields(
         _events(caplog, "market_lense.publisher_inventory_orchestrator")
@@ -271,10 +341,26 @@ def test_run_publisher_inventory_discovery_falls_back_after_memory_route_failure
             "src.generators.publisher_inventory_generator",
             fromlist=["parse_publisher_inventory_snapshot"],
         ).parse_publisher_inventory_snapshot(payload, source=source, ctx=ctx),
+        screen_publisher_inventory_candidates=lambda req, ctx: _screening_response(
+            accepted_urls={"https://www.activate.com/reports/new-report"},
+            request=req,
+        ),
         get_publisher_inventory_state=lambda req, ctx: _publisher_state(
             with_route=True, with_snapshot=False
         ),
         record_publisher_inventory_state=lambda req, ctx: None,
+        record_discovered_report_source=lambda req, ctx: ReportSourceDiscoveryRecordResponse(
+            schema_version="1.0",
+            record_id=1,
+            publisher_name=req.publisher_name,
+            source_domain=req.source_domain,
+            report_name=req.report_name,
+            landing_page_url=req.landing_page_url,
+            source_page_url=req.source_page_url,
+            discovered_at_utc=req.discovered_at_utc,
+            discovered_on_page_number=req.discovered_on_page_number,
+            created_new=True,
+        ),
         list_files_in_folder=lambda req, ctx: DriveFolderFileListResponse(
             schema_version="1.0", folder_id=req.folder_id, files=[]
         ),
@@ -356,10 +442,26 @@ def test_run_publisher_inventory_discovery_unchanged_rerun_skips_upload(
                 "src.generators.publisher_inventory_generator",
                 fromlist=["parse_publisher_inventory_snapshot"],
             ).parse_publisher_inventory_snapshot(payload, source=source, ctx=ctx),
+            screen_publisher_inventory_candidates=lambda req, ctx: _screening_response(
+                accepted_urls=set(),
+                request=req,
+            ),
             get_publisher_inventory_state=lambda req, ctx: _publisher_state(
                 with_route=False, with_snapshot=True, snapshot_sha256=snapshot_sha256
             ),
             record_publisher_inventory_state=lambda req, ctx: None,
+            record_discovered_report_source=lambda req, ctx: ReportSourceDiscoveryRecordResponse(
+                schema_version="1.0",
+                record_id=1,
+                publisher_name=req.publisher_name,
+                source_domain=req.source_domain,
+                report_name=req.report_name,
+                landing_page_url=req.landing_page_url,
+                source_page_url=req.source_page_url,
+                discovered_at_utc=req.discovered_at_utc,
+                discovered_on_page_number=req.discovered_on_page_number,
+                created_new=False,
+            ),
             list_files_in_folder=lambda req, ctx: DriveFolderFileListResponse(
                 schema_version="1.0", folder_id=req.folder_id, files=[]
             ),
@@ -423,10 +525,17 @@ def test_run_publisher_inventory_discovery_requires_google_folder(
             "src.generators.publisher_inventory_generator",
             fromlist=["parse_publisher_inventory_snapshot"],
         ).parse_publisher_inventory_snapshot(payload, source=source, ctx=ctx),
+        screen_publisher_inventory_candidates=lambda req, ctx: _screening_response(
+            accepted_urls={"https://www.activate.com/reports/new-report"},
+            request=req,
+        ),
         get_publisher_inventory_state=lambda req, ctx: _publisher_state(
             with_route=False, with_snapshot=False, with_folder=False
         ),
         record_publisher_inventory_state=lambda req, ctx: None,
+        record_discovered_report_source=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("should not record discovered sources")
+        ),
         list_files_in_folder=lambda req, ctx: DriveFolderFileListResponse(
             schema_version="1.0", folder_id=req.folder_id, files=[]
         ),
@@ -445,3 +554,153 @@ def test_run_publisher_inventory_discovery_requires_google_folder(
             dependencies=deps,
         )
     assert_app_error(err.value, code="publisher_inventory_google_folder_missing", retryable=False)
+
+
+def test_run_publisher_inventory_discovery_rejects_non_meaningful_candidates_before_recording(
+    run_context,
+):
+    source_records = []
+    deps = PublisherInventoryDependencies(
+        discover_publisher_inventory=lambda req, ctx: _service_response(
+            used_route_hint=False,
+            new_url="https://www.activate.com/reports/new-report",
+        ),
+        build_publisher_inventory_snapshot=lambda req, ctx: __import__(
+            "src.generators.publisher_inventory_generator",
+            fromlist=["build_publisher_inventory_snapshot"],
+        ).build_publisher_inventory_snapshot(req, ctx),
+        parse_publisher_inventory_snapshot=lambda payload, source, ctx: __import__(
+            "src.generators.publisher_inventory_generator",
+            fromlist=["parse_publisher_inventory_snapshot"],
+        ).parse_publisher_inventory_snapshot(payload, source=source, ctx=ctx),
+        screen_publisher_inventory_candidates=lambda req, ctx: _screening_response(
+            accepted_urls=set(),
+            request=req,
+        ),
+        get_publisher_inventory_state=lambda req, ctx: _publisher_state(
+            with_route=False, with_snapshot=False
+        ),
+        record_publisher_inventory_state=lambda req, ctx: None,
+        record_discovered_report_source=lambda req, ctx: (
+            source_records.append(req)
+            or ReportSourceDiscoveryRecordResponse(
+                schema_version="1.0",
+                record_id=1,
+                publisher_name=req.publisher_name,
+                source_domain=req.source_domain,
+                report_name=req.report_name,
+                landing_page_url=req.landing_page_url,
+                source_page_url=req.source_page_url,
+                discovered_at_utc=req.discovered_at_utc,
+                discovered_on_page_number=req.discovered_on_page_number,
+                created_new=True,
+            )
+        ),
+        list_files_in_folder=lambda req, ctx: DriveFolderFileListResponse(
+            schema_version="1.0", folder_id=req.folder_id, files=[]
+        ),
+        download_pdf=lambda req, ctx: (_ for _ in ()).throw(AssertionError("should not download snapshot")),
+        upload_bytes=lambda req, ctx: DriveUploadBytesResponse(
+            schema_version="1.0",
+            file=DriveFile(
+                schema_version="1.0",
+                file_id="drive-file-1",
+                name=req.file_name,
+                modified_time=None,
+                md5_checksum=None,
+                mime_type="application/json",
+            ),
+            size=len(req.content),
+            md5="abc123",
+        ),
+    )
+
+    result = run_publisher_inventory_discovery(
+        PublisherInventoryDiscoveryRequest(
+            schema_version="1.0",
+            insights_url="https://www.activate.com/insights",
+            reports_db="./state/reports.sqlite",
+            settings=_settings(),
+        ),
+        ctx=run_context,
+        dependencies=deps,
+    )
+
+    assert result.new_report_urls == []
+    assert source_records == []
+
+
+def test_run_publisher_inventory_discovery_screening_failure_does_not_commit_snapshot(
+    run_context,
+    assert_app_error,
+):
+    uploads = []
+    state_records = []
+    deps = PublisherInventoryDependencies(
+        discover_publisher_inventory=lambda req, ctx: _service_response(
+            used_route_hint=False,
+            new_url="https://www.activate.com/reports/new-report",
+        ),
+        build_publisher_inventory_snapshot=lambda req, ctx: __import__(
+            "src.generators.publisher_inventory_generator",
+            fromlist=["build_publisher_inventory_snapshot"],
+        ).build_publisher_inventory_snapshot(req, ctx),
+        parse_publisher_inventory_snapshot=lambda payload, source, ctx: __import__(
+            "src.generators.publisher_inventory_generator",
+            fromlist=["parse_publisher_inventory_snapshot"],
+        ).parse_publisher_inventory_snapshot(payload, source=source, ctx=ctx),
+        screen_publisher_inventory_candidates=lambda req, ctx: (_ for _ in ()).throw(
+            AppError(
+                code="publisher_inventory_candidate_screen_invalid_json",
+                message="invalid JSON",
+                retryable=False,
+            )
+        ),
+        get_publisher_inventory_state=lambda req, ctx: _publisher_state(
+            with_route=False, with_snapshot=False
+        ),
+        record_publisher_inventory_state=lambda req, ctx: state_records.append(req),
+        record_discovered_report_source=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("should not record discovered sources")
+        ),
+        list_files_in_folder=lambda req, ctx: DriveFolderFileListResponse(
+            schema_version="1.0", folder_id=req.folder_id, files=[]
+        ),
+        download_pdf=lambda req, ctx: (_ for _ in ()).throw(AssertionError("should not download snapshot")),
+        upload_bytes=lambda req, ctx: (
+            uploads.append(req)
+            or DriveUploadBytesResponse(
+                schema_version="1.0",
+                file=DriveFile(
+                    schema_version="1.0",
+                    file_id="drive-file-1",
+                    name=req.file_name,
+                    modified_time=None,
+                    md5_checksum=None,
+                    mime_type="application/json",
+                ),
+                size=len(req.content),
+                md5="abc123",
+            )
+        ),
+    )
+
+    with pytest.raises(AppError) as err:
+        run_publisher_inventory_discovery(
+            PublisherInventoryDiscoveryRequest(
+                schema_version="1.0",
+                insights_url="https://www.activate.com/insights",
+                reports_db="./state/reports.sqlite",
+                settings=_settings(),
+            ),
+            ctx=run_context,
+            dependencies=deps,
+        )
+
+    assert_app_error(
+        err.value,
+        code="publisher_inventory_candidate_screen_invalid_json",
+        retryable=False,
+    )
+    assert uploads == []
+    assert state_records == []

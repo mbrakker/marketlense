@@ -273,6 +273,71 @@ class ReportSourceRecordResponse:
 
 
 @dataclass(frozen=True)
+class ReportSourceDiscoveryRecordRequest:
+    schema_version: str = field(
+        metadata={"doc": "Report-source discovery record request schema version."}
+    )
+    db_path: str = field(
+        metadata={"doc": "Filesystem path to the report metadata SQLite database."}
+    )
+    publisher_name: str = field(
+        metadata={"doc": "Publisher display name resolved during inventory discovery."}
+    )
+    source_domain: str = field(
+        metadata={"doc": "Source domain where the discovered report URL lives."}
+    )
+    report_name: str = field(
+        metadata={"doc": "Human-readable report title from the discovery diff."}
+    )
+    landing_page_url: str = field(
+        metadata={"doc": "Discovered report URL queued for future download."}
+    )
+    source_page_url: str = field(
+        metadata={"doc": "Publisher insights page URL where the report URL was discovered."}
+    )
+    discovered_at_utc: str = field(
+        metadata={"doc": "UTC timestamp when the inventory diff was discovered."}
+    )
+    discovered_on_page_number: int = field(
+        metadata={"doc": "One-based inventory page number where the report URL was discovered."}
+    )
+
+
+@dataclass(frozen=True)
+class ReportSourceDiscoveryRecordResponse:
+    schema_version: str = field(
+        metadata={"doc": "Report-source discovery record response schema version."}
+    )
+    record_id: int = field(
+        metadata={"doc": "Auto-incremented SQLite row ID for the stored or updated source record."}
+    )
+    publisher_name: str = field(
+        metadata={"doc": "Publisher display name resolved during inventory discovery."}
+    )
+    source_domain: str = field(
+        metadata={"doc": "Source domain where the discovered report URL lives."}
+    )
+    report_name: str = field(
+        metadata={"doc": "Human-readable report title from the discovery diff."}
+    )
+    landing_page_url: str = field(
+        metadata={"doc": "Discovered report URL queued for future download."}
+    )
+    source_page_url: str = field(
+        metadata={"doc": "Publisher insights page URL where the report URL was discovered."}
+    )
+    discovered_at_utc: str = field(
+        metadata={"doc": "UTC timestamp when the inventory diff was discovered."}
+    )
+    discovered_on_page_number: int = field(
+        metadata={"doc": "One-based inventory page number where the report URL was discovered."}
+    )
+    created_new: bool = field(
+        metadata={"doc": "True when this discovery created a new report_sources row instead of updating an existing one."}
+    )
+
+
+@dataclass(frozen=True)
 class PublishersReplaceRequest:
     schema_version: str = field(
         metadata={"doc": "Publishers replace request schema version."}

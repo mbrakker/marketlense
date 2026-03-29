@@ -753,7 +753,11 @@ class TestConfigService(unittest.TestCase):
             }
             Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
 
-            with patch.dict(os.environ, {"OPENROUTER_API_KEY": "key"}, clear=True):
+            with patch.dict(
+                os.environ,
+                {"OPENROUTER_API_KEY": "key", "OPENAI_API_KEY": "openai-key"},
+                clear=True,
+            ):
                 settings = load_publisher_inventory_settings(
                     ConfigLoadRequest(schema_version="1.0", path=cfg_path),
                     RunContext(
@@ -771,6 +775,14 @@ class TestConfigService(unittest.TestCase):
         self.assertTrue(settings.headed)
         self.assertTrue(settings.force_browser)
         self.assertEqual(2, settings.retry_retries)
+        self.assertTrue(settings.candidate_screening_enabled)
+        self.assertEqual("gpt-5-nano", settings.candidate_screening_model)
+        self.assertEqual(1.0, settings.candidate_screening_temperature)
+        self.assertEqual(
+            "publisher_inventory/meaningful_candidate_screen",
+            settings.candidate_screening_prompt_namespace,
+        )
+        self.assertEqual("openai-key", settings.openai_api_key)
         self.assertEqual(
             Path(tmp_dir, "out", "browser_downloads").resolve(),
             Path(settings.output_dir).resolve(),
@@ -831,7 +843,11 @@ class TestConfigService(unittest.TestCase):
             }
             Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
 
-            with patch.dict(os.environ, {"OPENROUTER_API_KEY": "key"}, clear=True):
+            with patch.dict(
+                os.environ,
+                {"OPENROUTER_API_KEY": "key", "OPENAI_API_KEY": "openai-key"},
+                clear=True,
+            ):
                 settings = load_publisher_inventory_settings(
                     ConfigLoadRequest(schema_version="1.0", path=cfg_path),
                     RunContext(
@@ -849,6 +865,35 @@ class TestConfigService(unittest.TestCase):
             Path(tmp_dir, "oauth-token.json").resolve(),
             Path(str(settings.google_oauth_token_path)).resolve(),
         )
+
+    def test_publisher_inventory_settings_allow_disabled_candidate_screening_without_openai_key(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_publish=False)
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["browser_download"] = {
+                "model": "gpt-5-mini",
+                "identity_config_path": str(Path(tmp_dir) / "browser_download_identity.yaml"),
+            }
+            cfg_data["publisher_discovery"] = {
+                "candidate_screening": {
+                    "enabled": False,
+                }
+            }
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
+
+            with patch("src.services.config_service.load_dotenv", return_value=False):
+                with patch.dict(os.environ, {"OPENROUTER_API_KEY": "key"}, clear=True):
+                    settings = load_publisher_inventory_settings(
+                        ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                        RunContext(
+                            schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                        ),
+                    )
+
+        self.assertFalse(settings.candidate_screening_enabled)
+        self.assertEqual("", settings.openai_api_key)
 
     def test_read_and_write_app_config_round_trip(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

@@ -1,0 +1,41 @@
+text: |
+  You are validating newly discovered publisher-inventory links before they are queued for future report download.
+
+  Decide whether each candidate is a meaningful report-like asset.
+
+  Accept when the candidate is a substantive research or report asset, including:
+  - report
+  - analyst report
+  - outlook
+  - white paper
+  - study
+  - survey
+  - benchmark
+  - ebook or guide when it is clearly research/report content
+  - downloadable research PDF or report detail page
+
+  Reject when the candidate is clearly not a report-like asset, including:
+  - locale or language hub links
+  - social links
+  - generic insights/news/blog landing pages
+  - category, topic, or archive pages
+  - contact, login, careers, newsletter, or event pages
+  - product pages
+  - navigation pages such as "view all reports"
+
+  Requirements:
+  - Return a single JSON object.
+  - Output shape:
+    {
+      "decisions": [
+        {
+          "canonical_url": "...",
+          "accepted": true,
+          "reason": "short explanation"
+        }
+      ]
+    }
+  - Return exactly one decision for every input candidate URL.
+  - Keep `canonical_url` unchanged from the input.
+  - `reason` must be short and specific.
+  - Be conservative about obvious non-report pages, but if a candidate plausibly represents a real report or downloadable research asset, accept it.

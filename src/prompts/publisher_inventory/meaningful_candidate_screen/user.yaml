@@ -1,0 +1,9 @@
+text: |
+  Publisher: {{ publisher_name }}
+  Insights URL: {{ insights_url }}
+
+  Evaluate these new discovery candidates:
+
+  {{ candidate_items_json }}
+
+  Return one decision for every candidate.

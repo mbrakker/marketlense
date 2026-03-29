@@ -192,6 +192,153 @@ class PublisherInventorySettings:
         default=0.25,
         metadata={"doc": "Maximum jitter added to inventory discovery retry delays."},
     )
+    openai_api_key: str = field(
+        default="",
+        metadata={"doc": "OpenAI API key used for candidate screening before report_sources persistence when candidate_screening_enabled=true."},
+    )
+    openai_models: dict[str, str] = field(
+        default_factory=dict,
+        metadata={"doc": "Optional per-namespace OpenAI model overrides used by publisher-inventory candidate screening."},
+    )
+    openai_seed: Optional[int] = field(
+        default=None,
+        metadata={"doc": "Optional OpenAI seed used for publisher-inventory candidate screening."},
+    )
+    candidate_screening_enabled: bool = field(
+        default=True,
+        metadata={"doc": "Whether new diff candidates should be screened by OpenAI before insertion into report_sources."},
+    )
+    candidate_screening_model: str = field(
+        default="gpt-5-nano",
+        metadata={"doc": "Base OpenAI model used for candidate screening before report_sources persistence."},
+    )
+    candidate_screening_temperature: float = field(
+        default=1.0,
+        metadata={"doc": "Sampling temperature for publisher-inventory candidate screening."},
+    )
+    candidate_screening_timeout_seconds: float = field(
+        default=120.0,
+        metadata={"doc": "Timeout in seconds for publisher-inventory candidate screening calls."},
+    )
+    candidate_screening_prompt_namespace: str = field(
+        default="publisher_inventory/meaningful_candidate_screen",
+        metadata={"doc": "Prompt namespace used to screen new publisher-inventory diff candidates before queueing them for download."},
+    )
+    cost_ledger_path: str = field(
+        default="./out/cost-ledger.jsonl",
+        metadata={"doc": "Filesystem path for OpenAI cost ledger entries produced by candidate screening."},
+    )
+    cost_daily_path: str = field(
+        default="./out/cost-daily.json",
+        metadata={"doc": "Filesystem path for daily OpenAI cost rollups produced by candidate screening."},
+    )
+    model_pricing: dict = field(
+        default_factory=dict,
+        metadata={"doc": "Per-model pricing table used for candidate-screening cost estimation."},
+    )
+    llm_retry_retries: int = field(
+        default=1,
+        metadata={"doc": "Maximum retry count for individual candidate-screening LLM calls."},
+    )
+    llm_retry_base_delay_seconds: float = field(
+        default=1.0,
+        metadata={"doc": "Base delay in seconds before the first candidate-screening LLM retry."},
+    )
+    llm_retry_backoff_step_seconds: float = field(
+        default=1.0,
+        metadata={"doc": "Additional linear backoff delay added per candidate-screening LLM retry attempt."},
+    )
+    llm_retry_jitter_seconds: float = field(
+        default=0.25,
+        metadata={"doc": "Maximum jitter in seconds added to each candidate-screening LLM retry delay."},
+    )
+    llm_circuit_breaker_failure_threshold: int = field(
+        default=3,
+        metadata={"doc": "Consecutive retryable candidate-screening LLM failures required to open the circuit breaker."},
+    )
+    llm_circuit_breaker_recovery_seconds: float = field(
+        default=30.0,
+        metadata={"doc": "Cooldown in seconds before the candidate-screening LLM circuit breaker allows a probe call."},
+    )
+
+
+@dataclass(frozen=True)
+class PublisherInventoryCandidateScreeningItem:
+    schema_version: str = field(
+        metadata={"doc": "Publisher inventory candidate-screening item schema version."}
+    )
+    canonical_url: str = field(
+        metadata={"doc": "Normalized candidate URL under review for future download persistence."}
+    )
+    title: str = field(metadata={"doc": "Normalized candidate title under review."})
+    discovered_on_page_number: int = field(
+        metadata={"doc": "One-based inventory page number where the candidate was found."}
+    )
+    source_page_url: str = field(
+        metadata={"doc": "Inventory page URL where the candidate was found."}
+    )
+
+
+@dataclass(frozen=True)
+class PublisherInventoryCandidateScreeningDecision:
+    schema_version: str = field(
+        metadata={"doc": "Publisher inventory candidate-screening decision schema version."}
+    )
+    canonical_url: str = field(
+        metadata={"doc": "Normalized candidate URL that was screened."}
+    )
+    accepted: bool = field(
+        metadata={"doc": "Whether the candidate is a meaningful report-like asset that should be queued for future download."}
+    )
+    reason: str = field(
+        metadata={"doc": "Short human-readable reason explaining the screening decision."}
+    )
+
+
+@dataclass(frozen=True)
+class PublisherInventoryCandidateScreeningRequest:
+    schema_version: str = field(
+        metadata={"doc": "Publisher inventory candidate-screening request schema version."}
+    )
+    publisher_name: str = field(
+        metadata={"doc": "Publisher display name resolved from the reports database."}
+    )
+    insights_url: str = field(
+        metadata={"doc": "Publisher insights URL whose new diff items are being screened."}
+    )
+    candidates: List[PublisherInventoryCandidateScreeningItem] = field(
+        metadata={"doc": "New diff candidates to evaluate before persistence into report_sources."}
+    )
+    settings: PublisherInventorySettings = field(
+        metadata={"doc": "Loaded publisher inventory discovery settings including candidate-screening configuration."}
+    )
+
+
+@dataclass(frozen=True)
+class PublisherInventoryCandidateScreeningResponse:
+    schema_version: str = field(
+        metadata={"doc": "Publisher inventory candidate-screening response schema version."}
+    )
+    approved_items: List[PublisherInventoryCandidateScreeningItem] = field(
+        metadata={"doc": "Candidates accepted for future download persistence."}
+    )
+    rejected_items: List[PublisherInventoryCandidateScreeningItem] = field(
+        metadata={"doc": "Candidates rejected by the LLM screening step."}
+    )
+    decisions: List[PublisherInventoryCandidateScreeningDecision] = field(
+        metadata={"doc": "Full screening decision set returned for all reviewed candidates."}
+    )
+    model: str = field(
+        metadata={"doc": "Resolved OpenAI model ID used for candidate screening."}
+    )
+    request_id: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Provider request identifier for the screening call, if available."},
+    )
+    raw_response: str = field(
+        default="",
+        metadata={"doc": "Raw model response text returned by the candidate-screening call."},
+    )
 
 
 @dataclass(frozen=True)
