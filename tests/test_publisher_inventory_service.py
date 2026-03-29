@@ -79,6 +79,11 @@ class _FakeBrowserPage:
                 self._state_id = str(next_state)
                 return "true"
             return "false"
+        if script == service._browser_scroll_to_ratio_script():
+            next_state = self._states[self._state_id].get("scroll_next_state")
+            if next_state and float(args[0]) > 0:
+                self._state_id = str(next_state)
+            return "true"
         raise AssertionError(f"Unexpected script: {script_name or script[:40]}")
 
     async def get_url(self) -> str:
@@ -285,6 +290,87 @@ def test_discover_publisher_inventory_browser_fallback_when_http_empty(
         for candidate in response.candidates
     )
     assert_no_defaulted_required_fields(response)
+
+
+def test_discover_publisher_inventory_browser_scrolls_to_hydrate_load_more(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    external_boundary_mocks_only.setattr(
+        service.requests,
+        "get",
+        lambda *args, **kwargs: _FakeResponse(
+            url="https://www.bain.com/insights?filters=|types(424%2C420)",
+            text="<html><body><a href='/about'>About</a></body></html>",
+        ),
+    )
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://www.bain.com/insights?filters=|types(424%2C420)",
+                "page_title": "Insights",
+                "anchors": [
+                    {"href": "https://www.bain.com/insights/books", "text": "Bain Books", "rel": ""}
+                ],
+            },
+            "scroll_next_state": "scrolled",
+        },
+        "scrolled": {
+            "payload": {
+                "page_url": "https://www.bain.com/insights?filters=|types(424%2C420)",
+                "page_title": "Insights",
+                "anchors": [
+                    {
+                        "href": "https://www.bain.com/insights/asia-pacific-private-equity-report-2026",
+                        "text": "Asia-Pacific Private Equity Report 2026",
+                        "rel": "",
+                    }
+                ],
+                "load_more_labels": ["Load more"],
+            },
+            "named_clicks": {"load more": "page_2"},
+        },
+        "page_2": {
+            "payload": {
+                "page_url": "https://www.bain.com/insights?filters=|types(424%2C420)",
+                "page_title": "Insights",
+                "anchors": [
+                    {
+                        "href": "https://www.bain.com/insights/asia-pacific-private-equity-report-2026",
+                        "text": "Asia-Pacific Private Equity Report 2026",
+                        "rel": "",
+                    },
+                    {
+                        "href": "https://www.bain.com/insights/private-equitys-reality-check-gp-outlook-2026",
+                        "text": "Private Equity's Reality Check: The GP Outlook for 2026",
+                        "rel": "",
+                    },
+                ],
+            }
+        },
+    }
+    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://www.bain.com/insights?filters=|types(424%2C420)",
+            settings=_settings(tmp_path),
+            route_kind_hint="browser_render",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "browser_render"
+    assert len(response.pages) == 2
+    assert any(
+        candidate.url == "https://www.bain.com/insights/private-equitys-reality-check-gp-outlook-2026"
+        and candidate.discovered_on_page_number == 2
+        for candidate in response.candidates
+    )
+    assert "Expanded load-more pagination 1 time(s)." in response.route_summary
 
 
 def test_discover_publisher_inventory_http_hint_empty_is_typed_error(
@@ -575,3 +661,19 @@ def test_extract_candidates_from_html_filters_false_positive_hub_and_social_link
         "https://www.bain.com/insights/why-agentic-ai-demands-a-new-architecture",
         "https://www.bain.com/insights/topics/global-private-equity-report",
     ]
+
+
+def test_browser_named_control_selector_covers_anchor_button_controls() -> None:
+    selector = service._browser_named_control_selector()
+    inventory_script = service._browser_inventory_state_script()
+    click_script = service._browser_click_named_control_script()
+
+    assert 'a.btn' in selector
+    assert 'a[class*="btn"]' in selector
+    assert 'a.wp-block-button__link' in selector
+    assert '.load-more' in selector
+    assert 'a.btn' in inventory_script
+    assert 'a.wp-block-button__link' in inventory_script
+    assert 'a.btn' in click_script
+    assert 'a.wp-block-button__link' in click_script
+    assert 'scrollIntoView' in click_script

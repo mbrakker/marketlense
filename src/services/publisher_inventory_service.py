@@ -636,6 +636,8 @@ async def _collect_browser_inventory_pages(
     visited_navigation_urls: set[str] = set()
     state = current_state
     while True:
+        await _prime_browser_inventory_surface(page)
+        state = await _extract_rendered_inventory_state(page)
         next_page_url = _resolve_next_page_url(
             current_page_url=state.page_url,
             page_number=page_number,
@@ -840,6 +842,12 @@ async def _wait_for_inventory_growth(page: Any, *, current_candidate_count: int)
     )
 
 
+async def _prime_browser_inventory_surface(page: Any) -> None:
+    for ratio in (0.0, 0.35, 0.7, 0.95):
+        await page.evaluate(_browser_scroll_to_ratio_script(), ratio)
+        await _browser_wait_for_settle(page=page, delay_seconds=0.35)
+
+
 async def _browser_wait_for_settle(
     *,
     page: Any | None = None,
@@ -917,8 +925,42 @@ def _build_browser_route_summary(
     return " ".join(steps)
 
 
+def _browser_named_control_selector() -> str:
+    return (
+        "button, "
+        "[role=\"button\"], "
+        "a[role=\"button\"], "
+        "a.button, "
+        "a.btn, "
+        "a.wp-block-button__link, "
+        "a.cursor-pointer, "
+        "a[class*=\"btn\"], "
+        "input[type=\"button\"], "
+        "input[type=\"submit\"], "
+        ".load-more"
+    )
+
+
+def _browser_scroll_to_ratio_script() -> str:
+    return """(ratio) => {
+        const value = Number(ratio || 0);
+        const maxY = Math.max(
+            0,
+            Math.max(
+                document.body ? document.body.scrollHeight : 0,
+                document.documentElement ? document.documentElement.scrollHeight : 0
+            ) - window.innerHeight
+        );
+        const clamped = Math.max(0, Math.min(1, value));
+        window.scrollTo(0, Math.round(maxY * clamped));
+        return true;
+    }"""
+
+
 def _browser_inventory_state_script() -> str:
-    return """() => {
+    named_control_selector = json.dumps(_browser_named_control_selector())
+    script = """() => {
+        const namedControlSelector = __NAMED_CONTROL_SELECTOR__;
         const normalize = (value) => (value || '').replace(/\\s+/g, ' ').trim();
         const isVisible = (element) => {
             if (!element) return false;
@@ -946,7 +988,7 @@ def _browser_inventory_state_script() -> str:
             .map((element) => normalize(element.textContent || element.getAttribute('aria-label') || element.value || ''))
             .filter((label) => label);
         const loadMoreLabels = collectLabels(
-            Array.from(document.querySelectorAll('button, a[role="button"], a.button, input[type="button"], input[type="submit"]'))
+            Array.from(document.querySelectorAll(namedControlSelector))
                 .filter((element) => /(^|\\b)(load|show|view|see)\\b.*\\b(more|all|next)\\b|^more$/i.test(normalize(element.textContent || element.getAttribute('aria-label') || element.value || '')))
         );
         const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
@@ -979,10 +1021,13 @@ def _browser_inventory_state_script() -> str:
             has_apply_button: applyButton,
         };
     }"""
+    return script.replace("__NAMED_CONTROL_SELECTOR__", named_control_selector)
 
 
 def _browser_click_named_control_script() -> str:
-    return """(labels) => {
+    named_control_selector = json.dumps(_browser_named_control_selector())
+    script = """(labels) => {
+        const namedControlSelector = __NAMED_CONTROL_SELECTOR__;
         const normalize = (value) => (value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
         const wanted = Array.isArray(labels) ? labels.map((item) => normalize(item)) : [];
         const isVisible = (element) => {
@@ -991,17 +1036,21 @@ def _browser_click_named_control_script() -> str:
             const rect = element.getBoundingClientRect();
             return style && style.visibility !== 'hidden' && style.display !== 'none' && rect.width > 0 && rect.height > 0;
         };
-        const elements = Array.from(document.querySelectorAll('button, a[role="button"], a.button, input[type="button"], input[type="submit"]'));
+        const elements = Array.from(document.querySelectorAll(namedControlSelector));
         for (const element of elements) {
             const label = normalize(element.textContent || element.getAttribute('aria-label') || element.value || '');
             if (!label || !isVisible(element)) continue;
             if (wanted.some((candidate) => label === candidate || label.includes(candidate))) {
+                if (typeof element.scrollIntoView === 'function') {
+                    element.scrollIntoView({ block: 'center', inline: 'center' });
+                }
                 element.click();
                 return true;
             }
         }
         return false;
     }"""
+    return script.replace("__NAMED_CONTROL_SELECTOR__", named_control_selector)
 
 
 def _browser_click_tab_script() -> str:
