@@ -146,8 +146,10 @@ class LocalBrowserWatchdog(BaseWatchdog):
 				subprocess = await asyncio.create_subprocess_exec(
 					browser_path,
 					*launch_args,
-					stdout=asyncio.subprocess.PIPE,
-					stderr=asyncio.subprocess.PIPE,
+					# The launched browser process is controlled over CDP; we never read its stdio.
+					# Using DEVNULL avoids leaking Windows Proactor pipe transports until interpreter shutdown.
+					stdout=asyncio.subprocess.DEVNULL,
+					stderr=asyncio.subprocess.DEVNULL,
 				)
 				self.logger.debug(
 					f'[LocalBrowserWatchdog] 🎭 Browser running with browser_pid= {subprocess.pid} 🔗 listening on CDP port :{debug_port}'
