@@ -74,6 +74,72 @@ class RecordingOpenAIClient:
         )
 
 
+class BatchAwareOpenAIClient:
+    def __init__(self) -> None:
+        self.requests = []
+
+    def openai_chat_json(self, request, ctx):
+        self.requests.append((request, ctx))
+        payload = json.loads("\n".join(request.user_prompt.splitlines()[2:]))
+        decisions = [
+            {
+                "canonical_url": item["canonical_url"],
+                "accepted": True,
+                "reason": "Looks report-like.",
+            }
+            for item in payload
+        ]
+        return OpenAIResponseResult(
+            schema_version="1.0",
+            text=json.dumps({"decisions": decisions}),
+            parsed_json={"decisions": decisions},
+            input_tokens=20,
+            output_tokens=10,
+            tool_calls=0,
+            model=request.model,
+            total_tokens=30,
+            request_id=f"req-{len(self.requests)}",
+        )
+
+
+class RepairingOpenAIClient:
+    def __init__(self) -> None:
+        self.requests = []
+
+    def openai_chat_json(self, request, ctx):
+        self.requests.append((request, ctx))
+        payload = json.loads("\n".join(request.user_prompt.splitlines()[2:]))
+        if len(payload) > 1:
+            kept = payload[0]
+            decisions = [
+                {
+                    "canonical_url": kept["canonical_url"],
+                    "accepted": True,
+                    "reason": "Looks report-like.",
+                }
+            ]
+        else:
+            only = payload[0]
+            decisions = [
+                {
+                    "canonical_url": only["canonical_url"],
+                    "accepted": True,
+                    "reason": "Looks report-like.",
+                }
+            ]
+        return OpenAIResponseResult(
+            schema_version="1.0",
+            text=json.dumps({"decisions": decisions}),
+            parsed_json={"decisions": decisions},
+            input_tokens=20,
+            output_tokens=10,
+            tool_calls=0,
+            model=request.model,
+            total_tokens=30,
+            request_id=f"req-{len(self.requests)}",
+        )
+
+
 def _settings() -> PublisherInventorySettings:
     return PublisherInventorySettings(
         schema_version="1.0",
@@ -102,6 +168,7 @@ def _settings() -> PublisherInventorySettings:
         candidate_screening_model="gpt-5-nano",
         candidate_screening_temperature=1.0,
         candidate_screening_timeout_seconds=45.0,
+        candidate_screening_batch_size=20,
         candidate_screening_prompt_namespace="publisher_inventory/meaningful_candidate_screen",
     )
 
@@ -398,3 +465,79 @@ def test_screen_publisher_inventory_candidates_hard_rejects_publisher_success_ti
     )
     assert hard_reject_decision.accepted is False
     assert hard_reject_decision.reason == "publisher_success_marketing"
+
+
+def test_screen_publisher_inventory_candidates_batches_large_candidate_sets() -> None:
+    settings = replace(_settings(), candidate_screening_batch_size=2)
+    candidates = [
+        PublisherInventoryCandidateScreeningItem(
+            schema_version="1.0",
+            canonical_url=f"https://example.com/report-{index}",
+            title=f"Report {index}",
+            discovered_on_page_number=index,
+            source_page_url="https://example.com/insights",
+        )
+        for index in range(1, 6)
+    ]
+    openai_client = BatchAwareOpenAIClient()
+
+    response = screen_publisher_inventory_candidates(
+        PublisherInventoryCandidateScreeningRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/insights",
+            candidates=candidates,
+            settings=settings,
+        ),
+        _ctx(),
+        openai_client=openai_client,
+        prompt_client=RecordingPromptClient(),
+    )
+
+    assert len(openai_client.requests) == 3
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url for candidate in candidates
+    ]
+    assert response.rejected_items == []
+    assert response.request_id == "req-1,req-2,req-3"
+
+
+def test_screen_publisher_inventory_candidates_repairs_missing_batch_decisions() -> None:
+    candidates = [
+        PublisherInventoryCandidateScreeningItem(
+            schema_version="1.0",
+            canonical_url="https://example.com/report-one",
+            title="Report One",
+            discovered_on_page_number=1,
+            source_page_url="https://example.com/insights",
+        ),
+        PublisherInventoryCandidateScreeningItem(
+            schema_version="1.0",
+            canonical_url="https://example.com/report-two",
+            title="Report Two",
+            discovered_on_page_number=1,
+            source_page_url="https://example.com/insights",
+        ),
+    ]
+    openai_client = RepairingOpenAIClient()
+
+    response = screen_publisher_inventory_candidates(
+        PublisherInventoryCandidateScreeningRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/insights",
+            candidates=candidates,
+            settings=_settings(),
+        ),
+        _ctx(),
+        openai_client=openai_client,
+        prompt_client=RecordingPromptClient(),
+    )
+
+    assert len(openai_client.requests) == 2
+    assert [item.canonical_url for item in response.approved_items] == [
+        "https://example.com/report-one",
+        "https://example.com/report-two",
+    ]
+    assert response.rejected_items == []
+    assert response.request_id == "req-1,req-2"

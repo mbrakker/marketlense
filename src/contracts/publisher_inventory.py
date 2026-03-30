@@ -220,6 +220,10 @@ class PublisherInventorySettings:
         default=120.0,
         metadata={"doc": "Timeout in seconds for publisher-inventory candidate screening calls."},
     )
+    candidate_screening_batch_size: int = field(
+        default=20,
+        metadata={"doc": "Maximum number of candidates sent to a single publisher-inventory screening LLM call."},
+    )
     candidate_screening_prompt_namespace: str = field(
         default="publisher_inventory/meaningful_candidate_screen",
         metadata={"doc": "Prompt namespace used to screen new publisher-inventory diff candidates before queueing them for download."},

@@ -778,6 +778,7 @@ class TestConfigService(unittest.TestCase):
         self.assertTrue(settings.candidate_screening_enabled)
         self.assertEqual("gpt-5-nano", settings.candidate_screening_model)
         self.assertEqual(1.0, settings.candidate_screening_temperature)
+        self.assertEqual(20, settings.candidate_screening_batch_size)
         self.assertEqual(
             "publisher_inventory/meaningful_candidate_screen",
             settings.candidate_screening_prompt_namespace,

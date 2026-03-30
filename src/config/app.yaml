@@ -171,6 +171,7 @@ publisher_discovery:
     model: "gpt-5-nano"
     temperature: 1.0
     timeout_seconds: 120
+    batch_size: 20
     prompt_namespace: "publisher_inventory/meaningful_candidate_screen"
 
 analysis:

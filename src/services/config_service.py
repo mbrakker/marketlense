@@ -2194,6 +2194,15 @@ def load_publisher_inventory_settings(
             ),
             1.0,
         ),
+        candidate_screening_batch_size=max(
+            _to_int(
+                candidate_screening_cfg.get("batch_size")
+                if not _is_missing(candidate_screening_cfg.get("batch_size"))
+                else _env_value("PUBLISHER_DISCOVERY_CANDIDATE_SCREENING_BATCH_SIZE"),
+                20,
+            ),
+            1,
+        ),
         candidate_screening_prompt_namespace=str(
             candidate_screening_cfg.get("prompt_namespace")
             or _env_value("PUBLISHER_DISCOVERY_CANDIDATE_SCREENING_PROMPT_NAMESPACE")
@@ -2248,6 +2257,7 @@ def load_publisher_inventory_settings(
                 "candidate_screening_model": settings.candidate_screening_model,
                 "candidate_screening_temperature": settings.candidate_screening_temperature,
                 "candidate_screening_timeout_seconds": settings.candidate_screening_timeout_seconds,
+                "candidate_screening_batch_size": settings.candidate_screening_batch_size,
                 "candidate_screening_prompt_namespace": settings.candidate_screening_prompt_namespace,
                 "llm_retry_retries": llm_runtime["llm_retry_retries"],
                 "llm_retry_base_delay_seconds": llm_runtime["llm_retry_base_delay_seconds"],

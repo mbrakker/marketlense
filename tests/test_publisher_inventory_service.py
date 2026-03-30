@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -1513,3 +1514,53 @@ def test_browser_named_control_selector_covers_anchor_button_controls() -> None:
     assert 'aria-disabled' in click_script
     assert 'aria-disabled' in pagination_click_script
     assert 'has_pagination_next' in inventory_script
+
+
+def test_discover_publisher_inventory_browser_timeout_is_typed_error(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+    assert_app_error,
+) -> None:
+    states = {
+        "page1": {
+            "payload": {
+                "page_url": "https://example.com/insights",
+                "page_title": "Insights",
+                "anchors": [],
+            }
+        }
+    }
+    external_boundary_mocks_only.setattr(
+        service, "import_module", lambda _name: _runtime_for_states(states)
+    )
+
+    def _raise_timeout(_awaitable):
+        close = getattr(_awaitable, "close", None)
+        if callable(close):
+            close()
+        raise TimeoutError("timed out")
+
+    external_boundary_mocks_only.setattr(service.asyncio, "run", _raise_timeout)
+
+    with pytest.raises(AppError) as err:
+        service.discover_publisher_inventory(
+            PublisherInventoryServiceRequest(
+                schema_version="1.0",
+                insights_url="https://example.com/insights",
+                settings=replace(
+                    _settings(tmp_path),
+                    force_browser=True,
+                    timeout_seconds=1.0,
+                ),
+                route_kind_hint=None,
+                route_hint=None,
+            ),
+            run_context,
+        )
+
+    assert_app_error(
+        err.value,
+        code="publisher_inventory_browser_timeout",
+        retryable=True,
+    )

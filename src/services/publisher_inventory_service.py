@@ -430,7 +430,7 @@ def _discover_with_browser(
     route_summary = ""
     try:
         pages, candidates, final_page_url, route_summary = asyncio.run(
-            _run_browser_traversal(
+            _run_browser_traversal_with_timeout(
                 browser=browser,
                 request=request,
                 ctx=ctx,
@@ -447,6 +447,17 @@ def _discover_with_browser(
                 fields={"normalized_url": normalized_url, "error": str(exc)},
             )
         )
+        if isinstance(exc, TimeoutError):
+            raise AppError(
+                code="publisher_inventory_browser_timeout",
+                message="Browser-render inventory discovery exceeded the configured timeout",
+                cause=exc,
+                retryable=True,
+                context={
+                    "normalized_url": normalized_url,
+                    "timeout_seconds": request.settings.timeout_seconds,
+                },
+            ) from exc
         if isinstance(exc, AppError):
             raise
         raise AppError(
@@ -702,6 +713,29 @@ async def _run_browser_traversal(
         return pages, candidates, final_page_url, route_summary
     finally:
         await browser.kill()
+
+
+async def _run_browser_traversal_with_timeout(
+    *,
+    browser: Any,
+    request: PublisherInventoryServiceRequest,
+    ctx: RunContext,
+    normalized_url: str,
+) -> tuple[
+    list[PublisherInventoryPage],
+    list[PublisherInventoryRawCandidate],
+    str,
+    str,
+]:
+    return await asyncio.wait_for(
+        _run_browser_traversal(
+            browser=browser,
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        ),
+        timeout=max(float(request.settings.timeout_seconds), 1.0),
+    )
 
 
 def _page_target_id(page: Any) -> str:

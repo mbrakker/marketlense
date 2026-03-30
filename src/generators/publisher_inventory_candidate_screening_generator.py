@@ -23,6 +23,8 @@ logger = logging.getLogger(
     "market_lense.publisher_inventory_candidate_screening_generator"
 )
 
+_MISSING_DECISION_REPAIR_BATCH_SIZE = 1
+
 _PUBLISHER_SUCCESS_ANALYST_MARKERS = (
     "gartner",
     "forrester",
@@ -124,96 +126,37 @@ def screen_publisher_inventory_candidates(
             scope="publisher_inventory_candidate_screening",
         ),
     )
-    prompt_bundle = prepare_prompt_bundle(
-        namespace=request.settings.candidate_screening_prompt_namespace,
-        settings=request.settings,
-        ctx=ctx,
-        prompt_client=prompt_client,
-        system_variables={},
-        user_variables={
-            "publisher_name": request.publisher_name,
-            "insights_url": request.insights_url,
-            "candidate_items_json": json.dumps(
-                [
-                    {
-                        "canonical_url": item.canonical_url,
-                        "title": item.title,
-                        "discovered_on_page_number": item.discovered_on_page_number,
-                        "source_page_url": item.source_page_url,
-                    }
-                    for item in candidates
-                ],
-                ensure_ascii=True,
-                indent=2,
-            ),
-        },
-        reload_if_changed=True,
-        default_model=request.settings.candidate_screening_model,
-    )
+    batch_size = max(int(request.settings.candidate_screening_batch_size), 1)
+    batch_responses: list[PublisherInventoryCandidateScreeningResponse] = []
+    candidate_batches = list(_chunk_candidates(candidates, batch_size))
     logger.info(
         log_event(
             ctx,
             role="generator",
-            event="publisher_inventory_candidate_screen_prompt_rendered",
+            event="publisher_inventory_candidate_screen_batches_start",
             module=logger.name,
             fields={
-                "namespace": request.settings.candidate_screening_prompt_namespace,
-                "system_path": prompt_bundle.prompt_set.system.path,
-                "system_sha256": prompt_bundle.prompt_set.system.sha256,
-                "user_path": prompt_bundle.prompt_set.user.path,
-                "user_sha256": prompt_bundle.prompt_set.user.sha256,
-                "resolved_model": prompt_bundle.resolved_model,
-                "system_prompt": prompt_bundle.system_prompt,
-                "user_prompt": prompt_bundle.user_prompt,
+                "publisher_name": request.publisher_name,
+                "candidate_count": len(candidates),
+                "batch_size": batch_size,
+                "batch_count": len(candidate_batches),
             },
         )
     )
-    try:
-        response: OpenAIResponseResult = openai_client.openai_chat_json(
-            OpenAIJSONPromptRequest(
-                schema_version="1.0",
-                system_prompt=prompt_bundle.system_prompt,
-                user_prompt=prompt_bundle.user_prompt,
-                model=prompt_bundle.resolved_model,
-                temperature=request.settings.candidate_screening_temperature,
-                api_key=request.settings.openai_api_key,
-                seed=request.settings.openai_seed,
-                timeout_seconds=request.settings.candidate_screening_timeout_seconds,
-                cost_ledger_path=request.settings.cost_ledger_path,
-                cost_daily_path=request.settings.cost_daily_path,
-                model_pricing=request.settings.model_pricing,
-            ),
-            ctx,
+    for batch_index, batch_candidates in enumerate(candidate_batches, start=1):
+        batch_response = _screen_candidate_batch(
+            candidates=batch_candidates,
+            request=request,
+            ctx=ctx,
+            openai_client=openai_client,
+            prompt_client=prompt_client,
+            batch_index=batch_index,
+            batch_count=len(candidate_batches),
         )
-    except AppError:
-        raise
-    except Exception as exc:  # pragma: no cover - defensive guard
-        raise AppError(
-            code="publisher_inventory_candidate_screen_failed",
-            message="Publisher inventory candidate screening failed",
-            cause=exc,
-            retryable=True,
-            context={"publisher_name": request.publisher_name},
-        ) from exc
-
-    payload = response.parsed_json if isinstance(response.parsed_json, dict) else None
-    if payload is None:
-        raise AppError(
-            code="publisher_inventory_candidate_screen_invalid_json",
-            message="Candidate screening returned no JSON object",
-            retryable=False,
-            severity="error",
-            context={
-                "publisher_name": request.publisher_name,
-                "response_preview": (response.text or "")[:400],
-            },
-        )
-    screening_response = _coerce_screening_response(
-        payload=payload,
-        candidates=candidates,
-        model=str(response.model or prompt_bundle.resolved_model or ""),
-        request_id=str(response.request_id or "") or None,
-        raw_response=str(response.text or ""),
+        batch_responses.append(batch_response)
+    screening_response = _merge_screening_batches(
+        responses=batch_responses,
+        candidate_count=len(candidates),
     )
     screening_response = _apply_publisher_success_hard_rejections(
         response=screening_response,
@@ -253,14 +196,243 @@ def screen_publisher_inventory_candidates(
     return screening_response
 
 
-def _coerce_screening_response(
+def _screen_candidate_batch(
+    *,
+    candidates: list[PublisherInventoryCandidateScreeningItem],
+    request: PublisherInventoryCandidateScreeningRequest,
+    ctx,
+    openai_client,
+    prompt_client,
+    batch_index: int,
+    batch_count: int,
+    repair_depth: int = 0,
+) -> PublisherInventoryCandidateScreeningResponse:
+    prompt_bundle = prepare_prompt_bundle(
+        namespace=request.settings.candidate_screening_prompt_namespace,
+        settings=request.settings,
+        ctx=ctx,
+        prompt_client=prompt_client,
+        system_variables={},
+        user_variables={
+            "publisher_name": request.publisher_name,
+            "insights_url": request.insights_url,
+            "candidate_items_json": json.dumps(
+                [
+                    {
+                        "canonical_url": item.canonical_url,
+                        "title": item.title,
+                        "discovered_on_page_number": item.discovered_on_page_number,
+                        "source_page_url": item.source_page_url,
+                    }
+                    for item in candidates
+                ],
+                ensure_ascii=True,
+                indent=2,
+            ),
+        },
+        reload_if_changed=True,
+        default_model=request.settings.candidate_screening_model,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="publisher_inventory_candidate_screen_prompt_rendered",
+            module=logger.name,
+            fields={
+                "namespace": request.settings.candidate_screening_prompt_namespace,
+                "batch_index": batch_index,
+                "batch_count": batch_count,
+                "batch_candidate_count": len(candidates),
+                "system_path": prompt_bundle.prompt_set.system.path,
+                "system_sha256": prompt_bundle.prompt_set.system.sha256,
+                "user_path": prompt_bundle.prompt_set.user.path,
+                "user_sha256": prompt_bundle.prompt_set.user.sha256,
+                "resolved_model": prompt_bundle.resolved_model,
+                "system_prompt": prompt_bundle.system_prompt,
+                "user_prompt": prompt_bundle.user_prompt,
+            },
+        )
+    )
+    try:
+        response: OpenAIResponseResult = openai_client.openai_chat_json(
+            OpenAIJSONPromptRequest(
+                schema_version="1.0",
+                system_prompt=prompt_bundle.system_prompt,
+                user_prompt=prompt_bundle.user_prompt,
+                model=prompt_bundle.resolved_model,
+                temperature=request.settings.candidate_screening_temperature,
+                api_key=request.settings.openai_api_key,
+                seed=request.settings.openai_seed,
+                timeout_seconds=request.settings.candidate_screening_timeout_seconds,
+                cost_ledger_path=request.settings.cost_ledger_path,
+                cost_daily_path=request.settings.cost_daily_path,
+                model_pricing=request.settings.model_pricing,
+            ),
+            ctx,
+        )
+    except AppError:
+        raise
+    except Exception as exc:  # pragma: no cover - defensive guard
+        raise AppError(
+            code="publisher_inventory_candidate_screen_failed",
+            message="Publisher inventory candidate screening failed",
+            cause=exc,
+            retryable=True,
+            context={
+                "publisher_name": request.publisher_name,
+                "batch_index": batch_index,
+                "batch_count": batch_count,
+            },
+        ) from exc
+
+    payload = response.parsed_json if isinstance(response.parsed_json, dict) else None
+    if payload is None:
+        raise AppError(
+            code="publisher_inventory_candidate_screen_invalid_json",
+            message="Candidate screening returned no JSON object",
+            retryable=False,
+            severity="error",
+            context={
+                "publisher_name": request.publisher_name,
+                "batch_index": batch_index,
+                "batch_count": batch_count,
+                "response_preview": (response.text or "")[:400],
+            },
+        )
+    primary_model = str(response.model or prompt_bundle.resolved_model or "")
+    raw_request_id = str(response.request_id or "") or None
+    raw_response = str(response.text or "")
+    decision_map = _coerce_screening_decision_map(
+        payload=payload,
+        candidates=candidates,
+    )
+    models: list[str] = [primary_model] if primary_model else []
+    request_ids: list[str] = [raw_request_id] if raw_request_id else []
+    raw_responses: list[str] = [raw_response] if raw_response else []
+    missing_candidates = [
+        candidate
+        for candidate in candidates
+        if candidate.canonical_url not in decision_map
+    ]
+    if missing_candidates and repair_depth == 0 and len(candidates) > 1:
+        repair_batches = _chunk_candidates(
+            missing_candidates,
+            _MISSING_DECISION_REPAIR_BATCH_SIZE,
+        )
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="publisher_inventory_candidate_screen_batch_repair_start",
+                module=logger.name,
+                fields={
+                    "publisher_name": request.publisher_name,
+                    "batch_index": batch_index,
+                    "batch_count": batch_count,
+                    "original_batch_candidate_count": len(candidates),
+                    "missing_candidate_count": len(missing_candidates),
+                    "repair_batch_count": len(repair_batches),
+                    "missing_urls": [
+                        candidate.canonical_url for candidate in missing_candidates
+                    ],
+                },
+            )
+        )
+        for repair_index, repair_candidates in enumerate(repair_batches, start=1):
+            repair_response = _screen_candidate_batch(
+                candidates=repair_candidates,
+                request=request,
+                ctx=ctx,
+                openai_client=openai_client,
+                prompt_client=prompt_client,
+                batch_index=repair_index,
+                batch_count=len(repair_batches),
+                repair_depth=repair_depth + 1,
+            )
+            for decision in repair_response.decisions:
+                decision_map[decision.canonical_url] = decision
+            if repair_response.model:
+                models.append(repair_response.model)
+            if repair_response.request_id:
+                request_ids.append(repair_response.request_id)
+            if repair_response.raw_response:
+                raw_responses.append(repair_response.raw_response)
+        missing_candidates = [
+            candidate
+            for candidate in candidates
+            if candidate.canonical_url not in decision_map
+        ]
+    if missing_candidates:
+        raise AppError(
+            code="publisher_inventory_candidate_screen_incomplete",
+            message="Candidate screening did not return a decision for every candidate",
+            retryable=False,
+            severity="error",
+            context={
+                "batch_index": batch_index,
+                "batch_count": batch_count,
+                "missing_urls": [
+                    candidate.canonical_url for candidate in missing_candidates
+                ],
+            },
+        )
+    return _build_screening_response(
+        candidates=candidates,
+        decision_map=decision_map,
+        model=",".join(dict.fromkeys(models)),
+        request_id=",".join(dict.fromkeys(request_ids)) or None,
+        raw_response="\n\n".join(raw_responses),
+    )
+
+
+def _merge_screening_batches(
+    *,
+    responses: list[PublisherInventoryCandidateScreeningResponse],
+    candidate_count: int,
+) -> PublisherInventoryCandidateScreeningResponse:
+    if not responses:
+        raise AppError(
+            code="publisher_inventory_candidate_screen_empty",
+            message="Candidate screening produced no batch responses",
+            retryable=False,
+            severity="error",
+            context={"candidate_count": candidate_count},
+        )
+    if len(responses) == 1:
+        return responses[0]
+    approved_items: list[PublisherInventoryCandidateScreeningItem] = []
+    rejected_items: list[PublisherInventoryCandidateScreeningItem] = []
+    decisions: list[PublisherInventoryCandidateScreeningDecision] = []
+    models: list[str] = []
+    request_ids: list[str] = []
+    raw_responses: list[str] = []
+    for response in responses:
+        approved_items.extend(response.approved_items)
+        rejected_items.extend(response.rejected_items)
+        decisions.extend(response.decisions)
+        if response.model:
+            models.append(response.model)
+        if response.request_id:
+            request_ids.append(response.request_id)
+        if response.raw_response:
+            raw_responses.append(response.raw_response)
+    return PublisherInventoryCandidateScreeningResponse(
+        schema_version="1.0",
+        approved_items=approved_items,
+        rejected_items=rejected_items,
+        decisions=decisions,
+        model=",".join(dict.fromkeys(models)),
+        request_id=",".join(dict.fromkeys(request_ids)) or None,
+        raw_response="\n\n".join(raw_responses),
+    )
+
+
+def _coerce_screening_decision_map(
     *,
     payload: dict[str, Any],
     candidates: list[PublisherInventoryCandidateScreeningItem],
-    model: str,
-    request_id: str | None,
-    raw_response: str,
-) -> PublisherInventoryCandidateScreeningResponse:
+) -> dict[str, PublisherInventoryCandidateScreeningDecision]:
     raw_decisions = payload.get("decisions")
     if not isinstance(raw_decisions, list):
         raise AppError(
@@ -301,19 +473,17 @@ def _coerce_screening_response(
             accepted=accepted,
             reason=reason,
         )
-    missing_urls = [
-        candidate.canonical_url
-        for candidate in candidates
-        if candidate.canonical_url not in decision_map
-    ]
-    if missing_urls:
-        raise AppError(
-            code="publisher_inventory_candidate_screen_incomplete",
-            message="Candidate screening did not return a decision for every candidate",
-            retryable=False,
-            severity="error",
-            context={"missing_urls": missing_urls},
-        )
+    return decision_map
+
+
+def _build_screening_response(
+    *,
+    candidates: list[PublisherInventoryCandidateScreeningItem],
+    decision_map: dict[str, PublisherInventoryCandidateScreeningDecision],
+    model: str,
+    request_id: str | None,
+    raw_response: str,
+) -> PublisherInventoryCandidateScreeningResponse:
     approved_items: list[PublisherInventoryCandidateScreeningItem] = []
     rejected_items: list[PublisherInventoryCandidateScreeningItem] = []
     decisions: list[PublisherInventoryCandidateScreeningDecision] = []
@@ -515,6 +685,16 @@ def _is_publisher_success_marketing_title(*, title: str, publisher_name: str) ->
         "leader" in normalized_title
         and any(marker in normalized_title for marker in _PUBLISHER_SUCCESS_ANALYST_MARKERS)
     )
+
+
+def _chunk_candidates(
+    candidates: list[PublisherInventoryCandidateScreeningItem],
+    batch_size: int,
+) -> list[list[PublisherInventoryCandidateScreeningItem]]:
+    return [
+        candidates[start : start + batch_size]
+        for start in range(0, len(candidates), batch_size)
+    ]
 
 
 def _publisher_reference_tokens(publisher_name: str) -> tuple[str, ...]:
