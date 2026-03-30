@@ -1055,6 +1055,8 @@ python -m src.cli discover-publisher-inventory https://example.com/insights
 
 On Windows, the vendored `browser-use` local browser watchdog now launches Chromium with `stdout/stderr` redirected to `DEVNULL` instead of `PIPE`. The discovery/download flows control the browser over CDP and never consume browser stdio, so this avoids `_ProactorBasePipeTransport.__del__` shutdown noise and unclosed transport leaks after headed runs.
 
+The vendored local browser watchdog now also waits for forced `BrowserStopEvent` shutdown to finish its `BrowserKillEvent` cleanup before the event bus is torn down, and its Windows cleanup path terminates the full Chrome subprocess tree instead of only the launcher PID. This prevents repo-owned `chrome.exe` children using `browser-use-user-data-dir-*` temp profiles from surviving after discovery/download runs.
+
 Snapshot behavior:
 
 - `publishers.google_folder` is required; the command fails explicitly when it is missing.

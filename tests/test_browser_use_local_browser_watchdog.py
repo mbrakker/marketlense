@@ -16,6 +16,7 @@ if str(VENDORED_BROWSER_USE_ROOT) not in sys.path:
     sys.path.insert(0, str(VENDORED_BROWSER_USE_ROOT))
 
 from browser_use.browser.session import BrowserSession
+from browser_use.browser.events import BrowserKillEvent, BrowserStopEvent
 from browser_use.browser.watchdogs import local_browser_watchdog as watchdog_module
 from browser_use.browser.watchdogs.local_browser_watchdog import LocalBrowserWatchdog
 
@@ -104,3 +105,127 @@ def test_local_browser_watchdog_wait_for_cdp_url_times_out() -> None:
 
     with pytest.raises(TimeoutError, match="Browser did not start within"):
         asyncio.run(LocalBrowserWatchdog._wait_for_cdp_url(unused_port, timeout=0.2))
+
+
+class _FakeLogger:
+    def debug(self, _message: str) -> None:
+        return
+
+
+class _FakeProcess:
+    def __init__(self, pid: int, children: list["_FakeProcess"] | None = None) -> None:
+        self.pid = pid
+        self._running = True
+        self._children = children or []
+        self.terminate_calls = 0
+        self.kill_calls = 0
+
+    def children(self, recursive: bool = False) -> list["_FakeProcess"]:
+        if not recursive:
+            return list(self._children)
+        descendants: list[_FakeProcess] = []
+        for child in self._children:
+            descendants.append(child)
+            descendants.extend(child.children(recursive=True))
+        return descendants
+
+    def terminate(self) -> None:
+        self.terminate_calls += 1
+        self._running = False
+
+    def kill(self) -> None:
+        self.kill_calls += 1
+        self._running = False
+
+    def is_running(self) -> bool:
+        return self._running
+
+
+def test_local_browser_watchdog_force_stop_awaits_kill_completion() -> None:
+    state = {"dispatched_types": [], "awaited": False, "event_result_awaited": False}
+
+    class _DispatchedEvent:
+        def __await__(self):
+            async def _wait() -> None:
+                state["awaited"] = True
+
+            return _wait().__await__()
+
+        async def event_result(self, **_kwargs) -> None:
+            state["event_result_awaited"] = True
+            return None
+
+    class _EventBus:
+        def dispatch(self, event):
+            state["dispatched_types"].append(type(event).__name__)
+            return _DispatchedEvent()
+
+    watchdog = LocalBrowserWatchdog.model_construct(
+        event_bus=_EventBus(),
+        browser_session=SimpleNamespace(
+            is_local=True,
+            logger=_FakeLogger(),
+            browser_profile=SimpleNamespace(user_data_dir="profile"),
+        ),
+    )
+    watchdog._subprocess = _FakeProcess(pid=1001)
+
+    asyncio.run(watchdog.on_BrowserStopEvent(BrowserStopEvent(force=True)))
+
+    assert state == {
+        "dispatched_types": [BrowserKillEvent.__name__],
+        "awaited": True,
+        "event_result_awaited": True,
+    }
+
+
+def test_local_browser_watchdog_stop_without_force_keeps_browser_alive() -> None:
+    dispatched_types: list[str] = []
+
+    class _EventBus:
+        def dispatch(self, event):
+            dispatched_types.append(type(event).__name__)
+            return event
+
+    watchdog = LocalBrowserWatchdog.model_construct(
+        event_bus=_EventBus(),
+        browser_session=SimpleNamespace(
+            is_local=True,
+            logger=_FakeLogger(),
+            browser_profile=SimpleNamespace(user_data_dir="profile"),
+        ),
+    )
+    watchdog._subprocess = _FakeProcess(pid=1002)
+
+    asyncio.run(watchdog.on_BrowserStopEvent(BrowserStopEvent(force=False)))
+
+    assert dispatched_types == []
+    assert watchdog._subprocess is not None
+
+
+def test_local_browser_watchdog_kill_cleans_browser_process_tree() -> None:
+    grandchild = _FakeProcess(pid=2003)
+    child = _FakeProcess(pid=2002, children=[grandchild])
+    root = _FakeProcess(pid=2001, children=[child])
+    watchdog = LocalBrowserWatchdog.model_construct(
+        event_bus=SimpleNamespace(dispatch=lambda event: event),
+        browser_session=SimpleNamespace(
+            is_local=True,
+            logger=_FakeLogger(),
+            browser_profile=SimpleNamespace(user_data_dir="profile"),
+        ),
+    )
+    watchdog._subprocess = root
+
+    asyncio.run(watchdog.on_BrowserKillEvent(BrowserKillEvent()))
+
+    assert root.terminate_calls == 1
+    assert child.terminate_calls == 1
+    assert grandchild.terminate_calls == 1
+    assert root.kill_calls == 0
+    assert child.kill_calls == 0
+    assert grandchild.kill_calls == 0
+    assert root.is_running() is False
+    assert child.is_running() is False
+    assert grandchild.is_running() is False
+    assert watchdog._subprocess is None

@@ -83,11 +83,16 @@ class LocalBrowserWatchdog(BaseWatchdog):
 		self.logger.debug('[LocalBrowserWatchdog] Browser cleanup completed')
 
 	async def on_BrowserStopEvent(self, event: BrowserStopEvent) -> None:
-		"""Listen for BrowserStopEvent and dispatch BrowserKillEvent without awaiting it."""
+		"""Kill the local browser only for forced stops, and wait for cleanup to finish."""
+		if not event.force:
+			self.logger.debug('[LocalBrowserWatchdog] BrowserStopEvent received without force, leaving local browser alive')
+			return
+
 		if self.browser_session.is_local and self._subprocess:
 			self.logger.debug('[LocalBrowserWatchdog] BrowserStopEvent received, dispatching BrowserKillEvent')
-			# Dispatch BrowserKillEvent without awaiting so it gets processed after all BrowserStopEvent handlers
-			self.event_bus.dispatch(BrowserKillEvent())
+			kill_event = self.event_bus.dispatch(BrowserKillEvent())
+			await kill_event
+			await kill_event.event_result(raise_if_any=True, raise_if_none=False)
 
 	@observe_debug(ignore_input=True, ignore_output=True, name='launch_browser_process')
 	async def _launch_browser(self, max_retries: int = 3) -> tuple[psutil.Process, str]:
@@ -431,36 +436,65 @@ class LocalBrowserWatchdog(BaseWatchdog):
 
 	@staticmethod
 	async def _cleanup_process(process: psutil.Process) -> None:
-		"""Clean up browser process.
+		"""Clean up a browser process tree.
 
 		Args:
-			process: psutil.Process to terminate
+			process: psutil.Process root to terminate
 		"""
 		if not process:
 			return
 
 		try:
-			# Try graceful shutdown first
-			process.terminate()
+			processes = []
+			try:
+				processes.extend(process.children(recursive=True))
+			except psutil.NoSuchProcess:
+				return
+			except Exception:
+				pass
+			processes.append(process)
 
-			# Use async wait instead of blocking wait
+			# Terminate children first so Chrome renderer/utility processes do not outlive the launcher PID.
+			for candidate in reversed(processes):
+				try:
+					if candidate.is_running():
+						candidate.terminate()
+				except psutil.NoSuchProcess:
+					continue
+				except Exception:
+					continue
+
 			for _ in range(50):  # Wait up to 5 seconds (50 * 0.1)
-				if not process.is_running():
+				if not any(_is_process_running(candidate) for candidate in processes):
 					return
 				await asyncio.sleep(0.1)
 
-			# If still running after 5 seconds, force kill
-			if process.is_running():
-				process.kill()
-				# Give it a moment to die
-				await asyncio.sleep(0.1)
+			for candidate in reversed(processes):
+				try:
+					if candidate.is_running():
+						candidate.kill()
+				except psutil.NoSuchProcess:
+					continue
+				except Exception:
+					continue
 
+			await asyncio.sleep(0.1)
 		except psutil.NoSuchProcess:
 			# Process already gone
 			pass
 		except Exception:
 			# Ignore any other errors during cleanup
 			pass
+
+
+def _is_process_running(process: psutil.Process) -> bool:
+	"""Return whether a process is still alive, tolerating transient psutil races."""
+	try:
+		return process.is_running()
+	except psutil.NoSuchProcess:
+		return False
+	except Exception:
+		return False
 
 	def _cleanup_temp_dir(self, temp_dir: Path | str) -> None:
 		"""Clean up temporary directory.
