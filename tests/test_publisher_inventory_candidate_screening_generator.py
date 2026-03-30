@@ -260,3 +260,141 @@ def test_screen_publisher_inventory_candidates_skips_llm_when_disabled() -> None
         "https://example.com/report-one"
     ]
     assert response.model == "screening_disabled"
+
+
+def test_screen_publisher_inventory_candidates_collapses_duplicate_titles_after_llm() -> None:
+    candidates = [
+        PublisherInventoryCandidateScreeningItem(
+            schema_version="1.0",
+            canonical_url="https://example.com/report-one?promo=hero",
+            title="2026 Global Retail Outlook",
+            discovered_on_page_number=1,
+            source_page_url="https://example.com/insights",
+        ),
+        PublisherInventoryCandidateScreeningItem(
+            schema_version="1.0",
+            canonical_url="https://example.com/report-one",
+            title="2026 Global Retail Outlook",
+            discovered_on_page_number=2,
+            source_page_url="https://example.com/insights?page=2",
+        ),
+        PublisherInventoryCandidateScreeningItem(
+            schema_version="1.0",
+            canonical_url="https://example.com/report-two",
+            title="Substantive Market Outlook 2026",
+            discovered_on_page_number=3,
+            source_page_url="https://example.com/insights?page=3",
+        ),
+    ]
+    openai_client = RecordingOpenAIClient(
+        payload={
+            "decisions": [
+                {
+                    "canonical_url": "https://example.com/report-one?promo=hero",
+                    "accepted": True,
+                    "reason": "Looks report-like.",
+                },
+                {
+                    "canonical_url": "https://example.com/report-one",
+                    "accepted": True,
+                    "reason": "Looks report-like.",
+                },
+                {
+                    "canonical_url": "https://example.com/report-two",
+                    "accepted": True,
+                    "reason": "Looks report-like.",
+                },
+            ]
+        }
+    )
+
+    response = screen_publisher_inventory_candidates(
+        PublisherInventoryCandidateScreeningRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/insights",
+            candidates=candidates,
+            settings=_settings(),
+        ),
+        _ctx(),
+        openai_client=openai_client,
+        prompt_client=RecordingPromptClient(),
+    )
+
+    assert [item.canonical_url for item in response.approved_items] == [
+        "https://example.com/report-one",
+        "https://example.com/report-two",
+    ]
+    assert [item.canonical_url for item in response.rejected_items] == [
+        "https://example.com/report-one?promo=hero"
+    ]
+    duplicate_decision = next(
+        decision
+        for decision in response.decisions
+        if decision.canonical_url == "https://example.com/report-one?promo=hero"
+    )
+    assert duplicate_decision.accepted is False
+    assert duplicate_decision.reason.startswith("duplicate_in_run")
+
+
+def test_screen_publisher_inventory_candidates_hard_rejects_publisher_success_titles() -> None:
+    candidates = [
+        PublisherInventoryCandidateScreeningItem(
+            schema_version="1.0",
+            canonical_url="https://business.adobe.com/resources/reports/leader-email-service-providers",
+            title="Read now Adobe named a Leader in Email Service Providers.",
+            discovered_on_page_number=1,
+            source_page_url="https://business.adobe.com/resources/reports.html",
+        ),
+        PublisherInventoryCandidateScreeningItem(
+            schema_version="1.0",
+            canonical_url="https://business.adobe.com/resources/reports/2025-ai-digital-trends-customer-engagement",
+            title="Read now 2025 AI and Digital Trends in Customer Engagement.",
+            discovered_on_page_number=2,
+            source_page_url="https://business.adobe.com/resources/reports.html?page=2",
+        ),
+    ]
+    openai_client = RecordingOpenAIClient(
+        payload={
+            "decisions": [
+                {
+                    "canonical_url": "https://business.adobe.com/resources/reports/leader-email-service-providers",
+                    "accepted": True,
+                    "reason": "Looks report-like.",
+                },
+                {
+                    "canonical_url": "https://business.adobe.com/resources/reports/2025-ai-digital-trends-customer-engagement",
+                    "accepted": True,
+                    "reason": "Looks report-like.",
+                },
+            ]
+        }
+    )
+
+    response = screen_publisher_inventory_candidates(
+        PublisherInventoryCandidateScreeningRequest(
+            schema_version="1.0",
+            publisher_name="Adobe",
+            insights_url="https://business.adobe.com/resources/reports.html",
+            candidates=candidates,
+            settings=_settings(),
+        ),
+        _ctx(),
+        openai_client=openai_client,
+        prompt_client=RecordingPromptClient(),
+    )
+
+    assert [item.canonical_url for item in response.approved_items] == [
+        "https://business.adobe.com/resources/reports/2025-ai-digital-trends-customer-engagement"
+    ]
+    assert [item.canonical_url for item in response.rejected_items] == [
+        "https://business.adobe.com/resources/reports/leader-email-service-providers"
+    ]
+    hard_reject_decision = next(
+        decision
+        for decision in response.decisions
+        if decision.canonical_url
+        == "https://business.adobe.com/resources/reports/leader-email-service-providers"
+    )
+    assert hard_reject_decision.accepted is False
+    assert hard_reject_decision.reason == "publisher_success_marketing"

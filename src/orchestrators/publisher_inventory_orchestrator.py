@@ -204,15 +204,50 @@ def run_publisher_inventory_discovery(
                 )
             )
     if discovery_result is None:
-        discovery_result = _run_discovery_attempt(
-            request=request,
-            ctx=ctx,
-            policy=policy,
-            dependencies=deps,
-            route_hint=None,
-            route_kind_hint=None,
-            step_name="publisher_inventory_discovery",
-        )
+        if request.settings.force_browser:
+            discovery_result = _run_discovery_attempt(
+                request=request,
+                ctx=ctx,
+                policy=policy,
+                dependencies=deps,
+                route_hint=None,
+                route_kind_hint="browser_render",
+                step_name="publisher_inventory_discovery_browser",
+            )
+        else:
+            try:
+                discovery_result = _run_discovery_attempt(
+                    request=request,
+                    ctx=ctx,
+                    policy=policy,
+                    dependencies=deps,
+                    route_hint=None,
+                    route_kind_hint="http_parse",
+                    step_name="publisher_inventory_discovery_http",
+                )
+            except AppError as exc:
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="orchestrator",
+                        event="publisher_inventory_http_to_browser_fallback",
+                        module=logger.name,
+                        fields={
+                            "normalized_url": normalized_url,
+                            "error": exc.message,
+                            "code": exc.code,
+                        },
+                    )
+                )
+                discovery_result = _run_discovery_attempt(
+                    request=request,
+                    ctx=ctx,
+                    policy=policy,
+                    dependencies=deps,
+                    route_hint=None,
+                    route_kind_hint="browser_render",
+                    step_name="publisher_inventory_discovery_browser",
+                )
 
     build_response = deps.build_publisher_inventory_snapshot(
         PublisherInventoryBuildRequest(

@@ -879,7 +879,7 @@ class TestConfigService(unittest.TestCase):
             cfg_data["publisher_discovery"] = {
                 "candidate_screening": {
                     "enabled": False,
-                }
+                },
             }
             Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
 

@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import json
 import logging
+import re
+import unicodedata
+from urllib.parse import urlsplit
 from typing import Any
 
 from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIResponseResult
@@ -18,6 +21,34 @@ from src.utils.logging import log_event
 
 logger = logging.getLogger(
     "market_lense.publisher_inventory_candidate_screening_generator"
+)
+
+_PUBLISHER_SUCCESS_ANALYST_MARKERS = (
+    "gartner",
+    "forrester",
+    "omdia",
+    "idc",
+    "peak matrix",
+    "marketscape",
+    "magic quadrant",
+    "quadrant",
+    "wave",
+)
+_PUBLISHER_SUCCESS_HARD_PATTERNS = (
+    re.compile(r"\bnamed\s+(?:a|an|the\s+)?leader\b"),
+    re.compile(r"\bnames?\b.*\ba\s+leader\b"),
+    re.compile(r"\brated\s+(?:a|an|the\s+)?leader\b"),
+    re.compile(r"\brecogni[sz]ed\s+as\s+(?:a|an|the\s+)?leader\b"),
+    re.compile(r"\btop[- ]rated\b"),
+    re.compile(r"\btop ratings?\b"),
+    re.compile(r"\bcustomer favorite\b"),
+    re.compile(r"\bhighest[- ]designated leader\b"),
+    re.compile(r"\bbrings home the gold\b"),
+    re.compile(r"\bgoes big\b"),
+    re.compile(r"\bjust ask\b"),
+    re.compile(r"\bearns?\s+top ratings?\b"),
+    re.compile(r"\bleader in\b"),
+    re.compile(r"\bleader for\b"),
 )
 
 
@@ -75,11 +106,16 @@ def screen_publisher_inventory_candidates(
                     "approved_count": len(response.approved_items),
                     "rejected_count": len(response.rejected_items),
                     "model": response.model,
-                    "screening_skipped": True,
+                "screening_skipped": True,
                 },
             )
         )
-        return response
+        deduped_response = _deduplicate_screening_response(
+            response=response,
+            publisher_name=request.publisher_name,
+            ctx=ctx,
+        )
+        return deduped_response
 
     openai_client = openai_client or llm_service.build_openai_client(
         base_client=openai_service,
@@ -178,6 +214,16 @@ def screen_publisher_inventory_candidates(
         model=str(response.model or prompt_bundle.resolved_model or ""),
         request_id=str(response.request_id or "") or None,
         raw_response=str(response.text or ""),
+    )
+    screening_response = _apply_publisher_success_hard_rejections(
+        response=screening_response,
+        publisher_name=request.publisher_name,
+        ctx=ctx,
+    )
+    screening_response = _deduplicate_screening_response(
+        response=screening_response,
+        publisher_name=request.publisher_name,
+        ctx=ctx,
     )
     logger.info(
         log_event(
@@ -287,3 +333,197 @@ def _coerce_screening_response(
         request_id=request_id,
         raw_response=raw_response,
     )
+
+
+def _deduplicate_screening_response(
+    *,
+    response: PublisherInventoryCandidateScreeningResponse,
+    publisher_name: str,
+    ctx,
+) -> PublisherInventoryCandidateScreeningResponse:
+    if len(response.approved_items) <= 1:
+        return response
+    groups: dict[str, list[PublisherInventoryCandidateScreeningItem]] = {}
+    for item in response.approved_items:
+        groups.setdefault(_candidate_duplicate_key(item), []).append(item)
+    duplicate_map: dict[str, str] = {}
+    keep_urls: set[str] = set()
+    for items in groups.values():
+        winner = min(items, key=_candidate_selection_key)
+        keep_urls.add(winner.canonical_url)
+        for item in items:
+            if item.canonical_url == winner.canonical_url:
+                continue
+            duplicate_map[item.canonical_url] = winner.canonical_url
+    if not duplicate_map:
+        return response
+    approved_items = [
+        item for item in response.approved_items if item.canonical_url in keep_urls
+    ]
+    rejected_items = list(response.rejected_items) + [
+        item
+        for item in response.approved_items
+        if item.canonical_url in duplicate_map
+    ]
+    decisions: list[PublisherInventoryCandidateScreeningDecision] = []
+    for decision in response.decisions:
+        kept_url = duplicate_map.get(decision.canonical_url)
+        if not kept_url:
+            decisions.append(decision)
+            continue
+        decisions.append(
+            PublisherInventoryCandidateScreeningDecision(
+                schema_version="1.0",
+                canonical_url=decision.canonical_url,
+                accepted=False,
+                reason=f"duplicate_in_run keep {kept_url}",
+            )
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="publisher_inventory_candidate_screen_duplicates_collapsed",
+            module=logger.name,
+            fields={
+                "publisher_name": publisher_name,
+                "duplicate_count": len(duplicate_map),
+                "kept_urls": sorted(keep_urls),
+                "duplicate_urls": duplicate_map,
+            },
+        )
+    )
+    return PublisherInventoryCandidateScreeningResponse(
+        schema_version=response.schema_version,
+        approved_items=approved_items,
+        rejected_items=rejected_items,
+        decisions=decisions,
+        model=response.model,
+        request_id=response.request_id,
+        raw_response=response.raw_response,
+    )
+
+
+def _apply_publisher_success_hard_rejections(
+    *,
+    response: PublisherInventoryCandidateScreeningResponse,
+    publisher_name: str,
+    ctx,
+) -> PublisherInventoryCandidateScreeningResponse:
+    if not response.approved_items:
+        return response
+    forced_rejections: dict[str, str] = {}
+    for item in response.approved_items:
+        if _is_publisher_success_marketing_title(
+            title=item.title,
+            publisher_name=publisher_name,
+        ):
+            forced_rejections[item.canonical_url] = "publisher_success_marketing"
+    if not forced_rejections:
+        return response
+    approved_items = [
+        item
+        for item in response.approved_items
+        if item.canonical_url not in forced_rejections
+    ]
+    rejected_items = list(response.rejected_items) + [
+        item
+        for item in response.approved_items
+        if item.canonical_url in forced_rejections
+    ]
+    decisions: list[PublisherInventoryCandidateScreeningDecision] = []
+    for decision in response.decisions:
+        reason = forced_rejections.get(decision.canonical_url)
+        if not reason:
+            decisions.append(decision)
+            continue
+        decisions.append(
+            PublisherInventoryCandidateScreeningDecision(
+                schema_version="1.0",
+                canonical_url=decision.canonical_url,
+                accepted=False,
+                reason=reason,
+            )
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="publisher_inventory_candidate_screen_hard_rejections_applied",
+            module=logger.name,
+            fields={
+                "publisher_name": publisher_name,
+                "forced_rejection_count": len(forced_rejections),
+                "forced_rejection_urls": sorted(forced_rejections),
+            },
+        )
+    )
+    return PublisherInventoryCandidateScreeningResponse(
+        schema_version=response.schema_version,
+        approved_items=approved_items,
+        rejected_items=rejected_items,
+        decisions=decisions,
+        model=response.model,
+        request_id=response.request_id,
+        raw_response=response.raw_response,
+    )
+
+
+def _candidate_duplicate_key(
+    candidate: PublisherInventoryCandidateScreeningItem,
+) -> str:
+    title_key = _normalize_title_fingerprint(candidate.title)
+    if title_key:
+        return title_key
+    return candidate.canonical_url
+
+
+def _candidate_selection_key(
+    candidate: PublisherInventoryCandidateScreeningItem,
+) -> tuple[int, int, int, int, str]:
+    parsed = urlsplit(candidate.canonical_url)
+    has_query = 1 if parsed.query else 0
+    return (
+        has_query,
+        candidate.discovered_on_page_number,
+        len(parsed.path or ""),
+        len(candidate.canonical_url),
+        candidate.canonical_url,
+    )
+
+
+def _normalize_title_fingerprint(title: str) -> str:
+    token = unicodedata.normalize("NFKD", str(title or ""))
+    normalized = "".join(
+        char.casefold() if char.isalnum() or char.isspace() else " "
+        for char in token
+    )
+    return " ".join(normalized.split()).strip()
+
+
+def _is_publisher_success_marketing_title(*, title: str, publisher_name: str) -> bool:
+    normalized_title = _normalize_title_fingerprint(title)
+    if not normalized_title:
+        return False
+    normalized_title = re.sub(r"^(read|download|view)\s+now\s+", "", normalized_title)
+    publisher_tokens = _publisher_reference_tokens(publisher_name)
+    if publisher_tokens and not any(token in normalized_title for token in publisher_tokens):
+        return False
+    if any(pattern.search(normalized_title) for pattern in _PUBLISHER_SUCCESS_HARD_PATTERNS):
+        return True
+    return (
+        "leader" in normalized_title
+        and any(marker in normalized_title for marker in _PUBLISHER_SUCCESS_ANALYST_MARKERS)
+    )
+
+
+def _publisher_reference_tokens(publisher_name: str) -> tuple[str, ...]:
+    normalized_name = _normalize_title_fingerprint(publisher_name)
+    if not normalized_name:
+        return ()
+    tokens = [token for token in normalized_name.split() if len(token) >= 4]
+    unique_tokens: list[str] = []
+    for token in [normalized_name, *tokens]:
+        if token and token not in unique_tokens:
+            unique_tokens.append(token)
+    return tuple(unique_tokens)

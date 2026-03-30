@@ -22,6 +22,13 @@ text: |
   - contact, login, careers, newsletter, or event pages
   - product pages
   - navigation pages such as "view all reports"
+  - self-promotional publisher-success pieces whose primary message is that the publisher was named a leader, top rated, customer favorite, or similar vendor accolade
+
+  Treat publisher-success marketing pieces as non-report assets even when they mention a third-party analyst firm.
+  Examples that should usually be rejected:
+  - "Adobe named a Leader in Email Service Providers."
+  - "Adobe named a Leader for personalization engines."
+  - similar "named a leader", "top rated", "customer favorite", or "recognized as a leader" titles
 
   Requirements:
   - Return a single JSON object.

@@ -387,7 +387,6 @@ class PublisherInventoryDiscoveryResult:
         metadata={"doc": "Whether the normalized current snapshot differed from the previous snapshot."}
     )
 
-
 @dataclass(frozen=True)
 class PublisherInventoryServiceRequest:
     schema_version: str = field(
@@ -407,8 +406,6 @@ class PublisherInventoryServiceRequest:
         default=None,
         metadata={"doc": "Previously successful route kind when known: http_parse or browser_render."},
     )
-
-
 @dataclass(frozen=True)
 class PublisherInventoryServiceResponse:
     schema_version: str = field(

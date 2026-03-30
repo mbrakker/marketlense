@@ -41,6 +41,9 @@ class _FakeBrowserPage:
         payload.setdefault("report_link_url", "")
         payload.setdefault("has_report_filter", False)
         payload.setdefault("has_apply_button", False)
+        payload.setdefault("has_pagination_next", False)
+        payload.setdefault("result_range_end", 0)
+        payload.setdefault("result_range_total", 0)
         return payload
 
     async def evaluate(self, script: str, *args):
@@ -57,13 +60,54 @@ class _FakeBrowserPage:
         if script == service._browser_inventory_state_script():
             return json.dumps(self._payload())
         if script == service._browser_click_named_control_script():
-            labels = [str(label).strip().lower() for label in args[0]]
+            payload = args[0]
+            if isinstance(payload, dict):
+                labels = [str(label).strip().lower() for label in payload.get("labels", [])]
+                candidate_urls = [str(url).strip() for url in payload.get("candidate_urls", [])]
+                require_candidate_surface = bool(payload.get("require_candidate_surface"))
+            else:
+                labels = [str(label).strip().lower() for label in payload]
+                candidate_urls = []
+                require_candidate_surface = False
+            choices = self._states[self._state_id].get("named_click_choices", [])
+            if isinstance(choices, list) and choices:
+                matched_choices: list[dict[str, object]] = []
+                for choice in choices:
+                    assert isinstance(choice, dict)
+                    label = str(choice.get("label", "")).strip().lower()
+                    if not label:
+                        continue
+                    if any(label == wanted or label.find(wanted) >= 0 for wanted in labels):
+                        matched_choices.append(choice)
+                if matched_choices:
+                    if candidate_urls:
+                        matched_choices.sort(
+                            key=lambda choice: (
+                                int(choice.get("candidate_hits", 0)),
+                                int(choice.get("top", 0)),
+                            ),
+                            reverse=True,
+                        )
+                        min_relevant_hits = 1 if len(candidate_urls) <= 4 else min(3, -(-len(candidate_urls) // 4))
+                        if (
+                            require_candidate_surface
+                            and int(matched_choices[0].get("candidate_hits", 0)) < min_relevant_hits
+                        ):
+                            return "not_relevant"
+                    self._state_id = str(matched_choices[0]["next_state"])
+                    return "true"
             transitions = self._states[self._state_id].get("named_clicks", {})
             assert isinstance(transitions, dict)
             for label in labels:
                 if label in transitions:
                     self._state_id = str(transitions[label])
                     return "true"
+            return "false"
+        if script == service._browser_click_pagination_next_script():
+            next_state = self._states[self._state_id].get("pagination_next_state")
+            if next_state:
+                self._state_id = str(next_state)
+                return "true"
             return "false"
         if script == service._browser_click_tab_script():
             target = str(args[0]).strip().lower()
@@ -373,6 +417,282 @@ def test_discover_publisher_inventory_browser_scrolls_to_hydrate_load_more(
     assert "Expanded load-more pagination 1 time(s)." in response.route_summary
 
 
+def test_discover_publisher_inventory_browser_prefers_candidate_dense_load_more_surface(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    external_boundary_mocks_only.setattr(
+        service.requests,
+        "get",
+        lambda *args, **kwargs: _FakeResponse(
+            url="https://www.algolia.com/resources",
+            text="<html><body><a href='/about'>About</a></body></html>",
+        ),
+    )
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://www.algolia.com/resources",
+                "page_title": "Resource Center",
+                "anchors": [
+                    {
+                        "href": "https://www.algolia.com/resources/asset/ebook-understanding-ai-transparency",
+                        "text": "Understanding AI transparency",
+                        "rel": "",
+                    },
+                    {
+                        "href": "https://www.algolia.com/resources/asset/the-roi-of-relevance-algolia-shopify",
+                        "text": "The ROI of Relevance: Algolia + Shopify",
+                        "rel": "",
+                    },
+                ],
+                "load_more_labels": ["Show more results", "Show More"],
+            },
+            "named_click_choices": [
+                {"label": "show more results", "next_state": "wrong_surface", "candidate_hits": 1, "top": 1100},
+                {"label": "show more", "next_state": "page_2", "candidate_hits": 6, "top": 900},
+            ],
+        },
+        "wrong_surface": {
+            "payload": {
+                "page_url": "https://www.algolia.com/resources",
+                "page_title": "Resource Center",
+                "anchors": [
+                    {
+                        "href": "https://www.algolia.com/products/ai-search",
+                        "text": "AI Search",
+                        "rel": "",
+                    }
+                ],
+            }
+        },
+        "page_2": {
+            "payload": {
+                "page_url": "https://www.algolia.com/resources",
+                "page_title": "Resource Center",
+                "anchors": [
+                    {
+                        "href": "https://www.algolia.com/resources/asset/ebook-understanding-ai-transparency",
+                        "text": "Understanding AI transparency",
+                        "rel": "",
+                    },
+                    {
+                        "href": "https://www.algolia.com/resources/asset/the-roi-of-relevance-algolia-shopify",
+                        "text": "The ROI of Relevance: Algolia + Shopify",
+                        "rel": "",
+                    },
+                    {
+                        "href": "https://www.algolia.com/resources/asset/ebook-why-agentic-ai-is-your-next-priority",
+                        "text": "Why agentic AI is your next priority ebook",
+                        "rel": "",
+                    },
+                    {
+                        "href": "https://www.algolia.com/resources/asset/ebook-retail-media-trends-2026",
+                        "text": "Retail media trends 2026 ebook",
+                        "rel": "",
+                    },
+                    {
+                        "href": "https://www.algolia.com/resources/asset/ebook-black-friday-data-playbook",
+                        "text": "Black Friday data playbook ebook",
+                        "rel": "",
+                    },
+                    {
+                        "href": "https://www.algolia.com/resources/asset/ebook-b2c-ecommerce-ai-trends-2026",
+                        "text": "2026 B2C ecommerce AI trends ebook",
+                        "rel": "",
+                    },
+                ],
+                "load_more_labels": ["Show more results"],
+            },
+            "named_click_choices": [
+                {"label": "show more results", "next_state": "wrong_surface", "candidate_hits": 1, "top": 1200}
+            ],
+        },
+    }
+    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://www.algolia.com/resources?reports",
+            settings=_settings(tmp_path),
+            route_kind_hint="browser_render",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "browser_render"
+    assert len(response.pages) == 2
+    assert any(
+        candidate.url == "https://www.algolia.com/resources/asset/ebook-why-agentic-ai-is-your-next-priority"
+        and candidate.discovered_on_page_number == 2
+        for candidate in response.candidates
+    )
+
+
+def test_discover_publisher_inventory_browser_prioritizes_button_pagination_over_hero_load_more(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    external_boundary_mocks_only.setattr(
+        service.requests,
+        "get",
+        lambda *args, **kwargs: _FakeResponse(
+            url="https://business.adobe.com/resources/reports.html",
+            text="<html><body><a href='/about'>About</a></body></html>",
+        ),
+    )
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://business.adobe.com/resources/reports.html",
+                "page_title": "Adobe Reports",
+                "anchors": [
+                    {
+                        "href": "https://business.adobe.com/resources/reports/report-one.html",
+                        "text": "Read now",
+                        "heading_text": "Adobe Report One 2026",
+                        "rel": "",
+                    }
+                ],
+                "load_more_labels": ["Load more"],
+                "has_pagination_next": True,
+            },
+            "named_clicks": {"load more": "hero_load_more"},
+            "pagination_next_state": "page_2",
+        },
+        "hero_load_more": {
+            "payload": {
+                "page_url": "https://business.adobe.com/resources/reports.html",
+                "page_title": "Adobe Reports",
+                "anchors": [
+                    {
+                        "href": "https://business.adobe.com/resources/reports/report-one.html",
+                        "text": "Read now",
+                        "heading_text": "Adobe Report One 2026",
+                        "rel": "",
+                    },
+                    {
+                        "href": "https://business.adobe.com/resources/reports/report-hero.html",
+                        "text": "Read now",
+                        "heading_text": "Hero Spotlight Report",
+                        "rel": "",
+                    },
+                ],
+            }
+        },
+        "page_2": {
+            "payload": {
+                "page_url": "https://business.adobe.com/resources/reports.html?page=2",
+                "page_title": "Adobe Reports",
+                "anchors": [
+                    {
+                        "href": "https://business.adobe.com/resources/reports/report-two.html",
+                        "text": "Read now",
+                        "heading_text": "Adobe Report Two 2026",
+                        "rel": "",
+                    }
+                ],
+                "has_pagination_next": True,
+                "result_range_end": 18,
+                "result_range_total": 18,
+            }
+        },
+    }
+    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://business.adobe.com/resources/reports.html",
+            settings=_settings(tmp_path),
+            route_kind_hint="browser_render",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "browser_render"
+    assert len(response.pages) == 2
+    assert response.pages[1].page_url == "https://business.adobe.com/resources/reports.html?page=2"
+    assert [candidate.title for candidate in response.candidates] == [
+        "Adobe Report One 2026",
+        "Adobe Report Two 2026",
+    ]
+    assert "Clicked button pagination 1 time(s)." in response.route_summary
+    assert "Expanded load-more pagination" not in response.route_summary
+
+
+def test_discover_publisher_inventory_browser_tracks_load_more_state_change_without_new_unique_candidates(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    external_boundary_mocks_only.setattr(
+        service.requests,
+        "get",
+        lambda *args, **kwargs: _FakeResponse(
+            url="https://example.com/insights",
+            text="<html><body><a href='/about'>About</a></body></html>",
+        ),
+    )
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://example.com/insights",
+                "page_title": "Insights",
+                "anchors": [
+                    {
+                        "href": "https://example.com/reports/report-one",
+                        "text": "Report One 2026",
+                        "rel": "",
+                    }
+                ],
+                "load_more_labels": ["Load more"],
+            },
+            "named_clicks": {"load more": "page_2"},
+        },
+        "page_2": {
+            "payload": {
+                "page_url": "https://example.com/insights",
+                "page_title": "Insights",
+                "anchors": [
+                    {
+                        "href": "https://example.com/reports/report-one",
+                        "text": "Report One 2026",
+                        "rel": "",
+                    },
+                    {
+                        "href": "https://example.com/about",
+                        "text": "About",
+                        "rel": "",
+                    },
+                ],
+            }
+        },
+    }
+    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://example.com/insights",
+            settings=_settings(tmp_path),
+            route_kind_hint="browser_render",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "browser_render"
+    assert len(response.pages) == 2
+    assert response.pages[1].page_number == 2
+    assert "Expanded load-more pagination 1 time(s)." in response.route_summary
+
+
 def test_discover_publisher_inventory_http_hint_empty_is_typed_error(
     tmp_path: Path,
     run_context,
@@ -667,6 +987,7 @@ def test_browser_named_control_selector_covers_anchor_button_controls() -> None:
     selector = service._browser_named_control_selector()
     inventory_script = service._browser_inventory_state_script()
     click_script = service._browser_click_named_control_script()
+    pagination_click_script = service._browser_click_pagination_next_script()
 
     assert 'a.btn' in selector
     assert 'a[class*="btn"]' in selector
@@ -676,4 +997,9 @@ def test_browser_named_control_selector_covers_anchor_button_controls() -> None:
     assert 'a.wp-block-button__link' in inventory_script
     assert 'a.btn' in click_script
     assert 'a.wp-block-button__link' in click_script
+    assert 'candidate_urls' in click_script
     assert 'scrollIntoView' in click_script
+    assert 'aria-disabled' in inventory_script
+    assert 'aria-disabled' in click_script
+    assert 'aria-disabled' in pagination_click_script
+    assert 'has_pagination_next' in inventory_script
