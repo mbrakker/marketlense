@@ -33,6 +33,7 @@ from src.contracts.report_store import (
     PublisherInventoryStateGetRequest,
     PublisherInventoryStateRecordRequest,
     PublisherInventoryStateResponse,
+    PublisherInventoryTestStatusRecordRequest,
 )
 from src.contracts.run_context import RunContext
 from src.generators.publisher_inventory_generator import (
@@ -49,6 +50,7 @@ from src.services.report_store_service import (
     get_publisher_inventory_state,
     record_discovered_report_source,
     record_publisher_inventory_state,
+    record_publisher_inventory_test_status,
 )
 from src.utils.drive_utils import extract_drive_folder_id
 from src.utils.errors import AppError
@@ -86,6 +88,10 @@ class PublisherInventoryDependencies:
         [PublisherInventoryStateRecordRequest, RunContext],
         None,
     ]
+    record_publisher_inventory_test_status: Callable[
+        [PublisherInventoryTestStatusRecordRequest, RunContext],
+        None,
+    ]
     record_discovered_report_source: Callable[
         [ReportSourceDiscoveryRecordRequest, RunContext],
         ReportSourceDiscoveryRecordResponse,
@@ -108,6 +114,7 @@ class PublisherInventoryDependencies:
             screen_publisher_inventory_candidates=screen_publisher_inventory_candidates,
             get_publisher_inventory_state=get_publisher_inventory_state,
             record_publisher_inventory_state=record_publisher_inventory_state,
+            record_publisher_inventory_test_status=record_publisher_inventory_test_status,
             record_discovered_report_source=record_discovered_report_source,
             list_files_in_folder=list_files_in_folder,
             download_pdf=download_pdf,
@@ -154,6 +161,14 @@ def run_publisher_inventory_discovery(
         )
     folder_id = extract_drive_folder_id(publisher_state.google_folder or "")
     if not folder_id:
+        _record_discovery_test_status_on_failure(
+            request=request,
+            normalized_url=normalized_url,
+            publisher_state=publisher_state,
+            code="publisher_inventory_google_folder_missing",
+            ctx=ctx,
+            dependencies=deps,
+        )
         raise AppError(
             code="publisher_inventory_google_folder_missing",
             message="Publisher discovery requires an existing publisher Drive folder",
@@ -164,81 +179,48 @@ def run_publisher_inventory_discovery(
                 "normalized_url": normalized_url,
             },
         )
-    previous_snapshot, previous_snapshot_file_id, previous_snapshot_file_name, previous_snapshot_sha256 = _load_previous_snapshot(
-        publisher_state=publisher_state,
-        folder_id=folder_id,
-        settings=request.settings,
-        ctx=ctx,
-        dependencies=deps,
-    )
-    policy = RetryPolicy(
-        retries=request.settings.retry_retries,
-        base_delay_seconds=request.settings.retry_base_delay_seconds,
-        backoff_step_seconds=request.settings.retry_backoff_step_seconds,
-        jitter_seconds=request.settings.retry_jitter_seconds,
-    )
-    discovery_result: PublisherInventoryServiceResponse | None = None
-    if publisher_state.inventory_route_summary:
-        try:
-            discovery_result = _run_discovery_attempt(
-                request=request,
-                ctx=ctx,
-                policy=policy,
-                dependencies=deps,
-                route_hint=publisher_state.inventory_route_summary,
-                route_kind_hint=publisher_state.inventory_route_kind,
-                step_name="publisher_inventory_discovery_with_memory_route",
-            )
-        except Exception as exc:
-            logger.info(
-                log_event(
-                    ctx,
-                    role="orchestrator",
-                    event="publisher_inventory_memory_route_failed",
-                    module=logger.name,
-                    fields={
-                        "normalized_url": normalized_url,
-                        "route_kind": publisher_state.inventory_route_kind or "",
-                        "error": str(exc),
-                    },
-                )
-            )
-    if discovery_result is None:
-        if request.settings.force_browser:
-            discovery_result = _run_discovery_attempt(
-                request=request,
-                ctx=ctx,
-                policy=policy,
-                dependencies=deps,
-                route_hint=None,
-                route_kind_hint="browser_render",
-                step_name="publisher_inventory_discovery_browser",
-            )
-        else:
+    try:
+        previous_snapshot, previous_snapshot_file_id, previous_snapshot_file_name, previous_snapshot_sha256 = _load_previous_snapshot(
+            publisher_state=publisher_state,
+            folder_id=folder_id,
+            settings=request.settings,
+            ctx=ctx,
+            dependencies=deps,
+        )
+        policy = RetryPolicy(
+            retries=request.settings.retry_retries,
+            base_delay_seconds=request.settings.retry_base_delay_seconds,
+            backoff_step_seconds=request.settings.retry_backoff_step_seconds,
+            jitter_seconds=request.settings.retry_jitter_seconds,
+        )
+        discovery_result: PublisherInventoryServiceResponse | None = None
+        if publisher_state.inventory_route_summary:
             try:
                 discovery_result = _run_discovery_attempt(
                     request=request,
                     ctx=ctx,
                     policy=policy,
                     dependencies=deps,
-                    route_hint=None,
-                    route_kind_hint="http_parse",
-                    step_name="publisher_inventory_discovery_http",
+                    route_hint=publisher_state.inventory_route_summary,
+                    route_kind_hint=publisher_state.inventory_route_kind,
+                    step_name="publisher_inventory_discovery_with_memory_route",
                 )
-            except AppError as exc:
+            except Exception as exc:
                 logger.info(
                     log_event(
                         ctx,
                         role="orchestrator",
-                        event="publisher_inventory_http_to_browser_fallback",
+                        event="publisher_inventory_memory_route_failed",
                         module=logger.name,
                         fields={
                             "normalized_url": normalized_url,
-                            "error": exc.message,
-                            "code": exc.code,
+                            "route_kind": publisher_state.inventory_route_kind or "",
+                            "error": str(exc),
                         },
                     )
                 )
+        if discovery_result is None:
+            if request.settings.force_browser:
                 discovery_result = _run_discovery_attempt(
                     request=request,
                     ctx=ctx,
@@ -248,204 +230,293 @@ def run_publisher_inventory_discovery(
                     route_kind_hint="browser_render",
                     step_name="publisher_inventory_discovery_browser",
                 )
+            else:
+                try:
+                    discovery_result = _run_discovery_attempt(
+                        request=request,
+                        ctx=ctx,
+                        policy=policy,
+                        dependencies=deps,
+                        route_hint=None,
+                        route_kind_hint="http_parse",
+                        step_name="publisher_inventory_discovery_http",
+                    )
+                except AppError as exc:
+                    logger.info(
+                        log_event(
+                            ctx,
+                            role="orchestrator",
+                            event="publisher_inventory_http_to_browser_fallback",
+                            module=logger.name,
+                            fields={
+                                "normalized_url": normalized_url,
+                                "error": exc.message,
+                                "code": exc.code,
+                            },
+                        )
+                    )
+                    discovery_result = _run_discovery_attempt(
+                        request=request,
+                        ctx=ctx,
+                        policy=policy,
+                        dependencies=deps,
+                        route_hint=None,
+                        route_kind_hint="browser_render",
+                        step_name="publisher_inventory_discovery_browser",
+                    )
 
-    build_response = deps.build_publisher_inventory_snapshot(
-        PublisherInventoryBuildRequest(
+        build_response = deps.build_publisher_inventory_snapshot(
+            PublisherInventoryBuildRequest(
+                schema_version="1.0",
+                publisher_name=publisher_state.publisher_name,
+                insights_url=publisher_state.insights_url,
+                normalized_insights_url=normalized_url,
+                discovered_at_utc=_utc_now_iso(),
+                route_kind=discovery_result.route_kind,
+                route_summary=discovery_result.route_summary,
+                final_page_url=discovery_result.final_page_url,
+                pages=discovery_result.pages,
+                candidates=discovery_result.candidates,
+                previous_snapshot=previous_snapshot,
+            ),
+            ctx,
+        )
+        page_url_by_number = {
+            page.page_number: page.page_url for page in build_response.snapshot.pages
+        }
+        screening_response = deps.screen_publisher_inventory_candidates(
+            PublisherInventoryCandidateScreeningRequest(
+                schema_version="1.0",
+                publisher_name=publisher_state.publisher_name,
+                insights_url=publisher_state.insights_url,
+                candidates=[
+                    PublisherInventoryCandidateScreeningItem(
+                        schema_version="1.0",
+                        canonical_url=item.canonical_url,
+                        title=item.title,
+                        discovered_on_page_number=item.discovered_on_page_number,
+                        source_page_url=page_url_by_number.get(
+                            item.discovered_on_page_number, publisher_state.insights_url
+                        ),
+                    )
+                    for item in build_response.new_items
+                ],
+                settings=request.settings,
+            ),
+            ctx,
+        )
+        approved_item_urls = {
+            candidate.canonical_url for candidate in screening_response.approved_items
+        }
+        approved_items = [
+            item
+            for item in build_response.new_items
+            if item.canonical_url in approved_item_urls
+        ]
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="publisher_inventory_candidate_screening_complete",
+                module=logger.name,
+                fields={
+                    "publisher_name": publisher_state.publisher_name,
+                    "raw_new_report_count": len(build_response.new_items),
+                    "approved_new_report_count": len(approved_items),
+                    "rejected_new_report_count": len(screening_response.rejected_items),
+                    "screening_model": screening_response.model,
+                    "screening_request_id": screening_response.request_id or "",
+                },
+            )
+        )
+        snapshot_changed = build_response.snapshot_sha256 != (previous_snapshot_sha256 or "")
+        snapshot_drive_file_id = previous_snapshot_file_id
+        snapshot_drive_file_name = previous_snapshot_file_name
+        snapshot_sha256 = previous_snapshot_sha256
+        if snapshot_changed:
+            upload_response = run_with_retry(
+                step_name="publisher_inventory_snapshot_upload",
+                operation=lambda: deps.upload_bytes(
+                    DriveUploadBytesRequest(
+                        schema_version="1.0",
+                        folder_id=folder_id,
+                        service_account_path=request.settings.google_sa_path,
+                        auth_mode=request.settings.drive_auth_mode,
+                        oauth_client_path=request.settings.google_oauth_client_path,
+                        oauth_token_path=request.settings.google_oauth_token_path,
+                        file_name=_snapshot_file_name(),
+                        content=build_response.snapshot_json.encode("utf-8"),
+                        mime_type="application/json",
+                        supports_all_drives=True,
+                    ),
+                    ctx,
+                ),
+                ctx=ctx,
+                logger=logger,
+                module_name=logger.name,
+                policy=policy,
+                retry_event="publisher_inventory_snapshot_upload_retry",
+                failure_event="publisher_inventory_snapshot_upload_failed",
+            )
+            snapshot_drive_file_id = upload_response.file.file_id
+            snapshot_drive_file_name = upload_response.file.name
+            snapshot_sha256 = build_response.snapshot_sha256
+            logger.info(
+                log_event(
+                    ctx,
+                    role="orchestrator",
+                    event="publisher_inventory_snapshot_uploaded",
+                    module=logger.name,
+                    fields={
+                        "normalized_url": normalized_url,
+                        "snapshot_drive_file_id": snapshot_drive_file_id,
+                        "snapshot_drive_file_name": snapshot_drive_file_name or "",
+                        "snapshot_sha256": snapshot_sha256,
+                    },
+                )
+            )
+        for item in approved_items:
+            source_record = run_with_retry(
+                step_name="publisher_inventory_report_source_record",
+                operation=lambda item=item: deps.record_discovered_report_source(
+                    ReportSourceDiscoveryRecordRequest(
+                        schema_version="1.0",
+                        db_path=request.reports_db,
+                        publisher_name=publisher_state.publisher_name,
+                        source_domain=_source_domain_for_url(item.canonical_url),
+                        report_name=item.title,
+                        landing_page_url=item.canonical_url,
+                        source_page_url=page_url_by_number.get(
+                            item.discovered_on_page_number, publisher_state.insights_url
+                        ),
+                        discovered_at_utc=build_response.snapshot.discovered_at_utc,
+                        discovered_on_page_number=item.discovered_on_page_number,
+                    ),
+                    ctx,
+                ),
+                ctx=ctx,
+                logger=logger,
+                module_name=logger.name,
+                policy=policy,
+                retry_event="publisher_inventory_report_source_record_retry",
+                failure_event="publisher_inventory_report_source_record_failed",
+            )
+            logger.info(
+                log_event(
+                    ctx,
+                    role="orchestrator",
+                    event="publisher_inventory_report_source_recorded",
+                    module=logger.name,
+                    fields={
+                        "record_id": source_record.record_id,
+                        "publisher_name": source_record.publisher_name,
+                        "report_name": source_record.report_name,
+                        "landing_page_url": source_record.landing_page_url,
+                        "source_page_url": source_record.source_page_url,
+                        "discovered_on_page_number": source_record.discovered_on_page_number,
+                        "created_new": source_record.created_new,
+                    },
+                )
+            )
+        deps.record_publisher_inventory_state(
+            PublisherInventoryStateRecordRequest(
+                schema_version="1.0",
+                db_path=request.reports_db,
+                normalized_url=normalized_url,
+                source_url=publisher_state.insights_url,
+                route_kind=discovery_result.route_kind,
+                route_summary=discovery_result.route_summary,
+                last_final_page_url=discovery_result.final_page_url,
+                snapshot_drive_file_id=snapshot_drive_file_id,
+                snapshot_drive_file_name=snapshot_drive_file_name,
+                snapshot_sha256=snapshot_sha256 or build_response.snapshot_sha256,
+            ),
+            ctx,
+        )
+        deps.record_publisher_inventory_test_status(
+            PublisherInventoryTestStatusRecordRequest(
+                schema_version="1.0",
+                db_path=request.reports_db,
+                normalized_url=normalized_url,
+                status="passed",
+            ),
+            ctx,
+        )
+        response = PublisherInventoryDiscoveryResult(
             schema_version="1.0",
             publisher_name=publisher_state.publisher_name,
             insights_url=publisher_state.insights_url,
             normalized_insights_url=normalized_url,
-            discovered_at_utc=_utc_now_iso(),
-            route_kind=discovery_result.route_kind,
-            route_summary=discovery_result.route_summary,
-            final_page_url=discovery_result.final_page_url,
-            pages=discovery_result.pages,
-            candidates=discovery_result.candidates,
-            previous_snapshot=previous_snapshot,
-        ),
-        ctx,
-    )
-    page_url_by_number = {
-        page.page_number: page.page_url for page in build_response.snapshot.pages
-    }
-    screening_response = deps.screen_publisher_inventory_candidates(
-        PublisherInventoryCandidateScreeningRequest(
-            schema_version="1.0",
-            publisher_name=publisher_state.publisher_name,
-            insights_url=publisher_state.insights_url,
-            candidates=[
-                PublisherInventoryCandidateScreeningItem(
-                    schema_version="1.0",
-                    canonical_url=item.canonical_url,
-                    title=item.title,
-                    discovered_on_page_number=item.discovered_on_page_number,
-                    source_page_url=page_url_by_number.get(
-                        item.discovered_on_page_number, publisher_state.insights_url
-                    ),
-                )
-                for item in build_response.new_items
-            ],
-            settings=request.settings,
-        ),
-        ctx,
-    )
-    approved_item_urls = {
-        candidate.canonical_url for candidate in screening_response.approved_items
-    }
-    approved_items = [
-        item
-        for item in build_response.new_items
-        if item.canonical_url in approved_item_urls
-    ]
-    logger.info(
-        log_event(
-            ctx,
-            role="orchestrator",
-            event="publisher_inventory_candidate_screening_complete",
-            module=logger.name,
-            fields={
-                "publisher_name": publisher_state.publisher_name,
-                "raw_new_report_count": len(build_response.new_items),
-                "approved_new_report_count": len(approved_items),
-                "rejected_new_report_count": len(screening_response.rejected_items),
-                "screening_model": screening_response.model,
-                "screening_request_id": screening_response.request_id or "",
-            },
-        )
-    )
-    snapshot_changed = build_response.snapshot_sha256 != (previous_snapshot_sha256 or "")
-    snapshot_drive_file_id = previous_snapshot_file_id
-    snapshot_drive_file_name = previous_snapshot_file_name
-    snapshot_sha256 = previous_snapshot_sha256
-    if snapshot_changed:
-        upload_response = run_with_retry(
-            step_name="publisher_inventory_snapshot_upload",
-            operation=lambda: deps.upload_bytes(
-                DriveUploadBytesRequest(
-                    schema_version="1.0",
-                    folder_id=folder_id,
-                    service_account_path=request.settings.google_sa_path,
-                    auth_mode=request.settings.drive_auth_mode,
-                    oauth_client_path=request.settings.google_oauth_client_path,
-                    oauth_token_path=request.settings.google_oauth_token_path,
-                    file_name=_snapshot_file_name(),
-                    content=build_response.snapshot_json.encode("utf-8"),
-                    mime_type="application/json",
-                    supports_all_drives=True,
-                ),
-                ctx,
-            ),
-            ctx=ctx,
-            logger=logger,
-            module_name=logger.name,
-            policy=policy,
-            retry_event="publisher_inventory_snapshot_upload_retry",
-            failure_event="publisher_inventory_snapshot_upload_failed",
-        )
-        snapshot_drive_file_id = upload_response.file.file_id
-        snapshot_drive_file_name = upload_response.file.name
-        snapshot_sha256 = build_response.snapshot_sha256
-        logger.info(
-            log_event(
-                ctx,
-                role="orchestrator",
-                event="publisher_inventory_snapshot_uploaded",
-                module=logger.name,
-                fields={
-                    "normalized_url": normalized_url,
-                    "snapshot_drive_file_id": snapshot_drive_file_id,
-                    "snapshot_drive_file_name": snapshot_drive_file_name or "",
-                    "snapshot_sha256": snapshot_sha256,
-                },
-            )
-        )
-    for item in approved_items:
-        source_record = run_with_retry(
-            step_name="publisher_inventory_report_source_record",
-            operation=lambda item=item: deps.record_discovered_report_source(
-                ReportSourceDiscoveryRecordRequest(
-                    schema_version="1.0",
-                    db_path=request.reports_db,
-                    publisher_name=publisher_state.publisher_name,
-                    source_domain=_source_domain_for_url(item.canonical_url),
-                    report_name=item.title,
-                    landing_page_url=item.canonical_url,
-                    source_page_url=page_url_by_number.get(
-                        item.discovered_on_page_number, publisher_state.insights_url
-                    ),
-                    discovered_at_utc=build_response.snapshot.discovered_at_utc,
-                    discovered_on_page_number=item.discovered_on_page_number,
-                ),
-                ctx,
-            ),
-            ctx=ctx,
-            logger=logger,
-            module_name=logger.name,
-            policy=policy,
-            retry_event="publisher_inventory_report_source_record_retry",
-            failure_event="publisher_inventory_report_source_record_failed",
+            new_report_urls=approved_items,
+            current_report_count=build_response.current_report_count,
+            previous_report_count=build_response.previous_report_count,
+            used_memory_route=discovery_result.used_route_hint,
+            snapshot_changed=snapshot_changed,
         )
         logger.info(
             log_event(
                 ctx,
                 role="orchestrator",
-                event="publisher_inventory_report_source_recorded",
+                event="publisher_inventory_complete",
                 module=logger.name,
                 fields={
-                    "record_id": source_record.record_id,
-                    "publisher_name": source_record.publisher_name,
-                    "report_name": source_record.report_name,
-                    "landing_page_url": source_record.landing_page_url,
-                    "source_page_url": source_record.source_page_url,
-                    "discovered_on_page_number": source_record.discovered_on_page_number,
-                    "created_new": source_record.created_new,
+                    "publisher_name": response.publisher_name,
+                    "normalized_url": response.normalized_insights_url,
+                    "current_report_count": response.current_report_count,
+                    "previous_report_count": response.previous_report_count,
+                    "new_report_count": len(response.new_report_urls),
+                    "used_memory_route": response.used_memory_route,
+                    "snapshot_changed": response.snapshot_changed,
                 },
             )
         )
-    deps.record_publisher_inventory_state(
-        PublisherInventoryStateRecordRequest(
-            schema_version="1.0",
-            db_path=request.reports_db,
+        return response
+    except AppError as exc:
+        _record_discovery_test_status_on_failure(
+            request=request,
             normalized_url=normalized_url,
-            source_url=publisher_state.insights_url,
-            route_kind=discovery_result.route_kind,
-            route_summary=discovery_result.route_summary,
-            last_final_page_url=discovery_result.final_page_url,
-            snapshot_drive_file_id=snapshot_drive_file_id,
-            snapshot_drive_file_name=snapshot_drive_file_name,
-            snapshot_sha256=snapshot_sha256 or build_response.snapshot_sha256,
-        ),
-        ctx,
-    )
-    response = PublisherInventoryDiscoveryResult(
-        schema_version="1.0",
-        publisher_name=publisher_state.publisher_name,
-        insights_url=publisher_state.insights_url,
-        normalized_insights_url=normalized_url,
-        new_report_urls=approved_items,
-        current_report_count=build_response.current_report_count,
-        previous_report_count=build_response.previous_report_count,
-        used_memory_route=discovery_result.used_route_hint,
-        snapshot_changed=snapshot_changed,
-    )
-    logger.info(
-        log_event(
-            ctx,
-            role="orchestrator",
-            event="publisher_inventory_complete",
-            module=logger.name,
-            fields={
-                "publisher_name": response.publisher_name,
-                "normalized_url": response.normalized_insights_url,
-                "current_report_count": response.current_report_count,
-                "previous_report_count": response.previous_report_count,
-                "new_report_count": len(response.new_report_urls),
-                "used_memory_route": response.used_memory_route,
-                "snapshot_changed": response.snapshot_changed,
-            },
+            publisher_state=publisher_state,
+            code=exc.code,
+            ctx=ctx,
+            dependencies=deps,
         )
-    )
-    return response
+        raise
+
+
+def _record_discovery_test_status_on_failure(
+    *,
+    request: PublisherInventoryDiscoveryRequest,
+    normalized_url: str,
+    publisher_state: PublisherInventoryStateResponse,
+    code: str,
+    ctx: RunContext,
+    dependencies: PublisherInventoryDependencies,
+) -> None:
+    try:
+        dependencies.record_publisher_inventory_test_status(
+            PublisherInventoryTestStatusRecordRequest(
+                schema_version="1.0",
+                db_path=request.reports_db,
+                normalized_url=normalized_url,
+                status=f"failed:{code.strip()}" if code.strip() else "failed:unknown",
+            ),
+            ctx,
+        )
+    except Exception as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="publisher_inventory_test_status_record_failed",
+                module=logger.name,
+                fields={
+                    "publisher_name": publisher_state.publisher_name,
+                    "normalized_url": normalized_url,
+                    "status": f"failed:{code.strip()}" if code.strip() else "failed:unknown",
+                    "error": str(exc),
+                },
+            )
+        )
 
 
 def _run_discovery_attempt(

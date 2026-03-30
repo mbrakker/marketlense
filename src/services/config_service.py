@@ -2085,7 +2085,7 @@ def load_publisher_inventory_settings(
                 publisher_discovery.get("pagination_max_pages")
                 if not _is_missing(publisher_discovery.get("pagination_max_pages"))
                 else _env_value("PUBLISHER_DISCOVERY_PAGINATION_MAX_PAGES"),
-                10,
+                30,
             ),
             1,
         ),

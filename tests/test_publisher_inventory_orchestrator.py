@@ -70,6 +70,7 @@ def _publisher_state(
         insights_url="https://www.activate.com/insights",
         normalized_url="https://www.activate.com/insights",
         google_folder="https://drive.google.com/drive/folders/folder123" if with_folder else None,
+        discovery_test_status=None,
         inventory_route_kind="browser_render" if with_route else None,
         inventory_route_summary="Open page 1, click next, extract cards." if with_route else None,
         inventory_route_last_final_page_url="https://www.activate.com/insights?page=2" if with_route else None,
@@ -238,6 +239,7 @@ def _dependencies(**overrides) -> PublisherInventoryDependencies:
             with_route=False, with_snapshot=False
         ),
         "record_publisher_inventory_state": lambda req, ctx: None,
+        "record_publisher_inventory_test_status": lambda req, ctx: None,
         "record_discovered_report_source": lambda req, ctx: ReportSourceDiscoveryRecordResponse(
             schema_version="1.0",
             record_id=1,
@@ -282,10 +284,12 @@ def test_run_publisher_inventory_discovery_first_run_uploads_snapshot_and_return
 ):
     uploads = []
     records = []
+    status_records = []
     source_records = []
 
     deps = _dependencies(
         record_publisher_inventory_state=lambda req, ctx: records.append(req),
+        record_publisher_inventory_test_status=lambda req, ctx: status_records.append(req),
         record_discovered_report_source=lambda req, ctx: (
             source_records.append(req)
             or ReportSourceDiscoveryRecordResponse(
@@ -338,6 +342,7 @@ def test_run_publisher_inventory_discovery_first_run_uploads_snapshot_and_return
     assert result.new_report_urls[0].discovered_on_page_number == 2
     assert len(uploads) == 1
     assert len(records) == 1
+    assert [record.status for record in status_records] == ["passed"]
     assert len(source_records) == 1
     assert source_records[0].landing_page_url == "https://www.activate.com/reports/new-report"
     assert source_records[0].source_page_url == "https://www.activate.com/insights?page=2"
@@ -387,6 +392,40 @@ def test_run_publisher_inventory_discovery_falls_back_after_memory_route_failure
     assert attempts["memory"] >= 1
     assert attempts["fresh"] == 1
     assert result.used_memory_route is False
+
+
+def test_run_publisher_inventory_discovery_records_failed_test_status(
+    run_context,
+):
+    status_records = []
+
+    deps = _dependencies(
+        discover_publisher_inventory=lambda req, ctx: (_ for _ in ()).throw(
+            AppError(
+                code="publisher_inventory_browser_pagination_limit",
+                message="deep archive limit reached",
+                retryable=True,
+            )
+        ),
+        record_publisher_inventory_test_status=lambda req, ctx: status_records.append(req),
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        run_publisher_inventory_discovery(
+            PublisherInventoryDiscoveryRequest(
+                schema_version="1.0",
+                insights_url="https://www.activate.com/insights",
+                reports_db="./state/reports.sqlite",
+                settings=_settings(),
+            ),
+            ctx=run_context,
+            dependencies=deps,
+        )
+
+    assert exc_info.value.code == "publisher_inventory_browser_pagination_limit"
+    assert [record.status for record in status_records] == [
+        "failed:publisher_inventory_browser_pagination_limit"
+    ]
 
 
 def test_run_publisher_inventory_discovery_unchanged_rerun_skips_upload(

@@ -116,6 +116,8 @@ class _RenderedInventoryState:
     tab_labels: list[str]
     active_tab_label: str | None
     report_link_url: str | None
+    empty_results_visible: bool
+    reset_filter_labels: list[str]
     has_report_filter: bool
     has_apply_button: bool
     has_pagination_next: bool = False
@@ -211,6 +213,8 @@ def discover_publisher_inventory(
             },
         )
     )
+    if normalized_url.lower().endswith(".pdf"):
+        return _discover_direct_pdf_source(request, ctx, normalized_url)
     if request.settings.force_browser:
         return _discover_with_browser(request, ctx, normalized_url, use_hint=bool(request.route_hint))
     hinted_route = str(request.route_kind_hint or "").strip()
@@ -233,6 +237,52 @@ def discover_publisher_inventory(
             )
         )
     return _discover_with_browser(request, ctx, normalized_url, use_hint=False)
+
+
+def _discover_direct_pdf_source(
+    request: PublisherInventoryServiceRequest,
+    ctx: RunContext,
+    normalized_url: str,
+) -> PublisherInventoryServiceResponse:
+    candidate = PublisherInventoryRawCandidate(
+        schema_version="1.0",
+        url=normalized_url,
+        title=_fallback_title_from_url(normalized_url),
+        source_page_url=normalized_url,
+        discovered_on_page_number=1,
+        pdf_url=normalized_url,
+        published_at_text=None,
+    )
+    response = PublisherInventoryServiceResponse(
+        schema_version="1.0",
+        source_url=request.insights_url,
+        normalized_url=normalized_url,
+        route_kind="http_parse",
+        route_summary="Treated the direct PDF URL as a single-item inventory source.",
+        final_page_url=normalized_url,
+        used_route_hint=False,
+        pages=[
+            PublisherInventoryPage(
+                schema_version="1.0",
+                page_number=1,
+                page_url=normalized_url,
+            )
+        ],
+        candidates=[candidate],
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_inventory_direct_pdf_complete",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "candidate_url": candidate.url,
+            },
+        )
+    )
+    return response
 
 
 def _discover_with_http(
@@ -421,6 +471,19 @@ def _discover_with_browser(
             },
         )
     )
+    if pages and not candidates:
+        supplemented_candidates: list[PublisherInventoryRawCandidate] = []
+        for page in pages:
+            supplemented_candidates.extend(
+                _extract_browser_http_supplement_candidates(
+                    request=request,
+                    page=page,
+                    normalized_url=normalized_url,
+                    ctx=ctx,
+                )
+            )
+        if supplemented_candidates:
+            candidates = supplemented_candidates
     if not pages or not candidates:
         raise AppError(
             code="publisher_inventory_browser_incomplete",
@@ -467,7 +530,19 @@ async def _run_browser_traversal(
     try:
         await browser.start()
         page = await browser.new_page(normalized_url)
+        await _close_unexpected_blank_pages(
+            browser=browser,
+            active_page=page,
+            ctx=ctx,
+            reason="new_page",
+        )
         await _browser_wait_for_settle(page=page)
+        await _close_unexpected_blank_pages(
+            browser=browser,
+            active_page=page,
+            ctx=ctx,
+            reason="initial_settle",
+        )
         metrics = _BrowserTraversalMetrics(
             cookies_dismissed=0,
             report_route_clicks=0,
@@ -488,6 +563,12 @@ async def _run_browser_traversal(
                 button_pagination_clicks=metrics.button_pagination_clicks,
             )
             await _browser_wait_for_settle(page=page)
+            await _close_unexpected_blank_pages(
+                browser=browser,
+                active_page=page,
+                ctx=ctx,
+                reason="cookie_banner",
+            )
         initial_state = await _extract_rendered_inventory_state(page)
         if _should_apply_report_filter(normalized_url, initial_state):
             applied = await _apply_report_filter(page)
@@ -502,6 +583,12 @@ async def _run_browser_traversal(
                     button_pagination_clicks=metrics.button_pagination_clicks,
                 )
                 await _browser_wait_for_settle(page=page)
+                await _close_unexpected_blank_pages(
+                    browser=browser,
+                    active_page=page,
+                    ctx=ctx,
+                    reason="report_filter",
+                )
                 initial_state = await _extract_rendered_inventory_state(page)
         if _should_follow_report_listing(normalized_url, initial_state):
             await page.goto(initial_state.report_link_url or normalized_url)
@@ -515,6 +602,12 @@ async def _run_browser_traversal(
                 button_pagination_clicks=metrics.button_pagination_clicks,
             )
             await _browser_wait_for_settle(page=page)
+            await _close_unexpected_blank_pages(
+                browser=browser,
+                active_page=page,
+                ctx=ctx,
+                reason="report_route",
+            )
             dismissed = await _dismiss_cookie_banner(page)
             if dismissed:
                 metrics = _BrowserTraversalMetrics(
@@ -527,6 +620,12 @@ async def _run_browser_traversal(
                     button_pagination_clicks=metrics.button_pagination_clicks,
                 )
                 await _browser_wait_for_settle(page=page)
+                await _close_unexpected_blank_pages(
+                    browser=browser,
+                    active_page=page,
+                    ctx=ctx,
+                    reason="report_route_cookie_banner",
+                )
             initial_state = await _extract_rendered_inventory_state(page)
 
         pages: list[PublisherInventoryPage] = []
@@ -549,6 +648,12 @@ async def _run_browser_traversal(
                             retryable=True,
                             context={"normalized_url": normalized_url, "tab_label": tab_label},
                         )
+                    await _close_unexpected_blank_pages(
+                        browser=browser,
+                        active_page=page,
+                        ctx=ctx,
+                        reason="tab_click",
+                    )
                     metrics = _BrowserTraversalMetrics(
                         cookies_dismissed=metrics.cookies_dismissed,
                         report_route_clicks=metrics.report_route_clicks,
@@ -562,6 +667,7 @@ async def _run_browser_traversal(
                     current_state = await _extract_rendered_inventory_state(page)
                 seen_tabs.add(normalized_label)
                 page_number, metrics = await _collect_browser_inventory_pages(
+                    browser=browser,
                     page=page,
                     current_state=current_state,
                     starting_page_number=page_number,
@@ -575,6 +681,7 @@ async def _run_browser_traversal(
                 current_state = await _extract_rendered_inventory_state(page)
         else:
             _page_number, metrics = await _collect_browser_inventory_pages(
+                browser=browser,
                 page=page,
                 current_state=initial_state,
                 starting_page_number=page_number,
@@ -597,12 +704,125 @@ async def _run_browser_traversal(
         await browser.kill()
 
 
+def _page_target_id(page: Any) -> str:
+    return str(getattr(page, "_target_id", "") or "").strip()
+
+
+def _is_browser_placeholder_page_url(url: str) -> bool:
+    normalized = str(url or "").strip().lower()
+    return normalized in {
+        "about:blank",
+        "chrome://newtab",
+        "chrome://newtab/",
+        "chrome://new-tab-page",
+        "chrome://new-tab-page/",
+        "edge://newtab",
+        "edge://newtab/",
+    }
+
+
+async def _close_unexpected_blank_pages(
+    *,
+    browser: Any,
+    active_page: Any,
+    ctx: RunContext,
+    reason: str,
+) -> None:
+    get_pages = getattr(browser, "get_pages", None)
+    close_page = getattr(browser, "close_page", None)
+    if not callable(get_pages) or not callable(close_page):
+        return
+    active_target_id = _page_target_id(active_page)
+    try:
+        browser_pages = list(await get_pages() or [])
+    except Exception as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="publisher_inventory_browser_blank_page_cleanup_failed",
+                module=logger.name,
+                fields={
+                    "reason": reason,
+                    "active_target_id": active_target_id,
+                    "error": str(exc),
+                },
+            )
+        )
+        return
+    if not browser_pages:
+        return
+    closed_count = 0
+    placeholder_count = 0
+    for browser_page in browser_pages:
+        target_id = _page_target_id(browser_page)
+        if active_target_id and target_id == active_target_id:
+            continue
+        try:
+            page_url = str(await browser_page.get_url() or "").strip()
+        except Exception as exc:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="publisher_inventory_browser_blank_page_url_failed",
+                    module=logger.name,
+                    fields={
+                        "reason": reason,
+                        "target_id": target_id,
+                        "active_target_id": active_target_id,
+                        "error": str(exc),
+                    },
+                )
+            )
+            continue
+        if not _is_browser_placeholder_page_url(page_url):
+            continue
+        placeholder_count += 1
+        try:
+            await close_page(browser_page)
+            closed_count += 1
+        except Exception as exc:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="publisher_inventory_browser_blank_page_close_failed",
+                    module=logger.name,
+                    fields={
+                        "reason": reason,
+                        "target_id": target_id,
+                        "page_url": page_url,
+                        "active_target_id": active_target_id,
+                        "error": str(exc),
+                    },
+                )
+            )
+    if placeholder_count or len(browser_pages) > 1:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="publisher_inventory_browser_blank_page_cleanup",
+                module=logger.name,
+                fields={
+                    "reason": reason,
+                    "page_count": len(browser_pages),
+                    "placeholder_count": placeholder_count,
+                    "closed_count": closed_count,
+                    "active_target_id": active_target_id,
+                },
+            )
+        )
+
+
 def _extract_candidates_from_html(
     *,
     anchors: list[dict[str, str]],
     page_url: str,
     page_number: int,
     next_page_url: str | None,
+    origin_url: str | None = None,
 ) -> list[PublisherInventoryRawCandidate]:
     candidates: list[PublisherInventoryRawCandidate] = []
     seen_urls: set[str] = set()
@@ -619,6 +839,7 @@ def _extract_candidates_from_html(
             title=title,
             page_url=page_url,
             next_page_url=next_page_url,
+            origin_url=origin_url,
         ):
             continue
         seen_urls.add(absolute_url)
@@ -637,8 +858,100 @@ def _extract_candidates_from_html(
     return candidates
 
 
+async def _extract_rendered_html_supplement_candidates(
+    *,
+    page: Any,
+    state: _RenderedInventoryState,
+    page_number: int,
+    normalized_url: str,
+    ctx: RunContext,
+) -> list[PublisherInventoryRawCandidate]:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+                event="publisher_inventory_browser_rendered_html_supplement_request",
+                module=logger.name,
+                fields={
+                    "page_url": state.page_url,
+                    "page_number": page_number,
+                },
+            )
+        )
+    try:
+        html = str(await page.evaluate(_browser_rendered_html_script()) or "")
+    except Exception as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="publisher_inventory_browser_rendered_html_supplement_failed",
+                module=logger.name,
+                fields={
+                    "page_url": state.page_url,
+                    "page_number": page_number,
+                    "error": str(exc),
+                },
+            )
+        )
+        return []
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_inventory_browser_rendered_html_supplement_response",
+                module=logger.name,
+                fields={
+                    "page_url": state.page_url,
+                    "page_number": page_number,
+                    "html_length": len(html),
+                },
+            )
+    )
+    parser = _InventoryHtmlParser()
+    try:
+        parser.feed(html)
+    except Exception as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="publisher_inventory_browser_rendered_html_supplement_invalid_html",
+                module=logger.name,
+                fields={
+                    "page_url": state.page_url,
+                    "page_number": page_number,
+                    "error": str(exc),
+                },
+            )
+        )
+        return []
+    candidates = _extract_candidates_from_html(
+        anchors=parser.anchors,
+        page_url=state.page_url,
+        page_number=page_number,
+        next_page_url=None,
+        origin_url=normalized_url,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_inventory_browser_rendered_html_supplement_extracted",
+                module=logger.name,
+                fields={
+                    "page_url": state.page_url,
+                    "page_number": page_number,
+                    "candidate_count": len(candidates),
+                },
+            )
+    )
+    return candidates
+
+
 async def _collect_browser_inventory_pages(
     *,
+    browser: Any,
     page: Any,
     current_state: _RenderedInventoryState,
     starting_page_number: int,
@@ -651,10 +964,36 @@ async def _collect_browser_inventory_pages(
 ) -> tuple[int, _BrowserTraversalMetrics]:
     page_number = starting_page_number
     visited_navigation_urls: set[str] = set()
+    empty_results_reset_urls: set[str] = set()
+    origin_host_recovery_urls: set[str] = set()
     state = current_state
     while True:
+        await _close_unexpected_blank_pages(
+            browser=browser,
+            active_page=page,
+            ctx=ctx,
+            reason="collect_loop",
+        )
         await _prime_browser_inventory_surface(page)
         state = await _extract_rendered_inventory_state(page)
+        if (
+            state.empty_results_visible
+            and state.reset_filter_labels
+            and state.page_url not in empty_results_reset_urls
+        ):
+            reset_clicked = await _reset_empty_results_filters(
+                page,
+                labels=state.reset_filter_labels,
+            )
+            if reset_clicked:
+                empty_results_reset_urls.add(state.page_url)
+                await _wait_for_inventory_transition(
+                    page,
+                    previous_state=state,
+                    current_candidate_count=0,
+                )
+                state = await _extract_rendered_inventory_state(page)
+                continue
         next_page_url = _resolve_next_page_url(
             current_page_url=state.page_url,
             page_number=page_number,
@@ -666,6 +1005,7 @@ async def _collect_browser_inventory_pages(
             page_url=state.page_url,
             page_number=page_number,
             next_page_url=next_page_url,
+            origin_url=normalized_url,
         )
         hydration_attempts = 0
         while hydration_attempts < 3 and _needs_additional_hydration(
@@ -688,7 +1028,35 @@ async def _collect_browser_inventory_pages(
                 page_url=state.page_url,
                 page_number=page_number,
                 next_page_url=next_page_url,
+                origin_url=normalized_url,
             )
+        if not page_candidates:
+            page_candidates = await _extract_rendered_html_supplement_candidates(
+                page=page,
+                state=state,
+                page_number=page_number,
+                normalized_url=normalized_url,
+                ctx=ctx,
+            )
+        if (
+            not page_candidates
+            and _requires_origin_host_recovery(
+                page_url=state.page_url,
+                normalized_url=normalized_url,
+            )
+            and state.page_url not in origin_host_recovery_urls
+        ):
+            origin_host_recovery_urls.add(state.page_url)
+            await page.goto(normalized_url)
+            await _browser_wait_for_settle(page=page)
+            await _close_unexpected_blank_pages(
+                browser=browser,
+                active_page=page,
+                ctx=ctx,
+                reason="origin_host_recovery",
+            )
+            state = await _extract_rendered_inventory_state(page)
+            continue
         pages.append(
             PublisherInventoryPage(
                 schema_version="1.0",
@@ -745,6 +1113,12 @@ async def _collect_browser_inventory_pages(
                 button_pagination_clicks=metrics.button_pagination_clicks,
             )
             await _browser_wait_for_settle()
+            await _close_unexpected_blank_pages(
+                browser=browser,
+                active_page=page,
+                ctx=ctx,
+                reason="next_page_navigation",
+            )
             page_number += 1
             state = await _extract_rendered_inventory_state(page)
             continue
@@ -761,6 +1135,12 @@ async def _collect_browser_inventory_pages(
                         "page_url": state.page_url,
                     },
                 )
+            await _close_unexpected_blank_pages(
+                browser=browser,
+                active_page=page,
+                ctx=ctx,
+                reason="pagination_click",
+            )
             metrics = _BrowserTraversalMetrics(
                 cookies_dismissed=metrics.cookies_dismissed,
                 report_route_clicks=metrics.report_route_clicks,
@@ -798,6 +1178,27 @@ async def _collect_browser_inventory_pages(
                         "page_url": state.page_url,
                     },
                 )
+            await _close_unexpected_blank_pages(
+                browser=browser,
+                active_page=page,
+                ctx=ctx,
+                reason="load_more_click",
+            )
+            try:
+                await _wait_for_inventory_growth(
+                    page,
+                    previous_state=state,
+                    current_candidate_count=len(page_candidates),
+                )
+            except AppError as exc:
+                if exc.code == "publisher_inventory_browser_growth_timeout":
+                    stalled_state = await _extract_rendered_inventory_state(page)
+                    if _is_exhausted_inert_load_more(
+                        previous_state=state,
+                        stalled_state=stalled_state,
+                    ):
+                        break
+                raise
             metrics = _BrowserTraversalMetrics(
                 cookies_dismissed=metrics.cookies_dismissed,
                 report_route_clicks=metrics.report_route_clicks,
@@ -806,11 +1207,6 @@ async def _collect_browser_inventory_pages(
                 load_more_clicks=metrics.load_more_clicks + 1,
                 next_page_visits=metrics.next_page_visits,
                 button_pagination_clicks=metrics.button_pagination_clicks,
-            )
-            await _wait_for_inventory_growth(
-                page,
-                previous_state=state,
-                current_candidate_count=len(page_candidates),
             )
             page_number += 1
             state = await _extract_rendered_inventory_state(page)
@@ -852,6 +1248,12 @@ async def _extract_rendered_inventory_state(page: Any) -> _RenderedInventoryStat
         tab_labels=tab_labels,
         active_tab_label=active_tab_label,
         report_link_url=report_link_url,
+        empty_results_visible=bool(payload.get("empty_results_visible")),
+        reset_filter_labels=[
+            _normalize_text(label)
+            for label in payload.get("reset_filter_labels", [])
+            if _normalize_text(str(label or ""))
+        ],
         has_report_filter=bool(payload.get("has_report_filter")),
         has_apply_button=bool(payload.get("has_apply_button")),
         has_pagination_next=bool(payload.get("has_pagination_next")),
@@ -870,6 +1272,11 @@ async def _dismiss_cookie_banner(page: Any) -> bool:
         "close",
         "continue",
     ])
+    return str(clicked).strip().lower() == "true"
+
+
+async def _reset_empty_results_filters(page: Any, labels: list[str]) -> bool:
+    clicked = await page.evaluate(_browser_click_named_control_script(), labels)
     return str(clicked).strip().lower() == "true"
 
 
@@ -1132,6 +1539,43 @@ def _rendered_state_anchor_fingerprint(state: _RenderedInventoryState) -> tuple[
     )
 
 
+def _is_exhausted_inert_load_more(
+    *,
+    previous_state: _RenderedInventoryState,
+    stalled_state: _RenderedInventoryState,
+) -> bool:
+    if stalled_state.page_url != previous_state.page_url:
+        return False
+    if _rendered_state_anchor_fingerprint(stalled_state) != _rendered_state_anchor_fingerprint(previous_state):
+        return False
+    if (
+        stalled_state.result_range_end != previous_state.result_range_end
+        or stalled_state.result_range_total != previous_state.result_range_total
+    ):
+        return False
+    if stalled_state.has_pagination_next:
+        return False
+    previous_candidates = {
+        candidate.url
+        for candidate in _extract_candidates_from_html(
+            anchors=previous_state.anchors,
+            page_url=previous_state.page_url,
+            page_number=1,
+            next_page_url=None,
+        )
+    }
+    stalled_candidates = {
+        candidate.url
+        for candidate in _extract_candidates_from_html(
+            anchors=stalled_state.anchors,
+            page_url=stalled_state.page_url,
+            page_number=1,
+            next_page_url=None,
+        )
+    }
+    return stalled_candidates == previous_candidates
+
+
 def _build_browser_route_summary(
     *,
     normalized_url: str,
@@ -1194,7 +1638,7 @@ def _browser_inventory_state_script() -> str:
     named_control_selector = json.dumps(_browser_named_control_selector())
     script = """() => {
         const namedControlSelector = __NAMED_CONTROL_SELECTOR__;
-        const normalize = (value) => (value || '').replace(/\\s+/g, ' ').trim();
+        const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
         const isVisible = (element) => {
             if (!element) return false;
             const style = window.getComputedStyle(element);
@@ -1273,6 +1717,14 @@ def _browser_inventory_state_script() -> str:
         });
         const applyButton = Array.from(document.querySelectorAll('button, input[type="submit"], input[type="button"]'))
             .some((element) => /^apply$/i.test(normalize(element.textContent || element.value || element.getAttribute('aria-label') || '')) && isVisible(element));
+        const emptyResultsVisible = Array.from(document.querySelectorAll('body *'))
+            .filter((element) => isVisible(element))
+            .map((element) => normalize(element.textContent || ''))
+            .some((text) => /couldn't find any matches|no matches|no results|no resources found|try adjusting your filters|clear(?:ing)? your filters/i.test(text));
+        const resetFilterLabels = collectLabels(
+            Array.from(document.querySelectorAll(namedControlSelector))
+                .filter((element) => /^(reset|clear)( all)? filters?$|^reset all$|^clear all$/i.test(normalize(element.textContent || element.getAttribute('aria-label') || element.value || '')))
+        );
         const resultRangeText = Array.from(document.querySelectorAll('body *'))
             .filter((element) => isVisible(element))
             .map((element) => normalize(element.textContent || ''))
@@ -1287,6 +1739,8 @@ def _browser_inventory_state_script() -> str:
             tab_labels: tabLabels,
             active_tab_label: normalize(activeTab ? activeTab.textContent || activeTab.getAttribute('aria-label') || '' : ''),
             report_link_url: reportLink ? normalize(reportLink.href || reportLink.getAttribute('href') || '') : '',
+            empty_results_visible: emptyResultsVisible,
+            reset_filter_labels: resetFilterLabels,
             has_report_filter: reportFilter,
             has_apply_button: applyButton,
             has_pagination_next: hasPaginationNext,
@@ -1297,18 +1751,22 @@ def _browser_inventory_state_script() -> str:
     return script.replace("__NAMED_CONTROL_SELECTOR__", named_control_selector)
 
 
+def _browser_rendered_html_script() -> str:
+    return """() => document.documentElement ? document.documentElement.outerHTML : ''"""
+
+
 def _browser_click_named_control_script() -> str:
     named_control_selector = json.dumps(_browser_named_control_selector())
     script = """(payloadOrLabels) => {
         const namedControlSelector = __NAMED_CONTROL_SELECTOR__;
-        const normalize = (value) => (value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+        const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
         const payload = Array.isArray(payloadOrLabels)
             ? { labels: payloadOrLabels, candidate_urls: [] }
             : (payloadOrLabels || {});
         const wanted = Array.isArray(payload.labels) ? payload.labels.map((item) => normalize(item)).filter((item) => item) : [];
         const requireCandidateSurface = payload.require_candidate_surface === true;
         const normalizeHref = (value) => {
-            const raw = (value || '').trim();
+            const raw = String(value ?? '').trim();
             if (!raw) return '';
             try {
                 const parsed = new URL(raw, window.location.href);
@@ -1407,7 +1865,7 @@ def _browser_click_pagination_next_script() -> str:
     named_control_selector = json.dumps(_browser_named_control_selector())
     script = """() => {
         const namedControlSelector = __NAMED_CONTROL_SELECTOR__;
-        const normalize = (value) => (value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+        const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
         const isVisible = (element) => {
             if (!element) return false;
             const style = window.getComputedStyle(element);
@@ -1469,7 +1927,7 @@ def _browser_click_pagination_next_script() -> str:
 
 def _browser_click_tab_script() -> str:
     return """(tabLabel) => {
-        const normalize = (value) => (value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+        const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
         const target = normalize(tabLabel);
         const isVisible = (element) => {
             if (!element) return false;
@@ -1490,7 +1948,7 @@ def _browser_click_tab_script() -> str:
 
 def _browser_apply_report_filter_script() -> str:
     return """() => {
-        const normalize = (value) => (value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+        const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
         const isVisible = (element) => {
             if (!element) return false;
             const style = window.getComputedStyle(element);
@@ -1528,40 +1986,66 @@ def _browser_apply_report_filter_script() -> str:
         }
         return false;
     }"""
-    logger.info(
-        log_event(
-            ctx,
-            role="service",
-            event="publisher_inventory_browser_http_supplement_request",
-            module=logger.name,
-            fields={
-                "page_url": page.page_url,
-                "page_number": page.page_number,
-                "headers": headers,
-            },
-        )
-    )
-    try:
-        response = requests.get(
-            page.page_url,
-            timeout=request.settings.http_timeout_seconds,
-            headers=headers,
-        )
-        response.raise_for_status()
-    except requests.RequestException as exc:
+
+
+def _extract_browser_http_supplement_candidates(
+    *,
+    request: PublisherInventoryServiceRequest,
+    page: PublisherInventoryPage,
+    normalized_url: str,
+    ctx: RunContext,
+) -> list[PublisherInventoryRawCandidate]:
+    headers = {
+        "User-Agent": "MarketLensePublisherInventory/1.0 (+https://marketlense.local)",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    }
+    request_urls: list[str] = []
+    for candidate_url in (page.page_url, normalized_url):
+        normalized_candidate = _normalize_absolute_url(candidate_url)
+        if normalized_candidate and normalized_candidate not in request_urls:
+            request_urls.append(normalized_candidate)
+
+    response = None
+    for request_url in request_urls:
         logger.info(
             log_event(
                 ctx,
                 role="service",
-                event="publisher_inventory_browser_http_supplement_failed",
+                event="publisher_inventory_browser_http_supplement_request",
                 module=logger.name,
                 fields={
                     "page_url": page.page_url,
                     "page_number": page.page_number,
-                    "error": str(exc),
+                    "request_url": request_url,
+                    "headers": headers,
                 },
             )
         )
+        try:
+            response = requests.get(
+                request_url,
+                timeout=request.settings.http_timeout_seconds,
+                headers=headers,
+            )
+            response.raise_for_status()
+            break
+        except requests.RequestException as exc:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="publisher_inventory_browser_http_supplement_failed",
+                    module=logger.name,
+                    fields={
+                        "page_url": page.page_url,
+                        "page_number": page.page_number,
+                        "request_url": request_url,
+                        "error": str(exc),
+                    },
+                )
+            )
+            response = None
+    if response is None:
         return []
 
     final_page_url = _validate_and_normalize_url(str(response.url or page.page_url))
@@ -1582,12 +2066,30 @@ def _browser_apply_report_filter_script() -> str:
         )
     )
     parser = _InventoryHtmlParser()
-    parser.feed(html)
+    try:
+        parser.feed(html)
+    except Exception as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="publisher_inventory_browser_http_supplement_invalid_html",
+                module=logger.name,
+                fields={
+                    "page_url": page.page_url,
+                    "page_number": page.page_number,
+                    "request_url": final_page_url,
+                    "error": str(exc),
+                },
+            )
+        )
+        return []
     candidates = _extract_candidates_from_html(
         anchors=parser.anchors,
         page_url=final_page_url,
         page_number=page.page_number,
         next_page_url=None,
+        origin_url=normalized_url,
     )
     logger.info(
         log_event(
@@ -1641,6 +2143,7 @@ def _looks_like_report_candidate(
     title: str,
     page_url: str,
     next_page_url: str | None,
+    origin_url: str | None = None,
 ) -> bool:
     if absolute_url == page_url or absolute_url == next_page_url:
         return False
@@ -1649,6 +2152,7 @@ def _looks_like_report_candidate(
     lowered_url = absolute_url.casefold()
     candidate_host = str(urlsplit(absolute_url).hostname or "").strip().casefold()
     page_host = str(urlsplit(page_url).hostname or "").strip().casefold()
+    origin_host = str(urlsplit(origin_url or "").hostname or "").strip().casefold()
     if any(marker in candidate_host for marker in _SOCIAL_HOST_MARKERS):
         return False
     if any(marker in lowered_url for marker in _NEGATIVE_PATH_MARKERS):
@@ -1674,7 +2178,10 @@ def _looks_like_report_candidate(
         return False
     if absolute_url.lower().endswith(".pdf"):
         return True
-    if not _is_same_inventory_domain(candidate_host, page_host):
+    if not (
+        _is_same_inventory_domain(candidate_host, page_host)
+        or (origin_host and _is_same_inventory_domain(candidate_host, origin_host))
+    ):
         return False
     if _is_generic_insights_hub_title(lowered_title):
         return False
@@ -1704,6 +2211,18 @@ def _is_same_inventory_domain(candidate_host: str, page_host: str) -> bool:
     candidate_apex = _apex_domain(candidate_host)
     page_apex = _apex_domain(page_host)
     return bool(candidate_apex and page_apex and candidate_apex == page_apex)
+
+
+def _requires_origin_host_recovery(*, page_url: str, normalized_url: str) -> bool:
+    normalized_page_url = _normalize_absolute_url(page_url)
+    normalized_origin_url = _normalize_absolute_url(normalized_url)
+    if not normalized_page_url or not normalized_origin_url:
+        return False
+    if normalized_page_url == normalized_origin_url:
+        return False
+    page_host = str(urlsplit(normalized_page_url).hostname or "").strip().casefold()
+    origin_host = str(urlsplit(normalized_origin_url).hostname or "").strip().casefold()
+    return bool(page_host and origin_host and _apex_domain(page_host) != _apex_domain(origin_host))
 
 
 def _apex_domain(host: str) -> str:
@@ -1761,11 +2280,21 @@ def _is_root_or_locale_home(url: str) -> bool:
     ]
     if not segments:
         return True
+    return len(segments) == 1 and _looks_like_locale_segment(segments[0])
+
+
+def _looks_like_locale_segment(segment: str) -> bool:
+    token = str(segment or "").strip().casefold()
+    if not token:
+        return False
+    if len(token) == 2 and token.isalpha():
+        return True
+    parts = token.split("-")
     return (
-        len(segments) <= 2
-        and "insights" not in segments
-        and "report" not in segments
-        and "reports" not in segments
+        len(parts) == 2
+        and all(part.isalpha() for part in parts)
+        and 2 <= len(parts[0]) <= 3
+        and 2 <= len(parts[1]) <= 3
     )
 
 

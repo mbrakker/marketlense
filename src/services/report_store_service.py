@@ -17,6 +17,7 @@ from src.contracts.report_store import (
     PublisherInventoryStateGetRequest,
     PublisherInventoryStateRecordRequest,
     PublisherInventoryStateResponse,
+    PublisherInventoryTestStatusRecordRequest,
     PublishersReplaceRequest,
     PublishersReplaceResponse,
     ReportMetadataDbAccessRequest,
@@ -94,6 +95,7 @@ CREATE TABLE IF NOT EXISTS publishers (
   self_presentation TEXT NOT NULL,
   insights_url TEXT NOT NULL,
   google_folder TEXT,
+  discovery_test_status TEXT,
   download_route_kind TEXT,
   download_route_summary TEXT,
   download_route_outcome TEXT,
@@ -296,6 +298,7 @@ def _ensure_publishers_schema(conn: sqlite3.Connection) -> None:
         "self_presentation",
         "insights_url",
         "google_folder",
+        "discovery_test_status",
         "download_route_kind",
         "download_route_summary",
         "download_route_outcome",
@@ -325,6 +328,7 @@ def _ensure_publishers_schema(conn: sqlite3.Connection) -> None:
           self_presentation TEXT NOT NULL,
           insights_url TEXT NOT NULL,
           google_folder TEXT,
+          discovery_test_status TEXT,
           download_route_kind TEXT,
           download_route_summary TEXT,
           download_route_outcome TEXT,
@@ -351,6 +355,7 @@ def _ensure_publishers_schema(conn: sqlite3.Connection) -> None:
                 "self_presentation",
                 "insights_url",
                 "google_folder",
+                "discovery_test_status",
                 "download_route_kind",
                 "download_route_summary",
                 "download_route_outcome",
@@ -1343,6 +1348,7 @@ def replace_publishers(
                     name,
                     insights_url,
                     google_folder,
+                    discovery_test_status,
                     download_route_kind,
                     download_route_summary,
                     download_route_outcome,
@@ -1378,6 +1384,7 @@ def replace_publishers(
                     Optional[str],
                     Optional[str],
                     Optional[int],
+                    Optional[str],
                 ],
             ] = {}
             preserved_by_name = dict(preserved_by_insights_url)
@@ -1391,15 +1398,16 @@ def replace_publishers(
                     str(row[5] or "").strip() or None,
                     str(row[6] or "").strip() or None,
                     str(row[7] or "").strip() or None,
-                    int(row[8]) if row[8] is not None else None,
-                    str(row[9] or "").strip() or None,
+                    str(row[8] or "").strip() or None,
+                    int(row[9]) if row[9] is not None else None,
                     str(row[10] or "").strip() or None,
                     str(row[11] or "").strip() or None,
-                    int(row[12]) if row[12] is not None else None,
-                    str(row[13] or "").strip() or None,
+                    str(row[12] or "").strip() or None,
+                    int(row[13]) if row[13] is not None else None,
                     str(row[14] or "").strip() or None,
                     str(row[15] or "").strip() or None,
-                    int(row[16]) if row[16] is not None else None,
+                    str(row[16] or "").strip() or None,
+                    int(row[17]) if row[17] is not None else None,
                 )
                 if insights_url_key and insights_url_key not in preserved_by_insights_url:
                     preserved_by_insights_url[insights_url_key] = preserved_payload
@@ -1435,6 +1443,7 @@ def replace_publishers(
                             None,
                             None,
                             None,
+                            None,
                         )
                     rows_with_routes.append((*row, *preserved))
                 conn.executemany(
@@ -1445,6 +1454,7 @@ def replace_publishers(
                         self_presentation,
                         insights_url,
                         google_folder,
+                        discovery_test_status,
                         download_route_kind,
                         download_route_summary,
                         download_route_outcome,
@@ -1460,7 +1470,7 @@ def replace_publishers(
                         inventory_snapshot_sha256,
                         inventory_snapshot_updated_at
                     )
-                    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     rows_with_routes,
                 )
@@ -1813,6 +1823,7 @@ def get_publisher_inventory_state(
                 name,
                 insights_url,
                 google_folder,
+                discovery_test_status,
                 inventory_route_kind,
                 inventory_route_summary,
                 inventory_route_last_final_page_url,
@@ -1836,14 +1847,15 @@ def get_publisher_inventory_state(
             insights_url=insights_url,
             normalized_url=normalized_url,
             google_folder=str(row[2] or "").strip() or None,
-            inventory_route_kind=str(row[3] or "").strip() or None,
-            inventory_route_summary=str(row[4] or "").strip() or None,
-            inventory_route_last_final_page_url=str(row[5] or "").strip() or None,
-            inventory_route_updated_at=_optional_int(row[6]),
-            inventory_snapshot_drive_file_id=str(row[7] or "").strip() or None,
-            inventory_snapshot_drive_file_name=str(row[8] or "").strip() or None,
-            inventory_snapshot_sha256=str(row[9] or "").strip() or None,
-            inventory_snapshot_updated_at=_optional_int(row[10]),
+            discovery_test_status=str(row[3] or "").strip() or None,
+            inventory_route_kind=str(row[4] or "").strip() or None,
+            inventory_route_summary=str(row[5] or "").strip() or None,
+            inventory_route_last_final_page_url=str(row[6] or "").strip() or None,
+            inventory_route_updated_at=_optional_int(row[7]),
+            inventory_snapshot_drive_file_id=str(row[8] or "").strip() or None,
+            inventory_snapshot_drive_file_name=str(row[9] or "").strip() or None,
+            inventory_snapshot_sha256=str(row[10] or "").strip() or None,
+            inventory_snapshot_updated_at=_optional_int(row[11]),
         )
         logger.info(
             log_event(
@@ -1857,6 +1869,7 @@ def get_publisher_inventory_state(
                     "found": True,
                     "publisher_name": response.publisher_name,
                     "has_google_folder": bool(response.google_folder),
+                    "discovery_test_status": response.discovery_test_status or "",
                     "has_inventory_route": bool(response.inventory_route_summary),
                     "has_inventory_snapshot": bool(
                         response.inventory_snapshot_drive_file_id
@@ -1875,6 +1888,100 @@ def get_publisher_inventory_state(
         )
     )
     return None
+
+
+def record_publisher_inventory_test_status(
+    request: PublisherInventoryTestStatusRecordRequest,
+    ctx: RunContext,
+) -> None:
+    db_path = request.db_path.strip()
+    normalized_url = request.normalized_url.strip()
+    status = request.status.strip()
+    if not db_path:
+        raise AppError(
+            code="publisher_inventory_test_status_db_missing",
+            message="Report metadata DB path is required for publisher discovery test-status recording",
+            retryable=False,
+            severity="error",
+        )
+    if not normalized_url:
+        raise AppError(
+            code="publisher_inventory_test_status_normalized_url_missing",
+            message="normalized_url is required for publisher discovery test-status recording",
+            retryable=False,
+            severity="error",
+        )
+    if not status:
+        raise AppError(
+            code="publisher_inventory_test_status_missing",
+            message="status is required for publisher discovery test-status recording",
+            retryable=False,
+            severity="error",
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_inventory_test_status_record_start",
+            module=logger.name,
+            fields={
+                "db_path": db_path,
+                "normalized_url": normalized_url,
+                "status": status,
+            },
+        )
+    )
+    try:
+        with _metadata_conn(db_path) as conn:
+            matched_id: Optional[int] = None
+            rows = conn.execute(
+                "SELECT id, insights_url FROM publishers WHERE insights_url <> '' ORDER BY id ASC"
+            ).fetchall()
+            for row in rows:
+                if normalize_url(str(row[1] or "").strip()) != normalized_url:
+                    continue
+                matched_id = int(row[0])
+                break
+            if matched_id is None:
+                raise AppError(
+                    code="publisher_inventory_test_status_not_found",
+                    message="Publisher discovery test-status cannot be recorded because the publisher row was not found",
+                    retryable=False,
+                    severity="error",
+                    context={"normalized_url": normalized_url},
+                )
+            conn.execute(
+                """
+                UPDATE publishers
+                SET discovery_test_status=?
+                WHERE id=?
+                """,
+                (
+                    status,
+                    matched_id,
+                ),
+            )
+    except sqlite3.Error as exc:
+        raise AppError(
+            code="publisher_inventory_test_status_record_failed",
+            message="Failed to record publisher discovery test status",
+            cause=exc,
+            retryable=True,
+            context={"db_path": db_path, "normalized_url": normalized_url, "status": status},
+        ) from exc
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_inventory_test_status_record_complete",
+            module=logger.name,
+            fields={
+                "db_path": db_path,
+                "normalized_url": normalized_url,
+                "status": status,
+            },
+        )
+    )
 
 
 def record_publisher_inventory_state(

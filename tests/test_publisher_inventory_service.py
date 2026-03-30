@@ -27,10 +27,18 @@ class _FakeResponse:
 
 
 class _FakeBrowserPage:
-    def __init__(self, browser: "_FakeBrowser", start_state: str, states: dict[str, dict[str, object]]) -> None:
+    def __init__(
+        self,
+        browser: "_FakeBrowser",
+        start_state: str,
+        states: dict[str, dict[str, object]],
+        *,
+        target_id: str,
+    ) -> None:
         self._browser = browser
         self._state_id = start_state
         self._states = states
+        self._target_id = target_id
 
     def _payload(self) -> dict[str, object]:
         payload = dict(self._states[self._state_id]["payload"])
@@ -39,6 +47,8 @@ class _FakeBrowserPage:
         payload.setdefault("tab_labels", [])
         payload.setdefault("active_tab_label", "")
         payload.setdefault("report_link_url", "")
+        payload.setdefault("empty_results_visible", False)
+        payload.setdefault("reset_filter_labels", [])
         payload.setdefault("has_report_filter", False)
         payload.setdefault("has_apply_button", False)
         payload.setdefault("has_pagination_next", False)
@@ -59,6 +69,8 @@ class _FakeBrowserPage:
             )
         if script == service._browser_inventory_state_script():
             return json.dumps(self._payload())
+        if script == service._browser_rendered_html_script():
+            return str(self._states[self._state_id].get("rendered_html", ""))
         if script == service._browser_click_named_control_script():
             payload = args[0]
             if isinstance(payload, dict):
@@ -145,10 +157,28 @@ class _FakeBrowserPage:
         raise AssertionError(f"Unexpected goto url: {url}")
 
 
+class _FakeAuxPage:
+    def __init__(self, *, target_id: str, url: str) -> None:
+        self._target_id = target_id
+        self._url = url
+
+    async def get_url(self) -> str:
+        return self._url
+
+
 class _FakeBrowser:
     last_instance: "_FakeBrowser | None" = None
 
-    def __init__(self, downloads_path, headless, auto_download_pdfs, *, states: dict[str, dict[str, object]], start_state: str):
+    def __init__(
+        self,
+        downloads_path,
+        headless,
+        auto_download_pdfs,
+        *,
+        states: dict[str, dict[str, object]],
+        start_state: str,
+        extra_page_urls: list[str] | None = None,
+    ):
         self.downloads_path = downloads_path
         self.headless = headless
         self.auto_download_pdfs = auto_download_pdfs
@@ -156,6 +186,11 @@ class _FakeBrowser:
         self._start_state = start_state
         self._started = False
         self.page: _FakeBrowserPage | None = None
+        self.closed_page_ids: list[str] = []
+        self._extra_pages = [
+            _FakeAuxPage(target_id=f"aux-{index + 1}", url=url)
+            for index, url in enumerate(extra_page_urls or [])
+        ]
         _FakeBrowser.last_instance = self
 
     async def start(self) -> None:
@@ -163,14 +198,35 @@ class _FakeBrowser:
 
     async def new_page(self, url: str):
         assert self._started is True
-        self.page = _FakeBrowserPage(self, self._start_state, self._states)
+        self.page = _FakeBrowserPage(self, self._start_state, self._states, target_id="main")
         return self.page
+
+    async def get_pages(self):
+        pages: list[object] = []
+        if self.page is not None:
+            pages.append(self.page)
+        pages.extend(self._extra_pages)
+        return pages
+
+    async def close_page(self, page) -> None:
+        target_id = str(getattr(page, "_target_id", "") or "")
+        self.closed_page_ids.append(target_id)
+        self._extra_pages = [
+            candidate
+            for candidate in self._extra_pages
+            if str(getattr(candidate, "_target_id", "") or "") != target_id
+        ]
 
     async def kill(self) -> None:
         return None
 
 
-def _runtime_for_states(states: dict[str, dict[str, object]], start_state: str = "initial") -> SimpleNamespace:
+def _runtime_for_states(
+    states: dict[str, dict[str, object]],
+    start_state: str = "initial",
+    *,
+    extra_page_urls: list[str] | None = None,
+) -> SimpleNamespace:
     class RuntimeBrowser(_FakeBrowser):
         def __init__(self, downloads_path, headless, auto_download_pdfs):
             super().__init__(
@@ -179,6 +235,7 @@ def _runtime_for_states(states: dict[str, dict[str, object]], start_state: str =
                 auto_download_pdfs,
                 states=states,
                 start_state=start_state,
+                extra_page_urls=extra_page_urls,
             )
 
     return SimpleNamespace(Browser=RuntimeBrowser)
@@ -274,6 +331,33 @@ def test_discover_publisher_inventory_http_parse_handles_multipage(
     assert_logs_have_required_fields(_events(caplog))
 
 
+def test_discover_publisher_inventory_direct_pdf_source_short_circuits_browser(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    def _unexpected_runtime(_name: str):
+        raise AssertionError("browser runtime should not be loaded for direct PDF sources")
+
+    external_boundary_mocks_only.setattr(service, "import_module", _unexpected_runtime)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://example.com/reports/state-of-retail-2026.pdf",
+            settings=_settings(tmp_path),
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "http_parse"
+    assert len(response.pages) == 1
+    assert [candidate.url for candidate in response.candidates] == [
+        "https://example.com/reports/state-of-retail-2026.pdf"
+    ]
+    assert response.candidates[0].pdf_url == "https://example.com/reports/state-of-retail-2026.pdf"
+
+
 def test_discover_publisher_inventory_browser_fallback_when_http_empty(
     tmp_path: Path,
     run_context,
@@ -334,6 +418,55 @@ def test_discover_publisher_inventory_browser_fallback_when_http_empty(
         for candidate in response.candidates
     )
     assert_no_defaulted_required_fields(response)
+
+
+def test_discover_publisher_inventory_browser_closes_stray_blank_pages(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    external_boundary_mocks_only.setattr(
+        service.requests,
+        "get",
+        lambda *args, **kwargs: _FakeResponse(
+            url="https://example.com/insights",
+            text="<html><body><a href='/about'>About</a></body></html>",
+        ),
+    )
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://example.com/insights",
+                "page_title": "Insights",
+                "anchors": [
+                    {"href": "https://example.com/reports/report-one", "text": "Report One 2026", "rel": ""}
+                ],
+            }
+        }
+    }
+    external_boundary_mocks_only.setattr(
+        service,
+        "import_module",
+        lambda _name: _runtime_for_states(
+            states,
+            extra_page_urls=["about:blank", "chrome://newtab"],
+        ),
+    )
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://example.com/insights",
+            settings=_settings(tmp_path),
+            route_kind_hint="browser_render",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "browser_render"
+    assert _FakeBrowser.last_instance is not None
+    assert _FakeBrowser.last_instance.closed_page_ids == ["aux-1", "aux-2"]
 
 
 def test_discover_publisher_inventory_browser_scrolls_to_hydrate_load_more(
@@ -532,6 +665,285 @@ def test_discover_publisher_inventory_browser_prefers_candidate_dense_load_more_
     )
 
 
+def test_discover_publisher_inventory_browser_resets_empty_results_filters(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    external_boundary_mocks_only.setattr(
+        service.requests,
+        "get",
+        lambda *args, **kwargs: _FakeResponse(
+            url="https://www.contentful.com/resources/",
+            text="<html><body><a href='/about'>About</a></body></html>",
+        ),
+    )
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://www.contentful.com/resources/",
+                "page_title": "Resources | Contentful",
+                "anchors": [
+                    {
+                        "href": "https://www.contentful.com/resources/the-great-content-collapse/",
+                        "text": "The Great Content Collapse",
+                        "rel": "",
+                    }
+                ],
+                "empty_results_visible": True,
+                "reset_filter_labels": ["Reset all filters"],
+            },
+            "named_clicks": {"reset all filters": "listing"},
+        },
+        "listing": {
+            "payload": {
+                "page_url": "https://www.contentful.com/resources/",
+                "page_title": "Resources | Contentful",
+                "anchors": [
+                    {
+                        "href": "https://www.contentful.com/resources/composable-commerce-for-growth/",
+                        "text": "Composable commerce for growth report",
+                        "rel": "",
+                    }
+                ],
+            }
+        },
+    }
+    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://www.contentful.com/resources/",
+            settings=_settings(tmp_path),
+            route_kind_hint="browser_render",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "browser_render"
+    assert len(response.pages) == 1
+    assert [candidate.url for candidate in response.candidates] == [
+        "https://www.contentful.com/resources/composable-commerce-for-growth"
+    ]
+
+
+def test_discover_publisher_inventory_browser_uses_http_supplement_when_browser_candidates_are_empty(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    def _get(url, timeout, headers):
+        assert timeout == 10.0
+        assert headers["User-Agent"].startswith("MarketLensePublisherInventory/")
+        return _FakeResponse(
+            url="https://wordpress.bluecore.app/resources",
+            text=(
+                "<html><body>"
+                "<a href='https://www.bluecore.com/lp/customer-movement-benchmarks/'>"
+                "Benchmarks for Identification, Conversion, and Retention"
+                "</a>"
+                "</body></html>"
+            ),
+        )
+
+    external_boundary_mocks_only.setattr(service.requests, "get", _get)
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://wordpress.bluecore.app/resources",
+                "page_title": "Resources - Bluecore",
+                "anchors": [],
+            }
+        },
+        "origin": {
+            "payload": {
+                "page_url": "https://www.bluecore.com/resources",
+                "page_title": "Resources - Bluecore",
+                "anchors": [],
+            },
+        },
+    }
+    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://www.bluecore.com/resources/",
+            settings=_settings(tmp_path),
+            route_kind_hint="browser_render",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "browser_render"
+    assert len(response.pages) == 1
+    assert [candidate.url for candidate in response.candidates] == [
+        "https://www.bluecore.com/lp/customer-movement-benchmarks"
+    ]
+
+
+def test_discover_publisher_inventory_browser_invalid_http_supplement_html_fails_cleanly(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+    assert_app_error,
+) -> None:
+    def _get(url, timeout, headers):
+        assert timeout == 10.0
+        assert headers["User-Agent"].startswith("MarketLensePublisherInventory/")
+        return _FakeResponse(
+            url="https://example.com/insights",
+            text="<![\ufffd\"\ufffd(\u001c\ufffd\u001c\ufffdB\ufffdo\u0011IRD\ufffd\\\\",
+        )
+
+    external_boundary_mocks_only.setattr(service.requests, "get", _get)
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://example.com/insights",
+                "page_title": "Insights",
+                "anchors": [],
+            },
+        }
+    }
+    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
+
+    with pytest.raises(AppError) as err:
+        service.discover_publisher_inventory(
+            PublisherInventoryServiceRequest(
+                schema_version="1.0",
+                insights_url="https://example.com/insights",
+                settings=_settings(tmp_path),
+                route_kind_hint="browser_render",
+            ),
+            run_context,
+        )
+
+    assert_app_error(err.value, code="publisher_inventory_browser_incomplete", retryable=True)
+
+
+def test_discover_publisher_inventory_browser_uses_rendered_html_supplement_when_visible_anchors_are_empty(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    external_boundary_mocks_only.setattr(
+        service.requests,
+        "get",
+        lambda *args, **kwargs: _FakeResponse(
+            url="https://www.bluecore.com/resources",
+            text="<html><body><a href='/about'>About</a></body></html>",
+        ),
+    )
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://wordpress.bluecore.app/resources",
+                "page_title": "Resources - Bluecore",
+                "anchors": [],
+            },
+            "rendered_html": (
+                "<html><body>"
+                "<a href='https://www.bluecore.com/lp/customer-movement-benchmarks/'>"
+                "Benchmarks for Identification, Conversion, and Retention"
+                "</a>"
+                "</body></html>"
+            ),
+        }
+    }
+    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://www.bluecore.com/resources/",
+            settings=_settings(tmp_path),
+            route_kind_hint="browser_render",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "browser_render"
+    assert len(response.pages) == 1
+    assert [candidate.url for candidate in response.candidates] == [
+        "https://www.bluecore.com/lp/customer-movement-benchmarks"
+    ]
+
+
+def test_discover_publisher_inventory_browser_recovers_from_cross_apex_host_drift(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    external_boundary_mocks_only.setattr(
+        service.requests,
+        "get",
+        lambda *args, **kwargs: _FakeResponse(
+            url="https://www.bluecore.com/resources",
+            text="<html><body><a href='/about'>About</a></body></html>",
+        ),
+    )
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://wordpress.bluecore.app/resources",
+                "page_title": "Resources - Bluecore",
+                "anchors": [],
+            },
+        },
+        "origin": {
+            "payload": {
+                "page_url": "https://www.bluecore.com/resources/",
+                "page_title": "Resources - Bluecore",
+                "anchors": [
+                    {
+                        "href": "https://www.bluecore.com/lp/customer-movement-benchmarks/",
+                        "text": "Benchmarks for Identification, Conversion, and Retention",
+                        "rel": "",
+                    }
+                ],
+            },
+        },
+    }
+    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://www.bluecore.com/resources/",
+            settings=_settings(tmp_path),
+            route_kind_hint="browser_render",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "browser_render"
+    assert len(response.pages) == 1
+    assert response.pages[0].page_url == "https://www.bluecore.com/resources"
+    assert [candidate.url for candidate in response.candidates] == [
+        "https://www.bluecore.com/lp/customer-movement-benchmarks"
+    ]
+
+
+def test_browser_scripts_coerce_non_string_dom_values_before_normalizing() -> None:
+    scripts = [
+        service._browser_inventory_state_script(),
+        service._browser_click_named_control_script(),
+        service._browser_click_pagination_next_script(),
+        service._browser_click_tab_script(),
+        service._browser_apply_report_filter_script(),
+    ]
+    for script in scripts:
+        assert "String(value ?? '')" in script
+        assert "(value || '').replace" not in script
+
+
 def test_discover_publisher_inventory_browser_prioritizes_button_pagination_over_hero_load_more(
     tmp_path: Path,
     run_context,
@@ -690,6 +1102,79 @@ def test_discover_publisher_inventory_browser_tracks_load_more_state_change_with
     assert response.route_kind == "browser_render"
     assert len(response.pages) == 2
     assert response.pages[1].page_number == 2
+    assert "Expanded load-more pagination 1 time(s)." in response.route_summary
+
+
+def test_discover_publisher_inventory_browser_treats_inert_load_more_as_exhausted(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    external_boundary_mocks_only.setattr(
+        service.requests,
+        "get",
+        lambda *args, **kwargs: _FakeResponse(
+            url="https://example.com/insights",
+            text="<html><body><a href='/about'>About</a></body></html>",
+        ),
+    )
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://example.com/insights",
+                "page_title": "Insights",
+                "anchors": [
+                    {
+                        "href": "https://example.com/reports/report-one",
+                        "text": "Report One 2026",
+                        "rel": "",
+                    }
+                ],
+                "load_more_labels": ["Load more"],
+            },
+            "named_clicks": {"load more": "page_2"},
+        },
+        "page_2": {
+            "payload": {
+                "page_url": "https://example.com/insights",
+                "page_title": "Insights",
+                "anchors": [
+                    {
+                        "href": "https://example.com/reports/report-one",
+                        "text": "Report One 2026",
+                        "rel": "",
+                    },
+                    {
+                        "href": "https://example.com/reports/report-two",
+                        "text": "Report Two 2026",
+                        "rel": "",
+                    },
+                ],
+                "load_more_labels": ["Load more"],
+            },
+            "named_clicks": {"load more": "page_2"},
+        },
+    }
+    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://example.com/insights",
+            settings=_settings(tmp_path),
+            route_kind_hint="browser_render",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "browser_render"
+    assert len(response.pages) == 2
+    assert [candidate.url for candidate in response.candidates] == [
+        "https://example.com/reports/report-one",
+        "https://example.com/reports/report-one",
+        "https://example.com/reports/report-two",
+    ]
     assert "Expanded load-more pagination 1 time(s)." in response.route_summary
 
 
@@ -948,6 +1433,7 @@ def test_discover_publisher_inventory_browser_follows_report_listing_route(
 def test_extract_candidates_from_html_filters_false_positive_hub_and_social_links() -> None:
     html = """
     <html><body>
+      <a href="/blog/social-media-industry-benchmark-report/">2025 Social Media Industry Benchmark Report</a>
       <a href="/it/insights">Italy (Italiano)</a>
       <a href="/de/insights/type/report">Deutsch</a>
       <a href="https://www.facebook.com/bainandcompany">icon-facebook-f</a>
@@ -974,12 +1460,36 @@ def test_extract_candidates_from_html_filters_false_positive_hub_and_social_link
     )
 
     assert [candidate.title for candidate in candidates] == [
+        "2025 Social Media Industry Benchmark Report",
         "Why Agentic AI Demands a New Architecture",
         "Global Private Equity Report 2026",
     ]
     assert [candidate.url for candidate in candidates] == [
+        "https://www.bain.com/blog/social-media-industry-benchmark-report",
         "https://www.bain.com/insights/why-agentic-ai-demands-a-new-architecture",
         "https://www.bain.com/insights/topics/global-private-equity-report",
+    ]
+
+
+def test_extract_candidates_from_html_allows_original_host_when_rendered_page_uses_hosted_subdomain() -> None:
+    html = """
+    <html><body>
+      <a href="https://www.bluecore.com/lp/customer-movement-benchmarks/">Benchmarks for Identification, Conversion, and Retention</a>
+    </body></html>
+    """
+    parser = service._InventoryHtmlParser()
+    parser.feed(html)
+
+    candidates = service._extract_candidates_from_html(
+        anchors=parser.anchors,
+        page_url="https://wordpress.bluecore.app/resources",
+        page_number=1,
+        next_page_url=None,
+        origin_url="https://www.bluecore.com/resources",
+    )
+
+    assert [candidate.url for candidate in candidates] == [
+        "https://www.bluecore.com/lp/customer-movement-benchmarks"
     ]
 
 

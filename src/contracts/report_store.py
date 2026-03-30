@@ -478,6 +478,10 @@ class PublisherInventoryStateResponse:
         default=None,
         metadata={"doc": "Curated Google Drive folder URL or folder ID for this publisher."},
     )
+    discovery_test_status: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Last recorded discovery test outcome for this publisher row, for example `passed` or `failed:<error_code>`."},
+    )
     inventory_route_kind: Optional[str] = field(
         default=None,
         metadata={"doc": "Remembered discovery route kind for this publisher URL."},
@@ -547,4 +551,20 @@ class PublisherInventoryStateRecordRequest:
     snapshot_sha256: Optional[str] = field(
         default=None,
         metadata={"doc": "SHA-256 hash of the latest stored snapshot JSON, when changed or already known."},
+    )
+
+
+@dataclass(frozen=True)
+class PublisherInventoryTestStatusRecordRequest:
+    schema_version: str = field(
+        metadata={"doc": "Publisher inventory test-status record request schema version."}
+    )
+    db_path: str = field(
+        metadata={"doc": "Filesystem path to the report metadata SQLite database."}
+    )
+    normalized_url: str = field(
+        metadata={"doc": "Normalized publisher insights URL used to identify the publisher row."}
+    )
+    status: str = field(
+        metadata={"doc": "Last recorded discovery test outcome string, for example `passed` or `failed:<error_code>`."}
     )

@@ -157,7 +157,7 @@ publisher_discovery:
   max_steps: 30
   output_dir: "./out/publisher_inventory_discovery"
   prompt_namespace: "publisher_inventory/discovery"
-  pagination_max_pages: 10
+  pagination_max_pages: 30
   http_timeout_seconds: 30
   headed: true
   force_browser: true

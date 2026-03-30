@@ -10,6 +10,7 @@ from src.contracts.report_store import (
     PublisherDownloadRouteRecordRequest,
     PublisherInventoryStateGetRequest,
     PublisherInventoryStateRecordRequest,
+    PublisherInventoryTestStatusRecordRequest,
     PublishersReplaceRequest,
     ReportMetadataDbAccessRequest,
     ReportSourceDiscoveryRecordRequest,
@@ -24,6 +25,7 @@ from src.services.report_store_service import (
     record_discovered_report_source,
     get_publisher_download_route,
     get_publisher_inventory_state,
+    record_publisher_inventory_test_status,
     record_report_source,
     record_publisher_download_route,
     record_publisher_inventory_state,
@@ -751,6 +753,7 @@ class TestReportStoreService(unittest.TestCase):
             self.assertIsNone(state.inventory_route_updated_at)
             self.assertIsNone(state.inventory_snapshot_updated_at)
             self.assertIsNone(state.inventory_snapshot_drive_file_id)
+            self.assertIsNone(state.discovery_test_status)
 
     def test_replace_publishers_migrates_old_schema_and_drops_removed_columns(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -838,6 +841,7 @@ class TestReportStoreService(unittest.TestCase):
                     "self_presentation",
                     "insights_url",
                     "google_folder",
+                    "discovery_test_status",
                     "download_route_kind",
                     "download_route_summary",
                     "download_route_outcome",
@@ -938,9 +942,20 @@ class TestReportStoreService(unittest.TestCase):
             self.assertEqual(
                 "https://drive.google.com/drive/folders/abc123", state.google_folder
             )
+            self.assertIsNone(state.discovery_test_status)
             self.assertEqual("browser_render", state.inventory_route_kind)
             self.assertEqual("drive-file-1", state.inventory_snapshot_drive_file_id)
             self.assertEqual("sha256-1", state.inventory_snapshot_sha256)
+
+            record_publisher_inventory_test_status(
+                PublisherInventoryTestStatusRecordRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_url="https://www.activate.com/insights",
+                    status="passed",
+                ),
+                ctx,
+            )
 
             replace_publishers(
                 PublishersReplaceRequest(
@@ -973,8 +988,60 @@ class TestReportStoreService(unittest.TestCase):
             )
             assert preserved is not None
             self.assertEqual("Activate Consulting Updated", preserved.publisher_name)
+            self.assertEqual("passed", preserved.discovery_test_status)
             self.assertEqual("browser_render", preserved.inventory_route_kind)
             self.assertEqual("drive-file-1", preserved.inventory_snapshot_drive_file_id)
+
+    def test_record_publisher_inventory_test_status_roundtrip(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_publisher_inventory_test_status")
+
+            replace_publishers(
+                PublishersReplaceRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_page_url="https://www.notion.so/source",
+                    publishers=[
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-1",
+                            notion_page_url="https://www.notion.so/page-1",
+                            name="Activate Consulting",
+                            homepage="https://www.activate.com/",
+                            self_presentation="Activate description",
+                            insights_url="https://www.activate.com/insights",
+                            icon_source="https://cdn.example.com/activate.png",
+                        )
+                    ],
+                ),
+                ctx,
+            )
+
+            record_publisher_inventory_test_status(
+                PublisherInventoryTestStatusRecordRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_url="https://www.activate.com/insights",
+                    status="failed:publisher_inventory_browser_pagination_limit",
+                ),
+                ctx,
+            )
+
+            state = get_publisher_inventory_state(
+                PublisherInventoryStateGetRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_url="https://www.activate.com/insights",
+                ),
+                ctx,
+            )
+
+            assert state is not None
+            self.assertEqual(
+                "failed:publisher_inventory_browser_pagination_limit",
+                state.discovery_test_status,
+            )
 
 
 if __name__ == "__main__":
