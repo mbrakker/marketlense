@@ -125,6 +125,20 @@ _ASSET_TYPE_TERMS = (
     "outlook",
     "playbook",
     "guide",
+    "infographic",
+    "snapshot",
+)
+_REPORT_FOCUSED_TAB_MARKERS = (
+    "report",
+    "reports",
+    "research",
+    "white paper",
+    "whitepaper",
+    "ebook",
+    "study",
+    "benchmark",
+    "insight",
+    "insights",
 )
 _DOWNLOAD_LANGUAGE_MARKERS = (
     "download",
@@ -239,6 +253,8 @@ class _RenderedInventoryState:
     has_pagination_next: bool = False
     result_range_end: int | None = None
     result_range_total: int | None = None
+    page_index_hint: int | None = None
+    page_total_hint: int | None = None
 
 
 @dataclass(frozen=True)
@@ -915,6 +931,7 @@ async def _run_browser_traversal(
                 ctx=ctx,
                 reason="cookie_banner",
             )
+        await _prime_browser_inventory_surface(page)
         initial_state = await _extract_rendered_inventory_state(page)
         if _should_apply_report_filter(normalized_url, initial_state):
             applied = await _apply_report_filter(page)
@@ -935,6 +952,7 @@ async def _run_browser_traversal(
                     ctx=ctx,
                     reason="report_filter",
                 )
+                await _prime_browser_inventory_surface(page)
                 initial_state = await _extract_rendered_inventory_state(page)
         if _should_follow_report_listing(normalized_url, initial_state):
             await page.goto(initial_state.report_link_url or normalized_url)
@@ -972,20 +990,23 @@ async def _run_browser_traversal(
                     ctx=ctx,
                     reason="report_route_cookie_banner",
                 )
+            await _prime_browser_inventory_surface(page)
             initial_state = await _extract_rendered_inventory_state(page)
 
         pages: list[PublisherInventoryPage] = []
         candidates: list[PublisherInventoryRawCandidate] = []
         page_number = 1
-        if _should_traverse_tabs(normalized_url, initial_state):
+        selected_tab_labels = _select_tab_labels_for_traversal(normalized_url, initial_state)
+        archive_expected = _is_archive_surface(initial_state) or bool(selected_tab_labels)
+        if selected_tab_labels:
             seen_tabs: set[str] = set()
-            tab_labels = [label for label in initial_state.tab_labels if label]
             current_state = initial_state
-            for tab_index, tab_label in enumerate(tab_labels):
+            active_tab_label = _normalize_text(current_state.active_tab_label or "").casefold()
+            for tab_label in selected_tab_labels:
                 normalized_label = _normalize_text(tab_label).casefold()
-                if normalized_label in seen_tabs:
+                if not normalized_label or normalized_label in seen_tabs:
                     continue
-                if tab_index > 0:
+                if normalized_label != active_tab_label:
                     clicked = await _click_tab(page, tab_label)
                     if not clicked:
                         raise AppError(
@@ -1011,6 +1032,7 @@ async def _run_browser_traversal(
                     )
                     await _wait_for_tab_activation(page, tab_label)
                     current_state = await _extract_rendered_inventory_state(page)
+                    active_tab_label = _normalize_text(current_state.active_tab_label or "").casefold()
                 seen_tabs.add(normalized_label)
                 page_number, metrics = await _collect_browser_inventory_pages(
                     browser=browser,
@@ -1019,12 +1041,14 @@ async def _run_browser_traversal(
                     starting_page_number=page_number,
                     request=request,
                     normalized_url=normalized_url,
+                    archive_expected=archive_expected,
                     pages=pages,
                     candidates=candidates,
                     metrics=metrics,
                     ctx=ctx,
                 )
                 current_state = await _extract_rendered_inventory_state(page)
+                active_tab_label = _normalize_text(current_state.active_tab_label or "").casefold()
         else:
             _page_number, metrics = await _collect_browser_inventory_pages(
                 browser=browser,
@@ -1033,6 +1057,7 @@ async def _run_browser_traversal(
                 starting_page_number=page_number,
                 request=request,
                 normalized_url=normalized_url,
+                archive_expected=archive_expected,
                 pages=pages,
                 candidates=candidates,
                 metrics=metrics,
@@ -1043,7 +1068,7 @@ async def _run_browser_traversal(
             normalized_url=normalized_url,
             pages=pages,
             metrics=metrics,
-            used_tabs=_should_traverse_tabs(normalized_url, initial_state),
+            used_tabs=bool(selected_tab_labels),
         )
         return pages, candidates, final_page_url, route_summary
     finally:
@@ -1326,6 +1351,7 @@ async def _collect_browser_inventory_pages(
     starting_page_number: int,
     request: PublisherInventoryServiceRequest,
     normalized_url: str,
+    archive_expected: bool,
     pages: list[PublisherInventoryPage],
     candidates: list[PublisherInventoryRawCandidate],
     metrics: _BrowserTraversalMetrics,
@@ -1335,6 +1361,7 @@ async def _collect_browser_inventory_pages(
     visited_navigation_urls: set[str] = set()
     empty_results_reset_urls: set[str] = set()
     origin_host_recovery_urls: set[str] = set()
+    archive_surface_recovery_urls: set[str] = set()
     state = current_state
     while True:
         await _close_unexpected_blank_pages(
@@ -1376,6 +1403,35 @@ async def _collect_browser_inventory_pages(
             next_page_url=next_page_url,
             origin_url=normalized_url,
         )
+        if (
+            archive_expected
+            and _requires_archive_surface_recovery(
+                state=state,
+                page_candidates=page_candidates,
+                normalized_url=normalized_url,
+            )
+        ):
+            if state.page_url not in archive_surface_recovery_urls:
+                archive_surface_recovery_urls.add(state.page_url)
+                await page.goto(normalized_url)
+                await _browser_wait_for_settle(page=page)
+                await _close_unexpected_blank_pages(
+                    browser=browser,
+                    active_page=page,
+                    ctx=ctx,
+                    reason="archive_surface_recovery",
+                )
+                state = await _extract_rendered_inventory_state(page)
+                continue
+            raise AppError(
+                code="publisher_inventory_archive_drift",
+                message="Browser-render inventory discovery drifted away from the archive surface",
+                retryable=True,
+                context={
+                    "normalized_url": normalized_url,
+                    "page_url": state.page_url,
+                },
+            )
         hydration_attempts = 0
         while hydration_attempts < 3 and _needs_additional_hydration(
             state,
@@ -1449,6 +1505,8 @@ async def _collect_browser_inventory_pages(
                     "has_pagination_next": state.has_pagination_next,
                     "result_range_end": state.result_range_end or 0,
                     "result_range_total": state.result_range_total or 0,
+                    "page_index_hint": state.page_index_hint or 0,
+                    "page_total_hint": state.page_total_hint or 0,
                     "next_page_url": next_page_url or "",
                     "active_tab_label": state.active_tab_label or "",
                 },
@@ -1628,6 +1686,8 @@ async def _extract_rendered_inventory_state(page: Any) -> _RenderedInventoryStat
         has_pagination_next=bool(payload.get("has_pagination_next")),
         result_range_end=_positive_int_or_none(payload.get("result_range_end")),
         result_range_total=_positive_int_or_none(payload.get("result_range_total")),
+        page_index_hint=_positive_int_or_none(payload.get("page_index_hint")),
+        page_total_hint=_positive_int_or_none(payload.get("page_total_hint")),
     )
 
 
@@ -1851,7 +1911,11 @@ def _should_follow_report_listing(
 ) -> bool:
     host = str(urlsplit(normalized_url).hostname or "").casefold()
     if "gfk-media-measurement.com" not in host:
-        return False
+        if not state.report_link_url:
+            return False
+        if _normalize_absolute_url(state.report_link_url) == _normalize_absolute_url(state.page_url):
+            return False
+        return not _is_archive_surface(state)
     path = str(urlsplit(normalized_url).path or "").casefold()
     if "/insights/report/" in path:
         return False
@@ -1876,7 +1940,71 @@ def _should_traverse_tabs(
     return "salesforce.com" in host and len(state.tab_labels) > 1
 
 
+def _select_tab_labels_for_traversal(
+    normalized_url: str,
+    state: _RenderedInventoryState,
+) -> list[str]:
+    labels = [
+        _normalize_text(label)
+        for label in state.tab_labels
+        if _normalize_text(label)
+    ]
+    if not labels:
+        return []
+    unique_labels: list[str] = []
+    seen_labels: set[str] = set()
+    for label in labels:
+        normalized_label = label.casefold()
+        if normalized_label in seen_labels:
+            continue
+        seen_labels.add(normalized_label)
+        unique_labels.append(label)
+    preferred_labels = [
+        label
+        for label in unique_labels
+        if any(marker in label.casefold() for marker in _REPORT_FOCUSED_TAB_MARKERS)
+    ]
+    if preferred_labels:
+        return preferred_labels
+    if _should_traverse_tabs(normalized_url, state):
+        return unique_labels
+    return []
+
+
+def _is_archive_surface(state: _RenderedInventoryState) -> bool:
+    return bool(
+        state.load_more_labels
+        or state.has_pagination_next
+        or (state.page_total_hint and state.page_total_hint > 1)
+        or (state.result_range_total and state.result_range_total > 0)
+        or len(state.tab_labels) > 1
+        or len(state.anchors) >= 12
+    )
+
+
+def _requires_archive_surface_recovery(
+    *,
+    state: _RenderedInventoryState,
+    page_candidates: list[PublisherInventoryRawCandidate],
+    normalized_url: str,
+) -> bool:
+    current_url = _normalize_absolute_url(state.page_url)
+    origin_url = _normalize_absolute_url(normalized_url)
+    if not current_url or not origin_url or current_url == origin_url:
+        return False
+    if _is_archive_surface(state):
+        return False
+    return len(page_candidates) < 3
+
+
 def _is_terminal_results_page(state: _RenderedInventoryState) -> bool:
+    if (
+        state.page_index_hint is not None
+        and state.page_total_hint is not None
+        and state.page_total_hint > 0
+        and state.page_index_hint >= state.page_total_hint
+    ):
+        return True
     if state.result_range_end is None or state.result_range_total is None:
         return False
     return state.result_range_total > 0 and state.result_range_end >= state.result_range_total
@@ -2048,6 +2176,12 @@ def _browser_inventory_state_script() -> str:
             .filter((entry) => entry.label);
         const paginationContainerSelector = '[aria-label*="pagination" i], [class*="pagination" i], [data-testid*="pagination" i], nav, ul, ol';
         const isPaginationNextLabel = (label) => /^(next|next page|>|>>|»)$/i.test(label);
+        const pageCountText = Array.from(document.querySelectorAll('body *'))
+            .filter((element) => isVisible(element))
+            .map((element) => normalize(element.textContent || ''))
+            .filter((text) => /^page\\s+\\d+\\s+of\\s+\\d+$/i.test(text))
+            .pop() || '';
+        const pageCountMatch = pageCountText.match(/^page\\s+(\\d+)\\s+of\\s+(\\d+)$/i);
         const visibleContainerLabels = (container) => Array.from(container.querySelectorAll(namedControlSelector))
             .filter((element) => isVisible(element) && isEnabled(element))
             .map((element) => normalize(element.textContent || element.getAttribute('aria-label') || element.value || ''))
@@ -2062,6 +2196,9 @@ def _browser_inventory_state_script() -> str:
             return labels.some((label) => /^\\d+$/.test(label)) && labels.some((label) => isPaginationNextLabel(label));
         }) || (
             controlEntries.some((entry) => /^\\d+$/.test(entry.label)) &&
+            controlEntries.some((entry) => isPaginationNextLabel(entry.label))
+        ) || (
+            Boolean(pageCountMatch) &&
             controlEntries.some((entry) => isPaginationNextLabel(entry.label))
         );
         const loadMoreLabels = collectLabels(
@@ -2078,7 +2215,19 @@ def _browser_inventory_state_script() -> str:
             .find((anchor) => {
                 const href = normalize(anchor.href || anchor.getAttribute('href') || '');
                 const label = normalize(anchor.textContent || anchor.getAttribute('aria-label') || '');
-                return href.includes('/insights/report/') && /report/i.test(label || href);
+                if (!href || !label) return false;
+                if (href.replace(/\\/$/, '') === window.location.href.replace(/\\/$/, '')) return false;
+                return (
+                    (href.includes('/insights/report/') && /report/i.test(label || href)) ||
+                    (
+                        /(explore|view|see|browse|open|discover)( all)?/i.test(label) &&
+                        /(report|reports|research|resource|resources|library|white paper|whitepaper|ebook)/i.test(label)
+                    ) ||
+                    (
+                        /(report|reports|research|resource library|resource center|white paper|whitepaper|ebook)/i.test(label) &&
+                        /\\/(reports?|resources?|resource-library|knowledge-hub|library)\\//i.test(href)
+                    )
+                );
             });
         const reportFilter = Array.from(document.querySelectorAll('label, button, div, span')).some((element) => {
             const label = normalize(element.textContent || element.getAttribute('aria-label') || '');
@@ -2115,6 +2264,8 @@ def _browser_inventory_state_script() -> str:
             has_pagination_next: hasPaginationNext,
             result_range_end: resultRangeMatch ? Number(resultRangeMatch[2]) : 0,
             result_range_total: resultRangeMatch ? Number(resultRangeMatch[3]) : 0,
+            page_index_hint: pageCountMatch ? Number(pageCountMatch[1]) : 0,
+            page_total_hint: pageCountMatch ? Number(pageCountMatch[2]) : 0,
         };
     }"""
     return script.replace("__NAMED_CONTROL_SELECTOR__", named_control_selector)
@@ -2278,6 +2429,16 @@ def _browser_click_pagination_next_script() -> str:
             }
             nextEntry.element.click();
             return true;
+        }
+        if (pageCountMatch) {
+            const nextEntry = controlEntries.find((entry) => isPaginationNextLabel(entry.label));
+            if (nextEntry) {
+                if (typeof nextEntry.element.scrollIntoView === 'function') {
+                    nextEntry.element.scrollIntoView({ block: 'center', inline: 'center' });
+                }
+                nextEntry.element.click();
+                return true;
+            }
         }
         if (controlEntries.some((entry) => /^\\d+$/.test(entry.label))) {
             const nextEntry = controlEntries.find((entry) => isPaginationNextLabel(entry.label));

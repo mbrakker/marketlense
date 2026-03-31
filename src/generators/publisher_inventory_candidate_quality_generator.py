@@ -116,6 +116,8 @@ _REPORT_STYLE_TITLE_MARKERS = (
     "whitepaper",
     "white paper",
     "ebook",
+    "infographic",
+    "snapshot",
 )
 
 
@@ -308,6 +310,8 @@ def _qualify_observation(
         observation.has_editorial_url_pattern or observation.has_related_posts
     )
     editorial_context_signal = editorial_surface_signal or observation.has_editorial_markers
+    report_archive_path_signal = "/reports/" in final_url_lower or "/report/" in final_url_lower
+    report_title_signal = _contains_report_style_title_marker(resolved_title_lower)
     if observation.fetch_error or observation.has_dead_page_marker:
         return False, "dead_or_unreachable_landing_page"
     if any(marker in final_url_lower for marker in _LEGAL_URL_MARKERS) or any(
@@ -328,12 +332,18 @@ def _qualify_observation(
         return True, "direct_document_asset"
     if _looks_like_report_section_title(resolved_title_lower):
         return False, "report_section_page"
-    if editorial_surface_signal:
+    if editorial_surface_signal and not report_archive_path_signal:
         return False, "editorial_article_page"
     if _looks_like_informational_article_title(resolved_title_lower) and not (
         observation.has_gated_form or observation.has_price_or_purchase
     ):
         return False, "informational_article_page"
+    if (
+        (report_archive_path_signal or report_title_signal)
+        and (structured_document_signal or observation.has_asset_type_term)
+        and not observation.has_dead_page_marker
+    ):
+        return True, "printable_report_page"
     if (
         observation.has_price_or_purchase
         and observation.has_asset_type_term
@@ -354,7 +364,7 @@ def _qualify_observation(
         return True, "printable_report_page"
     if (
         structured_document_signal
-        and observation.has_asset_type_term
+        and (observation.has_asset_type_term or report_title_signal or report_archive_path_signal)
         and not editorial_surface_signal
     ):
         return True, "report_like_document_page"

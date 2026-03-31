@@ -210,6 +210,44 @@ def test_qualify_publisher_inventory_candidates_accepts_printable_report_page() 
     assert response.decisions[0].reason == "printable_report_page"
 
 
+def test_qualify_publisher_inventory_candidates_accepts_structured_infographic_report_page() -> None:
+    candidate = _candidate(
+        "https://pubmatic.com/reports/quarterly-global-advertising-spend-trends-q4-2025/",
+        "Quarterly Global Advertising Spend Trends: Q4 2025",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Pubmatic",
+            insights_url="https://pubmatic.com/reports/",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    final_title="Q4 2025 Global Advertiser Ad Spend Trends | PubMatic Ad Spend Report",
+                    h1_title="Quarterly Global Advertising Spend Trends: Q4 2025",
+                    has_asset_type_term=True,
+                    has_document_structure=True,
+                    has_editorial_markers=True,
+                )
+            ],
+        ),
+    )
+
+    assert [item.title for item in response.approved_items] == [
+        "Quarterly Global Advertising Spend Trends: Q4 2025"
+    ]
+    assert response.decisions[0].reason == "printable_report_page"
+
+
 def test_qualify_publisher_inventory_candidates_rejects_editorial_blog_post() -> None:
     candidate = _candidate(
         "https://example.com/blog/what-is-agentic-commerce",

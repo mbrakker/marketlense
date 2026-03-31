@@ -345,6 +345,71 @@ def test_discover_publisher_inventory_http_parse_handles_multipage(
     assert_logs_have_required_fields(_events(caplog))
 
 
+def test_select_tab_labels_for_traversal_prefers_report_focused_tabs() -> None:
+    state = service._RenderedInventoryState(
+        page_url="https://example.com/resources/blog",
+        page_title="Example Resources",
+        anchors=[],
+        load_more_labels=[],
+        tab_labels=["All", "Articles", "Research"],
+        active_tab_label="All",
+        report_link_url=None,
+        empty_results_visible=False,
+        reset_filter_labels=[],
+        has_report_filter=False,
+        has_apply_button=False,
+    )
+
+    selected = service._select_tab_labels_for_traversal(
+        "https://example.com/resources/blog",
+        state,
+    )
+
+    assert selected == ["Research"]
+
+
+def test_requires_archive_surface_recovery_for_detail_page_drift() -> None:
+    state = service._RenderedInventoryState(
+        page_url="https://example.com/resources/blog/cloud-cost-guide",
+        page_title="Cloud Cost Guide",
+        anchors=[],
+        load_more_labels=[],
+        tab_labels=[],
+        active_tab_label="",
+        report_link_url=None,
+        empty_results_visible=False,
+        reset_filter_labels=[],
+        has_report_filter=False,
+        has_apply_button=False,
+    )
+
+    assert service._requires_archive_surface_recovery(
+        state=state,
+        page_candidates=[],
+        normalized_url="https://example.com/resources/blog",
+    )
+
+
+def test_terminal_results_page_accepts_page_count_hints() -> None:
+    state = service._RenderedInventoryState(
+        page_url="https://example.com/library",
+        page_title="Example Library",
+        anchors=[],
+        load_more_labels=[],
+        tab_labels=[],
+        active_tab_label="",
+        report_link_url=None,
+        empty_results_visible=False,
+        reset_filter_labels=[],
+        has_report_filter=False,
+        has_apply_button=False,
+        page_index_hint=12,
+        page_total_hint=12,
+    )
+
+    assert service._is_terminal_results_page(state) is True
+
+
 def test_discover_publisher_inventory_direct_pdf_source_short_circuits_browser(
     tmp_path: Path,
     run_context,
