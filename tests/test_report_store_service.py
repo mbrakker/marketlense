@@ -238,6 +238,61 @@ class TestReportStoreService(unittest.TestCase):
                 row,
             )
 
+    def test_record_discovered_report_source_collapses_tracking_query_variants(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_discovered_report_source_tracking_dedupe")
+
+            first = record_discovered_report_source(
+                ReportSourceDiscoveryRecordRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_domain="www.pwc.com",
+                    report_name="CEO Survey",
+                    landing_page_url="https://www.pwc.com/gx/en/issues/c-suite-insights/ceo-survey.html?icid=tla-top-banner",
+                    publisher_name="PricewaterhouseCoopers (PWC)",
+                    source_page_url="https://www.pwc.com/gx/en/issues/c-suite-insights.html",
+                    discovered_at_utc="2026-03-31T00:00:00Z",
+                    discovered_on_page_number=1,
+                ),
+                ctx,
+            )
+            second = record_discovered_report_source(
+                ReportSourceDiscoveryRecordRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_domain="www.pwc.com",
+                    report_name="CEO Survey",
+                    landing_page_url="https://www.pwc.com/gx/en/issues/c-suite-insights/ceo-survey.html",
+                    publisher_name="PricewaterhouseCoopers (PWC)",
+                    source_page_url="https://www.pwc.com/gx/en/issues/c-suite-insights.html",
+                    discovered_at_utc="2026-03-31T00:05:00Z",
+                    discovered_on_page_number=1,
+                ),
+                ctx,
+            )
+
+            self.assertTrue(first.created_new)
+            self.assertFalse(second.created_new)
+            self.assertEqual(first.record_id, second.record_id)
+
+            conn = sqlite3.connect(db_path)
+            try:
+                rows = conn.execute(
+                    """
+                    SELECT landing_page_url, normalized_landing_page_url
+                    FROM report_sources
+                    """
+                ).fetchall()
+            finally:
+                conn.close()
+
+            self.assertEqual(1, len(rows))
+            self.assertEqual(
+                "https://www.pwc.com/gx/en/issues/c-suite-insights/ceo-survey.html",
+                rows[0][1],
+            )
+
     def test_record_report_source_requires_md5(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = os.path.join(tmpdir, "reports.sqlite")

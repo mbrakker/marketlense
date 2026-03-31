@@ -8,11 +8,14 @@ import pytest
 from src.contracts.drive import DriveDownloadResponse, DriveFile, DriveFolderFileListResponse, DriveUploadBytesResponse
 from src.contracts.publisher_inventory import (
     PublisherInventoryBuildRequest,
+    PublisherInventoryCandidateQualityDecision,
+    PublisherInventoryCandidateQualityResponse,
     PublisherInventoryCandidateScreeningDecision,
     PublisherInventoryCandidateScreeningItem,
     PublisherInventoryCandidateScreeningResponse,
     PublisherInventoryDiscoveryRequest,
     PublisherInventoryPage,
+    PublisherInventoryQualifiedCandidateItem,
     PublisherInventoryRawCandidate,
     PublisherInventoryServiceResponse,
     PublisherInventorySettings,
@@ -144,6 +147,61 @@ def _screening_response(*, accepted_urls: set[str], request) -> PublisherInvento
     )
 
 
+def _quality_response(*, accepted_urls: set[str], request) -> PublisherInventoryCandidateQualityResponse:
+    approved_items = []
+    rejected_items = []
+    decisions = []
+    for candidate in request.candidates:
+        accepted = candidate.canonical_url in accepted_urls
+        title = "Resolved New Report" if accepted else candidate.title
+        item = PublisherInventoryCandidateScreeningItem(
+            schema_version="1.0",
+            canonical_url=candidate.canonical_url,
+            title=title,
+            discovered_on_page_number=candidate.discovered_on_page_number,
+            source_page_url=candidate.source_page_url,
+        )
+        if accepted:
+            approved_items.append(
+                PublisherInventoryQualifiedCandidateItem(
+                    schema_version="1.0",
+                    canonical_url=item.canonical_url,
+                    title=item.title,
+                    discovered_on_page_number=item.discovered_on_page_number,
+                    source_page_url=item.source_page_url,
+                )
+            )
+        else:
+            rejected_items.append(
+                PublisherInventoryQualifiedCandidateItem(
+                    schema_version="1.0",
+                    canonical_url=item.canonical_url,
+                    title=item.title,
+                    discovered_on_page_number=item.discovered_on_page_number,
+                    source_page_url=item.source_page_url,
+                )
+            )
+        decisions.append(
+            PublisherInventoryCandidateQualityDecision(
+                schema_version="1.0",
+                canonical_url=candidate.canonical_url,
+                accepted=accepted,
+                reason=(
+                    "qualified_report_asset"
+                    if accepted
+                    else "editorial_article_page"
+                ),
+                resolved_title=title,
+            )
+        )
+    return PublisherInventoryCandidateQualityResponse(
+        schema_version="1.0",
+        approved_items=approved_items,
+        rejected_items=rejected_items,
+        decisions=decisions,
+    )
+
+
 def _snapshot_json(url: str) -> str:
     payload = {
         "schema_version": "1.0",
@@ -232,6 +290,10 @@ def _dependencies(**overrides) -> PublisherInventoryDependencies:
             fromlist=["parse_publisher_inventory_snapshot"],
         ).parse_publisher_inventory_snapshot(payload, source=source, ctx=ctx),
         "screen_publisher_inventory_candidates": lambda req, ctx: _screening_response(
+            accepted_urls={"https://www.activate.com/reports/new-report"},
+            request=req,
+        ),
+        "qualify_publisher_inventory_candidates": lambda req, ctx: _quality_response(
             accepted_urls={"https://www.activate.com/reports/new-report"},
             request=req,
         ),
@@ -345,6 +407,7 @@ def test_run_publisher_inventory_discovery_first_run_uploads_snapshot_and_return
     assert [record.status for record in status_records] == ["passed"]
     assert len(source_records) == 1
     assert source_records[0].landing_page_url == "https://www.activate.com/reports/new-report"
+    assert source_records[0].report_name == "Resolved New Report"
     assert source_records[0].source_page_url == "https://www.activate.com/insights?page=2"
     assert_no_defaulted_required_fields(result)
     assert_logs_have_required_fields(
@@ -470,6 +533,10 @@ def test_run_publisher_inventory_discovery_unchanged_rerun_skips_upload(
                 accepted_urls=set(),
                 request=req,
             ),
+            qualify_publisher_inventory_candidates=lambda req, ctx: _quality_response(
+                accepted_urls=set(),
+                request=req,
+            ),
             get_publisher_inventory_state=lambda req, ctx: _publisher_state(
                 with_route=False, with_snapshot=True, snapshot_sha256=snapshot_sha256
             ),
@@ -566,6 +633,47 @@ def test_run_publisher_inventory_discovery_rejects_non_meaningful_candidates_bef
         ),
         get_publisher_inventory_state=lambda req, ctx: _publisher_state(
             with_route=False, with_snapshot=False
+        ),
+        record_discovered_report_source=lambda req, ctx: (
+            source_records.append(req)
+            or ReportSourceDiscoveryRecordResponse(
+                schema_version="1.0",
+                record_id=1,
+                publisher_name=req.publisher_name,
+                source_domain=req.source_domain,
+                report_name=req.report_name,
+                landing_page_url=req.landing_page_url,
+                source_page_url=req.source_page_url,
+                discovered_at_utc=req.discovered_at_utc,
+                discovered_on_page_number=req.discovered_on_page_number,
+                created_new=True,
+            )
+        ),
+    )
+
+    result = run_publisher_inventory_discovery(
+        PublisherInventoryDiscoveryRequest(
+            schema_version="1.0",
+            insights_url="https://www.activate.com/insights",
+            reports_db="./state/reports.sqlite",
+            settings=_settings(),
+        ),
+        ctx=run_context,
+        dependencies=deps,
+    )
+
+    assert result.new_report_urls == []
+    assert source_records == []
+
+
+def test_run_publisher_inventory_discovery_quality_rejects_editorial_pages_before_recording(
+    run_context,
+):
+    source_records = []
+    deps = _dependencies(
+        qualify_publisher_inventory_candidates=lambda req, ctx: _quality_response(
+            accepted_urls=set(),
+            request=req,
         ),
         record_discovered_report_source=lambda req, ctx: (
             source_records.append(req)

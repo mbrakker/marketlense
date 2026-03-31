@@ -18,11 +18,14 @@ from src.contracts.drive import (
 from src.contracts.publisher_inventory import (
     PublisherInventoryBuildRequest,
     PublisherInventoryBuildResponse,
+    PublisherInventoryCandidateQualityRequest,
+    PublisherInventoryCandidateQualityResponse,
     PublisherInventoryCandidateScreeningItem,
     PublisherInventoryCandidateScreeningRequest,
     PublisherInventoryCandidateScreeningResponse,
     PublisherInventoryDiscoveryRequest,
     PublisherInventoryDiscoveryResult,
+    PublisherInventoryDiffItem,
     PublisherInventoryServiceRequest,
     PublisherInventoryServiceResponse,
     PublisherInventorySnapshot,
@@ -42,6 +45,9 @@ from src.generators.publisher_inventory_generator import (
 )
 from src.generators.publisher_inventory_candidate_screening_generator import (
     screen_publisher_inventory_candidates,
+)
+from src.generators.publisher_inventory_candidate_quality_generator import (
+    qualify_publisher_inventory_candidates,
 )
 from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
 from src.services.drive_service import download_pdf, list_files_in_folder, upload_bytes
@@ -80,6 +86,10 @@ class PublisherInventoryDependencies:
         [PublisherInventoryCandidateScreeningRequest, RunContext],
         PublisherInventoryCandidateScreeningResponse,
     ]
+    qualify_publisher_inventory_candidates: Callable[
+        [PublisherInventoryCandidateQualityRequest, RunContext],
+        PublisherInventoryCandidateQualityResponse,
+    ]
     get_publisher_inventory_state: Callable[
         [PublisherInventoryStateGetRequest, RunContext],
         Optional[PublisherInventoryStateResponse],
@@ -112,6 +122,7 @@ class PublisherInventoryDependencies:
                 parse_publisher_inventory_snapshot(snapshot_json, source=source, ctx=ctx)
             ),
             screen_publisher_inventory_candidates=screen_publisher_inventory_candidates,
+            qualify_publisher_inventory_candidates=qualify_publisher_inventory_candidates,
             get_publisher_inventory_state=get_publisher_inventory_state,
             record_publisher_inventory_state=record_publisher_inventory_state,
             record_publisher_inventory_test_status=record_publisher_inventory_test_status,
@@ -329,6 +340,33 @@ def run_publisher_inventory_discovery(
                 },
             )
         )
+        quality_response = deps.qualify_publisher_inventory_candidates(
+            PublisherInventoryCandidateQualityRequest(
+                schema_version="1.0",
+                publisher_name=publisher_state.publisher_name,
+                insights_url=publisher_state.insights_url,
+                candidates=screening_response.approved_items,
+                settings=request.settings,
+            ),
+            ctx,
+        )
+        qualified_items = quality_response.approved_items
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="publisher_inventory_candidate_quality_complete",
+                module=logger.name,
+                fields={
+                    "publisher_name": publisher_state.publisher_name,
+                    "screened_new_report_count": len(approved_items),
+                    "qualified_new_report_count": len(qualified_items),
+                    "quality_rejected_new_report_count": len(
+                        quality_response.rejected_items
+                    ),
+                },
+            )
+        )
         snapshot_changed = build_response.snapshot_sha256 != (previous_snapshot_sha256 or "")
         snapshot_drive_file_id = previous_snapshot_file_id
         snapshot_drive_file_name = previous_snapshot_file_name
@@ -375,7 +413,7 @@ def run_publisher_inventory_discovery(
                     },
                 )
             )
-        for item in approved_items:
+        for item in qualified_items:
             source_record = run_with_retry(
                 step_name="publisher_inventory_report_source_record",
                 operation=lambda item=item: deps.record_discovered_report_source(
@@ -447,7 +485,15 @@ def run_publisher_inventory_discovery(
             publisher_name=publisher_state.publisher_name,
             insights_url=publisher_state.insights_url,
             normalized_insights_url=normalized_url,
-            new_report_urls=approved_items,
+            new_report_urls=[
+                PublisherInventoryDiffItem(
+                    schema_version="1.0",
+                    canonical_url=item.canonical_url,
+                    title=item.title,
+                    discovered_on_page_number=item.discovered_on_page_number,
+                )
+                for item in qualified_items
+            ],
             current_report_count=build_response.current_report_count,
             previous_report_count=build_response.previous_report_count,
             used_memory_route=discovery_result.used_route_hint,

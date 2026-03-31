@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import logging
 import os
@@ -16,6 +17,10 @@ from urllib.parse import parse_qs, urljoin, urlsplit
 import requests
 
 from src.contracts.publisher_inventory import (
+    PublisherInventoryLandingPageInspectionRequest,
+    PublisherInventoryLandingPageInspectionResponse,
+    PublisherInventoryLandingPageInspectionItem,
+    PublisherInventoryLandingPageObservation,
     PublisherInventoryPage,
     PublisherInventoryRawCandidate,
     PublisherInventoryServiceRequest,
@@ -105,6 +110,117 @@ _GENERIC_CTA_LABELS = {
     "download report",
     "view report",
 }
+_ASSET_TYPE_TERMS = (
+    "report",
+    "reports",
+    "white paper",
+    "whitepaper",
+    "ebook",
+    "study",
+    "research",
+    "benchmark",
+    "market report",
+    "industry report",
+    "survey",
+    "outlook",
+    "playbook",
+    "guide",
+)
+_DOWNLOAD_LANGUAGE_MARKERS = (
+    "download",
+    "get the report",
+    "get report",
+    "access report",
+    "read report",
+    "download the report",
+    "download now",
+    "fill out the form",
+    "request the report",
+    "view the report",
+)
+_GATED_FORM_MARKERS = (
+    "fill out the form",
+    "complete the form",
+    "submit the form",
+    "register to download",
+    "enter your details",
+    "get access",
+    "access the report",
+)
+_DOCUMENT_STRUCTURE_MARKERS = (
+    "contents of the report",
+    "report includes",
+    "executive summary",
+    "table of contents",
+    "methodology",
+    "key findings",
+    "findings",
+    "chapters",
+    "pages",
+)
+_PRINT_LANGUAGE_MARKERS = (
+    "print",
+    "printable",
+    "printer friendly",
+    "save as pdf",
+)
+_PURCHASE_MARKERS = (
+    "buy now",
+    "buy the report",
+    "buy report",
+    "add to cart",
+    "purchase",
+    "price",
+)
+_EDITORIAL_URL_MARKERS = (
+    "/blog/",
+    "/news/",
+    "/press-release",
+    "/press-releases/",
+    "/article/",
+    "/articles/",
+    "/expert-view",
+    "/expert-views/",
+)
+_EDITORIAL_MARKERS = (
+    " min read",
+    "minute read",
+    "share this article",
+    "related articles",
+    "latest articles",
+    "published on",
+    "posted on",
+    "author",
+    "expert view",
+    "blog",
+    "newsroom",
+)
+_RELATED_POST_MARKERS = (
+    "related posts",
+    "related articles",
+    "you may also like",
+    "recommended for you",
+)
+_NEWSLETTER_MARKERS = (
+    "newsletter",
+    "subscribe",
+    "sign up",
+    "stay updated",
+)
+_CONTACT_SALES_MARKERS = (
+    "contact sales",
+    "book a demo",
+    "request a demo",
+    "talk to sales",
+)
+_DEAD_PAGE_MARKERS = (
+    "page not found",
+    "404",
+    "requested url was not found",
+    "the page you requested could not be found",
+    "this page doesn't exist",
+    "this page does not exist",
+)
 
 
 @dataclass(frozen=True)
@@ -186,6 +302,104 @@ class _InventoryHtmlParser(HTMLParser):
         self._anchor_text = []
 
 
+class _LandingPageInspectionHtmlParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.page_title = ""
+        self.og_title = ""
+        self.h1_title = ""
+        self.form_count = 0
+        self.visible_text = ""
+        self.interactive_texts: list[str] = []
+        self._capture_title = False
+        self._capture_h1 = False
+        self._skip_depth = 0
+        self._title_parts: list[str] = []
+        self._h1_parts: list[str] = []
+        self._visible_parts: list[str] = []
+        self._current_interactive_parts: list[str] | None = None
+        self._current_interactive_seed = ""
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        lowered_tag = tag.lower()
+        attr_map = {key.lower(): str(value or "") for key, value in attrs}
+        if lowered_tag in {"script", "style", "noscript"}:
+            self._skip_depth += 1
+            return
+        if lowered_tag == "meta":
+            property_name = str(attr_map.get("property", "")).strip().casefold()
+            meta_name = str(attr_map.get("name", "")).strip().casefold()
+            if property_name == "og:title" or meta_name == "og:title":
+                content = _normalize_text(attr_map.get("content", ""))
+                if content and not self.og_title:
+                    self.og_title = content
+            return
+        if lowered_tag == "title":
+            self._capture_title = True
+            self._title_parts = []
+            return
+        if lowered_tag == "h1" and not self.h1_title:
+            self._capture_h1 = True
+            self._h1_parts = []
+        if lowered_tag == "form":
+            self.form_count += 1
+        if lowered_tag == "input":
+            input_type = str(attr_map.get("type", "")).strip().casefold()
+            if input_type in {"submit", "button"}:
+                label = _normalize_text(
+                    attr_map.get("value", "")
+                    or attr_map.get("aria-label", "")
+                    or attr_map.get("title", "")
+                )
+                if label:
+                    self.interactive_texts.append(label)
+            return
+        if lowered_tag in {"a", "button"}:
+            self._current_interactive_parts = []
+            self._current_interactive_seed = _normalize_text(
+                attr_map.get("aria-label", "") or attr_map.get("title", "")
+            )
+
+    def handle_endtag(self, tag: str) -> None:
+        lowered_tag = tag.lower()
+        if lowered_tag in {"script", "style", "noscript"}:
+            self._skip_depth = max(0, self._skip_depth - 1)
+            return
+        if lowered_tag == "title":
+            self.page_title = _normalize_text(" ".join(self._title_parts))
+            self._capture_title = False
+            self._title_parts = []
+            return
+        if lowered_tag == "h1" and self._capture_h1:
+            self.h1_title = _normalize_text(" ".join(self._h1_parts))
+            self._capture_h1 = False
+            self._h1_parts = []
+            return
+        if lowered_tag in {"a", "button"} and self._current_interactive_parts is not None:
+            label = _normalize_text(" ".join(self._current_interactive_parts))
+            label = label or self._current_interactive_seed
+            if label:
+                self.interactive_texts.append(label)
+            self._current_interactive_parts = None
+            self._current_interactive_seed = ""
+
+    def handle_data(self, data: str) -> None:
+        if self._skip_depth > 0:
+            return
+        normalized = _normalize_text(data)
+        if not normalized:
+            return
+        if self._capture_title:
+            self._title_parts.append(normalized)
+        if self._capture_h1:
+            self._h1_parts.append(normalized)
+        if self._current_interactive_parts is not None:
+            self._current_interactive_parts.append(normalized)
+        if sum(len(part) for part in self._visible_parts) < 20000:
+            self._visible_parts.append(normalized)
+            self.visible_text = " ".join(self._visible_parts)
+
+
 def discover_publisher_inventory(
     request: PublisherInventoryServiceRequest,
     ctx: RunContext,
@@ -237,6 +451,127 @@ def discover_publisher_inventory(
             )
         )
     return _discover_with_browser(request, ctx, normalized_url, use_hint=False)
+
+
+def inspect_publisher_inventory_landing_pages(
+    request: PublisherInventoryLandingPageInspectionRequest,
+    ctx: RunContext,
+) -> PublisherInventoryLandingPageInspectionResponse:
+    if request.timeout_seconds <= 0:
+        raise AppError(
+            code="publisher_inventory_quality_timeout_invalid",
+            message="Landing-page quality-check timeout must be greater than zero",
+            retryable=False,
+        )
+    if request.max_workers <= 0:
+        raise AppError(
+            code="publisher_inventory_quality_workers_invalid",
+            message="Landing-page quality-check max_workers must be at least one",
+            retryable=False,
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_inventory_landing_page_inspection_start",
+            module=logger.name,
+            fields={
+                "publisher_name": request.publisher_name,
+                "item_count": len(request.items),
+                "timeout_seconds": request.timeout_seconds,
+                "max_workers": request.max_workers,
+            },
+        )
+    )
+    if not request.items:
+        response = PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[],
+        )
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="publisher_inventory_landing_page_inspection_complete",
+                module=logger.name,
+                fields={
+                    "publisher_name": request.publisher_name,
+                    "item_count": 0,
+                    "observed_count": 0,
+                },
+            )
+        )
+        return response
+    observations_by_url: dict[str, PublisherInventoryLandingPageObservation] = {}
+    worker_count = min(max(1, request.max_workers), len(request.items))
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        future_map = {
+            executor.submit(
+                _inspect_landing_page_item,
+                item=item,
+                timeout_seconds=request.timeout_seconds,
+                ctx=ctx,
+            ): item
+            for item in request.items
+        }
+        for future in as_completed(future_map):
+            item = future_map[future]
+            try:
+                observation = future.result()
+            except Exception as exc:  # pragma: no cover - defensive guard
+                observation = PublisherInventoryLandingPageObservation(
+                    schema_version="1.0",
+                    canonical_url=item.canonical_url,
+                    source_title=item.title,
+                    final_url=item.canonical_url,
+                    final_title="",
+                    h1_title="",
+                    og_title="",
+                    http_status_code=None,
+                    content_type="",
+                    fetch_error=str(exc),
+                    is_pdf=False,
+                    has_asset_type_term=False,
+                    has_download_language=False,
+                    has_gated_form=False,
+                    has_document_structure=False,
+                    has_price_or_purchase=False,
+                    has_print_language=False,
+                    has_editorial_url_pattern=_has_editorial_url_pattern(
+                        item.canonical_url
+                    ),
+                    has_editorial_markers=False,
+                    has_related_posts=False,
+                    has_newsletter_cta=False,
+                    has_contact_sales_cta=False,
+                    has_dead_page_marker=True,
+                )
+            observations_by_url[item.canonical_url] = observation
+    observations = [
+        observations_by_url[item.canonical_url] for item in request.items
+    ]
+    response = PublisherInventoryLandingPageInspectionResponse(
+        schema_version="1.0",
+        observations=observations,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_inventory_landing_page_inspection_complete",
+            module=logger.name,
+            fields={
+                "publisher_name": request.publisher_name,
+                "item_count": len(request.items),
+                "observed_count": len(response.observations),
+                "dead_page_count": sum(
+                    1 for item in response.observations if item.has_dead_page_marker
+                ),
+                "pdf_count": sum(1 for item in response.observations if item.is_pdf),
+            },
+        )
+    )
+    return response
 
 
 def _discover_direct_pdf_source(
@@ -2139,6 +2474,245 @@ def _extract_browser_http_supplement_candidates(
         )
     )
     return candidates
+
+
+def _inspect_landing_page_item(
+    *,
+    item: PublisherInventoryLandingPageInspectionItem,
+    timeout_seconds: float,
+    ctx: RunContext,
+) -> PublisherInventoryLandingPageObservation:
+    normalized_url = _normalize_absolute_url(item.canonical_url)
+    if not normalized_url:
+        return PublisherInventoryLandingPageObservation(
+            schema_version="1.0",
+            canonical_url=item.canonical_url,
+            source_title=item.title,
+            final_url=item.canonical_url,
+            final_title="",
+            h1_title="",
+            og_title="",
+            http_status_code=None,
+            content_type="",
+            fetch_error="invalid_candidate_url",
+            is_pdf=False,
+            has_asset_type_term=False,
+            has_download_language=False,
+            has_gated_form=False,
+            has_document_structure=False,
+            has_price_or_purchase=False,
+            has_print_language=False,
+            has_editorial_url_pattern=_has_editorial_url_pattern(item.canonical_url),
+            has_editorial_markers=False,
+            has_related_posts=False,
+            has_newsletter_cta=False,
+            has_contact_sales_cta=False,
+            has_dead_page_marker=True,
+        )
+    headers = {"User-Agent": "MarketLensePublisherInventory/1.0"}
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_inventory_landing_page_request",
+            module=logger.name,
+            fields={"candidate_url": normalized_url, "timeout_seconds": timeout_seconds},
+        )
+    )
+    try:
+        response = requests.get(
+            normalized_url,
+            timeout=timeout_seconds,
+            headers=headers,
+            allow_redirects=True,
+            stream=True,
+        )
+    except requests.RequestException as exc:
+        return PublisherInventoryLandingPageObservation(
+            schema_version="1.0",
+            canonical_url=item.canonical_url,
+            source_title=item.title,
+            final_url=normalized_url,
+            final_title="",
+            h1_title="",
+            og_title="",
+            http_status_code=None,
+            content_type="",
+            fetch_error=str(exc),
+            is_pdf=False,
+            has_asset_type_term=False,
+            has_download_language=False,
+            has_gated_form=False,
+            has_document_structure=False,
+            has_price_or_purchase=False,
+            has_print_language=False,
+            has_editorial_url_pattern=_has_editorial_url_pattern(normalized_url),
+            has_editorial_markers=False,
+            has_related_posts=False,
+            has_newsletter_cta=False,
+            has_contact_sales_cta=False,
+            has_dead_page_marker=True,
+        )
+    final_url = _normalize_absolute_url(str(response.url or normalized_url)) or normalized_url
+    content_type = str(response.headers.get("Content-Type", "") or "").strip()
+    status_code = int(response.status_code)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_inventory_landing_page_response",
+            module=logger.name,
+            fields={
+                "candidate_url": normalized_url,
+                "final_url": final_url,
+                "status_code": status_code,
+                "content_type": content_type,
+            },
+        )
+    )
+    lowered_content_type = content_type.casefold()
+    if final_url.casefold().endswith(".pdf") or "application/pdf" in lowered_content_type:
+        response.close()
+        return PublisherInventoryLandingPageObservation(
+            schema_version="1.0",
+            canonical_url=item.canonical_url,
+            source_title=item.title,
+            final_url=final_url,
+            final_title="",
+            h1_title="",
+            og_title="",
+            http_status_code=status_code,
+            content_type=content_type,
+            fetch_error="",
+            is_pdf=status_code < 400,
+            has_asset_type_term=True,
+            has_download_language=True,
+            has_gated_form=False,
+            has_document_structure=False,
+            has_price_or_purchase=False,
+            has_print_language=False,
+            has_editorial_url_pattern=_has_editorial_url_pattern(final_url),
+            has_editorial_markers=False,
+            has_related_posts=False,
+            has_newsletter_cta=False,
+            has_contact_sales_cta=False,
+            has_dead_page_marker=status_code >= 400,
+        )
+    try:
+        html = response.text or ""
+    finally:
+        response.close()
+    parser = _LandingPageInspectionHtmlParser()
+    try:
+        parser.feed(html)
+    except Exception:
+        parser = _LandingPageInspectionHtmlParser()
+    combined_text = " ".join(
+        part
+        for part in (
+            item.title,
+            parser.page_title,
+            parser.h1_title,
+            parser.og_title,
+            parser.visible_text,
+            " ".join(parser.interactive_texts),
+            final_url,
+        )
+        if part
+    )
+    combined_lower = combined_text.casefold()
+    dead_page_marker = status_code >= 400 or _contains_any_marker(
+        combined_lower, _DEAD_PAGE_MARKERS
+    )
+    observation = PublisherInventoryLandingPageObservation(
+        schema_version="1.0",
+        canonical_url=item.canonical_url,
+        source_title=item.title,
+        final_url=final_url,
+        final_title=parser.page_title,
+        h1_title=parser.h1_title,
+        og_title=parser.og_title,
+        http_status_code=status_code,
+        content_type=content_type,
+        fetch_error="",
+        is_pdf=False,
+        has_asset_type_term=_contains_any_marker(combined_lower, _ASSET_TYPE_TERMS),
+        has_download_language=(
+            ".pdf" in combined_lower
+            or _contains_any_marker(combined_lower, _DOWNLOAD_LANGUAGE_MARKERS)
+        ),
+        has_gated_form=parser.form_count > 0
+        and (
+            _contains_any_marker(combined_lower, _GATED_FORM_MARKERS)
+            or (
+                _contains_any_marker(combined_lower, _DOWNLOAD_LANGUAGE_MARKERS)
+                and _contains_any_marker(combined_lower, _ASSET_TYPE_TERMS)
+            )
+        ),
+        has_document_structure=_contains_any_marker(
+            combined_lower, _DOCUMENT_STRUCTURE_MARKERS
+        ),
+        has_price_or_purchase=_contains_any_marker(combined_lower, _PURCHASE_MARKERS),
+        has_print_language=_contains_any_marker(combined_lower, _PRINT_LANGUAGE_MARKERS),
+        has_editorial_url_pattern=_has_editorial_url_pattern(final_url),
+        has_editorial_markers=_contains_any_marker(combined_lower, _EDITORIAL_MARKERS),
+        has_related_posts=_contains_any_marker(combined_lower, _RELATED_POST_MARKERS),
+        has_newsletter_cta=_contains_any_marker(combined_lower, _NEWSLETTER_MARKERS),
+        has_contact_sales_cta=_contains_any_marker(
+            combined_lower, _CONTACT_SALES_MARKERS
+        ),
+        has_dead_page_marker=dead_page_marker,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_inventory_landing_page_observation",
+            module=logger.name,
+            fields={
+                "candidate_url": normalized_url,
+                "final_url": observation.final_url,
+                "status_code": observation.http_status_code,
+                "is_pdf": observation.is_pdf,
+                "has_asset_type_term": observation.has_asset_type_term,
+                "has_download_language": observation.has_download_language,
+                "has_gated_form": observation.has_gated_form,
+                "has_document_structure": observation.has_document_structure,
+                "has_price_or_purchase": observation.has_price_or_purchase,
+                "has_print_language": observation.has_print_language,
+                "has_editorial_url_pattern": observation.has_editorial_url_pattern,
+                "has_editorial_markers": observation.has_editorial_markers,
+                "has_related_posts": observation.has_related_posts,
+                "has_newsletter_cta": observation.has_newsletter_cta,
+                "has_contact_sales_cta": observation.has_contact_sales_cta,
+                "has_dead_page_marker": observation.has_dead_page_marker,
+            },
+        )
+    )
+    return observation
+
+
+def _contains_any_marker(value: str, markers: tuple[str, ...]) -> bool:
+    lowered_value = str(value or "").casefold()
+    return any(marker in lowered_value for marker in markers)
+
+
+def _has_editorial_url_pattern(url: str) -> bool:
+    lowered_url = str(url or "").strip().casefold()
+    if any(marker in lowered_url for marker in _EDITORIAL_URL_MARKERS):
+        return True
+    segments = [segment for segment in urlsplit(lowered_url).path.split("/") if segment]
+    if (
+        len(segments) >= 3
+        and len(segments[0]) == 4
+        and segments[0].isdigit()
+        and len(segments[1]) in {1, 2}
+        and segments[1].isdigit()
+        and len(segments[2]) in {1, 2}
+        and segments[2].isdigit()
+    ):
+        return True
+    return False
 
 
 def _resolve_next_page_url(

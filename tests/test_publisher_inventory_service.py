@@ -9,6 +9,8 @@ from types import SimpleNamespace
 import pytest
 
 from src.contracts.publisher_inventory import (
+    PublisherInventoryLandingPageInspectionItem,
+    PublisherInventoryLandingPageInspectionRequest,
     PublisherInventoryServiceRequest,
     PublisherInventorySettings,
 )
@@ -17,14 +19,25 @@ from src.utils.errors import AppError
 
 
 class _FakeResponse:
-    def __init__(self, *, url: str, text: str, status_code: int = 200) -> None:
+    def __init__(
+        self,
+        *,
+        url: str,
+        text: str,
+        status_code: int = 200,
+        headers: dict[str, str] | None = None,
+    ) -> None:
         self.url = url
         self.text = text
         self.status_code = status_code
+        self.headers = headers or {"Content-Type": "text/html; charset=utf-8"}
 
     def raise_for_status(self) -> None:
         if self.status_code >= 400:
             raise RuntimeError(f"status={self.status_code}")
+
+    def close(self) -> None:
+        return None
 
 
 class _FakeBrowserPage:
@@ -1564,3 +1577,146 @@ def test_discover_publisher_inventory_browser_timeout_is_typed_error(
         code="publisher_inventory_browser_timeout",
         retryable=True,
     )
+
+
+def test_inspect_publisher_inventory_landing_pages_detects_gated_report_signals(
+    run_context,
+    external_boundary_mocks_only,
+    caplog,
+    assert_logs_have_required_fields,
+) -> None:
+    html = """
+    <html>
+      <head>
+        <title>Greek eGrocery S1 2024 | Convert Group</title>
+        <meta property="og:title" content="Greek eGrocery S1 2024" />
+      </head>
+      <body>
+        <h1>Greek eGrocery S1 2024</h1>
+        <p>You can download the report by filling out the form.</p>
+        <p>Contents of the report include market size, trends, and key findings.</p>
+        <form><input type="email" /><input type="submit" value="Download report" /></form>
+      </body>
+    </html>
+    """
+    external_boundary_mocks_only.setattr(
+        service.requests,
+        "get",
+        lambda *args, **kwargs: _FakeResponse(
+            url="https://convertgroup.com/reports_posts/greek-egrocery-s1-2024/",
+            text=html,
+        ),
+    )
+    caplog.set_level(logging.INFO, logger="market_lense.publisher_inventory_service")
+
+    response = service.inspect_publisher_inventory_landing_pages(
+        PublisherInventoryLandingPageInspectionRequest(
+            schema_version="1.0",
+            publisher_name="Convert Group",
+            items=[
+                PublisherInventoryLandingPageInspectionItem(
+                    schema_version="1.0",
+                    canonical_url="https://convertgroup.com/reports_posts/greek-egrocery-s1-2024/",
+                    title="Download report",
+                    discovered_on_page_number=1,
+                    source_page_url="https://convertgroup.com/reports",
+                )
+            ],
+            timeout_seconds=5.0,
+            max_workers=2,
+        ),
+        run_context,
+    )
+
+    observation = response.observations[0]
+    assert observation.h1_title == "Greek eGrocery S1 2024"
+    assert observation.has_asset_type_term is True
+    assert observation.has_download_language is True
+    assert observation.has_gated_form is True
+    assert observation.has_document_structure is True
+    records = [
+        json.loads(record.message)
+        for record in caplog.records
+        if record.name == "market_lense.publisher_inventory_service"
+    ]
+    assert_logs_have_required_fields(records)
+
+
+def test_inspect_publisher_inventory_landing_pages_marks_dead_pages(
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    html = """
+    <html><head><title>Page not found | Example</title></head><body><h1>Page not found</h1></body></html>
+    """
+    external_boundary_mocks_only.setattr(
+        service.requests,
+        "get",
+        lambda *args, **kwargs: _FakeResponse(
+            url="https://example.com/resources/missing-report",
+            text=html,
+            status_code=404,
+        ),
+    )
+
+    response = service.inspect_publisher_inventory_landing_pages(
+        PublisherInventoryLandingPageInspectionRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            items=[
+                PublisherInventoryLandingPageInspectionItem(
+                    schema_version="1.0",
+                    canonical_url="https://example.com/resources/missing-report",
+                    title="Missing Report",
+                    discovered_on_page_number=1,
+                    source_page_url="https://example.com/insights",
+                )
+            ],
+            timeout_seconds=5.0,
+            max_workers=1,
+        ),
+        run_context,
+    )
+
+    observation = response.observations[0]
+    assert observation.http_status_code == 404
+    assert observation.has_dead_page_marker is True
+
+
+def test_inspect_publisher_inventory_landing_pages_detects_direct_pdf_assets(
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    external_boundary_mocks_only.setattr(
+        service.requests,
+        "get",
+        lambda *args, **kwargs: _FakeResponse(
+            url="https://example.com/report.pdf",
+            text="",
+            headers={"Content-Type": "application/pdf"},
+        ),
+    )
+
+    response = service.inspect_publisher_inventory_landing_pages(
+        PublisherInventoryLandingPageInspectionRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            items=[
+                PublisherInventoryLandingPageInspectionItem(
+                    schema_version="1.0",
+                    canonical_url="https://example.com/report.pdf",
+                    title="2026 Outlook",
+                    discovered_on_page_number=1,
+                    source_page_url="https://example.com/insights",
+                )
+            ],
+            timeout_seconds=5.0,
+            max_workers=1,
+        ),
+        run_context,
+    )
+
+    observation = response.observations[0]
+    assert observation.is_pdf is True
+    assert observation.has_download_language is True
+    assert observation.has_dead_page_marker is False

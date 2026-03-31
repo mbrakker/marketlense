@@ -783,6 +783,9 @@ class TestConfigService(unittest.TestCase):
             "publisher_inventory/meaningful_candidate_screen",
             settings.candidate_screening_prompt_namespace,
         )
+        self.assertTrue(settings.candidate_quality_check_enabled)
+        self.assertEqual(15.0, settings.candidate_quality_check_timeout_seconds)
+        self.assertEqual(6, settings.candidate_quality_check_max_workers)
         self.assertEqual("openai-key", settings.openai_api_key)
         self.assertEqual(
             Path(tmp_dir, "out", "browser_downloads").resolve(),

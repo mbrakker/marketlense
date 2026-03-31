@@ -173,6 +173,10 @@ publisher_discovery:
     timeout_seconds: 120
     batch_size: 20
     prompt_namespace: "publisher_inventory/meaningful_candidate_screen"
+  candidate_quality_check:
+    enabled: true
+    timeout_seconds: 15
+    max_workers: 6
 
 analysis:
   vector_store_keep: true

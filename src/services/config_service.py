@@ -1949,6 +1949,7 @@ def load_publisher_inventory_settings(
     browser_retry_cfg = browser_download.get("retry", {}) or {}
     publisher_discovery = data.get("publisher_discovery", {}) or {}
     candidate_screening_cfg = publisher_discovery.get("candidate_screening", {}) or {}
+    candidate_quality_cfg = publisher_discovery.get("candidate_quality_check", {}) or {}
     analysis_cfg = data.get("analysis", {}) or {}
     cost_cfg = data.get("cost", {}) or {}
     retry_cfg = publisher_discovery.get("retry", {}) or browser_retry_cfg
@@ -2208,6 +2209,34 @@ def load_publisher_inventory_settings(
             or _env_value("PUBLISHER_DISCOVERY_CANDIDATE_SCREENING_PROMPT_NAMESPACE")
             or DEFAULT_PUBLISHER_INVENTORY_CANDIDATE_SCREENING_PROMPT_NAMESPACE
         ).strip(),
+        candidate_quality_check_enabled=_to_bool(
+            candidate_quality_cfg.get("enabled")
+            if not _is_missing(candidate_quality_cfg.get("enabled"))
+            else _env_value("PUBLISHER_DISCOVERY_CANDIDATE_QUALITY_CHECK_ENABLED"),
+            True,
+        ),
+        candidate_quality_check_timeout_seconds=max(
+            _to_float(
+                candidate_quality_cfg.get("timeout_seconds")
+                if not _is_missing(candidate_quality_cfg.get("timeout_seconds"))
+                else _env_value(
+                    "PUBLISHER_DISCOVERY_CANDIDATE_QUALITY_CHECK_TIMEOUT_SECONDS"
+                ),
+                15.0,
+            ),
+            1.0,
+        ),
+        candidate_quality_check_max_workers=max(
+            _to_int(
+                candidate_quality_cfg.get("max_workers")
+                if not _is_missing(candidate_quality_cfg.get("max_workers"))
+                else _env_value(
+                    "PUBLISHER_DISCOVERY_CANDIDATE_QUALITY_CHECK_MAX_WORKERS"
+                ),
+                6,
+            ),
+            1,
+        ),
         cost_ledger_path=analysis_settings["cost_ledger_path"],
         cost_daily_path=analysis_settings["cost_daily_path"],
         model_pricing=analysis_settings["model_pricing"],
@@ -2259,6 +2288,9 @@ def load_publisher_inventory_settings(
                 "candidate_screening_timeout_seconds": settings.candidate_screening_timeout_seconds,
                 "candidate_screening_batch_size": settings.candidate_screening_batch_size,
                 "candidate_screening_prompt_namespace": settings.candidate_screening_prompt_namespace,
+                "candidate_quality_check_enabled": settings.candidate_quality_check_enabled,
+                "candidate_quality_check_timeout_seconds": settings.candidate_quality_check_timeout_seconds,
+                "candidate_quality_check_max_workers": settings.candidate_quality_check_max_workers,
                 "llm_retry_retries": llm_runtime["llm_retry_retries"],
                 "llm_retry_base_delay_seconds": llm_runtime["llm_retry_base_delay_seconds"],
                 "llm_retry_backoff_step_seconds": llm_runtime["llm_retry_backoff_step_seconds"],
