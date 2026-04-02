@@ -30,6 +30,46 @@ logger = logging.getLogger("market_lense.browser_report_download_service")
 _ROUTE_KINDS = {"pdf_download", "email_delivery"}
 _PDF_SIGNATURE = b"%PDF-"
 _PDF_URL_PATTERN = re.compile(r"""(?P<quote>['"])(?P<url>[^'"]+?\.pdf(?:\?[^'"]*)?)(?P=quote)""", re.IGNORECASE)
+_ROUTE_SUMMARY_ACTION_MARKERS = (
+    "open",
+    "click",
+    "fill",
+    "enter",
+    "submit",
+    "select",
+    "choose",
+    "use",
+    "wait",
+    "download",
+    "inspect",
+    "apply",
+    "expand",
+    "navigate",
+)
+_ROUTE_SUMMARY_TARGET_MARKERS = (
+    "button",
+    "link",
+    "page",
+    "form",
+    "field",
+    "email",
+    "report",
+    "pdf",
+    "cta",
+    "tab",
+    "filter",
+    "modal",
+    "screen",
+    "prompt",
+)
+_PDF_MIME_TYPES = {
+    "application/pdf",
+    "application/x-pdf",
+}
+_PDF_BINARY_FALLBACK_MIME_TYPES = {
+    "application/octet-stream",
+    "binary/octet-stream",
+}
 
 
 class _BrowserUseAgentResult(BaseModel):
@@ -245,6 +285,16 @@ def download_report_with_browser_use(
                 retryable=True,
                 context={"normalized_url": normalized_url},
             )
+        if not _message_indicates_email_delivery(agent_result.post_submit_message):
+            raise AppError(
+                code="browser_download_email_confirmation_missing",
+                message="browser-use identified an email-delivery route but did not capture a visible delivery confirmation",
+                retryable=True,
+                context={
+                    "normalized_url": normalized_url,
+                    "post_submit_message": agent_result.post_submit_message,
+                },
+            )
 
     route_summary = str(agent_result.route_summary or "").strip()
     if not route_summary:
@@ -253,6 +303,16 @@ def download_report_with_browser_use(
             message="browser-use returned an empty route summary",
             retryable=True,
             context={"normalized_url": normalized_url},
+        )
+    if not _is_semantic_route_summary(route_summary):
+        raise AppError(
+            code="browser_download_route_summary_too_weak",
+            message="browser-use returned a route summary without enough reusable action detail",
+            retryable=True,
+            context={
+                "normalized_url": normalized_url,
+                "route_summary": route_summary,
+            },
         )
 
     final_url = str(
@@ -264,10 +324,16 @@ def download_report_with_browser_use(
         delivery_email=delivery_email_value,
     )
     downloaded_file_name = downloaded_path.name if downloaded_path else None
-    downloaded_mime_type = (
-        str(agent_result.downloaded_mime_type).strip()
+    downloaded_mime_type = _resolve_downloaded_mime_type(
+        reported_mime_type=str(agent_result.downloaded_mime_type).strip()
         if agent_result.downloaded_mime_type
-        else _guess_mime_type(downloaded_path)
+        else None,
+        downloaded_path=downloaded_path,
+    )
+    _validate_downloaded_pdf_artifact(
+        downloaded_path=downloaded_path,
+        downloaded_mime_type=downloaded_mime_type,
+        normalized_url=normalized_url,
     )
     downloaded_size_bytes = downloaded_path.stat().st_size if downloaded_path else None
 
@@ -435,6 +501,23 @@ def _normalize_encountered_form_fields(raw_fields: list[str]) -> list[str]:
         seen.add(dedupe_key)
         normalized.append(token)
     return normalized
+
+
+def _is_semantic_route_summary(route_summary: str) -> bool:
+    normalized = " ".join(str(route_summary or "").split()).strip()
+    if not normalized:
+        return False
+    lowered = normalized.casefold()
+    tokens = [token for token in re.split(r"[^a-z0-9]+", lowered) if token]
+    if len(tokens) < 4:
+        return False
+    has_action = any(marker in lowered for marker in _ROUTE_SUMMARY_ACTION_MARKERS)
+    has_target = any(marker in lowered for marker in _ROUTE_SUMMARY_TARGET_MARKERS)
+    if not has_action or not has_target:
+        return False
+    return len(tokens) >= 6 or bool(re.search(r"\b(first|second|then|after|until|when|once|final)\b", lowered)) or any(
+        marker in lowered for marker in ("completion", "finish", "saved", "sent", "submitted")
+    )
 
 
 def _resolve_delivery_email_value(
@@ -644,6 +727,63 @@ def _guess_mime_type(downloaded_path: Path | None) -> str | None:
     if downloaded_path.suffix.lower() == ".pdf":
         return "application/pdf"
     return None
+
+
+def _resolve_downloaded_mime_type(
+    *,
+    reported_mime_type: str | None,
+    downloaded_path: Path | None,
+) -> str | None:
+    reported = str(reported_mime_type or "").strip().lower() or None
+    guessed = _guess_mime_type(downloaded_path)
+    if guessed == "application/pdf":
+        if reported and reported not in _PDF_MIME_TYPES and reported not in _PDF_BINARY_FALLBACK_MIME_TYPES:
+            return reported
+        return guessed
+    return reported or guessed
+
+
+def _validate_downloaded_pdf_artifact(
+    *,
+    downloaded_path: Path | None,
+    downloaded_mime_type: str | None,
+    normalized_url: str,
+) -> None:
+    if downloaded_path is None:
+        return
+    if not _is_pdf_file(downloaded_path):
+        raise AppError(
+            code="browser_download_invalid_pdf",
+            message="Downloaded file is not a valid PDF",
+            retryable=True,
+            context={
+                "normalized_url": normalized_url,
+                "downloaded_file_path": str(downloaded_path),
+            },
+        )
+    lowered_mime = str(downloaded_mime_type or "").strip().lower()
+    if lowered_mime and lowered_mime not in _PDF_MIME_TYPES and lowered_mime not in _PDF_BINARY_FALLBACK_MIME_TYPES:
+        raise AppError(
+            code="browser_download_invalid_pdf_metadata",
+            message="Downloaded file metadata does not match a PDF artifact",
+            retryable=True,
+            context={
+                "normalized_url": normalized_url,
+                "downloaded_file_path": str(downloaded_path),
+                "downloaded_mime_type": downloaded_mime_type,
+            },
+        )
+    if downloaded_path.suffix.lower() != ".pdf" and lowered_mime not in _PDF_MIME_TYPES and lowered_mime not in _PDF_BINARY_FALLBACK_MIME_TYPES:
+        raise AppError(
+            code="browser_download_invalid_pdf_metadata",
+            message="Downloaded file is missing PDF-identifying metadata",
+            retryable=True,
+            context={
+                "normalized_url": normalized_url,
+                "downloaded_file_path": str(downloaded_path),
+                "downloaded_mime_type": downloaded_mime_type,
+            },
+        )
 
 
 def _is_pdf_file(path: Path) -> bool:

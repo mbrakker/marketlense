@@ -8,85 +8,61 @@ This review identifies logical inconsistencies and concrete improvements for qua
 - `src/orchestrators/report_download_orchestrator.py`
 - `src/services/browser_report_download_service.py`
 
-## 20 Logical Inconsistencies & Reliability Improvements
+## 14 Logical Inconsistencies & Reliability Improvements
 
 1. **Route memory is keyed by normalized URL only, which can overfit to path/query variants.**
    - Risk: a remembered route for one campaign/report URL can be reused incorrectly for a semantically different page under the same normalized form.
    - Improve: store memory keys at multiple scopes (`exact_url`, `path_prefix`, `host`) and score reuse confidence before applying route hints.
 
-2. **Memory-route failures are swallowed broadly (`except Exception`) before fallback.**
-   - Risk: permanent validation/configuration failures are treated like transient route misses, causing noisy retries and hiding root cause classes.
-   - Improve: fallback only on explicitly retryable `AppError`; re-raise non-retryable failures.
-
-3. **HTTP discovery treats any non-empty candidate list as success without candidate quality scoring.**
+2. **HTTP discovery treats any non-empty candidate list as success without candidate quality scoring.**
    - Risk: weak keyword matches can dominate output and produce high false positives on blog/news pages.
    - Improve: add candidate confidence scoring and minimum quality threshold before accepting `http_parse` route.
 
-4. **Pagination traversal relies mainly on next-link heuristics and max page count, with no duplicate-content stop rule.**
+3. **Pagination traversal relies mainly on next-link heuristics and max page count, with no duplicate-content stop rule.**
    - Risk: infinite-ish loops through cosmetic URL changes or near-duplicate pages.
    - Improve: stop on repeated page fingerprint/hash, not only repeated URL.
 
-5. **Browser inventory traversal can return incomplete logical route summaries.**
+4. **Browser inventory traversal can return incomplete logical route summaries.**
    - Risk: route summaries are free text and may omit decisive interactions; memory reuse becomes brittle.
    - Improve: persist a structured route trace (`steps[]`, selectors/labels, outcomes) alongside human summary.
 
-6. **Discovery route hints are free text with no schema guardrail.**
+5. **Discovery route hints are free text with no schema guardrail.**
    - Risk: stale or ambiguous instructions degrade success and can mislead browser agent behavior.
    - Improve: use typed route-hint contracts (action type + target + optional guard conditions).
 
-7. **Snapshot hash intentionally ignores some volatile fields, but no explicit compatibility marker exists.**
+6. **Snapshot hash intentionally ignores some volatile fields, but no explicit compatibility marker exists.**
    - Risk: future hash-policy changes silently alter change detection semantics.
    - Improve: add `snapshot_hash_policy_version` into state and logs.
 
-8. **Previous snapshot loading uses Drive listing fallback but lacks stale-version compatibility checks.**
+7. **Previous snapshot loading uses Drive listing fallback but lacks stale-version compatibility checks.**
    - Risk: older snapshot shapes can parse but semantically mismatch current diff logic.
    - Improve: enforce schema-version compatibility matrix with explicit migration adapters.
 
-9. **Candidate screening happens after snapshot build, but approved/rejected decisions are not persisted as first-class audit rows.**
+8. **Candidate screening happens after snapshot build, but approved/rejected decisions are not persisted as first-class audit rows.**
    - Risk: hard to diagnose why expected items were dropped.
    - Improve: store screening decisions (`accepted`, `reason`, model/request id, prompt hash) per candidate.
 
-10. **`record_discovered_report_source` is retried, but there is no explicit idempotency token in call contract.**
+9. **`record_discovered_report_source` is retried, but there is no explicit idempotency token in call contract.**
     - Risk: retry storms can still duplicate side effects if DB uniqueness constraints drift.
     - Improve: pass deterministic idempotency key (`publisher + canonical_url + discovered_at_bucket`) and assert at storage layer.
 
-11. **`publisher_inventory_http_empty` is retryable by default even for structural no-inventory sites.**
-    - Risk: repeated retries on deterministic empties waste time/cost.
-    - Improve: classify empty outcomes into `expected_empty` (non-retryable) vs transient parse failures (retryable).
-
-12. **Browser discovery supplements via HTTP candidate extraction when browser candidate set is empty.**
+10. **Browser discovery supplements via HTTP candidate extraction when browser candidate set is empty.**
     - Risk: route kind says `browser_render` but effective extraction logic may be HTTP-derived, obscuring provenance.
     - Improve: annotate candidate provenance (`browser_dom`, `http_supplement`) and log proportion.
 
-13. **Download orchestrator records route memory before validating long-term route reliability.**
+11. **Download orchestrator records route memory before validating long-term route reliability.**
     - Risk: one-off flaky route can pollute memory and reduce next-run success.
     - Improve: add route-health counters and require N successful confirmations before promoting to primary memory route.
 
-14. **Download flow accepts route summary if non-empty, without quality constraints.**
-    - Risk: trivial summaries (“clicked button”) are unusable for future runs.
-    - Improve: validate minimum semantic content (action + target + terminal condition).
-
-15. **Email-delivery outcomes depend on model-reported `email_submission_completed` rather than deterministic DOM confirmation checks.**
-    - Risk: model hallucination can falsely classify as `email_requested`.
-    - Improve: require deterministic signal checks (success toast regex, response status, or form state transition evidence).
-
-16. **Downloaded-file resolution includes fallback fetch from final URL, which can mask browser route defects.**
+12. **Downloaded-file resolution includes fallback fetch from final URL, which can mask browser route defects.**
     - Risk: pipeline reports success even if browser flow failed but direct fetch happened later.
     - Improve: separate outcomes (`browser_downloaded` vs `http_recovered`) and gate memory-learning only on true browser success.
 
-17. **MIME/type validation is permissive around model-provided metadata.**
-    - Risk: non-PDF artifacts can enter pipeline when extension looks correct.
-    - Improve: enforce strong PDF signature and cross-check MIME + extension + magic bytes before marking `downloaded`.
-
-18. **Form identity-field auto-upsert is unconditional after every run.**
-    - Risk: noisy/low-value fields bloat identity config and degrade form-filling precision.
-    - Improve: upsert only fields passing quality filters (dedup normalization, min length, not generic placeholders).
-
-19. **Retry policy is shared for heterogeneous steps but without per-step tuning.**
+13. **Retry policy is shared for heterogeneous steps but without per-step tuning.**
     - Risk: DB writes, browser actions, and LLM calls need different retry/backoff behavior.
     - Improve: define per-step retry policies with bounded budgets and error-code mappings.
 
-20. **Cross-run reproducibility is limited by incomplete browser execution telemetry.**
+14. **Cross-run reproducibility is limited by incomplete browser execution telemetry.**
     - Risk: difficult postmortems when route regressions appear.
     - Improve: persist deterministic artifacts for each run (visited URL timeline, chosen elements, screenshots-on-failure, normalized exception taxonomy).
 
@@ -106,10 +82,10 @@ This review identifies logical inconsistencies and concrete improvements for qua
 ## Suggested Implementation Order (High ROI)
 
 1. Typed route hints + structured route traces.
-2. Retry/error taxonomy hardening (retryable vs non-retryable fallback behavior).
-3. Candidate quality/provenance scoring before snapshot acceptance.
-4. Deterministic email-confirmation and download outcome hardening.
-5. Route-memory health scoring and promotion thresholds.
+2. Candidate quality/provenance scoring before snapshot acceptance.
+3. Route-memory health scoring and promotion thresholds.
+4. Snapshot compatibility/version markers.
+5. Deterministic browser telemetry and artifact capture.
 
 ## Pure Logical Analysis: What To Check and In Which Algorithmic Order
 

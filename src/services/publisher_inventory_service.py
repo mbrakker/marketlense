@@ -744,7 +744,7 @@ def _discover_with_http(
         raise AppError(
             code="publisher_inventory_http_empty",
             message="Direct HTTP parsing found no valid report inventory items",
-            retryable=True,
+            retryable=False,
             context={"normalized_url": normalized_url},
         )
 

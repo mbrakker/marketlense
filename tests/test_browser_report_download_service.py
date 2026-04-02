@@ -436,6 +436,129 @@ def test_download_report_with_browser_use_reclassifies_email_message(
     assert_no_defaulted_required_fields(response)
 
 
+def test_download_report_with_browser_use_requires_semantic_route_summary(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+    assert_app_error,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="Clicked button.",
+        create_pdf=True,
+        email_submission_completed=None,
+    )
+    external_boundary_mocks_only.setattr(
+        service,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    with pytest.raises(AppError) as excinfo:
+        service.download_report_with_browser_use(
+            BrowserReportDownloadRequest(
+                schema_version="1.0",
+                url="https://example.com/report",
+                settings=_settings(tmp_path),
+            ),
+            run_context,
+        )
+
+    assert_app_error(
+        excinfo.value,
+        code="browser_download_route_summary_too_weak",
+        retryable=True,
+    )
+
+
+def test_download_report_with_browser_use_requires_visible_email_confirmation(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+    assert_app_error,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary="Open the form, enter the configured email, submit it, and wait for the confirmation message.",
+        create_pdf=False,
+        email_submission_completed=True,
+    )
+    external_boundary_mocks_only.setattr(
+        service,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    with pytest.raises(AppError) as excinfo:
+        service.download_report_with_browser_use(
+            BrowserReportDownloadRequest(
+                schema_version="1.0",
+                url="https://example.com/form-report",
+                settings=_settings(tmp_path),
+            ),
+            run_context,
+        )
+
+    assert_app_error(
+        excinfo.value,
+        code="browser_download_email_confirmation_missing",
+        retryable=True,
+    )
+
+
+def test_download_report_with_browser_use_rejects_conflicting_pdf_metadata(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+    assert_app_error,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="Open the landing page, click Download report, and wait for the file save to finish.",
+        create_pdf=True,
+        email_submission_completed=None,
+    )
+    original_runtime = runtime.Agent
+
+    class ConflictingMimeAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            payload = json.loads(history.final_result())
+            payload["downloaded_mime_type"] = "text/html"
+
+            class ConflictingMimeHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return ConflictingMimeHistory()
+
+    runtime.Agent = ConflictingMimeAgent
+    external_boundary_mocks_only.setattr(
+        service,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    with pytest.raises(AppError) as excinfo:
+        service.download_report_with_browser_use(
+            BrowserReportDownloadRequest(
+                schema_version="1.0",
+                url="https://example.com/report",
+                settings=_settings(tmp_path),
+            ),
+            run_context,
+        )
+
+    assert_app_error(
+        excinfo.value,
+        code="browser_download_invalid_pdf_metadata",
+        retryable=True,
+    )
+
+
 def test_download_report_with_browser_use_raises_when_pdf_classification_has_no_file(
     tmp_path: Path,
     run_context,

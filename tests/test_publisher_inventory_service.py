@@ -2112,7 +2112,7 @@ def test_discover_publisher_inventory_http_hint_empty_is_typed_error(
             ),
             run_context,
         )
-    assert_app_error(err.value, code="publisher_inventory_http_empty", retryable=True)
+    assert_app_error(err.value, code="publisher_inventory_http_empty", retryable=False)
 
 
 def test_discover_publisher_inventory_force_browser_skips_http(

@@ -245,6 +245,57 @@ def _identity_field_match_tokens(field: BrowserDownloadIdentityField) -> set[str
     return {token for token in tokens if token}
 
 
+def _should_upsert_browser_download_identity_field(
+    *,
+    label: str,
+    normalized_key: str,
+) -> bool:
+    lowered_label = str(label or "").strip().casefold()
+    if not lowered_label or not normalized_key:
+        return False
+    alpha_count = sum(1 for char in lowered_label if char.isalpha())
+    if alpha_count < 2:
+        return False
+    blocked_exact = {
+        "submit",
+        "send",
+        "download",
+        "download report",
+        "get report",
+        "get the report",
+        "view report",
+        "learn more",
+        "read more",
+        "continue",
+        "next",
+        "back",
+        "cancel",
+        "close",
+        "search",
+        "reset",
+        "clear",
+        "required",
+        "optional",
+        "captcha",
+        "recaptcha",
+        "privacy policy",
+        "terms",
+        "i agree",
+        "consent",
+    }
+    if lowered_label in blocked_exact:
+        return False
+    blocked_prefixes = (
+        "select ",
+        "choose ",
+        "option ",
+        "click ",
+    )
+    if any(lowered_label.startswith(prefix) for prefix in blocked_prefixes):
+        return False
+    return True
+
+
 def _normalize_html_tag_acronyms(values: object) -> list[str]:
     if not isinstance(values, list):
         return []
@@ -2341,6 +2392,11 @@ def upsert_browser_download_identity_fields(
         label = str(raw_label or "").strip()
         normalized = _normalize_browser_download_identity_key(label)
         if not label or not normalized:
+            continue
+        if not _should_upsert_browser_download_identity_field(
+            label=label,
+            normalized_key=normalized,
+        ):
             continue
         if normalized in existing_tokens or normalized in seen_new_tokens:
             continue

@@ -726,6 +726,33 @@ class TestConfigService(unittest.TestCase):
             [field["key"] for field in payload["fields"]],
         )
 
+    def test_upsert_browser_download_identity_fields_skips_generic_controls(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_publish=False)
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            identity_path = cfg_data["browser_download"]["identity_config_path"]
+            response = upsert_browser_download_identity_fields(
+                BrowserDownloadIdentityFieldUpsertRequest(
+                    schema_version="1.0",
+                    path=identity_path,
+                    encountered_form_fields=[
+                        "Submit",
+                        "Download report",
+                        "Select region",
+                        "Budget Range",
+                    ],
+                ),
+                RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+            )
+
+            payload = yaml.safe_load(Path(identity_path).read_text(encoding="utf-8"))
+
+        self.assertEqual(["budget_range"], response.added_field_keys)
+        self.assertEqual(
+            ["work_email", "company", "budget_range"],
+            [field["key"] for field in payload["fields"]],
+        )
+
     def test_publisher_inventory_settings_load_and_fallback_to_browser_download(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(tmp_dir, include_publish=False)

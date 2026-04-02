@@ -50,7 +50,11 @@ from src.generators.publisher_inventory_candidate_screening_generator import (
 from src.generators.publisher_inventory_candidate_quality_generator import (
     qualify_publisher_inventory_candidates,
 )
-from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
+from src.orchestrators.retry_orchestrator import (
+    RetryPolicy,
+    is_retryable_app_error,
+    run_with_retry,
+)
 from src.services.drive_service import download_pdf, list_files_in_folder, upload_bytes
 from src.services.publisher_inventory_service import discover_publisher_inventory
 from src.services.report_store_service import (
@@ -231,20 +235,8 @@ def run_publisher_inventory_discovery(
             except AppError as exc:
                 if exc.code == "publisher_inventory_browser_pagination_limit":
                     raise
-                logger.info(
-                    log_event(
-                        ctx,
-                        role="orchestrator",
-                        event="publisher_inventory_memory_route_failed",
-                        module=logger.name,
-                        fields={
-                            "normalized_url": normalized_url,
-                            "route_kind": publisher_state.inventory_route_kind or "",
-                            "error": str(exc),
-                        },
-                    )
-                )
-            except Exception as exc:
+                if not is_retryable_app_error(exc):
+                    raise
                 logger.info(
                     log_event(
                         ctx,

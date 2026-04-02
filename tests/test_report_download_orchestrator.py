@@ -5,6 +5,8 @@ import logging
 import sqlite3
 from pathlib import Path
 
+import pytest
+
 from src.contracts.browser_download import (
     BrowserDownloadIdentity,
     BrowserDownloadIdentityField,
@@ -309,6 +311,82 @@ def test_run_report_download_falls_back_after_memory_failure_and_retries(
     assert identity_updates[0].encountered_form_fields == []
     assert_logs_have_required_fields(
         _events(caplog, "market_lense.report_download_orchestrator")
+    )
+
+
+def test_run_report_download_does_not_fallback_after_non_retryable_memory_failure(
+    tmp_path: Path,
+    run_context,
+    assert_app_error,
+) -> None:
+    settings = _settings(tmp_path)
+    attempts = {"memory": 0, "discovery": 0}
+
+    def _download(req, ctx):
+        if req.route_hint:
+            attempts["memory"] += 1
+            raise AppError(
+                code="browser_download_route_summary_invalid",
+                message="stored route is structurally invalid",
+                retryable=False,
+            )
+        attempts["discovery"] += 1
+        return _result(
+            url="https://example.com/report",
+            used_route_hint=False,
+            path=str(Path(settings.output_dir) / "report.pdf"),
+        )
+
+    def _get_route(req, ctx):
+        return PublisherDownloadRouteResponse(
+            schema_version="1.0",
+            normalized_url=req.normalized_url,
+            source_url="https://example.com/report",
+            route_kind="pdf_download",
+            route_summary="Use the first Download report button.",
+            outcome="downloaded",
+            updated_at=1,
+            last_downloaded_file_path=None,
+            last_final_page_url=None,
+        )
+
+    deps = ReportDownloadDependencies(
+        download_report_with_browser_use=_download,
+        get_publisher_download_route=_get_route,
+        record_publisher_download_route=lambda req, ctx: None,
+        file_md5=lambda req, ctx: FileHashResponse(
+            schema_version="1.0",
+            path=req.path,
+            md5="unused",
+        ),
+        record_report_source=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("should not record sources")
+        ),
+        upsert_browser_download_identity_fields=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("should not update identity fields")
+        ),
+        sleep_fn=lambda seconds: None,
+    )
+
+    with pytest.raises(AppError) as excinfo:
+        run_report_download(
+            ReportDownloadOrchestratorRequest(
+                schema_version="1.0",
+                url="https://example.com/report",
+                settings=settings,
+                state_db=settings.state_db,
+                reports_db=settings.reports_db,
+            ),
+            ctx=run_context,
+            dependencies=deps,
+        )
+
+    assert attempts["memory"] == 1
+    assert attempts["discovery"] == 0
+    assert_app_error(
+        excinfo.value,
+        code="browser_download_route_summary_invalid",
+        retryable=False,
     )
 
 

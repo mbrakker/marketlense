@@ -25,7 +25,11 @@ from src.contracts.report_store import (
     ReportSourceRecordResponse,
 )
 from src.contracts.run_context import RunContext
-from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
+from src.orchestrators.retry_orchestrator import (
+    RetryPolicy,
+    is_retryable_app_error,
+    run_with_retry,
+)
 from src.services.browser_report_download_service import (
     download_report_with_browser_use,
 )
@@ -37,6 +41,7 @@ from src.services.report_store_service import (
 )
 from src.services.config_service import upsert_browser_download_identity_fields
 from src.utils.logging import log_event
+from src.utils.errors import AppError
 from src.utils.url_utils import normalize_url
 
 logger = logging.getLogger("market_lense.report_download_orchestrator")
@@ -154,7 +159,9 @@ def run_report_download(
                 route_kind_hint=remembered_route.route_kind,
                 step_name="report_download_with_memory_route",
             )
-        except Exception as exc:
+        except AppError as exc:
+            if not is_retryable_app_error(exc):
+                raise
             logger.info(
                 log_event(
                     ctx,

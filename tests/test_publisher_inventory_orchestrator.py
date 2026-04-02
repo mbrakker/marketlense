@@ -500,6 +500,54 @@ def test_run_publisher_inventory_discovery_falls_back_after_memory_route_failure
     assert result.used_memory_route is False
 
 
+def test_run_publisher_inventory_discovery_does_not_fallback_after_non_retryable_memory_failure(
+    run_context,
+    assert_app_error,
+):
+    attempts = {"memory": 0, "fresh": 0}
+
+    def _discover(req, ctx):
+        if req.route_hint:
+            attempts["memory"] += 1
+            raise AppError(
+                code="publisher_inventory_route_summary_invalid",
+                message="stored route is structurally invalid",
+                retryable=False,
+            )
+        attempts["fresh"] += 1
+        return _service_response(
+            used_route_hint=False,
+            new_url="https://www.activate.com/reports/new-report",
+        )
+
+    deps = _dependencies(
+        discover_publisher_inventory=_discover,
+        get_publisher_inventory_state=lambda req, ctx: _publisher_state(
+            with_route=True, with_snapshot=False
+        ),
+    )
+
+    with pytest.raises(AppError) as err:
+        run_publisher_inventory_discovery(
+            PublisherInventoryDiscoveryRequest(
+                schema_version="1.0",
+                insights_url="https://www.activate.com/insights",
+                reports_db="./state/reports.sqlite",
+                settings=_settings(),
+            ),
+            ctx=run_context,
+            dependencies=deps,
+        )
+
+    assert attempts["memory"] == 1
+    assert attempts["fresh"] == 0
+    assert_app_error(
+        err.value,
+        code="publisher_inventory_route_summary_invalid",
+        retryable=False,
+    )
+
+
 def test_run_publisher_inventory_discovery_applies_remaining_time_budget_to_step_settings(
     run_context,
 ):
