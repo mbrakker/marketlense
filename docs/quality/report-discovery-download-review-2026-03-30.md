@@ -235,122 +235,39 @@ This section is implementation-agnostic. It defines the logical gates and decisi
 
 ## Activity-Based Decomposition: How Discovery Can Be Split into Smaller Units
 
-Goal: split discovery by *activity type* so each unit has one responsibility, clearer quality gates, and easier reliability tuning.
+Goal: keep this section limited to decomposition work that is still missing in the latest codebase.
 
-### 1) Activity Catalog (What the workflow actually does)
+Implemented since this review:
+- navigation control, candidate extraction, and candidate-shape heuristics were extracted from the public service boundary into `src/services/_publisher_inventory_discovery_activity.py`
+- snapshot construction and diffing already live in `src/generators/publisher_inventory_generator.py`
+- screening, landing-page quality, and persistence already execute as separate generator/orchestrator responsibilities
 
-1. **Input qualification activity**
-   - Validate/normalize incoming URL and discovery context.
-   - Output: canonical source identity + eligibility verdict.
+### Remaining Activity-Based Decomposition Gaps
 
-2. **Route planning activity**
-   - Choose initial path (`memory-guided`, `http_parse`, `browser_render`) from confidence and historical performance.
-   - Output: route plan with fallback order and stop conditions.
+1. **Route planning is still embedded in `src/orchestrators/publisher_inventory_orchestrator.py`.**
+   - Memory-route reuse, HTTP/browser selection, and fallback ordering should still become an explicit planner unit with its own contract and logging surface.
 
-3. **Page acquisition activity**
-   - Obtain page material (HTTP HTML fetch or browser-rendered DOM state) with bounded traversal.
-   - Output: ordered page captures with provenance and traversal metadata.
+2. **HTTP acquisition and browser acquisition still share one public service module.**
+   - `src/services/publisher_inventory_service.py` remains the canonical boundary, but acquisition mechanics are still large enough to justify an internal split between HTTP fetch flow and browser traversal flow.
 
-4. **Navigation control activity**
-   - Determine “next page” / tab / load-more transitions.
-   - Output: next-step actions and loop-prevention signals.
+3. **Coverage validation remains implicit across service and orchestrator checks.**
+   - Undercoverage, raw-only delta rejection, and unreachable-delta tolerance are valuable quality gates, but they are still distributed rather than represented as one explicit activity with one verdict contract.
 
-5. **Candidate extraction activity**
-   - Parse anchors/DOM blocks into raw report candidates.
-   - Output: raw candidate set + extraction evidence.
+4. **Run-level quality evaluation is still missing as a first-class output.**
+   - The workflow logs rich traversal facts, but it does not yet persist a reusable run-quality summary for future route planning and drift monitoring.
 
-6. **Canonicalization and dedup activity**
-   - Normalize URLs/titles and deduplicate by stable identity key.
-   - Output: canonical candidate set.
+### Remaining Recommended Boundaries
 
-7. **Quality scoring activity**
-   - Score candidate quality/likelihood of being a true report asset.
-   - Output: accepted/rejected candidates with reasoned scores.
+- **Orchestrator units:**
+  - `discovery_route_planner` for route order, confidence, and stop conditions
+  - `discovery_execution_orchestrator` for run sequencing and retry policy
+  - `discovery_persistence_orchestrator` for state/diff persistence choreography
 
-8. **Coverage validation activity**
-   - Check if discovery set is plausible and sufficient for this publisher.
-   - Output: sufficiency verdict + escalation hint.
+- **Internal service units under the canonical publisher inventory service boundary:**
+  - `inventory_fetch_service` for HTTP acquisition
+  - `inventory_browser_service` for rendered acquisition/traversal
+  - `inventory_state_store_service` for snapshot/state reads and writes
 
-9. **Snapshot construction activity**
-   - Build deterministic inventory snapshot from accepted candidates.
-   - Output: stable snapshot payload + diff basis.
-
-10. **Diff and novelty activity**
-    - Compare against prior snapshot and identify new items.
-    - Output: new-item candidate set for screening.
-
-11. **Meaningfulness screening activity**
-    - Apply relevance screening to new items only.
-    - Output: approved/rejected novel items with auditable reasons.
-
-12. **Persistence activity**
-    - Write state, snapshot references, and discovered sources idempotently.
-    - Output: persisted state transitions and record IDs.
-
-13. **Run quality evaluation activity**
-    - Compute run-level quality metrics and drift indicators.
-    - Output: quality summary used for future planning.
-
-### 2) Recommended Smaller Module Boundaries by Activity Type
-
-Use activity boundaries, not file-size boundaries. Keep one role per module.
-
-- **Orchestrator units (control plane):**
-  - `discovery_route_planner` (route order + fallback policy)
-  - `discovery_execution_orchestrator` (sequence/run lifecycle)
-  - `discovery_persistence_orchestrator` (state/diff persistence choreography)
-
-- **Service units (I/O only):**
-  - `inventory_fetch_service` (HTTP acquisition)
-  - `inventory_browser_service` (rendered acquisition/traversal)
-  - `inventory_state_store_service` (snapshot/state reads+writes)
-
-- **Generator units (domain logic):**
-  - `inventory_candidate_generator` (extract/canonicalize/dedup)
-  - `inventory_quality_generator` (score/filter/sufficiency)
-  - `inventory_diff_generator` (snapshot/diff/novelty)
-  - `inventory_screening_generator` (meaningfulness decisions)
-
-- **Utility units (pure transforms):**
-  - URL/title normalization, identity keying, scoring math, deterministic sorting.
-
-### 3) Activity-to-Quality Gates Matrix
-
-For each activity, define an explicit pass/fail gate:
-
-1. Input qualification -> **valid canonical URL + eligible source type**.
-2. Route planning -> **route confidence >= threshold** or forced fallback.
-3. Page acquisition -> **bounded traversal + no loop signal**.
-4. Navigation control -> **forward progress evidence**.
-5. Candidate extraction -> **minimum structural evidence per candidate**.
-6. Canonicalization/dedup -> **stable identity + zero malformed keys**.
-7. Quality scoring -> **score >= acceptance threshold**.
-8. Coverage validation -> **sufficient diversity/count** or escalate.
-9. Snapshot construction -> **deterministic ordering + complete required fields**.
-10. Diff/novelty -> **alias-safe novelty detection**.
-11. Meaningfulness screening -> **auditable accept/reject rationale**.
-12. Persistence -> **idempotent write guarantees**.
-13. Run quality evaluation -> **metric emission complete**.
-
-### 4) Execution Steps for Best Results (Activity-first)
-
-1. Run input qualification.
-2. Build route plan with explicit confidence.
-3. Execute acquisition + navigation with loop controls.
-4. Extract raw candidates with provenance.
-5. Canonicalize and deduplicate.
-6. Apply quality scoring.
-7. Validate coverage; escalate route if insufficient.
-8. Build deterministic snapshot.
-9. Compute novelty against previous snapshot.
-10. Screen novel items for meaningfulness.
-11. Persist approved discoveries idempotently.
-12. Emit run quality metrics and update route reliability memory.
-
-### 5) Why this split improves reliability
-
-- **Failure isolation:** defects localize to one activity (planning vs extraction vs scoring).
-- **Targeted retries:** orchestrator retries only failing activity class, not whole pipeline.
-- **Auditability:** each activity has explicit inputs, outputs, and quality gate result.
-- **Determinism:** canonicalization and snapshot steps become stable reusable building blocks.
-- **Simpler tuning:** thresholds and fallback policies can evolve without touching I/O code paths.
+- **Generator units still worth isolating further:**
+  - explicit coverage-validation generator
+  - explicit run-quality evaluation generator
