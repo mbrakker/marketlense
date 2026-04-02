@@ -8,6 +8,7 @@ import unittest
 from src.contracts.report_store import (
     PublisherDownloadRouteGetRequest,
     PublisherDownloadRouteRecordRequest,
+    PublisherInventoryRunQualityRecordRequest,
     PublisherInventoryStateGetRequest,
     PublisherInventoryStateRecordRequest,
     PublisherInventoryTestStatusRecordRequest,
@@ -18,6 +19,7 @@ from src.contracts.report_store import (
     ReportSourceRecordRequest,
     ReportMetadataUpsertRequest,
 )
+from src.contracts.publisher_inventory import PublisherInventoryRunQualitySummary
 from src.contracts.publisher_profiles import PublisherProfileRecord
 from src.services.report_store_service import (
     check_report_db_access,
@@ -25,6 +27,7 @@ from src.services.report_store_service import (
     record_discovered_report_source,
     get_publisher_download_route,
     get_publisher_inventory_state,
+    record_publisher_inventory_run_quality,
     record_publisher_inventory_test_status,
     record_report_source,
     record_publisher_download_route,
@@ -911,6 +914,8 @@ class TestReportStoreService(unittest.TestCase):
                     "inventory_snapshot_drive_file_name",
                     "inventory_snapshot_sha256",
                     "inventory_snapshot_updated_at",
+                    "inventory_run_quality_json",
+                    "inventory_run_quality_updated_at",
                 ],
                 columns,
             )
@@ -1096,6 +1101,79 @@ class TestReportStoreService(unittest.TestCase):
             self.assertEqual(
                 "failed:publisher_inventory_browser_pagination_limit",
                 state.discovery_test_status,
+            )
+
+    def test_record_publisher_inventory_run_quality_roundtrip(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_publisher_inventory_run_quality")
+
+            replace_publishers(
+                PublishersReplaceRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_page_url="https://www.notion.so/source",
+                    publishers=[
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-1",
+                            notion_page_url="https://www.notion.so/page-1",
+                            name="Activate Consulting",
+                            homepage="https://www.activate.com/",
+                            self_presentation="Activate description",
+                            insights_url="https://www.activate.com/insights",
+                            icon_source="https://cdn.example.com/activate.png",
+                        )
+                    ],
+                ),
+                ctx,
+            )
+
+            record_publisher_inventory_run_quality(
+                PublisherInventoryRunQualityRecordRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_url="https://www.activate.com/insights",
+                    summary=PublisherInventoryRunQualitySummary(
+                        schema_version="1.0",
+                        outcome="accepted",
+                        status="passed",
+                        quality_band="high",
+                        route_kind="browser_render",
+                        recommended_route_kind="browser_render",
+                        used_memory_route=False,
+                        page_count=2,
+                        raw_candidate_count=10,
+                        current_report_count=10,
+                        previous_report_count=8,
+                        raw_new_report_count=2,
+                        screened_new_report_count=2,
+                        qualified_new_report_count=1,
+                        snapshot_changed=True,
+                        requires_review=False,
+                        recommended_route_reason="Reuse browser route.",
+                        summary="high quality via browser_render",
+                        candidate_provenance_counts={"browser_dom": 10},
+                    ),
+                ),
+                ctx,
+            )
+
+            state = get_publisher_inventory_state(
+                PublisherInventoryStateGetRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_url="https://www.activate.com/insights",
+                ),
+                ctx,
+            )
+
+            assert state is not None
+            assert state.inventory_run_quality_summary is not None
+            self.assertEqual("accepted", state.inventory_run_quality_summary.outcome)
+            self.assertEqual(
+                "browser_render",
+                state.inventory_run_quality_summary.recommended_route_kind,
             )
 
 

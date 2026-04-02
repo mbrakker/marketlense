@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import asdict
 import json
 import logging
 import re
@@ -15,6 +16,7 @@ from src.contracts.report_store import (
     PublisherDownloadRouteRecordRequest,
     PublisherDownloadRouteResponse,
     PublisherInventoryStateGetRequest,
+    PublisherInventoryRunQualityRecordRequest,
     PublisherInventoryStateRecordRequest,
     PublisherInventoryStateResponse,
     PublisherInventoryTestStatusRecordRequest,
@@ -109,7 +111,9 @@ CREATE TABLE IF NOT EXISTS publishers (
   inventory_snapshot_drive_file_id TEXT,
   inventory_snapshot_drive_file_name TEXT,
   inventory_snapshot_sha256 TEXT,
-  inventory_snapshot_updated_at INTEGER
+  inventory_snapshot_updated_at INTEGER,
+  inventory_run_quality_json TEXT,
+  inventory_run_quality_updated_at INTEGER
 );
 
 CREATE INDEX IF NOT EXISTS idx_publishers_name ON publishers(name);
@@ -288,6 +292,61 @@ def _optional_int(value: object) -> Optional[int]:
     return int(value_str)
 
 
+def _serialize_inventory_run_quality_summary(summary) -> Optional[str]:
+    if summary is None:
+        return None
+    return json.dumps(
+        asdict(summary),
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def _parse_inventory_run_quality_summary(payload: Optional[str]):
+    token = str(payload or "").strip()
+    if not token:
+        return None
+    from src.contracts.publisher_inventory import PublisherInventoryRunQualitySummary
+
+    try:
+        parsed = json.loads(token)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(parsed, dict):
+        return None
+    try:
+        return PublisherInventoryRunQualitySummary(
+            schema_version=str(parsed.get("schema_version") or "1.0"),
+            outcome=str(parsed["outcome"]).strip(),
+            status=str(parsed["status"]).strip(),
+            quality_band=str(parsed["quality_band"]).strip(),
+            route_kind=str(parsed["route_kind"]).strip(),
+            recommended_route_kind=str(parsed["recommended_route_kind"]).strip(),
+            used_memory_route=bool(parsed["used_memory_route"]),
+            page_count=int(parsed["page_count"]),
+            raw_candidate_count=int(parsed["raw_candidate_count"]),
+            current_report_count=int(parsed["current_report_count"]),
+            previous_report_count=int(parsed["previous_report_count"]),
+            raw_new_report_count=int(parsed["raw_new_report_count"]),
+            screened_new_report_count=int(parsed["screened_new_report_count"]),
+            qualified_new_report_count=int(parsed["qualified_new_report_count"]),
+            snapshot_changed=bool(parsed["snapshot_changed"]),
+            requires_review=bool(parsed["requires_review"]),
+            recommended_route_reason=str(parsed["recommended_route_reason"]).strip(),
+            summary=str(parsed["summary"]).strip(),
+            candidate_provenance_counts={
+                str(key).strip(): int(value)
+                for key, value in dict(
+                    parsed.get("candidate_provenance_counts") or {}
+                ).items()
+                if str(key).strip()
+            },
+        )
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
 def _ensure_publishers_schema(conn: sqlite3.Connection) -> None:
     cur = conn.execute("PRAGMA table_info(publishers)")
     rows = cur.fetchall()
@@ -313,6 +372,8 @@ def _ensure_publishers_schema(conn: sqlite3.Connection) -> None:
         "inventory_snapshot_drive_file_name",
         "inventory_snapshot_sha256",
         "inventory_snapshot_updated_at",
+        "inventory_run_quality_json",
+        "inventory_run_quality_updated_at",
     }
     current = {str(row[1]) for row in rows}
     if current == expected:
@@ -342,7 +403,9 @@ def _ensure_publishers_schema(conn: sqlite3.Connection) -> None:
           inventory_snapshot_drive_file_id TEXT,
           inventory_snapshot_drive_file_name TEXT,
           inventory_snapshot_sha256 TEXT,
-          inventory_snapshot_updated_at INTEGER
+          inventory_snapshot_updated_at INTEGER,
+          inventory_run_quality_json TEXT,
+          inventory_run_quality_updated_at INTEGER
         )
         """
     )
@@ -370,6 +433,8 @@ def _ensure_publishers_schema(conn: sqlite3.Connection) -> None:
                 "inventory_snapshot_drive_file_name",
                 "inventory_snapshot_sha256",
                 "inventory_snapshot_updated_at",
+                "inventory_run_quality_json",
+                "inventory_run_quality_updated_at",
             )
             if col in current
         ]
@@ -1362,7 +1427,9 @@ def replace_publishers(
                     inventory_snapshot_drive_file_id,
                     inventory_snapshot_drive_file_name,
                     inventory_snapshot_sha256,
-                    inventory_snapshot_updated_at
+                    inventory_snapshot_updated_at,
+                    inventory_run_quality_json,
+                    inventory_run_quality_updated_at
                 FROM publishers
                 """
             ).fetchall()
@@ -1385,6 +1452,9 @@ def replace_publishers(
                     Optional[str],
                     Optional[int],
                     Optional[str],
+                    Optional[int],
+                    Optional[str],
+                    Optional[int],
                 ],
             ] = {}
             preserved_by_name = dict(preserved_by_insights_url)
@@ -1408,6 +1478,8 @@ def replace_publishers(
                     str(row[15] or "").strip() or None,
                     str(row[16] or "").strip() or None,
                     int(row[17]) if row[17] is not None else None,
+                    str(row[18] or "").strip() or None,
+                    int(row[19]) if row[19] is not None else None,
                 )
                 if insights_url_key and insights_url_key not in preserved_by_insights_url:
                     preserved_by_insights_url[insights_url_key] = preserved_payload
@@ -1428,6 +1500,8 @@ def replace_publishers(
                         preserved = preserved_by_name.get(name_key)
                     if preserved is None:
                         preserved = (
+                            None,
+                            None,
                             None,
                             None,
                             None,
@@ -1468,9 +1542,11 @@ def replace_publishers(
                         inventory_snapshot_drive_file_id,
                         inventory_snapshot_drive_file_name,
                         inventory_snapshot_sha256,
-                        inventory_snapshot_updated_at
+                        inventory_snapshot_updated_at,
+                        inventory_run_quality_json,
+                        inventory_run_quality_updated_at
                     )
-                    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     rows_with_routes,
                 )
@@ -1831,7 +1907,9 @@ def get_publisher_inventory_state(
                 inventory_snapshot_drive_file_id,
                 inventory_snapshot_drive_file_name,
                 inventory_snapshot_sha256,
-                inventory_snapshot_updated_at
+                inventory_snapshot_updated_at,
+                inventory_run_quality_json,
+                inventory_run_quality_updated_at
             FROM publishers
             WHERE insights_url <> ''
             ORDER BY id ASC
@@ -1856,6 +1934,10 @@ def get_publisher_inventory_state(
             inventory_snapshot_drive_file_name=str(row[9] or "").strip() or None,
             inventory_snapshot_sha256=str(row[10] or "").strip() or None,
             inventory_snapshot_updated_at=_optional_int(row[11]),
+            inventory_run_quality_summary=_parse_inventory_run_quality_summary(
+                str(row[12] or "").strip() or None
+            ),
+            inventory_run_quality_updated_at=_optional_int(row[13]),
         )
         logger.info(
             log_event(
@@ -1873,6 +1955,9 @@ def get_publisher_inventory_state(
                     "has_inventory_route": bool(response.inventory_route_summary),
                     "has_inventory_snapshot": bool(
                         response.inventory_snapshot_drive_file_id
+                    ),
+                    "has_inventory_run_quality": bool(
+                        response.inventory_run_quality_summary
                     ),
                 },
             )
@@ -1979,6 +2064,104 @@ def record_publisher_inventory_test_status(
                 "db_path": db_path,
                 "normalized_url": normalized_url,
                 "status": status,
+            },
+        )
+    )
+
+
+def record_publisher_inventory_run_quality(
+    request: PublisherInventoryRunQualityRecordRequest,
+    ctx: RunContext,
+) -> None:
+    db_path = request.db_path.strip()
+    normalized_url = request.normalized_url.strip()
+    summary_json = _serialize_inventory_run_quality_summary(request.summary)
+    if not db_path:
+        raise AppError(
+            code="publisher_inventory_run_quality_db_missing",
+            message="Report metadata DB path is required for publisher run-quality recording",
+            retryable=False,
+            severity="error",
+        )
+    if not normalized_url:
+        raise AppError(
+            code="publisher_inventory_run_quality_normalized_url_missing",
+            message="normalized_url is required for publisher run-quality recording",
+            retryable=False,
+            severity="error",
+        )
+    if not summary_json:
+        raise AppError(
+            code="publisher_inventory_run_quality_missing",
+            message="summary is required for publisher run-quality recording",
+            retryable=False,
+            severity="error",
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_inventory_run_quality_record_start",
+            module=logger.name,
+            fields={
+                "db_path": db_path,
+                "normalized_url": normalized_url,
+                "outcome": request.summary.outcome,
+                "status": request.summary.status,
+                "recommended_route_kind": request.summary.recommended_route_kind,
+            },
+        )
+    )
+    try:
+        with _metadata_conn(db_path) as conn:
+            matched_id: Optional[int] = None
+            rows = conn.execute(
+                "SELECT id, insights_url FROM publishers WHERE insights_url <> '' ORDER BY id ASC"
+            ).fetchall()
+            for row in rows:
+                if normalize_url(str(row[1] or "").strip()) != normalized_url:
+                    continue
+                matched_id = int(row[0])
+                break
+            if matched_id is None:
+                raise AppError(
+                    code="publisher_inventory_run_quality_not_found",
+                    message="Publisher run-quality cannot be recorded because the publisher row was not found",
+                    retryable=False,
+                    severity="error",
+                    context={"normalized_url": normalized_url},
+                )
+            conn.execute(
+                """
+                UPDATE publishers
+                SET inventory_run_quality_json=?,
+                    inventory_run_quality_updated_at=strftime('%s','now')
+                WHERE id=?
+                """,
+                (
+                    summary_json,
+                    matched_id,
+                ),
+            )
+    except sqlite3.Error as exc:
+        raise AppError(
+            code="publisher_inventory_run_quality_record_failed",
+            message="Failed to record publisher inventory run quality",
+            cause=exc,
+            retryable=True,
+            context={"db_path": db_path, "normalized_url": normalized_url},
+        ) from exc
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_inventory_run_quality_record_complete",
+            module=logger.name,
+            fields={
+                "db_path": db_path,
+                "normalized_url": normalized_url,
+                "outcome": request.summary.outcome,
+                "status": request.summary.status,
             },
         )
     )

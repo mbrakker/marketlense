@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import List, Optional
 
 from src.contracts.docpacks import DocPackPathMap
+from src.contracts.publisher_inventory import PublisherInventoryRunQualitySummary
 from src.contracts.publisher_profiles import PublisherProfileRecord
 
 
@@ -514,6 +515,14 @@ class PublisherInventoryStateResponse:
         default=None,
         metadata={"doc": "Unix timestamp when the latest stored inventory snapshot index was updated."},
     )
+    inventory_run_quality_summary: Optional[PublisherInventoryRunQualitySummary] = field(
+        default=None,
+        metadata={"doc": "Last persisted publisher-inventory run-quality summary used for future route planning and drift monitoring."},
+    )
+    inventory_run_quality_updated_at: Optional[int] = field(
+        default=None,
+        metadata={"doc": "Unix timestamp when the last publisher-inventory run-quality summary was recorded."},
+    )
 
 
 @dataclass(frozen=True)
@@ -567,4 +576,20 @@ class PublisherInventoryTestStatusRecordRequest:
     )
     status: str = field(
         metadata={"doc": "Last recorded discovery test outcome string, for example `passed` or `failed:<error_code>`."}
+    )
+
+
+@dataclass(frozen=True)
+class PublisherInventoryRunQualityRecordRequest:
+    schema_version: str = field(
+        metadata={"doc": "Publisher inventory run-quality record request schema version."}
+    )
+    db_path: str = field(
+        metadata={"doc": "Filesystem path to the report metadata SQLite database."}
+    )
+    normalized_url: str = field(
+        metadata={"doc": "Normalized publisher insights URL used to identify the publisher row."}
+    )
+    summary: PublisherInventoryRunQualitySummary = field(
+        metadata={"doc": "Run-quality summary to persist for future route planning and drift monitoring."}
     )

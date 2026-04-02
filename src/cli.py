@@ -547,6 +547,12 @@ def discover_publisher_inventory(
     table.add_row("Previous reports", str(result.previous_report_count))
     table.add_row("Used memory route", "yes" if result.used_memory_route else "no")
     table.add_row("Snapshot changed", "yes" if result.snapshot_changed else "no")
+    table.add_row("Run quality", result.run_quality_summary.quality_band)
+    table.add_row("Run outcome", result.run_quality_summary.outcome)
+    table.add_row(
+        "Next route",
+        result.run_quality_summary.recommended_route_kind,
+    )
     console.print(table)
 
     diff_table = Table(title="New Report URLs", box=box.SIMPLE_HEAVY)

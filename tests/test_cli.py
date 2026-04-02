@@ -15,6 +15,7 @@ from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.publisher_inventory import (
     PublisherInventoryDiffItem,
     PublisherInventoryDiscoveryResult,
+    PublisherInventoryRunQualitySummary,
     PublisherInventorySettings,
 )
 from src.contracts.publish import PublishOutcome, PublishSettings
@@ -351,6 +352,27 @@ class TestCli(unittest.TestCase):
             previous_report_count=9,
             used_memory_route=True,
             snapshot_changed=True,
+            run_quality_summary=PublisherInventoryRunQualitySummary(
+                schema_version="1.0",
+                outcome="accepted",
+                status="passed",
+                quality_band="high",
+                route_kind="browser_render",
+                recommended_route_kind="browser_render",
+                used_memory_route=True,
+                page_count=2,
+                raw_candidate_count=10,
+                current_report_count=10,
+                previous_report_count=9,
+                raw_new_report_count=1,
+                screened_new_report_count=1,
+                qualified_new_report_count=1,
+                snapshot_changed=True,
+                requires_review=False,
+                recommended_route_reason="The latest run quality supports reusing the same primary route kind.",
+                summary="high quality via browser_render: 10 current items, 1 raw deltas, 1 qualified deltas, coverage verdict accepted.",
+                candidate_provenance_counts={"browser_dom": 10},
+            ),
         )
 
         with patch.object(

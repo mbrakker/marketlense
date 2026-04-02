@@ -580,6 +580,256 @@ class PublisherInventoryCandidateQualityResponse:
 
 
 @dataclass(frozen=True)
+class PublisherInventoryRoutePlanStep:
+    schema_version: str = field(
+        metadata={"doc": "Publisher inventory route-plan step schema version."}
+    )
+    step_name: str = field(
+        metadata={"doc": "Unique orchestrator step name used for the planned discovery attempt."}
+    )
+    route_kind_hint: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Discovery route kind to request for this step when known: http_parse or browser_render."},
+    )
+    route_hint: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Remembered route summary to reuse for this step when available."},
+    )
+    uses_memory_route: bool = field(
+        default=False,
+        metadata={"doc": "Whether this step reuses a remembered inventory route."},
+    )
+    fallback_on_retryable_error: bool = field(
+        default=False,
+        metadata={"doc": "Whether the orchestrator should continue to the next planned step only when this step fails with a retryable AppError."},
+    )
+
+
+@dataclass(frozen=True)
+class PublisherInventoryRunQualitySummary:
+    schema_version: str = field(
+        metadata={"doc": "Publisher inventory run-quality summary schema version."}
+    )
+    outcome: str = field(
+        metadata={"doc": "Run-level quality outcome, for example accepted, no_report_assets, raw_only_delta_rejected, undercoverage_regression, or unreachable_delta_tolerated."}
+    )
+    status: str = field(
+        metadata={"doc": "Final run status string aligned with discovery test-status semantics, for example passed, passed:no_report_assets, or failed:<error_code>."}
+    )
+    quality_band: str = field(
+        metadata={"doc": "Deterministic quality band for route-planning and drift monitoring: high, medium, or low."}
+    )
+    route_kind: str = field(
+        metadata={"doc": "Discovery route kind used for the run-quality summary: http_parse or browser_render."}
+    )
+    recommended_route_kind: str = field(
+        metadata={"doc": "Route kind recommended for the next discovery run based on this run's quality evidence."}
+    )
+    used_memory_route: bool = field(
+        metadata={"doc": "Whether the successful discovery attempt reused remembered route memory."}
+    )
+    page_count: int = field(
+        metadata={"doc": "Number of inventory pages traversed during the run."}
+    )
+    raw_candidate_count: int = field(
+        metadata={"doc": "Number of normalized raw inventory items produced before diff screening."}
+    )
+    current_report_count: int = field(
+        metadata={"doc": "Number of normalized report items in the current snapshot candidate."}
+    )
+    previous_report_count: int = field(
+        metadata={"doc": "Number of normalized report items in the previous snapshot when available, else zero."}
+    )
+    raw_new_report_count: int = field(
+        metadata={"doc": "Number of raw diff items before screening and landing-page qualification."}
+    )
+    screened_new_report_count: int = field(
+        metadata={"doc": "Number of diff items approved by the screening step before landing-page qualification."}
+    )
+    qualified_new_report_count: int = field(
+        metadata={"doc": "Number of diff items approved after landing-page qualification."}
+    )
+    snapshot_changed: bool = field(
+        metadata={"doc": "Whether the canonical publisher snapshot changed after all quality gates."}
+    )
+    requires_review: bool = field(
+        metadata={"doc": "Whether the run should be treated as drift-prone and reviewed before trusting route reuse."}
+    )
+    recommended_route_reason: str = field(
+        metadata={"doc": "Short explanation for the recommended route kind."}
+    )
+    summary: str = field(
+        metadata={"doc": "Compact human-readable summary of the run quality verdict."}
+    )
+    candidate_provenance_counts: dict[str, int] = field(
+        default_factory=dict,
+        metadata={"doc": "Counts of candidate provenance markers contributing to the run, keyed by provenance label."},
+    )
+
+
+@dataclass(frozen=True)
+class PublisherInventoryRoutePlanRequest:
+    schema_version: str = field(
+        metadata={"doc": "Publisher inventory route-plan request schema version."}
+    )
+    normalized_url: str = field(
+        metadata={"doc": "Normalized publisher insights URL used for route planning."}
+    )
+    force_browser: bool = field(
+        metadata={"doc": "Whether discovery must prefer browser traversal regardless of HTTP availability."}
+    )
+    remembered_route_kind: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Previously successful remembered discovery route kind when available."},
+    )
+    remembered_route_summary: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Previously successful remembered discovery route summary when available."},
+    )
+    previous_run_quality_summary: Optional[PublisherInventoryRunQualitySummary] = field(
+        default=None,
+        metadata={"doc": "Previously persisted run-quality summary used to bias route ordering when no remembered route exists."},
+    )
+
+
+@dataclass(frozen=True)
+class PublisherInventoryRoutePlanResponse:
+    schema_version: str = field(
+        metadata={"doc": "Publisher inventory route-plan response schema version."}
+    )
+    steps: List[PublisherInventoryRoutePlanStep] = field(
+        metadata={"doc": "Ordered discovery attempts the orchestrator should execute."}
+    )
+    planning_reason: str = field(
+        metadata={"doc": "Short human-readable explanation of why this route order was chosen."}
+    )
+
+
+@dataclass(frozen=True)
+class PublisherInventoryCoverageValidationRequest:
+    schema_version: str = field(
+        metadata={"doc": "Publisher inventory coverage-validation request schema version."}
+    )
+    publisher_name: str = field(
+        metadata={"doc": "Publisher display name for logging and error context."}
+    )
+    normalized_url: str = field(
+        metadata={"doc": "Normalized publisher insights URL used as the coverage-validation key."}
+    )
+    previous_snapshot_available: bool = field(
+        metadata={"doc": "Whether a previous canonical snapshot exists for this publisher."}
+    )
+    previous_page_count: int = field(
+        metadata={"doc": "Number of pages recorded in the previous canonical snapshot when available, else zero."}
+    )
+    previous_report_count: int = field(
+        metadata={"doc": "Number of items recorded in the previous canonical snapshot when available, else zero."}
+    )
+    current_page_count: int = field(
+        metadata={"doc": "Number of pages traversed in the current candidate snapshot."}
+    )
+    current_report_count: int = field(
+        metadata={"doc": "Number of items in the current candidate snapshot."}
+    )
+    raw_new_report_count: int = field(
+        metadata={"doc": "Number of raw diff items before screening and landing-page qualification."}
+    )
+    screened_new_report_count: int = field(
+        metadata={"doc": "Number of diff items approved by the candidate-screening step."}
+    )
+    qualified_new_report_count: int = field(
+        metadata={"doc": "Number of diff items approved after landing-page qualification."}
+    )
+    candidate_snapshot_changed: bool = field(
+        metadata={"doc": "Whether the candidate snapshot hash differs from the previous canonical snapshot hash."}
+    )
+    quality_rejection_reasons: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Ordered landing-page quality rejection reasons used for systematic-unreachable detection."},
+    )
+
+
+@dataclass(frozen=True)
+class PublisherInventoryCoverageValidationResponse:
+    schema_version: str = field(
+        metadata={"doc": "Publisher inventory coverage-validation response schema version."}
+    )
+    verdict: str = field(
+        metadata={"doc": "Coverage-validation verdict: accepted, no_report_assets, raw_only_delta_rejected, undercoverage_regression, unreachable_delta_failure, or unreachable_delta_tolerated."}
+    )
+    reason: str = field(
+        metadata={"doc": "Short human-readable reason explaining the coverage-validation verdict."}
+    )
+    snapshot_allowed: bool = field(
+        metadata={"doc": "Whether the candidate snapshot is allowed to become canonical after coverage validation."}
+    )
+    no_report_assets_detected: bool = field(
+        metadata={"doc": "Whether the run should be treated as an archive with no qualifying report assets."}
+    )
+    should_raise_error: bool = field(
+        metadata={"doc": "Whether the orchestrator must fail the run based on this coverage verdict."}
+    )
+    error_code: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Typed AppError code to raise when should_raise_error=true."},
+    )
+    error_message: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Typed AppError message to raise when should_raise_error=true."},
+    )
+
+
+@dataclass(frozen=True)
+class PublisherInventoryRunQualityEvaluationRequest:
+    schema_version: str = field(
+        metadata={"doc": "Publisher inventory run-quality evaluation request schema version."}
+    )
+    publisher_name: str = field(
+        metadata={"doc": "Publisher display name for the completed discovery run."}
+    )
+    normalized_url: str = field(
+        metadata={"doc": "Normalized publisher insights URL used as the run-quality key."}
+    )
+    route_kind: str = field(
+        metadata={"doc": "Discovery route kind used successfully for the run."}
+    )
+    used_memory_route: bool = field(
+        metadata={"doc": "Whether the successful discovery attempt reused remembered route memory."}
+    )
+    page_count: int = field(
+        metadata={"doc": "Number of inventory pages traversed during the run."}
+    )
+    raw_candidate_count: int = field(
+        metadata={"doc": "Number of normalized items in the current candidate snapshot before diff screening."}
+    )
+    current_report_count: int = field(
+        metadata={"doc": "Number of normalized items in the canonical current snapshot candidate."}
+    )
+    previous_report_count: int = field(
+        metadata={"doc": "Number of normalized items in the previous canonical snapshot when available, else zero."}
+    )
+    raw_new_report_count: int = field(
+        metadata={"doc": "Number of raw diff items before screening and landing-page qualification."}
+    )
+    screened_new_report_count: int = field(
+        metadata={"doc": "Number of diff items approved by the candidate-screening step."}
+    )
+    qualified_new_report_count: int = field(
+        metadata={"doc": "Number of diff items approved after landing-page qualification."}
+    )
+    snapshot_changed: bool = field(
+        metadata={"doc": "Whether the canonical snapshot changed after all quality gates."}
+    )
+    coverage_validation: PublisherInventoryCoverageValidationResponse = field(
+        metadata={"doc": "Explicit coverage-validation verdict for the completed discovery run."}
+    )
+    candidate_provenance_counts: dict[str, int] = field(
+        default_factory=dict,
+        metadata={"doc": "Counts of candidate provenance markers contributing to the run, keyed by provenance label."},
+    )
+
+
+@dataclass(frozen=True)
 class PublisherInventoryDiscoveryRequest:
     schema_version: str = field(
         metadata={"doc": "Publisher inventory discovery request schema version."}
@@ -623,6 +873,9 @@ class PublisherInventoryDiscoveryResult:
     )
     snapshot_changed: bool = field(
         metadata={"doc": "Whether the normalized current snapshot differed from the previous snapshot."}
+    )
+    run_quality_summary: PublisherInventoryRunQualitySummary = field(
+        metadata={"doc": "Deterministic run-quality summary persisted for future route planning and drift monitoring."}
     )
 
 @dataclass(frozen=True)

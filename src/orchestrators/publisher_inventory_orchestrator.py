@@ -24,14 +24,20 @@ from src.contracts.publisher_inventory import (
     PublisherInventoryCandidateScreeningItem,
     PublisherInventoryCandidateScreeningRequest,
     PublisherInventoryCandidateScreeningResponse,
+    PublisherInventoryCoverageValidationRequest,
+    PublisherInventoryCoverageValidationResponse,
     PublisherInventoryDiscoveryRequest,
     PublisherInventoryDiscoveryResult,
     PublisherInventoryDiffItem,
+    PublisherInventoryRoutePlanRequest,
+    PublisherInventoryRunQualityEvaluationRequest,
+    PublisherInventoryRunQualitySummary,
     PublisherInventoryServiceRequest,
     PublisherInventoryServiceResponse,
     PublisherInventorySnapshot,
 )
 from src.contracts.report_store import (
+    PublisherInventoryRunQualityRecordRequest,
     ReportSourceDiscoveryRecordRequest,
     ReportSourceDiscoveryRecordResponse,
     PublisherInventoryStateGetRequest,
@@ -44,11 +50,20 @@ from src.generators.publisher_inventory_generator import (
     build_publisher_inventory_snapshot,
     parse_publisher_inventory_snapshot,
 )
+from src.generators.publisher_inventory_coverage_generator import (
+    validate_publisher_inventory_coverage,
+)
+from src.generators.publisher_inventory_run_quality_generator import (
+    evaluate_publisher_inventory_run_quality,
+)
 from src.generators.publisher_inventory_candidate_screening_generator import (
     screen_publisher_inventory_candidates,
 )
 from src.generators.publisher_inventory_candidate_quality_generator import (
     qualify_publisher_inventory_candidates,
+)
+from src.orchestrators._publisher_inventory_route_planner import (
+    plan_publisher_inventory_routes,
 )
 from src.orchestrators.retry_orchestrator import (
     RetryPolicy,
@@ -59,6 +74,7 @@ from src.services.drive_service import download_pdf, list_files_in_folder, uploa
 from src.services.publisher_inventory_service import discover_publisher_inventory
 from src.services.report_store_service import (
     get_publisher_inventory_state,
+    record_publisher_inventory_run_quality,
     record_discovered_report_source,
     record_publisher_inventory_state,
     record_publisher_inventory_test_status,
@@ -83,6 +99,14 @@ class PublisherInventoryDependencies:
         [PublisherInventoryBuildRequest, RunContext],
         PublisherInventoryBuildResponse,
     ]
+    validate_publisher_inventory_coverage: Callable[
+        [PublisherInventoryCoverageValidationRequest, RunContext],
+        PublisherInventoryCoverageValidationResponse,
+    ]
+    evaluate_publisher_inventory_run_quality: Callable[
+        [PublisherInventoryRunQualityEvaluationRequest, RunContext],
+        PublisherInventoryRunQualitySummary,
+    ]
     parse_publisher_inventory_snapshot: Callable[
         [str, str, RunContext],
         PublisherInventorySnapshot,
@@ -98,6 +122,10 @@ class PublisherInventoryDependencies:
     get_publisher_inventory_state: Callable[
         [PublisherInventoryStateGetRequest, RunContext],
         Optional[PublisherInventoryStateResponse],
+    ]
+    record_publisher_inventory_run_quality: Callable[
+        [PublisherInventoryRunQualityRecordRequest, RunContext],
+        None,
     ]
     record_publisher_inventory_state: Callable[
         [PublisherInventoryStateRecordRequest, RunContext],
@@ -123,12 +151,15 @@ class PublisherInventoryDependencies:
         return cls(
             discover_publisher_inventory=discover_publisher_inventory,
             build_publisher_inventory_snapshot=build_publisher_inventory_snapshot,
+            validate_publisher_inventory_coverage=validate_publisher_inventory_coverage,
+            evaluate_publisher_inventory_run_quality=evaluate_publisher_inventory_run_quality,
             parse_publisher_inventory_snapshot=lambda snapshot_json, source, ctx: (
                 parse_publisher_inventory_snapshot(snapshot_json, source=source, ctx=ctx)
             ),
             screen_publisher_inventory_candidates=screen_publisher_inventory_candidates,
             qualify_publisher_inventory_candidates=qualify_publisher_inventory_candidates,
             get_publisher_inventory_state=get_publisher_inventory_state,
+            record_publisher_inventory_run_quality=record_publisher_inventory_run_quality,
             record_publisher_inventory_state=record_publisher_inventory_state,
             record_publisher_inventory_test_status=record_publisher_inventory_test_status,
             record_discovered_report_source=record_discovered_report_source,
@@ -213,13 +244,24 @@ def run_publisher_inventory_discovery(
             backoff_step_seconds=request.settings.retry_backoff_step_seconds,
             jitter_seconds=request.settings.retry_jitter_seconds,
         )
+        route_plan = plan_publisher_inventory_routes(
+            PublisherInventoryRoutePlanRequest(
+                schema_version="1.0",
+                normalized_url=normalized_url,
+                force_browser=request.settings.force_browser,
+                remembered_route_kind=publisher_state.inventory_route_kind,
+                remembered_route_summary=publisher_state.inventory_route_summary,
+                previous_run_quality_summary=publisher_state.inventory_run_quality_summary,
+            ),
+            ctx,
+        )
         discovery_result: PublisherInventoryServiceResponse | None = None
-        if publisher_state.inventory_route_summary:
+        for planned_step in route_plan.steps:
             try:
                 _assert_time_budget_remaining(
                     deadline_monotonic=deadline_monotonic,
                     normalized_url=normalized_url,
-                    step_name="publisher_inventory_discovery_with_memory_route",
+                    step_name=planned_step.step_name,
                     ctx=ctx,
                 )
                 discovery_result = _run_discovery_attempt(
@@ -227,97 +269,48 @@ def run_publisher_inventory_discovery(
                     ctx=ctx,
                     policy=policy,
                     dependencies=deps,
-                    route_hint=publisher_state.inventory_route_summary,
-                    route_kind_hint=publisher_state.inventory_route_kind,
-                    step_name="publisher_inventory_discovery_with_memory_route",
+                    route_hint=planned_step.route_hint,
+                    route_kind_hint=planned_step.route_kind_hint,
+                    step_name=planned_step.step_name,
                     deadline_monotonic=deadline_monotonic,
                 )
+                break
             except AppError as exc:
                 if exc.code == "publisher_inventory_browser_pagination_limit":
                     raise
-                if not is_retryable_app_error(exc):
+                if (
+                    not planned_step.fallback_on_retryable_error
+                    or not is_retryable_app_error(exc)
+                ):
                     raise
+                fallback_event = (
+                    "publisher_inventory_memory_route_failed"
+                    if planned_step.uses_memory_route
+                    else "publisher_inventory_http_to_browser_fallback"
+                )
                 logger.info(
                     log_event(
                         ctx,
                         role="orchestrator",
-                        event="publisher_inventory_memory_route_failed",
+                        event=fallback_event,
                         module=logger.name,
                         fields={
                             "normalized_url": normalized_url,
-                            "route_kind": publisher_state.inventory_route_kind or "",
-                            "error": str(exc),
+                            "step_name": planned_step.step_name,
+                            "route_kind": planned_step.route_kind_hint or "",
+                            "error": exc.message,
+                            "code": exc.code,
                         },
                     )
                 )
         if discovery_result is None:
-            if request.settings.force_browser:
-                _assert_time_budget_remaining(
-                    deadline_monotonic=deadline_monotonic,
-                    normalized_url=normalized_url,
-                    step_name="publisher_inventory_discovery_browser",
-                    ctx=ctx,
-                )
-                discovery_result = _run_discovery_attempt(
-                    request=request,
-                    ctx=ctx,
-                    policy=policy,
-                    dependencies=deps,
-                    route_hint=None,
-                    route_kind_hint="browser_render",
-                    step_name="publisher_inventory_discovery_browser",
-                    deadline_monotonic=deadline_monotonic,
-                )
-            else:
-                try:
-                    _assert_time_budget_remaining(
-                        deadline_monotonic=deadline_monotonic,
-                        normalized_url=normalized_url,
-                        step_name="publisher_inventory_discovery_http",
-                        ctx=ctx,
-                    )
-                    discovery_result = _run_discovery_attempt(
-                        request=request,
-                        ctx=ctx,
-                        policy=policy,
-                        dependencies=deps,
-                        route_hint=None,
-                        route_kind_hint="http_parse",
-                        step_name="publisher_inventory_discovery_http",
-                        deadline_monotonic=deadline_monotonic,
-                    )
-                except AppError as exc:
-                    if exc.code == "publisher_inventory_time_budget_exceeded":
-                        raise
-                    logger.info(
-                        log_event(
-                            ctx,
-                            role="orchestrator",
-                            event="publisher_inventory_http_to_browser_fallback",
-                            module=logger.name,
-                            fields={
-                                "normalized_url": normalized_url,
-                                "error": exc.message,
-                                "code": exc.code,
-                            },
-                        )
-                    )
-                    _assert_time_budget_remaining(
-                        deadline_monotonic=deadline_monotonic,
-                        normalized_url=normalized_url,
-                        step_name="publisher_inventory_discovery_browser",
-                        ctx=ctx,
-                    )
-                    discovery_result = _run_discovery_attempt(
-                        request=request,
-                        ctx=ctx,
-                        policy=policy,
-                        dependencies=deps,
-                        route_hint=None,
-                        route_kind_hint="browser_render",
-                        step_name="publisher_inventory_discovery_browser",
-                        deadline_monotonic=deadline_monotonic,
-                    )
+            raise AppError(
+                code="publisher_inventory_route_plan_exhausted",
+                message="Publisher inventory route plan completed without a successful discovery result",
+                retryable=False,
+                severity="error",
+                context={"normalized_url": normalized_url},
+            )
 
         _assert_time_budget_remaining(
             deadline_monotonic=deadline_monotonic,
@@ -412,56 +405,6 @@ def run_publisher_inventory_discovery(
             ctx,
         )
         qualified_items = quality_response.approved_items
-        if _is_systematic_landing_page_failure(
-            screened_candidate_count=len(approved_items),
-            quality_response=quality_response,
-        ):
-            if previous_snapshot is not None:
-                logger.info(
-                    log_event(
-                        ctx,
-                        role="orchestrator",
-                        event="publisher_inventory_quality_systematic_unreachable_delta_tolerated",
-                        module=logger.name,
-                        fields={
-                            "publisher_name": publisher_state.publisher_name,
-                            "normalized_url": normalized_url,
-                            "screened_new_report_count": len(approved_items),
-                            "quality_rejected_new_report_count": len(
-                                quality_response.rejected_items
-                            ),
-                            "previous_snapshot_item_count": len(previous_snapshot.items),
-                        },
-                    )
-                )
-            else:
-                logger.info(
-                    log_event(
-                        ctx,
-                        role="orchestrator",
-                        event="publisher_inventory_quality_systematic_unreachable_failure",
-                        module=logger.name,
-                        fields={
-                            "publisher_name": publisher_state.publisher_name,
-                            "normalized_url": normalized_url,
-                            "screened_new_report_count": len(approved_items),
-                            "quality_rejected_new_report_count": len(
-                                quality_response.rejected_items
-                            ),
-                        },
-                    )
-                )
-                raise AppError(
-                    code="publisher_inventory_candidate_quality_unreachable_archive",
-                    message="Landing-page quality verification rejected all screened candidates as unreachable",
-                    retryable=False,
-                    severity="error",
-                    context={
-                        "publisher_name": publisher_state.publisher_name,
-                        "normalized_url": normalized_url,
-                        "screened_new_report_count": len(approved_items),
-                    },
-                )
         logger.info(
             log_event(
                 ctx,
@@ -478,14 +421,71 @@ def run_publisher_inventory_discovery(
                 },
             )
         )
-        no_report_assets_detected = _is_no_report_assets_archive(
-            previous_snapshot_available=previous_snapshot is not None,
-            raw_candidate_count=build_response.current_report_count,
-            screened_candidate_count=len(approved_items),
-            qualified_candidate_count=len(qualified_items),
-            quality_response=quality_response,
+        candidate_snapshot_changed = (
+            build_response.snapshot_sha256 != (previous_snapshot_sha256 or "")
         )
-        if no_report_assets_detected:
+        coverage_response = deps.validate_publisher_inventory_coverage(
+            PublisherInventoryCoverageValidationRequest(
+                schema_version="1.0",
+                publisher_name=publisher_state.publisher_name,
+                normalized_url=normalized_url,
+                previous_snapshot_available=previous_snapshot is not None,
+                previous_page_count=len(previous_snapshot.pages)
+                if previous_snapshot is not None
+                else 0,
+                previous_report_count=len(previous_snapshot.items)
+                if previous_snapshot is not None
+                else 0,
+                current_page_count=len(build_response.snapshot.pages),
+                current_report_count=build_response.current_report_count,
+                raw_new_report_count=len(build_response.new_items),
+                screened_new_report_count=len(approved_items),
+                qualified_new_report_count=len(qualified_items),
+                quality_rejection_reasons=[
+                    decision.reason for decision in quality_response.decisions
+                ],
+                candidate_snapshot_changed=candidate_snapshot_changed,
+            ),
+            ctx,
+        )
+        if coverage_response.verdict == "unreachable_delta_tolerated":
+            logger.info(
+                log_event(
+                    ctx,
+                    role="orchestrator",
+                    event="publisher_inventory_quality_systematic_unreachable_delta_tolerated",
+                    module=logger.name,
+                    fields={
+                        "publisher_name": publisher_state.publisher_name,
+                        "normalized_url": normalized_url,
+                        "screened_new_report_count": len(approved_items),
+                        "quality_rejected_new_report_count": len(
+                            quality_response.rejected_items
+                        ),
+                        "previous_snapshot_item_count": len(previous_snapshot.items)
+                        if previous_snapshot is not None
+                        else 0,
+                    },
+                )
+            )
+        elif coverage_response.verdict == "unreachable_delta_failure":
+            logger.info(
+                log_event(
+                    ctx,
+                    role="orchestrator",
+                    event="publisher_inventory_quality_systematic_unreachable_failure",
+                    module=logger.name,
+                    fields={
+                        "publisher_name": publisher_state.publisher_name,
+                        "normalized_url": normalized_url,
+                        "screened_new_report_count": len(approved_items),
+                        "quality_rejected_new_report_count": len(
+                            quality_response.rejected_items
+                        ),
+                    },
+                )
+            )
+        elif coverage_response.verdict == "no_report_assets":
             logger.info(
                 log_event(
                     ctx,
@@ -500,13 +500,7 @@ def run_publisher_inventory_discovery(
                     },
                 )
             )
-        if _is_undercoverage_regression(
-            previous_snapshot=previous_snapshot,
-            current_page_count=len(build_response.snapshot.pages),
-            current_report_count=build_response.current_report_count,
-            raw_new_report_count=len(build_response.new_items),
-            qualified_candidate_count=len(qualified_items),
-        ):
+        elif coverage_response.verdict == "undercoverage_regression":
             logger.info(
                 log_event(
                     ctx,
@@ -516,34 +510,16 @@ def run_publisher_inventory_discovery(
                     fields={
                         "publisher_name": publisher_state.publisher_name,
                         "normalized_url": normalized_url,
-                        "previous_report_count": len(previous_snapshot.items),
+                        "previous_report_count": len(previous_snapshot.items)
+                        if previous_snapshot is not None
+                        else 0,
                         "current_report_count": build_response.current_report_count,
                         "raw_new_report_count": len(build_response.new_items),
                         "qualified_new_report_count": len(qualified_items),
                     },
                 )
             )
-            raise AppError(
-                code="publisher_inventory_browser_incomplete",
-                message="Discovery returned a materially smaller inventory without any new qualified report assets",
-                retryable=False,
-                severity="error",
-                context={
-                    "publisher_name": publisher_state.publisher_name,
-                    "normalized_url": normalized_url,
-                    "previous_report_count": len(previous_snapshot.items),
-                    "current_report_count": build_response.current_report_count,
-                },
-            )
-        snapshot_changed = build_response.snapshot_sha256 != (previous_snapshot_sha256 or "")
-        if no_report_assets_detected:
-            snapshot_changed = False
-        if (
-            snapshot_changed
-            and previous_snapshot is not None
-            and build_response.new_items
-            and not qualified_items
-        ):
+        elif coverage_response.verdict == "raw_only_delta_rejected":
             logger.info(
                 log_event(
                     ctx,
@@ -561,7 +537,70 @@ def run_publisher_inventory_discovery(
                     },
                 )
             )
-            snapshot_changed = False
+        snapshot_changed = candidate_snapshot_changed and coverage_response.snapshot_allowed
+        no_report_assets_detected = coverage_response.no_report_assets_detected
+        run_quality_summary = deps.evaluate_publisher_inventory_run_quality(
+            PublisherInventoryRunQualityEvaluationRequest(
+                schema_version="1.0",
+                publisher_name=publisher_state.publisher_name,
+                normalized_url=normalized_url,
+                route_kind=discovery_result.route_kind,
+                used_memory_route=discovery_result.used_route_hint,
+                page_count=len(build_response.snapshot.pages),
+                raw_candidate_count=len(discovery_result.candidates),
+                current_report_count=build_response.current_report_count,
+                previous_report_count=build_response.previous_report_count,
+                raw_new_report_count=len(build_response.new_items),
+                screened_new_report_count=len(approved_items),
+                qualified_new_report_count=len(qualified_items),
+                snapshot_changed=snapshot_changed,
+                coverage_validation=coverage_response,
+                candidate_provenance_counts=_candidate_provenance_counts(
+                    discovery_result.candidates
+                ),
+            ),
+            ctx,
+        )
+        _assert_time_budget_remaining(
+            deadline_monotonic=deadline_monotonic,
+            normalized_url=normalized_url,
+            step_name="publisher_inventory_run_quality_record",
+            ctx=ctx,
+        )
+        run_with_retry(
+            step_name="publisher_inventory_run_quality_record",
+            operation=lambda: deps.record_publisher_inventory_run_quality(
+                PublisherInventoryRunQualityRecordRequest(
+                    schema_version="1.0",
+                    db_path=request.reports_db,
+                    normalized_url=normalized_url,
+                    summary=run_quality_summary,
+                ),
+                ctx,
+            ),
+            ctx=ctx,
+            logger=logger,
+            module_name=logger.name,
+            policy=policy,
+            retry_event="publisher_inventory_run_quality_record_retry",
+            failure_event="publisher_inventory_run_quality_record_failed",
+        )
+        if coverage_response.should_raise_error:
+            raise AppError(
+                code=str(coverage_response.error_code or "publisher_inventory_coverage_invalid"),
+                message=str(
+                    coverage_response.error_message
+                    or coverage_response.reason
+                    or "Publisher inventory coverage validation failed"
+                ),
+                retryable=False,
+                severity="error",
+                context={
+                    "publisher_name": publisher_state.publisher_name,
+                    "normalized_url": normalized_url,
+                    "coverage_verdict": coverage_response.verdict,
+                },
+            )
         snapshot_drive_file_id = previous_snapshot_file_id
         snapshot_drive_file_name = previous_snapshot_file_name
         snapshot_sha256 = previous_snapshot_sha256
@@ -708,6 +747,7 @@ def run_publisher_inventory_discovery(
             previous_report_count=build_response.previous_report_count,
             used_memory_route=discovery_result.used_route_hint,
             snapshot_changed=snapshot_changed,
+            run_quality_summary=run_quality_summary,
         )
         logger.info(
             log_event(
@@ -723,6 +763,8 @@ def run_publisher_inventory_discovery(
                     "new_report_count": len(response.new_report_urls),
                     "used_memory_route": response.used_memory_route,
                     "snapshot_changed": response.snapshot_changed,
+                    "run_quality_outcome": response.run_quality_summary.outcome,
+                    "run_quality_band": response.run_quality_summary.quality_band,
                 },
             )
         )
@@ -785,63 +827,15 @@ def _discovery_test_status_for_error_code(code: str) -> str:
     return f"failed:{normalized}"
 
 
-def _is_systematic_landing_page_failure(
-    *,
-    screened_candidate_count: int,
-    quality_response: PublisherInventoryCandidateQualityResponse,
-) -> bool:
-    if screened_candidate_count <= 0 or quality_response.approved_items:
-        return False
-    if len(quality_response.rejected_items) != screened_candidate_count:
-        return False
-    return all(
-        decision.reason == "dead_or_unreachable_landing_page"
-        for decision in quality_response.decisions
-    )
-
-
-def _is_no_report_assets_archive(
-    *,
-    previous_snapshot_available: bool,
-    raw_candidate_count: int,
-    screened_candidate_count: int,
-    qualified_candidate_count: int,
-    quality_response: PublisherInventoryCandidateQualityResponse,
-) -> bool:
-    if previous_snapshot_available:
-        return False
-    if raw_candidate_count <= 0:
-        return False
-    if qualified_candidate_count != 0:
-        return False
-    if quality_response.approved_items:
-        return False
-    return screened_candidate_count == 0 or bool(quality_response.rejected_items)
-
-
-def _is_undercoverage_regression(
-    *,
-    previous_snapshot: PublisherInventorySnapshot | None,
-    current_page_count: int,
-    current_report_count: int,
-    raw_new_report_count: int,
-    qualified_candidate_count: int,
-) -> bool:
-    if previous_snapshot is None:
-        return False
-    if current_page_count <= 1 and len(previous_snapshot.pages) <= 1:
-        return False
-    previous_report_count = len(previous_snapshot.items)
-    if previous_report_count <= 0:
-        return False
-    if current_report_count >= previous_report_count:
-        return False
-    if raw_new_report_count > 0 or qualified_candidate_count > 0:
-        return False
-    dropped_report_count = previous_report_count - current_report_count
-    if dropped_report_count < 5:
-        return False
-    return current_report_count / previous_report_count <= 0.8
+def _candidate_provenance_counts(
+    candidates,
+) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for candidate in candidates:
+        provenance = str(getattr(candidate, "provenance", "") or "unknown").strip()
+        key = provenance or "unknown"
+        counts[key] = counts.get(key, 0) + 1
+    return counts
 
 
 def _run_discovery_attempt(

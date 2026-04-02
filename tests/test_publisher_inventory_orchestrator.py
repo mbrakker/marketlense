@@ -332,6 +332,14 @@ def _dependencies(**overrides) -> PublisherInventoryDependencies:
             "src.generators.publisher_inventory_generator",
             fromlist=["parse_publisher_inventory_snapshot"],
         ).parse_publisher_inventory_snapshot(payload, source=source, ctx=ctx),
+        "validate_publisher_inventory_coverage": lambda req, ctx: __import__(
+            "src.generators.publisher_inventory_coverage_generator",
+            fromlist=["validate_publisher_inventory_coverage"],
+        ).validate_publisher_inventory_coverage(req, ctx),
+        "evaluate_publisher_inventory_run_quality": lambda req, ctx: __import__(
+            "src.generators.publisher_inventory_run_quality_generator",
+            fromlist=["evaluate_publisher_inventory_run_quality"],
+        ).evaluate_publisher_inventory_run_quality(req, ctx),
         "screen_publisher_inventory_candidates": lambda req, ctx: _screening_response(
             accepted_urls={"https://www.activate.com/reports/new-report"},
             request=req,
@@ -343,6 +351,7 @@ def _dependencies(**overrides) -> PublisherInventoryDependencies:
         "get_publisher_inventory_state": lambda req, ctx: _publisher_state(
             with_route=False, with_snapshot=False
         ),
+        "record_publisher_inventory_run_quality": lambda req, ctx: None,
         "record_publisher_inventory_state": lambda req, ctx: None,
         "record_publisher_inventory_test_status": lambda req, ctx: None,
         "record_discovered_report_source": lambda req, ctx: ReportSourceDiscoveryRecordResponse(

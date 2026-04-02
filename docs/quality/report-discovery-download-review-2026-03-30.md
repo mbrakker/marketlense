@@ -231,32 +231,10 @@ Implemented since this review:
 - snapshot construction and diffing already live in `src/generators/publisher_inventory_generator.py`
 - screening, landing-page quality, and persistence already execute as separate generator/orchestrator responsibilities
 
-### Remaining Activity-Based Decomposition Gaps
+Latest-codebase status as of 2026-04-02:
+- route planning now runs through `src/orchestrators/_publisher_inventory_route_planner.py` with explicit plan-step contracts and planner logs
+- the canonical `src/services/publisher_inventory_service.py` boundary now delegates acquisition into `src/services/_publisher_inventory_fetch_service.py` and `src/services/_publisher_inventory_browser_service.py`
+- coverage validation now runs as an explicit generator activity in `src/generators/publisher_inventory_coverage_generator.py` with a typed verdict contract
+- run-level quality evaluation now runs as an explicit generator activity in `src/generators/publisher_inventory_run_quality_generator.py` and is persisted on the publisher row for future route planning and drift review
 
-1. **Route planning is still embedded in `src/orchestrators/publisher_inventory_orchestrator.py`.**
-   - Memory-route reuse, HTTP/browser selection, and fallback ordering should still become an explicit planner unit with its own contract and logging surface.
-
-2. **HTTP acquisition and browser acquisition still share one public service module.**
-   - `src/services/publisher_inventory_service.py` remains the canonical boundary, but acquisition mechanics are still large enough to justify an internal split between HTTP fetch flow and browser traversal flow.
-
-3. **Coverage validation remains implicit across service and orchestrator checks.**
-   - Undercoverage, raw-only delta rejection, and unreachable-delta tolerance are valuable quality gates, but they are still distributed rather than represented as one explicit activity with one verdict contract.
-
-4. **Run-level quality evaluation is still missing as a first-class output.**
-   - The workflow logs rich traversal facts, but it does not yet persist a reusable run-quality summary for future route planning and drift monitoring.
-
-### Remaining Recommended Boundaries
-
-- **Orchestrator units:**
-  - `discovery_route_planner` for route order, confidence, and stop conditions
-  - `discovery_execution_orchestrator` for run sequencing and retry policy
-  - `discovery_persistence_orchestrator` for state/diff persistence choreography
-
-- **Internal service units under the canonical publisher inventory service boundary:**
-  - `inventory_fetch_service` for HTTP acquisition
-  - `inventory_browser_service` for rendered acquisition/traversal
-  - `inventory_state_store_service` for snapshot/state reads and writes
-
-- **Generator units still worth isolating further:**
-  - explicit coverage-validation generator
-  - explicit run-quality evaluation generator
+No remaining activity-based decomposition items from this review are still open in the latest codebase.
