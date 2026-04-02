@@ -9,6 +9,7 @@ from src.contracts.config import AppSettings
 from src.contracts.openai import OpenAIResponseResult
 from src.contracts.prompts import PromptSet, PromptTemplate
 from src.contracts.run_context import RunContext
+from src.generators.evidence_packs.base import EvidencePackStrategy
 from src.generators.evidence_packs.registry import PACK_STRATEGIES
 from src.generators.evidence_pack_generator import (
     _resolve_pack_steps,
@@ -914,7 +915,12 @@ def test_resolve_pack_steps_prepends_doc_map_when_missing():
         evidence_pack_enable_new_variety_packs=False,
     )
     steps = _resolve_pack_steps(settings)
-    assert [name for name, _, _ in steps][:3] == ["doc_map", "scope", "methods"]
+    assert all(isinstance(strategy, EvidencePackStrategy) for strategy in steps)
+    assert [strategy.pack_name for strategy in steps][:3] == [
+        "doc_map",
+        "scope",
+        "methods",
+    ]
 
 
 def test_pack_strategy_registry_exposes_expected_prompt_and_schema_metadata():

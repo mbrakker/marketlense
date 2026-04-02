@@ -335,3 +335,35 @@ def test_render_formats_slug_chips_with_acronyms(tmp_path):
     assert "ROI" in html
     assert "ai-in-retail" not in html
     assert "private_label" not in html
+
+
+def test_render_is_deterministic_across_calls(tmp_path):
+    data = {
+        "title": "Deterministic Report",
+        "tldr": "TLDR",
+        "insights": ["Insight A", "Insight B", "Insight C", "Insight D", "Insight E"],
+        "quote": {"text": "Quote", "author": "Author"},
+        "commentary": "Commentary",
+        "publisher": "Publisher",
+        "taxonomy": ["roi"],
+        "region": "US",
+        "time_period": "2024",
+        "contents_page_number": 0,
+    }
+    req = RenderRequest(
+        schema_version="1.0",
+        data=data,
+        doc_name="deterministic.pdf",
+        file_id="file_deterministic",
+        out_dir=str(tmp_path),
+        preview_png=None,
+        tag_acronyms=["ROI"],
+    )
+
+    first = render_report(req, _ctx())
+    second = render_report(req, _ctx())
+
+    first_html = Path(first.html_path).read_text(encoding="utf-8")
+    second_html = Path(second.html_path).read_text(encoding="utf-8")
+    assert first.html_path == second.html_path
+    assert first_html == second_html

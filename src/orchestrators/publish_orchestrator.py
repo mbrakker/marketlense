@@ -14,7 +14,7 @@ from src.contracts.state import (
     StatePublishCheckRequest,
     StatePublishRecordRequest,
 )
-from src.contracts.validation import ValidationIssue, ValidationReport
+from src.contracts.validation import ValidationReport
 from src.contracts.wordpress import WordPressPostLookupRequest
 from src.services.file_service import list_html, read_text
 from src.services.state_service import already_published as state_already_published
@@ -30,6 +30,7 @@ from src.services.wordpress_service import find_post_by_file_id
 from src.utils.html_utils import extract_file_id
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event, new_run_context
+from src.utils.validation import parse_validation_report_payload
 from src.utils.wp_auth import build_auth_header
 
 logger = logging.getLogger("market_lense.publish_orchestrator")
@@ -85,30 +86,7 @@ def _load_validation_report(
             continue
     if data is None or used_path is None:
         return None
-    issues_payload = data.get("issues") if isinstance(data, dict) else []
-    issues: List[ValidationIssue] = []
-    if isinstance(issues_payload, list):
-        for item in issues_payload:
-            if not isinstance(item, dict):
-                continue
-            issues.append(
-                ValidationIssue(
-                    schema_version=str(item.get("schema_version", "1.0")),
-                    message=str(item.get("message", "")),
-                    severity=str(item.get("severity", "warning")),
-                    affected_section=str(item.get("affected_section", "")),
-                )
-            )
-    status = str(data.get("status") or "fail")
-    severity = str(data.get("severity") or ("error" if status != "pass" else "pass"))
-    severity_norm = severity if severity in {"pass", "warning", "error"} else "error"
-    return ValidationReport(
-        schema_version=str(data.get("schema_version", "1.1")),
-        status=status,
-        severity=severity_norm,
-        issues=issues,
-        source_path=str(used_path),
-    )
+    return parse_validation_report_payload(data, source_path=str(used_path))
 
 
 def _with_validation(

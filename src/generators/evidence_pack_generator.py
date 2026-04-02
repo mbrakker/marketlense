@@ -31,6 +31,7 @@ from src.generators.evidence_packs.doc_map_strategy import (
 from src.generators.evidence_packs.doc_map_strategy import (
     summarize_payload as summarize_doc_map,
 )
+from src.generators.evidence_packs.base import EvidencePackStrategy
 from src.generators.evidence_packs.registry import (
     DEFAULT_PACK_REGISTRY,
     PACK_STRATEGIES,
@@ -63,7 +64,7 @@ def _pack_parallel_workers(settings: AppSettings, step_count: int) -> int:
     return max(1, min(configured, step_count))
 
 
-def _resolve_pack_steps(settings: AppSettings) -> list[tuple[str, str, str]]:
+def _resolve_pack_steps(settings: AppSettings) -> list[EvidencePackStrategy]:
     raw_registry = getattr(settings, "evidence_pack_registry", None)
     enable_variety = bool(
         getattr(settings, "evidence_pack_enable_new_variety_packs", False)
@@ -84,14 +85,11 @@ def _resolve_pack_steps(settings: AppSettings) -> list[tuple[str, str, str]]:
         registry = ["doc_map", *registry]
     elif registry[0] != "doc_map":
         registry = ["doc_map"] + [item for item in registry if item != "doc_map"]
-    return [
-        (
-            pack_name,
-            PACK_STRATEGIES[pack_name].prompt_namespace_suffix,
-            PACK_STRATEGIES[pack_name].schema_name,
-        )
-        for pack_name in registry
-    ]
+    return [PACK_STRATEGIES[pack_name] for pack_name in registry]
+
+
+def _prompt_namespace_for_strategy(strategy: EvidencePackStrategy) -> str:
+    return f"report_vs/{strategy.prompt_namespace_suffix}"
 
 def _parse_json_payload_from_text(text: str) -> Optional[object]:
     parsed, _strategy = parse_json_from_text(text, accepted_types=(dict, list))
@@ -127,9 +125,9 @@ def generate_evidence_packs(
             fields={"report_id": report_id, "vector_store_id": vector_store_id},
         )
     )
-    steps = _resolve_pack_steps(settings)
+    strategies = _resolve_pack_steps(settings)
     results: Dict[str, dict] = {}
-    parallel_workers = _pack_parallel_workers(settings, max(0, len(steps) - 1))
+    parallel_workers = _pack_parallel_workers(settings, max(0, len(strategies) - 1))
     logger.info(
         log_event(
             ctx,
@@ -139,28 +137,26 @@ def generate_evidence_packs(
             fields={
                 "report_id": report_id,
                 "parallel_workers": parallel_workers,
-                "parallel_step_count": max(0, len(steps) - 1),
-                "pack_registry": [step[0] for step in steps],
+                "parallel_step_count": max(0, len(strategies) - 1),
+                "pack_registry": [strategy.pack_name for strategy in strategies],
             },
         )
     )
 
-    doc_step = steps[0]
-    step_name, prompt_ns, schema_name = doc_step
+    doc_strategy = strategies[0]
+    step_name = doc_strategy.pack_name
     step_ctx = child_context(ctx, task_id=f"{ctx.task_id}:{step_name}")
     results[step_name] = _generate_pack(
         report_id=report_id,
         report_name=report_name,
         vector_store_id=vector_store_id,
-        prompt_namespace=f"report_vs/{prompt_ns}",
-        schema_name=schema_name,
         settings=settings,
         ctx=step_ctx,
         md5=md5,
         openai_client=openai_client,
         prompt_client=prompt_client,
         analysis_store=analysis_store,
-        pack_name=step_name,
+        strategy=doc_strategy,
     )
     completeness = _summarize_doc_map_completeness(results[step_name])
     if completeness["warn"]:
@@ -213,27 +209,26 @@ def generate_evidence_packs(
             context=summary,
         )
 
-    parallel_steps = steps[1:]
+    parallel_strategies = strategies[1:]
     parallel_results: Dict[str, dict] = {}
-    if parallel_steps and parallel_workers > 1:
+    if parallel_strategies and parallel_workers > 1:
         with ThreadPoolExecutor(max_workers=parallel_workers) as executor:
             futures = {}
-            for step_name, prompt_ns, schema_name in parallel_steps:
+            for strategy in parallel_strategies:
+                step_name = strategy.pack_name
                 step_ctx = child_context(ctx, task_id=f"{ctx.task_id}:{step_name}")
                 future = executor.submit(
                     _generate_pack,
                     report_id=report_id,
                     report_name=report_name,
                     vector_store_id=vector_store_id,
-                    prompt_namespace=f"report_vs/{prompt_ns}",
-                    schema_name=schema_name,
                     settings=settings,
                     ctx=step_ctx,
                     md5=md5,
                     openai_client=openai_client,
                     prompt_client=prompt_client,
                     analysis_store=analysis_store,
-                    pack_name=step_name,
+                    strategy=strategy,
                 )
                 futures[future] = step_name
             first_error: Optional[Tuple[str, Exception]] = None
@@ -271,24 +266,23 @@ def generate_evidence_packs(
                     context={"report_id": report_id, "pack": failed_step},
                 ) from first_exc
     else:
-        for step_name, prompt_ns, schema_name in parallel_steps:
+        for strategy in parallel_strategies:
+            step_name = strategy.pack_name
             step_ctx = child_context(ctx, task_id=f"{ctx.task_id}:{step_name}")
             parallel_results[step_name] = _generate_pack(
                 report_id=report_id,
                 report_name=report_name,
                 vector_store_id=vector_store_id,
-                prompt_namespace=f"report_vs/{prompt_ns}",
-                schema_name=schema_name,
                 settings=settings,
                 ctx=step_ctx,
                 md5=md5,
                 openai_client=openai_client,
                 prompt_client=prompt_client,
                 analysis_store=analysis_store,
-                pack_name=step_name,
+                strategy=strategy,
             )
-    for step_name, _, _ in parallel_steps:
-        results[step_name] = parallel_results[step_name]
+    for strategy in parallel_strategies:
+        results[strategy.pack_name] = parallel_results[strategy.pack_name]
     logger.info(
         log_event(
             ctx,
@@ -306,17 +300,17 @@ def _generate_pack(
     report_id: str,
     report_name: str,
     vector_store_id: str,
-    prompt_namespace: str,
-    schema_name: str,
     settings: AppSettings,
     ctx: RunContext,
     md5: Optional[str],
     openai_client,
     prompt_client,
     analysis_store,
-    pack_name: str,
+    strategy: EvidencePackStrategy,
 ) -> dict:
-    strategy = PACK_STRATEGIES[pack_name]
+    pack_name = strategy.pack_name
+    prompt_namespace = _prompt_namespace_for_strategy(strategy)
+    schema_name = strategy.schema_name
     logger.info(
         log_event(
             ctx,

@@ -10,6 +10,11 @@ from src.utils.logging import log_event
 from src.utils.slugify import slugify
 
 logger = logging.getLogger("market_lense.render_service")
+TEMPLATES_DIR = Path(__file__).resolve().parents[2] / "templates"
+JINJA_ENV = Environment(
+    loader=FileSystemLoader(str(TEMPLATES_DIR)),
+    autoescape=select_autoescape(["html", "xml"]),
+)
 
 
 def _build_tag_acronym_map(acronyms: list[str]) -> dict[str, str]:
@@ -35,13 +40,8 @@ def render_report(request: RenderRequest, ctx: RunContext) -> RenderResponse:
             "tag_acronyms_count": len(tag_acronym_map),
         },
     ))
-    templates_dir = (Path(__file__).resolve().parents[2] / "templates")
-    env = Environment(
-        loader=FileSystemLoader(str(templates_dir)),
-        autoescape=select_autoescape(["html", "xml"]),
-    )
     report_title = str(request.data.get("title") or "").strip()
-    html = env.get_template("report.html.j2").render(
+    html = JINJA_ENV.get_template("report.html.j2").render(
         data=request.data,
         doc_name=request.doc_name,
         file_id=request.file_id,

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from src.contracts.candidates import Candidate
 from src.contracts.report_models import ReportPayload
+from src.contracts.validation import ValidationIssue, ValidationReport
 
 
 def validate_report_payload(payload: ReportPayload) -> None:
@@ -34,3 +35,36 @@ def validate_candidate(candidate: Candidate) -> None:
         raise ValueError("Candidate.id is required")
     if candidate.kind not in ("chart", "table"):
         raise ValueError("Candidate.kind must be 'chart' or 'table'")
+
+
+def parse_validation_report_payload(
+    payload: object, *, source_path: str = ""
+) -> ValidationReport:
+    data = payload if isinstance(payload, dict) else {}
+    issues_payload = data.get("issues") if isinstance(data, dict) else []
+    issues: list[ValidationIssue] = []
+    if isinstance(issues_payload, list):
+        for item in issues_payload:
+            if not isinstance(item, dict):
+                continue
+            issues.append(
+                ValidationIssue(
+                    schema_version=str(item.get("schema_version", "1.0")),
+                    message=str(item.get("message", "")),
+                    severity=str(item.get("severity", "warning")),
+                    affected_section=str(item.get("affected_section", "")),
+                    rule_id=str(item.get("rule_id", "")),
+                    repair_target=str(item.get("repair_target", "")),
+                    entity_id=str(item.get("entity_id", "")),
+                )
+            )
+    status = str(data.get("status") or "fail")
+    severity = str(data.get("severity") or ("error" if status != "pass" else "pass"))
+    severity_norm = severity if severity in {"pass", "warning", "error"} else "error"
+    return ValidationReport(
+        schema_version=str(data.get("schema_version", "1.1")),
+        status=status,
+        severity=severity_norm,
+        issues=issues,
+        source_path=source_path,
+    )

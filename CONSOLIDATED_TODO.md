@@ -257,13 +257,6 @@ Suggested reading order when prioritizing:
 ## 8. Audit-Driven Refactors & Compliance
 
 ### 8.1 Core High-Impact Refactors
-- **Title:** Cache Jinja `Environment` at module scope and unify render service
-  - Explanation: Avoid recreating Jinja environment per render; centralize render service to return deterministic outputs and reduce overhead.
-  - Pros: Performance and fewer subtle diffs.
-  - Cons: Cache invalidation considerations for template changes.
-  - Acceptance Criteria:
-    - Jinja environment is cached and tests confirm deterministic output.
-
 - **Title:** SQLite: adopt WAL and narrow lock scopes
   - Explanation: Reduce global SQLite locking by using WAL, setting busy timeouts, and minimizing critical sections for state updates.
   - Pros: Higher concurrency and throughput.
@@ -307,14 +300,6 @@ Suggested reading order when prioritizing:
   - Acceptance Criteria:
     - Preview generation detects overlap and reuses existing contents-page preview.
     - No visual regressions in sample reports.
-
-- **Title:** Extract publish-time JSON parsing to a shared helper
-  - Explanation: Centralize JSON parsing/validation used at publish time into a single helper/service to avoid duplicated parsing code and inconsistent error handling.
-  - Pros: Less duplicated code; consistent error messages; simpler testing.
-  - Cons: Small refactor and coordination across publish paths.
-  - Acceptance Criteria:
-    - A shared helper/service exists and is imported by publish flows.
-    - All publish-time parsing uses the new helper and tests cover parsing edge cases.
 
 - **Title:** Cache incremental cost rollups instead of recomputing full ledger per write
   - Explanation: Maintain an incremental cache or rolling aggregate for daily cost totals so each new ledger entry updates the aggregate instead of recomputing across the full ledger file on every write.
@@ -469,13 +454,4 @@ This section absorbs the remaining open appendix items from `docs/quality/ineffe
     - Common evidence-pack strategy scaffolding is centralized.
     - Pack-specific transforms and schema choices remain explicit.
     - Existing strategy outputs remain unchanged under tests.
-
-- **Title:** Pass evidence-pack strategy objects directly through the generator
-  - Explanation: Simplify evidence-pack execution by building work directly from `EvidencePackStrategy` objects and scheduling metadata instead of tuple-based indirection and thin wrappers.
-  - Pros: Lower indirection and clearer execution flow.
-  - Cons: Requires careful refactor of registry/execution plumbing.
-  - Acceptance Criteria:
-    - Evidence-pack execution steps are derived directly from strategy objects.
-    - Pack ordering and registry behavior remain unchanged.
-    - Helper indirection around strategy metadata is reduced.
 
