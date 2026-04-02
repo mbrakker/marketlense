@@ -29,6 +29,7 @@ from src.contracts.publisher_inventory import (
 )
 from src.contracts.run_context import RunContext
 from src.services._publisher_inventory_discovery_activity import (
+    _anchor_fingerprint,
     _build_browser_route_summary,
     _candidate_url_signature,
     _extract_candidates_from_html,
@@ -44,11 +45,13 @@ from src.services._publisher_inventory_discovery_activity import (
     _requires_archive_surface_recovery,
     _requires_origin_host_recovery,
     _resolve_next_page_url,
+    _score_http_candidate_confidence,
     _select_anchor_title,
     _select_tab_labels_for_traversal,
     _should_apply_report_filter,
     _should_expand_archive_library,
     _should_follow_report_listing,
+    _with_candidate_metadata,
 )
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -547,6 +550,8 @@ def _discover_direct_pdf_source(
         discovered_on_page_number=1,
         pdf_url=normalized_url,
         published_at_text=None,
+        provenance="direct_pdf_source",
+        confidence=1.0,
     )
     response = PublisherInventoryServiceResponse(
         schema_version="1.0",
@@ -590,8 +595,10 @@ def _discover_with_http(
     headers = dict(_HTTP_BROWSER_HEADERS)
     current_url = normalized_url
     visited: set[str] = set()
+    seen_page_fingerprints: set[tuple[tuple[str, str, str], ...]] = set()
     pages: list[PublisherInventoryPage] = []
     candidates: list[PublisherInventoryRawCandidate] = []
+    rejected_low_confidence_count = 0
     page_number = 1
     while current_url and page_number <= request.settings.pagination_max_pages:
         if current_url in visited:
@@ -648,13 +655,6 @@ def _discover_with_http(
                 retryable=True,
                 context={"page_url": final_page_url},
             ) from exc
-        pages.append(
-            PublisherInventoryPage(
-                schema_version="1.0",
-                page_number=page_number,
-                page_url=final_page_url,
-            )
-        )
         next_page_url = _resolve_next_page_url(
             current_page_url=final_page_url,
             page_number=page_number,
@@ -666,8 +666,54 @@ def _discover_with_http(
             page_url=final_page_url,
             page_number=page_number,
             next_page_url=next_page_url,
+            provenance="http_parse",
         )
-        candidates.extend(page_candidates)
+        page_fingerprint = _anchor_fingerprint(parser.anchors)
+        if page_fingerprint and page_fingerprint in seen_page_fingerprints:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="publisher_inventory_http_duplicate_page_fingerprint",
+                    module=logger.name,
+                    fields={
+                        "page_url": final_page_url,
+                        "page_number": page_number,
+                        "candidate_count": len(page_candidates),
+                    },
+                )
+            )
+            break
+        if page_fingerprint:
+            seen_page_fingerprints.add(page_fingerprint)
+        confidence_by_url = {
+            candidate.url: _score_http_candidate_confidence(
+                candidate,
+                page_url=final_page_url,
+            )
+            for candidate in page_candidates
+        }
+        qualified_page_candidates = _with_candidate_metadata(
+            [
+                candidate
+                for candidate in page_candidates
+                if confidence_by_url.get(candidate.url, 0.0) >= 0.60
+            ],
+            provenance="http_parse",
+            confidence_by_url=confidence_by_url,
+        )
+        rejected_low_confidence_count += max(
+            0,
+            len(page_candidates) - len(qualified_page_candidates),
+        )
+        pages.append(
+            PublisherInventoryPage(
+                schema_version="1.0",
+                page_number=page_number,
+                page_url=final_page_url,
+            )
+        )
+        candidates.extend(qualified_page_candidates)
         if not next_page_url:
             break
         current_url = next_page_url
@@ -704,6 +750,15 @@ def _discover_with_http(
                 "normalized_url": normalized_url,
                 "page_count": len(response.pages),
                 "candidate_count": len(response.candidates),
+                "rejected_low_confidence_count": rejected_low_confidence_count,
+                "average_confidence": round(
+                    sum(candidate.confidence or 0.0 for candidate in response.candidates)
+                    / len(response.candidates),
+                    4,
+                ),
+                "candidate_provenance_counts": _candidate_provenance_counts(
+                    response.candidates
+                ),
                 "used_route_hint": response.used_route_hint,
             },
         )
@@ -782,6 +837,7 @@ def _discover_with_browser(
                 "browser_final_url": final_page_url,
                 "page_count": len(pages),
                 "candidate_count": len(candidates),
+                "candidate_provenance_counts": _candidate_provenance_counts(candidates),
                 "route_summary": route_summary,
             },
         )
@@ -857,6 +913,9 @@ def _discover_with_browser(
                 "normalized_url": normalized_url,
                 "page_count": len(response.pages),
                 "candidate_count": len(response.candidates),
+                "candidate_provenance_counts": _candidate_provenance_counts(
+                    response.candidates
+                ),
                 "used_route_hint": response.used_route_hint,
                 "route_kind": response.route_kind,
             },
@@ -915,6 +974,7 @@ async def _run_browser_traversal(
             page_title=settled_state.page_title,
             active_tab_label=settled_state.active_tab_label,
             archive_surface=_is_archive_surface(settled_state),
+            provenance="browser_dom",
         )
         await _prime_browser_inventory_surface(page)
         pre_cookie_state = await _extract_rendered_inventory_state(page)
@@ -927,6 +987,7 @@ async def _run_browser_traversal(
             page_title=pre_cookie_state.page_title,
             active_tab_label=pre_cookie_state.active_tab_label,
             archive_surface=_is_archive_surface(pre_cookie_state),
+            provenance="browser_dom",
         )
         metrics = _BrowserTraversalMetrics(
             cookies_dismissed=0,
@@ -1033,6 +1094,7 @@ async def _run_browser_traversal(
             page_title=initial_state.page_title,
             active_tab_label=initial_state.active_tab_label,
             archive_surface=_is_archive_surface(initial_state),
+            provenance="browser_dom",
         )
         seed_state = initial_state
         seed_candidates = initial_candidates
@@ -1372,6 +1434,7 @@ async def _extract_rendered_html_supplement_candidates(
         page_title=state.page_title,
         active_tab_label=state.active_tab_label,
         archive_surface=_is_archive_surface(state),
+        provenance="browser_rendered_html_supplement",
     )
     logger.info(
         log_event(
@@ -1472,6 +1535,7 @@ async def _collect_browser_inventory_pages(
             page_title=state.page_title,
             active_tab_label=state.active_tab_label,
             archive_surface=_is_archive_surface(state),
+            provenance="browser_dom",
         )
         if (
             archive_expected
@@ -1527,6 +1591,7 @@ async def _collect_browser_inventory_pages(
                 page_title=state.page_title,
                 active_tab_label=state.active_tab_label,
                 archive_surface=_is_archive_surface(state),
+                provenance="browser_dom",
             )
         if not page_candidates:
             page_candidates = await _extract_rendered_html_supplement_candidates(
@@ -2815,6 +2880,7 @@ def _extract_browser_http_supplement_candidates(
         page_number=page.page_number,
         next_page_url=None,
         origin_url=normalized_url,
+        provenance="http_supplement",
     )
     logger.info(
         log_event(
@@ -3087,6 +3153,16 @@ def _contains_price_signal(value: str) -> bool:
             flags=re.IGNORECASE,
         )
     )
+
+
+def _candidate_provenance_counts(
+    candidates: list[PublisherInventoryRawCandidate],
+) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for candidate in candidates:
+        provenance = str(candidate.provenance or "unknown").strip() or "unknown"
+        counts[provenance] = counts.get(provenance, 0) + 1
+    return counts
 
 
 def _validate_request(

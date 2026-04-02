@@ -143,6 +143,7 @@ def _extract_candidates_from_html(
     page_title: str = "",
     active_tab_label: str | None = None,
     archive_surface: bool = False,
+    provenance: str | None = None,
 ) -> list[PublisherInventoryRawCandidate]:
     candidates: list[PublisherInventoryRawCandidate] = []
     seen_urls: set[str] = set()
@@ -182,6 +183,8 @@ def _extract_candidates_from_html(
                 discovered_on_page_number=page_number,
                 pdf_url=pdf_url,
                 published_at_text=None,
+                provenance=provenance,
+                confidence=None,
             )
         )
     return candidates
@@ -199,6 +202,81 @@ def _candidate_url_signature(
             }
         )
     )
+
+
+def _anchor_fingerprint(
+    anchors: list[dict[str, str]],
+) -> tuple[tuple[str, str, str], ...]:
+    return tuple(
+        (
+            _normalize_text(anchor.get("href", "")),
+            _normalize_text(anchor.get("text", "")),
+            _normalize_text(anchor.get("rel", "")),
+        )
+        for anchor in anchors
+        if _normalize_text(anchor.get("href", ""))
+    )
+
+
+def _score_http_candidate_confidence(
+    candidate: PublisherInventoryRawCandidate,
+    *,
+    page_url: str,
+) -> float:
+    normalized_url = _normalize_absolute_url(candidate.url)
+    if not normalized_url:
+        return 0.0
+    if normalized_url.lower().endswith(".pdf"):
+        return 1.0
+
+    lowered_url = normalized_url.casefold()
+    lowered_title = _normalize_text(candidate.title).casefold()
+    page_host = str(urlsplit(page_url).hostname or "").strip().casefold()
+    candidate_host = str(urlsplit(normalized_url).hostname or "").strip().casefold()
+
+    score = 0.0
+    if _is_same_inventory_domain(candidate_host, page_host):
+        score += 0.10
+    if any(keyword in lowered_url for keyword in _STRONG_REPORT_KEYWORDS):
+        score += 0.45
+    if any(keyword in lowered_title for keyword in _STRONG_REPORT_KEYWORDS):
+        score += 0.35
+    if any(keyword in lowered_url for keyword in _WEAK_REPORT_KEYWORDS):
+        score += 0.05
+    if any(keyword in lowered_title for keyword in _WEAK_REPORT_KEYWORDS):
+        score += 0.05
+    if _is_inventory_article_path(normalized_url):
+        score += 0.05
+    if _looks_like_human_report_title(candidate.title):
+        score += 0.10
+    if any(char.isdigit() for char in candidate.title):
+        score += 0.05
+    return max(0.0, min(round(score, 4), 1.0))
+
+
+def _with_candidate_metadata(
+    candidates: list[PublisherInventoryRawCandidate],
+    *,
+    provenance: str | None = None,
+    confidence_by_url: dict[str, float] | None = None,
+) -> list[PublisherInventoryRawCandidate]:
+    updated: list[PublisherInventoryRawCandidate] = []
+    confidence_by_url = confidence_by_url or {}
+    for candidate in candidates:
+        updated.append(
+            PublisherInventoryRawCandidate(
+                schema_version=candidate.schema_version,
+                url=candidate.url,
+                title=candidate.title,
+                source_page_url=candidate.source_page_url,
+                discovered_on_page_number=candidate.discovered_on_page_number,
+                pdf_url=candidate.pdf_url,
+                published_at_text=candidate.published_at_text,
+                provenance=provenance or candidate.provenance,
+                confidence=confidence_by_url.get(candidate.url, candidate.confidence),
+            )
+        )
+    return updated
 
 
 def _should_follow_report_listing(

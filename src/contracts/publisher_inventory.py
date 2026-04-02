@@ -42,6 +42,14 @@ class PublisherInventoryRawCandidate:
         default=None,
         metadata={"doc": "Optional raw published-date text extracted for this candidate."},
     )
+    provenance: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Optional extraction provenance for the raw candidate, for example browser_dom, browser_rendered_html_supplement, http_supplement, http_parse, or direct_pdf_source."},
+    )
+    confidence: Optional[float] = field(
+        default=None,
+        metadata={"doc": "Optional deterministic extraction-confidence score in the range 0.0-1.0 when a route computes candidate-quality confidence before acceptance."},
+    )
 
 
 @dataclass(frozen=True)

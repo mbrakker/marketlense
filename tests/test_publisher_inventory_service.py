@@ -361,10 +361,104 @@ def test_discover_publisher_inventory_http_parse_handles_multipage(
     assert response.used_route_hint is False
     assert len(response.pages) == 2
     assert len(response.candidates) == 2
+    assert response.candidates[0].provenance == "http_parse"
+    assert response.candidates[0].confidence is not None
+    assert response.candidates[0].confidence >= 0.60
     assert response.candidates[1].discovered_on_page_number == 2
     assert response.candidates[1].source_page_url == "https://example.com/insights?page=2"
     assert_no_defaulted_required_fields(response)
     assert_logs_have_required_fields(_events(caplog))
+
+
+def test_discover_publisher_inventory_http_parse_stops_on_duplicate_page_fingerprint(
+    tmp_path: Path,
+    caplog,
+    run_context,
+    external_boundary_mocks_only,
+    assert_logs_have_required_fields,
+) -> None:
+    html_page = """
+    <html><body>
+      <a href="/reports/report-one">Report One 2026</a>
+      <a href="https://example.com/insights?page=2" rel="next">Next</a>
+    </body></html>
+    """
+    requested_urls: list[str] = []
+
+    def _get(url, timeout, headers):
+        requested_urls.append(url)
+        assert timeout == 10.0
+        assert headers["User-Agent"].startswith("Mozilla/5.0")
+        assert headers["Accept-Language"] == "en-US,en;q=0.9"
+        if url.endswith("page=2"):
+            return _FakeResponse(
+                url="https://example.com/insights?page=2",
+                text=html_page,
+            )
+        return _FakeResponse(url="https://example.com/insights", text=html_page)
+
+    external_boundary_mocks_only.setattr(service.requests, "get", _get)
+    caplog.set_level(logging.INFO, logger=service.logger.name)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://example.com/insights",
+            settings=_settings(tmp_path),
+        ),
+        run_context,
+    )
+
+    assert requested_urls == [
+        "https://example.com/insights",
+        "https://example.com/insights?page=2",
+    ]
+    assert response.route_kind == "http_parse"
+    assert len(response.pages) == 1
+    assert [candidate.url for candidate in response.candidates] == [
+        "https://example.com/reports/report-one"
+    ]
+    duplicate_events = [
+        event
+        for event in _events(caplog)
+        if event.get("event") == "publisher_inventory_http_duplicate_page_fingerprint"
+    ]
+    assert len(duplicate_events) == 1
+    assert_logs_have_required_fields(_events(caplog))
+
+
+def test_discover_publisher_inventory_http_parse_rejects_low_confidence_candidates(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+    assert_app_error,
+) -> None:
+    html = """
+    <html><body>
+      <a href="/insights/customer-trends-2026">Customer Trends 2026</a>
+    </body></html>
+    """
+
+    def _get(url, timeout, headers):
+        assert timeout == 10.0
+        assert headers["User-Agent"].startswith("Mozilla/5.0")
+        assert headers["Accept-Language"] == "en-US,en;q=0.9"
+        return _FakeResponse(url="https://example.com/insights", text=html)
+
+    external_boundary_mocks_only.setattr(service.requests, "get", _get)
+
+    with pytest.raises(AppError) as err:
+        service.discover_publisher_inventory(
+            PublisherInventoryServiceRequest(
+                schema_version="1.0",
+                insights_url="https://example.com/insights",
+                settings=_settings(tmp_path),
+                route_kind_hint="http_parse",
+            ),
+            run_context,
+        )
+
+    assert_app_error(err.value, code="publisher_inventory_http_empty", retryable=False)
 
 
 def test_select_tab_labels_for_traversal_prefers_report_focused_tabs() -> None:
@@ -678,6 +772,7 @@ def test_discover_publisher_inventory_browser_applies_generic_report_dropdown_fi
     assert [candidate.url for candidate in response.candidates] == [
         "https://www.transunion.com/report/example-industry-report"
     ]
+    assert response.candidates[0].provenance == "browser_dom"
     assert "Applied the report format filter." in response.route_summary
 
 
@@ -706,6 +801,8 @@ def test_discover_publisher_inventory_direct_pdf_source_short_circuits_browser(
         "https://example.com/reports/state-of-retail-2026.pdf"
     ]
     assert response.candidates[0].pdf_url == "https://example.com/reports/state-of-retail-2026.pdf"
+    assert response.candidates[0].provenance == "direct_pdf_source"
+    assert response.candidates[0].confidence == 1.0
 
 
 def test_discover_publisher_inventory_browser_fallback_when_http_empty(
@@ -1246,6 +1343,7 @@ def test_discover_publisher_inventory_browser_uses_http_supplement_when_browser_
     assert [candidate.url for candidate in response.candidates] == [
         "https://www.bluecore.com/lp/customer-movement-benchmarks"
     ]
+    assert response.candidates[0].provenance == "http_supplement"
 
 
 def test_discover_publisher_inventory_browser_invalid_http_supplement_html_fails_cleanly(
@@ -1337,6 +1435,7 @@ def test_discover_publisher_inventory_browser_uses_rendered_html_supplement_when
     assert [candidate.url for candidate in response.candidates] == [
         "https://www.bluecore.com/lp/customer-movement-benchmarks"
     ]
+    assert response.candidates[0].provenance == "browser_rendered_html_supplement"
 
 
 def test_discover_publisher_inventory_browser_preserves_pre_cookie_archive_candidates_when_dismissal_degrades_page(
