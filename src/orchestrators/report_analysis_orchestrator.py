@@ -48,6 +48,7 @@ from src.generators.report_generation_shared import (
     pack_paths,
     record_state_progress,
     resolve_doc_map_metadata,
+    resolve_doc_map_primary_contributor,
 )
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
@@ -574,6 +575,9 @@ def run_report_analysis(
         data_dict["artifacts"] = artifacts_payload
     if validation_report:
         data_dict["validation_report"] = validation_report.to_dict()
+    data_dict["report_identity_author"] = resolve_doc_map_primary_contributor(
+        packs.get("doc_map", {}) if isinstance(packs.get("doc_map"), dict) else {}
+    )
     data_dict["categories_display"] = category_assignment.category_labels
     data_dict["analysis_mode"] = runtime.analysis_mode
     data_dict["regeneration_loop_state"] = asdict(regeneration_loop_state)

@@ -247,6 +247,44 @@ def test_render_report_output_sources_metadata_from_db_and_returns_complete_outc
     assert Path(outcome.html_path).exists()
 
 
+def test_render_report_output_preserves_analysis_metadata_when_db_metadata_missing(
+    tmp_path,
+):
+    runtime = _runtime(tmp_path, md5="md5")
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = _analysis(runtime, source, selection)
+    captured = {}
+    html_path = Path(tmp_path / "out" / "report.html")
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def _render_report(req, ctx):
+        del ctx
+        captured["title"] = req.data["title"]
+        captured["publisher"] = req.data["publisher"]
+        captured["time_period"] = req.data["time_period"]
+        html_path.write_text("<html></html>", encoding="utf-8")
+        return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
+
+    deps = _deps(render_report=_render_report, get_report_metadata=lambda req, ctx: None)
+
+    preview_resp = render_preview_asset(runtime, source, deps)
+    render_report_output(
+        runtime,
+        source,
+        selection,
+        analysis,
+        deps,
+        preview_resp=preview_resp,
+    )
+
+    assert captured == {
+        "title": "Doc Title",
+        "publisher": "Doc Publisher",
+        "time_period": "2026",
+    }
+
+
 def test_render_report_output_uses_html_cache_hit_and_skips_render(tmp_path):
     runtime = _runtime(tmp_path, md5="md5")
     source = _source(runtime)

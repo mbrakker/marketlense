@@ -730,8 +730,41 @@ def _load_cached_pack(
     def _adapt_payload(
         payload: Dict[str, object], path: str
     ) -> CachedPackAdaptResult[dict]:
-        del path
-        not_found_reason = str(payload.get("not_found_reason") or "").strip()
+        strategy = PACK_STRATEGIES[pack_name]
+        normalized_payload = dict(
+            strategy.normalize_payload(payload, report_id, report_name).payload
+        )
+        try:
+            validate_schema(
+                SchemaValidateRequest(
+                    schema_version="1.0",
+                    payload=normalized_payload,
+                    schema_name=strategy.schema_name,
+                ),
+                ctx,
+            )
+        except AppError as exc:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="evidence_pack_cache_invalid",
+                    module=logger.name,
+                    fields={
+                        "report_id": report_id,
+                        "pack": pack_name,
+                        "path": path,
+                        "code": exc.code,
+                        "message": exc.message,
+                    },
+                )
+            )
+            return CachedPackAdaptResult(
+                schema_version="1.0",
+                status="schema_invalid",
+                value=None,
+            )
+        not_found_reason = str(normalized_payload.get("not_found_reason") or "").strip()
         if not_found_reason:
             logger.info(
                 log_event(
@@ -754,7 +787,7 @@ def _load_cached_pack(
         return CachedPackAdaptResult(
             schema_version="1.0",
             status="hit",
-            value=dict(payload),
+            value=normalized_payload,
         )
 
     result = load_cached_pack(

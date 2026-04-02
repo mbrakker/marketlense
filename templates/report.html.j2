@@ -6,6 +6,8 @@
 {% set report_title = report_title|string|trim %}
 {% set publisher = data.publisher if data.publisher is defined and data.publisher else "" %}
 {% set publisher = publisher|string|trim %}
+{% set report_identity_author = data.report_identity_author if data.report_identity_author is defined and data.report_identity_author else "" %}
+{% set report_identity_author = report_identity_author|string|trim %}
 {% set region = data.region if data.region is defined and data.region else "" %}
 {% set region = region|string|trim %}
 {% set report_year = data.time_period if data.time_period is defined and data.time_period else "" %}
@@ -81,7 +83,14 @@
 {% set has_claim_map = claim_map|length > 0 %}
 {% set has_expert_comment = expert_comment and (expert_comment|string|trim) %}
 {% set has_linkedin_post = linkedin_post and (linkedin_post|string|trim) %}
+{% set has_appendix = has_expert_comment or has_linkedin_post %}
 {% set has_commentary = commentary and not has_expert_comment %}
+{% set report_identity_ns = namespace(items=[]) %}
+{% if report_title %}{% set report_identity_ns.items = report_identity_ns.items + ["Title: " ~ report_title] %}{% endif %}
+{% if publisher %}{% set report_identity_ns.items = report_identity_ns.items + ["Publisher: " ~ publisher] %}{% endif %}
+{% if report_year %}{% set report_identity_ns.items = report_identity_ns.items + ["Year: " ~ report_year] %}{% endif %}
+{% if report_identity_author %}{% set report_identity_ns.items = report_identity_ns.items + ["Author: " ~ report_identity_author] %}{% endif %}
+{% set has_report_identity = report_identity_ns.items|length > 0 %}
 {% set insights_ns = namespace(count=0) %}
 {% for insight in insights_list %}
   {% if insight.text is defined %}
@@ -548,6 +557,13 @@ body{
   font-size:1.02rem;
   max-width:58ch;
 }
+.report-identity{
+  margin:0 0 .9rem;
+  color:#34506f;
+  font-size:.84rem;
+  line-height:1.45;
+  font-family:"Avenir Next","Segoe UI",Tahoma,sans-serif;
+}
 .hero-subtitle-line{
   display:block;
   margin:0 0 2px;
@@ -977,8 +993,11 @@ h2{
           <div class="hero-copy">
             <p class="eyebrow">Market Lense report digest</p>
             <h1>{{ report_title }}</h1>
+            {% if has_report_identity %}
+            <p class="report-identity">{{ report_identity_ns.items|join(" · ") }}</p>
+            {% endif %}
             <p class="hero-subtitle">
-              <span class="hero-subtitle-line"><span class="hero-subtitle-label">Publisher:</span> {% if publisher %}{{ publisher }}{% else %}Unknown publisher{% endif %}</span>
+              <span class="hero-subtitle-line"><span class="hero-subtitle-label">Publisher:</span> {% if publisher %}{{ publisher }}{% else %}Not extracted{% endif %}</span>
               <span class="hero-subtitle-line"><span class="hero-subtitle-label">Time Period:</span> {% if report_year %}{{ report_year }}{% else %}Not specified{% endif %}</span>
               <span class="hero-subtitle-line"><span class="hero-subtitle-label">Geography:</span> {% if region %}{{ region }}{% else %}Not specified{% endif %}</span>
             </p>
@@ -1023,8 +1042,8 @@ h2{
               <li><a href="#section-insights" data-section-link>Key data insights</a></li>
               {% if has_primary_figure %}<li><a href="#section-figures" data-section-link>Figures</a></li>{% endif %}
               <li><a href="#section-quotes" data-section-link>Key quotes</a></li>
-              {% if has_expert_comment %}<li><a href="#section-expert" data-section-link>Expert comment</a></li>{% endif %}
-              {% if has_linkedin_post %}<li><a href="#section-linkedin" data-section-link>LinkedIn post</a></li>{% endif %}
+              <li><a href="#section-resources" data-section-link>Sources</a></li>
+              {% if has_appendix %}<li><a href="#section-appendix" data-section-link>Appendix</a></li>{% endif %}
             </ul>
           </div>
         </nav>
@@ -1324,20 +1343,6 @@ h2{
           {% endif %}
         </section>
 
-        {% if has_expert_comment %}
-        <section class="panel" id="section-expert" data-reveal data-section aria-label="Expert comment">
-          <h2>Expert comment (generated)</h2>
-          <div class="prose-block" data-chunk-prose style="max-width:none">{{ expert_comment }}</div>
-        </section>
-        {% endif %}
-
-        {% if has_linkedin_post %}
-        <section class="panel" id="section-linkedin" data-reveal data-section aria-label="LinkedIn post">
-          <h2>LinkedIn post</h2>
-          <div class="prose-block" data-chunk-prose style="max-width:none">{{ linkedin_post }}</div>
-        </section>
-        {% endif %}
-
         {% if has_commentary %}
         <section class="panel" id="section-commentary" data-reveal data-section aria-label="Commentary">
           <h2>Commentary</h2>
@@ -1345,15 +1350,30 @@ h2{
         </section>
         {% endif %}
 
-        {% if canonical_url or source_url %}
         <section class="panel" id="section-resources" data-reveal data-section aria-label="Related resources">
           <h2>Related resources</h2>
+          {% if not canonical_url and not source_url %}
+          <p class="muted">Source URL was not available in the extracted report metadata.</p>
+          {% endif %}
           <ul class="resource-list">
             {% if canonical_url %}<li><a href="{{ canonical_url }}" rel="noopener" target="_blank">Canonical/source URL</a></li>{% endif %}
             {% if source_url and source_url != canonical_url %}<li><a href="{{ source_url }}" rel="noopener" target="_blank">Original source link</a></li>{% endif %}
             <li><a href="#section-summary">Back to TL;DR</a></li>
             <li><a href="#section-insights">Jump to key insights</a></li>
           </ul>
+        </section>
+
+        {% if has_appendix %}
+        <section class="panel" id="section-appendix" data-reveal data-section aria-label="Appendix">
+          <h2>Appendix</h2>
+          {% if has_expert_comment %}
+          <h3>Expert comment (generated)</h3>
+          <div class="prose-block" data-chunk-prose style="max-width:none">{{ expert_comment }}</div>
+          {% endif %}
+          {% if has_linkedin_post %}
+          <h3>LinkedIn post</h3>
+          <div class="prose-block" data-chunk-prose style="max-width:none">{{ linkedin_post }}</div>
+          {% endif %}
         </section>
         {% endif %}
       </main>

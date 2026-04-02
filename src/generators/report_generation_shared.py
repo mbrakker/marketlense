@@ -313,6 +313,31 @@ def resolve_doc_map_metadata(doc_map_pack: dict[str, Any]) -> tuple[str, str, st
     return title, publisher, title_source, publisher_source
 
 
+def resolve_doc_map_primary_contributor(doc_map_pack: dict[str, Any]) -> str:
+    candidate = doc_map_pack
+    for key in ("doc_map", "docmap", "docMap"):
+        wrapped = doc_map_pack.get(key)
+        if isinstance(wrapped, dict):
+            candidate = wrapped
+            break
+    contributors = (
+        candidate.get("contributors")
+        if isinstance(candidate.get("contributors"), list)
+        else []
+    )
+    for contributor in contributors:
+        if not isinstance(contributor, dict):
+            continue
+        name = pick_non_empty_text(
+            contributor.get("name"),
+            contributor.get("author"),
+            contributor.get("full_name"),
+        )
+        if name:
+            return name
+    return ""
+
+
 def pack_paths(
     output_dir: str,
     report_id: str,

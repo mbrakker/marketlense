@@ -12,6 +12,7 @@ from src.contracts.run_context import RunContext
 from src.generators.evidence_packs.base import EvidencePackStrategy
 from src.generators.evidence_packs.registry import PACK_STRATEGIES
 from src.generators.evidence_pack_generator import (
+    _load_cached_pack,
     _resolve_pack_steps,
     _strip_json_fence,
     generate_evidence_packs,
@@ -947,3 +948,39 @@ def test_pack_strategy_registry_exposes_expected_prompt_and_schema_metadata():
         strategy = PACK_STRATEGIES[pack_name]
         assert strategy.prompt_namespace_suffix == prompt_ns
         assert strategy.schema_name == schema_name
+
+
+def test_load_cached_evidence_pack_normalizes_legacy_payload_before_validation(
+    tmp_path,
+):
+    report_name = "evidence cache invalid"
+    cache_path = tmp_path / slugify(report_name) / "report_analysis" / "doc_map.json"
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    cache_path.write_text(
+        json.dumps(
+            {
+                "_cache": {"key": "cache-key"},
+                "doc_map": {
+                    "title": "Legacy title",
+                    "sections": [{"heading": "Overview"}],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    cached = _load_cached_pack(
+        output_dir=str(tmp_path),
+        report_id="evidence-cache-invalid",
+        pack_name="doc_map",
+        report_name=report_name,
+        cache_key="cache-key",
+        ctx=_ctx(),
+        analysis_store=None,
+    )
+
+    assert cached is not None
+    assert cached["doc_id"] == "evidence-cache-invalid"
+    assert cached["title"] == "Legacy title"
+    assert cached["sections"][0]["title"] == "Overview"
+    assert cached["sections"][0]["id"]

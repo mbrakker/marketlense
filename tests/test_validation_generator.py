@@ -10,6 +10,7 @@ from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationRequest
 from src.contracts.openai import OpenAIResponseResult
+from src.generators.validation.cache import load_cached_validation
 from src.generators.validation.registry import build_validation_rule_registry
 from src.generators.validation_generator import validate_report
 from src.utils.slugify import slugify
@@ -861,6 +862,28 @@ def test_validation_cache_isolated_by_grounding_retrieval_mode(tmp_path):
     ]
     assert vector_grounding_calls
     assert vector_grounding_calls[0][0] == "vector"
+
+
+def test_load_cached_validation_rejects_schema_invalid_payload(tmp_path):
+    report_name = "validation cache invalid"
+    cache_path = tmp_path / slugify(report_name) / "report_analysis" / "validation.json"
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    cache_path.write_text(
+        json.dumps({"_cache": {"key": "cache-key"}}),
+        encoding="utf-8",
+    )
+
+    cached = load_cached_validation(
+        output_dir=str(tmp_path),
+        report_id="validation-cache-invalid",
+        pack_name="validation",
+        report_name=report_name,
+        cache_key="cache-key",
+        ctx=_ctx(),
+        analysis_store=None,
+    )
+
+    assert cached is None
 
 
 def test_validation_parallel_branch_with_auto_context_logs_parallel_event(

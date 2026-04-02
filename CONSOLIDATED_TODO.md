@@ -104,14 +104,6 @@ Suggested reading order when prioritizing:
 
 ### HTML Editorial Improvements (readability + report data visibility)
 
-- **Title:** Publisher attribution and report identity
-  - Explanation: Replace `Unknown publisher` with `doc_map.publisher` attribution and add a compact "Report identity" line under the title (title, publisher, year, author).
-  - Pros: Clearer source attribution and faster reader orientation.
-  - Cons: Requires mapping fields from evidence packs and graceful fallbacks.
-  - Acceptance Criteria:
-    - `Unknown publisher` no longer appears when metadata is available.
-    - Report identity line displays when at least one of the fields exists.
-
 - **Title:** Split and present time-period fields
   - Explanation: Split current time-period copy into `Report focus year` and `Fieldwork dates` so readers can parse scope quickly.
   - Pros: Better clarity on when data was collected and what period it covers.
@@ -132,13 +124,6 @@ Suggested reading order when prioritizing:
   - Cons: Requires mapping or fallback rules for missing labels.
   - Acceptance Criteria:
     - Template uses semantic labels when available and falls back to numbered sections.
-
-- **Title:** Explicit note when source URL missing
-  - Explanation: If the source URL is unavailable, render an explicit note in the report instead of silently omitting reference links.
-  - Pros: Clearer provenance for readers and fewer ambiguous missing links.
-  - Cons: Minor UI copy decision and template change.
-  - Acceptance Criteria:
-    - Reports show a visible note when source URL is absent.
 
 - **Title:** Methodology & digest coverage blocks
   - Explanation: Add "Methodology at a glance" (population, sample size, sponsor) and "What this digest covers" blocks sourced from scope objectives.
@@ -169,13 +154,6 @@ Suggested reading order when prioritizing:
   - Acceptance Criteria:
     - Citation micro-lines and improved quote labels appear when data exists.
     - Metric formatting follows natural-language pattern in examples.
-
-- **Title:** Optional appendix for generated social/expert copy
-  - Explanation: Move generated "Expert comment" and "LinkedIn post" into an appendix-style optional section so the digest stays report-first.
-  - Pros: Keeps primary content focused while preserving generated assets.
-  - Cons: Template additions and UI/UX decision.
-  - Acceptance Criteria:
-    - Expert comment and LinkedIn post appear only in appendix when present.
 
 ---
 
@@ -243,14 +221,6 @@ Suggested reading order when prioritizing:
 ---
 
 ## 7. Schema, Validation & Output Quality
-
-- **Title:** Re-validate cached payloads against current schema before returning cache hits
-  - Explanation: Prevent stale invalid payloads from being served by validating cached payloads against the active schema.
-  - Pros: Ensures cache correctness under schema changes.
-  - Cons: Adds validation cost on cache reads.
-  - Acceptance Criteria:
-    - Cache read path validates payloads and invalidates stale ones.
-    - Tests cover migration scenarios.
 
 ---
 

@@ -100,23 +100,36 @@ def render_report_output(
         child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:render_metadata"),
     )
     render_data_dict = deepcopy(analysis.data_dict)
+    existing_title = str(render_data_dict.get("title") or "").strip()
+    existing_publisher = str(render_data_dict.get("publisher") or "").strip()
+    existing_time_period = str(render_data_dict.get("time_period") or "").strip()
     if render_meta is None:
-        render_data_dict["title"] = ""
-        render_data_dict["publisher"] = ""
-        render_data_dict["time_period"] = ""
+        render_data_dict["title"] = existing_title
+        render_data_dict["publisher"] = existing_publisher
+        render_data_dict["time_period"] = existing_time_period
         logger.info(
             log_event(
                 runtime.ctx,
                 role="generator",
                 event="render_metadata_missing",
                 module=logger.name,
-                fields={"file_id": runtime.file.file_id},
+                fields={
+                    "file_id": runtime.file.file_id,
+                    "title": existing_title,
+                    "publisher": existing_publisher,
+                    "time_period": existing_time_period,
+                    "source": "analysis_payload",
+                },
             )
         )
     else:
-        render_data_dict["title"] = str(render_meta.title or "").strip()
-        render_data_dict["publisher"] = str(render_meta.publisher or "").strip()
-        render_data_dict["time_period"] = str(render_meta.time_period or "").strip()
+        render_data_dict["title"] = str(render_meta.title or existing_title).strip()
+        render_data_dict["publisher"] = str(
+            render_meta.publisher or existing_publisher
+        ).strip()
+        render_data_dict["time_period"] = str(
+            render_meta.time_period or existing_time_period
+        ).strip()
         logger.info(
             log_event(
                 runtime.ctx,

@@ -1627,13 +1627,57 @@ def _load_cached_artifacts(
         ),
         read_text=file_service.read_text,
         on_read_failed=_log_read_failed,
-        adapt_payload=lambda payload, path: CachedPackAdaptResult(
-            schema_version="1.0",
-            status="hit",
-            value=payload,
+        adapt_payload=lambda payload, path: _adapt_cached_artifacts_payload(
+            payload=payload,
+            path=path,
+            report_id=report_id,
+            ctx=ctx,
         ),
     )
     return result.value if result.status == "hit" else None
+
+
+def _adapt_cached_artifacts_payload(
+    *,
+    payload: Dict[str, Any],
+    path: str,
+    report_id: str,
+    ctx: RunContext,
+) -> CachedPackAdaptResult[Dict[str, Any]]:
+    try:
+        validate_schema(
+            SchemaValidateRequest(
+                schema_version="1.0",
+                payload=payload,
+                schema_name="artifacts",
+            ),
+            ctx,
+        )
+    except AppError as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="artifact_cache_invalid",
+                module=logger.name,
+                fields={
+                    "report_id": report_id,
+                    "path": path,
+                    "code": exc.code,
+                    "message": exc.message,
+                },
+            )
+        )
+        return CachedPackAdaptResult(
+            schema_version="1.0",
+            status="schema_invalid",
+            value=None,
+        )
+    return CachedPackAdaptResult(
+        schema_version="1.0",
+        status="hit",
+        value=payload,
+    )
 
 
 def _resolve_pack_path(

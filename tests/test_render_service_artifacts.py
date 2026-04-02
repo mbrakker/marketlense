@@ -73,8 +73,9 @@ def test_render_includes_artifact_sections(tmp_path):
     assert "Artifact quote" in html
     assert "Expert comment (generated)" in html
     assert "LinkedIn post" in html
-    assert 'id="section-expert"' in html
-    assert 'id="section-linkedin"' in html
+    assert 'id="section-appendix"' in html
+    assert 'id="section-expert"' not in html
+    assert 'id="section-linkedin"' not in html
     assert '<p class="summary-copy" style="max-width:none">Artifact TLDR</p>' in html
     assert (
         '<p class="summary-copy" style="max-width:none">Artifact executive summary</p>'
@@ -161,6 +162,41 @@ def test_render_fallbacks_without_artifacts(tmp_path):
     assert "Legacy quote" in html
     assert "Legacy commentary" in html
     assert "Key data insights" in html
+    assert "Source URL was not available in the extracted report metadata." in html
+
+
+def test_render_surfaces_report_identity_line_and_source_note(tmp_path):
+    data = {
+        "title": "Retail trends 2026",
+        "tldr": "TLDR",
+        "insights": ["Insight A", "Insight B", "Insight C", "Insight D", "Insight E"],
+        "quote": {"text": "Quote", "author": "Author"},
+        "commentary": "Commentary",
+        "publisher": "Capgemini",
+        "report_identity_author": "Mark Ruston",
+        "taxonomy": ["retail"],
+        "region": "Global",
+        "time_period": "2026",
+        "contents_page_number": 0,
+    }
+    req = RenderRequest(
+        schema_version="1.0",
+        data=data,
+        doc_name="identity.pdf",
+        file_id="file_identity",
+        out_dir=str(tmp_path),
+        preview_png=None,
+    )
+
+    resp = render_report(req, _ctx())
+    html = Path(resp.html_path).read_text(encoding="utf-8")
+
+    assert (
+        '<p class="report-identity">Title: Retail trends 2026 · Publisher: Capgemini · Year: 2026 · Author: Mark Ruston</p>'
+        in html
+    )
+    assert "Publisher:</span> Capgemini" in html
+    assert "Source URL was not available in the extracted report metadata." in html
 
 
 def test_render_hides_figure_sections_when_disabled(tmp_path):

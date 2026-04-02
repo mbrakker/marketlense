@@ -164,13 +164,60 @@ def load_cached_validation(
         ),
         read_text=file_service.read_text,
         on_read_failed=_log_read_failed,
-        adapt_payload=lambda payload, path: CachedPackAdaptResult(
-            schema_version="1.0",
-            status="hit",
-            value=validation_report_from_payload(payload, path),
+        adapt_payload=lambda payload, path: _adapt_cached_validation_payload(
+            payload=payload,
+            path=path,
+            report_id=report_id,
+            pack_name=pack_name,
+            ctx=ctx,
         ),
     )
     return result.value if result.status == "hit" else None
+
+
+def _adapt_cached_validation_payload(
+    *,
+    payload: Dict[str, Any],
+    path: str,
+    report_id: str,
+    pack_name: str,
+    ctx: RunContext,
+) -> CachedPackAdaptResult[ValidationReport]:
+    try:
+        validate_schema(
+            SchemaValidateRequest(
+                schema_version="1.0",
+                payload=payload,
+                schema_name="validation_report",
+            ),
+            ctx,
+        )
+    except AppError as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="validation_cache_invalid",
+                module=LOGGER_NAME,
+                fields={
+                    "report_id": report_id,
+                    "pack_name": pack_name,
+                    "path": path,
+                    "code": exc.code,
+                    "message": exc.message,
+                },
+            )
+        )
+        return CachedPackAdaptResult(
+            schema_version="1.0",
+            status="schema_invalid",
+            value=None,
+        )
+    return CachedPackAdaptResult(
+        schema_version="1.0",
+        status="hit",
+        value=validation_report_from_payload(payload, path),
+    )
 
 
 def validation_report_from_payload(payload: dict, path: str) -> ValidationReport:

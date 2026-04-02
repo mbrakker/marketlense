@@ -11,7 +11,11 @@ from src.contracts.openai import OpenAIResponseResult
 from src.contracts.prompts import PromptSet, PromptTemplate
 from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
-from src.generators.artifact_generator import build_topic_briefs, generate_artifacts
+from src.generators.artifact_generator import (
+    _load_cached_artifacts,
+    build_topic_briefs,
+    generate_artifacts,
+)
 from src.services.schema_validator_service import validate_schema
 from src.utils.errors import AppError
 from src.utils.slugify import slugify
@@ -1346,6 +1350,29 @@ def test_artifact_cache_isolated_by_retrieval_mode(tmp_path):
     )
     assert len(vector_openai.requests) == 6
     assert len([req for req in vector_openai.requests if req[0] == "vector"]) == 6
+
+
+def test_load_cached_artifacts_rejects_schema_invalid_payload(tmp_path):
+    report_name = "artifact cache invalid"
+    cache_path = (
+        tmp_path / slugify(report_name) / "report_analysis" / "artifacts.json"
+    )
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    cache_path.write_text(
+        json.dumps({"_cache": {"key": "cache-key"}}),
+        encoding="utf-8",
+    )
+
+    cached = _load_cached_artifacts(
+        output_dir=str(tmp_path),
+        report_id="artifact-cache-invalid",
+        report_name=report_name,
+        cache_key="cache-key",
+        ctx=_ctx(),
+        analysis_store=None,
+    )
+
+    assert cached is None
 
 
 def test_generate_artifacts_with_auto_context_preserves_input_evidence(tmp_path):
