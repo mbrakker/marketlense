@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import logging
 import os
+import re
 import sys
 from dataclasses import dataclass
 from hashlib import sha1
@@ -235,6 +236,15 @@ _DEAD_PAGE_MARKERS = (
     "this page doesn't exist",
     "this page does not exist",
 )
+_HTTP_BROWSER_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/137.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+}
 
 
 @dataclass(frozen=True)
@@ -265,6 +275,7 @@ class _BrowserTraversalMetrics:
     tab_clicks: int
     load_more_clicks: int
     next_page_visits: int
+    archive_expansion_clicks: int = 0
     button_pagination_clicks: int = 0
 
 
@@ -643,7 +654,7 @@ def _discover_with_http(
     *,
     use_hint: bool,
 ) -> PublisherInventoryServiceResponse:
-    headers = {"User-Agent": "MarketLensePublisherInventory/1.0"}
+    headers = dict(_HTTP_BROWSER_HEADERS)
     current_url = normalized_url
     visited: set[str] = set()
     pages: list[PublisherInventoryPage] = []
@@ -694,7 +705,16 @@ def _discover_with_http(
             )
         )
         parser = _InventoryHtmlParser()
-        parser.feed(html)
+        try:
+            parser.feed(html)
+        except Exception as exc:
+            raise AppError(
+                code="publisher_inventory_http_invalid_html",
+                message="Direct HTTP parsing received invalid publisher inventory HTML",
+                cause=exc,
+                retryable=True,
+                context={"page_url": final_page_url},
+            ) from exc
         pages.append(
             PublisherInventoryPage(
                 schema_version="1.0",
@@ -847,6 +867,36 @@ def _discover_with_browser(
         if supplemented_candidates:
             candidates = supplemented_candidates
     if not pages or not candidates:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="publisher_inventory_browser_http_recovery_start",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "browser_page_count": len(pages),
+                    "browser_candidate_count": len(candidates),
+                },
+            )
+        )
+        try:
+            return _discover_with_http(request, ctx, normalized_url, use_hint=False)
+        except AppError as exc:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="publisher_inventory_browser_http_recovery_failed",
+                    module=logger.name,
+                    fields={
+                        "normalized_url": normalized_url,
+                        "code": exc.code,
+                        "message": exc.message,
+                    },
+                )
+            )
+    if not pages or not candidates:
         raise AppError(
             code="publisher_inventory_browser_incomplete",
             message="Browser-render inventory discovery returned no usable pages or candidates",
@@ -882,6 +932,23 @@ def _discover_with_browser(
     return response
 
 
+def _seed_initial_browser_page(
+    *,
+    state: _RenderedInventoryState,
+    page_number: int,
+    candidates: list[PublisherInventoryRawCandidate],
+) -> tuple[list[PublisherInventoryPage], list[PublisherInventoryRawCandidate]]:
+    if not candidates:
+        return [], []
+    return [
+        PublisherInventoryPage(
+            schema_version="1.0",
+            page_number=page_number,
+            page_url=state.page_url,
+        )
+    ], list(candidates)
+
+
 async def _run_browser_traversal(
     *,
     browser: Any,
@@ -905,6 +972,29 @@ async def _run_browser_traversal(
             ctx=ctx,
             reason="initial_settle",
         )
+        settled_state = await _extract_rendered_inventory_state(page)
+        settled_candidates = _extract_candidates_from_html(
+            anchors=settled_state.anchors,
+            page_url=settled_state.page_url,
+            page_number=1,
+            next_page_url=None,
+            origin_url=normalized_url,
+            page_title=settled_state.page_title,
+            active_tab_label=settled_state.active_tab_label,
+            archive_surface=_is_archive_surface(settled_state),
+        )
+        await _prime_browser_inventory_surface(page)
+        pre_cookie_state = await _extract_rendered_inventory_state(page)
+        pre_cookie_candidates = _extract_candidates_from_html(
+            anchors=pre_cookie_state.anchors,
+            page_url=pre_cookie_state.page_url,
+            page_number=1,
+            next_page_url=None,
+            origin_url=normalized_url,
+            page_title=pre_cookie_state.page_title,
+            active_tab_label=pre_cookie_state.active_tab_label,
+            archive_surface=_is_archive_surface(pre_cookie_state),
+        )
         metrics = _BrowserTraversalMetrics(
             cookies_dismissed=0,
             report_route_clicks=0,
@@ -912,6 +1002,7 @@ async def _run_browser_traversal(
             tab_clicks=0,
             load_more_clicks=0,
             next_page_visits=0,
+            archive_expansion_clicks=0,
         )
         dismissed = await _dismiss_cookie_banner(page)
         if dismissed:
@@ -922,6 +1013,7 @@ async def _run_browser_traversal(
                 tab_clicks=metrics.tab_clicks,
                 load_more_clicks=metrics.load_more_clicks,
                 next_page_visits=metrics.next_page_visits,
+                archive_expansion_clicks=metrics.archive_expansion_clicks,
                 button_pagination_clicks=metrics.button_pagination_clicks,
             )
             await _browser_wait_for_settle(page=page)
@@ -943,6 +1035,7 @@ async def _run_browser_traversal(
                     tab_clicks=metrics.tab_clicks,
                     load_more_clicks=metrics.load_more_clicks,
                     next_page_visits=metrics.next_page_visits,
+                    archive_expansion_clicks=metrics.archive_expansion_clicks,
                     button_pagination_clicks=metrics.button_pagination_clicks,
                 )
                 await _browser_wait_for_settle(page=page)
@@ -963,6 +1056,7 @@ async def _run_browser_traversal(
                 tab_clicks=metrics.tab_clicks,
                 load_more_clicks=metrics.load_more_clicks,
                 next_page_visits=metrics.next_page_visits,
+                archive_expansion_clicks=metrics.archive_expansion_clicks,
                 button_pagination_clicks=metrics.button_pagination_clicks,
             )
             await _browser_wait_for_settle(page=page)
@@ -981,6 +1075,7 @@ async def _run_browser_traversal(
                     tab_clicks=metrics.tab_clicks,
                     load_more_clicks=metrics.load_more_clicks,
                     next_page_visits=metrics.next_page_visits,
+                    archive_expansion_clicks=metrics.archive_expansion_clicks,
                     button_pagination_clicks=metrics.button_pagination_clicks,
                 )
                 await _browser_wait_for_settle(page=page)
@@ -996,6 +1091,58 @@ async def _run_browser_traversal(
         pages: list[PublisherInventoryPage] = []
         candidates: list[PublisherInventoryRawCandidate] = []
         page_number = 1
+        initial_candidates = _extract_candidates_from_html(
+            anchors=initial_state.anchors,
+            page_url=initial_state.page_url,
+            page_number=page_number,
+            next_page_url=None,
+            origin_url=normalized_url,
+            page_title=initial_state.page_title,
+            active_tab_label=initial_state.active_tab_label,
+            archive_surface=_is_archive_surface(initial_state),
+        )
+        seed_state = initial_state
+        seed_candidates = initial_candidates
+        for fallback_state, fallback_candidates in (
+            (pre_cookie_state, pre_cookie_candidates),
+            (settled_state, settled_candidates),
+        ):
+            if len(fallback_candidates) > len(seed_candidates):
+                seed_state = fallback_state
+                seed_candidates = fallback_candidates
+        seeded_pages, seeded_candidates = _seed_initial_browser_page(
+            state=seed_state,
+            page_number=page_number,
+            candidates=seed_candidates,
+        )
+        if _should_expand_archive_library(initial_state, initial_candidates):
+            expanded = await _click_archive_expander(page)
+            if expanded:
+                metrics = _BrowserTraversalMetrics(
+                    cookies_dismissed=metrics.cookies_dismissed,
+                    report_route_clicks=metrics.report_route_clicks,
+                    report_filter_applied=metrics.report_filter_applied,
+                    tab_clicks=metrics.tab_clicks,
+                    load_more_clicks=metrics.load_more_clicks,
+                    next_page_visits=metrics.next_page_visits,
+                    archive_expansion_clicks=metrics.archive_expansion_clicks + 1,
+                    button_pagination_clicks=metrics.button_pagination_clicks,
+                )
+                await _wait_for_inventory_transition(
+                    page,
+                    previous_state=initial_state,
+                    current_candidate_count=len(initial_candidates),
+                )
+                await _close_unexpected_blank_pages(
+                    browser=browser,
+                    active_page=page,
+                    ctx=ctx,
+                    reason="archive_expand",
+                )
+                await _prime_browser_inventory_surface(page)
+                initial_state = await _extract_rendered_inventory_state(page)
+                seeded_pages = []
+                seeded_candidates = []
         selected_tab_labels = _select_tab_labels_for_traversal(normalized_url, initial_state)
         archive_expected = _is_archive_surface(initial_state) or bool(selected_tab_labels)
         if selected_tab_labels:
@@ -1028,6 +1175,7 @@ async def _run_browser_traversal(
                         tab_clicks=metrics.tab_clicks + 1,
                         load_more_clicks=metrics.load_more_clicks,
                         next_page_visits=metrics.next_page_visits,
+                        archive_expansion_clicks=metrics.archive_expansion_clicks,
                         button_pagination_clicks=metrics.button_pagination_clicks,
                     )
                     await _wait_for_tab_activation(page, tab_label)
@@ -1058,11 +1206,13 @@ async def _run_browser_traversal(
                 request=request,
                 normalized_url=normalized_url,
                 archive_expected=archive_expected,
-                pages=pages,
-                candidates=candidates,
+                pages=seeded_pages,
+                candidates=seeded_candidates,
                 metrics=metrics,
                 ctx=ctx,
             )
+            pages = seeded_pages
+            candidates = seeded_candidates
         final_page_url = _normalize_absolute_url(await page.get_url()) or normalized_url
         route_summary = _build_browser_route_summary(
             normalized_url=normalized_url,
@@ -1149,6 +1299,8 @@ async def _close_unexpected_blank_pages(
     closed_count = 0
     placeholder_count = 0
     for browser_page in browser_pages:
+        if browser_page is active_page:
+            continue
         target_id = _page_target_id(browser_page)
         if active_target_id and target_id == active_target_id:
             continue
@@ -1217,23 +1369,35 @@ def _extract_candidates_from_html(
     page_number: int,
     next_page_url: str | None,
     origin_url: str | None = None,
+    page_title: str = "",
+    active_tab_label: str | None = None,
+    archive_surface: bool = False,
 ) -> list[PublisherInventoryRawCandidate]:
     candidates: list[PublisherInventoryRawCandidate] = []
     seen_urls: set[str] = set()
+    join_base_url = page_url
+    if origin_url and _requires_origin_host_recovery(
+        page_url=page_url,
+        normalized_url=origin_url,
+    ):
+        join_base_url = origin_url
     for anchor in anchors:
         href = str(anchor.get("href", "")).strip()
         if not href:
             continue
-        absolute_url = _normalize_absolute_url(urljoin(page_url, href))
+        absolute_url = _normalize_absolute_url(urljoin(join_base_url, href))
         if not absolute_url or absolute_url in seen_urls:
             continue
-        title = _normalize_text(anchor.get("text", ""))
+        title = _select_anchor_title(anchor)
         if not _looks_like_report_candidate(
             absolute_url=absolute_url,
             title=title,
             page_url=page_url,
             next_page_url=next_page_url,
             origin_url=origin_url,
+            page_title=page_title,
+            active_tab_label=active_tab_label,
+            archive_surface=archive_surface,
         ):
             continue
         seen_urls.add(absolute_url)
@@ -1326,6 +1490,9 @@ async def _extract_rendered_html_supplement_candidates(
         page_number=page_number,
         next_page_url=None,
         origin_url=normalized_url,
+        page_title=state.page_title,
+        active_tab_label=state.active_tab_label,
+        archive_surface=_is_archive_surface(state),
     )
     logger.info(
         log_event(
@@ -1341,6 +1508,20 @@ async def _extract_rendered_html_supplement_candidates(
             )
     )
     return candidates
+
+
+def _candidate_url_signature(
+    candidates: list[PublisherInventoryRawCandidate],
+) -> tuple[str, ...]:
+    return tuple(
+        sorted(
+            {
+                _normalize_absolute_url(candidate.url) or candidate.url
+                for candidate in candidates
+                if _normalize_absolute_url(candidate.url) or candidate.url
+            }
+        )
+    )
 
 
 async def _collect_browser_inventory_pages(
@@ -1362,6 +1543,27 @@ async def _collect_browser_inventory_pages(
     empty_results_reset_urls: set[str] = set()
     origin_host_recovery_urls: set[str] = set()
     archive_surface_recovery_urls: set[str] = set()
+    cumulative_candidate_urls: set[str] = {candidate.url for candidate in candidates}
+    last_recorded_page_candidate_signature = _candidate_url_signature(
+        [
+            candidate
+            for candidate in candidates
+            if pages
+            and candidate.discovered_on_page_number == pages[-1].page_number
+            and candidate.source_page_url == pages[-1].page_url
+        ]
+    )
+    seen_inventory_signatures: set[tuple[str, tuple[str, ...]]] = set()
+    seen_candidate_signatures: set[tuple[str, ...]] = set()
+    consecutive_zero_growth_pages = 0
+    if pages and last_recorded_page_candidate_signature:
+        seen_inventory_signatures.add(
+            (
+                _normalize_absolute_url(pages[-1].page_url) or pages[-1].page_url,
+                last_recorded_page_candidate_signature,
+            )
+        )
+        seen_candidate_signatures.add(last_recorded_page_candidate_signature)
     state = current_state
     while True:
         await _close_unexpected_blank_pages(
@@ -1402,6 +1604,9 @@ async def _collect_browser_inventory_pages(
             page_number=page_number,
             next_page_url=next_page_url,
             origin_url=normalized_url,
+            page_title=state.page_title,
+            active_tab_label=state.active_tab_label,
+            archive_surface=_is_archive_surface(state),
         )
         if (
             archive_expected
@@ -1454,6 +1659,9 @@ async def _collect_browser_inventory_pages(
                 page_number=page_number,
                 next_page_url=next_page_url,
                 origin_url=normalized_url,
+                page_title=state.page_title,
+                active_tab_label=state.active_tab_label,
+                archive_surface=_is_archive_surface(state),
             )
         if not page_candidates:
             page_candidates = await _extract_rendered_html_supplement_candidates(
@@ -1482,14 +1690,133 @@ async def _collect_browser_inventory_pages(
             )
             state = await _extract_rendered_inventory_state(page)
             continue
-        pages.append(
-            PublisherInventoryPage(
-                schema_version="1.0",
-                page_number=page_number,
-                page_url=state.page_url,
+        new_candidate_urls = {
+            candidate.url
+            for candidate in page_candidates
+            if candidate.url not in cumulative_candidate_urls
+        }
+        previous_page_url = pages[-1].page_url if pages else ""
+        if (
+            pages
+            and state.page_url == previous_page_url
+            and not new_candidate_urls
+            and not (state.load_more_labels or next_page_url or state.has_pagination_next)
+        ):
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="publisher_inventory_browser_inert_state_ignored",
+                    module=logger.name,
+                    fields={
+                        "normalized_url": normalized_url,
+                        "page_number": page_number,
+                        "page_url": state.page_url,
+                        "candidate_count": len(page_candidates),
+                    },
+                )
             )
+            break
+        same_page_entry = bool(
+            pages
+            and pages[-1].page_url == state.page_url
+            and pages[-1].page_number == page_number
         )
-        candidates.extend(page_candidates)
+        current_page_candidate_signature = _candidate_url_signature(page_candidates)
+        current_inventory_signature = (
+            _normalize_absolute_url(state.page_url) or state.page_url,
+            current_page_candidate_signature,
+        )
+        if (
+            current_page_candidate_signature
+            and current_inventory_signature in seen_inventory_signatures
+            and not same_page_entry
+            and not new_candidate_urls
+        ):
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="publisher_inventory_browser_cycle_detected",
+                    module=logger.name,
+                    fields={
+                        "normalized_url": normalized_url,
+                        "page_number": page_number,
+                        "page_url": state.page_url,
+                        "candidate_count": len(page_candidates),
+                    },
+                )
+            )
+            break
+        if (
+            current_page_candidate_signature
+            and current_page_candidate_signature in seen_candidate_signatures
+            and not same_page_entry
+            and not new_candidate_urls
+        ):
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="publisher_inventory_browser_cycle_detected",
+                    module=logger.name,
+                    fields={
+                        "normalized_url": normalized_url,
+                        "page_number": page_number,
+                        "page_url": state.page_url,
+                        "candidate_count": len(page_candidates),
+                        "scope": "candidate_signature",
+                    },
+                )
+            )
+            break
+        if not new_candidate_urls and page_number > 1:
+            consecutive_zero_growth_pages += 1
+        else:
+            consecutive_zero_growth_pages = 0
+        if consecutive_zero_growth_pages >= 2:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="publisher_inventory_browser_cycle_detected",
+                    module=logger.name,
+                    fields={
+                        "normalized_url": normalized_url,
+                        "page_number": page_number,
+                        "page_url": state.page_url,
+                        "candidate_count": len(page_candidates),
+                        "scope": "zero_growth_streak",
+                    },
+                )
+            )
+            break
+        duplicate_page_inventory_state = bool(
+            pages
+            and pages[-1].page_url == state.page_url
+            and last_recorded_page_candidate_signature == current_page_candidate_signature
+        )
+        if not same_page_entry and not duplicate_page_inventory_state:
+            pages.append(
+                PublisherInventoryPage(
+                    schema_version="1.0",
+                    page_number=page_number,
+                    page_url=state.page_url,
+                )
+            )
+            last_recorded_page_candidate_signature = current_page_candidate_signature
+        if current_page_candidate_signature:
+            seen_inventory_signatures.add(current_inventory_signature)
+            seen_candidate_signatures.add(current_page_candidate_signature)
+        page_candidates_to_add = [
+            candidate
+            for candidate in page_candidates
+            if candidate.url not in cumulative_candidate_urls
+        ]
+        if not same_page_entry and not duplicate_page_inventory_state:
+            page_candidates_to_add = page_candidates
+        candidates.extend(page_candidates_to_add)
+        cumulative_candidate_urls.update(candidate.url for candidate in page_candidates_to_add)
         logger.info(
             log_event(
                 ctx,
@@ -1519,7 +1846,7 @@ async def _collect_browser_inventory_pages(
                 raise AppError(
                     code="publisher_inventory_browser_pagination_limit",
                     message="Browser-render inventory discovery reached the pagination limit before exhausting the inventory",
-                    retryable=True,
+                    retryable=False,
                     context={
                         "normalized_url": normalized_url,
                         "page_number": page_number,
@@ -1537,6 +1864,7 @@ async def _collect_browser_inventory_pages(
                 tab_clicks=metrics.tab_clicks,
                 load_more_clicks=metrics.load_more_clicks,
                 next_page_visits=metrics.next_page_visits + 1,
+                archive_expansion_clicks=metrics.archive_expansion_clicks,
                 button_pagination_clicks=metrics.button_pagination_clicks,
             )
             await _browser_wait_for_settle()
@@ -1575,6 +1903,7 @@ async def _collect_browser_inventory_pages(
                 tab_clicks=metrics.tab_clicks,
                 load_more_clicks=metrics.load_more_clicks,
                 next_page_visits=metrics.next_page_visits,
+                archive_expansion_clicks=metrics.archive_expansion_clicks,
                 button_pagination_clicks=metrics.button_pagination_clicks + 1,
             )
             await _wait_for_inventory_transition(
@@ -1611,21 +1940,26 @@ async def _collect_browser_inventory_pages(
                 ctx=ctx,
                 reason="load_more_click",
             )
-            try:
-                await _wait_for_inventory_growth(
-                    page,
-                    previous_state=state,
-                    current_candidate_count=len(page_candidates),
-                )
-            except AppError as exc:
-                if exc.code == "publisher_inventory_browser_growth_timeout":
-                    stalled_state = await _extract_rendered_inventory_state(page)
-                    if _is_exhausted_inert_load_more(
+            growth_observed = await _wait_for_inventory_growth_probe(
+                page,
+                previous_state=state,
+            )
+            if not growth_observed:
+                try:
+                    await _wait_for_inventory_growth(
+                        page,
                         previous_state=state,
-                        stalled_state=stalled_state,
-                    ):
-                        break
-                raise
+                        current_candidate_count=len(page_candidates),
+                    )
+                except AppError as exc:
+                    if exc.code == "publisher_inventory_browser_growth_timeout":
+                        stalled_state = await _extract_rendered_inventory_state(page)
+                        if _is_exhausted_inert_load_more(
+                            previous_state=state,
+                            stalled_state=stalled_state,
+                        ):
+                            break
+                    raise
             metrics = _BrowserTraversalMetrics(
                 cookies_dismissed=metrics.cookies_dismissed,
                 report_route_clicks=metrics.report_route_clicks,
@@ -1633,6 +1967,7 @@ async def _collect_browser_inventory_pages(
                 tab_clicks=metrics.tab_clicks,
                 load_more_clicks=metrics.load_more_clicks + 1,
                 next_page_visits=metrics.next_page_visits,
+                archive_expansion_clicks=metrics.archive_expansion_clicks,
                 button_pagination_clicks=metrics.button_pagination_clicks,
             )
             page_number += 1
@@ -1692,15 +2027,7 @@ async def _extract_rendered_inventory_state(page: Any) -> _RenderedInventoryStat
 
 
 async def _dismiss_cookie_banner(page: Any) -> bool:
-    clicked = await page.evaluate(_browser_click_named_control_script(), [
-        "accept all cookies",
-        "accept all",
-        "accept",
-        "agree",
-        "ok",
-        "close",
-        "continue",
-    ])
+    clicked = await page.evaluate(_browser_click_cookie_banner_script())
     return str(clicked).strip().lower() == "true"
 
 
@@ -1738,6 +2065,11 @@ async def _click_load_more(
 
 async def _click_pagination_next(page: Any) -> bool:
     clicked = await page.evaluate(_browser_click_pagination_next_script())
+    return str(clicked).strip().lower() == "true"
+
+
+async def _click_archive_expander(page: Any) -> bool:
+    clicked = await page.evaluate(_browser_click_archive_expander_script())
     return str(clicked).strip().lower() == "true"
 
 
@@ -1813,6 +2145,37 @@ async def _wait_for_inventory_growth(
         message="Browser-render inventory discovery did not observe new inventory items after interaction",
         retryable=True,
     )
+
+
+async def _wait_for_inventory_growth_probe(
+    page: Any,
+    *,
+    previous_state: _RenderedInventoryState,
+    delay_seconds: float = 0.2,
+    timeout_seconds: float = 4.0,
+) -> bool:
+    previous_url = _normalize_absolute_url(previous_state.page_url) or previous_state.page_url
+    previous_anchor_count = len(previous_state.anchors)
+    max_attempts = max(1, int(timeout_seconds / delay_seconds))
+    for _ in range(max_attempts):
+        await asyncio.sleep(delay_seconds)
+        try:
+            payload = json.loads(
+                await page.evaluate(
+                    """() => JSON.stringify({
+                        pageUrl: window.location.href || '',
+                        anchorCount: document.querySelectorAll('a[href]').length || 0,
+                    })"""
+                )
+            )
+        except Exception:
+            continue
+        current_url = _normalize_absolute_url(str(payload.get("pageUrl") or "")) or ""
+        if current_url and current_url != previous_url:
+            return True
+        if int(payload.get("anchorCount") or 0) > previous_anchor_count:
+            return True
+    return False
 
 
 async def _wait_for_inventory_transition(
@@ -1915,6 +2278,8 @@ def _should_follow_report_listing(
             return False
         if _normalize_absolute_url(state.report_link_url) == _normalize_absolute_url(state.page_url):
             return False
+        if not _looks_like_report_listing_route_url(state.report_link_url):
+            return False
         return not _is_archive_surface(state)
     path = str(urlsplit(normalized_url).path or "").casefold()
     if "/insights/report/" in path:
@@ -1924,12 +2289,39 @@ def _should_follow_report_listing(
     return bool(state.report_link_url)
 
 
+def _should_expand_archive_library(
+    state: _RenderedInventoryState,
+    page_candidates: list[PublisherInventoryRawCandidate],
+) -> bool:
+    if state.load_more_labels or state.has_pagination_next:
+        return False
+    if state.page_total_hint and state.page_total_hint > 1:
+        return False
+    if state.result_range_total and state.result_range_total > max(len(page_candidates), 0):
+        return False
+    if len(page_candidates) > 3:
+        return False
+    if _looks_like_report_listing_route_url(state.page_url):
+        return False
+    if not (
+        _is_archive_surface(state)
+        or _has_report_focused_surface_context(
+            page_url=state.page_url,
+            origin_url=state.page_url,
+            page_title=state.page_title,
+            active_tab_label=state.active_tab_label,
+        )
+    ):
+        return False
+    return True
+
+
 def _should_apply_report_filter(
     normalized_url: str,
     state: _RenderedInventoryState,
 ) -> bool:
-    host = str(urlsplit(normalized_url).hostname or "").casefold()
-    return "gfk-media-measurement.com" in host and state.has_report_filter and state.has_apply_button
+    _ = normalized_url
+    return state.has_report_filter
 
 
 def _should_traverse_tabs(
@@ -1972,6 +2364,12 @@ def _select_tab_labels_for_traversal(
 
 
 def _is_archive_surface(state: _RenderedInventoryState) -> bool:
+    substantive_anchor_count = sum(
+        1
+        for anchor in state.anchors
+        if len(_normalize_text(anchor.get("text", ""))) >= 18
+        and _looks_like_human_report_title(_normalize_text(anchor.get("text", "")))
+    )
     return bool(
         state.load_more_labels
         or state.has_pagination_next
@@ -1979,6 +2377,7 @@ def _is_archive_surface(state: _RenderedInventoryState) -> bool:
         or (state.result_range_total and state.result_range_total > 0)
         or len(state.tab_labels) > 1
         or len(state.anchors) >= 12
+        or substantive_anchor_count >= 3
     )
 
 
@@ -2086,6 +2485,8 @@ def _build_browser_route_summary(
         steps.append(f"Dismissed cookie banners {metrics.cookies_dismissed} time(s).")
     if metrics.report_route_clicks:
         steps.append("Followed the report listing route before extraction.")
+    if metrics.archive_expansion_clicks:
+        steps.append(f"Expanded archive surfaces {metrics.archive_expansion_clicks} time(s).")
     if metrics.report_filter_applied:
         steps.append("Applied the report format filter.")
     if used_tabs and metrics.tab_clicks:
@@ -2381,6 +2782,76 @@ def _browser_click_named_control_script() -> str:
     return script.replace("__NAMED_CONTROL_SELECTOR__", named_control_selector)
 
 
+def _browser_click_cookie_banner_script() -> str:
+    named_control_selector = json.dumps(_browser_named_control_selector())
+    script = """() => {
+        const namedControlSelector = __NAMED_CONTROL_SELECTOR__;
+        const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
+        const isVisible = (element) => {
+            if (!element) return false;
+            const style = window.getComputedStyle(element);
+            const rect = element.getBoundingClientRect();
+            return style && style.visibility !== 'hidden' && style.display !== 'none' && rect.width > 0 && rect.height > 0;
+        };
+        const isEnabled = (element) => {
+            if (!element) return false;
+            const ariaDisabled = normalize(element.getAttribute('aria-disabled')).toLowerCase();
+            const className = normalize(element.className || '').toLowerCase();
+            return !element.disabled && ariaDisabled !== 'true' && !/\\bdisabled\\b/.test(className);
+        };
+        const wanted = [
+            'accept all cookies',
+            'accept all',
+            'accept',
+            'agree',
+            'ok',
+            'close',
+            'continue',
+        ];
+        const bannerSelector = [
+            '[id*="cookie" i]',
+            '[class*="cookie" i]',
+            '[id*="consent" i]',
+            '[class*="consent" i]',
+            '[id*="onetrust" i]',
+            '[class*="onetrust" i]',
+            '[aria-label*="cookie" i]',
+            '[aria-label*="consent" i]',
+            '[role="dialog"]',
+            '[role="region"]'
+        ].join(', ');
+        const containers = Array.from(document.querySelectorAll(bannerSelector))
+            .filter((element) => isVisible(element))
+            .filter((element) => {
+                const descriptor = normalize([
+                    element.id || '',
+                    element.className || '',
+                    element.getAttribute('aria-label') || '',
+                    element.textContent || '',
+                ].join(' '));
+                return /(cookie|consent|privacy|onetrust)/i.test(descriptor);
+            });
+        for (const container of containers) {
+            const controls = Array.from(container.querySelectorAll(namedControlSelector))
+                .filter((element) => isVisible(element) && isEnabled(element))
+                .map((element) => ({
+                    element,
+                    label: normalize(element.textContent || element.getAttribute('aria-label') || element.value || ''),
+                }))
+                .filter((entry) => entry.label);
+            const target = controls.find((entry) => wanted.some((label) => entry.label === label || entry.label.includes(label)));
+            if (!target) continue;
+            if (typeof target.element.scrollIntoView === 'function') {
+                target.element.scrollIntoView({ block: 'center', inline: 'center' });
+            }
+            target.element.click();
+            return true;
+        }
+        return false;
+    }"""
+    return script.replace("__NAMED_CONTROL_SELECTOR__", named_control_selector)
+
+
 def _browser_click_pagination_next_script() -> str:
     named_control_selector = json.dumps(_browser_named_control_selector())
     script = """() => {
@@ -2400,6 +2871,12 @@ def _browser_click_pagination_next_script() -> str:
         };
         const paginationContainerSelector = '[aria-label*="pagination" i], [class*="pagination" i], [data-testid*="pagination" i], nav, ul, ol';
         const isPaginationNextLabel = (label) => /^(next|next page|>|>>|»)$/i.test(label);
+        const pageCountText = Array.from(document.querySelectorAll('body *'))
+            .filter((element) => isVisible(element))
+            .map((element) => normalize(element.textContent || ''))
+            .filter((text) => /^page\\s+\\d+\\s+of\\s+\\d+$/i.test(text))
+            .pop() || '';
+        const pageCountMatch = pageCountText.match(/^page\\s+(\\d+)\\s+of\\s+(\\d+)$/i);
         const controlEntries = Array.from(document.querySelectorAll(namedControlSelector))
             .filter((element) => isVisible(element) && isEnabled(element))
             .map((element) => ({
@@ -2455,6 +2932,40 @@ def _browser_click_pagination_next_script() -> str:
     return script.replace("__NAMED_CONTROL_SELECTOR__", named_control_selector)
 
 
+def _browser_click_archive_expander_script() -> str:
+    return """() => {
+        const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
+        const isVisible = (element) => {
+            if (!element) return false;
+            const style = window.getComputedStyle(element);
+            const rect = element.getBoundingClientRect();
+            return style && style.visibility !== 'hidden' && style.display !== 'none' && rect.width > 0 && rect.height > 0;
+        };
+        const controls = Array.from(document.querySelectorAll('button, [role="button"], a[role="button"], a.button, a.btn, a.wp-block-button__link, a.cursor-pointer, a[class*="btn"], a[href], input[type="button"], input[type="submit"]'))
+            .filter((element) => isVisible(element))
+            .map((element) => {
+                const label = normalize(element.textContent || element.value || element.getAttribute('aria-label') || '');
+                const href = normalize(element.getAttribute('href') || '');
+                let score = 0;
+                if (/(view|explore|see|show|browse|open)( all)?/.test(label)) score += 3;
+                if (/(library|archive|entries|items|reports?|resources?|research|collection)/.test(label)) score += 4;
+                if (/\\d+\\+?/.test(label)) score += 2;
+                if (/#\\/(feed|library|archive)/.test(href)) score += 4;
+                if (/\\/(reports?|resources?|resource-library|knowledge-hub|library|archive)\\b/.test(href)) score += 3;
+                if (!href || href === '#') score += 1;
+                return { element, score };
+            })
+            .filter((entry) => entry.score >= 7)
+            .sort((left, right) => right.score - left.score);
+        if (!controls.length) return false;
+        if (typeof controls[0].element.scrollIntoView === 'function') {
+            controls[0].element.scrollIntoView({ block: 'center', inline: 'center' });
+        }
+        controls[0].element.click();
+        return true;
+    }"""
+
+
 def _browser_click_tab_script() -> str:
     return """(tabLabel) => {
         const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
@@ -2486,6 +2997,42 @@ def _browser_apply_report_filter_script() -> str:
             return style && style.visibility !== 'hidden' && style.display !== 'none' && rect.width > 0 && rect.height > 0;
         };
         const candidates = Array.from(document.querySelectorAll('input[type="checkbox"], input[type="radio"], [role="checkbox"]'));
+        const preferredOptionLabels = [
+            'report',
+            'reports',
+            'whitepaper',
+            'whitepapers',
+            'white paper',
+            'ebook',
+            'ebooks',
+            'insight guide',
+            'insight guides',
+            'study',
+            'studies',
+            'research report',
+            'research reports',
+            'benchmark',
+            'benchmarks',
+            'playbook',
+            'playbooks',
+        ];
+        const isPreferredOptionLabel = (label) => preferredOptionLabels.some((candidate) => (
+            label === candidate ||
+            label.startsWith(candidate + ' ') ||
+            label.startsWith(candidate + '(') ||
+            label.includes(' ' + candidate + ' ')
+        ));
+        const applyButtons = Array.from(document.querySelectorAll('button, input[type="submit"], input[type="button"]'));
+        const clickApplyIfPresent = () => {
+            for (const button of applyButtons) {
+                const label = normalize(button.textContent || button.value || button.getAttribute('aria-label') || '');
+                if (label === 'apply' && isVisible(button)) {
+                    button.click();
+                    return true;
+                }
+            }
+            return false;
+        };
         let toggled = false;
         for (const element of candidates) {
             const labelledBy = element.id ? document.querySelector(`label[for="${element.id}"]`) : null;
@@ -2505,14 +3052,32 @@ def _browser_apply_report_filter_script() -> str:
                 break;
             }
         }
-        if (!toggled) return false;
-        const applyButtons = Array.from(document.querySelectorAll('button, input[type="submit"], input[type="button"]'));
-        for (const button of applyButtons) {
-            const label = normalize(button.textContent || button.value || button.getAttribute('aria-label') || '');
-            if (label === 'apply' && isVisible(button)) {
-                button.click();
+        if (toggled) {
+            if (clickApplyIfPresent()) {
                 return true;
             }
+            return true;
+        }
+        const selects = Array.from(document.querySelectorAll('select'))
+            .filter((element) => isVisible(element) && !element.disabled);
+        for (const select of selects) {
+            const options = Array.from(select.options || [])
+                .map((option) => ({
+                    value: option.value,
+                    label: normalize(option.textContent || option.label || ''),
+                    selected: option.selected === true,
+                }))
+                .filter((entry) => entry.label);
+            if (!options.length) continue;
+            const preferred = options.find((entry) => isPreferredOptionLabel(entry.label));
+            if (!preferred || preferred.selected) continue;
+            select.value = preferred.value;
+            select.dispatchEvent(new Event('input', { bubbles: true }));
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            if (clickApplyIfPresent()) {
+                return true;
+            }
+            return true;
         }
         return false;
     }"""
@@ -2525,10 +3090,7 @@ def _extract_browser_http_supplement_candidates(
     normalized_url: str,
     ctx: RunContext,
 ) -> list[PublisherInventoryRawCandidate]:
-    headers = {
-        "User-Agent": "MarketLensePublisherInventory/1.0 (+https://marketlense.local)",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    }
+    headers = dict(_HTTP_BROWSER_HEADERS)
     request_urls: list[str] = []
     for candidate_url in (page.page_url, normalized_url):
         normalized_candidate = _normalize_absolute_url(candidate_url)
@@ -2670,7 +3232,7 @@ def _inspect_landing_page_item(
             has_contact_sales_cta=False,
             has_dead_page_marker=True,
         )
-    headers = {"User-Agent": "MarketLensePublisherInventory/1.0"}
+    headers = dict(_HTTP_BROWSER_HEADERS)
     logger.info(
         log_event(
             ctx,
@@ -2768,6 +3330,7 @@ def _inspect_landing_page_item(
         parser.feed(html)
     except Exception:
         parser = _LandingPageInspectionHtmlParser()
+    interactive_text = _normalize_text(" ".join(parser.interactive_texts))
     combined_text = " ".join(
         part
         for part in (
@@ -2776,12 +3339,13 @@ def _inspect_landing_page_item(
             parser.h1_title,
             parser.og_title,
             parser.visible_text,
-            " ".join(parser.interactive_texts),
+            interactive_text,
             final_url,
         )
         if part
     )
     combined_lower = combined_text.casefold()
+    interactive_lower = interactive_text.casefold()
     dead_page_marker = status_code >= 400 or _contains_any_marker(
         combined_lower, _DEAD_PAGE_MARKERS
     )
@@ -2813,7 +3377,10 @@ def _inspect_landing_page_item(
         has_document_structure=_contains_any_marker(
             combined_lower, _DOCUMENT_STRUCTURE_MARKERS
         ),
-        has_price_or_purchase=_contains_any_marker(combined_lower, _PURCHASE_MARKERS),
+        has_price_or_purchase=(
+            _contains_any_marker(interactive_lower, _PURCHASE_MARKERS)
+            or _contains_price_signal(combined_text)
+        ),
         has_print_language=_contains_any_marker(combined_lower, _PRINT_LANGUAGE_MARKERS),
         has_editorial_url_pattern=_has_editorial_url_pattern(final_url),
         has_editorial_markers=_contains_any_marker(combined_lower, _EDITORIAL_MARKERS),
@@ -2913,6 +3480,9 @@ def _looks_like_report_candidate(
     page_url: str,
     next_page_url: str | None,
     origin_url: str | None = None,
+    page_title: str = "",
+    active_tab_label: str | None = None,
+    archive_surface: bool = False,
 ) -> bool:
     if absolute_url == page_url or absolute_url == next_page_url:
         return False
@@ -2947,6 +3517,11 @@ def _looks_like_report_candidate(
         return False
     if absolute_url.lower().endswith(".pdf"):
         return True
+    if archive_surface and (
+        any(keyword in lowered_url for keyword in _STRONG_REPORT_KEYWORDS)
+        or any(keyword in lowered_title for keyword in _STRONG_REPORT_KEYWORDS)
+    ):
+        return True
     if not (
         _is_same_inventory_domain(candidate_host, page_host)
         or (origin_host and _is_same_inventory_domain(candidate_host, origin_host))
@@ -2964,6 +3539,17 @@ def _looks_like_report_candidate(
         return True
     if any(keyword in lowered_title for keyword in _WEAK_REPORT_KEYWORDS) and _is_inventory_article_path(absolute_url):
         return True
+    if archive_surface and _is_same_inventory_domain(candidate_host, page_host):
+        if title and len(title) >= 12 and _looks_like_human_report_title(title):
+            return True
+    if archive_surface and _has_report_focused_surface_context(
+        page_url=page_url,
+        origin_url=origin_url,
+        page_title=page_title,
+        active_tab_label=active_tab_label,
+    ) and _is_same_inventory_domain(candidate_host, page_host):
+        if title and len(title) >= 8 and _looks_like_human_report_title(title):
+            return True
     if (
         title
         and len(title) >= 16
@@ -2972,6 +3558,55 @@ def _looks_like_report_candidate(
     ):
         return True
     return False
+
+
+def _has_report_focused_surface_context(
+    *,
+    page_url: str,
+    origin_url: str | None,
+    page_title: str,
+    active_tab_label: str | None,
+) -> bool:
+    parts = [
+        str(page_url or "").strip().casefold(),
+        str(origin_url or "").strip().casefold(),
+        _normalize_text(page_title).casefold(),
+        _normalize_text(active_tab_label or "").casefold(),
+    ]
+    combined = " ".join(part for part in parts if part)
+    if not combined:
+        return False
+    return any(keyword in combined for keyword in _REPORT_KEYWORDS) or any(
+        marker in combined
+        for marker in (
+            "resource library",
+            "resource center",
+            "knowledge hub",
+            "library entries",
+            "research",
+        )
+    )
+
+
+def _looks_like_report_listing_route_url(url: str) -> bool:
+    path = str(urlsplit(url).path or "").strip().casefold().rstrip("/")
+    if not path:
+        return False
+    if _is_root_or_locale_home(url) or _is_section_landing_page(url):
+        return False
+    segments = [segment for segment in path.split("/") if segment]
+    if not segments:
+        return False
+    archive_tail_markers = {
+        "report",
+        "reports",
+        "research",
+        "resources",
+        "resource-library",
+        "knowledge-hub",
+        "library",
+    }
+    return segments[-1] in archive_tail_markers
 
 
 def _is_same_inventory_domain(candidate_host: str, page_host: str) -> bool:
@@ -3120,12 +3755,34 @@ def _normalize_text(value: str) -> str:
     return " ".join(str(value or "").split()).strip()
 
 
+def _contains_price_signal(value: str) -> bool:
+    normalized = _normalize_text(value)
+    if not normalized:
+        return False
+    return bool(
+        re.search(
+            r"(?<!\w)(?:\$|€|£)\s?\d|\b(?:usd|eur|gbp)\s?\d",
+            normalized,
+            flags=re.IGNORECASE,
+        )
+    )
+
+
 def _select_anchor_title(item: dict[str, object]) -> str:
     text = _normalize_text(str(item.get("text") or ""))
     heading_text = _normalize_text(str(item.get("heading_text") or ""))
     aria_label = _normalize_text(str(item.get("aria_label") or ""))
     title_attr = _normalize_text(str(item.get("title_attr") or ""))
     img_alt = _normalize_text(str(item.get("img_alt") or ""))
+    if heading_text:
+        if not text or text.casefold() in _GENERIC_CTA_LABELS:
+            return heading_text
+        lowered_text = text.casefold()
+        lowered_heading = heading_text.casefold()
+        if lowered_heading == lowered_text:
+            return heading_text
+        if lowered_heading in lowered_text and len(text) >= len(heading_text) + 24:
+            return heading_text
     if text and text.casefold() not in _GENERIC_CTA_LABELS:
         return text
     return heading_text or aria_label or title_attr or img_alt or text

@@ -19,6 +19,7 @@ from src.contracts.publisher_inventory import (
 )
 from src.contracts.publish import PublishOutcome, PublishSettings
 from src.contracts.wordpress import WordPressAuthSettings
+from src.utils.errors import AppError
 
 
 class TestCli(unittest.TestCase):
@@ -369,6 +370,58 @@ class TestCli(unittest.TestCase):
         self.assertEqual("https://www.activate.com/insights", request.insights_url)
         self.assertEqual("./state/reports.sqlite", request.reports_db)
         self.assertEqual("gpt-5-mini", request.settings.model)
+
+    def test_discover_publisher_inventory_treats_pagination_limit_as_bounded(self) -> None:
+        import src.cli as cli
+
+        settings = PublisherInventorySettings(
+            schema_version="1.0",
+            openrouter_api_key="key",
+            model="gpt-5-mini",
+            temperature=0.0,
+            timeout_seconds=45.0,
+            max_steps=12,
+            output_dir="./out/publisher_inventory_discovery",
+            reports_db="./state/reports.sqlite",
+            google_sa_path="./sa.json",
+            prompt_namespace="publisher_inventory/discovery",
+            pagination_max_pages=10,
+            http_timeout_seconds=30.0,
+            openrouter_http_referer=None,
+            headed=False,
+            retry_retries=1,
+            retry_base_delay_seconds=1.0,
+            retry_backoff_step_seconds=0.0,
+            retry_jitter_seconds=0.0,
+            openai_api_key="openai-key",
+            candidate_screening_enabled=True,
+            candidate_screening_model="gpt-5-nano",
+            candidate_screening_temperature=1.0,
+            candidate_screening_timeout_seconds=30.0,
+            candidate_screening_prompt_namespace="publisher_inventory/meaningful_candidate_screen",
+        )
+
+        with patch.object(
+            cli, "load_publisher_inventory_settings", return_value=settings
+        ) as load_mock:
+            with patch.object(
+                cli,
+                "run_publisher_inventory_discovery",
+                side_effect=AppError(
+                    code="publisher_inventory_browser_pagination_limit",
+                    message="bounded crawl limit reached",
+                    retryable=False,
+                    severity="warning",
+                ),
+            ) as discover_mock:
+                with patch.object(cli.console, "print") as print_mock:
+                    cli.discover_publisher_inventory(
+                        insights_url="https://www.askattest.com/insights-teams"
+                    )
+
+        load_mock.assert_called_once()
+        discover_mock.assert_called_once()
+        self.assertGreaterEqual(print_mock.call_count, 1)
 
     def test_drive_oauth_login_wires_service(self) -> None:
         import src.cli as cli

@@ -140,7 +140,7 @@ browser_download:
   model: "google/gemini-2.5-flash-lite"
   identity_config_path: "./browser_download_identity.yaml"
   temperature: 0.0
-  timeout_seconds: 180
+  timeout_seconds: 360
   max_steps: 30
   output_dir: "./out/browser_downloads"
   headed: true
@@ -153,12 +153,13 @@ browser_download:
 publisher_discovery:
   model: "google/gemini-2.5-flash-lite"
   temperature: 0.0
-  timeout_seconds: 180
+  timeout_seconds: 360
   max_steps: 30
   output_dir: "./out/publisher_inventory_discovery"
   prompt_namespace: "publisher_inventory/discovery"
-  pagination_max_pages: 30
+  pagination_max_pages: 75
   http_timeout_seconds: 30
+  command_time_budget_seconds: 570
   headed: true
   force_browser: true
   retry:
@@ -171,7 +172,7 @@ publisher_discovery:
     model: "gpt-5-nano"
     temperature: 1.0
     timeout_seconds: 120
-    batch_size: 20
+    batch_size: 10
     prompt_namespace: "publisher_inventory/meaningful_candidate_screen"
   candidate_quality_check:
     enabled: true

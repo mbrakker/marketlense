@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from dataclasses import replace
@@ -81,10 +82,30 @@ class _FakeBrowserPage:
                     "anchorCount": len(payload.get("anchors", [])),
                 }
             )
+        if "pageUrl" in script and "anchorCount" in script:
+            payload = self._payload()
+            return json.dumps(
+                {
+                    "pageUrl": str(payload.get("page_url") or ""),
+                    "anchorCount": len(payload.get("anchors", [])),
+                }
+            )
         if script == service._browser_inventory_state_script():
             return json.dumps(self._payload())
         if script == service._browser_rendered_html_script():
             return str(self._states[self._state_id].get("rendered_html", ""))
+        if script == service._browser_click_cookie_banner_script():
+            next_state = self._states[self._state_id].get("cookie_banner_next_state")
+            if next_state:
+                self._state_id = str(next_state)
+                return "true"
+            return "false"
+        if script == service._browser_click_archive_expander_script():
+            next_state = self._states[self._state_id].get("archive_expander_next_state")
+            if next_state:
+                self._state_id = str(next_state)
+                return "true"
+            return "false"
         if script == service._browser_click_named_control_script():
             payload = args[0]
             if isinstance(payload, dict):
@@ -315,7 +336,8 @@ def test_discover_publisher_inventory_http_parse_handles_multipage(
 
     def _get(url, timeout, headers):
         assert timeout == 10.0
-        assert headers["User-Agent"].startswith("MarketLensePublisherInventory/")
+        assert headers["User-Agent"].startswith("Mozilla/5.0")
+        assert headers["Accept-Language"] == "en-US,en;q=0.9"
         if url.endswith("page=2"):
             return _FakeResponse(
                 url="https://example.com/insights?page=2",
@@ -390,6 +412,40 @@ def test_requires_archive_surface_recovery_for_detail_page_drift() -> None:
     )
 
 
+def test_is_archive_surface_accepts_small_set_of_substantive_cards() -> None:
+    state = service._RenderedInventoryState(
+        page_url="https://www.psfk.com/insights",
+        page_title="PSFK | Living Intelligence & AI Foresight",
+        anchors=[
+            {
+                "href": "https://psfk.gumroad.com/l/coffee-machine-innovation-report",
+                "text": "Coffee Maker Innovation An essential snapshot of the ideas reshaping coffee machines.",
+                "rel": "",
+            },
+            {
+                "href": "https://newsletter.psfk.com/p/about-your-health",
+                "text": "About Your Health Healthcare now runs through homes, workplaces, communities, devices and apps.",
+                "rel": "",
+            },
+            {
+                "href": "https://newsletter.psfk.com/p/future-of-wellness",
+                "text": "Future of Wellness A strategic thinking brief on changing consumer wellness expectations.",
+                "rel": "",
+            },
+        ],
+        load_more_labels=[],
+        tab_labels=[],
+        active_tab_label="",
+        report_link_url=None,
+        empty_results_visible=False,
+        reset_filter_labels=[],
+        has_report_filter=False,
+        has_apply_button=False,
+    )
+
+    assert service._is_archive_surface(state) is True
+
+
 def test_terminal_results_page_accepts_page_count_hints() -> None:
     state = service._RenderedInventoryState(
         page_url="https://example.com/library",
@@ -408,6 +464,221 @@ def test_terminal_results_page_accepts_page_count_hints() -> None:
     )
 
     assert service._is_terminal_results_page(state) is True
+
+
+def test_should_follow_report_listing_requires_archive_like_target() -> None:
+    state = service._RenderedInventoryState(
+        page_url="https://www.publicissapient.com/resources/blog",
+        page_title="Publicis Sapient Blog",
+        anchors=[],
+        load_more_labels=[],
+        tab_labels=[],
+        active_tab_label="",
+        report_link_url="https://www.publicissapient.com/resources/blog/cloud-cost-management-guide",
+        empty_results_visible=False,
+        reset_filter_labels=[],
+        has_report_filter=False,
+        has_apply_button=False,
+    )
+
+    assert (
+        service._should_follow_report_listing(
+            "https://www.publicissapient.com/resources/blog",
+            state,
+        )
+        is False
+    )
+
+
+def test_should_expand_archive_library_for_small_archive_preview() -> None:
+    state = service._RenderedInventoryState(
+        page_url="https://www.psfk.com/insights",
+        page_title="Reports & Strategic Thinking",
+        anchors=[],
+        load_more_labels=[],
+        tab_labels=[],
+        active_tab_label="",
+        report_link_url=None,
+        empty_results_visible=False,
+        reset_filter_labels=[],
+        has_report_filter=False,
+        has_apply_button=False,
+    )
+    page_candidates = [
+        service.PublisherInventoryRawCandidate(
+            schema_version="1.0",
+            url="https://psfk.gumroad.com/l/coffee-machine-innovation-report",
+            title="Coffee Maker Innovation",
+            source_page_url="https://www.psfk.com/insights",
+            discovered_on_page_number=1,
+        ),
+        service.PublisherInventoryRawCandidate(
+            schema_version="1.0",
+            url="https://psfk.gumroad.com/l/2026-trends-report",
+            title="To Be In 2026",
+            source_page_url="https://www.psfk.com/insights",
+            discovered_on_page_number=1,
+        ),
+    ]
+
+    assert service._should_expand_archive_library(state, page_candidates) is True
+
+
+def test_should_apply_report_filter_generically_for_visible_report_filter() -> None:
+    state = service._RenderedInventoryState(
+        page_url="https://www.transunion.com/insights",
+        page_title="Insights | TransUnion",
+        anchors=[],
+        load_more_labels=[],
+        tab_labels=[],
+        active_tab_label="",
+        report_link_url=None,
+        empty_results_visible=False,
+        reset_filter_labels=[],
+        has_report_filter=True,
+        has_apply_button=False,
+    )
+
+    assert (
+        service._should_apply_report_filter(
+            "https://www.transunion.com/insights",
+            state,
+        )
+        is True
+    )
+
+
+def test_select_anchor_title_prefers_heading_over_noisy_card_text() -> None:
+    selected = service._select_anchor_title(
+        {
+            "text": "Amazon Prime Day Trends Report 2024 Margaux Logan 22 / 07 / 2024 MARKETING AND THOUGHT LEADERSHIP Read more",
+            "heading_text": "Amazon Prime Day Trends Report 2024",
+            "aria_label": "",
+            "title_attr": "",
+            "img_alt": "",
+        }
+    )
+
+    assert selected == "Amazon Prime Day Trends Report 2024"
+
+
+def test_extract_candidates_from_html_uses_heading_for_cta_only_links() -> None:
+    candidates = service._extract_candidates_from_html(
+        anchors=[
+            {
+                "href": "https://www.bluecore.com/black-friday-benchmarks-2025/",
+                "text": "Learn more",
+                "heading_text": "Black Friday Benchmarks 2025",
+                "aria_label": "",
+                "title_attr": "",
+                "img_alt": "BFCM Benchmarks",
+            }
+        ],
+        page_url="https://www.bluecore.com/resources/",
+        page_number=1,
+        next_page_url=None,
+        origin_url="https://www.bluecore.com/resources/",
+        page_title="Resources - Bluecore",
+        archive_surface=True,
+    )
+
+    assert [candidate.url for candidate in candidates] == [
+        "https://www.bluecore.com/black-friday-benchmarks-2025"
+    ]
+    assert candidates[0].title == "Black Friday Benchmarks 2025"
+
+
+def test_extract_candidates_from_html_resolves_relative_links_to_origin_host_when_browser_drifts() -> None:
+    candidates = service._extract_candidates_from_html(
+        anchors=[
+            {
+                "href": "/black-friday-benchmarks-2025/",
+                "text": "Learn more",
+                "heading_text": "Black Friday Benchmarks 2025",
+                "aria_label": "",
+                "title_attr": "",
+                "img_alt": "",
+            }
+        ],
+        page_url="https://wordpress.bluecore.app/resources",
+        page_number=1,
+        next_page_url=None,
+        origin_url="https://www.bluecore.com/resources/",
+        page_title="Resources - Bluecore",
+        archive_surface=True,
+    )
+
+    assert [candidate.url for candidate in candidates] == [
+        "https://www.bluecore.com/black-friday-benchmarks-2025"
+    ]
+
+
+def test_discover_publisher_inventory_browser_applies_generic_report_dropdown_filter(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    external_boundary_mocks_only.setattr(
+        service.requests,
+        "get",
+        lambda *args, **kwargs: _FakeResponse(
+            url="https://www.transunion.com/insights",
+            text="<html><body><a href='/about'>About</a></body></html>",
+        ),
+    )
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://www.transunion.com/insights",
+                "page_title": "Insights | TransUnion",
+                "anchors": [
+                    {
+                        "href": "https://www.transunion.com/blog/example-blog",
+                        "text": "Example Blog",
+                        "rel": "",
+                    }
+                ],
+                "has_report_filter": True,
+                "has_apply_button": False,
+                "has_pagination_next": True,
+            },
+            "apply_filter_next_state": "filtered",
+        },
+        "filtered": {
+            "payload": {
+                "page_url": "https://www.transunion.com/insights",
+                "page_title": "Insights | TransUnion",
+                "anchors": [
+                    {
+                        "href": "https://www.transunion.com/report/example-industry-report",
+                        "text": "Example Industry Report 2026",
+                        "rel": "",
+                    }
+                ],
+                "has_report_filter": True,
+                "has_apply_button": False,
+                "has_pagination_next": False,
+            },
+        },
+    }
+    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://www.transunion.com/insights",
+            settings=_settings(tmp_path),
+            route_kind_hint="browser_render",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "browser_render"
+    assert [candidate.url for candidate in response.candidates] == [
+        "https://www.transunion.com/report/example-industry-report"
+    ]
+    assert "Applied the report format filter." in response.route_summary
 
 
 def test_discover_publisher_inventory_direct_pdf_source_short_circuits_browser(
@@ -548,6 +819,39 @@ def test_discover_publisher_inventory_browser_closes_stray_blank_pages(
     assert _FakeBrowser.last_instance.closed_page_ids == ["aux-1", "aux-2"]
 
 
+def test_close_unexpected_blank_pages_keeps_active_page_when_target_id_is_missing(
+    run_context,
+) -> None:
+    browser = _FakeBrowser(
+        downloads_path=".",
+        headless=True,
+        auto_download_pdfs=False,
+        states={
+            "initial": {
+                "payload": {
+                    "page_url": "about:blank",
+                    "page_title": "",
+                    "anchors": [],
+                }
+            }
+        },
+        start_state="initial",
+        extra_page_urls=["about:blank"],
+    )
+    browser.page = _FakeBrowserPage(browser, "initial", browser._states, target_id="")
+
+    asyncio.run(
+        service._close_unexpected_blank_pages(
+            browser=browser,
+            active_page=browser.page,
+            ctx=run_context,
+            reason="test_blank_identity_guard",
+        )
+    )
+
+    assert browser.closed_page_ids == ["aux-1"]
+
+
 def test_discover_publisher_inventory_browser_scrolls_to_hydrate_load_more(
     tmp_path: Path,
     run_context,
@@ -626,6 +930,85 @@ def test_discover_publisher_inventory_browser_scrolls_to_hydrate_load_more(
         and candidate.discovered_on_page_number == 2
         for candidate in response.candidates
     )
+    assert "Expanded load-more pagination 1 time(s)." in response.route_summary
+
+
+def test_discover_publisher_inventory_browser_stops_before_recording_inert_duplicate_load_more_states(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    external_boundary_mocks_only.setattr(
+        service.requests,
+        "get",
+        lambda *args, **kwargs: _FakeResponse(
+            url="https://www.alixpartners.com/insights",
+            text="<html><body><a href='/about'>About</a></body></html>",
+        ),
+    )
+    shared_anchors = [
+        {
+            "href": "https://www.alixpartners.com/insights/report-one",
+            "text": "Report One",
+            "rel": "",
+        },
+        {
+            "href": "https://www.alixpartners.com/insights/report-two",
+            "text": "Report Two",
+            "rel": "",
+        },
+    ]
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://www.alixpartners.com/insights",
+                "page_title": "Insights",
+                "anchors": shared_anchors[:1],
+                "load_more_labels": ["Load more"],
+            },
+            "named_clicks": {"load more": "page_2"},
+        },
+        "page_2": {
+            "payload": {
+                "page_url": "https://www.alixpartners.com/insights",
+                "page_title": "Insights",
+                "anchors": shared_anchors,
+                "load_more_labels": ["Load more"],
+            },
+            "named_clicks": {"load more": "page_3"},
+        },
+        "page_3": {
+            "payload": {
+                "page_url": "https://www.alixpartners.com/insights",
+                "page_title": "Insights",
+                "anchors": shared_anchors,
+                "load_more_labels": ["Load more"],
+            },
+        },
+    }
+    external_boundary_mocks_only.setattr(
+        service, "import_module", lambda _name: _runtime_for_states(states)
+    )
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://www.alixpartners.com/insights/",
+            settings=_settings(tmp_path),
+            route_kind_hint="browser_render",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "browser_render"
+    assert len(response.pages) == 2
+    assert [page.page_number for page in response.pages] == [1, 2]
+    assert [candidate.url for candidate in response.candidates] == [
+        "https://www.alixpartners.com/insights/report-one",
+        "https://www.alixpartners.com/insights/report-one",
+        "https://www.alixpartners.com/insights/report-two",
+    ]
     assert "Expanded load-more pagination 1 time(s)." in response.route_summary
 
 
@@ -815,7 +1198,8 @@ def test_discover_publisher_inventory_browser_uses_http_supplement_when_browser_
 ) -> None:
     def _get(url, timeout, headers):
         assert timeout == 10.0
-        assert headers["User-Agent"].startswith("MarketLensePublisherInventory/")
+        assert headers["User-Agent"].startswith("Mozilla/5.0")
+        assert headers["Accept-Language"] == "en-US,en;q=0.9"
         return _FakeResponse(
             url="https://wordpress.bluecore.app/resources",
             text=(
@@ -872,7 +1256,8 @@ def test_discover_publisher_inventory_browser_invalid_http_supplement_html_fails
 ) -> None:
     def _get(url, timeout, headers):
         assert timeout == 10.0
-        assert headers["User-Agent"].startswith("MarketLensePublisherInventory/")
+        assert headers["User-Agent"].startswith("Mozilla/5.0")
+        assert headers["Accept-Language"] == "en-US,en;q=0.9"
         return _FakeResponse(
             url="https://example.com/insights",
             text="<![\ufffd\"\ufffd(\u001c\ufffd\u001c\ufffdB\ufffdo\u0011IRD\ufffd\\\\",
@@ -954,6 +1339,64 @@ def test_discover_publisher_inventory_browser_uses_rendered_html_supplement_when
     ]
 
 
+def test_discover_publisher_inventory_browser_preserves_pre_cookie_archive_candidates_when_dismissal_degrades_page(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    external_boundary_mocks_only.setattr(
+        service.requests,
+        "get",
+        lambda *args, **kwargs: _FakeResponse(
+            url="https://www.bluecore.com/resources",
+            text="<html><body><a href='/about'>About</a></body></html>",
+        ),
+    )
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://www.bluecore.com/resources",
+                "page_title": "Resources - Bluecore",
+                "anchors": [
+                    {
+                        "href": "https://www.bluecore.com/lp/customer-movement-benchmarks/",
+                        "text": "Benchmarks for Identification, Conversion, and Retention",
+                        "rel": "",
+                    }
+                ],
+            },
+            "cookie_banner_next_state": "drifted",
+        },
+        "drifted": {
+            "payload": {
+                "page_url": "https://wordpress.bluecore.app/resources",
+                "page_title": "Resources - Bluecore",
+                "anchors": [],
+            },
+            "rendered_html": "<html><body></body></html>",
+        },
+    }
+    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://www.bluecore.com/resources/",
+            settings=_settings(tmp_path),
+            route_kind_hint="browser_render",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "browser_render"
+    assert len(response.pages) == 1
+    assert response.pages[0].page_url == "https://www.bluecore.com/resources"
+    assert [candidate.url for candidate in response.candidates] == [
+        "https://www.bluecore.com/lp/customer-movement-benchmarks"
+    ]
+
+
 def test_discover_publisher_inventory_browser_recovers_from_cross_apex_host_drift(
     tmp_path: Path,
     run_context,
@@ -1005,6 +1448,72 @@ def test_discover_publisher_inventory_browser_recovers_from_cross_apex_host_drif
     assert response.route_kind == "browser_render"
     assert len(response.pages) == 1
     assert response.pages[0].page_url == "https://www.bluecore.com/resources"
+    assert [candidate.url for candidate in response.candidates] == [
+        "https://www.bluecore.com/lp/customer-movement-benchmarks"
+    ]
+
+
+def test_discover_publisher_inventory_browser_falls_back_to_direct_http_when_browser_path_stays_empty(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    call_counts: dict[str, int] = {}
+
+    def _get(url, timeout, headers):
+        key = str(url)
+        call_counts[key] = call_counts.get(key, 0) + 1
+        assert timeout == 10.0
+        assert headers["User-Agent"].startswith("Mozilla/5.0")
+        if "wordpress.bluecore.app" in key:
+            raise service.requests.ConnectTimeout("mirror timeout")
+        if key == "https://www.bluecore.com/resources" and call_counts[key] == 1:
+            raise service.requests.ConnectTimeout("origin supplement timeout")
+        if key == "https://www.bluecore.com/resources":
+            return _FakeResponse(
+                url="https://www.bluecore.com/resources",
+                text=(
+                    "<html><body>"
+                    "<a href='https://www.bluecore.com/lp/customer-movement-benchmarks/'>"
+                    "Benchmarks for Identification, Conversion, and Retention"
+                    "</a>"
+                    "</body></html>"
+                ),
+            )
+        raise AssertionError(f"Unexpected URL: {url}")
+
+    external_boundary_mocks_only.setattr(service.requests, "get", _get)
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://wordpress.bluecore.app/resources",
+                "page_title": "Resources - Bluecore",
+                "anchors": [],
+            },
+            "rendered_html": "<html><body></body></html>",
+        },
+        "origin": {
+            "payload": {
+                "page_url": "https://www.bluecore.com/resources",
+                "page_title": "Resources - Bluecore",
+                "anchors": [],
+            },
+        }
+    }
+    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://www.bluecore.com/resources/",
+            settings=_settings(tmp_path),
+            route_kind_hint="browser_render",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "http_parse"
     assert [candidate.url for candidate in response.candidates] == [
         "https://www.bluecore.com/lp/customer-movement-benchmarks"
     ]
@@ -1117,7 +1626,7 @@ def test_discover_publisher_inventory_browser_prioritizes_button_pagination_over
     assert "Expanded load-more pagination" not in response.route_summary
 
 
-def test_discover_publisher_inventory_browser_tracks_load_more_state_change_without_new_unique_candidates(
+def test_discover_publisher_inventory_browser_stops_on_load_more_state_change_without_new_unique_candidates(
     tmp_path: Path,
     run_context,
     external_boundary_mocks_only,
@@ -1179,8 +1688,7 @@ def test_discover_publisher_inventory_browser_tracks_load_more_state_change_with
     )
 
     assert response.route_kind == "browser_render"
-    assert len(response.pages) == 2
-    assert response.pages[1].page_number == 2
+    assert len(response.pages) == 1
     assert "Expanded load-more pagination 1 time(s)." in response.route_summary
 
 
@@ -1255,6 +1763,329 @@ def test_discover_publisher_inventory_browser_treats_inert_load_more_as_exhauste
         "https://example.com/reports/report-two",
     ]
     assert "Expanded load-more pagination 1 time(s)." in response.route_summary
+
+
+def test_discover_publisher_inventory_browser_skips_duplicate_same_url_page_states(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    external_boundary_mocks_only.setattr(
+        service.requests,
+        "get",
+        lambda *args, **kwargs: _FakeResponse(
+            url="https://www.alixpartners.com/insights",
+            text="<html><body><a href='/about'>About</a></body></html>",
+        ),
+    )
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://www.alixpartners.com/insights",
+                "page_title": "Insights",
+                "anchors": [
+                    {
+                        "href": "https://www.alixpartners.com/insights/report-one",
+                        "text": "Report One",
+                        "rel": "",
+                    }
+                ],
+                "load_more_labels": ["Load more"],
+            },
+            "named_clicks": {"load more": "page_2"},
+        },
+        "page_2": {
+            "payload": {
+                "page_url": "https://www.alixpartners.com/insights",
+                "page_title": "Insights",
+                "anchors": [
+                    {
+                        "href": "https://www.alixpartners.com/insights/report-one",
+                        "text": "Report One",
+                        "rel": "",
+                    },
+                    {
+                        "href": "https://www.alixpartners.com/insights/report-two",
+                        "text": "Report Two",
+                        "rel": "",
+                    },
+                ],
+                "load_more_labels": ["Load more"],
+            },
+            "named_clicks": {"load more": "page_3"},
+        },
+        "page_3": {
+            "payload": {
+                "page_url": "https://www.alixpartners.com/insights",
+                "page_title": "Insights",
+                "anchors": [
+                    {
+                        "href": "https://www.alixpartners.com/insights/report-one",
+                        "text": "Report One",
+                        "rel": "",
+                    },
+                    {
+                        "href": "https://www.alixpartners.com/insights/report-two",
+                        "text": "Report Two",
+                        "rel": "",
+                    },
+                    {
+                        "href": "https://www.alixpartners.com/about",
+                        "text": "About",
+                        "rel": "",
+                    },
+                ],
+            },
+        },
+    }
+    external_boundary_mocks_only.setattr(
+        service, "import_module", lambda _name: _runtime_for_states(states)
+    )
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://www.alixpartners.com/insights/",
+            settings=_settings(tmp_path),
+            route_kind_hint="browser_render",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "browser_render"
+    assert len(response.pages) == 2
+    assert [page.page_number for page in response.pages] == [1, 2]
+    assert [candidate.url for candidate in response.candidates] == [
+        "https://www.alixpartners.com/insights/report-one",
+        "https://www.alixpartners.com/insights/report-one",
+        "https://www.alixpartners.com/insights/report-two",
+    ]
+    assert "Expanded load-more pagination 2 time(s)." in response.route_summary
+
+
+def test_discover_publisher_inventory_browser_breaks_same_url_load_more_cycles(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    external_boundary_mocks_only.setattr(
+        service.requests,
+        "get",
+        lambda *args, **kwargs: _FakeResponse(
+            url="https://www.askattest.com/our-research",
+            text="<html><body><a href='/about'>About</a></body></html>",
+        ),
+    )
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://www.askattest.com/our-research",
+                "page_title": "Research",
+                "anchors": [
+                    {
+                        "href": "https://www.askattest.com/research/report-one",
+                        "text": "Report One",
+                        "rel": "",
+                    }
+                ],
+                "load_more_labels": ["Load more"],
+            },
+            "named_clicks": {"load more": "page_2"},
+        },
+        "page_2": {
+            "payload": {
+                "page_url": "https://www.askattest.com/our-research",
+                "page_title": "Research",
+                "anchors": [
+                    {
+                        "href": "https://www.askattest.com/research/report-one",
+                        "text": "Report One",
+                        "rel": "",
+                    },
+                    {
+                        "href": "https://www.askattest.com/research/report-two",
+                        "text": "Report Two",
+                        "rel": "",
+                    },
+                ],
+                "load_more_labels": ["Load more"],
+            },
+            "named_clicks": {"load more": "page_3"},
+        },
+        "page_3": {
+            "payload": {
+                "page_url": "https://www.askattest.com/our-research",
+                "page_title": "Research",
+                "anchors": [
+                    {
+                        "href": "https://www.askattest.com/research/report-one",
+                        "text": "Report One",
+                        "rel": "",
+                    }
+                ],
+                "load_more_labels": ["Load more"],
+            },
+            "named_clicks": {"load more": "page_2"},
+        },
+    }
+    external_boundary_mocks_only.setattr(
+        service, "import_module", lambda _name: _runtime_for_states(states)
+    )
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://www.askattest.com/our-research",
+            settings=_settings(tmp_path),
+            route_kind_hint="browser_render",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "browser_render"
+    assert len(response.pages) == 2
+    assert [page.page_number for page in response.pages] == [1, 2]
+    assert [candidate.url for candidate in response.candidates] == [
+        "https://www.askattest.com/research/report-one",
+        "https://www.askattest.com/research/report-one",
+        "https://www.askattest.com/research/report-two",
+    ]
+    assert "Expanded load-more pagination 2 time(s)." in response.route_summary
+
+
+def test_discover_publisher_inventory_browser_breaks_cross_url_signature_cycles(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    external_boundary_mocks_only.setattr(
+        service.requests,
+        "get",
+        lambda *args, **kwargs: _FakeResponse(
+            url="https://datareportal.com/reports",
+            text="<html><body><a href='/reports?offset=34'>Next</a></body></html>",
+        ),
+    )
+    shared_anchors = [
+        {
+            "href": "https://datareportal.com/reports/report-one",
+            "text": "Report One",
+            "rel": "",
+        },
+        {
+            "href": "https://datareportal.com/reports/report-two",
+            "text": "Report Two",
+            "rel": "",
+        },
+    ]
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://datareportal.com/reports",
+                "page_title": "Reports",
+                "anchors": shared_anchors,
+                "rel_next_hrefs": ["/reports?offset=34"],
+            },
+            "goto_states": {
+                "https://datareportal.com/reports?offset=34": "page_2",
+            },
+        },
+        "page_2": {
+            "payload": {
+                "page_url": "https://datareportal.com/reports?offset=34",
+                "page_title": "Reports",
+                "anchors": shared_anchors,
+                "rel_next_hrefs": ["/reports?offset=68"],
+            },
+            "goto_states": {
+                "https://datareportal.com/reports?offset=68": "page_3",
+            },
+        },
+        "page_3": {
+            "payload": {
+                "page_url": "https://datareportal.com/reports?offset=68",
+                "page_title": "Reports",
+                "anchors": shared_anchors,
+                "rel_next_hrefs": ["/reports?offset=102"],
+            },
+        },
+    }
+    external_boundary_mocks_only.setattr(
+        service, "import_module", lambda _name: _runtime_for_states(states)
+    )
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://datareportal.com/reports",
+            settings=_settings(tmp_path),
+            route_kind_hint="browser_render",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "browser_render"
+    assert len(response.pages) == 1
+    assert [page.page_url for page in response.pages] == [
+        "https://datareportal.com/reports",
+    ]
+    assert [candidate.url for candidate in response.candidates] == [
+        "https://datareportal.com/reports/report-one",
+        "https://datareportal.com/reports/report-two",
+    ]
+
+
+def test_wait_for_inventory_growth_probe_detects_same_page_anchor_growth(
+    external_boundary_mocks_only,
+) -> None:
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
+
+    class _ProbePage:
+        def __init__(self) -> None:
+            self._counts = [1, 3]
+
+        async def evaluate(self, script: str, *args):
+            assert "pageUrl" in script
+            count = self._counts.pop(0)
+            return json.dumps(
+                {
+                    "pageUrl": "https://example.com/insights",
+                    "anchorCount": count,
+                }
+            )
+
+    previous_state = service._RenderedInventoryState(
+        page_url="https://example.com/insights",
+        page_title="Insights",
+        anchors=[{"href": "https://example.com/report-one", "text": "Report One", "rel": ""}],
+        load_more_labels=["Load more"],
+        tab_labels=[],
+        active_tab_label=None,
+        report_link_url=None,
+        empty_results_visible=False,
+        reset_filter_labels=[],
+        has_report_filter=False,
+        has_apply_button=False,
+        has_pagination_next=False,
+        result_range_end=None,
+        result_range_total=None,
+        page_index_hint=None,
+        page_total_hint=None,
+    )
+
+    observed = asyncio.run(
+        service._wait_for_inventory_growth_probe(
+            _ProbePage(),
+            previous_state=previous_state,
+            delay_seconds=0.1,
+            timeout_seconds=0.25,
+        )
+    )
+
+    assert observed is True
 
 
 def test_discover_publisher_inventory_http_hint_empty_is_typed_error(
@@ -1572,11 +2403,72 @@ def test_extract_candidates_from_html_allows_original_host_when_rendered_page_us
     ]
 
 
+def test_extract_candidates_from_html_accepts_archive_surface_cards_without_report_keywords() -> None:
+    html = """
+    <html><body>
+      <a href="https://www.publicissapient.com/resources/blog/modernization-risks-regulated-industries">
+        <h3>Modernization Risks in Regulated Industries</h3>
+        <span>Research</span>
+      </a>
+      <a href="https://www.publicissapient.com/resources/blog/the-ai-powered-investment-firm">
+        <h3>The AI-Powered Investment Firm</h3>
+        <span>Research</span>
+      </a>
+    </body></html>
+    """
+    parser = service._InventoryHtmlParser()
+    parser.feed(html)
+
+    candidates = service._extract_candidates_from_html(
+        anchors=parser.anchors,
+        page_url="https://www.publicissapient.com/resources/blog",
+        page_number=1,
+        next_page_url=None,
+        origin_url="https://www.publicissapient.com/resources/blog",
+        page_title="Publicis Sapient Blog | Articles and Research",
+        active_tab_label="Research",
+        archive_surface=True,
+    )
+
+    assert [candidate.url for candidate in candidates] == [
+        "https://www.publicissapient.com/resources/blog/modernization-risks-regulated-industries",
+        "https://www.publicissapient.com/resources/blog/the-ai-powered-investment-firm",
+    ]
+
+
+def test_extract_candidates_from_html_accepts_external_report_host_on_archive_surface() -> None:
+    html = """
+    <html><body>
+      <a href="https://psfk.gumroad.com/l/coffee-machine-innovation-report-psfk-for-waldo">
+        Report January 2026 Coffee Maker Innovation Download Report
+      </a>
+    </body></html>
+    """
+    parser = service._InventoryHtmlParser()
+    parser.feed(html)
+
+    candidates = service._extract_candidates_from_html(
+        anchors=parser.anchors,
+        page_url="https://www.psfk.com/insights",
+        page_number=1,
+        next_page_url=None,
+        origin_url="https://www.psfk.com/insights",
+        page_title="Thought Leadership Archive",
+        archive_surface=True,
+    )
+
+    assert [candidate.url for candidate in candidates] == [
+        "https://psfk.gumroad.com/l/coffee-machine-innovation-report-psfk-for-waldo"
+    ]
+
+
 def test_browser_named_control_selector_covers_anchor_button_controls() -> None:
     selector = service._browser_named_control_selector()
     inventory_script = service._browser_inventory_state_script()
     click_script = service._browser_click_named_control_script()
+    cookie_click_script = service._browser_click_cookie_banner_script()
     pagination_click_script = service._browser_click_pagination_next_script()
+    archive_expander_script = service._browser_click_archive_expander_script()
 
     assert 'a.btn' in selector
     assert 'a[class*="btn"]' in selector
@@ -1590,8 +2482,13 @@ def test_browser_named_control_selector_covers_anchor_button_controls() -> None:
     assert 'scrollIntoView' in click_script
     assert 'aria-disabled' in inventory_script
     assert 'aria-disabled' in click_script
+    assert 'cookie' in cookie_click_script
+    assert 'consent' in cookie_click_script
     assert 'aria-disabled' in pagination_click_script
     assert 'has_pagination_next' in inventory_script
+    assert 'const pageCountMatch =' in pagination_click_script
+    assert 'explore' in archive_expander_script
+    assert 'library' in archive_expander_script
 
 
 def test_discover_publisher_inventory_browser_timeout_is_typed_error(
@@ -1785,3 +2682,54 @@ def test_inspect_publisher_inventory_landing_pages_detects_direct_pdf_assets(
     assert observation.is_pdf is True
     assert observation.has_download_language is True
     assert observation.has_dead_page_marker is False
+
+
+def test_inspect_publisher_inventory_landing_pages_does_not_treat_body_purchase_word_as_product_flow(
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    html = """
+    <html>
+      <head><title>Creating Relevance Through the Convergence of Content, Creators & Commerce</title></head>
+      <body>
+        <h2>Creating Relevance Through the Convergence of Content, Creators & Commerce</h2>
+        <h1>KEY TAKEAWAYS</h1>
+        <p>Creators and content can guide consumers from awareness all the way through to purchase with just a click.</p>
+        <p>Other Articles</p>
+        <p>Colleen Hotchkiss</p>
+        <p>30 / 06 / 2023</p>
+        <button>Subscribe</button>
+      </body>
+    </html>
+    """
+    external_boundary_mocks_only.setattr(
+        service.requests,
+        "get",
+        lambda *args, **kwargs: _FakeResponse(
+            url="https://www.publiciscommerce.com/insights/creating-relevance-through-the-convergence-of-content-creators-and-commerce",
+            text=html,
+        ),
+    )
+
+    response = service.inspect_publisher_inventory_landing_pages(
+        PublisherInventoryLandingPageInspectionRequest(
+            schema_version="1.0",
+            publisher_name="Publicis Commerce",
+            items=[
+                PublisherInventoryLandingPageInspectionItem(
+                    schema_version="1.0",
+                    canonical_url="https://www.publiciscommerce.com/insights/creating-relevance-through-the-convergence-of-content-creators-and-commerce",
+                    title="Creating Relevance Through the Convergence of Content",
+                    discovered_on_page_number=1,
+                    source_page_url="https://www.publiciscommerce.com/insights",
+                )
+            ],
+            timeout_seconds=5.0,
+            max_workers=1,
+        ),
+        run_context,
+    )
+
+    observation = response.observations[0]
+    assert observation.has_price_or_purchase is False
+    assert observation.has_newsletter_cta is True

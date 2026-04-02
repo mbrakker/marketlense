@@ -24,6 +24,88 @@ logger = logging.getLogger(
 )
 
 _MISSING_DECISION_REPAIR_BATCH_SIZE = 1
+_TARGET_MAX_SCREENING_BATCHES = 8
+_MAX_DYNAMIC_SCREENING_BATCH_SIZE = 35
+_MAX_PROMPT_TITLE_LENGTH = 280
+_FALLBACK_REPORT_TITLE_MARKERS = (
+    "report",
+    "rapport",
+    "white paper",
+    "whitepaper",
+    "study",
+    "survey",
+    "benchmark",
+    "outlook",
+    "ebook",
+    "guide",
+    "playbook",
+    "forecast",
+    "outlook",
+    "barometer",
+    "barometre",
+    "observatory",
+    "observatoire",
+    "index",
+    "pulse",
+    "scorecard",
+    "trends",
+    "trend",
+    "research",
+    "analysis",
+    "infographic",
+    "note de conjoncture",
+)
+_FALLBACK_NON_REPORT_TITLE_MARKERS = (
+    "cookie notice",
+    "cookie policy",
+    "privacy notice",
+    "privacy policy",
+    "code of conduct",
+    "modern slavery",
+    "gender pay",
+    "tax strategy",
+    "case study",
+    "contact us",
+    "join the panel",
+    "publication archive",
+    "all products",
+    "award-winning experts",
+    "accurate data",
+    "real people",
+    "pioneering tech",
+    "binding corporate rules",
+    "bcr summary",
+    "gender equality index",
+    "equality index",
+    "index de l egalite",
+    "index de l égalité",
+    "egalite femmes hommes",
+    "égalité femmes-hommes",
+    "masterclass",
+    "training",
+    "video",
+    "webinar",
+)
+_FALLBACK_NON_REPORT_URL_MARKERS = (
+    "/academy/",
+    "/case-studies/",
+    "/careers",
+    "/contact",
+    "/login",
+    "/panel",
+    "/products",
+    "/privacy",
+    "/cookie",
+    "/modern-slavery",
+    "/tax-strategy",
+    "/code-of-conduct",
+    "/training/",
+    "/video",
+    "/webinar",
+    "academy.",
+    "support.",
+    "/hc/en-us/articles/",
+)
 
 _PUBLISHER_SUCCESS_ANALYST_MARKERS = (
     "gartner",
@@ -46,6 +128,7 @@ _PUBLISHER_SUCCESS_HARD_PATTERNS = (
     re.compile(r"\bcustomer favorite\b"),
     re.compile(r"\bhighest[- ]designated leader\b"),
     re.compile(r"\bbrings home the gold\b"),
+    re.compile(r"\b(?:earns?|receiv(?:e|es|ing)|wins?)\s+\d+\s+(?:exceptional[- ]rated\s+)?(?:gold\s+)?medals?\b"),
     re.compile(r"\bgoes big\b"),
     re.compile(r"\bjust ask\b"),
     re.compile(r"\bearns?\s+top ratings?\b"),
@@ -62,6 +145,9 @@ def screen_publisher_inventory_candidates(
     prompt_client=prompt_service,
 ) -> PublisherInventoryCandidateScreeningResponse:
     candidates = list(request.candidates)
+    candidates_for_llm, pre_rejected_decisions = _partition_candidates_for_llm_screening(
+        candidates
+    )
     logger.info(
         log_event(
             ctx,
@@ -72,6 +158,8 @@ def screen_publisher_inventory_candidates(
                 "publisher_name": request.publisher_name,
                 "insights_url": request.insights_url,
                 "candidate_count": len(candidates),
+                "llm_candidate_count": len(candidates_for_llm),
+                "pre_rejected_count": len(pre_rejected_decisions),
                 "candidate_screening_enabled": request.settings.candidate_screening_enabled,
                 "prompt_namespace": request.settings.candidate_screening_prompt_namespace,
             },
@@ -118,6 +206,33 @@ def screen_publisher_inventory_candidates(
             ctx=ctx,
         )
         return deduped_response
+    if not candidates_for_llm:
+        response = _build_screening_response(
+            candidates=candidates,
+            decision_map={
+                decision.canonical_url: decision for decision in pre_rejected_decisions
+            },
+            model="screening_prefilter_only",
+            request_id=None,
+            raw_response="",
+        )
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="publisher_inventory_candidate_screen_complete",
+                module=logger.name,
+                fields={
+                    "publisher_name": request.publisher_name,
+                    "candidate_count": len(candidates),
+                    "approved_count": 0,
+                    "rejected_count": len(response.rejected_items),
+                    "model": response.model,
+                    "screening_prefilter_only": True,
+                },
+            )
+        )
+        return response
 
     openai_client = openai_client or llm_service.build_openai_client(
         base_client=openai_service,
@@ -126,9 +241,12 @@ def screen_publisher_inventory_candidates(
             scope="publisher_inventory_candidate_screening",
         ),
     )
-    batch_size = max(int(request.settings.candidate_screening_batch_size), 1)
+    batch_size = _resolve_candidate_screening_batch_size(
+        candidate_count=len(candidates_for_llm),
+        configured_batch_size=int(request.settings.candidate_screening_batch_size),
+    )
     batch_responses: list[PublisherInventoryCandidateScreeningResponse] = []
-    candidate_batches = list(_chunk_candidates(candidates, batch_size))
+    candidate_batches = list(_chunk_candidates(candidates_for_llm, batch_size))
     logger.info(
         log_event(
             ctx,
@@ -138,7 +256,9 @@ def screen_publisher_inventory_candidates(
             fields={
                 "publisher_name": request.publisher_name,
                 "candidate_count": len(candidates),
-                "batch_size": batch_size,
+                "llm_candidate_count": len(candidates_for_llm),
+                "configured_batch_size": int(request.settings.candidate_screening_batch_size),
+                "effective_batch_size": batch_size,
                 "batch_count": len(candidate_batches),
             },
         )
@@ -156,7 +276,12 @@ def screen_publisher_inventory_candidates(
         batch_responses.append(batch_response)
     screening_response = _merge_screening_batches(
         responses=batch_responses,
-        candidate_count=len(candidates),
+        candidate_count=len(candidates_for_llm),
+    )
+    screening_response = _merge_screening_responses_with_prefilter(
+        candidates=candidates,
+        llm_response=screening_response,
+        pre_rejected_decisions=pre_rejected_decisions,
     )
     screening_response = _apply_publisher_success_hard_rejections(
         response=screening_response,
@@ -219,11 +344,11 @@ def _screen_candidate_batch(
             "candidate_items_json": json.dumps(
                 [
                     {
-                        "canonical_url": item.canonical_url,
-                        "title": item.title,
-                        "discovered_on_page_number": item.discovered_on_page_number,
-                        "source_page_url": item.source_page_url,
-                    }
+                            "canonical_url": item.canonical_url,
+                            "title": _truncate_prompt_text(item.title),
+                            "discovered_on_page_number": item.discovered_on_page_number,
+                            "source_page_url": item.source_page_url,
+                        }
                     for item in candidates
                 ],
                 ensure_ascii=True,
@@ -364,18 +489,25 @@ def _screen_candidate_batch(
             if candidate.canonical_url not in decision_map
         ]
     if missing_candidates:
-        raise AppError(
-            code="publisher_inventory_candidate_screen_incomplete",
-            message="Candidate screening did not return a decision for every candidate",
-            retryable=False,
-            severity="error",
-            context={
-                "batch_index": batch_index,
-                "batch_count": batch_count,
-                "missing_urls": [
-                    candidate.canonical_url for candidate in missing_candidates
-                ],
-            },
+        fallback_decisions = {
+            candidate.canonical_url: _fallback_screening_decision(candidate)
+            for candidate in missing_candidates
+        }
+        decision_map.update(fallback_decisions)
+        logger.warning(
+            log_event(
+                ctx,
+                role="generator",
+                event="publisher_inventory_candidate_screen_missing_decisions_fallback",
+                module=logger.name,
+                fields={
+                    "publisher_name": request.publisher_name,
+                    "batch_index": batch_index,
+                    "batch_count": batch_count,
+                    "fallback_count": len(fallback_decisions),
+                    "fallback_urls": sorted(fallback_decisions),
+                },
+            )
         )
     return _build_screening_response(
         candidates=candidates,
@@ -697,6 +829,112 @@ def _chunk_candidates(
     ]
 
 
+def _partition_candidates_for_llm_screening(
+    candidates: list[PublisherInventoryCandidateScreeningItem],
+) -> tuple[
+    list[PublisherInventoryCandidateScreeningItem],
+    list[PublisherInventoryCandidateScreeningDecision],
+]:
+    llm_candidates: list[PublisherInventoryCandidateScreeningItem] = []
+    pre_rejected: list[PublisherInventoryCandidateScreeningDecision] = []
+    for candidate in candidates:
+        if _is_probable_report_asset(candidate):
+            llm_candidates.append(candidate)
+            continue
+        pre_rejected.append(
+            PublisherInventoryCandidateScreeningDecision(
+                schema_version="1.0",
+                canonical_url=candidate.canonical_url,
+                accepted=False,
+                reason="low_report_probability_prefilter",
+            )
+        )
+    return llm_candidates, pre_rejected
+
+
+def _resolve_candidate_screening_batch_size(
+    *,
+    candidate_count: int,
+    configured_batch_size: int,
+) -> int:
+    batch_size = max(configured_batch_size, 1)
+    if candidate_count <= batch_size * _TARGET_MAX_SCREENING_BATCHES:
+        return batch_size
+    dynamic_batch_size = (candidate_count + _TARGET_MAX_SCREENING_BATCHES - 1) // _TARGET_MAX_SCREENING_BATCHES
+    return max(batch_size, min(dynamic_batch_size, _MAX_DYNAMIC_SCREENING_BATCH_SIZE))
+
+
+def _merge_screening_responses_with_prefilter(
+    *,
+    candidates: list[PublisherInventoryCandidateScreeningItem],
+    llm_response: PublisherInventoryCandidateScreeningResponse,
+    pre_rejected_decisions: list[PublisherInventoryCandidateScreeningDecision],
+) -> PublisherInventoryCandidateScreeningResponse:
+    if not pre_rejected_decisions:
+        return llm_response
+    decision_map = {
+        decision.canonical_url: decision for decision in llm_response.decisions
+    }
+    decision_map.update(
+        {decision.canonical_url: decision for decision in pre_rejected_decisions}
+    )
+    return _build_screening_response(
+        candidates=candidates,
+        decision_map=decision_map,
+        model=llm_response.model,
+        request_id=llm_response.request_id,
+        raw_response=llm_response.raw_response,
+    )
+
+
+def _fallback_screening_decision(
+    candidate: PublisherInventoryCandidateScreeningItem,
+) -> PublisherInventoryCandidateScreeningDecision:
+    normalized_title = _normalize_title_fingerprint(candidate.title)
+    normalized_url = candidate.canonical_url.casefold()
+    if any(marker in normalized_title for marker in _FALLBACK_NON_REPORT_TITLE_MARKERS):
+        return PublisherInventoryCandidateScreeningDecision(
+            schema_version="1.0",
+            canonical_url=candidate.canonical_url,
+            accepted=False,
+            reason="fallback_non_report_title",
+        )
+    if any(marker in normalized_url for marker in _FALLBACK_NON_REPORT_URL_MARKERS):
+        return PublisherInventoryCandidateScreeningDecision(
+            schema_version="1.0",
+            canonical_url=candidate.canonical_url,
+            accepted=False,
+            reason="fallback_non_report_url",
+        )
+    if any(marker in normalized_title for marker in _FALLBACK_REPORT_TITLE_MARKERS):
+        return PublisherInventoryCandidateScreeningDecision(
+            schema_version="1.0",
+            canonical_url=candidate.canonical_url,
+            accepted=True,
+            reason="fallback_report_signal",
+        )
+    return PublisherInventoryCandidateScreeningDecision(
+        schema_version="1.0",
+        canonical_url=candidate.canonical_url,
+        accepted=False,
+        reason="fallback_unknown_candidate",
+    )
+
+
+def _is_probable_report_asset(
+    candidate: PublisherInventoryCandidateScreeningItem,
+) -> bool:
+    normalized_title = _normalize_title_fingerprint(candidate.title)
+    normalized_url = candidate.canonical_url.casefold()
+    if normalized_url.endswith(".pdf"):
+        return True
+    if any(marker in normalized_url for marker in _FALLBACK_NON_REPORT_URL_MARKERS):
+        return False
+    if any(marker in normalized_title for marker in _FALLBACK_NON_REPORT_TITLE_MARKERS):
+        return False
+    return any(marker in normalized_title for marker in _FALLBACK_REPORT_TITLE_MARKERS)
+
+
 def _publisher_reference_tokens(publisher_name: str) -> tuple[str, ...]:
     normalized_name = _normalize_title_fingerprint(publisher_name)
     if not normalized_name:
@@ -707,3 +945,10 @@ def _publisher_reference_tokens(publisher_name: str) -> tuple[str, ...]:
         if token and token not in unique_tokens:
             unique_tokens.append(token)
     return tuple(unique_tokens)
+
+
+def _truncate_prompt_text(value: str) -> str:
+    normalized_value = " ".join(str(value or "").split()).strip()
+    if len(normalized_value) <= _MAX_PROMPT_TITLE_LENGTH:
+        return normalized_value
+    return normalized_value[: _MAX_PROMPT_TITLE_LENGTH - 1].rstrip() + "…"

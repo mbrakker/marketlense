@@ -515,15 +515,28 @@ def discover_publisher_inventory(
         ConfigLoadRequest(schema_version="1.0", path=""),
         ctx,
     )
-    result = run_publisher_inventory_discovery(
-        PublisherInventoryDiscoveryRequest(
-            schema_version="1.0",
-            insights_url=insights_url,
-            reports_db=settings.reports_db,
-            settings=settings,
-        ),
-        ctx=ctx,
-    )
+    try:
+        result = run_publisher_inventory_discovery(
+            PublisherInventoryDiscoveryRequest(
+                schema_version="1.0",
+                insights_url=insights_url,
+                reports_db=settings.reports_db,
+                settings=settings,
+            ),
+            ctx=ctx,
+        )
+    except AppError as exc:
+        if exc.code == "publisher_inventory_browser_pagination_limit":
+            table = Table(title="Publisher Inventory Discovery", box=box.SIMPLE_HEAVY)
+            table.add_column("Field")
+            table.add_column("Value")
+            table.add_row("Insights URL", insights_url)
+            table.add_row("Outcome", "bounded")
+            table.add_row("Status code", exc.code)
+            table.add_row("Message", exc.message)
+            console.print(table)
+            return
+        raise
     table = Table(title="Publisher Inventory Discovery", box=box.SIMPLE_HEAVY)
     table.add_column("Field")
     table.add_column("Value")

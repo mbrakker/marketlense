@@ -2056,7 +2056,7 @@ def load_publisher_inventory_settings(
                     or browser_download.get("timeout_seconds")
                     or _env_value("BROWSER_DOWNLOAD_TIMEOUT_SECONDS")
                 ),
-                180.0,
+                360.0,
             ),
             1.0,
         ),
@@ -2086,7 +2086,7 @@ def load_publisher_inventory_settings(
                 publisher_discovery.get("pagination_max_pages")
                 if not _is_missing(publisher_discovery.get("pagination_max_pages"))
                 else _env_value("PUBLISHER_DISCOVERY_PAGINATION_MAX_PAGES"),
-                30,
+                75,
             ),
             1,
         ),
@@ -2096,6 +2096,17 @@ def load_publisher_inventory_settings(
                 if not _is_missing(publisher_discovery.get("http_timeout_seconds"))
                 else _env_value("PUBLISHER_DISCOVERY_HTTP_TIMEOUT_SECONDS"),
                 30.0,
+            ),
+            1.0,
+        ),
+        command_time_budget_seconds=max(
+            _to_float(
+                publisher_discovery.get("command_time_budget_seconds")
+                if not _is_missing(
+                    publisher_discovery.get("command_time_budget_seconds")
+                )
+                else _env_value("PUBLISHER_DISCOVERY_COMMAND_TIME_BUDGET_SECONDS"),
+                570.0,
             ),
             1.0,
         ),
@@ -2200,7 +2211,7 @@ def load_publisher_inventory_settings(
                 candidate_screening_cfg.get("batch_size")
                 if not _is_missing(candidate_screening_cfg.get("batch_size"))
                 else _env_value("PUBLISHER_DISCOVERY_CANDIDATE_SCREENING_BATCH_SIZE"),
-                20,
+                10,
             ),
             1,
         ),
@@ -2276,6 +2287,7 @@ def load_publisher_inventory_settings(
                 "prompt_namespace": settings.prompt_namespace,
                 "pagination_max_pages": settings.pagination_max_pages,
                 "http_timeout_seconds": settings.http_timeout_seconds,
+                "command_time_budget_seconds": settings.command_time_budget_seconds,
                 "headed": settings.headed,
                 "force_browser": settings.force_browser,
                 "retry_retries": settings.retry_retries,

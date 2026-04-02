@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from unittest.mock import patch
 
 import pytest
 
@@ -203,6 +204,10 @@ def _quality_response(*, accepted_urls: set[str], request) -> PublisherInventory
 
 
 def _snapshot_json(url: str) -> str:
+    return _snapshot_json_for_urls([url])
+
+
+def _snapshot_json_for_urls(urls: list[str]) -> str:
     payload = {
         "schema_version": "1.0",
         "publisher_name": "Activate Consulting",
@@ -218,12 +223,13 @@ def _snapshot_json(url: str) -> str:
         "items": [
             {
                 "schema_version": "1.0",
-                "canonical_url": url,
-                "title": "Existing Report",
+                "canonical_url": item_url,
+                "title": f"Existing Report {index}",
                 "discovered_on_page_number": 1,
                 "pdf_url": None,
                 "published_at_text": None,
             }
+            for index, item_url in enumerate(urls, start=1)
         ],
     }
     return json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
@@ -259,6 +265,43 @@ def _snapshot_sha256(url: str, run_context) -> str:
                     discovered_on_page_number=1,
                 )
             ],
+        ),
+        run_context,
+    ).snapshot_sha256
+
+
+def _snapshot_sha256_for_urls(urls: list[str], run_context) -> str:
+    candidates = [
+        PublisherInventoryRawCandidate(
+            schema_version="1.0",
+            url=item_url,
+            title=f"Existing Report {index}",
+            source_page_url="https://www.activate.com/insights",
+            discovered_on_page_number=1,
+        )
+        for index, item_url in enumerate(urls, start=1)
+    ]
+    return __import__(
+        "src.generators.publisher_inventory_generator",
+        fromlist=["build_publisher_inventory_snapshot"],
+    ).build_publisher_inventory_snapshot(
+        PublisherInventoryBuildRequest(
+            schema_version="1.0",
+            publisher_name="Activate Consulting",
+            insights_url="https://www.activate.com/insights",
+            normalized_insights_url="https://www.activate.com/insights",
+            discovered_at_utc="2026-03-28T00:00:00Z",
+            route_kind="browser_render",
+            route_summary="Open page 1, click next, extract cards.",
+            final_page_url="https://www.activate.com/insights?page=2",
+            pages=[
+                PublisherInventoryPage(
+                    schema_version="1.0",
+                    page_number=1,
+                    page_url="https://www.activate.com/insights",
+                )
+            ],
+            candidates=candidates,
         ),
         run_context,
     ).snapshot_sha256
@@ -457,6 +500,95 @@ def test_run_publisher_inventory_discovery_falls_back_after_memory_route_failure
     assert result.used_memory_route is False
 
 
+def test_run_publisher_inventory_discovery_applies_remaining_time_budget_to_step_settings(
+    run_context,
+):
+    captured_discovery_timeouts = []
+    captured_screening_timeouts = []
+    captured_quality_timeouts = []
+    settings = PublisherInventorySettings(
+        **{
+            **_settings().__dict__,
+            "timeout_seconds": 30.0,
+            "candidate_screening_timeout_seconds": 30.0,
+            "candidate_quality_check_timeout_seconds": 15.0,
+            "command_time_budget_seconds": 4.0,
+        }
+    )
+    deps = _dependencies(
+        discover_publisher_inventory=lambda req, ctx: (
+            captured_discovery_timeouts.append(req.settings.timeout_seconds)
+            or _service_response(
+                used_route_hint=False,
+                new_url="https://www.activate.com/reports/new-report",
+            )
+        ),
+        screen_publisher_inventory_candidates=lambda req, ctx: (
+            captured_screening_timeouts.append(
+                req.settings.candidate_screening_timeout_seconds
+            )
+            or _screening_response(
+                accepted_urls={"https://www.activate.com/reports/new-report"},
+                request=req,
+            )
+        ),
+        qualify_publisher_inventory_candidates=lambda req, ctx: (
+            captured_quality_timeouts.append(
+                req.settings.candidate_quality_check_timeout_seconds
+            )
+            or _quality_response(
+                accepted_urls={"https://www.activate.com/reports/new-report"},
+                request=req,
+            )
+        ),
+    )
+
+    with patch(
+        "src.orchestrators.publisher_inventory_orchestrator.time.monotonic",
+        side_effect=[
+            100.0,
+            100.5,
+            100.75,
+            101.0,
+            101.25,
+            101.5,
+            101.75,
+            102.0,
+            102.25,
+            102.5,
+            102.75,
+            103.0,
+        ],
+    ):
+        run_publisher_inventory_discovery(
+            PublisherInventoryDiscoveryRequest(
+                schema_version="1.0",
+                insights_url="https://www.activate.com/insights",
+                reports_db="./state/reports.sqlite",
+                settings=settings,
+            ),
+            ctx=run_context,
+            dependencies=deps,
+        )
+
+    assert len(captured_discovery_timeouts) == 1
+    assert len(captured_screening_timeouts) == 1
+    assert len(captured_quality_timeouts) == 1
+    assert 1.0 <= captured_discovery_timeouts[0] < settings.timeout_seconds
+    assert (
+        1.0
+        <= captured_screening_timeouts[0]
+        < settings.candidate_screening_timeout_seconds
+    )
+    assert (
+        1.0
+        <= captured_quality_timeouts[0]
+        <= settings.candidate_quality_check_timeout_seconds
+    )
+    assert captured_discovery_timeouts[0] >= captured_screening_timeouts[0]
+    assert captured_screening_timeouts[0] >= captured_quality_timeouts[0]
+
+
 def test_run_publisher_inventory_discovery_records_failed_test_status(
     run_context,
 ):
@@ -467,7 +599,7 @@ def test_run_publisher_inventory_discovery_records_failed_test_status(
             AppError(
                 code="publisher_inventory_browser_pagination_limit",
                 message="deep archive limit reached",
-                retryable=True,
+                retryable=False,
             )
         ),
         record_publisher_inventory_test_status=lambda req, ctx: status_records.append(req),
@@ -487,8 +619,92 @@ def test_run_publisher_inventory_discovery_records_failed_test_status(
 
     assert exc_info.value.code == "publisher_inventory_browser_pagination_limit"
     assert [record.status for record in status_records] == [
-        "failed:publisher_inventory_browser_pagination_limit"
+        "bounded:publisher_inventory_browser_pagination_limit"
     ]
+
+
+def test_run_publisher_inventory_discovery_records_time_budget_failure_before_discovery(
+    run_context,
+):
+    status_records = []
+    discover_calls = []
+    settings = PublisherInventorySettings(
+        **{**_settings().__dict__, "command_time_budget_seconds": 1.0}
+    )
+    deps = _dependencies(
+        discover_publisher_inventory=lambda req, ctx: (
+            discover_calls.append(req)
+            or _service_response(
+                used_route_hint=False,
+                new_url="https://www.activate.com/reports/new-report",
+            )
+        ),
+        record_publisher_inventory_test_status=lambda req, ctx: status_records.append(
+            req
+        ),
+    )
+
+    with patch(
+        "src.orchestrators.publisher_inventory_orchestrator.time.monotonic",
+        side_effect=[100.0, 101.5],
+    ):
+        with pytest.raises(AppError) as exc_info:
+            run_publisher_inventory_discovery(
+                PublisherInventoryDiscoveryRequest(
+                    schema_version="1.0",
+                    insights_url="https://www.activate.com/insights",
+                    reports_db="./state/reports.sqlite",
+                    settings=settings,
+                ),
+                ctx=run_context,
+                dependencies=deps,
+            )
+
+    assert exc_info.value.code == "publisher_inventory_time_budget_exceeded"
+    assert discover_calls == []
+    assert [record.status for record in status_records] == [
+        "failed:publisher_inventory_time_budget_exceeded"
+    ]
+
+
+def test_run_publisher_inventory_discovery_does_not_retry_or_fallback_on_pagination_limit(
+    run_context,
+):
+    attempts = {"memory": 0, "fresh": 0}
+
+    def _discover(req, ctx):
+        if req.route_hint:
+            attempts["memory"] += 1
+        else:
+            attempts["fresh"] += 1
+        raise AppError(
+            code="publisher_inventory_browser_pagination_limit",
+            message="deep archive limit reached",
+            retryable=False,
+        )
+
+    deps = _dependencies(
+        discover_publisher_inventory=_discover,
+        get_publisher_inventory_state=lambda req, ctx: _publisher_state(
+            with_route=True,
+            with_snapshot=False,
+        ),
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        run_publisher_inventory_discovery(
+            PublisherInventoryDiscoveryRequest(
+                schema_version="1.0",
+                insights_url="https://www.activate.com/insights",
+                reports_db="./state/reports.sqlite",
+                settings=_settings(),
+            ),
+            ctx=run_context,
+            dependencies=deps,
+        )
+
+    assert exc_info.value.code == "publisher_inventory_browser_pagination_limit"
+    assert attempts == {"memory": 1, "fresh": 0}
 
 
 def test_run_publisher_inventory_discovery_unchanged_rerun_skips_upload(
@@ -595,6 +811,83 @@ def test_run_publisher_inventory_discovery_unchanged_rerun_skips_upload(
     assert uploads == []
 
 
+def test_run_publisher_inventory_discovery_does_not_commit_raw_only_snapshot_drift(
+    run_context,
+):
+    uploads = []
+    state_records = []
+    snapshot_payload = _snapshot_json("https://www.activate.com/reports/report-one")
+    snapshot_sha256 = _snapshot_sha256(
+        "https://www.activate.com/reports/report-one", run_context
+    )
+    deps = _dependencies(
+        discover_publisher_inventory=lambda req, ctx: _service_response(
+            used_route_hint=True,
+            new_url="https://www.activate.com/reports/noisy-hub",
+            title="Resources",
+        ),
+        screen_publisher_inventory_candidates=lambda req, ctx: _screening_response(
+            accepted_urls=set(),
+            request=req,
+        ),
+        qualify_publisher_inventory_candidates=lambda req, ctx: _quality_response(
+            accepted_urls=set(),
+            request=req,
+        ),
+        get_publisher_inventory_state=lambda req, ctx: _publisher_state(
+            with_route=True,
+            with_snapshot=True,
+            snapshot_sha256=snapshot_sha256,
+        ),
+        record_publisher_inventory_state=lambda req, ctx: state_records.append(req),
+        download_pdf=lambda req, ctx: DriveDownloadResponse(
+            schema_version="1.0",
+            file=req.file,
+            content=snapshot_payload.encode("utf-8"),
+            md5="md5",
+            size=len(snapshot_payload),
+        ),
+        upload_bytes=lambda req, ctx: (
+            uploads.append(req)
+            or DriveUploadBytesResponse(
+                schema_version="1.0",
+                file=DriveFile(
+                    schema_version="1.0",
+                    file_id="drive-file-new",
+                    name=req.file_name,
+                    modified_time=None,
+                    md5_checksum=None,
+                    mime_type="application/json",
+                ),
+                size=len(req.content),
+                md5="abc123",
+            )
+        ),
+        record_discovered_report_source=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("should not record discovered sources")
+        ),
+    )
+
+    result = run_publisher_inventory_discovery(
+        PublisherInventoryDiscoveryRequest(
+            schema_version="1.0",
+            insights_url="https://www.activate.com/insights",
+            reports_db="./state/reports.sqlite",
+            settings=_settings(),
+        ),
+        ctx=run_context,
+        dependencies=deps,
+    )
+
+    assert result.snapshot_changed is False
+    assert result.new_report_urls == []
+    assert uploads == []
+    assert len(state_records) == 1
+    assert state_records[0].snapshot_drive_file_id == "snapshot-1"
+    assert state_records[0].snapshot_sha256 == snapshot_sha256
+    assert state_records[0].route_kind == "browser_render"
+
+
 def test_run_publisher_inventory_discovery_requires_google_folder(
     run_context,
     assert_app_error,
@@ -626,6 +919,8 @@ def test_run_publisher_inventory_discovery_rejects_non_meaningful_candidates_bef
     run_context,
 ):
     source_records = []
+    uploads = []
+    status_records = []
     deps = _dependencies(
         screen_publisher_inventory_candidates=lambda req, ctx: _screening_response(
             accepted_urls=set(),
@@ -649,6 +944,23 @@ def test_run_publisher_inventory_discovery_rejects_non_meaningful_candidates_bef
                 created_new=True,
             )
         ),
+        record_publisher_inventory_test_status=lambda req, ctx: status_records.append(req),
+        upload_bytes=lambda req, ctx: (
+            uploads.append(req)
+            or DriveUploadBytesResponse(
+                schema_version="1.0",
+                file=DriveFile(
+                    schema_version="1.0",
+                    file_id="drive-file-1",
+                    name=req.file_name,
+                    modified_time=None,
+                    md5_checksum=None,
+                    mime_type="application/json",
+                ),
+                size=len(req.content),
+                md5="abc123",
+            )
+        ),
     )
 
     result = run_publisher_inventory_discovery(
@@ -664,12 +976,17 @@ def test_run_publisher_inventory_discovery_rejects_non_meaningful_candidates_bef
 
     assert result.new_report_urls == []
     assert source_records == []
+    assert result.snapshot_changed is False
+    assert uploads == []
+    assert [record.status for record in status_records] == ["passed:no_report_assets"]
 
 
 def test_run_publisher_inventory_discovery_quality_rejects_editorial_pages_before_recording(
     run_context,
 ):
     source_records = []
+    uploads = []
+    status_records = []
     deps = _dependencies(
         qualify_publisher_inventory_candidates=lambda req, ctx: _quality_response(
             accepted_urls=set(),
@@ -690,6 +1007,23 @@ def test_run_publisher_inventory_discovery_quality_rejects_editorial_pages_befor
                 created_new=True,
             )
         ),
+        record_publisher_inventory_test_status=lambda req, ctx: status_records.append(req),
+        upload_bytes=lambda req, ctx: (
+            uploads.append(req)
+            or DriveUploadBytesResponse(
+                schema_version="1.0",
+                file=DriveFile(
+                    schema_version="1.0",
+                    file_id="drive-file-1",
+                    name=req.file_name,
+                    modified_time=None,
+                    md5_checksum=None,
+                    mime_type="application/json",
+                ),
+                size=len(req.content),
+                md5="abc123",
+            )
+        ),
     )
 
     result = run_publisher_inventory_discovery(
@@ -705,6 +1039,126 @@ def test_run_publisher_inventory_discovery_quality_rejects_editorial_pages_befor
 
     assert result.new_report_urls == []
     assert source_records == []
+    assert result.snapshot_changed is False
+    assert uploads == []
+    assert [record.status for record in status_records] == ["passed:no_report_assets"]
+
+
+def test_run_publisher_inventory_discovery_rejects_material_shrinkage_without_new_assets(
+    run_context,
+    assert_app_error,
+):
+    previous_urls = [
+        f"https://www.activate.com/reports/report-{index}" for index in range(1, 11)
+    ]
+    current_urls = previous_urls[:5]
+    snapshot_payload = _snapshot_json_for_urls(previous_urls)
+    snapshot_sha256 = _snapshot_sha256_for_urls(previous_urls, run_context)
+    uploads = []
+    state_records = []
+    status_records = []
+
+    deps = _dependencies(
+        discover_publisher_inventory=lambda req, ctx: PublisherInventoryServiceResponse(
+            schema_version="1.0",
+            source_url="https://www.activate.com/insights",
+            normalized_url="https://www.activate.com/insights",
+            route_kind="browser_render",
+            route_summary="Open page 1, click next, extract cards.",
+            final_page_url="https://www.activate.com/insights?page=2",
+            used_route_hint=True,
+            pages=[
+                PublisherInventoryPage(
+                    schema_version="1.0",
+                    page_number=1,
+                    page_url="https://www.activate.com/insights",
+                ),
+                PublisherInventoryPage(
+                    schema_version="1.0",
+                    page_number=2,
+                    page_url="https://www.activate.com/insights?page=2",
+                ),
+            ],
+            candidates=[
+                PublisherInventoryRawCandidate(
+                    schema_version="1.0",
+                    url=item_url,
+                    title=f"Existing Report {index}",
+                    source_page_url=(
+                        "https://www.activate.com/insights"
+                        if index <= 3
+                        else "https://www.activate.com/insights?page=2"
+                    ),
+                    discovered_on_page_number=1 if index <= 3 else 2,
+                )
+                for index, item_url in enumerate(current_urls, start=1)
+            ],
+        ),
+        screen_publisher_inventory_candidates=lambda req, ctx: _screening_response(
+            accepted_urls=set(),
+            request=req,
+        ),
+        qualify_publisher_inventory_candidates=lambda req, ctx: _quality_response(
+            accepted_urls=set(),
+            request=req,
+        ),
+        get_publisher_inventory_state=lambda req, ctx: _publisher_state(
+            with_route=True,
+            with_snapshot=True,
+            snapshot_sha256=snapshot_sha256,
+        ),
+        download_pdf=lambda req, ctx: DriveDownloadResponse(
+            schema_version="1.0",
+            file=req.file,
+            content=snapshot_payload.encode("utf-8"),
+            md5="md5",
+            size=len(snapshot_payload),
+        ),
+        upload_bytes=lambda req, ctx: (
+            uploads.append(req)
+            or DriveUploadBytesResponse(
+                schema_version="1.0",
+                file=DriveFile(
+                    schema_version="1.0",
+                    file_id="drive-file-new",
+                    name=req.file_name,
+                    modified_time=None,
+                    md5_checksum=None,
+                    mime_type="application/json",
+                ),
+                size=len(req.content),
+                md5="abc123",
+            )
+        ),
+        record_publisher_inventory_state=lambda req, ctx: state_records.append(req),
+        record_publisher_inventory_test_status=lambda req, ctx: status_records.append(req),
+        record_discovered_report_source=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("should not record discovered sources")
+        ),
+    )
+
+    with pytest.raises(AppError) as err:
+        run_publisher_inventory_discovery(
+            PublisherInventoryDiscoveryRequest(
+                schema_version="1.0",
+                insights_url="https://www.activate.com/insights",
+                reports_db="./state/reports.sqlite",
+                settings=_settings(),
+            ),
+            ctx=run_context,
+            dependencies=deps,
+        )
+
+    assert_app_error(
+        err.value,
+        code="publisher_inventory_browser_incomplete",
+        retryable=False,
+    )
+    assert uploads == []
+    assert state_records == []
+    assert [record.status for record in status_records] == [
+        "failed:publisher_inventory_browser_incomplete"
+    ]
 
 
 def test_run_publisher_inventory_discovery_screening_failure_does_not_commit_snapshot(
@@ -765,3 +1219,217 @@ def test_run_publisher_inventory_discovery_screening_failure_does_not_commit_sna
     )
     assert uploads == []
     assert state_records == []
+
+
+def test_run_publisher_inventory_discovery_fails_when_all_screened_candidates_are_unreachable(
+    run_context,
+    assert_app_error,
+):
+    uploads = []
+    state_records = []
+    status_records = []
+    deps = _dependencies(
+        get_publisher_inventory_state=lambda req, ctx: _publisher_state(
+            with_route=False, with_snapshot=False
+        ),
+        qualify_publisher_inventory_candidates=lambda req, ctx: PublisherInventoryCandidateQualityResponse(
+            schema_version="1.0",
+            approved_items=[],
+            rejected_items=[
+                PublisherInventoryQualifiedCandidateItem(
+                    schema_version="1.0",
+                    canonical_url=candidate.canonical_url,
+                    title=candidate.title,
+                    discovered_on_page_number=candidate.discovered_on_page_number,
+                    source_page_url=candidate.source_page_url,
+                )
+                for candidate in req.candidates
+            ],
+            decisions=[
+                PublisherInventoryCandidateQualityDecision(
+                    schema_version="1.0",
+                    canonical_url=candidate.canonical_url,
+                    accepted=False,
+                    reason="dead_or_unreachable_landing_page",
+                    resolved_title=candidate.title,
+                )
+                for candidate in req.candidates
+            ],
+        ),
+        record_publisher_inventory_state=lambda req, ctx: state_records.append(req),
+        record_publisher_inventory_test_status=lambda req, ctx: status_records.append(req),
+        record_discovered_report_source=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("should not record discovered sources")
+        ),
+        upload_bytes=lambda req, ctx: (
+            uploads.append(req)
+            or DriveUploadBytesResponse(
+                schema_version="1.0",
+                file=DriveFile(
+                    schema_version="1.0",
+                    file_id="drive-file-1",
+                    name=req.file_name,
+                    modified_time=None,
+                    md5_checksum=None,
+                    mime_type="application/json",
+                ),
+                size=len(req.content),
+                md5="abc123",
+            )
+        ),
+    )
+
+    with pytest.raises(AppError) as err:
+        run_publisher_inventory_discovery(
+            PublisherInventoryDiscoveryRequest(
+                schema_version="1.0",
+                insights_url="https://www.activate.com/insights",
+                reports_db="./state/reports.sqlite",
+                settings=_settings(),
+            ),
+            ctx=run_context,
+            dependencies=deps,
+        )
+
+    assert_app_error(
+        err.value,
+        code="publisher_inventory_candidate_quality_unreachable_archive",
+        retryable=False,
+    )
+    assert uploads == []
+    assert state_records == []
+    assert [record.status for record in status_records] == [
+        "failed:publisher_inventory_candidate_quality_unreachable_archive"
+    ]
+
+
+def test_run_publisher_inventory_discovery_tolerates_unreachable_delta_when_previous_snapshot_exists(
+    run_context,
+):
+    previous_urls = ["https://www.activate.com/reports/existing-report"]
+    snapshot_payload = _snapshot_json_for_urls(previous_urls)
+    snapshot_sha256 = _snapshot_sha256_for_urls(previous_urls, run_context)
+    uploads = []
+    state_records = []
+    status_records = []
+
+    deps = _dependencies(
+        get_publisher_inventory_state=lambda req, ctx: _publisher_state(
+            with_route=False,
+            with_snapshot=True,
+            snapshot_sha256=snapshot_sha256,
+        ),
+        download_pdf=lambda req, ctx: DriveDownloadResponse(
+            schema_version="1.0",
+            file=DriveFile(
+                schema_version="1.0",
+                file_id=req.file.file_id,
+                name="publisher_inventory_snapshot__20260328T000000Z.json",
+                modified_time="2026-03-28T00:00:00Z",
+                md5_checksum="md5",
+                mime_type="application/json",
+            ),
+            content=snapshot_payload.encode("utf-8"),
+            size=len(snapshot_payload.encode("utf-8")),
+            md5="md5",
+        ),
+        discover_publisher_inventory=lambda req, ctx: PublisherInventoryServiceResponse(
+            schema_version="1.0",
+            source_url="https://www.activate.com/insights",
+            normalized_url="https://www.activate.com/insights",
+            route_kind="browser_render",
+            route_summary="Open page 1, click next, extract cards.",
+            final_page_url="https://www.activate.com/insights?page=2",
+            used_route_hint=False,
+            pages=[
+                PublisherInventoryPage(
+                    schema_version="1.0",
+                    page_number=1,
+                    page_url="https://www.activate.com/insights",
+                )
+            ],
+            candidates=[
+                PublisherInventoryRawCandidate(
+                    schema_version="1.0",
+                    url=previous_urls[0],
+                    title="Existing Report",
+                    source_page_url="https://www.activate.com/insights",
+                    discovered_on_page_number=1,
+                ),
+                PublisherInventoryRawCandidate(
+                    schema_version="1.0",
+                    url="https://www.activate.com/reports/dead-delta-report",
+                    title="Dead Delta Report",
+                    source_page_url="https://www.activate.com/insights",
+                    discovered_on_page_number=1,
+                ),
+            ],
+        ),
+        screen_publisher_inventory_candidates=lambda req, ctx: _screening_response(
+            accepted_urls={"https://www.activate.com/reports/dead-delta-report"},
+            request=req,
+        ),
+        qualify_publisher_inventory_candidates=lambda req, ctx: PublisherInventoryCandidateQualityResponse(
+            schema_version="1.0",
+            approved_items=[],
+            rejected_items=[
+                PublisherInventoryQualifiedCandidateItem(
+                    schema_version="1.0",
+                    canonical_url=candidate.canonical_url,
+                    title=candidate.title,
+                    discovered_on_page_number=candidate.discovered_on_page_number,
+                    source_page_url=candidate.source_page_url,
+                )
+                for candidate in req.candidates
+            ],
+            decisions=[
+                PublisherInventoryCandidateQualityDecision(
+                    schema_version="1.0",
+                    canonical_url=candidate.canonical_url,
+                    accepted=False,
+                    reason="dead_or_unreachable_landing_page",
+                    resolved_title=candidate.title,
+                )
+                for candidate in req.candidates
+            ],
+        ),
+        upload_bytes=lambda req, ctx: (
+            uploads.append(req)
+            or DriveUploadBytesResponse(
+                schema_version="1.0",
+                file=DriveFile(
+                    schema_version="1.0",
+                    file_id="drive-file-1",
+                    name=req.file_name,
+                    modified_time=None,
+                    md5_checksum=None,
+                    mime_type="application/json",
+                ),
+                size=len(req.content),
+                md5="abc123",
+            )
+        ),
+        record_publisher_inventory_state=lambda req, ctx: state_records.append(req),
+        record_publisher_inventory_test_status=lambda req, ctx: status_records.append(req),
+        record_discovered_report_source=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("should not record discovered sources")
+        ),
+    )
+
+    result = run_publisher_inventory_discovery(
+        PublisherInventoryDiscoveryRequest(
+            schema_version="1.0",
+            insights_url="https://www.activate.com/insights",
+            reports_db="./state/reports.sqlite",
+            settings=_settings(),
+        ),
+        ctx=run_context,
+        dependencies=deps,
+    )
+
+    assert result.new_report_urls == []
+    assert result.snapshot_changed is False
+    assert uploads == []
+    assert len(state_records) == 1
+    assert state_records[0].snapshot_drive_file_id == "snapshot-1"
+    assert [record.status for record in status_records] == ["passed"]

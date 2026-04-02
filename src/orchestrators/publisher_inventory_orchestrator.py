@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from dataclasses import dataclass
+import time
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from typing import Callable, Optional
 from urllib.parse import urlsplit
@@ -141,6 +142,9 @@ def run_publisher_inventory_discovery(
 ) -> PublisherInventoryDiscoveryResult:
     deps = dependencies or PublisherInventoryDependencies.default()
     normalized_url = normalize_url(request.insights_url)
+    deadline_monotonic = time.monotonic() + max(
+        float(request.settings.command_time_budget_seconds), 1.0
+    )
     logger.info(
         log_event(
             ctx,
@@ -151,6 +155,7 @@ def run_publisher_inventory_discovery(
                 "insights_url": request.insights_url,
                 "normalized_url": normalized_url,
                 "reports_db": request.reports_db,
+                "command_time_budget_seconds": request.settings.command_time_budget_seconds,
             },
         )
     )
@@ -207,6 +212,12 @@ def run_publisher_inventory_discovery(
         discovery_result: PublisherInventoryServiceResponse | None = None
         if publisher_state.inventory_route_summary:
             try:
+                _assert_time_budget_remaining(
+                    deadline_monotonic=deadline_monotonic,
+                    normalized_url=normalized_url,
+                    step_name="publisher_inventory_discovery_with_memory_route",
+                    ctx=ctx,
+                )
                 discovery_result = _run_discovery_attempt(
                     request=request,
                     ctx=ctx,
@@ -215,6 +226,23 @@ def run_publisher_inventory_discovery(
                     route_hint=publisher_state.inventory_route_summary,
                     route_kind_hint=publisher_state.inventory_route_kind,
                     step_name="publisher_inventory_discovery_with_memory_route",
+                    deadline_monotonic=deadline_monotonic,
+                )
+            except AppError as exc:
+                if exc.code == "publisher_inventory_browser_pagination_limit":
+                    raise
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="orchestrator",
+                        event="publisher_inventory_memory_route_failed",
+                        module=logger.name,
+                        fields={
+                            "normalized_url": normalized_url,
+                            "route_kind": publisher_state.inventory_route_kind or "",
+                            "error": str(exc),
+                        },
+                    )
                 )
             except Exception as exc:
                 logger.info(
@@ -232,6 +260,12 @@ def run_publisher_inventory_discovery(
                 )
         if discovery_result is None:
             if request.settings.force_browser:
+                _assert_time_budget_remaining(
+                    deadline_monotonic=deadline_monotonic,
+                    normalized_url=normalized_url,
+                    step_name="publisher_inventory_discovery_browser",
+                    ctx=ctx,
+                )
                 discovery_result = _run_discovery_attempt(
                     request=request,
                     ctx=ctx,
@@ -240,9 +274,16 @@ def run_publisher_inventory_discovery(
                     route_hint=None,
                     route_kind_hint="browser_render",
                     step_name="publisher_inventory_discovery_browser",
+                    deadline_monotonic=deadline_monotonic,
                 )
             else:
                 try:
+                    _assert_time_budget_remaining(
+                        deadline_monotonic=deadline_monotonic,
+                        normalized_url=normalized_url,
+                        step_name="publisher_inventory_discovery_http",
+                        ctx=ctx,
+                    )
                     discovery_result = _run_discovery_attempt(
                         request=request,
                         ctx=ctx,
@@ -251,8 +292,11 @@ def run_publisher_inventory_discovery(
                         route_hint=None,
                         route_kind_hint="http_parse",
                         step_name="publisher_inventory_discovery_http",
+                        deadline_monotonic=deadline_monotonic,
                     )
                 except AppError as exc:
+                    if exc.code == "publisher_inventory_time_budget_exceeded":
+                        raise
                     logger.info(
                         log_event(
                             ctx,
@@ -266,6 +310,12 @@ def run_publisher_inventory_discovery(
                             },
                         )
                     )
+                    _assert_time_budget_remaining(
+                        deadline_monotonic=deadline_monotonic,
+                        normalized_url=normalized_url,
+                        step_name="publisher_inventory_discovery_browser",
+                        ctx=ctx,
+                    )
                     discovery_result = _run_discovery_attempt(
                         request=request,
                         ctx=ctx,
@@ -274,8 +324,15 @@ def run_publisher_inventory_discovery(
                         route_hint=None,
                         route_kind_hint="browser_render",
                         step_name="publisher_inventory_discovery_browser",
+                        deadline_monotonic=deadline_monotonic,
                     )
 
+        _assert_time_budget_remaining(
+            deadline_monotonic=deadline_monotonic,
+            normalized_url=normalized_url,
+            step_name="publisher_inventory_snapshot_build",
+            ctx=ctx,
+        )
         build_response = deps.build_publisher_inventory_snapshot(
             PublisherInventoryBuildRequest(
                 schema_version="1.0",
@@ -312,7 +369,13 @@ def run_publisher_inventory_discovery(
                     )
                     for item in build_response.new_items
                 ],
-                settings=request.settings,
+                settings=_settings_with_time_budget(
+                    request.settings,
+                    deadline_monotonic=deadline_monotonic,
+                    normalized_url=normalized_url,
+                    step_name="publisher_inventory_candidate_screening",
+                    ctx=ctx,
+                ),
             ),
             ctx,
         )
@@ -346,11 +409,67 @@ def run_publisher_inventory_discovery(
                 publisher_name=publisher_state.publisher_name,
                 insights_url=publisher_state.insights_url,
                 candidates=screening_response.approved_items,
-                settings=request.settings,
+                settings=_settings_with_time_budget(
+                    request.settings,
+                    deadline_monotonic=deadline_monotonic,
+                    normalized_url=normalized_url,
+                    step_name="publisher_inventory_candidate_quality",
+                    ctx=ctx,
+                ),
             ),
             ctx,
         )
         qualified_items = quality_response.approved_items
+        if _is_systematic_landing_page_failure(
+            screened_candidate_count=len(approved_items),
+            quality_response=quality_response,
+        ):
+            if previous_snapshot is not None:
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="orchestrator",
+                        event="publisher_inventory_quality_systematic_unreachable_delta_tolerated",
+                        module=logger.name,
+                        fields={
+                            "publisher_name": publisher_state.publisher_name,
+                            "normalized_url": normalized_url,
+                            "screened_new_report_count": len(approved_items),
+                            "quality_rejected_new_report_count": len(
+                                quality_response.rejected_items
+                            ),
+                            "previous_snapshot_item_count": len(previous_snapshot.items),
+                        },
+                    )
+                )
+            else:
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="orchestrator",
+                        event="publisher_inventory_quality_systematic_unreachable_failure",
+                        module=logger.name,
+                        fields={
+                            "publisher_name": publisher_state.publisher_name,
+                            "normalized_url": normalized_url,
+                            "screened_new_report_count": len(approved_items),
+                            "quality_rejected_new_report_count": len(
+                                quality_response.rejected_items
+                            ),
+                        },
+                    )
+                )
+                raise AppError(
+                    code="publisher_inventory_candidate_quality_unreachable_archive",
+                    message="Landing-page quality verification rejected all screened candidates as unreachable",
+                    retryable=False,
+                    severity="error",
+                    context={
+                        "publisher_name": publisher_state.publisher_name,
+                        "normalized_url": normalized_url,
+                        "screened_new_report_count": len(approved_items),
+                    },
+                )
         logger.info(
             log_event(
                 ctx,
@@ -367,11 +486,100 @@ def run_publisher_inventory_discovery(
                 },
             )
         )
+        no_report_assets_detected = _is_no_report_assets_archive(
+            previous_snapshot_available=previous_snapshot is not None,
+            raw_candidate_count=build_response.current_report_count,
+            screened_candidate_count=len(approved_items),
+            qualified_candidate_count=len(qualified_items),
+            quality_response=quality_response,
+        )
+        if no_report_assets_detected:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="orchestrator",
+                    event="publisher_inventory_no_report_assets_archive",
+                    module=logger.name,
+                    fields={
+                        "publisher_name": publisher_state.publisher_name,
+                        "normalized_url": normalized_url,
+                        "raw_candidate_count": build_response.current_report_count,
+                        "screened_candidate_count": len(approved_items),
+                    },
+                )
+            )
+        if _is_undercoverage_regression(
+            previous_snapshot=previous_snapshot,
+            current_page_count=len(build_response.snapshot.pages),
+            current_report_count=build_response.current_report_count,
+            raw_new_report_count=len(build_response.new_items),
+            qualified_candidate_count=len(qualified_items),
+        ):
+            logger.info(
+                log_event(
+                    ctx,
+                    role="orchestrator",
+                    event="publisher_inventory_undercoverage_regression_detected",
+                    module=logger.name,
+                    fields={
+                        "publisher_name": publisher_state.publisher_name,
+                        "normalized_url": normalized_url,
+                        "previous_report_count": len(previous_snapshot.items),
+                        "current_report_count": build_response.current_report_count,
+                        "raw_new_report_count": len(build_response.new_items),
+                        "qualified_new_report_count": len(qualified_items),
+                    },
+                )
+            )
+            raise AppError(
+                code="publisher_inventory_browser_incomplete",
+                message="Discovery returned a materially smaller inventory without any new qualified report assets",
+                retryable=False,
+                severity="error",
+                context={
+                    "publisher_name": publisher_state.publisher_name,
+                    "normalized_url": normalized_url,
+                    "previous_report_count": len(previous_snapshot.items),
+                    "current_report_count": build_response.current_report_count,
+                },
+            )
         snapshot_changed = build_response.snapshot_sha256 != (previous_snapshot_sha256 or "")
+        if no_report_assets_detected:
+            snapshot_changed = False
+        if (
+            snapshot_changed
+            and previous_snapshot is not None
+            and build_response.new_items
+            and not qualified_items
+        ):
+            logger.info(
+                log_event(
+                    ctx,
+                    role="orchestrator",
+                    event="publisher_inventory_snapshot_guard_rejected_raw_only_delta",
+                    module=logger.name,
+                    fields={
+                        "publisher_name": publisher_state.publisher_name,
+                        "normalized_url": normalized_url,
+                        "raw_new_report_count": len(build_response.new_items),
+                        "screened_new_report_count": len(approved_items),
+                        "qualified_new_report_count": len(qualified_items),
+                        "previous_snapshot_sha256": previous_snapshot_sha256 or "",
+                        "candidate_snapshot_sha256": build_response.snapshot_sha256,
+                    },
+                )
+            )
+            snapshot_changed = False
         snapshot_drive_file_id = previous_snapshot_file_id
         snapshot_drive_file_name = previous_snapshot_file_name
         snapshot_sha256 = previous_snapshot_sha256
         if snapshot_changed:
+            _assert_time_budget_remaining(
+                deadline_monotonic=deadline_monotonic,
+                normalized_url=normalized_url,
+                step_name="publisher_inventory_snapshot_upload",
+                ctx=ctx,
+            )
             upload_response = run_with_retry(
                 step_name="publisher_inventory_snapshot_upload",
                 operation=lambda: deps.upload_bytes(
@@ -414,6 +622,12 @@ def run_publisher_inventory_discovery(
                 )
             )
         for item in qualified_items:
+            _assert_time_budget_remaining(
+                deadline_monotonic=deadline_monotonic,
+                normalized_url=normalized_url,
+                step_name="publisher_inventory_report_source_record",
+                ctx=ctx,
+            )
             source_record = run_with_retry(
                 step_name="publisher_inventory_report_source_record",
                 operation=lambda item=item: deps.record_discovered_report_source(
@@ -476,7 +690,11 @@ def run_publisher_inventory_discovery(
                 schema_version="1.0",
                 db_path=request.reports_db,
                 normalized_url=normalized_url,
-                status="passed",
+                status=(
+                    "passed:no_report_assets"
+                    if no_report_assets_detected
+                    else "passed"
+                ),
             ),
             ctx,
         )
@@ -538,13 +756,14 @@ def _record_discovery_test_status_on_failure(
     ctx: RunContext,
     dependencies: PublisherInventoryDependencies,
 ) -> None:
+    status = _discovery_test_status_for_error_code(code)
     try:
         dependencies.record_publisher_inventory_test_status(
             PublisherInventoryTestStatusRecordRequest(
                 schema_version="1.0",
                 db_path=request.reports_db,
                 normalized_url=normalized_url,
-                status=f"failed:{code.strip()}" if code.strip() else "failed:unknown",
+                status=status,
             ),
             ctx,
         )
@@ -558,11 +777,79 @@ def _record_discovery_test_status_on_failure(
                 fields={
                     "publisher_name": publisher_state.publisher_name,
                     "normalized_url": normalized_url,
-                    "status": f"failed:{code.strip()}" if code.strip() else "failed:unknown",
+                    "status": status,
                     "error": str(exc),
                 },
             )
         )
+
+
+def _discovery_test_status_for_error_code(code: str) -> str:
+    normalized = str(code or "").strip()
+    if not normalized:
+        return "failed:unknown"
+    if normalized == "publisher_inventory_browser_pagination_limit":
+        return f"bounded:{normalized}"
+    return f"failed:{normalized}"
+
+
+def _is_systematic_landing_page_failure(
+    *,
+    screened_candidate_count: int,
+    quality_response: PublisherInventoryCandidateQualityResponse,
+) -> bool:
+    if screened_candidate_count <= 0 or quality_response.approved_items:
+        return False
+    if len(quality_response.rejected_items) != screened_candidate_count:
+        return False
+    return all(
+        decision.reason == "dead_or_unreachable_landing_page"
+        for decision in quality_response.decisions
+    )
+
+
+def _is_no_report_assets_archive(
+    *,
+    previous_snapshot_available: bool,
+    raw_candidate_count: int,
+    screened_candidate_count: int,
+    qualified_candidate_count: int,
+    quality_response: PublisherInventoryCandidateQualityResponse,
+) -> bool:
+    if previous_snapshot_available:
+        return False
+    if raw_candidate_count <= 0:
+        return False
+    if qualified_candidate_count != 0:
+        return False
+    if quality_response.approved_items:
+        return False
+    return screened_candidate_count == 0 or bool(quality_response.rejected_items)
+
+
+def _is_undercoverage_regression(
+    *,
+    previous_snapshot: PublisherInventorySnapshot | None,
+    current_page_count: int,
+    current_report_count: int,
+    raw_new_report_count: int,
+    qualified_candidate_count: int,
+) -> bool:
+    if previous_snapshot is None:
+        return False
+    if current_page_count <= 1 and len(previous_snapshot.pages) <= 1:
+        return False
+    previous_report_count = len(previous_snapshot.items)
+    if previous_report_count <= 0:
+        return False
+    if current_report_count >= previous_report_count:
+        return False
+    if raw_new_report_count > 0 or qualified_candidate_count > 0:
+        return False
+    dropped_report_count = previous_report_count - current_report_count
+    if dropped_report_count < 5:
+        return False
+    return current_report_count / previous_report_count <= 0.8
 
 
 def _run_discovery_attempt(
@@ -574,6 +861,7 @@ def _run_discovery_attempt(
     route_hint: str | None,
     route_kind_hint: str | None,
     step_name: str,
+    deadline_monotonic: float,
 ) -> PublisherInventoryServiceResponse:
     return run_with_retry(
         step_name=step_name,
@@ -581,7 +869,13 @@ def _run_discovery_attempt(
             PublisherInventoryServiceRequest(
                 schema_version="1.0",
                 insights_url=request.insights_url,
-                settings=request.settings,
+                settings=_settings_with_time_budget(
+                    request.settings,
+                    deadline_monotonic=deadline_monotonic,
+                    normalized_url=normalize_url(request.insights_url),
+                    step_name=step_name,
+                    ctx=ctx,
+                ),
                 route_hint=route_hint,
                 route_kind_hint=route_kind_hint,
             ),
@@ -593,6 +887,78 @@ def _run_discovery_attempt(
         policy=policy,
         retry_event="publisher_inventory_discovery_retry",
         failure_event="publisher_inventory_discovery_failed",
+    )
+
+
+def _remaining_time_budget_seconds(*, deadline_monotonic: float) -> float:
+    return max(0.0, float(deadline_monotonic) - time.monotonic())
+
+
+def _assert_time_budget_remaining(
+    *,
+    deadline_monotonic: float,
+    normalized_url: str,
+    step_name: str,
+    ctx: RunContext,
+    minimum_seconds: float = 1.0,
+) -> float:
+    remaining_seconds = _remaining_time_budget_seconds(
+        deadline_monotonic=deadline_monotonic
+    )
+    if remaining_seconds >= minimum_seconds:
+        return remaining_seconds
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="publisher_inventory_time_budget_exceeded",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "step_name": step_name,
+                "remaining_seconds": remaining_seconds,
+                "minimum_seconds": minimum_seconds,
+            },
+        )
+    )
+    raise AppError(
+        code="publisher_inventory_time_budget_exceeded",
+        message="Publisher inventory discovery exceeded the configured per-publisher time budget",
+        retryable=False,
+        severity="error",
+        context={
+            "normalized_url": normalized_url,
+            "step_name": step_name,
+            "remaining_seconds": remaining_seconds,
+        },
+    )
+
+
+def _settings_with_time_budget(
+    settings,
+    *,
+    deadline_monotonic: float,
+    normalized_url: str,
+    step_name: str,
+    ctx: RunContext,
+):
+    remaining_seconds = _assert_time_budget_remaining(
+        deadline_monotonic=deadline_monotonic,
+        normalized_url=normalized_url,
+        step_name=step_name,
+        ctx=ctx,
+    )
+    return replace(
+        settings,
+        timeout_seconds=max(1.0, min(settings.timeout_seconds, remaining_seconds)),
+        candidate_screening_timeout_seconds=max(
+            1.0,
+            min(settings.candidate_screening_timeout_seconds, remaining_seconds),
+        ),
+        candidate_quality_check_timeout_seconds=max(
+            1.0,
+            min(settings.candidate_quality_check_timeout_seconds, remaining_seconds),
+        ),
     )
 
 

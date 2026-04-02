@@ -321,6 +321,113 @@ def test_qualify_publisher_inventory_candidates_rejects_dead_pages() -> None:
     assert response.decisions[0].reason == "dead_or_unreachable_landing_page"
 
 
+def test_qualify_publisher_inventory_candidates_accepts_bot_protected_report_asset() -> None:
+    candidate = _candidate(
+        "https://www.adjust.com/resources/ebooks/mobile-app-trends-2026",
+        "Mobile app trends 2026 edition",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Adjust",
+            insights_url="https://www.adjust.com/resources/ebooks/",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    final_title="Vercel Security Checkpoint",
+                    http_status_code=429,
+                    has_dead_page_marker=True,
+                )
+            ],
+        ),
+    )
+
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.approved_items[0].title == "Mobile app trends 2026 edition"
+    assert response.decisions[0].reason == "bot_protected_report_asset"
+
+
+def test_qualify_publisher_inventory_candidates_rejects_bot_protected_editorial_article() -> None:
+    candidate = _candidate(
+        "https://www.bcg.com/publications/2026/ai-is-already-moving-the-logistics-industry-forward",
+        "Article March 27, 2026 AI Is Already Moving the Logistics Industry Forward",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Boston Consulting Group (BCG)",
+            insights_url="https://www.bcg.com/search?q=Reports&s=1",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    final_title="Access Denied",
+                    http_status_code=403,
+                    has_dead_page_marker=True,
+                )
+            ],
+        ),
+    )
+
+    assert response.approved_items == []
+    assert response.decisions[0].reason == "bot_protected_editorial_page"
+
+
+def test_qualify_publisher_inventory_candidates_accepts_transient_fetch_timeout_for_report_asset() -> None:
+    candidate = _candidate(
+        "https://business.adobe.com/resources/digital-trends-report.html",
+        "Adobe 2026 AI and Digital Trends",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Adobe",
+            insights_url="https://business.adobe.com/resources/reports.html",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    fetch_error="HTTPSConnectionPool(host='business.adobe.com', port=443): Read timed out. (read timeout=20)",
+                    has_dead_page_marker=True,
+                )
+            ],
+        ),
+    )
+
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.approved_items[0].title == "Adobe 2026 AI and Digital Trends"
+    assert response.decisions[0].reason == "transient_fetch_report_asset"
+
+
 def test_qualify_publisher_inventory_candidates_rejects_legal_pages() -> None:
     candidate = _candidate(
         "https://example.com/legal/transparency-report",
@@ -426,6 +533,74 @@ def test_qualify_publisher_inventory_candidates_rejects_report_section_pages() -
 
     assert response.approved_items == []
     assert response.decisions[0].reason == "report_section_page"
+
+
+def test_qualify_publisher_inventory_candidates_rejects_nested_report_section_urls() -> None:
+    candidate = _candidate(
+        "https://example.com/enterprise-software-technology-predictions-report-2026/innovation",
+        "2026 Enterprise software technology predictions report",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/insights",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    h1_title="2026 Enterprise software technology predictions report",
+                    has_asset_type_term=True,
+                    has_document_structure=True,
+                )
+            ],
+        ),
+    )
+
+    assert response.approved_items == []
+    assert response.decisions[0].reason == "report_section_page"
+
+
+def test_qualify_publisher_inventory_candidates_rejects_legal_practice_area_guides() -> None:
+    candidate = _candidate(
+        "https://iclg.com/practice-areas/sanctions/germany",
+        "Sanctions Germany 2026",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/insights",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    h1_title="Sanctions Germany 2026",
+                    has_price_or_purchase=True,
+                    has_asset_type_term=True,
+                )
+            ],
+        ),
+    )
+
+    assert response.approved_items == []
+    assert response.decisions[0].reason == "legal_or_compliance_page"
 
 
 def test_qualify_publisher_inventory_candidates_rejects_research_announcements_without_asset_flow() -> None:
@@ -568,6 +743,255 @@ def test_qualify_publisher_inventory_candidates_rejects_regulatory_disclosure_do
     assert response.decisions[0].reason == "regulatory_or_disclosure_document"
 
 
+def test_qualify_publisher_inventory_candidates_rejects_corporate_policy_pdfs() -> None:
+    candidate = _candidate(
+        "https://example.com/docs/modern-slavery-statement.pdf",
+        "Modern Slavery Statement",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/insights",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    is_pdf=True,
+                    content_type="application/pdf",
+                )
+            ],
+        ),
+    )
+
+    assert response.approved_items == []
+    assert response.decisions[0].reason == "corporate_policy_document"
+
+
+def test_qualify_publisher_inventory_candidates_rejects_gender_equality_index_pdfs() -> None:
+    candidate = _candidate(
+        "https://example.com/docs/index-de-l-egalite-femmes-hommes.pdf",
+        "Index de l’égalité femmes-hommes",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/insights",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    final_title="Index de l’égalité femmes-hommes",
+                    h1_title="Index de l’égalité femmes-hommes",
+                    content_type="application/pdf",
+                    is_pdf=True,
+                    has_download_language=False,
+                    has_document_structure=False,
+                )
+            ],
+        ),
+    )
+
+    assert response.approved_items == []
+    assert [item.canonical_url for item in response.rejected_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "corporate_policy_document"
+
+
+def test_qualify_publisher_inventory_candidates_rejects_binding_corporate_rules_documents() -> None:
+    candidate = _candidate(
+        "https://example.com/docs/company-bcr-summary.pdf",
+        "UK BCR Summarypdf 159.3 KB",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/insights",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    final_title="UK BCR Summarypdf 159.3 KB",
+                    h1_title="UK BCR Summarypdf 159.3 KB",
+                    content_type="application/pdf",
+                    is_pdf=True,
+                )
+            ],
+        ),
+    )
+
+    assert response.approved_items == []
+    assert response.decisions[0].reason in {
+        "legal_or_compliance_page",
+        "legal_or_policy_document",
+        "regulatory_or_disclosure_document",
+    }
+
+
+def test_qualify_publisher_inventory_candidates_rejects_survey_platform_pages_without_report_signals() -> None:
+    candidate = _candidate(
+        "https://www.surveymonkey.com/r/SFSA_BTB_Sep25",
+        "SurveyMonkey logo with text in primary",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/insights",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url="https://www.surveymonkey.com/survey-closed",
+                    final_title="SurveyMonkey logo with text in primary",
+                    has_gated_form=True,
+                    has_newsletter_cta=True,
+                    has_contact_sales_cta=True,
+                    has_editorial_markers=True,
+                )
+            ],
+        ),
+    )
+
+    assert response.approved_items == []
+    assert response.decisions[0].reason == "survey_or_questionnaire_page"
+
+
+def test_qualify_publisher_inventory_candidates_rejects_survey_platform_pages_even_with_report_like_title() -> None:
+    candidate = _candidate(
+        "https://www.surveymonkey.com/r/SFSA_BTB_Feb26",
+        "SFSA Business Trend Survey - February 2026",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/insights",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url="https://www.surveymonkey.com/r/SFSA_BTB_Feb26",
+                    final_title="SFSA Business Trend Survey - February 2026",
+                    has_gated_form=True,
+                )
+            ],
+        ),
+    )
+
+    assert response.approved_items == []
+    assert response.decisions[0].reason == "survey_or_questionnaire_page"
+
+
+def test_qualify_publisher_inventory_candidates_uses_pdf_filename_when_source_title_is_generic() -> None:
+    candidate = _candidate(
+        "https://cdn.example.com/files/2026-market-forecast.pdf",
+        "here",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/insights",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    is_pdf=True,
+                    content_type="application/pdf",
+                )
+            ],
+        ),
+    )
+
+    assert response.approved_items[0].title == "2026 market forecast"
+    assert response.decisions[0].resolved_title == "2026 market forecast"
+
+
+def test_qualify_publisher_inventory_candidates_rejects_plural_asset_bucket_titles_without_distribution_signals() -> None:
+    candidate = _candidate(
+        "https://example.com/subject-areas/education/whitepapers",
+        "White papers",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/insights",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    final_title="White papers",
+                    h1_title="White papers",
+                    has_asset_type_term=True,
+                )
+            ],
+        ),
+    )
+
+    assert response.approved_items == []
+    assert response.decisions[0].reason == "generic_asset_hub_page"
+    assert response.decisions[0].resolved_title == candidate.canonical_url
+
+
 def test_qualify_publisher_inventory_candidates_rejects_dated_editorial_pages_even_with_generic_form_signals() -> None:
     candidate = _candidate(
         "https://example.com/2026/02/11/survey-enterprises-ai-agents",
@@ -603,3 +1027,160 @@ def test_qualify_publisher_inventory_candidates_rejects_dated_editorial_pages_ev
 
     assert response.approved_items == []
     assert response.decisions[0].reason == "editorial_article_page"
+
+
+def test_qualify_publisher_inventory_candidates_accepts_gated_report_on_editorial_path_when_report_signals_are_strong() -> None:
+    candidate = _candidate(
+        "https://www.cardlytics.com/blog/loyalty-movement-report-apparel",
+        "Loyalty Movement Report: Apparel",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Cardlytics",
+            insights_url="https://www.cardlytics.com/research-and-insights",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    h1_title="Loyalty Movement Report: Apparel",
+                    has_asset_type_term=True,
+                    has_download_language=True,
+                    has_gated_form=True,
+                    has_document_structure=True,
+                    has_editorial_url_pattern=True,
+                    has_editorial_markers=True,
+                )
+            ],
+        ),
+    )
+
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "gated_report_asset"
+
+
+def test_qualify_publisher_inventory_candidates_rejects_thought_leadership_article_with_generic_section_heading() -> None:
+    candidate = _candidate(
+        "https://www.publiciscommerce.com/insights/creating-relevance-through-the-convergence-of-content-creators-and-commerce",
+        "KEY TAKEAWAYS",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Publicis Commerce",
+            insights_url="https://www.publiciscommerce.com/insights",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    final_title="Creating Relevance Through the Convergence of Content, Creators & Commerce",
+                    h1_title="KEY TAKEAWAYS",
+                    has_asset_type_term=True,
+                    has_document_structure=True,
+                    has_editorial_markers=True,
+                    has_newsletter_cta=True,
+                )
+            ],
+        ),
+    )
+
+    assert response.approved_items == []
+    assert response.decisions[0].reason == "editorial_article_page"
+    assert response.decisions[0].resolved_title == "Creating Relevance Through the Convergence of Content, Creators & Commerce"
+
+
+def test_qualify_publisher_inventory_candidates_accepts_report_hub_pages_with_download_and_related_links() -> None:
+    candidate = _candidate(
+        "https://internetretailing.net/report-hub/amazon-sellers-summit-report-2025",
+        "Amazon Sellers Summit Report 2025",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Retail X",
+            insights_url="https://internetretailing.net/browse-all-reports/#",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    final_title="Amazon Sellers Summit Report 2025 - InternetRetailing",
+                    h1_title="Amazon Sellers Summit Report 2025",
+                    has_asset_type_term=True,
+                    has_download_language=True,
+                    has_related_posts=True,
+                )
+            ],
+        ),
+    )
+
+    assert response.approved_items != []
+    assert response.decisions[0].reason in {
+        "downloadable_report_asset",
+        "printable_report_page",
+    }
+
+
+def test_qualify_publisher_inventory_candidates_rejects_newsletter_articles_without_real_report_signals() -> None:
+    candidate = PublisherInventoryCandidateScreeningItem(
+        schema_version="1.0",
+        canonical_url="https://www.robeco.com/en-int/insights/2026/03/why-the-future-of-chips-depends-on-water",
+        title="Why the future of chips depends on water",
+        discovered_on_page_number=1,
+        source_page_url="https://www.robeco.com/en-int/insights/monthly-newsletter",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Robeco",
+            insights_url="https://www.robeco.com/en-int/insights/monthly-newsletter",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    h1_title="Why the future of chips depends on water",
+                    has_asset_type_term=True,
+                    has_print_language=True,
+                    has_price_or_purchase=True,
+                    has_editorial_markers=True,
+                    has_newsletter_cta=True,
+                )
+            ],
+        ),
+    )
+
+    assert response.approved_items == []
+    assert response.decisions[0].reason == "newsletter_article_page"

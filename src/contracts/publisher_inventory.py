@@ -152,6 +152,10 @@ class PublisherInventorySettings:
     http_timeout_seconds: float = field(
         metadata={"doc": "HTTP timeout in seconds for direct HTML fetch discovery."}
     )
+    command_time_budget_seconds: float = field(
+        default=570.0,
+        metadata={"doc": "Hard per-publisher workflow budget in seconds. The orchestrator must stop the run before this budget is exceeded so the command fails explicitly instead of hanging until an external shell timeout."},
+    )
     drive_auth_mode: str = field(
         default="service_account",
         metadata={"doc": "Drive auth mode: service_account or oauth_user."},

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+from urllib.parse import urlsplit
 
 from src.contracts.publisher_inventory import (
     PublisherInventoryCandidateQualityDecision,
@@ -39,10 +40,27 @@ _GENERIC_TITLE_TOKENS = {
     "white paper",
     "ebook",
     "page not found",
+    "key takeaways",
+    "takeaways",
+    "here",
+    "online here",
+    "white papers",
+    "whitepapers",
+    "research",
+    "studies",
+    "guides",
+    "playbooks",
+    "benchmarks",
+    "surveys",
+    "outlooks",
+    "forecasts",
+    "resources",
 }
 _LEGAL_URL_MARKERS = (
     "/legal/",
+    "/laws-and-regulations/",
     "/privacy",
+    "/practice-areas/",
     "/terms",
     "/cookie",
     "/compliance",
@@ -55,6 +73,8 @@ _LEGAL_TITLE_MARKERS = (
     "terms of service",
     "terms and conditions",
     "acceptable use policy",
+    "binding corporate rules",
+    "bcr summary",
 )
 _REGULATORY_TITLE_MARKERS = (
     "pillar 3",
@@ -63,6 +83,31 @@ _REGULATORY_TITLE_MARKERS = (
     "proxy statement",
     "prospectus",
     "financial statements",
+)
+_CORPORATE_POLICY_TITLE_MARKERS = (
+    "modern slavery statement",
+    "slavery statement",
+    "tax strategy",
+    "gender pay gap report",
+    "gender pay report",
+    "gender equality index",
+    "equality index",
+    "index de l egalite",
+    "index de l égalité",
+    "egalite femmes hommes",
+    "égalité femmes-hommes",
+    "supplier code of conduct",
+    "supplier code",
+    "accessibility statement",
+    "whistleblowing policy",
+)
+_SURVEY_PLATFORM_HOST_MARKERS = (
+    "surveymonkey.com",
+    "qualtrics.com",
+    "surveygizmo.com",
+    "alchemer.com",
+    "typeform.com",
+    "jotform.com",
 )
 _CASE_STUDY_URL_MARKERS = (
     "/case-study",
@@ -95,6 +140,19 @@ _SECTION_TITLE_MARKERS = {
     "methodology",
     "table of contents",
 }
+_SECTION_URL_SLUG_MARKERS = (
+    "about",
+    "conclusion",
+    "contents",
+    "executive-summary",
+    "foreword",
+    "innovation",
+    "introduction",
+    "methodology",
+    "path-to-market",
+    "strategic-implications",
+    "table-of-contents",
+)
 _INFORMATIONAL_ARTICLE_PREFIXES = (
     "how to ",
     "what is ",
@@ -103,6 +161,23 @@ _INFORMATIONAL_ARTICLE_PREFIXES = (
     "how do ",
     "how does ",
     "what can ",
+)
+_BOT_CHALLENGE_MARKERS = (
+    "access denied",
+    "attention required",
+    "captcha",
+    "checking your browser",
+    "just a moment",
+    "security checkpoint",
+    "verify you are human",
+)
+_TRANSIENT_FETCH_ERROR_MARKERS = (
+    "connection aborted",
+    "connection reset",
+    "read timed out",
+    "remote end closed connection",
+    "temporarily unavailable",
+    "timed out",
 )
 _REPORT_STYLE_TITLE_MARKERS = (
     "report",
@@ -119,6 +194,20 @@ _REPORT_STYLE_TITLE_MARKERS = (
     "infographic",
     "snapshot",
 )
+_REPORT_URL_PATH_MARKERS = (
+    "/report/",
+    "/reports/",
+    "/report-hub/",
+    "/special-reports/",
+    "/whitepaper",
+    "/whitepapers/",
+    "/ebook",
+    "/ebooks/",
+    "/study",
+    "/studies/",
+    "/research/",
+)
+_DATED_EDITORIAL_URL_RE = re.compile(r"/20\d{2}/\d{1,2}/\d{1,2}/")
 
 
 def qualify_publisher_inventory_candidates(
@@ -237,7 +326,10 @@ def qualify_publisher_inventory_candidates(
     for item in candidates:
         observation = observation_by_url[item.canonical_url]
         resolved_title = _resolve_candidate_title(item.title, observation)
-        accepted, reason = _qualify_observation(observation)
+        accepted, reason = _qualify_observation(
+            observation,
+            source_page_url=item.source_page_url,
+        )
         qualified_item = PublisherInventoryQualifiedCandidateItem(
             schema_version="1.0",
             canonical_url=item.canonical_url,
@@ -292,11 +384,14 @@ def qualify_publisher_inventory_candidates(
 
 def _qualify_observation(
     observation: PublisherInventoryLandingPageObservation,
+    *,
+    source_page_url: str,
 ) -> tuple[bool, str]:
     resolved_title_lower = _normalize_title(
         observation.h1_title or observation.og_title or observation.final_title or observation.source_title
     ).casefold()
     final_url_lower = str(observation.final_url or "").strip().casefold()
+    source_title_lower = _normalize_title(observation.source_title).casefold()
     strong_distribution_signal = (
         observation.is_pdf
         or observation.has_download_language
@@ -310,14 +405,45 @@ def _qualify_observation(
         observation.has_editorial_url_pattern or observation.has_related_posts
     )
     editorial_context_signal = editorial_surface_signal or observation.has_editorial_markers
-    report_archive_path_signal = "/reports/" in final_url_lower or "/report/" in final_url_lower
+    report_archive_path_signal = _has_report_style_url_path(final_url_lower)
     report_title_signal = _contains_report_style_title_marker(resolved_title_lower)
+    source_title_report_signal = _contains_report_style_title_marker(source_title_lower)
+    source_report_signal = (
+        source_title_report_signal
+        or _has_report_style_url_path(observation.canonical_url)
+        or _has_report_style_url_slug(observation.canonical_url)
+        or _has_report_style_url_path(source_page_url)
+        or _has_report_style_url_slug(source_page_url)
+    )
+    bot_protected_report_signal = (
+        report_title_signal
+        or source_title_report_signal
+        or _has_report_style_url_path(observation.canonical_url)
+        or _has_report_style_url_slug(observation.canonical_url)
+    )
+    newsletter_source_signal = _looks_like_newsletter_source_url(source_page_url)
+    if (
+        _looks_like_bot_challenge_page(observation)
+        and observation.has_dead_page_marker
+        and _looks_like_article_label_title(source_title_lower)
+    ):
+        return False, "bot_protected_editorial_page"
+    if _looks_like_bot_challenge_page(observation) and source_report_signal:
+        if _looks_like_article_label_title(source_title_lower) and not report_title_signal:
+            return False, "bot_protected_editorial_page"
+        if bot_protected_report_signal:
+            return True, "bot_protected_report_asset"
+        return False, "bot_protected_editorial_page"
+    if _looks_like_transient_fetch_failure(observation.fetch_error) and source_report_signal:
+        return True, "transient_fetch_report_asset"
     if observation.fetch_error or observation.has_dead_page_marker:
         return False, "dead_or_unreachable_landing_page"
     if any(marker in final_url_lower for marker in _LEGAL_URL_MARKERS) or any(
         marker in resolved_title_lower for marker in _LEGAL_TITLE_MARKERS
     ):
         return False, "legal_or_compliance_page"
+    if _looks_like_report_section_url(final_url_lower):
+        return False, "report_section_page"
     if any(marker in final_url_lower for marker in _CASE_STUDY_URL_MARKERS) or any(
         marker in resolved_title_lower for marker in _CASE_STUDY_TITLE_MARKERS
     ):
@@ -328,16 +454,57 @@ def _qualify_observation(
         return False, "research_announcement_page"
     if any(marker in resolved_title_lower for marker in _REGULATORY_TITLE_MARKERS):
         return False, "regulatory_or_disclosure_document"
+    if any(marker in resolved_title_lower for marker in _CORPORATE_POLICY_TITLE_MARKERS):
+        return False, "corporate_policy_document"
+    if _looks_like_survey_platform_page(observation.final_url) and not (
+        observation.has_download_language or observation.has_document_structure
+    ):
+        return False, "survey_or_questionnaire_page"
     if observation.is_pdf:
         return True, "direct_document_asset"
     if _looks_like_report_section_title(resolved_title_lower):
         return False, "report_section_page"
+    if (
+        not resolved_title_lower
+        and report_archive_path_signal
+        and not strong_distribution_signal
+        and not structured_document_signal
+    ):
+        return False, "generic_asset_hub_page"
+    if newsletter_source_signal and not (
+        report_title_signal
+        or report_archive_path_signal
+        or observation.is_pdf
+        or observation.has_gated_form
+        or observation.has_document_structure
+    ):
+        return False, "newsletter_article_page"
+    if (
+        editorial_surface_signal
+        and strong_distribution_signal
+        and structured_document_signal
+        and (report_title_signal or source_report_signal)
+        and not _looks_like_dated_editorial_url(final_url_lower)
+    ):
+        if observation.has_gated_form:
+            return True, "gated_report_asset"
+        if observation.has_download_language:
+            return True, "downloadable_report_asset"
+        if observation.has_print_language:
+            return True, "printable_report_page"
     if editorial_surface_signal and not report_archive_path_signal:
         return False, "editorial_article_page"
     if _looks_like_informational_article_title(resolved_title_lower) and not (
         observation.has_gated_form or observation.has_price_or_purchase
     ):
         return False, "informational_article_page"
+    if (
+        editorial_context_signal
+        and not strong_distribution_signal
+        and not report_title_signal
+        and not report_archive_path_signal
+    ):
+        return False, "editorial_article_page"
     if (
         (report_archive_path_signal or report_title_signal)
         and (structured_document_signal or observation.has_asset_type_term)
@@ -377,21 +544,28 @@ def _qualify_observation(
     return False, "insufficient_report_signals"
 
 
+def _looks_like_dated_editorial_url(url: str) -> bool:
+    return bool(_DATED_EDITORIAL_URL_RE.search(str(url or "").strip().casefold()))
+
+
 def _resolve_candidate_title(
     source_title: str,
     observation: PublisherInventoryLandingPageObservation,
 ) -> str:
+    fallback_title = observation.final_url.rsplit("/", 1)[-1].rsplit(".", 1)[0].replace("-", " ")
     for candidate_title in (
         observation.h1_title,
         observation.og_title,
         observation.final_title,
         source_title,
-        observation.final_url.rsplit("/", 1)[-1].rsplit(".", 1)[0].replace("-", " "),
+        fallback_title,
     ):
+        if _looks_like_bot_challenge_text(candidate_title):
+            continue
         normalized = _normalize_title(candidate_title)
         if normalized:
             return normalized
-    return source_title.strip() or observation.canonical_url
+    return _normalize_title(fallback_title) or observation.canonical_url
 
 
 def _normalize_title(value: str) -> str:
@@ -401,6 +575,17 @@ def _normalize_title(value: str) -> str:
         return ""
     if lowered.startswith(("read now ", "learn more ", "download report ", "download now ")):
         normalized = normalized.split(" ", 2)[-1].strip()
+        lowered = normalized.casefold()
+    normalized = re.sub(
+        r"\s*(?:pdf|docx?|xlsx?|pptx?)\s*\d+(?:\.\d+)?\s*(?:kb|mb|gb)\s*$",
+        "",
+        normalized,
+        flags=re.IGNORECASE,
+    ).rstrip()
+    lowered = normalized.casefold()
+    normalized = normalized.rstrip(". ")
+    if normalized.endswith("..."):
+        normalized = normalized[:-3].rstrip()
         lowered = normalized.casefold()
     if lowered in _GENERIC_TITLE_TOKENS:
         return ""
@@ -414,6 +599,13 @@ def _looks_like_informational_article_title(lowered_title: str) -> bool:
     if not title.startswith(_INFORMATIONAL_ARTICLE_PREFIXES):
         return False
     return not _contains_report_style_title_marker(title)
+
+
+def _looks_like_article_label_title(lowered_title: str) -> bool:
+    title = str(lowered_title or "").strip().casefold()
+    if not title:
+        return False
+    return title.startswith("article ")
 
 
 def _contains_report_style_title_marker(title: str) -> bool:
@@ -438,6 +630,69 @@ def _contains_report_style_title_marker(title: str) -> bool:
     return False
 
 
+def _looks_like_bot_challenge_page(
+    observation: PublisherInventoryLandingPageObservation,
+) -> bool:
+    return any(
+        _looks_like_bot_challenge_text(value)
+        for value in (
+            observation.final_title,
+            observation.h1_title,
+            observation.og_title,
+            observation.fetch_error,
+            observation.final_url,
+        )
+    )
+
+
+def _looks_like_bot_challenge_text(value: str) -> bool:
+    normalized_value = str(value or "").strip().casefold()
+    if not normalized_value:
+        return False
+    return any(marker in normalized_value for marker in _BOT_CHALLENGE_MARKERS)
+
+
+def _looks_like_transient_fetch_failure(value: str) -> bool:
+    normalized_value = str(value or "").strip().casefold()
+    if not normalized_value:
+        return False
+    return any(marker in normalized_value for marker in _TRANSIENT_FETCH_ERROR_MARKERS)
+
+
+def _has_report_style_url_slug(url: str) -> bool:
+    path = urlsplit(str(url or "").strip().casefold()).path
+    if not path:
+        return False
+    slug = path.rsplit("/", 1)[-1].rsplit(".", 1)[0].replace("-", " ")
+    return _contains_report_style_title_marker(slug)
+
+
+def _looks_like_report_section_url(url: str) -> bool:
+    path = urlsplit(str(url or "").strip().casefold()).path
+    segments = [segment for segment in path.split("/") if segment]
+    if len(segments) < 2:
+        return False
+    parent_slug = segments[-2].replace("-", " ")
+    child_slug = segments[-1].rsplit(".", 1)[0]
+    if child_slug not in _SECTION_URL_SLUG_MARKERS:
+        return False
+    return _contains_report_style_title_marker(parent_slug)
+
+
+def _has_report_style_url_path(final_url_lower: str) -> bool:
+    normalized = str(final_url_lower or "").strip().casefold()
+    if not normalized:
+        return False
+    return any(marker in normalized for marker in _REPORT_URL_PATH_MARKERS)
+
+
+def _looks_like_newsletter_source_url(source_page_url: str) -> bool:
+    normalized = str(source_page_url or "").strip().casefold()
+    if not normalized:
+        return False
+    return "newsletter" in normalized or "/newsletters/" in normalized
+
+
 def _looks_like_report_section_title(title: str) -> bool:
     normalized_title = str(title or "").strip().casefold()
     if not normalized_title:
@@ -445,3 +700,10 @@ def _looks_like_report_section_title(title: str) -> bool:
     if normalized_title in _SECTION_TITLE_MARKERS:
         return True
     return bool(re.fullmatch(r"(chapter|part|section)\s+\d+[a-z]?", normalized_title))
+
+
+def _looks_like_survey_platform_page(url: str) -> bool:
+    normalized = str(url or "").strip().casefold()
+    if not normalized:
+        return False
+    return any(marker in normalized for marker in _SURVEY_PLATFORM_HOST_MARKERS)

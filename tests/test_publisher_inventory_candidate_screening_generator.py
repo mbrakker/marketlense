@@ -5,8 +5,6 @@ import logging
 from dataclasses import replace
 from types import SimpleNamespace
 
-import pytest
-
 from src.contracts.openai import OpenAIResponseResult
 from src.contracts.prompts import PromptSet, PromptTemplate
 from src.contracts.publisher_inventory import (
@@ -15,10 +13,10 @@ from src.contracts.publisher_inventory import (
     PublisherInventorySettings,
 )
 from src.generators.publisher_inventory_candidate_screening_generator import (
+    _resolve_candidate_screening_batch_size,
     screen_publisher_inventory_candidates,
 )
 from src.contracts.run_context import RunContext
-from src.utils.errors import AppError
 
 
 def _ctx() -> RunContext:
@@ -248,9 +246,7 @@ def test_screen_publisher_inventory_candidates_filters_rejected_items(
     assert_logs_have_required_fields(records)
 
 
-def test_screen_publisher_inventory_candidates_requires_decision_for_every_candidate(
-    assert_app_error,
-) -> None:
+def test_screen_publisher_inventory_candidates_falls_back_when_decisions_remain_missing() -> None:
     openai_client = RecordingOpenAIClient(
         payload={
             "decisions": [
@@ -263,40 +259,45 @@ def test_screen_publisher_inventory_candidates_requires_decision_for_every_candi
         }
     )
 
-    with pytest.raises(AppError) as err:
-        screen_publisher_inventory_candidates(
-            PublisherInventoryCandidateScreeningRequest(
-                schema_version="1.0",
-                publisher_name="Example Publisher",
-                insights_url="https://example.com/insights",
-                candidates=[
-                    PublisherInventoryCandidateScreeningItem(
-                        schema_version="1.0",
-                        canonical_url="https://example.com/report-one",
-                        title="Report One",
-                        discovered_on_page_number=1,
-                        source_page_url="https://example.com/insights",
-                    ),
-                    PublisherInventoryCandidateScreeningItem(
-                        schema_version="1.0",
-                        canonical_url="https://example.com/report-two",
-                        title="Report Two",
-                        discovered_on_page_number=1,
-                        source_page_url="https://example.com/insights",
-                    ),
-                ],
-                settings=_settings(),
-            ),
-            _ctx(),
-            openai_client=openai_client,
-            prompt_client=RecordingPromptClient(),
-        )
-
-    assert_app_error(
-        err.value,
-        code="publisher_inventory_candidate_screen_incomplete",
-        retryable=False,
+    response = screen_publisher_inventory_candidates(
+        PublisherInventoryCandidateScreeningRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/insights",
+            candidates=[
+                PublisherInventoryCandidateScreeningItem(
+                    schema_version="1.0",
+                    canonical_url="https://example.com/report-one",
+                    title="Report One",
+                    discovered_on_page_number=1,
+                    source_page_url="https://example.com/insights",
+                ),
+                PublisherInventoryCandidateScreeningItem(
+                    schema_version="1.0",
+                    canonical_url="https://example.com/report-two",
+                    title="Report Two",
+                    discovered_on_page_number=1,
+                    source_page_url="https://example.com/insights",
+                ),
+            ],
+            settings=_settings(),
+        ),
+        _ctx(),
+        openai_client=openai_client,
+        prompt_client=RecordingPromptClient(),
     )
+
+    assert [item.canonical_url for item in response.approved_items] == [
+        "https://example.com/report-one",
+        "https://example.com/report-two",
+    ]
+    fallback_decision = next(
+        decision
+        for decision in response.decisions
+        if decision.canonical_url == "https://example.com/report-two"
+    )
+    assert fallback_decision.accepted is True
+    assert fallback_decision.reason == "fallback_report_signal"
 
 
 def test_screen_publisher_inventory_candidates_skips_llm_when_disabled() -> None:
@@ -464,7 +465,65 @@ def test_screen_publisher_inventory_candidates_hard_rejects_publisher_success_ti
         == "https://business.adobe.com/resources/reports/leader-email-service-providers"
     )
     assert hard_reject_decision.accepted is False
-    assert hard_reject_decision.reason == "publisher_success_marketing"
+    assert hard_reject_decision.reason in {
+        "publisher_success_marketing",
+        "low_report_probability_prefilter",
+    }
+
+
+def test_screen_publisher_inventory_candidates_hard_rejects_medal_accolade_titles() -> None:
+    candidates = [
+        PublisherInventoryCandidateScreeningItem(
+            schema_version="1.0",
+            canonical_url="https://www.bigcommerce.com/resources/reports/2025-b2b-paradigm-mm-cdl-report",
+            title="BigCommerce Earns 12 Medals in Paradigm B2B Combine (Mid-Market Edition)",
+            discovered_on_page_number=1,
+            source_page_url="https://www.bigcommerce.com/resources/reports",
+        ),
+        PublisherInventoryCandidateScreeningItem(
+            schema_version="1.0",
+            canonical_url="https://www.bigcommerce.com/resources/reports/2025-gartner-report-cdl-report",
+            title="2025 Gartner Magic Quadrant for Digital Commerce Report",
+            discovered_on_page_number=1,
+            source_page_url="https://www.bigcommerce.com/resources/reports",
+        ),
+    ]
+    openai_client = RecordingOpenAIClient(
+        payload={
+            "decisions": [
+                {
+                    "canonical_url": "https://www.bigcommerce.com/resources/reports/2025-b2b-paradigm-mm-cdl-report",
+                    "accepted": True,
+                    "reason": "Looks report-like.",
+                },
+                {
+                    "canonical_url": "https://www.bigcommerce.com/resources/reports/2025-gartner-report-cdl-report",
+                    "accepted": True,
+                    "reason": "Looks report-like.",
+                },
+            ]
+        }
+    )
+
+    response = screen_publisher_inventory_candidates(
+        PublisherInventoryCandidateScreeningRequest(
+            schema_version="1.0",
+            publisher_name="BigCommerce",
+            insights_url="https://www.bigcommerce.com/resources/reports",
+            candidates=candidates,
+            settings=_settings(),
+        ),
+        _ctx(),
+        openai_client=openai_client,
+        prompt_client=RecordingPromptClient(),
+    )
+
+    assert [item.canonical_url for item in response.approved_items] == [
+        "https://www.bigcommerce.com/resources/reports/2025-gartner-report-cdl-report"
+    ]
+    assert [item.canonical_url for item in response.rejected_items] == [
+        "https://www.bigcommerce.com/resources/reports/2025-b2b-paradigm-mm-cdl-report"
+    ]
 
 
 def test_screen_publisher_inventory_candidates_batches_large_candidate_sets() -> None:
@@ -500,6 +559,145 @@ def test_screen_publisher_inventory_candidates_batches_large_candidate_sets() ->
     ]
     assert response.rejected_items == []
     assert response.request_id == "req-1,req-2,req-3"
+
+
+def test_resolve_candidate_screening_batch_size_grows_for_large_archives() -> None:
+    assert _resolve_candidate_screening_batch_size(
+        candidate_count=430,
+        configured_batch_size=10,
+    ) == 35
+
+
+def test_screen_publisher_inventory_candidates_prefilters_low_probability_items() -> None:
+    response = screen_publisher_inventory_candidates(
+        PublisherInventoryCandidateScreeningRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/insights",
+            candidates=[
+                PublisherInventoryCandidateScreeningItem(
+                    schema_version="1.0",
+                    canonical_url="https://example.com/insights/customer-story",
+                    title="Customer story",
+                    discovered_on_page_number=1,
+                    source_page_url="https://example.com/insights",
+                ),
+                PublisherInventoryCandidateScreeningItem(
+                    schema_version="1.0",
+                    canonical_url="https://example.com/reports/annual-benchmark",
+                    title="Annual benchmark report",
+                    discovered_on_page_number=1,
+                    source_page_url="https://example.com/insights",
+                ),
+            ],
+            settings=_settings(),
+        ),
+        _ctx(),
+        openai_client=BatchAwareOpenAIClient(),
+        prompt_client=RecordingPromptClient(),
+    )
+
+    assert [item.canonical_url for item in response.approved_items] == [
+        "https://example.com/reports/annual-benchmark"
+    ]
+    assert [item.canonical_url for item in response.rejected_items] == [
+        "https://example.com/insights/customer-story"
+    ]
+    prefilter_decision = next(
+        decision
+        for decision in response.decisions
+        if decision.canonical_url == "https://example.com/insights/customer-story"
+    )
+    assert prefilter_decision.accepted is False
+    assert prefilter_decision.reason == "low_report_probability_prefilter"
+
+
+def test_screen_publisher_inventory_candidates_prefilters_support_and_webinar_items() -> None:
+    response = screen_publisher_inventory_candidates(
+        PublisherInventoryCandidateScreeningRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/insights",
+            candidates=[
+                PublisherInventoryCandidateScreeningItem(
+                    schema_version="1.0",
+                    canonical_url="https://support.example.com/hc/en-us/articles/123-report-generation",
+                    title="How can I automate analytics report generation and downloading?",
+                    discovered_on_page_number=1,
+                    source_page_url="https://example.com/insights",
+                ),
+                PublisherInventoryCandidateScreeningItem(
+                    schema_version="1.0",
+                    canonical_url="https://example.com/resources/asset/webinar-ai-search",
+                    title="AI Search Best Practices webinar",
+                    discovered_on_page_number=1,
+                    source_page_url="https://example.com/insights",
+                ),
+                PublisherInventoryCandidateScreeningItem(
+                    schema_version="1.0",
+                    canonical_url="https://example.com/resources/asset/white-paper-search-benchmark",
+                    title="2026 Search Benchmark white paper",
+                    discovered_on_page_number=1,
+                    source_page_url="https://example.com/insights",
+                ),
+            ],
+            settings=_settings(),
+        ),
+        _ctx(),
+        openai_client=BatchAwareOpenAIClient(),
+        prompt_client=RecordingPromptClient(),
+    )
+
+    assert [item.canonical_url for item in response.approved_items] == [
+        "https://example.com/resources/asset/white-paper-search-benchmark"
+    ]
+    assert {
+        item.canonical_url for item in response.rejected_items
+    } == {
+        "https://support.example.com/hc/en-us/articles/123-report-generation",
+        "https://example.com/resources/asset/webinar-ai-search",
+    }
+
+
+def test_screen_publisher_inventory_candidates_truncates_long_titles_in_prompt() -> None:
+    long_title = "2026 Search Benchmark Report " + ("A" * 500)
+    openai_client = RecordingOpenAIClient(
+        payload={
+            "decisions": [
+                {
+                    "canonical_url": "https://example.com/reports/long-report",
+                    "accepted": True,
+                    "reason": "Looks report-like.",
+                }
+            ]
+        }
+    )
+
+    screen_publisher_inventory_candidates(
+        PublisherInventoryCandidateScreeningRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/insights",
+            candidates=[
+                PublisherInventoryCandidateScreeningItem(
+                    schema_version="1.0",
+                    canonical_url="https://example.com/reports/long-report",
+                    title=long_title,
+                    discovered_on_page_number=1,
+                    source_page_url="https://example.com/insights",
+                )
+            ],
+            settings=_settings(),
+        ),
+        _ctx(),
+        openai_client=openai_client,
+        prompt_client=RecordingPromptClient(),
+    )
+
+    rendered_user_prompt = openai_client.requests[0][0].user_prompt
+    assert long_title not in rendered_user_prompt
+    assert "2026 Search Benchmark Report" in rendered_user_prompt
+    assert "\\u2026" in rendered_user_prompt
 
 
 def test_screen_publisher_inventory_candidates_repairs_missing_batch_decisions() -> None:

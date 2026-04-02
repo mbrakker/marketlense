@@ -748,6 +748,7 @@ class TestConfigService(unittest.TestCase):
             cfg_data["publisher_discovery"] = {
                 "pagination_max_pages": 7,
                 "http_timeout_seconds": 22,
+                "command_time_budget_seconds": 555,
                 "prompt_namespace": "publisher_inventory/discovery",
                 "force_browser": True,
             }
@@ -772,13 +773,14 @@ class TestConfigService(unittest.TestCase):
         self.assertEqual(12, settings.max_steps)
         self.assertEqual(7, settings.pagination_max_pages)
         self.assertEqual(22, settings.http_timeout_seconds)
+        self.assertEqual(555, settings.command_time_budget_seconds)
         self.assertTrue(settings.headed)
         self.assertTrue(settings.force_browser)
         self.assertEqual(2, settings.retry_retries)
         self.assertTrue(settings.candidate_screening_enabled)
         self.assertEqual("gpt-5-nano", settings.candidate_screening_model)
         self.assertEqual(1.0, settings.candidate_screening_temperature)
-        self.assertEqual(20, settings.candidate_screening_batch_size)
+        self.assertEqual(10, settings.candidate_screening_batch_size)
         self.assertEqual(
             "publisher_inventory/meaningful_candidate_screen",
             settings.candidate_screening_prompt_namespace,
