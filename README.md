@@ -1268,3 +1268,7 @@ To extend the system:
 - Artifacts: `src/generators/artifact_generator.py` writes `artifacts.json` under the same analysis path, parallelizing independent steps with dependency ordering and process-wide rate limiting via `ingest.artifacts.*`.
 - Cost ledger: `src/services/cost_ledger_service.py` appends JSONL entries for every LLM call and writes daily rollups (`./out/cost-ledger.jsonl`, `./out/cost-daily.json`) using per-model pricing from config.
 
+
+## Pipeline Review Notes
+
+- Discovery/download quality review (2026-03-30): `docs/quality/report-discovery-download-review-2026-03-30.md`.
