@@ -1470,6 +1470,58 @@ def test_discover_publisher_inventory_browser_invalid_http_supplement_html_fails
     assert_app_error(err.value, code="publisher_inventory_browser_incomplete", retryable=True)
 
 
+def test_discover_publisher_inventory_browser_pagination_limit_falls_back_to_http(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    external_boundary_mocks_only.setattr(
+        service.requests,
+        "get",
+        lambda *args, **kwargs: _FakeResponse(
+            url="https://example.com/insights",
+            text=(
+                "<html><body>"
+                "<a href='/reports/consumer-benchmark-2026'>Consumer Benchmark 2026</a>"
+                "</body></html>"
+            ),
+        ),
+    )
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://example.com/insights",
+                "page_title": "Insights",
+                "anchors": [
+                    {
+                        "href": "https://example.com/reports/consumer-benchmark-2026",
+                        "text": "Consumer Benchmark 2026",
+                        "rel": "",
+                    }
+                ],
+                "has_pagination_next": True,
+            },
+        }
+    }
+    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://example.com/insights",
+            settings=replace(_settings(tmp_path), pagination_max_pages=1),
+            route_kind_hint="browser_render",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "http_parse"
+    assert [candidate.url for candidate in response.candidates] == [
+        "https://example.com/reports/consumer-benchmark-2026"
+    ]
+
+
 def test_discover_publisher_inventory_browser_uses_rendered_html_supplement_when_visible_anchors_are_empty(
     tmp_path: Path,
     run_context,

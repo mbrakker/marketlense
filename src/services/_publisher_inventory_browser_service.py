@@ -86,7 +86,7 @@ def discover_inventory_via_browser(
                 },
             )
         )
-        if browser_error.retryable:
+        if _should_attempt_http_recovery(browser_error):
             logger.info(
                 log_event(
                     ctx,
@@ -257,3 +257,7 @@ def _coerce_browser_error(
             "host": str(urlsplit(normalized_url).hostname or "").strip().lower(),
         },
     )
+
+
+def _should_attempt_http_recovery(error: AppError) -> bool:
+    return error.retryable or error.code == "publisher_inventory_browser_pagination_limit"

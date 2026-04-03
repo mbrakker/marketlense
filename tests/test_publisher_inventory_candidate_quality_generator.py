@@ -428,6 +428,116 @@ def test_qualify_publisher_inventory_candidates_accepts_transient_fetch_timeout_
     assert response.decisions[0].reason == "transient_fetch_report_asset"
 
 
+def test_qualify_publisher_inventory_candidates_accepts_transient_http_status_for_report_asset() -> None:
+    candidate = _candidate(
+        "https://cube.asia/report_pages/citi-report",
+        "Download the report",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Cube Asia",
+            insights_url="https://cube.asia/insights",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    http_status_code=429,
+                    fetch_error="429 Client Error: Too Many Requests",
+                    has_dead_page_marker=True,
+                )
+            ],
+        ),
+    )
+
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "transient_fetch_report_asset"
+
+
+def test_qualify_publisher_inventory_candidates_accepts_protected_pdf_asset() -> None:
+    candidate = _candidate(
+        "https://www.example.com/files/agency-guide-report.pdf",
+        "Learn more",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/resources/reports",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    http_status_code=403,
+                    fetch_error="403 Client Error: Forbidden",
+                    has_dead_page_marker=True,
+                )
+            ],
+        ),
+    )
+
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "protected_document_asset"
+
+
+def test_qualify_publisher_inventory_candidates_accepts_protected_report_page() -> None:
+    candidate = _candidate(
+        "https://www.example.com/resources/data-report/rewriting-the-rules-of-engagement",
+        "Rewriting the Rules of Engagement",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/resources/reports",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    http_status_code=403,
+                    final_title="403 Forbidden",
+                    h1_title="Error 403 Forbidden",
+                    has_dead_page_marker=True,
+                    has_asset_type_term=True,
+                )
+            ],
+        ),
+    )
+
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "protected_report_asset"
+
+
 def test_qualify_publisher_inventory_candidates_rejects_legal_pages() -> None:
     candidate = _candidate(
         "https://example.com/legal/transparency-report",
@@ -1105,6 +1215,43 @@ def test_qualify_publisher_inventory_candidates_accepts_editorial_path_when_titl
         candidate.canonical_url
     ]
     assert response.decisions[0].reason == "gated_report_asset"
+
+
+def test_qualify_publisher_inventory_candidates_accepts_related_post_guide_when_document_signals_are_strong() -> None:
+    candidate = _candidate(
+        "https://www.example.com/insights/the-guide-framework",
+        "The guide framework",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://www.example.com/insights",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    h1_title="The Guide Framework",
+                    has_asset_type_term=True,
+                    has_document_structure=True,
+                    has_related_posts=True,
+                )
+            ],
+        ),
+    )
+
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "printable_report_page"
 
 
 def test_qualify_publisher_inventory_candidates_accepts_transparency_reports() -> None:

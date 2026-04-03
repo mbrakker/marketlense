@@ -180,47 +180,108 @@ _TRANSIENT_FETCH_ERROR_MARKERS = (
 )
 _REPORT_STYLE_TITLE_MARKERS = (
     "report",
+    "reports",
     "benchmark",
+    "benchmarks",
     "study",
+    "studies",
     "research",
     "survey",
+    "surveys",
     "outlook",
+    "outlooks",
     "playbook",
+    "playbooks",
     "blueprint",
     "whitepaper",
     "white paper",
+    "guide",
+    "guides",
     "ebook",
+    "ebooks",
+    "fact sheet",
+    "fact sheets",
+    "atlas",
     "infographic",
     "snapshot",
 )
 _SPECIFIC_REPORT_STYLE_TITLE_MARKERS = (
     "annual report",
     "benchmark",
+    "benchmarks",
     "ebook",
+    "ebooks",
     "forecast",
+    "forecasts",
+    "guide",
+    "guides",
     "index",
     "outlook",
+    "outlooks",
     "playbook",
+    "playbooks",
     "snapshot",
     "study",
+    "studies",
     "survey",
+    "surveys",
+    "fact sheet",
+    "fact sheets",
+    "atlas",
     "transparency report",
     "whitepaper",
     "white paper",
 )
 _REPORT_URL_PATH_MARKERS = (
+    "/data-report",
+    "/data-reports/",
+    "/fact-sheet",
+    "/fact-sheets/",
+    "/guide",
+    "/guides/",
+    "/industry-report",
+    "/industry-reports/",
+    "/lp/product-fact-sheet/",
+    "/lp/report/",
     "/report/",
     "/reports/",
+    "/report_pages/",
     "/report-hub/",
     "/special-reports/",
     "/whitepaper",
     "/whitepapers/",
+    "/white-paper",
     "/ebook",
     "/ebooks/",
     "/study",
     "/studies/",
+    "/survey",
+    "/surveys/",
     "/research/",
 )
+_REPORT_COLLECTION_URL_SEGMENTS = {
+    "benchmark",
+    "benchmarks",
+    "ebook",
+    "ebooks",
+    "fact-sheet",
+    "fact-sheets",
+    "guide",
+    "guides",
+    "report",
+    "reports",
+    "research",
+    "study",
+    "studies",
+    "survey",
+    "surveys",
+    "whitepaper",
+    "whitepapers",
+    "white-paper",
+}
+_TRANSIENT_HTTP_STATUS_CODES = {408, 425, 429, 500, 502, 503, 504}
+_PROTECTED_DOCUMENT_HTTP_STATUS_CODES = {401, 403}
+_DOCUMENT_URL_SUFFIXES = (".pdf", ".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx")
 _DATED_EDITORIAL_URL_RE = re.compile(r"/20\d{2}/\d{1,2}/\d{1,2}/")
 
 
@@ -452,8 +513,28 @@ def _qualify_observation(
         if bot_protected_report_signal:
             return True, "bot_protected_report_asset"
         return False, "bot_protected_editorial_page"
-    if _looks_like_transient_fetch_failure(observation.fetch_error) and source_report_signal:
+    if (
+        _looks_like_transient_fetch_failure(observation.fetch_error)
+        or _looks_like_transient_http_status(observation.http_status_code)
+    ) and source_report_signal:
         return True, "transient_fetch_report_asset"
+    if (
+        _looks_like_protected_document_status(observation.http_status_code)
+        and source_report_signal
+    ):
+        if observation.has_editorial_url_pattern and not (
+            report_archive_path_signal or specific_report_title_signal
+        ):
+            return False, "protected_editorial_page"
+        if _looks_like_document_url(observation.final_url or observation.canonical_url):
+            return True, "protected_document_asset"
+        if (
+            observation.has_asset_type_term
+            or report_archive_path_signal
+            or report_slug_signal
+            or specific_report_title_signal
+        ):
+            return True, "protected_report_asset"
     if observation.fetch_error or observation.has_dead_page_marker:
         return False, "dead_or_unreachable_landing_page"
     if any(marker in final_url_lower for marker in _LEGAL_URL_MARKERS) or any(
@@ -490,6 +571,12 @@ def _qualify_observation(
         and not structured_document_signal
     ):
         return False, "generic_asset_hub_page"
+    if (
+        _looks_like_report_collection_bucket_url(final_url_lower)
+        and not strong_distribution_signal
+        and not structured_document_signal
+    ):
+        return False, "generic_asset_hub_page"
     if newsletter_source_signal and not (
         report_title_signal
         or report_archive_path_signal
@@ -518,7 +605,10 @@ def _qualify_observation(
             return True, "downloadable_report_asset"
         if observation.has_print_language:
             return True, "printable_report_page"
-    if editorial_surface_signal and not report_archive_path_signal:
+    if observation.has_editorial_url_pattern and (
+        _looks_like_dated_editorial_url(final_url_lower)
+        or not (report_archive_path_signal or specific_report_title_signal)
+    ):
         return False, "editorial_article_page"
     if _looks_like_informational_article_title(resolved_title_lower) and not (
         observation.has_gated_form or observation.has_price_or_purchase
@@ -644,7 +734,7 @@ def _contains_report_style_title_marker(title: str) -> bool:
     if not normalized_title:
         return False
     words = {
-        token
+        _normalize_title_word(token)
         for token in re.findall(r"[a-z0-9]+", normalized_title)
         if token
     }
@@ -656,7 +746,7 @@ def _contains_report_style_title_marker(title: str) -> bool:
             if normalized_marker in normalized_title:
                 return True
             continue
-        if normalized_marker in words:
+        if _normalize_title_word(normalized_marker) in words:
             return True
     return False
 
@@ -690,6 +780,21 @@ def _looks_like_transient_fetch_failure(value: str) -> bool:
     return any(marker in normalized_value for marker in _TRANSIENT_FETCH_ERROR_MARKERS)
 
 
+def _looks_like_transient_http_status(status_code: int | None) -> bool:
+    return int(status_code or 0) in _TRANSIENT_HTTP_STATUS_CODES
+
+
+def _looks_like_protected_document_status(status_code: int | None) -> bool:
+    return int(status_code or 0) in _PROTECTED_DOCUMENT_HTTP_STATUS_CODES
+
+
+def _looks_like_document_url(url: str) -> bool:
+    normalized_url = str(url or "").strip().casefold()
+    if not normalized_url:
+        return False
+    return any(normalized_url.endswith(suffix) for suffix in _DOCUMENT_URL_SUFFIXES)
+
+
 def _has_report_style_url_slug(url: str) -> bool:
     path = urlsplit(str(url or "").strip().casefold()).path
     if not path:
@@ -703,8 +808,20 @@ def _contains_specific_report_style_title_marker(title: str) -> bool:
     if not normalized_title:
         return False
     return any(
-        marker in normalized_title for marker in _SPECIFIC_REPORT_STYLE_TITLE_MARKERS
+        str(marker or "").strip().casefold() in normalized_title
+        for marker in _SPECIFIC_REPORT_STYLE_TITLE_MARKERS
     )
+
+
+def _normalize_title_word(token: str) -> str:
+    normalized_token = str(token or "").strip().casefold()
+    if len(normalized_token) <= 4:
+        return normalized_token
+    if normalized_token.endswith("ies"):
+        return normalized_token[:-3] + "y"
+    if normalized_token.endswith("s") and not normalized_token.endswith("ss"):
+        return normalized_token[:-1]
+    return normalized_token
 
 
 def _looks_like_report_section_url(url: str) -> bool:
@@ -724,6 +841,17 @@ def _has_report_style_url_path(final_url_lower: str) -> bool:
     if not normalized:
         return False
     return any(marker in normalized for marker in _REPORT_URL_PATH_MARKERS)
+
+
+def _looks_like_report_collection_bucket_url(url: str) -> bool:
+    path = urlsplit(str(url or "").strip().casefold()).path
+    if not path:
+        return False
+    segments = [segment for segment in path.split("/") if segment]
+    if not segments:
+        return False
+    leaf = segments[-1].rsplit(".", 1)[0]
+    return leaf in _REPORT_COLLECTION_URL_SEGMENTS
 
 
 def _looks_like_newsletter_source_url(source_page_url: str) -> bool:

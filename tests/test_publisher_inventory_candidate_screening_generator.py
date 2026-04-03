@@ -405,6 +405,60 @@ def test_screen_publisher_inventory_candidates_collapses_duplicate_titles_after_
     assert duplicate_decision.reason.startswith("duplicate_in_run")
 
 
+def test_screen_publisher_inventory_candidates_keeps_distinct_generic_cta_titles() -> None:
+    candidates = [
+        PublisherInventoryCandidateScreeningItem(
+            schema_version="1.0",
+            canonical_url="https://example.com/reports/consumer-benchmark-2026",
+            title="Download the report",
+            discovered_on_page_number=1,
+            source_page_url="https://example.com/reports",
+        ),
+        PublisherInventoryCandidateScreeningItem(
+            schema_version="1.0",
+            canonical_url="https://example.com/reports/retail-benchmark-2026",
+            title="Download the report",
+            discovered_on_page_number=2,
+            source_page_url="https://example.com/reports?page=2",
+        ),
+    ]
+    openai_client = RecordingOpenAIClient(
+        payload={
+            "decisions": [
+                {
+                    "canonical_url": "https://example.com/reports/consumer-benchmark-2026",
+                    "accepted": True,
+                    "reason": "Looks report-like.",
+                },
+                {
+                    "canonical_url": "https://example.com/reports/retail-benchmark-2026",
+                    "accepted": True,
+                    "reason": "Looks report-like.",
+                },
+            ]
+        }
+    )
+
+    response = screen_publisher_inventory_candidates(
+        PublisherInventoryCandidateScreeningRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/reports",
+            candidates=candidates,
+            settings=_settings(),
+        ),
+        _ctx(),
+        openai_client=openai_client,
+        prompt_client=RecordingPromptClient(),
+    )
+
+    assert [item.canonical_url for item in response.approved_items] == [
+        "https://example.com/reports/consumer-benchmark-2026",
+        "https://example.com/reports/retail-benchmark-2026",
+    ]
+    assert response.rejected_items == []
+
+
 def test_screen_publisher_inventory_candidates_hard_rejects_publisher_success_titles() -> None:
     candidates = [
         PublisherInventoryCandidateScreeningItem(
@@ -690,6 +744,47 @@ def test_screen_publisher_inventory_candidates_prefilters_strong_report_detail_u
     assert response.decisions[0].reason == "strong_report_detail_url_prefilter"
 
 
+def test_screen_publisher_inventory_candidates_prefilters_slugged_report_detail_urls_without_llm() -> None:
+    openai_client = BatchAwareOpenAIClient()
+
+    response = screen_publisher_inventory_candidates(
+        PublisherInventoryCandidateScreeningRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/resources",
+            candidates=[
+                PublisherInventoryCandidateScreeningItem(
+                    schema_version="1.0",
+                    canonical_url="https://go.example.com/commerce-media-trends-report",
+                    title="Learn more",
+                    discovered_on_page_number=1,
+                    source_page_url="https://example.com/resources",
+                ),
+                PublisherInventoryCandidateScreeningItem(
+                    schema_version="1.0",
+                    canonical_url="https://example.com/report_pages/sea-ecommerce-atlas",
+                    title="Download the report",
+                    discovered_on_page_number=2,
+                    source_page_url="https://example.com/resources",
+                ),
+            ],
+            settings=_settings(),
+        ),
+        _ctx(),
+        openai_client=openai_client,
+        prompt_client=RecordingPromptClient(),
+    )
+
+    assert len(openai_client.requests) == 0
+    assert [item.canonical_url for item in response.approved_items] == [
+        "https://go.example.com/commerce-media-trends-report",
+        "https://example.com/report_pages/sea-ecommerce-atlas",
+    ]
+    assert {decision.reason for decision in response.decisions} == {
+        "strong_report_detail_url_prefilter"
+    }
+
+
 def test_screen_publisher_inventory_candidates_rejects_report_collection_pages_with_listing_signals() -> None:
     openai_client = BatchAwareOpenAIClient()
 
@@ -728,7 +823,7 @@ def test_screen_publisher_inventory_candidates_truncates_long_titles_in_prompt()
         payload={
             "decisions": [
                 {
-                    "canonical_url": "https://example.com/library/long-report",
+                    "canonical_url": "https://example.com/library/long-title-item",
                     "accepted": True,
                     "reason": "Looks report-like.",
                 }
@@ -744,7 +839,7 @@ def test_screen_publisher_inventory_candidates_truncates_long_titles_in_prompt()
             candidates=[
                 PublisherInventoryCandidateScreeningItem(
                     schema_version="1.0",
-                    canonical_url="https://example.com/library/long-report",
+                    canonical_url="https://example.com/library/long-title-item",
                     title=long_title,
                     discovered_on_page_number=1,
                     source_page_url="https://example.com/insights",

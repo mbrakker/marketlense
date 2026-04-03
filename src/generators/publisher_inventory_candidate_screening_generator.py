@@ -29,17 +29,28 @@ _MAX_DYNAMIC_SCREENING_BATCH_SIZE = 35
 _MAX_PROMPT_TITLE_LENGTH = 280
 _FALLBACK_REPORT_TITLE_MARKERS = (
     "report",
+    "reports",
     "rapport",
     "white paper",
     "whitepaper",
+    "white papers",
+    "whitepapers",
     "study",
+    "studies",
     "survey",
+    "surveys",
     "benchmark",
+    "benchmarks",
     "outlook",
+    "outlooks",
     "ebook",
+    "ebooks",
     "guide",
+    "guides",
     "playbook",
+    "playbooks",
     "forecast",
+    "forecasts",
     "outlook",
     "barometer",
     "barometre",
@@ -52,20 +63,36 @@ _FALLBACK_REPORT_TITLE_MARKERS = (
     "trend",
     "research",
     "analysis",
+    "fact sheet",
+    "fact sheets",
+    "atlas",
+    "atlases",
     "infographic",
     "note de conjoncture",
 )
 _FALLBACK_SPECIFIC_REPORT_TITLE_MARKERS = (
     "annual report",
     "benchmark",
+    "benchmarks",
     "ebook",
+    "ebooks",
     "forecast",
+    "forecasts",
+    "guide",
+    "guides",
     "index",
     "outlook",
+    "outlooks",
     "playbook",
+    "playbooks",
     "scorecard",
     "study",
+    "studies",
     "survey",
+    "surveys",
+    "fact sheet",
+    "fact sheets",
+    "atlas",
     "transparency report",
     "white paper",
     "whitepaper",
@@ -132,18 +159,32 @@ _FALLBACK_NON_REPORT_URL_MARKERS = (
 )
 _FALLBACK_REPORT_URL_MARKERS = (
     "/benchmark",
+    "/benchmarks/",
+    "/data-report",
+    "/data-reports/",
     "/ebook",
     "/ebooks/",
+    "/fact-sheet",
+    "/fact-sheets/",
     "/forecast",
+    "/guide",
+    "/guides/",
+    "/industry-report",
+    "/industry-reports/",
+    "/lp/product-fact-sheet/",
+    "/lp/report/",
     "/outlook",
     "/playbook",
-    "/report",
+    "/report/",
     "/reports/",
     "/reports_posts/",
+    "/report_pages/",
     "/research/",
     "/study",
     "/studies/",
     "/survey",
+    "/surveys/",
+    "/white-paper",
     "/whitepaper",
     "/whitepapers/",
 )
@@ -182,6 +223,23 @@ _FALLBACK_LISTING_QUERY_KEYS = (
     "topic=",
     "type=",
 )
+_GENERIC_DUPLICATE_TITLE_FINGERPRINTS = {
+    "",
+    "download for free",
+    "download now",
+    "download report",
+    "download the report",
+    "ebook",
+    "guide",
+    "learn more",
+    "read now",
+    "read report",
+    "report",
+    "reports",
+    "view report",
+    "white paper",
+    "whitepaper",
+}
 
 _PUBLISHER_SUCCESS_ANALYST_MARKERS = (
     "gartner",
@@ -863,7 +921,7 @@ def _candidate_duplicate_key(
     candidate: PublisherInventoryCandidateScreeningItem,
 ) -> str:
     title_key = _normalize_title_fingerprint(candidate.title)
-    if title_key:
+    if title_key and title_key not in _GENERIC_DUPLICATE_TITLE_FINGERPRINTS:
         return title_key
     return candidate.canonical_url
 
@@ -892,8 +950,25 @@ def _normalize_title_fingerprint(title: str) -> str:
 
 
 def _contains_any_title_marker(title: str, markers: tuple[str, ...]) -> bool:
-    normalized_title = f" {str(title or '').strip()} "
-    return any(f" {marker} " in normalized_title for marker in markers)
+    normalized_title = _normalize_title_fingerprint(title)
+    if not normalized_title:
+        return False
+    normalized_words = {
+        _normalize_marker_word(token)
+        for token in re.findall(r"[a-z0-9]+", normalized_title)
+        if token
+    }
+    for marker in markers:
+        normalized_marker = _normalize_title_fingerprint(marker)
+        if not normalized_marker:
+            continue
+        if " " in normalized_marker:
+            if normalized_marker in normalized_title:
+                return True
+            continue
+        if _normalize_marker_word(normalized_marker) in normalized_words:
+            return True
+    return False
 
 
 def _is_publisher_success_marketing_title(*, title: str, publisher_name: str) -> bool:
@@ -1045,6 +1120,14 @@ def _prefilter_screening_decision(
 ) -> PublisherInventoryCandidateScreeningDecision | None:
     normalized_title = _normalize_title_fingerprint(candidate.title)
     normalized_url = candidate.canonical_url.casefold()
+    parsed_url = urlsplit(normalized_url)
+    if any(token in parsed_url.query for token in _FALLBACK_LISTING_QUERY_KEYS):
+        return PublisherInventoryCandidateScreeningDecision(
+            schema_version="1.0",
+            canonical_url=candidate.canonical_url,
+            accepted=False,
+            reason="low_report_probability_prefilter",
+        )
     if any(marker in normalized_url for marker in _FALLBACK_NON_REPORT_URL_MARKERS):
         return PublisherInventoryCandidateScreeningDecision(
             schema_version="1.0",
@@ -1095,18 +1178,34 @@ def _has_strong_report_detail_url(url: str) -> bool:
         return False
     parsed = urlsplit(normalized_url)
     path_segments = [segment for segment in parsed.path.split("/") if segment]
-    if len(path_segments) < 2:
+    if not path_segments:
         return False
     if any(token in parsed.query for token in _FALLBACK_LISTING_QUERY_KEYS):
         return False
     if "/page/" in parsed.path or "/type/" in parsed.path:
         return False
-    if not any(marker in normalized_url for marker in _FALLBACK_REPORT_URL_MARKERS):
-        return False
     leaf_segment = path_segments[-1]
     if leaf_segment.isdigit() or leaf_segment in _FALLBACK_REPORT_COLLECTION_SEGMENTS:
         return False
-    return True
+    leaf_title = leaf_segment.rsplit(".", 1)[0].replace("_", "-").replace("-", " ")
+    if any(marker in normalized_url for marker in _FALLBACK_REPORT_URL_MARKERS):
+        return True
+    leaf_tokens = [token for token in re.findall(r"[a-z0-9]+", leaf_title) if token]
+    return len(leaf_tokens) >= 3 and _contains_any_title_marker(
+        leaf_title,
+        _FALLBACK_REPORT_TITLE_MARKERS,
+    )
+
+
+def _normalize_marker_word(token: str) -> str:
+    normalized_token = str(token or "").strip().casefold()
+    if len(normalized_token) <= 4:
+        return normalized_token
+    if normalized_token.endswith("ies"):
+        return normalized_token[:-3] + "y"
+    if normalized_token.endswith("s") and not normalized_token.endswith("ss"):
+        return normalized_token[:-1]
+    return normalized_token
 
 
 def _publisher_reference_tokens(publisher_name: str) -> tuple[str, ...]:
