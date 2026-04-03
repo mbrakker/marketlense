@@ -107,11 +107,13 @@ _PURCHASE_MARKERS = (
 )
 _EDITORIAL_URL_MARKERS = (
     "/blog/",
+    "/blogs/",
     "/news/",
     "/press-release",
     "/press-releases/",
     "/article/",
     "/articles/",
+    "/help/",
     "/expert-view",
     "/expert-views/",
 )

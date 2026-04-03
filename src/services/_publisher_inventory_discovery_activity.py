@@ -153,6 +153,27 @@ def _extract_candidates_from_html(
         normalized_url=origin_url,
     ):
         join_base_url = origin_url
+    if _should_include_page_url_as_candidate(
+        page_url=page_url,
+        origin_url=origin_url,
+        page_title=page_title,
+        archive_surface=archive_surface,
+    ):
+        seen_urls.add(page_url)
+        pdf_url = page_url if page_url.lower().endswith(".pdf") else None
+        candidates.append(
+            PublisherInventoryRawCandidate(
+                schema_version="1.0",
+                url=page_url,
+                title=page_title or _fallback_title_from_url(page_url),
+                source_page_url=page_url,
+                discovered_on_page_number=page_number,
+                pdf_url=pdf_url,
+                published_at_text=None,
+                provenance=provenance,
+                confidence=None,
+            )
+        )
     for anchor in anchors:
         href = str(anchor.get("href", "")).strip()
         if not href:
@@ -188,6 +209,51 @@ def _extract_candidates_from_html(
             )
         )
     return candidates
+
+
+def _should_include_page_url_as_candidate(
+    *,
+    page_url: str,
+    origin_url: str | None,
+    page_title: str,
+    archive_surface: bool,
+) -> bool:
+    direct_page_keywords = (*_STRONG_REPORT_KEYWORDS, "trend", "trends", "barometer")
+    normalized_url = _normalize_absolute_url(page_url)
+    if not normalized_url or archive_surface:
+        return False
+    if _is_root_or_locale_home(normalized_url):
+        return False
+    if _is_section_landing_page(normalized_url):
+        return False
+    if _is_reports_hub_path(normalized_url):
+        return False
+    if _is_inventory_type_archive_path(normalized_url):
+        return False
+    if _is_inventory_topic_hub_path(normalized_url):
+        return False
+    lowered_url = normalized_url.casefold()
+    if any(marker in lowered_url for marker in _NEGATIVE_PATH_MARKERS):
+        return False
+    path = urlsplit(normalized_url).path
+    segments = [segment for segment in path.split("/") if segment]
+    if not segments:
+        return False
+    leaf = segments[-1].rsplit(".", 1)[0].replace("-", " ").replace("_", " ").casefold()
+    if leaf in {"report", "reports", "research", "resources", "insights"}:
+        return False
+    combined_text = " ".join(
+        part
+        for part in (
+            lowered_url,
+            _normalize_text(page_title).casefold(),
+            _normalize_text(origin_url or "").casefold(),
+        )
+        if part
+    )
+    if any(keyword in combined_text for keyword in direct_page_keywords):
+        return True
+    return False
 
 
 def _candidate_url_signature(

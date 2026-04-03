@@ -817,6 +817,110 @@ def test_screen_publisher_inventory_candidates_rejects_report_collection_pages_w
     assert response.decisions[0].reason == "low_report_probability_prefilter"
 
 
+def test_screen_publisher_inventory_candidates_rejects_case_study_and_blog_help_urls_without_llm() -> None:
+    openai_client = BatchAwareOpenAIClient()
+
+    response = screen_publisher_inventory_candidates(
+        PublisherInventoryCandidateScreeningRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/resources",
+            candidates=[
+                PublisherInventoryCandidateScreeningItem(
+                    schema_version="1.0",
+                    canonical_url="https://example.com/case-studies",
+                    title="Case Studies",
+                    discovered_on_page_number=1,
+                    source_page_url="https://example.com/resources",
+                ),
+                PublisherInventoryCandidateScreeningItem(
+                    schema_version="1.0",
+                    canonical_url="https://example.com/blogs/ask/what-to-look-for-in-your-credit-report",
+                    title="What to look for in your credit report",
+                    discovered_on_page_number=1,
+                    source_page_url="https://example.com/resources",
+                ),
+            ],
+            settings=_settings(),
+        ),
+        _ctx(),
+        openai_client=openai_client,
+        prompt_client=RecordingPromptClient(),
+    )
+
+    assert len(openai_client.requests) == 0
+    assert response.approved_items == []
+    assert {item.canonical_url for item in response.rejected_items} == {
+        "https://example.com/case-studies",
+        "https://example.com/blogs/ask/what-to-look-for-in-your-credit-report",
+    }
+    assert {decision.reason for decision in response.decisions} == {
+        "low_report_probability_prefilter"
+    }
+
+
+def test_screen_publisher_inventory_candidates_prefilters_buyers_guide_urls_without_llm() -> None:
+    openai_client = BatchAwareOpenAIClient()
+
+    response = screen_publisher_inventory_candidates(
+        PublisherInventoryCandidateScreeningRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/resources",
+            candidates=[
+                PublisherInventoryCandidateScreeningItem(
+                    schema_version="1.0",
+                    canonical_url="https://example.com/resources/buyers-guide-enterprise-governance-platforms",
+                    title="Learn more",
+                    discovered_on_page_number=1,
+                    source_page_url="https://example.com/resources",
+                )
+            ],
+            settings=_settings(),
+        ),
+        _ctx(),
+        openai_client=openai_client,
+        prompt_client=RecordingPromptClient(),
+    )
+
+    assert len(openai_client.requests) == 0
+    assert [item.canonical_url for item in response.approved_items] == [
+        "https://example.com/resources/buyers-guide-enterprise-governance-platforms"
+    ]
+    assert response.decisions[0].reason == "strong_report_detail_url_prefilter"
+
+
+def test_screen_publisher_inventory_candidates_prefilters_editorial_report_detail_urls_without_llm() -> None:
+    openai_client = BatchAwareOpenAIClient()
+
+    response = screen_publisher_inventory_candidates(
+        PublisherInventoryCandidateScreeningRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/insights",
+            candidates=[
+                PublisherInventoryCandidateScreeningItem(
+                    schema_version="1.0",
+                    canonical_url="https://example.com/news/global-advertising-forecast-2026",
+                    title="Global Advertising Forecast 2026",
+                    discovered_on_page_number=1,
+                    source_page_url="https://example.com/insights",
+                )
+            ],
+            settings=_settings(),
+        ),
+        _ctx(),
+        openai_client=openai_client,
+        prompt_client=RecordingPromptClient(),
+    )
+
+    assert len(openai_client.requests) == 0
+    assert [item.canonical_url for item in response.approved_items] == [
+        "https://example.com/news/global-advertising-forecast-2026"
+    ]
+    assert response.decisions[0].reason == "editorial_report_detail_url_prefilter"
+
+
 def test_screen_publisher_inventory_candidates_truncates_long_titles_in_prompt() -> None:
     long_title = "2026 Search Analysis " + ("A" * 500)
     openai_client = RecordingOpenAIClient(

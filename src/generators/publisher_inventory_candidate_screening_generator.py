@@ -28,6 +28,8 @@ _TARGET_MAX_SCREENING_BATCHES = 8
 _MAX_DYNAMIC_SCREENING_BATCH_SIZE = 35
 _MAX_PROMPT_TITLE_LENGTH = 280
 _FALLBACK_REPORT_TITLE_MARKERS = (
+    "buyers guide",
+    "buyer's guide",
     "report",
     "reports",
     "rapport",
@@ -67,6 +69,7 @@ _FALLBACK_REPORT_TITLE_MARKERS = (
     "fact sheets",
     "atlas",
     "atlases",
+    "barometer",
     "infographic",
     "note de conjoncture",
 )
@@ -74,6 +77,8 @@ _FALLBACK_SPECIFIC_REPORT_TITLE_MARKERS = (
     "annual report",
     "benchmark",
     "benchmarks",
+    "buyers guide",
+    "buyer's guide",
     "ebook",
     "ebooks",
     "forecast",
@@ -93,11 +98,13 @@ _FALLBACK_SPECIFIC_REPORT_TITLE_MARKERS = (
     "fact sheet",
     "fact sheets",
     "atlas",
+    "barometer",
     "transparency report",
     "white paper",
     "whitepaper",
 )
 _FALLBACK_NON_REPORT_TITLE_MARKERS = (
+    "analyst relations council",
     "cookie notice",
     "cookie policy",
     "privacy notice",
@@ -110,6 +117,8 @@ _FALLBACK_NON_REPORT_TITLE_MARKERS = (
     "contact us",
     "join the panel",
     "publication archive",
+    "planned research",
+    "reprints",
     "all products",
     "award-winning experts",
     "accurate data",
@@ -129,15 +138,27 @@ _FALLBACK_NON_REPORT_TITLE_MARKERS = (
     "training",
     "video",
     "webinar",
+    "case studies",
+    "customer story",
+    "customer stories",
+    "client story",
+    "client stories",
 )
 _FALLBACK_NON_REPORT_URL_MARKERS = (
     "/article/",
     "/articles/",
     "/academy/",
     "/blog/",
+    "/blogs/",
+    "/case-study",
     "/case-studies/",
+    "/case-studies",
     "/careers",
     "/contact",
+    "/customer-story",
+    "/customer-stories/",
+    "/customer-stories",
+    "/help/",
     "/login",
     "/news/",
     "/newsroom/",
@@ -146,6 +167,8 @@ _FALLBACK_NON_REPORT_URL_MARKERS = (
     "/press-releases/",
     "/products",
     "/privacy",
+    "/registration/",
+    "/reprints",
     "/cookie",
     "/modern-slavery",
     "/tax-strategy",
@@ -160,6 +183,9 @@ _FALLBACK_NON_REPORT_URL_MARKERS = (
 _FALLBACK_REPORT_URL_MARKERS = (
     "/benchmark",
     "/benchmarks/",
+    "/buyers-guide",
+    "/buyers-guides/",
+    "/barometer",
     "/data-report",
     "/data-reports/",
     "/ebook",
@@ -167,6 +193,7 @@ _FALLBACK_REPORT_URL_MARKERS = (
     "/fact-sheet",
     "/fact-sheets/",
     "/forecast",
+    "/forecasts/",
     "/guide",
     "/guides/",
     "/industry-report",
@@ -184,6 +211,8 @@ _FALLBACK_REPORT_URL_MARKERS = (
     "/studies/",
     "/survey",
     "/surveys/",
+    "/trend",
+    "/trends/",
     "/white-paper",
     "/whitepaper",
     "/whitepapers/",
@@ -222,6 +251,12 @@ _FALLBACK_LISTING_QUERY_KEYS = (
     "tag=",
     "topic=",
     "type=",
+)
+_EDITORIAL_REPORT_URL_MARKERS = (
+    "/news/",
+    "/newsroom/",
+    "/press-release",
+    "/press-releases/",
 )
 _GENERIC_DUPLICATE_TITLE_FINGERPRINTS = {
     "",
@@ -1106,6 +1141,8 @@ def _is_probable_report_asset(
     normalized_url = candidate.canonical_url.casefold()
     if normalized_url.endswith(".pdf"):
         return True
+    if _has_editorial_report_detail_candidate(candidate):
+        return True
     if _has_strong_report_detail_url(candidate.canonical_url):
         return True
     if any(marker in normalized_url for marker in _FALLBACK_NON_REPORT_URL_MARKERS):
@@ -1127,6 +1164,13 @@ def _prefilter_screening_decision(
             canonical_url=candidate.canonical_url,
             accepted=False,
             reason="low_report_probability_prefilter",
+        )
+    if _has_editorial_report_detail_candidate(candidate):
+        return PublisherInventoryCandidateScreeningDecision(
+            schema_version="1.0",
+            canonical_url=candidate.canonical_url,
+            accepted=True,
+            reason="editorial_report_detail_url_prefilter",
         )
     if any(marker in normalized_url for marker in _FALLBACK_NON_REPORT_URL_MARKERS):
         return PublisherInventoryCandidateScreeningDecision(
@@ -1194,6 +1238,39 @@ def _has_strong_report_detail_url(url: str) -> bool:
     return len(leaf_tokens) >= 3 and _contains_any_title_marker(
         leaf_title,
         _FALLBACK_REPORT_TITLE_MARKERS,
+    )
+
+
+def _has_editorial_report_detail_candidate(
+    candidate: PublisherInventoryCandidateScreeningItem,
+) -> bool:
+    normalized_url = str(candidate.canonical_url or "").strip().casefold()
+    if not normalized_url:
+        return False
+    if not any(marker in normalized_url for marker in _EDITORIAL_REPORT_URL_MARKERS):
+        return False
+    parsed = urlsplit(normalized_url)
+    if any(token in parsed.query for token in _FALLBACK_LISTING_QUERY_KEYS):
+        return False
+    segments = [segment for segment in parsed.path.split("/") if segment]
+    if not segments:
+        return False
+    leaf = segments[-1].rsplit(".", 1)[0]
+    if leaf.isdigit() or leaf in _FALLBACK_REPORT_COLLECTION_SEGMENTS:
+        return False
+    leaf_title = leaf.replace("_", "-").replace("-", " ")
+    combined_signal_text = " ".join(
+        part
+        for part in (
+            leaf_title,
+            _normalize_title_fingerprint(candidate.title),
+        )
+        if part
+    )
+    leaf_tokens = [token for token in re.findall(r"[a-z0-9]+", combined_signal_text) if token]
+    return len(leaf_tokens) >= 3 and _contains_any_title_marker(
+        combined_signal_text,
+        _FALLBACK_SPECIFIC_REPORT_TITLE_MARKERS,
     )
 
 

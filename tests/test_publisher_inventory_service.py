@@ -1572,6 +1572,43 @@ def test_discover_publisher_inventory_browser_uses_rendered_html_supplement_when
     assert response.candidates[0].provenance == "browser_rendered_html_supplement"
 
 
+def test_discover_publisher_inventory_browser_seeds_direct_report_page_when_dom_has_only_navigation(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://example.com/2026-garden-trends-report",
+                "page_title": "2026 Garden Trends Report",
+                "anchors": [
+                    {"href": "https://example.com/expertise", "text": "Expertise", "rel": ""},
+                    {"href": "https://example.com/blog", "text": "Blog", "rel": ""},
+                ],
+            },
+        }
+    }
+    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://example.com/2026-garden-trends-report",
+            settings=_settings(tmp_path),
+            route_kind_hint="browser_render",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "browser_render"
+    assert [candidate.url for candidate in response.candidates] == [
+        "https://example.com/2026-garden-trends-report"
+    ]
+    assert response.candidates[0].title == "2026 Garden Trends Report"
+
+
 def test_discover_publisher_inventory_browser_preserves_pre_cookie_archive_candidates_when_dismissal_degrades_page(
     tmp_path: Path,
     run_context,
