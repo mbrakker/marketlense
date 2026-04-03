@@ -18,6 +18,29 @@ from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.publisher_inventory_service")
 
+_ARCHIVE_ROOT_KEYWORDS = (
+    "benchmark",
+    "benchmarks",
+    "ebook",
+    "ebooks",
+    "guide",
+    "guides",
+    "insight",
+    "insights",
+    "library",
+    "report",
+    "reports",
+    "research",
+    "resource",
+    "resources",
+    "study",
+    "studies",
+    "survey",
+    "surveys",
+    "whitepaper",
+    "whitepapers",
+)
+
 
 @dataclass(frozen=True)
 class BrowserInventoryAcquisitionDependencies:
@@ -143,7 +166,11 @@ def discover_inventory_via_browser(
             },
         )
     )
-    if pages and not candidates:
+    structurally_empty_candidates = _should_attempt_http_recovery_for_sparse_archive_root(
+        candidates=candidates,
+        normalized_url=normalized_url,
+    )
+    if pages and (not candidates or structurally_empty_candidates):
         supplemented_candidates: list[PublisherInventoryRawCandidate] = []
         for page in pages:
             supplemented_candidates.extend(
@@ -155,8 +182,20 @@ def discover_inventory_via_browser(
                 )
             )
         if supplemented_candidates:
-            candidates = supplemented_candidates
-    if not pages or not candidates:
+            if structurally_empty_candidates:
+                non_root_supplemented_candidates = [
+                    candidate
+                    for candidate in supplemented_candidates
+                    if _normalize_candidate_url(candidate.url)
+                    != _normalize_candidate_url(normalized_url)
+                ]
+                candidates = (
+                    non_root_supplemented_candidates or supplemented_candidates
+                )
+            else:
+                candidates = supplemented_candidates
+            structurally_empty_candidates = False
+    if not pages or not candidates or structurally_empty_candidates:
         logger.info(
             log_event(
                 ctx,
@@ -167,6 +206,7 @@ def discover_inventory_via_browser(
                     "normalized_url": normalized_url,
                     "browser_page_count": len(pages),
                     "browser_candidate_count": len(candidates),
+                    "structurally_empty_candidates": structurally_empty_candidates,
                 },
             )
         )
@@ -188,10 +228,11 @@ def discover_inventory_via_browser(
                         "normalized_url": normalized_url,
                         "code": exc.code,
                         "message": exc.message,
+                        "structurally_empty_candidates": structurally_empty_candidates,
                     },
                 )
             )
-    if not pages or not candidates:
+    if not pages or not candidates or structurally_empty_candidates:
         raise AppError(
             code="publisher_inventory_browser_incomplete",
             message="Browser-render inventory discovery returned no usable pages or candidates",
@@ -228,6 +269,43 @@ def discover_inventory_via_browser(
         )
     )
     return response
+
+
+def _should_attempt_http_recovery_for_sparse_archive_root(
+    *,
+    candidates: list[PublisherInventoryRawCandidate],
+    normalized_url: str,
+) -> bool:
+    if not candidates:
+        return False
+    normalized_candidates = {
+        _normalize_candidate_url(candidate.url) for candidate in candidates if candidate.url
+    }
+    if not normalized_candidates or len(normalized_candidates) != 1:
+        return False
+    only_candidate = next(iter(normalized_candidates))
+    return (
+        only_candidate == _normalize_candidate_url(normalized_url)
+        and _looks_like_archive_root_url(only_candidate)
+    )
+
+
+def _normalize_candidate_url(url: str) -> str:
+    parts = urlsplit(str(url or "").strip())
+    path = parts.path.rstrip("/") or "/"
+    return parts._replace(path=path, query="", fragment="").geturl().casefold()
+
+
+def _looks_like_archive_root_url(url: str) -> bool:
+    path = urlsplit(url).path.strip("/").casefold()
+    if not path:
+        return False
+    leaf = path.split("/")[-1]
+    if "." in leaf:
+        return False
+    if any(character.isdigit() for character in leaf):
+        return False
+    return any(keyword in leaf for keyword in _ARCHIVE_ROOT_KEYWORDS)
 
 
 def _coerce_browser_error(

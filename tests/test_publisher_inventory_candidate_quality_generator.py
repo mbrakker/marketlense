@@ -501,6 +501,105 @@ def test_qualify_publisher_inventory_candidates_accepts_transient_http_status_fo
     assert response.decisions[0].reason == "transient_fetch_report_asset"
 
 
+def test_qualify_publisher_inventory_candidates_rejects_transient_case_study_asset() -> None:
+    candidate = _candidate(
+        "https://example.com/resources/customer-success-case-study",
+        "Customer Success Case Study",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/resources",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    fetch_error="HTTPSConnectionPool(host='example.com', port=443): Read timed out. (read timeout=20)",
+                    has_dead_page_marker=True,
+                )
+            ],
+        ),
+    )
+
+    assert response.approved_items == []
+    assert response.decisions[0].reason == "case_study_or_customer_story_page"
+
+
+def test_qualify_publisher_inventory_candidates_rejects_transient_case_study_slug_with_generic_title() -> None:
+    candidate = _candidate(
+        "https://example.com/resources/customer-success-case-study",
+        "Learn more",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/resources",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    fetch_error="HTTPSConnectionPool(host='example.com', port=443): Read timed out. (read timeout=20)",
+                    has_dead_page_marker=True,
+                )
+            ],
+        ),
+    )
+
+    assert response.approved_items == []
+    assert response.decisions[0].reason == "case_study_or_customer_story_page"
+
+
+def test_qualify_publisher_inventory_candidates_rejects_transient_fetch_on_collection_root() -> None:
+    candidate = _candidate(
+        "https://example.com/resources",
+        "Guides + ebooks Retail strategy, reports and industry trends.",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/resources",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    fetch_error="HTTPSConnectionPool(host='example.com', port=443): Read timed out. (read timeout=20)",
+                    has_dead_page_marker=True,
+                )
+            ],
+        ),
+    )
+
+    assert response.approved_items == []
+    assert response.decisions[0].reason == "dead_or_unreachable_landing_page"
+
+
 def test_qualify_publisher_inventory_candidates_accepts_protected_pdf_asset() -> None:
     candidate = _candidate(
         "https://www.example.com/files/agency-guide-report.pdf",
@@ -1487,6 +1586,79 @@ def test_qualify_publisher_inventory_candidates_rejects_self_service_help_pages(
     assert response.decisions[0].reason == "self_service_or_signup_page"
 
 
+def test_qualify_publisher_inventory_candidates_rejects_consumer_self_service_report_products() -> None:
+    candidate = _candidate(
+        "https://example.com/credit/three-bureau-credit-report-and-score",
+        "3-bureau credit report and FICO Scores",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/resources",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    final_title="3 Bureau Credit Reports and Scores",
+                    h1_title="3-bureau credit report and FICO Scores",
+                    has_asset_type_term=True,
+                    has_download_language=True,
+                    has_gated_form=True,
+                    has_price_or_purchase=True,
+                )
+            ],
+        ),
+    )
+
+    assert response.approved_items == []
+    assert response.decisions[0].reason == "self_service_or_signup_page"
+
+
+def test_qualify_publisher_inventory_candidates_rejects_audio_editorial_pages() -> None:
+    candidate = _candidate(
+        "https://example.com/podcast/retail-playbook",
+        "Retail Playbook Podcast",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/resources",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    final_title="Retail Playbook Podcast",
+                    h1_title="Retail Playbook Podcast",
+                    has_asset_type_term=True,
+                    has_editorial_markers=True,
+                    has_newsletter_cta=True,
+                )
+            ],
+        ),
+    )
+
+    assert response.approved_items == []
+    assert response.decisions[0].reason == "audio_editorial_page"
+
+
 def test_qualify_publisher_inventory_candidates_accepts_buyer_guide_report_detail_pages_without_document_markup() -> None:
     candidate = _candidate(
         "https://example.com/resources/buyers-guide-enterprise-marketing-governance-platforms",
@@ -1511,6 +1683,43 @@ def test_qualify_publisher_inventory_candidates_accepts_buyer_guide_report_detai
                     final_url=candidate.canonical_url,
                     final_title="How to Evaluate Enterprise Marketing Governance Platforms",
                     h1_title="How to Evaluate Enterprise Marketing Governance Platforms",
+                )
+            ],
+        ),
+    )
+
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "report_detail_landing_page"
+
+
+def test_qualify_publisher_inventory_candidates_accepts_report_detail_pages_with_generic_editorial_chrome() -> None:
+    candidate = _candidate(
+        "https://example.com/next-normal-guide-to-the-digital-shelf",
+        "'Next Normal' Guide to the Digital Shelf",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/resources",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    final_title="The Next Normal",
+                    h1_title="'Next Normal' Guide to the Digital Shelf",
+                    has_asset_type_term=True,
+                    has_editorial_markers=True,
                 )
             ],
         ),

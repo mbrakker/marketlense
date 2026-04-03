@@ -75,6 +75,23 @@ _SELF_SERVICE_URL_MARKERS = (
     "/signup",
     "/get-started",
 )
+_CONSUMER_SELF_SERVICE_URL_MARKERS = (
+    "/consumer-products/",
+    "/credit/",
+)
+_CONSUMER_SELF_SERVICE_TITLE_MARKERS = (
+    "3 bureau credit report",
+    "3-bureau credit report",
+    "credit monitoring",
+    "credit report and fico",
+    "credit report and score",
+    "credit reports and scores",
+    "credit score",
+    "credit scores",
+    "fico score",
+    "fico scores",
+    "free credit report",
+)
 _LEGAL_TITLE_MARKERS = (
     "privacy policy",
     "cookie policy",
@@ -118,6 +135,9 @@ _SURVEY_PLATFORM_HOST_MARKERS = (
     "jotform.com",
 )
 _CASE_STUDY_URL_MARKERS = (
+    "-case-study",
+    "-customer-story",
+    "-success-story",
     "/case-study",
     "/case-studies/",
     "/case-studies",
@@ -180,6 +200,17 @@ _EDITORIAL_SECTION_URL_MARKERS = (
     "/market-insights/",
     "/market-outlook/",
     "/markets-explained/",
+)
+_AUDIO_EDITORIAL_URL_MARKERS = (
+    "/podcast/",
+    "/podcasts/",
+    "/podcasts-",
+    "/webcast/",
+)
+_AUDIO_EDITORIAL_TITLE_MARKERS = (
+    "podcast",
+    "roundtable",
+    "webcast",
 )
 _BOT_CHALLENGE_MARKERS = (
     "access denied",
@@ -307,11 +338,15 @@ _REPORT_COLLECTION_URL_SEGMENTS = {
     "fact-sheets",
     "guide",
     "guides",
+    "insights",
+    "library",
     "playbook",
     "playbooks",
     "report",
     "reports",
     "research",
+    "resource",
+    "resources",
     "study",
     "studies",
     "survey",
@@ -620,6 +655,20 @@ def _qualify_observation(
         or _has_report_style_url_path(observation.canonical_url)
         or _has_report_style_url_slug(observation.canonical_url)
     )
+    case_study_signal = (
+        any(marker in final_url_lower for marker in _CASE_STUDY_URL_MARKERS)
+        or any(marker in observation.canonical_url.casefold() for marker in _CASE_STUDY_URL_MARKERS)
+        or any(marker in resolved_title_lower for marker in _CASE_STUDY_TITLE_MARKERS)
+        or any(marker in source_title_lower for marker in _CASE_STUDY_TITLE_MARKERS)
+    )
+    collection_hub_signal = (
+        _looks_like_strict_collection_root_url(final_url_lower)
+        or _looks_like_strict_collection_root_url(observation.canonical_url)
+        or _looks_like_report_collection_root_url(final_url_lower)
+        or _looks_like_report_collection_root_url(observation.canonical_url)
+        or _looks_like_report_collection_bucket_url(final_url_lower)
+        or _looks_like_report_collection_bucket_url(observation.canonical_url)
+    )
     newsletter_source_signal = _looks_like_newsletter_source_url(source_page_url)
     if (
         _looks_like_bot_challenge_page(observation)
@@ -627,7 +676,9 @@ def _qualify_observation(
         and _looks_like_article_label_title(source_title_lower)
     ):
         return False, "bot_protected_editorial_page"
-    if _looks_like_bot_challenge_page(observation) and source_report_signal:
+    if case_study_signal:
+        return False, "case_study_or_customer_story_page"
+    if _looks_like_bot_challenge_page(observation) and source_report_signal and not collection_hub_signal:
         if _looks_like_article_label_title(source_title_lower) and not report_title_signal:
             return False, "bot_protected_editorial_page"
         if bot_protected_report_signal:
@@ -636,11 +687,12 @@ def _qualify_observation(
     if (
         _looks_like_transient_fetch_failure(observation.fetch_error)
         or _looks_like_transient_http_status(observation.http_status_code)
-    ) and source_report_signal:
+    ) and source_report_signal and not collection_hub_signal:
         return True, "transient_fetch_report_asset"
     if (
         _looks_like_protected_document_status(observation.http_status_code)
         and source_report_signal
+        and not collection_hub_signal
     ):
         if observation.has_editorial_url_pattern and not (
             report_archive_path_signal or specific_report_title_signal
@@ -663,11 +715,23 @@ def _qualify_observation(
         return True, "unreachable_document_asset"
     if observation.fetch_error or observation.has_dead_page_marker:
         return False, "dead_or_unreachable_landing_page"
+    if _looks_like_audio_editorial_page(
+        final_url_lower=final_url_lower,
+        resolved_title_lower=resolved_title_lower,
+        source_title_lower=source_title_lower,
+    ) and not observation.is_pdf:
+        return False, "audio_editorial_page"
     if _looks_like_self_service_page_url(final_url_lower) and not (
         observation.is_pdf
         or observation.has_download_language
         or observation.has_gated_form
         or observation.has_document_structure
+    ):
+        return False, "self_service_or_signup_page"
+    if _looks_like_consumer_self_service_report_product(
+        final_url_lower=final_url_lower,
+        resolved_title_lower=resolved_title_lower,
+        observation=observation,
     ):
         return False, "self_service_or_signup_page"
     if any(marker in final_url_lower for marker in _LEGAL_URL_MARKERS) or any(
@@ -716,10 +780,6 @@ def _qualify_observation(
         resolved_title_lower=resolved_title_lower,
     ) and not specific_report_title_signal:
         return False, "service_or_membership_page"
-    if any(marker in final_url_lower for marker in _CASE_STUDY_URL_MARKERS) or any(
-        marker in resolved_title_lower for marker in _CASE_STUDY_TITLE_MARKERS
-    ):
-        return False, "case_study_or_customer_story_page"
     if any(marker in resolved_title_lower for marker in _ANNOUNCEMENT_TITLE_MARKERS) and not (
         observation.has_gated_form or observation.has_price_or_purchase
     ):
@@ -732,6 +792,18 @@ def _qualify_observation(
         observation.has_download_language or observation.has_document_structure
     ):
         return False, "survey_or_questionnaire_page"
+    if (
+        (report_archive_path_signal or report_slug_signal)
+        and specific_report_title_signal
+        and source_report_signal
+        and not strong_distribution_signal
+        and not structured_document_signal
+        and not editorial_section_signal
+        and not observation.has_editorial_url_pattern
+        and not observation.has_related_posts
+        and not _looks_like_dated_editorial_url(final_url_lower)
+    ):
+        return True, "report_detail_landing_page"
     if observation.is_pdf:
         return True, "direct_document_asset"
     if _looks_like_report_section_title(resolved_title_lower):
@@ -1010,6 +1082,29 @@ def _looks_like_self_service_page_url(url: str) -> bool:
     return any(marker in normalized for marker in _SELF_SERVICE_URL_MARKERS)
 
 
+def _looks_like_consumer_self_service_report_product(
+    *,
+    final_url_lower: str,
+    resolved_title_lower: str,
+    observation: PublisherInventoryLandingPageObservation,
+) -> bool:
+    normalized_url = str(final_url_lower or "").strip().casefold()
+    normalized_title = str(resolved_title_lower or "").strip().casefold()
+    if not normalized_url:
+        return False
+    if not any(marker in normalized_url for marker in _CONSUMER_SELF_SERVICE_URL_MARKERS):
+        return False
+    if observation.is_pdf or observation.has_document_structure:
+        return False
+    if not (
+        observation.has_gated_form
+        or observation.has_download_language
+        or observation.has_price_or_purchase
+    ):
+        return False
+    return any(marker in normalized_title for marker in _CONSUMER_SELF_SERVICE_TITLE_MARKERS)
+
+
 def _looks_like_report_section_url(url: str) -> bool:
     path = urlsplit(str(url or "").strip().casefold()).path
     segments = [segment for segment in path.split("/") if segment]
@@ -1038,6 +1133,23 @@ def _looks_like_report_collection_bucket_url(url: str) -> bool:
         return False
     leaf = segments[-1].rsplit(".", 1)[0]
     return leaf in _REPORT_COLLECTION_URL_SEGMENTS
+
+
+def _looks_like_audio_editorial_page(
+    *,
+    final_url_lower: str,
+    resolved_title_lower: str,
+    source_title_lower: str,
+) -> bool:
+    normalized_url = str(final_url_lower or "").strip().casefold()
+    normalized_title = str(resolved_title_lower or "").strip().casefold()
+    normalized_source_title = str(source_title_lower or "").strip().casefold()
+    if any(marker in normalized_url for marker in _AUDIO_EDITORIAL_URL_MARKERS):
+        return True
+    combined_title = " ".join(
+        part for part in (normalized_title, normalized_source_title) if part
+    )
+    return any(marker in combined_title for marker in _AUDIO_EDITORIAL_TITLE_MARKERS)
 
 
 def _looks_like_service_or_membership_page(

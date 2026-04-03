@@ -461,6 +461,200 @@ def test_discover_publisher_inventory_http_parse_rejects_low_confidence_candidat
     assert_app_error(err.value, code="publisher_inventory_http_empty", retryable=False)
 
 
+def test_discover_publisher_inventory_http_parse_recovers_wordpress_ajax_archives(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    page_html = """
+    <html>
+      <head>
+        <title>Resources - Example</title>
+        <script>var wpajax = {"url":"https://example.com/wp-admin/admin-ajax.php","nonce":"nonce-123"};</script>
+        <script src="https://example.com/wp-content/themes/example/script.js"></script>
+      </head>
+      <body>
+        <main><a href="/resources/">Resources</a></main>
+      </body>
+    </html>
+    """
+    script_js = """
+    function ajax_filter() {
+      var data_ajax = {
+        action: 'resources_filter',
+        nonce: wpajax.nonce,
+        paged: curentPage
+      };
+    }
+    """
+    ajax_page_1 = json.dumps(
+        {
+            "max_num_pages": 2,
+            "posts": (
+                '<a href="https://example.com/lp/retail-benchmark-2026">'
+                "Retail Benchmark 2026"
+                "</a>"
+            ),
+        }
+    )
+    ajax_page_2 = json.dumps(
+        {
+            "max_num_pages": 2,
+            "posts": (
+                '<a href="https://example.com/lp/customer-retention-playbook">'
+                "Customer Retention Playbook"
+                "</a>"
+            ),
+        }
+    )
+
+    def _get(url, timeout, headers):
+        normalized_url = str(url).rstrip("/")
+        if normalized_url == "https://example.com/resources":
+            return _FakeResponse(url="https://example.com/resources", text=page_html)
+        if normalized_url == "https://example.com/wp-content/themes/example/script.js":
+            return _FakeResponse(url=normalized_url, text=script_js)
+        raise AssertionError(f"Unexpected GET url: {url}")
+
+    def _post(url, timeout, headers, data):
+        assert url == "https://example.com/wp-admin/admin-ajax.php"
+        assert headers["X-Requested-With"] == "XMLHttpRequest"
+        if data["paged"] == "1":
+            return _FakeResponse(url=url, text=ajax_page_1)
+        if data["paged"] == "2":
+            return _FakeResponse(url=url, text=ajax_page_2)
+        raise AssertionError(f"Unexpected AJAX payload: {data}")
+
+    external_boundary_mocks_only.setattr(service.requests, "get", _get)
+    external_boundary_mocks_only.setattr(service.requests, "post", _post)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://example.com/resources",
+            settings=_settings(tmp_path),
+            route_kind_hint="http_parse",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "http_parse"
+    assert "WordPress AJAX action `resources_filter`" in response.route_summary
+    assert [candidate.url for candidate in response.candidates] == [
+        "https://example.com/lp/retail-benchmark-2026",
+        "https://example.com/lp/customer-retention-playbook",
+    ]
+
+
+def test_discover_publisher_inventory_http_parse_retries_with_trailing_slash(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    def _get(url, timeout, headers):
+        if str(url) == "https://example.com/resources":
+            raise service.requests.RequestException("redirect timeout")
+        if str(url) == "https://example.com/resources/":
+            return _FakeResponse(
+                url="https://example.com/resources/",
+                text=(
+                    "<html><body>"
+                    "<a href='/lp/retail-benchmark-2026'>Retail Benchmark 2026</a>"
+                    "</body></html>"
+                ),
+            )
+        raise AssertionError(f"Unexpected GET url: {url}")
+
+    external_boundary_mocks_only.setattr(service.requests, "get", _get)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://example.com/resources",
+            settings=_settings(tmp_path),
+            route_kind_hint="http_parse",
+        ),
+        run_context,
+    )
+
+    assert [candidate.url for candidate in response.candidates] == [
+        "https://example.com/lp/retail-benchmark-2026"
+    ]
+
+
+def test_discover_publisher_inventory_http_parse_supplements_sparse_archive_with_wordpress_ajax(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    page_html = """
+    <html>
+      <head>
+        <title>Resources - Example</title>
+        <script>var wpajax = {"url":"https://example.com/wp-admin/admin-ajax.php","nonce":"nonce-123"};</script>
+        <script src="https://example.com/wp-content/themes/example/script.js"></script>
+      </head>
+      <body>
+        <main>
+          <a href="/resources/">Resources</a>
+          <a href="/lp/featured-retail-benchmark">Featured Retail Benchmark</a>
+        </main>
+      </body>
+    </html>
+    """
+    script_js = """
+    var data_ajax = {
+      action: 'resources_filter',
+      nonce: wpajax.nonce,
+      paged: curentPage
+    };
+    """
+    ajax_page_1 = json.dumps(
+        {
+            "max_num_pages": 1,
+            "posts": (
+                '<a href="https://example.com/lp/featured-retail-benchmark">'
+                "Featured Retail Benchmark"
+                "</a>"
+                '<a href="https://example.com/lp/customer-retention-playbook">'
+                "Customer Retention Playbook"
+                "</a>"
+            ),
+        }
+    )
+
+    def _get(url, timeout, headers):
+        normalized_url = str(url).rstrip("/")
+        if normalized_url == "https://example.com/resources":
+            return _FakeResponse(url="https://example.com/resources/", text=page_html)
+        if normalized_url == "https://example.com/wp-content/themes/example/script.js":
+            return _FakeResponse(url=normalized_url, text=script_js)
+        raise AssertionError(f"Unexpected GET url: {url}")
+
+    def _post(url, timeout, headers, data):
+        assert url == "https://example.com/wp-admin/admin-ajax.php"
+        return _FakeResponse(url=url, text=ajax_page_1)
+
+    external_boundary_mocks_only.setattr(service.requests, "get", _get)
+    external_boundary_mocks_only.setattr(service.requests, "post", _post)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://example.com/resources",
+            settings=_settings(tmp_path),
+            route_kind_hint="http_parse",
+        ),
+        run_context,
+    )
+
+    assert "WordPress AJAX action `resources_filter`" in response.route_summary
+    assert [candidate.url for candidate in response.candidates] == [
+        "https://example.com/lp/featured-retail-benchmark",
+        "https://example.com/lp/customer-retention-playbook",
+    ]
+
+
 def test_select_tab_labels_for_traversal_prefers_report_focused_tabs() -> None:
     state = service._RenderedInventoryState(
         page_url="https://example.com/resources/blog",
@@ -1441,6 +1635,63 @@ def test_discover_publisher_inventory_browser_uses_http_supplement_when_browser_
     assert len(response.pages) == 1
     assert [candidate.url for candidate in response.candidates] == [
         "https://www.bluecore.com/lp/customer-movement-benchmarks"
+    ]
+    assert response.candidates[0].provenance == "http_supplement"
+
+
+def test_discover_publisher_inventory_browser_uses_http_supplement_for_archive_root_only_candidate(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    def _get(url, timeout, headers):
+        assert timeout == 10.0
+        assert headers["User-Agent"].startswith("Mozilla/5.0")
+        assert headers["Accept-Language"] == "en-US,en;q=0.9"
+        return _FakeResponse(
+            url="https://ecdb.com/whitepapers-and-reports",
+            text=(
+                "<html><body>"
+                "<a href='https://ecdb.com/reports/global-marketplaces-report'>"
+                "Global Marketplaces Report"
+                "</a>"
+                "</body></html>"
+            ),
+        )
+
+    external_boundary_mocks_only.setattr(service.requests, "get", _get)
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://ecdb.com/whitepapers-and-reports",
+                "page_title": "Whitepapers and Reports",
+                "anchors": [
+                    {
+                        "href": "https://ecdb.com/whitepapers-and-reports",
+                        "text": "Whitepapers and Reports",
+                        "rel": "",
+                    }
+                ],
+            }
+        }
+    }
+    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://ecdb.com/whitepapers-and-reports",
+            settings=_settings(tmp_path),
+            route_kind_hint="browser_render",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "browser_render"
+    assert len(response.pages) == 1
+    assert [candidate.url for candidate in response.candidates] == [
+        "https://ecdb.com/reports/global-marketplaces-report"
     ]
     assert response.candidates[0].provenance == "http_supplement"
 
