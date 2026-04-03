@@ -26,6 +26,7 @@ from src.contracts.run_context import RunContext
 from src.services._publisher_inventory_discovery_activity import (
     _build_browser_route_summary,
     _candidate_url_signature,
+    _extract_component_link_anchors,
     _extract_candidates_from_html,
     _fallback_title_from_url,
     _is_archive_surface,
@@ -482,6 +483,7 @@ async def _run_browser_traversal(
                 seeded_candidates = []
         selected_tab_labels = _select_tab_labels_for_traversal(normalized_url, initial_state)
         archive_expected = _is_archive_surface(initial_state) or bool(selected_tab_labels)
+        bounded_by_pagination_limit = False
         if selected_tab_labels:
             seen_tabs: set[str] = set()
             current_state = initial_state
@@ -519,7 +521,7 @@ async def _run_browser_traversal(
                     current_state = await _extract_rendered_inventory_state(page)
                     active_tab_label = _normalize_text(current_state.active_tab_label or "").casefold()
                 seen_tabs.add(normalized_label)
-                page_number, metrics = await _collect_browser_inventory_pages(
+                page_number, metrics, tab_bounded_by_pagination_limit = await _collect_browser_inventory_pages(
                     browser=browser,
                     page=page,
                     current_state=current_state,
@@ -532,10 +534,13 @@ async def _run_browser_traversal(
                     metrics=metrics,
                     ctx=ctx,
                 )
+                bounded_by_pagination_limit = (
+                    bounded_by_pagination_limit or tab_bounded_by_pagination_limit
+                )
                 current_state = await _extract_rendered_inventory_state(page)
                 active_tab_label = _normalize_text(current_state.active_tab_label or "").casefold()
         else:
-            _page_number, metrics = await _collect_browser_inventory_pages(
+            _page_number, metrics, bounded_by_pagination_limit = await _collect_browser_inventory_pages(
                 browser=browser,
                 page=page,
                 current_state=initial_state,
@@ -556,6 +561,7 @@ async def _run_browser_traversal(
             pages=pages,
             metrics=metrics,
             used_tabs=bool(selected_tab_labels),
+            bounded_by_pagination_limit=bounded_by_pagination_limit,
         )
         return pages, candidates, final_page_url, route_summary
     finally:
@@ -767,8 +773,14 @@ async def _extract_rendered_html_supplement_candidates(
             )
         )
         return []
+    anchors = list(parser.anchors)
+    if not anchors:
+        anchors = _extract_component_link_anchors(
+            html_text=html,
+            page_url=state.page_url,
+        )
     candidates = _extract_candidates_from_html(
-        anchors=parser.anchors,
+        anchors=anchors,
         page_url=state.page_url,
         page_number=page_number,
         next_page_url=None,
@@ -807,7 +819,7 @@ async def _collect_browser_inventory_pages(
     candidates: list[PublisherInventoryRawCandidate],
     metrics: _BrowserTraversalMetrics,
     ctx: RunContext,
-) -> tuple[int, _BrowserTraversalMetrics]:
+) -> tuple[int, _BrowserTraversalMetrics, bool]:
     page_number = starting_page_number
     visited_navigation_urls: set[str] = set()
     empty_results_reset_urls: set[str] = set()
@@ -826,6 +838,7 @@ async def _collect_browser_inventory_pages(
     seen_inventory_signatures: set[tuple[str, tuple[str, ...]]] = set()
     seen_candidate_signatures: set[tuple[str, ...]] = set()
     consecutive_zero_growth_pages = 0
+    bounded_by_pagination_limit = False
     if pages and last_recorded_page_candidate_signature:
         seen_inventory_signatures.add(
             (
@@ -1115,6 +1128,9 @@ async def _collect_browser_inventory_pages(
             break
         if page_number >= request.settings.pagination_max_pages:
             if state.load_more_labels or next_page_url or state.has_pagination_next:
+                if page_number > 1 and cumulative_candidate_urls:
+                    bounded_by_pagination_limit = True
+                    break
                 raise AppError(
                     code="publisher_inventory_browser_pagination_limit",
                     message="Browser-render inventory discovery reached the pagination limit before exhausting the inventory",
@@ -1246,7 +1262,7 @@ async def _collect_browser_inventory_pages(
             state = await _extract_rendered_inventory_state(page)
             continue
         break
-    return page_number + 1, metrics
+    return page_number + 1, metrics, bounded_by_pagination_limit
 
 
 async def _extract_rendered_inventory_state(page: Any) -> _RenderedInventoryState:
@@ -2217,8 +2233,14 @@ def _extract_browser_http_supplement_candidates(
             )
         )
         return []
+    anchors = list(parser.anchors)
+    if not anchors:
+        anchors = _extract_component_link_anchors(
+            html_text=html,
+            page_url=final_page_url,
+        )
     candidates = _extract_candidates_from_html(
-        anchors=parser.anchors,
+        anchors=anchors,
         page_url=final_page_url,
         page_number=page.page_number,
         next_page_url=None,

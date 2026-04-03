@@ -174,6 +174,13 @@ _INFORMATIONAL_ARTICLE_PREFIXES = (
     "how does ",
     "what can ",
 )
+_EDITORIAL_SECTION_URL_MARKERS = (
+    "/behind-the-scenes/",
+    "/company-insights/",
+    "/market-insights/",
+    "/market-outlook/",
+    "/markets-explained/",
+)
 _BOT_CHALLENGE_MARKERS = (
     "access denied",
     "attention required",
@@ -300,6 +307,8 @@ _REPORT_COLLECTION_URL_SEGMENTS = {
     "fact-sheets",
     "guide",
     "guides",
+    "playbook",
+    "playbooks",
     "report",
     "reports",
     "research",
@@ -307,6 +316,8 @@ _REPORT_COLLECTION_URL_SEGMENTS = {
     "studies",
     "survey",
     "surveys",
+    "trend",
+    "trends",
     "whitepaper",
     "whitepapers",
     "white-paper",
@@ -318,11 +329,76 @@ _SERVICE_OR_MEMBERSHIP_LEAF_MARKERS = {
     "planned",
     "reprints",
     "subscription",
+    "system",
+}
+_SERVICE_OR_MEMBERSHIP_PATH_MARKERS = (
+    "/become-a-client",
+    "/capabilities/",
+    "/events/",
+    "/research-center",
+    "/research-centers/",
+)
+_SERVICE_OR_MEMBERSHIP_TITLE_MARKERS = (
+    "analyst relations council",
+    "membership",
+    "planned research",
+    "quarterly trends hub",
+    "request a call back",
+    "reprints",
+    "research center",
+    "resource center",
+    "subscription",
+    "thought leadership",
+)
+_HARD_NON_ASSET_PATH_MARKERS = (
+    "/become-a-client",
+    "/capabilities/",
+    "/events/",
+    "/research-center",
+    "/research-centers/",
+)
+_REPORT_COLLECTION_ROOT_WORDS = {
+    "all",
+    "and",
+    "asset",
+    "assets",
+    "benchmark",
+    "benchmarks",
+    "center",
+    "centre",
+    "ebook",
+    "ebooks",
+    "guide",
+    "guides",
+    "hub",
+    "index",
+    "library",
+    "paper",
+    "papers",
+    "playbook",
+    "playbooks",
+    "quarterly",
+    "report",
+    "reports",
+    "research",
+    "resource",
+    "resources",
+    "study",
+    "studies",
+    "survey",
+    "surveys",
+    "thought",
+    "trend",
+    "trends",
+    "white",
+    "whitepaper",
+    "whitepapers",
 }
 _TRANSIENT_HTTP_STATUS_CODES = {408, 425, 429, 500, 502, 503, 504}
 _PROTECTED_DOCUMENT_HTTP_STATUS_CODES = {401, 403}
 _DOCUMENT_URL_SUFFIXES = (".pdf", ".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx")
 _DATED_EDITORIAL_URL_RE = re.compile(r"/20\d{2}/\d{1,2}/\d{1,2}/")
+_LEAD_CAPTURE_PATH_RE = re.compile(r"^/l/\d+/")
 
 
 def qualify_publisher_inventory_candidates(
@@ -515,8 +591,13 @@ def _qualify_observation(
     structured_document_signal = (
         observation.has_document_structure or observation.has_print_language
     )
+    editorial_section_signal = _looks_like_editorial_section_url(final_url_lower) or _looks_like_editorial_section_url(
+        observation.canonical_url
+    )
     editorial_surface_signal = (
-        observation.has_editorial_url_pattern or observation.has_related_posts
+        observation.has_editorial_url_pattern
+        or observation.has_related_posts
+        or editorial_section_signal
     )
     editorial_context_signal = editorial_surface_signal or observation.has_editorial_markers
     report_archive_path_signal = _has_report_style_url_path(final_url_lower)
@@ -574,6 +655,12 @@ def _qualify_observation(
             or specific_report_title_signal
         ):
             return True, "protected_report_asset"
+    if (
+        _looks_like_document_url(observation.final_url or observation.canonical_url)
+        and source_report_signal
+        and (observation.fetch_error or observation.has_dead_page_marker)
+    ):
+        return True, "unreachable_document_asset"
     if observation.fetch_error or observation.has_dead_page_marker:
         return False, "dead_or_unreachable_landing_page"
     if _looks_like_self_service_page_url(final_url_lower) and not (
@@ -589,6 +676,41 @@ def _qualify_observation(
         return False, "legal_or_compliance_page"
     if _looks_like_report_section_url(final_url_lower):
         return False, "report_section_page"
+    if _looks_like_hard_non_asset_route(final_url_lower):
+        return False, "service_or_membership_page"
+    if _looks_like_research_hub_page(
+        final_url_lower=final_url_lower,
+        resolved_title_lower=resolved_title_lower,
+    ):
+        return False, "service_or_membership_page"
+    if (
+        _looks_like_strict_collection_root_url(final_url_lower)
+        or _looks_like_strict_collection_root_url(observation.canonical_url)
+        or (
+            _looks_like_report_collection_root_url(final_url_lower)
+            or _looks_like_report_collection_root_url(observation.canonical_url)
+        )
+        or (
+            not resolved_title_lower
+            and report_archive_path_signal
+            and not report_slug_signal
+        )
+    ):
+        if (
+            _looks_like_strict_collection_root_url(final_url_lower)
+            or _looks_like_strict_collection_root_url(observation.canonical_url)
+            or (not specific_report_title_signal and not observation.is_pdf)
+        ):
+            return False, "generic_asset_hub_page"
+    if (
+        (
+            _looks_like_report_collection_bucket_url(final_url_lower)
+            or _looks_like_report_collection_bucket_url(observation.canonical_url)
+        )
+        and not specific_report_title_signal
+        and not observation.is_pdf
+    ):
+        return False, "generic_asset_hub_page"
     if _looks_like_service_or_membership_page(
         final_url_lower=final_url_lower,
         resolved_title_lower=resolved_title_lower,
@@ -614,20 +736,6 @@ def _qualify_observation(
         return True, "direct_document_asset"
     if _looks_like_report_section_title(resolved_title_lower):
         return False, "report_section_page"
-    if (
-        not resolved_title_lower
-        and report_archive_path_signal
-        and not report_slug_signal
-        and not strong_distribution_signal
-        and not structured_document_signal
-    ):
-        return False, "generic_asset_hub_page"
-    if (
-        _looks_like_report_collection_bucket_url(final_url_lower)
-        and not strong_distribution_signal
-        and not observation.has_price_or_purchase
-    ):
-        return False, "generic_asset_hub_page"
     if newsletter_source_signal and not (
         report_title_signal
         or report_archive_path_signal
@@ -679,12 +787,17 @@ def _qualify_observation(
         (report_archive_path_signal or report_slug_signal or report_title_signal)
         and (structured_document_signal or observation.has_asset_type_term)
         and not observation.has_dead_page_marker
+        and not (
+            editorial_context_signal
+            and not structured_document_signal
+            and not strong_distribution_signal
+        )
     ):
         return True, "printable_report_page"
     if (
         observation.has_price_or_purchase
         and observation.has_asset_type_term
-        and not observation.has_editorial_url_pattern
+        and not editorial_context_signal
     ):
         return True, "paid_or_publication_report_page"
     if observation.has_gated_form and (
@@ -728,6 +841,11 @@ def _qualify_observation(
 
 def _looks_like_dated_editorial_url(url: str) -> bool:
     return bool(_DATED_EDITORIAL_URL_RE.search(str(url or "").strip().casefold()))
+
+
+def _looks_like_editorial_section_url(url: str) -> bool:
+    lowered = str(url or "").strip().casefold()
+    return any(marker in lowered for marker in _EDITORIAL_SECTION_URL_MARKERS)
 
 
 def _resolve_candidate_title(
@@ -927,10 +1045,17 @@ def _looks_like_service_or_membership_page(
     final_url_lower: str,
     resolved_title_lower: str,
 ) -> bool:
-    path = urlsplit(str(final_url_lower or "").strip().casefold()).path
+    normalized_url = str(final_url_lower or "").strip().casefold()
+    if not normalized_url:
+        return False
+    path = urlsplit(normalized_url).path
     segments = [segment for segment in path.split("/") if segment]
     if not segments:
         return False
+    if any(marker in normalized_url for marker in _SERVICE_OR_MEMBERSHIP_PATH_MARKERS):
+        return True
+    if _LEAD_CAPTURE_PATH_RE.match(path):
+        return True
     leaf = segments[-1].rsplit(".", 1)[0]
     if leaf in _SERVICE_OR_MEMBERSHIP_LEAF_MARKERS:
         return True
@@ -939,15 +1064,80 @@ def _looks_like_service_or_membership_page(
         for marker in _SERVICE_OR_MEMBERSHIP_LEAF_MARKERS
     ):
         return True
+    if leaf.endswith("-system"):
+        return True
     return any(
         marker in str(resolved_title_lower or "").strip().casefold()
-        for marker in (
-            "planned research",
-            "reprints",
-            "analyst relations council",
-            "membership",
-            "subscription",
-        )
+        for marker in _SERVICE_OR_MEMBERSHIP_TITLE_MARKERS
+    )
+
+
+def _looks_like_hard_non_asset_route(url: str) -> bool:
+    normalized_url = str(url or "").strip().casefold()
+    if not normalized_url:
+        return False
+    path = urlsplit(normalized_url).path
+    if any(marker in normalized_url for marker in _HARD_NON_ASSET_PATH_MARKERS):
+        return True
+    return bool(_LEAD_CAPTURE_PATH_RE.match(path))
+
+
+def _looks_like_research_hub_page(
+    *,
+    final_url_lower: str,
+    resolved_title_lower: str,
+) -> bool:
+    normalized_url = str(final_url_lower or "").strip().casefold()
+    normalized_title = str(resolved_title_lower or "").strip().casefold()
+    if not normalized_url:
+        return False
+    path = urlsplit(normalized_url).path
+    segments = [segment for segment in path.split("/") if segment]
+    if not segments:
+        return False
+    leaf = segments[-1].rsplit(".", 1)[0]
+    if leaf.endswith("-research-center") or leaf.endswith("-research"):
+        return normalized_title.endswith("research center") or normalized_title.endswith("research")
+    return normalized_title.endswith("research center") or normalized_title.endswith("research")
+
+
+def _looks_like_report_collection_root_url(url: str) -> bool:
+    path = urlsplit(str(url or "").strip().casefold()).path
+    if not path:
+        return False
+    segments = [segment for segment in path.split("/") if segment]
+    if not segments:
+        return False
+    leaf = segments[-1].rsplit(".", 1)[0]
+    if leaf in _REPORT_COLLECTION_URL_SEGMENTS:
+        return True
+    words = [token for token in re.findall(r"[a-z0-9]+", leaf) if token]
+    if not words:
+        return False
+    if not any(
+        token in _REPORT_COLLECTION_URL_SEGMENTS
+        or token in {"hub", "library", "center", "centre", "research", "reports", "report"}
+        for token in words
+    ):
+        return False
+    return all(token in _REPORT_COLLECTION_ROOT_WORDS for token in words)
+
+
+def _looks_like_strict_collection_root_url(url: str) -> bool:
+    path = urlsplit(str(url or "").strip().casefold()).path
+    if not path:
+        return False
+    segments = [segment for segment in path.split("/") if segment]
+    if not segments:
+        return False
+    leaf = segments[-1].rsplit(".", 1)[0]
+    if leaf in _REPORT_COLLECTION_URL_SEGMENTS:
+        return True
+    words = [token for token in re.findall(r"[a-z0-9]+", leaf) if token]
+    if not words:
+        return False
+    return any(token in {"hub", "library", "center", "centre"} for token in words) and all(
+        token in _REPORT_COLLECTION_ROOT_WORDS for token in words
     )
 
 

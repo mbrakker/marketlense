@@ -30,6 +30,10 @@ _MAX_PROMPT_TITLE_LENGTH = 280
 _FALLBACK_REPORT_TITLE_MARKERS = (
     "buyers guide",
     "buyer's guide",
+    "guideline",
+    "guidelines",
+    "prediction",
+    "predictions",
     "report",
     "reports",
     "rapport",
@@ -85,11 +89,15 @@ _FALLBACK_SPECIFIC_REPORT_TITLE_MARKERS = (
     "forecasts",
     "guide",
     "guides",
+    "guideline",
+    "guidelines",
     "index",
     "outlook",
     "outlooks",
     "playbook",
     "playbooks",
+    "prediction",
+    "predictions",
     "scorecard",
     "study",
     "studies",
@@ -117,7 +125,9 @@ _FALLBACK_NON_REPORT_TITLE_MARKERS = (
     "contact us",
     "join the panel",
     "publication archive",
+    "property not found",
     "planned research",
+    "page not found",
     "reprints",
     "all products",
     "award-winning experts",
@@ -258,15 +268,59 @@ _EDITORIAL_REPORT_URL_MARKERS = (
     "/press-release",
     "/press-releases/",
 )
+_GENERIC_CTA_TITLES = {
+    "download now",
+    "download report",
+    "download the report",
+    "get the report",
+    "learn more",
+    "read article",
+    "read more",
+    "read now",
+    "read report",
+    "view report",
+}
+_EDITORIAL_SPECIFIC_REPORT_TITLE_MARKERS = (
+    "annual report",
+    "atlas",
+    "barometer",
+    "benchmark",
+    "benchmarks",
+    "ebook",
+    "ebooks",
+    "fact sheet",
+    "fact sheets",
+    "forecast",
+    "forecasts",
+    "guideline",
+    "guidelines",
+    "outlook",
+    "outlooks",
+    "prediction",
+    "predictions",
+    "report",
+    "reports",
+    "study",
+    "studies",
+    "survey",
+    "surveys",
+    "white paper",
+    "whitepaper",
+)
 _GENERIC_DUPLICATE_TITLE_FINGERPRINTS = {
     "",
+    "download annual report",
+    "download pdf",
     "download for free",
     "download now",
     "download report",
     "download the report",
     "ebook",
+    "get the report",
     "guide",
     "learn more",
+    "read article",
+    "read more",
     "read now",
     "read report",
     "report",
@@ -956,7 +1010,7 @@ def _candidate_duplicate_key(
     candidate: PublisherInventoryCandidateScreeningItem,
 ) -> str:
     title_key = _normalize_title_fingerprint(candidate.title)
-    if title_key and title_key not in _GENERIC_DUPLICATE_TITLE_FINGERPRINTS:
+    if title_key and not _is_generic_duplicate_title(title_key):
         return title_key
     return candidate.canonical_url
 
@@ -982,6 +1036,22 @@ def _normalize_title_fingerprint(title: str) -> str:
         for char in token
     )
     return " ".join(normalized.split()).strip()
+
+
+def _is_generic_duplicate_title(title_key: str) -> bool:
+    normalized_title = _normalize_title_fingerprint(title_key)
+    if not normalized_title:
+        return True
+    if normalized_title in _GENERIC_DUPLICATE_TITLE_FINGERPRINTS:
+        return True
+    tokens = [token for token in normalized_title.split() if token]
+    if not tokens or any(char.isdigit() for char in normalized_title):
+        return False
+    if tokens[0] not in {"download", "get", "learn", "read", "view"}:
+        return False
+    if len(tokens) > 4:
+        return False
+    return _contains_any_title_marker(normalized_title, _FALLBACK_REPORT_TITLE_MARKERS)
 
 
 def _contains_any_title_marker(title: str, markers: tuple[str, ...]) -> bool:
@@ -1139,8 +1209,8 @@ def _is_probable_report_asset(
 ) -> bool:
     normalized_title = _normalize_title_fingerprint(candidate.title)
     normalized_url = candidate.canonical_url.casefold()
-    if normalized_url.endswith(".pdf"):
-        return True
+    if urlsplit(normalized_url).path.endswith(".pdf"):
+        return _has_pdf_report_signal(candidate)
     if _has_editorial_report_detail_candidate(candidate):
         return True
     if _has_strong_report_detail_url(candidate.canonical_url):
@@ -1158,6 +1228,13 @@ def _prefilter_screening_decision(
     normalized_title = _normalize_title_fingerprint(candidate.title)
     normalized_url = candidate.canonical_url.casefold()
     parsed_url = urlsplit(normalized_url)
+    if normalized_url.endswith(".pdf") and not _has_pdf_report_signal(candidate):
+        return PublisherInventoryCandidateScreeningDecision(
+            schema_version="1.0",
+            canonical_url=candidate.canonical_url,
+            accepted=False,
+            reason="low_report_probability_prefilter",
+        )
     if any(token in parsed_url.query for token in _FALLBACK_LISTING_QUERY_KEYS):
         return PublisherInventoryCandidateScreeningDecision(
             schema_version="1.0",
@@ -1171,6 +1248,15 @@ def _prefilter_screening_decision(
             canonical_url=candidate.canonical_url,
             accepted=True,
             reason="editorial_report_detail_url_prefilter",
+        )
+    if _is_generic_cta_title(normalized_title) and _looks_like_insights_detail_url(
+        candidate.canonical_url
+    ) and not _has_specific_editorial_report_slug(candidate.canonical_url):
+        return PublisherInventoryCandidateScreeningDecision(
+            schema_version="1.0",
+            canonical_url=candidate.canonical_url,
+            accepted=False,
+            reason="low_report_probability_prefilter",
         )
     if any(marker in normalized_url for marker in _FALLBACK_NON_REPORT_URL_MARKERS):
         return PublisherInventoryCandidateScreeningDecision(
@@ -1216,11 +1302,11 @@ def _has_strong_report_detail_url(url: str) -> bool:
     normalized_url = str(url or "").strip().casefold()
     if not normalized_url:
         return False
-    if normalized_url.endswith(".pdf"):
+    parsed = urlsplit(normalized_url)
+    if parsed.path.endswith(".pdf"):
         return True
     if any(marker in normalized_url for marker in _FALLBACK_NON_REPORT_URL_MARKERS):
         return False
-    parsed = urlsplit(normalized_url)
     path_segments = [segment for segment in parsed.path.split("/") if segment]
     if not path_segments:
         return False
@@ -1237,6 +1323,32 @@ def _has_strong_report_detail_url(url: str) -> bool:
     leaf_tokens = [token for token in re.findall(r"[a-z0-9]+", leaf_title) if token]
     return len(leaf_tokens) >= 3 and _contains_any_title_marker(
         leaf_title,
+        _FALLBACK_REPORT_TITLE_MARKERS,
+    )
+
+
+def _has_pdf_report_signal(candidate: PublisherInventoryCandidateScreeningItem) -> bool:
+    normalized_url = str(candidate.canonical_url or "").strip().casefold()
+    parsed_url = urlsplit(normalized_url)
+    if not parsed_url.path.endswith(".pdf"):
+        return False
+    leaf_title = (
+        parsed_url.path.rsplit("/", 1)[-1].rsplit(".", 1)[0].replace("_", "-").replace("-", " ")
+    )
+    source_url_signal = str(candidate.source_page_url or "").strip().casefold()
+    combined_signal_text = " ".join(
+        part
+        for part in (
+            leaf_title,
+            _normalize_title_fingerprint(candidate.title),
+            source_url_signal,
+        )
+        if part
+    )
+    if _contains_any_title_marker(combined_signal_text, _FALLBACK_NON_REPORT_TITLE_MARKERS):
+        return False
+    return _contains_any_title_marker(
+        combined_signal_text,
         _FALLBACK_REPORT_TITLE_MARKERS,
     )
 
@@ -1271,6 +1383,34 @@ def _has_editorial_report_detail_candidate(
     return len(leaf_tokens) >= 3 and _contains_any_title_marker(
         combined_signal_text,
         _FALLBACK_SPECIFIC_REPORT_TITLE_MARKERS,
+    )
+
+
+def _is_generic_cta_title(title: str) -> bool:
+    normalized_title = _normalize_title_fingerprint(title)
+    return normalized_title in _GENERIC_CTA_TITLES
+
+
+def _looks_like_insights_detail_url(url: str) -> bool:
+    path = urlsplit(str(url or "").strip().casefold()).path
+    if not path.startswith("/insights/"):
+        return False
+    segments = [segment for segment in path.split("/") if segment]
+    return len(segments) >= 2 and segments[-1] not in _FALLBACK_REPORT_COLLECTION_SEGMENTS
+
+
+def _has_specific_editorial_report_slug(url: str) -> bool:
+    path = urlsplit(str(url or "").strip().casefold()).path
+    segments = [segment for segment in path.split("/") if segment]
+    if not segments:
+        return False
+    leaf_title = segments[-1].rsplit(".", 1)[0].replace("_", "-").replace("-", " ")
+    leaf_tokens = [token for token in re.findall(r"[a-z0-9]+", leaf_title) if token]
+    if len(leaf_tokens) < 3:
+        return False
+    return _contains_any_title_marker(
+        leaf_title,
+        _EDITORIAL_SPECIFIC_REPORT_TITLE_MARKERS,
     )
 
 

@@ -759,6 +759,23 @@ def test_extract_candidates_from_html_uses_card_context_for_generic_cta_links() 
     ]
 
 
+def test_extract_candidates_from_html_keeps_direct_report_library_pages_on_archive_surfaces() -> None:
+    candidates = service._extract_candidates_from_html(
+        anchors=[],
+        page_url="https://www.knightfrank.com/research/report-library/active-capital-the-report-11021.aspx",
+        page_number=1,
+        next_page_url=None,
+        origin_url="https://www.knightfrank.com/research/report-library/active-capital-the-report-11021.aspx",
+        page_title="Active Capital: The Report",
+        archive_surface=True,
+    )
+
+    assert [candidate.url for candidate in candidates] == [
+        "https://www.knightfrank.com/research/report-library/active-capital-the-report-11021.aspx"
+    ]
+    assert candidates[0].title == "Active Capital: The Report"
+
+
 def test_inventory_html_parser_preserves_container_text_for_generic_cta_links() -> None:
     parser = service._InventoryHtmlParser()
     parser.feed(
@@ -1522,6 +1539,82 @@ def test_discover_publisher_inventory_browser_pagination_limit_falls_back_to_htt
     ]
 
 
+def test_discover_publisher_inventory_browser_returns_bounded_result_after_multi_page_pagination_limit(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    external_boundary_mocks_only.setattr(
+        service.requests,
+        "get",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("http fallback not expected")
+        ),
+    )
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://example.com/insights",
+                "page_title": "Insights",
+                "anchors": [
+                    {
+                        "href": "https://example.com/reports/consumer-benchmark-2026",
+                        "text": "Consumer Benchmark 2026",
+                        "rel": "",
+                    }
+                ],
+                "load_more_labels": ["Load more"],
+            },
+            "named_clicks": {"load more": "page_2"},
+        },
+        "page_2": {
+            "payload": {
+                "page_url": "https://example.com/insights",
+                "page_title": "Insights",
+                "anchors": [
+                    {
+                        "href": "https://example.com/reports/consumer-benchmark-2026",
+                        "text": "Consumer Benchmark 2026",
+                        "rel": "",
+                    },
+                    {
+                        "href": "https://example.com/reports/retail-outlook-2026",
+                        "text": "Retail Outlook 2026",
+                        "rel": "",
+                    },
+                ],
+                "load_more_labels": ["Load more"],
+            },
+        },
+    }
+    external_boundary_mocks_only.setattr(
+        service, "import_module", lambda _name: _runtime_for_states(states)
+    )
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://example.com/insights",
+            settings=replace(_settings(tmp_path), pagination_max_pages=2),
+            route_kind_hint="browser_render",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "browser_render"
+    assert len(response.pages) == 2
+    assert response.candidates[0].url == "https://example.com/reports/consumer-benchmark-2026"
+    assert response.candidates[-1].url == "https://example.com/reports/retail-outlook-2026"
+    assert {
+        candidate.url for candidate in response.candidates
+    } == {
+        "https://example.com/reports/consumer-benchmark-2026",
+        "https://example.com/reports/retail-outlook-2026",
+    }
+    assert "pagination limit" in response.route_summary.lower()
+
+
 def test_discover_publisher_inventory_browser_uses_rendered_html_supplement_when_visible_anchors_are_empty(
     tmp_path: Path,
     run_context,
@@ -1569,6 +1662,59 @@ def test_discover_publisher_inventory_browser_uses_rendered_html_supplement_when
     assert [candidate.url for candidate in response.candidates] == [
         "https://www.bluecore.com/lp/customer-movement-benchmarks"
     ]
+    assert response.candidates[0].provenance == "browser_rendered_html_supplement"
+
+
+def test_discover_publisher_inventory_browser_extracts_custom_component_links_from_rendered_html(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    external_boundary_mocks_only.setattr(
+        service.requests,
+        "get",
+        lambda *args, **kwargs: _FakeResponse(
+            url="https://www.juliusbaer.com/en/insights",
+            text="<html><body></body></html>",
+        ),
+    )
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://www.juliusbaer.com/en/insights",
+                "page_title": "Insights | Julius Baer",
+                "anchors": [],
+            },
+            "rendered_html": (
+                '<html><body>'
+                '<jb-article-card '
+                'link="{&quot;href&quot;:&quot;\\/en\\/insights\\/market-insights\\/market-outlook\\/iran-war-dominates-markets-what-now\\/&quot;}" '
+                'teaserHeader="{&quot;headline&quot;:&quot;Iran war dominates markets: What now?&quot;}">'
+                "</jb-article-card>"
+                "</body></html>"
+            ),
+        }
+    }
+    external_boundary_mocks_only.setattr(
+        service, "import_module", lambda _name: _runtime_for_states(states)
+    )
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://www.juliusbaer.com/en/insights/",
+            settings=_settings(tmp_path),
+            route_kind_hint="browser_render",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "browser_render"
+    assert [candidate.url for candidate in response.candidates] == [
+        "https://www.juliusbaer.com/en/insights/market-insights/market-outlook/iran-war-dominates-markets-what-now"
+    ]
+    assert response.candidates[0].title == "Iran war dominates markets: What now?"
     assert response.candidates[0].provenance == "browser_rendered_html_supplement"
 
 

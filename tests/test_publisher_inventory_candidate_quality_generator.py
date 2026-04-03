@@ -287,6 +287,43 @@ def test_qualify_publisher_inventory_candidates_rejects_editorial_blog_post() ->
     assert response.decisions[0].reason == "editorial_article_page"
 
 
+def test_qualify_publisher_inventory_candidates_rejects_editorial_finance_insight_routes() -> None:
+    candidate = _candidate(
+        "https://www.example.com/insights/company-insights/from-boutique-to-benchmark",
+        "From boutique to benchmark",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://www.example.com/insights",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    h1_title="From boutique to benchmark",
+                    has_asset_type_term=True,
+                    has_price_or_purchase=True,
+                )
+            ],
+        ),
+    )
+
+    assert response.approved_items == []
+    assert [item.canonical_url for item in response.rejected_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "editorial_article_page"
+
+
 def test_qualify_publisher_inventory_candidates_rejects_dead_pages() -> None:
     candidate = _candidate(
         "https://example.com/resources/the-ce-scorecard",
@@ -1169,6 +1206,253 @@ def test_qualify_publisher_inventory_candidates_rejects_service_membership_pages
 
     assert response.approved_items == []
     assert response.decisions[0].reason == "service_or_membership_page"
+
+
+def test_qualify_publisher_inventory_candidates_rejects_research_center_hubs() -> None:
+    candidate = _candidate(
+        "https://example.com/research-centers/artificial-intelligence-research-center",
+        "Artificial Intelligence Research Center",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/research",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    final_title="Artificial Intelligence Research Center",
+                    h1_title="Artificial Intelligence Research Center",
+                    has_document_structure=True,
+                    has_print_language=True,
+                )
+            ],
+        ),
+    )
+
+    assert response.approved_items == []
+    assert response.decisions[0].reason == "service_or_membership_page"
+
+
+def test_qualify_publisher_inventory_candidates_rejects_research_center_hubs_even_with_gated_signals() -> None:
+    candidate = _candidate(
+        "https://example.com/research-centers/tech-trends-priorities-research-center",
+        "Tech Trends & Priorities Research Center",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/research",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    final_title="Tech Trends & Priorities Research Center",
+                    h1_title="Tech Trends & Priorities Research Center",
+                    has_download_language=True,
+                    has_gated_form=True,
+                    has_document_structure=True,
+                    has_print_language=True,
+                )
+            ],
+        ),
+    )
+
+    assert response.approved_items == []
+    assert response.decisions[0].reason == "service_or_membership_page"
+
+
+def test_qualify_publisher_inventory_candidates_rejects_capability_pages_even_with_report_words_in_title() -> None:
+    candidate = _candidate(
+        "https://example.com/capabilities/survey-creation",
+        "Survey creation",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/resources",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    final_title="From research objectives to ready-to-launch survey — in a day",
+                    h1_title="From research objectives to ready-to-launch survey — in a day",
+                    has_document_structure=True,
+                    has_print_language=True,
+                )
+            ],
+        ),
+    )
+
+    assert response.approved_items == []
+    assert response.decisions[0].reason == "service_or_membership_page"
+
+
+def test_qualify_publisher_inventory_candidates_rejects_collection_root_hubs() -> None:
+    candidate = _candidate(
+        "https://example.com/reports-and-whitepapers",
+        "Reports and Whitepapers",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/resources",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    final_title="Thought Leadership",
+                    h1_title="Thought Leadership",
+                    has_document_structure=True,
+                    has_print_language=True,
+                )
+            ],
+        ),
+    )
+
+    assert response.approved_items == []
+    assert response.decisions[0].reason == "generic_asset_hub_page"
+
+
+def test_qualify_publisher_inventory_candidates_rejects_trends_hub_roots() -> None:
+    candidate = _candidate(
+        "https://example.com/quarterly-trends-hub",
+        "Quarterly Trends Hub",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/resources",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    final_title="Quarterly Trends Hub",
+                    h1_title="Quarterly Trends Hub",
+                    has_document_structure=True,
+                    has_print_language=True,
+                )
+            ],
+        ),
+    )
+
+    assert response.approved_items == []
+    assert response.decisions[0].reason == "generic_asset_hub_page"
+
+
+def test_qualify_publisher_inventory_candidates_rejects_generic_research_hubs() -> None:
+    candidate = _candidate(
+        "https://example.com/insights/research/index-research",
+        "Example Global Index Research",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/insights/research",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    final_title="Example Global Index Research",
+                    h1_title="Example Global Index Research",
+                    has_document_structure=True,
+                    has_print_language=True,
+                )
+            ],
+        ),
+    )
+
+    assert response.approved_items == []
+    assert response.decisions[0].reason == "service_or_membership_page"
+
+
+def test_qualify_publisher_inventory_candidates_accepts_unreachable_report_documents() -> None:
+    candidate = _candidate(
+        "https://cdn.example.com/annual-report-2025.pdf",
+        "Download Annual Report",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/annual-report",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    fetch_error="403 Client Error",
+                    has_dead_page_marker=True,
+                )
+            ],
+        ),
+    )
+
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "unreachable_document_asset"
 
 
 def test_qualify_publisher_inventory_candidates_rejects_self_service_help_pages() -> None:

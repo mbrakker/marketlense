@@ -921,6 +921,173 @@ def test_screen_publisher_inventory_candidates_prefilters_editorial_report_detai
     assert response.decisions[0].reason == "editorial_report_detail_url_prefilter"
 
 
+def test_screen_publisher_inventory_candidates_keeps_distinct_urls_for_generic_cta_titles() -> None:
+    openai_client = BatchAwareOpenAIClient()
+
+    response = screen_publisher_inventory_candidates(
+        PublisherInventoryCandidateScreeningRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/resources",
+            candidates=[
+                PublisherInventoryCandidateScreeningItem(
+                    schema_version="1.0",
+                    canonical_url="https://example.com/knowledge_hub/global-advertising-report-2026",
+                    title="Read more",
+                    discovered_on_page_number=1,
+                    source_page_url="https://example.com/resources",
+                ),
+                PublisherInventoryCandidateScreeningItem(
+                    schema_version="1.0",
+                    canonical_url="https://example.com/knowledge_hub/guidelines-for-incremental-measurement",
+                    title="Read more",
+                    discovered_on_page_number=1,
+                    source_page_url="https://example.com/resources",
+                ),
+            ],
+            settings=_settings(),
+        ),
+        _ctx(),
+        openai_client=openai_client,
+        prompt_client=RecordingPromptClient(),
+    )
+
+    assert len(openai_client.requests) == 0
+    assert [item.canonical_url for item in response.approved_items] == [
+        "https://example.com/knowledge_hub/global-advertising-report-2026",
+        "https://example.com/knowledge_hub/guidelines-for-incremental-measurement",
+    ]
+    assert all(decision.accepted for decision in response.decisions)
+
+
+def test_screen_publisher_inventory_candidates_keeps_distinct_generic_annual_report_downloads() -> None:
+    openai_client = BatchAwareOpenAIClient()
+
+    response = screen_publisher_inventory_candidates(
+        PublisherInventoryCandidateScreeningRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/annual-report",
+            candidates=[
+                PublisherInventoryCandidateScreeningItem(
+                    schema_version="1.0",
+                    canonical_url="https://cdn.example.com/annual_report_2025_en.pdf",
+                    title="Download Annual Report",
+                    discovered_on_page_number=1,
+                    source_page_url="https://example.com/annual-report",
+                ),
+                PublisherInventoryCandidateScreeningItem(
+                    schema_version="1.0",
+                    canonical_url="https://cdn.example.com/annual_report_2024_en.pdf",
+                    title="Download Annual Report",
+                    discovered_on_page_number=1,
+                    source_page_url="https://example.com/annual-report",
+                ),
+            ],
+            settings=_settings(),
+        ),
+        _ctx(),
+        openai_client=openai_client,
+        prompt_client=RecordingPromptClient(),
+    )
+
+    assert len(openai_client.requests) == 0
+    assert [item.canonical_url for item in response.approved_items] == [
+        "https://cdn.example.com/annual_report_2025_en.pdf",
+        "https://cdn.example.com/annual_report_2024_en.pdf",
+    ]
+    assert all(decision.accepted for decision in response.decisions)
+
+
+def test_screen_publisher_inventory_candidates_accepts_query_string_pdf_when_source_page_is_report_like() -> None:
+    openai_client = BatchAwareOpenAIClient()
+
+    response = screen_publisher_inventory_candidates(
+        PublisherInventoryCandidateScreeningRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/annual-report",
+            candidates=[
+                PublisherInventoryCandidateScreeningItem(
+                    schema_version="1.0",
+                    canonical_url="https://cdn.example.com/2025-report.pdf?la=en",
+                    title="Download PDF",
+                    discovered_on_page_number=1,
+                    source_page_url="https://example.com/annual-report",
+                )
+            ],
+            settings=_settings(),
+        ),
+        _ctx(),
+        openai_client=openai_client,
+        prompt_client=RecordingPromptClient(),
+    )
+
+    assert len(openai_client.requests) == 0
+    assert [item.canonical_url for item in response.approved_items] == [
+        "https://cdn.example.com/2025-report.pdf?la=en"
+    ]
+    assert response.decisions[0].accepted is True
+
+
+def test_screen_publisher_inventory_candidates_rejects_generic_cta_insights_articles_without_specific_report_slug() -> None:
+    openai_client = BatchAwareOpenAIClient()
+
+    response = screen_publisher_inventory_candidates(
+        PublisherInventoryCandidateScreeningRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/insights",
+            candidates=[
+                PublisherInventoryCandidateScreeningItem(
+                    schema_version="1.0",
+                    canonical_url="https://example.com/insights/the-ultimate-guide-to-social-media",
+                    title="Read article",
+                    discovered_on_page_number=1,
+                    source_page_url="https://example.com/insights",
+                )
+            ],
+            settings=_settings(),
+        ),
+        _ctx(),
+        openai_client=openai_client,
+        prompt_client=RecordingPromptClient(),
+    )
+
+    assert len(openai_client.requests) == 0
+    assert response.approved_items == []
+    assert response.decisions[0].reason == "low_report_probability_prefilter"
+
+
+def test_screen_publisher_inventory_candidates_rejects_pdf_without_report_signals() -> None:
+    openai_client = BatchAwareOpenAIClient()
+
+    response = screen_publisher_inventory_candidates(
+        PublisherInventoryCandidateScreeningRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/insights",
+            candidates=[
+                PublisherInventoryCandidateScreeningItem(
+                    schema_version="1.0",
+                    canonical_url="https://cdn.example.com/Example-Group-Reprint.pdf",
+                    title="(opens in a new tab)",
+                    discovered_on_page_number=1,
+                    source_page_url="https://example.com/insights",
+                )
+            ],
+            settings=_settings(),
+        ),
+        _ctx(),
+        openai_client=openai_client,
+        prompt_client=RecordingPromptClient(),
+    )
+
+    assert len(openai_client.requests) == 0
+    assert response.approved_items == []
+    assert response.decisions[0].reason == "low_report_probability_prefilter"
+
+
 def test_screen_publisher_inventory_candidates_truncates_long_titles_in_prompt() -> None:
     long_title = "2026 Search Analysis " + ("A" * 500)
     openai_client = RecordingOpenAIClient(

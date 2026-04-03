@@ -20,6 +20,7 @@ from src.contracts.publisher_inventory import (
 from src.contracts.run_context import RunContext
 from src.services._publisher_inventory_discovery_activity import (
     _anchor_fingerprint,
+    _extract_component_link_anchors,
     _extract_candidates_from_html,
     _normalize_absolute_url,
     _normalize_text,
@@ -407,14 +408,20 @@ def discover_inventory_via_http(
                 retryable=True,
                 context={"page_url": final_page_url},
             ) from exc
+        anchors = list(parser.anchors)
+        if not anchors:
+            anchors = _extract_component_link_anchors(
+                html_text=html,
+                page_url=final_page_url,
+            )
         next_page_url = _resolve_next_page_url(
             current_page_url=final_page_url,
             page_number=page_number,
-            anchors=parser.anchors,
+            anchors=anchors,
             rel_next_hrefs=parser.next_link_hrefs,
         )
         page_candidates = _extract_candidates_from_html(
-            anchors=parser.anchors,
+            anchors=anchors,
             page_url=final_page_url,
             page_number=page_number,
             next_page_url=next_page_url,

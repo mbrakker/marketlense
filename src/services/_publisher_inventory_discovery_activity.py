@@ -7,6 +7,8 @@ service boundary can focus on acquisition and external runtime coordination.
 
 from __future__ import annotations
 
+import html
+import re
 from typing import Any
 from urllib.parse import parse_qs, urljoin, urlsplit
 
@@ -100,6 +102,21 @@ _REPORT_FOCUSED_TAB_MARKERS = (
     "benchmark",
     "insight",
     "insights",
+)
+_COMPONENT_LINK_WITH_HEADER_PATTERNS = (
+    re.compile(
+        r'link="(?P<link>[^"]*href&quot;:&quot;[^"]+)"[^>]*?teaserHeader="(?P<header>[^"]*headline&quot;:&quot;[^"]+)"',
+        re.IGNORECASE | re.DOTALL,
+    ),
+    re.compile(
+        r'teaserHeader="(?P<header>[^"]*headline&quot;:&quot;[^"]+)"[^>]*?link="(?P<link>[^"]*href&quot;:&quot;[^"]+)"',
+        re.IGNORECASE | re.DOTALL,
+    ),
+)
+_EMBEDDED_HREF_RE = re.compile(r'"href"\s*:\s*"(?P<href>[^"]+)"', re.IGNORECASE)
+_EMBEDDED_HEADLINE_RE = re.compile(
+    r'"headline"\s*:\s*"(?P<headline>[^"]+)"',
+    re.IGNORECASE,
 )
 
 
@@ -211,6 +228,44 @@ def _extract_candidates_from_html(
     return candidates
 
 
+def _extract_component_link_anchors(
+    *,
+    html_text: str,
+    page_url: str,
+) -> list[dict[str, str]]:
+    anchors: list[dict[str, str]] = []
+    seen_urls: set[str] = set()
+    normalized_page_url = _normalize_absolute_url(page_url) or page_url
+    for pattern in _COMPONENT_LINK_WITH_HEADER_PATTERNS:
+        for match in pattern.finditer(str(html_text or "")):
+            link_payload = html.unescape(str(match.group("link") or "")).replace("\\/", "/")
+            header_payload = html.unescape(str(match.group("header") or "")).replace("\\/", "/")
+            href_match = _EMBEDDED_HREF_RE.search(link_payload)
+            if href_match is None:
+                continue
+            absolute_url = _normalize_absolute_url(
+                urljoin(normalized_page_url, str(href_match.group("href") or ""))
+            )
+            if not absolute_url or absolute_url in seen_urls:
+                continue
+            headline_match = _EMBEDDED_HEADLINE_RE.search(header_payload)
+            title = (
+                _normalize_text(str(headline_match.group("headline") or ""))
+                if headline_match is not None
+                else _fallback_title_from_url(absolute_url)
+            )
+            seen_urls.add(absolute_url)
+            anchors.append(
+                {
+                    "href": absolute_url,
+                    "rel": "",
+                    "text": title,
+                    "context_text": "",
+                }
+            )
+    return anchors
+
+
 def _should_include_page_url_as_candidate(
     *,
     page_url: str,
@@ -220,7 +275,9 @@ def _should_include_page_url_as_candidate(
 ) -> bool:
     direct_page_keywords = (*_STRONG_REPORT_KEYWORDS, "trend", "trends", "barometer")
     normalized_url = _normalize_absolute_url(page_url)
-    if not normalized_url or archive_surface:
+    if not normalized_url:
+        return False
+    if archive_surface and not _looks_like_direct_report_detail_page(normalized_url):
         return False
     if _is_root_or_locale_home(normalized_url):
         return False
@@ -252,6 +309,31 @@ def _should_include_page_url_as_candidate(
         if part
     )
     if any(keyword in combined_text for keyword in direct_page_keywords):
+        return True
+    return False
+
+
+def _looks_like_direct_report_detail_page(url: str) -> bool:
+    normalized_url = _normalize_absolute_url(url)
+    if not normalized_url:
+        return False
+    parsed = urlsplit(normalized_url)
+    path = parsed.path.casefold()
+    segments = [segment for segment in path.split("/") if segment]
+    if not segments:
+        return False
+    leaf = segments[-1].rsplit(".", 1)[0]
+    if leaf in {"report", "reports", "library"} or leaf.isdigit():
+        return False
+    if "/report-library/" in path and "report" in leaf:
+        return True
+    if "/report_pages/" in path:
+        return True
+    leaf_text = leaf.replace("-", " ").replace("_", " ")
+    leaf_tokens = [token for token in leaf_text.split() if token]
+    if len(leaf_tokens) < 3:
+        return False
+    if any(keyword in leaf_text for keyword in _STRONG_REPORT_KEYWORDS):
         return True
     return False
 
@@ -555,6 +637,7 @@ def _build_browser_route_summary(
     pages: list[Any],
     metrics: Any,
     used_tabs: bool,
+    bounded_by_pagination_limit: bool = False,
 ) -> str:
     host = str(urlsplit(normalized_url).hostname or "").strip().lower()
     steps = [f"Rendered {host} in browser and extracted {len(pages)} inventory state(s)."]
@@ -574,6 +657,8 @@ def _build_browser_route_summary(
         steps.append(f"Clicked button pagination {metrics.button_pagination_clicks} time(s).")
     if metrics.next_page_visits:
         steps.append(f"Visited {metrics.next_page_visits} additional pagination URL(s).")
+    if bounded_by_pagination_limit:
+        steps.append("Stopped at the configured pagination limit after collecting a bounded candidate set.")
     return " ".join(steps)
 
 
