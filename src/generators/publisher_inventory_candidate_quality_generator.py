@@ -67,7 +67,6 @@ _LEGAL_URL_MARKERS = (
     "/gdpr",
 )
 _LEGAL_TITLE_MARKERS = (
-    "transparency report",
     "privacy policy",
     "cookie policy",
     "terms of service",
@@ -193,6 +192,21 @@ _REPORT_STYLE_TITLE_MARKERS = (
     "ebook",
     "infographic",
     "snapshot",
+)
+_SPECIFIC_REPORT_STYLE_TITLE_MARKERS = (
+    "annual report",
+    "benchmark",
+    "ebook",
+    "forecast",
+    "index",
+    "outlook",
+    "playbook",
+    "snapshot",
+    "study",
+    "survey",
+    "transparency report",
+    "whitepaper",
+    "white paper",
 )
 _REPORT_URL_PATH_MARKERS = (
     "/report/",
@@ -406,7 +420,11 @@ def _qualify_observation(
     )
     editorial_context_signal = editorial_surface_signal or observation.has_editorial_markers
     report_archive_path_signal = _has_report_style_url_path(final_url_lower)
+    report_slug_signal = _has_report_style_url_slug(final_url_lower)
     report_title_signal = _contains_report_style_title_marker(resolved_title_lower)
+    specific_report_title_signal = _contains_specific_report_style_title_marker(
+        resolved_title_lower
+    )
     source_title_report_signal = _contains_report_style_title_marker(source_title_lower)
     source_report_signal = (
         source_title_report_signal
@@ -467,6 +485,7 @@ def _qualify_observation(
     if (
         not resolved_title_lower
         and report_archive_path_signal
+        and not report_slug_signal
         and not strong_distribution_signal
         and not structured_document_signal
     ):
@@ -483,7 +502,14 @@ def _qualify_observation(
         editorial_surface_signal
         and strong_distribution_signal
         and structured_document_signal
-        and (report_title_signal or source_report_signal)
+        and (
+            report_archive_path_signal
+            or specific_report_title_signal
+            or (
+                observation.is_pdf
+                and (report_title_signal or source_report_signal)
+            )
+        )
         and not _looks_like_dated_editorial_url(final_url_lower)
     ):
         if observation.has_gated_form:
@@ -506,7 +532,7 @@ def _qualify_observation(
     ):
         return False, "editorial_article_page"
     if (
-        (report_archive_path_signal or report_title_signal)
+        (report_archive_path_signal or report_slug_signal or report_title_signal)
         and (structured_document_signal or observation.has_asset_type_term)
         and not observation.has_dead_page_marker
     ):
@@ -531,7 +557,12 @@ def _qualify_observation(
         return True, "printable_report_page"
     if (
         structured_document_signal
-        and (observation.has_asset_type_term or report_title_signal or report_archive_path_signal)
+        and (
+            observation.has_asset_type_term
+            or report_title_signal
+            or report_archive_path_signal
+            or report_slug_signal
+        )
         and not editorial_surface_signal
     ):
         return True, "report_like_document_page"
@@ -665,6 +696,15 @@ def _has_report_style_url_slug(url: str) -> bool:
         return False
     slug = path.rsplit("/", 1)[-1].rsplit(".", 1)[0].replace("-", " ")
     return _contains_report_style_title_marker(slug)
+
+
+def _contains_specific_report_style_title_marker(title: str) -> bool:
+    normalized_title = str(title or "").strip().casefold()
+    if not normalized_title:
+        return False
+    return any(
+        marker in normalized_title for marker in _SPECIFIC_REPORT_STYLE_TITLE_MARKERS
+    )
 
 
 def _looks_like_report_section_url(url: str) -> bool:

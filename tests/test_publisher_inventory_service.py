@@ -656,6 +656,26 @@ def test_select_anchor_title_prefers_heading_over_noisy_card_text() -> None:
     assert selected == "Amazon Prime Day Trends Report 2024"
 
 
+def test_select_anchor_title_uses_card_context_for_generic_cta_links() -> None:
+    selected = service._select_anchor_title(
+        {
+            "text": "Learn more",
+            "heading_text": "",
+            "aria_label": "",
+            "title_attr": "",
+            "img_alt": "",
+            "context_text": (
+                "Retail Data & Trends, Seasonal Retail Advice "
+                "Black Friday Benchmarks 2025 "
+                "Discover Bluecore's annual Black Friday benchmarks report. "
+                "Learn more"
+            ),
+        }
+    )
+
+    assert selected.startswith("Retail Data & Trends, Seasonal Retail Advice Black Friday Benchmarks 2025")
+
+
 def test_extract_candidates_from_html_uses_heading_for_cta_only_links() -> None:
     candidates = service._extract_candidates_from_html(
         anchors=[
@@ -694,6 +714,68 @@ def test_extract_candidates_from_html_resolves_relative_links_to_origin_host_whe
                 "img_alt": "",
             }
         ],
+        page_url="https://wordpress.bluecore.app/resources",
+        page_number=1,
+        next_page_url=None,
+        origin_url="https://www.bluecore.com/resources/",
+        page_title="Resources - Bluecore",
+        archive_surface=True,
+    )
+
+    assert [candidate.url for candidate in candidates] == [
+        "https://www.bluecore.com/black-friday-benchmarks-2025"
+    ]
+
+
+def test_extract_candidates_from_html_uses_card_context_for_generic_cta_links() -> None:
+    candidates = service._extract_candidates_from_html(
+        anchors=[
+            {
+                "href": "https://www.bluecore.com/black-friday-benchmarks-2025/",
+                "text": "Learn more",
+                "heading_text": "",
+                "aria_label": "",
+                "title_attr": "",
+                "img_alt": "",
+                "context_text": (
+                    "Retail Data & Trends, Seasonal Retail Advice "
+                    "Black Friday Benchmarks 2025 "
+                    "Discover Bluecore's annual Black Friday benchmarks report. "
+                    "Learn more"
+                ),
+                "rel": "",
+            }
+        ],
+        page_url="https://wordpress.bluecore.app/resources",
+        page_number=1,
+        next_page_url=None,
+        origin_url="https://www.bluecore.com/resources/",
+        page_title="Resources - Bluecore",
+        archive_surface=True,
+    )
+
+    assert [candidate.url for candidate in candidates] == [
+        "https://www.bluecore.com/black-friday-benchmarks-2025"
+    ]
+
+
+def test_inventory_html_parser_preserves_container_text_for_generic_cta_links() -> None:
+    parser = service._InventoryHtmlParser()
+    parser.feed(
+        """
+        <html><body>
+          <div class="resource-card">
+            <div>Retail Data &amp; Trends</div>
+            <div>Black Friday Benchmarks 2025</div>
+            <div>Discover Bluecore's annual Black Friday benchmarks report.</div>
+            <a href="https://www.bluecore.com/black-friday-benchmarks-2025/">Learn more</a>
+          </div>
+        </body></html>
+        """
+    )
+
+    candidates = service._extract_candidates_from_html(
+        anchors=parser.anchors,
         page_url="https://wordpress.bluecore.app/resources",
         page_number=1,
         next_page_url=None,
@@ -2638,6 +2720,55 @@ def test_discover_publisher_inventory_browser_timeout_is_typed_error(
         code="publisher_inventory_browser_timeout",
         retryable=True,
     )
+
+
+def test_discover_publisher_inventory_browser_timeout_falls_back_to_http(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    html = """
+    <html><body>
+      <a href="/reports/report-one">Report One 2026</a>
+    </body></html>
+    """
+
+    external_boundary_mocks_only.setattr(
+        service.requests,
+        "get",
+        lambda url, timeout, headers: _FakeResponse(
+            url="https://example.com/insights",
+            text=html,
+        ),
+    )
+
+    def _raise_timeout(_awaitable):
+        close = getattr(_awaitable, "close", None)
+        if callable(close):
+            close()
+        raise TimeoutError("timed out")
+
+    external_boundary_mocks_only.setattr(service.asyncio, "run", _raise_timeout)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://example.com/insights",
+            settings=replace(
+                _settings(tmp_path),
+                force_browser=True,
+                timeout_seconds=1.0,
+            ),
+            route_kind_hint=None,
+            route_hint=None,
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "http_parse"
+    assert [candidate.url for candidate in response.candidates] == [
+        "https://example.com/reports/report-one"
+    ]
 
 
 def test_inspect_publisher_inventory_landing_pages_detects_gated_report_signals(

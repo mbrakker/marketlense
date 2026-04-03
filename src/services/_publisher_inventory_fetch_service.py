@@ -163,15 +163,23 @@ class _InventoryHtmlParser(HTMLParser):
         self.next_link_hrefs: list[str] = []
         self._current_anchor: dict[str, str] | None = None
         self._anchor_text: list[str] = []
+        self._container_stack: list[dict[str, object]] = []
+        self._skip_depth = 0
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        lowered_tag = tag.lower()
         attr_map = {key.lower(): str(value or "") for key, value in attrs}
-        if tag.lower() == "link":
+        if lowered_tag in {"script", "style", "noscript"}:
+            self._skip_depth += 1
+            return
+        if lowered_tag in {"article", "section", "li", "div"}:
+            self._container_stack.append({"text_parts": []})
+        if lowered_tag == "link":
             rel = attr_map.get("rel", "").lower()
             href = attr_map.get("href", "").strip()
             if href and "next" in rel:
                 self.next_link_hrefs.append(href)
-        if tag.lower() != "a":
+        if lowered_tag != "a":
             return
         href = attr_map.get("href", "").strip()
         if not href:
@@ -185,27 +193,47 @@ class _InventoryHtmlParser(HTMLParser):
         self._anchor_text = []
 
     def handle_data(self, data: str) -> None:
+        if self._skip_depth > 0:
+            return
+        normalized = _normalize_text(data)
+        if self._container_stack and normalized:
+            text_parts = self._container_stack[-1]["text_parts"]
+            assert isinstance(text_parts, list)
+            if sum(len(part) for part in text_parts) < 400:
+                text_parts.append(normalized)
         if self._current_anchor is not None:
             self._anchor_text.append(data)
 
     def handle_endtag(self, tag: str) -> None:
-        if tag.lower() != "a" or self._current_anchor is None:
+        lowered_tag = tag.lower()
+        if lowered_tag in {"script", "style", "noscript"}:
+            self._skip_depth = max(0, self._skip_depth - 1)
             return
-        text = _normalize_text(" ".join(self._anchor_text))
-        title = (
-            text
-            or _normalize_text(self._current_anchor.get("aria_label", ""))
-            or _normalize_text(self._current_anchor.get("title_attr", ""))
-        )
-        self.anchors.append(
-            {
-                "href": self._current_anchor["href"],
-                "rel": self._current_anchor.get("rel", ""),
-                "text": title,
-            }
-        )
-        self._current_anchor = None
-        self._anchor_text = []
+        if lowered_tag == "a" and self._current_anchor is not None:
+            text = _normalize_text(" ".join(self._anchor_text))
+            context_text = ""
+            if self._container_stack:
+                text_parts = self._container_stack[-1]["text_parts"]
+                assert isinstance(text_parts, list)
+                context_text = _normalize_text(" ".join(text_parts))
+            title = (
+                text
+                or _normalize_text(self._current_anchor.get("aria_label", ""))
+                or _normalize_text(self._current_anchor.get("title_attr", ""))
+            )
+            self.anchors.append(
+                {
+                    "href": self._current_anchor["href"],
+                    "rel": self._current_anchor.get("rel", ""),
+                    "text": title,
+                    "context_text": context_text,
+                }
+            )
+            self._current_anchor = None
+            self._anchor_text = []
+            return
+        if lowered_tag in {"article", "section", "li", "div"} and self._container_stack:
+            self._container_stack.pop()
 
 
 class _LandingPageInspectionHtmlParser(HTMLParser):

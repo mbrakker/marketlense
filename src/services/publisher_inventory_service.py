@@ -1601,6 +1601,7 @@ def _browser_inventory_state_script() -> str:
                 title_attr: normalize(anchor.getAttribute('title')),
                 img_alt: normalize(image ? image.getAttribute('alt') : ''),
                 heading_text: normalize(heading ? heading.textContent : ''),
+                context_text: normalize(card ? card.textContent : ''),
                 visible: isVisible(anchor),
             };
         }).filter((item) => item.href && item.visible);

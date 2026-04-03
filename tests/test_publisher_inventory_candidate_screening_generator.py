@@ -335,21 +335,21 @@ def test_screen_publisher_inventory_candidates_collapses_duplicate_titles_after_
         PublisherInventoryCandidateScreeningItem(
             schema_version="1.0",
             canonical_url="https://example.com/report-one?promo=hero",
-            title="2026 Global Retail Outlook",
+            title="2026 Global Retail Analysis",
             discovered_on_page_number=1,
             source_page_url="https://example.com/insights",
         ),
         PublisherInventoryCandidateScreeningItem(
             schema_version="1.0",
             canonical_url="https://example.com/report-one",
-            title="2026 Global Retail Outlook",
+            title="2026 Global Retail Analysis",
             discovered_on_page_number=2,
             source_page_url="https://example.com/insights?page=2",
         ),
         PublisherInventoryCandidateScreeningItem(
             schema_version="1.0",
             canonical_url="https://example.com/report-two",
-            title="Substantive Market Outlook 2026",
+            title="Substantive Market Analysis 2026",
             discovered_on_page_number=3,
             source_page_url="https://example.com/insights?page=3",
         ),
@@ -659,13 +659,76 @@ def test_screen_publisher_inventory_candidates_prefilters_support_and_webinar_it
     }
 
 
+def test_screen_publisher_inventory_candidates_prefilters_strong_report_detail_urls_without_llm() -> None:
+    openai_client = BatchAwareOpenAIClient()
+
+    response = screen_publisher_inventory_candidates(
+        PublisherInventoryCandidateScreeningRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/resources",
+            candidates=[
+                PublisherInventoryCandidateScreeningItem(
+                    schema_version="1.0",
+                    canonical_url="https://example.com/resources/reports/2026-b2b-commerce-study",
+                    title="Download",
+                    discovered_on_page_number=1,
+                    source_page_url="https://example.com/resources",
+                )
+            ],
+            settings=_settings(),
+        ),
+        _ctx(),
+        openai_client=openai_client,
+        prompt_client=RecordingPromptClient(),
+    )
+
+    assert len(openai_client.requests) == 0
+    assert [item.canonical_url for item in response.approved_items] == [
+        "https://example.com/resources/reports/2026-b2b-commerce-study"
+    ]
+    assert response.decisions[0].reason == "strong_report_detail_url_prefilter"
+
+
+def test_screen_publisher_inventory_candidates_rejects_report_collection_pages_with_listing_signals() -> None:
+    openai_client = BatchAwareOpenAIClient()
+
+    response = screen_publisher_inventory_candidates(
+        PublisherInventoryCandidateScreeningRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/resources",
+            candidates=[
+                PublisherInventoryCandidateScreeningItem(
+                    schema_version="1.0",
+                    canonical_url="https://example.com/resources?resource_type=whitepaper",
+                    title="White Papers",
+                    discovered_on_page_number=1,
+                    source_page_url="https://example.com/resources",
+                )
+            ],
+            settings=_settings(),
+        ),
+        _ctx(),
+        openai_client=openai_client,
+        prompt_client=RecordingPromptClient(),
+    )
+
+    assert len(openai_client.requests) == 0
+    assert response.approved_items == []
+    assert [item.canonical_url for item in response.rejected_items] == [
+        "https://example.com/resources?resource_type=whitepaper"
+    ]
+    assert response.decisions[0].reason == "low_report_probability_prefilter"
+
+
 def test_screen_publisher_inventory_candidates_truncates_long_titles_in_prompt() -> None:
-    long_title = "2026 Search Benchmark Report " + ("A" * 500)
+    long_title = "2026 Search Analysis " + ("A" * 500)
     openai_client = RecordingOpenAIClient(
         payload={
             "decisions": [
                 {
-                    "canonical_url": "https://example.com/reports/long-report",
+                    "canonical_url": "https://example.com/library/long-report",
                     "accepted": True,
                     "reason": "Looks report-like.",
                 }
@@ -681,7 +744,7 @@ def test_screen_publisher_inventory_candidates_truncates_long_titles_in_prompt()
             candidates=[
                 PublisherInventoryCandidateScreeningItem(
                     schema_version="1.0",
-                    canonical_url="https://example.com/reports/long-report",
+                    canonical_url="https://example.com/library/long-report",
                     title=long_title,
                     discovered_on_page_number=1,
                     source_page_url="https://example.com/insights",
@@ -696,7 +759,7 @@ def test_screen_publisher_inventory_candidates_truncates_long_titles_in_prompt()
 
     rendered_user_prompt = openai_client.requests[0][0].user_prompt
     assert long_title not in rendered_user_prompt
-    assert "2026 Search Benchmark Report" in rendered_user_prompt
+    assert "2026 Search Analysis" in rendered_user_prompt
     assert "\\u2026" in rendered_user_prompt
 
 

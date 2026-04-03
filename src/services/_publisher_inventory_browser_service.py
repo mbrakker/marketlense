@@ -69,19 +69,59 @@ def discover_inventory_via_browser(
             )
         )
     except Exception as exc:
+        browser_error = _coerce_browser_error(
+            exc=exc,
+            normalized_url=normalized_url,
+        )
         logger.info(
             log_event(
                 ctx,
                 role="service",
                 event="publisher_inventory_browser_failed",
                 module=logger.name,
-                fields={"normalized_url": normalized_url, "error": str(exc)},
+                fields={
+                    "normalized_url": normalized_url,
+                    "error": str(exc),
+                    "code": browser_error.code,
+                },
             )
         )
-        raise _coerce_browser_error(
-            exc=exc,
-            normalized_url=normalized_url,
-        ) from exc
+        if browser_error.retryable:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="publisher_inventory_browser_http_recovery_start",
+                    module=logger.name,
+                    fields={
+                        "normalized_url": normalized_url,
+                        "browser_error_code": browser_error.code,
+                    },
+                )
+            )
+            try:
+                return dependencies.fallback_http_discovery(
+                    request,
+                    ctx,
+                    normalized_url,
+                    False,
+                )
+            except AppError as recovery_exc:
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="service",
+                        event="publisher_inventory_browser_http_recovery_failed",
+                        module=logger.name,
+                        fields={
+                            "normalized_url": normalized_url,
+                            "code": recovery_exc.code,
+                            "message": recovery_exc.message,
+                            "browser_error_code": browser_error.code,
+                        },
+                    )
+                )
+        raise browser_error from exc
     finally:
         dependencies.kill_browser(browser, ctx)
 

@@ -1029,7 +1029,7 @@ def test_qualify_publisher_inventory_candidates_rejects_dated_editorial_pages_ev
     assert response.decisions[0].reason == "editorial_article_page"
 
 
-def test_qualify_publisher_inventory_candidates_accepts_gated_report_on_editorial_path_when_report_signals_are_strong() -> None:
+def test_qualify_publisher_inventory_candidates_rejects_gated_editorial_blog_post_with_generic_report_title() -> None:
     candidate = _candidate(
         "https://www.cardlytics.com/blog/loyalty-movement-report-apparel",
         "Loyalty Movement Report: Apparel",
@@ -1063,10 +1063,120 @@ def test_qualify_publisher_inventory_candidates_accepts_gated_report_on_editoria
         ),
     )
 
+    assert response.approved_items == []
+    assert response.decisions[0].reason == "editorial_article_page"
+
+
+def test_qualify_publisher_inventory_candidates_accepts_editorial_path_when_title_has_specific_report_signal() -> None:
+    candidate = _candidate(
+        "https://www.example.com/blog/global-consumer-outlook-2026",
+        "Global Consumer Outlook 2026",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://www.example.com/research",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    h1_title="Global Consumer Outlook 2026",
+                    has_asset_type_term=True,
+                    has_download_language=True,
+                    has_gated_form=True,
+                    has_document_structure=True,
+                    has_editorial_url_pattern=True,
+                    has_editorial_markers=True,
+                )
+            ],
+        ),
+    )
+
     assert [item.canonical_url for item in response.approved_items] == [
         candidate.canonical_url
     ]
     assert response.decisions[0].reason == "gated_report_asset"
+
+
+def test_qualify_publisher_inventory_candidates_accepts_transparency_reports() -> None:
+    candidate = _candidate(
+        "https://example.com/reports/tax-transparency-report-2025",
+        "Tax Transparency Report 2025",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/reports",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    h1_title="Tax Transparency Report 2025",
+                    has_asset_type_term=True,
+                    has_download_language=True,
+                    has_gated_form=True,
+                )
+            ],
+        ),
+    )
+
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "printable_report_page"
+
+
+def test_qualify_publisher_inventory_candidates_accepts_slug_signaled_ebook_page() -> None:
+    candidate = _candidate(
+        "https://go.example.com/en/analysis-paralysis-ebook",
+        "Breaking Free From Analysis Paralysis",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/ebooks-reports",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    h1_title="Breaking Free From Analysis Paralysis",
+                    has_asset_type_term=True,
+                )
+            ],
+        ),
+    )
+
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "printable_report_page"
 
 
 def test_qualify_publisher_inventory_candidates_rejects_thought_leadership_article_with_generic_section_heading() -> None:

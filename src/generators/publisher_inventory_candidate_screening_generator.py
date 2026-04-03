@@ -55,6 +55,21 @@ _FALLBACK_REPORT_TITLE_MARKERS = (
     "infographic",
     "note de conjoncture",
 )
+_FALLBACK_SPECIFIC_REPORT_TITLE_MARKERS = (
+    "annual report",
+    "benchmark",
+    "ebook",
+    "forecast",
+    "index",
+    "outlook",
+    "playbook",
+    "scorecard",
+    "study",
+    "survey",
+    "transparency report",
+    "white paper",
+    "whitepaper",
+)
 _FALLBACK_NON_REPORT_TITLE_MARKERS = (
     "cookie notice",
     "cookie policy",
@@ -82,17 +97,26 @@ _FALLBACK_NON_REPORT_TITLE_MARKERS = (
     "egalite femmes hommes",
     "égalité femmes-hommes",
     "masterclass",
+    "template",
+    "templates",
     "training",
     "video",
     "webinar",
 )
 _FALLBACK_NON_REPORT_URL_MARKERS = (
+    "/article/",
+    "/articles/",
     "/academy/",
+    "/blog/",
     "/case-studies/",
     "/careers",
     "/contact",
     "/login",
+    "/news/",
+    "/newsroom/",
     "/panel",
+    "/press-release",
+    "/press-releases/",
     "/products",
     "/privacy",
     "/cookie",
@@ -105,6 +129,58 @@ _FALLBACK_NON_REPORT_URL_MARKERS = (
     "academy.",
     "support.",
     "/hc/en-us/articles/",
+)
+_FALLBACK_REPORT_URL_MARKERS = (
+    "/benchmark",
+    "/ebook",
+    "/ebooks/",
+    "/forecast",
+    "/outlook",
+    "/playbook",
+    "/report",
+    "/reports/",
+    "/reports_posts/",
+    "/research/",
+    "/study",
+    "/studies/",
+    "/survey",
+    "/whitepaper",
+    "/whitepapers/",
+)
+_FALLBACK_REPORT_COLLECTION_SEGMENTS = {
+    "all",
+    "asset",
+    "assets",
+    "benchmark",
+    "benchmarks",
+    "ebook",
+    "ebooks",
+    "guide",
+    "guides",
+    "insights",
+    "library",
+    "playbook",
+    "playbooks",
+    "report",
+    "reports",
+    "research",
+    "resource",
+    "resources",
+    "studies",
+    "study",
+    "survey",
+    "surveys",
+    "whitepaper",
+    "whitepapers",
+}
+_FALLBACK_LISTING_QUERY_KEYS = (
+    "category=",
+    "page=",
+    "pagenum=",
+    "resource_type=",
+    "tag=",
+    "topic=",
+    "type=",
 )
 
 _PUBLISHER_SUCCESS_ANALYST_MARKERS = (
@@ -145,9 +221,11 @@ def screen_publisher_inventory_candidates(
     prompt_client=prompt_service,
 ) -> PublisherInventoryCandidateScreeningResponse:
     candidates = list(request.candidates)
-    candidates_for_llm, pre_rejected_decisions = _partition_candidates_for_llm_screening(
+    candidates_for_llm, prefilter_decisions = _partition_candidates_for_llm_screening(
         candidates
     )
+    pre_accepted_count = sum(1 for decision in prefilter_decisions if decision.accepted)
+    pre_rejected_count = len(prefilter_decisions) - pre_accepted_count
     logger.info(
         log_event(
             ctx,
@@ -159,7 +237,8 @@ def screen_publisher_inventory_candidates(
                 "insights_url": request.insights_url,
                 "candidate_count": len(candidates),
                 "llm_candidate_count": len(candidates_for_llm),
-                "pre_rejected_count": len(pre_rejected_decisions),
+                "pre_accepted_count": pre_accepted_count,
+                "pre_rejected_count": pre_rejected_count,
                 "candidate_screening_enabled": request.settings.candidate_screening_enabled,
                 "prompt_namespace": request.settings.candidate_screening_prompt_namespace,
             },
@@ -210,7 +289,7 @@ def screen_publisher_inventory_candidates(
         response = _build_screening_response(
             candidates=candidates,
             decision_map={
-                decision.canonical_url: decision for decision in pre_rejected_decisions
+                decision.canonical_url: decision for decision in prefilter_decisions
             },
             model="screening_prefilter_only",
             request_id=None,
@@ -225,14 +304,23 @@ def screen_publisher_inventory_candidates(
                 fields={
                     "publisher_name": request.publisher_name,
                     "candidate_count": len(candidates),
-                    "approved_count": 0,
+                    "approved_count": len(response.approved_items),
                     "rejected_count": len(response.rejected_items),
                     "model": response.model,
                     "screening_prefilter_only": True,
                 },
             )
         )
-        return response
+        response = _apply_publisher_success_hard_rejections(
+            response=response,
+            publisher_name=request.publisher_name,
+            ctx=ctx,
+        )
+        return _deduplicate_screening_response(
+            response=response,
+            publisher_name=request.publisher_name,
+            ctx=ctx,
+        )
 
     openai_client = openai_client or llm_service.build_openai_client(
         base_client=openai_service,
@@ -281,7 +369,7 @@ def screen_publisher_inventory_candidates(
     screening_response = _merge_screening_responses_with_prefilter(
         candidates=candidates,
         llm_response=screening_response,
-        pre_rejected_decisions=pre_rejected_decisions,
+        prefilter_decisions=prefilter_decisions,
     )
     screening_response = _apply_publisher_success_hard_rejections(
         response=screening_response,
@@ -803,6 +891,11 @@ def _normalize_title_fingerprint(title: str) -> str:
     return " ".join(normalized.split()).strip()
 
 
+def _contains_any_title_marker(title: str, markers: tuple[str, ...]) -> bool:
+    normalized_title = f" {str(title or '').strip()} "
+    return any(f" {marker} " in normalized_title for marker in markers)
+
+
 def _is_publisher_success_marketing_title(*, title: str, publisher_name: str) -> bool:
     normalized_title = _normalize_title_fingerprint(title)
     if not normalized_title:
@@ -836,20 +929,14 @@ def _partition_candidates_for_llm_screening(
     list[PublisherInventoryCandidateScreeningDecision],
 ]:
     llm_candidates: list[PublisherInventoryCandidateScreeningItem] = []
-    pre_rejected: list[PublisherInventoryCandidateScreeningDecision] = []
+    prefilter_decisions: list[PublisherInventoryCandidateScreeningDecision] = []
     for candidate in candidates:
-        if _is_probable_report_asset(candidate):
+        prefilter_decision = _prefilter_screening_decision(candidate)
+        if prefilter_decision is None:
             llm_candidates.append(candidate)
             continue
-        pre_rejected.append(
-            PublisherInventoryCandidateScreeningDecision(
-                schema_version="1.0",
-                canonical_url=candidate.canonical_url,
-                accepted=False,
-                reason="low_report_probability_prefilter",
-            )
-        )
-    return llm_candidates, pre_rejected
+        prefilter_decisions.append(prefilter_decision)
+    return llm_candidates, prefilter_decisions
 
 
 def _resolve_candidate_screening_batch_size(
@@ -868,15 +955,15 @@ def _merge_screening_responses_with_prefilter(
     *,
     candidates: list[PublisherInventoryCandidateScreeningItem],
     llm_response: PublisherInventoryCandidateScreeningResponse,
-    pre_rejected_decisions: list[PublisherInventoryCandidateScreeningDecision],
+    prefilter_decisions: list[PublisherInventoryCandidateScreeningDecision],
 ) -> PublisherInventoryCandidateScreeningResponse:
-    if not pre_rejected_decisions:
+    if not prefilter_decisions:
         return llm_response
     decision_map = {
         decision.canonical_url: decision for decision in llm_response.decisions
     }
     decision_map.update(
-        {decision.canonical_url: decision for decision in pre_rejected_decisions}
+        {decision.canonical_url: decision for decision in prefilter_decisions}
     )
     return _build_screening_response(
         candidates=candidates,
@@ -892,7 +979,7 @@ def _fallback_screening_decision(
 ) -> PublisherInventoryCandidateScreeningDecision:
     normalized_title = _normalize_title_fingerprint(candidate.title)
     normalized_url = candidate.canonical_url.casefold()
-    if any(marker in normalized_title for marker in _FALLBACK_NON_REPORT_TITLE_MARKERS):
+    if _contains_any_title_marker(normalized_title, _FALLBACK_NON_REPORT_TITLE_MARKERS):
         return PublisherInventoryCandidateScreeningDecision(
             schema_version="1.0",
             canonical_url=candidate.canonical_url,
@@ -906,7 +993,23 @@ def _fallback_screening_decision(
             accepted=False,
             reason="fallback_non_report_url",
         )
-    if any(marker in normalized_title for marker in _FALLBACK_REPORT_TITLE_MARKERS):
+    if _has_strong_report_detail_url(candidate.canonical_url):
+        return PublisherInventoryCandidateScreeningDecision(
+            schema_version="1.0",
+            canonical_url=candidate.canonical_url,
+            accepted=True,
+            reason="fallback_report_detail_url",
+        )
+    if _contains_any_title_marker(
+        normalized_title, _FALLBACK_SPECIFIC_REPORT_TITLE_MARKERS
+    ):
+        return PublisherInventoryCandidateScreeningDecision(
+            schema_version="1.0",
+            canonical_url=candidate.canonical_url,
+            accepted=True,
+            reason="fallback_specific_report_title",
+        )
+    if _contains_any_title_marker(normalized_title, _FALLBACK_REPORT_TITLE_MARKERS):
         return PublisherInventoryCandidateScreeningDecision(
             schema_version="1.0",
             canonical_url=candidate.canonical_url,
@@ -928,11 +1031,82 @@ def _is_probable_report_asset(
     normalized_url = candidate.canonical_url.casefold()
     if normalized_url.endswith(".pdf"):
         return True
+    if _has_strong_report_detail_url(candidate.canonical_url):
+        return True
     if any(marker in normalized_url for marker in _FALLBACK_NON_REPORT_URL_MARKERS):
         return False
-    if any(marker in normalized_title for marker in _FALLBACK_NON_REPORT_TITLE_MARKERS):
+    if _contains_any_title_marker(normalized_title, _FALLBACK_NON_REPORT_TITLE_MARKERS):
         return False
-    return any(marker in normalized_title for marker in _FALLBACK_REPORT_TITLE_MARKERS)
+    return _contains_any_title_marker(normalized_title, _FALLBACK_REPORT_TITLE_MARKERS)
+
+
+def _prefilter_screening_decision(
+    candidate: PublisherInventoryCandidateScreeningItem,
+) -> PublisherInventoryCandidateScreeningDecision | None:
+    normalized_title = _normalize_title_fingerprint(candidate.title)
+    normalized_url = candidate.canonical_url.casefold()
+    if any(marker in normalized_url for marker in _FALLBACK_NON_REPORT_URL_MARKERS):
+        return PublisherInventoryCandidateScreeningDecision(
+            schema_version="1.0",
+            canonical_url=candidate.canonical_url,
+            accepted=False,
+            reason="low_report_probability_prefilter",
+        )
+    if _contains_any_title_marker(normalized_title, _FALLBACK_NON_REPORT_TITLE_MARKERS):
+        return PublisherInventoryCandidateScreeningDecision(
+            schema_version="1.0",
+            canonical_url=candidate.canonical_url,
+            accepted=False,
+            reason="low_report_probability_prefilter",
+        )
+    if _has_strong_report_detail_url(candidate.canonical_url):
+        return PublisherInventoryCandidateScreeningDecision(
+            schema_version="1.0",
+            canonical_url=candidate.canonical_url,
+            accepted=True,
+            reason="strong_report_detail_url_prefilter",
+        )
+    if _contains_any_title_marker(
+        normalized_title, _FALLBACK_SPECIFIC_REPORT_TITLE_MARKERS
+    ):
+        return PublisherInventoryCandidateScreeningDecision(
+            schema_version="1.0",
+            canonical_url=candidate.canonical_url,
+            accepted=True,
+            reason="specific_report_title_prefilter",
+        )
+    if _is_probable_report_asset(candidate):
+        return None
+    return PublisherInventoryCandidateScreeningDecision(
+        schema_version="1.0",
+        canonical_url=candidate.canonical_url,
+        accepted=False,
+        reason="low_report_probability_prefilter",
+    )
+
+
+def _has_strong_report_detail_url(url: str) -> bool:
+    normalized_url = str(url or "").strip().casefold()
+    if not normalized_url:
+        return False
+    if normalized_url.endswith(".pdf"):
+        return True
+    if any(marker in normalized_url for marker in _FALLBACK_NON_REPORT_URL_MARKERS):
+        return False
+    parsed = urlsplit(normalized_url)
+    path_segments = [segment for segment in parsed.path.split("/") if segment]
+    if len(path_segments) < 2:
+        return False
+    if any(token in parsed.query for token in _FALLBACK_LISTING_QUERY_KEYS):
+        return False
+    if "/page/" in parsed.path or "/type/" in parsed.path:
+        return False
+    if not any(marker in normalized_url for marker in _FALLBACK_REPORT_URL_MARKERS):
+        return False
+    leaf_segment = path_segments[-1]
+    if leaf_segment.isdigit() or leaf_segment in _FALLBACK_REPORT_COLLECTION_SEGMENTS:
+        return False
+    return True
 
 
 def _publisher_reference_tokens(publisher_name: str) -> tuple[str, ...]:

@@ -809,6 +809,7 @@ def _select_anchor_title(item: dict[str, object]) -> str:
     aria_label = _normalize_text(str(item.get("aria_label") or ""))
     title_attr = _normalize_text(str(item.get("title_attr") or ""))
     img_alt = _normalize_text(str(item.get("img_alt") or ""))
+    context_text = _normalize_text(str(item.get("context_text") or ""))
     if heading_text:
         if not text or text.casefold() in _GENERIC_CTA_LABELS:
             return heading_text
@@ -820,7 +821,31 @@ def _select_anchor_title(item: dict[str, object]) -> str:
             return heading_text
     if text and text.casefold() not in _GENERIC_CTA_LABELS:
         return text
+    if aria_label and aria_label.casefold() not in _GENERIC_CTA_LABELS:
+        return aria_label
+    if title_attr and title_attr.casefold() not in _GENERIC_CTA_LABELS:
+        return title_attr
+    if img_alt and img_alt.casefold() not in _GENERIC_CTA_LABELS:
+        return img_alt
+    context_title = _card_context_title(context_text)
+    if context_title:
+        return context_title
     return heading_text or aria_label or title_attr or img_alt or text
+
+
+def _card_context_title(context_text: str) -> str:
+    normalized = _normalize_text(context_text)
+    if not normalized:
+        return ""
+    lowered = normalized.casefold()
+    for label in sorted(_GENERIC_CTA_LABELS, key=len, reverse=True):
+        if lowered.endswith(label):
+            normalized = normalized[: -len(label)].rstrip(" -:>|")
+            lowered = normalized.casefold()
+            break
+    if len(normalized) <= 180:
+        return normalized
+    return normalized[:180].rsplit(" ", 1)[0].rstrip(" -:>|")
 
 
 def _fallback_title_from_url(url: str) -> str:
