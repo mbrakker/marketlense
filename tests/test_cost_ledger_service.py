@@ -1,4 +1,5 @@
 import json
+import logging
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -117,6 +118,156 @@ def test_rollup_daily_sums_by_day(tmp_path: Path) -> None:
     assert data["totals_by_task"]["t2"]["estimated_cost_usd"] == 0.02
     assert resp.totals_by_run["run"].total_output_tokens == 150
     assert resp.totals_by_task["t1"].total_tool_calls == 1
+    assert data["ledger_state"]["ledger_path"] == str(ledger_path)
+    assert data["ledger_state"]["size_bytes"] > 0
+
+
+def test_rollup_daily_updates_incrementally_for_appended_backfill(
+    tmp_path: Path, caplog
+) -> None:
+    ledger_path = tmp_path / "ledger.jsonl"
+    out_path = tmp_path / "cost-daily.json"
+    now = datetime(2026, 1, 2, 12, 0, 0, tzinfo=timezone.utc)
+    backfill = now - timedelta(days=1)
+    first_entry = CostLedgerEntry(
+        schema_version="1.0",
+        timestamp_utc=now.isoformat(),
+        run_id="run-a",
+        task_id="task-a",
+        span_id="span-a",
+        step_name="openai_analyze",
+        model="gpt-5",
+        input_tokens=100,
+        output_tokens=25,
+        cached_input_tokens=None,
+        tool_calls=0,
+        estimated_cost_usd=0.01,
+    )
+    second_entry = CostLedgerEntry(
+        schema_version="1.0",
+        timestamp_utc=backfill.isoformat(),
+        run_id="run-b",
+        task_id="task-b",
+        span_id="span-b",
+        step_name="rank_candidates",
+        model="gpt-5",
+        input_tokens=200,
+        output_tokens=10,
+        cached_input_tokens=None,
+        tool_calls=1,
+        estimated_cost_usd=0.02,
+    )
+
+    append_entry(
+        CostLedgerAppendRequest(
+            schema_version="1.0", path=str(ledger_path), entry=first_entry
+        ),
+        _ctx(),
+    )
+    rollup_daily(
+        CostRollupRequest(
+            schema_version="1.0",
+            ledger_path=str(ledger_path),
+            out_path=str(out_path),
+        ),
+        _ctx(),
+    )
+
+    caplog.set_level(logging.INFO, logger="market_lense.cost_ledger_service")
+    append_entry(
+        CostLedgerAppendRequest(
+            schema_version="1.0", path=str(ledger_path), entry=second_entry
+        ),
+        _ctx(),
+    )
+    response = rollup_daily(
+        CostRollupRequest(
+            schema_version="1.0",
+            ledger_path=str(ledger_path),
+            out_path=str(out_path),
+        ),
+        _ctx(),
+    )
+
+    data = json.loads(out_path.read_text(encoding="utf-8"))
+    assert response.totals_by_date[backfill.date().isoformat()].total_usd == 0.02
+    assert response.totals_by_date[now.date().isoformat()].total_usd == 0.01
+    assert response.totals_by_run["run-b"].estimated_cost_usd == 0.02
+    complete_events = [
+        json.loads(record.message)
+        for record in caplog.records
+        if '"event": "cost_ledger_rollup_complete"' in record.message
+    ]
+    assert complete_events
+    assert complete_events[-1]["fields"]["mode"] == "incremental"
+    assert complete_events[-1]["fields"]["rows_processed"] == 1
+    assert data["totals_by_date"][backfill.date().isoformat()]["total_usd"] == 0.02
+
+
+def test_rollup_daily_rebuilds_after_ledger_amend(tmp_path: Path, caplog) -> None:
+    ledger_path = tmp_path / "ledger.jsonl"
+    out_path = tmp_path / "cost-daily.json"
+    now = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    original = CostLedgerEntry(
+        schema_version="1.0",
+        timestamp_utc=now.isoformat(),
+        run_id="run-1",
+        task_id="task-1",
+        span_id="span-1",
+        step_name="openai_analyze",
+        model="gpt-5",
+        input_tokens=100,
+        output_tokens=50,
+        cached_input_tokens=None,
+        tool_calls=0,
+        estimated_cost_usd=0.01,
+    )
+    amended = CostLedgerEntry(
+        schema_version="1.0",
+        timestamp_utc=now.isoformat(),
+        run_id="run-1",
+        task_id="task-1",
+        span_id="span-1",
+        step_name="openai_analyze",
+        model="gpt-5",
+        input_tokens=100,
+        output_tokens=50,
+        cached_input_tokens=None,
+        tool_calls=0,
+        estimated_cost_usd=0.09,
+    )
+
+    _write_entries(ledger_path, [original])
+    rollup_daily(
+        CostRollupRequest(
+            schema_version="1.0",
+            ledger_path=str(ledger_path),
+            out_path=str(out_path),
+        ),
+        _ctx(),
+    )
+
+    caplog.set_level(logging.INFO, logger="market_lense.cost_ledger_service")
+    _write_entries(ledger_path, [amended])
+    response = rollup_daily(
+        CostRollupRequest(
+            schema_version="1.0",
+            ledger_path=str(ledger_path),
+            out_path=str(out_path),
+        ),
+        _ctx(),
+    )
+
+    data = json.loads(out_path.read_text(encoding="utf-8"))
+    assert response.totals_by_run["run-1"].estimated_cost_usd == 0.09
+    assert data["totals_by_run"]["run-1"]["estimated_cost_usd"] == 0.09
+    complete_events = [
+        json.loads(record.message)
+        for record in caplog.records
+        if '"event": "cost_ledger_rollup_complete"' in record.message
+    ]
+    assert complete_events
+    assert complete_events[-1]["fields"]["mode"] == "full_rebuild"
 
 
 def test_generate_cost_report_by_date(tmp_path: Path) -> None:

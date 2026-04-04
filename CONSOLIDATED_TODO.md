@@ -459,14 +459,6 @@ Scoring rubric:
 
 ### 8.3 Quick Wins
 
-- **Title:** Cache incremental cost rollups instead of recomputing full ledger per write [Impact: 4/5, Effort: 2/5]
-  - Explanation: Maintain an incremental cache or rolling aggregate for daily cost totals so each new ledger entry updates the aggregate instead of recomputing across the full ledger file on every write.
-  - Pros: Significant CPU and I/O savings for high-volume runs; simpler thresholds checks.
-  - Cons: Need correct invalidation/repair logic if ledger entries are backfilled or amended.
-  - Acceptance Criteria:
-    - Daily cost rollup updated incrementally on ledger writes.
-    - Tests covering backfill/amend scenarios ensure aggregates remain correct.
-
 Each quick-win should be documented with a short task when prioritized.
 
 ### 8.4 Architecture-Fit Additions
