@@ -13,6 +13,7 @@ from pypdf import PdfWriter
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.context_category_fit import (
+    CategoryFitCandidate,
     ContextCategoryFitResponse,
     ReportCategoryContext,
 )
@@ -307,7 +308,17 @@ def _base_vector_report_dependencies(
             report_id=req.context.report_id,
             categories=["cat"],
             category_labels=["Category"],
-            fits=[],
+            fits=[
+                CategoryFitCandidate(
+                    category_id="cat",
+                    label="Category",
+                    fit_score=0.91,
+                    decision="primary",
+                    why_fit="The report centers on Category.",
+                    why_not_fit="",
+                    evidence_sections=["Overview"],
+                )
+            ],
             request_id="req-1",
             model="gpt-5-mini",
             raw_response="{}",

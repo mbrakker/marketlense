@@ -85,6 +85,25 @@ def _attach_payload_analysis_metadata(
     return payload
 
 
+def _serialize_context_category_fit_payload(fit_response) -> dict[str, Any]:
+    return {
+        "schema_version": str(fit_response.schema_version or "1.0"),
+        "selected_category_ids": list(fit_response.categories or []),
+        "category_fits": [
+            {
+                "category_id": str(fit.category_id),
+                "label": str(fit.label),
+                "fit_score": float(fit.fit_score),
+                "decision": str(fit.decision),
+                "why_fit": str(fit.why_fit),
+                "why_not_fit": str(fit.why_not_fit),
+                "evidence_sections": list(fit.evidence_sections or []),
+            }
+            for fit in fit_response.fits
+        ],
+    }
+
+
 def _ensure_report_payload_complete(
     payload,
     *,
@@ -350,7 +369,12 @@ def run_report_analysis(
     data.categories = category_assignment.categories
     for pack_name, payload in (
         ("report_context", asdict(context_category_state.report_context)),
-        ("context_category_fit", asdict(context_category_state.fit_response)),
+        (
+            "context_category_fit",
+            _serialize_context_category_fit_payload(
+                context_category_state.fit_response
+            ),
+        ),
     ):
         stored_pack = dependencies.analysis_store_pack(
             AnalysisStorePackRequest(

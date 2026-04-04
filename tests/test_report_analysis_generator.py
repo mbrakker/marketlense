@@ -9,6 +9,7 @@ from types import SimpleNamespace
 import pytest
 
 from src.contracts.context_category_fit import (
+    CategoryFitCandidate,
     ContextCategoryFitResponse,
     ReportCategoryContext,
 )
@@ -218,6 +219,36 @@ def _selection(
     )
 
 
+def _fit_response(
+    *,
+    report_id: str = "file-1",
+    categories: list[str] | None = None,
+    category_labels: list[str] | None = None,
+) -> ContextCategoryFitResponse:
+    resolved_categories = list(categories or ["cat"])
+    resolved_labels = list(category_labels or ["Category"])
+    return ContextCategoryFitResponse(
+        schema_version="1.0",
+        report_id=report_id,
+        categories=resolved_categories,
+        category_labels=resolved_labels,
+        fits=[
+            CategoryFitCandidate(
+                category_id=resolved_categories[0],
+                label=resolved_labels[0],
+                fit_score=0.9,
+                decision="primary",
+                why_fit="The report strongly aligns with this category.",
+                why_not_fit="",
+                evidence_sections=["Overview"],
+            )
+        ],
+        request_id="req-1",
+        model="gpt-5-mini",
+        raw_response="{}",
+    )
+
+
 def _deps(**overrides) -> ReportGeneratorDependencies:
     base = ReportGeneratorDependencies.default()
     seeded = replace(
@@ -249,16 +280,7 @@ def _deps(**overrides) -> ReportGeneratorDependencies:
             limitations=[],
             sections=[],
         ),
-        fit_report_categories_from_context=lambda req, ctx: ContextCategoryFitResponse(
-            schema_version="1.0",
-            report_id="file-1",
-            categories=["cat"],
-            category_labels=["Category"],
-            fits=[],
-            request_id="req-1",
-            model="gpt-5-mini",
-            raw_response="{}",
-        ),
+        fit_report_categories_from_context=lambda req, ctx: _fit_response(),
         vector_store_update_metadata=lambda req, ctx: None,
     )
     return replace(seeded, **overrides)
@@ -392,6 +414,7 @@ def test_run_report_analysis_uses_context_fit_categories_not_taxonomy_tags(tmp_p
     source = _source(runtime)
     selection = _selection(runtime, source)
     stored: list[str] = []
+    stored_payloads: dict[str, dict] = {}
     metadata_updates = []
 
     deps = _deps(
@@ -414,15 +437,10 @@ def test_run_report_analysis_uses_context_fit_categories_not_taxonomy_tags(tmp_p
             limitations=[],
             sections=[],
         ),
-        fit_report_categories_from_context=lambda req, ctx: ContextCategoryFitResponse(
-            schema_version="1.0",
+        fit_report_categories_from_context=lambda req, ctx: _fit_response(
             report_id=req.context.report_id,
             categories=["agentic_commerce", "ai_automation"],
             category_labels=["Agentic Commerce", "AI & Automation"],
-            fits=[],
-            request_id="req-ctx",
-            model="gpt-5-mini",
-            raw_response="{}",
         ),
         generate_evidence_packs=lambda **kwargs: {
             "doc_map": {
@@ -445,11 +463,12 @@ def test_run_report_analysis_uses_context_fit_categories_not_taxonomy_tags(tmp_p
             source_path=str(tmp_path / "out" / "validation.json"),
         ),
         analysis_store_pack=lambda req, ctx: (
-            stored.append(req.pack_name)
-            or SimpleNamespace(
+            stored.append(req.pack_name),
+            stored_payloads.setdefault(req.pack_name, req.payload),
+            SimpleNamespace(
                 output_path=str(Path(req.output_dir) / req.pack_name / "payload.json")
-            )
-        ),
+            ),
+        )[-1],
         vector_store_update_metadata=lambda req, ctx: metadata_updates.append(req),
     )
 
@@ -471,6 +490,21 @@ def test_run_report_analysis_uses_context_fit_categories_not_taxonomy_tags(tmp_p
     assert state.payload.categories == ["agentic_commerce", "ai_automation"]
     assert state.category_labels == ["Agentic Commerce", "AI & Automation"]
     assert {"report_context", "context_category_fit"}.issubset(set(stored))
+    assert stored_payloads["context_category_fit"] == {
+        "schema_version": "1.0",
+        "selected_category_ids": ["agentic_commerce", "ai_automation"],
+        "category_fits": [
+            {
+                "category_id": "agentic_commerce",
+                "label": "Agentic Commerce",
+                "fit_score": 0.9,
+                "decision": "primary",
+                "why_fit": "The report strongly aligns with this category.",
+                "why_not_fit": "",
+                "evidence_sections": ["Overview"],
+            }
+        ],
+    }
     assert metadata_updates[0].metadata.taxonomy == ["metadata_only_tag"]
     assert metadata_updates[0].metadata.categories == [
         "agentic_commerce",

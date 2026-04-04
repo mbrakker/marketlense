@@ -399,15 +399,6 @@ Scoring rubric:
 
 ## 7. Schema, Validation & Output Quality
 
-- **Title:** Validate analysis packs against their schemas before persistence [Impact: 4/5, Effort: 2/5]
-  - Explanation: Analysis packs are written to disk through `report_analysis_store_service`, but schema validation is largely downstream. Validate pack payloads before they are persisted so invalid intermediate artifacts fail fast and do not pollute later stages.
-  - Pros: Earlier failure, cleaner artifacts, and stronger guarantees for downstream generators/renderers.
-  - Cons: Slightly more validation overhead on write paths.
-  - Acceptance Criteria:
-    - Schema-backed analysis packs validate before final write.
-    - Invalid packs fail with explicit `AppError` and contextual logs.
-    - Tests cover both valid and invalid pack persistence attempts.
-
 ---
 
 ## 8. Audit-Driven Refactors & Compliance
