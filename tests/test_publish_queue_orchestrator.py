@@ -15,9 +15,17 @@ def _ctx() -> RunContext:
     return RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
 
 
-def test_build_publish_queue_snapshot(monkeypatch) -> None:
+def test_build_publish_queue_snapshot(
+    caplog,
+    external_boundary_mocks_only,
+    assert_logs_have_required_fields,
+) -> None:
     html_paths = ["out/a.html", "out/b.html", "out/c.html"]
-    monkeypatch.setattr(orch, "list_html", lambda req, ctx: SimpleNamespace(html_paths=html_paths))
+    external_boundary_mocks_only.setattr(
+        orch.file_service,
+        "list_html",
+        lambda req, ctx: SimpleNamespace(html_paths=html_paths),
+    )
 
     def _read_text(req, ctx):
         if req.path.endswith("a.html"):
@@ -26,9 +34,9 @@ def test_build_publish_queue_snapshot(monkeypatch) -> None:
             return SimpleNamespace(content="no file id marker")
         raise AppError(code="file_not_found", message="missing", retryable=False)
 
-    monkeypatch.setattr(orch, "read_text", _read_text)
-    monkeypatch.setattr(
-        orch,
+    external_boundary_mocks_only.setattr(orch.file_service, "read_text", _read_text)
+    external_boundary_mocks_only.setattr(
+        orch.state_service,
         "get_publish",
         lambda req, ctx: SimpleNamespace(wp_post_id=7, wp_post_url="https://example.com/post") if req.file_id == "file_a" else None,
     )
@@ -51,16 +59,20 @@ def test_build_publish_queue_snapshot(monkeypatch) -> None:
     second = response.items[1]
     assert second.file_id == ""
     assert second.published is False
+    assert_logs_have_required_fields(caplog.records)
 
 
 def test_build_publish_queue_snapshot_prefers_reports_db_mapping(
-    monkeypatch, tmp_path: Path
+    external_boundary_mocks_only,
+    tmp_path: Path,
 ) -> None:
     output_dir = tmp_path / "out"
     output_dir.mkdir(parents=True, exist_ok=True)
     html_paths = [str(output_dir / "a.html"), str(output_dir / "b.html")]
-    monkeypatch.setattr(
-        orch, "list_html", lambda req, ctx: SimpleNamespace(html_paths=html_paths)
+    external_boundary_mocks_only.setattr(
+        orch.file_service,
+        "list_html",
+        lambda req, ctx: SimpleNamespace(html_paths=html_paths),
     )
     reports_db = str(tmp_path / "reports.sqlite")
     upsert_metadata(
@@ -95,9 +107,9 @@ def test_build_publish_queue_snapshot_prefers_reports_db_mapping(
             return SimpleNamespace(content="Drive fileId: file_b")
         raise AppError(code="file_not_found", message="missing", retryable=False)
 
-    monkeypatch.setattr(orch, "read_text", _read_text)
-    monkeypatch.setattr(
-        orch,
+    external_boundary_mocks_only.setattr(orch.file_service, "read_text", _read_text)
+    external_boundary_mocks_only.setattr(
+        orch.state_service,
         "get_publish",
         lambda req, ctx: SimpleNamespace(wp_post_id=11, wp_post_url="https://example.com/a") if req.file_id == "file_a" else None,
     )

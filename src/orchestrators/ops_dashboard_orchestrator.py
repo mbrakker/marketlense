@@ -14,10 +14,7 @@ from src.contracts.ops import (
 from src.contracts.report_store import ReportMetadataListRequest
 from src.contracts.run_context import RunContext
 from src.contracts.state import StateProcessedListRequest, StatePublishedListRequest
-from src.services.file_service import file_stat
-from src.services.lock_service import get_lock
-from src.services.report_store_service import list_metadata
-from src.services.state_service import list_processed, list_published
+from src.services import file_service, lock_service, report_store_service, state_service
 from src.utils.errors import AppError
 from src.utils.gui_utils import row_dicts
 from src.utils.logging import child_context, log_event
@@ -40,7 +37,7 @@ def collect_ops_dashboard_snapshot(
         },
     ))
 
-    reports_resp = list_metadata(
+    reports_resp = report_store_service.list_metadata(
         ReportMetadataListRequest(schema_version="1.1", db_path=request.reports_db),
         child_context(ctx, task_id="ops:list_reports"),
     )
@@ -48,13 +45,13 @@ def collect_ops_dashboard_snapshot(
     reports.sort(key=lambda row: int(row.get("updated_at") or 0), reverse=True)
     reports = reports[: max(request.report_limit, 0)]
 
-    processed_resp = list_processed(
+    processed_resp = state_service.list_processed(
         StateProcessedListRequest(schema_version="1.0", state_db=request.state_db, limit=request.processed_limit),
         child_context(ctx, task_id="ops:list_processed"),
     )
     processed = row_dicts(processed_resp.rows, include_object_attrs=True)
 
-    published_resp = list_published(
+    published_resp = state_service.list_published(
         StatePublishedListRequest(schema_version="1.0", state_db=request.state_db, limit=request.published_limit),
         child_context(ctx, task_id="ops:list_published"),
     )
@@ -62,7 +59,7 @@ def collect_ops_dashboard_snapshot(
 
     lock_ctx = child_context(ctx, task_id="ops:get_lock")
     try:
-        lock_resp = get_lock(
+        lock_resp = lock_service.get_lock(
             LockGetRequest(schema_version="1.0", lock_path=request.ingest_lock_path),
             lock_ctx,
         )
@@ -92,7 +89,10 @@ def collect_ops_dashboard_snapshot(
     for name, path in targets:
         target_ctx = child_context(ctx, task_id=f"ops:stat:{name}")
         try:
-            stat = file_stat(FileStatRequest(schema_version="1.0", path=path), target_ctx)
+            stat = file_service.file_stat(
+                FileStatRequest(schema_version="1.0", path=path),
+                target_ctx,
+            )
             storage_health.append(OpsStorageHealthItem(
                 schema_version="1.0",
                 name=name,

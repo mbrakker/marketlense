@@ -19,7 +19,11 @@ def _ctx() -> RunContext:
     return RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
 
 
-def test_cost_reporting_runs_requested_steps(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_cost_reporting_runs_requested_steps(
+    caplog,
+    external_boundary_mocks_only,
+    assert_logs_have_required_fields,
+) -> None:
     report = CostReportResponse(
         schema_version="1.0",
         filter_type="date",
@@ -52,13 +56,13 @@ def test_cost_reporting_runs_requested_steps(monkeypatch: pytest.MonkeyPatch) ->
     )
     calls = {"report": 0, "rollup": 0}
 
-    monkeypatch.setattr(
-        orch,
+    external_boundary_mocks_only.setattr(
+        orch.cost_ledger_service,
         "generate_cost_report",
         lambda req, ctx: calls.__setitem__("report", calls["report"] + 1) or report,
     )
-    monkeypatch.setattr(
-        orch,
+    external_boundary_mocks_only.setattr(
+        orch.cost_ledger_service,
         "rollup_daily",
         lambda req, ctx: calls.__setitem__("rollup", calls["rollup"] + 1) or rollup,
     )
@@ -75,6 +79,7 @@ def test_cost_reporting_runs_requested_steps(monkeypatch: pytest.MonkeyPatch) ->
     assert calls == {"report": 1, "rollup": 1}
     assert response.report == report
     assert response.rollup == rollup
+    assert_logs_have_required_fields(caplog.records)
 
 
 def test_cost_reporting_requires_work() -> None:

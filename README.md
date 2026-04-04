@@ -856,6 +856,7 @@ Default runs exclude `integration`-marked tests (`addopts = -m "not integration"
 Workflow tests should prefer explicit dependency dataclasses and shared boundary fixtures over monkeypatching module globals.
 Current boundary seams include `IngestBatchDependencies`, `CandidateExtractionDependencies`, and `ReportGeneratorDependencies`.
 Use `tests/conftest.py` fixtures like `external_boundary_mocks_only`, `wordpress_http`, and `fake_openai` to patch only external boundaries (service entrypoints, HTTP clients, OpenAI clients, time/random/os), while leaving orchestrator and generator logic on the real path.
+Touched orchestrator tests should also use `assert_logs_have_required_fields`, and remaining generator/orchestrator hotspots should move to explicit dependency seams or service-module patch points instead of patching internal module symbols directly.
 
 Run the live OpenAI smoke test explicitly (opt-in):
 

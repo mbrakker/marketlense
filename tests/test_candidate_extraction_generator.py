@@ -55,26 +55,29 @@ def _candidates() -> list[Candidate]:
     ]
 
 
-def test_generate_candidate_pack_success_with_crops(tmp_path, monkeypatch):
+def test_generate_candidate_pack_success_with_crops(
+    tmp_path,
+    external_boundary_mocks_only,
+):
     pdf_ctx = _FakePdfContext()
     written: dict[str, object] = {}
 
-    monkeypatch.setattr(
-        gen,
+    external_boundary_mocks_only.setattr(
+        gen.pdf_service,
         "build_pdf_context",
         lambda req, ctx: SimpleNamespace(context=pdf_ctx),
     )
-    monkeypatch.setattr(
-        gen,
-        "collect_candidates_service",
+    external_boundary_mocks_only.setattr(
+        gen.pdf_service,
+        "collect_candidates",
         lambda req, ctx: ExtractCandidatesResponse(
             schema_version="1.0",
             candidates=_candidates(),
         ),
     )
-    monkeypatch.setattr(
-        gen,
-        "crop_regions_service",
+    external_boundary_mocks_only.setattr(
+        gen.pdf_service,
+        "crop_regions",
         lambda req, ctx: CropResponse(
             schema_version="1.0",
             paths=["candidates/c1.png", "candidates/c2.png"],
@@ -86,7 +89,11 @@ def test_generate_candidate_pack_success_with_crops(tmp_path, monkeypatch):
         written["content"] = req.content
         return SimpleNamespace(path=req.path)
 
-    monkeypatch.setattr(gen, "write_bytes", _write_bytes)
+    external_boundary_mocks_only.setattr(
+        gen.file_service,
+        "write_bytes",
+        _write_bytes,
+    )
 
     outcome = gen.generate_candidate_pack(_request(tmp_path, save_crops=True), _ctx())
 
@@ -104,24 +111,25 @@ def test_generate_candidate_pack_success_with_crops(tmp_path, monkeypatch):
 
 
 def test_generate_candidate_pack_continues_when_pdf_context_build_fails(
-    tmp_path, monkeypatch
+    tmp_path,
+    external_boundary_mocks_only,
 ):
     written: dict[str, object] = {}
-    monkeypatch.setattr(
-        gen,
+    external_boundary_mocks_only.setattr(
+        gen.pdf_service,
         "build_pdf_context",
         lambda req, ctx: (_ for _ in ()).throw(RuntimeError("context failed")),
     )
-    monkeypatch.setattr(
-        gen,
-        "collect_candidates_service",
+    external_boundary_mocks_only.setattr(
+        gen.pdf_service,
+        "collect_candidates",
         lambda req, ctx: ExtractCandidatesResponse(
             schema_version="1.0",
             candidates=[_candidates()[0]],
         ),
     )
-    monkeypatch.setattr(
-        gen,
+    external_boundary_mocks_only.setattr(
+        gen.file_service,
         "write_bytes",
         lambda req, ctx: (
             written.update({"path": req.path, "content": req.content})

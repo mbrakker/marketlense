@@ -11,8 +11,7 @@ from src.contracts.pdf_context import PdfContextBuildRequest
 from src.contracts.report_assets import CropRequest, ExtractCandidatesRequest
 from src.contracts.report_models import CropItem
 from src.contracts.run_context import RunContext
-from src.services.file_service import write_bytes
-from src.services.pdf_service import build_pdf_context, collect_candidates as collect_candidates_service, crop_regions as crop_regions_service
+from src.services import file_service, pdf_service
 from src.utils.logging import log_event
 from src.utils.validation import validate_candidate
 
@@ -61,7 +60,7 @@ def generate_candidate_pack(request: CandidateExtractRequest, ctx: RunContext) -
 
     pdf_context = None
     try:
-        pdf_ctx_resp = build_pdf_context(
+        pdf_ctx_resp = pdf_service.build_pdf_context(
             PdfContextBuildRequest(schema_version="1.0", path=request.pdf_path),
             ctx,
         )
@@ -77,7 +76,7 @@ def generate_candidate_pack(request: CandidateExtractRequest, ctx: RunContext) -
         pdf_context = None
 
     try:
-        candidates_resp = collect_candidates_service(
+        candidates_resp = pdf_service.collect_candidates(
             ExtractCandidatesRequest(
                 schema_version="1.0",
                 pdf_path=request.pdf_path,
@@ -117,7 +116,7 @@ def generate_candidate_pack(request: CandidateExtractRequest, ctx: RunContext) -
                 )
                 for c in candidates_resp.candidates
             ]
-            crop_resp = crop_regions_service(
+            crop_resp = pdf_service.crop_regions(
                 CropRequest(
                     schema_version="1.0",
                     pdf_path=request.pdf_path,
@@ -150,7 +149,7 @@ def generate_candidate_pack(request: CandidateExtractRequest, ctx: RunContext) -
             "candidates": _candidate_payload(candidates_resp.candidates, crop_map),
         }
         output_path = _candidates_path(request.output_dir, request.report_name, request.subdir)
-        write_bytes(
+        file_service.write_bytes(
             WriteBytesRequest(
                 schema_version="1.0",
                 path=output_path,

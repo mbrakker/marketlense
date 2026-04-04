@@ -59,9 +59,9 @@ def test_wp_category_update_skips_when_no_categories():
     assert outcome.categories == []
 
 
-def test_wp_category_update_applies_categories(monkeypatch):
-    monkeypatch.setattr(
-        gen,
+def test_wp_category_update_applies_categories(external_boundary_mocks_only):
+    external_boundary_mocks_only.setattr(
+        gen.wordpress_service,
         "ensure_taxonomy_terms",
         lambda req, ctx: (
             (_ for _ in ()).throw(AssertionError("ssl_verify should be disabled"))
@@ -78,7 +78,11 @@ def test_wp_category_update_applies_categories(monkeypatch):
         assert req.ssl_verify is False
         return WordPressPostUpdateResponse(schema_version="1.0", post_id=req.post_id)
 
-    monkeypatch.setattr(gen, "update_post_categories", _update)
+    external_boundary_mocks_only.setattr(
+        gen.wordpress_service,
+        "update_post_categories",
+        _update,
+    )
 
     outcome = gen.update_post_categories_for_record(
         file_id="file-1",
@@ -96,17 +100,17 @@ def test_wp_category_update_applies_categories(monkeypatch):
     assert outcome.categories == ["digital_payments", "consumer_behavior"]
 
 
-def test_wp_category_update_skips_when_no_term_ids(monkeypatch):
-    monkeypatch.setattr(
-        gen,
+def test_wp_category_update_skips_when_no_term_ids(external_boundary_mocks_only):
+    external_boundary_mocks_only.setattr(
+        gen.wordpress_service,
         "ensure_taxonomy_terms",
         lambda req, ctx: WordPressTaxonomyEnsureResponse(
             schema_version="1.0",
             slug_to_id={},
         ),
     )
-    monkeypatch.setattr(
-        gen,
+    external_boundary_mocks_only.setattr(
+        gen.wordpress_service,
         "update_post_categories",
         lambda req, ctx: (_ for _ in ()).throw(
             AssertionError("update_post_categories should not be called")

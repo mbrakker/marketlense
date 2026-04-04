@@ -4,7 +4,7 @@ import logging
 
 from src.contracts.costs import CostReportingRequest, CostReportingResponse
 from src.contracts.run_context import RunContext
-from src.services.cost_ledger_service import generate_cost_report, rollup_daily
+from src.services import cost_ledger_service
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.cost_reporting_orchestrator")
@@ -25,8 +25,16 @@ def run_cost_reporting(request: CostReportingRequest, ctx: RunContext) -> CostRe
         },
     ))
 
-    report = generate_cost_report(request.report_request, ctx) if request.report_request else None
-    rollup = rollup_daily(request.rollup_request, ctx) if request.rollup_request else None
+    report = (
+        cost_ledger_service.generate_cost_report(request.report_request, ctx)
+        if request.report_request
+        else None
+    )
+    rollup = (
+        cost_ledger_service.rollup_daily(request.rollup_request, ctx)
+        if request.rollup_request
+        else None
+    )
 
     logger.info(log_event(
         ctx,

@@ -162,7 +162,12 @@ def test_analysis_store_adapter_falls_back_to_canonical_service(tmp_path):
         output_dir=str(tmp_path),
         report_id="report-service",
         pack_name="validation",
-        payload={"schema_version": "1.0", "status": "pass"},
+        payload={
+            "schema_version": "1.1",
+            "status": "pass",
+            "severity": "pass",
+            "issues": [],
+        },
         report_slug="service-slug",
     )
 

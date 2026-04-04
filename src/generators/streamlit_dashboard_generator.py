@@ -35,10 +35,7 @@ from src.contracts.streamlit_dashboard import (
     ValidationArtifactSummaryResponse,
     ValidationArtifactSummaryRow,
 )
-from src.services.file_service import file_stat, list_directory, read_text
-from src.services.lock_service import get_lock
-from src.services.report_store_service import list_metadata
-from src.services.state_service import list_processed, list_published
+from src.services import file_service, lock_service, report_store_service, state_service
 from src.utils.errors import AppError
 from src.utils.gui_utils import (
     extract_log_date_from_filename,
@@ -70,7 +67,7 @@ def discover_log_files(
         },
     ))
     try:
-        response = list_directory(
+        response = file_service.list_directory(
             ListDirectoryRequest(
                 schema_version="1.0",
                 root_dir=request.log_dir.strip(),
@@ -132,7 +129,7 @@ def load_log_events(
     events: list[dict[str, Any]] = []
     for path in log_paths:
         try:
-            text = read_text(
+            text = file_service.read_text(
                 ReadTextRequest(schema_version="1.0", path=path),
                 child_context(ctx, task_id="streamlit:read_log"),
             ).content
@@ -177,7 +174,7 @@ def read_json_payload(
         fields={"path": path},
     ))
     try:
-        payload_text = read_text(
+        payload_text = file_service.read_text(
             ReadTextRequest(schema_version="1.0", path=path),
             child_context(ctx, task_id="streamlit:read_json_file"),
         ).content
@@ -218,7 +215,7 @@ def collect_storage_health(
         path = target.path.strip()
         task_id = f"streamlit:stat:{target.name}"
         try:
-            stat = file_stat(
+            stat = file_service.file_stat(
                 FileStatRequest(schema_version="1.0", path=path),
                 child_context(ctx, task_id=task_id),
             )
@@ -265,7 +262,7 @@ def summarize_validation_artifacts(
         fields={"output_dir": request.output_dir, "limit": limit},
     ))
     try:
-        response = list_directory(
+        response = file_service.list_directory(
             ListDirectoryRequest(
                 schema_version="1.0",
                 root_dir=request.output_dir,
@@ -329,7 +326,7 @@ def load_report_rows(
         module=logger.name,
         fields={"reports_db": request.reports_db},
     ))
-    reports_resp = list_metadata(
+    reports_resp = report_store_service.list_metadata(
         ReportMetadataListRequest(schema_version="1.1", db_path=request.reports_db),
         child_context(ctx, task_id="streamlit:list_reports"),
     )
@@ -360,12 +357,12 @@ def load_state_rows(
         fields={"state_db": request.state_db, "kind": kind, "limit": limit},
     ))
     if kind == "processed":
-        response = list_processed(
+        response = state_service.list_processed(
             StateProcessedListRequest(schema_version="1.0", state_db=request.state_db, limit=limit),
             child_context(ctx, task_id="streamlit:list_processed"),
         )
     elif kind == "published":
-        response = list_published(
+        response = state_service.list_published(
             StatePublishedListRequest(schema_version="1.0", state_db=request.state_db, limit=limit),
             child_context(ctx, task_id="streamlit:list_published"),
         )
@@ -401,7 +398,7 @@ def load_lock_snapshot(
         fields={"lock_path": lock_path},
     ))
     try:
-        lock = get_lock(
+        lock = lock_service.get_lock(
             LockGetRequest(schema_version="1.0", lock_path=lock_path),
             child_context(ctx, task_id="streamlit:get_lock"),
         )
@@ -447,7 +444,7 @@ def load_ledger_entries(
         fields={"ledger_path": ledger_path, "limit": limit},
     ))
     try:
-        content = read_text(
+        content = file_service.read_text(
             ReadTextRequest(schema_version="1.0", path=ledger_path),
             child_context(ctx, task_id="streamlit:read_ledger"),
         ).content
@@ -495,7 +492,7 @@ def collect_directory_counts(
     rows: list[DirectoryCountRow] = []
     for check in request.checks:
         try:
-            response = list_directory(
+            response = file_service.list_directory(
                 ListDirectoryRequest(
                     schema_version="1.0",
                     root_dir=check.root_dir,

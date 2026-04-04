@@ -513,16 +513,6 @@ Each quick-win should be documented with a short task when prioritized.
     - Generator logs continue to expose the same prompt and validation observability after the split.
     - Equivalent behavior is validated by pipeline tests without introducing default-filled or sentinel-filled intermediate payloads.
 
-- **Title:** Finish rollout of AGENTS test-integrity fixtures and boundary-only mocking [Impact: 4/5, Effort: 4/5]
-  - Explanation: The shared fixtures now exist in `tests/conftest.py`, but the suite still contains raw `monkeypatch` usage against generator/orchestrator internals. Finish migrating remaining hotspots to boundary-only mocks and fixture-based assertions.
-  - Pros: Higher confidence that tests validate real behavior.
-  - Cons: Test rewrite effort, especially around orchestration-heavy paths.
-  - Acceptance Criteria:
-    - New and touched tests use the shared fixtures instead of ad-hoc assertion helpers.
-    - Private/helper patching and internal orchestrator/generator patching are removed from remaining hotspots.
-    - Orchestrator and service tests assert required structured log fields.
-    - Idempotency behavior asserted where applicable.
-
 - **Title:** Meet minimum integration-test coverage per service module [Impact: 4/5, Effort: 5/5]
   - Explanation: Add at least one marked integration test per service module and keep live API calls out of unit tests.
   - Pros: Better boundary confidence and fewer production surprises.

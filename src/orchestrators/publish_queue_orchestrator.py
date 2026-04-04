@@ -11,8 +11,7 @@ from src.orchestrators.publish_shared import (
     canonicalize_html_path,
     load_html_file_id_map,
 )
-from src.services.file_service import list_html, read_text
-from src.services.state_service import get_publish
+from src.services import file_service, state_service
 from src.utils.errors import AppError
 from src.utils.html_utils import extract_file_id
 from src.utils.logging import child_context, log_event
@@ -29,7 +28,7 @@ def build_publish_queue_snapshot(request: PublishQueueRequest, ctx: RunContext) 
         fields={"output_dir": request.output_dir, "state_db": request.state_db, "reports_db": request.reports_db},
     ))
 
-    list_resp = list_html(
+    list_resp = file_service.list_html(
         ListHtmlRequest(schema_version="1.0", root_dir=request.output_dir),
         ctx,
     )
@@ -53,7 +52,10 @@ def build_publish_queue_snapshot(request: PublishQueueRequest, ctx: RunContext) 
         file_id = html_file_id_map.get(canonicalize_html_path(html_path), "")
         if not file_id:
             try:
-                html = read_text(ReadTextRequest(schema_version="1.0", path=html_path), row_ctx).content
+                html = file_service.read_text(
+                    ReadTextRequest(schema_version="1.0", path=html_path),
+                    row_ctx,
+                ).content
             except AppError as exc:
                 logger.info(log_event(
                     row_ctx,
@@ -82,7 +84,7 @@ def build_publish_queue_snapshot(request: PublishQueueRequest, ctx: RunContext) 
             ))
         publish_state = None
         if file_id:
-            publish_state = get_publish(
+            publish_state = state_service.get_publish(
                 StatePublishCheckRequest(
                     schema_version="1.0",
                     state_db=request.state_db,

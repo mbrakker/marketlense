@@ -11,7 +11,7 @@ from src.contracts.wordpress import (
     WordPressTaxonomyTerm,
 )
 from src.contracts.run_context import RunContext
-from src.services.wordpress_service import ensure_taxonomy_terms, update_post_categories
+from src.services import wordpress_service
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.wp_category_generator")
@@ -65,7 +65,7 @@ def update_post_categories_for_record(
         )
         for cat_id in categories
     ]
-    ensure_resp = ensure_taxonomy_terms(
+    ensure_resp = wordpress_service.ensure_taxonomy_terms(
         WordPressTaxonomyEnsureRequest(
             schema_version="1.0",
             base_url=base_url,
@@ -91,7 +91,7 @@ def update_post_categories_for_record(
             status="skipped",
             error="no_category_ids",
         )
-    update_resp = update_post_categories(
+    update_resp = wordpress_service.update_post_categories(
         WordPressPostUpdateRequest(
             schema_version="1.0",
             base_url=base_url,

@@ -22,9 +22,11 @@ def _ctx() -> RunContext:
     return RunContext(schema_version="1.0", run_id="run", task_id="task", span_id="span")
 
 
-def test_discover_log_files_sorts_by_mtime_desc(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(
-        gen,
+def test_discover_log_files_sorts_by_mtime_desc(
+    external_boundary_mocks_only,
+) -> None:
+    external_boundary_mocks_only.setattr(
+        gen.file_service,
         "list_directory",
         lambda req, ctx: SimpleNamespace(
             entries=[
@@ -45,13 +47,19 @@ def test_discover_log_files_sorts_by_mtime_desc(monkeypatch: pytest.MonkeyPatch)
     ]
 
 
-def test_load_log_events_parses_structured_lines(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_load_log_events_parses_structured_lines(
+    external_boundary_mocks_only,
+) -> None:
     payload = (
         "12:01:02 | INFO | market_lense.test | "
         '{"run_id":"r1","task_id":"t1","span_id":"s1","event":"ingest_start","role":"orchestrator","module":"m","fields":{}}\n'
         "plain text line\n"
     )
-    monkeypatch.setattr(gen, "read_text", lambda req, ctx: SimpleNamespace(content=payload))
+    external_boundary_mocks_only.setattr(
+        gen.file_service,
+        "read_text",
+        lambda req, ctx: SimpleNamespace(content=payload),
+    )
 
     response = gen.load_log_events(
         LogEventLoadRequest(
@@ -68,9 +76,11 @@ def test_load_log_events_parses_structured_lines(monkeypatch: pytest.MonkeyPatch
     assert str(response.events[0].get("timestamp_utc")).startswith("2026-02-09T12:01:02")
 
 
-def test_summarize_validation_artifacts_extracts_status(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(
-        gen,
+def test_summarize_validation_artifacts_extracts_status(
+    external_boundary_mocks_only,
+) -> None:
+    external_boundary_mocks_only.setattr(
+        gen.file_service,
         "list_directory",
         lambda req, ctx: SimpleNamespace(
             entries=[
@@ -85,7 +95,7 @@ def test_summarize_validation_artifacts_extracts_status(monkeypatch: pytest.Monk
             return SimpleNamespace(content='{"status":"fail","severity":"error"}')
         return SimpleNamespace(content='{"status":"pass","severity":"info"}')
 
-    monkeypatch.setattr(gen, "read_text", _read_text)
+    external_boundary_mocks_only.setattr(gen.file_service, "read_text", _read_text)
 
     response = gen.summarize_validation_artifacts(
         ValidationArtifactSummaryRequest(schema_version="1.0", output_dir="out", limit=10),
@@ -107,13 +117,19 @@ def test_load_state_rows_invalid_kind_raises() -> None:
     assert exc_info.value.code == "invalid_state_kind"
 
 
-def test_collect_directory_counts_captures_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_collect_directory_counts_captures_errors(
+    external_boundary_mocks_only,
+) -> None:
     def _list_directory(req, ctx):
         if req.glob_pattern == "broken":
             raise AppError(code="directory_not_found", message="missing", retryable=False)
         return SimpleNamespace(entries=[SimpleNamespace(path="a"), SimpleNamespace(path="b")])
 
-    monkeypatch.setattr(gen, "list_directory", _list_directory)
+    external_boundary_mocks_only.setattr(
+        gen.file_service,
+        "list_directory",
+        _list_directory,
+    )
 
     response = gen.collect_directory_counts(
         DirectoryCountsRequest(
@@ -149,9 +165,11 @@ def test_collect_directory_counts_captures_errors(monkeypatch: pytest.MonkeyPatc
     assert response.rows[1].error == "missing"
 
 
-def test_load_ledger_entries_keeps_last_n_valid_objects(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(
-        gen,
+def test_load_ledger_entries_keeps_last_n_valid_objects(
+    external_boundary_mocks_only,
+) -> None:
+    external_boundary_mocks_only.setattr(
+        gen.file_service,
         "read_text",
         lambda req, ctx: SimpleNamespace(content='{"usd":1}\nnot-json\n{"usd":2}\n{"usd":3}\n'),
     )
