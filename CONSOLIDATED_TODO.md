@@ -518,15 +518,6 @@ Each quick-win should be documented with a short task when prioritized.
 
 ### 8.5 AGENTS.md Compliance Backlog
 
-- **Title:** Ensure retryable `AppError` propagation from generators [Impact: 5/5, Effort: 3/5]
-  - Explanation: Remove generator-side swallowing of retryable failures and propagate retryable `AppError` to orchestrators for policy-driven retry.
-  - Pros: Correct error taxonomy behavior and cleaner resilience model.
-  - Cons: Requires revisiting existing fallback behavior and negative-path tests.
-  - Acceptance Criteria:
-    - Generators do not suppress retryable `AppError`.
-    - Orchestrator tests verify retries/backoff/state transitions for propagated errors.
-    - Error taxonomy assertions (`code`, `retryable`, `severity`) added for failure paths.
-
 - **Title:** Enforce prompt immutability outside prompt service and complete prompt observability [Impact: 5/5, Effort: 3/5]
   - Explanation: Ban runtime prompt text mutation/concatenation outside prompt service and ensure every model call logs prompt namespace, file paths, prompt hashes, exact rendered prompts, model params, and raw response.
   - Pros: Reproducibility and auditability of model behavior.

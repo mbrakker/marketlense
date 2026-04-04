@@ -283,3 +283,85 @@ def test_fit_report_categories_from_context_returns_selected_categories(
     assert "exclude_when" in openai_client.requests[0][0].user_prompt
     assert_no_defaulted_required_fields(response)
     assert_no_defaulted_required_fields(response.fits[0])
+
+
+def test_fit_report_categories_from_context_defaults_missing_optional_fields() -> None:
+    context = ReportCategoryContext(
+        schema_version="1.0",
+        report_id="file-1",
+        title="Tech Trends 2026",
+        publisher="Deloitte",
+        region="Global",
+        time_period="2026",
+        overview="A report about enterprise technology shifts and AI adoption.",
+        methods=["Interviews with CIOs"],
+        key_findings=["AI agents are becoming operational tooling."],
+        limitations=["Forward-looking analysis includes uncertainty."],
+        sections=[],
+    )
+    mappings = CategoryMappings(
+        schema_version="1.0",
+        categories=[
+            CategoryDefinition(
+                id="technology",
+                label="Technology & Innovation",
+                description="Reports about major technology shifts, enterprise systems, and innovation.",
+                definition="Reports whose primary subject is enterprise technology platforms, infrastructure, and technology change.",
+                include_when=["Repeated evidence centers on enterprise technology shifts or infrastructure decisions."],
+                exclude_when=["Reject when technology is only an enabling theme inside a broader consumer or media report."],
+            )
+        ],
+        classification=CategoryClassificationConfig(),
+        inference_rules=[],
+        uncategorized=[],
+    )
+
+    def mapping_client(request, ctx):
+        del request, ctx
+        return CategoryMappingLoadResponse(
+            schema_version="1.0",
+            mappings=mappings,
+        )
+
+    openai_client = RecordingOpenAIClient(
+        payload={
+            "schema_version": "1.0",
+            "selected_category_ids": ["technology"],
+            "category_fits": [
+                {
+                    "category_id": "technology",
+                    "label": "Technology & Innovation",
+                    "fit_score": 0.93,
+                    "decision": "primary",
+                    "why_fit": "The report is centrally about major enterprise technology shifts.",
+                }
+            ],
+        }
+    )
+    settings = SimpleNamespace(
+        openai_model="gpt-5-mini",
+        openai_models={},
+        openai_api_key="test-key",
+        openai_seed=None,
+        openai_timeout_seconds=30.0,
+        cost_ledger_path="./out/cost-ledger.jsonl",
+        cost_daily_path="./out/cost-daily.json",
+        model_pricing={"gpt-5-mini": {}},
+    )
+
+    response = fit_report_categories_from_context(
+        ContextCategoryFitRequest(
+            schema_version="1.0",
+            context=context,
+            settings=settings,
+            category_mapping_path="unused",
+        ),
+        _ctx(),
+        openai_client=openai_client,
+        prompt_client=RecordingPromptClient(),
+        mapping_client=mapping_client,
+    )
+
+    assert response.categories == ["technology"]
+    assert response.fits[0].why_not_fit == ""
+    assert response.fits[0].evidence_sections == []

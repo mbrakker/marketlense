@@ -79,6 +79,8 @@ def load_cached_pack(
                 path=path,
             )
         on_read_failed(exc, path)
+        if exc.retryable:
+            raise
         return CachedPackLoadResult(
             schema_version="1.0",
             status="read_failed",

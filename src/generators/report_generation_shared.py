@@ -49,6 +49,17 @@ def read_cache_json(
     except AppError as exc:
         if exc.code == "file_not_found":
             return None
+        if exc.retryable:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="cache_read_retryable_error_propagated",
+                    module=logger.name,
+                    fields={"path": str(path), "error": exc.message, "code": exc.code},
+                )
+            )
+            raise
         logger.info(
             log_event(
                 ctx,
@@ -123,6 +134,17 @@ def template_sha256(
             ctx,
         )
     except AppError as exc:
+        if exc.retryable:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="template_hash_retryable_error_propagated",
+                    module=logger.name,
+                    fields={"path": str(path), "error": exc.message, "code": exc.code},
+                )
+            )
+            raise
         logger.info(
             log_event(
                 ctx,

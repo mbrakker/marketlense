@@ -2,12 +2,15 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 from src.contracts.config import AppSettings
 from src.contracts.openai import OpenAIResponseResult
 from src.contracts.prompts import PromptSet, PromptTemplate
 from src.contracts.run_context import RunContext
 from src.contracts.taxonomy import TaxonomyExtractRequest
 from src.generators.taxonomy_generator import extract_taxonomy
+from src.utils.errors import AppError
 
 
 class FakePromptClient:
@@ -58,6 +61,16 @@ class FailIfCalledOpenAI:
         self.calls += 1
         raise AssertionError(
             "openai_respond_with_vector_store should not be called on cache hit"
+        )
+
+
+class RetryableFailingOpenAI:
+    def openai_respond_with_vector_store(self, req, ctx):
+        del req, ctx
+        raise AppError(
+            code="openai_request_failed",
+            message="retry taxonomy extraction",
+            retryable=True,
         )
 
 
@@ -453,3 +466,24 @@ def test_taxonomy_rule_context_matching_normalizes_punctuation(tmp_path):
 
     assert response.taxonomy == ["creator_commerce", "social_commerce"]
     assert response.secondary_tags == ["social_commerce"]
+
+
+def test_taxonomy_propagates_retryable_app_error(tmp_path, assert_app_error):
+    mapping_path = tmp_path / "category-mappings.yaml"
+    _write_mapping(mapping_path)
+    settings = _settings(tmp_path, mapping_path)
+
+    with pytest.raises(AppError) as err:
+        extract_taxonomy(
+            _request(settings),
+            _ctx(),
+            openai_client=RetryableFailingOpenAI(),
+            prompt_client=FakePromptClient(),
+        )
+
+    assert_app_error(
+        err.value,
+        code="openai_request_failed",
+        retryable=True,
+        severity="error",
+    )

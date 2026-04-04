@@ -345,6 +345,21 @@ def render_report_output(
             )
         )
     except AppError as exc:
+        if exc.retryable:
+            logger.info(
+                log_event(
+                    cover_ctx,
+                    role="generator",
+                    event="cover_image_retryable_error_propagated",
+                    module=logger.name,
+                    fields={
+                        "file_id": runtime.file.file_id,
+                        "code": exc.code,
+                        "error": exc.message,
+                    },
+                )
+            )
+            raise
         logger.info(
             log_event(
                 cover_ctx,

@@ -213,6 +213,21 @@ def generate_cover_images(
                 ctx,
             )
         except AppError as exc:
+            if exc.retryable:
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="generator",
+                        event="cover_generate_retryable_error_propagated",
+                        module=logger.name,
+                        fields={
+                            "file_id": normalized.file_id,
+                            "error": exc.message,
+                            "code": exc.code,
+                        },
+                    )
+                )
+                raise
             logger.info(
                 log_event(
                     ctx,

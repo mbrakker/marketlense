@@ -145,6 +145,7 @@ def fit_report_categories_from_context(
                 "response_preview": (response.text or "")[:400],
             },
         )
+    payload = _normalize_fit_payload(payload)
     validate_schema(
         SchemaValidateRequest(
             schema_version="1.0",
@@ -200,6 +201,33 @@ def _serialize_context(context: ReportCategoryContext) -> Dict[str, Any]:
             for section in context.sections
         ],
     }
+
+
+def _normalize_fit_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    normalized: dict[str, Any] = {
+        "schema_version": str(payload.get("schema_version") or "1.0"),
+        "selected_category_ids": [],
+        "category_fits": [],
+    }
+    for category_id in payload.get("selected_category_ids") or []:
+        text = str(category_id or "").strip()
+        if text:
+            normalized["selected_category_ids"].append(text)
+    for item in payload.get("category_fits") or []:
+        if not isinstance(item, dict):
+            continue
+        normalized["category_fits"].append(
+            {
+                "category_id": item.get("category_id"),
+                "label": item.get("label"),
+                "fit_score": item.get("fit_score"),
+                "decision": item.get("decision"),
+                "why_fit": str(item.get("why_fit") or ""),
+                "why_not_fit": str(item.get("why_not_fit") or ""),
+                "evidence_sections": item.get("evidence_sections") or [],
+            }
+        )
+    return normalized
 
 
 def _coerce_fit_response(

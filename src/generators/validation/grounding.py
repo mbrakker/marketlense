@@ -250,6 +250,17 @@ def run_grounding_check(
                         )
                     )
     except AppError as exc:
+        if exc.retryable:
+            logger.info(
+                log_event(
+                    prompt_ctx,
+                    role="generator",
+                    event="grounding_retryable_error_propagated",
+                    module=LOGGER_NAME,
+                    fields={"code": exc.code, "message": exc.message},
+                )
+            )
+            raise
         logger.info(
             log_event(
                 prompt_ctx,

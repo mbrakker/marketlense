@@ -1,6 +1,8 @@
 import json
 from types import SimpleNamespace
 
+import pytest
+
 from src.contracts.files import ReadTextRequest
 from src.contracts.run_context import RunContext
 from src.generators.analysis_pack_cache import (
@@ -139,3 +141,37 @@ def test_load_cached_pack_propagates_adapter_rejection_status():
     assert result.status == "schema_invalid"
     assert result.path == "packs/taxonomy.json"
     assert result.value is None
+
+
+def test_load_cached_pack_propagates_retryable_read_error(assert_app_error):
+    captured_errors = []
+
+    def _read_text(request: ReadTextRequest, ctx: RunContext):
+        del request, ctx
+        raise AppError(
+            code="read_failed",
+            message="temporary disk error",
+            retryable=True,
+        )
+
+    with pytest.raises(AppError) as err:
+        load_cached_pack(
+            cache_key="cache-key",
+            ctx=_ctx(),
+            resolve_path=lambda: "packs/report.json",
+            read_text=_read_text,
+            on_read_failed=lambda exc, path: captured_errors.append((exc.code, path)),
+            adapt_payload=lambda payload, path: CachedPackAdaptResult(
+                schema_version="1.0",
+                status="hit",
+                value=payload,
+            ),
+        )
+
+    assert_app_error(
+        err.value,
+        code="read_failed",
+        retryable=True,
+        severity="error",
+    )
+    assert captured_errors == [("read_failed", "packs/report.json")]

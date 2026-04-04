@@ -178,7 +178,7 @@ def run_semantic_validation(
                 code="semantic_response_invalid",
                 message="Semantic validation did not return JSON payload",
                 retryable=False,
-                context={"model": resolved_model},
+                context={"model": prompt_bundle.resolved_model},
             )
         outcome = parse_semantic_response(parsed)
         logger.info(
@@ -196,6 +196,17 @@ def run_semantic_validation(
         )
         return outcome
     except AppError as exc:
+        if exc.retryable:
+            logger.info(
+                log_event(
+                    semantic_ctx,
+                    role="generator",
+                    event="semantic_retryable_error_propagated",
+                    module=LOGGER_NAME,
+                    fields={"code": exc.code, "message": exc.message},
+                )
+            )
+            raise
         logger.info(
             log_event(
                 semantic_ctx,

@@ -4,6 +4,8 @@ import logging
 import threading
 from pathlib import Path
 
+import pytest
+
 from src.contracts.config import AppSettings
 from src.contracts.prompts import PromptSet, PromptTemplate
 from src.contracts.report_models import Figure, Quote, ReportPayload
@@ -13,6 +15,7 @@ from src.contracts.openai import OpenAIResponseResult
 from src.generators.validation.cache import load_cached_validation
 from src.generators.validation.registry import build_validation_rule_registry
 from src.generators.validation_generator import validate_report
+from src.utils.errors import AppError
 from src.utils.slugify import slugify
 
 
@@ -75,6 +78,27 @@ class FakeOpenAI:
                 ("vector", req.vector_store_id, str(getattr(ctx, "task_id", "")))
             )
         return self.openai_chat_json(req, ctx)
+
+
+class FailingOpenAI(FakeOpenAI):
+    def __init__(self, *, semantic_exc=None, grounding_exc=None):
+        super().__init__(semantic_payload={"metrics": [], "quotes": []}, grounding_payload={"unsupported": []})
+        self.semantic_exc = semantic_exc
+        self.grounding_exc = grounding_exc
+
+    def openai_chat_json(self, req, ctx):
+        task_id = str(getattr(ctx, "task_id", ""))
+        if task_id.endswith(":semantic") and self.semantic_exc is not None:
+            raise self.semantic_exc
+        if task_id.endswith(":grounding") and self.grounding_exc is not None:
+            raise self.grounding_exc
+        return super().openai_chat_json(req, ctx)
+
+    def openai_respond_with_vector_store(self, req, ctx):
+        task_id = str(getattr(ctx, "task_id", ""))
+        if task_id.endswith(":grounding") and self.grounding_exc is not None:
+            raise self.grounding_exc
+        return super().openai_respond_with_vector_store(req, ctx)
 
 
 class FakeAnalysisStore:
@@ -1208,3 +1232,97 @@ def test_validation_failures_include_rule_identity_prefix(tmp_path):
     assert any(issue.message.startswith("[quotes]") for issue in result.issues)
     assert any(issue.message.startswith("[numbers]") for issue in result.issues)
     assert any(issue.message.startswith("[grounding]") for issue in result.issues)
+
+
+def test_validation_propagates_retryable_semantic_error(tmp_path, assert_app_error):
+    settings = _settings(tmp_path, report_worker_limit=1)
+    artifacts = {
+        "insights_final": [
+            {
+                "id": "i1",
+                "text": "Insight text",
+                "evidence_id": "e1",
+                "evidence": "Revenue grew 5%",
+                "metric": {"value": "5", "unit": "%", "timeframe": "2024"},
+            }
+        ]
+    }
+
+    with pytest.raises(AppError) as err:
+        validate_report(
+            ValidationRequest(
+                schema_version="1.0",
+                report_id="r-semantic-retry",
+                report=_report(),
+                artifacts=artifacts,
+                evidence_packs={},
+                vector_store_id=None,
+            ),
+            settings,
+            _ctx(),
+            prompt_client=FakePromptClient(),
+            openai_client=FailingOpenAI(
+                semantic_exc=AppError(
+                    code="openai_chat_failed",
+                    message="semantic retry",
+                    retryable=True,
+                )
+            ),
+            analysis_store=FakeAnalysisStore(),
+        )
+
+    assert_app_error(
+        err.value,
+        code="openai_chat_failed",
+        retryable=True,
+        severity="error",
+    )
+
+
+def test_validation_propagates_retryable_grounding_error(tmp_path, assert_app_error):
+    settings = _settings(
+        tmp_path,
+        report_worker_limit=1,
+        validation_grounding_use_vector_store=True,
+    )
+    artifacts = {
+        "insights_final": [
+            {
+                "id": "i1",
+                "text": "Insight text",
+                "evidence_id": "e1",
+                "evidence": "Revenue grew 5%",
+                "metric": {"value": "5", "unit": "%", "timeframe": "2024"},
+            }
+        ]
+    }
+
+    with pytest.raises(AppError) as err:
+        validate_report(
+            ValidationRequest(
+                schema_version="1.0",
+                report_id="r-grounding-retry",
+                report=_report(),
+                artifacts=artifacts,
+                evidence_packs={},
+                vector_store_id="vs_1",
+            ),
+            settings,
+            _ctx(),
+            prompt_client=FakePromptClient(),
+            openai_client=FailingOpenAI(
+                grounding_exc=AppError(
+                    code="openai_request_failed",
+                    message="grounding retry",
+                    retryable=True,
+                )
+            ),
+            analysis_store=FakeAnalysisStore(),
+        )
+
+    assert_app_error(
+        err.value,
+        code="openai_request_failed",
+        retryable=True,
+        severity="error",
+    )

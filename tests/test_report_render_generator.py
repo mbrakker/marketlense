@@ -5,6 +5,8 @@ from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestSettings
 from src.contracts.pdf_text import PdfTextExtractResponse
@@ -29,6 +31,7 @@ from src.generators.report_render_generator import (
     render_preview_asset,
     render_report_output,
 )
+from src.utils.errors import AppError
 from src.utils.cache_utils import sha256_json
 import hashlib
 
@@ -391,3 +394,47 @@ def test_render_preview_asset_renders_when_contents_page_does_not_overlap(
 
     assert preview_resp.image_path == "preview.png"
     assert render_calls == [(runtime.local_pdf_path, 0, "")]
+
+
+def test_render_report_output_propagates_retryable_cover_error(
+    tmp_path, assert_app_error
+):
+    runtime = _runtime(tmp_path, md5="md5")
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = _analysis(runtime, source, selection)
+    html_path = Path(tmp_path / "out" / "report.html")
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def _render_report(req, ctx):
+        del req, ctx
+        html_path.write_text("<html></html>", encoding="utf-8")
+        return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
+
+    deps = _deps(
+        render_report=_render_report,
+        generate_cover_images=lambda req, ctx: (_ for _ in ()).throw(
+            AppError(
+                code="cover_render_failed",
+                message="temporary cover render failure",
+                retryable=True,
+            )
+        ),
+    )
+
+    with pytest.raises(AppError) as err:
+        render_report_output(
+            runtime,
+            source,
+            selection,
+            analysis,
+            deps,
+            preview_resp=render_preview_asset(runtime, source, deps),
+        )
+
+    assert_app_error(
+        err.value,
+        code="cover_render_failed",
+        retryable=True,
+        severity="error",
+    )

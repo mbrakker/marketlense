@@ -224,6 +224,15 @@ def extract_taxonomy(
         if parsed_json is None:
             not_found_reason = "model_returned_no_json"
     except AppError as exc:
+        if exc.retryable:
+            logger.info(log_event(
+                ctx,
+                role="generator",
+                event="taxonomy_retryable_error_propagated",
+                module=logger.name,
+                fields={"code": exc.code, "message": exc.message},
+            ))
+            raise
         not_found_reason = exc.code
         logger.info(log_event(
             ctx,
@@ -247,6 +256,15 @@ def extract_taxonomy(
             fields={"reason": not_found_reason or ""},
         ))
     except AppError as exc:
+        if exc.retryable:
+            logger.info(log_event(
+                ctx,
+                role="generator",
+                event="taxonomy_retryable_error_propagated",
+                module=logger.name,
+                fields={"code": exc.code, "message": exc.message},
+            ))
+            raise
         not_found_reason = not_found_reason or f"schema_validation_failed:{exc.code}"
         payload = _empty_payload(not_found_reason)
         logger.info(log_event(
