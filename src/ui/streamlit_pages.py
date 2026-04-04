@@ -6,7 +6,7 @@ from copy import deepcopy
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, MutableMapping, Optional, TypeVar
 
 import streamlit as st
 import yaml
@@ -104,6 +104,45 @@ from src.utils.logging import new_run_context
 from src.utils.slugify import slugify
 
 UI_SURFACE_EXCEPTIONS = (AppError, OSError, RuntimeError, ValueError, TypeError, yaml.YAMLError)
+
+_DASHBOARD_READ_MODEL_CACHE_KEY = "dashboard_read_models"
+_DASHBOARD_CACHE_INVALIDATION_REASON_KEY = "dashboard_read_models_last_invalidation"
+_T = TypeVar("_T")
+
+_DASHBOARD_CACHE_INVALIDATION_RULES: dict[str, set[str] | None] = {
+    "refresh_all": None,
+    "ingest": {
+        "ops_snapshot",
+        "report_rows",
+        "processed_rows",
+        "published_rows",
+        "log_files",
+        "log_events",
+        "lock_snapshot",
+        "storage_health",
+        "validation_files",
+        "directory_counts",
+    },
+    "publish": {
+        "ops_snapshot",
+        "report_rows",
+        "published_rows",
+        "log_files",
+        "log_events",
+        "validation_files",
+    },
+    "recategorize": {
+        "ops_snapshot",
+        "report_rows",
+        "log_files",
+        "log_events",
+    },
+    "cover_images": {
+        "report_rows",
+        "directory_counts",
+    },
+    "settings": None,
+}
 
 
 NAV_SECTIONS = [
@@ -499,31 +538,89 @@ def _try_write_app_config(
     return response, None
 
 
+def _dashboard_read_model_store(
+    session_state: MutableMapping[str, Any],
+) -> dict[tuple[object, ...], Any]:
+    cache = session_state.get(_DASHBOARD_READ_MODEL_CACHE_KEY)
+    if isinstance(cache, dict):
+        return cache
+    created: dict[tuple[object, ...], Any] = {}
+    session_state[_DASHBOARD_READ_MODEL_CACHE_KEY] = created
+    return created
+
+
+def _load_dashboard_read_model(
+    session_state: MutableMapping[str, Any],
+    *,
+    view_name: str,
+    identity: tuple[object, ...] = (),
+    loader: Callable[[], _T],
+) -> _T:
+    cache = _dashboard_read_model_store(session_state)
+    cache_key = (view_name, *identity)
+    if cache_key not in cache:
+        cache[cache_key] = loader()
+    return cache[cache_key]
+
+
+def _invalidate_dashboard_read_models(
+    session_state: MutableMapping[str, Any], *, reason: str
+) -> list[str]:
+    if reason not in _DASHBOARD_CACHE_INVALIDATION_RULES:
+        raise ValueError(f"Unknown dashboard cache invalidation reason: {reason}")
+    cache = _dashboard_read_model_store(session_state)
+    targets = _DASHBOARD_CACHE_INVALIDATION_RULES[reason]
+    if targets is None:
+        removed_keys = list(cache.keys())
+        cache.clear()
+    else:
+        removed_keys = [
+            key
+            for key in list(cache.keys())
+            if isinstance(key, tuple) and key and key[0] in targets
+        ]
+        for key in removed_keys:
+            cache.pop(key, None)
+    session_state[_DASHBOARD_CACHE_INVALIDATION_REASON_KEY] = reason
+    return [str(key[0]) for key in removed_keys if isinstance(key, tuple) and key]
+
+
 def _discover_log_files() -> list[dict[str, Any]]:
-    response = discover_log_files(
-        LogFileDiscoveryRequest(
-            schema_version="1.0",
-            log_dir=os.getenv(LOG_DIR_ENV, DEFAULT_LOG_DIR),
-            file_prefix=LOG_FILE_PREFIX,
-            limit=100,
+    log_dir = os.getenv(LOG_DIR_ENV, DEFAULT_LOG_DIR)
+    return _load_dashboard_read_model(
+        st.session_state,
+        view_name="log_files",
+        identity=(log_dir, LOG_FILE_PREFIX, 100),
+        loader=lambda: row_dicts(
+            discover_log_files(
+                LogFileDiscoveryRequest(
+                    schema_version="1.0",
+                    log_dir=log_dir,
+                    file_prefix=LOG_FILE_PREFIX,
+                    limit=100,
+                ),
+                _ctx("discover_logs"),
+            ).records
         ),
-        _ctx("discover_logs"),
     )
-    return row_dicts(response.records)
 
 
 def _load_log_events(
     log_paths: list[str], *, max_lines_per_file: int = 5000
 ) -> list[dict[str, Any]]:
-    response = load_log_events(
-        LogEventLoadRequest(
-            schema_version="1.0",
-            log_paths=log_paths,
-            max_lines_per_file=max_lines_per_file,
-        ),
-        _ctx("load_log_events"),
+    return _load_dashboard_read_model(
+        st.session_state,
+        view_name="log_events",
+        identity=(tuple(log_paths), max_lines_per_file),
+        loader=lambda: load_log_events(
+            LogEventLoadRequest(
+                schema_version="1.0",
+                log_paths=log_paths,
+                max_lines_per_file=max_lines_per_file,
+            ),
+            _ctx("load_log_events"),
+        ).events,
     )
-    return response.events
 
 
 def _read_json(path: str) -> dict[str, Any] | list[Any] | None:
@@ -582,93 +679,218 @@ def _optional_int_from_text(value: str, *, field: str, errors: list[str]) -> int
 
 
 def _storage_health(settings: Any) -> list[dict[str, Any]]:
-    response = collect_storage_health(
-        StorageHealthRequest(
-            schema_version="1.0",
-            targets=[
-                StorageTarget(
-                    schema_version="1.0", name="output_dir", path=settings.output_dir
-                ),
-                StorageTarget(
-                    schema_version="1.0", name="cache_dir", path=settings.cache_dir
-                ),
-                StorageTarget(
-                    schema_version="1.0", name="state_db", path=settings.state_db
-                ),
-                StorageTarget(
-                    schema_version="1.0", name="reports_db", path=settings.reports_db
-                ),
-            ],
+    return _load_dashboard_read_model(
+        st.session_state,
+        view_name="storage_health",
+        identity=(
+            settings.output_dir,
+            settings.cache_dir,
+            settings.state_db,
+            settings.reports_db,
         ),
-        _ctx("storage_health"),
+        loader=lambda: row_dicts(
+            collect_storage_health(
+                StorageHealthRequest(
+                    schema_version="1.0",
+                    targets=[
+                        StorageTarget(
+                            schema_version="1.0",
+                            name="output_dir",
+                            path=settings.output_dir,
+                        ),
+                        StorageTarget(
+                            schema_version="1.0",
+                            name="cache_dir",
+                            path=settings.cache_dir,
+                        ),
+                        StorageTarget(
+                            schema_version="1.0",
+                            name="state_db",
+                            path=settings.state_db,
+                        ),
+                        StorageTarget(
+                            schema_version="1.0",
+                            name="reports_db",
+                            path=settings.reports_db,
+                        ),
+                    ],
+                ),
+                _ctx("storage_health"),
+            ).rows
+        ),
     )
-    return row_dicts(response.rows)
 
 
 def _recent_validation_files(output_dir: str) -> list[dict[str, Any]]:
-    response = summarize_validation_artifacts(
-        ValidationArtifactSummaryRequest(
-            schema_version="1.0", output_dir=output_dir, limit=200
+    return _load_dashboard_read_model(
+        st.session_state,
+        view_name="validation_files",
+        identity=(output_dir, 200),
+        loader=lambda: row_dicts(
+            summarize_validation_artifacts(
+                ValidationArtifactSummaryRequest(
+                    schema_version="1.0", output_dir=output_dir, limit=200
+                ),
+                _ctx("validation_summary"),
+            ).rows
         ),
-        _ctx("validation_summary"),
     )
-    return row_dicts(response.rows)
 
 
 def _load_report_rows(settings: Any) -> list[dict[str, Any]]:
-    response = load_report_rows(
-        ReportRowsLoadRequest(schema_version="1.0", reports_db=settings.reports_db),
-        _ctx("load_report_rows"),
+    return _load_dashboard_read_model(
+        st.session_state,
+        view_name="report_rows",
+        identity=(settings.reports_db,),
+        loader=lambda: load_report_rows(
+            ReportRowsLoadRequest(schema_version="1.0", reports_db=settings.reports_db),
+            _ctx("load_report_rows"),
+        ).rows,
     )
-    return response.rows
 
 
 def _load_processed_rows(settings: Any) -> list[dict[str, Any]]:
-    response = load_state_rows(
-        StateRowsLoadRequest(
-            schema_version="1.0",
-            state_db=settings.state_db,
-            kind="processed",
-            limit=1000,
-        ),
-        _ctx("load_processed_rows"),
+    return _load_dashboard_read_model(
+        st.session_state,
+        view_name="processed_rows",
+        identity=(settings.state_db, 1000),
+        loader=lambda: load_state_rows(
+            StateRowsLoadRequest(
+                schema_version="1.0",
+                state_db=settings.state_db,
+                kind="processed",
+                limit=1000,
+            ),
+            _ctx("load_processed_rows"),
+        ).rows,
     )
-    return response.rows
 
 
 def _load_published_rows(settings: Any) -> list[dict[str, Any]]:
-    response = load_state_rows(
-        StateRowsLoadRequest(
-            schema_version="1.0",
-            state_db=settings.state_db,
-            kind="published",
-            limit=1000,
-        ),
-        _ctx("load_published_rows"),
+    return _load_dashboard_read_model(
+        st.session_state,
+        view_name="published_rows",
+        identity=(settings.state_db, 1000),
+        loader=lambda: load_state_rows(
+            StateRowsLoadRequest(
+                schema_version="1.0",
+                state_db=settings.state_db,
+                kind="published",
+                limit=1000,
+            ),
+            _ctx("load_published_rows"),
+        ).rows,
     )
-    return response.rows
 
 
 def _lock_snapshot(lock_path: str) -> dict[str, Any]:
-    snapshot = load_lock_snapshot(
-        LockSnapshotLoadRequest(schema_version="1.0", lock_path=lock_path),
-        _ctx("load_lock_snapshot"),
+    return _load_dashboard_read_model(
+        st.session_state,
+        view_name="lock_snapshot",
+        identity=(lock_path,),
+        loader=lambda: asdict(
+            load_lock_snapshot(
+                LockSnapshotLoadRequest(schema_version="1.0", lock_path=lock_path),
+                _ctx("load_lock_snapshot"),
+            )
+        ),
     )
-    return asdict(snapshot)
+
+
+def _load_ops_dashboard_snapshot(settings: Any) -> Any:
+    return _load_dashboard_read_model(
+        st.session_state,
+        view_name="ops_snapshot",
+        identity=(
+            settings.output_dir,
+            settings.cache_dir,
+            settings.state_db,
+            settings.reports_db,
+            settings.ingest_lock_path,
+        ),
+        loader=lambda: collect_ops_dashboard_snapshot(
+            OpsDashboardSnapshotRequest(
+                schema_version="1.0",
+                output_dir=settings.output_dir,
+                cache_dir=settings.cache_dir,
+                state_db=settings.state_db,
+                reports_db=settings.reports_db,
+                ingest_lock_path=settings.ingest_lock_path,
+            ),
+            _ctx("ops_snapshot"),
+        ),
+    )
+
+
+def _load_directory_count_rows(settings: Any) -> list[dict[str, Any]]:
+    return _load_dashboard_read_model(
+        st.session_state,
+        view_name="directory_counts",
+        identity=(settings.output_dir, 5000),
+        loader=lambda: row_dicts(
+            collect_directory_counts(
+                DirectoryCountsRequest(
+                    schema_version="1.0",
+                    checks=[
+                        DirectoryCountCheck(
+                            schema_version="1.0",
+                            name="HTML",
+                            root_dir=settings.output_dir,
+                            glob_pattern="*.html",
+                            recursive=False,
+                            include_dirs=False,
+                        ),
+                        DirectoryCountCheck(
+                            schema_version="1.0",
+                            name="report_analysis dirs",
+                            root_dir=settings.output_dir,
+                            glob_pattern="report_analysis",
+                            recursive=True,
+                            include_dirs=True,
+                        ),
+                        DirectoryCountCheck(
+                            schema_version="1.0",
+                            name="assets dirs",
+                            root_dir=settings.output_dir,
+                            glob_pattern="assets",
+                            recursive=True,
+                            include_dirs=True,
+                        ),
+                        DirectoryCountCheck(
+                            schema_version="1.0",
+                            name="candidates dirs",
+                            root_dir=settings.output_dir,
+                            glob_pattern="candidates",
+                            recursive=True,
+                            include_dirs=True,
+                        ),
+                        DirectoryCountCheck(
+                            schema_version="1.0",
+                            name="slices dirs",
+                            root_dir=settings.output_dir,
+                            glob_pattern="slices",
+                            recursive=True,
+                            include_dirs=True,
+                        ),
+                        DirectoryCountCheck(
+                            schema_version="1.0",
+                            name="thumbs dirs",
+                            root_dir=settings.output_dir,
+                            glob_pattern="thumbs",
+                            recursive=True,
+                            include_dirs=True,
+                        ),
+                    ],
+                    limit=5000,
+                ),
+                _ctx("directory_counts"),
+            ).rows
+        ),
+    )
 
 
 def _render_cockpit_overview(settings: Any) -> None:
-    snapshot = collect_ops_dashboard_snapshot(
-        OpsDashboardSnapshotRequest(
-            schema_version="1.0",
-            output_dir=settings.output_dir,
-            cache_dir=settings.cache_dir,
-            state_db=settings.state_db,
-            reports_db=settings.reports_db,
-            ingest_lock_path=settings.ingest_lock_path,
-        ),
-        _ctx("ops_snapshot"),
-    )
+    snapshot = _load_ops_dashboard_snapshot(settings)
     reports = snapshot.reports
     processed = snapshot.processed
     published = snapshot.published
@@ -691,6 +913,7 @@ def _render_cockpit_overview(settings: Any) -> None:
         primary_key="overview_refresh",
     )
     if clicked:
+        _invalidate_dashboard_read_models(st.session_state, reason="refresh_all")
         st.rerun()
 
     with filters:
@@ -800,6 +1023,7 @@ def _render_ingest_control(settings: Any) -> None:
                 ctx=_ctx("run_ingest"),
             )
             st.session_state["last_ingest_outcomes"] = outcomes
+            _invalidate_dashboard_read_models(st.session_state, reason="ingest")
             processed_count = len([o for o in outcomes if o.status == "processed"])
             _append_terminal(
                 f"Ingest complete. processed={processed_count} total={len(outcomes)}"
@@ -992,6 +1216,7 @@ def _render_report_command_center(settings: Any) -> None:
         primary_key="refresh_reports_center",
     )
     if clicked:
+        _invalidate_dashboard_read_models(st.session_state, reason="refresh_all")
         st.rerun()
     reports = _load_report_rows(settings)
     with filters:
@@ -1179,6 +1404,7 @@ def _render_cover_images(settings: Any) -> None:
                 ctx=_ctx("run_covers"),
             )
             st.session_state["last_cover_outcomes"] = outcomes
+            _invalidate_dashboard_read_models(st.session_state, reason="cover_images")
             _append_terminal(f"Cover generation complete. outcomes={len(outcomes)}")
             st.success(f"Cover generation completed for {len(outcomes)} report(s).")
         except UI_SURFACE_EXCEPTIONS as exc:
@@ -1245,6 +1471,7 @@ def _render_analysis_and_evidence(settings: Any) -> None:
         primary_key="analysis_refresh",
     )
     if clicked:
+        _invalidate_dashboard_read_models(st.session_state, reason="refresh_all")
         st.rerun()
     reports = _load_report_rows(settings)
     with filters:
@@ -1344,6 +1571,7 @@ def _render_validation_center(
         primary_key="validation_refresh",
     )
     if clicked:
+        _invalidate_dashboard_read_models(st.session_state, reason="refresh_all")
         st.rerun()
     with filters:
         st.caption("Validation policy and artifact compliance status across reports.")
@@ -1429,6 +1657,7 @@ def _render_publishing_control(
                 ctx=_ctx("publish"),
             )
             st.session_state["last_publish_outcomes"] = outcomes
+            _invalidate_dashboard_read_models(st.session_state, reason="publish")
             published_count = len([o for o in outcomes if o.status == "published"])
             _append_terminal(
                 f"Publish complete. published={published_count} total={len(outcomes)}"
@@ -1524,6 +1753,7 @@ def _render_category_manager(settings: Any, publish_settings: Any | None) -> Non
                 )
             )
             st.session_state["last_recategorize_outcomes"] = outcomes
+            _invalidate_dashboard_read_models(st.session_state, reason="recategorize")
             _append_terminal(f"Recategorize complete. outcomes={len(outcomes)}")
             st.success(f"Recategorization completed for {len(outcomes)} reports.")
         except UI_SURFACE_EXCEPTIONS as exc:
@@ -1535,6 +1765,7 @@ def _render_category_manager(settings: Any, publish_settings: Any | None) -> Non
         try:
             outcomes = run_update_wp_categories(publish_settings)
             st.session_state["last_wp_sync_outcomes"] = outcomes
+            _invalidate_dashboard_read_models(st.session_state, reason="publish")
             _append_terminal(f"WP category sync complete. outcomes={len(outcomes)}")
             st.success(
                 f"WordPress category sync completed for {len(outcomes)} reports."
@@ -1733,6 +1964,7 @@ def _render_logs_and_terminal() -> None:
         primary_key="refresh_logs",
     )
     if clicked:
+        _invalidate_dashboard_read_models(st.session_state, reason="refresh_all")
         st.rerun()
     log_files = _discover_log_files()
     with filters:
@@ -2694,6 +2926,9 @@ def _render_settings_and_prompts_legacy(
                         st.session_state[saved_key] = refreshed_doc.content
                     else:
                         st.session_state[saved_key] = editor_text
+                    _invalidate_dashboard_read_models(
+                        st.session_state, reason="settings"
+                    )
                     _append_terminal(
                         f"app.yaml saved ({save_response.bytes_written} bytes, keys={len(save_response.top_level_keys)})"
                     )
@@ -2788,6 +3023,7 @@ def _render_system_and_storage(settings: Any) -> None:
         primary_key="refresh_system_storage",
     )
     if clicked:
+        _invalidate_dashboard_read_models(st.session_state, reason="refresh_all")
         st.rerun()
     with filters:
         st.caption("Explore DB records, lock status, and artifact directory mapping.")
@@ -2797,64 +3033,7 @@ def _render_system_and_storage(settings: Any) -> None:
     reports = _load_report_rows(settings)
     lock = _lock_snapshot(settings.ingest_lock_path)
 
-    path_checks_response = collect_directory_counts(
-        DirectoryCountsRequest(
-            schema_version="1.0",
-            checks=[
-                DirectoryCountCheck(
-                    schema_version="1.0",
-                    name="HTML",
-                    root_dir=settings.output_dir,
-                    glob_pattern="*.html",
-                    recursive=False,
-                    include_dirs=False,
-                ),
-                DirectoryCountCheck(
-                    schema_version="1.0",
-                    name="report_analysis dirs",
-                    root_dir=settings.output_dir,
-                    glob_pattern="report_analysis",
-                    recursive=True,
-                    include_dirs=True,
-                ),
-                DirectoryCountCheck(
-                    schema_version="1.0",
-                    name="assets dirs",
-                    root_dir=settings.output_dir,
-                    glob_pattern="assets",
-                    recursive=True,
-                    include_dirs=True,
-                ),
-                DirectoryCountCheck(
-                    schema_version="1.0",
-                    name="candidates dirs",
-                    root_dir=settings.output_dir,
-                    glob_pattern="candidates",
-                    recursive=True,
-                    include_dirs=True,
-                ),
-                DirectoryCountCheck(
-                    schema_version="1.0",
-                    name="slices dirs",
-                    root_dir=settings.output_dir,
-                    glob_pattern="slices",
-                    recursive=True,
-                    include_dirs=True,
-                ),
-                DirectoryCountCheck(
-                    schema_version="1.0",
-                    name="thumbs dirs",
-                    root_dir=settings.output_dir,
-                    glob_pattern="thumbs",
-                    recursive=True,
-                    include_dirs=True,
-                ),
-            ],
-            limit=5000,
-        ),
-        _ctx("directory_counts"),
-    )
-    path_checks = row_dicts(path_checks_response.rows)
+    path_checks = _load_directory_count_rows(settings)
 
     with main_col:
         st.subheader("State DB - Processed")

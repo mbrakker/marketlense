@@ -536,15 +536,6 @@ Each quick-win should be documented with a short task when prioritized.
 
 This section absorbs the remaining open appendix items from `docs/quality/ineffective-choices-top50.md` so the consolidated TODO remains the only active backlog.
 
-- **Title:** Cache dashboard read models in Streamlit session state with explicit invalidation [Impact: 3/5, Effort: 2/5]
-  - Explanation: `src/ui/streamlit_pages.py` repeatedly reloads logs, state rows, report rows, and storage views during one UI session. Cache those read models in `st.session_state` or a thin UI cache layer and invalidate them after actions that mutate underlying state.
-  - Pros: Faster dashboard interactions and less repeated filesystem/database work.
-  - Cons: Invalidation must be explicit to avoid stale operator views.
-  - Acceptance Criteria:
-    - High-volume dashboard loaders use session-aware caching.
-    - Mutating actions invalidate the affected cached views deterministically.
-    - UI tests cover refresh behavior after ingest/publish/settings actions.
-
 - **Title:** Factory-generate repetitive evidence-pack strategy scaffolding [Impact: 2/5, Effort: 3/5]
   - Explanation: Replace repeated list-pack/scalar-pack strategy boilerplate with factory helpers, leaving pack-specific field maps and transforms explicit in each strategy module.
   - Pros: Smaller strategy modules and less repeated normalization shell code.
