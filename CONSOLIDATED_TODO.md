@@ -536,12 +536,4 @@ Each quick-win should be documented with a short task when prioritized.
 
 This section absorbs the remaining open appendix items from `docs/quality/ineffective-choices-top50.md` so the consolidated TODO remains the only active backlog.
 
-- **Title:** Factory-generate repetitive evidence-pack strategy scaffolding [Impact: 2/5, Effort: 3/5]
-  - Explanation: Replace repeated list-pack/scalar-pack strategy boilerplate with factory helpers, leaving pack-specific field maps and transforms explicit in each strategy module.
-  - Pros: Smaller strategy modules and less repeated normalization shell code.
-  - Cons: Must avoid over-abstracting genuinely different pack behavior.
-  - Acceptance Criteria:
-    - Common evidence-pack strategy scaffolding is centralized.
-    - Pack-specific transforms and schema choices remain explicit.
-    - Existing strategy outputs remain unchanged under tests.
 

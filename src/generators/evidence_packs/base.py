@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Callable
+from typing import Callable, Sequence
 
 
 @dataclass(frozen=True)
@@ -51,3 +51,103 @@ def build_scalar_pack_empty_payload(
 
 def unchanged_result(payload: dict[str, object]) -> PackNormalizationResult:
     return PackNormalizationResult(payload=payload, changed=False)
+
+
+def _extract_wrapped_pack_payload(
+    payload: object, *, root_key: str
+) -> tuple[object, dict[str, object] | None]:
+    cache_meta = None
+    source = payload
+    if isinstance(payload, dict):
+        cache_meta = (
+            payload.get("_cache") if isinstance(payload.get("_cache"), dict) else None
+        )
+        wrapped = payload.get(root_key)
+        if wrapped is None:
+            wrapped = payload.get("evidence_pack")
+        if wrapped is None:
+            wrapped = payload.get("evidencePack")
+        if wrapped is not None:
+            source = wrapped
+    return source, cache_meta
+
+
+def build_list_pack_strategy(
+    *,
+    pack_name: str,
+    prompt_namespace_suffix: str,
+    schema_name: str,
+    root_key: str,
+    source_aliases: Sequence[str] = (),
+    normalize_items: Callable[[object], list[object]],
+) -> EvidencePackStrategy:
+    def build_empty_payload(reason: str) -> dict[str, object]:
+        return build_list_pack_empty_payload(root_key=root_key, reason=reason)
+
+    def normalize_payload(
+        payload: object, report_id: str, report_name: str
+    ) -> PackNormalizationResult:
+        del report_id, report_name
+        source, cache_meta = _extract_wrapped_pack_payload(payload, root_key=root_key)
+        root = source if isinstance(source, dict) else {}
+        normalized = build_empty_payload("")
+        raw_value = root.get(root_key) if isinstance(source, dict) else source
+        if raw_value is None:
+            for alias in source_aliases:
+                raw_value = root.get(alias)
+                if raw_value is not None:
+                    break
+        normalized[root_key] = normalize_items(raw_value)
+        if cache_meta:
+            normalized["_cache"] = cache_meta
+        return PackNormalizationResult(payload=normalized, changed=normalized != payload)
+
+    return EvidencePackStrategy(
+        pack_name=pack_name,
+        prompt_namespace_suffix=prompt_namespace_suffix,
+        schema_name=schema_name,
+        normalize_payload=normalize_payload,
+        empty_payload=build_empty_payload,
+    )
+
+
+def build_scalar_pack_strategy(
+    *,
+    pack_name: str,
+    prompt_namespace_suffix: str,
+    schema_name: str,
+    root_key: str,
+    default_value: object,
+    source_aliases: Sequence[str] = (),
+    normalize_value: Callable[[object], object],
+) -> EvidencePackStrategy:
+    def build_empty_payload(reason: str) -> dict[str, object]:
+        return build_scalar_pack_empty_payload(
+            root_key=root_key, default_value=default_value, reason=reason
+        )
+
+    def normalize_payload(
+        payload: object, report_id: str, report_name: str
+    ) -> PackNormalizationResult:
+        del report_id, report_name
+        source, cache_meta = _extract_wrapped_pack_payload(payload, root_key=root_key)
+        root = source if isinstance(source, dict) else {}
+        normalized = build_empty_payload("")
+        raw_value = root.get(root_key) if isinstance(source, dict) else source
+        if raw_value is None:
+            for alias in source_aliases:
+                raw_value = root.get(alias)
+                if raw_value is not None:
+                    break
+        normalized[root_key] = normalize_value(raw_value)
+        if cache_meta:
+            normalized["_cache"] = cache_meta
+        return PackNormalizationResult(payload=normalized, changed=normalized != payload)
+
+    return EvidencePackStrategy(
+        pack_name=pack_name,
+        prompt_namespace_suffix=prompt_namespace_suffix,
+        schema_name=schema_name,
+        normalize_payload=normalize_payload,
+        empty_payload=build_empty_payload,
+    )

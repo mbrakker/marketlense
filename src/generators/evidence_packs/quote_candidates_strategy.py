@@ -3,9 +3,7 @@ from __future__ import annotations
 from typing import Optional
 
 from src.generators.evidence_packs.base import (
-    EvidencePackStrategy,
-    PackNormalizationResult,
-    build_list_pack_empty_payload,
+    build_list_pack_strategy,
 )
 from src.generators.evidence_packs.common import (
     coerce_pack_items,
@@ -13,12 +11,6 @@ from src.generators.evidence_packs.common import (
     first_non_empty_text,
     to_dict,
 )
-
-
-def build_empty_payload(reason: str) -> dict[str, object]:
-    return build_list_pack_empty_payload(root_key="quote_candidates", reason=reason)
-
-
 def normalize_quote_candidates(raw_quotes: object) -> list[dict[str, object]]:
     quotes: list[dict[str, object]] = []
     for idx, entry in enumerate(coerce_pack_items(raw_quotes)):
@@ -70,41 +62,11 @@ def normalize_quote_candidates(raw_quotes: object) -> list[dict[str, object]]:
     return quotes
 
 
-def normalize_payload(
-    payload: object, report_id: str, report_name: str
-) -> PackNormalizationResult:
-    del report_id, report_name
-    cache_meta = None
-    source = payload
-    if isinstance(payload, dict):
-        cache_meta = (
-            payload.get("_cache") if isinstance(payload.get("_cache"), dict) else None
-        )
-        wrapped = payload.get("quote_candidates")
-        if wrapped is None:
-            wrapped = payload.get("evidence_pack")
-        if wrapped is None:
-            wrapped = payload.get("evidencePack")
-        if wrapped is not None:
-            source = wrapped
-
-    root = to_dict(source)
-    normalized = build_empty_payload("")
-    raw_quotes = root.get("quote_candidates") if isinstance(source, dict) else source
-    if raw_quotes is None:
-        raw_quotes = root.get("quotes")
-    if raw_quotes is None:
-        raw_quotes = root.get("quoteCandidates")
-    normalized["quote_candidates"] = normalize_quote_candidates(raw_quotes)
-    if cache_meta:
-        normalized["_cache"] = cache_meta
-    return PackNormalizationResult(payload=normalized, changed=normalized != payload)
-
-
-QUOTE_CANDIDATES_STRATEGY = EvidencePackStrategy(
+QUOTE_CANDIDATES_STRATEGY = build_list_pack_strategy(
     pack_name="quote_candidates",
     prompt_namespace_suffix="evidence_packs/quote_candidates",
     schema_name="quote_candidates_pack",
-    normalize_payload=normalize_payload,
-    empty_payload=build_empty_payload,
+    root_key="quote_candidates",
+    source_aliases=("quotes", "quoteCandidates"),
+    normalize_items=normalize_quote_candidates,
 )
