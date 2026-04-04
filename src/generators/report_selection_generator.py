@@ -679,7 +679,7 @@ def select_refined_candidate_items(
             )
 
     plan_rows: list[dict[str, Any]] = []
-    llm_pending_indices: list[int] = []
+    llm_pending_by_page: dict[int, list[int]] = {}
     llm_pages: set[int] = set()
     for idx, (_, candidate) in enumerate(thresholded):
         reject_now, reject_reason = _candidate_is_obvious_reject(candidate)
@@ -706,7 +706,7 @@ def select_refined_candidate_items(
             )
             cached_row = crop_refine_cache_rows.get(entry_key) if entry_key else None
         if use_llm and cached_row is None:
-            llm_pending_indices.append(idx)
+            llm_pending_by_page.setdefault(candidate.page, []).append(idx)
             llm_pages.add(candidate.page)
         plan_rows.append(
             {
@@ -781,29 +781,39 @@ def select_refined_candidate_items(
             )
         )
 
-    def _run_crop_refine_llm(plan_index: int) -> dict[str, Any]:
+    def _run_crop_refine_llm_page(
+        page_number: int, plan_indices: list[int]
+    ) -> dict[int, dict[str, Any]]:
         if crop_refine_prompt_set is None or crop_refine_system_render is None:
             raise RuntimeError("crop_refine prompt set was not initialized")
-        _, candidate = thresholded[plan_index]
-        page_render = page_render_cache.get(candidate.page) or _render_refine_page(
-            candidate.page
+        page_render = page_render_cache.get(page_number) or _render_refine_page(
+            page_number
         )
-        base_payload = {
-            "id": candidate.id,
-            "type": candidate.kind,
-            "page": candidate.page,
-            "bbox": [float(value) for value in candidate.bbox],
-            "caption": (candidate.caption or "")[:400],
-            "preview_text": (candidate.preview_text or "")[:600],
-            "meta": candidate.meta or {},
-        }
-        current_bbox = _bbox_tuple(candidate.bbox)
-        current_reason = "missing_decision"
-        is_valid = False
-        for phase in ("coarse", "finalize"):
-            payload_item = dict(base_payload)
-            if phase == "finalize":
-                payload_item["proposed_bbox"] = [float(value) for value in current_bbox]
+
+        def _candidate_prompt_payload(
+            candidate: Candidate,
+            *,
+            bbox: tuple[float, float, float, float],
+            include_proposed_bbox: bool,
+        ) -> dict[str, Any]:
+            payload_item = {
+                "id": candidate.id,
+                "type": candidate.kind,
+                "page": candidate.page,
+                "bbox": [float(value) for value in bbox],
+                "caption": (candidate.caption or "")[:400],
+                "preview_text": (candidate.preview_text or "")[:600],
+                "meta": candidate.meta or {},
+            }
+            if include_proposed_bbox:
+                payload_item["proposed_bbox"] = [float(value) for value in bbox]
+            return payload_item
+
+        def _invoke_phase(
+            phase: str,
+            phase_candidates: list[CropRefineCandidate],
+            phase_payload: list[dict[str, Any]],
+        ) -> Any:
             crop_refine_user_render = dependencies.render_prompt(
                 PromptRenderRequest(
                     schema_version="1.0",
@@ -813,7 +823,7 @@ def select_refined_candidate_items(
                         "page_height": page_render.page_height,
                         "phase": phase,
                         "candidates_json": json.dumps(
-                            [payload_item], ensure_ascii=True
+                            phase_payload, ensure_ascii=True
                         ),
                     },
                 ),
@@ -826,9 +836,10 @@ def select_refined_candidate_items(
                     event="crop_refine_llm_request",
                     module=logger.name,
                     fields={
-                        "candidate_id": candidate.id,
-                        "page": candidate.page,
+                        "page": page_number,
                         "phase": phase,
+                        "candidate_ids": [candidate.id for candidate in phase_candidates],
+                        "candidate_count": len(phase_candidates),
                     },
                 )
             )
@@ -847,21 +858,10 @@ def select_refined_candidate_items(
                     page_image_path=str(
                         Path(settings.output_dir) / page_render.image_path
                     ),
-                    page=candidate.page,
+                    page=page_number,
                     page_width=page_render.page_width,
                     page_height=page_render.page_height,
-                    candidates=[
-                        CropRefineCandidate(
-                            schema_version="1.0",
-                            id=candidate.id,
-                            type=candidate.kind,
-                            page=candidate.page,
-                            bbox=current_bbox,
-                            caption=candidate.caption or "",
-                            preview_text=candidate.preview_text or "",
-                            meta=candidate.meta or {},
-                        )
-                    ],
+                    candidates=phase_candidates,
                     seed=settings.rank_seed,
                     timeout_seconds=float(
                         getattr(
@@ -883,68 +883,159 @@ def select_refined_candidate_items(
                     event="crop_refine_llm_response_raw",
                     module=logger.name,
                     fields={
-                        "candidate_id": candidate.id,
+                        "page": page_number,
                         "phase": phase,
+                        "candidate_ids": [candidate.id for candidate in phase_candidates],
+                        "candidate_count": len(phase_candidates),
                         "content": crop_refine_resp.raw_content,
                     },
                 )
             )
-            decision = next(
-                (
-                    result_item
-                    for result_item in crop_refine_resp.results
-                    if result_item.id == candidate.id
-                ),
-                None,
-            )
-            if decision is None:
-                is_valid = False
-                current_reason = f"missing_decision:{phase}"
-                break
-            is_valid = bool(decision.is_valid_candidate)
-            current_reason = decision.reason or ("valid" if is_valid else "rejected")
-            current_bbox = _bbox_tuple(decision.refined_bbox)
-            if not is_valid:
-                break
-            if phase == "coarse":
-                logger.info(
-                    log_event(
-                        ctx,
-                        role="generator",
-                        event="crop_refine_second_pass_start",
-                        module=logger.name,
-                        fields={
-                            "candidate_id": candidate.id,
-                            "bbox": list(current_bbox),
-                        },
-                    )
+            return crop_refine_resp
+
+        phase_candidates: list[CropRefineCandidate] = []
+        phase_payload: list[dict[str, Any]] = []
+        for plan_index in plan_indices:
+            _, candidate = thresholded[plan_index]
+            initial_bbox = _bbox_tuple(candidate.bbox)
+            phase_candidates.append(
+                CropRefineCandidate(
+                    schema_version="1.0",
+                    id=candidate.id,
+                    type=candidate.kind,
+                    page=candidate.page,
+                    bbox=initial_bbox,
+                    caption=candidate.caption or "",
+                    preview_text=candidate.preview_text or "",
+                    meta=candidate.meta or {},
                 )
-        return {
-            "is_valid_candidate": is_valid,
-            "reason": current_reason,
-            "refined_bbox": [float(value) for value in current_bbox],
+            )
+            phase_payload.append(
+                _candidate_prompt_payload(
+                    candidate,
+                    bbox=initial_bbox,
+                    include_proposed_bbox=False,
+                )
+            )
+
+        coarse_resp = _invoke_phase("coarse", phase_candidates, phase_payload)
+        coarse_results = {result_item.id: result_item for result_item in coarse_resp.results}
+        page_results: dict[int, dict[str, Any]] = {}
+        finalize_candidates: list[CropRefineCandidate] = []
+        finalize_payload: list[dict[str, Any]] = []
+        finalize_plan_indices: list[int] = []
+
+        for plan_index in plan_indices:
+            _, candidate = thresholded[plan_index]
+            coarse_decision = coarse_results.get(candidate.id)
+            if coarse_decision is None:
+                page_results[plan_index] = {
+                    "is_valid_candidate": False,
+                    "reason": "missing_decision:coarse",
+                    "refined_bbox": [float(value) for value in candidate.bbox],
+                }
+                continue
+            coarse_bbox = _bbox_tuple(coarse_decision.refined_bbox)
+            coarse_valid = bool(coarse_decision.is_valid_candidate)
+            coarse_reason = coarse_decision.reason or (
+                "valid" if coarse_valid else "rejected"
+            )
+            if not coarse_valid:
+                page_results[plan_index] = {
+                    "is_valid_candidate": False,
+                    "reason": coarse_reason,
+                    "refined_bbox": [float(value) for value in coarse_bbox],
+                }
+                continue
+            finalize_plan_indices.append(plan_index)
+            finalize_candidates.append(
+                CropRefineCandidate(
+                    schema_version="1.0",
+                    id=candidate.id,
+                    type=candidate.kind,
+                    page=candidate.page,
+                    bbox=coarse_bbox,
+                    caption=candidate.caption or "",
+                    preview_text=candidate.preview_text or "",
+                    meta=candidate.meta or {},
+                )
+            )
+            finalize_payload.append(
+                _candidate_prompt_payload(
+                    candidate,
+                    bbox=coarse_bbox,
+                    include_proposed_bbox=True,
+                )
+            )
+
+        if not finalize_candidates:
+            return page_results
+
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="crop_refine_second_pass_start",
+                module=logger.name,
+                fields={
+                    "page": page_number,
+                    "candidate_ids": [candidate.id for candidate in finalize_candidates],
+                    "candidate_count": len(finalize_candidates),
+                },
+            )
+        )
+        finalize_resp = _invoke_phase("finalize", finalize_candidates, finalize_payload)
+        finalize_results = {
+            result_item.id: result_item for result_item in finalize_resp.results
         }
+        for plan_index, finalize_candidate in zip(
+            finalize_plan_indices, finalize_candidates
+        ):
+            finalize_decision = finalize_results.get(finalize_candidate.id)
+            if finalize_decision is None:
+                page_results[plan_index] = {
+                    "is_valid_candidate": False,
+                    "reason": "missing_decision:finalize",
+                    "refined_bbox": [
+                        float(value) for value in finalize_candidate.bbox
+                    ],
+                }
+                continue
+            final_bbox = _bbox_tuple(finalize_decision.refined_bbox)
+            final_valid = bool(finalize_decision.is_valid_candidate)
+            final_reason = finalize_decision.reason or (
+                "valid" if final_valid else "rejected"
+            )
+            page_results[plan_index] = {
+                "is_valid_candidate": final_valid,
+                "reason": final_reason,
+                "refined_bbox": [float(value) for value in final_bbox],
+            }
+        return page_results
 
     refine_workers = _crop_refine_parallel_workers(settings, selected_max)
     llm_executor: Optional[ThreadPoolExecutor] = None
     llm_inflight: dict[int, Any] = {}
     llm_cursor = 0
+    llm_pending_pages = sorted(llm_pending_by_page)
 
     def _submit_llm_jobs() -> None:
         nonlocal llm_cursor
         if llm_executor is None:
             return
         while (
-            llm_cursor < len(llm_pending_indices) and len(llm_inflight) < refine_workers
+            llm_cursor < len(llm_pending_pages) and len(llm_inflight) < refine_workers
         ):
-            plan_index = llm_pending_indices[llm_cursor]
-            if plan_index not in llm_inflight:
-                llm_inflight[plan_index] = llm_executor.submit(
-                    _run_crop_refine_llm, plan_index
+            page_number = llm_pending_pages[llm_cursor]
+            if page_number not in llm_inflight:
+                llm_inflight[page_number] = llm_executor.submit(
+                    _run_crop_refine_llm_page,
+                    page_number,
+                    list(llm_pending_by_page.get(page_number, [])),
                 )
             llm_cursor += 1
 
-    if llm_pending_indices and refine_workers > 1:
+    if llm_pending_pages and refine_workers > 1:
         llm_executor = ThreadPoolExecutor(max_workers=refine_workers)
         _submit_llm_jobs()
 
@@ -1036,14 +1127,32 @@ def select_refined_candidate_items(
                 if isinstance(cached_bbox, (list, tuple)) and len(cached_bbox) == 4:
                     refined_bbox = _bbox_tuple(cached_bbox)
             else:
-                if llm_executor is not None:
-                    future = llm_inflight.pop(idx, None) or llm_executor.submit(
-                        _run_crop_refine_llm, idx
-                    )
-                    llm_result = future.result()
-                    _submit_llm_jobs()
-                else:
-                    llm_result = _run_crop_refine_llm(idx)
+                page_number = candidate.page
+                llm_result = plan.get("llm_result")
+                if not isinstance(llm_result, dict):
+                    pending_plan_indices = list(llm_pending_by_page.get(page_number, [idx]))
+                    if llm_executor is not None:
+                        future = llm_inflight.pop(page_number, None) or llm_executor.submit(
+                            _run_crop_refine_llm_page,
+                            page_number,
+                            pending_plan_indices,
+                        )
+                        page_results = future.result()
+                        _submit_llm_jobs()
+                    else:
+                        page_results = _run_crop_refine_llm_page(
+                            page_number,
+                            pending_plan_indices,
+                        )
+                    for result_index, page_result in page_results.items():
+                        plan_rows[result_index]["llm_result"] = page_result
+                    llm_result = plan.get("llm_result")
+                if not isinstance(llm_result, dict):
+                    llm_result = {
+                        "is_valid_candidate": False,
+                        "reason": "missing_decision:page_batch",
+                        "refined_bbox": [float(value) for value in candidate.bbox],
+                    }
                 llm_valid = bool(llm_result.get("is_valid_candidate"))
                 llm_reason = str(
                     llm_result.get("reason") or ("valid" if llm_valid else "rejected")

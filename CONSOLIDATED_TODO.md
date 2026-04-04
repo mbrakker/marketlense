@@ -200,16 +200,6 @@ Scoring rubric:
     - Cost per ranking call measurably reduced in benchmarks.
     - No regression in ranking quality on held-out set.
 
-- **Title:** Batch crop-refine LLM decisions by page instead of per candidate [Impact: 4/5, Effort: 4/5]
-  - Explanation: `src/generators/report_selection_generator.py` already pre-renders page images, but the crop-refine flow still issues separate LLM calls per candidate and per phase. Group refine candidates by page/phase, reuse the same rendered page context, and map batched decisions back to candidate IDs.
-  - Pros: Fewer model calls, lower latency, lower prompt overhead, and simpler concurrency control.
-  - Cons: More complex response-to-candidate mapping and partial-failure handling.
-  - Acceptance Criteria:
-    - Crop-refine requests are batched per page/phase when multiple candidates share a page.
-    - Raw-response and decision logs still identify each candidate deterministically.
-    - Multi-candidate sample reports show a lower crop-refine call count without selection regressions.
-    - Tests cover mixed valid/invalid decisions within one batched response.
-
 - **Title:** Share PDF page-artifact caches across visual, table, and crop passes [Impact: 5/5, Effort: 4/5]
   - Explanation: `src/services/_pdf/page_artifacts.py` is only reused by parts of extraction today, while crop and related flows still rebuild page text/block state separately. Introduce one internal page-artifact cache per page/document and feed it through visual, table, and crop services.
   - Pros: Less repeated PDF parsing, lower CPU cost on large reports, and fewer divergent heuristics.
