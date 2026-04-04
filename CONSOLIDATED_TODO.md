@@ -491,15 +491,6 @@ Each quick-win should be documented with a short task when prioritized.
 
 ### 8.5 AGENTS.md Compliance Backlog
 
-- **Title:** Enforce prompt immutability outside prompt service and complete prompt observability [Impact: 5/5, Effort: 3/5]
-  - Explanation: Ban runtime prompt text mutation/concatenation outside prompt service and ensure every model call logs prompt namespace, file paths, prompt hashes, exact rendered prompts, model params, and raw response.
-  - Pros: Reproducibility and auditability of model behavior.
-  - Cons: Larger logs and redaction policy tuning.
-  - Acceptance Criteria:
-    - No runtime prompt string concatenation outside prompt service.
-    - Generator logs include required prompt and model metadata for every model call.
-    - Raw model response logging present with redaction safeguards.
-
 - **Title:** Finish remaining generator/service/control-flow refactors and boundary cleanup [Impact: 5/5, Effort: 5/5]
   - Explanation: Merge the remaining monolith-split work, oversized generation/validation phase splits, and the OpenAI/CLI/control-flow helper cleanup into one refactor track. Break the remaining oversized mixed-responsibility modules (notably `artifact_generator` and `openai_service`) into role-appropriate, single-purpose modules wired by orchestrators; phase-split large domain flows such as `generate_artifacts`, `_generate_pack`, `validate_report`, `_run_grounding_check`, `extract_taxonomy`, and `analyze_report`; remove cross-role side effects in `src/services/openai_service.py`; centralize repeated OpenAI cost/accounting and response-adaptation helpers; and route repeated CLI/control-flow status rendering through named helpers. The PDF service internal split, the report-generator phase split, the validation-generator rule split, and the evidence-pack strategy split are complete and removed from this backlog item.
   - Pros: Easier maintenance, lower regression risk, clearer service boundaries, and more focused tests around core generation flows.

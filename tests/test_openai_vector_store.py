@@ -185,6 +185,25 @@ def test_openai_response_with_vector_store_retries_unsupported_temperature(
     assert "temperature" not in second_call
 
 
+def test_openai_response_with_vector_store_preserves_prompt_text(fake_openai) -> None:
+    fake_openai.queue_response_text(json.dumps({"result": "ok"}))
+    req = OpenAIResponseRequest(
+        schema_version="1.0",
+        system_prompt="system",
+        user_prompt="Return findings only.",
+        vector_store_id="vs_123",
+        model="gpt-4.1-mini",
+        temperature=0.1,
+        api_key="key",
+    )
+
+    svc.openai_respond_with_vector_store(req, _ctx())
+
+    call = fake_openai.calls["responses.create"][0]
+    assert call["instructions"] == "system"
+    assert call["input"] == [{"role": "user", "content": "Return findings only."}]
+
+
 def test_openai_chat_json_with_images_skips_known_unsupported_params(
     tmp_path, fake_openai
 ) -> None:

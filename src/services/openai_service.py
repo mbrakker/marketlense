@@ -1332,13 +1332,10 @@ def openai_respond_with_vector_store(
     client_kwargs: dict = {"api_key": request.api_key}
     if request.timeout_seconds is not None:
         client_kwargs["timeout"] = request.timeout_seconds
-    user_prompt = request.user_prompt
-    if "json" not in user_prompt.lower():
-        user_prompt = f"{user_prompt}\n\nReturn a JSON object."
     payload_args = {
         "model": request.model,
         "instructions": request.system_prompt,
-        "input": [{"role": "user", "content": user_prompt}],
+        "input": [{"role": "user", "content": request.user_prompt}],
         "temperature": request.temperature,
         "tools": [
             {"type": "file_search", "vector_store_ids": [request.vector_store_id]}

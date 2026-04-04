@@ -7,7 +7,6 @@ from typing import Dict, Optional, Tuple
 
 from src.contracts.config import AppSettings
 from src.contracts.openai import OpenAIResponseRequest, OpenAIResponseResult
-from src.contracts.prompts import PromptLoadRequest
 from src.contracts.report_analysis import (
     AnalysisPackPathRequest,
     AnalysisStorePackRequest,
@@ -22,6 +21,7 @@ from src.generators.analysis_store_adapter import (
     resolve_pack_path as resolve_analysis_pack_path,
     store_pack as store_analysis_pack,
 )
+from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.generators.evidence_packs.doc_map_strategy import (
     normalize_payload as normalize_doc_map_payload,
 )
@@ -52,7 +52,6 @@ from src.utils.json_recovery import (
     strip_json_fence as _strip_json_fence,
 )
 from src.utils.logging import child_context, log_event, new_run_context
-from src.utils.model_resolver import resolve_model
 
 logger = logging.getLogger("market_lense.evidence_pack_generator")
 
@@ -324,11 +323,15 @@ def _generate_pack(
             },
         )
     )
-    prompt_set = prompt_client.load_prompt_set(
-        PromptLoadRequest(schema_version="1.0", namespace=prompt_namespace), ctx
+    prompt_bundle = prepare_prompt_bundle(
+        namespace=prompt_namespace,
+        settings=settings,
+        ctx=ctx,
+        prompt_client=prompt_client,
+        system_variables={},
+        user_variables={},
+        default_model=settings.openai_model,
     )
-    system_prompt = prompt_set.system.text
-    user_prompt = prompt_set.user.text
     logger.info(
         log_event(
             ctx,
@@ -338,15 +341,16 @@ def _generate_pack(
             fields={
                 "pack": pack_name,
                 "namespace": prompt_namespace,
-                "prompt_system_sha256": prompt_set.system.sha256,
-                "prompt_user_sha256": prompt_set.user.sha256,
-                "system_prompt": system_prompt,
-                "user_prompt": user_prompt,
+                "system_path": prompt_bundle.prompt_set.system.path,
+                "user_path": prompt_bundle.prompt_set.user.path,
+                "prompt_system_sha256": prompt_bundle.prompt_set.system.sha256,
+                "prompt_user_sha256": prompt_bundle.prompt_set.user.sha256,
+                "system_prompt": prompt_bundle.system_prompt,
+                "user_prompt": prompt_bundle.user_prompt,
+                "resolved_model": prompt_bundle.resolved_model,
+                "temperature": settings.temperature,
             },
         )
-    )
-    resolved_model = resolve_model(
-        prompt_namespace, getattr(settings, "openai_models", {}), settings.openai_model
     )
     cache_meta = None
     cache_key = ""
@@ -357,9 +361,9 @@ def _generate_pack(
             "md5": md5,
             "pack_name": pack_name,
             "schema_name": schema_name,
-            "prompt_system_sha256": prompt_set.system.sha256,
-            "prompt_user_sha256": prompt_set.user.sha256,
-            "model": resolved_model,
+            "prompt_system_sha256": prompt_bundle.prompt_set.system.sha256,
+            "prompt_user_sha256": prompt_bundle.prompt_set.user.sha256,
+            "model": prompt_bundle.resolved_model,
             "temperature": settings.temperature,
             "seed": settings.openai_seed,
         }
@@ -453,7 +457,7 @@ def _generate_pack(
             module=logger.name,
             fields={
                 "namespace": prompt_namespace,
-                "resolved_model": resolved_model,
+                "resolved_model": prompt_bundle.resolved_model,
                 "default_model": settings.openai_model,
             },
         )
@@ -466,10 +470,10 @@ def _generate_pack(
         resp: OpenAIResponseResult = openai_client.openai_respond_with_vector_store(
             OpenAIResponseRequest(
                 schema_version="1.0",
-                system_prompt=system_prompt,
-                user_prompt=user_prompt,
+                system_prompt=prompt_bundle.system_prompt,
+                user_prompt=prompt_bundle.user_prompt,
                 vector_store_id=vector_store_id,
-                model=resolved_model,
+                model=prompt_bundle.resolved_model,
                 temperature=settings.temperature,
                 api_key=settings.openai_api_key,
                 seed=settings.openai_seed,
@@ -479,6 +483,26 @@ def _generate_pack(
                 model_pricing=settings.model_pricing,
             ),
             ctx,
+        )
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="evidence_pack_raw_response",
+                module=logger.name,
+                fields={
+                    "report_id": report_id,
+                    "pack": pack_name,
+                    "namespace": prompt_namespace,
+                    "model": str(resp.model or prompt_bundle.resolved_model or ""),
+                    "request_id": resp.request_id or "",
+                    "input_tokens": resp.input_tokens,
+                    "output_tokens": resp.output_tokens,
+                    "tool_calls": resp.tool_calls,
+                    "has_json": isinstance(resp.parsed_json, (dict, list)),
+                    "raw_response": str(resp.text or ""),
+                },
+            )
         )
         parsed_payload: Optional[object] = (
             resp.parsed_json if isinstance(resp.parsed_json, (dict, list)) else None

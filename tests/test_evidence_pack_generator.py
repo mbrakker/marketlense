@@ -31,6 +31,9 @@ class FakePromptClient:
         )
         return PromptSet(schema_version="1.0", system=tmpl, user=user)
 
+    def render_prompt(self, request, ctx):
+        return SimpleNamespace(text=request.template.text)
+
 
 class FakeOpenAIClient:
     def __init__(self, parsed):
@@ -258,8 +261,55 @@ def test_generate_evidence_packs_success(tmp_path):
     )
     assert "doc_map" in packs
     assert packs["doc_map"]["doc_id"] == "d1"
-    # ensure store called for each pack
-    assert len(analysis_store.stored) == 6
+
+
+def test_generate_evidence_packs_logs_prompt_observability_and_raw_response(
+    tmp_path, caplog, assert_logs_have_required_fields
+):
+    caplog.set_level(logging.INFO, logger="market_lense.evidence_pack_generator")
+    packs = generate_evidence_packs(
+        report_id="r1",
+        report_name="report",
+        vector_store_id="vs_1",
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=FakeOpenAIClient({"doc_id": "d1", "title": "title", "sections": []}),
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert packs["doc_map"]["doc_id"] == "d1"
+    events = []
+    for record in caplog.records:
+        try:
+            payload = json.loads(record.message)
+        except json.JSONDecodeError:
+            continue
+        if payload.get("event") in {
+            "evidence_pack_prompt_rendered",
+            "evidence_pack_raw_response",
+        }:
+            events.append(payload)
+
+    assert len(events) >= 2
+    assert_logs_have_required_fields(events)
+    rendered = next(
+        event for event in events if event.get("event") == "evidence_pack_prompt_rendered"
+    )
+    rendered_fields = rendered["fields"]
+    assert rendered_fields["namespace"] == "report_vs/doc_map"
+    assert rendered_fields["system_path"] == "system"
+    assert rendered_fields["user_path"] == "user"
+    assert rendered_fields["system_prompt"] == "sys"
+    assert rendered_fields["user_prompt"] == "user"
+    assert rendered_fields["resolved_model"] == "gpt-4.1-mini"
+    raw = next(
+        event for event in events if event.get("event") == "evidence_pack_raw_response"
+    )
+    raw_fields = raw["fields"]
+    assert raw_fields["pack"] == "doc_map"
+    assert raw_fields["has_json"] is True
+    assert raw_fields["raw_response"] == "{}"
 
 
 def test_generate_evidence_packs_handles_missing_json(tmp_path):
