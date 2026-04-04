@@ -791,6 +791,11 @@ def _looks_like_report_listing_route_url(url: str) -> bool:
     if not segments:
         return False
     archive_tail_markers = {
+        "ebooks",
+        "guides-whitepapers",
+        "livres-blancs",
+        "publication",
+        "publications",
         "report",
         "reports",
         "research",
@@ -798,6 +803,9 @@ def _looks_like_report_listing_route_url(url: str) -> bool:
         "resource-library",
         "knowledge-hub",
         "library",
+        "white-papers",
+        "whitepaper",
+        "whitepapers",
     }
     return segments[-1] in archive_tail_markers
 

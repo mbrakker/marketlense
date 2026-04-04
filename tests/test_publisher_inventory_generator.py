@@ -223,3 +223,40 @@ def test_build_publisher_inventory_snapshot_hash_ignores_volatile_run_metadata(
     )
 
     assert first.snapshot_sha256 == second.snapshot_sha256
+
+
+def test_build_publisher_inventory_snapshot_replaces_placeholder_title_with_url_slug(
+    run_context,
+) -> None:
+    response = build_publisher_inventory_snapshot(
+        PublisherInventoryBuildRequest(
+            schema_version="1.0",
+            publisher_name="Marmind",
+            insights_url="https://www.marmind.com/guides-whitepapers",
+            normalized_insights_url="https://www.marmind.com/guides-whitepapers",
+            discovered_at_utc="2026-04-04T00:00:00Z",
+            route_kind="browser_render",
+            route_summary="Rendered archive page.",
+            final_page_url="https://www.marmind.com/guides-whitepapers",
+            pages=[
+                PublisherInventoryPage(
+                    schema_version="1.0",
+                    page_number=1,
+                    page_url="https://www.marmind.com/guides-whitepapers",
+                )
+            ],
+            candidates=[
+                PublisherInventoryRawCandidate(
+                    schema_version="1.0",
+                    url="https://www.marmind.com/guides-whitepapers/buyers-guide-marketing-resource-management",
+                    title="feature-img",
+                    source_page_url="https://www.marmind.com/guides-whitepapers",
+                    discovered_on_page_number=1,
+                )
+            ],
+            previous_snapshot=None,
+        ),
+        run_context,
+    )
+
+    assert response.snapshot.items[0].title == "buyers guide marketing resource management"

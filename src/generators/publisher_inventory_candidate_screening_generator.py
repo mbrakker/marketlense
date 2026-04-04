@@ -191,6 +191,8 @@ _FALLBACK_NON_REPORT_URL_MARKERS = (
     "/hc/en-us/articles/",
 )
 _FALLBACK_REPORT_URL_MARKERS = (
+    "/publication/",
+    "/publications/",
     "/benchmark",
     "/benchmarks/",
     "/buyers-guide",
@@ -246,6 +248,8 @@ _FALLBACK_REPORT_COLLECTION_SEGMENTS = {
     "research",
     "resource",
     "resources",
+    "publication",
+    "publications",
     "studies",
     "study",
     "survey",
@@ -1288,6 +1292,15 @@ def _prefilter_screening_decision(
             accepted=True,
             reason="specific_report_title_prefilter",
         )
+    if _has_report_archive_context(candidate.source_page_url) and _looks_like_human_archive_title(
+        normalized_title
+    ):
+        return PublisherInventoryCandidateScreeningDecision(
+            schema_version="1.0",
+            canonical_url=candidate.canonical_url,
+            accepted=True,
+            reason="report_archive_context_prefilter",
+        )
     if _is_probable_report_asset(candidate):
         return None
     return PublisherInventoryCandidateScreeningDecision(
@@ -1325,6 +1338,50 @@ def _has_strong_report_detail_url(url: str) -> bool:
         leaf_title,
         _FALLBACK_REPORT_TITLE_MARKERS,
     )
+
+
+def _has_report_archive_context(url: str) -> bool:
+    normalized_url = str(url or "").strip().casefold()
+    if not normalized_url:
+        return False
+    path = urlsplit(normalized_url).path
+    if any(marker in normalized_url for marker in _FALLBACK_NON_REPORT_URL_MARKERS):
+        return False
+    return any(
+        marker in path
+        for marker in (
+            "/publication",
+            "/publications/",
+            "/report",
+            "/reports/",
+            "/research",
+            "/resources/",
+            "/whitepaper",
+            "/whitepapers/",
+            "/ebooks/",
+            "/guides-whitepapers",
+            "/livres-blancs",
+        )
+    ) or "/type/report" in normalized_url
+
+
+def _looks_like_human_archive_title(title: str) -> bool:
+    normalized_title = _normalize_title_fingerprint(title)
+    if not normalized_title or _is_generic_cta_title(normalized_title):
+        return False
+    if _contains_any_title_marker(normalized_title, _FALLBACK_NON_REPORT_TITLE_MARKERS):
+        return False
+    if normalized_title.startswith(
+        (
+            "how ",
+            "what ",
+            "why ",
+        )
+    ):
+        return False
+    tokens = [token for token in re.findall(r"[a-z0-9]+", normalized_title) if token]
+    alpha_tokens = [token for token in tokens if any(char.isalpha() for char in token)]
+    return len(alpha_tokens) >= 3 and len(normalized_title) >= 16
 
 
 def _has_pdf_report_signal(candidate: PublisherInventoryCandidateScreeningItem) -> bool:

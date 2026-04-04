@@ -28,6 +28,7 @@ logger = logging.getLogger(
 
 _GENERIC_TITLE_TOKENS = {
     "",
+    "heading 1",
     "read now",
     "download now",
     "learn more",
@@ -276,6 +277,8 @@ _SPECIFIC_REPORT_STYLE_TITLE_MARKERS = (
     "forecasts",
     "guide",
     "guides",
+    "guideline",
+    "guidelines",
     "index",
     "outlook",
     "outlooks",
@@ -294,6 +297,40 @@ _SPECIFIC_REPORT_STYLE_TITLE_MARKERS = (
     "transparency report",
     "whitepaper",
     "white paper",
+)
+_EDITORIAL_STRONG_REPORT_TITLE_MARKERS = (
+    "annual report",
+    "barometer",
+    "benchmark",
+    "benchmarks",
+    "buyers guide",
+    "buyer's guide",
+    "ebook",
+    "ebooks",
+    "fact sheet",
+    "fact sheets",
+    "forecast",
+    "forecasts",
+    "guide",
+    "guides",
+    "guideline",
+    "guidelines",
+    "index",
+    "outlook",
+    "outlooks",
+    "playbook",
+    "playbooks",
+    "prediction",
+    "predictions",
+    "scorecard",
+    "snapshot",
+    "study",
+    "studies",
+    "survey",
+    "surveys",
+    "transparency report",
+    "white paper",
+    "whitepaper",
 )
 _REPORT_URL_PATH_MARKERS = (
     "/barometer",
@@ -369,9 +406,15 @@ _SERVICE_OR_MEMBERSHIP_LEAF_MARKERS = {
 _SERVICE_OR_MEMBERSHIP_PATH_MARKERS = (
     "/become-a-client",
     "/capabilities/",
+    "/career",
+    "/careers/",
     "/events/",
     "/research-center",
     "/research-centers/",
+    "/service/",
+    "/services/",
+    "/software/",
+    "/who-we-help/",
 )
 _SERVICE_OR_MEMBERSHIP_TITLE_MARKERS = (
     "analyst relations council",
@@ -388,9 +431,26 @@ _SERVICE_OR_MEMBERSHIP_TITLE_MARKERS = (
 _HARD_NON_ASSET_PATH_MARKERS = (
     "/become-a-client",
     "/capabilities/",
+    "/career",
+    "/careers/",
     "/events/",
     "/research-center",
     "/research-centers/",
+    "/service/",
+    "/services/",
+    "/software/",
+    "/who-we-help/",
+)
+_METHODOLOGY_TITLE_MARKERS = (
+    "methodology",
+    "methodologies",
+)
+_NEWS_ANALYSIS_TITLE_MARKERS = (
+    " acquisition",
+    " acquires ",
+    " reveals about ",
+    " what this ",
+    " what it means ",
 )
 _REPORT_COLLECTION_ROOT_WORDS = {
     "all",
@@ -635,11 +695,24 @@ def _qualify_observation(
         or editorial_section_signal
     )
     editorial_context_signal = editorial_surface_signal or observation.has_editorial_markers
+    hard_editorial_signal = (
+        editorial_section_signal
+        or observation.has_contact_sales_cta
+    )
     report_archive_path_signal = _has_report_style_url_path(final_url_lower)
     report_slug_signal = _has_report_style_url_slug(final_url_lower)
     report_title_signal = _contains_report_style_title_marker(resolved_title_lower)
     specific_report_title_signal = _contains_specific_report_style_title_marker(
         resolved_title_lower
+    )
+    strong_editorial_report_title_signal = _contains_strong_editorial_report_title_marker(
+        resolved_title_lower
+    )
+    strong_report_slug_signal = _has_strong_report_style_url_slug(final_url_lower)
+    editorial_report_rescue_signal = (
+        report_archive_path_signal
+        or strong_report_slug_signal
+        or strong_editorial_report_title_signal
     )
     source_title_report_signal = _contains_report_style_title_marker(source_title_lower)
     source_report_signal = (
@@ -648,6 +721,8 @@ def _qualify_observation(
         or _has_report_style_url_slug(observation.canonical_url)
         or _has_report_style_url_path(source_page_url)
         or _has_report_style_url_slug(source_page_url)
+        or _looks_like_publication_detail_url(observation.canonical_url)
+        or _looks_like_publication_detail_url(source_page_url)
     )
     bot_protected_report_signal = (
         report_title_signal
@@ -669,6 +744,16 @@ def _qualify_observation(
         or _looks_like_report_collection_bucket_url(final_url_lower)
         or _looks_like_report_collection_bucket_url(observation.canonical_url)
     )
+    hard_non_asset_signal = _looks_like_hard_non_asset_route(final_url_lower) or _looks_like_hard_non_asset_route(
+        observation.canonical_url
+    )
+    service_or_membership_signal = _looks_like_service_or_membership_page(
+        final_url_lower=final_url_lower or observation.canonical_url,
+        resolved_title_lower=resolved_title_lower,
+    ) or _looks_like_service_or_membership_page(
+        final_url_lower=observation.canonical_url,
+        resolved_title_lower=resolved_title_lower,
+    )
     newsletter_source_signal = _looks_like_newsletter_source_url(source_page_url)
     if (
         _looks_like_bot_challenge_page(observation)
@@ -678,21 +763,31 @@ def _qualify_observation(
         return False, "bot_protected_editorial_page"
     if case_study_signal:
         return False, "case_study_or_customer_story_page"
-    if _looks_like_bot_challenge_page(observation) and source_report_signal and not collection_hub_signal:
+    if (
+        _looks_like_bot_challenge_page(observation)
+        and source_report_signal
+        and not collection_hub_signal
+        and not hard_non_asset_signal
+        and not service_or_membership_signal
+    ):
         if _looks_like_article_label_title(source_title_lower) and not report_title_signal:
             return False, "bot_protected_editorial_page"
         if bot_protected_report_signal:
+            return True, "bot_protected_report_asset"
+        if _looks_like_publication_detail_url(observation.canonical_url):
             return True, "bot_protected_report_asset"
         return False, "bot_protected_editorial_page"
     if (
         _looks_like_transient_fetch_failure(observation.fetch_error)
         or _looks_like_transient_http_status(observation.http_status_code)
-    ) and source_report_signal and not collection_hub_signal:
+    ) and source_report_signal and not collection_hub_signal and not hard_non_asset_signal and not service_or_membership_signal:
         return True, "transient_fetch_report_asset"
     if (
         _looks_like_protected_document_status(observation.http_status_code)
         and source_report_signal
         and not collection_hub_signal
+        and not hard_non_asset_signal
+        and not service_or_membership_signal
     ):
         if observation.has_editorial_url_pattern and not (
             report_archive_path_signal or specific_report_title_signal
@@ -713,6 +808,25 @@ def _qualify_observation(
         and (observation.fetch_error or observation.has_dead_page_marker)
     ):
         return True, "unreachable_document_asset"
+    if (
+        source_report_signal
+        and not collection_hub_signal
+        and not hard_non_asset_signal
+        and not service_or_membership_signal
+        and (
+            report_archive_path_signal
+            or report_slug_signal
+            or specific_report_title_signal
+            or _looks_like_publication_detail_url(observation.canonical_url)
+        )
+        and (observation.fetch_error or observation.has_dead_page_marker)
+        and (
+            not editorial_context_signal
+            or structured_document_signal
+            or observation.has_print_language
+        )
+    ):
+        return True, "unreachable_report_asset"
     if observation.fetch_error or observation.has_dead_page_marker:
         return False, "dead_or_unreachable_landing_page"
     if _looks_like_audio_editorial_page(
@@ -775,6 +889,17 @@ def _qualify_observation(
         and not observation.is_pdf
     ):
         return False, "generic_asset_hub_page"
+    if (
+        any(marker in resolved_title_lower for marker in _METHODOLOGY_TITLE_MARKERS)
+        and not (
+            specific_report_title_signal
+            or _looks_like_publication_detail_url(observation.canonical_url)
+            or _looks_like_publication_detail_url(source_page_url)
+        )
+        and not strong_distribution_signal
+        and not structured_document_signal
+    ):
+        return False, "editorial_article_page"
     if _looks_like_service_or_membership_page(
         final_url_lower=final_url_lower,
         resolved_title_lower=resolved_title_lower,
@@ -798,9 +923,7 @@ def _qualify_observation(
         and source_report_signal
         and not strong_distribution_signal
         and not structured_document_signal
-        and not editorial_section_signal
-        and not observation.has_editorial_url_pattern
-        and not observation.has_related_posts
+        and not hard_editorial_signal
         and not _looks_like_dated_editorial_url(final_url_lower)
     ):
         return True, "report_detail_landing_page"
@@ -822,7 +945,8 @@ def _qualify_observation(
         and structured_document_signal
         and (
             report_archive_path_signal
-            or specific_report_title_signal
+            or strong_report_slug_signal
+            or strong_editorial_report_title_signal
             or (
                 observation.is_pdf
                 and (report_title_signal or source_report_signal)
@@ -830,6 +954,10 @@ def _qualify_observation(
         )
         and not _looks_like_dated_editorial_url(final_url_lower)
     ):
+        if hard_editorial_signal and not report_archive_path_signal:
+            return False, "editorial_article_page"
+        if editorial_context_signal and not editorial_report_rescue_signal:
+            return False, "editorial_article_page"
         if observation.has_gated_form:
             return True, "gated_report_asset"
         if observation.has_download_language:
@@ -856,15 +984,26 @@ def _qualify_observation(
     ):
         return False, "editorial_article_page"
     if (
+        _looks_like_news_analysis_title(resolved_title_lower)
+        and editorial_context_signal
+        and not strong_distribution_signal
+        and not structured_document_signal
+        and not specific_report_title_signal
+        and not report_archive_path_signal
+        and not report_slug_signal
+    ):
+        return False, "editorial_article_page"
+    if (
         (report_archive_path_signal or report_slug_signal or report_title_signal)
         and (structured_document_signal or observation.has_asset_type_term)
         and not observation.has_dead_page_marker
         and not (
             editorial_context_signal
-            and not structured_document_signal
-            and not strong_distribution_signal
+            and not editorial_report_rescue_signal
         )
     ):
+        if hard_editorial_signal and not report_archive_path_signal:
+            return False, "editorial_article_page"
         return True, "printable_report_page"
     if (
         observation.has_price_or_purchase
@@ -874,15 +1013,41 @@ def _qualify_observation(
         return True, "paid_or_publication_report_page"
     if observation.has_gated_form and (
         observation.has_asset_type_term or observation.has_document_structure
+    ) and (
+        report_title_signal
+        or specific_report_title_signal
+        or report_archive_path_signal
+        or report_slug_signal
+        or source_report_signal
     ):
+        if hard_editorial_signal and not report_archive_path_signal:
+            return False, "editorial_article_page"
+        if editorial_context_signal and not editorial_report_rescue_signal:
+            return False, "editorial_article_page"
         return True, "gated_report_asset"
     if observation.has_download_language and (
         observation.has_asset_type_term or observation.has_document_structure
+    ) and (
+        report_title_signal
+        or specific_report_title_signal
+        or report_archive_path_signal
+        or report_slug_signal
+        or source_report_signal
     ):
+        if hard_editorial_signal and not report_archive_path_signal:
+            return False, "editorial_article_page"
+        if editorial_context_signal and not editorial_report_rescue_signal:
+            return False, "editorial_article_page"
         return True, "downloadable_report_asset"
     if observation.has_print_language and (
         observation.has_asset_type_term or observation.has_document_structure
-    ) and not editorial_surface_signal:
+    ) and not editorial_surface_signal and (
+        report_title_signal
+        or specific_report_title_signal
+        or report_archive_path_signal
+        or report_slug_signal
+        or source_report_signal
+    ):
         return True, "printable_report_page"
     if (
         (report_slug_signal or specific_report_title_signal)
@@ -899,8 +1064,11 @@ def _qualify_observation(
             or report_archive_path_signal
             or report_slug_signal
         )
-        and not editorial_surface_signal
     ):
+        if hard_editorial_signal and not report_archive_path_signal:
+            return False, "editorial_article_page"
+        if editorial_context_signal and not editorial_report_rescue_signal:
+            return False, "editorial_article_page"
         return True, "report_like_document_page"
     if editorial_context_signal and not strong_distribution_signal:
         return False, "editorial_article_page"
@@ -1054,6 +1222,14 @@ def _has_report_style_url_slug(url: str) -> bool:
     return _contains_report_style_title_marker(slug)
 
 
+def _has_strong_report_style_url_slug(url: str) -> bool:
+    path = urlsplit(str(url or "").strip().casefold()).path
+    if not path:
+        return False
+    slug = path.rsplit("/", 1)[-1].rsplit(".", 1)[0].replace("-", " ")
+    return _contains_strong_editorial_report_title_marker(slug)
+
+
 def _contains_specific_report_style_title_marker(title: str) -> bool:
     normalized_title = str(title or "").strip().casefold()
     if not normalized_title:
@@ -1124,6 +1300,20 @@ def _has_report_style_url_path(final_url_lower: str) -> bool:
     return any(marker in normalized for marker in _REPORT_URL_PATH_MARKERS)
 
 
+def _looks_like_publication_detail_url(url: str) -> bool:
+    path = urlsplit(str(url or "").strip().casefold()).path
+    if "/publications/" not in path:
+        return False
+    segments = [segment for segment in path.split("/") if segment]
+    if not segments:
+        return False
+    raw_leaf = segments[-1]
+    leaf = raw_leaf.rsplit(".", 1)[0]
+    if leaf in {"publication", "publications"} or leaf.isdigit():
+        return False
+    return raw_leaf.endswith(".html") or "_" in leaf
+
+
 def _looks_like_report_collection_bucket_url(url: str) -> bool:
     path = urlsplit(str(url or "").strip().casefold()).path
     if not path:
@@ -1182,6 +1372,20 @@ def _looks_like_service_or_membership_page(
         marker in str(resolved_title_lower or "").strip().casefold()
         for marker in _SERVICE_OR_MEMBERSHIP_TITLE_MARKERS
     )
+
+
+def _looks_like_news_analysis_title(lowered_title: str) -> bool:
+    normalized_title = str(lowered_title or "").strip().casefold()
+    if not normalized_title:
+        return False
+    return any(marker in normalized_title for marker in _NEWS_ANALYSIS_TITLE_MARKERS)
+
+
+def _contains_strong_editorial_report_title_marker(lowered_title: str) -> bool:
+    normalized_title = str(lowered_title or "").strip().casefold()
+    if not normalized_title:
+        return False
+    return any(marker in normalized_title for marker in _EDITORIAL_STRONG_REPORT_TITLE_MARKERS)
 
 
 def _looks_like_hard_non_asset_route(url: str) -> bool:

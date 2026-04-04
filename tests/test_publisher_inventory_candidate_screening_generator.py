@@ -1168,3 +1168,37 @@ def test_screen_publisher_inventory_candidates_repairs_missing_batch_decisions()
     ]
     assert response.rejected_items == []
     assert response.request_id == "req-1,req-2"
+
+
+def test_screen_publisher_inventory_candidates_accepts_human_titles_from_report_archive_context() -> None:
+    openai_client = BatchAwareOpenAIClient()
+
+    response = screen_publisher_inventory_candidates(
+        PublisherInventoryCandidateScreeningRequest(
+            schema_version="1.0",
+            publisher_name="OECD",
+            insights_url="https://www.oecd.org/en/publications/reports.html",
+            candidates=[
+                PublisherInventoryCandidateScreeningItem(
+                    schema_version="1.0",
+                    canonical_url="https://www.oecd.org/en/publications/bridging-the-finance-gap-for-women-entrepreneurs_75b52972-en.html",
+                    title="Bridging the Finance Gap for Women Entrepreneurs",
+                    discovered_on_page_number=1,
+                    source_page_url="https://www.oecd.org/en/publications/reports.html",
+                )
+            ],
+            settings=_settings(),
+        ),
+        _ctx(),
+        openai_client=openai_client,
+        prompt_client=RecordingPromptClient(),
+    )
+
+    assert len(openai_client.requests) == 0
+    assert [item.canonical_url for item in response.approved_items] == [
+        "https://www.oecd.org/en/publications/bridging-the-finance-gap-for-women-entrepreneurs_75b52972-en.html"
+    ]
+    assert response.decisions[0].reason in {
+        "report_archive_context_prefilter",
+        "strong_report_detail_url_prefilter",
+    }

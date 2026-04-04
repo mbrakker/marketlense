@@ -3007,6 +3007,54 @@ def test_discover_publisher_inventory_browser_follows_report_listing_route(
     assert "report listing route" in response.route_summary
 
 
+def test_discover_publisher_inventory_browser_follows_whitepaper_listing_route(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    states = {
+        "initial": {
+            "payload": {
+                "page_url": "https://onclusive.com/fr/expertise/insights/",
+                "page_title": "Insights",
+                "anchors": [
+                    {"href": "https://onclusive.com/fr/expertise/insights/article-one/", "text": "Article", "rel": ""}
+                ],
+                "report_link_url": "https://onclusive.com/fr/ressources/livres-blancs/",
+            }
+        },
+        "report_listing": {
+            "payload": {
+                "page_url": "https://onclusive.com/fr/ressources/livres-blancs/",
+                "page_title": "Livres Blancs",
+                "anchors": [
+                    {
+                        "href": "https://onclusive.com/fr/ressources/livres-blancs/barometre-medias-2026/",
+                        "text": "Baromètre médias 2026",
+                        "rel": "",
+                    }
+                ],
+            }
+        },
+    }
+    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://onclusive.com/fr/expertise/insights/",
+            settings=_settings(tmp_path),
+            route_kind_hint="browser_render",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "browser_render"
+    assert response.final_page_url == "https://onclusive.com/fr/ressources/livres-blancs"
+    assert response.candidates[0].url == "https://onclusive.com/fr/ressources/livres-blancs/barometre-medias-2026"
+
+
 def test_extract_candidates_from_html_filters_false_positive_hub_and_social_links() -> None:
     html = """
     <html><body>

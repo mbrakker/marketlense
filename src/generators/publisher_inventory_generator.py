@@ -23,6 +23,19 @@ from src.utils.url_utils import normalize_url
 
 logger = logging.getLogger("market_lense.publisher_inventory_generator")
 
+_GENERIC_PLACEHOLDER_TITLES = {
+    "",
+    "download",
+    "download now",
+    "download pdf",
+    "feature img",
+    "feature-img",
+    "learn more",
+    "read",
+    "read more",
+    "view report",
+}
+
 
 def build_publisher_inventory_snapshot(
     request: PublisherInventoryBuildRequest,
@@ -339,7 +352,12 @@ def _normalize_absolute_url(raw_url: str) -> str:
 
 
 def _normalize_title(title: str) -> str:
-    return " ".join(str(title or "").split()).strip()
+    normalized = " ".join(str(title or "").split()).strip()
+    lowered = normalized.casefold().replace("_", " ").replace("-", " ")
+    lowered = " ".join(lowered.split())
+    if lowered in _GENERIC_PLACEHOLDER_TITLES:
+        return ""
+    return normalized
 
 
 def _normalize_optional_text(value: str | None) -> str | None:
