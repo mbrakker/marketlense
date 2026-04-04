@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import json
+import logging
+
+import pytest
 
 from src.contracts.openai import (
+    OpenAIVectorStoreAttachFileRequest,
     OpenAIJSONImagePromptRequest,
     OpenAIResponseRequest,
     OpenAIVectorStoreCreateRequest,
@@ -16,6 +20,17 @@ from src.services import openai_service as svc
 
 def _ctx() -> RunContext:
     return RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
+
+
+def _events(caplog) -> list[dict[str, object]]:
+    events: list[dict[str, object]] = []
+    for record in caplog.records:
+        if record.name != "market_lense.openai_service":
+            continue
+        payload = json.loads(record.message)
+        if isinstance(payload, dict):
+            events.append(payload)
+    return events
 
 
 def test_openai_response_with_vector_store_writes_ledger(tmp_path, fake_openai) -> None:
@@ -233,8 +248,14 @@ def test_openai_chat_json_with_images_retries_unknown_unsupported_param(
     assert "temperature" not in second_call
 
 
-def test_openai_vector_store_create_success(fake_openai) -> None:
+def test_openai_vector_store_create_success(
+    fake_openai,
+    caplog,
+    assert_logs_have_required_fields,
+    assert_no_defaulted_required_fields,
+) -> None:
     fake_openai.add("vector_stores.create", {"id": "vs_123"})
+    caplog.set_level(logging.INFO, logger="market_lense.openai_service")
 
     resp = svc.openai_vector_store_create(
         OpenAIVectorStoreCreateRequest(
@@ -242,12 +263,16 @@ def test_openai_vector_store_create_success(fake_openai) -> None:
             api_key="key",
             name="report",
             metadata={"report_id": "r1"},
+            timeout_seconds=12.0,
         ),
         _ctx(),
     )
 
     assert resp.vector_store_id == "vs_123"
+    assert_no_defaulted_required_fields(resp)
+    assert fake_openai.client_kwargs == [{"api_key": "key", "timeout": 12.0}]
     assert fake_openai.calls["vector_stores.create"][0]["name"] == "report"
+    assert_logs_have_required_fields(_events(caplog))
 
 
 def test_openai_vector_store_upload_missing_file(assert_app_error, tmp_path) -> None:
@@ -310,6 +335,84 @@ def test_openai_vector_store_update_metadata_missing_id(
         )
     else:  # pragma: no cover
         raise AssertionError("expected AppError")
+
+
+@pytest.mark.parametrize(
+    ("operation", "request_factory", "expected_code", "expected_context"),
+    [
+        (
+            "vector_stores.create",
+            lambda: (
+                svc.openai_vector_store_create,
+                OpenAIVectorStoreCreateRequest(
+                    schema_version="1.0",
+                    api_key="key",
+                    name="report",
+                    metadata={"report_id": "r1"},
+                ),
+            ),
+            "openai_vector_store_create_failed",
+            {},
+        ),
+        (
+            "vector_stores.files.create",
+            lambda: (
+                svc.openai_vector_store_attach_file,
+                OpenAIVectorStoreAttachFileRequest(
+                    schema_version="1.0",
+                    api_key="key",
+                    vector_store_id="vs_123",
+                    openai_file_id="file_123",
+                ),
+            ),
+            "openai_vector_store_attach_failed",
+            {},
+        ),
+        (
+            "vector_stores.retrieve",
+            lambda: (
+                svc.openai_vector_store_status,
+                OpenAIVectorStoreStatusRequest(
+                    schema_version="1.0",
+                    api_key="key",
+                    vector_store_id="vs_123",
+                ),
+            ),
+            "openai_vector_store_status_failed",
+            {"vector_store_id": "vs_123"},
+        ),
+        (
+            "vector_stores.update",
+            lambda: (
+                svc.openai_vector_store_update_metadata,
+                OpenAIVectorStoreUpdateMetadataRequest(
+                    schema_version="1.0",
+                    api_key="key",
+                    vector_store_id="vs_123",
+                    metadata={"report_id": "r1"},
+                ),
+            ),
+            "openai_vector_store_update_metadata_failed",
+            {"vector_store_id": "vs_123"},
+        ),
+    ],
+)
+def test_openai_vector_store_operations_map_request_failures(
+    fake_openai,
+    assert_app_error,
+    operation,
+    request_factory,
+    expected_code,
+    expected_context,
+) -> None:
+    fake_openai.add(operation, RuntimeError("provider boom"))
+    operation_fn, request = request_factory()
+
+    with pytest.raises(Exception) as exc_info:
+        operation_fn(request, _ctx())
+
+    assert_app_error(exc_info.value, code=expected_code, retryable=True)
+    assert exc_info.value.context == expected_context
 
 
 def test_image_path_to_data_url_defaults_png_for_unknown_extension(tmp_path) -> None:

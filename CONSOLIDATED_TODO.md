@@ -397,16 +397,6 @@ This section absorbs the remaining open appendix items from `docs/quality/ineffe
     - Returned dataclass contracts remain unchanged.
     - Tests cover identical metadata extraction across the affected flows.
 
-- **Title:** Unify vector-store operation scaffolding in OpenAI service
-  - Explanation: Collapse repeated create/upload/attach/status/update scaffolding in `src/services/openai_service.py` into shared operation helpers while keeping one canonical OpenAI service boundary.
-  - Pros: Lower duplication and more consistent error mapping.
-  - Cons: Needs explicit contracts so the shared layer does not become vague pass-through indirection.
-  - Acceptance Criteria:
-    - Common vector-store client init/log/error mapping is centralized.
-    - Operation-specific request/response contracts remain explicit.
-    - Existing vector-store tests continue to validate behavior without regressions.
-
-
 - **Title:** Centralize YAML loading and parse-error wrapping where semantics match
   - Explanation: Introduce shared YAML-loading helpers for the common pattern of load, root-shape validation, and typed parse-error mapping, while preserving service-specific error codes at the boundary.
   - Pros: Less boilerplate and more consistent config/schema loading behavior.

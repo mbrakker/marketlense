@@ -1271,7 +1271,7 @@ To extend the system:
 
 ## Vector Store & Cost Tracking Highlights
 
-- OpenAI boundary: only `src/services/openai_service.py` constructs `OpenAI(...)` clients; all provider request/response and shared error/cost behaviors are centralized there.
+- OpenAI boundary: only `src/services/openai_service.py` constructs `OpenAI(...)` clients; all provider request/response and shared error/cost behaviors are centralized there. Vector-store create/upload/attach/status/update operations also share one internal scaffolding path for client init, structured service logs, and typed provider-error mapping while preserving explicit request/response contracts per operation.
 - Vector stores: `src/services/vector_store_service.py` handles create/upload/attach/status/wait orchestration and metadata shaping, delegating provider API calls to `openai_service`; used by vector-mode generators.
 - Analysis uses vector_store only; `ANALYSIS_MODE`/`USE_VECTOR_STORE` toggles are no longer needed.
 - Evidence packs: `src/generators/evidence_pack_generator.py` is the entrypoint, and `src/generators/evidence_packs/*.py` contains the per-pack strategy modules used for pack metadata and normalization. Packs use `src/prompts/report_vs/**` and write JSON to `out/<report-slug>/report_analysis/*.json`; `doc_map` runs first and remaining packs run in parallel with process-wide rate limiting via `ingest.evidence_packs.*`. Validation uses strict per-pack schemas (`scope_pack`, `methods_pack`, `findings_pack`, `limitations_pack`, `quote_candidates_pack`) plus optional variety-pack schemas (`key_metrics_pack`, `risk_register_pack`, `recommendations_pack`, `contradictions_pack`).
