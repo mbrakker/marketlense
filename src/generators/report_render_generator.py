@@ -6,7 +6,7 @@ from pathlib import Path
 from src.contracts.cover_images import CoverImageGenerationRequest, CoverImageReport
 from src.contracts.files import FileStatRequest
 from src.contracts.ingest import IngestOutcome
-from src.contracts.report_assets import PreviewRequest, RenderRequest
+from src.contracts.report_assets import PreviewRequest, PreviewResponse, RenderRequest
 from src.contracts.report_generation import (
     ReportAnalysisState,
     ReportRuntimeState,
@@ -65,6 +65,25 @@ def render_preview_asset(
     source: ReportSourceState,
     dependencies: ReportGeneratorDependencies,
 ):
+    if source.contents_page_number == 1 and source.contents_image:
+        logger.info(
+            log_event(
+                runtime.ctx,
+                role="generator",
+                event="preview_asset_reused_from_contents",
+                module=logger.name,
+                fields={
+                    "file_id": runtime.file.file_id,
+                    "image_path": source.contents_image,
+                    "contents_page_number": source.contents_page_number,
+                },
+            )
+        )
+        return PreviewResponse(
+            schema_version="1.1",
+            image_path=source.contents_image,
+            page_number=0,
+        )
     preview_ctx = child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:preview")
     return dependencies.render_preview(
         PreviewRequest(

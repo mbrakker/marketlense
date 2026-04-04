@@ -336,3 +336,58 @@ def test_render_report_output_uses_html_cache_hit_and_skips_render(tmp_path):
     )
 
     assert outcome.html_path == str(expected_html)
+
+
+def test_render_preview_asset_reuses_contents_preview_when_contents_is_first_page(
+    tmp_path,
+):
+    runtime = _runtime(tmp_path, md5="md5")
+    source = replace(
+        _source(runtime),
+        contents_page_number=1,
+        contents_image="report/assets/report-contents.png",
+    )
+    render_calls: list[tuple[str, int, str]] = []
+    deps = _deps(
+        render_preview=lambda req, ctx: (
+            render_calls.append((req.pdf_path, req.page_number, req.variant))
+            or SimpleNamespace(
+                schema_version="1.1",
+                image_path="preview.png",
+                page_number=req.page_number,
+            )
+        )
+    )
+
+    preview_resp = render_preview_asset(runtime, source, deps)
+
+    assert preview_resp.image_path == "report/assets/report-contents.png"
+    assert preview_resp.page_number == 0
+    assert render_calls == []
+
+
+def test_render_preview_asset_renders_when_contents_page_does_not_overlap(
+    tmp_path,
+):
+    runtime = _runtime(tmp_path, md5="md5")
+    source = replace(
+        _source(runtime),
+        contents_page_number=2,
+        contents_image="report/assets/report-contents.png",
+    )
+    render_calls: list[tuple[str, int, str]] = []
+    deps = _deps(
+        render_preview=lambda req, ctx: (
+            render_calls.append((req.pdf_path, req.page_number, req.variant))
+            or SimpleNamespace(
+                schema_version="1.1",
+                image_path="preview.png",
+                page_number=req.page_number,
+            )
+        )
+    )
+
+    preview_resp = render_preview_asset(runtime, source, deps)
+
+    assert preview_resp.image_path == "preview.png"
+    assert render_calls == [(runtime.local_pdf_path, 0, "")]

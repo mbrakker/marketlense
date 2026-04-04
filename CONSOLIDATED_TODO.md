@@ -263,14 +263,6 @@ Suggested reading order when prioritizing:
 
 ### 8.3 Quick Wins
 
-- **Title:** Reuse contents-page preview when it overlaps with general preview rendering
-  - Explanation: Detect when the contents-page preview output overlaps or duplicates the main preview and reuse the same rendered asset instead of generating a second one.
-  - Pros: Saves CPU and I/O; reduces storage duplication; faster report generation.
-  - Cons: Requires a small dedupe check and coordination in preview generation logic; small risk of edge-case layout mismatch.
-  - Acceptance Criteria:
-    - Preview generation detects overlap and reuses existing contents-page preview.
-    - No visual regressions in sample reports.
-
 - **Title:** Cache incremental cost rollups instead of recomputing full ledger per write
   - Explanation: Maintain an incremental cache or rolling aggregate for daily cost totals so each new ledger entry updates the aggregate instead of recomputing across the full ledger file on every write.
   - Pros: Significant CPU and I/O savings for high-volume runs; simpler thresholds checks.
@@ -283,16 +275,19 @@ Each quick-win should be documented with a short task when prioritized.
 
 ### 8.4 Architecture-Fit Additions
 
-- **Title:** Normalize config defaults, portability, and tracked operational artifacts
-  - Explanation: Move concrete deployment values (e.g., Drive folder IDs, site URLs, usernames) out of committed defaults into environment overlays (`app.example.yaml` + env vars), move hardcoded defaults and keyword lists out of `src/services/config_service.py` into one documented source of truth, and stop tracking generated operational artifacts such as `logs/*.csv` and `logs/*.json` unless they are intentional fixtures.
-  - Pros: Safer repo defaults, easier onboarding across environments, lower risk of accidental prod coupling, and less repository noise.
-  - Cons: Requires migration docs, bootstrap scripts, and a review of any current tracked artifacts treated as fixtures.
+- **Title:** Normalize config defaults, portability, and shared YAML loading
+  - Explanation: Merge the config-portability cleanup with the repeated YAML-loading/parsing refactor. Move concrete deployment values (e.g., Drive folder IDs, site URLs, usernames) out of committed defaults into environment overlays (`app.example.yaml` + env vars), move hardcoded defaults and keyword lists out of `src/services/config_service.py` into one documented source of truth, centralize shared YAML load/root-shape/parse-error wrapping where semantics match, and stop tracking generated operational artifacts such as `logs/*.csv` and `logs/*.json` unless they are intentional fixtures.
+  - Pros: Safer repo defaults, easier onboarding across environments, less duplicated YAML boilerplate, and lower risk of accidental prod coupling.
+  - Cons: Requires migration docs, bootstrap scripts, careful preservation of service-specific YAML error semantics, and a review of any current tracked artifacts treated as fixtures.
   - Acceptance Criteria:
     - `src/config/app.yaml` contains environment-neutral defaults only.
     - Config defaults are defined in one source of truth and documented in the README.
+    - Shared YAML-loading helpers replace repeated load/root-shape/parse-error boilerplate where semantics match.
+    - Service-specific error codes remain explicit at the public boundary.
     - Example/local override pattern documented in README.
     - Generated log artifacts are ignored or moved to a documented fixture/snapshot location with rationale.
     - Bootstrapping tests verify env/profile overrides resolve correctly.
+    - File-not-found and invalid-YAML tests still distinguish the correct failure modes.
 
 - **Title:** Expand architecture boundary checks from I/O linting to full import-role enforcement
   - Explanation: The repo already has direct-I/O boundary coverage in `tests/test_io_boundaries.py`. Extend that enforcement to import-direction checks (`services -> contracts/utils`, etc.) and explicit cross-role dependency violations.
@@ -325,13 +320,18 @@ Each quick-win should be documented with a short task when prioritized.
     - Generator logs include required prompt and model metadata for every model call.
     - Raw model response logging present with redaction safeguards.
 
-- **Title:** Split remaining monolithic generator/service modules to single-responsibility units
-  - Explanation: Break the remaining oversized mixed-responsibility modules (notably `artifact_generator` and `openai_service`) into role-appropriate, single-purpose modules wired by orchestrators. The PDF service internal split, the report-generator phase split, the validation-generator rule split, and the evidence-pack strategy split are complete and removed from this backlog item.
-  - Pros: Easier maintenance, lower regression risk, clearer ownership.
-  - Cons: Large refactor with broad test impact.
+- **Title:** Finish remaining generator/service/control-flow refactors and boundary cleanup
+  - Explanation: Merge the remaining monolith-split work, oversized generation/validation phase splits, and the OpenAI/CLI/control-flow helper cleanup into one refactor track. Break the remaining oversized mixed-responsibility modules (notably `artifact_generator` and `openai_service`) into role-appropriate, single-purpose modules wired by orchestrators; phase-split large domain flows such as `generate_artifacts`, `_generate_pack`, `validate_report`, `_run_grounding_check`, `extract_taxonomy`, and `analyze_report`; remove cross-role side effects in `src/services/openai_service.py`; centralize repeated OpenAI cost/accounting and response-adaptation helpers; and route repeated CLI/control-flow status rendering through named helpers. The PDF service internal split, the report-generator phase split, the validation-generator rule split, and the evidence-pack strategy split are complete and removed from this backlog item.
+  - Pros: Easier maintenance, lower regression risk, clearer service boundaries, and more focused tests around core generation flows.
+  - Cons: Large refactor with broad test impact and small API/signature changes between services, generators, orchestrators, and CLI helpers.
   - Acceptance Criteria:
     - Remaining oversized service/generator modules extract cross-cutting orchestration and I/O concerns to proper layers.
-    - Equivalent behavior validated by pipeline tests.
+    - The listed generation/validation flows are split into named phase helpers with typed intermediate contracts where appropriate.
+    - OpenAI service emits cost/accounting data without directly persisting ledger side effects.
+    - OpenAI cost/accounting and response adaptation use shared helpers instead of repeated internal blocks.
+    - CLI status formatting and major branch policies in remaining control-flow hotspots are routed through named helpers with focused tests.
+    - Generator logs continue to expose the same prompt and validation observability after the split.
+    - Equivalent behavior is validated by pipeline tests without introducing default-filled or sentinel-filled intermediate payloads.
 
 - **Title:** Finish rollout of AGENTS test-integrity fixtures and boundary-only mocking
   - Explanation: The shared fixtures now exist in `tests/conftest.py`, but the suite still contains raw `monkeypatch` usage against generator/orchestrator internals. Finish migrating remaining hotspots to boundary-only mocks and fixture-based assertions.
@@ -365,25 +365,6 @@ This section absorbs the 2026-03-08 low-effort/high-impact repository audit into
     - The named oversized functions are decomposed into shorter phase-specific helpers.
     - Existing behavior is preserved by updated tests on the affected flows.
 
-- **Title:** Phase-split oversized generation and validation flows
-  - Explanation: Break large domain functions into typed phases for generation, validation, and adaptation across `generate_artifacts`, `_generate_pack`, `validate_report`, `_run_grounding_check`, `extract_taxonomy`, and `analyze_report`. The `report_generator` and candidate-selection splits are complete and removed from this backlog item. This merges audit items 15, 19, 20, 21, 23, and 25.
-  - Pros: Easier reasoning about generator behavior, smaller failure surfaces, better contract-level testing.
-  - Cons: Refactor touches core generation paths and requires careful preservation of current outputs.
-  - Acceptance Criteria:
-    - Each listed flow is split into named phase helpers with typed intermediate contracts where appropriate.
-    - Generator logs continue to expose the same prompt and validation observability after the split.
-    - Sentinel or default-filled intermediate payloads are not introduced during refactoring.
-
-- **Title:** Decouple cross-role side effects in OpenAI, CLI, and control-flow helpers
-  - Explanation: Remove cost-ledger persistence from `src/services/openai_service.py`, centralize repeated OpenAI cost-estimation/ledger-update blocks behind one helper while keeping side effects outside the service boundary, centralize repeated CLI status rendering instead of scattered `console.print(...)` calls in `src/cli.py`, and extract large branch-policy helpers from `src/ui/streamlit_pages.py` and the remaining oversized generation flows. This merges audit items 46, 47, and 49.
-  - Pros: Cleaner service boundaries, more consistent operator UX, easier policy testing.
-  - Cons: Requires small API changes between orchestrators, services, and UI helpers.
-  - Acceptance Criteria:
-    - OpenAI service emits cost/accounting data without directly persisting ledger side effects.
-    - OpenAI cost/accounting adaptation uses one shared helper instead of repeated ledger-write blocks.
-    - CLI status formatting is routed through shared rendering helpers.
-    - Major branch policies in UI/report generation are moved into named helpers with focused tests.
-
 ## 9. Supplemental Code-Reduction Intake
 
 This section absorbs the remaining open appendix items from `docs/quality/ineffective-choices-top50.md` so the consolidated TODO remains the only active backlog.
@@ -396,15 +377,6 @@ This section absorbs the remaining open appendix items from `docs/quality/ineffe
     - Shared response metadata adapter used by the repeated OpenAI response paths.
     - Returned dataclass contracts remain unchanged.
     - Tests cover identical metadata extraction across the affected flows.
-
-- **Title:** Centralize YAML loading and parse-error wrapping where semantics match
-  - Explanation: Introduce shared YAML-loading helpers for the common pattern of load, root-shape validation, and typed parse-error mapping, while preserving service-specific error codes at the boundary.
-  - Pros: Less boilerplate and more consistent config/schema loading behavior.
-  - Cons: Shared loader must not blur domain-specific error semantics.
-  - Acceptance Criteria:
-    - Repeated YAML loading boilerplate is replaced with shared helpers.
-    - Service-specific error codes remain explicit at the public boundary.
-    - File-not-found and invalid-YAML tests still distinguish the correct failure modes.
 
 - **Title:** Factory-generate repetitive evidence-pack strategy scaffolding
   - Explanation: Replace repeated list-pack/scalar-pack strategy boilerplate with factory helpers, leaving pack-specific field maps and transforms explicit in each strategy module.
