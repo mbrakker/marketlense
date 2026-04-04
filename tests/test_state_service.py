@@ -243,6 +243,57 @@ def test_state_db_access_allows_unlocked_db(tmp_path: Path) -> None:
     assert resp.locked is False
 
 
+def test_state_db_uses_wal_mode(tmp_path: Path) -> None:
+    db_path = tmp_path / "state.sqlite"
+    record(
+        StateRecordRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            file_id="file-wal",
+            md5="md5-wal",
+        ),
+        _ctx(),
+    )
+
+    conn = sqlite3.connect(db_path)
+    try:
+        journal_mode = conn.execute("PRAGMA journal_mode").fetchone()[0]
+    finally:
+        conn.close()
+
+    assert journal_mode.lower() == "wal"
+
+
+def test_state_db_access_allows_active_wal_writer(tmp_path: Path) -> None:
+    db_path = tmp_path / "state.sqlite"
+    record(
+        StateRecordRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            file_id="file-writer",
+            md5="md5-writer",
+        ),
+        _ctx(),
+    )
+
+    conn = sqlite3.connect(db_path)
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        resp = check_state_db_access(
+            StateDbAccessRequest(
+                schema_version="1.0",
+                state_db=str(db_path),
+                timeout_seconds=0.0,
+            ),
+            _ctx(),
+        )
+        assert resp.accessible is True
+        assert resp.locked is False
+    finally:
+        conn.rollback()
+        conn.close()
+
+
 def test_ingest_cursor_roundtrip(tmp_path: Path) -> None:
     db_path = tmp_path / "state.sqlite"
     initial = get_ingest_cursor(

@@ -198,6 +198,69 @@ class TestReportStoreService(unittest.TestCase):
             self.assertTrue(resp.accessible)
             self.assertFalse(resp.locked)
 
+    def test_report_db_uses_wal_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_db_wal")
+            upsert_metadata(
+                ReportMetadataUpsertRequest(
+                    schema_version="1.1",
+                    db_path=db_path,
+                    file_id="file-wal",
+                    title="WAL Report",
+                    publisher=None,
+                    taxonomy=[],
+                    source_url=None,
+                    html_path=None,
+                    md5=None,
+                ),
+                ctx,
+            )
+
+            conn = sqlite3.connect(db_path)
+            try:
+                journal_mode = conn.execute("PRAGMA journal_mode").fetchone()[0]
+            finally:
+                conn.close()
+
+            self.assertEqual("wal", journal_mode.lower())
+
+    def test_report_db_access_allows_active_wal_writer(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_db_access_writer_ok")
+            upsert_metadata(
+                ReportMetadataUpsertRequest(
+                    schema_version="1.1",
+                    db_path=db_path,
+                    file_id="file-writer",
+                    title="Writer Report",
+                    publisher=None,
+                    taxonomy=[],
+                    source_url=None,
+                    html_path=None,
+                    md5=None,
+                ),
+                ctx,
+            )
+
+            conn = sqlite3.connect(db_path)
+            conn.execute("BEGIN IMMEDIATE")
+            try:
+                resp = check_report_db_access(
+                    ReportMetadataDbAccessRequest(
+                        schema_version="1.0",
+                        db_path=db_path,
+                        timeout_seconds=0.0,
+                    ),
+                    new_run_context(task_id="test_db_access_writer_probe"),
+                )
+                self.assertTrue(resp.accessible)
+                self.assertFalse(resp.locked)
+            finally:
+                conn.rollback()
+                conn.close()
+
     def test_record_report_source_inserts_row(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = os.path.join(tmpdir, "reports.sqlite")

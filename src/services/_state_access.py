@@ -4,7 +4,12 @@ import sqlite3
 
 from src.contracts.run_context import RunContext
 from src.contracts.state import StateDbAccessRequest, StateDbAccessResponse
-from src.services._state_common import ACCESS_TIMEOUT_SECONDS, _is_lock_error, logger
+from src.services._state_common import (
+    ACCESS_TIMEOUT_SECONDS,
+    _configure_sqlite_connection,
+    _is_lock_error,
+    logger,
+)
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -65,6 +70,7 @@ def check_state_db_access(
             context={"state_db": request.state_db},
         ) from exc
     try:
+        _configure_sqlite_connection(conn, busy_timeout_seconds=timeout)
         logger.info(
             log_event(
                 ctx,
@@ -74,8 +80,7 @@ def check_state_db_access(
                 fields={"state_db": request.state_db},
             )
         )
-        conn.execute("BEGIN IMMEDIATE")
-        conn.execute("ROLLBACK")
+        conn.execute("PRAGMA schema_version")
     except sqlite3.OperationalError as exc:
         if _is_lock_error(exc):
             message = str(exc)

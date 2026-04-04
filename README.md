@@ -23,6 +23,7 @@ Key traits:
 - Cached execution: PDF info/contents/text extraction are cached by md5, and analysis outputs (evidence packs, artifacts, validation, HTML, crop-refine decisions) are cached by md5 + prompt/template hashes to skip redundant work.
 - Cached analysis packs are schema-validated again on cache hits before reuse, so stale evidence/artifact/validation payloads are treated as misses instead of being served forward.
 - Batched state prefilter: Drive-list skip checks for `(file_id, md5)` are grouped into batch SQLite queries to reduce per-file DB round trips; per-file state checks run only when the final resolved md5 differs from the Drive md5.
+- SQLite metadata/state stores use WAL mode with connection-local busy timeouts, and ingest access checks now use a lightweight schema probe so readers do not escalate to write locks while another WAL writer is active.
 - Low-text resilience: text density heuristics detect PDFs with little/no extractable text and emit explicit "not available from text" artifacts + HTML notices instead of blank sections.
 - Artifact reference robustness: artifact evidence IDs are canonicalized against docpacks before validation (supports comma/list-like model output and quote aliases such as `quote_1 -> q1`), preventing TL;DR/insights/quotes dropouts caused by malformed IDs.
 - Deterministic TOC structure: artifacts now include authoritative `toc_entries`, built directly from eligible `doc_map.sections` in source order. Legacy `toc_topics` and `toc_topics_expanded` are compatibility projections derived from `toc_entries`, and HTML renders the Covered topics section from those deterministic entries.
@@ -532,7 +533,7 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
    - `src/orchestrators/ingest_orchestrator.py` coordinates run-level ingest flow (locks, DB checks, list/fanout, cursor transitions).
    - `src/orchestrators/ingest_file_orchestrator.py` handles per-file execution inside the ingest worker pool.
    - Per-file cache eligibility is logged via `report_cache_prereq` (`md5_present`, `vector_store_keep`, `eligible`), with an explicit event when `vector_store_keep=false` disables analysis-cache reuse.
-   - Before doing any work, ingest probes `state_db` and `reports_db` for write access (SQLite `BEGIN IMMEDIATE`). If either DB is locked, the run exits early with `db_locked` to avoid partial outputs.
+   - Before doing any work, ingest probes `state_db` and `reports_db` with a lightweight SQLite schema-read access check after applying WAL/busy-timeout settings. If either DB is locked even for that probe, the run exits early with `db_locked` to avoid partial outputs.
    - Per-file processing runs in a bounded worker pool controlled by `ingest.worker_limit` (default `2`).
 
 3. **Drive discovery**
@@ -937,7 +938,7 @@ Start with the structured logs: every failure path logs `run_id`, `task_id`, `sp
 
 ### `db_locked`
 
-- Meaning: ingest checked SQLite write access up front and refused to start because `state_db`, `reports_db`, or both could not acquire `BEGIN IMMEDIATE`.
+- Meaning: ingest checked SQLite DB access up front after applying WAL mode and refused to start because `state_db`, `reports_db`, or both were still locked even for the lightweight schema probe.
 - Typical fix: stop the other process holding the DB, close any GUI/DB browser session, or wait for the other run to finish before starting a new ingest.
 - Related code path: `src/orchestrators/ingest_orchestrator.py` raises `db_locked` before any report work begins.
 

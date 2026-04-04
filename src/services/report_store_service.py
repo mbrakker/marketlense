@@ -45,6 +45,7 @@ logger = logging.getLogger("market_lense.report_store_service")
 
 ACCESS_TIMEOUT_SECONDS = 0.0
 LOCK_ERROR_MARKERS = ("database is locked", "database is busy")
+DEFAULT_BUSY_TIMEOUT_SECONDS = 5.0
 _REPORT_CONN_LOCK = threading.Lock()
 
 DDL = """
@@ -468,16 +469,32 @@ def _metadata_conn(path: str):
             severity="error",
         )
     Path(path).parent.mkdir(parents=True, exist_ok=True)
-    with _REPORT_CONN_LOCK:
-        conn = sqlite3.connect(path)
-        try:
+    conn = sqlite3.connect(path, timeout=DEFAULT_BUSY_TIMEOUT_SECONDS)
+    try:
+        _configure_sqlite_connection(
+            conn,
+            busy_timeout_seconds=DEFAULT_BUSY_TIMEOUT_SECONDS,
+        )
+        with _REPORT_CONN_LOCK:
             conn.executescript(DDL)
             _ensure_schema(conn)
             conn.commit()
-            yield conn
-            conn.commit()
-        finally:
-            conn.close()
+        yield conn
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _configure_sqlite_connection(
+    conn: sqlite3.Connection,
+    *,
+    busy_timeout_seconds: float,
+) -> None:
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute(
+        f"PRAGMA busy_timeout={max(0, int(busy_timeout_seconds * 1000))}"
+    )
+    conn.execute("PRAGMA synchronous=NORMAL")
 
 
 def _clean_metadata(metadata: dict[str, str]) -> dict[str, str]:
@@ -659,6 +676,7 @@ def check_report_db_access(request: ReportMetadataDbAccessRequest, ctx: RunConte
             context={"db_path": request.db_path},
         ) from exc
     try:
+        _configure_sqlite_connection(conn, busy_timeout_seconds=timeout)
         logger.info(log_event(
             ctx,
             role="service",
@@ -666,8 +684,7 @@ def check_report_db_access(request: ReportMetadataDbAccessRequest, ctx: RunConte
             module=logger.name,
             fields={"db_path": request.db_path},
         ))
-        conn.execute("BEGIN IMMEDIATE")
-        conn.execute("ROLLBACK")
+        conn.execute("PRAGMA schema_version")
     except sqlite3.OperationalError as exc:
         if _is_lock_error(exc):
             message = str(exc)

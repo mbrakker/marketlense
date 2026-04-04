@@ -394,14 +394,6 @@ Scoring rubric:
 ## 8. Audit-Driven Refactors & Compliance
 
 ### 8.1 Core High-Impact Refactors
-- **Title:** SQLite: adopt WAL and narrow lock scopes [Impact: 5/5, Effort: 3/5]
-  - Explanation: Reduce global SQLite locking by using WAL, setting busy timeouts, and minimizing critical sections for state updates.
-  - Pros: Higher concurrency and throughput.
-  - Cons: Requires migration and careful testing on Windows file systems.
-  - Acceptance Criteria:
-    - WAL mode enabled with safe busy timeouts.
-    - Concurrency tests show reduced contention.
-
 - **Title:** Persist normalized publisher lookup keys and replace Python-side table scans [Impact: 4/5, Effort: 4/5]
   - Explanation: `src/services/report_store_service.py` repeatedly loads publisher rows and normalizes `insights_url` in Python for route and inventory lookups/updates. Persist normalized lookup keys in the database, index them, and query/update rows directly in SQL.
   - Pros: Faster publisher-state lookups, less repeated normalization logic, and smaller service methods.

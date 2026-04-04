@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import sqlite3
 import threading
 from contextlib import contextmanager
@@ -14,6 +15,7 @@ logger = logging.getLogger("market_lense.state_service")
 
 ACCESS_TIMEOUT_SECONDS = 0.0
 LOCK_ERROR_MARKERS = ("database is locked", "database is busy")
+DEFAULT_BUSY_TIMEOUT_SECONDS = 5.0
 _STATE_CONN_LOCK = threading.Lock()
 BATCH_STATE_CHECK_MAX_PAIRS = 200
 
@@ -71,16 +73,35 @@ def _state_conn(path: str):
             message="State DB path is required",
             retryable=False,
         )
-    with _STATE_CONN_LOCK:
-        conn = sqlite3.connect(path)
-        try:
+    parent = os.path.dirname(path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    conn = sqlite3.connect(path, timeout=DEFAULT_BUSY_TIMEOUT_SECONDS)
+    try:
+        _configure_sqlite_connection(
+            conn,
+            busy_timeout_seconds=DEFAULT_BUSY_TIMEOUT_SECONDS,
+        )
+        with _STATE_CONN_LOCK:
             conn.executescript(DDL)
             _migrate_schema(conn)
             conn.commit()
-            yield conn
-            conn.commit()
-        finally:
-            conn.close()
+        yield conn
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _configure_sqlite_connection(
+    conn: sqlite3.Connection,
+    *,
+    busy_timeout_seconds: float,
+) -> None:
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute(
+        f"PRAGMA busy_timeout={max(0, int(busy_timeout_seconds * 1000))}"
+    )
+    conn.execute("PRAGMA synchronous=NORMAL")
 
 
 def _migrate_schema(conn: sqlite3.Connection) -> None:
