@@ -49,6 +49,24 @@ Suggested reading order when prioritizing:
     - Per-variant hashes and rendered prompts logged.
     - Deterministic selection mechanism implemented and covered by tests.
 
+- **Title:** Build a prompt namespace manifest and stop full-tree prompt scans on every listing
+  - Explanation: `src/services/prompt_service.py` currently discovers namespaces by recursively scanning `src/prompts/**` and loading each prompt set. Add a manifest/index file or cached namespace inventory so the UI and tooling can list prompts without repeatedly traversing and hashing the entire tree.
+  - Pros: Faster settings/prompt screens, less filesystem churn, and simpler prompt discovery behavior.
+  - Cons: Manifest invalidation and regeneration need to be reliable.
+  - Acceptance Criteria:
+    - Prompt namespace listing no longer depends on a full recursive scan for steady-state reads.
+    - Manifest/cache invalidation occurs when prompt files change.
+    - Prompt listing tests cover add/remove/rename scenarios.
+
+- **Title:** Add repository-wide prompt dry-run validation with fixture inputs
+  - Explanation: Go beyond file existence checks by adding a prompt validation step that renders every prompt namespace against representative fixture inputs or declared variable contracts, failing fast when templates drift from generator usage.
+  - Pros: Catches prompt breakage before runtime and reduces latent generator failures.
+  - Cons: Requires maintaining representative fixture inputs for prompt families.
+  - Acceptance Criteria:
+    - CI runs a prompt dry-run command or test suite across active namespaces.
+    - Missing variables and template syntax errors fail before runtime.
+    - Fixture coverage exists for the main report, validation, ranking, and publishing prompt families.
+
 ---
 
 ## 2. Cost, Billing & Resource Cleanup
@@ -177,6 +195,52 @@ Suggested reading order when prioritizing:
     - Cost per ranking call measurably reduced in benchmarks.
     - No regression in ranking quality on held-out set.
 
+- **Title:** Batch crop-refine LLM decisions by page instead of per candidate
+  - Explanation: `src/generators/report_selection_generator.py` already pre-renders page images, but the crop-refine flow still issues separate LLM calls per candidate and per phase. Group refine candidates by page/phase, reuse the same rendered page context, and map batched decisions back to candidate IDs.
+  - Pros: Fewer model calls, lower latency, lower prompt overhead, and simpler concurrency control.
+  - Cons: More complex response-to-candidate mapping and partial-failure handling.
+  - Acceptance Criteria:
+    - Crop-refine requests are batched per page/phase when multiple candidates share a page.
+    - Raw-response and decision logs still identify each candidate deterministically.
+    - Multi-candidate sample reports show a lower crop-refine call count without selection regressions.
+    - Tests cover mixed valid/invalid decisions within one batched response.
+
+- **Title:** Share PDF page-artifact caches across visual, table, and crop passes
+  - Explanation: `src/services/_pdf/page_artifacts.py` is only reused by parts of extraction today, while crop and related flows still rebuild page text/block state separately. Introduce one internal page-artifact cache per page/document and feed it through visual, table, and crop services.
+  - Pros: Less repeated PDF parsing, lower CPU cost on large reports, and fewer divergent heuristics.
+  - Cons: Requires careful lifecycle management for document/page objects.
+  - Acceptance Criteria:
+    - Shared page artifact/context objects are reused across figure, table, and crop flows.
+    - Duplicate text-block extraction paths are removed or delegated to the shared cache.
+    - Benchmarks on large PDFs show reduced repeated page parsing work.
+
+- **Title:** Replace loose `Candidate.meta` score inputs with a typed feature contract
+  - Explanation: Ranking, filtering, and crop-refine decisions currently depend on ad-hoc keys inside `Candidate.meta`. Add a typed candidate-feature dataclass so quality metrics, geometric signals, and scoring inputs have an explicit contract instead of stringly-typed lookups.
+  - Pros: Safer refactors, clearer tests, and less hidden coupling between extraction and ranking.
+  - Cons: Requires migrating multiple generators/services and adapting caches.
+  - Acceptance Criteria:
+    - Candidate quality/scoring features are represented by typed contracts.
+    - Ranking and crop-refine code paths stop depending on magic `meta` keys for required fields.
+    - Serialization and round-trip tests cover the new feature contract.
+
+- **Title:** Cache visual probe rasters and image statistics for repeated bbox inspection
+  - Explanation: Visual/table heuristics repeatedly render and inspect the same page regions while computing edge density, grayscale variance, or image profiles. Cache probe rasters/statistics by page+bbox+render profile so repeated heuristics can reuse them.
+  - Pros: Lower image-render overhead and faster candidate extraction on graphics-heavy PDFs.
+  - Cons: Needs tight cache keys to avoid stale or mismatched probe data.
+  - Acceptance Criteria:
+    - Repeated bbox probe rendering/stat extraction is cached behind a stable key.
+    - Visual/table extraction modules reuse the cache instead of re-rendering identical probes.
+    - Benchmarks show lower extraction time on graphics-heavy sample PDFs.
+
+- **Title:** Consolidate report-source cache boilerplate into one typed helper
+  - Explanation: `src/generators/report_source_generator.py` repeats near-identical cache load/write flows for PDF info, contents detection, and extracted text. Replace those repeated blocks with a shared typed helper, similar in spirit to `analysis_pack_cache.py`, while keeping pack-specific validation explicit.
+  - Pros: Smaller generator surface, fewer cache bugs, and easier extension of source-analysis phases.
+  - Cons: Needs careful API design to avoid over-generalizing distinct cache semantics.
+  - Acceptance Criteria:
+    - Repeated cache read/write/miss logging paths in report-source generation are centralized.
+    - Each cached phase still validates its own payload shape explicitly.
+    - Existing source-generation tests continue to cover hit/miss/stale-cache behavior.
+
 ---
 
 ## 5. Orchestration, Durability & Performance
@@ -196,6 +260,60 @@ Suggested reading order when prioritizing:
   - Acceptance Criteria:
     - Streaming path implemented for key generators.
     - Early validation hooks can abort and surface clear errors.
+
+- **Title:** Promote MD5 sidecar handling into a dedicated typed file-cache service
+  - Explanation: `src/orchestrators/ingest_orchestrator.py` currently owns md5 sidecar path construction, JSON parsing, stat reconciliation, and fallback logic. Move that into a dedicated service/contract pair so ingest orchestration only asks for typed cache answers.
+  - Pros: Smaller orchestrator surface and fewer opportunities for ad-hoc cache drift.
+  - Cons: Requires moving a well-tested but intertwined code path across layers.
+  - Acceptance Criteria:
+    - MD5 sidecar pathing, load, validation, and write logic live behind a service boundary.
+    - Ingest orchestration no longer parses sidecar JSON directly.
+    - Existing cache-hit/cache-miss correctness is preserved by tests.
+
+- **Title:** Stream Drive pagination results instead of materializing entire page batches
+  - Explanation: `src/services/drive_service.py` currently accumulates full page responses in `_list_files_paginated()` before yielding files. Convert listing to a streaming iterator so large folders do not require materializing every page into intermediate lists.
+  - Pros: Lower memory usage and earlier first-result latency for large Drive folders.
+  - Cons: Requires careful logging and partial-failure behavior when streaming pages.
+  - Acceptance Criteria:
+    - Drive file listing yields results incrementally across paginated responses.
+    - Large-folder ingest no longer depends on full in-memory page accumulation.
+    - Listing tests cover partial completion and logging on mid-stream failures.
+
+- **Title:** Cache resolved Drive folder scope for recursive listings
+  - Explanation: Recursive listing currently re-traverses Drive subfolder structure every time `_resolve_folder_scope()` runs. Cache the resolved folder-id set behind a key that includes the root folder and Drive settings, with explicit invalidation controls.
+  - Pros: Less API chatter and faster repeated ingest/list operations on stable folder trees.
+  - Cons: Folder topology changes need a reliable refresh path.
+  - Acceptance Criteria:
+    - Recursive folder-scope expansion is cached with explicit invalidation or TTL.
+    - Repeated ingest/list operations reuse cached scope when inputs are unchanged.
+    - Tests cover refresh behavior after folder additions/removals.
+
+- **Title:** Bound and evict thread-scoped Drive client caches
+  - Explanation: `src/services/drive_service.py` caches Drive clients by auth mode, credential path, and thread id with no eviction strategy. Add bounded lifetime/cleanup rules so long-running sessions do not accumulate stale thread-bound clients indefinitely.
+  - Pros: Lower memory/resource leakage risk and cleaner long-lived process behavior.
+  - Cons: Needs eviction rules that do not thrash clients under normal concurrency.
+  - Acceptance Criteria:
+    - Drive client cache size/lifetime is bounded.
+    - Stale thread-specific clients are evicted or refreshed safely.
+    - Tests cover reuse, eviction, and concurrent access behavior.
+
+- **Title:** Move vector-store wait loops out of services and into orchestrator retry policy
+  - Explanation: `src/services/vector_store_service.py` currently owns a polling loop with `sleep`, which mixes control-plane waiting into a service boundary. Make status fetch a pure service call and let orchestrators own wait/backoff/idempotency policy.
+  - Pros: Cleaner role boundaries, easier retry testing, and more reusable status checks.
+  - Cons: Requires touching vector-store orchestration and dependent tests.
+  - Acceptance Criteria:
+    - Service layer exposes status fetch without internal wait loops.
+    - Polling/backoff lives in orchestrators or retry helpers with structured logging.
+    - Vector-store timeout/failure behavior is preserved by pipeline tests.
+
+- **Title:** Make analysis packs, HTML renders, and cache artifacts atomic on write
+  - Explanation: `src/services/report_analysis_store_service.py`, `src/services/render_service.py`, and cache-writing paths write directly to final files. Switch to temp-file + rename semantics so interrupted runs do not leave partial JSON/HTML artifacts behind.
+  - Pros: Better durability and fewer corrupted artifacts after failures or interrupted runs.
+  - Cons: Slightly more write-path complexity and temp-file cleanup logic.
+  - Acceptance Criteria:
+    - Analysis-pack, render, and cache writes use atomic replace semantics.
+    - Interrupted writes do not leave partially written final artifacts.
+    - Tests cover overwrite and failure-mid-write scenarios.
 
 ---
 
@@ -218,9 +336,72 @@ Suggested reading order when prioritizing:
     - Publish tasks can be enqueued and retried with idempotency keys.
     - Publish failures are retried with backoff and logged.
 
+- **Title:** Introduce a shared WordPress request executor with pooled sessions and error adaptation
+  - Explanation: `src/services/wordpress_service.py` repeats request setup, SSL handling, error parsing, and JSON adaptation across upload/post/term operations. Centralize that into one internal request executor backed by a pooled `requests.Session`.
+  - Pros: Less duplicated HTTP code, lower connection overhead, and more consistent error handling.
+  - Cons: Requires careful migration of per-endpoint behavior and logging details.
+  - Acceptance Criteria:
+    - WordPress REST calls go through one shared executor or session helper.
+    - Existing request/response logging and error taxonomy remain intact.
+    - Connection reuse is covered by service tests or instrumentation.
+
+- **Title:** Batch WordPress taxonomy/tag ensure flows
+  - Explanation: Taxonomy and tag ensure operations currently work through repeated lookup/create cycles. Add batched lookup and creation planning per publish run so term resolution happens once per taxonomy set instead of one item at a time.
+  - Pros: Fewer WordPress round trips and simpler publish-generator control flow.
+  - Cons: Needs careful handling of partial term-creation failures.
+  - Acceptance Criteria:
+    - Publish flows perform batched term lookup/planning per run.
+    - Duplicate per-term REST calls are reduced for common publish cases.
+    - Tests cover mixed existing/new term scenarios.
+
+- **Title:** Remove duplicate HTML reads and parses from the publish path
+  - Explanation: `src/orchestrators/publish_orchestrator.py` may read HTML once to extract `file_id` and then process the same HTML again downstream. Carry preloaded HTML and parsed metadata through the publish request path instead of reopening the same file.
+  - Pros: Less file I/O, simpler publish control flow, and fewer parsing inconsistencies.
+  - Cons: Requires request/contract changes between orchestrator and generator.
+  - Acceptance Criteria:
+    - Publish flow reads each HTML artifact at most once per attempt.
+    - File ID extraction, validation lookup, and publish generation reuse the same loaded HTML payload.
+    - Publish tests cover both preloaded and non-preloaded entry paths.
+
+- **Title:** Add a batch publish preflight read model for state and post lookups
+  - Explanation: Publishing currently performs per-file state checks, published checks, validation reads, and post lookups. Add a batch preflight read model so publish orchestration resolves these inputs once before iterating files.
+  - Pros: Fewer repeated service calls and clearer decision-making for skip/error paths.
+  - Cons: Adds a precomputation layer that must stay consistent with per-file behavior.
+  - Acceptance Criteria:
+    - Publish preflight data is loaded in batch for the selected HTML set.
+    - Per-file publish decisions consume the batch snapshot instead of re-querying common state.
+    - Tests verify parity with current skip/already-published behavior.
+
+- **Title:** Preflight browser-report downloads with lightweight HTTP and wrapper inspection before agent launch
+  - Explanation: `src/services/browser_report_download_service.py` builds the browser-use runtime immediately, even when a direct PDF or simple wrapper page could be identified through a lightweight HTTP fetch. Add a preflight path that checks direct PDF signatures and embedded PDF wrappers before spinning up the browser agent.
+  - Pros: Lower cost and latency for simple download routes.
+  - Cons: Needs careful heuristics to avoid false positives on JS-heavy pages.
+  - Acceptance Criteria:
+    - Direct PDF and simple wrapper cases are handled without browser-agent startup.
+    - Browser-agent launch remains the fallback for ambiguous or JS-dependent routes.
+    - Tests cover direct-PDF, wrapper-page, and browser-required cases.
+
+- **Title:** Move browser-download task prompts into prompt-service namespaces
+  - Explanation: `src/services/browser_report_download_service.py` currently constructs its agent task prompt inline. Move that text into dedicated prompt namespaces so browser-download instructions are versioned, hash-logged, and maintained consistently with the rest of the prompt system.
+  - Pros: Better prompt observability, easier iteration, and reduced service-level string assembly.
+  - Cons: Requires prompt fixtures and migration of prompt variables into explicit contracts.
+  - Acceptance Criteria:
+    - Browser-download task text is loaded and rendered via prompt service.
+    - Prompt paths, hashes, and rendered text are logged for browser-download runs.
+    - Existing browser-download tests are updated to cover prompt rendering.
+
 ---
 
 ## 7. Schema, Validation & Output Quality
+
+- **Title:** Validate analysis packs against their schemas before persistence
+  - Explanation: Analysis packs are written to disk through `report_analysis_store_service`, but schema validation is largely downstream. Validate pack payloads before they are persisted so invalid intermediate artifacts fail fast and do not pollute later stages.
+  - Pros: Earlier failure, cleaner artifacts, and stronger guarantees for downstream generators/renderers.
+  - Cons: Slightly more validation overhead on write paths.
+  - Acceptance Criteria:
+    - Schema-backed analysis packs validate before final write.
+    - Invalid packs fail with explicit `AppError` and contextual logs.
+    - Tests cover both valid and invalid pack persistence attempts.
 
 ---
 
@@ -234,6 +415,16 @@ Suggested reading order when prioritizing:
   - Acceptance Criteria:
     - WAL mode enabled with safe busy timeouts.
     - Concurrency tests show reduced contention.
+
+- **Title:** Persist normalized publisher lookup keys and replace Python-side table scans
+  - Explanation: `src/services/report_store_service.py` repeatedly loads publisher rows and normalizes `insights_url` in Python for route and inventory lookups/updates. Persist normalized lookup keys in the database, index them, and query/update rows directly in SQL.
+  - Pros: Faster publisher-state lookups, less repeated normalization logic, and smaller service methods.
+  - Cons: Requires a schema migration and careful handling of normalization collisions.
+  - Acceptance Criteria:
+    - Normalized publisher lookup columns are stored and backfilled in the database.
+    - Indexed SQL lookups replace current `fetchall()` + Python filtering paths for publisher route and inventory operations.
+    - Collision behavior is defined and covered by tests.
+    - Existing route/inventory tests continue to pass against the migrated schema.
 
 ### 8.2 Additional Audit Items
 
@@ -288,6 +479,26 @@ Each quick-win should be documented with a short task when prioritized.
     - Generated log artifacts are ignored or moved to a documented fixture/snapshot location with rationale.
     - Bootstrapping tests verify env/profile overrides resolve correctly.
     - File-not-found and invalid-YAML tests still distinguish the correct failure modes.
+
+- **Title:** Finish PDF extraction internal split and remove private cross-module imports
+  - Explanation: `src/services/_pdf/visual_candidates.py` and `src/services/_pdf/table_candidates.py` still import dozens of private helpers and constants from `src/services/_pdf/figures.py`, which keeps `figures.py` as a 7k-line god module. Extract shared geometry/text/caption/scoring heuristics into explicit internal modules and keep `pdf_service` as the only public boundary.
+  - Pros: Lower cognitive load, clearer ownership of PDF heuristics, and easier performance tuning without touching one giant file.
+  - Cons: Broad refactor with risk of subtle heuristic regressions if test coverage misses edge cases.
+  - Acceptance Criteria:
+    - Capability modules no longer import private helpers directly from `figures.py`.
+    - Shared heuristics live in named internal modules with focused tests.
+    - `src/services/pdf_service.py` remains the single canonical public boundary.
+    - Existing candidate-extraction and crop tests continue to pass without behavior drift.
+
+- **Title:** Externalize publisher-inventory browser scripts and traversal state
+  - Explanation: `src/services/publisher_inventory_service.py` embeds large JavaScript snippets with repeated selector, visibility, and normalization helpers, while traversal metrics are rebuilt repeatedly during browser flows. Move browser actions/state extraction into named internal script modules or assets, reuse one helper bundle, and model traversal state updates through explicit typed state helpers.
+  - Pros: Smaller service surface, less duplicated browser logic, easier targeted testing, and less brittle DOM-script maintenance.
+  - Cons: Requires careful script-loading and browser-test updates.
+  - Acceptance Criteria:
+    - Inline browser action/state scripts are replaced by named internal script builders or assets.
+    - Shared selector/visibility/normalization logic is defined once and reused across browser actions.
+    - Traversal state/metrics updates use explicit helpers instead of repeated manual dataclass reconstruction.
+    - Browser-inventory tests cover the extracted script/runtime contract.
 
 - **Title:** Expand architecture boundary checks from I/O linting to full import-role enforcement
   - Explanation: The repo already has direct-I/O boundary coverage in `tests/test_io_boundaries.py`. Extend that enforcement to import-direction checks (`services -> contracts/utils`, etc.) and explicit cross-role dependency violations.
@@ -368,6 +579,15 @@ This section absorbs the 2026-03-08 low-effort/high-impact repository audit into
 ## 9. Supplemental Code-Reduction Intake
 
 This section absorbs the remaining open appendix items from `docs/quality/ineffective-choices-top50.md` so the consolidated TODO remains the only active backlog.
+
+- **Title:** Cache dashboard read models in Streamlit session state with explicit invalidation
+  - Explanation: `src/ui/streamlit_pages.py` repeatedly reloads logs, state rows, report rows, and storage views during one UI session. Cache those read models in `st.session_state` or a thin UI cache layer and invalidate them after actions that mutate underlying state.
+  - Pros: Faster dashboard interactions and less repeated filesystem/database work.
+  - Cons: Invalidation must be explicit to avoid stale operator views.
+  - Acceptance Criteria:
+    - High-volume dashboard loaders use session-aware caching.
+    - Mutating actions invalidate the affected cached views deterministically.
+    - UI tests cover refresh behavior after ingest/publish/settings actions.
 
 - **Title:** Factory-generate repetitive evidence-pack strategy scaffolding
   - Explanation: Replace repeated list-pack/scalar-pack strategy boilerplate with factory helpers, leaving pack-specific field maps and transforms explicit in each strategy module.
