@@ -313,16 +313,110 @@ def _extract_responses_output_text(resp: Any) -> str:
     return text if isinstance(text, str) else ""
 
 
-def _extract_responses_usage(resp: Any) -> tuple[int | None, int | None, int]:
+def _extract_responses_usage(
+    resp: Any,
+) -> tuple[int | None, int | None, int, int | None]:
     usage = getattr(resp, "usage", None) or {}
     input_tokens = getattr(usage, "input_tokens", None) if usage else None
     output_tokens = getattr(usage, "output_tokens", None) if usage else None
+    total_tokens = getattr(usage, "total_tokens", None) if usage else None
     tool_calls = 0
     if isinstance(usage, dict):
         input_tokens = usage.get("input_tokens")
         output_tokens = usage.get("output_tokens")
+        total_tokens = usage.get("total_tokens")
         tool_calls = usage.get("total_tool_calls") or usage.get("tool_calls") or 0
-    return input_tokens, output_tokens, int(tool_calls or 0)
+    return input_tokens, output_tokens, int(tool_calls or 0), total_tokens
+
+
+@dataclass(frozen=True)
+class _OpenAIResponseMetadata:
+    text: str
+    request_id: str | None
+    input_tokens: int | None
+    output_tokens: int | None
+    tool_calls: int
+    total_tokens: int | None
+    parsed_json: dict | None
+    parse_strategy: str
+
+
+def _parse_response_json(
+    text: str, *, recover_json_object: bool
+) -> tuple[dict | None, str]:
+    if recover_json_object:
+        return _parse_json_object_from_text(text)
+    if not text:
+        return None, "empty"
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        return None, "invalid_json"
+    if not isinstance(parsed, dict):
+        return None, "json_non_object"
+    return parsed, "json_object"
+
+
+def _build_response_metadata(
+    *,
+    text: str,
+    request_id: str | None,
+    input_tokens: int | None,
+    output_tokens: int | None,
+    tool_calls: int,
+    total_tokens: int | None,
+    recover_json_object: bool,
+) -> _OpenAIResponseMetadata:
+    parsed_json, parse_strategy = _parse_response_json(
+        text,
+        recover_json_object=recover_json_object,
+    )
+    resolved_total_tokens = total_tokens
+    if resolved_total_tokens is None and (
+        input_tokens is not None or output_tokens is not None
+    ):
+        resolved_total_tokens = int(input_tokens or 0) + int(output_tokens or 0)
+    return _OpenAIResponseMetadata(
+        text=text,
+        request_id=str(request_id) if request_id else None,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        tool_calls=int(tool_calls or 0),
+        total_tokens=resolved_total_tokens,
+        parsed_json=parsed_json,
+        parse_strategy=parse_strategy,
+    )
+
+
+def _adapt_chat_completion_metadata(
+    run: _ChatCompletionRun,
+) -> _OpenAIResponseMetadata:
+    return _build_response_metadata(
+        text=run.payload if isinstance(run.payload, str) else "",
+        request_id=run.request_id,
+        input_tokens=run.prompt_tokens,
+        output_tokens=run.completion_tokens,
+        tool_calls=0,
+        total_tokens=run.total_tokens,
+        recover_json_object=False,
+    )
+
+
+def _adapt_responses_metadata(
+    resp: Any, *, recover_json_object: bool
+) -> _OpenAIResponseMetadata:
+    input_tokens, output_tokens, tool_calls, total_tokens = _extract_responses_usage(
+        resp
+    )
+    return _build_response_metadata(
+        text=_extract_responses_output_text(resp),
+        request_id=getattr(resp, "id", None),
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        tool_calls=tool_calls,
+        total_tokens=total_tokens,
+        recover_json_object=recover_json_object,
+    )
 
 
 def _append_cost_entry_safe(
@@ -756,12 +850,16 @@ def openai_chat_json(
             },
         )
     )
-    text = ""
-    request_id = None
-    prompt_tokens = None
-    completion_tokens = None
-    total_tokens = None
-    tool_calls = 0
+    metadata = _OpenAIResponseMetadata(
+        text="",
+        request_id=None,
+        input_tokens=None,
+        output_tokens=None,
+        tool_calls=0,
+        total_tokens=None,
+        parsed_json=None,
+        parse_strategy="empty",
+    )
 
     try:
         run = _run_chat_completion(
@@ -773,11 +871,7 @@ def openai_chat_json(
             temperature=request.temperature,
             seed=request.seed,
         )
-        text = run.payload
-        request_id = run.request_id
-        prompt_tokens = run.prompt_tokens
-        completion_tokens = run.completion_tokens
-        total_tokens = run.total_tokens
+        metadata = _adapt_chat_completion_metadata(run)
     except OPENAI_REQUEST_EXCEPTIONS as exc:
         raise AppError(
             code="openai_chat_failed",
@@ -787,18 +881,11 @@ def openai_chat_json(
             context={"model": request.model},
         ) from exc
 
-    parsed_json = None
-    if text:
-        try:
-            parsed_json = json.loads(text)
-        except json.JSONDecodeError:
-            parsed_json = None
-
     estimated_cost = estimate_cost_usd(
         request.model,
-        int(prompt_tokens or 0),
-        int(completion_tokens or 0),
-        int(tool_calls or 0),
+        int(metadata.input_tokens or 0),
+        int(metadata.output_tokens or 0),
+        int(metadata.tool_calls or 0),
         pricing=request.model_pricing or {},
     )
     try:
@@ -810,12 +897,12 @@ def openai_chat_json(
             span_id=ctx.span_id,
             step_name="openai_chat_json",
             model=request.model,
-            input_tokens=int(prompt_tokens or 0),
-            output_tokens=int(completion_tokens or 0),
+            input_tokens=int(metadata.input_tokens or 0),
+            output_tokens=int(metadata.output_tokens or 0),
             cached_input_tokens=None,
-            tool_calls=int(tool_calls or 0),
+            tool_calls=int(metadata.tool_calls or 0),
             estimated_cost_usd=estimated_cost,
-            extra={"request_id": str(request_id) if request_id else None},
+            extra={"request_id": metadata.request_id},
         )
         append_cost_entry(
             CostLedgerAppendRequest(
@@ -850,25 +937,25 @@ def openai_chat_json(
             module=logger.name,
             fields={
                 "model": request.model,
-                "request_id": request_id or "",
-                "prompt_tokens": prompt_tokens,
-                "completion_tokens": completion_tokens,
-                "total_tokens": total_tokens,
-                "parsed_json": isinstance(parsed_json, dict),
+                "request_id": metadata.request_id or "",
+                "prompt_tokens": metadata.input_tokens,
+                "completion_tokens": metadata.output_tokens,
+                "total_tokens": metadata.total_tokens,
+                "parsed_json": metadata.parsed_json is not None,
             },
         )
     )
 
     return OpenAIResponseResult(
         schema_version="1.0",
-        text=text or "",
-        parsed_json=parsed_json if isinstance(parsed_json, dict) else None,
-        input_tokens=prompt_tokens,
-        output_tokens=completion_tokens,
-        tool_calls=tool_calls,
+        text=metadata.text,
+        parsed_json=metadata.parsed_json,
+        input_tokens=metadata.input_tokens,
+        output_tokens=metadata.output_tokens,
+        tool_calls=metadata.tool_calls,
         model=request.model,
-        total_tokens=total_tokens,
-        request_id=str(request_id) if request_id else None,
+        total_tokens=metadata.total_tokens,
+        request_id=metadata.request_id,
     )
 
 
@@ -974,28 +1061,12 @@ def openai_chat_json_with_images(
             context={"model": request.model},
         ) from exc
 
-    text = getattr(resp, "output_text", "") or ""
-    usage = getattr(resp, "usage", None) or {}
-    input_tokens = getattr(usage, "input_tokens", None) if usage else None
-    output_tokens = getattr(usage, "output_tokens", None) if usage else None
-    if isinstance(usage, dict):
-        input_tokens = usage.get("input_tokens")
-        output_tokens = usage.get("output_tokens")
-    tool_calls = 0
-    if isinstance(usage, dict):
-        tool_calls = usage.get("total_tool_calls") or usage.get("tool_calls") or 0
-    parsed_json = None
-    if text:
-        try:
-            parsed_json = json.loads(text)
-        except json.JSONDecodeError:
-            parsed_json = None
-    request_id = getattr(resp, "id", None)
+    metadata = _adapt_responses_metadata(resp, recover_json_object=False)
     estimated_cost = estimate_cost_usd(
         request.model,
-        int(input_tokens or 0),
-        int(output_tokens or 0),
-        int(tool_calls or 0),
+        int(metadata.input_tokens or 0),
+        int(metadata.output_tokens or 0),
+        int(metadata.tool_calls or 0),
         pricing=request.model_pricing or {},
     )
     try:
@@ -1007,12 +1078,12 @@ def openai_chat_json_with_images(
             span_id=ctx.span_id,
             step_name="openai_chat_json_with_images",
             model=request.model,
-            input_tokens=int(input_tokens or 0),
-            output_tokens=int(output_tokens or 0),
+            input_tokens=int(metadata.input_tokens or 0),
+            output_tokens=int(metadata.output_tokens or 0),
             cached_input_tokens=None,
-            tool_calls=int(tool_calls or 0),
+            tool_calls=int(metadata.tool_calls or 0),
             estimated_cost_usd=estimated_cost,
-            extra={"request_id": str(request_id) if request_id else None},
+            extra={"request_id": metadata.request_id},
         )
         append_cost_entry(
             CostLedgerAppendRequest(
@@ -1046,25 +1117,25 @@ def openai_chat_json_with_images(
             module=logger.name,
             fields={
                 "model": request.model,
-                "request_id": request_id or "",
+                "request_id": metadata.request_id or "",
                 "image_count": len(request.image_paths or []),
-                "input_tokens": input_tokens,
-                "output_tokens": output_tokens,
-                "tool_calls": tool_calls,
-                "parsed_json": isinstance(parsed_json, dict),
+                "input_tokens": metadata.input_tokens,
+                "output_tokens": metadata.output_tokens,
+                "tool_calls": metadata.tool_calls,
+                "parsed_json": metadata.parsed_json is not None,
             },
         )
     )
     return OpenAIResponseResult(
         schema_version="1.0",
-        text=text,
-        parsed_json=parsed_json if isinstance(parsed_json, dict) else None,
-        input_tokens=input_tokens,
-        output_tokens=output_tokens,
-        tool_calls=tool_calls,
+        text=metadata.text,
+        parsed_json=metadata.parsed_json,
+        input_tokens=metadata.input_tokens,
+        output_tokens=metadata.output_tokens,
+        tool_calls=metadata.tool_calls,
         model=request.model,
-        total_tokens=(int(input_tokens or 0) + int(output_tokens or 0)),
-        request_id=str(request_id) if request_id else None,
+        total_tokens=metadata.total_tokens,
+        request_id=metadata.request_id,
     )
 
 
@@ -1163,12 +1234,9 @@ def openai_ocr_pdf(
             context={"model": request.model, "pdf_path": str(pdf_path)},
         ) from exc
 
-    text = _extract_responses_output_text(resp)
-    request_id = getattr(resp, "id", None)
     resolved_model = str(getattr(resp, "model", None) or request.model)
-    input_tokens, output_tokens, tool_calls = _extract_responses_usage(resp)
-    parsed_json, parse_strategy = _parse_json_object_from_text(text)
-    pages = _coerce_pdf_ocr_pages(parsed_json)
+    metadata = _adapt_responses_metadata(resp, recover_json_object=True)
+    pages = _coerce_pdf_ocr_pages(metadata.parsed_json)
     logger.info(
         log_event(
             ctx,
@@ -1177,11 +1245,11 @@ def openai_ocr_pdf(
             module=logger.name,
             fields={
                 "model": resolved_model,
-                "request_id": request_id or "",
-                "input_tokens": input_tokens,
-                "output_tokens": output_tokens,
-                "tool_calls": tool_calls,
-                "parse_strategy": parse_strategy,
+                "request_id": metadata.request_id or "",
+                "input_tokens": metadata.input_tokens,
+                "output_tokens": metadata.output_tokens,
+                "tool_calls": metadata.tool_calls,
+                "parse_strategy": metadata.parse_strategy,
                 "page_count": len(pages),
             },
         )
@@ -1193,9 +1261,9 @@ def openai_ocr_pdf(
             retryable=False,
             context={
                 "model": resolved_model,
-                "request_id": str(request_id) if request_id else "",
-                "parse_strategy": parse_strategy,
-                "response_text_preview": text[:400],
+                "request_id": metadata.request_id or "",
+                "parse_strategy": metadata.parse_strategy,
+                "response_text_preview": metadata.text[:400],
             },
         )
 
@@ -1203,23 +1271,23 @@ def openai_ocr_pdf(
         ctx=ctx,
         step_name="openai_ocr_pdf",
         model=resolved_model,
-        input_tokens=input_tokens,
-        output_tokens=output_tokens,
-        tool_calls=tool_calls,
+        input_tokens=metadata.input_tokens,
+        output_tokens=metadata.output_tokens,
+        tool_calls=metadata.tool_calls,
         cost_ledger_path=request.cost_ledger_path,
         cost_daily_path=request.cost_daily_path,
         model_pricing=request.model_pricing,
-        request_id=str(request_id) if request_id else None,
+        request_id=metadata.request_id,
     )
     response = OpenAIPdfOcrResponse(
         schema_version="1.0",
         pages=pages,
-        raw_text=text,
+        raw_text=metadata.text,
         model=resolved_model,
-        input_tokens=input_tokens,
-        output_tokens=output_tokens,
-        tool_calls=tool_calls,
-        request_id=str(request_id) if request_id else None,
+        input_tokens=metadata.input_tokens,
+        output_tokens=metadata.output_tokens,
+        tool_calls=metadata.tool_calls,
+        request_id=metadata.request_id,
     )
     logger.info(
         log_event(
@@ -1325,45 +1393,14 @@ def openai_respond_with_vector_store(
             },
         ) from exc
 
-    text = getattr(resp, "output_text", None)
-    if text is None:
-        output = (
-            getattr(resp, "output", None)
-            or getattr(resp, "choices", None)
-            or getattr(resp, "data", None)
-        )
-        if output and isinstance(output, list):
-            first = output[0]
-            content = getattr(first, "content", None) or (
-                first.get("content") if isinstance(first, dict) else None
-            )
-            if content and isinstance(content, list):
-                maybe_text = getattr(content[0], "text", None) or (
-                    content[0].get("text") if isinstance(content[0], dict) else None
-                )
-                if maybe_text:
-                    text = maybe_text
-    if text is None:
-        text = getattr(resp, "text", "") or ""
-
-    request_id = getattr(resp, "id", None)
-    usage = getattr(resp, "usage", None) or {}
-    input_tokens = getattr(usage, "input_tokens", None) if usage else None
-    output_tokens = getattr(usage, "output_tokens", None) if usage else None
-    if isinstance(usage, dict):
-        input_tokens = usage.get("input_tokens")
-        output_tokens = usage.get("output_tokens")
-    tool_calls = 0
-    if isinstance(usage, dict):
-        tool_calls = usage.get("total_tool_calls") or usage.get("tool_calls") or 0
-    parsed_json, parse_strategy = _parse_json_object_from_text(text)
+    metadata = _adapt_responses_metadata(resp, recover_json_object=True)
     parse_error_code = ""
     parse_error_message = ""
-    if parsed_json is None:
-        if parse_strategy == "empty":
+    if metadata.parsed_json is None:
+        if metadata.parse_strategy == "empty":
             parse_error_code = "openai_response_empty"
             parse_error_message = "OpenAI response from vector store is empty"
-        elif parse_strategy == "json_non_object":
+        elif metadata.parse_strategy == "json_non_object":
             parse_error_code = "openai_response_json_type_invalid"
             parse_error_message = "OpenAI response JSON must be an object"
         else:
@@ -1372,9 +1409,9 @@ def openai_respond_with_vector_store(
 
     estimated_cost = estimate_cost_usd(
         request.model,
-        int(input_tokens or 0),
-        int(output_tokens or 0),
-        int(tool_calls or 0),
+        int(metadata.input_tokens or 0),
+        int(metadata.output_tokens or 0),
+        int(metadata.tool_calls or 0),
         pricing=request.model_pricing or {},
     )
     try:
@@ -1386,12 +1423,12 @@ def openai_respond_with_vector_store(
             span_id=ctx.span_id,
             step_name="openai_response_vector_store",
             model=request.model,
-            input_tokens=int(input_tokens or 0),
-            output_tokens=int(output_tokens or 0),
+            input_tokens=int(metadata.input_tokens or 0),
+            output_tokens=int(metadata.output_tokens or 0),
             cached_input_tokens=None,
-            tool_calls=int(tool_calls or 0),
+            tool_calls=int(metadata.tool_calls or 0),
             estimated_cost_usd=estimated_cost,
-            extra={"request_id": str(request_id) if request_id else None},
+            extra={"request_id": metadata.request_id},
         )
         append_cost_entry(
             CostLedgerAppendRequest(
@@ -1426,12 +1463,12 @@ def openai_respond_with_vector_store(
             module=logger.name,
             fields={
                 "model": request.model,
-                "request_id": request_id or "",
-                "input_tokens": input_tokens,
-                "output_tokens": output_tokens,
-                "tool_calls": tool_calls,
-                "parsed_json": parsed_json is not None,
-                "parse_strategy": parse_strategy,
+                "request_id": metadata.request_id or "",
+                "input_tokens": metadata.input_tokens,
+                "output_tokens": metadata.output_tokens,
+                "tool_calls": metadata.tool_calls,
+                "parsed_json": metadata.parsed_json is not None,
+                "parse_strategy": metadata.parse_strategy,
                 "parse_error_code": parse_error_code,
             },
         )
@@ -1444,20 +1481,20 @@ def openai_respond_with_vector_store(
             context={
                 "model": request.model,
                 "vector_store_id": request.vector_store_id,
-                "parse_strategy": parse_strategy,
-                "response_text_preview": text[:240],
+                "parse_strategy": metadata.parse_strategy,
+                "response_text_preview": metadata.text[:240],
             },
         )
     return OpenAIResponseResult(
         schema_version="1.0",
-        text=text,
-        parsed_json=parsed_json if isinstance(parsed_json, dict) else None,
-        input_tokens=input_tokens,
-        output_tokens=output_tokens,
-        tool_calls=tool_calls,
+        text=metadata.text,
+        parsed_json=metadata.parsed_json,
+        input_tokens=metadata.input_tokens,
+        output_tokens=metadata.output_tokens,
+        tool_calls=metadata.tool_calls,
         model=request.model,
-        total_tokens=(int(input_tokens or 0) + int(output_tokens or 0)),
-        request_id=str(request_id) if request_id else None,
+        total_tokens=metadata.total_tokens,
+        request_id=metadata.request_id,
     )
 
 

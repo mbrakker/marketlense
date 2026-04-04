@@ -369,15 +369,6 @@ This section absorbs the 2026-03-08 low-effort/high-impact repository audit into
 
 This section absorbs the remaining open appendix items from `docs/quality/ineffective-choices-top50.md` so the consolidated TODO remains the only active backlog.
 
-- **Title:** Centralize OpenAI response metadata adaptation
-  - Explanation: Deduplicate request-id, token-count, tool-call, and parsed-JSON extraction logic across JSON chat, image chat, and vector-store response flows.
-  - Pros: More consistent provider adaptation and simpler service maintenance.
-  - Cons: Shared adapters must preserve subtle response-shape differences.
-  - Acceptance Criteria:
-    - Shared response metadata adapter used by the repeated OpenAI response paths.
-    - Returned dataclass contracts remain unchanged.
-    - Tests cover identical metadata extraction across the affected flows.
-
 - **Title:** Factory-generate repetitive evidence-pack strategy scaffolding
   - Explanation: Replace repeated list-pack/scalar-pack strategy boilerplate with factory helpers, leaving pack-specific field maps and transforms explicit in each strategy module.
   - Pros: Smaller strategy modules and less repeated normalization shell code.

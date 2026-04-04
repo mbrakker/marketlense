@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from types import SimpleNamespace
 
 import pytest
 
@@ -246,6 +247,85 @@ def test_openai_chat_json_with_images_retries_unknown_unsupported_param(
     assert result.parsed_json == {"results": []}
     assert "temperature" in first_call
     assert "temperature" not in second_call
+
+
+@pytest.mark.parametrize(
+    ("operation", "request_factory"),
+    [
+        (
+            "vector_store",
+            lambda tmp_path: (
+                svc.openai_respond_with_vector_store,
+                OpenAIResponseRequest(
+                    schema_version="1.0",
+                    system_prompt="system",
+                    user_prompt="user",
+                    vector_store_id="vs_123",
+                    model="gpt-4.1-mini",
+                    temperature=0.1,
+                    api_key="key",
+                    cost_ledger_path=str(tmp_path / "ledger.jsonl"),
+                    cost_daily_path=str(tmp_path / "daily.json"),
+                    model_pricing={},
+                ),
+            ),
+        ),
+        (
+            "images",
+            lambda tmp_path: (
+                svc.openai_chat_json_with_images,
+                OpenAIJSONImagePromptRequest(
+                    schema_version="1.0",
+                    system_prompt="system",
+                    user_prompt="user",
+                    model="gpt-4.1-mini",
+                    temperature=0.1,
+                    api_key="key",
+                    image_paths=[str(tmp_path / "test.png")],
+                    cost_ledger_path=str(tmp_path / "ledger.jsonl"),
+                    cost_daily_path=str(tmp_path / "daily.json"),
+                    model_pricing={},
+                ),
+            ),
+        ),
+    ],
+)
+def test_openai_responses_metadata_adapter_preserves_shared_fields(
+    tmp_path,
+    fake_openai,
+    operation,
+    request_factory,
+) -> None:
+    if operation == "images":
+        (tmp_path / "test.png").write_bytes(b"fake-image")
+    fake_openai.add(
+        "responses.create",
+        SimpleNamespace(
+            output_text=None,
+            output=[
+                SimpleNamespace(
+                    content=[SimpleNamespace(text='{"result":"ok"}')],
+                )
+            ],
+            usage=SimpleNamespace(
+                input_tokens=13,
+                output_tokens=8,
+                total_tokens=21,
+            ),
+            id="resp_nested_1",
+        ),
+    )
+    operation_fn, request = request_factory(tmp_path)
+
+    result = operation_fn(request, _ctx())
+
+    assert result.text == '{"result":"ok"}'
+    assert result.parsed_json == {"result": "ok"}
+    assert result.request_id == "resp_nested_1"
+    assert result.input_tokens == 13
+    assert result.output_tokens == 8
+    assert result.tool_calls == 0
+    assert result.total_tokens == 21
 
 
 def test_openai_vector_store_create_success(

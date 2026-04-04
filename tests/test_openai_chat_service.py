@@ -78,6 +78,7 @@ def test_openai_chat_json_uses_modern_chat_completion(monkeypatch, tmp_path) -> 
     assert result.request_id == "chat_1"
     assert result.input_tokens == 12
     assert result.output_tokens == 5
+    assert result.tool_calls == 0
     assert result.total_tokens == 17
     assert captured_client_kwargs == [{"api_key": "key", "timeout": 5.0}]
     assert captured_payloads[0]["response_format"] == {"type": "json_object"}
