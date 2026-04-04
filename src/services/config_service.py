@@ -20,7 +20,6 @@ from src.contracts.config import (
     IngestSettingsBuildRequest,
 )
 from src.contracts.browser_download import (
-    BrowserDownloadIdentity,
     BrowserDownloadIdentityField,
     BrowserDownloadIdentityFieldUpsertRequest,
     BrowserDownloadIdentityFieldUpsertResponse,
@@ -31,6 +30,12 @@ from src.contracts.ingest import IngestSettings
 from src.contracts.publish import PublishSettings
 from src.contracts.run_context import RunContext
 from src.contracts.wordpress import WordPressAuthSettings
+from src.services._config_identity import (
+    identity_field_match_tokens as _identity_field_match_tokens,
+    load_browser_download_identity as _load_browser_download_identity,
+    normalize_browser_download_identity_key as _normalize_browser_download_identity_key,
+    should_upsert_browser_download_identity_field as _should_upsert_browser_download_identity_field,
+)
 from src.utils.coercion import (
     coerce_bool as _to_bool,
     coerce_extended_bool as _to_config_bool,
@@ -153,147 +158,6 @@ def _load_yaml_mapping(path: str, *, label: str) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise RuntimeError(f"{label} YAML must be a mapping: {path}")
     return payload
-
-
-def _normalize_browser_download_identity_key(raw_value: Any) -> str:
-    token = str(raw_value or "").strip().lower()
-    characters: list[str] = []
-    previous_was_separator = False
-    for char in token:
-        if char.isalnum():
-            characters.append(char)
-            previous_was_separator = False
-            continue
-        if previous_was_separator:
-            continue
-        characters.append("_")
-        previous_was_separator = True
-    normalized = "".join(characters).strip("_")
-    return normalized
-
-
-def _normalize_browser_download_identity_aliases(raw_value: Any) -> list[str]:
-    if not isinstance(raw_value, list):
-        return []
-    aliases: list[str] = []
-    seen: set[str] = set()
-    for item in raw_value:
-        token = str(item or "").strip()
-        if not token:
-            continue
-        normalized = token.casefold()
-        if normalized in seen:
-            continue
-        aliases.append(token)
-        seen.add(normalized)
-    return aliases
-
-
-def _load_browser_download_identity(path: str) -> BrowserDownloadIdentity:
-    payload = _load_yaml_mapping(path, label="Browser download identity")
-    raw_fields = payload.get("fields")
-    if not isinstance(raw_fields, list) or not raw_fields:
-        raise RuntimeError(
-            f"Browser download identity YAML must contain a non-empty 'fields' list: {path}"
-        )
-    fields: list[BrowserDownloadIdentityField] = []
-    seen_keys: set[str] = set()
-    for entry in raw_fields:
-        if not isinstance(entry, dict):
-            raise RuntimeError(
-                f"Browser download identity fields must be mappings: {path}"
-            )
-        key = _normalize_browser_download_identity_key(entry.get("key"))
-        label = str(entry.get("label") or "").strip()
-        if not key or not label:
-            raise RuntimeError(
-                f"Browser download identity fields require non-empty key and label: {path}"
-            )
-        if key in seen_keys:
-            raise RuntimeError(
-                f"Browser download identity field keys must be unique; duplicate '{key}' in {path}"
-            )
-        seen_keys.add(key)
-        raw_value = entry.get("value")
-        value = None if _is_missing(raw_value) else str(raw_value).strip()
-        fields.append(
-            BrowserDownloadIdentityField(
-                schema_version=str(entry.get("schema_version") or "1.0"),
-                key=key,
-                label=label,
-                value=value,
-                aliases=_normalize_browser_download_identity_aliases(
-                    entry.get("aliases")
-                ),
-            )
-        )
-    return BrowserDownloadIdentity(
-        schema_version=str(payload.get("schema_version") or "1.0"),
-        fields=fields,
-    )
-
-
-def _identity_field_match_tokens(field: BrowserDownloadIdentityField) -> set[str]:
-    tokens = {
-        _normalize_browser_download_identity_key(field.key),
-        _normalize_browser_download_identity_key(field.label),
-    }
-    for alias in field.aliases:
-        token = _normalize_browser_download_identity_key(alias)
-        if token:
-            tokens.add(token)
-    return {token for token in tokens if token}
-
-
-def _should_upsert_browser_download_identity_field(
-    *,
-    label: str,
-    normalized_key: str,
-) -> bool:
-    lowered_label = str(label or "").strip().casefold()
-    if not lowered_label or not normalized_key:
-        return False
-    alpha_count = sum(1 for char in lowered_label if char.isalpha())
-    if alpha_count < 2:
-        return False
-    blocked_exact = {
-        "submit",
-        "send",
-        "download",
-        "download report",
-        "get report",
-        "get the report",
-        "view report",
-        "learn more",
-        "read more",
-        "continue",
-        "next",
-        "back",
-        "cancel",
-        "close",
-        "search",
-        "reset",
-        "clear",
-        "required",
-        "optional",
-        "captcha",
-        "recaptcha",
-        "privacy policy",
-        "terms",
-        "i agree",
-        "consent",
-    }
-    if lowered_label in blocked_exact:
-        return False
-    blocked_prefixes = (
-        "select ",
-        "choose ",
-        "option ",
-        "click ",
-    )
-    if any(lowered_label.startswith(prefix) for prefix in blocked_prefixes):
-        return False
-    return True
 
 
 def _normalize_html_tag_acronyms(values: object) -> list[str]:
@@ -528,6 +392,58 @@ class _ConfigResolver:
             self.missing.append(label if not env_key else f"{label}|env:{env_key}")
             return ""
         return str(value)
+
+
+@dataclass(frozen=True)
+class _ConfigLoadSections:
+    config_path: Path
+    runtime_base_path: Path
+    data: dict[str, Any]
+    resolver: _ConfigResolver
+    paths: dict[str, Any]
+    ingest: dict[str, Any]
+    llm_cfg: dict[str, Any]
+    drive_cfg: dict[str, Any]
+    pdf_text: dict[str, Any]
+    figure_captions_cfg: dict[str, Any]
+    rank: dict[str, Any]
+    validation_cfg: dict[str, Any]
+    contents_page: dict[str, Any]
+    evidence_packs_cfg: dict[str, Any]
+    artifacts_cfg: dict[str, Any]
+    analysis_cfg: dict[str, Any]
+    cost_cfg: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class _ResolvedAppSettingsLoad:
+    settings: AppSettings
+    paths_settings: dict[str, str]
+
+
+def _load_config_sections(request: ConfigLoadRequest) -> _ConfigLoadSections:
+    config_path = Path(request.path or str(CONFIG_PATH)).resolve()
+    data = _load_config(str(config_path))
+    ingest = data.get("ingest", {}) or {}
+    return _ConfigLoadSections(
+        config_path=config_path,
+        runtime_base_path=_resolve_runtime_base_path(config_path),
+        data=data,
+        resolver=_ConfigResolver(),
+        paths=data.get("paths", {}) or {},
+        ingest=ingest,
+        llm_cfg=ingest.get("llm", {}) or {},
+        drive_cfg=ingest.get("drive", {}) or {},
+        pdf_text=ingest.get("pdf_text", {}) or {},
+        figure_captions_cfg=ingest.get("figure_captions", {}) or {},
+        rank=data.get("rank", {}) or {},
+        validation_cfg=ingest.get("validation", {}) or {},
+        contents_page=ingest.get("contents_page", {}) or {},
+        evidence_packs_cfg=ingest.get("evidence_packs", {}) or {},
+        artifacts_cfg=ingest.get("artifacts", {}) or {},
+        analysis_cfg=data.get("analysis", {}) or {},
+        cost_cfg=data.get("cost", {}) or {},
+    )
 
 
 def _normalize_openai_models(raw_value: Any) -> dict[str, str]:
@@ -1314,6 +1230,102 @@ def build_ingest_settings(
     return settings
 
 
+def _ensure_app_settings_directories(settings: AppSettings) -> None:
+    _ensure_app_settings_directories(settings)
+
+
+def _config_load_complete_fields(
+    settings: AppSettings,
+    *,
+    paths_settings: dict[str, str],
+) -> dict[str, Any]:
+    return {
+        "output_dir": settings.output_dir,
+        "cache_dir": settings.cache_dir,
+        "state_db": settings.state_db,
+        "reports_db": settings.reports_db,
+        "publisher_profiles_path": settings.publisher_profiles_path,
+        "category_mapping_path": settings.category_mapping_path,
+        "html_tag_acronyms_path": paths_settings["html_tag_acronyms_path"],
+        "ingest_lock_path": settings.ingest_lock_path,
+        "ingest_lock_ttl_seconds": settings.ingest_lock_ttl_seconds,
+        "drive_supports_all_drives": settings.drive_supports_all_drives,
+        "drive_include_items_from_all_drives": settings.drive_include_items_from_all_drives,
+        "drive_id": settings.drive_id or "",
+        "drive_list_mode": settings.drive_list_mode,
+        "openai_model": settings.openai_model,
+        "openai_models": settings.openai_models,
+        "temperature": settings.temperature,
+        "taxonomy_temperature": settings.taxonomy_temperature,
+        "ingest_worker_limit": settings.ingest_worker_limit,
+        "report_worker_limit": settings.report_worker_limit,
+        "openai_seed": settings.openai_seed,
+        "rank_model": settings.rank_model,
+        "rank_temperature": settings.rank_temperature,
+        "rank_seed": settings.rank_seed,
+        "rank_max_candidates": settings.rank_max_candidates,
+        "rank_selected_max": settings.rank_selected_max,
+        "rank_min_overall_score": settings.rank_min_overall_score,
+        "rank_min_quality_score": settings.rank_min_quality_score,
+        "rank_min_insight_score": settings.rank_min_insight_score,
+        "rank_min_data_score": settings.rank_min_data_score,
+        "crop_refine_enabled": settings.crop_refine_enabled,
+        "crop_refine_mode": settings.crop_refine_mode,
+        "crop_refine_page_dpi": settings.crop_refine_page_dpi,
+        "crop_refine_temperature": settings.crop_refine_temperature,
+        "crop_refine_timeout_seconds": settings.crop_refine_timeout_seconds,
+        "figure_caption_enabled": settings.figure_caption_enabled,
+        "figure_caption_temperature": settings.figure_caption_temperature,
+        "figure_caption_timeout_seconds": settings.figure_caption_timeout_seconds,
+        "figure_caption_prompt_namespace": settings.figure_caption_prompt_namespace,
+        "figure_caption_max_chars": settings.figure_caption_max_chars,
+        "pdf_text_max_pages": settings.pdf_text_max_pages,
+        "pdf_text_max_chars": settings.pdf_text_max_chars,
+        "pdf_text_min_density": settings.pdf_text_min_density,
+        "pdf_text_sample_pages": settings.pdf_text_sample_pages,
+        "pdf_text_ocr_enabled": settings.pdf_text_ocr_enabled,
+        "pdf_text_ocr_model": settings.pdf_text_ocr_model,
+        "pdf_text_ocr_timeout_seconds": settings.pdf_text_ocr_timeout_seconds,
+        "pdf_text_ocr_prompt_namespace": settings.pdf_text_ocr_prompt_namespace,
+        "pdf_text_ocr_cache_enabled": settings.pdf_text_ocr_cache_enabled,
+        "pdf_text_ocr_chunk_page_count": settings.pdf_text_ocr_chunk_page_count,
+        "openai_timeout_seconds": settings.openai_timeout_seconds,
+        "llm_retry_retries": settings.llm_retry_retries,
+        "llm_retry_base_delay_seconds": settings.llm_retry_base_delay_seconds,
+        "llm_retry_backoff_step_seconds": settings.llm_retry_backoff_step_seconds,
+        "llm_retry_jitter_seconds": settings.llm_retry_jitter_seconds,
+        "llm_circuit_breaker_failure_threshold": settings.llm_circuit_breaker_failure_threshold,
+        "llm_circuit_breaker_recovery_seconds": settings.llm_circuit_breaker_recovery_seconds,
+        "rank_timeout_seconds": settings.rank_timeout_seconds,
+        "contents_max_pages": settings.contents_max_pages,
+        "contents_min_headings": settings.contents_min_headings,
+        "contents_keywords": settings.contents_keywords,
+        "contents_preview_enabled": settings.contents_preview_enabled,
+        "contents_preview_dpi": settings.contents_preview_dpi,
+        "evidence_pack_parallel_workers": settings.evidence_pack_parallel_workers,
+        "evidence_pack_global_max_in_flight": settings.evidence_pack_global_max_in_flight,
+        "evidence_pack_global_min_interval_ms": settings.evidence_pack_global_min_interval_ms,
+        "evidence_pack_doc_map_max_attempts": settings.evidence_pack_doc_map_max_attempts,
+        "evidence_pack_doc_map_retry_delay_ms": settings.evidence_pack_doc_map_retry_delay_ms,
+        "evidence_pack_registry": settings.evidence_pack_registry,
+        "evidence_pack_enable_new_variety_packs": settings.evidence_pack_enable_new_variety_packs,
+        "artifact_parallel_workers": settings.artifact_parallel_workers,
+        "artifact_global_max_in_flight": settings.artifact_global_max_in_flight,
+        "artifact_global_min_interval_ms": settings.artifact_global_min_interval_ms,
+        "vector_store_keep": settings.vector_store_keep,
+        "artifacts_use_vector_store": settings.artifacts_use_vector_store,
+        "validation_grounding_use_vector_store": settings.validation_grounding_use_vector_store,
+        "strict_schema_validation": settings.strict_schema_validation,
+        "cover_cache_enabled": settings.cover_cache_enabled,
+        "cost_ledger_path": settings.cost_ledger_path,
+        "cost_daily_path": settings.cost_daily_path,
+        "html_tag_acronyms": settings.html_tag_acronyms,
+        "html_tag_acronyms_count": len(settings.html_tag_acronyms),
+        "validation_data_gap_policy": settings.validation_data_gap_policy,
+        "validation_regeneration_max_attempts": settings.validation_regeneration_max_attempts,
+    }
+
+
 def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     load_dotenv(find_dotenv(filename=".env", usecwd=True))
 
@@ -1326,63 +1338,61 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             fields={"path": request.path or str(CONFIG_PATH)},
         )
     )
-    config_path = Path(request.path or str(CONFIG_PATH)).resolve()
-    runtime_base_path = _resolve_runtime_base_path(config_path)
-    data = _load_config(str(config_path))
-    resolver = _ConfigResolver()
+    sections = _load_config_sections(request)
+    resolver = sections.resolver
     need = resolver.need
     need_env = resolver.need_env
 
-    paths = data.get("paths", {}) or {}
-    ingest = data.get("ingest", {}) or {}
-    llm_cfg = ingest.get("llm", {}) or {}
-    drive_cfg = ingest.get("drive", {}) or {}
-    pdf_text = ingest.get("pdf_text", {}) or {}
-    figure_captions_cfg = ingest.get("figure_captions", {}) or {}
-    rank = data.get("rank", {}) or {}
-    validation_cfg = ingest.get("validation", {}) or {}
-    contents_page = ingest.get("contents_page", {}) or {}
-    evidence_packs_cfg = ingest.get("evidence_packs", {}) or {}
-    artifacts_cfg = ingest.get("artifacts", {}) or {}
-    analysis_cfg = data.get("analysis", {}) or {}
-    cost_cfg = data.get("cost", {}) or {}
-    paths_settings = _resolve_paths_settings(paths, resolver)
-    openai_model = need(ingest, "openai_model", "ingest.openai_model", "OPENAI_MODEL")
-    ingest_runtime = _resolve_ingest_runtime_settings(ingest)
-    llm_runtime = _resolve_llm_runtime_settings(llm_cfg)
+    paths_settings = _resolve_paths_settings(sections.paths, resolver)
+    openai_model = need(
+        sections.ingest,
+        "openai_model",
+        "ingest.openai_model",
+        "OPENAI_MODEL",
+    )
+    ingest_runtime = _resolve_ingest_runtime_settings(sections.ingest)
+    llm_runtime = _resolve_llm_runtime_settings(sections.llm_cfg)
     rank_settings = _resolve_rank_settings(
-        rank,
+        sections.rank,
         openai_model=openai_model,
         temperature=ingest_runtime["temperature"],
         openai_timeout_seconds=ingest_runtime["openai_timeout_seconds"],
     )
     figure_caption_settings = _resolve_figure_caption_settings(
-        figure_captions_cfg,
+        sections.figure_captions_cfg,
         openai_timeout_seconds=ingest_runtime["openai_timeout_seconds"],
     )
-    contents_settings = _resolve_contents_settings(contents_page)
-    evidence_pack_settings = _resolve_evidence_pack_settings(evidence_packs_cfg)
-    artifact_settings = _resolve_artifact_settings(artifacts_cfg)
-    pdf_text_settings = _resolve_pdf_text_settings(pdf_text, ingest)
-    validation_settings = _resolve_validation_settings(validation_cfg)
+    contents_settings = _resolve_contents_settings(sections.contents_page)
+    evidence_pack_settings = _resolve_evidence_pack_settings(
+        sections.evidence_packs_cfg
+    )
+    artifact_settings = _resolve_artifact_settings(sections.artifacts_cfg)
+    pdf_text_settings = _resolve_pdf_text_settings(
+        sections.pdf_text,
+        sections.ingest,
+    )
+    validation_settings = _resolve_validation_settings(sections.validation_cfg)
     analysis_settings = _resolve_analysis_settings(
-        analysis_cfg,
-        cost_cfg,
+        sections.analysis_cfg,
+        sections.cost_cfg,
         html_tag_acronyms_path=paths_settings["html_tag_acronyms_path"],
     )
-    drive_settings = _resolve_drive_settings(drive_cfg)
+    drive_settings = _resolve_drive_settings(sections.drive_cfg)
     drive_auth_settings = _resolve_drive_auth_settings(
-        ingest,
-        drive_cfg,
-        runtime_base_path=runtime_base_path,
+        sections.ingest,
+        sections.drive_cfg,
+        runtime_base_path=sections.runtime_base_path,
         resolver=resolver,
     )
 
     settings = AppSettings(
-        schema_version=str(data.get("schema_version", "1.0")),
+        schema_version=str(sections.data.get("schema_version", "1.0")),
         google_sa_path=drive_auth_settings["google_sa_path"],
         gdrive_folder_id=need(
-            ingest, "gdrive_folder_id", "ingest.gdrive_folder_id", "GDRIVE_FOLDER_ID"
+            sections.ingest,
+            "gdrive_folder_id",
+            "ingest.gdrive_folder_id",
+            "GDRIVE_FOLDER_ID",
         ),
         drive_auth_mode=drive_auth_settings["drive_auth_mode"],
         google_oauth_client_path=drive_auth_settings["google_oauth_client_path"],
@@ -1395,7 +1405,7 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         drive_list_mode=drive_settings["drive_list_mode"],
         openai_api_key=need_env("OPENAI_API_KEY"),
         openai_model=openai_model,
-        openai_models=_normalize_openai_models(data.get("openai_models") or {}),
+        openai_models=_normalize_openai_models(sections.data.get("openai_models") or {}),
         batch_limit=ingest_runtime["batch_limit"],
         ingest_worker_limit=ingest_runtime["ingest_worker_limit"],
         report_worker_limit=ingest_runtime["report_worker_limit"],
@@ -1536,91 +1546,10 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
             role="service",
             event="config_load_complete",
             module=logger.name,
-            fields={
-                "output_dir": settings.output_dir,
-                "cache_dir": settings.cache_dir,
-                "state_db": settings.state_db,
-                "reports_db": settings.reports_db,
-                "publisher_profiles_path": settings.publisher_profiles_path,
-                "category_mapping_path": settings.category_mapping_path,
-                "html_tag_acronyms_path": paths_settings["html_tag_acronyms_path"],
-                "ingest_lock_path": settings.ingest_lock_path,
-                "ingest_lock_ttl_seconds": settings.ingest_lock_ttl_seconds,
-                "drive_supports_all_drives": settings.drive_supports_all_drives,
-                "drive_include_items_from_all_drives": settings.drive_include_items_from_all_drives,
-                "drive_id": settings.drive_id or "",
-                "drive_list_mode": settings.drive_list_mode,
-                "openai_model": settings.openai_model,
-                "openai_models": settings.openai_models,
-                "temperature": settings.temperature,
-                "taxonomy_temperature": settings.taxonomy_temperature,
-                "ingest_worker_limit": settings.ingest_worker_limit,
-                "report_worker_limit": settings.report_worker_limit,
-                "openai_seed": settings.openai_seed,
-                "rank_model": settings.rank_model,
-                "rank_temperature": settings.rank_temperature,
-                "rank_seed": settings.rank_seed,
-                "rank_max_candidates": settings.rank_max_candidates,
-                "rank_selected_max": settings.rank_selected_max,
-                "rank_min_overall_score": settings.rank_min_overall_score,
-                "rank_min_quality_score": settings.rank_min_quality_score,
-                "rank_min_insight_score": settings.rank_min_insight_score,
-                "rank_min_data_score": settings.rank_min_data_score,
-                "crop_refine_enabled": settings.crop_refine_enabled,
-                "crop_refine_mode": settings.crop_refine_mode,
-                "crop_refine_page_dpi": settings.crop_refine_page_dpi,
-                "crop_refine_temperature": settings.crop_refine_temperature,
-                "crop_refine_timeout_seconds": settings.crop_refine_timeout_seconds,
-                "figure_caption_enabled": settings.figure_caption_enabled,
-                "figure_caption_temperature": settings.figure_caption_temperature,
-                "figure_caption_timeout_seconds": settings.figure_caption_timeout_seconds,
-                "figure_caption_prompt_namespace": settings.figure_caption_prompt_namespace,
-                "figure_caption_max_chars": settings.figure_caption_max_chars,
-                "pdf_text_max_pages": settings.pdf_text_max_pages,
-                "pdf_text_max_chars": settings.pdf_text_max_chars,
-                "pdf_text_min_density": settings.pdf_text_min_density,
-                "pdf_text_sample_pages": settings.pdf_text_sample_pages,
-                "pdf_text_ocr_enabled": settings.pdf_text_ocr_enabled,
-                "pdf_text_ocr_model": settings.pdf_text_ocr_model,
-                "pdf_text_ocr_timeout_seconds": settings.pdf_text_ocr_timeout_seconds,
-                "pdf_text_ocr_prompt_namespace": settings.pdf_text_ocr_prompt_namespace,
-                "pdf_text_ocr_cache_enabled": settings.pdf_text_ocr_cache_enabled,
-                "pdf_text_ocr_chunk_page_count": settings.pdf_text_ocr_chunk_page_count,
-                "openai_timeout_seconds": settings.openai_timeout_seconds,
-                "llm_retry_retries": settings.llm_retry_retries,
-                "llm_retry_base_delay_seconds": settings.llm_retry_base_delay_seconds,
-                "llm_retry_backoff_step_seconds": settings.llm_retry_backoff_step_seconds,
-                "llm_retry_jitter_seconds": settings.llm_retry_jitter_seconds,
-                "llm_circuit_breaker_failure_threshold": settings.llm_circuit_breaker_failure_threshold,
-                "llm_circuit_breaker_recovery_seconds": settings.llm_circuit_breaker_recovery_seconds,
-                "rank_timeout_seconds": settings.rank_timeout_seconds,
-                "contents_max_pages": settings.contents_max_pages,
-                "contents_min_headings": settings.contents_min_headings,
-                "contents_keywords": settings.contents_keywords,
-                "contents_preview_enabled": settings.contents_preview_enabled,
-                "contents_preview_dpi": settings.contents_preview_dpi,
-                "evidence_pack_parallel_workers": settings.evidence_pack_parallel_workers,
-                "evidence_pack_global_max_in_flight": settings.evidence_pack_global_max_in_flight,
-                "evidence_pack_global_min_interval_ms": settings.evidence_pack_global_min_interval_ms,
-                "evidence_pack_doc_map_max_attempts": settings.evidence_pack_doc_map_max_attempts,
-                "evidence_pack_doc_map_retry_delay_ms": settings.evidence_pack_doc_map_retry_delay_ms,
-                "evidence_pack_registry": settings.evidence_pack_registry,
-                "evidence_pack_enable_new_variety_packs": settings.evidence_pack_enable_new_variety_packs,
-                "artifact_parallel_workers": settings.artifact_parallel_workers,
-                "artifact_global_max_in_flight": settings.artifact_global_max_in_flight,
-                "artifact_global_min_interval_ms": settings.artifact_global_min_interval_ms,
-                "vector_store_keep": settings.vector_store_keep,
-                "artifacts_use_vector_store": settings.artifacts_use_vector_store,
-                "validation_grounding_use_vector_store": settings.validation_grounding_use_vector_store,
-                "strict_schema_validation": settings.strict_schema_validation,
-                "cover_cache_enabled": settings.cover_cache_enabled,
-                "cost_ledger_path": settings.cost_ledger_path,
-                "cost_daily_path": settings.cost_daily_path,
-                "html_tag_acronyms": settings.html_tag_acronyms,
-                "html_tag_acronyms_count": len(settings.html_tag_acronyms),
-                "validation_data_gap_policy": settings.validation_data_gap_policy,
-                "validation_regeneration_max_attempts": settings.validation_regeneration_max_attempts,
-            },
+            fields=_config_load_complete_fields(
+                settings,
+                paths_settings=paths_settings,
+            ),
         )
     )
     return settings
@@ -1863,7 +1792,11 @@ def load_browser_download_settings(
             f"Missing required config/env values: {', '.join(resolver.missing)}"
         )
 
-    identity_profile = _load_browser_download_identity(identity_config_path)
+    identity_profile = _load_browser_download_identity(
+        identity_config_path,
+        load_yaml_mapping=_load_yaml_mapping,
+        is_missing=_is_missing,
+    )
 
     settings = BrowserDownloadSettings(
         schema_version=str(data.get("schema_version", "1.0")),
@@ -2381,7 +2314,11 @@ def upsert_browser_download_identity_fields(
             },
         )
     )
-    identity_profile = _load_browser_download_identity(str(identity_path))
+    identity_profile = _load_browser_download_identity(
+        str(identity_path),
+        load_yaml_mapping=_load_yaml_mapping,
+        is_missing=_is_missing,
+    )
     existing_tokens: set[str] = set()
     for field in identity_profile.fields:
         existing_tokens.update(_identity_field_match_tokens(field))

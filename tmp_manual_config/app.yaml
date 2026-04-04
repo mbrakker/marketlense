@@ -1,0 +1,15 @@
+browser_download:
+  identity_config_path: c:\Programing\Market lense\tmp_manual_config\browser_download_identity.yaml
+ingest:
+  gdrive_folder_id: folder
+  google_sa_path: c:\Programing\Market lense\tmp_manual_config\sa.json
+  openai_model: gpt-5
+  temperature: 0.5
+paths:
+  cache_dir: c:\Programing\Market lense\tmp_manual_config\cache
+  html_tag_acronyms: c:\Programing\Market lense\tmp_manual_config\html-tag-acronyms.yaml
+  output_dir: c:\Programing\Market lense\tmp_manual_config\out
+  publisher_profiles: c:\Programing\Market lense\tmp_manual_config\publisher-profiles.json
+  reports_db: c:\Programing\Market lense\tmp_manual_config\state\reports.sqlite
+  state_db: c:\Programing\Market lense\tmp_manual_config\state\index.sqlite
+schema_version: '1.0'

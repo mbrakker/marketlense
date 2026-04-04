@@ -1877,7 +1877,7 @@ def _render_logs_and_terminal() -> None:
         _render_terminal_panel()
 
 
-def _render_structured_config_form(
+def _render_structured_config_form_legacy(
     config_payload: dict[str, Any], *, editor_key: str
 ) -> None:
     working = deepcopy(config_payload)
@@ -2520,7 +2520,7 @@ def _render_structured_config_form(
     st.rerun()
 
 
-def _render_settings_and_prompts(
+def _render_settings_and_prompts_legacy(
     settings: Any | None,
     publish_settings: Any | None,
     publish_error: str | None,
@@ -2749,6 +2749,30 @@ def _render_settings_and_prompts(
             )
         for row in badges:
             st.markdown(f"{row['key']} {row['chip']}", unsafe_allow_html=True)
+
+
+def _render_structured_config_form(
+    config_payload: dict[str, Any], *, editor_key: str
+) -> None:
+    from src.ui.settings_page import render_structured_config_form
+
+    render_structured_config_form(config_payload=config_payload, editor_key=editor_key)
+
+
+def _render_settings_and_prompts(
+    settings: Any | None,
+    publish_settings: Any | None,
+    publish_error: str | None,
+    settings_error: str | None = None,
+) -> None:
+    from src.ui.settings_page import render_settings_and_prompts
+
+    render_settings_and_prompts(
+        settings=settings,
+        publish_settings=publish_settings,
+        publish_error=publish_error,
+        settings_error=settings_error,
+    )
 
 
 def _render_system_and_storage(settings: Any) -> None:

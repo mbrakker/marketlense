@@ -457,56 +457,18 @@ def _process_file(
     )
 
 
-def run_ingest(
-    settings: IngestSettings,
-    *,
-    folder_id: Optional[str] = None,
-    limit: Optional[int] = None,
-    ctx: Optional[RunContext] = None,
-    dependencies: Optional[IngestBatchDependencies] = None,
-) -> List[IngestOutcome]:
-    deps = dependencies or IngestBatchDependencies.default()
-    root_ctx = ctx or new_run_context()
-    lock_ctx = child_context(root_ctx, task_id="ingest_lock")
-    lock_info = None
-    outcomes: List[IngestOutcome] = []
-    processed = 0
-    try:
-        lock_resp = acquire_lock(
-            LockAcquireRequest(
-                schema_version="1.0",
-                lock_path=settings.ingest_lock_path,
-                owner_id=f"ingest:{root_ctx.run_id}",
-                pid=os.getpid(),
-                ttl_seconds=settings.ingest_lock_ttl_seconds,
-            ),
-            lock_ctx,
-        )
-        if not lock_resp.acquired:
-            conflict = lock_resp.conflict
-            logger.info(
-                log_event(
-                    lock_ctx,
-                    role="orchestrator",
-                    event="ingest_lock_conflict",
-                    module=logger.name,
-                    fields={
-                        "lock_path": settings.ingest_lock_path,
-                        "existing_owner": conflict.owner_id if conflict else None,
-                        "existing_pid": conflict.pid if conflict else None,
-                    },
-                )
-            )
-            raise AppError(
-                code="ingest_locked",
-                message="Another ingest run is already active",
-                retryable=False,
-                context={
-                    "lock_path": settings.ingest_lock_path,
-                    "owner_id": conflict.owner_id if conflict else None,
-                    "pid": conflict.pid if conflict else None,
-                },
-            )
+def _acquire_ingest_lock(settings: IngestSettings, lock_ctx: RunContext):
+    lock_resp = acquire_lock(
+        LockAcquireRequest(
+            schema_version="1.0",
+            lock_path=settings.ingest_lock_path,
+            owner_id=f"ingest:{lock_ctx.run_id}",
+            pid=os.getpid(),
+            ttl_seconds=settings.ingest_lock_ttl_seconds,
+        ),
+        lock_ctx,
+    )
+    if lock_resp.acquired:
         lock_info = lock_resp.lock
         logger.info(
             log_event(
@@ -521,69 +483,64 @@ def run_ingest(
                 },
             )
         )
+        return lock_info
+    conflict = lock_resp.conflict
+    logger.info(
+        log_event(
+            lock_ctx,
+            role="orchestrator",
+            event="ingest_lock_conflict",
+            module=logger.name,
+            fields={
+                "lock_path": settings.ingest_lock_path,
+                "existing_owner": conflict.owner_id if conflict else None,
+                "existing_pid": conflict.pid if conflict else None,
+            },
+        )
+    )
+    raise AppError(
+        code="ingest_locked",
+        message="Another ingest run is already active",
+        retryable=False,
+        context={
+            "lock_path": settings.ingest_lock_path,
+            "owner_id": conflict.owner_id if conflict else None,
+            "pid": conflict.pid if conflict else None,
+        },
+    )
 
-        db_ctx = child_context(root_ctx, task_id="ingest_db_access")
-        logger.info(
-            log_event(
-                db_ctx,
-                role="orchestrator",
-                event="ingest_db_access_start",
-                module=logger.name,
-                fields={
-                    "state_db": settings.state_db,
-                    "reports_db": settings.reports_db,
-                },
-            )
-        )
-        state_access = check_state_db_access(
-            StateDbAccessRequest(
-                schema_version="1.0",
-                state_db=settings.state_db,
-                timeout_seconds=DB_ACCESS_TIMEOUT_SECONDS,
-            ),
+
+def _verify_ingest_db_access(settings: IngestSettings, root_ctx: RunContext) -> None:
+    db_ctx = child_context(root_ctx, task_id="ingest_db_access")
+    logger.info(
+        log_event(
             db_ctx,
+            role="orchestrator",
+            event="ingest_db_access_start",
+            module=logger.name,
+            fields={
+                "state_db": settings.state_db,
+                "reports_db": settings.reports_db,
+            },
         )
-        report_access = check_report_db_access(
-            ReportMetadataDbAccessRequest(
-                schema_version="1.0",
-                db_path=settings.reports_db,
-                timeout_seconds=DB_ACCESS_TIMEOUT_SECONDS,
-            ),
-            db_ctx,
-        )
-        if not state_access.accessible or not report_access.accessible:
-            locked = []
-            if state_access.locked:
-                locked.append(f"state_db={settings.state_db}")
-            if report_access.locked:
-                locked.append(f"reports_db={settings.reports_db}")
-            reason = ", ".join(locked) if locked else "unknown"
-            logger.info(
-                log_event(
-                    db_ctx,
-                    role="orchestrator",
-                    event="ingest_db_access_blocked",
-                    module=logger.name,
-                    fields={
-                        "state_db_accessible": state_access.accessible,
-                        "state_db_locked": state_access.locked,
-                        "reports_db_accessible": report_access.accessible,
-                        "reports_db_locked": report_access.locked,
-                        "reason": reason,
-                    },
-                )
-            )
-            raise AppError(
-                code="db_locked",
-                message=f"Database locked: {reason}",
-                retryable=False,
-                context={
-                    "state_db": settings.state_db,
-                    "reports_db": settings.reports_db,
-                    "state_db_locked": state_access.locked,
-                    "reports_db_locked": report_access.locked,
-                },
-            )
+    )
+    state_access = check_state_db_access(
+        StateDbAccessRequest(
+            schema_version="1.0",
+            state_db=settings.state_db,
+            timeout_seconds=DB_ACCESS_TIMEOUT_SECONDS,
+        ),
+        db_ctx,
+    )
+    report_access = check_report_db_access(
+        ReportMetadataDbAccessRequest(
+            schema_version="1.0",
+            db_path=settings.reports_db,
+            timeout_seconds=DB_ACCESS_TIMEOUT_SECONDS,
+        ),
+        db_ctx,
+    )
+    if state_access.accessible and report_access.accessible:
         logger.info(
             log_event(
                 db_ctx,
@@ -596,6 +553,395 @@ def run_ingest(
                 },
             )
         )
+        return
+    locked = []
+    if state_access.locked:
+        locked.append(f"state_db={settings.state_db}")
+    if report_access.locked:
+        locked.append(f"reports_db={settings.reports_db}")
+    reason = ", ".join(locked) if locked else "unknown"
+    logger.info(
+        log_event(
+            db_ctx,
+            role="orchestrator",
+            event="ingest_db_access_blocked",
+            module=logger.name,
+            fields={
+                "state_db_accessible": state_access.accessible,
+                "state_db_locked": state_access.locked,
+                "reports_db_accessible": report_access.accessible,
+                "reports_db_locked": report_access.locked,
+                "reason": reason,
+            },
+        )
+    )
+    raise AppError(
+        code="db_locked",
+        message=f"Database locked: {reason}",
+        retryable=False,
+        context={
+            "state_db": settings.state_db,
+            "reports_db": settings.reports_db,
+            "state_db_locked": state_access.locked,
+            "reports_db_locked": report_access.locked,
+        },
+    )
+
+
+def _resolve_modified_after(
+    settings: IngestSettings,
+    *,
+    limit: Optional[int],
+    root_ctx: RunContext,
+) -> Optional[str]:
+    if limit is not None:
+        logger.info(
+            log_event(
+                root_ctx,
+                role="orchestrator",
+                event="ingest_modified_after_ignored",
+                module=logger.name,
+                fields={"reason": "limit_override", "limit": limit},
+            )
+        )
+        return None
+    cursor_resp = get_ingest_cursor(
+        StateIngestCursorGetRequest(
+            schema_version="1.0",
+            state_db=settings.state_db,
+        ),
+        root_ctx,
+    )
+    modified_after = cursor_resp.last_successful_ingest_utc
+    if modified_after:
+        logger.info(
+            log_event(
+                root_ctx,
+                role="orchestrator",
+                event="ingest_modified_after_loaded",
+                module=logger.name,
+                fields={"modified_after": modified_after},
+            )
+        )
+    return modified_after
+
+
+def _build_drive_list_request(
+    settings: IngestSettings,
+    *,
+    folder_id: Optional[str],
+    limit: Optional[int],
+    modified_after: Optional[str],
+) -> DriveListRequest:
+    max_n = limit if limit is not None else settings.batch_limit
+    return DriveListRequest(
+        schema_version="1.0",
+        folder_id=folder_id or settings.gdrive_folder_id,
+        service_account_path=settings.google_sa_path,
+        auth_mode=settings.drive_auth_mode,
+        oauth_client_path=settings.google_oauth_client_path,
+        oauth_token_path=settings.google_oauth_token_path,
+        page_size=min(max_n, 1000) if limit is not None else None,
+        order_by="modifiedTime desc" if limit is not None else None,
+        modified_after=modified_after,
+        list_mode=settings.drive_list_mode,
+        supports_all_drives=settings.drive_supports_all_drives,
+        include_items_from_all_drives=settings.drive_include_items_from_all_drives,
+        drive_id=settings.drive_id,
+    )
+
+
+def _materialize_files_to_process(
+    list_req: DriveListRequest,
+    *,
+    settings: IngestSettings,
+    max_n: int,
+    deps: IngestBatchDependencies,
+    root_ctx: RunContext,
+) -> list[DriveFile]:
+    files_to_process: list[DriveFile] = []
+    pending_md5_files: list[DriveFile] = []
+
+    def _flush_pending_md5_files() -> None:
+        nonlocal pending_md5_files
+        if not pending_md5_files:
+            return
+        lookup = deps.batch_should_skip(pending_md5_files, settings.state_db, root_ctx)
+        for pending in pending_md5_files:
+            drive_md5 = pending.md5_checksum.strip() if pending.md5_checksum else ""
+            if drive_md5 and lookup.get((pending.file_id, drive_md5), False):
+                logger.info(
+                    log_event(
+                        root_ctx,
+                        role="orchestrator",
+                        event="drive_list_skip_processed",
+                        module=logger.name,
+                        fields={"file_id": pending.file_id, "md5": drive_md5},
+                    )
+                )
+                continue
+            files_to_process.append(pending)
+            if len(files_to_process) >= max_n:
+                break
+        pending_md5_files = []
+
+    for file in deps.list_pdfs(list_req, root_ctx):
+        drive_md5 = file.md5_checksum.strip() if file.md5_checksum else None
+        if drive_md5:
+            pending_md5_files.append(file)
+            if len(pending_md5_files) >= STATE_PREFILTER_BATCH_SIZE:
+                _flush_pending_md5_files()
+                if len(files_to_process) >= max_n:
+                    break
+            continue
+        files_to_process.append(file)
+        if len(files_to_process) >= max_n:
+            break
+
+    if len(files_to_process) < max_n:
+        _flush_pending_md5_files()
+    logger.info(
+        log_event(
+            root_ctx,
+            role="orchestrator",
+            event="drive_list_materialized",
+            module=logger.name,
+            fields={"count": len(files_to_process), "limit": max_n},
+        )
+    )
+    return files_to_process
+
+
+def _resolve_worker_limit(
+    settings: IngestSettings,
+    *,
+    file_count: int,
+    root_ctx: RunContext,
+) -> int:
+    worker_limit = settings.ingest_worker_limit
+    try:
+        worker_limit = int(worker_limit)
+    except (TypeError, ValueError):
+        worker_limit = 1
+    if worker_limit < 1:
+        worker_limit = 1
+    logger.info(
+        log_event(
+            root_ctx,
+            role="orchestrator",
+            event="ingest_worker_config",
+            module=logger.name,
+            fields={
+                "worker_limit": worker_limit,
+                "file_count": file_count,
+            },
+        )
+    )
+    return worker_limit
+
+
+def _process_ingest_batch(
+    files_to_process: list[DriveFile],
+    *,
+    settings: IngestSettings,
+    deps: IngestBatchDependencies,
+    root_ctx: RunContext,
+) -> list[_FileProcessResult]:
+    worker_limit = _resolve_worker_limit(
+        settings,
+        file_count=len(files_to_process),
+        root_ctx=root_ctx,
+    )
+    results: list[_FileProcessResult] = []
+    if worker_limit <= 1 or len(files_to_process) <= 1:
+        for idx, file in enumerate(files_to_process):
+            results.append(deps.process_file(file, idx, settings, root_ctx))
+        return results
+
+    with deps.thread_pool_executor_factory(max_workers=worker_limit) as executor:
+        futures = {
+            executor.submit(deps.process_file, file, idx, settings, root_ctx): (
+                idx,
+                file,
+            )
+            for idx, file in enumerate(files_to_process)
+        }
+        for future in as_completed(futures):
+            idx, file = futures[future]
+            try:
+                result = future.result()
+            except (AppError, OSError, RuntimeError, ValueError, TypeError) as exc:  # pragma: no cover - defensive fallback
+                file_ctx = child_context(root_ctx, task_id=file.file_id)
+                logger.info(
+                    log_event(
+                        file_ctx,
+                        role="orchestrator",
+                        event="file_processing_error",
+                        module=logger.name,
+                        fields={
+                            "file_id": file.file_id,
+                            "error": str(exc),
+                            "local_path": _cache_pdf_path(settings, file),
+                            "md5": file.md5_checksum or "",
+                        },
+                    )
+                )
+                result = _FileProcessResult(
+                    index=idx,
+                    outcome=IngestOutcome(
+                        schema_version="1.0",
+                        file_id=file.file_id,
+                        name=file.name or file.file_id,
+                        md5=None,
+                        html_path=None,
+                        status="error",
+                        error=str(exc),
+                    ),
+                    processed=0,
+                    had_error=True,
+                )
+            results.append(result)
+    return results
+
+
+def _update_ingest_cursor(
+    settings: IngestSettings,
+    *,
+    processed: int,
+    had_errors: bool,
+    limit: Optional[int],
+    root_ctx: RunContext,
+) -> None:
+    if not had_errors and processed > 0 and limit is None:
+        try:
+            now_utc = (
+                datetime.now(timezone.utc)
+                .replace(microsecond=0)
+                .isoformat()
+                .replace("+00:00", "Z")
+            )
+            set_ingest_cursor(
+                StateIngestCursorSetRequest(
+                    schema_version="1.0",
+                    state_db=settings.state_db,
+                    last_successful_ingest_utc=now_utc,
+                ),
+                root_ctx,
+            )
+            logger.info(
+                log_event(
+                    root_ctx,
+                    role="orchestrator",
+                    event="ingest_cursor_updated",
+                    module=logger.name,
+                    fields={"last_successful_ingest_utc": now_utc},
+                )
+            )
+        except AppError as exc:
+            logger.info(
+                log_event(
+                    root_ctx,
+                    role="orchestrator",
+                    event="ingest_cursor_update_failed",
+                    module=logger.name,
+                    fields={"error": str(exc)},
+                )
+            )
+        return
+    logger.info(
+        log_event(
+            root_ctx,
+            role="orchestrator",
+            event="ingest_cursor_skipped",
+            module=logger.name,
+            fields={
+                "reason": "errors_detected"
+                if had_errors
+                else "no_processed_or_limit_override",
+                "processed": processed,
+                "limit": limit,
+            },
+        )
+    )
+
+
+def _finalize_ingest_run(
+    settings: IngestSettings,
+    *,
+    deps: IngestBatchDependencies,
+    root_ctx: RunContext,
+    lock_ctx: RunContext,
+    lock_info,
+) -> None:
+    try:
+        deps.flush_uncategorized_tags(
+            UncategorizedTagsFlushRequest(
+                schema_version="1.0",
+                path=settings.category_mapping_path,
+            ),
+            root_ctx,
+        )
+    except AppError as exc:
+        logger.info(
+            log_event(
+                root_ctx,
+                role="orchestrator",
+                event="ingest_uncategorized_flush_failed",
+                module=logger.name,
+                fields={"path": settings.category_mapping_path, "error": str(exc)},
+            )
+        )
+    if not lock_info:
+        return
+    try:
+        release_lock(
+            LockReleaseRequest(
+                schema_version="1.0",
+                lock_path=lock_info.lock_path,
+                owner_id=lock_info.owner_id,
+                pid=lock_info.pid,
+            ),
+            lock_ctx,
+        )
+        logger.info(
+            log_event(
+                lock_ctx,
+                role="orchestrator",
+                event="ingest_lock_released",
+                module=logger.name,
+                fields={"lock_path": lock_info.lock_path},
+            )
+        )
+    except AppError as exc:
+        logger.info(
+            log_event(
+                lock_ctx,
+                role="orchestrator",
+                event="ingest_lock_release_failed",
+                module=logger.name,
+                fields={
+                    "lock_path": settings.ingest_lock_path,
+                    "error": str(exc),
+                },
+            )
+        )
+
+
+def run_ingest(
+    settings: IngestSettings,
+    *,
+    folder_id: Optional[str] = None,
+    limit: Optional[int] = None,
+    ctx: Optional[RunContext] = None,
+    dependencies: Optional[IngestBatchDependencies] = None,
+) -> List[IngestOutcome]:
+    deps = dependencies or IngestBatchDependencies.default()
+    root_ctx = ctx or new_run_context()
+    lock_ctx = child_context(root_ctx, task_id="ingest_lock")
+    lock_info = None
+    try:
+        lock_info = _acquire_ingest_lock(settings, lock_ctx)
+        _verify_ingest_db_access(settings, root_ctx)
 
         logger.info(
             log_event(
@@ -610,181 +956,33 @@ def run_ingest(
             )
         )
 
-        modified_after = None
-        if limit is None:
-            cursor_resp = get_ingest_cursor(
-                StateIngestCursorGetRequest(
-                    schema_version="1.0", state_db=settings.state_db
-                ),
-                root_ctx,
-            )
-            modified_after = cursor_resp.last_successful_ingest_utc
-            if modified_after:
-                logger.info(
-                    log_event(
-                        root_ctx,
-                        role="orchestrator",
-                        event="ingest_modified_after_loaded",
-                        module=logger.name,
-                        fields={"modified_after": modified_after},
-                    )
-                )
-        else:
-            logger.info(
-                log_event(
-                    root_ctx,
-                    role="orchestrator",
-                    event="ingest_modified_after_ignored",
-                    module=logger.name,
-                    fields={"reason": "limit_override", "limit": limit},
-                )
-            )
-
+        modified_after = _resolve_modified_after(
+            settings,
+            limit=limit,
+            root_ctx=root_ctx,
+        )
         max_n = limit if limit is not None else settings.batch_limit
-        page_size = min(max_n, 1000) if limit is not None else None
-        order_by = "modifiedTime desc" if limit is not None else None
-        list_req = DriveListRequest(
-            schema_version="1.0",
-            folder_id=folder_id or settings.gdrive_folder_id,
-            service_account_path=settings.google_sa_path,
-            auth_mode=settings.drive_auth_mode,
-            oauth_client_path=settings.google_oauth_client_path,
-            oauth_token_path=settings.google_oauth_token_path,
-            page_size=page_size,
-            order_by=order_by,
+        list_req = _build_drive_list_request(
+            settings,
+            folder_id=folder_id,
+            limit=limit,
             modified_after=modified_after,
-            list_mode=settings.drive_list_mode,
-            supports_all_drives=settings.drive_supports_all_drives,
-            include_items_from_all_drives=settings.drive_include_items_from_all_drives,
-            drive_id=settings.drive_id,
         )
-
-        files_to_process: list[DriveFile] = []
-        pending_md5_files: list[DriveFile] = []
-
-        def _flush_pending_md5_files() -> None:
-            nonlocal pending_md5_files
-            if not pending_md5_files:
-                return
-            lookup = deps.batch_should_skip(
-                pending_md5_files, settings.state_db, root_ctx
-            )
-            for pending in pending_md5_files:
-                drive_md5 = pending.md5_checksum.strip() if pending.md5_checksum else ""
-                if drive_md5 and lookup.get((pending.file_id, drive_md5), False):
-                    logger.info(
-                        log_event(
-                            root_ctx,
-                            role="orchestrator",
-                            event="drive_list_skip_processed",
-                            module=logger.name,
-                            fields={"file_id": pending.file_id, "md5": drive_md5},
-                        )
-                    )
-                    continue
-                files_to_process.append(pending)
-                if len(files_to_process) >= max_n:
-                    break
-            pending_md5_files = []
-
-        for file in deps.list_pdfs(list_req, root_ctx):
-            drive_md5 = file.md5_checksum.strip() if file.md5_checksum else None
-            if drive_md5:
-                pending_md5_files.append(file)
-                if len(pending_md5_files) >= STATE_PREFILTER_BATCH_SIZE:
-                    _flush_pending_md5_files()
-                    if len(files_to_process) >= max_n:
-                        break
-                continue
-            files_to_process.append(file)
-            if len(files_to_process) >= max_n:
-                break
-
-        if len(files_to_process) < max_n:
-            _flush_pending_md5_files()
-        logger.info(
-            log_event(
-                root_ctx,
-                role="orchestrator",
-                event="drive_list_materialized",
-                module=logger.name,
-                fields={"count": len(files_to_process), "limit": max_n},
-            )
+        files_to_process = _materialize_files_to_process(
+            list_req,
+            settings=settings,
+            max_n=max_n,
+            deps=deps,
+            root_ctx=root_ctx,
         )
-
-        worker_limit = settings.ingest_worker_limit
-        try:
-            worker_limit = int(worker_limit)
-        except (TypeError, ValueError):
-            worker_limit = 1
-        if worker_limit < 1:
-            worker_limit = 1
-        logger.info(
-            log_event(
-                root_ctx,
-                role="orchestrator",
-                event="ingest_worker_config",
-                module=logger.name,
-                fields={
-                    "worker_limit": worker_limit,
-                    "file_count": len(files_to_process),
-                },
-            )
+        results = _process_ingest_batch(
+            files_to_process,
+            settings=settings,
+            deps=deps,
+            root_ctx=root_ctx,
         )
-
-        results: list[_FileProcessResult] = []
-        if worker_limit <= 1 or len(files_to_process) <= 1:
-            for idx, file in enumerate(files_to_process):
-                results.append(deps.process_file(file, idx, settings, root_ctx))
-        else:
-            with deps.thread_pool_executor_factory(
-                max_workers=worker_limit
-            ) as executor:
-                futures = {
-                    executor.submit(deps.process_file, file, idx, settings, root_ctx): (
-                        idx,
-                        file,
-                    )
-                    for idx, file in enumerate(files_to_process)
-                }
-                for future in as_completed(futures):
-                    idx, file = futures[future]
-                    try:
-                        result = future.result()
-                    except (AppError, OSError, RuntimeError, ValueError, TypeError) as exc:  # pragma: no cover - defensive fallback
-                        file_ctx = child_context(root_ctx, task_id=file.file_id)
-                        logger.info(
-                            log_event(
-                                file_ctx,
-                                role="orchestrator",
-                                event="file_processing_error",
-                                module=logger.name,
-                                fields={
-                                    "file_id": file.file_id,
-                                    "error": str(exc),
-                                    "local_path": _cache_pdf_path(settings, file),
-                                    "md5": file.md5_checksum or "",
-                                },
-                            )
-                        )
-                        result = _FileProcessResult(
-                            index=idx,
-                            outcome=IngestOutcome(
-                                schema_version="1.0",
-                                file_id=file.file_id,
-                                name=file.name or file.file_id,
-                                md5=None,
-                                html_path=None,
-                                status="error",
-                                error=str(exc),
-                            ),
-                            processed=0,
-                            had_error=True,
-                        )
-                    results.append(result)
-
         results.sort(key=lambda r: r.index)
-        outcomes.extend([result.outcome for result in results])
+        outcomes = [result.outcome for result in results]
         processed = sum(result.processed for result in results)
         had_errors = any(result.had_error for result in results)
 
@@ -797,107 +995,19 @@ def run_ingest(
                 fields={"processed": processed},
             )
         )
-        if not had_errors and processed > 0 and limit is None:
-            try:
-                now_utc = (
-                    datetime.now(timezone.utc)
-                    .replace(microsecond=0)
-                    .isoformat()
-                    .replace("+00:00", "Z")
-                )
-                set_ingest_cursor(
-                    StateIngestCursorSetRequest(
-                        schema_version="1.0",
-                        state_db=settings.state_db,
-                        last_successful_ingest_utc=now_utc,
-                    ),
-                    root_ctx,
-                )
-                logger.info(
-                    log_event(
-                        root_ctx,
-                        role="orchestrator",
-                        event="ingest_cursor_updated",
-                        module=logger.name,
-                        fields={"last_successful_ingest_utc": now_utc},
-                    )
-                )
-            except AppError as exc:
-                logger.info(
-                    log_event(
-                        root_ctx,
-                        role="orchestrator",
-                        event="ingest_cursor_update_failed",
-                        module=logger.name,
-                        fields={"error": str(exc)},
-                    )
-                )
-        else:
-            logger.info(
-                log_event(
-                    root_ctx,
-                    role="orchestrator",
-                    event="ingest_cursor_skipped",
-                    module=logger.name,
-                    fields={
-                        "reason": "errors_detected"
-                        if had_errors
-                        else "no_processed_or_limit_override",
-                        "processed": processed,
-                        "limit": limit,
-                    },
-                )
-            )
+        _update_ingest_cursor(
+            settings,
+            processed=processed,
+            had_errors=had_errors,
+            limit=limit,
+            root_ctx=root_ctx,
+        )
         return outcomes
     finally:
-        try:
-            deps.flush_uncategorized_tags(
-                UncategorizedTagsFlushRequest(
-                    schema_version="1.0",
-                    path=settings.category_mapping_path,
-                ),
-                root_ctx,
-            )
-        except AppError as exc:
-            logger.info(
-                log_event(
-                    root_ctx,
-                    role="orchestrator",
-                    event="ingest_uncategorized_flush_failed",
-                    module=logger.name,
-                    fields={"path": settings.category_mapping_path, "error": str(exc)},
-                )
-            )
-        if lock_info:
-            try:
-                release_lock(
-                    LockReleaseRequest(
-                        schema_version="1.0",
-                        lock_path=lock_info.lock_path,
-                        owner_id=lock_info.owner_id,
-                        pid=lock_info.pid,
-                    ),
-                    lock_ctx,
-                )
-                logger.info(
-                    log_event(
-                        lock_ctx,
-                        role="orchestrator",
-                        event="ingest_lock_released",
-                        module=logger.name,
-                        fields={"lock_path": lock_info.lock_path},
-                    )
-                )
-            except AppError as exc:
-                logger.info(
-                    log_event(
-                        lock_ctx,
-                        role="orchestrator",
-                        event="ingest_lock_release_failed",
-                        module=logger.name,
-                        fields={
-                            "lock_path": settings.ingest_lock_path,
-                            "error": str(exc),
-                        },
-                    )
-                )
+        _finalize_ingest_run(
+            settings,
+            deps=deps,
+            root_ctx=root_ctx,
+            lock_ctx=lock_ctx,
+            lock_info=lock_info,
+        )
