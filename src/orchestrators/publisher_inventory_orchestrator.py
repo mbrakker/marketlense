@@ -748,6 +748,7 @@ def run_publisher_inventory_discovery(
             used_memory_route=discovery_result.used_route_hint,
             snapshot_changed=snapshot_changed,
             run_quality_summary=run_quality_summary,
+            current_candidates=build_response.current_candidates,
         )
         logger.info(
             log_event(
@@ -761,6 +762,7 @@ def run_publisher_inventory_discovery(
                     "current_report_count": response.current_report_count,
                     "previous_report_count": response.previous_report_count,
                     "new_report_count": len(response.new_report_urls),
+                    "current_candidate_count": len(response.current_candidates),
                     "used_memory_route": response.used_memory_route,
                     "snapshot_changed": response.snapshot_changed,
                     "run_quality_outcome": response.run_quality_summary.outcome,

@@ -374,6 +374,63 @@ class PublishersReplaceResponse:
 
 
 @dataclass(frozen=True)
+class PublishersListRequest:
+    schema_version: str = field(
+        metadata={"doc": "Publisher list request schema version."}
+    )
+    db_path: str = field(
+        metadata={"doc": "Filesystem path to the report metadata SQLite database."}
+    )
+    limit: Optional[int] = field(
+        default=None,
+        metadata={"doc": "Optional maximum number of publisher rows to return, ordered by row ID ascending."},
+    )
+
+
+@dataclass(frozen=True)
+class PublisherListItem:
+    schema_version: str = field(
+        metadata={"doc": "Publisher list item schema version."}
+    )
+    publisher_name: str = field(metadata={"doc": "Publisher display name."})
+    homepage: str = field(metadata={"doc": "Publisher homepage URL."})
+    insights_url: str = field(metadata={"doc": "Publisher insights URL."})
+    normalized_insights_url: str = field(
+        metadata={"doc": "Normalized publisher insights URL used as the lookup key."}
+    )
+    google_folder: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Curated Google Drive folder URL or folder ID for this publisher, if any."},
+    )
+    discovery_test_status: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Last recorded discovery status for this publisher, if any."},
+    )
+    inventory_route_kind: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Remembered publisher inventory route kind, if any."},
+    )
+    inventory_route_summary: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Remembered publisher inventory route summary, if any."},
+    )
+    inventory_run_quality_summary: Optional[PublisherInventoryRunQualitySummary] = field(
+        default=None,
+        metadata={"doc": "Last persisted publisher-inventory run-quality summary, if any."},
+    )
+
+
+@dataclass(frozen=True)
+class PublishersListResponse:
+    schema_version: str = field(
+        metadata={"doc": "Publisher list response schema version."}
+    )
+    publishers: List[PublisherListItem] = field(
+        metadata={"doc": "Publisher rows with non-empty insights URLs."}
+    )
+
+
+@dataclass(frozen=True)
 class PublisherDownloadRouteGetRequest:
     schema_version: str = field(
         metadata={"doc": "Publisher download-route get request schema version."}

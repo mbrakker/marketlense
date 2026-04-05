@@ -118,14 +118,6 @@ def download_report_with_browser_use(
         root_dir=request.settings.output_dir,
         normalized_url=normalized_url,
     )
-    task_prompt = _build_task_prompt(
-        normalized_url=normalized_url,
-        download_dir=download_dir,
-        delivery_email=delivery_email_value,
-        route_hint=request.route_hint,
-        route_kind_hint=request.route_kind_hint,
-        identity_profile=request.settings.identity_profile,
-    )
     logger.info(
         log_event(
             ctx,
@@ -150,6 +142,29 @@ def download_report_with_browser_use(
                 "has_route_hint": bool(request.route_hint),
             },
         )
+    )
+
+    if _url_looks_like_direct_pdf(normalized_url):
+        direct_pdf_result = _attempt_direct_pdf_download(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            download_dir=download_dir,
+        )
+        if direct_pdf_result is not None:
+            return direct_pdf_result
+        download_dir = _prepare_download_dir(
+            root_dir=request.settings.output_dir,
+            normalized_url=normalized_url,
+        )
+
+    task_prompt = _build_task_prompt(
+        normalized_url=normalized_url,
+        download_dir=download_dir,
+        delivery_email=delivery_email_value,
+        route_hint=request.route_hint,
+        route_kind_hint=request.route_kind_hint,
+        identity_profile=request.settings.identity_profile,
     )
     logger.info(
         log_event(
@@ -465,6 +480,98 @@ def _build_task_prompt(
         )
     prompt_parts.append("Do not return free-text outside the structured result.")
     return "\n".join(prompt_parts)
+
+
+def _url_looks_like_direct_pdf(normalized_url: str) -> bool:
+    path = str(urlsplit(normalized_url).path or "").strip().lower()
+    return path.endswith(".pdf")
+
+
+def _attempt_direct_pdf_download(
+    *,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    normalized_url: str,
+    download_dir: Path,
+) -> BrowserReportDownloadResult | None:
+    destination_name = Path(urlsplit(normalized_url).path).name or "download.pdf"
+    destination_path = download_dir / destination_name
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_direct_pdf_attempt_start",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "destination_path": str(destination_path),
+            },
+        )
+    )
+    try:
+        _download_pdf_from_url(
+            pdf_url=normalized_url,
+            destination_path=destination_path,
+            timeout_seconds=request.settings.timeout_seconds,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+        downloaded_mime_type = _resolve_downloaded_mime_type(
+            reported_mime_type=None,
+            downloaded_path=destination_path,
+        )
+        _validate_downloaded_pdf_artifact(
+            downloaded_path=destination_path,
+            downloaded_mime_type=downloaded_mime_type,
+            normalized_url=normalized_url,
+        )
+    except AppError as exc:
+        destination_path.unlink(missing_ok=True)
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_direct_pdf_attempt_fallback",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "error_code": exc.code,
+                    "error_message": exc.message,
+                },
+            )
+        )
+        if not exc.retryable:
+            raise
+        return None
+
+    response = BrowserReportDownloadResult(
+        schema_version="1.0",
+        source_url=request.url,
+        normalized_url=normalized_url,
+        route_kind="pdf_download",
+        outcome="downloaded",
+        route_summary="Open the direct PDF URL and save the returned PDF file locally.",
+        final_page_url=normalized_url,
+        used_route_hint=False,
+        encountered_form_fields=[],
+        downloaded_file_path=str(destination_path),
+        downloaded_file_name=destination_path.name,
+        downloaded_mime_type=_resolve_downloaded_mime_type(
+            reported_mime_type=None,
+            downloaded_path=destination_path,
+        ),
+        downloaded_size_bytes=destination_path.stat().st_size,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_direct_pdf_attempt_complete",
+            module=logger.name,
+            fields=asdict(response),
+        )
+    )
+    return response
 
 
 def _render_identity_prompt(identity_profile: Any, delivery_email: str | None) -> str:

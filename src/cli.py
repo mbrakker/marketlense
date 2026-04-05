@@ -9,6 +9,7 @@ from rich.table import Table
 from rich import box
 
 from src.utils.errors import AppError
+from src.contracts.acquisition_audit import AcquisitionAuditBatchRequest
 from src.contracts.costs import CostReportRequest, CostReportingRequest
 from src.contracts.browser_download import ReportDownloadOrchestratorRequest
 from src.contracts.categories import RecategorizeRequest
@@ -19,6 +20,7 @@ from src.contracts.logging import LoggingSetupRequest
 from src.contracts.publisher_inventory import PublisherInventoryDiscoveryRequest
 from src.contracts.publisher_profiles import PublisherSyncRequest
 from src.orchestrators.report_download_orchestrator import run_report_download
+from src.orchestrators.acquisition_audit_orchestrator import run_acquisition_audit
 from src.orchestrators.cost_reporting_orchestrator import run_cost_reporting
 from src.orchestrators.ingest_orchestrator import run_ingest
 from src.orchestrators.candidate_extraction_orchestrator import run_candidate_extraction
@@ -615,6 +617,83 @@ def drive_oauth_login(
     table.add_row("Scopes", ", ".join(result.scopes))
     table.add_row("Refresh token", "yes" if result.refresh_token_present else "no")
     console.print(table)
+
+
+@cli_app.command("audit-acquisition-paths")
+def audit_acquisition_paths(
+    publisher_limit: int = typer.Option(
+        None,
+        help="Optional maximum number of current publishers to audit",
+    ),
+    candidate_limit_per_publisher: int = typer.Option(
+        None,
+        help="Optional maximum number of current candidates to audit per publisher",
+    ),
+    delivery_email: str = typer.Option(
+        None,
+        help="Optional delivery email used when a report is gated behind email delivery",
+    ),
+):
+    ctx = new_run_context(task_id="cli_audit_acquisition_paths")
+    setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="cli_audit_acquisition_paths_start",
+            module=logger.name,
+            fields={
+                "publisher_limit": publisher_limit,
+                "candidate_limit_per_publisher": candidate_limit_per_publisher,
+                "has_delivery_email": bool(delivery_email),
+            },
+        )
+    )
+    app_settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    publisher_inventory_settings = load_publisher_inventory_settings(
+        ConfigLoadRequest(schema_version="1.0", path=""),
+        ctx,
+    )
+    browser_download_settings = load_browser_download_settings(
+        ConfigLoadRequest(schema_version="1.0", path=""),
+        ctx,
+    )
+    result = run_acquisition_audit(
+        AcquisitionAuditBatchRequest(
+            schema_version="1.0",
+            reports_db=app_settings.reports_db,
+            publisher_inventory_settings=publisher_inventory_settings,
+            browser_download_settings=browser_download_settings,
+            output_dir=app_settings.output_dir,
+            delivery_email=delivery_email,
+            publisher_limit=publisher_limit,
+            candidate_limit_per_publisher=candidate_limit_per_publisher,
+        ),
+        ctx=ctx,
+    )
+
+    summary_table = Table(title="Acquisition Audit", box=box.SIMPLE_HEAVY)
+    summary_table.add_column("Field")
+    summary_table.add_column("Value")
+    summary_table.add_row("Generated at", result.generated_at_utc)
+    summary_table.add_row("Artifact", result.output_path)
+    summary_table.add_row("Publishers", str(result.publisher_count))
+    summary_table.add_row("Candidates", str(result.candidate_count))
+    console.print(summary_table)
+
+    publisher_table = Table(title="Publisher Recommendations", box=box.SIMPLE_HEAVY)
+    publisher_table.add_column("Publisher")
+    publisher_table.add_column("Candidates", justify="right")
+    publisher_table.add_column("Discovery")
+    publisher_table.add_column("Recommendation")
+    for publisher in result.publishers:
+        publisher_table.add_row(
+            publisher.publisher_name,
+            str(publisher.current_candidate_count),
+            publisher.recommended_discovery_route_kind,
+            publisher.recommended_publisher_flow,
+        )
+    console.print(publisher_table)
 
 
 @cli_app.command("sync-publishers")

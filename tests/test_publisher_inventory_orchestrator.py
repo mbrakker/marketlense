@@ -453,6 +453,9 @@ def test_run_publisher_inventory_discovery_first_run_uploads_snapshot_and_return
     assert result.snapshot_changed is True
     assert result.used_memory_route is False
     assert len(result.new_report_urls) == 1
+    assert len(result.current_candidates) == 1
+    assert result.current_candidates[0].canonical_url == "https://www.activate.com/reports/new-report"
+    assert result.current_candidates[0].discovery_provenances == []
     assert result.new_report_urls[0].discovered_on_page_number == 2
     assert len(uploads) == 1
     assert len(records) == 1

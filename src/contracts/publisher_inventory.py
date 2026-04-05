@@ -75,6 +75,38 @@ class PublisherInventoryItem:
 
 
 @dataclass(frozen=True)
+class PublisherInventoryCandidateTrace:
+    schema_version: str = field(
+        metadata={"doc": "Publisher inventory candidate-trace schema version."}
+    )
+    canonical_url: str = field(
+        metadata={"doc": "Normalized canonical report URL for the current candidate."}
+    )
+    title: str = field(metadata={"doc": "Normalized candidate title."})
+    discovered_on_page_number: int = field(
+        metadata={"doc": "One-based inventory page number where the candidate was first found."}
+    )
+    source_page_urls: List[str] = field(
+        metadata={"doc": "Distinct inventory page URLs where the candidate was observed during the run."}
+    )
+    discovery_provenances: List[str] = field(
+        metadata={"doc": "Distinct extraction provenance labels observed for the candidate during the run."}
+    )
+    pdf_url: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Normalized PDF URL when the candidate directly exposes a PDF or one was observed."},
+    )
+    published_at_text: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Normalized published-date text when available."},
+    )
+    max_confidence: Optional[float] = field(
+        default=None,
+        metadata={"doc": "Maximum raw extraction-confidence value observed for the candidate during the run when available."},
+    )
+
+
+@dataclass(frozen=True)
 class PublisherInventorySnapshot:
     schema_version: str = field(
         metadata={"doc": "Publisher inventory snapshot schema version."}
@@ -877,6 +909,10 @@ class PublisherInventoryDiscoveryResult:
     run_quality_summary: PublisherInventoryRunQualitySummary = field(
         metadata={"doc": "Deterministic run-quality summary persisted for future route planning and drift monitoring."}
     )
+    current_candidates: List[PublisherInventoryCandidateTrace] = field(
+        default_factory=list,
+        metadata={"doc": "Current normalized report candidates from the discovery run, enriched with discovery provenance for audit/report-download follow-up."},
+    )
 
 @dataclass(frozen=True)
 class PublisherInventoryServiceRequest:
@@ -988,4 +1024,8 @@ class PublisherInventoryBuildResponse:
     )
     snapshot_json: str = field(
         metadata={"doc": "Deterministic JSON serialization of the normalized snapshot."}
+    )
+    current_candidates: List[PublisherInventoryCandidateTrace] = field(
+        default_factory=list,
+        metadata={"doc": "Current normalized report candidates from the discovery run, enriched with discovery provenance details."},
     )

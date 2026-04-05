@@ -12,6 +12,7 @@ from typing import List, Optional
 from urllib.parse import urlsplit
 
 from src.contracts.report_store import (
+    PublisherListItem,
     PublisherDownloadRouteGetRequest,
     PublisherDownloadRouteRecordRequest,
     PublisherDownloadRouteResponse,
@@ -22,6 +23,8 @@ from src.contracts.report_store import (
     PublisherInventoryTestStatusRecordRequest,
     PublishersReplaceRequest,
     PublishersReplaceResponse,
+    PublishersListRequest,
+    PublishersListResponse,
     ReportMetadataDbAccessRequest,
     ReportMetadataDbAccessResponse,
     ReportMetadataGetRequest,
@@ -1618,6 +1621,90 @@ def _normalize_optional_url_key(url: str) -> str:
     if not token:
         return ""
     return normalize_url(token)
+
+
+def list_publishers(
+    request: PublishersListRequest,
+    ctx: RunContext,
+) -> PublishersListResponse:
+    db_path = request.db_path.strip()
+    limit = int(request.limit) if request.limit is not None else None
+    if not db_path:
+        raise AppError(
+            code="publishers_list_db_missing",
+            message="Report metadata DB path is required for publisher listing",
+            retryable=False,
+            severity="error",
+        )
+    if limit is not None and limit <= 0:
+        raise AppError(
+            code="publishers_list_limit_invalid",
+            message="limit must be greater than zero when provided",
+            retryable=False,
+            severity="error",
+            context={"limit": limit},
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publishers_list_start",
+            module=logger.name,
+            fields={"db_path": db_path, "limit": limit},
+        )
+    )
+    with _metadata_conn(db_path) as conn:
+        rows = conn.execute(
+            """
+            SELECT
+                name,
+                homepage,
+                insights_url,
+                google_folder,
+                discovery_test_status,
+                inventory_route_kind,
+                inventory_route_summary,
+                inventory_run_quality_json
+            FROM publishers
+            WHERE insights_url <> ''
+            ORDER BY id ASC
+            """
+        ).fetchall()
+    publishers: list[PublisherListItem] = []
+    for row in rows:
+        insights_url = str(row[2] or "").strip()
+        normalized_insights_url = _normalize_optional_url_key(insights_url)
+        if not normalized_insights_url:
+            continue
+        publishers.append(
+            PublisherListItem(
+                schema_version="1.0",
+                publisher_name=str(row[0] or "").strip(),
+                homepage=str(row[1] or "").strip(),
+                insights_url=insights_url,
+                normalized_insights_url=normalized_insights_url,
+                google_folder=str(row[3] or "").strip() or None,
+                discovery_test_status=str(row[4] or "").strip() or None,
+                inventory_route_kind=str(row[5] or "").strip() or None,
+                inventory_route_summary=str(row[6] or "").strip() or None,
+                inventory_run_quality_summary=_parse_inventory_run_quality_summary(
+                    str(row[7] or "").strip() or None
+                ),
+            )
+        )
+        if limit is not None and len(publishers) >= limit:
+            break
+    response = PublishersListResponse(schema_version="1.0", publishers=publishers)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publishers_list_complete",
+            module=logger.name,
+            fields={"db_path": db_path, "publisher_count": len(response.publishers)},
+        )
+    )
+    return response
 
 
 def get_publisher_download_route(

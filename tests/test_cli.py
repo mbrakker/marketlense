@@ -9,6 +9,11 @@ from src.contracts.browser_download import (
     BrowserDownloadSettings,
     ReportDownloadOrchestratorResult,
 )
+from src.contracts.acquisition_audit import (
+    AcquisitionAuditBatchResult,
+    AcquisitionAuditCandidateResult,
+    AcquisitionAuditPublisherSummary,
+)
 from src.contracts.config import AppSettings
 from src.contracts.costs import CostReportResponse, CostTotals, StepCostTotal
 from src.contracts.ingest import IngestOutcome, IngestSettings
@@ -305,6 +310,164 @@ class TestCli(unittest.TestCase):
         request = sync_mock.call_args.args[0]
         self.assertEqual("./Wordpress/config/publisher-profiles.json", request.snapshot_path)
         self.assertEqual("./state/reports.sqlite", request.reports_db)
+
+    def test_audit_acquisition_paths_wires_settings_and_orchestrator(self) -> None:
+        import src.cli as cli
+
+        app_settings = AppSettings(
+            schema_version="1.0",
+            google_sa_path="sa.json",
+            gdrive_folder_id="folder",
+            openai_api_key="key",
+            openai_model="gpt-5",
+            batch_limit=5,
+            output_dir="./out",
+            cache_dir="./cache",
+            state_db="./state/index.sqlite",
+            reports_db="./state/reports.sqlite",
+            publisher_profiles_path="./Wordpress/config/publisher-profiles.json",
+            category_mapping_path="./src/config/category-mappings.yaml",
+            cover_style_path="./src/config/cover-styles.yaml",
+            ingest_lock_path="./state/ingest.lock",
+            ingest_lock_ttl_seconds=7200.0,
+            temperature=1.0,
+            cost_ledger_path="./out/cost-ledger.jsonl",
+            cost_daily_path="./out/cost-daily.json",
+            model_pricing={},
+        )
+        inventory_settings = PublisherInventorySettings(
+            schema_version="1.0",
+            openrouter_api_key="key",
+            model="gpt-5-mini",
+            temperature=0.0,
+            timeout_seconds=45.0,
+            max_steps=12,
+            output_dir="./out/publisher_inventory_discovery",
+            reports_db="./state/reports.sqlite",
+            google_sa_path="./sa.json",
+            prompt_namespace="publisher_inventory/discovery",
+            pagination_max_pages=10,
+            http_timeout_seconds=30.0,
+            openrouter_http_referer=None,
+            headed=False,
+            retry_retries=1,
+            retry_base_delay_seconds=1.0,
+            retry_backoff_step_seconds=0.0,
+            retry_jitter_seconds=0.0,
+            openai_api_key="openai-key",
+            candidate_screening_enabled=True,
+            candidate_screening_model="gpt-5-nano",
+            candidate_screening_temperature=1.0,
+            candidate_screening_timeout_seconds=30.0,
+            candidate_screening_prompt_namespace="publisher_inventory/meaningful_candidate_screen",
+        )
+        browser_settings = BrowserDownloadSettings(
+            schema_version="1.0",
+            openrouter_api_key="key",
+            model="openai/gpt-5-mini",
+            temperature=0.0,
+            timeout_seconds=45.0,
+            max_steps=12,
+            output_dir="./out/browser_downloads",
+            state_db="./state/index.sqlite",
+            reports_db="./state/reports.sqlite",
+            identity_config_path="./src/config/browser_download_identity.yaml",
+            identity_profile=BrowserDownloadIdentity(
+                schema_version="1.0",
+                fields=[
+                    BrowserDownloadIdentityField(
+                        schema_version="1.0",
+                        key="work_email",
+                        label="Work email",
+                        value="ops@example.com",
+                        aliases=["email"],
+                    )
+                ],
+            ),
+            openrouter_http_referer=None,
+            headed=False,
+            retry_retries=1,
+            retry_base_delay_seconds=1.0,
+            retry_backoff_step_seconds=0.0,
+            retry_jitter_seconds=0.0,
+        )
+        result = AcquisitionAuditBatchResult(
+            schema_version="1.0",
+            generated_at_utc="2026-04-04T12:00:00Z",
+            output_path="./out/acquisition_audit/report.json",
+            publisher_count=1,
+            candidate_count=1,
+            publishers=[
+                AcquisitionAuditPublisherSummary(
+                    schema_version="1.0",
+                    publisher_name="Activate Consulting",
+                    insights_url="https://www.activate.com/insights",
+                    discovery_route_kind="browser_render",
+                    discovery_quality_band="high",
+                    recommended_discovery_route_kind="browser_render",
+                    recommended_publisher_flow="publisher_prefers_pdf_download",
+                    recommendation_reason="All candidates downloaded.",
+                    current_candidate_count=1,
+                    downloaded_count=1,
+                    email_requested_count=0,
+                    email_required_count=0,
+                    failed_count=0,
+                    discovery_provenance_counts={"browser_dom": 1},
+                    acquisition_route_counts={"pdf_download": 1},
+                    acquisition_outcome_counts={"downloaded": 1},
+                )
+            ],
+            candidates=[
+                AcquisitionAuditCandidateResult(
+                    schema_version="1.0",
+                    publisher_name="Activate Consulting",
+                    publisher_insights_url="https://www.activate.com/insights",
+                    publisher_discovery_route_kind="browser_render",
+                    publisher_recommended_discovery_route_kind="browser_render",
+                    report_url="https://www.activate.com/reports/direct.pdf",
+                    report_title="Direct Report",
+                    discovered_on_page_number=1,
+                    source_page_urls=["https://www.activate.com/insights"],
+                    discovery_provenances=["browser_dom"],
+                    acquisition_route_kind="pdf_download",
+                    acquisition_outcome="downloaded",
+                    recommended_report_flow="automate_pdf_download",
+                    recommendation_reason="Downloaded successfully.",
+                    acquisition_route_summary="Download the PDF.",
+                    acquisition_final_page_url="https://www.activate.com/reports/direct.pdf",
+                    encountered_form_fields=[],
+                    downloaded_file_path="./out/downloads/direct.pdf",
+                )
+            ],
+        )
+
+        with patch.object(cli, "load_settings", return_value=app_settings) as load_app:
+            with patch.object(
+                cli, "load_publisher_inventory_settings", return_value=inventory_settings
+            ) as load_inventory:
+                with patch.object(
+                    cli, "load_browser_download_settings", return_value=browser_settings
+                ) as load_browser:
+                    with patch.object(
+                        cli, "run_acquisition_audit", return_value=result
+                    ) as run_audit:
+                        with patch.object(cli.console, "print"):
+                            cli.audit_acquisition_paths(
+                                publisher_limit=2,
+                                candidate_limit_per_publisher=3,
+                                delivery_email="ops@example.com",
+                            )
+
+        load_app.assert_called_once()
+        load_inventory.assert_called_once()
+        load_browser.assert_called_once()
+        run_audit.assert_called_once()
+        request = run_audit.call_args.args[0]
+        self.assertEqual("./state/reports.sqlite", request.reports_db)
+        self.assertEqual("./out", request.output_dir)
+        self.assertEqual(2, request.publisher_limit)
+        self.assertEqual(3, request.candidate_limit_per_publisher)
+        self.assertEqual("ops@example.com", request.delivery_email)
 
     def test_discover_publisher_inventory_wires_settings_and_orchestrator(self) -> None:
         import src.cli as cli

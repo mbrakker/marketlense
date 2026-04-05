@@ -211,6 +211,100 @@ def test_download_report_with_browser_use_returns_downloaded_pdf(
     assert_logs_have_required_fields(_service_events(caplog))
 
 
+def test_download_report_with_browser_use_short_circuits_direct_pdf_url(
+    tmp_path: Path,
+    caplog,
+    run_context,
+    external_boundary_mocks_only,
+    assert_logs_have_required_fields,
+    assert_no_defaulted_required_fields,
+) -> None:
+    def fake_get(*args: Any, **kwargs: Any) -> _FakeResponse:
+        return _FakeResponse(
+            content=b"%PDF-1.7 direct pdf bytes",
+            headers={"Content-Type": "application/pdf"},
+        )
+
+    def fail_if_browser_loaded(module_name: str) -> Any:
+        raise AssertionError(f"browser runtime should not load for direct pdf URL: {module_name}")
+
+    external_boundary_mocks_only.setattr(service.requests, "get", fake_get)
+    external_boundary_mocks_only.setattr(
+        service,
+        "import_module",
+        fail_if_browser_loaded,
+    )
+    caplog.set_level(logging.INFO, logger=service.logger.name)
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://cdn.example.com/reports/outlook-2026.pdf?download=1",
+            settings=_settings(tmp_path),
+            route_hint="Click the download CTA.",
+            route_kind_hint="pdf_download",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "pdf_download"
+    assert response.outcome == "downloaded"
+    assert response.used_route_hint is False
+    assert response.final_page_url == "https://cdn.example.com/reports/outlook-2026.pdf?download=1"
+    assert response.downloaded_file_path is not None
+    assert Path(str(response.downloaded_file_path)).read_bytes().startswith(b"%PDF-")
+    assert response.downloaded_file_name == "outlook-2026.pdf"
+    assert response.downloaded_mime_type == "application/pdf"
+    assert response.route_summary == "Open the direct PDF URL and save the returned PDF file locally."
+    assert_no_defaulted_required_fields(response)
+    assert_logs_have_required_fields(_service_events(caplog))
+
+
+def test_download_report_with_browser_use_falls_back_from_invalid_direct_pdf(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+    assert_no_defaulted_required_fields,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="Open the landing page, click Download report, and wait for the PDF save to finish.",
+        create_pdf=True,
+        email_submission_completed=None,
+    )
+    browser_loaded = {"value": False}
+
+    def fake_get(*args: Any, **kwargs: Any) -> _FakeResponse:
+        return _FakeResponse(
+            content=b"<html><body>login required</body></html>",
+            headers={"Content-Type": "text/html"},
+        )
+
+    def load_runtime(module_name: str) -> Any:
+        browser_loaded["value"] = True
+        return runtime
+
+    external_boundary_mocks_only.setattr(service.requests, "get", fake_get)
+    external_boundary_mocks_only.setattr(service, "import_module", load_runtime)
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://cdn.example.com/reports/outlook-2026.pdf",
+            settings=_settings(tmp_path),
+        ),
+        run_context,
+    )
+
+    assert browser_loaded["value"] is True
+    assert response.route_kind == "pdf_download"
+    assert response.outcome == "downloaded"
+    assert response.downloaded_file_path is not None
+    assert Path(str(response.downloaded_file_path)).exists()
+    assert_no_defaulted_required_fields(response)
+
+
 def test_download_report_with_browser_use_fetches_real_pdf_from_wrapper(
     tmp_path: Path,
     run_context,

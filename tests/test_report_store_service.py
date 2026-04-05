@@ -6,6 +6,7 @@ import time
 import unittest
 
 from src.contracts.report_store import (
+    PublishersListRequest,
     PublisherDownloadRouteGetRequest,
     PublisherDownloadRouteRecordRequest,
     PublisherInventoryRunQualityRecordRequest,
@@ -27,6 +28,7 @@ from src.services.report_store_service import (
     record_discovered_report_source,
     get_publisher_download_route,
     get_publisher_inventory_state,
+    list_publishers,
     record_publisher_inventory_run_quality,
     record_publisher_inventory_test_status,
     record_report_source,
@@ -462,6 +464,91 @@ class TestReportStoreService(unittest.TestCase):
                 ],
                 rows,
             )
+
+    def test_list_publishers_returns_current_rows_with_inventory_state(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_publishers_list")
+
+            replace_publishers(
+                PublishersReplaceRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_page_url="https://www.notion.so/source",
+                    publishers=[
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-1",
+                            notion_page_url="https://www.notion.so/page-1",
+                            name="Activate Consulting",
+                            homepage="https://www.activate.com/",
+                            self_presentation="Activate description",
+                            insights_url="https://www.activate.com/insights",
+                            icon_source="https://cdn.example.com/activate.png",
+                        ),
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-2",
+                            notion_page_url="https://www.notion.so/page-2",
+                            name="No Insights",
+                            homepage="https://example.com/",
+                            self_presentation="No insights description",
+                            insights_url="",
+                            icon_source="https://cdn.example.com/no-insights.png",
+                        ),
+                    ],
+                ),
+                ctx,
+            )
+
+            record_publisher_inventory_run_quality(
+                PublisherInventoryRunQualityRecordRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_url="https://www.activate.com/insights",
+                    summary=PublisherInventoryRunQualitySummary(
+                        schema_version="1.0",
+                        outcome="accepted",
+                        status="passed",
+                        quality_band="high",
+                        route_kind="browser_render",
+                        recommended_route_kind="browser_render",
+                        used_memory_route=False,
+                        page_count=2,
+                        raw_candidate_count=6,
+                        current_report_count=6,
+                        previous_report_count=5,
+                        raw_new_report_count=1,
+                        screened_new_report_count=1,
+                        qualified_new_report_count=1,
+                        snapshot_changed=True,
+                        requires_review=False,
+                        recommended_route_reason="Reuse browser route.",
+                        summary="high quality via browser_render",
+                        candidate_provenance_counts={"browser_dom": 6},
+                    ),
+                ),
+                ctx,
+            )
+
+            response = list_publishers(
+                PublishersListRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    limit=None,
+                ),
+                ctx,
+            )
+
+            self.assertEqual(1, len(response.publishers))
+            item = response.publishers[0]
+            self.assertEqual("Activate Consulting", item.publisher_name)
+            self.assertEqual("https://www.activate.com/insights", item.insights_url)
+            self.assertEqual(
+                "https://www.activate.com/insights", item.normalized_insights_url
+            )
+            assert item.inventory_run_quality_summary is not None
+            self.assertEqual("accepted", item.inventory_run_quality_summary.outcome)
 
     def test_publisher_download_route_roundtrip_and_preserved_on_replace(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

@@ -10,6 +10,7 @@ from urllib.parse import urljoin, urlsplit
 from src.contracts.publisher_inventory import (
     PublisherInventoryBuildRequest,
     PublisherInventoryBuildResponse,
+    PublisherInventoryCandidateTrace,
     PublisherInventoryDiffItem,
     PublisherInventoryItem,
     PublisherInventoryPage,
@@ -84,6 +85,10 @@ def build_publisher_inventory_snapshot(
     snapshot_sha256 = hashlib.sha256(
         _serialize_stable_snapshot(snapshot).encode("utf-8")
     ).hexdigest()
+    current_candidates = _build_candidate_traces(
+        raw_candidates=request.candidates,
+        normalized_items=items,
+    )
     previous_snapshot = request.previous_snapshot
     previous_urls = {
         item.canonical_url for item in (previous_snapshot.items if previous_snapshot else [])
@@ -106,6 +111,7 @@ def build_publisher_inventory_snapshot(
         previous_report_count=len(previous_snapshot.items) if previous_snapshot else 0,
         snapshot_sha256=snapshot_sha256,
         snapshot_json=snapshot_json,
+        current_candidates=current_candidates,
     )
     logger.info(
         log_event(
@@ -333,6 +339,74 @@ def _normalize_items(
     if current_item is not None:
         aggregated.append(current_item)
     return aggregated
+
+
+def _build_candidate_traces(
+    *,
+    raw_candidates: Iterable[PublisherInventoryRawCandidate],
+    normalized_items: Iterable[PublisherInventoryItem],
+) -> list[PublisherInventoryCandidateTrace]:
+    raw_by_url: dict[
+        str, dict[str, object]
+    ] = {}
+    for candidate in raw_candidates:
+        source_page_url = _normalize_absolute_url(candidate.source_page_url)
+        canonical_url = _normalize_candidate_url(candidate.url, base_url=source_page_url)
+        if not canonical_url:
+            continue
+        entry = raw_by_url.setdefault(
+            canonical_url,
+            {
+                "source_page_urls": set(),
+                "provenances": set(),
+                "max_confidence": None,
+            },
+        )
+        if source_page_url:
+            cast_source_page_urls = entry["source_page_urls"]
+            assert isinstance(cast_source_page_urls, set)
+            cast_source_page_urls.add(source_page_url)
+        provenance = _normalize_optional_text(candidate.provenance)
+        if provenance:
+            cast_provenances = entry["provenances"]
+            assert isinstance(cast_provenances, set)
+            cast_provenances.add(provenance)
+        confidence = candidate.confidence
+        if confidence is not None:
+            current_max = entry["max_confidence"]
+            if current_max is None or float(confidence) > float(current_max):
+                entry["max_confidence"] = float(confidence)
+
+    traces: list[PublisherInventoryCandidateTrace] = []
+    for item in normalized_items:
+        details = raw_by_url.get(item.canonical_url, {})
+        source_page_urls = sorted(
+            str(value).strip()
+            for value in details.get("source_page_urls", set())
+            if str(value).strip()
+        )
+        provenances = sorted(
+            str(value).strip()
+            for value in details.get("provenances", set())
+            if str(value).strip()
+        )
+        max_confidence = details.get("max_confidence")
+        traces.append(
+            PublisherInventoryCandidateTrace(
+                schema_version="1.0",
+                canonical_url=item.canonical_url,
+                title=item.title,
+                discovered_on_page_number=item.discovered_on_page_number,
+                source_page_urls=source_page_urls,
+                discovery_provenances=provenances,
+                pdf_url=item.pdf_url,
+                published_at_text=item.published_at_text,
+                max_confidence=float(max_confidence)
+                if max_confidence is not None
+                else None,
+            )
+        )
+    return traces
 
 
 def _normalize_candidate_url(raw_url: str | None, *, base_url: str) -> str:
