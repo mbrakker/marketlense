@@ -8,13 +8,16 @@ from pathlib import Path
 import pytest
 
 from src.contracts.browser_download import (
+    BrowserDownloadConfirmationEvidence,
     BrowserDownloadIdentity,
     BrowserDownloadIdentityField,
+    BrowserDownloadRouteStep,
     BrowserDownloadSettings,
     BrowserReportDownloadResult,
     ReportDownloadOrchestratorRequest,
 )
 from src.contracts.files import FileHashResponse
+from src.contracts.publisher_inventory import PublisherInventoryCandidateTrace
 from src.contracts.report_store import (
     PublisherDownloadRouteResponse,
     ReportSourceRecordResponse,
@@ -66,15 +69,41 @@ def _settings(tmp_path: Path) -> BrowserDownloadSettings:
 def _result(
     *, url: str, used_route_hint: bool, path: str | None
 ) -> BrowserReportDownloadResult:
+    final_page_url = f"{url}/final"
     return BrowserReportDownloadResult(
         schema_version="1.0",
         source_url=url,
         normalized_url=url,
         route_kind="pdf_download" if path else "email_delivery",
+        route_family="direct_pdf_probe" if path else "browser_email_form",
+        route_status="verified" if path else "inferred",
         outcome="downloaded" if path else "email_required",
         route_summary="Click the report CTA and wait for completion.",
-        final_page_url=f"{url}/final",
+        final_page_url=final_page_url,
+        resolved_target_url=final_page_url,
         used_route_hint=used_route_hint,
+        route_steps=[
+            BrowserDownloadRouteStep(
+                schema_version="1.0",
+                index=0,
+                action="open",
+                target_text=url,
+                target_role="url",
+                target_url=url,
+                result="downloaded" if path else "completed",
+            )
+        ],
+        confirmation_evidence=BrowserDownloadConfirmationEvidence(
+            schema_version="1.0",
+            url_changed=False,
+            visible_confirmation_text="",
+            submit_button_state="unchanged",
+            form_disappeared=False,
+            final_page_url=final_page_url,
+        ),
+        browser_had_structured_result=not path,
+        used_candidate_pdf_url=False,
+        used_candidate_source_page=False,
         encountered_form_fields=["Name", "Business"] if not path else [],
         downloaded_file_path=path,
         downloaded_file_name=Path(path).name if path else None,
@@ -121,7 +150,27 @@ def test_run_report_download_uses_memory_and_records_route(
             route_kind="pdf_download",
             route_summary="Use the first Download report button.",
             outcome="downloaded",
+            route_family="browser_pdf_click",
+            route_status="verified",
+            resolved_target_url="https://example.com/report/final",
+            route_steps=[],
+            confirmation_evidence=BrowserDownloadConfirmationEvidence(
+                schema_version="1.0",
+                url_changed=False,
+                visible_confirmation_text="",
+                submit_button_state="unchanged",
+                form_disappeared=False,
+                final_page_url="https://example.com/report/final",
+            ),
+            browser_had_structured_result=True,
+            used_candidate_pdf_url=False,
+            used_candidate_source_page=False,
             updated_at=1,
+            candidate_pdf_url=None,
+            candidate_source_page_urls=[],
+            candidate_discovery_provenances=[],
+            publisher_discovery_route_kind=None,
+            publisher_recommended_discovery_route_kind=None,
             last_downloaded_file_path=str(Path(settings.output_dir) / "report.pdf"),
             last_final_page_url="https://example.com/report/final",
         )
@@ -239,7 +288,27 @@ def test_run_report_download_falls_back_after_memory_failure_and_retries(
             route_kind="pdf_download",
             route_summary="Use the first Download report button.",
             outcome="downloaded",
+            route_family="browser_pdf_click",
+            route_status="verified",
+            resolved_target_url="https://example.com/report/final",
+            route_steps=[],
+            confirmation_evidence=BrowserDownloadConfirmationEvidence(
+                schema_version="1.0",
+                url_changed=False,
+                visible_confirmation_text="",
+                submit_button_state="unchanged",
+                form_disappeared=False,
+                final_page_url="https://example.com/report/final",
+            ),
+            browser_had_structured_result=True,
+            used_candidate_pdf_url=False,
+            used_candidate_source_page=False,
             updated_at=1,
+            candidate_pdf_url=None,
+            candidate_source_page_urls=[],
+            candidate_discovery_provenances=[],
+            publisher_discovery_route_kind=None,
+            publisher_recommended_discovery_route_kind=None,
             last_downloaded_file_path=None,
             last_final_page_url=None,
         )
@@ -345,7 +414,27 @@ def test_run_report_download_does_not_fallback_after_non_retryable_memory_failur
             route_kind="pdf_download",
             route_summary="Use the first Download report button.",
             outcome="downloaded",
+            route_family="browser_pdf_click",
+            route_status="verified",
+            resolved_target_url="https://example.com/report/final",
+            route_steps=[],
+            confirmation_evidence=BrowserDownloadConfirmationEvidence(
+                schema_version="1.0",
+                url_changed=False,
+                visible_confirmation_text="",
+                submit_button_state="unchanged",
+                form_disappeared=False,
+                final_page_url="https://example.com/report/final",
+            ),
+            browser_had_structured_result=True,
+            used_candidate_pdf_url=False,
+            used_candidate_source_page=False,
             updated_at=1,
+            candidate_pdf_url=None,
+            candidate_source_page_urls=[],
+            candidate_discovery_provenances=[],
+            publisher_discovery_route_kind=None,
+            publisher_recommended_discovery_route_kind=None,
             last_downloaded_file_path=None,
             last_final_page_url=None,
         )
@@ -519,3 +608,81 @@ def test_run_report_download_does_not_record_source_for_email_outcome(
 
     assert response.outcome == "email_required"
     assert source_record_calls == []
+
+
+def test_run_report_download_prefers_candidate_pdf_before_generic_browser(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    settings = _settings(tmp_path)
+    requests_seen = []
+    candidate_trace = PublisherInventoryCandidateTrace(
+        schema_version="1.0",
+        canonical_url="https://example.com/report",
+        title="Discovery PDF",
+        discovered_on_page_number=1,
+        source_page_urls=["https://example.com/insights"],
+        discovery_provenances=["direct_pdf_source"],
+        pdf_url="https://cdn.example.com/discovery-report.pdf",
+        published_at_text=None,
+        max_confidence=0.95,
+    )
+
+    def _download(req, ctx):
+        requests_seen.append(req)
+        return _result(
+            url=req.url,
+            used_route_hint=False,
+            path=str(Path(settings.output_dir) / "report.pdf"),
+        )
+
+    deps = ReportDownloadDependencies(
+        download_report_with_browser_use=_download,
+        get_publisher_download_route=lambda req, ctx: None,
+        record_publisher_download_route=lambda req, ctx: None,
+        file_md5=lambda req, ctx: FileHashResponse(
+            schema_version="1.0",
+            path=req.path,
+            md5="abc123",
+        ),
+        record_report_source=lambda req, ctx: ReportSourceRecordResponse(
+            schema_version="1.0",
+            record_id=1,
+            source_domain=req.source_domain,
+            report_name=req.report_name,
+            landing_page_url=req.landing_page_url,
+            downloaded_at_utc=req.downloaded_at_utc,
+            md5=req.md5,
+        ),
+        upsert_browser_download_identity_fields=lambda req, ctx: type(
+            "IdentityUpdate",
+            (),
+            {
+                "path": settings.identity_config_path,
+                "added_field_keys": [],
+                "total_fields": len(settings.identity_profile.fields),
+            },
+        )(),
+        sleep_fn=lambda seconds: None,
+    )
+
+    response = run_report_download(
+        ReportDownloadOrchestratorRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=settings,
+            state_db=settings.state_db,
+            reports_db=settings.reports_db,
+            candidate_trace=candidate_trace,
+            publisher_discovery_route_kind="browser_render",
+            publisher_recommended_discovery_route_kind="http_parse",
+        ),
+        ctx=run_context,
+        dependencies=deps,
+    )
+
+    assert response.outcome == "downloaded"
+    assert len(requests_seen) == 1
+    assert requests_seen[0].attempt_url == "https://cdn.example.com/discovery-report.pdf"
+    assert requests_seen[0].route_family_hint == "direct_pdf_probe"
+    assert requests_seen[0].candidate_trace == candidate_trace

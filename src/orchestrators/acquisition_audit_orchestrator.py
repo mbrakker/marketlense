@@ -236,6 +236,9 @@ def _audit_publisher(
                     state_db=download_settings.state_db,
                     reports_db=audit_reports_db,
                     delivery_email=request.delivery_email,
+                    candidate_trace=candidate,
+                    publisher_discovery_route_kind=discovery_result.run_quality_summary.route_kind,
+                    publisher_recommended_discovery_route_kind=discovery_result.run_quality_summary.recommended_route_kind,
                 ),
                 candidate_ctx,
             )

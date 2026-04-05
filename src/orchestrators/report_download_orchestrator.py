@@ -13,6 +13,9 @@ from src.contracts.browser_download import (
     BrowserDownloadIdentityFieldUpsertResponse,
     BrowserReportDownloadRequest,
     BrowserReportDownloadResult,
+    PublisherDownloadRouteMemory,
+    ReportDownloadRoutePlanRequest,
+    ReportDownloadRoutePlanStep,
     ReportDownloadOrchestratorRequest,
     ReportDownloadOrchestratorResult,
 )
@@ -29,6 +32,9 @@ from src.orchestrators.retry_orchestrator import (
     RetryPolicy,
     is_retryable_app_error,
     run_with_retry,
+)
+from src.orchestrators._report_download_route_planner import (
+    plan_report_download_routes,
 )
 from src.services.browser_report_download_service import (
     download_report_with_browser_use,
@@ -104,6 +110,12 @@ def run_report_download(
                 "normalized_url": normalized_url,
                 "reports_db": request.reports_db,
                 "has_delivery_email": bool(request.delivery_email),
+                "has_candidate_trace": request.candidate_trace is not None,
+                "publisher_discovery_route_kind": request.publisher_discovery_route_kind
+                or "",
+                "publisher_recommended_discovery_route_kind": (
+                    request.publisher_recommended_discovery_route_kind or ""
+                ),
             },
         )
     )
@@ -147,44 +159,60 @@ def run_report_download(
         jitter_seconds=request.settings.retry_jitter_seconds,
     )
 
+    plan = plan_report_download_routes(
+        ReportDownloadRoutePlanRequest(
+            schema_version="1.0",
+            normalized_url=normalized_url,
+            remembered_route=_remembered_route_memory(remembered_route),
+            candidate_trace=request.candidate_trace,
+            publisher_discovery_route_kind=request.publisher_discovery_route_kind,
+            publisher_recommended_discovery_route_kind=request.publisher_recommended_discovery_route_kind,
+        ),
+        ctx,
+    )
     result: BrowserReportDownloadResult | None = None
-    if remembered_route is not None:
+    last_retryable_error: AppError | None = None
+    for planned_step in plan.steps:
         try:
             result = _run_download_attempt(
                 request=request,
                 ctx=ctx,
                 policy=policy,
                 dependencies=deps,
-                route_hint=remembered_route.route_summary,
-                route_kind_hint=remembered_route.route_kind,
-                step_name="report_download_with_memory_route",
+                planned_step=planned_step,
             )
+            break
         except AppError as exc:
             if not is_retryable_app_error(exc):
                 raise
+            last_retryable_error = exc
             logger.info(
                 log_event(
                     ctx,
                     role="orchestrator",
-                    event="report_download_memory_route_failed",
+                    event="report_download_step_failed",
                     module=logger.name,
                     fields={
                         "normalized_url": normalized_url,
-                        "route_kind": remembered_route.route_kind,
-                        "error": str(exc),
+                        "step_name": planned_step.step_name,
+                        "route_family": planned_step.route_family,
+                        "attempt_url": planned_step.attempt_url or "",
+                        "error_code": exc.code,
+                        "error_message": exc.message,
+                        "fallback_on_retryable_error": planned_step.fallback_on_retryable_error,
                     },
                 )
             )
-
+            if not planned_step.fallback_on_retryable_error:
+                raise
     if result is None:
-        result = _run_download_attempt(
-            request=request,
-            ctx=ctx,
-            policy=policy,
-            dependencies=deps,
-            route_hint=None,
-            route_kind_hint=None,
-            step_name="report_download_discovery",
+        if last_retryable_error is not None:
+            raise last_retryable_error
+        raise AppError(
+            code="report_download_plan_exhausted",
+            message="The report download route plan completed without a result",
+            retryable=True,
+            context={"normalized_url": normalized_url},
         )
 
     deps.record_publisher_download_route(
@@ -196,6 +224,29 @@ def run_report_download(
             route_kind=result.route_kind,
             route_summary=result.route_summary,
             outcome=result.outcome,
+            route_family=result.route_family,
+            route_status=result.route_status,
+            resolved_target_url=result.resolved_target_url,
+            route_steps=result.route_steps,
+            confirmation_evidence=result.confirmation_evidence,
+            browser_had_structured_result=result.browser_had_structured_result,
+            used_candidate_pdf_url=result.used_candidate_pdf_url,
+            used_candidate_source_page=result.used_candidate_source_page,
+            candidate_pdf_url=(
+                request.candidate_trace.pdf_url if request.candidate_trace else None
+            ),
+            candidate_source_page_urls=(
+                list(request.candidate_trace.source_page_urls)
+                if request.candidate_trace is not None
+                else []
+            ),
+            candidate_discovery_provenances=(
+                list(request.candidate_trace.discovery_provenances)
+                if request.candidate_trace is not None
+                else []
+            ),
+            publisher_discovery_route_kind=request.publisher_discovery_route_kind,
+            publisher_recommended_discovery_route_kind=request.publisher_recommended_discovery_route_kind,
             last_downloaded_file_path=result.downloaded_file_path,
             last_final_page_url=result.final_page_url,
         ),
@@ -289,10 +340,18 @@ def run_report_download(
         source_url=result.source_url,
         normalized_url=result.normalized_url,
         route_kind=result.route_kind,
+        route_family=result.route_family,
+        route_status=result.route_status,
         outcome=result.outcome,
         route_summary=result.route_summary,
         final_page_url=result.final_page_url,
+        resolved_target_url=result.resolved_target_url,
         used_memory_route=result.used_route_hint,
+        route_steps=result.route_steps,
+        confirmation_evidence=result.confirmation_evidence,
+        browser_had_structured_result=result.browser_had_structured_result,
+        used_candidate_pdf_url=result.used_candidate_pdf_url,
+        used_candidate_source_page=result.used_candidate_source_page,
         encountered_form_fields=result.encountered_form_fields,
         identity_fields_added=identity_update.added_field_keys,
         downloaded_file_path=result.downloaded_file_path,
@@ -324,20 +383,24 @@ def _run_download_attempt(
     ctx: RunContext,
     policy: RetryPolicy,
     dependencies: ReportDownloadDependencies,
-    route_hint: str | None,
-    route_kind_hint: str | None,
-    step_name: str,
+    planned_step: ReportDownloadRoutePlanStep,
 ) -> BrowserReportDownloadResult:
     service_request = BrowserReportDownloadRequest(
         schema_version="1.0",
         url=request.url,
         settings=request.settings,
         delivery_email=request.delivery_email,
-        route_hint=route_hint,
-        route_kind_hint=route_kind_hint,
+        route_hint=planned_step.route_hint,
+        route_kind_hint=planned_step.route_kind_hint,
+        candidate_trace=request.candidate_trace,
+        publisher_discovery_route_kind=request.publisher_discovery_route_kind,
+        publisher_recommended_discovery_route_kind=request.publisher_recommended_discovery_route_kind,
+        attempt_url=planned_step.attempt_url,
+        route_family_hint=planned_step.route_family,
+        source_page_url_hint=planned_step.source_page_url_hint,
     )
     return run_with_retry(
-        step_name=step_name,
+        step_name=planned_step.step_name,
         operation=lambda: dependencies.download_report_with_browser_use(
             service_request, ctx
         ),
@@ -348,6 +411,22 @@ def _run_download_attempt(
         retry_event="report_download_retry",
         failure_event="report_download_attempt_failed",
         sleep_fn=dependencies.sleep_fn,
+    )
+
+
+def _remembered_route_memory(
+    remembered_route: PublisherDownloadRouteResponse | None,
+) -> PublisherDownloadRouteMemory | None:
+    if remembered_route is None:
+        return None
+    return PublisherDownloadRouteMemory(
+        schema_version="1.0",
+        route_kind=remembered_route.route_kind,
+        route_summary=remembered_route.route_summary,
+        outcome=remembered_route.outcome,
+        route_family=remembered_route.route_family,
+        route_status=remembered_route.route_status,
+        resolved_target_url=remembered_route.resolved_target_url,
     )
 
 

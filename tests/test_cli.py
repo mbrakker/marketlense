@@ -4,8 +4,10 @@ import unittest
 from unittest.mock import patch
 
 from src.contracts.browser_download import (
+    BrowserDownloadConfirmationEvidence,
     BrowserDownloadIdentity,
     BrowserDownloadIdentityField,
+    BrowserDownloadRouteStep,
     BrowserDownloadSettings,
     ReportDownloadOrchestratorResult,
 )
@@ -231,10 +233,35 @@ class TestCli(unittest.TestCase):
             source_url="https://example.com/report",
             normalized_url="https://example.com/report",
             route_kind="pdf_download",
+            route_family="direct_pdf_probe",
+            route_status="verified",
             outcome="downloaded",
             route_summary="Click the report download button.",
             final_page_url="https://example.com/report/final",
+            resolved_target_url="https://example.com/report/final",
             used_memory_route=False,
+            route_steps=[
+                BrowserDownloadRouteStep(
+                    schema_version="1.0",
+                    index=0,
+                    action="open",
+                    target_text="https://example.com/report",
+                    target_role="url",
+                    target_url="https://example.com/report",
+                    result="downloaded",
+                )
+            ],
+            confirmation_evidence=BrowserDownloadConfirmationEvidence(
+                schema_version="1.0",
+                url_changed=False,
+                visible_confirmation_text="",
+                submit_button_state="unchanged",
+                form_disappeared=False,
+                final_page_url="https://example.com/report/final",
+            ),
+            browser_had_structured_result=False,
+            used_candidate_pdf_url=False,
+            used_candidate_source_page=False,
             encountered_form_fields=["Email", "Business"],
             identity_fields_added=["business"],
             downloaded_file_path="./out/browser_downloads/report.pdf",

@@ -33,6 +33,7 @@ def run_browser_report_download_agent(
     request: BrowserReportDownloadRequest,
     ctx: RunContext,
     normalized_url: str,
+    execution_url: str,
     download_dir: Path,
     prompt_bundle: BrowserDownloadPromptBundle,
 ) -> BrowserAgentRunResult:
@@ -44,6 +45,8 @@ def run_browser_report_download_agent(
             module=logger.name,
             fields={
                 "normalized_url": normalized_url,
+                "execution_url": execution_url,
+                "route_family_hint": request.route_family_hint or "",
                 "prompt_namespace": prompt_bundle.namespace,
                 "task_prompt": prompt_bundle.task_prompt,
             },

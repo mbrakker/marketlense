@@ -15,6 +15,7 @@ from src.contracts.browser_download import (
     BrowserDownloadSettings,
     BrowserReportDownloadRequest,
 )
+from src.contracts.publisher_inventory import PublisherInventoryCandidateTrace
 from src.services._browser_report_download import browser as browser_runtime
 from src.services._browser_report_download import http as http_runtime
 from src.services import browser_report_download_service as service
@@ -807,3 +808,178 @@ def test_download_report_with_browser_use_direct_pdf_skips_browser_config_requir
 
     assert response.outcome == "downloaded"
     assert response.downloaded_file_path is not None
+
+
+def test_download_report_with_browser_use_prefers_candidate_pdf_probe(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    candidate_trace = PublisherInventoryCandidateTrace(
+        schema_version="1.0",
+        canonical_url="https://example.com/report",
+        title="Discovery PDF",
+        discovered_on_page_number=1,
+        source_page_urls=["https://example.com/insights"],
+        discovery_provenances=["direct_pdf_source"],
+        pdf_url="https://cdn.example.com/discovery-report.pdf",
+        published_at_text=None,
+        max_confidence=0.98,
+    )
+
+    def fake_get(*args: Any, **kwargs: Any) -> _FakeResponse:
+        return _FakeResponse(
+            content=b"%PDF-1.7 discovery bytes",
+            headers={"Content-Type": "application/pdf"},
+        )
+
+    external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: (_ for _ in ()).throw(
+            AssertionError("browser runtime should not load for candidate pdf probe")
+        ),
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=_settings(tmp_path),
+            candidate_trace=candidate_trace,
+            attempt_url=candidate_trace.pdf_url,
+            route_family_hint="direct_pdf_probe",
+        ),
+        run_context,
+    )
+
+    assert response.outcome == "downloaded"
+    assert response.used_candidate_pdf_url is True
+    assert response.route_family == "direct_pdf_probe"
+
+
+def test_download_report_with_browser_use_salvages_empty_browser_result_from_candidate_pdf(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    candidate_trace = PublisherInventoryCandidateTrace(
+        schema_version="1.0",
+        canonical_url="https://example.com/report",
+        title="Discovery PDF",
+        discovered_on_page_number=1,
+        source_page_urls=["https://example.com/insights"],
+        discovery_provenances=["browser_dom"],
+        pdf_url="https://cdn.example.com/discovery-report.pdf",
+        published_at_text=None,
+        max_confidence=0.91,
+    )
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="Open the page and click the report CTA.",
+        create_pdf=False,
+        email_submission_completed=None,
+    )
+    original_runtime = runtime.Agent
+
+    class EmptyAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            self.browser.url = "https://example.com/report/final"
+
+            class EmptyHistory:
+                def final_result(self_nonlocal) -> str:
+                    return ""
+
+            return EmptyHistory()
+
+    runtime.Agent = EmptyAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+    external_boundary_mocks_only.setattr(
+        http_runtime.requests,
+        "get",
+        lambda *args, **kwargs: _FakeResponse(
+            content=b"%PDF-1.7 discovery salvage",
+            headers={"Content-Type": "application/pdf"},
+        ),
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=_settings(tmp_path),
+            candidate_trace=candidate_trace,
+        ),
+        run_context,
+    )
+
+    assert response.outcome == "downloaded"
+    assert response.browser_had_structured_result is False
+    assert response.used_candidate_pdf_url is True
+
+
+def test_download_report_with_browser_use_logs_discovery_prompt_context(
+    tmp_path: Path,
+    caplog,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    candidate_trace = PublisherInventoryCandidateTrace(
+        schema_version="1.0",
+        canonical_url="https://trk.example.com/campaign?id=123",
+        title="Tracker Candidate",
+        discovered_on_page_number=2,
+        source_page_urls=["https://example.com/insights"],
+        discovery_provenances=["browser_dom"],
+        pdf_url=None,
+        published_at_text=None,
+        max_confidence=0.73,
+    )
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="Open the source page, click the report link, and download the PDF.",
+        create_pdf=True,
+        email_submission_completed=None,
+    )
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+    caplog.set_level(logging.INFO, logger=service.logger.name)
+
+    service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url=candidate_trace.canonical_url,
+            settings=_settings(tmp_path),
+            candidate_trace=candidate_trace,
+            attempt_url="https://example.com/insights",
+            route_family_hint="browser_tracker_redirect",
+            source_page_url_hint="https://example.com/insights",
+            publisher_discovery_route_kind="browser_render",
+            publisher_recommended_discovery_route_kind="browser_render",
+        ),
+        run_context,
+    )
+
+    prompt_events = [
+        json.loads(record.message)
+        for record in caplog.records
+        if record.name == service.logger.name
+        and json.loads(record.message).get("event")
+        == "browser_report_download_prompt_prepared"
+    ]
+    assert len(prompt_events) == 1
+    fields = prompt_events[0]["fields"]
+    assert fields["candidate_canonical_url"] == candidate_trace.canonical_url
+    assert fields["candidate_source_page_urls"] == ["https://example.com/insights"]
+    assert fields["publisher_recommended_discovery_route_kind"] == "browser_render"
+    assert "https://example.com/insights" in fields["rendered_user_prompt"]

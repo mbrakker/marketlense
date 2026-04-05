@@ -5,6 +5,10 @@ import tempfile
 import time
 import unittest
 
+from src.contracts.browser_download import (
+    BrowserDownloadConfirmationEvidence,
+    BrowserDownloadRouteStep,
+)
 from src.contracts.report_store import (
     PublishersListRequest,
     PublisherDownloadRouteGetRequest,
@@ -585,6 +589,31 @@ class TestReportStoreService(unittest.TestCase):
                     route_kind="email_delivery",
                     route_summary="Open the report modal and submit the email form.",
                     outcome="email_required",
+                    route_family="browser_email_form",
+                    route_status="inferred",
+                    resolved_target_url="https://www.activate.com/insights",
+                    route_steps=[
+                        BrowserDownloadRouteStep(
+                            schema_version="1.0",
+                            index=0,
+                            action="open",
+                            target_text="https://www.activate.com/insights",
+                            target_role="url",
+                            target_url="https://www.activate.com/insights",
+                            result="completed",
+                        )
+                    ],
+                    confirmation_evidence=BrowserDownloadConfirmationEvidence(
+                        schema_version="1.0",
+                        url_changed=False,
+                        visible_confirmation_text="",
+                        submit_button_state="unchanged",
+                        form_disappeared=False,
+                        final_page_url="https://www.activate.com/insights",
+                    ),
+                    browser_had_structured_result=True,
+                    used_candidate_pdf_url=False,
+                    used_candidate_source_page=False,
                     last_downloaded_file_path=None,
                     last_final_page_url="https://www.activate.com/insights",
                 ),

@@ -6,3 +6,5 @@ text: |
   Classify the route as `email_delivery` only when the site requires sending the report or download link to an email address instead of producing a local PDF file.
   If you inspect or open a form, capture every distinct visible field label or field name in `encountered_form_fields`.
   After any submission attempt, inspect the visible confirmation or status text and summarize it verbatim in `post_submit_message`.
+  Return structured `route_steps` when possible so the system can reuse the exact route.
+  Return confirmation evidence fields when possible, including URL changes, submit-button state, and whether the form disappeared.

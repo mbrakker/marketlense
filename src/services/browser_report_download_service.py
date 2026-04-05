@@ -26,6 +26,7 @@ from src.services._browser_report_download.request import (
     validate_browser_runtime_settings,
     validate_common_request,
 )
+from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.browser_report_download_service")
@@ -36,7 +37,11 @@ def download_report_with_browser_use(
     ctx: RunContext,
 ) -> BrowserReportDownloadResult:
     normalized_url = validate_and_normalize_url(request.url)
+    execution_url = str(request.attempt_url or request.url).strip()
+    normalized_execution_url = validate_and_normalize_url(execution_url)
     validate_common_request(request, normalized_url)
+    if request.attempt_url and not normalized_execution_url:
+        validate_common_request(request, normalized_execution_url)
     delivery_email_value = resolve_delivery_email_value(request)
     download_dir = prepare_download_dir(
         root_dir=request.settings.output_dir,
@@ -51,6 +56,8 @@ def download_report_with_browser_use(
             fields={
                 "url": request.url,
                 "normalized_url": normalized_url,
+                "execution_url": execution_url,
+                "normalized_execution_url": normalized_execution_url,
                 "output_dir": request.settings.output_dir,
                 "download_dir": str(download_dir),
                 "state_db": request.settings.state_db,
@@ -64,16 +71,40 @@ def download_report_with_browser_use(
                 "has_delivery_email": bool(request.delivery_email),
                 "has_effective_delivery_email": bool(delivery_email_value),
                 "has_route_hint": bool(request.route_hint),
+                "route_family_hint": request.route_family_hint or "",
+                "has_candidate_trace": request.candidate_trace is not None,
+                "publisher_discovery_route_kind": request.publisher_discovery_route_kind
+                or "",
+                "publisher_recommended_discovery_route_kind": (
+                    request.publisher_recommended_discovery_route_kind or ""
+                ),
             },
         )
     )
 
-    if url_looks_like_direct_pdf(normalized_url):
+    should_try_http_probe = (
+        request.route_family_hint in {"direct_pdf_probe", "http_pdf_probe"}
+        or url_looks_like_direct_pdf(normalized_execution_url)
+    )
+    if should_try_http_probe:
         direct_pdf_result = try_direct_pdf_download(
             request=request,
             ctx=ctx,
             normalized_url=normalized_url,
             download_dir=download_dir,
+            probe_url=normalized_execution_url,
+            route_family=request.route_family_hint or "direct_pdf_probe",
+            used_candidate_pdf_url=bool(
+                request.candidate_trace is not None
+                and request.candidate_trace.pdf_url
+                and normalized_execution_url
+                == validate_and_normalize_url(request.candidate_trace.pdf_url)
+            ),
+            used_candidate_source_page=bool(
+                request.source_page_url_hint
+                and normalized_execution_url
+                == validate_and_normalize_url(request.source_page_url_hint)
+            ),
         )
         if direct_pdf_result is not None:
             logger.info(
@@ -86,6 +117,17 @@ def download_report_with_browser_use(
                 )
             )
             return direct_pdf_result
+        if request.route_family_hint in {"direct_pdf_probe", "http_pdf_probe"}:
+            raise AppError(
+                code="browser_download_http_probe_failed",
+                message="The planned HTTP probe did not produce a valid PDF artifact",
+                retryable=True,
+                context={
+                    "normalized_url": normalized_url,
+                    "execution_url": normalized_execution_url,
+                    "route_family_hint": request.route_family_hint,
+                },
+            )
         download_dir = prepare_download_dir(
             root_dir=request.settings.output_dir,
             normalized_url=normalized_url,
@@ -96,6 +138,7 @@ def download_report_with_browser_use(
         request=request,
         ctx=ctx,
         normalized_url=normalized_url,
+        execution_url=normalized_execution_url,
         download_dir=download_dir,
         delivery_email=delivery_email_value,
     )
@@ -103,6 +146,7 @@ def download_report_with_browser_use(
         request=request,
         ctx=ctx,
         normalized_url=normalized_url,
+        execution_url=normalized_execution_url,
         download_dir=download_dir,
         prompt_bundle=prompt_bundle,
     )

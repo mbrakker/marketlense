@@ -10,6 +10,8 @@ from urllib.parse import urljoin, urlsplit
 import requests
 
 from src.contracts.browser_download import (
+    BrowserDownloadConfirmationEvidence,
+    BrowserDownloadRouteStep,
     BrowserReportDownloadRequest,
     BrowserReportDownloadResult,
 )
@@ -47,8 +49,13 @@ def try_direct_pdf_download(
     ctx: RunContext,
     normalized_url: str,
     download_dir: Path,
+    probe_url: str | None = None,
+    route_family: str = "direct_pdf_probe",
+    used_candidate_pdf_url: bool = False,
+    used_candidate_source_page: bool = False,
 ) -> BrowserReportDownloadResult | None:
-    destination_name = Path(urlsplit(normalized_url).path).name or "download.pdf"
+    target_url = str(probe_url or normalized_url).strip() or normalized_url
+    destination_name = Path(urlsplit(target_url).path).name or "download.pdf"
     destination_path = download_dir / destination_name
     logger.info(
         log_event(
@@ -58,24 +65,33 @@ def try_direct_pdf_download(
             module=logger.name,
             fields={
                 "normalized_url": normalized_url,
+                "target_url": target_url,
+                "route_family": route_family,
                 "destination_path": str(destination_path),
             },
         )
     )
     try:
         download_pdf_from_url(
-            pdf_url=normalized_url,
+            pdf_url=target_url,
             destination_path=destination_path,
             timeout_seconds=request.settings.timeout_seconds,
             ctx=ctx,
             normalized_url=normalized_url,
         )
+        downloaded_path = ensure_downloaded_pdf(
+            downloaded_path=destination_path,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            document_url=target_url,
+            timeout_seconds=request.settings.timeout_seconds,
+        )
         downloaded_mime_type = resolve_downloaded_mime_type(
             reported_mime_type=None,
-            downloaded_path=destination_path,
+            downloaded_path=downloaded_path,
         )
         validate_downloaded_pdf_artifact(
-            downloaded_path=destination_path,
+            downloaded_path=downloaded_path,
             downloaded_mime_type=downloaded_mime_type,
             normalized_url=normalized_url,
         )
@@ -103,10 +119,35 @@ def try_direct_pdf_download(
         source_url=request.url,
         normalized_url=normalized_url,
         route_kind="pdf_download",
+        route_family=route_family,
+        route_status="verified",
         outcome="downloaded",
         route_summary="Open the direct PDF URL and save the returned PDF file locally.",
-        final_page_url=normalized_url,
+        final_page_url=target_url,
+        resolved_target_url=target_url,
         used_route_hint=False,
+        route_steps=[
+            BrowserDownloadRouteStep(
+                schema_version="1.0",
+                index=0,
+                action="open",
+                target_text=target_url,
+                target_role="url",
+                target_url=target_url,
+                result="downloaded",
+            )
+        ],
+        confirmation_evidence=BrowserDownloadConfirmationEvidence(
+            schema_version="1.0",
+            url_changed=False,
+            visible_confirmation_text="",
+            submit_button_state="unchanged",
+            form_disappeared=False,
+            final_page_url=target_url,
+        ),
+        browser_had_structured_result=False,
+        used_candidate_pdf_url=used_candidate_pdf_url,
+        used_candidate_source_page=used_candidate_source_page,
         encountered_form_fields=[],
         downloaded_file_path=str(destination_path),
         downloaded_file_name=destination_path.name,

@@ -117,3 +117,23 @@ fields:
   label: Do you have an app?
   value: null
   aliases: []
+- schema_version: '1.0'
+  key: termsagreed
+  label: termsAgreed
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: newsletter
+  label: newsletter
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: professional_email
+  label: Professional Email
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: business_phone
+  label: Business Phone
+  value: null
+  aliases: []

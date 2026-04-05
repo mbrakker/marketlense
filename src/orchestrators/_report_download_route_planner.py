@@ -1,0 +1,330 @@
+from __future__ import annotations
+
+import logging
+from urllib.parse import urlsplit
+
+from src.contracts.browser_download import (
+    PublisherDownloadRouteMemory,
+    ReportDownloadRoutePlanRequest,
+    ReportDownloadRoutePlanResponse,
+    ReportDownloadRoutePlanStep,
+)
+from src.contracts.run_context import RunContext
+from src.utils.logging import log_event
+
+logger = logging.getLogger("market_lense.report_download_route_planner")
+
+_BROWSER_DISCOVERY_PROVENANCES = {
+    "browser_dom",
+    "browser_rendered_html_supplement",
+}
+_PDF_FIRST_DISCOVERY_PROVENANCES = {
+    "direct_pdf_source",
+}
+_TRACKER_HOST_MARKERS = {
+    "lnk",
+    "trk",
+    "click",
+    "go",
+    "email",
+    "hubspot",
+    "pardot",
+    "marketo",
+}
+_LISTING_PATH_MARKERS = {
+    "insights",
+    "reports",
+    "research",
+    "resources",
+    "publications",
+    "library",
+}
+
+
+def plan_report_download_routes(
+    request: ReportDownloadRoutePlanRequest,
+    ctx: RunContext,
+) -> ReportDownloadRoutePlanResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="report_download_route_plan_start",
+            module=logger.name,
+            fields={
+                "normalized_url": request.normalized_url,
+                "has_remembered_route": request.remembered_route is not None,
+                "has_candidate_trace": request.candidate_trace is not None,
+                "publisher_discovery_route_kind": request.publisher_discovery_route_kind
+                or "",
+                "publisher_recommended_discovery_route_kind": (
+                    request.publisher_recommended_discovery_route_kind or ""
+                ),
+            },
+        )
+    )
+    response = _build_plan(request)
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="report_download_route_plan_complete",
+            module=logger.name,
+            fields={
+                "normalized_url": request.normalized_url,
+                "planning_reason": response.planning_reason,
+                "step_names": [step.step_name for step in response.steps],
+                "route_families": [step.route_family for step in response.steps],
+                "attempt_urls": [step.attempt_url or "" for step in response.steps],
+            },
+        )
+    )
+    return response
+
+
+def _build_plan(
+    request: ReportDownloadRoutePlanRequest,
+) -> ReportDownloadRoutePlanResponse:
+    steps: list[ReportDownloadRoutePlanStep] = []
+    remembered_route = request.remembered_route
+    candidate = request.candidate_trace
+    candidate_pdf_url = str(candidate.pdf_url or "").strip() if candidate else ""
+    source_page_urls = _clean_string_list(
+        candidate.source_page_urls if candidate is not None else []
+    )
+    provenances = {
+        str(value).strip().lower()
+        for value in (candidate.discovery_provenances if candidate is not None else [])
+        if str(value).strip()
+    }
+    recommended_route_kind = str(
+        request.publisher_recommended_discovery_route_kind or ""
+    ).strip()
+
+    if remembered_route is not None and remembered_route.route_status == "verified":
+        steps.append(
+            ReportDownloadRoutePlanStep(
+                schema_version="1.0",
+                step_name="report_download_with_memory_route",
+                route_family=remembered_route.route_family
+                or _default_route_family_for_kind(remembered_route.route_kind),
+                attempt_url=remembered_route.resolved_target_url or None,
+                route_hint=remembered_route.route_summary,
+                route_kind_hint=remembered_route.route_kind,
+                uses_memory_route=True,
+                fallback_on_retryable_error=True,
+            )
+        )
+
+    if candidate_pdf_url:
+        steps.append(
+            ReportDownloadRoutePlanStep(
+                schema_version="1.0",
+                step_name="report_download_candidate_pdf_probe",
+                route_family="direct_pdf_probe",
+                attempt_url=candidate_pdf_url,
+                route_kind_hint="pdf_download",
+                uses_memory_route=False,
+                fallback_on_retryable_error=True,
+            )
+        )
+    elif _looks_like_pdf(request.normalized_url):
+        steps.append(
+            ReportDownloadRoutePlanStep(
+                schema_version="1.0",
+                step_name="report_download_direct_pdf_probe",
+                route_family="direct_pdf_probe",
+                attempt_url=request.normalized_url,
+                route_kind_hint="pdf_download",
+                uses_memory_route=False,
+                fallback_on_retryable_error=True,
+            )
+        )
+
+    browser_step = _build_browser_step(
+        normalized_url=request.normalized_url,
+        source_page_urls=source_page_urls,
+        provenances=provenances,
+    )
+    http_step = ReportDownloadRoutePlanStep(
+        schema_version="1.0",
+        step_name="report_download_http_probe",
+        route_family="http_pdf_probe",
+        attempt_url=request.normalized_url,
+        route_kind_hint="pdf_download",
+        uses_memory_route=False,
+        fallback_on_retryable_error=True,
+    )
+
+    browser_first = (
+        recommended_route_kind == "browser_render"
+        or bool(provenances & _BROWSER_DISCOVERY_PROVENANCES)
+    )
+    pdf_first = (
+        recommended_route_kind == "http_parse"
+        or bool(provenances & _PDF_FIRST_DISCOVERY_PROVENANCES)
+    )
+    if browser_first and not pdf_first:
+        steps.append(browser_step)
+        steps.append(http_step)
+    else:
+        steps.append(http_step)
+        steps.append(browser_step)
+
+    deduped_steps = _dedupe_steps(steps)
+    planning_reason = _planning_reason(
+        remembered_route=remembered_route,
+        candidate_pdf_url=candidate_pdf_url,
+        browser_first=browser_first,
+        source_page_urls=source_page_urls,
+    )
+    return ReportDownloadRoutePlanResponse(
+        schema_version="1.0",
+        steps=deduped_steps,
+        planning_reason=planning_reason,
+    )
+
+
+def _build_browser_step(
+    *,
+    normalized_url: str,
+    source_page_urls: list[str],
+    provenances: set[str],
+) -> ReportDownloadRoutePlanStep:
+    source_page_url = source_page_urls[0] if source_page_urls else None
+    if _looks_like_tracker_url(normalized_url):
+        return ReportDownloadRoutePlanStep(
+            schema_version="1.0",
+            step_name="report_download_browser_tracker_redirect",
+            route_family="browser_tracker_redirect",
+            attempt_url=source_page_url or normalized_url,
+            route_kind_hint=None,
+            source_page_url_hint=source_page_url,
+            uses_memory_route=False,
+            fallback_on_retryable_error=False,
+        )
+    if source_page_url and _looks_like_listing_url(normalized_url):
+        return ReportDownloadRoutePlanStep(
+            schema_version="1.0",
+            step_name="report_download_browser_listing_hub",
+            route_family="browser_listing_hub",
+            attempt_url=source_page_url,
+            route_kind_hint=None,
+            source_page_url_hint=source_page_url,
+            uses_memory_route=False,
+            fallback_on_retryable_error=False,
+        )
+    if provenances & _BROWSER_DISCOVERY_PROVENANCES:
+        return ReportDownloadRoutePlanStep(
+            schema_version="1.0",
+            step_name="report_download_browser_candidate",
+            route_family="browser_pdf_click",
+            attempt_url=normalized_url,
+            route_kind_hint=None,
+            source_page_url_hint=source_page_url,
+            uses_memory_route=False,
+            fallback_on_retryable_error=False,
+        )
+    return ReportDownloadRoutePlanStep(
+        schema_version="1.0",
+        step_name="report_download_browser_candidate",
+        route_family="browser_pdf_click",
+        attempt_url=normalized_url,
+        route_kind_hint=None,
+        source_page_url_hint=source_page_url,
+        uses_memory_route=False,
+        fallback_on_retryable_error=False,
+    )
+
+
+def _planning_reason(
+    *,
+    remembered_route: PublisherDownloadRouteMemory | None,
+    candidate_pdf_url: str,
+    browser_first: bool,
+    source_page_urls: list[str],
+) -> str:
+    if remembered_route is not None and remembered_route.route_status == "verified":
+        if candidate_pdf_url:
+            return (
+                "Reuse the verified remembered route first, then verify the discovery-provided candidate PDF before broader fallback."
+            )
+        return (
+            "Reuse the verified remembered route first, then fall back to discovery-aware HTTP and browser attempts only on retryable failure."
+        )
+    if candidate_pdf_url:
+        return (
+            "The discovery phase already exposed a candidate PDF URL, so verify that target before broader HTTP or browser exploration."
+        )
+    if browser_first and source_page_urls:
+        return (
+            "Discovery evidence points to a browser-derived route from a source page, so revisit that page before generic PDF probing."
+        )
+    if browser_first:
+        return (
+            "Discovery evidence points to a browser-derived route, so prefer browser execution before generic PDF probing."
+        )
+    return (
+        "No verified remembered route is available, so start with discovery-aware PDF probing before falling back to browser execution."
+    )
+
+
+def _default_route_family_for_kind(route_kind: str) -> str:
+    if str(route_kind or "").strip() == "email_delivery":
+        return "browser_email_form"
+    return "browser_pdf_click"
+
+
+def _dedupe_steps(
+    steps: list[ReportDownloadRoutePlanStep],
+) -> list[ReportDownloadRoutePlanStep]:
+    deduped: list[ReportDownloadRoutePlanStep] = []
+    seen: set[tuple[str, str, str, str]] = set()
+    for step in steps:
+        key = (
+            step.step_name,
+            step.route_family,
+            str(step.attempt_url or "").strip(),
+            str(step.source_page_url_hint or "").strip(),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(step)
+    return deduped
+
+
+def _clean_string_list(values: list[str]) -> list[str]:
+    cleaned: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        token = str(value or "").strip()
+        if not token:
+            continue
+        marker = token.casefold()
+        if marker in seen:
+            continue
+        seen.add(marker)
+        cleaned.append(token)
+    return cleaned
+
+
+def _looks_like_pdf(url: str) -> bool:
+    return str(urlsplit(str(url or "").strip()).path or "").strip().lower().endswith(
+        ".pdf"
+    )
+
+
+def _looks_like_listing_url(url: str) -> bool:
+    path = str(urlsplit(str(url or "").strip()).path or "").strip().lower()
+    return any(marker in path for marker in _LISTING_PATH_MARKERS)
+
+
+def _looks_like_tracker_url(url: str) -> bool:
+    parsed = urlsplit(str(url or "").strip())
+    hostname = str(parsed.hostname or "").strip().lower()
+    path = str(parsed.path or "").strip().lower()
+    query = str(parsed.query or "").strip().lower()
+    return any(marker in hostname for marker in _TRACKER_HOST_MARKERS) or any(
+        marker in path or marker in query for marker in _TRACKER_HOST_MARKERS
+    )

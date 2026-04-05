@@ -33,6 +33,7 @@ def render_browser_report_download_prompt(
     request: BrowserReportDownloadRequest,
     ctx: RunContext,
     normalized_url: str,
+    execution_url: str,
     download_dir: Path,
     delivery_email: str | None,
 ) -> BrowserDownloadPromptBundle:
@@ -45,6 +46,7 @@ def render_browser_report_download_prompt(
     )
     variables = {
         "normalized_url": normalized_url,
+        "execution_url": execution_url,
         "download_dir": str(download_dir),
         "identity_prompt": _render_identity_prompt(
             request=request,
@@ -57,6 +59,7 @@ def render_browser_report_download_prompt(
         "delivery_instruction": _render_delivery_instruction(
             delivery_email=delivery_email,
         ),
+        "discovery_context": _render_discovery_context(request=request),
     }
     rendered_system = prompt_service.render_prompt(
         PromptRenderRequest(
@@ -107,6 +110,34 @@ def render_browser_report_download_prompt(
                 "temperature": request.settings.temperature,
                 "timeout_seconds": request.settings.timeout_seconds,
                 "max_steps": request.settings.max_steps,
+                "candidate_canonical_url": (
+                    request.candidate_trace.canonical_url
+                    if request.candidate_trace is not None
+                    else ""
+                ),
+                "candidate_pdf_url": (
+                    request.candidate_trace.pdf_url
+                    if request.candidate_trace is not None
+                    and request.candidate_trace.pdf_url
+                    else ""
+                ),
+                "candidate_source_page_urls": (
+                    list(request.candidate_trace.source_page_urls)
+                    if request.candidate_trace is not None
+                    else []
+                ),
+                "candidate_discovery_provenances": (
+                    list(request.candidate_trace.discovery_provenances)
+                    if request.candidate_trace is not None
+                    else []
+                ),
+                "publisher_discovery_route_kind": request.publisher_discovery_route_kind
+                or "",
+                "publisher_recommended_discovery_route_kind": (
+                    request.publisher_recommended_discovery_route_kind or ""
+                ),
+                "route_family_hint": request.route_family_hint or "",
+                "source_page_url_hint": request.source_page_url_hint or "",
             },
         )
     )
@@ -166,3 +197,51 @@ def _render_delivery_instruction(*, delivery_email: str | None) -> str:
         "available, do not invent one. Classify the route as `email_delivery` "
         "and set email_submission_completed to false."
     )
+
+
+def _render_discovery_context(*, request: BrowserReportDownloadRequest) -> str:
+    candidate = request.candidate_trace
+    lines = [
+        f"Planned route family for this attempt: {request.route_family_hint or 'unspecified'}."
+    ]
+    if request.publisher_discovery_route_kind:
+        lines.append(
+            f"Publisher discovery route kind from the discovery/diff phase: {request.publisher_discovery_route_kind}."
+        )
+    if request.publisher_recommended_discovery_route_kind:
+        lines.append(
+            "Publisher recommended discovery route kind from the discovery/diff "
+            f"phase: {request.publisher_recommended_discovery_route_kind}."
+        )
+    if candidate is None:
+        lines.append("No discovery candidate trace is available for this attempt.")
+        return "\n".join(lines)
+    lines.append(f"Candidate title: {candidate.title}")
+    lines.append(f"Candidate canonical URL: {candidate.canonical_url}")
+    if candidate.pdf_url:
+        lines.append(
+            f"Discovery observed a candidate PDF URL for this report: {candidate.pdf_url}"
+        )
+        lines.append(
+            "Verify that candidate PDF target before exploring alternate download routes."
+        )
+    if candidate.source_page_urls:
+        lines.append(
+            "Discovery source pages where this candidate was observed: "
+            + ", ".join(candidate.source_page_urls)
+        )
+    if request.source_page_url_hint:
+        lines.append(
+            "If the candidate URL is thin, gated, or tracker-like, revisit this "
+            f"source page first: {request.source_page_url_hint}"
+        )
+    if candidate.discovery_provenances:
+        lines.append(
+            "Discovery provenance labels for this candidate: "
+            + ", ".join(candidate.discovery_provenances)
+        )
+    if candidate.max_confidence is not None:
+        lines.append(
+            f"Discovery maximum candidate confidence: {candidate.max_confidence:.3f}"
+        )
+    return "\n".join(lines)

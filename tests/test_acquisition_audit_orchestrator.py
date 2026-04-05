@@ -5,8 +5,10 @@ from dataclasses import replace
 
 from src.contracts.acquisition_audit import AcquisitionAuditBatchRequest
 from src.contracts.browser_download import (
+    BrowserDownloadConfirmationEvidence,
     BrowserDownloadIdentity,
     BrowserDownloadIdentityField,
+    BrowserDownloadRouteStep,
     BrowserDownloadSettings,
     ReportDownloadOrchestratorResult,
 )
@@ -164,10 +166,35 @@ def test_run_acquisition_audit_builds_candidate_and_publisher_maps(
                 source_url=req.url,
                 normalized_url=req.url,
                 route_kind="pdf_download",
+                route_family="direct_pdf_probe",
+                route_status="verified",
                 outcome="downloaded",
                 route_summary="Open the page and download the PDF.",
                 final_page_url=req.url,
+                resolved_target_url=req.url,
                 used_memory_route=False,
+                route_steps=[
+                    BrowserDownloadRouteStep(
+                        schema_version="1.0",
+                        index=0,
+                        action="open",
+                        target_text=req.url,
+                        target_role="url",
+                        target_url=req.url,
+                        result="downloaded",
+                    )
+                ],
+                confirmation_evidence=BrowserDownloadConfirmationEvidence(
+                    schema_version="1.0",
+                    url_changed=False,
+                    visible_confirmation_text="",
+                    submit_button_state="unchanged",
+                    form_disappeared=False,
+                    final_page_url=req.url,
+                ),
+                browser_had_structured_result=False,
+                used_candidate_pdf_url=True,
+                used_candidate_source_page=False,
                 encountered_form_fields=[],
                 identity_fields_added=[],
                 downloaded_file_path="./out/downloads/direct.pdf",
@@ -180,10 +207,25 @@ def test_run_acquisition_audit_builds_candidate_and_publisher_maps(
             source_url=req.url,
             normalized_url=req.url,
             route_kind="email_delivery",
+            route_family="browser_email_form",
+            route_status="inferred",
             outcome="email_required",
             route_summary="Open the page and inspect the gated form.",
             final_page_url=req.url,
+            resolved_target_url=req.url,
             used_memory_route=False,
+            route_steps=[],
+            confirmation_evidence=BrowserDownloadConfirmationEvidence(
+                schema_version="1.0",
+                url_changed=False,
+                visible_confirmation_text="",
+                submit_button_state="unchanged",
+                form_disappeared=False,
+                final_page_url=req.url,
+            ),
+            browser_had_structured_result=True,
+            used_candidate_pdf_url=False,
+            used_candidate_source_page=False,
             encountered_form_fields=["Business email"],
             identity_fields_added=[],
             downloaded_file_path=None,
@@ -248,6 +290,12 @@ def test_run_acquisition_audit_builds_candidate_and_publisher_maps(
     assert result.candidates[0].recommended_report_flow == "automate_pdf_download"
     assert result.candidates[1].recommended_report_flow == "complete_identity_profile"
     assert len(download_requests) == 2
+    assert download_requests[0].candidate_trace == _discovery_result().current_candidates[0]
+    assert download_requests[0].publisher_discovery_route_kind == "browser_render"
+    assert (
+        download_requests[0].publisher_recommended_discovery_route_kind
+        == "browser_render"
+    )
     assert all(
         req.reports_db != "./state/reports.sqlite" for req in download_requests
     )
@@ -294,10 +342,35 @@ def test_run_acquisition_audit_limits_candidates_per_publisher(run_context) -> N
                 source_url=req.url,
                 normalized_url=req.url,
                 route_kind="pdf_download",
+                route_family="direct_pdf_probe",
+                route_status="verified",
                 outcome="downloaded",
                 route_summary="Download the PDF.",
                 final_page_url=req.url,
+                resolved_target_url=req.url,
                 used_memory_route=False,
+                route_steps=[
+                    BrowserDownloadRouteStep(
+                        schema_version="1.0",
+                        index=0,
+                        action="open",
+                        target_text=req.url,
+                        target_role="url",
+                        target_url=req.url,
+                        result="downloaded",
+                    )
+                ],
+                confirmation_evidence=BrowserDownloadConfirmationEvidence(
+                    schema_version="1.0",
+                    url_changed=False,
+                    visible_confirmation_text="",
+                    submit_button_state="unchanged",
+                    form_disappeared=False,
+                    final_page_url=req.url,
+                ),
+                browser_had_structured_result=False,
+                used_candidate_pdf_url=True,
+                used_candidate_source_page=False,
                 encountered_form_fields=[],
                 identity_fields_added=[],
                 downloaded_file_path="./out/download.pdf",

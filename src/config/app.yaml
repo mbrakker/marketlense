@@ -137,7 +137,7 @@ publish:
     policy: "block"
 
 browser_download:
-  model: "google/gemini-2.5-flash-lite"
+  model: "stepfun/step-3.5-flash:free"
   identity_config_path: "./browser_download_identity.yaml"
   temperature: 0.0
   timeout_seconds: 360
@@ -151,7 +151,7 @@ browser_download:
     jitter_seconds: 0.25
 
 publisher_discovery:
-  model: "google/gemini-2.5-flash-lite"
+  model: "stepfun/step-3.5-flash:free"
   temperature: 0.0
   timeout_seconds: 360
   max_steps: 30

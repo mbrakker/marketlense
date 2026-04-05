@@ -3,6 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List, Optional
 
+from src.contracts.browser_download import (
+    BrowserDownloadConfirmationEvidence,
+    BrowserDownloadRouteStep,
+)
 from src.contracts.docpacks import DocPackPathMap
 from src.contracts.publisher_inventory import PublisherInventoryRunQualitySummary
 from src.contracts.publisher_profiles import PublisherProfileRecord
@@ -466,6 +470,50 @@ class PublisherDownloadRouteRecordRequest:
     outcome: str = field(
         metadata={"doc": "Observed outcome: `downloaded`, `email_requested`, or `email_required`."}
     )
+    route_family: str = field(
+        metadata={"doc": "Observed route family, for example `direct_pdf_probe` or `browser_email_form`."}
+    )
+    route_status: str = field(
+        metadata={"doc": "Verification status for the route result, for example `verified` or `inferred`."}
+    )
+    resolved_target_url: str = field(
+        metadata={"doc": "Resolved target URL that produced the final artifact or email form state."}
+    )
+    route_steps: List[BrowserDownloadRouteStep] = field(
+        metadata={"doc": "Structured route execution trace stored for later reuse and debugging."}
+    )
+    confirmation_evidence: BrowserDownloadConfirmationEvidence = field(
+        metadata={"doc": "Structured confirmation evidence stored for email-gated or ambiguous routes."}
+    )
+    browser_had_structured_result: bool = field(
+        metadata={"doc": "Whether browser-use returned a structured result instead of requiring fallback salvage."}
+    )
+    used_candidate_pdf_url: bool = field(
+        metadata={"doc": "Whether the successful route reused a discovery-provided candidate PDF URL."}
+    )
+    used_candidate_source_page: bool = field(
+        metadata={"doc": "Whether the successful route reused a discovery-provided candidate source page URL."}
+    )
+    candidate_pdf_url: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Discovery-provided candidate PDF URL snapshot recorded with the route attempt."},
+    )
+    candidate_source_page_urls: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Discovery source page URLs snapshot recorded with the route attempt."},
+    )
+    candidate_discovery_provenances: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Discovery provenance labels snapshot recorded with the route attempt."},
+    )
+    publisher_discovery_route_kind: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Publisher-level discovery route kind snapshot recorded with the route attempt."},
+    )
+    publisher_recommended_discovery_route_kind: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Publisher-level recommended discovery route kind snapshot recorded with the route attempt."},
+    )
     last_downloaded_file_path: Optional[str] = field(
         default=None,
         metadata={"doc": "Last downloaded local file path for this publisher route, if any."},
@@ -496,8 +544,52 @@ class PublisherDownloadRouteResponse:
     outcome: str = field(
         metadata={"doc": "Last observed outcome for this publisher route."}
     )
+    route_family: str = field(
+        metadata={"doc": "Observed route family, for example `direct_pdf_probe` or `browser_email_form`."}
+    )
+    route_status: str = field(
+        metadata={"doc": "Verification status for the route result, for example `verified` or `inferred`."}
+    )
+    resolved_target_url: str = field(
+        metadata={"doc": "Resolved target URL that produced the final artifact or email form state."}
+    )
+    route_steps: List[BrowserDownloadRouteStep] = field(
+        metadata={"doc": "Structured route execution trace stored for later reuse and debugging."}
+    )
+    confirmation_evidence: BrowserDownloadConfirmationEvidence = field(
+        metadata={"doc": "Structured confirmation evidence stored for email-gated or ambiguous routes."}
+    )
+    browser_had_structured_result: bool = field(
+        metadata={"doc": "Whether browser-use returned a structured result instead of requiring fallback salvage."}
+    )
+    used_candidate_pdf_url: bool = field(
+        metadata={"doc": "Whether the remembered route reused a discovery-provided candidate PDF URL."}
+    )
+    used_candidate_source_page: bool = field(
+        metadata={"doc": "Whether the remembered route reused a discovery-provided candidate source page URL."}
+    )
     updated_at: int = field(
         metadata={"doc": "Unix timestamp when the publisher route-memory record was last updated."}
+    )
+    candidate_pdf_url: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Discovery-provided candidate PDF URL snapshot recorded with the route attempt."},
+    )
+    candidate_source_page_urls: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Discovery source page URLs snapshot recorded with the route attempt."},
+    )
+    candidate_discovery_provenances: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Discovery provenance labels snapshot recorded with the route attempt."},
+    )
+    publisher_discovery_route_kind: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Publisher-level discovery route kind snapshot recorded with the route attempt."},
+    )
+    publisher_recommended_discovery_route_kind: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Publisher-level recommended discovery route kind snapshot recorded with the route attempt."},
     )
     last_downloaded_file_path: Optional[str] = field(
         default=None,

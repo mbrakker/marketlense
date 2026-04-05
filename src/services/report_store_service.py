@@ -11,6 +11,10 @@ from pathlib import Path
 from typing import List, Optional
 from urllib.parse import urlsplit
 
+from src.contracts.browser_download import (
+    BrowserDownloadConfirmationEvidence,
+    BrowserDownloadRouteStep,
+)
 from src.contracts.report_store import (
     PublisherListItem,
     PublisherDownloadRouteGetRequest,
@@ -120,9 +124,39 @@ CREATE TABLE IF NOT EXISTS publishers (
   inventory_run_quality_updated_at INTEGER
 );
 
+CREATE TABLE IF NOT EXISTS publisher_download_route_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  normalized_url TEXT NOT NULL,
+  source_url TEXT NOT NULL,
+  route_kind TEXT NOT NULL,
+  route_summary TEXT NOT NULL,
+  outcome TEXT NOT NULL,
+  route_family TEXT NOT NULL,
+  route_status TEXT NOT NULL,
+  resolved_target_url TEXT NOT NULL,
+  route_steps_json TEXT NOT NULL,
+  confirmation_evidence_json TEXT NOT NULL,
+  browser_had_structured_result INTEGER NOT NULL,
+  used_candidate_pdf_url INTEGER NOT NULL,
+  used_candidate_source_page INTEGER NOT NULL,
+  candidate_pdf_url TEXT,
+  candidate_source_page_urls_json TEXT NOT NULL,
+  candidate_discovery_provenances_json TEXT NOT NULL,
+  publisher_discovery_route_kind TEXT,
+  publisher_recommended_discovery_route_kind TEXT,
+  last_downloaded_file_path TEXT,
+  last_final_page_url TEXT,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_publishers_name ON publishers(name);
 CREATE INDEX IF NOT EXISTS idx_publishers_homepage ON publishers(homepage);
 CREATE INDEX IF NOT EXISTS idx_publishers_insights_url ON publishers(insights_url);
+CREATE INDEX IF NOT EXISTS idx_download_route_history_normalized_url
+  ON publisher_download_route_history(normalized_url);
+CREATE INDEX IF NOT EXISTS idx_download_route_history_updated_at
+  ON publisher_download_route_history(updated_at);
 """
 
 
@@ -349,6 +383,134 @@ def _parse_inventory_run_quality_summary(payload: Optional[str]):
         )
     except (KeyError, TypeError, ValueError):
         return None
+
+
+def _serialize_route_steps(steps: List[BrowserDownloadRouteStep]) -> str:
+    return json.dumps(
+        [asdict(step) for step in steps],
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def _parse_route_steps(payload: Optional[str]) -> List[BrowserDownloadRouteStep]:
+    token = str(payload or "").strip()
+    if not token:
+        return []
+    try:
+        parsed = json.loads(token)
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(parsed, list):
+        return []
+    steps: List[BrowserDownloadRouteStep] = []
+    for index, item in enumerate(parsed):
+        if not isinstance(item, dict):
+            continue
+        try:
+            steps.append(
+                BrowserDownloadRouteStep(
+                    schema_version=str(item.get("schema_version") or "1.0"),
+                    index=int(item.get("index") if item.get("index") is not None else index),
+                    action=str(item.get("action") or "").strip(),
+                    target_text=str(item.get("target_text") or "").strip(),
+                    target_role=str(item.get("target_role") or "").strip(),
+                    target_url=str(item.get("target_url") or "").strip(),
+                    result=str(item.get("result") or "").strip(),
+                )
+            )
+        except (TypeError, ValueError):
+            continue
+    return steps
+
+
+def _serialize_confirmation_evidence(
+    evidence: BrowserDownloadConfirmationEvidence,
+) -> str:
+    return json.dumps(
+        asdict(evidence),
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def _parse_confirmation_evidence(
+    payload: Optional[str],
+    *,
+    final_page_url: str = "",
+) -> BrowserDownloadConfirmationEvidence:
+    token = str(payload or "").strip()
+    if not token:
+        return _empty_confirmation_evidence(final_page_url=final_page_url)
+    try:
+        parsed = json.loads(token)
+    except json.JSONDecodeError:
+        return _empty_confirmation_evidence(final_page_url=final_page_url)
+    if not isinstance(parsed, dict):
+        return _empty_confirmation_evidence(final_page_url=final_page_url)
+    try:
+        return BrowserDownloadConfirmationEvidence(
+            schema_version=str(parsed.get("schema_version") or "1.0"),
+            url_changed=bool(parsed.get("url_changed")),
+            visible_confirmation_text=str(
+                parsed.get("visible_confirmation_text") or ""
+            ).strip(),
+            submit_button_state=str(parsed.get("submit_button_state") or "").strip()
+            or "unchanged",
+            form_disappeared=bool(parsed.get("form_disappeared")),
+            final_page_url=str(parsed.get("final_page_url") or final_page_url).strip(),
+        )
+    except (TypeError, ValueError):
+        return _empty_confirmation_evidence(final_page_url=final_page_url)
+
+
+def _empty_confirmation_evidence(
+    *,
+    final_page_url: str,
+) -> BrowserDownloadConfirmationEvidence:
+    return BrowserDownloadConfirmationEvidence(
+        schema_version="1.0",
+        url_changed=False,
+        visible_confirmation_text="",
+        submit_button_state="unchanged",
+        form_disappeared=False,
+        final_page_url=final_page_url,
+    )
+
+
+def _route_projection_rank(route_status: str, outcome: str) -> int:
+    normalized_status = str(route_status or "").strip().lower()
+    normalized_outcome = str(outcome or "").strip().lower()
+    if normalized_status == "verified" and normalized_outcome == "downloaded":
+        return 5
+    if normalized_status == "verified" and normalized_outcome == "email_requested":
+        return 4
+    if normalized_status == "inferred" and normalized_outcome == "downloaded":
+        return 3
+    if normalized_status == "inferred" and normalized_outcome == "email_requested":
+        return 2
+    if normalized_outcome == "email_required":
+        return 1
+    return 0
+
+
+def _bool_from_db(value: object) -> bool:
+    return bool(int(value or 0))
+
+
+def _parse_json_string_list(payload: Optional[str]) -> List[str]:
+    token = str(payload or "").strip()
+    if not token:
+        return []
+    try:
+        parsed = json.loads(token)
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(parsed, list):
+        return []
+    return clean_string_list(parsed)
 
 
 def _ensure_publishers_schema(conn: sqlite3.Connection) -> None:
@@ -1737,6 +1899,99 @@ def get_publisher_download_route(
         )
     )
     with _metadata_conn(db_path) as conn:
+        history_rows = conn.execute(
+            """
+            SELECT
+                source_url,
+                route_kind,
+                route_summary,
+                outcome,
+                route_family,
+                route_status,
+                resolved_target_url,
+                route_steps_json,
+                confirmation_evidence_json,
+                browser_had_structured_result,
+                used_candidate_pdf_url,
+                used_candidate_source_page,
+                candidate_pdf_url,
+                candidate_source_page_urls_json,
+                candidate_discovery_provenances_json,
+                publisher_discovery_route_kind,
+                publisher_recommended_discovery_route_kind,
+                last_downloaded_file_path,
+                last_final_page_url,
+                updated_at
+            FROM publisher_download_route_history
+            WHERE normalized_url = ?
+            ORDER BY updated_at DESC, id DESC
+            """,
+            (normalized_url,),
+        ).fetchall()
+        best_history_row = None
+        best_history_rank = -1
+        for row in history_rows:
+            rank = _route_projection_rank(str(row[5] or "").strip(), str(row[3] or "").strip())
+            if rank > best_history_rank:
+                best_history_row = row
+                best_history_rank = rank
+        if best_history_row is not None:
+            response = PublisherDownloadRouteResponse(
+                schema_version="1.0",
+                normalized_url=normalized_url,
+                source_url=str(best_history_row[0] or "").strip(),
+                route_kind=str(best_history_row[1] or "").strip(),
+                route_summary=str(best_history_row[2] or "").strip(),
+                outcome=str(best_history_row[3] or "").strip(),
+                route_family=str(best_history_row[4] or "").strip(),
+                route_status=str(best_history_row[5] or "").strip() or "inferred",
+                resolved_target_url=str(best_history_row[6] or "").strip(),
+                route_steps=_parse_route_steps(
+                    str(best_history_row[7] or "").strip() or None
+                ),
+                confirmation_evidence=_parse_confirmation_evidence(
+                    str(best_history_row[8] or "").strip() or None,
+                    final_page_url=str(best_history_row[18] or "").strip(),
+                ),
+                browser_had_structured_result=_bool_from_db(best_history_row[9]),
+                used_candidate_pdf_url=_bool_from_db(best_history_row[10]),
+                used_candidate_source_page=_bool_from_db(best_history_row[11]),
+                updated_at=int(best_history_row[19] or 0),
+                candidate_pdf_url=str(best_history_row[12] or "").strip() or None,
+                candidate_source_page_urls=_parse_json_string_list(
+                    str(best_history_row[13] or "").strip() or None
+                ),
+                candidate_discovery_provenances=_parse_json_string_list(
+                    str(best_history_row[14] or "").strip() or None
+                ),
+                publisher_discovery_route_kind=str(best_history_row[15] or "").strip()
+                or None,
+                publisher_recommended_discovery_route_kind=str(best_history_row[16] or "").strip()
+                or None,
+                last_downloaded_file_path=str(best_history_row[17] or "").strip()
+                or None,
+                last_final_page_url=str(best_history_row[18] or "").strip() or None,
+            )
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="publisher_route_get_complete",
+                    module=logger.name,
+                    fields={
+                        "db_path": db_path,
+                        "normalized_url": normalized_url,
+                        "found": True,
+                        "source_url": response.source_url,
+                        "route_kind": response.route_kind,
+                        "route_family": response.route_family,
+                        "route_status": response.route_status,
+                        "outcome": response.outcome,
+                        "history_backed": True,
+                    },
+                )
+            )
+            return response
         rows = conn.execute(
             """
             SELECT
@@ -1759,16 +2014,39 @@ def get_publisher_download_route(
             continue
         if normalize_url(insights_url) != normalized_url:
             continue
+        legacy_final_page_url = str(row[5] or "").strip()
+        legacy_outcome = str(row[3] or "").strip()
         response = PublisherDownloadRouteResponse(
             schema_version="1.0",
             normalized_url=normalized_url,
             source_url=insights_url,
             route_kind=str(row[1] or "").strip(),
             route_summary=str(row[2] or "").strip(),
-            outcome=str(row[3] or "").strip(),
+            outcome=legacy_outcome,
+            route_family=(
+                "browser_email_form"
+                if str(row[1] or "").strip() == "email_delivery"
+                else "browser_pdf_click"
+            ),
+            route_status=(
+                "verified" if legacy_outcome in {"downloaded", "email_requested"} else "inferred"
+            ),
+            resolved_target_url=legacy_final_page_url or insights_url,
+            route_steps=[],
+            confirmation_evidence=_empty_confirmation_evidence(
+                final_page_url=legacy_final_page_url
+            ),
+            browser_had_structured_result=False,
+            used_candidate_pdf_url=False,
+            used_candidate_source_page=False,
             updated_at=int(row[6] or 0),
+            candidate_pdf_url=None,
+            candidate_source_page_urls=[],
+            candidate_discovery_provenances=[],
+            publisher_discovery_route_kind=None,
+            publisher_recommended_discovery_route_kind=None,
             last_downloaded_file_path=str(row[4] or "").strip() or None,
-            last_final_page_url=str(row[5] or "").strip() or None,
+            last_final_page_url=legacy_final_page_url or None,
         )
         logger.info(
             log_event(
@@ -1782,7 +2060,10 @@ def get_publisher_download_route(
                     "found": True,
                     "source_url": response.source_url,
                     "route_kind": response.route_kind,
+                    "route_family": response.route_family,
+                    "route_status": response.route_status,
                     "outcome": response.outcome,
+                    "history_backed": False,
                 },
             )
         )
@@ -1809,6 +2090,9 @@ def record_publisher_download_route(
     route_kind = request.route_kind.strip()
     route_summary = request.route_summary.strip()
     outcome = request.outcome.strip()
+    route_family = request.route_family.strip()
+    route_status = request.route_status.strip()
+    resolved_target_url = request.resolved_target_url.strip()
     last_downloaded_file_path = (
         request.last_downloaded_file_path.strip()
         if request.last_downloaded_file_path and request.last_downloaded_file_path.strip()
@@ -1861,6 +2145,27 @@ def record_publisher_download_route(
             retryable=False,
             severity="error",
         )
+    if not route_family:
+        raise AppError(
+            code="publisher_route_family_missing",
+            message="route_family is required for publisher route recording",
+            retryable=False,
+            severity="error",
+        )
+    if not route_status:
+        raise AppError(
+            code="publisher_route_status_missing",
+            message="route_status is required for publisher route recording",
+            retryable=False,
+            severity="error",
+        )
+    if not resolved_target_url:
+        raise AppError(
+            code="publisher_route_resolved_target_missing",
+            message="resolved_target_url is required for publisher route recording",
+            retryable=False,
+            severity="error",
+        )
     logger.info(
         log_event(
             ctx,
@@ -1872,12 +2177,111 @@ def record_publisher_download_route(
                 "normalized_url": normalized_url,
                 "source_url": source_url,
                 "route_kind": route_kind,
+                "route_family": route_family,
+                "route_status": route_status,
                 "outcome": outcome,
             },
         )
     )
     try:
         with _metadata_conn(db_path) as conn:
+            conn.execute(
+                """
+                INSERT INTO publisher_download_route_history(
+                    normalized_url,
+                    source_url,
+                    route_kind,
+                    route_summary,
+                    outcome,
+                    route_family,
+                    route_status,
+                    resolved_target_url,
+                    route_steps_json,
+                    confirmation_evidence_json,
+                    browser_had_structured_result,
+                    used_candidate_pdf_url,
+                    used_candidate_source_page,
+                    candidate_pdf_url,
+                    candidate_source_page_urls_json,
+                    candidate_discovery_provenances_json,
+                    publisher_discovery_route_kind,
+                    publisher_recommended_discovery_route_kind,
+                    last_downloaded_file_path,
+                    last_final_page_url
+                )
+                VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    normalized_url,
+                    source_url,
+                    route_kind,
+                    route_summary,
+                    outcome,
+                    route_family,
+                    route_status,
+                    resolved_target_url,
+                    _serialize_route_steps(request.route_steps),
+                    _serialize_confirmation_evidence(request.confirmation_evidence),
+                    1 if request.browser_had_structured_result else 0,
+                    1 if request.used_candidate_pdf_url else 0,
+                    1 if request.used_candidate_source_page else 0,
+                    str(request.candidate_pdf_url or "").strip() or None,
+                    json.dumps(
+                        clean_string_list(request.candidate_source_page_urls),
+                        ensure_ascii=False,
+                        separators=(",", ":"),
+                    ),
+                    json.dumps(
+                        clean_string_list(request.candidate_discovery_provenances),
+                        ensure_ascii=False,
+                        separators=(",", ":"),
+                    ),
+                    str(request.publisher_discovery_route_kind or "").strip() or None,
+                    str(request.publisher_recommended_discovery_route_kind or "").strip()
+                    or None,
+                    last_downloaded_file_path,
+                    last_final_page_url,
+                ),
+            )
+            best_history_row = conn.execute(
+                """
+                SELECT
+                    source_url,
+                    route_kind,
+                    route_summary,
+                    outcome,
+                    route_family,
+                    route_status,
+                    resolved_target_url,
+                    last_downloaded_file_path,
+                    last_final_page_url
+                FROM publisher_download_route_history
+                WHERE normalized_url = ?
+                ORDER BY updated_at DESC, id DESC
+                """,
+                (normalized_url,),
+            ).fetchall()
+            best_projection = None
+            best_rank = -1
+            for row in best_history_row:
+                rank = _route_projection_rank(
+                    str(row[5] or "").strip(),
+                    str(row[3] or "").strip(),
+                )
+                if rank > best_rank:
+                    best_projection = row
+                    best_rank = rank
+            if best_projection is not None:
+                source_url = str(best_projection[0] or "").strip() or source_url
+                route_kind = str(best_projection[1] or "").strip() or route_kind
+                route_summary = str(best_projection[2] or "").strip() or route_summary
+                outcome = str(best_projection[3] or "").strip() or outcome
+                last_downloaded_file_path = (
+                    str(best_projection[7] or "").strip() or last_downloaded_file_path
+                )
+                last_final_page_url = (
+                    str(best_projection[8] or "").strip() or last_final_page_url
+                )
             matched_id: Optional[int] = None
             rows = conn.execute(
                 "SELECT id, insights_url FROM publishers WHERE insights_url <> '' ORDER BY id ASC"
@@ -1961,6 +2365,8 @@ def record_publisher_download_route(
                 "normalized_url": normalized_url,
                 "source_url": source_url,
                 "route_kind": route_kind,
+                "route_family": route_family,
+                "route_status": route_status,
                 "outcome": outcome,
             },
         )

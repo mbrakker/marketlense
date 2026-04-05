@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 
+from src.contracts.publisher_inventory import PublisherInventoryCandidateTrace
+
 
 @dataclass(frozen=True)
 class BrowserDownloadIdentityField:
@@ -144,6 +146,53 @@ class BrowserDownloadSettings:
 
 
 @dataclass(frozen=True)
+class BrowserDownloadRouteStep:
+    schema_version: str = field(
+        metadata={"doc": "Browser download route-step schema version."}
+    )
+    index: int = field(
+        metadata={"doc": "Zero-based step index in the observed route execution trace."}
+    )
+    action: str = field(
+        metadata={"doc": "Observed action kind, for example `open`, `click`, `fill`, or `submit`."}
+    )
+    target_text: str = field(
+        metadata={"doc": "Human-readable target label, URL fragment, or visible copy for the step."}
+    )
+    target_role: str = field(
+        metadata={"doc": "Observed target role, for example `button`, `link`, `form`, or `page`."}
+    )
+    target_url: str = field(
+        metadata={"doc": "Resolved target URL associated with the step when known, else empty string."}
+    )
+    result: str = field(
+        metadata={"doc": "Observed outcome of the step, for example `opened`, `submitted`, or `downloaded`."}
+    )
+
+
+@dataclass(frozen=True)
+class BrowserDownloadConfirmationEvidence:
+    schema_version: str = field(
+        metadata={"doc": "Browser download confirmation-evidence schema version."}
+    )
+    url_changed: bool = field(
+        metadata={"doc": "Whether the page URL changed after the relevant route action."}
+    )
+    visible_confirmation_text: str = field(
+        metadata={"doc": "Visible confirmation or status text observed after the relevant route action, else empty string."}
+    )
+    submit_button_state: str = field(
+        metadata={"doc": "Observed submit-button state after submission, for example `unchanged`, `disabled`, or `replaced`."}
+    )
+    form_disappeared: bool = field(
+        metadata={"doc": "Whether the form disappeared after a submission attempt."}
+    )
+    final_page_url: str = field(
+        metadata={"doc": "Final page URL associated with the captured confirmation evidence."}
+    )
+
+
+@dataclass(frozen=True)
 class BrowserReportDownloadRequest:
     schema_version: str = field(
         metadata={"doc": "Browser report download request schema version."}
@@ -172,6 +221,42 @@ class BrowserReportDownloadRequest:
             "doc": "Previously observed route kind (`pdf_download` or `email_delivery`) when available."
         },
     )
+    candidate_trace: Optional[PublisherInventoryCandidateTrace] = field(
+        default=None,
+        metadata={
+            "doc": "Optional discovery-phase candidate trace reused to plan and verify the download route."
+        },
+    )
+    publisher_discovery_route_kind: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Optional publisher-level discovery route kind from the inventory/diff phase."
+        },
+    )
+    publisher_recommended_discovery_route_kind: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Optional publisher-level recommended discovery route kind from the inventory/diff phase."
+        },
+    )
+    attempt_url: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Optional execution URL chosen by the download planner for this attempt when it differs from the source URL."
+        },
+    )
+    route_family_hint: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Optional planned route family for this attempt, for example `direct_pdf_probe` or `browser_email_form`."
+        },
+    )
+    source_page_url_hint: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Optional discovery source page URL to revisit when the candidate URL is thin, gated, or tracker-like."
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -186,6 +271,12 @@ class BrowserReportDownloadResult:
     route_kind: str = field(
         metadata={"doc": "Detected delivery path: `pdf_download` or `email_delivery`."}
     )
+    route_family: str = field(
+        metadata={"doc": "Planned or observed route family that produced the result, for example `direct_pdf_probe` or `browser_email_form`."}
+    )
+    route_status: str = field(
+        metadata={"doc": "Verification status for the route result, for example `verified` or `inferred`."}
+    )
     outcome: str = field(
         metadata={
             "doc": "Observed outcome: `downloaded`, `email_requested`, or `email_required`."
@@ -197,8 +288,26 @@ class BrowserReportDownloadResult:
     final_page_url: str = field(
         metadata={"doc": "Final browser URL after the agent finished."}
     )
+    resolved_target_url: str = field(
+        metadata={"doc": "Resolved target URL that produced the final artifact or email form state."}
+    )
     used_route_hint: bool = field(
         metadata={"doc": "Whether the execution used a previously stored route hint."}
+    )
+    route_steps: list[BrowserDownloadRouteStep] = field(
+        metadata={"doc": "Structured route execution trace captured for reuse and verification."}
+    )
+    confirmation_evidence: BrowserDownloadConfirmationEvidence = field(
+        metadata={"doc": "Structured confirmation evidence captured for email-gated or ambiguous routes."}
+    )
+    browser_had_structured_result: bool = field(
+        metadata={"doc": "Whether browser-use returned a structured JSON result instead of requiring fallback salvage."}
+    )
+    used_candidate_pdf_url: bool = field(
+        metadata={"doc": "Whether the result reused a discovery-provided candidate PDF URL."}
+    )
+    used_candidate_source_page: bool = field(
+        metadata={"doc": "Whether the result reused a discovery-provided candidate source page URL."}
     )
     encountered_form_fields: list[str] = field(
         default_factory=list,
@@ -227,6 +336,107 @@ class BrowserReportDownloadResult:
 
 
 @dataclass(frozen=True)
+class ReportDownloadRoutePlanStep:
+    schema_version: str = field(
+        metadata={"doc": "Report download route-plan step schema version."}
+    )
+    step_name: str = field(
+        metadata={"doc": "Stable orchestrator step name for this route attempt."}
+    )
+    route_family: str = field(
+        metadata={"doc": "Planned route family for this attempt, for example `direct_pdf_probe` or `browser_email_form`."}
+    )
+    attempt_url: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Concrete URL the service should attempt first for this route step when known."},
+    )
+    route_hint: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Previously successful route summary reused for this attempt when available."},
+    )
+    route_kind_hint: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Previously observed route kind reused for this attempt when available."},
+    )
+    source_page_url_hint: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Discovery source page URL to revisit when the candidate URL is thin, gated, or tracker-like."},
+    )
+    uses_memory_route: bool = field(
+        default=False,
+        metadata={"doc": "Whether this step reuses remembered route memory."},
+    )
+    fallback_on_retryable_error: bool = field(
+        default=False,
+        metadata={"doc": "Whether the orchestrator should continue to the next planned step when this attempt fails with a retryable error."},
+    )
+
+
+@dataclass(frozen=True)
+class ReportDownloadRoutePlanRequest:
+    schema_version: str = field(
+        metadata={"doc": "Report download route-plan request schema version."}
+    )
+    normalized_url: str = field(
+        metadata={"doc": "Normalized candidate URL used as the route-memory key."}
+    )
+    remembered_route: Optional["PublisherDownloadRouteMemory"] = field(
+        default=None,
+        metadata={"doc": "Previously remembered download route when available."},
+    )
+    candidate_trace: Optional[PublisherInventoryCandidateTrace] = field(
+        default=None,
+        metadata={"doc": "Optional discovery-phase candidate trace reused to choose and verify route order."},
+    )
+    publisher_discovery_route_kind: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Optional publisher-level discovery route kind from the inventory/diff phase."},
+    )
+    publisher_recommended_discovery_route_kind: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Optional publisher-level recommended discovery route kind from the inventory/diff phase."},
+    )
+
+
+@dataclass(frozen=True)
+class ReportDownloadRoutePlanResponse:
+    schema_version: str = field(
+        metadata={"doc": "Report download route-plan response schema version."}
+    )
+    steps: list[ReportDownloadRoutePlanStep] = field(
+        metadata={"doc": "Ordered download attempts the orchestrator should execute."}
+    )
+    planning_reason: str = field(
+        metadata={"doc": "Short human-readable explanation of why this route order was chosen."}
+    )
+
+
+@dataclass(frozen=True)
+class PublisherDownloadRouteMemory:
+    schema_version: str = field(
+        metadata={"doc": "Publisher remembered download-route schema version."}
+    )
+    route_kind: str = field(
+        metadata={"doc": "Remembered route kind previously observed for this URL."}
+    )
+    route_summary: str = field(
+        metadata={"doc": "Remembered route summary previously observed for this URL."}
+    )
+    outcome: str = field(
+        metadata={"doc": "Remembered route outcome previously observed for this URL."}
+    )
+    route_family: str = field(
+        metadata={"doc": "Remembered route family previously observed for this URL."}
+    )
+    route_status: str = field(
+        metadata={"doc": "Remembered route verification status previously observed for this URL."}
+    )
+    resolved_target_url: str = field(
+        metadata={"doc": "Remembered resolved target URL for this route."}
+    )
+
+
+@dataclass(frozen=True)
 class ReportDownloadOrchestratorRequest:
     schema_version: str = field(
         metadata={"doc": "Report download orchestrator request schema version."}
@@ -247,6 +457,24 @@ class ReportDownloadOrchestratorRequest:
             "doc": "Optional email address used when a report can only be delivered by email."
         },
     )
+    candidate_trace: Optional[PublisherInventoryCandidateTrace] = field(
+        default=None,
+        metadata={
+            "doc": "Optional discovery-phase candidate trace reused to choose and verify the download route."
+        },
+    )
+    publisher_discovery_route_kind: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Optional publisher-level discovery route kind from the inventory/diff phase."
+        },
+    )
+    publisher_recommended_discovery_route_kind: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Optional publisher-level recommended discovery route kind from the inventory/diff phase."
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -261,6 +489,12 @@ class ReportDownloadOrchestratorResult:
     route_kind: str = field(
         metadata={"doc": "Detected delivery path: `pdf_download` or `email_delivery`."}
     )
+    route_family: str = field(
+        metadata={"doc": "Planned or observed route family that produced the result, for example `direct_pdf_probe` or `browser_email_form`."}
+    )
+    route_status: str = field(
+        metadata={"doc": "Verification status for the route result, for example `verified` or `inferred`."}
+    )
     outcome: str = field(
         metadata={
             "doc": "Observed outcome: `downloaded`, `email_requested`, or `email_required`."
@@ -272,10 +506,28 @@ class ReportDownloadOrchestratorResult:
     final_page_url: str = field(
         metadata={"doc": "Final browser URL after orchestration completed."}
     )
+    resolved_target_url: str = field(
+        metadata={"doc": "Resolved target URL that produced the final artifact or email form state."}
+    )
     used_memory_route: bool = field(
         metadata={
             "doc": "Whether a remembered route hint was used on the successful run."
         }
+    )
+    route_steps: list[BrowserDownloadRouteStep] = field(
+        metadata={"doc": "Structured route execution trace captured for reuse and verification."}
+    )
+    confirmation_evidence: BrowserDownloadConfirmationEvidence = field(
+        metadata={"doc": "Structured confirmation evidence captured for email-gated or ambiguous routes."}
+    )
+    browser_had_structured_result: bool = field(
+        metadata={"doc": "Whether browser-use returned a structured JSON result instead of requiring fallback salvage."}
+    )
+    used_candidate_pdf_url: bool = field(
+        metadata={"doc": "Whether the result reused a discovery-provided candidate PDF URL."}
+    )
+    used_candidate_source_page: bool = field(
+        metadata={"doc": "Whether the result reused a discovery-provided candidate source page URL."}
     )
     encountered_form_fields: list[str] = field(
         default_factory=list,

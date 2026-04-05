@@ -1,5 +1,7 @@
 text: |
-  Open this exact URL: {{ normalized_url }}
+  The original candidate URL for memory and storage is: {{ normalized_url }}
+
+  Open this exact execution URL first: {{ execution_url }}
 
   Find the report acquisition path on the page and complete the route.
 
@@ -14,5 +16,7 @@ text: |
   {{ route_hint_text }}
 
   {{ delivery_instruction }}
+
+  {{ discovery_context }}
 
   Do not return free text outside the structured result.
