@@ -15,6 +15,8 @@ from src.contracts.browser_download import (
     BrowserDownloadSettings,
     BrowserReportDownloadRequest,
 )
+from src.services._browser_report_download import browser as browser_runtime
+from src.services._browser_report_download import http as http_runtime
 from src.services import browser_report_download_service as service
 from src.utils.errors import AppError
 
@@ -183,7 +185,7 @@ def test_download_report_with_browser_use_returns_downloaded_pdf(
         email_submission_completed=None,
     )
     external_boundary_mocks_only.setattr(
-        service,
+        browser_runtime,
         "import_module",
         lambda module_name: runtime,
     )
@@ -228,9 +230,9 @@ def test_download_report_with_browser_use_short_circuits_direct_pdf_url(
     def fail_if_browser_loaded(module_name: str) -> Any:
         raise AssertionError(f"browser runtime should not load for direct pdf URL: {module_name}")
 
-    external_boundary_mocks_only.setattr(service.requests, "get", fake_get)
+    external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
     external_boundary_mocks_only.setattr(
-        service,
+        browser_runtime,
         "import_module",
         fail_if_browser_loaded,
     )
@@ -285,8 +287,12 @@ def test_download_report_with_browser_use_falls_back_from_invalid_direct_pdf(
         browser_loaded["value"] = True
         return runtime
 
-    external_boundary_mocks_only.setattr(service.requests, "get", fake_get)
-    external_boundary_mocks_only.setattr(service, "import_module", load_runtime)
+    external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        load_runtime,
+    )
 
     response = service.download_report_with_browser_use(
         BrowserReportDownloadRequest(
@@ -349,7 +355,7 @@ def test_download_report_with_browser_use_fetches_real_pdf_from_wrapper(
 
     runtime.Agent = WrapperAgent
     external_boundary_mocks_only.setattr(
-        service,
+        browser_runtime,
         "import_module",
         lambda module_name: runtime,
     )
@@ -360,7 +366,7 @@ def test_download_report_with_browser_use_fetches_real_pdf_from_wrapper(
             headers={"Content-Type": "application/pdf"},
         )
 
-    external_boundary_mocks_only.setattr(service.requests, "get", fake_get)
+    external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
 
     response = service.download_report_with_browser_use(
         BrowserReportDownloadRequest(
@@ -394,7 +400,7 @@ def test_download_report_with_browser_use_returns_email_required_without_address
         email_submission_completed=False,
     )
     external_boundary_mocks_only.setattr(
-        service,
+        browser_runtime,
         "import_module",
         lambda module_name: runtime,
     )
@@ -428,7 +434,7 @@ def test_download_report_with_browser_use_returns_encountered_form_fields(
         email_submission_completed=False,
     )
     external_boundary_mocks_only.setattr(
-        service,
+        browser_runtime,
         "import_module",
         lambda module_name: runtime,
     )
@@ -480,7 +486,7 @@ def test_download_report_with_browser_use_reclassifies_email_message(
         email_submission_completed=True,
     )
     external_boundary_mocks_only.setattr(
-        service,
+        browser_runtime,
         "import_module",
         lambda module_name: runtime,
     )
@@ -544,7 +550,7 @@ def test_download_report_with_browser_use_requires_semantic_route_summary(
         email_submission_completed=None,
     )
     external_boundary_mocks_only.setattr(
-        service,
+        browser_runtime,
         "import_module",
         lambda module_name: runtime,
     )
@@ -580,7 +586,7 @@ def test_download_report_with_browser_use_requires_visible_email_confirmation(
         email_submission_completed=True,
     )
     external_boundary_mocks_only.setattr(
-        service,
+        browser_runtime,
         "import_module",
         lambda module_name: runtime,
     )
@@ -631,7 +637,7 @@ def test_download_report_with_browser_use_rejects_conflicting_pdf_metadata(
 
     runtime.Agent = ConflictingMimeAgent
     external_boundary_mocks_only.setattr(
-        service,
+        browser_runtime,
         "import_module",
         lambda module_name: runtime,
     )
@@ -667,7 +673,7 @@ def test_download_report_with_browser_use_raises_when_pdf_classification_has_no_
         email_submission_completed=None,
     )
     external_boundary_mocks_only.setattr(
-        service,
+        browser_runtime,
         "import_module",
         lambda module_name: runtime,
     )
@@ -725,7 +731,7 @@ def test_download_report_with_browser_use_raises_for_invalid_pdf_stub(
 
     runtime.Agent = InvalidPdfAgent
     external_boundary_mocks_only.setattr(
-        service,
+        browser_runtime,
         "import_module",
         lambda module_name: runtime,
     )
@@ -745,3 +751,59 @@ def test_download_report_with_browser_use_raises_for_invalid_pdf_stub(
         code="browser_download_invalid_pdf",
         retryable=True,
     )
+
+
+def test_download_report_with_browser_use_direct_pdf_skips_browser_config_requirements(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    def fake_get(*args: Any, **kwargs: Any) -> _FakeResponse:
+        return _FakeResponse(
+            content=b"%PDF-1.7 direct pdf bytes",
+            headers={"Content-Type": "application/pdf"},
+        )
+
+    def fail_if_browser_loaded(module_name: str) -> Any:
+        raise AssertionError(
+            f"browser runtime should not load for direct pdf URL: {module_name}"
+        )
+
+    external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        fail_if_browser_loaded,
+    )
+    settings = _settings(tmp_path)
+    settings = BrowserDownloadSettings(
+        schema_version=settings.schema_version,
+        openrouter_api_key="",
+        model="",
+        temperature=settings.temperature,
+        timeout_seconds=settings.timeout_seconds,
+        max_steps=settings.max_steps,
+        output_dir=settings.output_dir,
+        state_db=settings.state_db,
+        reports_db=settings.reports_db,
+        identity_config_path=settings.identity_config_path,
+        identity_profile=settings.identity_profile,
+        openrouter_http_referer=settings.openrouter_http_referer,
+        headed=settings.headed,
+        retry_retries=settings.retry_retries,
+        retry_base_delay_seconds=settings.retry_base_delay_seconds,
+        retry_backoff_step_seconds=settings.retry_backoff_step_seconds,
+        retry_jitter_seconds=settings.retry_jitter_seconds,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://cdn.example.com/reports/outlook-2026.pdf",
+            settings=settings,
+        ),
+        run_context,
+    )
+
+    assert response.outcome == "downloaded"
+    assert response.downloaded_file_path is not None

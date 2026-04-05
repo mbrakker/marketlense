@@ -1,0 +1,18 @@
+text: |
+  Open this exact URL: {{ normalized_url }}
+
+  Find the report acquisition path on the page and complete the route.
+
+  The browser downloads directory for this run is: {{ download_dir }}
+
+  When a PDF is downloaded, include the absolute `downloaded_file_path`, `downloaded_file_name`, and `downloaded_mime_type` when known.
+
+  Always return a concise `route_summary` describing the successful clicks or form steps so the system can reuse it later.
+
+  {{ identity_prompt }}
+
+  {{ route_hint_text }}
+
+  {{ delivery_instruction }}
+
+  Do not return free text outside the structured result.

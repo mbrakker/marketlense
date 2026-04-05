@@ -1,0 +1,372 @@
+from __future__ import annotations
+
+import logging
+import mimetypes
+import re
+from dataclasses import asdict
+from pathlib import Path
+from urllib.parse import urljoin, urlsplit
+
+import requests
+
+from src.contracts.browser_download import (
+    BrowserReportDownloadRequest,
+    BrowserReportDownloadResult,
+)
+from src.contracts.run_context import RunContext
+from src.utils.errors import AppError
+from src.utils.logging import log_event
+
+logger = logging.getLogger("market_lense.browser_report_download_service")
+
+_PDF_SIGNATURE = b"%PDF-"
+_PDF_URL_PATTERN = re.compile(
+    r"""(?P<quote>['"])(?P<url>[^'"]+?\.pdf(?:\?[^'"]*)?)(?P=quote)""",
+    re.IGNORECASE,
+)
+_PDF_MIME_TYPES = {
+    "application/pdf",
+    "application/x-pdf",
+}
+_PDF_BINARY_FALLBACK_MIME_TYPES = {
+    "application/octet-stream",
+    "binary/octet-stream",
+}
+_PDF_FETCH_HEADERS = {
+    "Accept": "application/pdf,application/octet-stream;q=0.9,*/*;q=0.8",
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+    ),
+}
+
+
+def try_direct_pdf_download(
+    *,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    normalized_url: str,
+    download_dir: Path,
+) -> BrowserReportDownloadResult | None:
+    destination_name = Path(urlsplit(normalized_url).path).name or "download.pdf"
+    destination_path = download_dir / destination_name
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_direct_pdf_attempt_start",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "destination_path": str(destination_path),
+            },
+        )
+    )
+    try:
+        download_pdf_from_url(
+            pdf_url=normalized_url,
+            destination_path=destination_path,
+            timeout_seconds=request.settings.timeout_seconds,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+        downloaded_mime_type = resolve_downloaded_mime_type(
+            reported_mime_type=None,
+            downloaded_path=destination_path,
+        )
+        validate_downloaded_pdf_artifact(
+            downloaded_path=destination_path,
+            downloaded_mime_type=downloaded_mime_type,
+            normalized_url=normalized_url,
+        )
+    except AppError as exc:
+        destination_path.unlink(missing_ok=True)
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_direct_pdf_attempt_fallback",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "error_code": exc.code,
+                    "error_message": exc.message,
+                },
+            )
+        )
+        if not exc.retryable:
+            raise
+        return None
+
+    response = BrowserReportDownloadResult(
+        schema_version="1.0",
+        source_url=request.url,
+        normalized_url=normalized_url,
+        route_kind="pdf_download",
+        outcome="downloaded",
+        route_summary="Open the direct PDF URL and save the returned PDF file locally.",
+        final_page_url=normalized_url,
+        used_route_hint=False,
+        encountered_form_fields=[],
+        downloaded_file_path=str(destination_path),
+        downloaded_file_name=destination_path.name,
+        downloaded_mime_type=resolve_downloaded_mime_type(
+            reported_mime_type=None,
+            downloaded_path=destination_path,
+        ),
+        downloaded_size_bytes=destination_path.stat().st_size,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_direct_pdf_attempt_complete",
+            module=logger.name,
+            fields=asdict(response),
+        )
+    )
+    return response
+
+
+def ensure_downloaded_pdf(
+    *,
+    downloaded_path: Path | None,
+    ctx: RunContext,
+    normalized_url: str,
+    document_url: str,
+    timeout_seconds: float,
+) -> Path | None:
+    if downloaded_path is None:
+        return None
+    if is_pdf_file(downloaded_path):
+        return downloaded_path
+
+    wrapper_html = _read_text_if_small(downloaded_path, max_bytes=64 * 1024)
+    embedded_pdf_url = _extract_embedded_pdf_url(
+        wrapper_html=wrapper_html,
+        document_url=document_url,
+    )
+    if embedded_pdf_url:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_wrapper_detected",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "downloaded_file_path": str(downloaded_path),
+                    "embedded_pdf_url": embedded_pdf_url,
+                },
+            )
+        )
+        download_pdf_from_url(
+            pdf_url=embedded_pdf_url,
+            destination_path=downloaded_path,
+            timeout_seconds=timeout_seconds,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+        if is_pdf_file(downloaded_path):
+            return downloaded_path
+
+    raise AppError(
+        code="browser_download_invalid_pdf",
+        message="Downloaded file is not a valid PDF",
+        retryable=True,
+        context={
+            "normalized_url": normalized_url,
+            "downloaded_file_path": str(downloaded_path),
+            "document_url": document_url,
+        },
+    )
+
+
+def resolve_downloaded_mime_type(
+    *,
+    reported_mime_type: str | None,
+    downloaded_path: Path | None,
+) -> str | None:
+    reported = str(reported_mime_type or "").strip().lower() or None
+    guessed = _guess_mime_type(downloaded_path)
+    if guessed == "application/pdf":
+        if (
+            reported
+            and reported not in _PDF_MIME_TYPES
+            and reported not in _PDF_BINARY_FALLBACK_MIME_TYPES
+        ):
+            return reported
+        return guessed
+    return reported or guessed
+
+
+def validate_downloaded_pdf_artifact(
+    *,
+    downloaded_path: Path | None,
+    downloaded_mime_type: str | None,
+    normalized_url: str,
+) -> None:
+    if downloaded_path is None:
+        return
+    if not is_pdf_file(downloaded_path):
+        raise AppError(
+            code="browser_download_invalid_pdf",
+            message="Downloaded file is not a valid PDF",
+            retryable=True,
+            context={
+                "normalized_url": normalized_url,
+                "downloaded_file_path": str(downloaded_path),
+            },
+        )
+    lowered_mime = str(downloaded_mime_type or "").strip().lower()
+    if (
+        lowered_mime
+        and lowered_mime not in _PDF_MIME_TYPES
+        and lowered_mime not in _PDF_BINARY_FALLBACK_MIME_TYPES
+    ):
+        raise AppError(
+            code="browser_download_invalid_pdf_metadata",
+            message="Downloaded file metadata does not match a PDF artifact",
+            retryable=True,
+            context={
+                "normalized_url": normalized_url,
+                "downloaded_file_path": str(downloaded_path),
+                "downloaded_mime_type": downloaded_mime_type,
+            },
+        )
+    if (
+        downloaded_path.suffix.lower() != ".pdf"
+        and lowered_mime not in _PDF_MIME_TYPES
+        and lowered_mime not in _PDF_BINARY_FALLBACK_MIME_TYPES
+    ):
+        raise AppError(
+            code="browser_download_invalid_pdf_metadata",
+            message="Downloaded file is missing PDF-identifying metadata",
+            retryable=True,
+            context={
+                "normalized_url": normalized_url,
+                "downloaded_file_path": str(downloaded_path),
+                "downloaded_mime_type": downloaded_mime_type,
+            },
+        )
+
+
+def is_pdf_file(path: Path) -> bool:
+    try:
+        with path.open("rb") as handle:
+            return handle.read(len(_PDF_SIGNATURE)) == _PDF_SIGNATURE
+    except OSError:
+        return False
+
+
+def download_pdf_from_url(
+    *,
+    pdf_url: str,
+    destination_path: Path,
+    timeout_seconds: float,
+    ctx: RunContext,
+    normalized_url: str,
+) -> None:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_pdf_fetch_start",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "pdf_url": pdf_url,
+                "destination_path": str(destination_path),
+            },
+        )
+    )
+    temp_path = destination_path.with_suffix(destination_path.suffix + ".part")
+    try:
+        with requests.get(
+            pdf_url,
+            headers=_PDF_FETCH_HEADERS,
+            stream=True,
+            timeout=timeout_seconds,
+        ) as response:
+            content_type = str(response.headers.get("Content-Type", "")).strip()
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="browser_report_download_pdf_fetch_response",
+                    module=logger.name,
+                    fields={
+                        "normalized_url": normalized_url,
+                        "pdf_url": pdf_url,
+                        "status_code": response.status_code,
+                        "content_type": content_type,
+                    },
+                )
+            )
+            response.raise_for_status()
+            with temp_path.open("wb") as handle:
+                for chunk in response.iter_content(chunk_size=64 * 1024):
+                    if chunk:
+                        handle.write(chunk)
+        temp_path.replace(destination_path)
+    except requests.RequestException as exc:
+        if temp_path.exists():
+            temp_path.unlink(missing_ok=True)
+        raise AppError(
+            code="browser_download_pdf_fetch_failed",
+            message="Failed to fetch the real PDF from the wrapper page",
+            cause=exc,
+            retryable=True,
+            context={
+                "normalized_url": normalized_url,
+                "pdf_url": pdf_url,
+                "destination_path": str(destination_path),
+            },
+        ) from exc
+    except OSError as exc:
+        if temp_path.exists():
+            temp_path.unlink(missing_ok=True)
+        raise AppError(
+            code="browser_download_pdf_write_failed",
+            message="Failed to write the fetched PDF to disk",
+            cause=exc,
+            retryable=True,
+            context={
+                "normalized_url": normalized_url,
+                "pdf_url": pdf_url,
+                "destination_path": str(destination_path),
+            },
+        ) from exc
+
+
+def _guess_mime_type(downloaded_path: Path | None) -> str | None:
+    if downloaded_path is None:
+        return None
+    if is_pdf_file(downloaded_path):
+        return "application/pdf"
+    guessed, _ = mimetypes.guess_type(downloaded_path.name)
+    if guessed:
+        return guessed
+    if downloaded_path.suffix.lower() == ".pdf":
+        return "application/pdf"
+    return None
+
+
+def _read_text_if_small(path: Path, *, max_bytes: int) -> str:
+    try:
+        if path.stat().st_size > max_bytes:
+            return ""
+        return path.read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return ""
+
+
+def _extract_embedded_pdf_url(*, wrapper_html: str, document_url: str) -> str | None:
+    if not wrapper_html:
+        return None
+    for match in _PDF_URL_PATTERN.finditer(wrapper_html):
+        raw_url = str(match.group("url") or "").strip()
+        if not raw_url:
+            continue
+        return urljoin(document_url, raw_url)
+    return None
