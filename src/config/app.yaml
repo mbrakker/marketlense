@@ -137,7 +137,7 @@ publish:
     policy: "block"
 
 browser_download:
-  model: "openrouter/free"
+  model: "google/gemini-2.5-flash-lite"
   identity_config_path: "./browser_download_identity.yaml"
   temperature: 0.0
   timeout_seconds: 360
@@ -151,7 +151,7 @@ browser_download:
     jitter_seconds: 0.25
 
 publisher_discovery:
-  model: "openrouter/free"
+  model: "google/gemini-2.5-flash-lite"
   temperature: 0.0
   timeout_seconds: 360
   max_steps: 30

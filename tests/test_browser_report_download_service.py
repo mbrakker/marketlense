@@ -12,12 +12,15 @@ import requests
 from src.contracts.browser_download import (
     BrowserDownloadIdentity,
     BrowserDownloadIdentityField,
+    BrowserDownloadPublisherOverride,
     BrowserDownloadSettings,
     BrowserReportDownloadRequest,
 )
 from src.contracts.publisher_inventory import PublisherInventoryCandidateTrace
+from src.services._browser_report_download import artifact as artifact_runtime
 from src.services._browser_report_download import browser as browser_runtime
 from src.services._browser_report_download import http as http_runtime
+from src.services._browser_report_download.request import resolve_effective_identity_fields
 from src.services import browser_report_download_service as service
 from src.utils.errors import AppError
 
@@ -96,10 +99,35 @@ def _runtime(
             self.headless = headless
             self.auto_download_pdfs = auto_download_pdfs
             self.url = ""
+            self.title = ""
+            self.html = ""
             self.downloaded_files: list[str] = []
+            self.network_resource_urls: list[str] = []
+            self.network_events: list[dict[str, str]] = []
+            self.dom_candidate_urls: list[str] = []
 
         async def kill(self) -> None:
             return None
+
+        def get_current_page(self):
+            browser = self
+
+            class FakePage:
+                def evaluate(self, script):
+                    if "navigationEntries" in str(script):
+                        if browser.network_events:
+                            return list(browser.network_events)
+                        return list(browser.network_resource_urls)
+                    if "document.querySelectorAll" in str(script):
+                        return list(browser.dom_candidate_urls)
+                    return list(browser.network_resource_urls)
+
+            return FakePage()
+
+        def take_screenshot(self, path=None, full_page=False, format="png", quality=None, clip=None):
+            if path:
+                Path(path).write_bytes(b"fake-screenshot")
+            return b"fake-screenshot"
 
     class FakeChatOpenRouter:
         def __init__(self, **kwargs):
@@ -114,6 +142,8 @@ def _runtime(
 
         def run_sync(self, max_steps: int):
             self.browser.url = "https://example.com/final"
+            self.browser.title = "Example report terminal"
+            self.browser.html = "<html><body><h1>Example report terminal</h1></body></html>"
             download_dir = Path(self.browser.downloads_path)
             download_dir.mkdir(parents=True, exist_ok=True)
             if create_pdf:
@@ -537,6 +567,63 @@ def test_download_report_with_browser_use_reclassifies_email_message(
     assert_no_defaulted_required_fields(response)
 
 
+def test_download_report_with_browser_use_treats_generic_success_text_as_email_requested(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary=(
+            "Filled the form fields and submitted the gated report request."
+        ),
+        create_pdf=False,
+        email_submission_completed=True,
+    )
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    original_runtime = runtime.Agent
+
+    class SuccessTextAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            payload = json.loads(history.final_result())
+            payload["post_submit_message"] = "Thank you for submitting the form."
+            payload["encountered_form_fields"] = [
+                "First Name",
+                "Last Name",
+                "Company Name",
+                "Professional Email",
+                "Business Phone",
+            ]
+
+            class SuccessTextHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return SuccessTextHistory()
+
+    runtime.Agent = SuccessTextAgent
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/form-report",
+            settings=_settings(tmp_path),
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.outcome == "email_requested"
+    assert response.blocked_reason is None
+
+
 def test_download_report_with_browser_use_requires_semantic_route_summary(
     tmp_path: Path,
     run_context,
@@ -573,11 +660,10 @@ def test_download_report_with_browser_use_requires_semantic_route_summary(
     )
 
 
-def test_download_report_with_browser_use_requires_visible_email_confirmation(
+def test_download_report_with_browser_use_returns_email_required_when_confirmation_is_missing(
     tmp_path: Path,
     run_context,
     external_boundary_mocks_only,
-    assert_app_error,
 ) -> None:
     runtime = _runtime(
         tmp_path,
@@ -592,21 +678,18 @@ def test_download_report_with_browser_use_requires_visible_email_confirmation(
         lambda module_name: runtime,
     )
 
-    with pytest.raises(AppError) as excinfo:
-        service.download_report_with_browser_use(
-            BrowserReportDownloadRequest(
-                schema_version="1.0",
-                url="https://example.com/form-report",
-                settings=_settings(tmp_path),
-            ),
-            run_context,
-        )
-
-    assert_app_error(
-        excinfo.value,
-        code="browser_download_email_confirmation_missing",
-        retryable=True,
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/form-report",
+            settings=_settings(tmp_path),
+        ),
+        run_context,
     )
+
+    assert response.route_kind == "email_delivery"
+    assert response.outcome == "email_required"
+    assert response.route_status == "inferred"
 
 
 def test_download_report_with_browser_use_rejects_conflicting_pdf_metadata(
@@ -1060,3 +1143,1821 @@ def test_download_report_with_browser_use_logs_onsite_prompt_guidance(
     assert "on-site content" in fields["route_family_guidance"].casefold()
     assert response.route_kind == "onsite_report"
     assert response.outcome == "captured"
+
+
+def test_download_report_with_browser_use_recovers_embedded_pdf_from_encoded_wrapper(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="Open the landing page and click the wrapped PDF link.",
+        create_pdf=False,
+        email_submission_completed=None,
+    )
+    original_runtime = runtime.Agent
+
+    class EncodedWrapperAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            self.browser.url = "https://example.com/report"
+            self.browser.title = "Wrapped report"
+            download_dir = Path(self.browser.downloads_path)
+            download_dir.mkdir(parents=True, exist_ok=True)
+            wrapper_path = download_dir / "report.pdf"
+            wrapper_path.write_text(
+                (
+                    "<html><body><iframe "
+                    "src=\"/viewer?downloadData=https%3A%2F%2Fcdn.example.com%2Freal-report.pdf\">"
+                    "</iframe></body></html>"
+                ),
+                encoding="utf-8",
+            )
+            self.browser.downloaded_files = [str(wrapper_path)]
+            payload = json.loads(super().run_sync(max_steps).final_result())
+            payload["downloaded_file_path"] = str(wrapper_path)
+            payload["downloaded_file_name"] = wrapper_path.name
+            payload["downloaded_mime_type"] = "application/pdf"
+
+            class EncodedWrapperHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return EncodedWrapperHistory()
+
+    runtime.Agent = EncodedWrapperAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+    external_boundary_mocks_only.setattr(
+        http_runtime.requests,
+        "get",
+        lambda *args, **kwargs: _FakeResponse(
+            content=b"%PDF-1.7 recovered bytes",
+            headers={"Content-Type": "application/pdf"},
+        ),
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=_settings(tmp_path),
+        ),
+        run_context,
+    )
+
+    assert response.outcome == "downloaded"
+    assert response.downloaded_file_path is not None
+    assert Path(str(response.downloaded_file_path)).read_bytes().startswith(b"%PDF-")
+
+
+def test_download_report_with_browser_use_salvages_empty_result_to_email_required(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary="Open the gated report page and inspect the form.",
+        create_pdf=False,
+        email_submission_completed=None,
+    )
+    original_runtime = runtime.Agent
+
+    class EmptyEmailAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            self.browser.url = "https://example.com/gated-report"
+            self.browser.title = "Download the report"
+            self.browser.html = (
+                "<html><body><form>"
+                "<label>Email</label><input name='email' />"
+                "<label>Industry</label><select name='industry'></select>"
+                "<button type='submit'>Submit</button>"
+                "</form></body></html>"
+            )
+
+            class EmptyHistory:
+                def final_result(self_nonlocal) -> str:
+                    return ""
+
+            return EmptyHistory()
+
+    runtime.Agent = EmptyEmailAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/gated-report",
+            settings=_settings(tmp_path, work_email=None),
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.outcome == "email_required"
+    assert response.blocked_reason in {
+        "blocked_missing_identity_field",
+        "blocked_unknown_required_enum",
+    }
+    assert "Email" in response.encountered_form_fields
+
+
+def test_download_report_with_browser_use_normalizes_blocked_route_kind_to_email_delivery(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="blocked_unknown_required_enum",
+        route_summary="",
+        create_pdf=False,
+        email_submission_completed=None,
+    )
+    original_runtime = runtime.Agent
+
+    class BlockedKindAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            self.browser.url = "https://example.com/gated-report"
+            self.browser.title = "Download report"
+            self.browser.html = (
+                "<html><body><form>"
+                "<label>Industry</label><select name='industry'></select>"
+                "<button type='submit'>Download</button>"
+                "</form></body></html>"
+            )
+            payload = json.loads(super().run_sync(max_steps).final_result())
+            payload["route_kind"] = "blocked_unknown_required_enum"
+            payload["blocked_reason_detail"] = "Industry selection is required."
+            payload["terminal_text_excerpt"] = "Industry selection is required."
+
+            class BlockedKindHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return BlockedKindHistory()
+
+    runtime.Agent = BlockedKindAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/gated-report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_pdf_click",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.outcome == "email_required"
+    assert response.blocked_reason == "blocked_unknown_required_enum"
+    assert response.blocked_reason_detail == "Industry selection is required."
+
+
+def test_download_report_with_browser_use_prefers_form_evidence_over_onsite_hint(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="onsite_report",
+        route_summary=(
+            "Accepted cookies, filled form fields, and clicked submit on the gated page."
+        ),
+        create_pdf=False,
+        email_submission_completed=True,
+    )
+    original_runtime = runtime.Agent
+
+    class OnsiteHintEmailAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            self.browser.url = "https://example.com/research/report"
+            self.browser.title = "Request the report"
+            payload = json.loads(super().run_sync(max_steps).final_result())
+            payload["route_kind"] = "onsite_report"
+            payload["encountered_form_fields"] = ["Business Email", "Industry"]
+            payload["submit_button_state"] = "disabled"
+            payload["post_submit_message"] = "Please use a business email address."
+            payload["blocked_reason"] = "blocked_email_domain"
+
+            class OnsiteHintEmailHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return OnsiteHintEmailHistory()
+
+    runtime.Agent = OnsiteHintEmailAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/research/report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_onsite_report",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.outcome == "email_required"
+    assert response.blocked_reason == "blocked_email_domain"
+
+
+def test_download_report_with_browser_use_maps_company_name_and_professional_email_without_false_blocker(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary="Filled the form and submitted it successfully.",
+        create_pdf=False,
+        email_submission_completed=True,
+    )
+    original_runtime = runtime.Agent
+
+    class AliasAwareAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            payload = json.loads(history.final_result())
+            payload["post_submit_message"] = "Thank you for submitting the form."
+            payload["encountered_form_fields"] = [
+                "First Name",
+                "Last Name",
+                "Company Name",
+                "Professional Email",
+                "Business Phone",
+                "Country",
+            ]
+
+            class AliasAwareHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return AliasAwareHistory()
+
+    runtime.Agent = AliasAwareAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/gated-report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_pdf_click",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.outcome == "email_requested"
+    assert response.blocked_reason is None
+
+
+def test_download_report_with_browser_use_salvages_empty_result_to_onsite_capture(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="onsite_report",
+        route_summary="Open the longread report page and capture the article.",
+        create_pdf=False,
+        email_submission_completed=None,
+    )
+    original_runtime = runtime.Agent
+
+    class EmptyOnsiteAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            self.browser.url = "https://example.com/research/market-outlook-2026"
+            self.browser.title = "Market Outlook 2026 report"
+            self.browser.html = (
+                "<html><body><article><h1>Market Outlook 2026 report</h1>"
+                "<h2>Executive summary</h2><p>" + ("Longread body. " * 300) + "</p>"
+                "<h2>Methodology</h2><p>" + ("More body. " * 120) + "</p>"
+                "</article></body></html>"
+            )
+
+            class EmptyHistory:
+                def final_result(self_nonlocal) -> str:
+                    return ""
+
+            return EmptyHistory()
+
+    runtime.Agent = EmptyOnsiteAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/research/market-outlook-2026",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_onsite_report",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "onsite_report"
+    assert response.outcome == "captured"
+    assert response.onsite_capture_path is not None
+    assert Path(str(response.onsite_capture_path)).exists()
+
+
+def test_download_report_with_browser_use_records_terminal_snapshot_and_document_urls(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="Open the report and download the PDF.",
+        create_pdf=True,
+        email_submission_completed=None,
+    )
+    original_runtime = runtime.Agent
+
+    class EvidenceRichAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            self.browser.network_resource_urls = [
+                "https://cdn.example.com/reports/final-report.pdf",
+                "https://cdn.example.com/reports/final-report.pdf",
+            ]
+            self.browser.html = (
+                "<html><head><meta property='og:url' content='https://cdn.example.com/reports/final-report.pdf' /></head>"
+                "<body><h1>Example report terminal</h1></body></html>"
+            )
+            return super().run_sync(max_steps)
+
+    runtime.Agent = EvidenceRichAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_pdf_click",
+        ),
+        run_context,
+    )
+
+    assert response.terminal_evidence.html_snapshot_path
+    assert Path(response.terminal_evidence.html_snapshot_path).exists()
+    assert response.terminal_evidence.screenshot_path
+    assert Path(response.terminal_evidence.screenshot_path).exists()
+    assert "https://cdn.example.com/reports/final-report.pdf" in response.terminal_evidence.observed_document_urls
+    assert response.terminal_evidence.network_events
+    assert response.terminal_evidence.network_events[0].signal_kind == "document_request"
+    assert response.terminal_evidence.visited_url_timeline
+
+
+def test_download_report_with_browser_use_uses_network_confirmation_signal(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary="Fill the form, submit it, and verify the terminal state.",
+        create_pdf=False,
+        email_submission_completed=True,
+    )
+    original_runtime = runtime.Agent
+
+    class NetworkConfirmedAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            self.browser.network_events = [
+                {
+                    "url": "https://example.com/forms/submit",
+                    "initiator_type": "fetch",
+                },
+                {
+                    "url": "https://example.com/report/thank-you",
+                    "initiator_type": "navigation",
+                },
+            ]
+            payload = json.loads(history.final_result())
+            payload["route_kind"] = "email_delivery"
+            payload["route_family"] = "browser_email_form"
+            payload["final_page_url"] = "https://example.com/report"
+            payload["resolved_target_url"] = "https://example.com/report"
+            payload["post_submit_message"] = ""
+            payload["confirmation_url_changed"] = False
+            payload["submit_button_state"] = ""
+            payload["form_disappeared"] = False
+
+            class NetworkConfirmedHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return NetworkConfirmedHistory()
+
+    runtime.Agent = NetworkConfirmedAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.outcome == "email_requested"
+    assert "network_confirmation_request" in response.confirmation_evidence.signal_labels
+    assert any(
+        event.signal_kind == "confirmation_request"
+        for event in response.terminal_evidence.network_events
+    )
+
+
+def test_download_report_with_browser_use_falls_back_to_page_screenshot(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="Open the report and download the PDF.",
+        create_pdf=True,
+        email_submission_completed=None,
+    )
+    original_runtime = runtime.Agent
+
+    class PageScreenshotAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            self.browser.take_screenshot = lambda *args, **kwargs: (_ for _ in ()).throw(
+                RuntimeError("browser screenshot failed")
+            )
+
+            class AsyncPage:
+                url = "https://example.com/final"
+
+                async def title(self_nonlocal):
+                    return "Example report terminal"
+
+                async def content(self_nonlocal):
+                    return "<html><body><h1>Example report terminal</h1></body></html>"
+
+                async def evaluate(self_nonlocal, script):
+                    return []
+
+                async def screenshot(self_nonlocal, path=None, full_page=False):
+                    if path:
+                        Path(path).write_bytes(b"page-screenshot")
+                    return b"page-screenshot"
+
+            async def get_current_page():
+                return AsyncPage()
+
+            self.browser.get_current_page = get_current_page
+            return history
+
+    runtime.Agent = PageScreenshotAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_pdf_click",
+        ),
+        run_context,
+    )
+
+    assert response.terminal_evidence.screenshot_path
+    assert Path(response.terminal_evidence.screenshot_path).exists()
+
+
+def test_download_report_with_browser_use_parses_stringified_page_evaluate_payloads(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="Open the report and download the PDF.",
+        create_pdf=True,
+        email_submission_completed=None,
+    )
+    original_runtime = runtime.Agent
+
+    class JsonStringEvaluateAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            self.browser.url = ""
+            self.browser.title = ""
+            self.browser.html = ""
+
+            class AsyncPage:
+                async def title(self_nonlocal):
+                    return "Example report terminal"
+
+                async def content(self_nonlocal):
+                    return (
+                        "<html><head><meta property='og:url' "
+                        "content='https://cdn.example.com/reports/final-report.pdf' /></head>"
+                        "<body><h1>Example report terminal</h1></body></html>"
+                    )
+
+                async def evaluate(self_nonlocal, script):
+                    source = str(script)
+                    if "navigationEntries" in source:
+                        return json.dumps(
+                            [
+                                {
+                                    "url": "https://example.com/report/thank-you",
+                                    "initiator_type": "navigation",
+                                },
+                                {
+                                    "url": "https://cdn.example.com/reports/final-report.pdf",
+                                    "initiator_type": "fetch",
+                                },
+                            ]
+                        )
+                    if "document.querySelectorAll" in source:
+                        return json.dumps(
+                            [
+                                "https://cdn.example.com/reports/final-report.pdf",
+                            ]
+                        )
+                    return json.dumps(
+                        [
+                            "https://cdn.example.com/reports/final-report.pdf",
+                        ]
+                    )
+
+                async def screenshot(self_nonlocal, path=None, full_page=False):
+                    if path:
+                        Path(path).write_bytes(b"page-screenshot")
+                    return b"page-screenshot"
+
+            async def get_current_page():
+                return AsyncPage()
+
+            async def get_current_page_url():
+                return "https://example.com/report/thank-you"
+
+            async def get_current_page_title():
+                return "Example report terminal"
+
+            self.browser.get_current_page = get_current_page
+            self.browser.get_current_page_url = get_current_page_url
+            self.browser.get_current_page_title = get_current_page_title
+            return history
+
+    runtime.Agent = JsonStringEvaluateAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_pdf_click",
+        ),
+        run_context,
+    )
+
+    assert response.final_page_url == "https://example.com/report/thank-you"
+    assert response.terminal_evidence.final_page_title == "Example report terminal"
+    assert response.terminal_evidence.network_events
+    assert any(
+        event.signal_kind == "confirmation_request"
+        for event in response.terminal_evidence.network_events
+    )
+    assert "https://cdn.example.com/reports/final-report.pdf" in response.terminal_evidence.observed_document_urls
+
+
+def test_download_report_with_browser_use_falls_back_to_history_terminal_state(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary="Filled the form and submitted it successfully.",
+        create_pdf=False,
+        email_submission_completed=True,
+    )
+    original_runtime = runtime.Agent
+
+    class HistoryStateAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            self.browser.url = ""
+            self.browser.title = ""
+            self.browser.html = ""
+            self.browser.take_screenshot = lambda *args, **kwargs: (_ for _ in ()).throw(
+                RuntimeError("browser screenshot failed")
+            )
+
+            def raise_current_page():
+                raise RuntimeError("browser session already reset")
+
+            self.browser.get_current_page = raise_current_page
+            screenshot_source = Path(self.browser.downloads_path) / "history-step.png"
+            screenshot_source.write_bytes(b"history-screenshot")
+            payload = json.loads(history.final_result())
+            payload["post_submit_message"] = (
+                "A copy of the report will be sent to your inbox shortly."
+            )
+            payload["final_page_title"] = ""
+            payload["terminal_text_excerpt"] = ""
+
+            class HistoryWithState:
+                history = [
+                    SimpleNamespace(
+                        state=SimpleNamespace(
+                            url="https://example.com/report/thank-you",
+                            title="Thank you for downloading the report",
+                            screenshot_path=str(screenshot_source),
+                        )
+                    )
+                ]
+
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return HistoryWithState()
+
+    runtime.Agent = HistoryStateAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.outcome == "email_requested"
+    assert response.final_page_url == "https://example.com/report/thank-you"
+    assert response.terminal_evidence.final_page_title == "Thank you for downloading the report"
+    assert response.terminal_evidence.screenshot_path
+    assert Path(response.terminal_evidence.screenshot_path).exists()
+
+
+def test_resolve_effective_identity_fields_hydrates_semantic_alias_values(tmp_path: Path) -> None:
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://example.com/form",
+        settings=BrowserDownloadSettings(
+            schema_version="1.0",
+            openrouter_api_key="openrouter-key",
+            model="openai/gpt-5-mini",
+            temperature=0.0,
+            timeout_seconds=30.0,
+            max_steps=5,
+            output_dir=str(tmp_path / "downloads"),
+            state_db=str(tmp_path / "state.sqlite"),
+            reports_db=str(tmp_path / "reports.sqlite"),
+            identity_config_path=str(tmp_path / "browser_download_identity.yaml"),
+            identity_profile=BrowserDownloadIdentity(
+                schema_version="1.0",
+                fields=[
+                    BrowserDownloadIdentityField(
+                        schema_version="1.0",
+                        key="work_email",
+                        label="Work email",
+                        value="ops@example.com",
+                        aliases=["email", "business email"],
+                    ),
+                    BrowserDownloadIdentityField(
+                        schema_version="1.0",
+                        key="company",
+                        label="Company",
+                        value="Market Lense",
+                        aliases=["organization"],
+                    ),
+                    BrowserDownloadIdentityField(
+                        schema_version="1.0",
+                        key="professional_email",
+                        label="Professional Email",
+                        value=None,
+                        aliases=[],
+                    ),
+                    BrowserDownloadIdentityField(
+                        schema_version="1.0",
+                        key="company_name",
+                        label="Company Name",
+                        value=None,
+                        aliases=[],
+                    ),
+                ],
+            ),
+            headed=False,
+        ),
+    )
+
+    effective = resolve_effective_identity_fields(request)
+    by_key = {field.key: field for field in effective}
+
+    assert by_key["professional_email"].value == "ops@example.com"
+    assert by_key["company_name"].value == "Market Lense"
+
+
+def test_resolve_effective_identity_fields_applies_publisher_override_values(
+    tmp_path: Path,
+) -> None:
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report",
+        settings=BrowserDownloadSettings(
+            schema_version="1.0",
+            openrouter_api_key="openrouter-key",
+            model="openai/gpt-5-mini",
+            temperature=0.0,
+            timeout_seconds=30.0,
+            max_steps=5,
+            output_dir=str(tmp_path / "downloads"),
+            state_db=str(tmp_path / "state.sqlite"),
+            reports_db=str(tmp_path / "reports.sqlite"),
+            identity_config_path=str(tmp_path / "browser_download_identity.yaml"),
+            identity_profile=BrowserDownloadIdentity(
+                schema_version="1.0",
+                fields=[
+                    BrowserDownloadIdentityField(
+                        schema_version="1.0",
+                        key="online_annual_revenue",
+                        label="Online Annual Revenue",
+                        value=None,
+                        aliases=["projected annual revenue"],
+                    ),
+                    BrowserDownloadIdentityField(
+                        schema_version="1.0",
+                        key="country",
+                        label="Country",
+                        value="Austria",
+                        aliases=["country"],
+                    ),
+                ],
+                publisher_overrides=[
+                    BrowserDownloadPublisherOverride(
+                        schema_version="1.0",
+                        host_pattern="bigcommerce.com",
+                        field_values=[
+                            BrowserDownloadIdentityField(
+                                schema_version="1.0",
+                                key="online_annual_revenue",
+                                label="Online Annual Revenue",
+                                value="Building a business: $50K to $250K",
+                                aliases=[
+                                    "projected annual revenue",
+                                    "projected annual online revenue",
+                                ],
+                            )
+                        ],
+                    )
+                ],
+            ),
+            headed=False,
+        ),
+    )
+
+    effective = resolve_effective_identity_fields(request)
+    by_key = {field.key: field for field in effective}
+
+    assert by_key["online_annual_revenue"].value == "Building a business: $50K to $250K"
+    assert by_key["country"].value == "Austria"
+
+
+def test_download_report_with_browser_use_infers_bounded_incomplete_for_weak_onsite_capture(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="onsite_report",
+        route_summary="Open the report page and capture the article.",
+        create_pdf=False,
+        email_submission_completed=None,
+    )
+    original_runtime = runtime.Agent
+
+    class WeakOnsiteAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            self.browser.url = "https://example.com/research/report-2026"
+            self.browser.title = "Research report 2026"
+            self.browser.html = (
+                "<html><body><article><h1>Research report 2026</h1>"
+                "<p>Short introduction only.</p></article></body></html>"
+            )
+            payload = json.loads(super().run_sync(max_steps).final_result())
+            payload["route_kind"] = "onsite_report"
+            payload["onsite_capture_path"] = str(
+                Path(self.browser.downloads_path) / "onsite-report.html"
+            )
+            Path(payload["onsite_capture_path"]).write_text(
+                self.browser.html,
+                encoding="utf-8",
+            )
+            payload["onsite_capture_format"] = "html"
+            payload["onsite_page_count"] = 1
+            payload["onsite_completeness_status"] = ""
+            payload["route_steps"] = [
+                {
+                    "index": 0,
+                    "action": "navigate",
+                    "target_text": "report",
+                    "target_role": "page",
+                    "target_url": "https://example.com/research/report-2026",
+                    "result": "opened",
+                }
+            ]
+            payload["traversed_page_urls"] = [
+                "https://example.com/research/report-2026"
+            ]
+
+            class WeakOnsiteHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return WeakOnsiteHistory()
+
+    runtime.Agent = WeakOnsiteAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/research/report-2026",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_onsite_report",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "onsite_report"
+    assert response.outcome == "captured"
+    assert response.onsite_completeness_status == "bounded_incomplete"
+    assert response.route_status == "inferred"
+
+
+def test_download_report_with_browser_use_auto_captures_onsite_html_when_agent_omits_capture_path(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="onsite_report",
+        route_summary="Open the report page and capture the article.",
+        create_pdf=False,
+        email_submission_completed=None,
+    )
+    original_runtime = runtime.Agent
+
+    class MissingCaptureAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            self.browser.url = "https://example.com/research/report-2026"
+            self.browser.title = "Research report 2026"
+            self.browser.html = (
+                "<html><body><article><h1>Research report 2026</h1>"
+                "<h2>Executive summary</h2><p>" + ("Longread body. " * 180) + "</p>"
+                "<h2>Methodology</h2><p>" + ("More report detail. " * 120) + "</p>"
+                "</article></body></html>"
+            )
+            payload = json.loads(super().run_sync(max_steps).final_result())
+            payload["route_kind"] = "onsite_report"
+            payload["onsite_capture_path"] = None
+            payload["onsite_capture_format"] = None
+            payload["onsite_page_count"] = None
+            payload["onsite_completeness_status"] = ""
+            payload["route_steps"] = [
+                {
+                    "index": 0,
+                    "action": "scroll",
+                    "target_text": "",
+                    "target_role": "page",
+                    "target_url": "https://example.com/research/report-2026",
+                    "result": "Scrolled down 950px",
+                },
+                {
+                    "index": 1,
+                    "action": "scroll",
+                    "target_text": "",
+                    "target_role": "page",
+                    "target_url": "https://example.com/research/report-2026",
+                    "result": "Scrolled down 950px",
+                },
+                {
+                    "index": 2,
+                    "action": "scroll",
+                    "target_text": "",
+                    "target_role": "page",
+                    "target_url": "https://example.com/research/report-2026",
+                    "result": "Scrolled down 950px",
+                },
+            ]
+            payload["traversed_page_urls"] = [
+                "https://example.com/research/report-2026"
+            ]
+
+            class MissingCaptureHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return MissingCaptureHistory()
+
+    runtime.Agent = MissingCaptureAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/research/report-2026",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_onsite_report",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "onsite_report"
+    assert response.outcome == "captured"
+    assert response.onsite_capture_path is not None
+    assert Path(str(response.onsite_capture_path)).exists()
+    assert response.onsite_capture_format == "html"
+
+
+def test_download_report_with_browser_use_marks_paginated_onsite_capture_partial_without_full_traversal(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="onsite_report",
+        route_summary="Open the report pages and capture the article.",
+        create_pdf=False,
+        email_submission_completed=None,
+    )
+    original_runtime = runtime.Agent
+
+    class PartialPaginationAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            combined_html = (
+                "<html><body><article><h1>Global industry report</h1>"
+                "<h2>Executive summary</h2><p>" + ("Page one content. " * 140) + "</p>"
+                "<h2>Market outlook</h2><p>" + ("Page two content. " * 140) + "</p>"
+                "</article></body></html>"
+            )
+            payload = json.loads(super().run_sync(max_steps).final_result())
+            self.browser.url = "https://example.com/report?page=2"
+            self.browser.title = "Global industry report"
+            self.browser.html = combined_html
+            payload["route_kind"] = "onsite_report"
+            payload["final_page_url"] = "https://example.com/report?page=2"
+            payload["onsite_capture_path"] = str(
+                Path(self.browser.downloads_path) / "onsite-report.html"
+            )
+            Path(payload["onsite_capture_path"]).write_text(
+                combined_html,
+                encoding="utf-8",
+            )
+            payload["onsite_capture_format"] = "html"
+            payload["onsite_page_count"] = 3
+            payload["onsite_completeness_status"] = ""
+            payload["traversed_page_urls"] = [
+                "https://example.com/report?page=1",
+                "https://example.com/report?page=2",
+            ]
+            payload["route_steps"] = [
+                {
+                    "index": 0,
+                    "action": "navigate",
+                    "target_text": "Page 1",
+                    "target_role": "page",
+                    "target_url": "https://example.com/report?page=1",
+                    "result": "opened",
+                },
+                {
+                    "index": 1,
+                    "action": "click",
+                    "target_text": "Next page",
+                    "target_role": "button",
+                    "target_url": "https://example.com/report?page=2",
+                    "result": "Opened page 2",
+                },
+            ]
+
+            class PartialPaginationHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return PartialPaginationHistory()
+
+    runtime.Agent = PartialPaginationAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report?page=1",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_onsite_report",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "onsite_report"
+    assert response.outcome == "captured"
+    assert response.onsite_completeness_status == "partial"
+    assert response.route_status == "inferred"
+
+
+def test_download_report_with_browser_use_marks_paginated_onsite_capture_complete_after_final_page(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="onsite_report",
+        route_summary="Open the report pages and capture the article.",
+        create_pdf=False,
+        email_submission_completed=None,
+    )
+    original_runtime = runtime.Agent
+
+    class CompletePaginationAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            combined_html = (
+                "<html><body><article><h1>Global industry report</h1>"
+                "<h2>Executive summary</h2><p>" + ("Page one content. " * 140) + "</p>"
+                "<h2>Market outlook</h2><p>" + ("Page two content. " * 140) + "</p>"
+                "<h2>Recommendations</h2><p>" + ("Page three content. " * 140) + "</p>"
+                "</article></body></html>"
+            )
+            payload = json.loads(super().run_sync(max_steps).final_result())
+            self.browser.url = "https://example.com/report?page=3"
+            self.browser.title = "Global industry report"
+            self.browser.html = combined_html
+            payload["route_kind"] = "onsite_report"
+            payload["final_page_url"] = "https://example.com/report?page=3"
+            payload["onsite_capture_path"] = str(
+                Path(self.browser.downloads_path) / "onsite-report.html"
+            )
+            Path(payload["onsite_capture_path"]).write_text(
+                combined_html,
+                encoding="utf-8",
+            )
+            payload["onsite_capture_format"] = "html"
+            payload["onsite_page_count"] = 3
+            payload["onsite_completeness_status"] = ""
+            payload["traversed_page_urls"] = [
+                "https://example.com/report?page=1",
+                "https://example.com/report?page=2",
+                "https://example.com/report?page=3",
+            ]
+            payload["route_steps"] = [
+                {
+                    "index": 0,
+                    "action": "navigate",
+                    "target_text": "Page 1",
+                    "target_role": "page",
+                    "target_url": "https://example.com/report?page=1",
+                    "result": "opened",
+                },
+                {
+                    "index": 1,
+                    "action": "click",
+                    "target_text": "Next page",
+                    "target_role": "button",
+                    "target_url": "https://example.com/report?page=2",
+                    "result": "Opened page 2",
+                },
+                {
+                    "index": 2,
+                    "action": "click",
+                    "target_text": "Next page",
+                    "target_role": "button",
+                    "target_url": "https://example.com/report?page=3",
+                    "result": "Reached page 3 of 3",
+                },
+            ]
+
+            class CompletePaginationHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return CompletePaginationHistory()
+
+    runtime.Agent = CompletePaginationAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report?page=1",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_onsite_report",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "onsite_report"
+    assert response.outcome == "captured"
+    assert response.onsite_completeness_status == "complete"
+    assert response.route_status == "verified"
+
+
+def test_download_report_with_browser_use_prefers_onsite_capture_over_optional_form_submission(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary="Filled the optional form on the longread page and clicked submit.",
+        create_pdf=False,
+        email_submission_completed=True,
+    )
+    original_runtime = runtime.Agent
+
+    class OnsiteLongreadAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            longread_html = (
+                "<html><body><article>"
+                "<h1>Global innovation outlook report</h1>"
+                "<h2>Executive summary</h2>"
+                "<p>" + ("Report analysis section. " * 120) + "</p>"
+                "<h2>Methodology</h2>"
+                "<p>" + ("Detailed report findings. " * 120) + "</p>"
+                "</article></body></html>"
+            )
+
+            class AsyncPage:
+                url = "https://example.com/insights/global-innovation-outlook"
+
+                async def title(self_nonlocal):
+                    return "Global innovation outlook report"
+
+                async def content(self_nonlocal):
+                    return longread_html
+
+                async def evaluate(self_nonlocal, script):
+                    if "getEntriesByType" in script:
+                        return [
+                            "https://example.com/insights/global-innovation-outlook",
+                        ]
+                    return longread_html
+
+            async def get_current_page():
+                return AsyncPage()
+
+            history = super().run_sync(max_steps)
+            self.browser.url = "https://example.com/insights/global-innovation-outlook"
+            self.browser.title = ""
+            self.browser.html = ""
+            self.browser.get_current_page = get_current_page
+            payload = json.loads(history.final_result())
+            payload["route_kind"] = "email_delivery"
+            payload["route_family"] = "browser_onsite_report"
+            payload["final_page_url"] = "https://example.com/insights/global-innovation-outlook"
+            payload["final_page_title"] = "Global innovation outlook report"
+            payload["encountered_form_fields"] = ["Full name", "Work email"]
+            payload["post_submit_message"] = "Thank you for submitting the form."
+            payload["traversed_page_urls"] = [
+                "https://example.com/insights/global-innovation-outlook"
+            ]
+            payload["route_steps"] = [
+                {
+                    "index": 0,
+                    "action": "scroll",
+                    "target_text": "",
+                    "target_role": "page",
+                    "target_url": "https://example.com/insights/global-innovation-outlook",
+                    "result": "Scrolled down 950px",
+                },
+                {
+                    "index": 1,
+                    "action": "scroll",
+                    "target_text": "",
+                    "target_role": "page",
+                    "target_url": "https://example.com/insights/global-innovation-outlook",
+                    "result": "Scrolled down 950px",
+                },
+                {
+                    "index": 2,
+                    "action": "scroll",
+                    "target_text": "",
+                    "target_role": "page",
+                    "target_url": "https://example.com/insights/global-innovation-outlook",
+                    "result": "Scrolled down 950px",
+                },
+                {
+                    "index": 3,
+                    "action": "click",
+                    "target_text": "Submit",
+                    "target_role": "button",
+                    "target_url": "https://example.com/insights/global-innovation-outlook",
+                    "result": "Clicked button \"Submit\"",
+                },
+            ]
+
+            class OnsiteHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return OnsiteHistory()
+
+    runtime.Agent = OnsiteLongreadAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/insights/global-innovation-outlook",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_onsite_report",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "onsite_report"
+    assert response.outcome == "captured"
+    assert response.onsite_capture_path is not None
+    assert Path(str(response.onsite_capture_path)).exists()
+    assert response.terminal_evidence.html_snapshot_path
+    assert response.terminal_evidence.dom_snapshot_sha256
+
+
+def test_download_report_with_browser_use_fetches_onsite_html_when_browser_html_is_missing(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary="Scrolled through the article and submitted the optional form.",
+        create_pdf=False,
+        email_submission_completed=True,
+    )
+    original_runtime = runtime.Agent
+
+    class HtmlMissingOnsiteAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            self.browser.url = "https://example.com/insights/global-innovation-outlook"
+            self.browser.title = ""
+            self.browser.html = ""
+            payload = json.loads(history.final_result())
+            payload["route_kind"] = "email_delivery"
+            payload["route_family"] = "browser_onsite_report"
+            payload["final_page_url"] = "https://example.com/insights/global-innovation-outlook"
+            payload["final_page_title"] = "Global innovation outlook report"
+            payload["post_submit_message"] = "Thank you for submitting the form."
+            payload["encountered_form_fields"] = ["Full name", "Work email"]
+            payload["route_steps"] = [
+                {
+                    "index": 0,
+                    "action": "scroll",
+                    "target_text": "",
+                    "target_role": "page",
+                    "target_url": "https://example.com/insights/global-innovation-outlook",
+                    "result": "Scrolled down 900px",
+                },
+                {
+                    "index": 1,
+                    "action": "scroll",
+                    "target_text": "",
+                    "target_role": "page",
+                    "target_url": "https://example.com/insights/global-innovation-outlook",
+                    "result": "Scrolled down 900px",
+                },
+                {
+                    "index": 2,
+                    "action": "click",
+                    "target_text": "Submit",
+                    "target_role": "button",
+                    "target_url": "https://example.com/insights/global-innovation-outlook",
+                    "result": "Clicked button",
+                },
+            ]
+
+            class HtmlMissingOnsiteHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return HtmlMissingOnsiteHistory()
+
+    runtime.Agent = HtmlMissingOnsiteAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+    external_boundary_mocks_only.setattr(
+        artifact_runtime,
+        "fetch_html_from_url",
+        lambda **kwargs: (
+            "<html><body><article><h1>Global innovation outlook report</h1>"
+            "<h2>Executive summary</h2><p>" + ("Report section. " * 120) + "</p>"
+            "<h2>Methodology</h2><p>" + ("More report content. " * 120) + "</p>"
+            "</article></body></html>"
+        ),
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/insights/global-innovation-outlook",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_onsite_report",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "onsite_report"
+    assert response.outcome == "captured"
+    assert response.blocked_reason is None
+    assert response.onsite_capture_path is not None
+
+
+def test_download_report_with_browser_use_fetches_terminal_html_for_email_delivery_when_browser_html_is_missing(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary="Filled the form and submitted it successfully.",
+        create_pdf=False,
+        email_submission_completed=True,
+    )
+    original_runtime = runtime.Agent
+
+    class HtmlMissingEmailAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            self.browser.url = "https://example.com/report/thank-you"
+            self.browser.title = ""
+            self.browser.html = ""
+            payload = json.loads(history.final_result())
+            payload["route_kind"] = "email_delivery"
+            payload["final_page_url"] = "https://example.com/report/thank-you"
+            payload["resolved_target_url"] = "https://example.com/report/thank-you"
+            payload["final_page_title"] = ""
+            payload["post_submit_message"] = (
+                "Thank you. A copy of the report will be sent to your inbox shortly."
+            )
+            payload["terminal_text_excerpt"] = ""
+            payload["encountered_form_fields"] = ["Business Email", "Country"]
+
+            class HtmlMissingEmailHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return HtmlMissingEmailHistory()
+
+    runtime.Agent = HtmlMissingEmailAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+    external_boundary_mocks_only.setattr(
+        artifact_runtime,
+        "fetch_html_from_url",
+        lambda **kwargs: (
+            "<html><head><title>Thank you for downloading the report</title></head>"
+            "<body><main><h1>Thank you</h1>"
+            "<p>A copy of the report will be sent to your inbox shortly.</p>"
+            "</main></body></html>"
+        ),
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.outcome == "email_requested"
+    assert response.terminal_evidence.html_snapshot_path
+    assert Path(response.terminal_evidence.html_snapshot_path).exists()
+    assert response.terminal_evidence.dom_snapshot_sha256
+    assert response.final_page_url == "https://example.com/report/thank-you"
+    assert response.terminal_evidence.final_page_title == "Thank you for downloading the report"
+
+
+def test_download_report_with_browser_use_infers_form_disappeared_from_fetched_terminal_html(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary="Filled the form and clicked submit.",
+        create_pdf=False,
+        email_submission_completed=True,
+    )
+    original_runtime = runtime.Agent
+
+    class SparseTerminalAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            payload = json.loads(history.final_result())
+            payload["encountered_form_fields"] = [
+                "First Name",
+                "Last Name",
+                "Business Email",
+                "Company Name",
+                "Online Annual Revenue",
+                "Country",
+            ]
+            payload["post_submit_message"] = ""
+            payload["submit_button_state"] = ""
+            payload["form_disappeared"] = None
+            payload["confirmation_url_changed"] = None
+            payload["final_page_title"] = ""
+            payload["terminal_text_excerpt"] = ""
+
+            class SparseTerminalHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return SparseTerminalHistory()
+
+    runtime.Agent = SparseTerminalAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+    external_boundary_mocks_only.setattr(
+        artifact_runtime,
+        "fetch_html_from_url",
+        lambda **kwargs: (
+            "<html><body><h1>Thanks</h1>"
+            "<p>A copy of the report will be sent directly to your inbox shortly.</p>"
+            "</body></html>"
+        ),
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.outcome == "email_requested"
+    assert response.confirmation_evidence.form_disappeared is True
+    assert response.confirmation_evidence.confirmation_score >= 2
+    assert "form_disappeared" in response.confirmation_evidence.signal_labels
+
+
+def test_download_report_with_browser_use_prefers_delivery_confirmation_over_conflicting_blocker(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary="Filled the form and submitted it successfully.",
+        create_pdf=False,
+        email_submission_completed=True,
+    )
+    original_runtime = runtime.Agent
+
+    class ConflictingBlockerAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            payload = json.loads(history.final_result())
+            payload["encountered_form_fields"] = [
+                "First Name",
+                "Last Name",
+                "Business Email",
+                "Company Name",
+                "Online Annual Revenue",
+                "Country",
+            ]
+            payload["post_submit_message"] = (
+                "A copy of the report will be sent directly to your inbox shortly."
+            )
+            payload["submit_button_state"] = "disabled"
+            payload["blocked_reason"] = "blocked_unknown_required_enum"
+            payload["blocked_reason_detail"] = "Online Annual Revenue is required."
+
+            class ConflictingBlockerHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return ConflictingBlockerHistory()
+
+    runtime.Agent = ConflictingBlockerAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.outcome == "email_requested"
+    assert response.blocked_reason is None
+    assert response.blocked_reason_detail is None
+    assert response.confirmation_evidence.confirmation_score >= 2
+
+
+def test_download_report_with_browser_use_normalizes_text_field_blocker_to_missing_identity(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="Opened the report page, attempted the form, and stopped at the blocker.",
+        create_pdf=False,
+        email_submission_completed=False,
+    )
+    original_runtime = runtime.Agent
+
+    class TextFieldBlockerAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            payload = json.loads(history.final_result())
+            payload["route_kind"] = "pdf_download"
+            payload["route_family"] = "browser_pdf_click"
+            payload["encountered_form_fields"] = [
+                "First Name",
+                "Last Name",
+                "Business Email",
+                "Company Name",
+                "Phone",
+                "Company Website",
+            ]
+            payload["post_submit_message"] = (
+                "Form submission failed because the company website field is required."
+            )
+            payload["blocked_reason"] = "blocked_unknown_required_enum"
+            payload["blocked_reason_detail"] = (
+                "Company Website is required before submission."
+            )
+            payload["terminal_text_excerpt"] = (
+                "Fill out the form below to have your copy sent directly to your inbox."
+            )
+
+            class TextFieldBlockerHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return TextFieldBlockerHistory()
+
+    runtime.Agent = TextFieldBlockerAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_pdf_click",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.route_family == "browser_email_form"
+    assert response.outcome == "email_required"
+    assert response.blocked_reason == "blocked_missing_identity_field"
+    assert "Company Website is required" in str(response.blocked_reason_detail)
+
+
+def test_download_report_with_browser_use_does_not_infer_static_archive_from_please_wait(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary="Filled the form and clicked submit.",
+        create_pdf=False,
+        email_submission_completed=None,
+    )
+    original_runtime = runtime.Agent
+
+    class PendingSubmitAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            payload = json.loads(history.final_result())
+            payload["encountered_form_fields"] = [
+                "First Name",
+                "Last Name",
+                "Business Email",
+                "Company Name",
+                "Online Annual Revenue",
+                "Country",
+            ]
+            payload["post_submit_message"] = "Please Wait"
+            payload["submit_button_state"] = "disabled"
+            payload["terminal_text_excerpt"] = (
+                "Fill out the form below to have your copy sent directly to your inbox."
+            )
+
+            class PendingSubmitHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return PendingSubmitHistory()
+
+    runtime.Agent = PendingSubmitAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.outcome == "email_required"
+    assert response.blocked_reason != "blocked_static_archive"
+
+
+def test_download_report_with_browser_use_does_not_infer_blocker_from_onsite_article_text(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="onsite_report",
+        route_summary="Captured the on-site report article.",
+        create_pdf=False,
+        email_submission_completed=None,
+    )
+    original_runtime = runtime.Agent
+
+    class OnsiteBodyAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            payload = json.loads(history.final_result())
+            onsite_path = Path(self.browser.downloads_path) / "onsite-report.md"
+            onsite_path.write_text("# Report\n\nBody", encoding="utf-8")
+            payload["route_kind"] = "onsite_report"
+            payload["onsite_capture_path"] = str(onsite_path)
+            payload["onsite_capture_format"] = "markdown"
+            payload["onsite_page_count"] = 1
+            payload["onsite_completeness_status"] = "complete"
+            payload["final_page_title"] = "Global Soft Power Index"
+            payload["terminal_text_excerpt"] = (
+                "Among member states, innovation perceptions remain strong. "
+                "See Legal Archives in the footer for historical notices."
+            )
+
+            class OnsiteBodyHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return OnsiteBodyHistory()
+
+    runtime.Agent = OnsiteBodyAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://brandfinance.com/insights/global-soft-power-index-which-nations-lead-global-perceptions-of-innovation-in-2026",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_onsite_report",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "onsite_report"
+    assert response.outcome == "captured"
+    assert response.blocked_reason is None
+    assert response.blocked_reason_detail is None

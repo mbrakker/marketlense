@@ -57,6 +57,37 @@ _EDITORIAL_REPORT_MARKERS = {
     "study",
     "survey",
 }
+_EMAIL_GATE_PATH_MARKERS = {
+    "gated-content-form",
+    "download",
+    "ebook",
+    "whitepaper",
+    "asset",
+    "register",
+    "form",
+}
+_ONSITE_LONGREAD_SEGMENTS = {
+    "insight",
+    "insights",
+    "research",
+    "analysis",
+    "survey",
+    "outlook",
+}
+_ONSITE_EXCLUDED_SEGMENTS = {
+    "resources",
+    "reports",
+    "report",
+    "download",
+    "downloads",
+    "ebook",
+    "whitepaper",
+    "whitepapers",
+    "asset",
+    "assets",
+    "form",
+    "register",
+}
 _TRACKER_QUERY_KEYS = (
     "url",
     "target",
@@ -130,14 +161,18 @@ def _build_plan(
         request.publisher_recommended_discovery_route_kind or ""
     ).strip()
     redirect_target_url = _extract_tracker_target_url(request.normalized_url)
+    redirect_target_kind = _classify_redirect_target(redirect_target_url)
 
     if _should_reuse_memory_route(remembered_route):
+        remembered_route_family = _canonical_memory_route_family(
+            route_kind=remembered_route.route_kind,
+            route_family=remembered_route.route_family,
+        )
         steps.append(
             ReportDownloadRoutePlanStep(
                 schema_version="1.0",
                 step_name="report_download_with_memory_route",
-                route_family=remembered_route.route_family
-                or _default_route_family_for_kind(remembered_route.route_kind),
+                route_family=remembered_route_family,
                 attempt_url=remembered_route.resolved_target_url or None,
                 route_hint=remembered_route.route_summary,
                 route_kind_hint=remembered_route.route_kind,
@@ -188,6 +223,8 @@ def _build_plan(
         source_page_urls=source_page_urls,
         provenances=provenances,
         redirect_target_url=redirect_target_url,
+        redirect_target_kind=redirect_target_kind,
+        remembered_route=remembered_route,
     )
     http_step = ReportDownloadRoutePlanStep(
         schema_version="1.0",
@@ -234,9 +271,51 @@ def _build_browser_step(
     source_page_urls: list[str],
     provenances: set[str],
     redirect_target_url: str | None,
+    redirect_target_kind: str,
+    remembered_route: PublisherDownloadRouteMemory | None,
 ) -> ReportDownloadRoutePlanStep:
     source_page_url = source_page_urls[0] if source_page_urls else None
+    remembered_route_kind = str(
+        remembered_route.route_kind if remembered_route is not None else ""
+    ).strip()
+    remembered_route_family = _canonical_memory_route_family(
+        route_kind=remembered_route_kind,
+        route_family=remembered_route.route_family if remembered_route is not None else "",
+    )
     if _looks_like_tracker_url(normalized_url):
+        if redirect_target_kind == "redirect_to_email_gate":
+            return ReportDownloadRoutePlanStep(
+                schema_version="1.0",
+                step_name="report_download_browser_email_form",
+                route_family="browser_email_form",
+                attempt_url=redirect_target_url or source_page_url or normalized_url,
+                route_kind_hint="email_delivery",
+                source_page_url_hint=source_page_url,
+                uses_memory_route=False,
+                fallback_on_retryable_error=False,
+            )
+        if redirect_target_kind == "redirect_to_onsite_report":
+            return ReportDownloadRoutePlanStep(
+                schema_version="1.0",
+                step_name="report_download_browser_onsite_report",
+                route_family="browser_onsite_report",
+                attempt_url=redirect_target_url or normalized_url,
+                route_kind_hint="onsite_report",
+                source_page_url_hint=source_page_url,
+                uses_memory_route=False,
+                fallback_on_retryable_error=False,
+            )
+        if redirect_target_kind == "redirect_to_non_report" and source_page_url:
+            return ReportDownloadRoutePlanStep(
+                schema_version="1.0",
+                step_name="report_download_browser_listing_hub",
+                route_family="browser_listing_hub",
+                attempt_url=source_page_url,
+                route_kind_hint=None,
+                source_page_url_hint=source_page_url,
+                uses_memory_route=False,
+                fallback_on_retryable_error=False,
+            )
         return ReportDownloadRoutePlanStep(
             schema_version="1.0",
             step_name="report_download_browser_tracker_redirect",
@@ -258,7 +337,18 @@ def _build_browser_step(
             uses_memory_route=False,
             fallback_on_retryable_error=False,
         )
-    if _looks_like_editorial_report_url(redirect_target_url or normalized_url):
+    if remembered_route_kind == "email_delivery" or remembered_route_family == "browser_email_form":
+        return ReportDownloadRoutePlanStep(
+            schema_version="1.0",
+            step_name="report_download_browser_email_form",
+            route_family="browser_email_form",
+            attempt_url=normalized_url,
+            route_kind_hint="email_delivery",
+            source_page_url_hint=source_page_url,
+            uses_memory_route=False,
+            fallback_on_retryable_error=False,
+        )
+    if _looks_like_onsite_longread_url(redirect_target_url or normalized_url):
         return ReportDownloadRoutePlanStep(
             schema_version="1.0",
             step_name="report_download_browser_onsite_report",
@@ -339,11 +429,55 @@ def _should_reuse_memory_route(
         return False
     if remembered_route.route_status != "verified":
         return False
-    if remembered_route.confidence_score >= 0.35:
+    if remembered_route.outcome not in {"downloaded", "email_requested", "captured"}:
+        return False
+    if (
+        remembered_route.route_kind == "onsite_report"
+        and str(remembered_route.onsite_completeness_status or "").strip().lower()
+        != "complete"
+    ):
+        return False
+    route_family = _canonical_memory_route_family(
+        route_kind=remembered_route.route_kind,
+        route_family=remembered_route.route_family,
+    )
+    if (
+        not remembered_route.browser_had_structured_result
+        and route_family not in {"direct_pdf_probe", "http_pdf_probe"}
+    ):
+        return False
+    minimum_confidence = 0.5
+    if route_family in {"direct_pdf_probe", "http_pdf_probe"}:
+        minimum_confidence = 0.35
+    elif remembered_route.route_kind == "email_delivery":
+        minimum_confidence = 0.45
+    elif remembered_route.route_kind == "onsite_report":
+        minimum_confidence = 0.6
+    if remembered_route.confidence_score < minimum_confidence:
+        return False
+    required_successes = 1 if route_family in {"direct_pdf_probe", "http_pdf_probe", "browser_email_form"} else 2
+    if remembered_route.verified_successes >= required_successes:
         return True
-    if remembered_route.verified_successes > 0:
-        return True
-    return remembered_route.outcome in {"downloaded", "email_requested", "captured"}
+    return remembered_route.confidence_score >= 0.75 and remembered_route.verified_successes >= 1
+
+
+def _canonical_memory_route_family(*, route_kind: str, route_family: str) -> str:
+    token = str(route_family or "").strip()
+    if route_kind == "email_delivery" and token in {
+        "",
+        "browser_pdf_click",
+        "browser_pdf_download",
+    }:
+        return "browser_email_form"
+    if route_kind == "onsite_report" and token in {
+        "",
+        "browser_pdf_click",
+        "browser_pdf_download",
+    }:
+        return "browser_onsite_report"
+    if not token:
+        return _default_route_family_for_kind(route_kind)
+    return token
 
 
 def _dedupe_steps(
@@ -416,10 +550,43 @@ def _extract_tracker_target_url(url: str) -> str | None:
     return None
 
 
+def _classify_redirect_target(url: str | None) -> str:
+    token = str(url or "").strip()
+    if not token:
+        return ""
+    if _looks_like_pdf(token):
+        return "redirect_to_pdf"
+    if _looks_like_onsite_longread_url(token):
+        return "redirect_to_onsite_report"
+    lowered = str(urlsplit(token).path or "").strip().lower()
+    if any(marker in lowered for marker in _EMAIL_GATE_PATH_MARKERS):
+        return "redirect_to_email_gate"
+    if any(marker in lowered for marker in _EDITORIAL_NON_REPORT_MARKERS):
+        return "redirect_to_non_report"
+    return ""
+
+
 def _looks_like_editorial_report_url(url: str | None) -> bool:
     path = str(urlsplit(str(url or "").strip()).path or "").strip().lower()
     if not path or _looks_like_pdf(path):
         return False
     if any(marker in path for marker in _EDITORIAL_NON_REPORT_MARKERS):
         return False
+    return any(marker in path for marker in _EDITORIAL_REPORT_MARKERS)
+
+
+def _looks_like_onsite_longread_url(url: str | None) -> bool:
+    parsed = urlsplit(str(url or "").strip())
+    path = str(parsed.path or "").strip().lower()
+    if not path or _looks_like_pdf(path):
+        return False
+    if any(marker in path for marker in _EDITORIAL_NON_REPORT_MARKERS):
+        return False
+    segments = [segment for segment in path.split("/") if segment]
+    if not segments:
+        return False
+    if any(segment in _ONSITE_EXCLUDED_SEGMENTS for segment in segments):
+        return False
+    if any(segment in _ONSITE_LONGREAD_SEGMENTS for segment in segments):
+        return True
     return any(marker in path for marker in _EDITORIAL_REPORT_MARKERS)

@@ -7,6 +7,7 @@ from pathlib import Path
 from src.contracts.browser_download import BrowserReportDownloadRequest
 from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.contracts.run_context import RunContext
+from src.services._browser_report_download.request import resolve_effective_identity_fields
 from src.services import prompt_service
 from src.utils.logging import log_event
 
@@ -154,7 +155,7 @@ def _render_identity_prompt(
     lines = [
         "Use the following configured identity values when a matching form field is available. Do not invent missing values."
     ]
-    for field in request.settings.identity_profile.fields:
+    for field in resolve_effective_identity_fields(request):
         aliases = ", ".join(field.aliases)
         value = str(field.value or "").strip()
         if field.key == "work_email" and delivery_email:
@@ -210,6 +211,7 @@ def _render_route_family_guidance(*, request: BrowserReportDownloadRequest) -> s
                 "- Stay tightly scoped to the candidate page and visible report CTAs.",
                 "- Prefer direct PDF links or obvious download buttons over generic navigation.",
                 "- If the page forces a form instead of producing a PDF, classify that as `email_delivery` rather than pretending the PDF path worked.",
+                "- If the page turns into a lead form, switch to concise form handling instead of retrying every visible field as if it were required.",
                 "- Do not wander across unrelated resources, blog posts, or site navigation.",
             ]
         )
@@ -219,7 +221,10 @@ def _render_route_family_guidance(*, request: BrowserReportDownloadRequest) -> s
                 "Route-family guidance for `browser_email_form`:",
                 "- Inspect the form before submission and capture all encountered field labels.",
                 "- Use only configured identity values. If a required field is missing, stop and return the correct blocker code instead of guessing.",
-                "- After submission, inspect confirmation text, URL change, button state, and whether the form disappeared.",
+                "- After submission, inspect confirmation text, URL change, button state, whether the form disappeared, and whether the terminal page still looks like the same form.",
+                "- If the page shows a transient submit state such as `Please Wait`, do not stop there; keep waiting for the final confirmation or blocker text.",
+                "- Do not keep retrying a field that becomes hidden, detached, or unavailable after a reasonable attempt. If submission is still possible, continue.",
+                "- Reserve `blocked_unknown_required_enum` for real enum/select blockers; treat missing phone, website, or other text fields as identity-data issues instead.",
                 "- A submit click alone is not enough; only classify success when the confirmation evidence is real.",
             ]
         )
@@ -246,9 +251,11 @@ def _render_route_family_guidance(*, request: BrowserReportDownloadRequest) -> s
             [
                 "Route-family guidance for `browser_onsite_report`:",
                 "- Treat the report as on-site content, not a failed PDF download.",
+                "- If the article body is already readable on the page, do not submit optional download or lead forms; capture the on-page report instead.",
                 "- Capture the article locally, return `onsite_capture_path`, and record `traversed_page_urls`.",
                 "- For pagination or infinite scroll, traverse only until the report is complete or clearly bounded; avoid endless scrolling.",
                 "- Deduplicate repeated sections and set `onsite_completeness_status` honestly.",
+                "- Use `complete` only when pagination or scrolling clearly reached the report end; otherwise prefer `partial` or `bounded_incomplete`.",
             ]
         )
     return "\n".join(

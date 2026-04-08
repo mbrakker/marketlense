@@ -681,6 +681,55 @@ class TestConfigService(unittest.TestCase):
         )
         self.assertEqual(2, len(settings.identity_profile.fields))
 
+    def test_browser_download_settings_load_publisher_overrides(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(tmp_dir, include_publish=False)
+            identity_path = Path(tmp_dir) / "browser_download_identity.yaml"
+            identity_payload = yaml.safe_load(identity_path.read_text(encoding="utf-8"))
+            identity_payload["delivery_emails"] = [
+                "reports@marketlense.local",
+                "ops@example.com",
+            ]
+            identity_payload["publisher_overrides"] = [
+                {
+                    "schema_version": "1.0",
+                    "host_pattern": "example.com",
+                    "delivery_emails": ["analyst@example.com"],
+                    "field_values": [
+                        {
+                            "schema_version": "1.0",
+                            "key": "country",
+                            "label": "Country",
+                            "value": "Austria",
+                            "aliases": ["country"],
+                        }
+                    ],
+                }
+            ]
+            identity_path.write_text(
+                yaml.safe_dump(identity_payload, sort_keys=False),
+                encoding="utf-8",
+            )
+
+            with patch.dict(os.environ, {"OPENROUTER_API_KEY": "key"}, clear=True):
+                settings = load_browser_download_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=cfg_path),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
+                )
+
+        self.assertEqual(
+            ["reports@marketlense.local", "ops@example.com"],
+            settings.identity_profile.delivery_emails,
+        )
+        self.assertEqual(1, len(settings.identity_profile.publisher_overrides))
+        override = settings.identity_profile.publisher_overrides[0]
+        self.assertEqual("example.com", override.host_pattern)
+        self.assertEqual(["analyst@example.com"], override.delivery_emails)
+        self.assertEqual("country", override.field_values[0].key)
+        self.assertEqual("Austria", override.field_values[0].value)
+
     def test_browser_download_settings_require_openrouter_key(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(tmp_dir, include_publish=False)

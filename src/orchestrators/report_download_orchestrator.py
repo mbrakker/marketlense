@@ -63,6 +63,28 @@ _NON_REPORT_URL_MARKERS = {
     "support",
     "contact",
 }
+_ASSET_URL_MARKERS = {
+    "logo",
+    "image",
+    "images",
+    "video",
+    "webp",
+    "jpg",
+    "jpeg",
+    "png",
+    "svg",
+}
+_MARKETING_URL_MARKERS = {
+    "demo",
+    "pricing",
+    "contact-sales",
+    "contact_sales",
+    "book-a-demo",
+    "book_demo",
+    "request-pricing",
+    "signup",
+    "sign-up",
+}
 _NON_REPORT_TITLE_MARKERS = {
     "case study",
     "webinar",
@@ -80,6 +102,13 @@ _REPORT_TITLE_MARKERS = {
     "insight",
     "analysis",
     "outlook",
+}
+_REPORT_SOURCE_PAGE_MARKERS = {
+    "insights",
+    "reports",
+    "research",
+    "resources",
+    "publications",
 }
 
 
@@ -476,6 +505,8 @@ def _remembered_route_memory(
         verified_successes=remembered_route.verified_successes,
         last_n_outcomes=list(remembered_route.last_n_outcomes),
         confidence_score=remembered_route.confidence_score,
+        browser_had_structured_result=remembered_route.browser_had_structured_result,
+        onsite_completeness_status=remembered_route.onsite_completeness_status,
     )
 
 
@@ -494,13 +525,27 @@ def _assert_candidate_download_ready(
         return
     if candidate.pdf_url or normalized_url.endswith(".pdf"):
         return
-    title = str(candidate.title or "").strip().casefold()
-    url_value = str(candidate.canonical_url or normalized_url).strip().casefold()
-    if any(marker in title for marker in _REPORT_TITLE_MARKERS):
-        return
-    if any(marker in url_value for marker in _NON_REPORT_URL_MARKERS) or any(
-        marker in title for marker in _NON_REPORT_TITLE_MARKERS
-    ):
+    readiness_score, rejection_reason, readiness_signals = _evaluate_candidate_download_readiness(
+        request=request,
+        normalized_url=normalized_url,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="report_download_readiness_evaluated",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "candidate_title": candidate.title,
+                "candidate_url": candidate.canonical_url,
+                "download_readiness_score": readiness_score,
+                "readiness_signals": readiness_signals,
+                "readiness_rejection_reason": rejection_reason or "",
+            },
+        )
+    )
+    if rejection_reason:
         logger.info(
             log_event(
                 ctx,
@@ -511,19 +556,88 @@ def _assert_candidate_download_ready(
                     "normalized_url": normalized_url,
                     "candidate_title": candidate.title,
                     "candidate_url": candidate.canonical_url,
+                    "download_readiness_score": readiness_score,
+                    "readiness_signals": readiness_signals,
+                    "readiness_rejection_reason": rejection_reason,
                 },
             )
         )
         raise AppError(
-            code="report_download_candidate_not_ready",
+            code=f"report_download_{rejection_reason}",
             message="The candidate URL does not look like a report acquisition target",
             retryable=False,
             context={
                 "normalized_url": normalized_url,
                 "candidate_title": candidate.title,
                 "candidate_url": candidate.canonical_url,
+                "download_readiness_score": readiness_score,
+                "readiness_signals": readiness_signals,
+                "readiness_rejection_reason": rejection_reason,
             },
         )
+
+
+def _evaluate_candidate_download_readiness(
+    *,
+    request: ReportDownloadOrchestratorRequest,
+    normalized_url: str,
+) -> tuple[float, str | None, list[str]]:
+    candidate = request.candidate_trace
+    if candidate is None:
+        return 1.0, None, ["no_candidate_trace"]
+    title = str(candidate.title or "").strip().casefold()
+    url_value = str(candidate.canonical_url or normalized_url).strip().casefold()
+    source_pages = [str(value or "").strip().casefold() for value in candidate.source_page_urls]
+    provenances = {
+        str(value or "").strip().casefold() for value in candidate.discovery_provenances
+    }
+    score = 0.0
+    signals: list[str] = []
+    if any(marker in title for marker in _REPORT_TITLE_MARKERS):
+        score += 0.5
+        signals.append("report_title_marker")
+    if any(marker in url_value for marker in _REPORT_TITLE_MARKERS):
+        score += 0.25
+        signals.append("report_url_marker")
+    if any(
+        any(marker in page for marker in _REPORT_SOURCE_PAGE_MARKERS)
+        for page in source_pages
+    ):
+        score += 0.2
+        signals.append("report_source_page")
+    if candidate.max_confidence is not None:
+        score += min(0.2, max(0.0, float(candidate.max_confidence)) * 0.2)
+        signals.append("candidate_confidence")
+    if "direct_pdf_source" in provenances:
+        score += 0.3
+        signals.append("direct_pdf_source")
+    if "browser_dom" in provenances or "browser_rendered_html_supplement" in provenances:
+        score += 0.1
+        signals.append("browser_provenance")
+
+    if any(marker in url_value for marker in _ASSET_URL_MARKERS):
+        score -= 0.9
+        signals.append("asset_url_marker")
+        return round(score, 3), "candidate_rejected_asset_page", signals
+    if any(marker in url_value for marker in _MARKETING_URL_MARKERS):
+        score -= 0.7
+        signals.append("marketing_url_marker")
+    if any(marker in url_value for marker in _NON_REPORT_URL_MARKERS):
+        score -= 0.6
+        signals.append("non_report_url_marker")
+    if any(marker in title for marker in _NON_REPORT_TITLE_MARKERS):
+        score -= 0.7
+        signals.append("non_report_title_marker")
+
+    if score >= 0.35:
+        return round(score, 3), None, signals
+    if any(marker in url_value for marker in _MARKETING_URL_MARKERS):
+        return round(score, 3), "candidate_rejected_marketing_page", signals
+    if any(marker in title for marker in _NON_REPORT_TITLE_MARKERS) or any(
+        marker in url_value for marker in _NON_REPORT_URL_MARKERS
+    ):
+        return round(score, 3), "candidate_rejected_non_report", signals
+    return round(score, 3), "candidate_rejected_non_report", signals
 
 
 def _report_name_for_result(result: BrowserReportDownloadResult) -> str:

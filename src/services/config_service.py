@@ -2362,6 +2362,27 @@ def upsert_browser_download_identity_fields(
                 for field in [*identity_profile.fields, *added_fields]
             ],
         }
+        if identity_profile.delivery_emails:
+            payload["delivery_emails"] = list(identity_profile.delivery_emails)
+        if identity_profile.publisher_overrides:
+            payload["publisher_overrides"] = [
+                {
+                    "schema_version": override.schema_version,
+                    "host_pattern": override.host_pattern,
+                    "delivery_emails": list(override.delivery_emails),
+                    "field_values": [
+                        {
+                            "schema_version": field.schema_version,
+                            "key": field.key,
+                            "label": field.label,
+                            "value": field.value,
+                            "aliases": field.aliases,
+                        }
+                        for field in override.field_values
+                    ],
+                }
+                for override in identity_profile.publisher_overrides
+            ]
         identity_path.parent.mkdir(parents=True, exist_ok=True)
         identity_path.write_text(
             yaml.safe_dump(payload, sort_keys=False, allow_unicode=False),

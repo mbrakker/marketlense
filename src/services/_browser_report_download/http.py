@@ -5,7 +5,7 @@ import mimetypes
 import re
 from dataclasses import asdict
 from pathlib import Path
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import parse_qs, unquote, urljoin, urlsplit
 
 import requests
 
@@ -27,6 +27,23 @@ _PDF_URL_PATTERN = re.compile(
     r"""(?P<quote>['"])(?P<url>[^'"]+?\.pdf(?:\?[^'"]*)?)(?P=quote)""",
     re.IGNORECASE,
 )
+_PDF_QUERY_KEYS = (
+    "download",
+    "downloadurl",
+    "downloaddata",
+    "file",
+    "fileurl",
+    "asset",
+    "asseturl",
+    "pdf",
+    "pdfurl",
+    "url",
+    "target",
+    "redirect",
+    "redirect_url",
+    "redirect_uri",
+    "u",
+)
 _PDF_MIME_TYPES = {
     "application/pdf",
     "application/x-pdf",
@@ -41,6 +58,10 @@ _PDF_FETCH_HEADERS = {
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
     ),
+}
+_HTML_FETCH_HEADERS = {
+    "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
+    "User-Agent": _PDF_FETCH_HEADERS["User-Agent"],
 }
 
 
@@ -242,6 +263,83 @@ def ensure_downloaded_pdf(
     )
 
 
+def fetch_html_from_url(
+    *,
+    page_url: str,
+    timeout_seconds: float,
+    ctx: RunContext,
+    normalized_url: str,
+) -> str:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_html_fetch_start",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "page_url": page_url,
+            },
+        )
+    )
+    try:
+        response = requests.get(
+            page_url,
+            headers=_HTML_FETCH_HEADERS,
+            timeout=timeout_seconds,
+            allow_redirects=True,
+        )
+    except requests.RequestException as exc:
+        raise AppError(
+            code="browser_download_html_fetch_failed",
+            message="Failed to fetch terminal HTML for on-site capture recovery",
+            cause=exc,
+            retryable=True,
+            context={
+                "normalized_url": normalized_url,
+                "page_url": page_url,
+            },
+        ) from exc
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_html_fetch_response",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "page_url": page_url,
+                "status_code": response.status_code,
+                "content_type": response.headers.get("content-type", ""),
+            },
+        )
+    )
+    if response.status_code >= 400:
+        raise AppError(
+            code="browser_download_html_fetch_failed",
+            message="Terminal HTML fetch returned an error status",
+            retryable=True,
+            context={
+                "normalized_url": normalized_url,
+                "page_url": page_url,
+                "status_code": response.status_code,
+            },
+        )
+    content_type = str(response.headers.get("content-type", "")).casefold()
+    if "html" not in content_type and "xml" not in content_type:
+        raise AppError(
+            code="browser_download_html_fetch_invalid_content_type",
+            message="Terminal HTML fetch did not return HTML content",
+            retryable=True,
+            context={
+                "normalized_url": normalized_url,
+                "page_url": page_url,
+                "content_type": response.headers.get("content-type", ""),
+            },
+        )
+    return response.text
+
+
 def resolve_downloaded_mime_type(
     *,
     reported_mime_type: str | None,
@@ -422,11 +520,68 @@ def _read_text_if_small(path: Path, *, max_bytes: int) -> str:
 
 
 def _extract_embedded_pdf_url(*, wrapper_html: str, document_url: str) -> str | None:
-    if not wrapper_html:
-        return None
-    for match in _PDF_URL_PATTERN.finditer(wrapper_html):
-        raw_url = str(match.group("url") or "").strip()
-        if not raw_url:
-            continue
-        return urljoin(document_url, raw_url)
+    for candidate in extract_embedded_pdf_urls(
+        wrapper_html=wrapper_html,
+        document_url=document_url,
+    ):
+        return candidate
     return None
+
+
+def extract_embedded_pdf_urls(*, wrapper_html: str, document_url: str) -> list[str]:
+    candidates: list[str] = []
+    seen: set[str] = set()
+    for payload in (
+        str(wrapper_html or ""),
+        unquote(str(wrapper_html or "")),
+        document_url,
+        unquote(str(document_url or "")),
+    ):
+        for match in _PDF_URL_PATTERN.finditer(payload):
+            raw_url = str(match.group("url") or "").strip()
+            if not raw_url:
+                continue
+            _append_pdf_candidate(
+                candidates,
+                seen,
+                candidate=urljoin(document_url, raw_url),
+            )
+        parsed = urlsplit(payload)
+        if not parsed.query:
+            continue
+        query = parse_qs(parsed.query, keep_blank_values=False)
+        for key in _PDF_QUERY_KEYS:
+            values = query.get(key)
+            if not values:
+                continue
+            for value in values:
+                token = unquote(str(value or "").strip())
+                if not token:
+                    continue
+                if token.startswith("http://") or token.startswith("https://"):
+                    _append_pdf_candidate(candidates, seen, candidate=token)
+                elif ".pdf" in token.casefold():
+                    _append_pdf_candidate(
+                        candidates,
+                        seen,
+                        candidate=urljoin(document_url, token),
+                    )
+    return candidates
+
+
+def _append_pdf_candidate(
+    candidates: list[str],
+    seen: set[str],
+    *,
+    candidate: str,
+) -> None:
+    token = str(candidate or "").strip()
+    if not token:
+        return
+    marker = token.casefold()
+    if ".pdf" not in marker:
+        return
+    if marker in seen:
+        return
+    seen.add(marker)
+    candidates.append(token)

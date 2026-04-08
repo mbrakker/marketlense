@@ -770,4 +770,140 @@ def test_run_report_download_prefers_candidate_pdf_before_generic_browser(
     assert len(requests_seen) == 1
     assert requests_seen[0].attempt_url == "https://cdn.example.com/discovery-report.pdf"
     assert requests_seen[0].route_family_hint == "direct_pdf_probe"
-    assert requests_seen[0].candidate_trace == candidate_trace
+
+
+def test_run_report_download_rejects_non_report_candidate_with_typed_reason(
+    tmp_path: Path,
+    caplog,
+    run_context,
+    assert_logs_have_required_fields,
+    assert_app_error,
+) -> None:
+    settings = _settings(tmp_path)
+    candidate_trace = PublisherInventoryCandidateTrace(
+        schema_version="1.0",
+        canonical_url="https://example.com/support/customer-story",
+        title="Customer Story",
+        discovered_on_page_number=1,
+        source_page_urls=["https://example.com/support"],
+        discovery_provenances=["browser_dom"],
+        pdf_url=None,
+        published_at_text=None,
+        max_confidence=0.2,
+    )
+    deps = ReportDownloadDependencies(
+        download_report_with_browser_use=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("should reject before browser execution")
+        ),
+        get_publisher_download_route=lambda req, ctx: None,
+        record_publisher_download_route=lambda req, ctx: None,
+        file_md5=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("should not hash files")
+        ),
+        record_report_source=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("should not record sources")
+        ),
+        upsert_browser_download_identity_fields=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("should not update identity")
+        ),
+        sleep_fn=lambda seconds: None,
+    )
+    caplog.set_level(logging.INFO, logger="market_lense.report_download_orchestrator")
+
+    with pytest.raises(AppError) as excinfo:
+        run_report_download(
+            ReportDownloadOrchestratorRequest(
+                schema_version="1.0",
+                url=candidate_trace.canonical_url,
+                settings=settings,
+                state_db=settings.state_db,
+                reports_db=settings.reports_db,
+                candidate_trace=candidate_trace,
+            ),
+            ctx=run_context,
+            dependencies=deps,
+        )
+
+    assert_app_error(
+        excinfo.value,
+        code="report_download_candidate_rejected_non_report",
+        retryable=False,
+    )
+    events = _events(caplog, "market_lense.report_download_orchestrator")
+    assert_logs_have_required_fields(events)
+    readiness_events = [
+        event for event in events if event["event"] == "report_download_readiness_rejected"
+    ]
+    assert len(readiness_events) == 1
+    assert readiness_events[0]["fields"]["readiness_rejection_reason"] == "candidate_rejected_non_report"
+    assert readiness_events[0]["fields"]["download_readiness_score"] < 0.35
+
+
+def test_run_report_download_allows_thin_candidate_when_pdf_url_is_present(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    settings = _settings(tmp_path)
+    candidate_trace = PublisherInventoryCandidateTrace(
+        schema_version="1.0",
+        canonical_url="https://example.com/landing",
+        title="Landing page",
+        discovered_on_page_number=1,
+        source_page_urls=["https://example.com/resources"],
+        discovery_provenances=["direct_pdf_source"],
+        pdf_url="https://cdn.example.com/report.pdf",
+        published_at_text=None,
+        max_confidence=0.1,
+    )
+    seen_requests = []
+    deps = ReportDownloadDependencies(
+        download_report_with_browser_use=lambda req, ctx: seen_requests.append(req)
+        or _result(
+            url=req.url,
+            used_route_hint=False,
+            path=str(Path(settings.output_dir) / "report.pdf"),
+        ),
+        get_publisher_download_route=lambda req, ctx: None,
+        record_publisher_download_route=lambda req, ctx: None,
+        file_md5=lambda req, ctx: FileHashResponse(
+            schema_version="1.0",
+            path=req.path,
+            md5="abc123",
+        ),
+        record_report_source=lambda req, ctx: ReportSourceRecordResponse(
+            schema_version="1.0",
+            record_id=1,
+            source_domain=req.source_domain,
+            report_name=req.report_name,
+            landing_page_url=req.landing_page_url,
+            downloaded_at_utc=req.downloaded_at_utc,
+            md5=req.md5,
+        ),
+        upsert_browser_download_identity_fields=lambda req, ctx: type(
+            "IdentityUpdate",
+            (),
+            {
+                "path": settings.identity_config_path,
+                "added_field_keys": [],
+                "total_fields": len(settings.identity_profile.fields),
+            },
+        )(),
+        sleep_fn=lambda seconds: None,
+    )
+
+    response = run_report_download(
+        ReportDownloadOrchestratorRequest(
+            schema_version="1.0",
+            url=candidate_trace.canonical_url,
+            settings=settings,
+            state_db=settings.state_db,
+            reports_db=settings.reports_db,
+            candidate_trace=candidate_trace,
+        ),
+        ctx=run_context,
+        dependencies=deps,
+    )
+
+    assert response.outcome == "downloaded"
+    assert seen_requests[0].attempt_url == candidate_trace.pdf_url
+    assert seen_requests[0].candidate_trace == candidate_trace

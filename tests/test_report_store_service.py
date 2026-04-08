@@ -7,6 +7,7 @@ import unittest
 
 from src.contracts.browser_download import (
     BrowserDownloadConfirmationEvidence,
+    BrowserDownloadNetworkEvent,
     BrowserDownloadRouteStep,
     DownloadTerminalEvidence,
 )
@@ -690,6 +691,403 @@ class TestReportStoreService(unittest.TestCase):
             self.assertEqual(
                 "Open the report modal and submit the email form.",
                 response_after_replace.route_summary,
+            )
+
+    def test_publisher_download_route_projection_preserves_best_memory_without_rewriting_latest_history(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_publisher_route_projection")
+
+            replace_publishers(
+                PublishersReplaceRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_page_url="https://www.notion.so/source",
+                    publishers=[
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-1",
+                            notion_page_url="https://www.notion.so/page-1",
+                            name="BigCommerce",
+                            homepage="https://www.bigcommerce.com/",
+                            self_presentation="BigCommerce description",
+                            insights_url="https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report",
+                            icon_source="https://cdn.example.com/bigcommerce.png",
+                        )
+                    ],
+                ),
+                ctx,
+            )
+
+            success_request = PublisherDownloadRouteRecordRequest(
+                schema_version="1.0",
+                db_path=db_path,
+                normalized_url="https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report",
+                source_url="https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report",
+                route_kind="email_delivery",
+                route_summary="Submit the form and wait for the email confirmation state.",
+                outcome="email_requested",
+                route_family="browser_pdf_click",
+                route_status="verified",
+                resolved_target_url="https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report/",
+                route_steps=[],
+                confirmation_evidence=BrowserDownloadConfirmationEvidence(
+                    schema_version="1.0",
+                    url_changed=True,
+                    visible_confirmation_text="Check your inbox for the report.",
+                    submit_button_state="submitted",
+                    form_disappeared=True,
+                    final_page_url="https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report/",
+                    confirmation_score=3,
+                    signal_labels=["success_text", "form_disappeared", "success_url"],
+                ),
+                terminal_evidence=DownloadTerminalEvidence(
+                    schema_version="1.0",
+                    final_page_url="https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report/",
+                    final_page_title="Global B2B Buyer Report | BigCommerce",
+                    terminal_text_excerpt="Check your inbox for the report.",
+                    artifact_url="https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report/",
+                    artifact_kind="email_delivery",
+                    artifact_validation_status="confirmed",
+                    artifact_validation_detail="Email delivery confirmed on page.",
+                    confirmation_signal_count=3,
+                    traversed_page_urls=[
+                        "https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report/"
+                    ],
+                    evidence_labels=["structured_result", "confirmed", "email_delivery"],
+                ),
+                browser_had_structured_result=True,
+                used_candidate_pdf_url=False,
+                used_candidate_source_page=False,
+                blocked_reason=None,
+                blocked_reason_detail=None,
+                last_downloaded_file_path=None,
+                last_final_page_url="https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report/",
+                onsite_capture_path=None,
+                onsite_capture_format=None,
+                onsite_page_count=None,
+                onsite_completeness_status=None,
+            )
+            record_publisher_download_route(success_request, ctx)
+
+            weaker_request = PublisherDownloadRouteRecordRequest(
+                schema_version="1.0",
+                db_path=db_path,
+                normalized_url=success_request.normalized_url,
+                source_url=success_request.source_url,
+                route_kind="email_delivery",
+                route_summary="Filled the form and clicked download but no confirmation was visible.",
+                outcome="email_required",
+                route_family="browser_pdf_click",
+                route_status="inferred",
+                resolved_target_url=success_request.resolved_target_url,
+                route_steps=[],
+                confirmation_evidence=BrowserDownloadConfirmationEvidence(
+                    schema_version="1.0",
+                    url_changed=False,
+                    visible_confirmation_text="",
+                    submit_button_state="unchanged",
+                    form_disappeared=False,
+                    final_page_url="https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report/",
+                    confirmation_score=0,
+                    signal_labels=[],
+                ),
+                terminal_evidence=DownloadTerminalEvidence(
+                    schema_version="1.0",
+                    final_page_url="https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report/",
+                    final_page_title="Global B2B Buyer Report | BigCommerce",
+                    terminal_text_excerpt="",
+                    artifact_url="https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report/",
+                    artifact_kind="email_delivery",
+                    artifact_validation_status="none",
+                    artifact_validation_detail="",
+                    confirmation_signal_count=0,
+                    traversed_page_urls=[
+                        "https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report/"
+                    ],
+                    evidence_labels=["structured_result", "none", "email_delivery"],
+                ),
+                browser_had_structured_result=True,
+                used_candidate_pdf_url=False,
+                used_candidate_source_page=False,
+                blocked_reason=None,
+                blocked_reason_detail=None,
+                last_downloaded_file_path=None,
+                last_final_page_url="https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report/",
+                onsite_capture_path=None,
+                onsite_capture_format=None,
+                onsite_page_count=None,
+                onsite_completeness_status=None,
+            )
+            record_publisher_download_route(weaker_request, ctx)
+
+            conn = sqlite3.connect(db_path)
+            try:
+                latest_history = conn.execute(
+                    """
+                    SELECT outcome, route_status, route_summary
+                    FROM publisher_download_route_history
+                    WHERE normalized_url=?
+                    ORDER BY id DESC
+                    LIMIT 1
+                    """,
+                    (weaker_request.normalized_url,),
+                ).fetchone()
+                publisher_projection = conn.execute(
+                    """
+                    SELECT download_route_outcome, download_route_summary
+                    FROM publishers
+                    WHERE insights_url=?
+                    """,
+                    (weaker_request.source_url,),
+                ).fetchone()
+            finally:
+                conn.close()
+
+            self.assertEqual(
+                (
+                    "email_required",
+                    "inferred",
+                    "Filled the form and clicked download but no confirmation was visible.",
+                ),
+                latest_history,
+            )
+            self.assertEqual(
+                (
+                    "email_requested",
+                    "Submit the form and wait for the email confirmation state.",
+                ),
+                publisher_projection,
+            )
+
+    def test_get_download_route_preserves_confirmation_score_and_signal_labels(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_route_confirmation_round_trip")
+
+            replace_publishers(
+                PublishersReplaceRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_page_url="https://www.notion.so/source",
+                    publishers=[
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-1",
+                            notion_page_url="https://www.notion.so/page-1",
+                            name="BigCommerce",
+                            homepage="https://www.bigcommerce.com/",
+                            self_presentation="BigCommerce description",
+                            insights_url="https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report",
+                            icon_source="https://cdn.example.com/bigcommerce.png",
+                        )
+                    ],
+                ),
+                ctx,
+            )
+
+            record_publisher_download_route(
+                PublisherDownloadRouteRecordRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_url="https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report",
+                    source_url="https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report",
+                    route_kind="email_delivery",
+                    route_summary="Submit the form and verify the thank-you state.",
+                    outcome="email_requested",
+                    route_family="browser_email_form",
+                    route_status="verified",
+                    resolved_target_url="https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report-ty/",
+                    route_steps=[],
+                    confirmation_evidence=BrowserDownloadConfirmationEvidence(
+                        schema_version="1.0",
+                        url_changed=True,
+                        visible_confirmation_text="A copy of the report will be sent to your inbox shortly.",
+                        submit_button_state="disabled",
+                        form_disappeared=True,
+                        final_page_url="https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report-ty/",
+                        confirmation_score=4,
+                        signal_labels=[
+                            "submit_observed",
+                            "delivery_text",
+                            "success_url",
+                            "form_disappeared",
+                        ],
+                    ),
+                    terminal_evidence=DownloadTerminalEvidence(
+                        schema_version="1.0",
+                        final_page_url="https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report-ty/",
+                        final_page_title="Thank you for downloading the report",
+                        terminal_text_excerpt="A copy of the report will be sent to your inbox shortly.",
+                        artifact_url="https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report-ty/",
+                        artifact_kind="email_delivery",
+                        artifact_validation_status="confirmed",
+                        artifact_validation_detail="Email delivery confirmed on thank-you page.",
+                        confirmation_signal_count=4,
+                        traversed_page_urls=[
+                            "https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report-ty/"
+                        ],
+                        evidence_labels=["structured_result", "confirmed", "email_delivery"],
+                    ),
+                    browser_had_structured_result=True,
+                    used_candidate_pdf_url=False,
+                    used_candidate_source_page=False,
+                    blocked_reason=None,
+                    blocked_reason_detail=None,
+                    last_downloaded_file_path=None,
+                    last_final_page_url="https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report-ty/",
+                    onsite_capture_path=None,
+                    onsite_capture_format=None,
+                    onsite_page_count=None,
+                    onsite_completeness_status=None,
+                ),
+                ctx,
+            )
+
+            response = get_publisher_download_route(
+                PublisherDownloadRouteGetRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_url="https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report",
+                ),
+                ctx,
+            )
+
+            self.assertIsNotNone(response)
+            assert response is not None
+            self.assertEqual(4, response.confirmation_evidence.confirmation_score)
+            self.assertEqual(
+                [
+                    "submit_observed",
+                    "delivery_text",
+                    "success_url",
+                    "form_disappeared",
+                ],
+                response.confirmation_evidence.signal_labels,
+            )
+
+    def test_get_download_route_preserves_terminal_network_events(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_route_network_events_round_trip")
+
+            replace_publishers(
+                PublishersReplaceRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_page_url="https://www.notion.so/source",
+                    publishers=[
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-1",
+                            notion_page_url="https://www.notion.so/page-1",
+                            name="Example Publisher",
+                            homepage="https://example.com/",
+                            self_presentation="Example description",
+                            insights_url="https://example.com/report",
+                            icon_source="https://cdn.example.com/example.png",
+                        )
+                    ],
+                ),
+                ctx,
+            )
+
+            record_publisher_download_route(
+                PublisherDownloadRouteRecordRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_url="https://example.com/report",
+                    source_url="https://example.com/report",
+                    route_kind="email_delivery",
+                    route_summary="Submit the form and verify the terminal state.",
+                    outcome="email_requested",
+                    route_family="browser_email_form",
+                    route_status="verified",
+                    resolved_target_url="https://example.com/report/thank-you",
+                    route_steps=[],
+                    confirmation_evidence=BrowserDownloadConfirmationEvidence(
+                        schema_version="1.0",
+                        url_changed=False,
+                        visible_confirmation_text="",
+                        submit_button_state="unchanged",
+                        form_disappeared=False,
+                        final_page_url="https://example.com/report",
+                        confirmation_score=2,
+                        signal_labels=[
+                            "submit_observed",
+                            "network_confirmation_request",
+                        ],
+                    ),
+                    terminal_evidence=DownloadTerminalEvidence(
+                        schema_version="1.0",
+                        final_page_url="https://example.com/report",
+                        final_page_title="Example report",
+                        terminal_text_excerpt="",
+                        artifact_url="https://example.com/report",
+                        artifact_kind="email_delivery",
+                        artifact_validation_status="confirmed",
+                        artifact_validation_detail="Email delivery confirmed from terminal evidence.",
+                        confirmation_signal_count=2,
+                        traversed_page_urls=["https://example.com/report"],
+                        visited_url_timeline=[
+                            "https://example.com/forms/submit",
+                            "https://example.com/report",
+                        ],
+                        observed_document_urls=[],
+                        network_events=[
+                            BrowserDownloadNetworkEvent(
+                                schema_version="1.0",
+                                url="https://example.com/forms/submit",
+                                initiator_type="fetch",
+                                signal_kind="submission_request",
+                            ),
+                            BrowserDownloadNetworkEvent(
+                                schema_version="1.0",
+                                url="https://example.com/report/thank-you",
+                                initiator_type="navigation",
+                                signal_kind="confirmation_request",
+                            ),
+                        ],
+                        evidence_labels=[
+                            "submit_observed",
+                            "network_confirmation_request",
+                            "email_delivery",
+                        ],
+                    ),
+                    browser_had_structured_result=True,
+                    used_candidate_pdf_url=False,
+                    used_candidate_source_page=False,
+                    blocked_reason=None,
+                    blocked_reason_detail=None,
+                    last_downloaded_file_path=None,
+                    last_final_page_url="https://example.com/report",
+                    onsite_capture_path=None,
+                    onsite_capture_format=None,
+                    onsite_page_count=None,
+                    onsite_completeness_status=None,
+                ),
+                ctx,
+            )
+
+            response = get_publisher_download_route(
+                PublisherDownloadRouteGetRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_url="https://example.com/report",
+                ),
+                ctx,
+            )
+
+            self.assertIsNotNone(response)
+            assert response is not None
+            self.assertEqual(2, len(response.terminal_evidence.network_events))
+            self.assertEqual(
+                "submission_request",
+                response.terminal_evidence.network_events[0].signal_kind,
+            )
+            self.assertEqual(
+                "confirmation_request",
+                response.terminal_evidence.network_events[1].signal_kind,
             )
 
     def test_replace_publishers_preserves_google_folder_by_name_or_insights_url(self) -> None:

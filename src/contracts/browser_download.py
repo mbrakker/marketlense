@@ -30,6 +30,30 @@ class BrowserDownloadIdentityField:
 
 
 @dataclass(frozen=True)
+class BrowserDownloadPublisherOverride:
+    schema_version: str = field(
+        metadata={"doc": "Browser download publisher-override schema version."}
+    )
+    host_pattern: str = field(
+        metadata={
+            "doc": "Exact host or host suffix used to match publisher-specific identity overrides."
+        }
+    )
+    delivery_emails: list[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Publisher-specific delivery email addresses ranked ahead of the global identity emails."
+        },
+    )
+    field_values: list[BrowserDownloadIdentityField] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Publisher-specific identity field values, including enum answers and field overrides."
+        },
+    )
+
+
+@dataclass(frozen=True)
 class BrowserDownloadIdentity:
     schema_version: str = field(
         metadata={"doc": "Browser download identity schema version."}
@@ -38,6 +62,18 @@ class BrowserDownloadIdentity:
         metadata={
             "doc": "Configured identity fields available for browser form filling."
         }
+    )
+    delivery_emails: list[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Configured delivery email addresses that can be used for gated report forms."
+        },
+    )
+    publisher_overrides: list[BrowserDownloadPublisherOverride] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Optional publisher-specific delivery-email and field-value overrides."
+        },
     )
 
 
@@ -190,6 +226,34 @@ class BrowserDownloadConfirmationEvidence:
     final_page_url: str = field(
         metadata={"doc": "Final page URL associated with the captured confirmation evidence."}
     )
+    confirmation_score: int = field(
+        default=0,
+        metadata={
+            "doc": "Count of independent confirmation signals captured for the terminal form state."
+        },
+    )
+    signal_labels: list[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Stable labels describing which confirmation signals contributed to the score."
+        },
+    )
+
+
+@dataclass(frozen=True)
+class BrowserDownloadNetworkEvent:
+    schema_version: str = field(
+        metadata={"doc": "Browser download network-event schema version."}
+    )
+    url: str = field(
+        metadata={"doc": "Observed request URL associated with the terminal browser state."}
+    )
+    initiator_type: str = field(
+        metadata={"doc": "Browser-reported initiator type, for example `navigation`, `fetch`, `xmlhttprequest`, or `beacon`."}
+    )
+    signal_kind: str = field(
+        metadata={"doc": "Stable semantic classification for the request, for example `document_request`, `submission_request`, `confirmation_request`, or `other`."}
+    )
 
 
 @dataclass(frozen=True)
@@ -224,6 +288,48 @@ class DownloadTerminalEvidence:
     traversed_page_urls: list[str] = field(
         default_factory=list,
         metadata={"doc": "Distinct page URLs traversed while reaching the terminal state."},
+    )
+    visited_url_timeline: list[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Ordered URL timeline reconstructed from route steps and terminal navigation evidence."
+        },
+    )
+    observed_document_urls: list[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Observed document or PDF-like URLs recovered from browser resource evidence, DOM markup, or deterministic artifact recovery."
+        },
+    )
+    network_events: list[BrowserDownloadNetworkEvent] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Bounded typed network events captured from browser performance/navigation evidence for terminal-state salvage and auditability."
+        },
+    )
+    html_snapshot_path: str = field(
+        default="",
+        metadata={
+            "doc": "Absolute local path of the persisted terminal HTML snapshot when available."
+        },
+    )
+    screenshot_path: str = field(
+        default="",
+        metadata={
+            "doc": "Absolute local path of the persisted terminal screenshot when available."
+        },
+    )
+    dom_snapshot_sha256: str = field(
+        default="",
+        metadata={
+            "doc": "SHA-256 hash of the bounded terminal DOM snapshot when browser HTML was available."
+        },
+    )
+    evidence_labels: list[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Stable labels describing the deterministic evidence captured for this terminal state."
+        },
     )
 
 
@@ -511,6 +617,18 @@ class PublisherDownloadRouteMemory:
     confidence_score: float = field(
         default=0.0,
         metadata={"doc": "Confidence score for reusing this remembered route."},
+    )
+    browser_had_structured_result: bool = field(
+        default=True,
+        metadata={
+            "doc": "Whether the remembered success came from a structured browser result instead of fallback salvage."
+        },
+    )
+    onsite_completeness_status: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Remembered on-site completeness verdict when the route kind is `onsite_report`."
+        },
     )
 
 

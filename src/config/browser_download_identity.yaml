@@ -83,7 +83,7 @@ fields:
 - schema_version: '1.0'
   key: website_url
   label: Website URL
-  value: null
+  value: https://secret.example
   aliases:
   - website
   - site
@@ -100,17 +100,17 @@ fields:
 - schema_version: '1.0'
   key: business_organization
   label: Business / Organization
-  value: null
+  value: Secret
   aliases: []
 - schema_version: '1.0'
   key: workplace
   label: Workplace
-  value: null
+  value: Secret
   aliases: []
 - schema_version: '1.0'
   key: company_name
   label: Company name
-  value: null
+  value: Secret
   aliases: []
 - schema_version: '1.0'
   key: do_you_have_an_app
@@ -130,12 +130,12 @@ fields:
 - schema_version: '1.0'
   key: professional_email
   label: Professional Email
-  value: null
+  value: dustin.von.richman@proton.me
   aliases: []
 - schema_version: '1.0'
   key: business_phone
   label: Business Phone
-  value: null
+  value: 0378378394
   aliases: []
 - schema_version: '1.0'
   key: privacy_checkbox
@@ -178,3 +178,77 @@ fields:
     promotions via email
   value: null
   aliases: []
+- schema_version: '1.0'
+  key: request_purpose
+  label: Request Purpose
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: description
+  label: Description
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: preferred_method_of_contact
+  label: Preferred Method of Contact
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: online_annual_revenue
+  label: Online Annual Revenue
+  value: null
+  aliases:
+  - projected annual revenue
+  - projected annual online revenue
+- schema_version: '1.0'
+  key: do_you_have_a_specific_goal
+  label: Do you have a specific goal?
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: how_would_you_like_us_to_respond
+  label: How would you like us to respond?
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: please_send_me_updates_about
+  label: 'Please send me updates about:'
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: business_type
+  label: Business Type
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: number_of_employees
+  label: Number of Employees
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: current_platform
+  label: Current Platform
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: opt_in_for_marketing_communications_c
+  label: Opt_in_for_Marketing_Communications__c
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: newsletter_and_report_releases
+  label: Newsletter and report releases
+  value: null
+  aliases: []
+publisher_overrides:
+- schema_version: '1.0'
+  host_pattern: bigcommerce.com
+  delivery_emails: []
+  field_values:
+  - schema_version: '1.0'
+    key: online_annual_revenue
+    label: Online Annual Revenue
+    value: 'Building a business: $50K to $250K'
+    aliases:
+    - projected annual revenue
+    - projected annual online revenue

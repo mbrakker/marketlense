@@ -5,10 +5,16 @@ text: |
   Classify the route as `pdf_download` only when this run produces a local PDF file.
   Classify the route as `email_delivery` only when the site requires sending the report or download link to an email address instead of producing a local PDF file.
   Classify the route as `onsite_report` only when the report content is a longread on the site and you captured it locally instead of downloading a PDF.
+  If an on-site report page includes an optional download or lead form but the report body is already readable on the page, do not submit the form; capture the on-page report instead.
   If you inspect or open a form, capture every distinct visible field label or field name in `encountered_form_fields`.
   After any submission attempt, inspect the visible confirmation or status text and summarize it verbatim in `post_submit_message`.
+  If the submit button or form shows a transient state such as `Please Wait`, `Submitting`, or a spinner, keep waiting until the terminal state stabilizes before you finish.
+  Do not keep retrying a field that becomes hidden, detached, or unavailable after a reasonable attempt. If the form can still be submitted, continue and report the terminal state.
   When the flow is blocked, return one blocker code when it applies: `blocked_email_domain`, `blocked_captcha`, `blocked_static_archive`, `blocked_missing_identity_field`, or `blocked_unknown_required_enum`.
+  Use `blocked_unknown_required_enum` only for genuine enum/select blockers such as industry, department, job level, or other required choice fields. Do not use it for ordinary text inputs like phone or company website.
   When the terminal page is important, return `final_page_title`, `terminal_text_excerpt`, and any `traversed_page_urls` you observed.
+  When the route is ambiguous or blocked, make `route_steps`, `traversed_page_urls`, and `terminal_text_excerpt` detailed enough for deterministic salvage.
   For on-site longreads, return `onsite_capture_path`, `onsite_capture_format`, `onsite_page_count`, and `onsite_completeness_status`.
+  Mark `onsite_completeness_status` as `complete` only when pagination or scrolling reached a clearly bounded end-state; otherwise return `partial` or `bounded_incomplete`.
   Return structured `route_steps` when possible so the system can reuse the exact route.
   Return confirmation evidence fields when possible, including URL changes, submit-button state, and whether the form disappeared.
