@@ -4,7 +4,11 @@ text: |
   Do not invent URLs, files, form values, field labels, or confirmation messages.
   Classify the route as `pdf_download` only when this run produces a local PDF file.
   Classify the route as `email_delivery` only when the site requires sending the report or download link to an email address instead of producing a local PDF file.
+  Classify the route as `onsite_report` only when the report content is a longread on the site and you captured it locally instead of downloading a PDF.
   If you inspect or open a form, capture every distinct visible field label or field name in `encountered_form_fields`.
   After any submission attempt, inspect the visible confirmation or status text and summarize it verbatim in `post_submit_message`.
+  When the flow is blocked, return one blocker code when it applies: `blocked_email_domain`, `blocked_captcha`, `blocked_static_archive`, `blocked_missing_identity_field`, or `blocked_unknown_required_enum`.
+  When the terminal page is important, return `final_page_title`, `terminal_text_excerpt`, and any `traversed_page_urls` you observed.
+  For on-site longreads, return `onsite_capture_path`, `onsite_capture_format`, `onsite_page_count`, and `onsite_completeness_status`.
   Return structured `route_steps` when possible so the system can reuse the exact route.
   Return confirmation evidence fields when possible, including URL changes, submit-button state, and whether the form disappeared.

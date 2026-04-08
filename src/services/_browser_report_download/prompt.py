@@ -59,6 +59,7 @@ def render_browser_report_download_prompt(
         "delivery_instruction": _render_delivery_instruction(
             delivery_email=delivery_email,
         ),
+        "route_family_guidance": _render_route_family_guidance(request=request),
         "discovery_context": _render_discovery_context(request=request),
     }
     rendered_system = prompt_service.render_prompt(
@@ -137,6 +138,7 @@ def render_browser_report_download_prompt(
                     request.publisher_recommended_discovery_route_kind or ""
                 ),
                 "route_family_hint": request.route_family_hint or "",
+                "route_family_guidance": variables["route_family_guidance"],
                 "source_page_url_hint": request.source_page_url_hint or "",
             },
         )
@@ -196,6 +198,66 @@ def _render_delivery_instruction(*, delivery_email: str | None) -> str:
         "If the site requires email delivery and no configured email value is "
         "available, do not invent one. Classify the route as `email_delivery` "
         "and set email_submission_completed to false."
+    )
+
+
+def _render_route_family_guidance(*, request: BrowserReportDownloadRequest) -> str:
+    route_family = str(request.route_family_hint or "").strip()
+    if route_family == "browser_pdf_click":
+        return "\n".join(
+            [
+                "Route-family guidance for `browser_pdf_click`:",
+                "- Stay tightly scoped to the candidate page and visible report CTAs.",
+                "- Prefer direct PDF links or obvious download buttons over generic navigation.",
+                "- If the page forces a form instead of producing a PDF, classify that as `email_delivery` rather than pretending the PDF path worked.",
+                "- Do not wander across unrelated resources, blog posts, or site navigation.",
+            ]
+        )
+    if route_family == "browser_email_form":
+        return "\n".join(
+            [
+                "Route-family guidance for `browser_email_form`:",
+                "- Inspect the form before submission and capture all encountered field labels.",
+                "- Use only configured identity values. If a required field is missing, stop and return the correct blocker code instead of guessing.",
+                "- After submission, inspect confirmation text, URL change, button state, and whether the form disappeared.",
+                "- A submit click alone is not enough; only classify success when the confirmation evidence is real.",
+            ]
+        )
+    if route_family == "browser_tracker_redirect":
+        return "\n".join(
+            [
+                "Route-family guidance for `browser_tracker_redirect`:",
+                "- Let the redirect resolve first and record the resolved target URL.",
+                "- If the redirect lands on a listing/source page, switch to the exact matching report candidate rather than exploring broadly.",
+                "- Avoid loops through tracking wrappers, share dialogs, or marketing overlays.",
+            ]
+        )
+    if route_family == "browser_listing_hub":
+        return "\n".join(
+            [
+                "Route-family guidance for `browser_listing_hub`:",
+                "- Start from the source/listing page and find the exact candidate title or URL from discovery context.",
+                "- Open only the most likely matching report candidate; ignore unrelated resources, blog cards, and marketing content.",
+                "- If the destination is an on-site longread instead of a PDF, classify it as `onsite_report` and capture it locally.",
+            ]
+        )
+    if route_family == "browser_onsite_report":
+        return "\n".join(
+            [
+                "Route-family guidance for `browser_onsite_report`:",
+                "- Treat the report as on-site content, not a failed PDF download.",
+                "- Capture the article locally, return `onsite_capture_path`, and record `traversed_page_urls`.",
+                "- For pagination or infinite scroll, traverse only until the report is complete or clearly bounded; avoid endless scrolling.",
+                "- Deduplicate repeated sections and set `onsite_completeness_status` honestly.",
+            ]
+        )
+    return "\n".join(
+        [
+            "Route-family guidance for the current attempt:",
+            "- Stay tightly scoped to the candidate and the most direct report-acquisition path.",
+            "- Prefer deterministic download paths over exploratory browsing.",
+            "- If the route is blocked or becomes an on-site longread, classify that explicitly instead of forcing a PDF outcome.",
+        ]
     )
 
 

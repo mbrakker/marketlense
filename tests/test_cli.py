@@ -9,6 +9,7 @@ from src.contracts.browser_download import (
     BrowserDownloadIdentityField,
     BrowserDownloadRouteStep,
     BrowserDownloadSettings,
+    DownloadTerminalEvidence,
     ReportDownloadOrchestratorResult,
 )
 from src.contracts.acquisition_audit import (
@@ -259,15 +260,33 @@ class TestCli(unittest.TestCase):
                 form_disappeared=False,
                 final_page_url="https://example.com/report/final",
             ),
+            terminal_evidence=DownloadTerminalEvidence(
+                schema_version="1.0",
+                final_page_url="https://example.com/report/final",
+                final_page_title="",
+                terminal_text_excerpt="",
+                artifact_url="https://example.com/report/final",
+                artifact_kind="pdf",
+                artifact_validation_status="verified",
+                artifact_validation_detail="",
+                confirmation_signal_count=0,
+                traversed_page_urls=["https://example.com/report/final"],
+            ),
             browser_had_structured_result=False,
             used_candidate_pdf_url=False,
             used_candidate_source_page=False,
             encountered_form_fields=["Email", "Business"],
             identity_fields_added=["business"],
+            blocked_reason=None,
+            blocked_reason_detail=None,
             downloaded_file_path="./out/browser_downloads/report.pdf",
             downloaded_file_name="report.pdf",
             downloaded_mime_type="application/pdf",
             downloaded_size_bytes=128,
+            onsite_capture_path=None,
+            onsite_capture_format=None,
+            onsite_page_count=None,
+            onsite_completeness_status=None,
         )
 
         with patch.object(

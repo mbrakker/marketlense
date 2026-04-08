@@ -8,6 +8,7 @@ import unittest
 from src.contracts.browser_download import (
     BrowserDownloadConfirmationEvidence,
     BrowserDownloadRouteStep,
+    DownloadTerminalEvidence,
 )
 from src.contracts.report_store import (
     PublishersListRequest,
@@ -611,11 +612,29 @@ class TestReportStoreService(unittest.TestCase):
                         form_disappeared=False,
                         final_page_url="https://www.activate.com/insights",
                     ),
+                    terminal_evidence=DownloadTerminalEvidence(
+                        schema_version="1.0",
+                        final_page_url="https://www.activate.com/insights",
+                        final_page_title="",
+                        terminal_text_excerpt="",
+                        artifact_url="https://www.activate.com/insights",
+                        artifact_kind="email_delivery",
+                        artifact_validation_status="blocked",
+                        artifact_validation_detail="",
+                        confirmation_signal_count=0,
+                        traversed_page_urls=["https://www.activate.com/insights"],
+                    ),
                     browser_had_structured_result=True,
                     used_candidate_pdf_url=False,
                     used_candidate_source_page=False,
+                    blocked_reason="blocked_missing_identity_field",
+                    blocked_reason_detail="missing required identity value",
                     last_downloaded_file_path=None,
                     last_final_page_url="https://www.activate.com/insights",
+                    onsite_capture_path=None,
+                    onsite_capture_format=None,
+                    onsite_page_count=None,
+                    onsite_completeness_status=None,
                 ),
                 ctx,
             )

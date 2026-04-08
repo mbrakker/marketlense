@@ -6,6 +6,7 @@ from typing import List, Optional
 from src.contracts.browser_download import (
     BrowserDownloadConfirmationEvidence,
     BrowserDownloadRouteStep,
+    DownloadTerminalEvidence,
 )
 from src.contracts.docpacks import DocPackPathMap
 from src.contracts.publisher_inventory import PublisherInventoryRunQualitySummary
@@ -462,13 +463,13 @@ class PublisherDownloadRouteRecordRequest:
         metadata={"doc": "Last source URL observed for the route; expected to match publisher insights_url."}
     )
     route_kind: str = field(
-        metadata={"doc": "Detected route kind: `pdf_download` or `email_delivery`."}
+        metadata={"doc": "Detected route kind: `pdf_download`, `email_delivery`, or `onsite_report`."}
     )
     route_summary: str = field(
         metadata={"doc": "Remembered summary of the best-known route for this publisher URL."}
     )
     outcome: str = field(
-        metadata={"doc": "Observed outcome: `downloaded`, `email_requested`, or `email_required`."}
+        metadata={"doc": "Observed outcome: `downloaded`, `email_requested`, `email_required`, or `captured`."}
     )
     route_family: str = field(
         metadata={"doc": "Observed route family, for example `direct_pdf_probe` or `browser_email_form`."}
@@ -484,6 +485,9 @@ class PublisherDownloadRouteRecordRequest:
     )
     confirmation_evidence: BrowserDownloadConfirmationEvidence = field(
         metadata={"doc": "Structured confirmation evidence stored for email-gated or ambiguous routes."}
+    )
+    terminal_evidence: DownloadTerminalEvidence = field(
+        metadata={"doc": "Canonical terminal evidence stored for successful or failed route classification."}
     )
     browser_had_structured_result: bool = field(
         metadata={"doc": "Whether browser-use returned a structured result instead of requiring fallback salvage."}
@@ -514,6 +518,14 @@ class PublisherDownloadRouteRecordRequest:
         default=None,
         metadata={"doc": "Publisher-level recommended discovery route kind snapshot recorded with the route attempt."},
     )
+    blocked_reason: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Typed blocker code when the route reached a blocked terminal state."},
+    )
+    blocked_reason_detail: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Human-readable blocker detail captured from the terminal state when available."},
+    )
     last_downloaded_file_path: Optional[str] = field(
         default=None,
         metadata={"doc": "Last downloaded local file path for this publisher route, if any."},
@@ -521,6 +533,38 @@ class PublisherDownloadRouteRecordRequest:
     last_final_page_url: Optional[str] = field(
         default=None,
         metadata={"doc": "Last final browser URL observed for this publisher route, if any."},
+    )
+    onsite_capture_path: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Last local on-site capture path for this publisher route, if any."},
+    )
+    onsite_capture_format: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Stored on-site capture format for this publisher route, if any."},
+    )
+    onsite_page_count: Optional[int] = field(
+        default=None,
+        metadata={"doc": "Stored on-site captured page count for this publisher route, if any."},
+    )
+    onsite_completeness_status: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Stored on-site capture completeness verdict for this publisher route, if any."},
+    )
+    attempts: int = field(
+        default=0,
+        metadata={"doc": "Total attempts recorded for this normalized route after this write."},
+    )
+    verified_successes: int = field(
+        default=0,
+        metadata={"doc": "Total verified successes recorded for this normalized route after this write."},
+    )
+    last_n_outcomes: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Recent outcomes backing this route-memory record."},
+    )
+    confidence_score: float = field(
+        default=0.0,
+        metadata={"doc": "Confidence score assigned to this remembered route after projection."},
     )
 
 
@@ -536,7 +580,7 @@ class PublisherDownloadRouteResponse:
         metadata={"doc": "Publisher insights URL used as the stored source URL."}
     )
     route_kind: str = field(
-        metadata={"doc": "Detected route kind: `pdf_download` or `email_delivery`."}
+        metadata={"doc": "Detected route kind: `pdf_download`, `email_delivery`, or `onsite_report`."}
     )
     route_summary: str = field(
         metadata={"doc": "Remembered summary of the best-known route for this publisher URL."}
@@ -558,6 +602,9 @@ class PublisherDownloadRouteResponse:
     )
     confirmation_evidence: BrowserDownloadConfirmationEvidence = field(
         metadata={"doc": "Structured confirmation evidence stored for email-gated or ambiguous routes."}
+    )
+    terminal_evidence: DownloadTerminalEvidence = field(
+        metadata={"doc": "Canonical terminal evidence stored for successful or failed route classification."}
     )
     browser_had_structured_result: bool = field(
         metadata={"doc": "Whether browser-use returned a structured result instead of requiring fallback salvage."}
@@ -591,6 +638,14 @@ class PublisherDownloadRouteResponse:
         default=None,
         metadata={"doc": "Publisher-level recommended discovery route kind snapshot recorded with the route attempt."},
     )
+    blocked_reason: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Typed blocker code when the route reached a blocked terminal state."},
+    )
+    blocked_reason_detail: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Human-readable blocker detail captured from the terminal state when available."},
+    )
     last_downloaded_file_path: Optional[str] = field(
         default=None,
         metadata={"doc": "Last downloaded local file path for this publisher route, if any."},
@@ -598,6 +653,38 @@ class PublisherDownloadRouteResponse:
     last_final_page_url: Optional[str] = field(
         default=None,
         metadata={"doc": "Last final browser URL observed for this publisher route, if any."},
+    )
+    onsite_capture_path: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Last local on-site capture path for this publisher route, if any."},
+    )
+    onsite_capture_format: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Stored on-site capture format for this publisher route, if any."},
+    )
+    onsite_page_count: Optional[int] = field(
+        default=None,
+        metadata={"doc": "Stored on-site captured page count for this publisher route, if any."},
+    )
+    onsite_completeness_status: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Stored on-site capture completeness verdict for this publisher route, if any."},
+    )
+    attempts: int = field(
+        default=0,
+        metadata={"doc": "Total remembered attempts recorded for this normalized route."},
+    )
+    verified_successes: int = field(
+        default=0,
+        metadata={"doc": "Total remembered verified successes recorded for this normalized route."},
+    )
+    last_n_outcomes: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Recent outcomes backing this route-memory record."},
+    )
+    confidence_score: float = field(
+        default=0.0,
+        metadata={"doc": "Confidence score assigned to this remembered route."},
     )
 
 

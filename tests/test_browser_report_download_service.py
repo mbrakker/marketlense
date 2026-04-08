@@ -669,7 +669,7 @@ def test_download_report_with_browser_use_raises_when_pdf_classification_has_no_
     runtime = _runtime(
         tmp_path,
         route_kind="pdf_download",
-        route_summary="Click the report download CTA.",
+        route_summary="Open the report page, click the main download CTA, and wait for the PDF save to finish.",
         create_pdf=False,
         email_submission_completed=None,
     )
@@ -705,7 +705,7 @@ def test_download_report_with_browser_use_raises_for_invalid_pdf_stub(
     runtime = _runtime(
         tmp_path,
         route_kind="pdf_download",
-        route_summary="Click the report download CTA.",
+        route_summary="Open the report page, click the main download CTA, and wait for the PDF save to finish.",
         create_pdf=False,
         email_submission_completed=None,
     )
@@ -982,4 +982,81 @@ def test_download_report_with_browser_use_logs_discovery_prompt_context(
     assert fields["candidate_canonical_url"] == candidate_trace.canonical_url
     assert fields["candidate_source_page_urls"] == ["https://example.com/insights"]
     assert fields["publisher_recommended_discovery_route_kind"] == "browser_render"
+    assert "redirect" in fields["route_family_guidance"].casefold()
     assert "https://example.com/insights" in fields["rendered_user_prompt"]
+
+
+def test_download_report_with_browser_use_logs_onsite_prompt_guidance(
+    tmp_path: Path,
+    caplog,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    candidate_trace = PublisherInventoryCandidateTrace(
+        schema_version="1.0",
+        canonical_url="https://example.com/research/market-outlook-2026",
+        title="Market Outlook 2026",
+        discovered_on_page_number=1,
+        source_page_urls=["https://example.com/research"],
+        discovery_provenances=["browser_dom"],
+        pdf_url=None,
+        published_at_text=None,
+        max_confidence=0.82,
+    )
+    runtime = _runtime(
+        tmp_path,
+        route_kind="onsite_report",
+        route_summary="Open the report page, capture the article locally, and verify completeness.",
+        create_pdf=False,
+        email_submission_completed=None,
+    )
+    original_runtime = runtime.Agent
+
+    class OnsiteAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            payload = json.loads(history.final_result())
+            onsite_path = Path(self.browser.downloads_path) / "onsite-report.html"
+            onsite_path.write_text("<article><h1>Market Outlook</h1><p>Longread body.</p></article>", encoding="utf-8")
+            payload["onsite_capture_path"] = str(onsite_path)
+            payload["onsite_capture_format"] = "html"
+            payload["onsite_page_count"] = 1
+            payload["onsite_completeness_status"] = "complete"
+
+            class OnsiteHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return OnsiteHistory()
+
+    runtime.Agent = OnsiteAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+    caplog.set_level(logging.INFO, logger=service.logger.name)
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url=candidate_trace.canonical_url,
+            settings=_settings(tmp_path),
+            candidate_trace=candidate_trace,
+            route_family_hint="browser_onsite_report",
+        ),
+        run_context,
+    )
+
+    prompt_events = [
+        json.loads(record.message)
+        for record in caplog.records
+        if record.name == service.logger.name
+        and json.loads(record.message).get("event")
+        == "browser_report_download_prompt_prepared"
+    ]
+    assert len(prompt_events) == 1
+    fields = prompt_events[0]["fields"]
+    assert "on-site content" in fields["route_family_guidance"].casefold()
+    assert response.route_kind == "onsite_report"
+    assert response.outcome == "captured"

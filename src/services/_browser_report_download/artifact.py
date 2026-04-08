@@ -12,6 +12,7 @@ from src.contracts.browser_download import (
     BrowserDownloadRouteStep,
     BrowserReportDownloadRequest,
     BrowserReportDownloadResult,
+    DownloadTerminalEvidence,
 )
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download.http import (
@@ -26,7 +27,7 @@ from src.utils.url_utils import normalize_url
 if TYPE_CHECKING:
     from src.services._browser_report_download.browser import BrowserAgentRunResult
 
-_ROUTE_KINDS = {"pdf_download", "email_delivery"}
+_ROUTE_KINDS = {"pdf_download", "email_delivery", "onsite_report"}
 _ROUTE_SUMMARY_ACTION_MARKERS = (
     "open",
     "click",
@@ -60,6 +61,36 @@ _ROUTE_SUMMARY_TARGET_MARKERS = (
     "prompt",
 )
 _SUCCESS_URL_MARKERS = ("thank", "success", "confirm", "complete", "done")
+_EMAIL_DOMAIN_BLOCK_MARKERS = (
+    "business email",
+    "work email",
+    "corporate email",
+    "company email",
+    "valid business email",
+    "professional email",
+)
+_CAPTCHA_MARKERS = ("captcha", "recaptcha", "hcaptcha", "i am human", "not a robot")
+_STATIC_ARCHIVE_MARKERS = (
+    "archived",
+    "archive",
+    "no longer available",
+    "unavailable",
+    "coming soon",
+)
+_UNKNOWN_ENUM_MARKERS = (
+    "select",
+    "choose",
+    "dropdown",
+    "industry",
+    "country",
+    "state",
+    "department",
+    "job level",
+)
+_ONSITE_ROUTE_FAMILIES = {
+    "browser_onsite_report",
+    "browser_listing_hub",
+}
 
 
 class BrowserUseRouteStep(BaseModel):
@@ -72,7 +103,7 @@ class BrowserUseRouteStep(BaseModel):
 
 
 class BrowserUseAgentResult(BaseModel):
-    route_kind: str = Field(description="Either `pdf_download` or `email_delivery`.")
+    route_kind: str = Field(description="Either `pdf_download`, `email_delivery`, or `onsite_report`.")
     route_summary: str = Field(
         default="",
         description="Short description of the working clicks/forms for this URL.",
@@ -129,6 +160,42 @@ class BrowserUseAgentResult(BaseModel):
         default=None,
         description="Whether the form disappeared after submission.",
     )
+    blocked_reason: str = Field(
+        default="",
+        description="Typed blocker code when the flow is blocked instead of completed.",
+    )
+    blocked_reason_detail: str = Field(
+        default="",
+        description="Human-readable blocker detail captured from the terminal state when available.",
+    )
+    final_page_title: str = Field(
+        default="",
+        description="Observed final page title when available.",
+    )
+    terminal_text_excerpt: str = Field(
+        default="",
+        description="Short visible text excerpt captured from the terminal page when available.",
+    )
+    traversed_page_urls: list[str] = Field(
+        default_factory=list,
+        description="Distinct page URLs traversed while reaching the terminal state.",
+    )
+    onsite_capture_path: str | None = Field(
+        default=None,
+        description="Absolute local path of the captured on-site report artifact when available.",
+    )
+    onsite_capture_format: str | None = Field(
+        default=None,
+        description="Stored on-site capture format when available.",
+    )
+    onsite_page_count: int | None = Field(
+        default=None,
+        description="Number of distinct pages or scroll segments captured for an on-site report when available.",
+    )
+    onsite_completeness_status: str = Field(
+        default="",
+        description="On-site capture completeness verdict when available.",
+    )
 
 
 def finalize_browser_report_download_result(
@@ -162,6 +229,16 @@ def finalize_browser_report_download_result(
         browser_downloaded_files=browser_run.downloaded_files,
         download_dir=download_dir,
     )
+    onsite_capture_path = str(agent_result.onsite_capture_path or "").strip() or None
+    if onsite_capture_path and downloaded_path is not None:
+        try:
+            if downloaded_path.resolve() == Path(onsite_capture_path).expanduser().resolve():
+                downloaded_path = None
+        except OSError:
+            downloaded_path = None
+    encountered_form_fields = _normalize_encountered_form_fields(
+        agent_result.encountered_form_fields
+    )
     resolved_target_url = str(
         agent_result.resolved_target_url
         or final_url
@@ -181,9 +258,11 @@ def finalize_browser_report_download_result(
         ],
     )
     route_kind = _resolve_route_kind(
+        request=request,
+        agent_result=agent_result,
         route_kind=agent_result.route_kind,
         downloaded_path=downloaded_path,
-        encountered_form_fields=agent_result.encountered_form_fields,
+        encountered_form_fields=encountered_form_fields,
         post_submit_message=agent_result.post_submit_message,
     )
     if route_kind == "pdf_download" and downloaded_path is None:
@@ -200,9 +279,6 @@ def finalize_browser_report_download_result(
     confirmation_evidence = _build_confirmation_evidence(
         agent_result=agent_result,
         final_url=final_url,
-    )
-    encountered_form_fields = _normalize_encountered_form_fields(
-        agent_result.encountered_form_fields
     )
     route_steps = _resolve_route_steps(
         request=request,
@@ -224,17 +300,87 @@ def finalize_browser_report_download_result(
         else None,
         downloaded_path=downloaded_path,
     )
-    validate_downloaded_pdf_artifact(
-        downloaded_path=downloaded_path,
-        downloaded_mime_type=downloaded_mime_type,
-        normalized_url=normalized_url,
+    blocked_reason = _resolve_blocked_reason(
+        request=request,
+        delivery_email=delivery_email,
+        agent_result=agent_result,
+        encountered_form_fields=encountered_form_fields,
+        final_url=final_url,
     )
-    outcome, route_status = _classify_route_result(
+    blocked_reason_detail = _resolve_blocked_reason_detail(
+        agent_result=agent_result,
+        blocked_reason=blocked_reason,
+    )
+    onsite_capture_format = str(agent_result.onsite_capture_format or "").strip() or None
+    onsite_page_count = agent_result.onsite_page_count
+    onsite_completeness_status = (
+        str(agent_result.onsite_completeness_status or "").strip() or None
+    )
+    artifact_validation_status = "none"
+    artifact_validation_detail = ""
+    if downloaded_path is not None:
+        try:
+            validate_downloaded_pdf_artifact(
+                downloaded_path=downloaded_path,
+                downloaded_mime_type=downloaded_mime_type,
+                normalized_url=normalized_url,
+            )
+            artifact_validation_status = "verified"
+            artifact_validation_detail = "Validated local PDF artifact."
+        except AppError as exc:
+            (
+                route_kind,
+                downloaded_path,
+                downloaded_mime_type,
+                blocked_reason,
+                blocked_reason_detail,
+                onsite_capture_path,
+                onsite_capture_format,
+                onsite_page_count,
+                onsite_completeness_status,
+                artifact_validation_status,
+                artifact_validation_detail,
+            ) = _recover_from_invalid_artifact(
+                request=request,
+                agent_result=agent_result,
+                downloaded_path=downloaded_path,
+                final_url=final_url,
+                resolved_target_url=resolved_target_url,
+                confirmation_evidence=confirmation_evidence,
+                encountered_form_fields=encountered_form_fields,
+                blocked_reason=blocked_reason,
+                blocked_reason_detail=blocked_reason_detail,
+                delivery_email=delivery_email,
+                original_error=exc,
+            )
+    elif route_kind == "onsite_report":
+        artifact_validation_status = "captured"
+        artifact_validation_detail = "Captured on-site report content without a local PDF."
+    elif blocked_reason:
+        artifact_validation_status = "blocked"
+        artifact_validation_detail = blocked_reason_detail or blocked_reason
+
+    outcome, route_status, confirmation_signal_count = _classify_route_result(
         route_kind=route_kind,
         downloaded_path=downloaded_path,
         confirmation_evidence=confirmation_evidence,
         encountered_form_fields=encountered_form_fields,
         email_submission_completed=agent_result.email_submission_completed,
+        blocked_reason=blocked_reason,
+        onsite_capture_path=onsite_capture_path,
+        onsite_completeness_status=onsite_completeness_status,
+    )
+    terminal_evidence = _build_terminal_evidence(
+        agent_result=agent_result,
+        final_url=final_url,
+        resolved_target_url=resolved_target_url,
+        route_kind=route_kind,
+        downloaded_path=downloaded_path,
+        downloaded_mime_type=downloaded_mime_type,
+        onsite_capture_path=onsite_capture_path,
+        confirmation_signal_count=confirmation_signal_count,
+        artifact_validation_status=artifact_validation_status,
+        artifact_validation_detail=artifact_validation_detail,
     )
     downloaded_file_name = downloaded_path.name if downloaded_path else None
     downloaded_size_bytes = downloaded_path.stat().st_size if downloaded_path else None
@@ -256,14 +402,21 @@ def finalize_browser_report_download_result(
         used_route_hint=bool(request.route_hint),
         route_steps=route_steps,
         confirmation_evidence=confirmation_evidence,
+        terminal_evidence=terminal_evidence,
         browser_had_structured_result=True,
         used_candidate_pdf_url=used_candidate_pdf_url,
         used_candidate_source_page=_used_candidate_source_page(request),
         encountered_form_fields=encountered_form_fields,
+        blocked_reason=blocked_reason,
+        blocked_reason_detail=blocked_reason_detail,
         downloaded_file_path=str(downloaded_path) if downloaded_path else None,
         downloaded_file_name=downloaded_file_name,
         downloaded_mime_type=downloaded_mime_type,
         downloaded_size_bytes=downloaded_size_bytes,
+        onsite_capture_path=onsite_capture_path,
+        onsite_capture_format=onsite_capture_format,
+        onsite_page_count=onsite_page_count,
+        onsite_completeness_status=onsite_completeness_status,
     )
 
 
@@ -330,6 +483,70 @@ def _salvage_without_structured_result(
             browser_had_structured_result=False,
             used_candidate_pdf_url=used_candidate_pdf_url,
         )
+    if request.route_family_hint == "browser_email_form" and _url_indicates_confirmation(
+        final_url
+    ):
+        confirmation_evidence = BrowserDownloadConfirmationEvidence(
+            schema_version="1.0",
+            url_changed=True,
+            visible_confirmation_text="",
+            submit_button_state="unchanged",
+            form_disappeared=False,
+            final_page_url=final_url,
+        )
+        return BrowserReportDownloadResult(
+            schema_version="1.0",
+            source_url=request.url,
+            normalized_url=normalized_url,
+            route_kind="email_delivery",
+            route_family=request.route_family_hint,
+            route_status="inferred",
+            outcome="email_requested",
+            route_summary="Open the form page, submit the delivery request, and verify the confirmation URL.",
+            final_page_url=final_url,
+            resolved_target_url=final_url or request.attempt_url or normalized_url,
+            used_route_hint=bool(request.route_hint),
+            route_steps=[
+                BrowserDownloadRouteStep(
+                    schema_version="1.0",
+                    index=0,
+                    action="open",
+                    target_text=str(request.attempt_url or request.url).strip(),
+                    target_role="url",
+                    target_url=final_url or request.attempt_url or normalized_url,
+                    result="submitted",
+                )
+            ],
+            confirmation_evidence=confirmation_evidence,
+            terminal_evidence=DownloadTerminalEvidence(
+                schema_version="1.0",
+                final_page_url=final_url,
+                final_page_title="",
+                terminal_text_excerpt="",
+                artifact_url=final_url,
+                artifact_kind="email_delivery",
+                artifact_validation_status="recovered",
+                artifact_validation_detail="Recovered email-delivery terminal state from the final confirmation URL.",
+                confirmation_signal_count=1,
+                traversed_page_urls=_normalize_traversed_page_urls(
+                    raw_urls=[request.attempt_url or "", final_url]
+                ),
+            ),
+            browser_had_structured_result=False,
+            used_candidate_pdf_url=used_candidate_pdf_url,
+            used_candidate_source_page=_used_candidate_source_page(request),
+            encountered_form_fields=[],
+            blocked_reason=None,
+            blocked_reason_detail=None,
+            downloaded_file_path=None,
+            downloaded_file_name=None,
+            downloaded_mime_type=None,
+            downloaded_size_bytes=None,
+            onsite_capture_path=None,
+            onsite_capture_format=None,
+            onsite_page_count=None,
+            onsite_completeness_status=None,
+        )
     raise AppError(
         code="browser_download_empty_result",
         message="browser-use returned no structured result and no PDF artifact could be salvaged",
@@ -354,14 +571,19 @@ def _complete_pdf_artifact(
     target_urls: list[str],
 ) -> tuple[Path | None, bool]:
     if downloaded_path is not None:
-        ensured_path = ensure_downloaded_pdf(
-            downloaded_path=downloaded_path,
-            ctx=ctx,
-            normalized_url=normalized_url,
-            document_url=str(request.attempt_url or normalized_url).strip(),
-            timeout_seconds=request.settings.timeout_seconds,
-        )
-        return ensured_path, False
+        try:
+            ensured_path = ensure_downloaded_pdf(
+                downloaded_path=downloaded_path,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                document_url=str(request.attempt_url or normalized_url).strip(),
+                timeout_seconds=request.settings.timeout_seconds,
+            )
+            return ensured_path, False
+        except AppError as exc:
+            if exc.code != "browser_download_invalid_pdf":
+                raise
+            return downloaded_path, False
     candidate_pdf_url = (
         str(request.candidate_trace.pdf_url or "").strip()
         if request.candidate_trace is not None
@@ -465,14 +687,34 @@ def _build_pdf_result(
             form_disappeared=False,
             final_page_url=final_url,
         ),
+        terminal_evidence=DownloadTerminalEvidence(
+            schema_version="1.0",
+            final_page_url=final_url,
+            final_page_title="",
+            terminal_text_excerpt="",
+            artifact_url=resolved_target_url,
+            artifact_kind="pdf",
+            artifact_validation_status="verified",
+            artifact_validation_detail="Validated local PDF artifact.",
+            confirmation_signal_count=0,
+            traversed_page_urls=_normalize_traversed_page_urls(
+                raw_urls=[resolved_target_url, final_url]
+            ),
+        ),
         browser_had_structured_result=browser_had_structured_result,
         used_candidate_pdf_url=used_candidate_pdf_url,
         used_candidate_source_page=_used_candidate_source_page(request),
         encountered_form_fields=[],
+        blocked_reason=None,
+        blocked_reason_detail=None,
         downloaded_file_path=str(downloaded_path),
         downloaded_file_name=downloaded_path.name,
         downloaded_mime_type=downloaded_mime_type,
         downloaded_size_bytes=downloaded_path.stat().st_size,
+        onsite_capture_path=None,
+        onsite_capture_format=None,
+        onsite_page_count=None,
+        onsite_completeness_status=None,
     )
 
 
@@ -559,6 +801,8 @@ def _is_semantic_route_summary(route_summary: str) -> bool:
 
 def _resolve_route_kind(
     *,
+    request: BrowserReportDownloadRequest,
+    agent_result: BrowserUseAgentResult,
     route_kind: str,
     downloaded_path: Path | None,
     encountered_form_fields: list[str],
@@ -567,6 +811,12 @@ def _resolve_route_kind(
     token = str(route_kind or "").strip().lower()
     if downloaded_path is not None:
         return "pdf_download"
+    if (
+        agent_result.onsite_capture_path
+        or str(agent_result.onsite_completeness_status or "").strip()
+        or str(request.route_family_hint or "").strip() in _ONSITE_ROUTE_FAMILIES
+    ):
+        return "onsite_report"
     if encountered_form_fields or _message_indicates_email_delivery(post_submit_message):
         return "email_delivery"
     if token in _ROUTE_KINDS:
@@ -594,6 +844,93 @@ def _build_confirmation_evidence(
         form_disappeared=bool(agent_result.form_disappeared),
         final_page_url=str(agent_result.final_page_url or final_url).strip(),
     )
+
+
+def _build_terminal_evidence(
+    *,
+    agent_result: BrowserUseAgentResult,
+    final_url: str,
+    resolved_target_url: str,
+    route_kind: str,
+    downloaded_path: Path | None,
+    downloaded_mime_type: str | None,
+    onsite_capture_path: str | None,
+    confirmation_signal_count: int,
+    artifact_validation_status: str,
+    artifact_validation_detail: str,
+) -> DownloadTerminalEvidence:
+    artifact_url = resolved_target_url if resolved_target_url else final_url
+    artifact_kind = route_kind
+    if downloaded_path is not None:
+        artifact_kind = downloaded_mime_type or "pdf"
+    elif onsite_capture_path:
+        artifact_kind = "onsite_report"
+    return DownloadTerminalEvidence(
+        schema_version="1.0",
+        final_page_url=final_url,
+        final_page_title=str(agent_result.final_page_title or "").strip(),
+        terminal_text_excerpt=str(agent_result.terminal_text_excerpt or "").strip(),
+        artifact_url=str(artifact_url or "").strip(),
+        artifact_kind=str(artifact_kind or "none").strip() or "none",
+        artifact_validation_status=str(artifact_validation_status or "none").strip()
+        or "none",
+        artifact_validation_detail=str(artifact_validation_detail or "").strip(),
+        confirmation_signal_count=confirmation_signal_count,
+        traversed_page_urls=_normalize_traversed_page_urls(
+            raw_urls=[*agent_result.traversed_page_urls, resolved_target_url, final_url]
+        ),
+    )
+
+
+def _resolve_blocked_reason(
+    *,
+    request: BrowserReportDownloadRequest,
+    delivery_email: str | None,
+    agent_result: BrowserUseAgentResult,
+    encountered_form_fields: list[str],
+    final_url: str,
+) -> str | None:
+    explicit = str(agent_result.blocked_reason or "").strip().lower()
+    if explicit:
+        return explicit
+    haystack = " ".join(
+        [
+            str(agent_result.post_submit_message or "").strip(),
+            str(agent_result.terminal_text_excerpt or "").strip(),
+            " ".join(encountered_form_fields),
+            str(agent_result.final_page_title or "").strip(),
+        ]
+    ).casefold()
+    if any(marker in haystack for marker in _EMAIL_DOMAIN_BLOCK_MARKERS):
+        return "blocked_email_domain"
+    if any(marker in haystack for marker in _CAPTCHA_MARKERS):
+        return "blocked_captcha"
+    if any(marker in haystack for marker in _STATIC_ARCHIVE_MARKERS) or any(
+        marker in str(final_url or "").casefold() for marker in _STATIC_ARCHIVE_MARKERS
+    ):
+        return "blocked_static_archive"
+    if _has_missing_identity_field(
+        request=request,
+        delivery_email=delivery_email,
+        encountered_form_fields=encountered_form_fields,
+    ):
+        return "blocked_missing_identity_field"
+    if any(marker in haystack for marker in _UNKNOWN_ENUM_MARKERS):
+        return "blocked_unknown_required_enum"
+    return None
+
+
+def _resolve_blocked_reason_detail(
+    *,
+    agent_result: BrowserUseAgentResult,
+    blocked_reason: str | None,
+) -> str | None:
+    detail = str(agent_result.blocked_reason_detail or "").strip()
+    if detail:
+        return detail
+    if blocked_reason:
+        return str(agent_result.post_submit_message or agent_result.terminal_text_excerpt or "").strip() or blocked_reason
+    return None
 
 
 def _resolve_route_steps(
@@ -643,6 +980,96 @@ def _resolve_route_steps(
     ]
 
 
+def _recover_from_invalid_artifact(
+    *,
+    request: BrowserReportDownloadRequest,
+    agent_result: BrowserUseAgentResult,
+    downloaded_path: Path,
+    final_url: str,
+    resolved_target_url: str,
+    confirmation_evidence: BrowserDownloadConfirmationEvidence,
+    encountered_form_fields: list[str],
+    blocked_reason: str | None,
+    blocked_reason_detail: str | None,
+    delivery_email: str | None,
+    original_error: AppError,
+) -> tuple[
+    str,
+    Path | None,
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    int | None,
+    str | None,
+    str,
+    str,
+]:
+    wrapper_html = _read_text_if_small(downloaded_path, max_bytes=256 * 1024)
+    if not wrapper_html:
+        raise original_error
+    recovered_blocked_reason = blocked_reason or _resolve_blocked_reason(
+        request=request,
+        delivery_email=delivery_email,
+        agent_result=agent_result,
+        encountered_form_fields=encountered_form_fields,
+        final_url=final_url,
+    )
+    recovered_blocked_detail = blocked_reason_detail or _resolve_blocked_reason_detail(
+        agent_result=agent_result,
+        blocked_reason=recovered_blocked_reason,
+    )
+    lowered_html = wrapper_html.casefold()
+    if (
+        _message_indicates_email_delivery(wrapper_html)
+        or recovered_blocked_reason
+        or _url_indicates_confirmation(final_url)
+    ):
+        return (
+            "email_delivery",
+            None,
+            None,
+            recovered_blocked_reason,
+            recovered_blocked_detail,
+            None,
+            None,
+            None,
+            None,
+            "recovered" if _message_indicates_email_delivery(wrapper_html) else "blocked",
+            "Recovered an email-delivery or blocked-form terminal state from an HTML artifact.",
+        )
+    if _looks_like_onsite_report_html(
+        wrapper_html=wrapper_html,
+        request=request,
+        agent_result=agent_result,
+        final_url=final_url,
+    ):
+        capture_path = _resolve_onsite_capture_path(downloaded_path)
+        completeness_status = (
+            str(agent_result.onsite_completeness_status or "").strip()
+            or ("complete" if len(lowered_html) >= 2000 else "partial")
+        )
+        page_count = agent_result.onsite_page_count or max(
+            1,
+            len(_normalize_traversed_page_urls(raw_urls=agent_result.traversed_page_urls)),
+        )
+        return (
+            "onsite_report",
+            None,
+            None,
+            None,
+            None,
+            str(capture_path),
+            str(agent_result.onsite_capture_format or "html").strip() or "html",
+            page_count,
+            completeness_status,
+            "captured",
+            "Recovered an on-site report capture from an HTML artifact that was misclassified as a PDF.",
+        )
+    raise original_error
+
+
 def _classify_route_result(
     *,
     route_kind: str,
@@ -650,17 +1077,41 @@ def _classify_route_result(
     confirmation_evidence: BrowserDownloadConfirmationEvidence,
     encountered_form_fields: list[str],
     email_submission_completed: bool | None,
-) -> tuple[str, str]:
+    blocked_reason: str | None,
+    onsite_capture_path: str | None,
+    onsite_completeness_status: str | None,
+) -> tuple[str, str, int]:
+    confirmation_signal_count = _count_confirmation_signals(confirmation_evidence)
     if downloaded_path is not None:
-        return "downloaded", "verified"
+        return "downloaded", "verified", confirmation_signal_count
+    if route_kind == "onsite_report":
+        if not onsite_capture_path:
+            raise AppError(
+                code="browser_download_onsite_capture_missing",
+                message="browser-use classified the route as an on-site report but no local capture artifact was found",
+                retryable=True,
+                context={"final_page_url": confirmation_evidence.final_page_url},
+            )
+        route_status = (
+            "verified"
+            if str(onsite_completeness_status or "").strip().lower() == "complete"
+            else "inferred"
+        )
+        return "captured", route_status, confirmation_signal_count
     if route_kind != "email_delivery":
         raise AppError(
             code="browser_download_missing_file",
             message="No PDF artifact was produced for a non-email route",
             retryable=True,
         )
-    if _has_strong_confirmation_signal(confirmation_evidence):
-        return "email_requested", "verified"
+    if confirmation_signal_count >= 2 and _message_indicates_email_delivery(
+        confirmation_evidence.visible_confirmation_text
+    ):
+        return "email_requested", "verified", confirmation_signal_count
+    if email_submission_completed is True and _message_indicates_email_delivery(
+        confirmation_evidence.visible_confirmation_text
+    ):
+        return "email_requested", "verified", confirmation_signal_count
     if email_submission_completed is True:
         raise AppError(
             code="browser_download_email_confirmation_missing",
@@ -668,8 +1119,8 @@ def _classify_route_result(
             retryable=True,
             context={"final_page_url": confirmation_evidence.final_page_url},
         )
-    if encountered_form_fields or email_submission_completed is False:
-        return "email_required", "inferred"
+    if blocked_reason or encountered_form_fields or email_submission_completed is False:
+        return "email_required", "inferred", confirmation_signal_count
     raise AppError(
         code="browser_download_email_submission_missing",
         message="browser-use did not produce enough evidence to verify an email-gated route",
@@ -678,18 +1129,21 @@ def _classify_route_result(
     )
 
 
-def _has_strong_confirmation_signal(
+def _count_confirmation_signals(
     confirmation_evidence: BrowserDownloadConfirmationEvidence,
-) -> bool:
+) -> int:
+    count = 0
     if _message_indicates_email_delivery(confirmation_evidence.visible_confirmation_text):
-        return True
+        count += 1
     if confirmation_evidence.url_changed and _url_indicates_confirmation(
         confirmation_evidence.final_page_url
     ):
-        return True
+        count += 1
     if confirmation_evidence.submit_button_state in {"disabled", "replaced"}:
-        return True
-    return confirmation_evidence.form_disappeared
+        count += 1
+    if confirmation_evidence.form_disappeared:
+        count += 1
+    return count
 
 
 def _message_indicates_email_delivery(message: str) -> bool:
@@ -729,9 +1183,90 @@ def _resolve_route_family(
         return token
     if request.route_family_hint:
         return request.route_family_hint
+    if route_kind == "onsite_report":
+        return "browser_onsite_report"
     if route_kind == "email_delivery":
         return "browser_email_form"
     return "browser_pdf_click"
+
+
+def _normalize_traversed_page_urls(*, raw_urls: list[str]) -> list[str]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for raw_url in raw_urls:
+        token = str(raw_url or "").strip()
+        if not token:
+            continue
+        dedupe_key = normalize_url(token)
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
+        normalized.append(token)
+    return normalized
+
+
+def _has_missing_identity_field(
+    *,
+    request: BrowserReportDownloadRequest,
+    delivery_email: str | None,
+    encountered_form_fields: list[str],
+) -> bool:
+    configured_tokens: set[str] = set()
+    for field in request.settings.identity_profile.fields:
+        value = str(field.value or "").strip()
+        if field.key == "work_email" and delivery_email:
+            value = delivery_email
+        if not value:
+            continue
+        configured_tokens.add(str(field.label or "").strip().casefold())
+        for alias in field.aliases:
+            configured_tokens.add(str(alias or "").strip().casefold())
+        configured_tokens.add(str(field.key or "").strip().casefold())
+    for field_name in encountered_form_fields:
+        token = str(field_name or "").strip().casefold()
+        if not token:
+            continue
+        if "email" in token and not delivery_email:
+            return True
+        if any(
+            marker in token
+            for marker in ("name", "company", "organization", "business", "title", "role", "phone")
+        ) and token not in configured_tokens:
+            return True
+    return False
+
+
+def _looks_like_onsite_report_html(
+    *,
+    wrapper_html: str,
+    request: BrowserReportDownloadRequest,
+    agent_result: BrowserUseAgentResult,
+    final_url: str,
+) -> bool:
+    lowered = str(wrapper_html or "").casefold()
+    route_family = str(request.route_family_hint or agent_result.route_family or "").strip()
+    if route_family in _ONSITE_ROUTE_FAMILIES and len(lowered) >= 1200:
+        return True
+    if "article" in lowered and any(
+        marker in lowered for marker in ("report", "insight", "research", "analysis", "survey")
+    ):
+        return True
+    return (
+        str(agent_result.route_kind or "").strip() == "onsite_report"
+        and len(lowered) >= 800
+        and not _message_indicates_email_delivery(lowered)
+        and not str(final_url or "").strip().lower().endswith(".pdf")
+    )
+
+
+def _resolve_onsite_capture_path(downloaded_path: Path) -> Path:
+    if downloaded_path.suffix.lower() == ".html":
+        return downloaded_path
+    capture_path = downloaded_path.with_suffix(".html")
+    if capture_path.exists():
+        capture_path.unlink()
+    downloaded_path.replace(capture_path)
+    return capture_path
 
 
 def _used_candidate_source_page(request: BrowserReportDownloadRequest) -> bool:
@@ -776,3 +1311,12 @@ def _resolve_downloaded_file(
     selected = pdf_candidates or resolved_candidates
     selected.sort(key=lambda path: path.stat().st_mtime, reverse=True)
     return selected[0]
+
+
+def _read_text_if_small(path: Path, *, max_bytes: int) -> str:
+    try:
+        if path.stat().st_size > max_bytes:
+            return ""
+        return path.read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return ""

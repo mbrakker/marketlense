@@ -4,10 +4,13 @@ text: |
   Open this exact execution URL first: {{ execution_url }}
 
   Find the report acquisition path on the page and complete the route.
+  Use browser interaction only when it adds value for this attempt: click-through downloads, redirects, form submission, or on-site longread capture.
+  Do not waste browser steps re-fetching a direct PDF when the execution URL is already a deterministic PDF target.
 
   The browser downloads directory for this run is: {{ download_dir }}
 
   When a PDF is downloaded, include the absolute `downloaded_file_path`, `downloaded_file_name`, and `downloaded_mime_type` when known.
+  When the report is a longread on the site, capture it locally and return the `onsite_*` fields instead of forcing a PDF classification.
 
   Always return a concise `route_summary` describing the successful clicks or form steps so the system can reuse it later.
 
@@ -16,6 +19,8 @@ text: |
   {{ route_hint_text }}
 
   {{ delivery_instruction }}
+
+  {{ route_family_guidance }}
 
   {{ discovery_context }}
 

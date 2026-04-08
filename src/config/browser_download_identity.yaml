@@ -137,3 +137,44 @@ fields:
   label: Business Phone
   value: null
   aliases: []
+- schema_version: '1.0'
+  key: privacy_checkbox
+  label: Privacy checkbox
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: i_d_like_to_see_a_demo_of_contentsquare
+  label: I'd like to see a demo of Contentsquare
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: i_agree_to_receive_marketing_communications
+  label: I agree to receive marketing communications
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: how_did_you_hear_about_us
+  label: How did you hear about us?
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: receive_our_insights_and_analysis
+  label: Receive our insights and analysis
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: industry
+  label: Industry
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: job_function
+  label: Job Function
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: yes_i_d_like_to_receive_more_information_on_algolia_products_events_and_promotions_via_email
+  label: Yes, I'd like to receive more information on Algolia products, events and
+    promotions via email
+  value: null
+  aliases: []

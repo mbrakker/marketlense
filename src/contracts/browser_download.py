@@ -193,6 +193,41 @@ class BrowserDownloadConfirmationEvidence:
 
 
 @dataclass(frozen=True)
+class DownloadTerminalEvidence:
+    schema_version: str = field(
+        metadata={"doc": "Browser download terminal-evidence schema version."}
+    )
+    final_page_url: str = field(
+        metadata={"doc": "Final browser URL associated with the terminal evidence."}
+    )
+    final_page_title: str = field(
+        metadata={"doc": "Observed final page title when available, else empty string."}
+    )
+    terminal_text_excerpt: str = field(
+        metadata={"doc": "Short visible text excerpt captured from the terminal page when available, else empty string."}
+    )
+    artifact_url: str = field(
+        metadata={"doc": "Best known artifact URL associated with the terminal state when available, else empty string."}
+    )
+    artifact_kind: str = field(
+        metadata={"doc": "Detected artifact kind for the terminal state, for example `pdf`, `html`, `email_delivery`, `onsite_report`, or `none`."}
+    )
+    artifact_validation_status: str = field(
+        metadata={"doc": "Artifact validation status, for example `verified`, `recovered`, `invalid`, `blocked`, `captured`, or `none`."}
+    )
+    artifact_validation_detail: str = field(
+        metadata={"doc": "Short detail describing why the terminal artifact was accepted, recovered, blocked, or rejected."}
+    )
+    confirmation_signal_count: int = field(
+        metadata={"doc": "Number of independent confirmation signals observed for this terminal state."}
+    )
+    traversed_page_urls: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Distinct page URLs traversed while reaching the terminal state."},
+    )
+
+
+@dataclass(frozen=True)
 class BrowserReportDownloadRequest:
     schema_version: str = field(
         metadata={"doc": "Browser report download request schema version."}
@@ -218,7 +253,7 @@ class BrowserReportDownloadRequest:
     route_kind_hint: Optional[str] = field(
         default=None,
         metadata={
-            "doc": "Previously observed route kind (`pdf_download` or `email_delivery`) when available."
+            "doc": "Previously observed route kind (`pdf_download`, `email_delivery`, or `onsite_report`) when available."
         },
     )
     candidate_trace: Optional[PublisherInventoryCandidateTrace] = field(
@@ -269,7 +304,7 @@ class BrowserReportDownloadResult:
         metadata={"doc": "Normalized URL used for route-memory lookup and storage."}
     )
     route_kind: str = field(
-        metadata={"doc": "Detected delivery path: `pdf_download` or `email_delivery`."}
+        metadata={"doc": "Detected delivery path: `pdf_download`, `email_delivery`, or `onsite_report`."}
     )
     route_family: str = field(
         metadata={"doc": "Planned or observed route family that produced the result, for example `direct_pdf_probe` or `browser_email_form`."}
@@ -279,7 +314,7 @@ class BrowserReportDownloadResult:
     )
     outcome: str = field(
         metadata={
-            "doc": "Observed outcome: `downloaded`, `email_requested`, or `email_required`."
+            "doc": "Observed outcome: `downloaded`, `email_requested`, `email_required`, or `captured`."
         }
     )
     route_summary: str = field(
@@ -300,6 +335,9 @@ class BrowserReportDownloadResult:
     confirmation_evidence: BrowserDownloadConfirmationEvidence = field(
         metadata={"doc": "Structured confirmation evidence captured for email-gated or ambiguous routes."}
     )
+    terminal_evidence: DownloadTerminalEvidence = field(
+        metadata={"doc": "Canonical terminal evidence captured for successful or failed browser acquisition attempts."}
+    )
     browser_had_structured_result: bool = field(
         metadata={"doc": "Whether browser-use returned a structured JSON result instead of requiring fallback salvage."}
     )
@@ -314,6 +352,14 @@ class BrowserReportDownloadResult:
         metadata={
             "doc": "Distinct form field labels or names encountered while following the route."
         },
+    )
+    blocked_reason: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Typed blocker code when the browser reached a blocked email-gated or static terminal state."},
+    )
+    blocked_reason_detail: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Human-readable blocker detail captured from the terminal state when available."},
     )
     downloaded_file_path: Optional[str] = field(
         default=None,
@@ -332,6 +378,22 @@ class BrowserReportDownloadResult:
     downloaded_size_bytes: Optional[int] = field(
         default=None,
         metadata={"doc": "Downloaded file size in bytes when a local file exists."},
+    )
+    onsite_capture_path: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Absolute path of the captured on-site report artifact when outcome=`captured`."},
+    )
+    onsite_capture_format: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Stored on-site capture format, for example `html`, `markdown`, or `html+markdown`."},
+    )
+    onsite_page_count: Optional[int] = field(
+        default=None,
+        metadata={"doc": "Number of distinct pages or scroll segments captured for an on-site report when known."},
+    )
+    onsite_completeness_status: Optional[str] = field(
+        default=None,
+        metadata={"doc": "On-site capture completeness verdict, for example `complete`, `partial`, or `bounded_incomplete`."},
     )
 
 
@@ -434,6 +496,22 @@ class PublisherDownloadRouteMemory:
     resolved_target_url: str = field(
         metadata={"doc": "Remembered resolved target URL for this route."}
     )
+    attempts: int = field(
+        default=0,
+        metadata={"doc": "Remembered attempt count backing this route-memory record when available."},
+    )
+    verified_successes: int = field(
+        default=0,
+        metadata={"doc": "Remembered verified success count backing this route-memory record when available."},
+    )
+    last_n_outcomes: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Recent remembered outcomes for this route when available."},
+    )
+    confidence_score: float = field(
+        default=0.0,
+        metadata={"doc": "Confidence score for reusing this remembered route."},
+    )
 
 
 @dataclass(frozen=True)
@@ -487,7 +565,7 @@ class ReportDownloadOrchestratorResult:
         metadata={"doc": "Normalized URL used for state lookup and storage."}
     )
     route_kind: str = field(
-        metadata={"doc": "Detected delivery path: `pdf_download` or `email_delivery`."}
+        metadata={"doc": "Detected delivery path: `pdf_download`, `email_delivery`, or `onsite_report`."}
     )
     route_family: str = field(
         metadata={"doc": "Planned or observed route family that produced the result, for example `direct_pdf_probe` or `browser_email_form`."}
@@ -497,7 +575,7 @@ class ReportDownloadOrchestratorResult:
     )
     outcome: str = field(
         metadata={
-            "doc": "Observed outcome: `downloaded`, `email_requested`, or `email_required`."
+            "doc": "Observed outcome: `downloaded`, `email_requested`, `email_required`, or `captured`."
         }
     )
     route_summary: str = field(
@@ -520,6 +598,9 @@ class ReportDownloadOrchestratorResult:
     confirmation_evidence: BrowserDownloadConfirmationEvidence = field(
         metadata={"doc": "Structured confirmation evidence captured for email-gated or ambiguous routes."}
     )
+    terminal_evidence: DownloadTerminalEvidence = field(
+        metadata={"doc": "Canonical terminal evidence captured for the final successful browser acquisition attempt."}
+    )
     browser_had_structured_result: bool = field(
         metadata={"doc": "Whether browser-use returned a structured JSON result instead of requiring fallback salvage."}
     )
@@ -541,6 +622,14 @@ class ReportDownloadOrchestratorResult:
             "doc": "New identity keys added to the browser identity YAML after this run."
         },
     )
+    blocked_reason: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Typed blocker code when the final route is blocked instead of completed."},
+    )
+    blocked_reason_detail: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Human-readable blocker detail captured from the final terminal state when available."},
+    )
     downloaded_file_path: Optional[str] = field(
         default=None,
         metadata={"doc": "Absolute local report path when the file was downloaded."},
@@ -556,4 +645,20 @@ class ReportDownloadOrchestratorResult:
     downloaded_size_bytes: Optional[int] = field(
         default=None,
         metadata={"doc": "Downloaded file size in bytes when a local file exists."},
+    )
+    onsite_capture_path: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Absolute local path of the captured on-site report artifact when outcome=`captured`."},
+    )
+    onsite_capture_format: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Stored on-site capture format, for example `html`, `markdown`, or `html+markdown`."},
+    )
+    onsite_page_count: Optional[int] = field(
+        default=None,
+        metadata={"doc": "Number of distinct pages or scroll segments captured for an on-site report when known."},
+    )
+    onsite_completeness_status: Optional[str] = field(
+        default=None,
+        metadata={"doc": "On-site capture completeness verdict, for example `complete`, `partial`, or `bounded_incomplete`."},
     )

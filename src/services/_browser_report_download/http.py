@@ -14,6 +14,7 @@ from src.contracts.browser_download import (
     BrowserDownloadRouteStep,
     BrowserReportDownloadRequest,
     BrowserReportDownloadResult,
+    DownloadTerminalEvidence,
 )
 from src.contracts.run_context import RunContext
 from src.utils.errors import AppError
@@ -145,10 +146,24 @@ def try_direct_pdf_download(
             form_disappeared=False,
             final_page_url=target_url,
         ),
+        terminal_evidence=DownloadTerminalEvidence(
+            schema_version="1.0",
+            final_page_url=target_url,
+            final_page_title="",
+            terminal_text_excerpt="",
+            artifact_url=target_url,
+            artifact_kind="pdf",
+            artifact_validation_status="verified",
+            artifact_validation_detail="Validated local PDF artifact.",
+            confirmation_signal_count=0,
+            traversed_page_urls=[target_url],
+        ),
         browser_had_structured_result=False,
         used_candidate_pdf_url=used_candidate_pdf_url,
         used_candidate_source_page=used_candidate_source_page,
         encountered_form_fields=[],
+        blocked_reason=None,
+        blocked_reason_detail=None,
         downloaded_file_path=str(destination_path),
         downloaded_file_name=destination_path.name,
         downloaded_mime_type=resolve_downloaded_mime_type(
@@ -156,6 +171,10 @@ def try_direct_pdf_download(
             downloaded_path=destination_path,
         ),
         downloaded_size_bytes=destination_path.stat().st_size,
+        onsite_capture_path=None,
+        onsite_capture_format=None,
+        onsite_page_count=None,
+        onsite_completeness_status=None,
     )
     logger.info(
         log_event(

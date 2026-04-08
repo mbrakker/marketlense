@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, unquote, urlsplit
 
 from src.contracts.browser_download import (
     PublisherDownloadRouteMemory,
@@ -39,6 +39,35 @@ _LISTING_PATH_MARKERS = {
     "publications",
     "library",
 }
+_EDITORIAL_NON_REPORT_MARKERS = {
+    "blog",
+    "news",
+    "press",
+    "case-study",
+    "case_study",
+    "webinar",
+}
+_EDITORIAL_REPORT_MARKERS = {
+    "report",
+    "reports",
+    "insight",
+    "insights",
+    "research",
+    "analysis",
+    "study",
+    "survey",
+}
+_TRACKER_QUERY_KEYS = (
+    "url",
+    "target",
+    "dest",
+    "destination",
+    "redirect",
+    "redirect_url",
+    "redirect_uri",
+    "u",
+    "r",
+)
 
 
 def plan_report_download_routes(
@@ -100,8 +129,9 @@ def _build_plan(
     recommended_route_kind = str(
         request.publisher_recommended_discovery_route_kind or ""
     ).strip()
+    redirect_target_url = _extract_tracker_target_url(request.normalized_url)
 
-    if remembered_route is not None and remembered_route.route_status == "verified":
+    if _should_reuse_memory_route(remembered_route):
         steps.append(
             ReportDownloadRoutePlanStep(
                 schema_version="1.0",
@@ -128,6 +158,18 @@ def _build_plan(
                 fallback_on_retryable_error=True,
             )
         )
+    elif redirect_target_url and _looks_like_pdf(redirect_target_url):
+        steps.append(
+            ReportDownloadRoutePlanStep(
+                schema_version="1.0",
+                step_name="report_download_redirect_pdf_probe",
+                route_family="direct_pdf_probe",
+                attempt_url=redirect_target_url,
+                route_kind_hint="pdf_download",
+                uses_memory_route=False,
+                fallback_on_retryable_error=True,
+            )
+        )
     elif _looks_like_pdf(request.normalized_url):
         steps.append(
             ReportDownloadRoutePlanStep(
@@ -145,6 +187,7 @@ def _build_plan(
         normalized_url=request.normalized_url,
         source_page_urls=source_page_urls,
         provenances=provenances,
+        redirect_target_url=redirect_target_url,
     )
     http_step = ReportDownloadRoutePlanStep(
         schema_version="1.0",
@@ -190,6 +233,7 @@ def _build_browser_step(
     normalized_url: str,
     source_page_urls: list[str],
     provenances: set[str],
+    redirect_target_url: str | None,
 ) -> ReportDownloadRoutePlanStep:
     source_page_url = source_page_urls[0] if source_page_urls else None
     if _looks_like_tracker_url(normalized_url):
@@ -197,7 +241,7 @@ def _build_browser_step(
             schema_version="1.0",
             step_name="report_download_browser_tracker_redirect",
             route_family="browser_tracker_redirect",
-            attempt_url=source_page_url or normalized_url,
+            attempt_url=source_page_url or redirect_target_url or normalized_url,
             route_kind_hint=None,
             source_page_url_hint=source_page_url,
             uses_memory_route=False,
@@ -210,6 +254,17 @@ def _build_browser_step(
             route_family="browser_listing_hub",
             attempt_url=source_page_url,
             route_kind_hint=None,
+            source_page_url_hint=source_page_url,
+            uses_memory_route=False,
+            fallback_on_retryable_error=False,
+        )
+    if _looks_like_editorial_report_url(redirect_target_url or normalized_url):
+        return ReportDownloadRoutePlanStep(
+            schema_version="1.0",
+            step_name="report_download_browser_onsite_report",
+            route_family="browser_onsite_report",
+            attempt_url=redirect_target_url or normalized_url,
+            route_kind_hint="onsite_report",
             source_page_url_hint=source_page_url,
             uses_memory_route=False,
             fallback_on_retryable_error=False,
@@ -244,7 +299,7 @@ def _planning_reason(
     browser_first: bool,
     source_page_urls: list[str],
 ) -> str:
-    if remembered_route is not None and remembered_route.route_status == "verified":
+    if _should_reuse_memory_route(remembered_route):
         if candidate_pdf_url:
             return (
                 "Reuse the verified remembered route first, then verify the discovery-provided candidate PDF before broader fallback."
@@ -270,9 +325,25 @@ def _planning_reason(
 
 
 def _default_route_family_for_kind(route_kind: str) -> str:
+    if str(route_kind or "").strip() == "onsite_report":
+        return "browser_onsite_report"
     if str(route_kind or "").strip() == "email_delivery":
         return "browser_email_form"
     return "browser_pdf_click"
+
+
+def _should_reuse_memory_route(
+    remembered_route: PublisherDownloadRouteMemory | None,
+) -> bool:
+    if remembered_route is None:
+        return False
+    if remembered_route.route_status != "verified":
+        return False
+    if remembered_route.confidence_score >= 0.35:
+        return True
+    if remembered_route.verified_successes > 0:
+        return True
+    return remembered_route.outcome in {"downloaded", "email_requested", "captured"}
 
 
 def _dedupe_steps(
@@ -328,3 +399,27 @@ def _looks_like_tracker_url(url: str) -> bool:
     return any(marker in hostname for marker in _TRACKER_HOST_MARKERS) or any(
         marker in path or marker in query for marker in _TRACKER_HOST_MARKERS
     )
+
+
+def _extract_tracker_target_url(url: str) -> str | None:
+    parsed = urlsplit(str(url or "").strip())
+    if not parsed.query:
+        return None
+    query = parse_qs(parsed.query, keep_blank_values=False)
+    for key in _TRACKER_QUERY_KEYS:
+        values = query.get(key)
+        if not values:
+            continue
+        candidate = unquote(str(values[0] or "").strip())
+        if candidate.startswith("http://") or candidate.startswith("https://"):
+            return candidate
+    return None
+
+
+def _looks_like_editorial_report_url(url: str | None) -> bool:
+    path = str(urlsplit(str(url or "").strip()).path or "").strip().lower()
+    if not path or _looks_like_pdf(path):
+        return False
+    if any(marker in path for marker in _EDITORIAL_NON_REPORT_MARKERS):
+        return False
+    return any(marker in path for marker in _EDITORIAL_REPORT_MARKERS)

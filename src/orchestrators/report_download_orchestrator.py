@@ -51,6 +51,36 @@ from src.utils.errors import AppError
 from src.utils.url_utils import normalize_url
 
 logger = logging.getLogger("market_lense.report_download_orchestrator")
+_NON_REPORT_URL_MARKERS = {
+    "blog",
+    "news",
+    "press",
+    "case-study",
+    "case_study",
+    "webinar",
+    "podcast",
+    "faq",
+    "support",
+    "contact",
+}
+_NON_REPORT_TITLE_MARKERS = {
+    "case study",
+    "webinar",
+    "podcast",
+    "press release",
+    "support",
+    "help center",
+    "customer story",
+}
+_REPORT_TITLE_MARKERS = {
+    "report",
+    "research",
+    "study",
+    "survey",
+    "insight",
+    "analysis",
+    "outlook",
+}
 
 
 @dataclass(frozen=True)
@@ -119,6 +149,7 @@ def run_report_download(
             },
         )
     )
+    _assert_candidate_download_ready(request=request, normalized_url=normalized_url, ctx=ctx)
     remembered_route = deps.get_publisher_download_route(
         PublisherDownloadRouteGetRequest(
             schema_version="1.0",
@@ -229,6 +260,7 @@ def run_report_download(
             resolved_target_url=result.resolved_target_url,
             route_steps=result.route_steps,
             confirmation_evidence=result.confirmation_evidence,
+            terminal_evidence=result.terminal_evidence,
             browser_had_structured_result=result.browser_had_structured_result,
             used_candidate_pdf_url=result.used_candidate_pdf_url,
             used_candidate_source_page=result.used_candidate_source_page,
@@ -247,8 +279,14 @@ def run_report_download(
             ),
             publisher_discovery_route_kind=request.publisher_discovery_route_kind,
             publisher_recommended_discovery_route_kind=request.publisher_recommended_discovery_route_kind,
+            blocked_reason=result.blocked_reason,
+            blocked_reason_detail=result.blocked_reason_detail,
             last_downloaded_file_path=result.downloaded_file_path,
             last_final_page_url=result.final_page_url,
+            onsite_capture_path=result.onsite_capture_path,
+            onsite_capture_format=result.onsite_capture_format,
+            onsite_page_count=result.onsite_page_count,
+            onsite_completeness_status=result.onsite_completeness_status,
         ),
         ctx,
     )
@@ -349,15 +387,22 @@ def run_report_download(
         used_memory_route=result.used_route_hint,
         route_steps=result.route_steps,
         confirmation_evidence=result.confirmation_evidence,
+        terminal_evidence=result.terminal_evidence,
         browser_had_structured_result=result.browser_had_structured_result,
         used_candidate_pdf_url=result.used_candidate_pdf_url,
         used_candidate_source_page=result.used_candidate_source_page,
         encountered_form_fields=result.encountered_form_fields,
         identity_fields_added=identity_update.added_field_keys,
+        blocked_reason=result.blocked_reason,
+        blocked_reason_detail=result.blocked_reason_detail,
         downloaded_file_path=result.downloaded_file_path,
         downloaded_file_name=result.downloaded_file_name,
         downloaded_mime_type=result.downloaded_mime_type,
         downloaded_size_bytes=result.downloaded_size_bytes,
+        onsite_capture_path=result.onsite_capture_path,
+        onsite_capture_format=result.onsite_capture_format,
+        onsite_page_count=result.onsite_page_count,
+        onsite_completeness_status=result.onsite_completeness_status,
     )
     logger.info(
         log_event(
@@ -427,11 +472,58 @@ def _remembered_route_memory(
         route_family=remembered_route.route_family,
         route_status=remembered_route.route_status,
         resolved_target_url=remembered_route.resolved_target_url,
+        attempts=remembered_route.attempts,
+        verified_successes=remembered_route.verified_successes,
+        last_n_outcomes=list(remembered_route.last_n_outcomes),
+        confidence_score=remembered_route.confidence_score,
     )
 
 
 def _source_domain_for_url(url: str) -> str:
     return str(urlsplit(str(url).strip()).hostname or "").strip().lower()
+
+
+def _assert_candidate_download_ready(
+    *,
+    request: ReportDownloadOrchestratorRequest,
+    normalized_url: str,
+    ctx: RunContext,
+) -> None:
+    candidate = request.candidate_trace
+    if candidate is None:
+        return
+    if candidate.pdf_url or normalized_url.endswith(".pdf"):
+        return
+    title = str(candidate.title or "").strip().casefold()
+    url_value = str(candidate.canonical_url or normalized_url).strip().casefold()
+    if any(marker in title for marker in _REPORT_TITLE_MARKERS):
+        return
+    if any(marker in url_value for marker in _NON_REPORT_URL_MARKERS) or any(
+        marker in title for marker in _NON_REPORT_TITLE_MARKERS
+    ):
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="report_download_readiness_rejected",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "candidate_title": candidate.title,
+                    "candidate_url": candidate.canonical_url,
+                },
+            )
+        )
+        raise AppError(
+            code="report_download_candidate_not_ready",
+            message="The candidate URL does not look like a report acquisition target",
+            retryable=False,
+            context={
+                "normalized_url": normalized_url,
+                "candidate_title": candidate.title,
+                "candidate_url": candidate.canonical_url,
+            },
+        )
 
 
 def _report_name_for_result(result: BrowserReportDownloadResult) -> str:
