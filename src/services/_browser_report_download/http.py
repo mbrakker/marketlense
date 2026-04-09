@@ -345,6 +345,8 @@ def resolve_downloaded_mime_type(
     reported_mime_type: str | None,
     downloaded_path: Path | None,
 ) -> str | None:
+    if downloaded_path is None:
+        return None
     reported = str(reported_mime_type or "").strip().lower() or None
     guessed = _guess_mime_type(downloaded_path)
     if guessed == "application/pdf":

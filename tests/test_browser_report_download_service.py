@@ -94,10 +94,17 @@ def _runtime(
             return json.dumps(payload)
 
     class FakeBrowser:
-        def __init__(self, downloads_path, headless, auto_download_pdfs):
+        def __init__(
+            self,
+            downloads_path,
+            headless,
+            auto_download_pdfs,
+            keep_alive=None,
+        ):
             self.downloads_path = str(downloads_path)
             self.headless = headless
             self.auto_download_pdfs = auto_download_pdfs
+            self.keep_alive = keep_alive
             self.url = ""
             self.title = ""
             self.html = ""
@@ -105,11 +112,14 @@ def _runtime(
             self.network_resource_urls: list[str] = []
             self.network_events: list[dict[str, str]] = []
             self.dom_candidate_urls: list[str] = []
+            self.current_page_factory = None
 
         async def kill(self) -> None:
             return None
 
         def get_current_page(self):
+            if callable(self.current_page_factory):
+                return self.current_page_factory()
             browser = self
 
             class FakePage:
@@ -1864,6 +1874,175 @@ def test_download_report_with_browser_use_falls_back_to_history_terminal_state(
     assert response.terminal_evidence.final_page_title == "Thank you for downloading the report"
     assert response.terminal_evidence.screenshot_path
     assert Path(response.terminal_evidence.screenshot_path).exists()
+
+
+def test_download_report_with_browser_use_stabilizes_transient_submit_state(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary="Fill the form, submit it, and wait for the email-delivery terminal state.",
+        create_pdf=False,
+        email_submission_completed=True,
+    )
+    original_runtime = runtime.Agent
+
+    class StabilizingAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            payload = json.loads(history.final_result())
+            payload["route_kind"] = "email_delivery"
+            payload["route_family"] = "browser_email_form"
+            payload["post_submit_message"] = "Please Wait"
+            payload["submit_button_state"] = "disabled"
+            payload["encountered_form_fields"] = [
+                "First Name",
+                "Company",
+                "Professional Email",
+            ]
+            snapshots = [
+                {
+                    "url": "https://example.com/report",
+                    "title": "Example report",
+                    "html": (
+                        "<html><body><form><button disabled>Please Wait</button></form></body></html>"
+                    ),
+                },
+                {
+                    "url": "https://example.com/report/thank-you",
+                    "title": "Thank you for downloading the report",
+                    "html": (
+                        "<html><body><h1>Thank you for downloading the report</h1>"
+                        "<p>Check your email inbox for the download link.</p></body></html>"
+                    ),
+                },
+            ]
+            state = {"index": 0}
+
+            class AsyncPage:
+                def __init__(self, snapshot: dict[str, str]):
+                    self.url = snapshot["url"]
+                    self._title = snapshot["title"]
+                    self._html = snapshot["html"]
+
+                async def get_title(self_nonlocal):
+                    return self_nonlocal._title
+
+                async def content(self_nonlocal):
+                    return self_nonlocal._html
+
+                async def evaluate(self_nonlocal, script):
+                    source = str(script)
+                    if "navigationEntries" in source:
+                        return []
+                    if "document.querySelectorAll" in source:
+                        return []
+                    return []
+
+                async def screenshot(self_nonlocal, path=None, full_page=False):
+                    if path:
+                        Path(path).write_bytes(b"page-screenshot")
+                    return b"page-screenshot"
+
+            def current_page_factory():
+                snapshot = snapshots[min(state["index"], len(snapshots) - 1)]
+                state["index"] += 1
+                return AsyncPage(snapshot)
+
+            self.browser.url = ""
+            self.browser.title = ""
+            self.browser.html = ""
+            self.browser.current_page_factory = current_page_factory
+
+            class StabilizingHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return StabilizingHistory()
+
+    runtime.Agent = StabilizingAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+    external_boundary_mocks_only.setattr(browser_runtime.time, "sleep", lambda _: None)
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.outcome == "email_requested"
+    assert response.final_page_url == "https://example.com/report/thank-you"
+    assert response.terminal_evidence.final_page_title == "Thank you for downloading the report"
+    assert "success_url" in response.confirmation_evidence.signal_labels
+
+
+def test_download_report_with_browser_use_clears_phantom_pdf_metadata_without_file(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary="Fill the form, submit it, and wait for the email-delivery terminal state.",
+        create_pdf=False,
+        email_submission_completed=True,
+    )
+    original_runtime = runtime.Agent
+
+    class PhantomPdfAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            payload = json.loads(history.final_result())
+            payload["route_kind"] = "email_delivery"
+            payload["route_family"] = "browser_email_form"
+            payload["downloaded_file_path"] = str(
+                Path(self.browser.downloads_path) / "missing.pdf"
+            )
+            payload["downloaded_file_name"] = "missing.pdf"
+            payload["downloaded_mime_type"] = "application/pdf"
+            payload["post_submit_message"] = (
+                "A copy of the report will be sent to your email inbox shortly."
+            )
+
+            class PhantomHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return PhantomHistory()
+
+    runtime.Agent = PhantomPdfAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.outcome == "email_requested"
+    assert response.downloaded_file_path is None
+    assert response.downloaded_mime_type is None
 
 
 def test_resolve_effective_identity_fields_hydrates_semantic_alias_values(tmp_path: Path) -> None:

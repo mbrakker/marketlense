@@ -7,6 +7,7 @@ import logging
 import os
 import re
 import shutil
+import time
 from dataclasses import dataclass
 from importlib import import_module
 from pathlib import Path
@@ -25,6 +26,16 @@ from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.browser_report_download_service")
 
+_TERMINAL_TRANSIENT_MARKERS = (
+    "please wait",
+    "submitting",
+    "processing",
+    "loading",
+    "one moment",
+)
+_TERMINAL_STABILIZATION_POLL_SECONDS = 2.0
+_TERMINAL_STABILIZATION_MAX_ATTEMPTS = 3
+
 
 @dataclass(frozen=True)
 class BrowserAgentRunResult:
@@ -38,6 +49,14 @@ class BrowserAgentRunResult:
     network_events: list[BrowserDownloadNetworkEvent]
     html_snapshot_path: str
     screenshot_path: str
+
+
+@dataclass(frozen=True)
+class TerminalSnapshot:
+    page: Any
+    url: str
+    title: str
+    html: str
 
 
 def run_browser_report_download_agent(
@@ -80,6 +99,7 @@ def run_browser_report_download_agent(
             downloads_path=str(download_dir),
             headless=not request.settings.headed,
             auto_download_pdfs=True,
+            keep_alive=True,
         )
         llm = browser_use.ChatOpenRouter(
             model=request.settings.model,
@@ -102,22 +122,24 @@ def run_browser_report_download_agent(
             history=history,
             download_dir=download_dir,
         )
-        current_page = _resolve_current_page(browser)
+        terminal_snapshot = _capture_terminal_snapshot(browser)
+        terminal_snapshot = _stabilize_terminal_snapshot(
+            browser=browser,
+            raw_model_response=raw_model_response,
+            snapshot=terminal_snapshot,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+        current_page = terminal_snapshot.page
         final_page_url = (
-            str(getattr(browser, "url", "") or "").strip()
-            or _read_browser_current_page_url(browser)
-            or _read_page_url(current_page)
+            terminal_snapshot.url
             or history_final_page_url
         )
         final_page_title = (
-            str(getattr(browser, "title", "") or "").strip()
-            or _read_browser_current_page_title(browser)
-            or _read_page_title(current_page)
+            terminal_snapshot.title
             or history_final_page_title
         )
-        final_page_html = str(getattr(browser, "html", "") or "") or _read_page_html(
-            current_page
-        )
+        final_page_html = terminal_snapshot.html
         downloaded_files = [
             str(path) for path in getattr(browser, "downloaded_files", [])
         ]
@@ -185,6 +207,137 @@ def run_browser_report_download_agent(
         network_events=network_events,
         html_snapshot_path=html_snapshot_path,
         screenshot_path=screenshot_path,
+    )
+
+
+def _capture_terminal_snapshot(browser: Any) -> TerminalSnapshot:
+    page = _resolve_current_page(browser)
+    return TerminalSnapshot(
+        page=page,
+        url=(
+            str(getattr(browser, "url", "") or "").strip()
+            or _read_browser_current_page_url(browser)
+            or _read_page_url(page)
+        ),
+        title=(
+            str(getattr(browser, "title", "") or "").strip()
+            or _read_browser_current_page_title(browser)
+            or _read_page_title(page)
+        ),
+        html=str(getattr(browser, "html", "") or "") or _read_page_html(page),
+    )
+
+
+def _stabilize_terminal_snapshot(
+    *,
+    browser: Any,
+    raw_model_response: str,
+    snapshot: TerminalSnapshot,
+    ctx: RunContext,
+    normalized_url: str,
+) -> TerminalSnapshot:
+    reason = _terminal_stabilization_reason(
+        raw_model_response=raw_model_response,
+        snapshot=snapshot,
+    )
+    if not reason:
+        return snapshot
+    stabilized_snapshot = snapshot
+    attempts = 0
+    for attempt in range(_TERMINAL_STABILIZATION_MAX_ATTEMPTS):
+        attempts = attempt + 1
+        time.sleep(_TERMINAL_STABILIZATION_POLL_SECONDS)
+        candidate = _capture_terminal_snapshot(browser)
+        stabilized_snapshot = _merge_terminal_snapshots(
+            previous=stabilized_snapshot,
+            candidate=candidate,
+        )
+        if not _terminal_stabilization_reason(
+            raw_model_response=raw_model_response,
+            snapshot=stabilized_snapshot,
+        ):
+            break
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_terminal_stabilized",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "stabilization_reason": reason,
+                "attempts": attempts,
+                "final_url": stabilized_snapshot.url,
+                "final_title": stabilized_snapshot.title,
+                "final_html_size": len(stabilized_snapshot.html),
+            },
+        )
+    )
+    return stabilized_snapshot
+
+
+def _terminal_stabilization_reason(
+    *,
+    raw_model_response: str,
+    snapshot: TerminalSnapshot,
+) -> str:
+    payload = _parse_raw_model_response(raw_model_response)
+    email_submission_completed = payload.get("email_submission_completed") is True
+    post_submit_message = str(payload.get("post_submit_message") or "").strip()
+    submit_button_state = str(payload.get("submit_button_state") or "").strip().lower()
+    snapshot_transient = _contains_transient_terminal_marker(
+        " ".join([snapshot.title, snapshot.html])
+    )
+    if email_submission_completed and (
+        _contains_transient_terminal_marker(post_submit_message)
+        or submit_button_state == "disabled"
+        or snapshot_transient
+    ):
+        return "transient_submit_state"
+    if email_submission_completed and not snapshot.html.strip():
+        return "empty_terminal_html_after_submit"
+    return ""
+
+
+def _parse_raw_model_response(raw_model_response: str) -> dict[str, Any]:
+    token = str(raw_model_response or "").strip()
+    if not token:
+        return {}
+    try:
+        parsed = json.loads(token)
+    except json.JSONDecodeError:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _contains_transient_terminal_marker(text: str) -> bool:
+    token = str(text or "").strip().casefold()
+    if not token:
+        return False
+    return any(marker in token for marker in _TERMINAL_TRANSIENT_MARKERS)
+
+
+def _merge_terminal_snapshots(
+    *,
+    previous: TerminalSnapshot,
+    candidate: TerminalSnapshot,
+) -> TerminalSnapshot:
+    html = previous.html
+    candidate_html = str(candidate.html or "")
+    if candidate_html.strip() and (
+        not html.strip()
+        or len(candidate_html) >= len(html)
+        or (
+            _contains_transient_terminal_marker(html)
+            and not _contains_transient_terminal_marker(candidate_html)
+        )
+    ):
+        html = candidate_html
+    return TerminalSnapshot(
+        page=candidate.page if candidate.page is not None else previous.page,
+        url=str(candidate.url or "").strip() or previous.url,
+        title=str(candidate.title or "").strip() or previous.title,
+        html=html,
     )
 
 

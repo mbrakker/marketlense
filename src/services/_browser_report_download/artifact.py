@@ -89,6 +89,13 @@ _FORM_SUCCESS_TEXT_MARKERS = (
     "form submitted",
     "successfully submitted",
 )
+_TRANSIENT_SUBMIT_MESSAGE_MARKERS = (
+    "please wait",
+    "submitting",
+    "processing",
+    "loading",
+    "one moment",
+)
 _EMAIL_DOMAIN_BLOCK_MARKERS = (
     "business email",
     "work email",
@@ -1397,10 +1404,17 @@ def _build_confirmation_evidence(
     network_events: list[BrowserDownloadNetworkEvent],
 ) -> BrowserDownloadConfirmationEvidence:
     visible_confirmation_text = str(agent_result.post_submit_message or "").strip()
+    effective_final_url = str(final_url or agent_result.final_page_url or "").strip()
+    url_changed = bool(agent_result.confirmation_url_changed) or (
+        bool(effective_final_url)
+        and bool(str(agent_result.final_page_url or "").strip())
+        and normalize_url(effective_final_url)
+        != normalize_url(str(agent_result.final_page_url or "").strip())
+    )
     signal_labels = _build_confirmation_signal_labels(
         visible_confirmation_text=visible_confirmation_text,
-        final_page_url=str(agent_result.final_page_url or final_url).strip(),
-        url_changed=bool(agent_result.confirmation_url_changed),
+        final_page_url=effective_final_url,
+        url_changed=url_changed,
         submit_button_state=str(agent_result.submit_button_state or "").strip()
         or "unchanged",
         form_disappeared=bool(agent_result.form_disappeared),
@@ -1411,12 +1425,12 @@ def _build_confirmation_evidence(
     )
     return BrowserDownloadConfirmationEvidence(
         schema_version="1.0",
-        url_changed=bool(agent_result.confirmation_url_changed),
+        url_changed=url_changed,
         visible_confirmation_text=visible_confirmation_text,
         submit_button_state=str(agent_result.submit_button_state or "").strip()
         or "unchanged",
         form_disappeared=bool(agent_result.form_disappeared),
-        final_page_url=str(agent_result.final_page_url or final_url).strip(),
+        final_page_url=effective_final_url,
         confirmation_score=len(signal_labels),
         signal_labels=signal_labels,
     )
@@ -1431,31 +1445,58 @@ def _upgrade_confirmation_evidence_from_terminal_html(
 ) -> BrowserDownloadConfirmationEvidence:
     if email_submission_completed is not True:
         return confirmation_evidence
-    if confirmation_evidence.form_disappeared:
-        return confirmation_evidence
-    if not encountered_form_fields:
-        return confirmation_evidence
     token = str(html or "").strip()
-    if not token or _html_contains_form(token):
+    if not token:
+        return confirmation_evidence
+    terminal_confirmation_text = _resolve_terminal_confirmation_text_from_html(
+        html=token,
+        fallback_text=confirmation_evidence.visible_confirmation_text,
+    )
+    form_disappeared = confirmation_evidence.form_disappeared or (
+        bool(encountered_form_fields) and not _html_contains_form(token)
+    )
+    if (
+        terminal_confirmation_text == confirmation_evidence.visible_confirmation_text
+        and form_disappeared == confirmation_evidence.form_disappeared
+    ):
         return confirmation_evidence
     signal_labels = _build_confirmation_signal_labels(
-        visible_confirmation_text=confirmation_evidence.visible_confirmation_text,
+        visible_confirmation_text=terminal_confirmation_text,
         final_page_url=confirmation_evidence.final_page_url,
         url_changed=confirmation_evidence.url_changed,
         submit_button_state=confirmation_evidence.submit_button_state,
-        form_disappeared=True,
+        form_disappeared=form_disappeared,
         email_submission_completed=email_submission_completed,
     )
     return BrowserDownloadConfirmationEvidence(
         schema_version=confirmation_evidence.schema_version,
         url_changed=confirmation_evidence.url_changed,
-        visible_confirmation_text=confirmation_evidence.visible_confirmation_text,
+        visible_confirmation_text=terminal_confirmation_text,
         submit_button_state=confirmation_evidence.submit_button_state,
-        form_disappeared=True,
+        form_disappeared=form_disappeared,
         final_page_url=confirmation_evidence.final_page_url,
         confirmation_score=len(signal_labels),
         signal_labels=signal_labels,
     )
+
+
+def _resolve_terminal_confirmation_text_from_html(
+    *,
+    html: str,
+    fallback_text: str,
+) -> str:
+    terminal_text = _extract_visible_text_from_html(html, max_chars=800)
+    if not terminal_text:
+        return fallback_text
+    if _message_indicates_email_delivery(terminal_text) or _message_indicates_form_success(
+        terminal_text
+    ):
+        return terminal_text
+    if _message_indicates_transient_submit_state(
+        fallback_text
+    ) and not _message_indicates_transient_submit_state(terminal_text):
+        return terminal_text
+    return fallback_text
 
 
 def _build_terminal_evidence(
@@ -2162,6 +2203,13 @@ def _message_indicates_email_delivery(message: str) -> bool:
     return any(marker in token for marker in email_markers) and any(
         marker in token for marker in delivery_markers
     )
+
+
+def _message_indicates_transient_submit_state(message: str) -> bool:
+    token = str(message or "").strip().casefold()
+    if not token:
+        return False
+    return any(marker in token for marker in _TRANSIENT_SUBMIT_MESSAGE_MARKERS)
 
 
 def _message_indicates_confirmed_email_delivery(message: str) -> bool:

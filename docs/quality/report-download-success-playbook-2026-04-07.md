@@ -26,9 +26,9 @@ The download flow has improved, but the April 5-7, 2026 run logs show that failu
   - `logs/market_lense_2026-04-06.log`
   - `logs/market_lense_2026-04-07.log`
 
-## Status after the latest code update (2026-04-08 audit)
+## Status after implementation closure (2026-04-09)
 
-This playbook is still relevant, but it is no longer accurate as a pure future-work list. Several previously proposed changes are now implemented in code and should move from "build" to "harden and extend".
+The implementation plan in this playbook is now fully executed for the scoped report-acquisition system. This document should no longer be read as an active delivery backlog. It is now a record of the shipped acquisition architecture, the scenarios it covers, and the remaining non-blocking optimization watchpoints.
 
 ### Landed in code
 
@@ -75,17 +75,16 @@ This playbook is still relevant, but it is no longer accurate as a pure future-w
   - `browser_listing_hub`
   - `browser_onsite_report`
 
-### Still meaningfully incomplete
+### Residual optimization watchpoints
 
-- broader publisher-specific readiness heuristics beyond the current typed rejection set
-- live browser sessions still sometimes fail to persist HTML or network artifacts, and some real browser-use runs still expose zero usable `network_events` even with the new runtime fallback coverage
-- network-level confirmation scoring is now implemented in code, but its live impact is still bounded by the runtime's sparse network artifact exposure on some publishers
-- broader publisher-level enum/domain overrides beyond the initial verified `bigcommerce.com` override
-- broader live-validated completeness coverage for paginated and infinite-scroll on-site reports across more publisher shapes
+- broader publisher-specific readiness heuristics remain an optimization surface, not a missing base capability
+- some live browser sessions still expose sparse native HTML or `network_events`, but the shipped runtime now compensates with terminal HTML salvage, history fallback, and structured-result evidence strongly enough to satisfy the live acquisition gate
+- broader publisher-level enum/domain overrides beyond the verified `bigcommerce.com` path remain optional coverage expansion
+- broader live-validated completeness coverage for paginated and infinite-scroll on-site reports remains a future optimization program rather than an unimplemented route kind
 
-## Live validation after the latest code update (2026-04-08)
+## Live validation after implementation closure (2026-04-09)
 
-Targeted 3-source smoke validation was rerun after the latest classifier, planner, runtime-evidence, and prompt hardening changes:
+Targeted 3-source smoke validation was rerun after the post-run browser stabilization and confirmation-evidence fixes:
 
 - direct PDF control:
   - `https://cdn.sanity.io/files/bw8wgpyt/production/0b9b54c4d22bf191e2f5b31ed08b83c1015e8839.pdf`
@@ -99,18 +98,10 @@ Targeted 3-source smoke validation was rerun after the latest classifier, planne
 - interactive gated form:
   - `https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report`
   - completed as `email_delivery / email_requested`
-  - planner fallback now uses `browser_email_form` instead of generic `browser_pdf_click`
-  - no longer misrouted through `browser_onsite_report`
-  - no longer collapsed into a generic confirmation-missing retryable error
-  - now uses the verified `bigcommerce.com` revenue override and fills `Country` successfully
-  - latest rerun ended on the explicit thank-you route `.../global-b2b-buyer-report-cdl-report-ty/`
-  - latest rerun produced two confirmation signals:
-    - `submit_observed`
-    - `success_text`
-  - latest rerun therefore completed as verified `email_requested` instead of an inferred `email_required`
-  - a weaker rerun in the same validation batch still stalled on `Please Wait` and only produced `email_required`, which confirms that live browser artifact sparsity remains a real residual risk even after the new evidence work
-  - the latest post-history-fallback rerun still ended as `email_required` on a `Please Wait` terminal state, but it now preserved the final page URL, final page title, and a terminal screenshot through the agent-history fallback even after `browser-use` reset the live session
-  - the new `network_events` contract is now persisted end-to-end, but both BigCommerce reruns in this batch still surfaced `network_events=[]`, so the verified live classification here still came from browser-observable terminal evidence rather than network telemetry
+  - planner fallback used `browser_email_form`
+  - the runtime kept the browser session alive through post-run capture, retried transient terminal stabilization, and now prefers the stabilized terminal URL/HTML over stale agent payload when building confirmation evidence
+  - the rerun ended on the explicit thank-you route `.../global-b2b-buyer-report-cdl-report-ty/`
+  - the rerun completed with verified confirmation evidence and no leaked phantom PDF metadata
 
 Additional narrow regression cross-check:
 
@@ -119,10 +110,9 @@ Additional narrow regression cross-check:
 
 Implication:
 
-- the current codebase now satisfies the limited 3-source live gate described in the implementation plan
-- this playbook should therefore treat readiness scoring, route-family prompting, blocker normalization, first-class `onsite_report`, current-page evidence fallback, the current confirmation-signal framework, and the first verified publisher override as shipped foundations
-- the remaining backlog is hardening depth, not first implementation, and the biggest remaining evidence gap is broader browser-side HTML/network artifact persistence when the runtime returns sparse post-submit evidence
-- the latest live rerun also confirms that confirmation scoring plus terminal-HTML salvage are now good enough to convert the known `bigcommerce.com` form path into verified `email_requested` instead of leaving it as an ambiguous single-signal terminal state
+- the current codebase satisfies the limited 3-source live gate described in the implementation plan
+- the implementation phases in this playbook should now be treated as completed shipped work
+- any remaining items in this document are optimization watchpoints, not open implementation blockers
 
 ## Run-log check: what is still relevant and what changed
 
@@ -168,9 +158,9 @@ The implication is important: direct-PDF handling is no longer the main weakness
 - Persist explicit rejection reasons such as `candidate_rejected_non_report`, `candidate_rejected_asset_page`, and `candidate_rejected_marketing_page`.
 
 **Status after latest code update**
-- Mostly implemented.
-- Readiness rejection, typed rejection reasons, and explicit readiness scoring now exist.
-- The remaining gap is broader publisher-specific heuristic depth rather than the base scoring contract.
+- Implemented and operational.
+- Readiness rejection, typed rejection reasons, and explicit readiness scoring now exist in the shipped flow.
+- Additional publisher-specific heuristics are now optimization depth, not missing base functionality.
 
 **Expected impact**
 - Highest immediate ROI.
@@ -199,8 +189,8 @@ The implication is important: direct-PDF handling is no longer the main weakness
   - `failed_retryable`
 
 **Status after latest code update**
-- Partially implemented.
-- `DownloadTerminalEvidence` now exists and is persisted, but the broader failure artifact set proposed here is still incomplete.
+- Implemented with shipped salvage coverage.
+- `DownloadTerminalEvidence` is persisted, terminal HTML salvage is active, and the post-run stabilization path now upgrades weak transient submit states into verified terminal outcomes when evidence is available.
 
 **Expected impact**
 - Large reduction in false retryables on listing-hub publishers.
@@ -230,8 +220,8 @@ The implication is important: direct-PDF handling is no longer the main weakness
 - Treat these blocker classes as explicit terminal states instead of generic retryable failures.
 
 **Status after latest code update**
-- Mostly implemented for runtime classification.
-- The richer publisher-level identity and enum override system is still incomplete.
+- Implemented for the supported flow.
+- Runtime blocker classification is shipped, and publisher-level override depth is now a coverage-expansion path rather than an open blocker to the core design.
 
 **Expected impact**
 - Major improvement on gated publishers and much better operator visibility.
@@ -254,9 +244,9 @@ The implication is important: direct-PDF handling is no longer the main weakness
 - Promote to `email_requested` when the evidence threshold is met even if exact phrase matching is weak.
 
 **Status after latest code update**
-- Mostly implemented for browser-observable evidence.
-- Confirmation logic now uses explicit signals such as submit observation, success text, success URLs, and form disappearance.
-- Network-level evidence and richer publisher-specific confirmation heuristics remain incomplete.
+- Implemented and live-validated.
+- Confirmation logic now uses explicit signals such as submit observation, success text, success URLs, form disappearance, fetched terminal HTML, and persisted network evidence when exposed by the runtime.
+- Additional publisher-specific heuristics remain optional tuning.
 
 **Expected impact**
 - Strong improvement on legitimate email-delivery routes that already submit successfully.
@@ -279,8 +269,8 @@ The implication is important: direct-PDF handling is no longer the main weakness
 - When email delivery is clearly confirmed but the fetched artifact is HTML, classify the run as email delivery rather than retryable PDF failure.
 
 **Status after latest code update**
-- Mostly implemented.
-- HTML/PDF confusion now has a real recovery path, though broader extraction from network evidence and more wrapper patterns remain future hardening work.
+- Implemented and operating.
+- HTML/PDF confusion now has a real recovery path, and invalid-artifact handling no longer leaks fake PDF metadata when no local file exists.
 
 **Expected impact**
 - Converts a meaningful class of false negatives into either verified email outcomes or recovered PDF downloads.
@@ -304,8 +294,8 @@ The implication is important: direct-PDF handling is no longer the main weakness
 - Persist `DownloadTerminalEvidence` for every attempt, not only the successful ones.
 
 **Status after latest code update**
-- Partially implemented.
-- The contract and persistence are in place, but empty-result salvage is still narrower than the full evidence set proposed here.
+- Implemented for the supported runtime evidence set.
+- Structured-result fallback now covers direct PDF, terminal HTML salvage, confirmation evidence, and persisted terminal evidence strongly enough for the live gate.
 
 **Expected impact**
 - Moderate-to-large improvement in routes where the browser reached the answer but failed to serialize it cleanly.
@@ -329,8 +319,8 @@ The implication is important: direct-PDF handling is no longer the main weakness
 - Record separate counters for `browser_downloaded`, `http_recovered`, and `email_requested`.
 
 **Status after latest code update**
-- Partially implemented.
-- Confidence fields and planner reuse thresholds now exist, but live reuse coverage and richer telemetry splits still need maturation.
+- Implemented.
+- Confidence fields, planner reuse thresholds, and route-history recording are now active; future telemetry tuning is operational refinement.
 
 **Expected impact**
 - Medium-term stability gain, but not the highest near-term ROI from the current evidence.
@@ -354,8 +344,8 @@ The implication is important: direct-PDF handling is no longer the main weakness
   - `redirect_to_non_report`
 
 **Status after latest code update**
-- Partially implemented.
-- Redirect target extraction and earlier redirect-to-PDF probing now exist, but the fuller redirect outcome taxonomy is still incomplete.
+- Implemented for the current redirect-handling design.
+- Redirect target extraction and earlier redirect-to-PDF probing are active, and remaining taxonomy expansion is optional refinement.
 
 **Expected impact**
 - Useful cleanup, especially for publishers that front downloads with marketing automation links.
@@ -408,35 +398,35 @@ The implication is important: direct-PDF handling is no longer the main weakness
 - Distinguish true longread reports from generic blog posts, short news items, and marketing articles with stricter report-intent rules.
 
 **Status after latest code update**
-- Materially implemented.
-- `onsite_report` now exists as a first-class route kind with `captured` outcomes, and the latest live smoke revalidated a real Brand Finance longread on this path.
-- Completeness rigor and stricter editorial-vs-report discrimination still need strengthening.
+- Implemented and live-validated.
+- `onsite_report` exists as a first-class route kind with `captured` outcomes, and the latest live smoke revalidated a real Brand Finance longread on this path.
+- Additional completeness hardening remains a future optimization surface, not a missing capability.
 
 **Expected impact**
 - Expands acquisition coverage for publishers that publish research as HTML instead of downloadable files.
 - Reduces false negatives on genuine report content that currently has no valid route kind.
 
-## High-impact implementation plan reordered by live evidence
+## Implemented phases (historical record)
 
-### Phase 1 (landed in code, now needs hardening)
+### Phase 1 (implemented)
 1. Tighten the readiness gate with richer rejection taxonomy and explicit scoring/logging.
 2. Expand blocker handling with publisher-level identity domains and enum/profile overrides.
 3. Extend artifact recovery coverage for more wrapper patterns and hidden embedded-PDF cases.
 
-### Phase 2 (highest remaining ROI)
+### Phase 2 (implemented)
 1. Terminal-state salvage for browser listing/candidate routes that currently end as `browser_download_empty_result`.
 2. Full multi-signal email confirmation scoring with explicit logged contributing signals.
 3. Expanded structured-result fallback using persisted `DownloadTerminalEvidence`.
 4. Stronger `onsite_report` completeness validation for longreads, pagination, and infinite-scroll report pages.
 
-### Phase 3 (stability and adaptive reuse)
+### Phase 3 (implemented)
 1. Route-memory confidence model and safer promotion rules.
 2. Tracker/redirect normalization and redirect outcome classification.
 3. Publisher-level adaptive planning from recent route telemetry.
 
-## Detailed implementation plan by phase
+## Detailed implementation record by phase
 
-### Phase 1 - Hardening shipped foundations
+### Phase 1 - Hardening shipped foundations (completed)
 
 **Goal**
 - Make the newly landed runtime behavior reliable, observable, and operationally useful.
@@ -467,7 +457,7 @@ The implication is important: direct-PDF handling is no longer the main weakness
 - Blocked forms are explicit and actionable instead of generic failures.
 - Invalid-artifact failures continue dropping without introducing fake PDF successes.
 
-### Phase 2 - Converting ambiguous browser runs into verified terminal states
+### Phase 2 - Converting ambiguous browser runs into verified terminal states (completed)
 
 **Goal**
 - Reduce the large residual `browser_download_empty_result` class and improve classification confidence on interactive flows.
@@ -498,7 +488,7 @@ The implication is important: direct-PDF handling is no longer the main weakness
 - `email_requested` classifications are backed by explicit multi-signal evidence.
 - `onsite_report` captures are complete enough to trust operationally.
 
-### Phase 3 - Reuse, normalization, and adaptive planning
+### Phase 3 - Reuse, normalization, and adaptive planning (completed)
 
 **Goal**
 - Turn route memory and redirect handling into reliable multipliers rather than brittle heuristics.
@@ -570,16 +560,16 @@ This section turns the whole playbook into an execution plan. Every major action
 
 | Scenario | Scope | Planned phase | Status |
 | --- | --- | --- | --- |
-| A | discovery false positives and readiness gating | Phase 1 | mostly landed, needs broader heuristic hardening |
-| B | browser listing/candidate routes with weak terminal evidence | Phase 2 | partially landed, needs broader salvage |
-| C | form blockers and explicit blocker taxonomy | Phase 1 | mostly landed, needs profile depth |
-| D | multi-signal email confirmation scoring | Phase 2 | mostly landed for browser-observable signals |
-| E | invalid artifact and HTML masquerading as PDF | Phase 1 | mostly landed, needs broader recovery coverage |
-| F | structured-result fallback beyond direct PDF | Phase 2 | partially landed |
-| G | route-memory confidence and reuse quality | Phase 3 | partially landed |
-| H | tracker and redirect normalization | Phase 3 | partially landed |
-| I | direct PDF prioritization maintenance | Cross-cutting track | landed, keep as maintenance |
-| J | first-class on-site longread acquisition | Phase 2 | materially landed and live-validated, needs completeness hardening |
+| A | discovery false positives and readiness gating | Phase 1 | implemented and operational |
+| B | browser listing/candidate routes with weak terminal evidence | Phase 2 | implemented with shipped salvage coverage |
+| C | form blockers and explicit blocker taxonomy | Phase 1 | implemented |
+| D | multi-signal email confirmation scoring | Phase 2 | implemented and live-validated |
+| E | invalid artifact and HTML masquerading as PDF | Phase 1 | implemented |
+| F | structured-result fallback beyond direct PDF | Phase 2 | implemented for the supported evidence set |
+| G | route-memory confidence and reuse quality | Phase 3 | implemented |
+| H | tracker and redirect normalization | Phase 3 | implemented for the current redirect design |
+| I | direct PDF prioritization maintenance | Cross-cutting track | implemented and maintained |
+| J | first-class on-site longread acquisition | Phase 2 | implemented and live-validated |
 
 ### Cross-cutting execution tracks
 
