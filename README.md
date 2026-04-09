@@ -1195,13 +1195,18 @@ In `oauth_user` mode, the Drive service reads and refreshes the authorized-user 
 
 ## Streamlit Cockpit
 
-The repository includes a full Streamlit admin/control panel aligned to `GUI-ARCHITECTURE.md`.
-The entrypoint is intentionally thin and now delegates into dedicated UI + generator modules:
+The repository includes a Streamlit control panel aligned to `GUI-ARCHITECTURE.md`.
+The entrypoint is thin and the UI is now split into grouped multi-page surfaces plus a persisted run-control layer:
 
-- `src/streamlit_app.py`: entrypoint only (page config + handoff).
-- `src/ui/streamlit_pages.py`: Streamlit presentation/rendering for sidebar sections.
-- `src/generators/streamlit_dashboard_generator.py`: dashboard data assembly and normalization (logs, JSON payloads, validation summaries, lock/state/report snapshots, ledger parsing, directory counts).
-- `src/contracts/streamlit_dashboard.py`: dataclass contracts for Streamlit dashboard generator I/O.
+- `src/streamlit_app.py`: entrypoint only, grouped `st.navigation(...)`, runtime state bootstrap, theme load.
+- `src/ui/app_pages/`: bounded page modules for overview, core operations, publisher operations, QA, observability, and configuration.
+- `src/ui/settings_page.py`: config studio for `app.yaml`, operational YAML/JSON assets, prompt files, and auth/source status.
+- `src/ui/run_control.py`: Streamlit-facing helpers for launching, polling, listing, canceling, and retrying persisted UI runs.
+- `src/orchestrators/ui_run_control_orchestrator.py`: background run orchestration over local worker processes plus registry persistence.
+- `src/services/process_service.py`: canonical local-process boundary for launch/poll/output/terminate.
+- `src/services/run_registry_service.py`: SQLite-backed run registry persisted beside the state DB.
+- `src/services/config_asset_service.py`: canonical YAML/JSON/text asset editor boundary with validation and optional backups.
+- `src/generators/streamlit_dashboard_generator.py`: read-model assembly for dashboard/log/storage views.
 
 Run locally:
 
@@ -1209,36 +1214,25 @@ Run locally:
 streamlit run src/streamlit_app.py
 ```
 
-Primary sidebar navigation (14 sections):
+Grouped sidebar navigation:
 
-1. Cockpit Overview
-2. Ingest Control
-3. Candidate Extraction
-4. Report Command Center
-5. Cover Images
-6. Analysis & Evidence
-7. Validation Center
-8. Publishing Control
-9. Category Manager
-10. Cost & Usage
-11. Logs & Live Terminal
-12. Settings & Prompts
-13. System & Storage
-14. Developer & Test Tools (disabled stub)
+- `Overview`: Cockpit Overview, Run Center
+- `Core operations`: Ingest Control, Candidate Extraction, Cover Images, Publishing & Taxonomy
+- `Publisher operations`: Publisher Discovery, Report Download Lab, Acquisition Audit, Publisher Sync, Auth & External Access
+- `Content QA`: Report Command Center, Analysis & Evidence, Validation Center
+- `Observability`: Cost & Usage, Logs & Live Events, System & Storage, Developer & Test Tools
+- `Configuration`: Settings & Prompts
 
 Design and behavior highlights:
 
-- One dominant task per page with a consistent shell: title + status chip + primary action + filters + main data region + right-side details panel.
-- Status chips are normalized to `success` / `warn` / `error` semantics for consistent operational feedback.
-- Accessibility/readability defaults: captions are rendered in black and action buttons use a light-blue background for consistent contrast in the main content area.
-- Interactive controls (navigation, actions, inputs, selectors) expose concise hover help with usage examples (capped at 1000 characters per tooltip).
-- Pages are wired to existing contracts/services/orchestrators as source-of-truth surfaces (DB, files, config, and logs).
-- Cockpit overview and publish queue views now use dedicated orchestrators (`ops_dashboard_orchestrator`, `publish_queue_orchestrator`) so UI code stays presentation-focused.
-- The logs page supports structured filtering (`run_id`, `task_id`, `span_id`, `event`, `role`, `module`) and includes a terminal-style panel for UI-triggered run output history.
-- The **Settings & Prompts** page now includes a full `app.yaml` editor with direct save support (optional timestamped backups), so every config key in `src/config/app.yaml` can be changed from the Streamlit UI.
-- The same page now also provides a **Structured Form** tab with field-by-field widgets for all `app.yaml` sections (paths, ingest, rank, publish, analysis, cost, and model maps), designed for non-technical config editing.
+- Long-running workflows launched from Streamlit now run through the persisted UI run registry instead of blocking the browser session inline. The Run Center can inspect, cancel, and retry tracked jobs.
+- The overview and Run Center now use card-based dashboard composition with bordered KPI rows, tighter run/history tables, and selected-run context that carries into observability pages.
+- Workflow coverage now includes publisher discovery, report download, acquisition audit, publisher sync, and Drive OAuth/auth visibility in addition to ingest, candidate extraction, cover generation, publish, taxonomy, QA, and observability pages.
+- The configuration surface now covers `app.yaml`, category mappings, cover styles, browser download identity, publisher snapshot JSON, and prompt YAML files through service-backed editors with validation, diff visibility, and optional backups.
+- The config studio defaults to four task-oriented workspaces: `Common`, `Assets`, `Prompts`, and `Advanced`, so routine operator changes no longer open on the raw YAML editor by default.
+- Selected run IDs now flow into observability surfaces such as cost and log filters, and selected report IDs persist across the report/analysis pages.
+- Native theming now lives in `.streamlit/config.toml`; injected CSS is limited to a small set of component-level helpers such as status chips, panels, steppers, and the terminal surface.
 - If runtime config validation fails, the UI still opens directly into **Settings & Prompts** so `app.yaml` can be fixed without leaving Streamlit.
-- Extracted dashboard business logic is unit-tested in `tests/test_streamlit_dashboard_generator.py`.
 
 ## Output Layout
 

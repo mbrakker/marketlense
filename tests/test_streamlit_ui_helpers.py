@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from src.ui import streamlit_pages as pages
+from src.ui import state as ui_state
 from src import streamlit_app
 
 
@@ -16,7 +17,7 @@ def test_chip_html_includes_escaped_tooltip_title() -> None:
     assert 'title="Use &quot;Refresh&quot; after ingest."' in rendered
 
 
-def test_inject_theme_has_black_captions_and_light_blue_buttons(monkeypatch) -> None:
+def test_inject_theme_includes_status_chip_and_terminal_styles(monkeypatch) -> None:
     captured: dict[str, object] = {}
 
     def _capture_markdown(body: str, unsafe_allow_html: bool = False) -> None:
@@ -27,16 +28,32 @@ def test_inject_theme_has_black_captions_and_light_blue_buttons(monkeypatch) -> 
     streamlit_app._inject_theme()
 
     body = str(captured.get("body") or "")
-    assert "[data-testid=\"stAppViewContainer\"] [data-testid=\"stMain\"] {" in body
-    assert "--text-color: #000000 !important;" in body
-    assert "[data-testid=\"stAppViewContainer\"] [data-testid=\"stMain\"] [data-testid=\"stCaptionContainer\"]" in body
-    assert "[data-testid=\"stAppViewContainer\"] [data-testid=\"stMain\"] [data-testid=\"stMetricLabel\"]" in body
-    assert "[data-testid=\"stAppViewContainer\"] [data-testid=\"stMain\"] [data-testid=\"stWidgetLabel\"]" in body
-    assert "[data-testid=\"stAppViewContainer\"] [data-testid=\"stMain\"] [data-testid=\"stHeadingWithActionElements\"]" in body
-    assert "-webkit-text-fill-color: #000000 !important;" in body
-    assert "color: #000000 !important;" in body
-    assert "background: #d7ecff !important;" in body
+    assert ".status-chip {" in body
+    assert ".status-success {" in body
+    assert ".ml-terminal {" in body
+    assert "font-family: \"JetBrains Mono\"" in body
+    assert ".ml-panel {" in body
+    assert ".ml-page-subtitle {" in body
+    assert ".ml-empty-state {" in body
     assert captured.get("unsafe") is True
+
+
+def test_initialize_ui_state_sets_shared_keys(monkeypatch) -> None:
+    session_state: dict[str, object] = {}
+    monkeypatch.setattr(ui_state.st, "session_state", session_state)
+
+    ui_state.initialize_ui_state(
+        settings={"mode": "ok"},
+        publish_settings={"publish": True},
+        publish_error="",
+        settings_error=None,
+    )
+
+    assert session_state[ui_state.APP_SETTINGS_KEY] == {"mode": "ok"}
+    assert session_state[ui_state.PUBLISH_SETTINGS_KEY] == {"publish": True}
+    assert session_state[ui_state.PUBLISH_ERROR_KEY] == ""
+    assert session_state[ui_state.SELECTED_RUN_ID_KEY] == ""
+    assert session_state[ui_state.SELECTED_REPORT_ID_KEY] == ""
 
 
 def test_dashboard_read_model_cache_reuses_loaded_value() -> None:

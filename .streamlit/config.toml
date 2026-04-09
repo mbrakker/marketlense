@@ -1,0 +1,72 @@
+[theme]
+base = "light"
+primaryColor = "#0f7d45"
+backgroundColor = "#f4f4f1"
+secondaryBackgroundColor = "#ffffff"
+textColor = "#18211d"
+linkColor = "#116f8f"
+codeTextColor = "#18211d"
+codeBackgroundColor = "#eef2ef"
+borderColor = "#d7ddd8"
+showWidgetBorder = true
+showSidebarBorder = true
+baseRadius = "10px"
+buttonRadius = "10px"
+
+font = "Manrope:https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+headingFont = "Sora:https://fonts.googleapis.com/css2?family=Sora:wght@600;700&display=swap"
+codeFont = "'JetBrains Mono':https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"
+baseFontSize = 14
+codeFontSize = "13px"
+linkUnderline = false
+headingFontSizes = ["32px", "24px", "20px", "16px", "14px", "12px"]
+headingFontWeights = [700, 700, 600, 600, 600, 600]
+
+greenColor = "#0f7d45"
+greenBackgroundColor = "#dcefe3"
+greenTextColor = "#0f5f36"
+orangeColor = "#bd7a12"
+orangeBackgroundColor = "#f8ebd7"
+orangeTextColor = "#8a5706"
+redColor = "#b42318"
+redBackgroundColor = "#f6ddd9"
+redTextColor = "#8f1d14"
+blueColor = "#116f8f"
+blueBackgroundColor = "#dcedf3"
+blueTextColor = "#0f556d"
+grayColor = "#5f6c67"
+grayBackgroundColor = "#e8ece9"
+grayTextColor = "#44514c"
+
+chartCategoricalColors = ["#0f7d45", "#116f8f", "#7a5030", "#bd7a12", "#b42318", "#667085", "#0d9488"]
+
+dataframeBorderColor = "#d7ddd8"
+dataframeHeaderBackgroundColor = "#eef2ef"
+
+[theme.sidebar]
+backgroundColor = "#16372b"
+secondaryBackgroundColor = "#1e4738"
+textColor = "#f2f6f3"
+borderColor = "#295442"
+codeBackgroundColor = "#132d23"
+codeTextColor = "#f2f6f3"
+primaryColor = "#8fd6c0"
+linkColor = "#8fd6c0"
+showWidgetBorder = true
+dataframeBorderColor = "#295442"
+dataframeHeaderBackgroundColor = "#1d4335"
+greenColor = "#86d3a1"
+greenBackgroundColor = "#17392c"
+greenTextColor = "#def5e6"
+orangeColor = "#e4b66a"
+orangeBackgroundColor = "#47351c"
+orangeTextColor = "#f8e4bf"
+redColor = "#f28b82"
+redBackgroundColor = "#47221e"
+redTextColor = "#f8dfdc"
+blueColor = "#8fd6c0"
+blueBackgroundColor = "#153933"
+blueTextColor = "#dff6ef"
+grayColor = "#a7b8b0"
+grayBackgroundColor = "#223d32"
+grayTextColor = "#e3ece8"

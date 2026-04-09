@@ -16,18 +16,13 @@ from src.contracts.config import (
     AppConfigReadRequest,
     AppConfigWriteRequest,
     ConfigLoadRequest,
-    IngestSettingsBuildRequest,
 )
 from src.contracts.costs import (
     CostReportRequest,
     CostReportingRequest,
     CostRollupRequest,
 )
-from src.contracts.cover_images import (
-    CoverImageOrchestratorRequest,
-    CoverStyleLoadRequest,
-)
-from src.contracts.logging import LoggingSetupRequest
+from src.contracts.cover_images import CoverStyleLoadRequest
 from src.contracts.ops import OpsDashboardSnapshotRequest
 from src.contracts.prompts import PromptNamespaceListRequest
 from src.contracts.publish import PublishQueueRequest
@@ -58,31 +53,23 @@ from src.generators.streamlit_dashboard_generator import (
     read_json_payload,
     summarize_validation_artifacts,
 )
-from src.orchestrators.candidate_extraction_orchestrator import run_candidate_extraction
-from src.orchestrators.cover_image_orchestrator import run_cover_image_generation
 from src.orchestrators.cost_reporting_orchestrator import run_cost_reporting
-from src.orchestrators.ingest_orchestrator import run_ingest
 from src.orchestrators.ops_dashboard_orchestrator import collect_ops_dashboard_snapshot
-from src.orchestrators.publish_orchestrator import run_publish
 from src.orchestrators.publish_queue_orchestrator import build_publish_queue_snapshot
 from src.orchestrators.recategorize_orchestrator import run_recategorize
 from src.orchestrators.wp_category_update_orchestrator import run_update_wp_categories
 from src.services.category_mapping_service import load_mappings
 from src.services.config_service import (
-    build_ingest_settings,
     load_publish_settings,
     load_settings,
     read_app_config,
     write_app_config,
 )
 from src.services.cover_style_service import load_cover_styles
-from src.services.logging_service import (
-    DEFAULT_LOG_DIR,
-    LOG_DIR_ENV,
-    LOG_FILE_PREFIX,
-    setup_logging,
-)
+from src.services.logging_service import DEFAULT_LOG_DIR, LOG_DIR_ENV, LOG_FILE_PREFIX
 from src.services.prompt_service import list_prompt_namespaces
+from src.ui import state as ui_state
+from src.ui.run_control import launch_background_run, list_recent_runs, poll_selected_run
 from src.services.state_service import get as get_state
 from src.utils.coercion import (
     coerce_extended_bool as _as_bool,
@@ -144,6 +131,16 @@ _DASHBOARD_CACHE_INVALIDATION_RULES: dict[str, set[str] | None] = {
     "settings": None,
 }
 
+_UI_RUN_INVALIDATION_BY_TYPE: dict[str, str | None] = {
+    "ingest": "ingest",
+    "publish": "publish",
+    "cover_images": "cover_images",
+    "candidate_extraction": None,
+    "publisher_discovery": None,
+    "report_download": None,
+    "acquisition_audit": None,
+}
+
 
 NAV_SECTIONS = [
     "Cockpit Overview",
@@ -184,6 +181,38 @@ CANDIDATE_STEPS = [
 
 def _ctx(task_id: str) -> Any:
     return new_run_context(task_id=f"gui:{task_id}")
+
+
+def _selected_ui_run(
+    settings: Any,
+    *,
+    run_type: str | None = None,
+    max_bytes: int = 65536,
+) -> Any | None:
+    polled = poll_selected_run(settings, max_bytes=max_bytes)
+    if polled is None:
+        return None
+    record = polled.record
+    if run_type and record.run_type != run_type:
+        return None
+    if record.status == "succeeded":
+        cache_key = f"ui_run_cache_synced:{record.run_id}"
+        if not st.session_state.get(cache_key):
+            reason = _UI_RUN_INVALIDATION_BY_TYPE.get(record.run_type)
+            if reason:
+                _invalidate_dashboard_read_models(st.session_state, reason=reason)
+            st.session_state[cache_key] = True
+    return polled
+
+
+def _selected_report_index(reports: list[dict[str, Any]]) -> int:
+    selected_report_id = ui_state.get_selected_report_id()
+    if not selected_report_id:
+        return 0
+    for idx, row in enumerate(reports):
+        if str(row.get("file_id") or "").strip() == selected_report_id:
+            return idx
+    return 0
 
 def _chip_html(label: str, level: str, *, tooltip: str | None = None) -> str:
     tip = tooltip or _tip(
@@ -899,6 +928,9 @@ def _render_cockpit_overview(settings: Any) -> None:
     logs = _discover_log_files()
     recent_paths = [row["path"] for row in logs[:2]]
     events = _load_log_events(recent_paths)
+    active_runs = list_recent_runs(settings, statuses=["queued", "running"], limit=20).records
+    recent_runs = list_recent_runs(settings, limit=20).records
+    recent_failures = [item for item in recent_runs if item.status == "failed"][:5]
 
     status_level = "warn" if lock.get("found") else "success"
     clicked, filters, main_col, detail_col = _page_shell(
@@ -924,9 +956,17 @@ def _render_cockpit_overview(settings: Any) -> None:
     with main_col:
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("Reports", f"{len(reports)}")
-        m2.metric("Processed", f"{len(processed)}")
-        m3.metric("Published", f"{len(published)}")
-        m4.metric("Recent Log Events", f"{len(events)}")
+        m2.metric("Active Runs", f"{len(active_runs)}")
+        m3.metric("Processed", f"{len(processed)}")
+        m4.metric("Published", f"{len(published)}")
+        m5, m6 = st.columns(2)
+        m5.metric("Recent Log Events", f"{len(events)}")
+        m6.metric("Failed Runs", f"{len(recent_failures)}")
+        st.subheader("Active Runs")
+        if active_runs:
+            st.dataframe(row_dicts(active_runs), use_container_width=True, hide_index=True)
+        else:
+            st.caption("No queued or running background jobs.")
         st.subheader("Recent Reports")
         if reports:
             table = []
@@ -947,6 +987,11 @@ def _render_cockpit_overview(settings: Any) -> None:
     with detail_col:
         st.subheader("System Health")
         st.dataframe(health, use_container_width=True, hide_index=True)
+        st.subheader("Recent Failures")
+        if recent_failures:
+            st.dataframe(row_dicts(recent_failures), use_container_width=True, hide_index=True)
+        else:
+            st.caption("No failed background runs recorded.")
         st.subheader("Ingest Lock")
         if lock.get("found"):
             st.error(f"Locked by `{lock.get('owner_id')}` (pid={lock.get('pid')})")
@@ -1009,46 +1054,40 @@ def _render_ingest_control(settings: Any) -> None:
         )
 
     if clicked:
-        _append_terminal("Ingest requested from UI.")
-        try:
-            outcomes = run_ingest(
-                build_ingest_settings(
-                    IngestSettingsBuildRequest(
-                        schema_version="1.0", app_settings=settings
-                    ),
-                    _ctx("build_ingest_settings"),
-                ),
-                folder_id=folder_override.strip() or None,
-                limit=int(limit),
-                ctx=_ctx("run_ingest"),
-            )
-            st.session_state["last_ingest_outcomes"] = outcomes
-            _invalidate_dashboard_read_models(st.session_state, reason="ingest")
-            processed_count = len([o for o in outcomes if o.status == "processed"])
-            _append_terminal(
-                f"Ingest complete. processed={processed_count} total={len(outcomes)}"
-            )
-            st.success(f"Ingest completed with {processed_count} processed file(s).")
-        except UI_SURFACE_EXCEPTIONS as exc:
-            _append_terminal(f"Ingest failed: {exc}")
-            st.error(str(exc))
+        response = launch_background_run(
+            settings,
+            run_type="ingest",
+            display_name="Ingest",
+            request_payload={
+                "folder_id": folder_override.strip(),
+                "limit": int(limit),
+            },
+        )
+        _append_terminal(f"Ingest launched: {response.record.run_id}")
+        st.success(f"Ingest launched: {response.record.run_id}")
 
-    outcomes = st.session_state.get("last_ingest_outcomes", [])
-    done_count = len(INGEST_STEPS) if outcomes else 0
-    has_errors = any(getattr(item, "status", "") == "error" for item in outcomes)
+    polled = _selected_ui_run(settings, run_type="ingest")
+    run_status = polled.record.status if polled is not None else ""
+    done_count = len(INGEST_STEPS) if run_status == "succeeded" else 0
+    active_index = 0 if run_status in {"queued", "running"} else None
+    error_index = len(INGEST_STEPS) - 1 if run_status == "failed" else None
 
     with main_col:
         st.subheader("Pipeline Stepper")
         _render_stepper(
             INGEST_STEPS,
             done_count=done_count,
-            error_index=(len(INGEST_STEPS) - 1 if has_errors else None),
+            active_index=active_index,
+            error_index=error_index,
         )
-        if outcomes:
-            st.subheader("Ingest Outcomes")
-            st.dataframe(row_dicts(outcomes), use_container_width=True, hide_index=True)
+        if polled is None:
+            st.info("Launch ingest to create a tracked background run.")
         else:
-            st.info("No ingest run executed in this session yet.")
+            st.subheader("Selected run summary")
+            st.json(polled.record.result_summary)
+            if polled.output_chunk is not None:
+                st.subheader("Worker output")
+                st.code(polled.output_chunk.text or "[worker] no output yet")
 
     with detail_col:
         st.subheader("Lock & Config")
@@ -1067,6 +1106,9 @@ def _render_ingest_control(settings: Any) -> None:
                 "analysis_mode": "vector_store",
             }
         )
+        if polled is not None:
+            st.subheader("Run record")
+            st.json(polled.record.__dict__)
 
 
 def _render_candidate_extraction(settings: Any) -> None:
@@ -1139,68 +1181,65 @@ def _render_candidate_extraction(settings: Any) -> None:
             )
 
     if clicked:
-        _append_terminal("Candidate extraction requested from UI.")
-        try:
-            outcomes = run_candidate_extraction(
-                build_ingest_settings(
-                    IngestSettingsBuildRequest(
-                        schema_version="1.0", app_settings=settings
-                    ),
-                    _ctx("build_ingest_settings"),
-                ),
-                folder_id=folder_override.strip() or None,
-                limit=int(limit),
-                file_id=file_id.strip() or None,
-                pdf_path=local_pdf.strip() or None,
-                report_id=report_id.strip() or None,
-                ctx=_ctx("run_candidates"),
-            )
-            st.session_state["last_candidate_outcomes"] = outcomes
-            _append_terminal(f"Candidate extraction complete. outputs={len(outcomes)}")
-            st.success(f"Candidate extraction complete for {len(outcomes)} item(s).")
-        except UI_SURFACE_EXCEPTIONS as exc:
-            _append_terminal(f"Candidate extraction failed: {exc}")
-            st.error(str(exc))
+        response = launch_background_run(
+            settings,
+            run_type="candidate_extraction",
+            display_name="Candidate extraction",
+            request_payload={
+                "folder_id": folder_override.strip(),
+                "limit": int(limit),
+                "file_id": file_id.strip(),
+                "pdf_path": local_pdf.strip(),
+                "report_id": report_id.strip(),
+            },
+        )
+        _append_terminal(f"Candidate extraction launched: {response.record.run_id}")
+        st.success(f"Candidate extraction launched: {response.record.run_id}")
 
-    outcomes = st.session_state.get("last_candidate_outcomes", [])
+    polled = _selected_ui_run(settings, run_type="candidate_extraction")
     with main_col:
         st.subheader("Pipeline Stepper")
         _render_stepper(
-            CANDIDATE_STEPS, done_count=(len(CANDIDATE_STEPS) if outcomes else 0)
+            CANDIDATE_STEPS,
+            done_count=(len(CANDIDATE_STEPS) if polled and polled.record.status == "succeeded" else 0),
+            active_index=(0 if polled and polled.record.status in {"queued", "running"} else None),
+            error_index=(len(CANDIDATE_STEPS) - 1 if polled and polled.record.status == "failed" else None),
         )
-        if outcomes:
-            st.subheader("Extraction Outcomes")
-            st.dataframe(row_dicts(outcomes), use_container_width=True, hide_index=True)
+        if polled is None:
+            st.info("Launch extraction to create a tracked background run.")
         else:
-            st.info("No extraction run executed in this session yet.")
+            st.subheader("Selected run summary")
+            st.json(polled.record.result_summary)
+            if polled.output_chunk is not None:
+                st.subheader("Worker output")
+                st.code(polled.output_chunk.text or "[worker] no output yet")
 
     with detail_col:
         st.subheader("Asset Viewer")
-        if not outcomes:
-            st.caption("Run extraction to inspect `candidates.json` and crops.")
+        if polled is None:
+            st.caption("Run extraction to inspect generated candidate artifacts.")
             return
-        labels = [f"{item.report_id} | {item.report_name}" for item in outcomes]
-        selected = st.selectbox(
-            "Select outcome",
-            options=list(range(len(labels))),
-            format_func=lambda idx: labels[idx],
-            help=_tip(
-                "Select an extraction outcome to inspect candidates JSON and generated crops.",
-                "Choose the latest report to review candidate quality.",
-            ),
-        )
-        outcome = outcomes[selected]
-        parsed = (
-            _read_json(outcome.candidates_path) if outcome.candidates_path else None
-        )
-        if parsed is not None:
-            st.json(parsed)
-        if outcome.crop_paths:
-            st.caption(f"Crops ({len(outcome.crop_paths)})")
-            for crop_path in outcome.crop_paths[:8]:
-                candidate_path = Path(crop_path)
-                if candidate_path.exists():
-                    st.image(str(candidate_path), use_container_width=True)
+        if polled.record.artifact_paths:
+            st.dataframe(
+                [{"path": path} for path in polled.record.artifact_paths],
+                use_container_width=True,
+                hide_index=True,
+            )
+            first_json = next(
+                (
+                    path
+                    for path in polled.record.artifact_paths
+                    if str(path).strip().lower().endswith(".json")
+                ),
+                "",
+            )
+            if first_json:
+                payload = _read_json(first_json)
+                if payload is not None:
+                    st.subheader("Artifact preview")
+                    st.json(payload)
+        else:
+            st.caption("No artifact paths recorded yet.")
 
 
 def _render_report_command_center(settings: Any) -> None:
@@ -1231,6 +1270,7 @@ def _render_report_command_center(settings: Any) -> None:
         selected_idx = st.selectbox(
             "Report",
             options=list(range(len(labels))),
+            index=_selected_report_index(reports),
             format_func=lambda idx: labels[idx],
             help=_tip(
                 "Select a report metadata row for detailed provenance and artifact review.",
@@ -1238,6 +1278,7 @@ def _render_report_command_center(settings: Any) -> None:
             ),
         )
         report = reports[selected_idx]
+        ui_state.set_selected_report_id(str(report.get("file_id") or ""))
         st.dataframe(
             [
                 {
@@ -1390,28 +1431,20 @@ def _render_cover_images(settings: Any) -> None:
         st.caption(f"Source of truth style config: `{settings.cover_style_path}`")
 
     if clicked:
-        _append_terminal("Cover generation requested from UI.")
-        try:
-            outcomes = run_cover_image_generation(
-                CoverImageOrchestratorRequest(
-                    schema_version="1.0",
-                    reports_db=settings.reports_db,
-                    output_dir=settings.output_dir,
-                    style_config_path=style_path.strip(),
-                    limit=int(limit),
-                    file_id=file_id.strip() or None,
-                ),
-                ctx=_ctx("run_covers"),
-            )
-            st.session_state["last_cover_outcomes"] = outcomes
-            _invalidate_dashboard_read_models(st.session_state, reason="cover_images")
-            _append_terminal(f"Cover generation complete. outcomes={len(outcomes)}")
-            st.success(f"Cover generation completed for {len(outcomes)} report(s).")
-        except UI_SURFACE_EXCEPTIONS as exc:
-            _append_terminal(f"Cover generation failed: {exc}")
-            st.error(str(exc))
+        response = launch_background_run(
+            settings,
+            run_type="cover_images",
+            display_name="Cover image generation",
+            request_payload={
+                "style_config_path": style_path.strip(),
+                "limit": int(limit),
+                "file_id": file_id.strip(),
+            },
+        )
+        _append_terminal(f"Cover generation launched: {response.record.run_id}")
+        st.success(f"Cover generation launched: {response.record.run_id}")
 
-    outcomes = st.session_state.get("last_cover_outcomes", [])
+    polled = _selected_ui_run(settings, run_type="cover_images")
     with main_col:
         try:
             style_config = load_cover_styles(
@@ -1429,19 +1462,26 @@ def _render_cover_images(settings: Any) -> None:
             )
         except UI_SURFACE_EXCEPTIONS as exc:
             st.warning(f"Unable to load style config: {exc}")
-        if outcomes:
-            st.subheader("Generation Outcomes")
-            st.dataframe(row_dicts(outcomes), use_container_width=True, hide_index=True)
+        if polled is None:
+            st.info("Launch cover generation to create a tracked background run.")
         else:
-            st.info("No cover generation run executed in this session yet.")
+            st.subheader("Selected run summary")
+            st.json(polled.record.result_summary)
+            if polled.output_chunk is not None:
+                st.subheader("Worker output")
+                st.code(polled.output_chunk.text or "[worker] no output yet")
 
     with detail_col:
         st.subheader("Asset Viewer")
-        generated = [item for item in outcomes if getattr(item, "output_path", None)]
-        if not generated:
-            st.caption("No generated assets yet.")
+        generated_paths = [
+            path
+            for path in (polled.record.artifact_paths if polled is not None else [])
+            if str(path).strip()
+        ]
+        if not generated_paths:
+            st.caption("No generated assets recorded yet.")
             return
-        labels = [f"{item.file_id} | {item.title}" for item in generated]
+        labels = [Path(path).name for path in generated_paths]
         selected = st.selectbox(
             "Select output",
             options=list(range(len(labels))),
@@ -1451,11 +1491,10 @@ def _render_cover_images(settings: Any) -> None:
                 "Pick a report with recent style updates to validate rendering.",
             ),
         )
-        selected_outcome = generated[selected]
-        if selected_outcome.output_path:
-            st.code(selected_outcome.output_path)
-            if Path(selected_outcome.output_path).exists():
-                st.image(selected_outcome.output_path, use_container_width=True)
+        selected_path = generated_paths[selected]
+        st.code(selected_path)
+        if Path(selected_path).exists():
+            st.image(selected_path, use_container_width=True)
 
 
 def _render_analysis_and_evidence(settings: Any) -> None:
@@ -1485,6 +1524,7 @@ def _render_analysis_and_evidence(settings: Any) -> None:
     selected_idx = st.selectbox(
         "Report",
         options=list(range(len(labels))),
+        index=_selected_report_index(reports),
         format_func=lambda idx: labels[idx],
         help=_tip(
             "Choose which report to inspect for vector indexing and evidence packs.",
@@ -1492,6 +1532,7 @@ def _render_analysis_and_evidence(settings: Any) -> None:
         ),
     )
     report = reports[selected_idx]
+    ui_state.set_selected_report_id(str(report.get("file_id") or ""))
     state_row = get_state(
         StateGetRequest(
             schema_version="1.0", state_db=settings.state_db, file_id=report["file_id"]
@@ -1649,23 +1690,14 @@ def _render_publishing_control(
             ),
         )
     if clicked and publish_settings:
-        _append_terminal("Publish requested from UI.")
-        try:
-            outcomes = run_publish(
-                publish_settings,
-                limit=int(limit),
-                ctx=_ctx("publish"),
-            )
-            st.session_state["last_publish_outcomes"] = outcomes
-            _invalidate_dashboard_read_models(st.session_state, reason="publish")
-            published_count = len([o for o in outcomes if o.status == "published"])
-            _append_terminal(
-                f"Publish complete. published={published_count} total={len(outcomes)}"
-            )
-            st.success(f"Publishing completed: {published_count} published.")
-        except UI_SURFACE_EXCEPTIONS as exc:
-            _append_terminal(f"Publish failed: {exc}")
-            st.error(str(exc))
+        response = launch_background_run(
+            settings,
+            run_type="publish",
+            display_name="Publish queue",
+            request_payload={"limit": int(limit)},
+        )
+        _append_terminal(f"Publish launched: {response.record.run_id}")
+        st.success(f"Publish launched: {response.record.run_id}")
 
     queue_rows: list[dict[str, Any]] = []
     try:
@@ -1693,10 +1725,13 @@ def _render_publishing_control(
             st.dataframe(queue_rows, use_container_width=True, hide_index=True)
         else:
             st.info("No HTML files found in output directory.")
-        outcomes = st.session_state.get("last_publish_outcomes", [])
-        if outcomes:
-            st.subheader("Last Publish Results")
-            st.dataframe(row_dicts(outcomes), use_container_width=True, hide_index=True)
+        polled = _selected_ui_run(settings, run_type="publish")
+        if polled is not None:
+            st.subheader("Selected run summary")
+            st.json(polled.record.result_summary)
+            if polled.output_chunk is not None:
+                st.subheader("Worker output")
+                st.code(polled.output_chunk.text or "[worker] no output yet")
 
     with detail_col:
         st.subheader("Settings Summary")
@@ -1712,6 +1747,13 @@ def _render_publishing_control(
             )
         else:
             st.error(f"Publish settings unavailable: {publish_error}")
+        if can_publish and polled is not None:
+            st.subheader("Artifacts")
+            st.dataframe(
+                [{"path": path} for path in polled.record.artifact_paths],
+                use_container_width=True,
+                hide_index=True,
+            )
 
 
 def _render_category_manager(settings: Any, publish_settings: Any | None) -> None:
@@ -1814,6 +1856,7 @@ def _load_ledger_entries(
 
 
 def _render_cost_and_usage(settings: Any) -> None:
+    selected_run_id = ui_state.get_selected_run_id()
     clicked, filters, main_col, detail_col = _page_shell(
         "Cost & Usage",
         status_label="Ledger Ready",
@@ -1828,10 +1871,11 @@ def _render_cost_and_usage(settings: Any) -> None:
     with filters:
         mode_col, value_col, top_col = st.columns(3)
         with mode_col:
-            filter_mode = st.selectbox(
+            default_mode = "run_id" if selected_run_id else "date"
+            filter_mode = st.segmented_control(
                 "Filter Mode",
                 options=["date", "run_id"],
-                index=0,
+                default=default_mode,
                 help=_tip(
                     "Choose how to filter the generated cost report.",
                     "Use 'date' for daily totals or 'run_id' for one execution trace.",
@@ -1849,7 +1893,7 @@ def _render_cost_and_usage(settings: Any) -> None:
             else:
                 filter_value = st.text_input(
                     "run_id",
-                    value="",
+                    value=selected_run_id,
                     help=_tip(
                         "Run identifier filter used when Filter Mode is 'run_id'.",
                         "Paste run_id from Logs & Live Terminal for per-run cost analysis.",
@@ -1952,6 +1996,7 @@ def _render_cost_and_usage(settings: Any) -> None:
 
 
 def _render_logs_and_terminal() -> None:
+    default_run_id = ui_state.get_selected_run_id()
     clicked, filters, main_col, detail_col = _page_shell(
         "Logs & Live Terminal",
         status_label="Observability",
@@ -1985,7 +2030,7 @@ def _render_logs_and_terminal() -> None:
         with c1:
             run_id = st.text_input(
                 "run_id",
-                value="",
+                value=default_run_id,
                 help=_tip(
                     "Filter events by a specific run identifier.",
                     "Paste run_id from a recent orchestrator event.",
@@ -3075,74 +3120,9 @@ def _render_developer_tools() -> None:
 
 
 def main() -> None:
-    st.set_page_config(page_title="Market Lense Cockpit", page_icon="ML", layout="wide")
-    _inject_theme()
-    if not st.session_state.get("gui_logging_ready"):
-        setup_logging(LoggingSetupRequest(schema_version="1.0"), _ctx("setup_logging"))
-        st.session_state["gui_logging_ready"] = True
-    st.session_state.setdefault("live_terminal_output", "")
+    from src import streamlit_app
 
-    settings, settings_error = _try_load_settings()
-    publish_settings, publish_error = _try_load_publish_settings()
-    nav_sections = NAV_SECTIONS if settings else ["Settings & Prompts"]
-    if st.session_state.get("nav_section") not in nav_sections:
-        st.session_state["nav_section"] = nav_sections[0]
-
-    with st.sidebar:
-        st.title("Market Lense")
-        if settings_error:
-            st.error(
-                "Runtime config is invalid. Open Settings & Prompts to fix app.yaml."
-            )
-        section = st.radio(
-            "Navigation",
-            options=nav_sections,
-            key="nav_section",
-            help=_tip(
-                "Primary section selector. Each page is scoped to one operational task.",
-                "Choose 'Ingest Control' to run ingest, then move to 'Logs & Live Terminal' to inspect events.",
-            ),
-        )
-        st.markdown("---")
-        st.caption("One task per page. Source-of-truth first.")
-
-    if settings is None and section != "Settings & Prompts":
-        st.error(f"Unable to load app settings: {settings_error}")
-        _render_settings_and_prompts(
-            settings, publish_settings, publish_error, settings_error
-        )
-        return
-
-    if section == "Cockpit Overview":
-        _render_cockpit_overview(settings)
-    elif section == "Ingest Control":
-        _render_ingest_control(settings)
-    elif section == "Candidate Extraction":
-        _render_candidate_extraction(settings)
-    elif section == "Report Command Center":
-        _render_report_command_center(settings)
-    elif section == "Cover Images":
-        _render_cover_images(settings)
-    elif section == "Analysis & Evidence":
-        _render_analysis_and_evidence(settings)
-    elif section == "Validation Center":
-        _render_validation_center(settings, publish_settings, publish_error)
-    elif section == "Publishing Control":
-        _render_publishing_control(settings, publish_settings, publish_error)
-    elif section == "Category Manager":
-        _render_category_manager(settings, publish_settings)
-    elif section == "Cost & Usage":
-        _render_cost_and_usage(settings)
-    elif section == "Logs & Live Terminal":
-        _render_logs_and_terminal()
-    elif section == "Settings & Prompts":
-        _render_settings_and_prompts(
-            settings, publish_settings, publish_error, settings_error
-        )
-    elif section == "System & Storage":
-        _render_system_and_storage(settings)
-    elif section == "Developer & Test Tools":
-        _render_developer_tools()
+    streamlit_app.main()
 
 
 if __name__ == "__main__":
