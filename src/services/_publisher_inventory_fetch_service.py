@@ -15,6 +15,8 @@ from src.contracts.publisher_inventory import (
     PublisherInventoryLandingPageObservation,
     PublisherInventoryPage,
     PublisherInventoryRawCandidate,
+    PublisherInventoryRouteTrace,
+    PublisherInventoryScenarioSummary,
     PublisherInventoryServiceRequest,
     PublisherInventoryServiceResponse,
 )
@@ -174,6 +176,8 @@ _DEAD_PAGE_MARKERS = (
     "this page doesn't exist",
     "this page does not exist",
 )
+_TRANSIENT_HTTP_STATUS_CODES = {408, 425, 429, 500, 502, 503, 504}
+_PROTECTED_DOCUMENT_HTTP_STATUS_CODES = {401, 403}
 
 
 class _InventoryHtmlParser(HTMLParser):
@@ -360,6 +364,7 @@ def discover_inventory_via_http(
     normalized_url: str,
     *,
     use_hint: bool,
+    scenario_summary: PublisherInventoryScenarioSummary | None,
     requests_module: Any,
 ) -> PublisherInventoryServiceResponse:
     headers = dict(HTTP_BROWSER_HEADERS)
@@ -584,6 +589,22 @@ def discover_inventory_via_http(
         used_route_hint=use_hint,
         pages=pages,
         candidates=candidates,
+        route_trace=PublisherInventoryRouteTrace(
+            schema_version="1.0",
+            followed_report_listing=False,
+            applied_report_filter=False,
+            selected_filters=[],
+            selected_tab_labels=[],
+            pagination_mode="next_link" if len(pages) > 1 else "none",
+            preferred_control_labels=[],
+            candidate_surface_guard="none",
+            surface_class=(
+                "archive_feed"
+                if len(pages) > 1 or "filters=" in normalized_url
+                else "direct_detail"
+            ),
+        ),
+        scenario_summary=scenario_summary,
     )
     logger.info(
         log_event(
@@ -982,6 +1003,13 @@ def inspect_inventory_landing_pages(
                     has_newsletter_cta=False,
                     has_contact_sales_cta=False,
                     has_dead_page_marker=True,
+                    verification_class="dead",
+                    recovery_eligible=False,
+                    source_surface_class=_classify_source_surface(
+                        canonical_url=item.canonical_url,
+                        source_page_url=item.source_page_url,
+                        source_title=item.title,
+                    ),
                 )
             observations_by_url[item.canonical_url] = observation
     observations = [
@@ -1069,6 +1097,19 @@ def _inspect_landing_page_item(
     lowered_content_type = content_type.casefold()
     if final_url.casefold().endswith(".pdf") or "application/pdf" in lowered_content_type:
         response.close()
+        verification_class, recovery_eligible = _classify_verification(
+            final_url=final_url,
+            final_title="",
+            h1_title="",
+            og_title="",
+            fetch_error="",
+            http_status_code=status_code,
+            is_pdf=status_code < 400,
+            has_asset_type_term=True,
+            has_download_language=True,
+            has_document_structure=False,
+            has_dead_page_marker=status_code >= 400,
+        )
         return PublisherInventoryLandingPageObservation(
             schema_version="1.0",
             canonical_url=item.canonical_url,
@@ -1093,6 +1134,13 @@ def _inspect_landing_page_item(
             has_newsletter_cta=False,
             has_contact_sales_cta=False,
             has_dead_page_marker=status_code >= 400,
+            verification_class=verification_class,
+            recovery_eligible=recovery_eligible,
+            source_surface_class=_classify_source_surface(
+                canonical_url=item.canonical_url,
+                source_page_url=item.source_page_url,
+                source_title=item.title,
+            ),
         )
     try:
         html = response.text or ""
@@ -1121,6 +1169,24 @@ def _inspect_landing_page_item(
     interactive_lower = interactive_text.casefold()
     dead_page_marker = status_code >= 400 or _contains_any_marker(
         combined_lower, _DEAD_PAGE_MARKERS
+    )
+    verification_class, recovery_eligible = _classify_verification(
+        final_url=final_url,
+        final_title=parser.page_title,
+        h1_title=parser.h1_title,
+        og_title=parser.og_title,
+        fetch_error="",
+        http_status_code=status_code,
+        is_pdf=False,
+        has_asset_type_term=_contains_any_marker(combined_lower, _ASSET_TYPE_TERMS),
+        has_download_language=(
+            ".pdf" in combined_lower
+            or _contains_any_marker(combined_lower, _DOWNLOAD_LANGUAGE_MARKERS)
+        ),
+        has_document_structure=_contains_any_marker(
+            combined_lower, _DOCUMENT_STRUCTURE_MARKERS
+        ),
+        has_dead_page_marker=dead_page_marker,
     )
     observation = PublisherInventoryLandingPageObservation(
         schema_version="1.0",
@@ -1163,6 +1229,13 @@ def _inspect_landing_page_item(
             combined_lower, _CONTACT_SALES_MARKERS
         ),
         has_dead_page_marker=dead_page_marker,
+        verification_class=verification_class,
+        recovery_eligible=recovery_eligible,
+        source_surface_class=_classify_source_surface(
+            canonical_url=item.canonical_url,
+            source_page_url=item.source_page_url,
+            source_title=item.title,
+        ),
     )
     logger.info(
         log_event(
@@ -1187,6 +1260,9 @@ def _inspect_landing_page_item(
                 "has_newsletter_cta": observation.has_newsletter_cta,
                 "has_contact_sales_cta": observation.has_contact_sales_cta,
                 "has_dead_page_marker": observation.has_dead_page_marker,
+                "verification_class": observation.verification_class,
+                "recovery_eligible": observation.recovery_eligible,
+                "source_surface_class": observation.source_surface_class,
             },
         )
     )
@@ -1199,6 +1275,24 @@ def _dead_observation(
     final_url: str,
     fetch_error: str,
 ) -> PublisherInventoryLandingPageObservation:
+    source_surface_class = _classify_source_surface(
+        canonical_url=item.canonical_url,
+        source_page_url=item.source_page_url,
+        source_title=item.title,
+    )
+    verification_class, recovery_eligible = _classify_verification(
+        final_url=final_url,
+        final_title="",
+        h1_title="",
+        og_title="",
+        fetch_error=fetch_error,
+        http_status_code=None,
+        is_pdf=False,
+        has_asset_type_term=False,
+        has_download_language=False,
+        has_document_structure=False,
+        has_dead_page_marker=True,
+    )
     return PublisherInventoryLandingPageObservation(
         schema_version="1.0",
         canonical_url=item.canonical_url,
@@ -1223,6 +1317,9 @@ def _dead_observation(
         has_newsletter_cta=False,
         has_contact_sales_cta=False,
         has_dead_page_marker=True,
+        verification_class=verification_class,
+        recovery_eligible=recovery_eligible,
+        source_surface_class=source_surface_class,
     )
 
 
@@ -1260,6 +1357,77 @@ def _contains_price_signal(value: str) -> bool:
             flags=re.IGNORECASE,
         )
     )
+
+
+def _classify_source_surface(
+    *,
+    canonical_url: str,
+    source_page_url: str,
+    source_title: str,
+) -> str:
+    candidate_url = str(canonical_url or "").strip().casefold()
+    source_url = str(source_page_url or "").strip().casefold()
+    source_title_lower = str(source_title or "").strip().casefold()
+    if any(
+        marker in candidate_url or marker in source_url
+        for marker in ("/service/", "/services/", "/membership", "/subscription")
+    ):
+        return "service_membership"
+    if source_url and source_url.rstrip("/") != candidate_url.rstrip("/"):
+        if any(marker in source_url for marker in ("/reports", "/research", "/resources", "/insights")):
+            return "archive_feed"
+        return "mixed_content_hub"
+    if any(marker in candidate_url for marker in ("/report/", "/reports/", "/research-library/", "/study/", "/survey/")):
+        return "direct_detail"
+    if any(marker in candidate_url for marker in ("/research", "/insights", "/resources")):
+        return "research_hub"
+    if any(marker in source_title_lower for marker in ("report", "study", "survey", "benchmark", "playbook")):
+        return "direct_detail"
+    return "unknown"
+
+
+def _classify_verification(
+    *,
+    final_url: str,
+    final_title: str,
+    h1_title: str,
+    og_title: str,
+    fetch_error: str,
+    http_status_code: int | None,
+    is_pdf: bool,
+    has_asset_type_term: bool,
+    has_download_language: bool,
+    has_document_structure: bool,
+    has_dead_page_marker: bool,
+) -> tuple[str, bool]:
+    combined = " ".join(
+        part for part in (final_url, final_title, h1_title, og_title, fetch_error) if part
+    ).casefold()
+    if any(marker in combined for marker in ("access denied", "captcha", "just a moment", "verify you are human", "attention required")):
+        return "challenge", True
+    if fetch_error and any(
+        marker in fetch_error.casefold()
+        for marker in (
+            "connection aborted",
+            "connection reset",
+            "read timed out",
+            "remote end closed connection",
+            "temporarily unavailable",
+            "timed out",
+        )
+    ):
+        return "transient_fetch_failure", True
+    if int(http_status_code or 0) in _TRANSIENT_HTTP_STATUS_CODES:
+        return "transient_fetch_failure", True
+    if int(http_status_code or 0) in _PROTECTED_DOCUMENT_HTTP_STATUS_CODES and (
+        is_pdf or has_asset_type_term or has_download_language or has_document_structure
+    ):
+        return "protected_document", True
+    if fetch_error or has_dead_page_marker:
+        return "dead", False
+    if not (is_pdf or has_asset_type_term or has_download_language or has_document_structure):
+        return "weak_signal_html", False
+    return "verified", False
 
 
 def _candidate_provenance_counts(

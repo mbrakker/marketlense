@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import sys
 from dataclasses import dataclass
 from hashlib import sha1
@@ -19,6 +20,8 @@ from src.contracts.publisher_inventory import (
     PublisherInventoryLandingPageInspectionResponse,
     PublisherInventoryPage,
     PublisherInventoryRawCandidate,
+    PublisherInventoryRouteTrace,
+    PublisherInventoryScenarioSummary,
     PublisherInventoryServiceRequest,
     PublisherInventoryServiceResponse,
 )
@@ -96,12 +99,324 @@ class _BrowserTraversalMetrics:
     button_pagination_clicks: int = 0
 
 
+_DIRECT_DETAIL_URL_MARKERS = (
+    "/research-library/",
+    "/report/",
+    "/reports/",
+    "/whitepaper/",
+    "/whitepapers/",
+    "/ebook/",
+    "/ebooks/",
+    "/study/",
+    "/studies/",
+    "/survey/",
+    "/surveys/",
+)
+_ARCHIVE_URL_MARKERS = (
+    "/insights",
+    "/insight",
+    "/library",
+    "/research",
+    "/reports",
+    "/resources",
+)
+_FILTER_HINT_MARKERS = ("filter", "filters", "topic", "type")
+_DOWNLOAD_HINT_MARKERS = (
+    "download",
+    "download the report",
+    "download the research brief",
+    "get the report",
+    "access report",
+    "view report",
+)
+_PREFLIGHT_COLLECTION_ROOT_TOKENS = {
+    "all",
+    "and",
+    "center",
+    "centre",
+    "ebook",
+    "ebooks",
+    "guide",
+    "guides",
+    "hub",
+    "insight",
+    "insights",
+    "library",
+    "publication",
+    "publications",
+    "report",
+    "reports",
+    "research",
+    "resource",
+    "resources",
+    "study",
+    "studies",
+    "survey",
+    "surveys",
+    "whitepaper",
+    "whitepapers",
+}
+
+
+def _build_scenario_summary(
+    *,
+    scenario_class: str,
+    source_surface_class: str,
+    confidence: float,
+    direct_detail_eligible: bool,
+    browser_preferred: bool,
+    notes: str,
+) -> PublisherInventoryScenarioSummary:
+    return PublisherInventoryScenarioSummary(
+        schema_version="1.0",
+        scenario_class=scenario_class,
+        source_surface_class=source_surface_class,
+        confidence=max(0.0, min(float(confidence), 1.0)),
+        direct_detail_eligible=direct_detail_eligible,
+        browser_preferred=browser_preferred,
+        notes=notes.strip(),
+    )
+
+
+def _classify_preflight_scenario(
+    *,
+    request: PublisherInventoryServiceRequest,
+    normalized_url: str,
+    ctx: RunContext,
+) -> PublisherInventoryScenarioSummary:
+    if normalized_url.casefold().endswith(".pdf"):
+        return _build_scenario_summary(
+            scenario_class="direct_pdf",
+            source_surface_class="direct_detail",
+            confidence=1.0,
+            direct_detail_eligible=True,
+            browser_preferred=False,
+            notes="The source URL already points at a PDF asset.",
+        )
+    path_lower = urlsplit(normalized_url).path.casefold()
+    if _looks_like_preflight_filter_route(normalized_url):
+        return _build_scenario_summary(
+            scenario_class="filtered_archive",
+            source_surface_class="archive_feed",
+            confidence=0.8,
+            direct_detail_eligible=False,
+            browser_preferred=True,
+            notes="The source URL already encodes report filter state.",
+        )
+    if path_lower.rstrip("/") in {"/insights", "/research", "/resources", "/reports"}:
+        return _build_scenario_summary(
+            scenario_class="mixed_content_hub",
+            source_surface_class="mixed_content_hub",
+            confidence=0.55,
+            direct_detail_eligible=False,
+            browser_preferred=True,
+            notes="The source URL looks like a broad insight or resource hub.",
+        )
+    try:
+        response = requests.get(
+            normalized_url,
+            timeout=min(float(request.settings.http_timeout_seconds), 10.0),
+            headers=dict(HTTP_BROWSER_HEADERS),
+            allow_redirects=True,
+        )
+    except requests.RequestException as exc:
+        marker = str(exc).casefold()
+        if any(term in marker for term in ("captcha", "access denied", "just a moment", "timed out", "temporarily unavailable")):
+            return _build_scenario_summary(
+                scenario_class="challenge_prone",
+                source_surface_class="unknown",
+                confidence=0.7,
+                direct_detail_eligible=False,
+                browser_preferred=True,
+                notes=f"Preflight fetch encountered a challenge-prone response: {str(exc).strip()}",
+            )
+        return _build_scenario_summary(
+            scenario_class="unknown",
+            source_surface_class="unknown",
+            confidence=0.0,
+            direct_detail_eligible=False,
+            browser_preferred=bool(request.settings.force_browser),
+            notes="Preflight classification could not fetch the source page.",
+        )
+    final_url = _normalize_absolute_url(str(response.url or normalized_url)) or normalized_url
+    content_type = str(response.headers.get("Content-Type", "") or "").casefold()
+    html = response.text or ""
+    response.close()
+    lower_html = html.casefold()
+    title_start = lower_html.find("<title")
+    title_text = ""
+    if title_start >= 0:
+        title_close = lower_html.find("</title>", title_start)
+        title_text = html[title_start:title_close] if title_close > title_start else ""
+    combined = " ".join(part for part in (final_url, title_text, lower_html[:5000]) if part).casefold()
+    final_path = urlsplit(final_url).path.casefold()
+    if ".pdf" in final_path or "application/pdf" in content_type:
+        return _build_scenario_summary(
+            scenario_class="direct_pdf",
+            source_surface_class="direct_detail",
+            confidence=1.0,
+            direct_detail_eligible=True,
+            browser_preferred=False,
+            notes="Preflight fetch resolved the source URL to a PDF asset.",
+        )
+    detail_signal = _looks_like_preflight_direct_detail_path(final_url)
+    download_signal = any(marker in combined for marker in _DOWNLOAD_HINT_MARKERS)
+    archive_signal = any(marker in final_path for marker in _ARCHIVE_URL_MARKERS)
+    filter_signal = _looks_like_preflight_filter_route(final_url)
+    tab_signal = any(label in combined for label in ("featured", "reports", "insights", "research", "latest"))
+    challenge_signal = any(marker in combined for marker in ("access denied", "captcha", "just a moment", "verify you are human"))
+    if challenge_signal:
+        return _build_scenario_summary(
+            scenario_class="challenge_prone",
+            source_surface_class="unknown",
+            confidence=0.8,
+            direct_detail_eligible=False,
+            browser_preferred=True,
+            notes="Preflight fetch saw anti-bot or challenge markers in the response.",
+        )
+    if detail_signal and not filter_signal:
+        return _build_scenario_summary(
+            scenario_class="direct_detail_html",
+            source_surface_class="direct_detail",
+            confidence=0.9 if download_signal else 0.75,
+            direct_detail_eligible=True,
+            browser_preferred=False,
+            notes=(
+                "Preflight fetch found a direct-detail HTML route with explicit download language."
+                if download_signal
+                else "Preflight fetch found a deep direct-detail HTML route without archive-style filter state."
+            ),
+        )
+    if filter_signal and archive_signal:
+        return _build_scenario_summary(
+            scenario_class="filtered_archive",
+            source_surface_class="archive_feed",
+            confidence=0.85,
+            direct_detail_eligible=False,
+            browser_preferred=True,
+            notes="Preflight fetch found archive-style content with explicit filter state.",
+        )
+    if archive_signal and tab_signal:
+        return _build_scenario_summary(
+            scenario_class="tabbed_archive",
+            source_surface_class="archive_feed",
+            confidence=0.65,
+            direct_detail_eligible=False,
+            browser_preferred=True,
+            notes="Preflight fetch suggests a tabbed report archive.",
+        )
+    if archive_signal:
+        return _build_scenario_summary(
+            scenario_class="mixed_content_hub",
+            source_surface_class="mixed_content_hub",
+            confidence=0.55,
+            direct_detail_eligible=False,
+            browser_preferred=True,
+            notes="Preflight fetch suggests a broad insight hub rather than a single detail page.",
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_inventory_preflight_classification_defaulted",
+            module=logger.name,
+            fields={"normalized_url": normalized_url, "final_url": final_url},
+        )
+    )
+    return _build_scenario_summary(
+        scenario_class="unknown",
+        source_surface_class="unknown",
+        confidence=0.25,
+        direct_detail_eligible=False,
+        browser_preferred=bool(request.settings.force_browser),
+        notes="Preflight fetch found no stable scenario signature.",
+    )
+
+
+def _build_browser_route_trace(
+    *,
+    initial_state: _RenderedInventoryState,
+    metrics: _BrowserTraversalMetrics,
+    selected_tab_labels: list[str],
+) -> PublisherInventoryRouteTrace:
+    pagination_mode = "none"
+    if metrics.load_more_clicks > 0:
+        pagination_mode = "load_more"
+    elif metrics.button_pagination_clicks > 0:
+        pagination_mode = "button_next"
+    elif metrics.next_page_visits > 0:
+        pagination_mode = "next_link"
+    if selected_tab_labels:
+        pagination_mode = "tabbed" if pagination_mode == "none" else "mixed"
+    surface_class = (
+        "archive_feed"
+        if _is_archive_surface(initial_state) or selected_tab_labels
+        else "mixed_content_hub"
+    )
+    return PublisherInventoryRouteTrace(
+        schema_version="1.0",
+        followed_report_listing=metrics.report_route_clicks > 0,
+        applied_report_filter=metrics.report_filter_applied > 0,
+        selected_filters=(["report"] if metrics.report_filter_applied > 0 else []),
+        selected_tab_labels=[label for label in selected_tab_labels if str(label).strip()],
+        pagination_mode=pagination_mode,
+        preferred_control_labels=list(dict.fromkeys(initial_state.load_more_labels[:3])),
+        candidate_surface_guard=(
+            "report_filter"
+            if metrics.report_filter_applied > 0
+            else ("tab_guard" if selected_tab_labels else "candidate_density")
+        ),
+        surface_class=surface_class,
+    )
+
+
+def _looks_like_preflight_filter_route(url: str) -> bool:
+    normalized_url = str(url or "").strip().casefold()
+    if not normalized_url:
+        return False
+    return (
+        "filters=" in normalized_url
+        or "filter=" in normalized_url
+        or "types(" in normalized_url
+        or "type=" in normalized_url
+        or "topic=" in normalized_url
+        or "/type/" in normalized_url
+        or "/topic/" in normalized_url
+    )
+
+
+def _looks_like_preflight_direct_detail_path(url: str) -> bool:
+    normalized_url = str(url or "").strip().casefold()
+    if not normalized_url:
+        return False
+    path = urlsplit(normalized_url).path
+    if not any(marker in path for marker in _DIRECT_DETAIL_URL_MARKERS):
+        return False
+    segments = [segment for segment in path.split("/") if segment]
+    if len(segments) < 2:
+        return False
+    leaf = segments[-1].rsplit(".", 1)[0]
+    if not leaf or leaf.isdigit():
+        return False
+    leaf_tokens = [token for token in re.findall(r"[a-z0-9]+", leaf) if token]
+    if not leaf_tokens:
+        return False
+    if len(leaf_tokens) == 1 and leaf_tokens[0] in _PREFLIGHT_COLLECTION_ROOT_TOKENS:
+        return False
+    return not all(token in _PREFLIGHT_COLLECTION_ROOT_TOKENS for token in leaf_tokens)
+
+
 def discover_publisher_inventory(
     request: PublisherInventoryServiceRequest,
     ctx: RunContext,
 ) -> PublisherInventoryServiceResponse:
     normalized_url = _validate_and_normalize_url(request.insights_url)
     _validate_request(request, normalized_url)
+    scenario_summary = (
+        _classify_preflight_scenario(request=request, normalized_url=normalized_url, ctx=ctx)
+        if request.settings.enable_preflight_classifier_and_direct_detail
+        else None
+    )
     logger.info(
         log_event(
             ctx,
@@ -120,22 +435,60 @@ def discover_publisher_inventory(
                 "max_steps": request.settings.max_steps,
                 "headed": request.settings.headed,
                 "force_browser": request.settings.force_browser,
+                "scenario_class": (
+                    scenario_summary.scenario_class if scenario_summary is not None else ""
+                ),
             },
         )
     )
     if normalized_url.lower().endswith(".pdf"):
         return _discover_direct_pdf_source(request, ctx, normalized_url)
+    if (
+        scenario_summary is not None
+        and scenario_summary.direct_detail_eligible
+        and scenario_summary.scenario_class == "direct_detail_html"
+    ):
+        return _discover_direct_detail_source(
+            request,
+            ctx,
+            normalized_url,
+            scenario_summary=scenario_summary,
+        )
     if request.settings.force_browser:
-        return _discover_with_browser(request, ctx, normalized_url, use_hint=bool(request.route_hint))
+        return _discover_with_browser(
+            request,
+            ctx,
+            normalized_url,
+            use_hint=bool(request.route_hint),
+            scenario_summary=scenario_summary,
+        )
     hinted_route = str(request.route_kind_hint or "").strip()
     if hinted_route:
         _validate_route_kind(hinted_route)
         if hinted_route == "http_parse":
-            return _discover_with_http(request, ctx, normalized_url, use_hint=True)
-        return _discover_with_browser(request, ctx, normalized_url, use_hint=True)
+            return _discover_with_http(
+                request,
+                ctx,
+                normalized_url,
+                use_hint=True,
+                scenario_summary=scenario_summary,
+            )
+        return _discover_with_browser(
+            request,
+            ctx,
+            normalized_url,
+            use_hint=True,
+            scenario_summary=scenario_summary,
+        )
 
     try:
-        return _discover_with_http(request, ctx, normalized_url, use_hint=False)
+        return _discover_with_http(
+            request,
+            ctx,
+            normalized_url,
+            use_hint=False,
+            scenario_summary=scenario_summary,
+        )
     except AppError as exc:
         logger.info(
             log_event(
@@ -146,7 +499,13 @@ def discover_publisher_inventory(
                 fields={"normalized_url": normalized_url, "error": exc.message, "code": exc.code},
             )
         )
-    return _discover_with_browser(request, ctx, normalized_url, use_hint=False)
+    return _discover_with_browser(
+        request,
+        ctx,
+        normalized_url,
+        use_hint=False,
+        scenario_summary=scenario_summary,
+    )
 
 
 def inspect_publisher_inventory_landing_pages(
@@ -192,6 +551,14 @@ def _discover_direct_pdf_source(
             )
         ],
         candidates=[candidate],
+        scenario_summary=_build_scenario_summary(
+            scenario_class="direct_pdf",
+            source_surface_class="direct_detail",
+            confidence=1.0,
+            direct_detail_eligible=True,
+            browser_preferred=False,
+            notes="The source URL resolved directly to a PDF document.",
+        ),
     )
     logger.info(
         log_event(
@@ -208,18 +575,71 @@ def _discover_direct_pdf_source(
     return response
 
 
+def _discover_direct_detail_source(
+    request: PublisherInventoryServiceRequest,
+    ctx: RunContext,
+    normalized_url: str,
+    *,
+    scenario_summary: PublisherInventoryScenarioSummary,
+) -> PublisherInventoryServiceResponse:
+    candidate = PublisherInventoryRawCandidate(
+        schema_version="1.0",
+        url=normalized_url,
+        title=_fallback_title_from_url(normalized_url),
+        source_page_url=normalized_url,
+        discovered_on_page_number=1,
+        pdf_url=None,
+        published_at_text=None,
+        provenance="direct_detail_source",
+        confidence=max(float(scenario_summary.confidence), 0.85),
+    )
+    response = PublisherInventoryServiceResponse(
+        schema_version="1.0",
+        source_url=request.insights_url,
+        normalized_url=normalized_url,
+        route_kind="http_parse",
+        route_summary="Short-circuited a high-confidence direct-detail report page without archive traversal.",
+        final_page_url=normalized_url,
+        used_route_hint=False,
+        pages=[
+            PublisherInventoryPage(
+                schema_version="1.0",
+                page_number=1,
+                page_url=normalized_url,
+            )
+        ],
+        candidates=[candidate],
+        scenario_summary=scenario_summary,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_inventory_direct_detail_complete",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "scenario_class": scenario_summary.scenario_class,
+            },
+        )
+    )
+    return response
+
+
 def _discover_with_http(
     request: PublisherInventoryServiceRequest,
     ctx: RunContext,
     normalized_url: str,
     *,
     use_hint: bool,
+    scenario_summary: PublisherInventoryScenarioSummary | None,
 ) -> PublisherInventoryServiceResponse:
     return discover_inventory_via_http(
         request,
         ctx,
         normalized_url,
         use_hint=use_hint,
+        scenario_summary=scenario_summary,
         requests_module=requests,
     )
 
@@ -230,12 +650,14 @@ def _discover_with_browser(
     normalized_url: str,
     *,
     use_hint: bool,
+    scenario_summary: PublisherInventoryScenarioSummary | None,
 ) -> PublisherInventoryServiceResponse:
     return discover_inventory_via_browser(
         request,
         ctx,
         normalized_url,
         use_hint=use_hint,
+        scenario_summary=scenario_summary,
         dependencies=BrowserInventoryAcquisitionDependencies(
             asyncio_module=asyncio,
             prepare_session_dir=lambda root_dir, url: _prepare_session_dir(
@@ -260,6 +682,7 @@ def _discover_with_browser(
                 run_ctx,
                 url,
                 use_hint=hint,
+                scenario_summary=None,
             ),
             kill_browser=_kill_browser,
             candidate_provenance_counts=_candidate_provenance_counts,
@@ -290,7 +713,13 @@ async def _run_browser_traversal(
     request: PublisherInventoryServiceRequest,
     ctx: RunContext,
     normalized_url: str,
-) -> tuple[list[PublisherInventoryPage], list[PublisherInventoryRawCandidate], str, str]:
+) -> tuple[
+    list[PublisherInventoryPage],
+    list[PublisherInventoryRawCandidate],
+    str,
+    str,
+    PublisherInventoryRouteTrace,
+]:
     try:
         await browser.start()
         page = await browser.new_page(normalized_url)
@@ -563,7 +992,12 @@ async def _run_browser_traversal(
             used_tabs=bool(selected_tab_labels),
             bounded_by_pagination_limit=bounded_by_pagination_limit,
         )
-        return pages, candidates, final_page_url, route_summary
+        route_trace = _build_browser_route_trace(
+            initial_state=initial_state,
+            metrics=metrics,
+            selected_tab_labels=selected_tab_labels,
+        )
+        return pages, candidates, final_page_url, route_summary, route_trace
     finally:
         await browser.kill()
 
@@ -579,6 +1013,7 @@ async def _run_browser_traversal_with_timeout(
     list[PublisherInventoryRawCandidate],
     str,
     str,
+    PublisherInventoryRouteTrace,
 ]:
     return await asyncio.wait_for(
         _run_browser_traversal(

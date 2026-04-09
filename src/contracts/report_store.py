@@ -9,7 +9,12 @@ from src.contracts.browser_download import (
     DownloadTerminalEvidence,
 )
 from src.contracts.docpacks import DocPackPathMap
-from src.contracts.publisher_inventory import PublisherInventoryRunQualitySummary
+from src.contracts.publisher_inventory import (
+    PublisherInventoryRecoveryRecord,
+    PublisherInventoryRouteTrace,
+    PublisherInventoryRunQualitySummary,
+    PublisherInventoryScenarioSummary,
+)
 from src.contracts.publisher_profiles import PublisherProfileRecord
 
 
@@ -727,6 +732,14 @@ class PublisherInventoryStateResponse:
         default=None,
         metadata={"doc": "Remembered discovery route summary for this publisher URL."},
     )
+    inventory_route_trace: Optional[PublisherInventoryRouteTrace] = field(
+        default=None,
+        metadata={"doc": "Remembered structured discovery route trace for this publisher URL when available."},
+    )
+    inventory_scenario_summary: Optional[PublisherInventoryScenarioSummary] = field(
+        default=None,
+        metadata={"doc": "Remembered scenario summary for this publisher URL when available."},
+    )
     inventory_route_last_final_page_url: Optional[str] = field(
         default=None,
         metadata={"doc": "Last final page URL observed for the remembered discovery route."},
@@ -781,6 +794,14 @@ class PublisherInventoryStateRecordRequest:
     route_summary: str = field(
         metadata={"doc": "Summary of the successful discovery route for reuse on later runs."}
     )
+    route_trace: Optional[PublisherInventoryRouteTrace] = field(
+        default=None,
+        metadata={"doc": "Optional structured discovery route trace captured during the successful run."},
+    )
+    scenario_summary: Optional[PublisherInventoryScenarioSummary] = field(
+        default=None,
+        metadata={"doc": "Optional scenario summary captured during the successful run."},
+    )
     last_final_page_url: Optional[str] = field(
         default=None,
         metadata={"doc": "Last final page URL observed for the successful discovery route."},
@@ -828,4 +849,33 @@ class PublisherInventoryRunQualityRecordRequest:
     )
     summary: PublisherInventoryRunQualitySummary = field(
         metadata={"doc": "Run-quality summary to persist for future route planning and drift monitoring."}
+    )
+
+
+@dataclass(frozen=True)
+class PublisherInventoryRecoveryCacheGetRequest:
+    schema_version: str = field(
+        metadata={"doc": "Publisher inventory recovery-cache get request schema version."}
+    )
+    db_path: str = field(
+        metadata={"doc": "Filesystem path to the report metadata SQLite database."}
+    )
+    normalized_url: str = field(
+        metadata={"doc": "Normalized publisher insights URL used to scope the recovery cache lookup."}
+    )
+    canonical_url: str = field(
+        metadata={"doc": "Normalized candidate URL used as the recovery cache key."}
+    )
+
+
+@dataclass(frozen=True)
+class PublisherInventoryRecoveryCacheRecordRequest:
+    schema_version: str = field(
+        metadata={"doc": "Publisher inventory recovery-cache record request schema version."}
+    )
+    db_path: str = field(
+        metadata={"doc": "Filesystem path to the report metadata SQLite database."}
+    )
+    record: PublisherInventoryRecoveryRecord = field(
+        metadata={"doc": "Recovery-cache record to upsert for the candidate."}
     )

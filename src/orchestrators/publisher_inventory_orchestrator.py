@@ -29,6 +29,7 @@ from src.contracts.publisher_inventory import (
     PublisherInventoryDiscoveryRequest,
     PublisherInventoryDiscoveryResult,
     PublisherInventoryDiffItem,
+    PublisherInventoryRecoveryRecord,
     PublisherInventoryRoutePlanRequest,
     PublisherInventoryRunQualityEvaluationRequest,
     PublisherInventoryRunQualitySummary,
@@ -37,6 +38,8 @@ from src.contracts.publisher_inventory import (
     PublisherInventorySnapshot,
 )
 from src.contracts.report_store import (
+    PublisherInventoryRecoveryCacheGetRequest,
+    PublisherInventoryRecoveryCacheRecordRequest,
     PublisherInventoryRunQualityRecordRequest,
     ReportSourceDiscoveryRecordRequest,
     ReportSourceDiscoveryRecordResponse,
@@ -73,7 +76,9 @@ from src.orchestrators.retry_orchestrator import (
 from src.services.drive_service import download_pdf, list_files_in_folder, upload_bytes
 from src.services.publisher_inventory_service import discover_publisher_inventory
 from src.services.report_store_service import (
+    get_publisher_inventory_recovery_cache_record,
     get_publisher_inventory_state,
+    record_publisher_inventory_recovery_cache_record,
     record_publisher_inventory_run_quality,
     record_discovered_report_source,
     record_publisher_inventory_state,
@@ -123,8 +128,16 @@ class PublisherInventoryDependencies:
         [PublisherInventoryStateGetRequest, RunContext],
         Optional[PublisherInventoryStateResponse],
     ]
+    get_publisher_inventory_recovery_cache_record: Callable[
+        [PublisherInventoryRecoveryCacheGetRequest, RunContext],
+        Optional[PublisherInventoryRecoveryRecord],
+    ]
     record_publisher_inventory_run_quality: Callable[
         [PublisherInventoryRunQualityRecordRequest, RunContext],
+        None,
+    ]
+    record_publisher_inventory_recovery_cache_record: Callable[
+        [PublisherInventoryRecoveryCacheRecordRequest, RunContext],
         None,
     ]
     record_publisher_inventory_state: Callable[
@@ -159,7 +172,9 @@ class PublisherInventoryDependencies:
             screen_publisher_inventory_candidates=screen_publisher_inventory_candidates,
             qualify_publisher_inventory_candidates=qualify_publisher_inventory_candidates,
             get_publisher_inventory_state=get_publisher_inventory_state,
+            get_publisher_inventory_recovery_cache_record=get_publisher_inventory_recovery_cache_record,
             record_publisher_inventory_run_quality=record_publisher_inventory_run_quality,
+            record_publisher_inventory_recovery_cache_record=record_publisher_inventory_recovery_cache_record,
             record_publisher_inventory_state=record_publisher_inventory_state,
             record_publisher_inventory_test_status=record_publisher_inventory_test_status,
             record_discovered_report_source=record_discovered_report_source,
@@ -251,7 +266,10 @@ def run_publisher_inventory_discovery(
                 force_browser=request.settings.force_browser,
                 remembered_route_kind=publisher_state.inventory_route_kind,
                 remembered_route_summary=publisher_state.inventory_route_summary,
+                remembered_route_trace=publisher_state.inventory_route_trace,
+                remembered_scenario_summary=publisher_state.inventory_scenario_summary,
                 previous_run_quality_summary=publisher_state.inventory_run_quality_summary,
+                enable_structured_route_reuse=request.settings.enable_structured_route_reuse,
             ),
             ctx,
         )
@@ -421,6 +439,14 @@ def run_publisher_inventory_discovery(
                 },
             )
         )
+        _record_deferred_candidate_recovery_cache(
+            request=request,
+            normalized_url=normalized_url,
+            publisher_name=publisher_state.publisher_name,
+            quality_response=quality_response,
+            ctx=ctx,
+            dependencies=deps,
+        )
         candidate_snapshot_changed = (
             build_response.snapshot_sha256 != (previous_snapshot_sha256 or "")
         )
@@ -561,6 +587,11 @@ def run_publisher_inventory_discovery(
             ),
             ctx,
         )
+        if discovery_result.scenario_summary is not None:
+            run_quality_summary = replace(
+                run_quality_summary,
+                scenario_class=discovery_result.scenario_summary.scenario_class,
+            )
         _assert_time_budget_remaining(
             deadline_monotonic=deadline_monotonic,
             normalized_url=normalized_url,
@@ -709,6 +740,8 @@ def run_publisher_inventory_discovery(
                 source_url=publisher_state.insights_url,
                 route_kind=discovery_result.route_kind,
                 route_summary=discovery_result.route_summary,
+                route_trace=discovery_result.route_trace,
+                scenario_summary=discovery_result.scenario_summary,
                 last_final_page_url=discovery_result.final_page_url,
                 snapshot_drive_file_id=snapshot_drive_file_id,
                 snapshot_drive_file_name=snapshot_drive_file_name,
@@ -838,6 +871,92 @@ def _candidate_provenance_counts(
         key = provenance or "unknown"
         counts[key] = counts.get(key, 0) + 1
     return counts
+
+
+def _record_deferred_candidate_recovery_cache(
+    *,
+    request: PublisherInventoryDiscoveryRequest,
+    normalized_url: str,
+    publisher_name: str,
+    quality_response: PublisherInventoryCandidateQualityResponse,
+    ctx: RunContext,
+    dependencies: PublisherInventoryDependencies,
+) -> None:
+    for decision in quality_response.decisions:
+        recipe = decision.recovery_recipe
+        if recipe is None:
+            continue
+        existing = dependencies.get_publisher_inventory_recovery_cache_record(
+            PublisherInventoryRecoveryCacheGetRequest(
+                schema_version="1.0",
+                db_path=request.reports_db,
+                normalized_url=normalized_url,
+                canonical_url=decision.canonical_url,
+            ),
+            ctx,
+        )
+        if (
+            existing is not None
+            and existing.verification_class == recipe.verification_class
+            and existing.recovery_action == recipe.recovery_action
+            and existing.last_outcome in {"scheduled", "recovered"}
+        ):
+            logger.info(
+                log_event(
+                    ctx,
+                    role="orchestrator",
+                    event="publisher_inventory_candidate_recovery_cache_reused",
+                    module=logger.name,
+                    fields={
+                        "publisher_name": publisher_name,
+                        "normalized_url": normalized_url,
+                        "canonical_url": decision.canonical_url,
+                        "verification_class": existing.verification_class,
+                        "last_outcome": existing.last_outcome,
+                    },
+                )
+            )
+            continue
+        last_outcome = (
+            "scheduled"
+            if request.settings.enable_deferred_candidate_recovery
+            else "skipped"
+        )
+        dependencies.record_publisher_inventory_recovery_cache_record(
+            PublisherInventoryRecoveryCacheRecordRequest(
+                schema_version="1.0",
+                db_path=request.reports_db,
+                record=PublisherInventoryRecoveryRecord(
+                    schema_version="1.0",
+                    normalized_url=normalized_url,
+                    canonical_url=decision.canonical_url,
+                    source_surface_class=decision.source_surface_class,
+                    verification_class=recipe.verification_class,
+                    recovery_action=recipe.recovery_action,
+                    last_outcome=last_outcome,
+                    last_http_status=None,
+                    last_error_marker=decision.reason,
+                    updated_at_utc=_utc_now_iso(),
+                ),
+            ),
+            ctx,
+        )
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="publisher_inventory_candidate_recovery_cache_recorded",
+                module=logger.name,
+                fields={
+                    "publisher_name": publisher_name,
+                    "normalized_url": normalized_url,
+                    "canonical_url": decision.canonical_url,
+                    "verification_class": recipe.verification_class,
+                    "recovery_action": recipe.recovery_action,
+                    "last_outcome": last_outcome,
+                },
+            )
+        )
 
 
 def _run_discovery_attempt(

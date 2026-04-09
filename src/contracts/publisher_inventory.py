@@ -220,6 +220,18 @@ class PublisherInventorySettings:
         default=False,
         metadata={"doc": "Whether discovery must use the browser-render route instead of direct HTTP parsing."},
     )
+    enable_deferred_candidate_recovery: bool = field(
+        default=False,
+        metadata={"doc": "Whether the orchestrator may schedule deferred second-pass recovery for strong candidates rejected only due to recoverable landing-page failures."},
+    )
+    enable_structured_route_reuse: bool = field(
+        default=False,
+        metadata={"doc": "Whether discovery route planning may prefer typed remembered route traces over legacy free-text route summaries."},
+    )
+    enable_preflight_classifier_and_direct_detail: bool = field(
+        default=False,
+        metadata={"doc": "Whether discovery may use cheap scenario classification and direct-detail short-circuiting before broader archive traversal."},
+    )
     retry_retries: int = field(
         default=1,
         metadata={"doc": "Retry count for orchestrated inventory discovery attempts."},
@@ -526,6 +538,18 @@ class PublisherInventoryLandingPageObservation:
         default=False,
         metadata={"doc": "Whether the landing page looks missing, 404, or otherwise dead."},
     )
+    verification_class: str = field(
+        default="verified",
+        metadata={"doc": "Deterministic landing-page verification class: verified, dead, challenge, transient_fetch_failure, protected_document, or weak_signal_html."},
+    )
+    recovery_eligible: bool = field(
+        default=False,
+        metadata={"doc": "Whether this observation is eligible for orchestrator-owned deferred recovery instead of immediate hard rejection."},
+    )
+    source_surface_class: str = field(
+        default="unknown",
+        metadata={"doc": "Deterministic surface class inferred from the candidate/source route: archive_feed, direct_detail, mixed_content_hub, service_membership, research_hub, or unknown."},
+    )
 
 
 @dataclass(frozen=True)
@@ -573,6 +597,14 @@ class PublisherInventoryCandidateQualityDecision:
     )
     resolved_title: str = field(
         metadata={"doc": "Best resolved title chosen from the candidate and landing-page metadata."}
+    )
+    source_surface_class: str = field(
+        default="unknown",
+        metadata={"doc": "Deterministic surface class inferred for the candidate landing page."},
+    )
+    recovery_recipe: Optional["PublisherInventoryRecoveryRecipe"] = field(
+        default=None,
+        metadata={"doc": "Optional deferred recovery recipe attached only to strong candidates rejected for recoverable verification failures."},
     )
 
 
@@ -697,6 +729,135 @@ class PublisherInventoryRunQualitySummary:
         default_factory=dict,
         metadata={"doc": "Counts of candidate provenance markers contributing to the run, keyed by provenance label."},
     )
+    scenario_class: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Optional preflight scenario classification that described the landing surface for the run, for example direct_detail_html, filtered_archive, or mixed_content_hub."},
+    )
+
+
+@dataclass(frozen=True)
+class PublisherInventoryRouteTrace:
+    schema_version: str = field(
+        metadata={"doc": "Publisher inventory structured route-trace schema version."}
+    )
+    followed_report_listing: bool = field(
+        default=False,
+        metadata={"doc": "Whether discovery followed a dedicated report-listing entry point before collecting candidates."},
+    )
+    applied_report_filter: bool = field(
+        default=False,
+        metadata={"doc": "Whether discovery applied an explicit report-only filter during traversal."},
+    )
+    selected_filters: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Deterministic labels for filters that were applied during traversal."},
+    )
+    selected_tab_labels: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Ordered tab labels traversed during discovery when the archive used tabbed content sections."},
+    )
+    pagination_mode: str = field(
+        default="none",
+        metadata={"doc": "Pagination mode observed during traversal: none, next_link, button_next, load_more, tabbed, or mixed."},
+    )
+    preferred_control_labels: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Deterministic control labels preferred by the remembered route for pagination or expansion."},
+    )
+    candidate_surface_guard: str = field(
+        default="none",
+        metadata={"doc": "Guard describing how remembered traversal avoided irrelevant surfaces: none, candidate_density, report_filter, or tab_guard."},
+    )
+    surface_class: str = field(
+        default="unknown",
+        metadata={"doc": "Deterministic traversal surface class aligned with scenario/source-surface taxonomy."},
+    )
+
+
+@dataclass(frozen=True)
+class PublisherInventoryScenarioSummary:
+    schema_version: str = field(
+        metadata={"doc": "Publisher inventory scenario-summary schema version."}
+    )
+    scenario_class: str = field(
+        metadata={"doc": "Deterministic scenario class inferred before or during discovery: direct_pdf, direct_detail_html, filtered_archive, tabbed_archive, mixed_content_hub, js_hydrated_archive, challenge_prone, or unknown."}
+    )
+    source_surface_class: str = field(
+        default="unknown",
+        metadata={"doc": "Best-effort surface class aligned with candidate quality taxonomy."},
+    )
+    confidence: float = field(
+        default=0.0,
+        metadata={"doc": "Deterministic scenario confidence score in the range 0.0-1.0."},
+    )
+    direct_detail_eligible: bool = field(
+        default=False,
+        metadata={"doc": "Whether the scenario strongly supports a direct-detail short-circuit instead of archive traversal."},
+    )
+    browser_preferred: bool = field(
+        default=False,
+        metadata={"doc": "Whether browser traversal should be preferred for this scenario when route planning has a choice."},
+    )
+    notes: str = field(
+        default="",
+        metadata={"doc": "Short human-readable explanation for the chosen scenario class."},
+    )
+
+
+@dataclass(frozen=True)
+class PublisherInventoryRecoveryRecipe:
+    schema_version: str = field(
+        metadata={"doc": "Publisher inventory recovery-recipe schema version."}
+    )
+    verification_class: str = field(
+        metadata={"doc": "Verification class that triggered the deferred recovery recipe."}
+    )
+    source_surface_class: str = field(
+        metadata={"doc": "Surface class of the candidate the recipe applies to."}
+    )
+    recovery_action: str = field(
+        metadata={"doc": "Deterministic deferred recovery action, for example browser_retry, headless_retry, http_recheck, or protected_document_probe."}
+    )
+    reason: str = field(
+        metadata={"doc": "Short explanation of why deferred recovery is allowed for this candidate."}
+    )
+
+
+@dataclass(frozen=True)
+class PublisherInventoryRecoveryRecord:
+    schema_version: str = field(
+        metadata={"doc": "Publisher inventory recovery-cache record schema version."}
+    )
+    normalized_url: str = field(
+        metadata={"doc": "Normalized publisher insights URL that owned the recovery attempt."}
+    )
+    canonical_url: str = field(
+        metadata={"doc": "Normalized candidate URL whose recovery history is cached."}
+    )
+    source_surface_class: str = field(
+        metadata={"doc": "Surface class associated with the cached candidate."}
+    )
+    verification_class: str = field(
+        metadata={"doc": "Latest landing-page verification class associated with the candidate."}
+    )
+    recovery_action: str = field(
+        metadata={"doc": "Most recent deferred recovery action recorded for the candidate."}
+    )
+    last_outcome: str = field(
+        metadata={"doc": "Outcome of the latest recovery attempt, for example scheduled, recovered, skipped, or failed."}
+    )
+    last_http_status: Optional[int] = field(
+        default=None,
+        metadata={"doc": "Latest observed HTTP status code for the candidate when available."},
+    )
+    last_error_marker: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Latest normalized error marker recorded for the candidate when available."},
+    )
+    updated_at_utc: str = field(
+        default="",
+        metadata={"doc": "UTC timestamp when this recovery cache record was last updated."},
+    )
 
 
 @dataclass(frozen=True)
@@ -718,9 +879,21 @@ class PublisherInventoryRoutePlanRequest:
         default=None,
         metadata={"doc": "Previously successful remembered discovery route summary when available."},
     )
+    remembered_route_trace: Optional[PublisherInventoryRouteTrace] = field(
+        default=None,
+        metadata={"doc": "Previously successful remembered discovery route trace when available."},
+    )
+    remembered_scenario_summary: Optional[PublisherInventoryScenarioSummary] = field(
+        default=None,
+        metadata={"doc": "Previously persisted scenario summary when available."},
+    )
     previous_run_quality_summary: Optional[PublisherInventoryRunQualitySummary] = field(
         default=None,
         metadata={"doc": "Previously persisted run-quality summary used to bias route ordering when no remembered route exists."},
+    )
+    enable_structured_route_reuse: bool = field(
+        default=False,
+        metadata={"doc": "Whether the planner may prioritize typed remembered route traces over legacy route summaries."},
     )
 
 
@@ -961,6 +1134,14 @@ class PublisherInventoryServiceResponse:
     )
     candidates: List[PublisherInventoryRawCandidate] = field(
         metadata={"doc": "Raw report candidates extracted across all traversed pages."}
+    )
+    route_trace: Optional[PublisherInventoryRouteTrace] = field(
+        default=None,
+        metadata={"doc": "Optional structured trace capturing actual traversal decisions for future reuse."},
+    )
+    scenario_summary: Optional[PublisherInventoryScenarioSummary] = field(
+        default=None,
+        metadata={"doc": "Optional scenario summary describing the discovery surface encountered during the run."},
     )
 
 

@@ -921,6 +921,126 @@ def test_screen_publisher_inventory_candidates_prefilters_editorial_report_detai
     assert response.decisions[0].reason == "editorial_report_detail_url_prefilter"
 
 
+def test_screen_publisher_inventory_candidates_prefilters_blog_report_detail_urls_without_llm() -> None:
+    openai_client = BatchAwareOpenAIClient()
+
+    response = screen_publisher_inventory_candidates(
+        PublisherInventoryCandidateScreeningRequest(
+            schema_version="1.0",
+            publisher_name="Cardlytics",
+            insights_url="https://www.cardlytics.com/research-and-insights",
+            candidates=[
+                PublisherInventoryCandidateScreeningItem(
+                    schema_version="1.0",
+                    canonical_url="https://www.cardlytics.com/blog/loyalty-movement-report-qsr",
+                    title="Loyalty Movement Report: QSR",
+                    discovered_on_page_number=1,
+                    source_page_url="https://www.cardlytics.com/research-and-insights",
+                )
+            ],
+            settings=_settings(),
+        ),
+        _ctx(),
+        openai_client=openai_client,
+        prompt_client=RecordingPromptClient(),
+    )
+
+    assert len(openai_client.requests) == 0
+    assert [item.canonical_url for item in response.approved_items] == [
+        "https://www.cardlytics.com/blog/loyalty-movement-report-qsr"
+    ]
+    assert response.decisions[0].reason == "editorial_report_detail_url_prefilter"
+
+
+def test_screen_publisher_inventory_candidates_prefilters_direct_detail_sources_without_llm() -> None:
+    openai_client = BatchAwareOpenAIClient()
+
+    response = screen_publisher_inventory_candidates(
+        PublisherInventoryCandidateScreeningRequest(
+            schema_version="1.0",
+            publisher_name="Capgemini",
+            insights_url="https://www.capgemini.com/insights/research-library/ai-perspectives-2026",
+            candidates=[
+                PublisherInventoryCandidateScreeningItem(
+                    schema_version="1.0",
+                    canonical_url="https://www.capgemini.com/insights/research-library/ai-perspectives-2026",
+                    title="AI Perspectives 2026",
+                    discovered_on_page_number=1,
+                    source_page_url="https://www.capgemini.com/insights/research-library/ai-perspectives-2026",
+                )
+            ],
+            settings=_settings(),
+        ),
+        _ctx(),
+        openai_client=openai_client,
+        prompt_client=RecordingPromptClient(),
+    )
+
+    assert len(openai_client.requests) == 0
+    assert [item.canonical_url for item in response.approved_items] == [
+        "https://www.capgemini.com/insights/research-library/ai-perspectives-2026"
+    ]
+    assert response.decisions[0].reason == "direct_detail_source_prefilter"
+
+
+def test_screen_publisher_inventory_candidates_rejects_collection_root_hubs_without_llm() -> None:
+    openai_client = BatchAwareOpenAIClient()
+
+    response = screen_publisher_inventory_candidates(
+        PublisherInventoryCandidateScreeningRequest(
+            schema_version="1.0",
+            publisher_name="Cardlytics",
+            insights_url="https://www.cardlytics.com/research-and-insights",
+            candidates=[
+                PublisherInventoryCandidateScreeningItem(
+                    schema_version="1.0",
+                    canonical_url="https://www.cardlytics.com/research-and-insights",
+                    title="Cardlytics Research | Actionable Consumer Insights",
+                    discovered_on_page_number=1,
+                    source_page_url="https://www.cardlytics.com/research-and-insights",
+                )
+            ],
+            settings=_settings(),
+        ),
+        _ctx(),
+        openai_client=openai_client,
+        prompt_client=RecordingPromptClient(),
+    )
+
+    assert len(openai_client.requests) == 0
+    assert response.approved_items == []
+    assert response.decisions[0].reason == "low_report_probability_prefilter"
+
+
+def test_screen_publisher_inventory_candidates_rejects_editorial_blog_posts_without_report_detail_signals() -> None:
+    openai_client = BatchAwareOpenAIClient()
+
+    response = screen_publisher_inventory_candidates(
+        PublisherInventoryCandidateScreeningRequest(
+            schema_version="1.0",
+            publisher_name="Cardlytics",
+            insights_url="https://www.cardlytics.com/research-and-insights",
+            candidates=[
+                PublisherInventoryCandidateScreeningItem(
+                    schema_version="1.0",
+                    canonical_url="https://www.cardlytics.com/blog/driving-customer-acquisition-loyalty-with-card-linked-offers-clos",
+                    title="Driving Customer Acquisition & Loyalty with Card-Linked Offers (CLOs)",
+                    discovered_on_page_number=1,
+                    source_page_url="https://www.cardlytics.com/research-and-insights",
+                )
+            ],
+            settings=_settings(),
+        ),
+        _ctx(),
+        openai_client=openai_client,
+        prompt_client=RecordingPromptClient(),
+    )
+
+    assert len(openai_client.requests) == 0
+    assert response.approved_items == []
+    assert response.decisions[0].reason == "low_report_probability_prefilter"
+
+
 def test_screen_publisher_inventory_candidates_keeps_distinct_urls_for_generic_cta_titles() -> None:
     openai_client = BatchAwareOpenAIClient()
 

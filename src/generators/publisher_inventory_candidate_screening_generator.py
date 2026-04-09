@@ -267,10 +267,91 @@ _FALLBACK_LISTING_QUERY_KEYS = (
     "type=",
 )
 _EDITORIAL_REPORT_URL_MARKERS = (
+    "/article/",
+    "/articles/",
+    "/blog/",
+    "/blogs/",
     "/news/",
     "/newsroom/",
     "/press-release",
     "/press-releases/",
+)
+_COLLECTION_ROOT_URL_TOKENS = {
+    "all",
+    "and",
+    "article",
+    "articles",
+    "asset",
+    "assets",
+    "blog",
+    "blogs",
+    "center",
+    "centre",
+    "guide",
+    "guides",
+    "hub",
+    "insight",
+    "insights",
+    "knowledge",
+    "library",
+    "publication",
+    "publications",
+    "report",
+    "reports",
+    "research",
+    "resource",
+    "resources",
+    "study",
+    "studies",
+    "survey",
+    "surveys",
+    "topic",
+    "topics",
+    "whitepaper",
+    "whitepapers",
+}
+_REPORT_CONTEXT_STOP_WORDS = {
+    "a",
+    "an",
+    "and",
+    "for",
+    "from",
+    "in",
+    "of",
+    "on",
+    "our",
+    "the",
+    "to",
+    "with",
+}
+_DIRECT_DETAIL_SOURCE_URL_MARKERS = (
+    "/research-library/",
+    "/report/",
+    "/reports/",
+    "/whitepaper/",
+    "/whitepapers/",
+    "/ebook/",
+    "/ebooks/",
+    "/study/",
+    "/studies/",
+    "/survey/",
+    "/surveys/",
+)
+_EDITORIAL_NON_REPORT_URL_MARKERS = (
+    "/ask/",
+    "/help/",
+    "/hc/en-us/articles/",
+    "/support/",
+    "/webinar",
+    "support.",
+)
+_INFORMATIONAL_TITLE_PREFIXES = (
+    "how ",
+    "what ",
+    "when ",
+    "where ",
+    "who ",
+    "why ",
 )
 _GENERIC_CTA_TITLES = {
     "download now",
@@ -1163,6 +1244,13 @@ def _fallback_screening_decision(
 ) -> PublisherInventoryCandidateScreeningDecision:
     normalized_title = _normalize_title_fingerprint(candidate.title)
     normalized_url = candidate.canonical_url.casefold()
+    if _looks_like_collection_root_candidate_url(candidate.canonical_url):
+        return PublisherInventoryCandidateScreeningDecision(
+            schema_version="1.0",
+            canonical_url=candidate.canonical_url,
+            accepted=False,
+            reason="fallback_non_report_url",
+        )
     if _contains_any_title_marker(normalized_title, _FALLBACK_NON_REPORT_TITLE_MARKERS):
         return PublisherInventoryCandidateScreeningDecision(
             schema_version="1.0",
@@ -1246,6 +1334,20 @@ def _prefilter_screening_decision(
             accepted=False,
             reason="low_report_probability_prefilter",
         )
+    if _looks_like_confident_direct_detail_source(candidate):
+        return PublisherInventoryCandidateScreeningDecision(
+            schema_version="1.0",
+            canonical_url=candidate.canonical_url,
+            accepted=True,
+            reason="direct_detail_source_prefilter",
+        )
+    if _looks_like_collection_root_candidate_url(candidate.canonical_url):
+        return PublisherInventoryCandidateScreeningDecision(
+            schema_version="1.0",
+            canonical_url=candidate.canonical_url,
+            accepted=False,
+            reason="low_report_probability_prefilter",
+        )
     if _has_editorial_report_detail_candidate(candidate):
         return PublisherInventoryCandidateScreeningDecision(
             schema_version="1.0",
@@ -1314,6 +1416,8 @@ def _prefilter_screening_decision(
 def _has_strong_report_detail_url(url: str) -> bool:
     normalized_url = str(url or "").strip().casefold()
     if not normalized_url:
+        return False
+    if _looks_like_collection_root_candidate_url(normalized_url):
         return False
     parsed = urlsplit(normalized_url)
     if parsed.path.endswith(".pdf"):
@@ -1418,6 +1522,8 @@ def _has_editorial_report_detail_candidate(
         return False
     if not any(marker in normalized_url for marker in _EDITORIAL_REPORT_URL_MARKERS):
         return False
+    if any(marker in normalized_url for marker in _EDITORIAL_NON_REPORT_URL_MARKERS):
+        return False
     parsed = urlsplit(normalized_url)
     if any(token in parsed.query for token in _FALLBACK_LISTING_QUERY_KEYS):
         return False
@@ -1427,20 +1533,76 @@ def _has_editorial_report_detail_candidate(
     leaf = segments[-1].rsplit(".", 1)[0]
     if leaf.isdigit() or leaf in _FALLBACK_REPORT_COLLECTION_SEGMENTS:
         return False
+    normalized_title = _normalize_title_fingerprint(candidate.title)
+    if normalized_title.startswith(_INFORMATIONAL_TITLE_PREFIXES):
+        return False
+    if _contains_any_title_marker(normalized_title, _FALLBACK_NON_REPORT_TITLE_MARKERS):
+        return False
     leaf_title = leaf.replace("_", "-").replace("-", " ")
     combined_signal_text = " ".join(
         part
         for part in (
             leaf_title,
-            _normalize_title_fingerprint(candidate.title),
+            normalized_title,
         )
         if part
     )
     leaf_tokens = [token for token in re.findall(r"[a-z0-9]+", combined_signal_text) if token]
-    return len(leaf_tokens) >= 3 and _contains_any_title_marker(
-        combined_signal_text,
-        _FALLBACK_SPECIFIC_REPORT_TITLE_MARKERS,
+    return len(leaf_tokens) >= 3 and (
+        _contains_any_title_marker(
+            combined_signal_text,
+            _FALLBACK_SPECIFIC_REPORT_TITLE_MARKERS,
+        )
+        or _has_contextual_report_term(combined_signal_text)
     )
+
+
+def _looks_like_collection_root_candidate_url(url: str) -> bool:
+    path = urlsplit(str(url or "").strip().casefold()).path
+    if not path:
+        return False
+    segments = [segment for segment in path.split("/") if segment]
+    if not segments:
+        return False
+    leaf = segments[-1].rsplit(".", 1)[0]
+    if leaf in _FALLBACK_REPORT_COLLECTION_SEGMENTS:
+        return True
+    leaf_tokens = [token for token in re.findall(r"[a-z0-9]+", leaf) if token]
+    if not leaf_tokens:
+        return False
+    if any(token.isdigit() for token in leaf_tokens):
+        return False
+    return all(token in _COLLECTION_ROOT_URL_TOKENS for token in leaf_tokens)
+
+
+def _has_contextual_report_term(value: str) -> bool:
+    normalized_value = _normalize_title_fingerprint(value)
+    if not normalized_value:
+        return False
+    tokens = [token for token in re.findall(r"[a-z0-9]+", normalized_value) if token]
+    if "report" not in tokens and "reports" not in tokens:
+        return False
+    contextual_tokens = [
+        token
+        for token in tokens
+        if token not in _REPORT_CONTEXT_STOP_WORDS
+        and token not in {"report", "reports"}
+    ]
+    return len(contextual_tokens) >= 2
+
+
+def _looks_like_confident_direct_detail_source(
+    candidate: PublisherInventoryCandidateScreeningItem,
+) -> bool:
+    normalized_url = str(candidate.canonical_url or "").strip().casefold()
+    source_page_url = str(candidate.source_page_url or "").strip().casefold()
+    if not normalized_url or not source_page_url:
+        return False
+    if normalized_url != source_page_url:
+        return False
+    if not any(marker in normalized_url for marker in _DIRECT_DETAIL_SOURCE_URL_MARKERS):
+        return False
+    return not _looks_like_collection_root_candidate_url(normalized_url)
 
 
 def _is_generic_cta_title(title: str) -> bool:

@@ -2950,12 +2950,93 @@ def test_discover_publisher_inventory_browser_traverses_tabs(
 
     assert response.route_kind == "browser_render"
     assert len(response.pages) == 3
+    assert response.route_trace is not None
+    assert response.route_trace.selected_tab_labels == ["Gartner", "Forrester", "IDC"]
+    assert response.route_trace.pagination_mode == "tabbed"
     assert [candidate.url for candidate in response.candidates] == [
         "https://www.salesforce.com/eu/form/gartner-report",
         "https://www.salesforce.com/eu/form/forrester-report",
         "https://www.salesforce.com/eu/form/idc-report",
     ]
     assert "tabbed publisher section(s)" in response.route_summary
+
+
+def test_discover_publisher_inventory_preflight_short_circuits_direct_detail(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    settings = _settings(tmp_path)
+    settings = replace(
+        settings,
+        force_browser=False,
+        enable_preflight_classifier_and_direct_detail=True,
+    )
+
+    def _get(url, timeout, headers, allow_redirects=True):
+        return _FakeResponse(
+            url="https://example.com/research-library/ai-perspectives-2026",
+            text=(
+                "<html><head><title>AI Perspectives 2026</title></head>"
+                "<body><a href='/files/ai-perspectives.pdf'>Download the research brief</a></body></html>"
+            ),
+        )
+
+    external_boundary_mocks_only.setattr(service.requests, "get", _get)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://example.com/research-library/ai-perspectives-2026",
+            settings=settings,
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "http_parse"
+    assert response.scenario_summary is not None
+    assert response.scenario_summary.scenario_class == "direct_detail_html"
+    assert response.candidates[0].provenance == "direct_detail_source"
+
+
+def test_discover_publisher_inventory_preflight_prefers_direct_detail_path_over_archive_terms(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    settings = _settings(tmp_path)
+    settings = replace(
+        settings,
+        force_browser=True,
+        enable_preflight_classifier_and_direct_detail=True,
+    )
+
+    def _get(url, timeout, headers, allow_redirects=True):
+        return _FakeResponse(
+            url="https://example.com/insights/research-library/ai-perspectives-2026",
+            text=(
+                "<html><head><title>AI Perspectives 2026</title></head>"
+                "<body><h1>AI Perspectives 2026</h1>"
+                "<p>Research library entry with related insights and latest research links.</p>"
+                "</body></html>"
+            ),
+        )
+
+    external_boundary_mocks_only.setattr(service.requests, "get", _get)
+
+    response = service.discover_publisher_inventory(
+        PublisherInventoryServiceRequest(
+            schema_version="1.0",
+            insights_url="https://example.com/insights/research-library/ai-perspectives-2026",
+            settings=settings,
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "http_parse"
+    assert response.scenario_summary is not None
+    assert response.scenario_summary.scenario_class == "direct_detail_html"
+    assert response.candidates[0].provenance == "direct_detail_source"
 
 
 def test_discover_publisher_inventory_browser_follows_report_listing_route(

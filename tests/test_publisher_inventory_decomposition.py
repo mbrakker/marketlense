@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from src.contracts.publisher_inventory import (
     PublisherInventoryCoverageValidationRequest,
+    PublisherInventoryRouteTrace,
     PublisherInventoryRoutePlanRequest,
     PublisherInventoryRunQualityEvaluationRequest,
     PublisherInventoryRunQualitySummary,
+    PublisherInventoryScenarioSummary,
 )
 from src.generators.publisher_inventory_coverage_generator import (
     validate_publisher_inventory_coverage,
@@ -56,6 +58,46 @@ def test_route_planner_prefers_browser_when_previous_quality_requires_review(
         "browser_render",
         "http_parse",
     ]
+
+
+def test_route_planner_prefers_structured_memory_then_scenario_guided_fallback(
+    run_context,
+) -> None:
+    response = plan_publisher_inventory_routes(
+        PublisherInventoryRoutePlanRequest(
+            schema_version="1.0",
+            normalized_url="https://example.com/insights",
+            force_browser=False,
+            remembered_route_kind="browser_render",
+            remembered_route_summary="Open the reports tab and paginate with load more.",
+            remembered_route_trace=PublisherInventoryRouteTrace(
+                schema_version="1.0",
+                followed_report_listing=True,
+                applied_report_filter=True,
+                selected_filters=["report"],
+                selected_tab_labels=["reports"],
+                pagination_mode="load_more",
+                preferred_control_labels=["load more"],
+                candidate_surface_guard="report_filter",
+                surface_class="archive_feed",
+            ),
+            remembered_scenario_summary=PublisherInventoryScenarioSummary(
+                schema_version="1.0",
+                scenario_class="filtered_archive",
+                source_surface_class="archive_feed",
+                confidence=0.9,
+                direct_detail_eligible=False,
+                browser_preferred=True,
+                notes="Use browser traversal first.",
+            ),
+            previous_run_quality_summary=None,
+            enable_structured_route_reuse=True,
+        ),
+        run_context,
+    )
+
+    assert response.steps[0].step_name == "publisher_inventory_discovery_with_structured_memory_route"
+    assert response.steps[0].route_kind_hint == "browser_render"
 
 
 def test_coverage_validation_rejects_raw_only_delta_with_previous_snapshot(

@@ -90,6 +90,9 @@ def _observation(
     has_newsletter_cta: bool = False,
     has_contact_sales_cta: bool = False,
     has_dead_page_marker: bool = False,
+    verification_class: str = "verified",
+    recovery_eligible: bool = False,
+    source_surface_class: str = "unknown",
 ) -> PublisherInventoryLandingPageObservation:
     return PublisherInventoryLandingPageObservation(
         schema_version="1.0",
@@ -115,6 +118,9 @@ def _observation(
         has_newsletter_cta=has_newsletter_cta,
         has_contact_sales_cta=has_contact_sales_cta,
         has_dead_page_marker=has_dead_page_marker,
+        verification_class=verification_class,
+        recovery_eligible=recovery_eligible,
+        source_surface_class=source_surface_class,
     )
 
 
@@ -359,6 +365,46 @@ def test_qualify_publisher_inventory_candidates_rejects_dead_pages() -> None:
 
     assert response.approved_items == []
     assert response.decisions[0].reason == "dead_or_unreachable_landing_page"
+
+
+def test_qualify_publisher_inventory_candidates_attaches_recovery_recipe_for_challenge() -> None:
+    candidate = _candidate(
+        "https://example.com/protected/asset-123",
+        "Download now",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Example Publisher",
+            insights_url="https://example.com/reports",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    final_title="Attention required",
+                    fetch_error="Access denied",
+                    has_dead_page_marker=True,
+                    verification_class="challenge",
+                    recovery_eligible=True,
+                    source_surface_class="direct_detail",
+                )
+            ],
+        ),
+    )
+
+    assert response.approved_items == []
+    assert response.decisions[0].accepted is False
+    assert response.decisions[0].source_surface_class == "direct_detail"
+    assert response.decisions[0].recovery_recipe is not None
+    assert response.decisions[0].recovery_recipe.recovery_action == "browser_retry"
 
 
 def test_qualify_publisher_inventory_candidates_accepts_bot_protected_report_asset() -> None:
@@ -1848,7 +1894,7 @@ def test_qualify_publisher_inventory_candidates_rejects_dated_editorial_pages_ev
     }
 
 
-def test_qualify_publisher_inventory_candidates_rejects_gated_editorial_blog_post_with_generic_report_title() -> None:
+def test_qualify_publisher_inventory_candidates_accepts_gated_editorial_blog_post_when_report_document_signals_are_strong() -> None:
     candidate = _candidate(
         "https://www.cardlytics.com/blog/loyalty-movement-report-apparel",
         "Loyalty Movement Report: Apparel",
@@ -1875,6 +1921,46 @@ def test_qualify_publisher_inventory_candidates_rejects_gated_editorial_blog_pos
                     has_download_language=True,
                     has_gated_form=True,
                     has_document_structure=True,
+                    has_editorial_url_pattern=True,
+                    has_editorial_markers=True,
+                )
+            ],
+        ),
+    )
+
+    assert [item.canonical_url for item in response.approved_items] == [
+        candidate.canonical_url
+    ]
+    assert response.decisions[0].reason == "gated_report_asset"
+
+
+def test_qualify_publisher_inventory_candidates_rejects_editorial_blog_report_post_without_document_structure() -> None:
+    candidate = _candidate(
+        "https://www.cardlytics.com/blog/loyalty-movement-report-apparel",
+        "Loyalty Movement Report: Apparel",
+    )
+
+    response = qualify_publisher_inventory_candidates(
+        PublisherInventoryCandidateQualityRequest(
+            schema_version="1.0",
+            publisher_name="Cardlytics",
+            insights_url="https://www.cardlytics.com/research-and-insights",
+            candidates=[candidate],
+            settings=_settings(),
+        ),
+        _ctx(),
+        inspection_client=lambda request, ctx: PublisherInventoryLandingPageInspectionResponse(
+            schema_version="1.0",
+            observations=[
+                _observation(
+                    canonical_url=candidate.canonical_url,
+                    source_title=candidate.title,
+                    final_url=candidate.canonical_url,
+                    h1_title="Loyalty Movement Report: Apparel",
+                    has_asset_type_term=True,
+                    has_download_language=True,
+                    has_gated_form=True,
+                    has_document_structure=False,
                     has_editorial_url_pattern=True,
                     has_editorial_markers=True,
                 )

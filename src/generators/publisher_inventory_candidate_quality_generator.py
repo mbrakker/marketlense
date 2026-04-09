@@ -14,6 +14,7 @@ from src.contracts.publisher_inventory import (
     PublisherInventoryLandingPageInspectionRequest,
     PublisherInventoryLandingPageInspectionResponse,
     PublisherInventoryLandingPageObservation,
+    PublisherInventoryRecoveryRecipe,
     PublisherInventoryQualifiedCandidateItem,
 )
 from src.services.publisher_inventory_service import (
@@ -332,6 +333,20 @@ _EDITORIAL_STRONG_REPORT_TITLE_MARKERS = (
     "white paper",
     "whitepaper",
 )
+_REPORT_CONTEXT_STOP_WORDS = {
+    "a",
+    "an",
+    "and",
+    "for",
+    "from",
+    "in",
+    "of",
+    "on",
+    "our",
+    "the",
+    "to",
+    "with",
+}
 _REPORT_URL_PATH_MARKERS = (
     "/barometer",
     "/buyers-guide",
@@ -623,6 +638,12 @@ def qualify_publisher_inventory_candidates(
             discovered_on_page_number=item.discovered_on_page_number,
             source_page_url=item.source_page_url,
         )
+        recovery_recipe = _build_recovery_recipe(
+            observation=observation,
+            accepted=accepted,
+            reason=reason,
+            resolved_title=resolved_title,
+        )
         decisions.append(
             PublisherInventoryCandidateQualityDecision(
                 schema_version="1.0",
@@ -630,6 +651,8 @@ def qualify_publisher_inventory_candidates(
                 accepted=accepted,
                 reason=reason,
                 resolved_title=resolved_title,
+                source_surface_class=observation.source_surface_class,
+                recovery_recipe=recovery_recipe,
             )
         )
         if accepted:
@@ -1079,6 +1102,55 @@ def _qualify_observation(
     return False, "insufficient_report_signals"
 
 
+def _build_recovery_recipe(
+    *,
+    observation: PublisherInventoryLandingPageObservation,
+    accepted: bool,
+    reason: str,
+    resolved_title: str,
+) -> PublisherInventoryRecoveryRecipe | None:
+    if accepted:
+        return None
+    if observation.source_surface_class not in {"archive_feed", "direct_detail"}:
+        return None
+    verification_class = str(observation.verification_class or "").strip()
+    if verification_class not in {
+        "challenge",
+        "transient_fetch_failure",
+        "protected_document",
+    }:
+        return None
+    if reason in {
+        "editorial_article_page",
+        "case_study_or_customer_story_page",
+        "service_or_membership_page",
+        "newsletter_article_page",
+        "research_announcement_page",
+        "informational_article_page",
+        "audio_editorial_page",
+        "generic_asset_hub_page",
+        "report_section_page",
+    }:
+        return None
+    action = {
+        "challenge": "browser_retry",
+        "transient_fetch_failure": "http_recheck",
+        "protected_document": "protected_document_probe",
+    }.get(verification_class, "")
+    if not action:
+        return None
+    return PublisherInventoryRecoveryRecipe(
+        schema_version="1.0",
+        verification_class=verification_class,
+        source_surface_class=observation.source_surface_class,
+        recovery_action=action,
+        reason=(
+            f"Deferred recovery allowed for strong {observation.source_surface_class} "
+            f"candidate after {verification_class} verification failure on {resolved_title}."
+        ),
+    )
+
+
 def _looks_like_dated_editorial_url(url: str) -> bool:
     return bool(_DATED_EDITORIAL_URL_RE.search(str(url or "").strip().casefold()))
 
@@ -1240,6 +1312,22 @@ def _contains_specific_report_style_title_marker(title: str) -> bool:
     )
 
 
+def _contains_contextual_report_title_marker(title: str) -> bool:
+    normalized_title = str(title or "").strip().casefold()
+    if not normalized_title:
+        return False
+    tokens = [token for token in re.findall(r"[a-z0-9]+", normalized_title) if token]
+    if "report" not in tokens and "reports" not in tokens:
+        return False
+    contextual_tokens = [
+        token
+        for token in tokens
+        if token not in _REPORT_CONTEXT_STOP_WORDS
+        and token not in {"report", "reports"}
+    ]
+    return len(contextual_tokens) >= 2
+
+
 def _normalize_title_word(token: str) -> str:
     normalized_token = str(token or "").strip().casefold()
     if len(normalized_token) <= 4:
@@ -1385,7 +1473,9 @@ def _contains_strong_editorial_report_title_marker(lowered_title: str) -> bool:
     normalized_title = str(lowered_title or "").strip().casefold()
     if not normalized_title:
         return False
-    return any(marker in normalized_title for marker in _EDITORIAL_STRONG_REPORT_TITLE_MARKERS)
+    return any(
+        marker in normalized_title for marker in _EDITORIAL_STRONG_REPORT_TITLE_MARKERS
+    ) or _contains_contextual_report_title_marker(normalized_title)
 
 
 def _looks_like_hard_non_asset_route(url: str) -> bool:

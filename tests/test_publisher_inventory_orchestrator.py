@@ -344,16 +344,18 @@ def _dependencies(**overrides) -> PublisherInventoryDependencies:
             accepted_urls={"https://www.activate.com/reports/new-report"},
             request=req,
         ),
-        "qualify_publisher_inventory_candidates": lambda req, ctx: _quality_response(
-            accepted_urls={"https://www.activate.com/reports/new-report"},
-            request=req,
-        ),
-        "get_publisher_inventory_state": lambda req, ctx: _publisher_state(
-            with_route=False, with_snapshot=False
-        ),
-        "record_publisher_inventory_run_quality": lambda req, ctx: None,
-        "record_publisher_inventory_state": lambda req, ctx: None,
-        "record_publisher_inventory_test_status": lambda req, ctx: None,
+            "qualify_publisher_inventory_candidates": lambda req, ctx: _quality_response(
+                accepted_urls={"https://www.activate.com/reports/new-report"},
+                request=req,
+            ),
+            "get_publisher_inventory_state": lambda req, ctx: _publisher_state(
+                with_route=False, with_snapshot=False
+            ),
+            "get_publisher_inventory_recovery_cache_record": lambda req, ctx: None,
+            "record_publisher_inventory_run_quality": lambda req, ctx: None,
+            "record_publisher_inventory_recovery_cache_record": lambda req, ctx: None,
+            "record_publisher_inventory_state": lambda req, ctx: None,
+            "record_publisher_inventory_test_status": lambda req, ctx: None,
         "record_discovered_report_source": lambda req, ctx: ReportSourceDiscoveryRecordResponse(
             schema_version="1.0",
             record_id=1,

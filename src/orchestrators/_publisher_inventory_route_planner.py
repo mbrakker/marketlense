@@ -28,6 +28,12 @@ def plan_publisher_inventory_routes(
                 "force_browser": request.force_browser,
                 "remembered_route_kind": request.remembered_route_kind or "",
                 "has_remembered_route_summary": bool(request.remembered_route_summary),
+                "has_remembered_route_trace": bool(request.remembered_route_trace),
+                "remembered_scenario_class": (
+                    request.remembered_scenario_summary.scenario_class
+                    if request.remembered_scenario_summary is not None
+                    else ""
+                ),
                 "previous_quality_outcome": (
                     request.previous_run_quality_summary.outcome
                     if request.previous_run_quality_summary is not None
@@ -64,6 +70,29 @@ def _build_plan(
     request: PublisherInventoryRoutePlanRequest,
 ) -> PublisherInventoryRoutePlanResponse:
     steps: list[PublisherInventoryRoutePlanStep] = []
+    if (
+        request.enable_structured_route_reuse
+        and request.remembered_route_trace is not None
+        and request.remembered_route_summary
+    ):
+        steps.append(
+            PublisherInventoryRoutePlanStep(
+                schema_version="1.0",
+                step_name="publisher_inventory_discovery_with_structured_memory_route",
+                route_kind_hint=request.remembered_route_kind,
+                route_hint=request.remembered_route_summary,
+                uses_memory_route=True,
+                fallback_on_retryable_error=True,
+            )
+        )
+        steps.extend(_default_non_memory_steps(request))
+        return PublisherInventoryRoutePlanResponse(
+            schema_version="1.0",
+            steps=_dedupe_steps(steps),
+            planning_reason=(
+                "Reuse the structured remembered route first, then fall back to the default route order only on retryable failure."
+            ),
+        )
     if request.remembered_route_summary:
         steps.append(
             PublisherInventoryRoutePlanStep(
@@ -135,11 +164,12 @@ def _build_plan(
                 "The previous run-quality summary flagged drift, so the next run should start with the stronger browser route before falling back to direct HTTP."
             ),
         )
+    default_steps = _scenario_guided_steps(request)
     return PublisherInventoryRoutePlanResponse(
         schema_version="1.0",
         steps=default_steps,
         planning_reason=(
-            "No remembered route is available, so use the default direct-HTTP-first plan unless browser use was forced."
+            "No remembered route is available, so use scenario-guided routing before falling back to the default order."
         ),
     )
 
@@ -176,6 +206,42 @@ def _default_non_memory_steps(
             fallback_on_retryable_error=False,
         ),
     ]
+
+
+def _scenario_guided_steps(
+    request: PublisherInventoryRoutePlanRequest,
+) -> list[PublisherInventoryRoutePlanStep]:
+    scenario_class = (
+        request.remembered_scenario_summary.scenario_class
+        if request.remembered_scenario_summary is not None
+        else ""
+    )
+    if scenario_class in {
+        "filtered_archive",
+        "tabbed_archive",
+        "mixed_content_hub",
+        "js_hydrated_archive",
+        "challenge_prone",
+    }:
+        return [
+            PublisherInventoryRoutePlanStep(
+                schema_version="1.0",
+                step_name="publisher_inventory_discovery_browser",
+                route_kind_hint="browser_render",
+                route_hint=None,
+                uses_memory_route=False,
+                fallback_on_retryable_error=False,
+            ),
+            PublisherInventoryRoutePlanStep(
+                schema_version="1.0",
+                step_name="publisher_inventory_discovery_http",
+                route_kind_hint="http_parse",
+                route_hint=None,
+                uses_memory_route=False,
+                fallback_on_retryable_error=True,
+            ),
+        ]
+    return _default_non_memory_steps(request)
 
 
 def _dedupe_steps(

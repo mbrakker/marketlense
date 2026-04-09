@@ -9,6 +9,8 @@ from urllib.parse import urlsplit
 from src.contracts.publisher_inventory import (
     PublisherInventoryPage,
     PublisherInventoryRawCandidate,
+    PublisherInventoryRouteTrace,
+    PublisherInventoryScenarioSummary,
     PublisherInventoryServiceRequest,
     PublisherInventoryServiceResponse,
 )
@@ -66,6 +68,7 @@ def discover_inventory_via_browser(
     normalized_url: str,
     *,
     use_hint: bool,
+    scenario_summary: PublisherInventoryScenarioSummary | None,
     dependencies: BrowserInventoryAcquisitionDependencies,
 ) -> PublisherInventoryServiceResponse:
     session_dir = dependencies.prepare_session_dir(
@@ -82,8 +85,15 @@ def discover_inventory_via_browser(
     candidates: list[PublisherInventoryRawCandidate] = []
     final_page_url = normalized_url
     route_summary = ""
+    route_trace: PublisherInventoryRouteTrace | None = None
     try:
-        pages, candidates, final_page_url, route_summary = dependencies.asyncio_module.run(
+        (
+            pages,
+            candidates,
+            final_page_url,
+            route_summary,
+            route_trace,
+        ) = dependencies.asyncio_module.run(
             dependencies.run_browser_traversal(
                 browser,
                 request,
@@ -249,6 +259,8 @@ def discover_inventory_via_browser(
         used_route_hint=use_hint,
         pages=pages,
         candidates=candidates,
+        route_trace=route_trace,
+        scenario_summary=scenario_summary,
     )
     logger.info(
         log_event(

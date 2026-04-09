@@ -2114,6 +2114,34 @@ def load_publisher_inventory_settings(
             else _env_value("PUBLISHER_DISCOVERY_FORCE_BROWSER"),
             False,
         ),
+        enable_deferred_candidate_recovery=_to_bool(
+            publisher_discovery.get("enable_deferred_candidate_recovery")
+            if not _is_missing(
+                publisher_discovery.get("enable_deferred_candidate_recovery")
+            )
+            else _env_value("PUBLISHER_DISCOVERY_ENABLE_DEFERRED_CANDIDATE_RECOVERY"),
+            False,
+        ),
+        enable_structured_route_reuse=_to_bool(
+            publisher_discovery.get("enable_structured_route_reuse")
+            if not _is_missing(
+                publisher_discovery.get("enable_structured_route_reuse")
+            )
+            else _env_value("PUBLISHER_DISCOVERY_ENABLE_STRUCTURED_ROUTE_REUSE"),
+            False,
+        ),
+        enable_preflight_classifier_and_direct_detail=_to_bool(
+            publisher_discovery.get("enable_preflight_classifier_and_direct_detail")
+            if not _is_missing(
+                publisher_discovery.get(
+                    "enable_preflight_classifier_and_direct_detail"
+                )
+            )
+            else _env_value(
+                "PUBLISHER_DISCOVERY_ENABLE_PREFLIGHT_CLASSIFIER_AND_DIRECT_DETAIL"
+            ),
+            False,
+        ),
         retry_retries=max(
             _to_int(
                 retry_cfg.get("retries")
@@ -2274,6 +2302,9 @@ def load_publisher_inventory_settings(
                 "command_time_budget_seconds": settings.command_time_budget_seconds,
                 "headed": settings.headed,
                 "force_browser": settings.force_browser,
+                "enable_deferred_candidate_recovery": settings.enable_deferred_candidate_recovery,
+                "enable_structured_route_reuse": settings.enable_structured_route_reuse,
+                "enable_preflight_classifier_and_direct_detail": settings.enable_preflight_classifier_and_direct_detail,
                 "retry_retries": settings.retry_retries,
                 "retry_base_delay_seconds": settings.retry_base_delay_seconds,
                 "retry_backoff_step_seconds": settings.retry_backoff_step_seconds,

@@ -12,6 +12,8 @@ from src.contracts.browser_download import (
     DownloadTerminalEvidence,
 )
 from src.contracts.report_store import (
+    PublisherInventoryRecoveryCacheGetRequest,
+    PublisherInventoryRecoveryCacheRecordRequest,
     PublishersListRequest,
     PublisherDownloadRouteGetRequest,
     PublisherDownloadRouteRecordRequest,
@@ -26,15 +28,22 @@ from src.contracts.report_store import (
     ReportSourceRecordRequest,
     ReportMetadataUpsertRequest,
 )
-from src.contracts.publisher_inventory import PublisherInventoryRunQualitySummary
+from src.contracts.publisher_inventory import (
+    PublisherInventoryRecoveryRecord,
+    PublisherInventoryRouteTrace,
+    PublisherInventoryRunQualitySummary,
+    PublisherInventoryScenarioSummary,
+)
 from src.contracts.publisher_profiles import PublisherProfileRecord
 from src.services.report_store_service import (
     check_report_db_access,
     get_metadata,
+    get_publisher_inventory_recovery_cache_record,
     record_discovered_report_source,
     get_publisher_download_route,
     get_publisher_inventory_state,
     list_publishers,
+    record_publisher_inventory_recovery_cache_record,
     record_publisher_inventory_run_quality,
     record_publisher_inventory_test_status,
     record_report_source,
@@ -1504,6 +1513,8 @@ class TestReportStoreService(unittest.TestCase):
                     "download_route_updated_at",
                     "inventory_route_kind",
                     "inventory_route_summary",
+                    "inventory_route_trace_json",
+                    "inventory_scenario_summary_json",
                     "inventory_route_last_final_page_url",
                     "inventory_route_updated_at",
                     "inventory_snapshot_drive_file_id",
@@ -1576,6 +1587,26 @@ class TestReportStoreService(unittest.TestCase):
                     source_url="https://www.activate.com/insights",
                     route_kind="browser_render",
                     route_summary="Open the insights page, click next pagination until the last page, and extract report links.",
+                    route_trace=PublisherInventoryRouteTrace(
+                        schema_version="1.0",
+                        followed_report_listing=True,
+                        applied_report_filter=True,
+                        selected_filters=["report"],
+                        selected_tab_labels=["research"],
+                        pagination_mode="load_more",
+                        preferred_control_labels=["load more"],
+                        candidate_surface_guard="report_filter",
+                        surface_class="archive_feed",
+                    ),
+                    scenario_summary=PublisherInventoryScenarioSummary(
+                        schema_version="1.0",
+                        scenario_class="filtered_archive",
+                        source_surface_class="archive_feed",
+                        confidence=0.9,
+                        direct_detail_eligible=False,
+                        browser_preferred=True,
+                        notes="Archive uses explicit report filters.",
+                    ),
                     last_final_page_url="https://www.activate.com/insights?page=2",
                     snapshot_drive_file_id="drive-file-1",
                     snapshot_drive_file_name="publisher_inventory_snapshot__20260329T120000Z.json",
@@ -1600,6 +1631,12 @@ class TestReportStoreService(unittest.TestCase):
             )
             self.assertIsNone(state.discovery_test_status)
             self.assertEqual("browser_render", state.inventory_route_kind)
+            assert state.inventory_route_trace is not None
+            self.assertEqual("load_more", state.inventory_route_trace.pagination_mode)
+            assert state.inventory_scenario_summary is not None
+            self.assertEqual(
+                "filtered_archive", state.inventory_scenario_summary.scenario_class
+            )
             self.assertEqual("drive-file-1", state.inventory_snapshot_drive_file_id)
             self.assertEqual("sha256-1", state.inventory_snapshot_sha256)
 
@@ -1646,6 +1683,10 @@ class TestReportStoreService(unittest.TestCase):
             self.assertEqual("Activate Consulting Updated", preserved.publisher_name)
             self.assertEqual("passed", preserved.discovery_test_status)
             self.assertEqual("browser_render", preserved.inventory_route_kind)
+            assert preserved.inventory_route_trace is not None
+            self.assertEqual(
+                "archive_feed", preserved.inventory_route_trace.surface_class
+            )
             self.assertEqual("drive-file-1", preserved.inventory_snapshot_drive_file_id)
 
     def test_record_publisher_inventory_test_status_roundtrip(self) -> None:
@@ -1771,6 +1812,86 @@ class TestReportStoreService(unittest.TestCase):
                 "browser_render",
                 state.inventory_run_quality_summary.recommended_route_kind,
             )
+
+    def test_publisher_inventory_recovery_cache_roundtrip_is_idempotent(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_publisher_inventory_recovery_cache")
+
+            replace_publishers(
+                PublishersReplaceRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_page_url="https://www.notion.so/source",
+                    publishers=[
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-1",
+                            notion_page_url="https://www.notion.so/page-1",
+                            name="Activate Consulting",
+                            homepage="https://www.activate.com/",
+                            self_presentation="Activate description",
+                            insights_url="https://www.activate.com/insights",
+                            icon_source="https://cdn.example.com/activate.png",
+                        )
+                    ],
+                ),
+                ctx,
+            )
+
+            record_publisher_inventory_recovery_cache_record(
+                PublisherInventoryRecoveryCacheRecordRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    record=PublisherInventoryRecoveryRecord(
+                        schema_version="1.0",
+                        normalized_url="https://www.activate.com/insights",
+                        canonical_url="https://www.activate.com/reports/new-report",
+                        source_surface_class="archive_feed",
+                        verification_class="challenge",
+                        recovery_action="browser_retry",
+                        last_outcome="scheduled",
+                        last_http_status=403,
+                        last_error_marker="dead_or_unreachable_landing_page",
+                        updated_at_utc="2026-04-08T10:00:00Z",
+                    ),
+                ),
+                ctx,
+            )
+            record_publisher_inventory_recovery_cache_record(
+                PublisherInventoryRecoveryCacheRecordRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    record=PublisherInventoryRecoveryRecord(
+                        schema_version="1.0",
+                        normalized_url="https://www.activate.com/insights",
+                        canonical_url="https://www.activate.com/reports/new-report",
+                        source_surface_class="archive_feed",
+                        verification_class="challenge",
+                        recovery_action="browser_retry",
+                        last_outcome="recovered",
+                        last_http_status=200,
+                        last_error_marker=None,
+                        updated_at_utc="2026-04-08T10:05:00Z",
+                    ),
+                ),
+                ctx,
+            )
+
+            record = get_publisher_inventory_recovery_cache_record(
+                PublisherInventoryRecoveryCacheGetRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_url="https://www.activate.com/insights",
+                    canonical_url="https://www.activate.com/reports/new-report",
+                ),
+                ctx,
+            )
+
+            assert record is not None
+            self.assertEqual("recovered", record.last_outcome)
+            self.assertEqual(200, record.last_http_status)
+            self.assertEqual("browser_retry", record.recovery_action)
 
 
 if __name__ == "__main__":

@@ -22,6 +22,8 @@ from src.contracts.report_store import (
     PublisherDownloadRouteGetRequest,
     PublisherDownloadRouteRecordRequest,
     PublisherDownloadRouteResponse,
+    PublisherInventoryRecoveryCacheGetRequest,
+    PublisherInventoryRecoveryCacheRecordRequest,
     PublisherInventoryStateGetRequest,
     PublisherInventoryRunQualityRecordRequest,
     PublisherInventoryStateRecordRequest,
@@ -116,6 +118,8 @@ CREATE TABLE IF NOT EXISTS publishers (
   download_route_updated_at INTEGER,
   inventory_route_kind TEXT,
   inventory_route_summary TEXT,
+  inventory_route_trace_json TEXT,
+  inventory_scenario_summary_json TEXT,
   inventory_route_last_final_page_url TEXT,
   inventory_route_updated_at INTEGER,
   inventory_snapshot_drive_file_id TEXT,
@@ -163,9 +167,28 @@ CREATE TABLE IF NOT EXISTS publisher_download_route_history (
   updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
 );
 
+CREATE TABLE IF NOT EXISTS publisher_inventory_candidate_recovery_cache (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  normalized_url TEXT NOT NULL,
+  canonical_url TEXT NOT NULL,
+  source_surface_class TEXT NOT NULL,
+  verification_class TEXT NOT NULL,
+  recovery_action TEXT NOT NULL,
+  last_outcome TEXT NOT NULL,
+  last_http_status INTEGER,
+  last_error_marker TEXT,
+  updated_at_utc TEXT NOT NULL,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_publishers_name ON publishers(name);
 CREATE INDEX IF NOT EXISTS idx_publishers_homepage ON publishers(homepage);
 CREATE INDEX IF NOT EXISTS idx_publishers_insights_url ON publishers(insights_url);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_publisher_inventory_candidate_recovery_cache_key
+  ON publisher_inventory_candidate_recovery_cache(normalized_url, canonical_url);
+CREATE INDEX IF NOT EXISTS idx_publisher_inventory_candidate_recovery_cache_updated_at
+  ON publisher_inventory_candidate_recovery_cache(updated_at);
 CREATE INDEX IF NOT EXISTS idx_download_route_history_normalized_url
   ON publisher_download_route_history(normalized_url);
 CREATE INDEX IF NOT EXISTS idx_download_route_history_updated_at
@@ -200,6 +223,7 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
     _ensure_report_sources_schema(conn)
     _ensure_publishers_schema(conn)
     _ensure_publisher_download_route_history_schema(conn)
+    _ensure_publisher_inventory_candidate_recovery_cache_schema(conn)
     conn.commit()
 
 
@@ -384,6 +408,84 @@ def _ensure_publisher_download_route_history_schema(conn: sqlite3.Connection) ->
         )
 
 
+def _ensure_publisher_inventory_candidate_recovery_cache_schema(
+    conn: sqlite3.Connection,
+) -> None:
+    cur = conn.execute("PRAGMA table_info(publisher_inventory_candidate_recovery_cache)")
+    cols = {str(row[1]) for row in cur.fetchall()}
+    expected = {
+        "id",
+        "normalized_url",
+        "canonical_url",
+        "source_surface_class",
+        "verification_class",
+        "recovery_action",
+        "last_outcome",
+        "last_http_status",
+        "last_error_marker",
+        "updated_at_utc",
+        "created_at",
+        "updated_at",
+    }
+    if cols != expected:
+        conn.execute("DROP TABLE IF EXISTS publisher_inventory_candidate_recovery_cache_new")
+        conn.execute(
+            """
+            CREATE TABLE publisher_inventory_candidate_recovery_cache_new (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              normalized_url TEXT NOT NULL,
+              canonical_url TEXT NOT NULL,
+              source_surface_class TEXT NOT NULL,
+              verification_class TEXT NOT NULL,
+              recovery_action TEXT NOT NULL,
+              last_outcome TEXT NOT NULL,
+              last_http_status INTEGER,
+              last_error_marker TEXT,
+              updated_at_utc TEXT NOT NULL,
+              created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+              updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+            )
+            """
+        )
+        if cols:
+            selectable = [
+                col
+                for col in (
+                    "normalized_url",
+                    "canonical_url",
+                    "source_surface_class",
+                    "verification_class",
+                    "recovery_action",
+                    "last_outcome",
+                    "last_http_status",
+                    "last_error_marker",
+                    "updated_at_utc",
+                    "created_at",
+                    "updated_at",
+                )
+                if col in cols
+            ]
+            if selectable:
+                quoted = ", ".join(selectable)
+                conn.execute(
+                    f"""
+                    INSERT INTO publisher_inventory_candidate_recovery_cache_new({quoted})
+                    SELECT {quoted}
+                    FROM publisher_inventory_candidate_recovery_cache
+                    """
+                )
+        conn.execute("DROP TABLE IF EXISTS publisher_inventory_candidate_recovery_cache")
+        conn.execute(
+            "ALTER TABLE publisher_inventory_candidate_recovery_cache_new RENAME TO publisher_inventory_candidate_recovery_cache"
+        )
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_publisher_inventory_candidate_recovery_cache_key ON publisher_inventory_candidate_recovery_cache(normalized_url, canonical_url)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_publisher_inventory_candidate_recovery_cache_updated_at ON publisher_inventory_candidate_recovery_cache(updated_at)"
+    )
+
+
 def _optional_int(value: object) -> Optional[int]:
     if value is None:
         return None
@@ -402,6 +504,82 @@ def _serialize_inventory_run_quality_summary(summary) -> Optional[str]:
         sort_keys=True,
         separators=(",", ":"),
     )
+
+
+def _serialize_dataclass_payload(payload) -> Optional[str]:
+    if payload is None:
+        return None
+    return json.dumps(
+        asdict(payload),
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def _parse_inventory_route_trace(payload: Optional[str]):
+    token = str(payload or "").strip()
+    if not token:
+        return None
+    from src.contracts.publisher_inventory import PublisherInventoryRouteTrace
+
+    try:
+        parsed = json.loads(token)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(parsed, dict):
+        return None
+    try:
+        return PublisherInventoryRouteTrace(
+            schema_version=str(parsed.get("schema_version") or "1.0"),
+            followed_report_listing=bool(parsed.get("followed_report_listing", False)),
+            applied_report_filter=bool(parsed.get("applied_report_filter", False)),
+            selected_filters=clean_string_list(parsed.get("selected_filters", [])),
+            selected_tab_labels=clean_string_list(parsed.get("selected_tab_labels", [])),
+            pagination_mode=str(parsed.get("pagination_mode") or "none").strip()
+            or "none",
+            preferred_control_labels=clean_string_list(
+                parsed.get("preferred_control_labels", [])
+            ),
+            candidate_surface_guard=str(
+                parsed.get("candidate_surface_guard") or "none"
+            ).strip()
+            or "none",
+            surface_class=str(parsed.get("surface_class") or "unknown").strip()
+            or "unknown",
+        )
+    except (TypeError, ValueError):
+        return None
+
+
+def _parse_inventory_scenario_summary(payload: Optional[str]):
+    token = str(payload or "").strip()
+    if not token:
+        return None
+    from src.contracts.publisher_inventory import PublisherInventoryScenarioSummary
+
+    try:
+        parsed = json.loads(token)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(parsed, dict):
+        return None
+    try:
+        return PublisherInventoryScenarioSummary(
+            schema_version=str(parsed.get("schema_version") or "1.0"),
+            scenario_class=str(parsed.get("scenario_class") or "unknown").strip()
+            or "unknown",
+            source_surface_class=str(
+                parsed.get("source_surface_class") or "unknown"
+            ).strip()
+            or "unknown",
+            confidence=float(parsed.get("confidence") or 0.0),
+            direct_detail_eligible=bool(parsed.get("direct_detail_eligible", False)),
+            browser_preferred=bool(parsed.get("browser_preferred", False)),
+            notes=str(parsed.get("notes") or "").strip(),
+        )
+    except (TypeError, ValueError):
+        return None
 
 
 def _parse_inventory_run_quality_summary(payload: Optional[str]):
@@ -443,6 +621,7 @@ def _parse_inventory_run_quality_summary(payload: Optional[str]):
                 ).items()
                 if str(key).strip()
             },
+            scenario_class=str(parsed.get("scenario_class") or "").strip() or None,
         )
     except (KeyError, TypeError, ValueError):
         return None
@@ -753,6 +932,8 @@ def _ensure_publishers_schema(conn: sqlite3.Connection) -> None:
         "download_route_updated_at",
         "inventory_route_kind",
         "inventory_route_summary",
+        "inventory_route_trace_json",
+        "inventory_scenario_summary_json",
         "inventory_route_last_final_page_url",
         "inventory_route_updated_at",
         "inventory_snapshot_drive_file_id",
@@ -785,6 +966,8 @@ def _ensure_publishers_schema(conn: sqlite3.Connection) -> None:
           download_route_updated_at INTEGER,
           inventory_route_kind TEXT,
           inventory_route_summary TEXT,
+          inventory_route_trace_json TEXT,
+          inventory_scenario_summary_json TEXT,
           inventory_route_last_final_page_url TEXT,
           inventory_route_updated_at INTEGER,
           inventory_snapshot_drive_file_id TEXT,
@@ -814,6 +997,8 @@ def _ensure_publishers_schema(conn: sqlite3.Connection) -> None:
                 "download_route_updated_at",
                 "inventory_route_kind",
                 "inventory_route_summary",
+                "inventory_route_trace_json",
+                "inventory_scenario_summary_json",
                 "inventory_route_last_final_page_url",
                 "inventory_route_updated_at",
                 "inventory_snapshot_drive_file_id",
@@ -1825,6 +2010,8 @@ def replace_publishers(
                     download_route_updated_at,
                     inventory_route_kind,
                     inventory_route_summary,
+                    inventory_route_trace_json,
+                    inventory_scenario_summary_json,
                     inventory_route_last_final_page_url,
                     inventory_route_updated_at,
                     inventory_snapshot_drive_file_id,
@@ -1839,6 +2026,8 @@ def replace_publishers(
             preserved_by_insights_url: dict[
                 str,
                 tuple[
+                    Optional[str],
+                    Optional[str],
                     Optional[str],
                     Optional[str],
                     Optional[str],
@@ -1876,13 +2065,15 @@ def replace_publishers(
                     str(row[10] or "").strip() or None,
                     str(row[11] or "").strip() or None,
                     str(row[12] or "").strip() or None,
-                    int(row[13]) if row[13] is not None else None,
+                    str(row[13] or "").strip() or None,
                     str(row[14] or "").strip() or None,
-                    str(row[15] or "").strip() or None,
+                    int(row[15]) if row[15] is not None else None,
                     str(row[16] or "").strip() or None,
-                    int(row[17]) if row[17] is not None else None,
+                    str(row[17] or "").strip() or None,
                     str(row[18] or "").strip() or None,
                     int(row[19]) if row[19] is not None else None,
+                    str(row[20] or "").strip() or None,
+                    int(row[21]) if row[21] is not None else None,
                 )
                 if insights_url_key and insights_url_key not in preserved_by_insights_url:
                     preserved_by_insights_url[insights_url_key] = preserved_payload
@@ -1921,6 +2112,8 @@ def replace_publishers(
                             None,
                             None,
                             None,
+                            None,
+                            None,
                         )
                     rows_with_routes.append((*row, *preserved))
                 conn.executemany(
@@ -1940,6 +2133,8 @@ def replace_publishers(
                         download_route_updated_at,
                         inventory_route_kind,
                         inventory_route_summary,
+                        inventory_route_trace_json,
+                        inventory_scenario_summary_json,
                         inventory_route_last_final_page_url,
                         inventory_route_updated_at,
                         inventory_snapshot_drive_file_id,
@@ -1949,7 +2144,7 @@ def replace_publishers(
                         inventory_run_quality_json,
                         inventory_run_quality_updated_at
                     )
-                    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     rows_with_routes,
                 )
@@ -2806,6 +3001,8 @@ def get_publisher_inventory_state(
                 discovery_test_status,
                 inventory_route_kind,
                 inventory_route_summary,
+                inventory_route_trace_json,
+                inventory_scenario_summary_json,
                 inventory_route_last_final_page_url,
                 inventory_route_updated_at,
                 inventory_snapshot_drive_file_id,
@@ -2832,16 +3029,22 @@ def get_publisher_inventory_state(
             discovery_test_status=str(row[3] or "").strip() or None,
             inventory_route_kind=str(row[4] or "").strip() or None,
             inventory_route_summary=str(row[5] or "").strip() or None,
-            inventory_route_last_final_page_url=str(row[6] or "").strip() or None,
-            inventory_route_updated_at=_optional_int(row[7]),
-            inventory_snapshot_drive_file_id=str(row[8] or "").strip() or None,
-            inventory_snapshot_drive_file_name=str(row[9] or "").strip() or None,
-            inventory_snapshot_sha256=str(row[10] or "").strip() or None,
-            inventory_snapshot_updated_at=_optional_int(row[11]),
-            inventory_run_quality_summary=_parse_inventory_run_quality_summary(
-                str(row[12] or "").strip() or None
+            inventory_route_trace=_parse_inventory_route_trace(
+                str(row[6] or "").strip() or None
             ),
-            inventory_run_quality_updated_at=_optional_int(row[13]),
+            inventory_scenario_summary=_parse_inventory_scenario_summary(
+                str(row[7] or "").strip() or None
+            ),
+            inventory_route_last_final_page_url=str(row[8] or "").strip() or None,
+            inventory_route_updated_at=_optional_int(row[9]),
+            inventory_snapshot_drive_file_id=str(row[10] or "").strip() or None,
+            inventory_snapshot_drive_file_name=str(row[11] or "").strip() or None,
+            inventory_snapshot_sha256=str(row[12] or "").strip() or None,
+            inventory_snapshot_updated_at=_optional_int(row[13]),
+            inventory_run_quality_summary=_parse_inventory_run_quality_summary(
+                str(row[14] or "").strip() or None
+            ),
+            inventory_run_quality_updated_at=_optional_int(row[15]),
         )
         logger.info(
             log_event(
@@ -2857,6 +3060,10 @@ def get_publisher_inventory_state(
                     "has_google_folder": bool(response.google_folder),
                     "discovery_test_status": response.discovery_test_status or "",
                     "has_inventory_route": bool(response.inventory_route_summary),
+                    "has_inventory_route_trace": bool(response.inventory_route_trace),
+                    "has_inventory_scenario_summary": bool(
+                        response.inventory_scenario_summary
+                    ),
                     "has_inventory_snapshot": bool(
                         response.inventory_snapshot_drive_file_id
                     ),
@@ -3071,6 +3278,228 @@ def record_publisher_inventory_run_quality(
     )
 
 
+def get_publisher_inventory_recovery_cache_record(
+    request: PublisherInventoryRecoveryCacheGetRequest,
+    ctx: RunContext,
+):
+    from src.contracts.publisher_inventory import PublisherInventoryRecoveryRecord
+
+    db_path = request.db_path.strip()
+    normalized_url = request.normalized_url.strip()
+    canonical_url = request.canonical_url.strip()
+    if not db_path:
+        raise AppError(
+            code="publisher_inventory_recovery_cache_db_missing",
+            message="Report metadata DB path is required for recovery-cache lookup",
+            retryable=False,
+            severity="error",
+        )
+    if not normalized_url:
+        raise AppError(
+            code="publisher_inventory_recovery_cache_normalized_url_missing",
+            message="normalized_url is required for recovery-cache lookup",
+            retryable=False,
+            severity="error",
+        )
+    if not canonical_url:
+        raise AppError(
+            code="publisher_inventory_recovery_cache_canonical_url_missing",
+            message="canonical_url is required for recovery-cache lookup",
+            retryable=False,
+            severity="error",
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_inventory_recovery_cache_get_start",
+            module=logger.name,
+            fields={
+                "db_path": db_path,
+                "normalized_url": normalized_url,
+                "canonical_url": canonical_url,
+            },
+        )
+    )
+    with _metadata_conn(db_path) as conn:
+        row = conn.execute(
+            """
+            SELECT
+                source_surface_class,
+                verification_class,
+                recovery_action,
+                last_outcome,
+                last_http_status,
+                last_error_marker,
+                updated_at_utc
+            FROM publisher_inventory_candidate_recovery_cache
+            WHERE normalized_url=? AND canonical_url=?
+            """,
+            (normalized_url, canonical_url),
+        ).fetchone()
+    if row is None:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="publisher_inventory_recovery_cache_get_complete",
+                module=logger.name,
+                fields={
+                    "db_path": db_path,
+                    "normalized_url": normalized_url,
+                    "canonical_url": canonical_url,
+                    "found": False,
+                },
+            )
+        )
+        return None
+    response = PublisherInventoryRecoveryRecord(
+        schema_version="1.0",
+        normalized_url=normalized_url,
+        canonical_url=canonical_url,
+        source_surface_class=str(row[0] or "").strip() or "unknown",
+        verification_class=str(row[1] or "").strip() or "verified",
+        recovery_action=str(row[2] or "").strip(),
+        last_outcome=str(row[3] or "").strip(),
+        last_http_status=_optional_int(row[4]),
+        last_error_marker=str(row[5] or "").strip() or None,
+        updated_at_utc=str(row[6] or "").strip(),
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_inventory_recovery_cache_get_complete",
+            module=logger.name,
+            fields={
+                "db_path": db_path,
+                "normalized_url": normalized_url,
+                "canonical_url": canonical_url,
+                "found": True,
+                "verification_class": response.verification_class,
+                "last_outcome": response.last_outcome,
+            },
+        )
+    )
+    return response
+
+
+def record_publisher_inventory_recovery_cache_record(
+    request: PublisherInventoryRecoveryCacheRecordRequest,
+    ctx: RunContext,
+) -> None:
+    db_path = request.db_path.strip()
+    record = request.record
+    normalized_url = record.normalized_url.strip()
+    canonical_url = record.canonical_url.strip()
+    if not db_path:
+        raise AppError(
+            code="publisher_inventory_recovery_cache_db_missing",
+            message="Report metadata DB path is required for recovery-cache recording",
+            retryable=False,
+            severity="error",
+        )
+    if not normalized_url:
+        raise AppError(
+            code="publisher_inventory_recovery_cache_normalized_url_missing",
+            message="normalized_url is required for recovery-cache recording",
+            retryable=False,
+            severity="error",
+        )
+    if not canonical_url:
+        raise AppError(
+            code="publisher_inventory_recovery_cache_canonical_url_missing",
+            message="canonical_url is required for recovery-cache recording",
+            retryable=False,
+            severity="error",
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_inventory_recovery_cache_record_start",
+            module=logger.name,
+            fields={
+                "db_path": db_path,
+                "normalized_url": normalized_url,
+                "canonical_url": canonical_url,
+                "verification_class": record.verification_class,
+                "recovery_action": record.recovery_action,
+                "last_outcome": record.last_outcome,
+            },
+        )
+    )
+    try:
+        with _metadata_conn(db_path) as conn:
+            conn.execute(
+                """
+                INSERT INTO publisher_inventory_candidate_recovery_cache(
+                    normalized_url,
+                    canonical_url,
+                    source_surface_class,
+                    verification_class,
+                    recovery_action,
+                    last_outcome,
+                    last_http_status,
+                    last_error_marker,
+                    updated_at_utc,
+                    created_at,
+                    updated_at
+                )
+                VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%s','now'), strftime('%s','now'))
+                ON CONFLICT(normalized_url, canonical_url) DO UPDATE SET
+                    source_surface_class=excluded.source_surface_class,
+                    verification_class=excluded.verification_class,
+                    recovery_action=excluded.recovery_action,
+                    last_outcome=excluded.last_outcome,
+                    last_http_status=excluded.last_http_status,
+                    last_error_marker=excluded.last_error_marker,
+                    updated_at_utc=excluded.updated_at_utc,
+                    updated_at=strftime('%s','now')
+                """,
+                (
+                    normalized_url,
+                    canonical_url,
+                    record.source_surface_class.strip() or "unknown",
+                    record.verification_class.strip() or "verified",
+                    record.recovery_action.strip(),
+                    record.last_outcome.strip(),
+                    record.last_http_status,
+                    record.last_error_marker.strip()
+                    if record.last_error_marker and record.last_error_marker.strip()
+                    else None,
+                    record.updated_at_utc.strip(),
+                ),
+            )
+    except sqlite3.Error as exc:
+        raise AppError(
+            code="publisher_inventory_recovery_cache_record_failed",
+            message="Failed to record publisher inventory recovery cache state",
+            cause=exc,
+            retryable=True,
+            context={
+                "db_path": db_path,
+                "normalized_url": normalized_url,
+                "canonical_url": canonical_url,
+            },
+        ) from exc
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="publisher_inventory_recovery_cache_record_complete",
+            module=logger.name,
+            fields={
+                "db_path": db_path,
+                "normalized_url": normalized_url,
+                "canonical_url": canonical_url,
+                "verification_class": record.verification_class,
+                "last_outcome": record.last_outcome,
+            },
+        )
+    )
+
+
 def record_publisher_inventory_state(
     request: PublisherInventoryStateRecordRequest,
     ctx: RunContext,
@@ -3080,6 +3509,8 @@ def record_publisher_inventory_state(
     source_url = request.source_url.strip()
     route_kind = request.route_kind.strip()
     route_summary = request.route_summary.strip()
+    route_trace_json = _serialize_dataclass_payload(request.route_trace)
+    scenario_summary_json = _serialize_dataclass_payload(request.scenario_summary)
     last_final_page_url = (
         request.last_final_page_url.strip()
         if request.last_final_page_url and request.last_final_page_url.strip()
@@ -3146,6 +3577,8 @@ def record_publisher_inventory_state(
                 "normalized_url": normalized_url,
                 "source_url": source_url,
                 "route_kind": route_kind,
+                "has_route_trace": bool(request.route_trace),
+                "has_scenario_summary": bool(request.scenario_summary),
                 "has_snapshot_drive_file_id": bool(snapshot_drive_file_id),
             },
         )
@@ -3160,7 +3593,9 @@ def record_publisher_inventory_state(
                     insights_url,
                     inventory_snapshot_drive_file_id,
                     inventory_snapshot_drive_file_name,
-                    inventory_snapshot_sha256
+                    inventory_snapshot_sha256,
+                    inventory_route_trace_json,
+                    inventory_scenario_summary_json
                 FROM publishers
                 WHERE insights_url <> ''
                 ORDER BY id ASC
@@ -3177,6 +3612,10 @@ def record_publisher_inventory_state(
                     snapshot_drive_file_name = str(row[3] or "").strip() or None
                 if snapshot_sha256 is None:
                     snapshot_sha256 = str(row[4] or "").strip() or None
+                if route_trace_json is None:
+                    route_trace_json = str(row[5] or "").strip() or None
+                if scenario_summary_json is None:
+                    scenario_summary_json = str(row[6] or "").strip() or None
                 break
             if matched is None:
                 raise AppError(
@@ -3192,6 +3631,8 @@ def record_publisher_inventory_state(
                 SET
                     inventory_route_kind=?,
                     inventory_route_summary=?,
+                    inventory_route_trace_json=?,
+                    inventory_scenario_summary_json=?,
                     inventory_route_last_final_page_url=?,
                     inventory_route_updated_at=strftime('%s','now'),
                     inventory_snapshot_drive_file_id=?,
@@ -3203,6 +3644,8 @@ def record_publisher_inventory_state(
                 (
                     route_kind,
                     route_summary,
+                    route_trace_json,
+                    scenario_summary_json,
                     last_final_page_url,
                     snapshot_drive_file_id,
                     snapshot_drive_file_name,
