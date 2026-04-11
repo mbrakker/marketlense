@@ -919,6 +919,42 @@ def select_refined_candidate_items(
             )
 
         coarse_resp = _invoke_phase("coarse", phase_candidates, phase_payload)
+
+        expected_coarse_ids = {candidate.id for candidate in phase_candidates}
+        returned_coarse_ids = {result_item.id for result_item in coarse_resp.results}
+        missing_coarse_ids = expected_coarse_ids - returned_coarse_ids
+        if missing_coarse_ids:
+            logger.warning(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="crop_refine_batch_missing_decisions_recover",
+                    module=logger.name,
+                    fields={
+                        "page": page_number,
+                        "phase": "coarse",
+                        "missing_candidate_ids": sorted(missing_coarse_ids),
+                        "missing_count": len(missing_coarse_ids),
+                    },
+                )
+            )
+            for missing_id in sorted(missing_coarse_ids):
+                recovery_index = next(
+                    (
+                        index
+                        for index, candidate in enumerate(phase_candidates)
+                        if candidate.id == missing_id
+                    ),
+                    None,
+                )
+                if recovery_index is None:
+                    continue
+                recovery_resp = _invoke_phase(
+                    "coarse",
+                    [phase_candidates[recovery_index]],
+                    [phase_payload[recovery_index]],
+                )
+                coarse_resp.results.extend(recovery_resp.results)
         coarse_results = {result_item.id: result_item for result_item in coarse_resp.results}
         page_results: dict[int, dict[str, Any]] = {}
         finalize_candidates: list[CropRefineCandidate] = []
@@ -985,6 +1021,41 @@ def select_refined_candidate_items(
             )
         )
         finalize_resp = _invoke_phase("finalize", finalize_candidates, finalize_payload)
+        expected_finalize_ids = {candidate.id for candidate in finalize_candidates}
+        returned_finalize_ids = {result_item.id for result_item in finalize_resp.results}
+        missing_finalize_ids = expected_finalize_ids - returned_finalize_ids
+        if missing_finalize_ids:
+            logger.warning(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="crop_refine_batch_missing_decisions_recover",
+                    module=logger.name,
+                    fields={
+                        "page": page_number,
+                        "phase": "finalize",
+                        "missing_candidate_ids": sorted(missing_finalize_ids),
+                        "missing_count": len(missing_finalize_ids),
+                    },
+                )
+            )
+            for missing_id in sorted(missing_finalize_ids):
+                recovery_index = next(
+                    (
+                        index
+                        for index, candidate in enumerate(finalize_candidates)
+                        if candidate.id == missing_id
+                    ),
+                    None,
+                )
+                if recovery_index is None:
+                    continue
+                recovery_resp = _invoke_phase(
+                    "finalize",
+                    [finalize_candidates[recovery_index]],
+                    [finalize_payload[recovery_index]],
+                )
+                finalize_resp.results.extend(recovery_resp.results)
         finalize_results = {
             result_item.id: result_item for result_item in finalize_resp.results
         }

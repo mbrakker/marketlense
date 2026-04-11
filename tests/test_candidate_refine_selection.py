@@ -190,7 +190,14 @@ def test_refine_selection_adaptive_ambiguous_calls_llm(tmp_path):
             request_id="req",
         )
 
-    deps = _deps(refine_candidate_crops=_refine)
+    deps = _deps(
+        render_prompt=lambda req, ctx: SimpleNamespace(
+            text=f"phase:{req.variables.get('phase', '')}"
+            if getattr(req, "variables", None)
+            else "phase:"
+        ),
+        refine_candidate_crops=_refine,
+    )
     cand = _candidate(
         cid="chart_1",
         kind="chart",
@@ -443,6 +450,122 @@ def test_refine_selection_batched_page_maps_mixed_valid_invalid_decisions(tmp_pa
     assert llm_calls == [["chart_keep", "chart_drop"], ["chart_keep"]]
     assert [item.id for item in items] == ["chart_keep"]
     assert [candidate.id for candidate in accepted] == ["chart_keep"]
+
+
+def test_refine_selection_recovers_missing_batched_decisions(tmp_path):
+    settings = _settings(
+        tmp_path, crop_refine_enabled=True, crop_refine_mode="always"
+    )
+    llm_calls: list[tuple[str, list[str]]] = []
+
+    def _refine(req, ctx):
+        candidate_ids = [candidate.id for candidate in req.candidates]
+        phase = "finalize" if "finalize" in req.user_prompt else "coarse"
+        llm_calls.append((phase, candidate_ids))
+        if phase == "coarse" and candidate_ids == ["chart_1", "chart_2"]:
+            return CropRefineResponse(
+                schema_version="1.0",
+                results=[
+                    CropRefineResult(
+                        schema_version="1.0",
+                        id="chart_1",
+                        is_valid_candidate=True,
+                        refined_bbox=(20.0, 20.0, 280.0, 220.0),
+                        include_title=True,
+                        include_note_if_present=True,
+                        confidence=0.91,
+                        reason="valid",
+                    )
+                ],
+                raw_content='{"results":[]}',
+                prompt_tokens=10,
+                completion_tokens=5,
+                total_tokens=15,
+                request_id="req-coarse-batch",
+            )
+        return CropRefineResponse(
+            schema_version="1.0",
+            results=[
+                CropRefineResult(
+                    schema_version="1.0",
+                    id=candidate.id,
+                    is_valid_candidate=True,
+                    refined_bbox=(
+                        float(candidate.bbox[0]) + 5.0,
+                        float(candidate.bbox[1]) + 5.0,
+                        float(candidate.bbox[2]) + 10.0,
+                        float(candidate.bbox[3]) + 10.0,
+                    ),
+                    include_title=True,
+                    include_note_if_present=True,
+                    confidence=0.93,
+                    reason="valid",
+                )
+                for candidate in req.candidates
+            ],
+            raw_content='{"results":[]}',
+            prompt_tokens=10,
+            completion_tokens=5,
+            total_tokens=15,
+            request_id="req-ok",
+        )
+
+    deps = _deps(refine_candidate_crops=_refine)
+    candidates = [
+        _candidate(
+            cid="chart_1",
+            kind="chart",
+            page=0,
+            bbox=(12.0, 12.0, 260.0, 200.0),
+            meta={"area_frac": 0.08, "text_ratio": 0.42},
+        ),
+        _candidate(
+            cid="chart_2",
+            kind="chart",
+            page=0,
+            bbox=(250.0, 16.0, 500.0, 240.0),
+            meta={"area_frac": 0.09, "text_ratio": 0.38},
+        ),
+    ]
+    ranked = [
+        RankedCandidate(
+            id="chart_1",
+            type="chart",
+            score=92,
+            quality_score=90,
+            insight_score=91,
+            data_score=88,
+            keep=True,
+        ),
+        RankedCandidate(
+            id="chart_2",
+            type="chart",
+            score=91,
+            quality_score=89,
+            insight_score=88,
+            data_score=87,
+            keep=True,
+        ),
+    ]
+
+    items, accepted = rsg.select_refined_candidate_items(
+        ranked_rows=ranked,
+        ranked_candidates=candidates,
+        settings=settings,
+        local_pdf_path=_pdf_path(tmp_path),
+        report_name="report",
+        file_id="file",
+        md5=None,
+        ctx=_ctx(),
+        pdf_context=None,
+        fallback_model="gpt-5-mini",
+        selected_kind_max=max(1, int(settings.rank_selected_max)),
+        dependencies=deps,
+    )
+
+    assert llm_calls[:2] == [("coarse", ["chart_1", "chart_2"]), ("coarse", ["chart_2"])]
+    assert [item.id for item in items] == ["chart_1", "chart_2"]
+    assert [candidate.id for candidate in accepted] == ["chart_1", "chart_2"]
 
 
 def test_refine_selection_early_stops_at_selected_max(tmp_path):
