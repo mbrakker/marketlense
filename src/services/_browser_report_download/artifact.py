@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from hashlib import sha256
 import re
+import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import urlsplit
@@ -301,6 +302,7 @@ def finalize_browser_report_download_result(
 
     downloaded_path = _resolve_downloaded_file(
         explicit_path=agent_result.downloaded_file_path,
+        attachment_paths=browser_run.attachment_paths,
         browser_downloaded_files=browser_run.downloaded_files,
         download_dir=download_dir,
     )
@@ -338,6 +340,13 @@ def finalize_browser_report_download_result(
             final_url,
         ],
     )
+    blocked_reason = _resolve_blocked_reason(
+        request=request,
+        delivery_email=delivery_email,
+        agent_result=agent_result,
+        encountered_form_fields=encountered_form_fields,
+        final_url=final_url,
+    )
     route_kind = _resolve_route_kind(
         request=request,
         agent_result=agent_result,
@@ -345,15 +354,34 @@ def finalize_browser_report_download_result(
         downloaded_path=downloaded_path,
         encountered_form_fields=encountered_form_fields,
         post_submit_message=agent_result.post_submit_message,
+        blocked_reason=blocked_reason,
     )
     if route_kind == "pdf_download" and downloaded_path is None:
+        claimed_artifact_paths = _normalize_string_list(
+            [
+                str(agent_result.downloaded_file_path or "").strip(),
+                *list(browser_run.attachment_paths or []),
+                *list(browser_run.downloaded_files or []),
+            ]
+        )
+        error_code = (
+            "browser_download_missing_file"
+            if claimed_artifact_paths
+            else "browser_download_unverified_pdf_claim"
+        )
+        error_message = (
+            "browser-use classified the route as a PDF download but no local file was found"
+            if claimed_artifact_paths
+            else "browser-use classified the route as a PDF download without producing a verifiable artifact"
+        )
         raise AppError(
-            code="browser_download_missing_file",
-            message="browser-use classified the route as a PDF download but no local file was found",
+            code=error_code,
+            message=error_message,
             retryable=True,
             context={
                 "normalized_url": normalized_url,
                 "download_dir": str(download_dir),
+                "claimed_artifact_paths": claimed_artifact_paths,
             },
         )
 
@@ -391,13 +419,6 @@ def finalize_browser_report_download_result(
     terminal_text_excerpt = (
         str(agent_result.terminal_text_excerpt or "").strip()
         or _extract_visible_text_from_html(browser_html)
-    )
-    blocked_reason = _resolve_blocked_reason(
-        request=request,
-        delivery_email=delivery_email,
-        agent_result=agent_result,
-        encountered_form_fields=encountered_form_fields,
-        final_url=final_url,
     )
     blocked_reason_detail = _resolve_blocked_reason_detail(
         agent_result=agent_result,
@@ -668,6 +689,7 @@ def _salvage_without_structured_result(
     terminal_text_excerpt = _extract_visible_text_from_html(browser_html)
     downloaded_path = _resolve_downloaded_file(
         explicit_path=None,
+        attachment_paths=browser_run.attachment_paths,
         browser_downloaded_files=browser_run.downloaded_files,
         download_dir=download_dir,
     )
@@ -1373,10 +1395,13 @@ def _resolve_route_kind(
     downloaded_path: Path | None,
     encountered_form_fields: list[str],
     post_submit_message: str,
+    blocked_reason: str | None,
 ) -> str:
     token = str(route_kind or "").strip().lower()
     if downloaded_path is not None:
         return "pdf_download"
+    if blocked_reason:
+        return "email_delivery"
     if token in _BLOCKED_REASONS:
         return "email_delivery"
     if encountered_form_fields or _message_indicates_email_delivery(post_submit_message):
@@ -2772,40 +2797,104 @@ def _used_candidate_source_page(request: BrowserReportDownloadRequest) -> bool:
 def _resolve_downloaded_file(
     *,
     explicit_path: str | None,
+    attachment_paths: list[str],
     browser_downloaded_files: list[str],
     download_dir: Path,
 ) -> Path | None:
     ignored_runtime_files = {"terminal_snapshot.html", "terminal_screenshot.png"}
-    candidates: list[Path] = []
+    external_candidates: list[Path] = []
+    local_candidates: list[Path] = []
+    seen: set[Path] = set()
+    resolved_download_dir = download_dir.expanduser().resolve()
+
+    def add_candidate(raw_path: str | Path | None) -> None:
+        if raw_path is None:
+            return
+        token = str(raw_path).strip()
+        if not token:
+            return
+        try:
+            resolved = Path(token).expanduser().resolve()
+        except OSError:
+            return
+        if resolved in seen:
+            return
+        seen.add(resolved)
+        if not resolved.exists() or not resolved.is_file():
+            return
+        if resolved.name in ignored_runtime_files:
+            return
+        if _is_within_directory(path=resolved, directory=resolved_download_dir):
+            local_candidates.append(resolved)
+            return
+        external_candidates.append(resolved)
+
     if explicit_path:
-        candidates.append(Path(explicit_path).expanduser())
+        add_candidate(explicit_path)
+    for raw_path in attachment_paths:
+        add_candidate(raw_path)
     for raw_path in browser_downloaded_files:
-        candidates.append(Path(raw_path).expanduser())
+        add_candidate(raw_path)
     for path in sorted(download_dir.glob("*")):
         if path.is_file():
-            if path.name in ignored_runtime_files:
-                continue
-            candidates.append(path)
+            add_candidate(path)
 
-    resolved_candidates: list[Path] = []
-    for candidate in candidates:
-        try:
-            resolved = candidate.resolve()
-        except OSError:
-            continue
-        if not resolved.exists() or not resolved.is_file():
-            continue
-        if download_dir not in resolved.parents:
-            continue
-        resolved_candidates.append(resolved)
-    if not resolved_candidates:
+    selected = _select_download_candidate(local_candidates)
+    if selected is not None:
+        return selected
+    selected = _select_download_candidate(external_candidates)
+    if selected is None:
         return None
-    pdf_candidates = [
-        path for path in resolved_candidates if path.suffix.lower() == ".pdf"
-    ]
-    selected = pdf_candidates or resolved_candidates
+    return _adopt_external_downloaded_file(
+        source_path=selected,
+        download_dir=resolved_download_dir,
+    )
+
+
+def _is_within_directory(*, path: Path, directory: Path) -> bool:
+    try:
+        path.relative_to(directory)
+    except ValueError:
+        return False
+    return True
+
+
+def _select_download_candidate(candidates: list[Path]) -> Path | None:
+    if not candidates:
+        return None
+    pdf_candidates = [path for path in candidates if path.suffix.lower() == ".pdf"]
+    selected = pdf_candidates or candidates
     selected.sort(key=lambda path: path.stat().st_mtime, reverse=True)
     return selected[0]
+
+
+def _adopt_external_downloaded_file(
+    *,
+    source_path: Path,
+    download_dir: Path,
+) -> Path | None:
+    download_dir.mkdir(parents=True, exist_ok=True)
+    target_path = download_dir / source_path.name
+    counter = 1
+    while target_path.exists():
+        try:
+            if source_path.samefile(target_path):
+                return target_path.resolve()
+        except OSError:
+            pass
+        target_path = download_dir / f"{source_path.stem}_{counter}{source_path.suffix}"
+        counter += 1
+    try:
+        shutil.copy2(source_path, target_path)
+    except OSError:
+        return None
+    try:
+        resolved = target_path.resolve()
+    except OSError:
+        return None
+    if not resolved.exists() or not resolved.is_file():
+        return None
+    return resolved
 
 
 def _read_text_if_small(path: Path, *, max_bytes: int) -> str:

@@ -88,10 +88,16 @@ def _runtime(
         "encountered_form_fields": [],
         "post_submit_message": "",
     }
+    history_attachments: list[str] = []
 
     class FakeHistory:
         def final_result(self) -> str:
             return json.dumps(payload)
+
+        def action_results(self) -> list[Any]:
+            return [
+                SimpleNamespace(attachments=list(history_attachments)),
+            ]
 
     class FakeBrowser:
         def __init__(
@@ -163,6 +169,7 @@ def _runtime(
                 payload["downloaded_file_path"] = str(pdf_path)
                 payload["downloaded_file_name"] = pdf_path.name
                 payload["downloaded_mime_type"] = "application/pdf"
+                history_attachments[:] = [str(pdf_path)]
             return FakeHistory()
 
     return SimpleNamespace(
@@ -753,7 +760,7 @@ def test_download_report_with_browser_use_rejects_conflicting_pdf_metadata(
     )
 
 
-def test_download_report_with_browser_use_raises_when_pdf_classification_has_no_file(
+def test_download_report_with_browser_use_raises_when_pdf_classification_has_no_verifiable_artifact(
     tmp_path: Path,
     run_context,
     external_boundary_mocks_only,
@@ -784,7 +791,154 @@ def test_download_report_with_browser_use_raises_when_pdf_classification_has_no_
 
     assert_app_error(
         excinfo.value,
-        code="browser_download_missing_file",
+        code="browser_download_unverified_pdf_claim",
+        retryable=True,
+    )
+
+
+def test_download_report_with_browser_use_adopts_external_pdf_attachment(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="Open the report page and save the current page as a PDF.",
+        create_pdf=False,
+        email_submission_completed=None,
+    )
+    original_runtime = runtime.Agent
+
+    class ExternalAttachmentAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            self.browser.url = "https://example.com/report"
+            self.browser.title = "External attachment report"
+            external_dir = tmp_path / "browseruse_agent_data"
+            external_dir.mkdir(parents=True, exist_ok=True)
+            pdf_path = external_dir / "external-report.pdf"
+            pdf_path.write_bytes(b"%PDF-1.7 external attachment")
+            payload = {
+                "route_kind": "pdf_download",
+                "route_summary": "Open the report page and save the current page as a PDF artifact.",
+                "final_page_url": "https://example.com/report",
+                "resolved_target_url": "https://example.com/report",
+                "email_submission_completed": None,
+                "downloaded_file_path": None,
+                "downloaded_file_name": None,
+                "downloaded_mime_type": None,
+                "encountered_form_fields": [],
+                "post_submit_message": "",
+                "route_steps": [
+                    {
+                        "index": 0,
+                        "action": "navigate",
+                        "target_text": "",
+                        "target_role": "url",
+                        "target_url": "https://example.com/report",
+                        "result": "Opened the report landing page",
+                    },
+                    {
+                        "index": 1,
+                        "action": "save_as_pdf",
+                        "target_text": "external-report.pdf",
+                        "target_role": "page",
+                        "target_url": "https://example.com/report",
+                        "result": "Saved the current page as PDF",
+                    },
+                ],
+            }
+
+            class ExternalAttachmentHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+                def action_results(self_nonlocal) -> list[Any]:
+                    return [SimpleNamespace(attachments=[str(pdf_path)])]
+
+            return ExternalAttachmentHistory()
+
+    runtime.Agent = ExternalAttachmentAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=_settings(tmp_path),
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "pdf_download"
+    assert response.outcome == "downloaded"
+    assert response.downloaded_file_path is not None
+    downloaded_path = Path(str(response.downloaded_file_path))
+    assert downloaded_path.exists()
+    assert downloaded_path.parent != (tmp_path / "browseruse_agent_data")
+    assert str(tmp_path / "downloads") in str(downloaded_path)
+    assert downloaded_path.read_bytes().startswith(b"%PDF-")
+
+
+def test_download_report_with_browser_use_raises_for_unverified_pdf_claim_with_spurious_blocker(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+    assert_app_error,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="Attempted to follow the report links but did not acquire an artifact.",
+        create_pdf=False,
+        email_submission_completed=False,
+    )
+    original_runtime = runtime.Agent
+
+    class SpuriousBlockerAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            self.browser.url = "https://example.com/2026-report"
+            self.browser.title = "2026 Report"
+            payload = json.loads(super().run_sync(max_steps).final_result())
+            payload["blocked_reason"] = "blocked_unknown_required_enum"
+            payload["blocked_reason_detail"] = (
+                "The agent could not find the correct report link after multiple attempts."
+            )
+            payload["terminal_text_excerpt"] = "The 2026 report page is available here."
+
+            class SpuriousBlockerHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+                def action_results(self_nonlocal) -> list[Any]:
+                    return []
+
+            return SpuriousBlockerHistory()
+
+    runtime.Agent = SpuriousBlockerAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    with pytest.raises(AppError) as excinfo:
+        service.download_report_with_browser_use(
+            BrowserReportDownloadRequest(
+                schema_version="1.0",
+                url="https://example.com/2026-report",
+                settings=_settings(tmp_path),
+            ),
+            run_context,
+        )
+
+    assert_app_error(
+        excinfo.value,
+        code="browser_download_unverified_pdf_claim",
         retryable=True,
     )
 

@@ -45,6 +45,7 @@ class BrowserAgentRunResult:
     final_page_title: str
     final_page_html: str
     downloaded_files: list[str]
+    attachment_paths: list[str]
     network_resource_urls: list[str]
     network_events: list[BrowserDownloadNetworkEvent]
     html_snapshot_path: str
@@ -90,6 +91,7 @@ def run_browser_report_download_agent(
     final_page_title = ""
     final_page_html = ""
     downloaded_files: list[str] = []
+    attachment_paths: list[str] = []
     network_resource_urls: list[str] = []
     network_events: list[BrowserDownloadNetworkEvent] = []
     html_snapshot_path = ""
@@ -118,6 +120,7 @@ def run_browser_report_download_agent(
         raw_model_response = str(history.final_result() or "").strip()
         history_final_page_url = _read_history_final_page_url(history)
         history_final_page_title = _read_history_final_page_title(history)
+        attachment_paths = _read_history_attachment_paths(history)
         history_screenshot_path = _copy_history_screenshot(
             history=history,
             download_dir=download_dir,
@@ -186,6 +189,7 @@ def run_browser_report_download_agent(
                 "normalized_url": normalized_url,
                 "raw_model_response": raw_model_response,
                 "downloaded_files": downloaded_files,
+                "attachment_paths": attachment_paths,
                 "browser_final_url": final_page_url,
                 "browser_final_title": final_page_title,
                 "browser_final_html_size": len(final_page_html),
@@ -203,6 +207,7 @@ def run_browser_report_download_agent(
         final_page_title=final_page_title,
         final_page_html=final_page_html,
         downloaded_files=downloaded_files,
+        attachment_paths=attachment_paths,
         network_resource_urls=network_resource_urls,
         network_events=network_events,
         html_snapshot_path=html_snapshot_path,
@@ -664,6 +669,28 @@ def _read_history_final_state(history: Any) -> Any:
         return None
     last_entry = entries[-1]
     return getattr(last_entry, "state", None)
+
+
+def _read_history_attachment_paths(history: Any) -> list[str]:
+    action_results = getattr(history, "action_results", None)
+    if not callable(action_results):
+        return []
+    attachments: list[str] = []
+    seen: set[str] = set()
+    try:
+        results = action_results()
+    except Exception:
+        return []
+    if not isinstance(results, list):
+        return []
+    for result in results:
+        for raw_path in getattr(result, "attachments", None) or []:
+            token = str(raw_path or "").strip()
+            if not token or token in seen:
+                continue
+            seen.add(token)
+            attachments.append(token)
+    return attachments
 
 
 def _read_page_url(page: Any) -> str:
