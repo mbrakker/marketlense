@@ -65,6 +65,8 @@ CROP_STRICT_EDGE_TOUCH_TOL = 1.0
 CROP_STRICT_EDGE_MIN_OVERLAP = 0.2
 CROP_STRICT_EDGE_TRIM_OVERLAP_RATIO = 0.25
 CROP_STRICT_EDGE_TRIM_MARGIN = 1.0
+CROP_REFINE_EDGE_MAX_TRIM_FRAC = 0.035
+CROP_REFINE_EDGE_MAX_TRIM_PX = 24.0
 CROP_FILENAME_ID_MAX_LEN = 96
 TABLE_CONTINUATION_MIN_WIDTH_FRAC = 0.82
 TABLE_CONTINUATION_MIN_HEIGHT_FRAC = 0.3
@@ -1085,6 +1087,9 @@ def _crop_refine_edge_guard_rect(page: fitz.Page, rect: fitz.Rect) -> fitz.Rect:
     adjusted &= page_rect
 
     # Pass 2: if only a tiny fraction of a text block is clipped at the edge, trim it away.
+    # Guardrail: never allow this cleanup pass to carve out a large share of the crop.
+    max_trim_x = min(CROP_REFINE_EDGE_MAX_TRIM_PX, adjusted.width * CROP_REFINE_EDGE_MAX_TRIM_FRAC)
+    max_trim_y = min(CROP_REFINE_EDGE_MAX_TRIM_PX, adjusted.height * CROP_REFINE_EDGE_MAX_TRIM_FRAC)
     for block in blocks:
         inter = adjusted & block
         if inter.is_empty:
@@ -1093,13 +1098,13 @@ def _crop_refine_edge_guard_rect(page: fitz.Page, rect: fitz.Rect) -> fitz.Rect:
         if overlap_ratio > CROP_REFINE_EDGE_TRIM_OVERLAP_RATIO:
             continue
         crosses_left, crosses_right, crosses_top, crosses_bottom = _edge_cross(block, adjusted)
-        if crosses_left:
+        if crosses_left and (block.x1 - adjusted.x0) <= max_trim_x:
             adjusted.x0 = max(adjusted.x0, block.x1)
-        if crosses_right:
+        if crosses_right and (adjusted.x1 - block.x0) <= max_trim_x:
             adjusted.x1 = min(adjusted.x1, block.x0)
-        if crosses_top:
+        if crosses_top and (block.y1 - adjusted.y0) <= max_trim_y:
             adjusted.y0 = max(adjusted.y0, block.y1)
-        if crosses_bottom:
+        if crosses_bottom and (adjusted.y1 - block.y0) <= max_trim_y:
             adjusted.y1 = min(adjusted.y1, block.y0)
     adjusted &= page_rect
 

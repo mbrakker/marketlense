@@ -55,6 +55,23 @@ def _build_pdf_with_bottom_body_text(path: Path) -> None:
     doc.close()
 
 
+def _build_pdf_with_long_line_crossing_crop_edge(path: Path) -> None:
+    doc = fitz.open()
+    page = doc.new_page(width=700, height=800)
+    page.draw_rect(fitz.Rect(60, 90, 360, 420), color=(0, 0, 0), fill=(0.95, 0.95, 0.95))
+    page.insert_text((74, 130), "Figure 1. Edge trimming guard", fontsize=16)
+    page.insert_textbox(
+        fitz.Rect(255, 200, 690, 235),
+        (
+            "This is intentionally long body text that crosses the crop edge and should "
+            "not trigger a large inward trim of the chart area."
+        ),
+        fontsize=10,
+    )
+    doc.save(path.as_posix())
+    doc.close()
+
+
 def _build_pdf_with_table_note_and_spillover(path: Path) -> None:
     doc = fitz.open()
     page = doc.new_page(width=620, height=820)
@@ -869,3 +886,19 @@ def test_apply_crop_refine_bbox_rejects_page_out_of_range(tmp_path, assert_app_e
         code="crop_refine_page_out_of_range",
         retryable=False,
     )
+
+
+def test_apply_crop_refine_bbox_does_not_over_trim_for_long_crossing_text(tmp_path):
+    pdf_path = tmp_path / "edge-trim-guard.pdf"
+    _build_pdf_with_long_line_crossing_crop_edge(pdf_path)
+    response = apply_crop_refine_bbox(
+        CropRefineBBoxApplyRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            page=0,
+            bbox=(60.0, 90.0, 360.0, 420.0),
+        ),
+        _ctx(),
+    )
+
+    assert response.bbox[2] >= 348.0
