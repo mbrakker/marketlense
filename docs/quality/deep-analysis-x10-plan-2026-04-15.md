@@ -54,7 +54,6 @@ Signals used:
 | 2 | Contracts | Generate JSON Schema from dataclasses in CI and snapshot diff per PR | Turns schema breakage into compile-time signal; cuts integration breakage detection latency by >x10 | M / High | Deterministic review artifact | Extra CI steps |
 | 3 | Contracts | Add `required-field population` invariant checks in constructors (or validators) | Stops sentinel/default leakage that cascades into downstream LLM failures; sharply reduces latent defect propagation | M / Very High | Fails fast, clearer errors | More validation code paths |
 | 4 | Contracts | Build contract compatibility matrix tests (N-1, N, N+adapter) | Enables safe rolling upgrades and replay; release safety can improve >x10 for mixed-version runs | L / High | Production-friendly evolution | Adds test maintenance |
-| 5 | Contracts | Introduce typed semantic IDs (`ReportId`, `RunId`, `TaskId`) wrappers | Prevents accidental ID mixing, a common source of state corruption; can reduce class of bugs by order-of-magnitude | M / High | Strong compile-time semantics | Refactor breadth |
 | 6 | Services / OpenAI | Add adaptive model routing by task criticality + token budget | Uses cheaper/faster models for low-risk steps and premium models only on high-uncertainty steps; cost-per-report can drop >x10 on large volumes | L / Transformational | Massive cost control | Needs robust quality guardrails |
 | 7 | Services / OpenAI | Add response cache with semantic key (`prompt_hash + context_hash + model_config`) | Eliminates repeated calls on reruns/regeneration loops; for repeated corpora this yields >x10 token reduction | M / Transformational | Fast reruns, lower spend | Cache invalidation complexity |
 | 8 | Services / OpenAI | Implement automatic prompt-minification with token budget planner | Reduces context size before calls; large prompt chains can see >x10 latency/cost gains in worst-case docs | M / High | Direct token savings | Risk of dropping relevant context |
@@ -234,15 +233,6 @@ Scoring rubric:
     - Contract compatibility suites run in CI.
     - Adapter logic covered with positive + negative cases.
     - Breaking changes require explicit version bump evidence.
-
-- **Title:** Introduce typed semantic IDs (`RunId`, `TaskId`, `ReportId`) [Impact: 3/5, Effort: 3/5]
-  - Explanation: Replace free-form string IDs with typed wrappers to prevent accidental ID mixing. This class of corruption bugs can reduce by >10x.
-  - Pros: Stronger semantics, safer refactors.
-  - Cons: Broad signature changes across modules.
-  - Acceptance Criteria:
-    - Shared ID contracts introduced and adopted in core paths.
-    - Mixed-ID misuse triggers typing or runtime validation failure.
-    - Orchestrator/state tests cover ID round-trips.
 
 ---
 

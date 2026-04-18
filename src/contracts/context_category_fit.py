@@ -5,6 +5,7 @@ from typing import List, Optional
 
 from src.contracts.config import AppSettings
 from src.contracts.report_store import ReportMetadataGetResponse
+from src.contracts.semantic_ids import ReportId, SemanticIdContract
 
 
 @dataclass(frozen=True)
@@ -28,8 +29,8 @@ class ReportContextSection:
 
 
 @dataclass(frozen=True)
-class ReportCategoryContext:
-    report_id: str = field(metadata={"doc": "Stable report identifier."})
+class ReportCategoryContext(SemanticIdContract):
+    report_id: ReportId = field(metadata={"doc": "Stable report identifier."})
     title: str = field(metadata={"doc": "Human-readable report title."})
     publisher: str = field(metadata={"doc": "Publisher or organization if known."})
     region: str = field(metadata={"doc": "Primary region or market focus if known."})
@@ -133,8 +134,8 @@ class ContextCategoryFitRequest:
 
 
 @dataclass(frozen=True)
-class ContextCategoryFitResponse:
-    report_id: str = field(metadata={"doc": "Stable report identifier."})
+class ContextCategoryFitResponse(SemanticIdContract):
+    report_id: ReportId = field(metadata={"doc": "Stable report identifier."})
     categories: List[str] = field(
         metadata={"doc": "Selected portal category identifiers in rank order."}
     )

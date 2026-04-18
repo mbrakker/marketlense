@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
+from src.contracts.semantic_ids import RunId, SemanticIdContract
+
 
 @dataclass(frozen=True)
 class ProcessOutputChunk:
@@ -20,11 +22,11 @@ class ProcessOutputChunk:
 
 
 @dataclass(frozen=True)
-class UiRunSummary:
+class UiRunSummary(SemanticIdContract):
     schema_version: str = field(
         metadata={"doc": "UI-run summary schema version."}
     )
-    run_id: str = field(metadata={"doc": "Unique UI run identifier."})
+    run_id: RunId = field(metadata={"doc": "Unique UI run identifier."})
     run_type: str = field(metadata={"doc": "Stable run type for this workflow."})
     display_name: str = field(
         metadata={"doc": "Human-readable display name for the workflow run."}
@@ -58,11 +60,11 @@ class UiRunSummary:
 
 
 @dataclass(frozen=True)
-class UiRunRecord:
+class UiRunRecord(SemanticIdContract):
     schema_version: str = field(
         metadata={"doc": "UI-run record schema version."}
     )
-    run_id: str = field(metadata={"doc": "Unique UI run identifier."})
+    run_id: RunId = field(metadata={"doc": "Unique UI run identifier."})
     run_type: str = field(metadata={"doc": "Stable run type for this workflow."})
     display_name: str = field(
         metadata={"doc": "Human-readable display name for the workflow run."}
@@ -149,14 +151,14 @@ class UiRunLaunchResponse:
 
 
 @dataclass(frozen=True)
-class UiRunPollRequest:
+class UiRunPollRequest(SemanticIdContract):
     schema_version: str = field(
         metadata={"doc": "UI-run poll request schema version."}
     )
     registry_path: str = field(
         metadata={"doc": "Filesystem path to the UI-run registry SQLite database."}
     )
-    run_id: str = field(metadata={"doc": "Run identifier to poll."})
+    run_id: RunId = field(metadata={"doc": "Run identifier to poll."})
     output_tail_bytes: int = field(
         default=32768,
         metadata={"doc": "Maximum trailing bytes of output log to read for the UI."},
@@ -178,14 +180,14 @@ class UiRunPollResponse:
 
 
 @dataclass(frozen=True)
-class UiRunCancelRequest:
+class UiRunCancelRequest(SemanticIdContract):
     schema_version: str = field(
         metadata={"doc": "UI-run cancel request schema version."}
     )
     registry_path: str = field(
         metadata={"doc": "Filesystem path to the UI-run registry SQLite database."}
     )
-    run_id: str = field(metadata={"doc": "Run identifier to cancel."})
+    run_id: RunId = field(metadata={"doc": "Run identifier to cancel."})
 
 
 @dataclass(frozen=True)
@@ -229,14 +231,14 @@ class UiRunListResponse:
 
 
 @dataclass(frozen=True)
-class UiRunWorkerRequest:
+class UiRunWorkerRequest(SemanticIdContract):
     schema_version: str = field(
         metadata={"doc": "UI-run worker request schema version."}
     )
     registry_path: str = field(
         metadata={"doc": "Filesystem path to the UI-run registry SQLite database."}
     )
-    run_id: str = field(metadata={"doc": "Run identifier to execute."})
+    run_id: RunId = field(metadata={"doc": "Run identifier to execute."})
     run_type: str = field(metadata={"doc": "Stable run type the worker should execute."})
     request_payload: dict[str, Any] = field(
         metadata={"doc": "Typed payload values that describe the workflow invocation."}
@@ -263,14 +265,14 @@ class UiRunRecordWriteResponse:
 
 
 @dataclass(frozen=True)
-class UiRunRecordGetRequest:
+class UiRunRecordGetRequest(SemanticIdContract):
     schema_version: str = field(
         metadata={"doc": "UI-run record get request schema version."}
     )
     registry_path: str = field(
         metadata={"doc": "Filesystem path to the UI-run registry SQLite database."}
     )
-    run_id: str = field(metadata={"doc": "Run identifier to retrieve."})
+    run_id: RunId = field(metadata={"doc": "Run identifier to retrieve."})
 
 
 @dataclass(frozen=True)

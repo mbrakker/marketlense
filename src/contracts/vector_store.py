@@ -3,11 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List, Optional
 
+from src.contracts.semantic_ids import ReportId, SemanticIdContract
+
 
 @dataclass(frozen=True)
-class VectorStoreMetadata:
+class VectorStoreMetadata(SemanticIdContract):
     schema_version: str = field(metadata={"doc": "Vector store metadata schema version."})
-    report_id: str = field(metadata={"doc": "Report identifier associated with this vector store."})
+    report_id: ReportId = field(metadata={"doc": "Report identifier associated with this vector store."})
     report_name: str = field(metadata={"doc": "Human-friendly report name associated with this vector store."})
     taxonomy: List[str] = field(default_factory=list, metadata={"doc": "Taxonomy tags applied to the report."})
     categories: List[str] = field(default_factory=list, metadata={"doc": "Assigned category IDs for the report."})

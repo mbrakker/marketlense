@@ -5,6 +5,7 @@ from typing import List, Optional
 
 from src.contracts.docpacks import DocPackPayloadMap
 from src.contracts.report_models import ReportPayload
+from src.contracts.semantic_ids import ReportId, SemanticIdContract
 
 
 @dataclass(frozen=True)
@@ -86,9 +87,9 @@ class ValidationReport:
 
 
 @dataclass(frozen=True)
-class ValidationRequest:
+class ValidationRequest(SemanticIdContract):
     schema_version: str = field(metadata={"doc": "Validation request schema version."})
-    report_id: str = field(
+    report_id: ReportId = field(
         metadata={"doc": "Unique identifier for the report being validated."}
     )
     report: ReportPayload = field(

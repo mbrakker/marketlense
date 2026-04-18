@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+from src.contracts.semantic_ids import RunId
 from src.contracts.ui_run_control import (
     UiRunRecord,
     UiRunRecordGetRequest,
@@ -100,6 +101,8 @@ def test_run_registry_service_write_get_and_list(
     ).records
 
     assert loaded == newer
+    assert isinstance(loaded.run_id, RunId)
+    assert all(isinstance(item.run_id, RunId) for item in listed)
     assert [item.run_id for item in listed] == ["run-new", "run-old"]
     assert_logs_have_required_fields(caplog.records)
 
@@ -158,3 +161,4 @@ def test_run_registry_service_upserts_existing_record(tmp_path: Path) -> None:
     ).record
 
     assert loaded == succeeded
+    assert isinstance(loaded.run_id, RunId)

@@ -3,13 +3,15 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Any, List
 
+from src.contracts.semantic_ids import RunId, SemanticIdContract, TaskId
+
 
 @dataclass(frozen=True)
-class CostLedgerEntry:
+class CostLedgerEntry(SemanticIdContract):
     schema_version: str = field(metadata={"doc": "Cost ledger entry schema version."})
     timestamp_utc: str = field(metadata={"doc": "ISO-8601 UTC timestamp when the call completed."})
-    run_id: str = field(metadata={"doc": "Run identifier."})
-    task_id: str = field(metadata={"doc": "Task identifier."})
+    run_id: RunId = field(metadata={"doc": "Run identifier."})
+    task_id: TaskId = field(metadata={"doc": "Task identifier."})
     span_id: str = field(metadata={"doc": "Span identifier for the model call."})
     step_name: str = field(metadata={"doc": "Logical step name, e.g., openai_analyze or rank_candidates."})
     model: str = field(metadata={"doc": "Model ID used for the call."})
@@ -84,11 +86,11 @@ class StepCostTotal:
 
 
 @dataclass(frozen=True)
-class CostReportRequest:
+class CostReportRequest(SemanticIdContract):
     schema_version: str = field(metadata={"doc": "Cost report request schema version."})
     ledger_path: str = field(metadata={"doc": "Path to the ledger JSONL file to analyze."})
     date_utc: Optional[str] = field(default=None, metadata={"doc": "Optional UTC date (YYYY-MM-DD) filter."})
-    run_id: Optional[str] = field(default=None, metadata={"doc": "Optional run_id filter."})
+    run_id: Optional[RunId] = field(default=None, metadata={"doc": "Optional run_id filter."})
     top_n: int = field(default=5, metadata={"doc": "Number of top-cost steps to return."})
 
 

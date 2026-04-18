@@ -8,6 +8,7 @@ from src.contracts.report_analysis import (
     AnalysisStorePackResponse,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.semantic_ids import ReportId
 from src.generators.analysis_store_adapter import resolve_pack_path, store_pack
 
 
@@ -105,6 +106,7 @@ def test_resolve_pack_path_retries_legacy_positional_signature(tmp_path):
     output_path = resolve_pack_path(analysis_store=store, request=request, ctx=_ctx())
 
     assert output_path == "legacy/path/artifacts.json"
+    assert isinstance(store.pack_path_calls[0][1], ReportId)
     assert store.pack_path_calls == [
         (str(tmp_path), "report-legacy", "artifacts", "legacy-slug")
     ]
@@ -150,6 +152,7 @@ def test_store_pack_retries_legacy_positional_signature(tmp_path):
     output_path = store_pack(analysis_store=store, request=request, ctx=ctx)
 
     assert output_path == "legacy/path/artifacts.json"
+    assert isinstance(store.store_pack_calls[0][1], ReportId)
     assert store.store_pack_calls == [
         (str(tmp_path), "report-legacy", "artifacts", payload, ctx, "legacy-slug")
     ]

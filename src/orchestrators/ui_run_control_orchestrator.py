@@ -9,6 +9,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from src.contracts.run_context import RunContext
+from src.contracts.semantic_ids import RunId
 from src.contracts.ui_run_control import (
     ProcessLaunchRequest,
     ProcessOutputChunk,
@@ -87,7 +88,7 @@ def launch_ui_run(
     request: UiRunLaunchRequest, ctx: RunContext
 ) -> UiRunLaunchResponse:
     created_at = _utc_now()
-    run_id = str(uuid4())
+    run_id = RunId(str(uuid4()))
     run_dir = _run_state_dir(request.registry_path) / run_id
     request_path = run_dir / "request.json"
     output_path = run_dir / "output.log"

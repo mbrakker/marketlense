@@ -3,11 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List, Optional
 
+from src.contracts.semantic_ids import ReportId, SemanticIdContract
+
 
 @dataclass(frozen=True)
-class CandidateExtractRequest:
+class CandidateExtractRequest(SemanticIdContract):
     schema_version: str = field(metadata={"doc": "Candidate extraction request schema version."})
-    report_id: str = field(metadata={"doc": "Stable report identifier for outputs."})
+    report_id: ReportId = field(metadata={"doc": "Stable report identifier for outputs."})
     pdf_path: str = field(metadata={"doc": "Filesystem path to the PDF."})
     output_dir: str = field(metadata={"doc": "Root output directory for candidate artifacts."})
     report_name: str = field(metadata={"doc": "Normalized report name for asset paths."})
@@ -16,9 +18,9 @@ class CandidateExtractRequest:
 
 
 @dataclass(frozen=True)
-class CandidateExtractOutcome:
+class CandidateExtractOutcome(SemanticIdContract):
     schema_version: str = field(metadata={"doc": "Candidate extraction outcome schema version."})
-    report_id: str = field(metadata={"doc": "Report identifier used for outputs."})
+    report_id: ReportId = field(metadata={"doc": "Report identifier used for outputs."})
     report_name: str = field(metadata={"doc": "Normalized report name."})
     pdf_path: str = field(metadata={"doc": "Filesystem path to the PDF."})
     candidates_path: str = field(metadata={"doc": "Filesystem path to the saved candidates JSON."})

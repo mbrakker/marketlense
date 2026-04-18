@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 
 from src.contracts.ingest import IngestSettings
 from src.contracts.run_context import RunContext
+from src.contracts.semantic_ids import ReportId, SemanticIdContract
 
 
 @dataclass(frozen=True)
@@ -139,8 +140,8 @@ class RegenerationLoopState:
 
 
 @dataclass(frozen=True)
-class ArtifactRegenerationRequest:
-    report_id: str = field(metadata={"doc": "Report identifier."})
+class ArtifactRegenerationRequest(SemanticIdContract):
+    report_id: ReportId = field(metadata={"doc": "Report identifier."})
     report_name: str = field(
         metadata={"doc": "Normalized report slug used for persisted outputs."}
     )

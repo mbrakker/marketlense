@@ -3,12 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 
+from src.contracts.semantic_ids import ReportId, SemanticIdContract
+
 
 @dataclass(frozen=True)
-class AnalysisPackPathRequest:
+class AnalysisPackPathRequest(SemanticIdContract):
     schema_version: str = field(metadata={"doc": "Analysis pack path request schema version."})
     output_dir: str = field(metadata={"doc": "Base output directory."})
-    report_id: str = field(metadata={"doc": "Report identifier used as slug fallback when report_slug is missing."})
+    report_id: ReportId = field(metadata={"doc": "Report identifier used as slug fallback when report_slug is missing."})
     pack_name: str = field(metadata={"doc": "Pack name without file extension."})
     report_slug: Optional[str] = field(default=None, metadata={"doc": "Optional normalized report slug for per-report layout."})
 
@@ -20,10 +22,10 @@ class AnalysisPackPathResponse:
 
 
 @dataclass(frozen=True)
-class AnalysisStorePackRequest:
+class AnalysisStorePackRequest(SemanticIdContract):
     schema_version: str = field(metadata={"doc": "Analysis pack store request schema version."})
     output_dir: str = field(metadata={"doc": "Base output directory."})
-    report_id: str = field(metadata={"doc": "Report identifier."})
+    report_id: ReportId = field(metadata={"doc": "Report identifier."})
     pack_name: str = field(metadata={"doc": "Pack name without file extension."})
     payload: Dict[str, Any] = field(metadata={"doc": "JSON-serializable payload to write."})
     report_slug: Optional[str] = field(default=None, metadata={"doc": "Optional normalized report slug for per-report layout."})

@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+from src.contracts.semantic_ids import RunId
 from src.contracts.ui_run_control import (
     ProcessLaunchResponse,
     ProcessOutputChunk,
@@ -92,6 +93,8 @@ def test_launch_ui_run_persists_record_and_request(
     ).record
 
     assert stored == response.record
+    assert isinstance(response.record.run_id, RunId)
+    assert isinstance(stored.run_id, RunId)
     assert response.record.pid == 4321
     assert Path(response.record.request_path).exists()
     assert Path(response.record.output_path).parent.exists()
@@ -156,6 +159,7 @@ def test_poll_ui_run_marks_unexpected_worker_exit_as_failed(
     )
 
     assert first.record.status == "failed"
+    assert isinstance(first.record.run_id, RunId)
     assert first.record.error_code == "ui_run_worker_exited_unexpectedly"
     assert first.output_chunk is not None
     assert second.record.status == "failed"
@@ -197,6 +201,7 @@ def test_cancel_ui_run_updates_state_and_terminates_process(
     )
 
     assert response.canceled is True
+    assert isinstance(response.record.run_id, RunId)
     assert response.record.status == "canceled"
     assert calls == [3210]
 

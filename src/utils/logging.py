@@ -6,18 +6,26 @@ from typing import Any, Dict
 from uuid import uuid4
 
 from src.contracts.run_context import RunContext
+from src.contracts.semantic_ids import RunId, TaskId
 
 
-def new_run_context(task_id: str | None = None, span_id: str | None = None) -> RunContext:
+def new_run_context(
+    task_id: TaskId | str | None = None,
+    span_id: str | None = None,
+) -> RunContext:
     return RunContext(
         schema_version="1.0",
-        run_id=str(uuid4()),
-        task_id=task_id or str(uuid4()),
+        run_id=RunId(str(uuid4())),
+        task_id=TaskId(task_id or str(uuid4())),
         span_id=span_id or str(uuid4()),
     )
 
 
-def child_context(parent: RunContext, *, task_id: str | None = None) -> RunContext:
+def child_context(
+    parent: RunContext,
+    *,
+    task_id: TaskId | str | None = None,
+) -> RunContext:
     return RunContext(
         schema_version=parent.schema_version,
         run_id=parent.run_id,

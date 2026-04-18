@@ -4,12 +4,13 @@ from dataclasses import dataclass, field
 from typing import List, Optional
 
 from src.contracts.config import AppSettings
+from src.contracts.semantic_ids import ReportId, SemanticIdContract
 
 
 @dataclass(frozen=True)
-class TaxonomyExtractRequest:
+class TaxonomyExtractRequest(SemanticIdContract):
     schema_version: str = field(metadata={"doc": "Taxonomy extraction request schema version."})
-    report_id: str = field(metadata={"doc": "Report identifier used for logging and storage."})
+    report_id: ReportId = field(metadata={"doc": "Report identifier used for logging and storage."})
     report_title: str = field(metadata={"doc": "Human-friendly report title for prompt context."})
     vector_store_id: str = field(metadata={"doc": "Vector store identifier to query for taxonomy extraction."})
     settings: AppSettings = field(metadata={"doc": "Resolved application settings for model configuration."})

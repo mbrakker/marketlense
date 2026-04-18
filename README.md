@@ -785,6 +785,7 @@ Key contracts live under `src/contracts/`:
 - `pdf_context.py`: shared PDF context (PyMuPDF + pypdf handles) and build request/response contracts
 - `pdf_utils.py`: EOF check and PDF info (page count + metadata) contracts
 - `report_store.py`: report metadata upsert/get/list contracts, including page count and flattened PDF metadata
+- `semantic_ids.py`: typed `RunId`, `TaskId`, and `ReportId` wrappers used by core contracts to block cross-ID reuse while preserving string-compatible JSON/state boundaries
 - `validation.py`: validation requests, issues, and reports (persisted per report)
 - `regeneration.py`: validation-regeneration issues, plans, attempt results, loop state, and typed single-pass request/response contracts
 - `docpacks.py`: typed contracts for core/variety docpack payloads and map aliases
