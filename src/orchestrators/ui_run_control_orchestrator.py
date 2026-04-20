@@ -184,11 +184,12 @@ def launch_ui_run(
         run_id=record.run_id,
         run_type=record.run_type,
         display_name=record.display_name,
-        status=record.status,
+        status="running",
         request_payload=record.request_payload,
         command=record.command,
         created_at_utc=record.created_at_utc,
         updated_at_utc=_utc_now(),
+        started_at_utc=process.started_at_utc,
         output_path=record.output_path,
         request_path=record.request_path,
         pid=process.pid,
@@ -241,7 +242,36 @@ def poll_ui_run(request: UiRunPollRequest, ctx: RunContext) -> UiRunPollResponse
             ProcessPollRequest(schema_version="1.0", pid=record.pid),
             ctx,
         )
-        if not process.running and record.status not in FINAL_UI_RUN_STATUSES:
+        if process.running and record.status == "queued":
+            record = UiRunRecord(
+                schema_version="1.0",
+                run_id=record.run_id,
+                run_type=record.run_type,
+                display_name=record.display_name,
+                status="running",
+                request_payload=record.request_payload,
+                command=record.command,
+                created_at_utc=record.created_at_utc,
+                updated_at_utc=_utc_now(),
+                started_at_utc=record.started_at_utc or _utc_now(),
+                output_path=record.output_path,
+                request_path=record.request_path,
+                artifact_paths=record.artifact_paths,
+                result_summary=record.result_summary,
+                pid=record.pid,
+                exit_code=record.exit_code,
+                error_code=record.error_code,
+                error_message=record.error_message,
+            )
+            write_ui_run_record(
+                UiRunRecordWriteRequest(
+                    schema_version="1.0",
+                    registry_path=request.registry_path,
+                    record=record,
+                ),
+                ctx,
+            )
+        elif not process.running and record.status not in FINAL_UI_RUN_STATUSES:
             record = UiRunRecord(
                 schema_version="1.0",
                 run_id=record.run_id,

@@ -4592,6 +4592,25 @@ def test_extract_best_figure_writes_asset_and_logs(
     assert {"figure_extract_start", "figure_extract_complete"} <= event_names
 
 
+def test_extract_best_figure_sanitizes_report_name_segment(tmp_path) -> None:
+    pdf_path = tmp_path / "figure_escape.pdf"
+    out_dir = tmp_path / "out"
+    _build_candidates_pdf(pdf_path)
+
+    response = extract_best_figure(
+        FigureExtractRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="../escape",
+        ),
+        _ctx(),
+    )
+
+    assert response.image_path == "escape/assets/escape.png"
+    assert (out_dir / response.image_path).exists()
+
+
 def test_collect_candidates_table_bbox_keeps_title_and_notes_but_excludes_body_text(
     tmp_path,
 ) -> None:

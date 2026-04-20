@@ -171,9 +171,18 @@ def _build_drive_client(
     ctx: RunContext,
 ):
     if auth_mode == "service_account":
-        creds = Credentials.from_service_account_file(
-            service_account_path, scopes=DRIVE_SCOPES
-        )
+        try:
+            creds = Credentials.from_service_account_file(
+                service_account_path, scopes=DRIVE_SCOPES
+            )
+        except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+            raise AppError(
+                code="drive_service_account_invalid",
+                message="Service account credentials could not be loaded",
+                cause=exc,
+                retryable=False,
+                context={"service_account_path": service_account_path},
+            ) from exc
         return build("drive", "v3", credentials=creds, cache_discovery=False)
     creds = _load_authorized_user_credentials(
         token_path=str(oauth_token_path or ""),
@@ -598,6 +607,16 @@ def download_pdf_to_path(request: DriveDownloadToPathRequest, ctx: RunContext) -
             size = writer.bytes_written
             md5 = writer.md5
     except DRIVE_BOUNDARY_EXCEPTIONS as exc:
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            logger.info(log_event(
+                ctx,
+                role="service",
+                event="drive_download_partial_cleanup_failed",
+                module=logger.name,
+                fields={"file_id": file_meta.file_id, "output_path": request.output_path},
+            ))
         logger.info(log_event(
             ctx,
             role="service",

@@ -22,6 +22,7 @@ from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.lock_service")
 LOCK_FILE_EXCEPTIONS = (OSError, json.JSONDecodeError, TypeError, ValueError)
+DEFAULT_LOCK_TTL_SECONDS = 7200.0
 
 
 def _read_lock(path: str) -> Optional[LockInfo]:
@@ -36,6 +37,7 @@ def _read_lock(path: str) -> Optional[LockInfo]:
             owner_id=str(data.get("owner_id", "")),
             pid=int(data.get("pid", -1)),
             created_at=float(data.get("created_at", 0.0)),
+            ttl_seconds=float(data.get("ttl_seconds", DEFAULT_LOCK_TTL_SECONDS)),
         )
     except LOCK_FILE_EXCEPTIONS:
         return None
@@ -81,11 +83,17 @@ def acquire_lock(request: LockAcquireRequest, ctx: RunContext) -> LockAcquireRes
     ))
     lock_path = Path(request.lock_path)
     lock_path.parent.mkdir(parents=True, exist_ok=True)
-    ttl = request.ttl_seconds if request.ttl_seconds > 0 else None
+    requested_ttl = (
+        float(request.ttl_seconds) if float(request.ttl_seconds) > 0 else None
+    )
 
     existing = _read_lock(request.lock_path)
     now = time.time()
-    if existing and ttl and (now - existing.created_at) > ttl:
+    existing_ttl = (
+        float(existing.ttl_seconds) if existing and existing.ttl_seconds > 0 else None
+    )
+    stale_ttl = existing_ttl if existing_ttl is not None else requested_ttl
+    if existing and stale_ttl and (now - existing.created_at) > stale_ttl:
         logger.info(log_event(
             ctx,
             role="service",
@@ -137,6 +145,8 @@ def acquire_lock(request: LockAcquireRequest, ctx: RunContext) -> LockAcquireRes
             "pid": request.pid,
             "created_at": now,
         }
+        if requested_ttl is not None:
+            payload["ttl_seconds"] = requested_ttl
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as fh:
                 json.dump(payload, fh, ensure_ascii=True)
@@ -176,6 +186,7 @@ def acquire_lock(request: LockAcquireRequest, ctx: RunContext) -> LockAcquireRes
         owner_id=request.owner_id,
         pid=request.pid,
         created_at=now,
+        ttl_seconds=requested_ttl if requested_ttl is not None else DEFAULT_LOCK_TTL_SECONDS,
     )
     logger.info(log_event(
         ctx,

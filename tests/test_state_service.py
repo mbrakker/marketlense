@@ -1,6 +1,8 @@
 import sqlite3
 from pathlib import Path
 
+import pytest
+
 from src.contracts.run_context import RunContext
 from src.contracts.state import (
     StateBatchCheckItem,
@@ -17,6 +19,7 @@ from src.contracts.state import (
     StateReportDownloadRouteGetRequest,
     StateReportDownloadRouteRecordRequest,
 )
+from src.services import _state_common as state_common
 from src.services.state_service import (
     already_processed_batch,
     already_processed,
@@ -31,6 +34,7 @@ from src.services.state_service import (
     record_report_download_route,
     set_ingest_cursor,
 )
+from src.utils.errors import AppError
 
 
 def _ctx() -> RunContext:
@@ -316,6 +320,33 @@ def test_ingest_cursor_roundtrip(tmp_path: Path) -> None:
         _ctx(),
     )
     assert updated.last_successful_ingest_utc == ts
+
+
+def test_state_read_connect_failure_is_typed_app_error(
+    external_boundary_mocks_only,
+    assert_app_error,
+) -> None:
+    def _raise_connect(*args, **kwargs):
+        raise sqlite3.OperationalError("connect boom")
+
+    external_boundary_mocks_only.setattr(
+        state_common.sqlite3, "connect", _raise_connect
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        get_ingest_cursor(
+            StateIngestCursorGetRequest(
+                schema_version="1.0",
+                state_db="C:/tmp/state.sqlite",
+            ),
+            _ctx(),
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="state_db_unavailable",
+        retryable=True,
+    )
 
 
 def test_list_processed_and_published_rows(tmp_path: Path) -> None:

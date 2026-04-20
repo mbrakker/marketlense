@@ -200,9 +200,12 @@ def _load_config(path: str) -> dict:
     if not cfg_path.exists():
         raise RuntimeError(f"Config file not found: {path}")
     try:
-        return yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+        payload = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
     except yaml.YAMLError as exc:
         raise RuntimeError(f"Config YAML invalid: {path}") from exc
+    if not isinstance(payload, dict):
+        raise RuntimeError(f"Config YAML must be a mapping: {path}")
+    return payload
 
 
 def _resolve_config_path(path: str) -> Path:

@@ -150,3 +150,62 @@ def test_openai_chat_json_maps_provider_failure_to_typed_app_error(
         svc.openai_chat_json(_chat_request(tmp_path), _ctx())
 
     assert_app_error(exc_info.value, code="openai_chat_failed", retryable=True)
+
+
+def test_legacy_chat_completion_timeout_does_not_leak_between_requests(
+    external_boundary_mocks_only, tmp_path
+) -> None:
+    observed_timeouts: list[float | None] = []
+
+    class _FakeLegacyChatCompletion:
+        @staticmethod
+        def create(**kwargs):
+            observed_timeouts.append(getattr(svc.openai_legacy, "timeout", None))
+            return {
+                "id": "legacy_chat_1",
+                "choices": [{"message": {"content": json.dumps({"ok": True})}}],
+                "usage": {
+                    "prompt_tokens": 5,
+                    "completion_tokens": 2,
+                    "total_tokens": 7,
+                },
+            }
+
+    def _request(timeout_seconds: float | None) -> OpenAIJSONPromptRequest:
+        return OpenAIJSONPromptRequest(
+            schema_version="1.0",
+            system_prompt="system",
+            user_prompt="user",
+            model="gpt-4.1-mini",
+            temperature=0.1,
+            api_key="key",
+            seed=7,
+            timeout_seconds=timeout_seconds,
+            cost_ledger_path=str(tmp_path / "ledger.jsonl"),
+            cost_daily_path=str(tmp_path / "daily.json"),
+            model_pricing={},
+        )
+
+    external_boundary_mocks_only.setattr(svc, "OpenAI", None)
+    external_boundary_mocks_only.setattr(
+        svc.openai_legacy, "ChatCompletion", _FakeLegacyChatCompletion
+    )
+
+    had_timeout = hasattr(svc.openai_legacy, "timeout")
+    original_timeout = getattr(svc.openai_legacy, "timeout", None)
+    try:
+        if had_timeout:
+            delattr(svc.openai_legacy, "timeout")
+
+        svc.openai_chat_json(_request(1.5), _ctx())
+        assert hasattr(svc.openai_legacy, "timeout") is False
+
+        svc.openai_chat_json(_request(None), _ctx())
+
+        assert observed_timeouts == [1.5, None]
+        assert hasattr(svc.openai_legacy, "timeout") is False
+    finally:
+        if had_timeout:
+            svc.openai_legacy.timeout = original_timeout
+        elif hasattr(svc.openai_legacy, "timeout"):
+            delattr(svc.openai_legacy, "timeout")

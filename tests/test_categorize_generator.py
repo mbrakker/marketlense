@@ -475,6 +475,29 @@ def test_category_mapping_service_loads_weighted_schema(tmp_path: Path) -> None:
     assert response.mappings.inference_rules[0].remove_tags == ["digital_economy"]
 
 
+def test_category_mapping_service_rejects_non_mapping_root(
+    tmp_path: Path,
+    assert_app_error,
+) -> None:
+    mapping_path = tmp_path / "category-mappings.yaml"
+    mapping_path.write_text("- not-a-mapping\n", encoding="utf-8")
+
+    with pytest.raises(AppError) as exc_info:
+        load_mappings(
+            CategoryMappingLoadRequest(
+                schema_version="1.0",
+                path=str(mapping_path),
+            ),
+            _ctx(),
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="category_mapping_invalid_yaml",
+        retryable=False,
+    )
+
+
 def test_repo_category_mapping_config_is_normalized() -> None:
     mapping_path = Path(__file__).resolve().parents[1] / "src" / "config" / "category-mappings.yaml"
     payload = yaml.safe_load(mapping_path.read_text(encoding="utf-8"))

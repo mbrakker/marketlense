@@ -14,6 +14,7 @@ from src.contracts.report_store import ReportMetadataGetRequest, ReportMetadataL
 from src.contracts.run_context import RunContext
 from src.generators.cover_image_generator import generate_cover_images
 from src.services.report_store_service import get_metadata, list_metadata
+from src.utils.errors import AppError
 from src.utils.slugify import slugify
 from src.utils.logging import child_context, log_event, new_run_context
 
@@ -74,6 +75,13 @@ def run_cover_image_generation(
             ReportMetadataGetRequest(schema_version="1.0", db_path=request.reports_db, file_id=request.file_id),
             list_ctx,
         )
+        if response is None:
+            raise AppError(
+                code="cover_report_not_found",
+                message=f"Report metadata not found for file_id: {request.file_id}",
+                retryable=False,
+                context={"file_id": request.file_id, "reports_db": request.reports_db},
+            )
         reports.append(_report_from_metadata(response))
     else:
         response = list_metadata(

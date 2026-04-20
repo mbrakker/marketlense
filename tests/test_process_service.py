@@ -4,6 +4,7 @@ import logging
 import sys
 import time
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -13,6 +14,7 @@ from src.contracts.ui_run_control import (
     ProcessPollRequest,
     ProcessTerminateRequest,
 )
+from src.services import process_service as process_service_module
 from src.services.process_service import (
     launch_process,
     poll_process,
@@ -124,3 +126,31 @@ def test_process_service_missing_cwd_returns_typed_error(assert_app_error) -> No
         )
 
     assert_app_error(exc_info.value, code="process_cwd_missing", retryable=False)
+
+
+def test_process_service_windows_terminate_failure_is_typed_error(
+    external_boundary_mocks_only,
+    assert_app_error,
+) -> None:
+    external_boundary_mocks_only.setattr(process_service_module.os, "name", "nt")
+    external_boundary_mocks_only.setattr(
+        process_service_module.subprocess,
+        "run",
+        lambda *args, **kwargs: SimpleNamespace(
+            returncode=1,
+            stdout="",
+            stderr="Access is denied.",
+        ),
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        terminate_process(
+            ProcessTerminateRequest(schema_version="1.0", pid=1234),
+            _ctx(),
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="process_terminate_failed",
+        retryable=False,
+    )

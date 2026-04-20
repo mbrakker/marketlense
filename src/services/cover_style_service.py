@@ -65,9 +65,16 @@ def _load_yaml(path: str) -> Dict[str, Any]:
     if not cfg_path.exists():
         raise AppError(code="cover_style_missing", message=f"Cover style config not found: {path}", retryable=False)
     try:
-        return yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+        payload = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
     except yaml.YAMLError as exc:
         raise AppError(code="cover_style_invalid", message=f"Invalid cover style YAML: {path}", cause=exc, retryable=False) from exc
+    if not isinstance(payload, dict):
+        raise AppError(
+            code="cover_style_invalid",
+            message=f"Cover style YAML must be a mapping: {path}",
+            retryable=False,
+        )
+    return payload
 
 
 def _parse_layout(payload: Dict[str, Any]) -> CoverImageLayout:

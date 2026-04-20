@@ -1075,7 +1075,17 @@ def _metadata_conn(path: str):
             severity="error",
         )
     Path(path).parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path, timeout=DEFAULT_BUSY_TIMEOUT_SECONDS)
+    try:
+        conn = sqlite3.connect(path, timeout=DEFAULT_BUSY_TIMEOUT_SECONDS)
+    except sqlite3.Error as exc:
+        raise AppError(
+            code="metadata_db_unavailable",
+            message="Failed to open report metadata DB",
+            cause=exc,
+            retryable=True,
+            severity="error",
+            context={"db_path": path},
+        ) from exc
     try:
         _configure_sqlite_connection(
             conn,

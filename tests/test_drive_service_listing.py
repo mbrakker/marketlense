@@ -6,9 +6,11 @@ import pytest
 
 from src.contracts.drive import (
     DriveOAuthAuthorizeRequest,
+    DriveDownloadToPathRequest,
     DriveFolderFileListRequest,
     DriveListRequest,
     DriveUploadBytesRequest,
+    DriveFile,
 )
 from src.contracts.run_context import RunContext
 from src.services import drive_service
@@ -45,6 +47,9 @@ class _FakeFilesResource:
         }
         self.created_payloads.append(kwargs)
         return _FakeListCall(payload)
+
+    def get_media(self, *, fileId):
+        return {"fileId": fileId}
 
 
 class _FakeDriveClient:
@@ -284,3 +289,66 @@ def test_authorize_oauth_user_writes_token(monkeypatch, tmp_path):
     assert token_output_path.exists()
     assert response.token_output_path == str(token_output_path)
     assert response.refresh_token_present is True
+
+
+def test_list_pdfs_wraps_missing_service_account_path_as_typed_error(
+    monkeypatch, assert_app_error
+):
+    monkeypatch.setattr(
+        drive_service.Credentials,
+        "from_service_account_file",
+        staticmethod(lambda _sa_path, scopes: (_ for _ in ()).throw(FileNotFoundError("missing"))),
+    )
+    drive_service._DRIVE_CLIENTS = {}
+
+    with pytest.raises(AppError) as err:
+        list(drive_service.list_pdfs(_request(), _ctx()))
+
+    assert_app_error(err.value, code="drive_service_account_invalid", retryable=False)
+
+
+def test_download_pdf_to_path_removes_partial_file_on_failure(
+    monkeypatch, tmp_path, assert_app_error
+):
+    fake_drive = _FakeDriveClient({})
+    output_path = tmp_path / "downloaded.pdf"
+
+    class _FailingDownloader:
+        def __init__(self, writer, _request):
+            self._writer = writer
+            self._attempts = 0
+
+        def next_chunk(self):
+            self._attempts += 1
+            self._writer.write(b"%PDF-partial")
+            raise RuntimeError("chunk failed")
+
+    monkeypatch.setattr(
+        drive_service.Credentials,
+        "from_service_account_file",
+        staticmethod(lambda _sa_path, scopes: object()),
+    )
+    monkeypatch.setattr(drive_service, "build", lambda *_args, **_kwargs: fake_drive)
+    monkeypatch.setattr(drive_service, "MediaIoBaseDownload", _FailingDownloader)
+    drive_service._DRIVE_CLIENTS = {}
+
+    with pytest.raises(AppError) as err:
+        drive_service.download_pdf_to_path(
+            DriveDownloadToPathRequest(
+                schema_version="1.0",
+                file=DriveFile(
+                    schema_version="1.0",
+                    file_id="file-1",
+                    name="report.pdf",
+                    modified_time=None,
+                    md5_checksum=None,
+                ),
+                service_account_path="/tmp/fake-sa.json",
+                output_path=str(output_path),
+                make_parents=True,
+            ),
+            _ctx(),
+        )
+
+    assert_app_error(err.value, code="drive_download_failed", retryable=True)
+    assert not output_path.exists()

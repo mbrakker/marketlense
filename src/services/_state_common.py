@@ -76,7 +76,16 @@ def _state_conn(path: str):
     parent = os.path.dirname(path)
     if parent:
         os.makedirs(parent, exist_ok=True)
-    conn = sqlite3.connect(path, timeout=DEFAULT_BUSY_TIMEOUT_SECONDS)
+    try:
+        conn = sqlite3.connect(path, timeout=DEFAULT_BUSY_TIMEOUT_SECONDS)
+    except sqlite3.Error as exc:
+        raise AppError(
+            code="state_db_unavailable",
+            message="Failed to open state DB",
+            cause=exc,
+            retryable=True,
+            context={"state_db": path},
+        ) from exc
     try:
         _configure_sqlite_connection(
             conn,

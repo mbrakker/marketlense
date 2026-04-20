@@ -299,16 +299,21 @@ def _extract_responses_output_text(resp: Any) -> str:
         or getattr(resp, "data", None)
     )
     if isinstance(output, list) and output:
-        first = output[0]
-        content = getattr(first, "content", None) or (
-            first.get("content") if isinstance(first, dict) else None
-        )
-        if isinstance(content, list) and content:
-            maybe_text = getattr(content[0], "text", None) or (
-                content[0].get("text") if isinstance(content[0], dict) else None
+        extracted_blocks: list[str] = []
+        for item in output:
+            content = getattr(item, "content", None) or (
+                item.get("content") if isinstance(item, dict) else None
             )
-            if isinstance(maybe_text, str):
-                return maybe_text
+            if not isinstance(content, list):
+                continue
+            for block in content:
+                maybe_text = getattr(block, "text", None) or (
+                    block.get("text") if isinstance(block, dict) else None
+                )
+                if isinstance(maybe_text, str) and maybe_text:
+                    extracted_blocks.append(maybe_text)
+        if extracted_blocks:
+            return "\n".join(extracted_blocks)
     text = getattr(resp, "text", None)
     return text if isinstance(text, str) else ""
 
@@ -532,33 +537,46 @@ def _legacy_chat_completion_call(
 ) -> _ChatCompletionRun:
     # Compatibility path for environments where OpenAI client instantiation
     # fails (e.g., unexpected kwargs like proxies in older dependencies).
+    previous_timeout = getattr(openai_legacy, "timeout", None)
+    had_timeout_attr = hasattr(openai_legacy, "timeout")
     openai_legacy.api_key = api_key
-    if timeout_seconds is not None:
-        openai_legacy.timeout = timeout_seconds
-    payload_args = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        "temperature": temperature,
-        "seed": seed,
-    }
     try:
-        payload_args["response_format"] = {"type": "json_object"}
-        resp = openai_legacy.ChatCompletion.create(**payload_args)
-    except TypeError:
-        payload_args.pop("response_format", None)
-        resp = openai_legacy.ChatCompletion.create(**payload_args)
-    payload = resp["choices"][0]["message"]["content"]
-    usage = resp.get("usage") or {}
-    return _ChatCompletionRun(
-        payload=payload,
-        request_id=resp.get("id"),
-        prompt_tokens=usage.get("prompt_tokens"),
-        completion_tokens=usage.get("completion_tokens"),
-        total_tokens=usage.get("total_tokens"),
-    )
+        if timeout_seconds is not None:
+            openai_legacy.timeout = timeout_seconds
+        elif had_timeout_attr:
+            delattr(openai_legacy, "timeout")
+        payload_args = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            "temperature": temperature,
+            "seed": seed,
+        }
+        try:
+            payload_args["response_format"] = {"type": "json_object"}
+            resp = openai_legacy.ChatCompletion.create(**payload_args)
+        except TypeError:
+            payload_args.pop("response_format", None)
+            resp = openai_legacy.ChatCompletion.create(**payload_args)
+        payload = resp["choices"][0]["message"]["content"]
+        usage = resp.get("usage") or {}
+        return _ChatCompletionRun(
+            payload=payload,
+            request_id=resp.get("id"),
+            prompt_tokens=usage.get("prompt_tokens"),
+            completion_tokens=usage.get("completion_tokens"),
+            total_tokens=usage.get("total_tokens"),
+        )
+    finally:
+        if had_timeout_attr:
+            openai_legacy.timeout = previous_timeout
+        else:
+            try:
+                delattr(openai_legacy, "timeout")
+            except AttributeError:
+                pass
 
 
 def _modern_chat_completion_call(
@@ -984,13 +1002,12 @@ def openai_chat_json_with_images(
             retryable=False,
         )
     image_urls = [_image_path_to_data_url(path) for path in request.image_paths]
-    client_kwargs: dict = {"api_key": request.api_key}
-    if request.timeout_seconds is not None:
-        client_kwargs["timeout"] = request.timeout_seconds
     try:
-        if OpenAI is None:
-            raise TypeError("OpenAI client not available")
-        client = OpenAI(**client_kwargs)
+        client = _build_openai_client(
+            api_key=request.api_key,
+            timeout_seconds=request.timeout_seconds,
+            operation="chat_json_with_images",
+        )
         user_content = [{"type": "input_text", "text": request.user_prompt}]
         user_content.extend(
             {"type": "input_image", "image_url": image_url} for image_url in image_urls
@@ -1031,14 +1048,8 @@ def openai_chat_json_with_images(
             event_name="openai_chat_json_with_images_retry_without_param",
             model=request.model,
         )
-    except TypeError as exc:
-        raise AppError(
-            code="openai_client_unavailable",
-            message="OpenAI client not available",
-            cause=exc,
-            retryable=False,
-            context={"model": request.model},
-        ) from exc
+    except AppError:
+        raise
     except OPENAI_REQUEST_EXCEPTIONS as exc:
         logger.info(
             log_event(
@@ -1329,9 +1340,6 @@ def openai_respond_with_vector_store(
             message="vector_store_id is required for file search responses",
             retryable=False,
         )
-    client_kwargs: dict = {"api_key": request.api_key}
-    if request.timeout_seconds is not None:
-        client_kwargs["timeout"] = request.timeout_seconds
     payload_args = {
         "model": request.model,
         "instructions": request.system_prompt,
@@ -1344,9 +1352,11 @@ def openai_respond_with_vector_store(
     if request.seed is not None:
         payload_args["seed"] = request.seed
     try:
-        if OpenAI is None:
-            raise TypeError("OpenAI client not available")
-        client = OpenAI(**client_kwargs)
+        client = _build_openai_client(
+            api_key=request.api_key,
+            timeout_seconds=request.timeout_seconds,
+            operation="response_vector_store",
+        )
         resp = _responses_create_with_unsupported_param_retry(
             client=client,
             payload_args=payload_args,
@@ -1355,14 +1365,8 @@ def openai_respond_with_vector_store(
             event_name="openai_response_retry_without_param",
             model=request.model,
         )
-    except TypeError as exc:
-        raise AppError(
-            code="openai_client_unavailable",
-            message="OpenAI client not available",
-            cause=exc,
-            retryable=False,
-            context={"model": request.model},
-        ) from exc
+    except AppError:
+        raise
     except OPENAI_REQUEST_EXCEPTIONS as exc:
         logger.info(
             log_event(

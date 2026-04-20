@@ -184,14 +184,36 @@ def terminate_process(
             fields={"pid": pid},
         )
     )
+    terminated = True
     try:
         if _is_windows():
-            subprocess.run(
+            result = subprocess.run(
                 ["taskkill", "/PID", str(pid), "/T", "/F"],
                 capture_output=True,
                 text=True,
                 check=False,
             )
+            if result.returncode != 0:
+                details = " ".join(
+                    part.strip()
+                    for part in (str(result.stdout or ""), str(result.stderr or ""))
+                    if part and str(part).strip()
+                ).strip()
+                lowered = details.lower()
+                if not any(
+                    marker in lowered
+                    for marker in (
+                        "not found",
+                        "no running instance",
+                        "no tasks are running",
+                    )
+                ):
+                    raise AppError(
+                        code="process_terminate_failed",
+                        message=f"Failed to terminate process {pid}",
+                        retryable=False,
+                        context={"pid": pid, "details": details},
+                    )
         else:
             os.killpg(os.getpgid(pid), 15)
     except ProcessLookupError:
@@ -207,7 +229,7 @@ def terminate_process(
     response = ProcessTerminateResponse(
         schema_version="1.0",
         pid=pid,
-        terminated=True,
+        terminated=terminated,
     )
     logger.info(
         log_event(
@@ -215,7 +237,7 @@ def terminate_process(
             role="service",
             event="process_terminate_complete",
             module=logger.name,
-            fields={"pid": pid, "terminated": True},
+            fields={"pid": pid, "terminated": terminated},
         )
     )
     return response

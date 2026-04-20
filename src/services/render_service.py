@@ -6,6 +6,7 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from src.contracts.report_assets import RenderRequest, RenderResponse
 from src.contracts.run_context import RunContext
+from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.slugify import slugify
 
@@ -51,8 +52,19 @@ def render_report(request: RenderRequest, ctx: RunContext) -> RenderResponse:
         tag_acronym_map=tag_acronym_map,
     )
     report_name = slugify(request.doc_name)
-    out_path = Path(request.out_dir) / f"{report_name}.html"
-    out_path.write_text(html, encoding="utf-8")
+    out_dir = Path(request.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / f"{report_name}.html"
+    try:
+        out_path.write_text(html, encoding="utf-8")
+    except OSError as exc:
+        raise AppError(
+            code="render_html_write_failed",
+            message="Failed to write rendered HTML report",
+            cause=exc,
+            retryable=False,
+            context={"out_path": str(out_path)},
+        ) from exc
     html_path = str(out_path)
     logger.info(log_event(
         ctx,

@@ -674,7 +674,7 @@ def _load_yaml(path: Path) -> dict:
             context={"path": str(path)},
         )
     try:
-        return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        payload = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     except yaml.YAMLError as exc:
         raise AppError(
             code="category_mapping_invalid_yaml",
@@ -684,3 +684,12 @@ def _load_yaml(path: Path) -> dict:
             severity="error",
             context={"path": str(path)},
         ) from exc
+    if not isinstance(payload, dict):
+        raise AppError(
+            code="category_mapping_invalid_yaml",
+            message=f"Category mapping YAML must be a mapping: {path}",
+            retryable=False,
+            severity="error",
+            context={"path": str(path)},
+        )
+    return payload

@@ -27,6 +27,17 @@ logger = logging.getLogger("market_lense.cost_ledger_service")
 _LEDGER_LOCK = threading.Lock()
 
 
+def _raise_cost_report_validation_error(
+    *, code: str, message: str, context: dict[str, Any] | None = None
+) -> None:
+    raise AppError(
+        code=code,
+        message=message,
+        retryable=False,
+        context=context or {},
+    )
+
+
 def _empty_metrics() -> Dict[str, float | int]:
     return {"estimated_cost_usd": 0.0, "input_tokens": 0, "output_tokens": 0, "tool_calls": 0}
 
@@ -454,9 +465,17 @@ def generate_cost_report(request: CostReportRequest, ctx: RunContext) -> CostRep
     with _LEDGER_LOCK:
         ledger_path = Path(request.ledger_path)
         if (request.date_utc and request.run_id) or (not request.date_utc and not request.run_id):
-            raise ValueError("Provide exactly one of date_utc or run_id for cost reporting.")
+            _raise_cost_report_validation_error(
+                code="cost_report_filter_invalid",
+                message="Provide exactly one of date_utc or run_id for cost reporting.",
+                context={"date_utc": request.date_utc or "", "run_id": request.run_id or ""},
+            )
         if request.top_n <= 0:
-            raise ValueError("top_n must be greater than zero.")
+            _raise_cost_report_validation_error(
+                code="cost_report_top_n_invalid",
+                message="top_n must be greater than zero.",
+                context={"top_n": request.top_n},
+            )
 
         logger.info(log_event(
             ctx,
@@ -479,7 +498,13 @@ def generate_cost_report(request: CostReportRequest, ctx: RunContext) -> CostRep
             try:
                 target_date = datetime.fromisoformat(request.date_utc).date()
             except ValueError as exc:
-                raise ValueError("date_utc must be YYYY-MM-DD") from exc
+                raise AppError(
+                    code="cost_report_date_invalid",
+                    message="date_utc must be YYYY-MM-DD",
+                    cause=exc,
+                    retryable=False,
+                    context={"date_utc": request.date_utc},
+                ) from exc
             for row in rows:
                 day = _date_key(row)
                 if day and day == target_date.isoformat():

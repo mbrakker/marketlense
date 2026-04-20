@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from pathlib import Path
 
 from src.contracts.report_analysis import (
@@ -18,6 +19,7 @@ from src.utils.logging import log_event
 from src.utils.slugify import slugify
 
 logger = logging.getLogger("market_lense.report_analysis_store_service")
+_SAFE_PACK_NAME_RX = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 _PACK_SCHEMA_NAMES: dict[str, str] = {
     "artifacts": "artifacts",
     "context_category_fit": "context_category_fit",
@@ -55,6 +57,18 @@ def _schema_name_for_pack(pack_name: str) -> str:
     return _PACK_SCHEMA_NAMES.get(normalized, "")
 
 
+def _validate_pack_name(pack_name: str) -> str:
+    normalized = str(pack_name or "").strip()
+    if normalized and _SAFE_PACK_NAME_RX.fullmatch(normalized):
+        return normalized
+    raise AppError(
+        code="analysis_pack_name_invalid",
+        message="Analysis pack name must be a single safe filename segment",
+        retryable=False,
+        context={"pack_name": pack_name},
+    )
+
+
 def pack_path(request: AnalysisPackPathRequest, ctx: RunContext) -> AnalysisPackPathResponse:
     logger.info(log_event(
         ctx,
@@ -68,7 +82,8 @@ def pack_path(request: AnalysisPackPathRequest, ctx: RunContext) -> AnalysisPack
         },
     ))
     slug = _resolve_report_slug(request.report_slug, request.report_id)
-    path = _report_base_dir(request.output_dir, slug) / f"{request.pack_name}.json"
+    pack_name = _validate_pack_name(request.pack_name)
+    path = _report_base_dir(request.output_dir, slug) / f"{pack_name}.json"
     response = AnalysisPackPathResponse(schema_version="1.0", output_path=str(path))
     logger.info(log_event(
         ctx,

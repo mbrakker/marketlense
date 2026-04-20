@@ -13,6 +13,7 @@ from src.contracts.report_models import CropItem
 from src.contracts.run_context import RunContext
 from src.services import file_service, pdf_service
 from src.utils.logging import log_event
+from src.utils.path_utils import safe_path_segment
 from src.utils.validation import validate_candidate
 
 logger = logging.getLogger("market_lense.candidate_extraction_generator")
@@ -38,7 +39,9 @@ def _candidate_payload(candidates, crop_map: Dict[str, str]) -> List[dict]:
 
 
 def _candidates_path(output_dir: str, report_name: str, subdir: str) -> str:
-    base = Path(output_dir) / report_name / (subdir or "candidates")
+    safe_report_name = safe_path_segment(report_name, fallback="report")
+    safe_subdir = safe_path_segment(subdir or "candidates", fallback="candidates")
+    base = Path(output_dir) / safe_report_name / safe_subdir
     return str(base / "candidates.json")
 
 

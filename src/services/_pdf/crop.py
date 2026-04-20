@@ -22,6 +22,7 @@ from src.contracts.report_models import CropItem
 from src.contracts.run_context import RunContext
 from src.utils.errors import AppError
 from src.utils.logging import log_event
+from src.utils.path_utils import safe_path_segment
 from src.utils.slugify import slugify
 
 from .figures import (
@@ -726,12 +727,13 @@ def _build_table_continuation_augments(
 
 
 def _crop_output_filename(report_name: str, item: CropItem, idx: int) -> str:
+    safe_report_name = safe_path_segment(report_name, fallback="report")
     item_slug = slugify(str(item.id or ""))
     if not item_slug:
         item_slug = f"item-{idx}"
     if len(item_slug) > CROP_FILENAME_ID_MAX_LEN:
         item_slug = item_slug[:CROP_FILENAME_ID_MAX_LEN]
-    return f"{report_name}-{item_slug}.png"
+    return f"{safe_report_name}-{item_slug}.png"
 
 
 def crop_regions(request: CropRequest, ctx: RunContext) -> CropResponse:
@@ -778,8 +780,9 @@ def _crop_regions(
     mode: str = "legacy",
     doc: Optional[fitz.Document] = None,
 ) -> List[str]:
-    safe_subdir = subdir or "slices"
-    output_dir = Path(out_dir) / report_name / safe_subdir
+    safe_report_name = safe_path_segment(report_name, fallback="report")
+    safe_subdir = safe_path_segment(subdir or "slices", fallback="slices")
+    output_dir = Path(out_dir) / safe_report_name / safe_subdir
     output_dir.mkdir(parents=True, exist_ok=True)
     paths = []
     items_list = list(items)
@@ -808,7 +811,7 @@ def _crop_regions(
                     index=idx,
                     item=it,
                     rect=rect,
-                    filename=_crop_output_filename(report_name, it, idx),
+                    filename=_crop_output_filename(safe_report_name, it, idx),
                 )
             )
 
@@ -883,7 +886,7 @@ def _crop_regions(
                 img.save(op.as_posix())
             else:
                 pix.save(op.as_posix())
-            rel = Path(report_name) / safe_subdir / filename
+            rel = Path(safe_report_name) / safe_subdir / filename
             paths.append(rel.as_posix())
     finally:
         if doc is None:
@@ -920,12 +923,13 @@ def render_page_for_crop_refine(request: CropRefinePageRenderRequest, ctx: RunCo
         page = local_doc[request.page]
         zoom = max(float(request.dpi), 72.0) / 72.0
         pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
-        out_dir = Path(request.out_dir) / request.report_name / "crop_refine_pages"
+        safe_report_name = safe_path_segment(request.report_name, fallback="report")
+        out_dir = Path(request.out_dir) / safe_report_name / "crop_refine_pages"
         out_dir.mkdir(parents=True, exist_ok=True)
         filename = f"page-{request.page}.png"
         abs_path = out_dir / filename
         pix.save(abs_path.as_posix())
-        rel = (Path(request.report_name) / "crop_refine_pages" / filename).as_posix()
+        rel = (Path(safe_report_name) / "crop_refine_pages" / filename).as_posix()
         page_width = float(page.rect.width)
         page_height = float(page.rect.height)
         scale_x = (float(pix.width) / page_width) if page_width > 0 else 0.0
@@ -1173,12 +1177,13 @@ def _page_png(
     out_root = Path(out_dir)
     out_root.mkdir(parents=True, exist_ok=True)
 
-    img_dir = out_root / report_name / "assets"
+    safe_report_name = safe_path_segment(report_name, fallback="report")
+    img_dir = out_root / safe_report_name / "assets"
     img_dir.mkdir(parents=True, exist_ok=True)
 
     variant_slug = slugify(variant) if variant else ""
     suffix = f"-{variant_slug}" if variant_slug else ""
-    abs_png = img_dir / f"{report_name}{suffix}.png"
+    abs_png = img_dir / f"{safe_report_name}{suffix}.png"
 
     local_doc = doc or fitz.open(pdf_path)
     try:
@@ -1192,5 +1197,5 @@ def _page_png(
         if doc is None:
             local_doc.close()
 
-    rel_png = Path(report_name) / "assets" / abs_png.name
+    rel_png = Path(safe_report_name) / "assets" / abs_png.name
     return rel_png.as_posix()

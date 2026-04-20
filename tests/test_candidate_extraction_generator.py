@@ -145,3 +145,46 @@ def test_generate_candidate_pack_continues_when_pdf_context_build_fails(
     payload = json.loads((written.get("content") or b"{}").decode("utf-8"))
     assert payload["chart_count"] == 1
     assert payload["table_count"] == 0
+
+
+def test_generate_candidate_pack_sanitizes_output_path_segments(
+    tmp_path,
+    external_boundary_mocks_only,
+):
+    written: dict[str, object] = {}
+    request = CandidateExtractRequest(
+        schema_version="1.0",
+        report_id="report_1",
+        report_name="../escape",
+        pdf_path=str(tmp_path / "report.pdf"),
+        output_dir=str(tmp_path / "out"),
+        subdir="../candidates",
+        save_crops=False,
+    )
+    external_boundary_mocks_only.setattr(
+        gen.pdf_service,
+        "build_pdf_context",
+        lambda req, ctx: (_ for _ in ()).throw(RuntimeError("context failed")),
+    )
+    external_boundary_mocks_only.setattr(
+        gen.pdf_service,
+        "collect_candidates",
+        lambda req, ctx: ExtractCandidatesResponse(
+            schema_version="1.0",
+            candidates=[_candidates()[0]],
+        ),
+    )
+    external_boundary_mocks_only.setattr(
+        gen.file_service,
+        "write_bytes",
+        lambda req, ctx: (
+            written.update({"path": req.path, "content": req.content})
+            or SimpleNamespace(path=req.path)
+        ),
+    )
+
+    outcome = gen.generate_candidate_pack(request, _ctx())
+    expected_path = tmp_path / "out" / "escape" / "candidates" / "candidates.json"
+
+    assert outcome.candidates_path == str(expected_path)
+    assert written["path"] == str(expected_path)

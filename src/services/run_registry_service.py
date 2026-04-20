@@ -66,7 +66,16 @@ def _registry_conn(path: str):
     parent = os.path.dirname(path)
     if parent:
         os.makedirs(parent, exist_ok=True)
-    conn = sqlite3.connect(path, timeout=DEFAULT_BUSY_TIMEOUT_SECONDS)
+    try:
+        conn = sqlite3.connect(path, timeout=DEFAULT_BUSY_TIMEOUT_SECONDS)
+    except sqlite3.Error as exc:
+        raise AppError(
+            code="ui_run_registry_unavailable",
+            message="Failed to open UI run registry DB",
+            cause=exc,
+            retryable=True,
+            context={"registry_path": path},
+        ) from exc
     try:
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute(

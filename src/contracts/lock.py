@@ -11,6 +11,10 @@ class LockInfo:
     owner_id: str = field(metadata={"doc": "Identifier for the current lock owner."})
     pid: int = field(metadata={"doc": "Process ID of the owner recorded in the lock file."})
     created_at: float = field(metadata={"doc": "Epoch seconds when the lock was created."})
+    ttl_seconds: float = field(
+        default=7200.0,
+        metadata={"doc": "Staleness TTL recorded by the lock owner in seconds."},
+    )
 
 
 @dataclass(frozen=True)

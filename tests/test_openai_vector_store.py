@@ -282,6 +282,70 @@ def test_openai_chat_json_with_images_retries_unknown_unsupported_param(
                     vector_store_id="vs_123",
                     model="gpt-4.1-mini",
                     temperature=0.1,
+                    api_key="",
+                    cost_ledger_path=str(tmp_path / "ledger.jsonl"),
+                    cost_daily_path=str(tmp_path / "daily.json"),
+                    model_pricing={},
+                ),
+            ),
+        ),
+        (
+            "images",
+            lambda tmp_path: (
+                svc.openai_chat_json_with_images,
+                OpenAIJSONImagePromptRequest(
+                    schema_version="1.0",
+                    system_prompt="system",
+                    user_prompt="user",
+                    model="gpt-4.1-mini",
+                    temperature=0.1,
+                    api_key="",
+                    image_paths=[str(tmp_path / "test.png")],
+                    cost_ledger_path=str(tmp_path / "ledger.jsonl"),
+                    cost_daily_path=str(tmp_path / "daily.json"),
+                    model_pricing={},
+                ),
+            ),
+        ),
+    ],
+)
+def test_openai_responses_paths_require_api_key(
+    tmp_path,
+    fake_openai,
+    operation,
+    request_factory,
+    assert_app_error,
+) -> None:
+    if operation == "images":
+        (tmp_path / "test.png").write_bytes(b"fake-image")
+    operation_fn, request = request_factory(tmp_path)
+
+    with pytest.raises(Exception) as exc_info:
+        operation_fn(request, _ctx())
+
+    assert_app_error(
+        exc_info.value,
+        code="openai_missing_api_key",
+        retryable=False,
+    )
+    assert fake_openai.client_kwargs == []
+    assert fake_openai.calls["responses.create"] == []
+
+
+@pytest.mark.parametrize(
+    ("operation", "request_factory"),
+    [
+        (
+            "vector_store",
+            lambda tmp_path: (
+                svc.openai_respond_with_vector_store,
+                OpenAIResponseRequest(
+                    schema_version="1.0",
+                    system_prompt="system",
+                    user_prompt="user",
+                    vector_store_id="vs_123",
+                    model="gpt-4.1-mini",
+                    temperature=0.1,
                     api_key="key",
                     cost_ledger_path=str(tmp_path / "ledger.jsonl"),
                     cost_daily_path=str(tmp_path / "daily.json"),
@@ -345,6 +409,44 @@ def test_openai_responses_metadata_adapter_preserves_shared_fields(
     assert result.output_tokens == 8
     assert result.tool_calls == 0
     assert result.total_tokens == 21
+
+
+def test_openai_response_with_vector_store_reads_later_text_blocks(fake_openai) -> None:
+    fake_openai.add(
+        "responses.create",
+        SimpleNamespace(
+            output_text=None,
+            output=[
+                SimpleNamespace(
+                    content=[
+                        SimpleNamespace(type="reasoning", summary="thinking"),
+                        SimpleNamespace(text='{"result":"ok"}'),
+                    ],
+                )
+            ],
+            usage=SimpleNamespace(
+                input_tokens=11,
+                output_tokens=7,
+                total_tokens=18,
+            ),
+            id="resp_multiblock_1",
+        ),
+    )
+    req = OpenAIResponseRequest(
+        schema_version="1.0",
+        system_prompt="system",
+        user_prompt="user",
+        vector_store_id="vs_123",
+        model="gpt-4.1-mini",
+        temperature=0.1,
+        api_key="key",
+    )
+
+    result = svc.openai_respond_with_vector_store(req, _ctx())
+
+    assert result.text == '{"result":"ok"}'
+    assert result.parsed_json == {"result": "ok"}
+    assert result.request_id == "resp_multiblock_1"
 
 
 def test_openai_vector_store_create_success(

@@ -51,6 +51,23 @@ def _running_record(*, registry_path: str) -> UiRunRecord:
     )
 
 
+def _queued_record(*, registry_path: str) -> UiRunRecord:
+    return UiRunRecord(
+        schema_version="1.0",
+        run_id="run-queued",
+        run_type="ingest",
+        display_name="Queued ingest",
+        status="queued",
+        request_payload={"limit": 2},
+        command=["python", "-m", "src.cli"],
+        created_at_utc="2026-04-09T10:00:00+00:00",
+        updated_at_utc="2026-04-09T10:00:00+00:00",
+        output_path="out.log",
+        request_path="request.json",
+        pid=1234,
+    )
+
+
 def test_launch_ui_run_persists_record_and_request(
     tmp_path: Path,
     monkeypatch,
@@ -95,6 +112,8 @@ def test_launch_ui_run_persists_record_and_request(
     assert stored == response.record
     assert isinstance(response.record.run_id, RunId)
     assert isinstance(stored.run_id, RunId)
+    assert response.record.status == "running"
+    assert response.record.started_at_utc == "2026-04-09T10:00:05+00:00"
     assert response.record.pid == 4321
     assert Path(response.record.request_path).exists()
     assert Path(response.record.output_path).parent.exists()
@@ -234,3 +253,64 @@ def test_launch_ui_run_same_request_creates_new_record_ids(
     second = orchestrator.launch_ui_run(request, _ctx())
 
     assert first.record.run_id != second.record.run_id
+
+
+def test_poll_ui_run_promotes_live_queued_worker_to_running(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    registry_path = _registry_path(tmp_path)
+    write_ui_run_record(
+        UiRunRecordWriteRequest(
+            schema_version="1.0",
+            registry_path=registry_path,
+            record=_queued_record(registry_path=registry_path),
+        ),
+        _ctx(),
+    )
+    monkeypatch.setattr(
+        orchestrator,
+        "poll_process",
+        lambda request, ctx: ProcessPollResponse(
+            schema_version="1.0",
+            pid=request.pid,
+            running=True,
+        ),
+    )
+    monkeypatch.setattr(
+        orchestrator,
+        "read_process_output",
+        lambda request, ctx: ProcessOutputReadResponse(
+            schema_version="1.0",
+            chunk=ProcessOutputChunk(
+                schema_version="1.0",
+                path=request.path,
+                text="[worker] running",
+                truncated=False,
+                size_bytes=16,
+            ),
+        ),
+    )
+
+    response = orchestrator.poll_ui_run(
+        UiRunPollRequest(
+            schema_version="1.0",
+            registry_path=registry_path,
+            run_id="run-queued",
+            output_tail_bytes=2048,
+        ),
+        _ctx(),
+    )
+
+    persisted = get_ui_run_record(
+        UiRunRecordGetRequest(
+            schema_version="1.0",
+            registry_path=registry_path,
+            run_id="run-queued",
+        ),
+        _ctx(),
+    ).record
+
+    assert response.record.status == "running"
+    assert response.record.started_at_utc
+    assert persisted == response.record

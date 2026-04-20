@@ -902,3 +902,46 @@ def test_apply_crop_refine_bbox_does_not_over_trim_for_long_crossing_text(tmp_pa
     )
 
     assert response.bbox[2] >= 348.0
+
+
+def test_crop_and_preview_sanitize_report_and_subdir_segments(tmp_path):
+    pdf_path = tmp_path / "preview_escape.pdf"
+    _build_basic_pdf(pdf_path)
+    out_dir = tmp_path / "out"
+    item = CropItem(
+        id="chart-0-0",
+        type="chart",
+        score=90.0,
+        page=0,
+        bbox=(60.0, 90.0, 220.0, 220.0),
+    )
+
+    crop_response = crop_regions(
+        CropRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="../escape",
+            items=[item],
+            subdir="../slices",
+            mode="legacy",
+        ),
+        _ctx(),
+    )
+    preview_response = render_preview(
+        PreviewRequest(
+            schema_version="1.1",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="../escape",
+            page_number=0,
+            variant="contents",
+            dpi=96,
+        ),
+        _ctx(),
+    )
+
+    assert crop_response.paths == ["escape/slices/escape-chart-0-0.png"]
+    assert preview_response.image_path == "escape/assets/escape-contents.png"
+    assert (out_dir / crop_response.paths[0]).exists()
+    assert (out_dir / preview_response.image_path).exists()

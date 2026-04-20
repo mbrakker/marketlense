@@ -24,6 +24,7 @@ from src.contracts.report_assets import (
 from src.contracts.run_context import RunContext
 from src.utils.errors import AppError
 from src.utils.logging import log_event
+from src.utils.path_utils import safe_path_segment
 from src.utils.slugify import slugify
 
 from .page_artifacts import is_full_page_scan_without_text
@@ -5788,6 +5789,7 @@ def _expand_table_bbox(
 def _save_thumb(
     pix: fitz.Pixmap, out_dir: str, report_name: str, index: int, max_w: int = 480
 ) -> str:
+    safe_report_name = safe_path_segment(report_name, fallback="report")
     if pix.alpha:
         pix = fitz.Pixmap(fitz.csRGB, pix)
     elif pix.colorspace and pix.colorspace != fitz.csRGB:
@@ -5802,9 +5804,9 @@ def _save_thumb(
 
     Path(out_dir).mkdir(parents=True, exist_ok=True)
     if index == 0:
-        filename = f"{report_name}.png"
+        filename = f"{safe_report_name}.png"
     else:
-        filename = f"{report_name}{index}.png"
+        filename = f"{safe_report_name}{index}.png"
     p = Path(out_dir) / filename
     img.save(p.as_posix(), format="PNG")
     return p.as_posix()
@@ -7391,11 +7393,12 @@ def _extract_candidate_artifacts(
     )
     if page_plan.chart_pages == [] and page_plan.table_pages == []:
         return artifacts
-    thumbs = Path(request.out_dir) / request.report_name / "thumbs"
+    safe_report_name = safe_path_segment(request.report_name, fallback="report")
+    thumbs = Path(request.out_dir) / safe_report_name / "thumbs"
     artifacts.charts, artifacts.chart_stats = _extract_charts(
         request.pdf_path,
         thumbs.as_posix(),
-        request.report_name,
+        safe_report_name,
         save_thumbs=False,
         doc=triage_doc if parallel_workers <= 1 else None,
         parallel_workers=parallel_workers,
@@ -7682,7 +7685,8 @@ def _extract_best_figure_png(
 ) -> Tuple[Optional[str], Optional[str], int]:
     try:
         out_root = Path(out_dir)
-        img_dir = out_root / report_name / "assets"
+        safe_report_name = safe_path_segment(report_name, fallback="report")
+        img_dir = out_root / safe_report_name / "assets"
         img_dir.mkdir(parents=True, exist_ok=True)
         best = (None, 0.0, "", -1)
 
@@ -7744,9 +7748,9 @@ def _extract_best_figure_png(
         if best[0] is None:
             return None, None, -1
 
-        out_path = img_dir / f"{report_name}.png"
+        out_path = img_dir / f"{safe_report_name}.png"
         best[0].save(out_path.as_posix())
-        rel = Path(report_name) / "assets" / out_path.name
+        rel = Path(safe_report_name) / "assets" / out_path.name
         return rel.as_posix(), best[2], int(best[3])
     except PDF_FIGURE_EXCEPTIONS:
         return None, None, -1

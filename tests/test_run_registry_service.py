@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import logging
+import sqlite3
 from pathlib import Path
+
+import pytest
 
 from src.contracts.semantic_ids import RunId
 from src.contracts.ui_run_control import (
@@ -10,12 +13,14 @@ from src.contracts.ui_run_control import (
     UiRunRecordListRequest,
     UiRunRecordWriteRequest,
 )
+from src.services import run_registry_service as registry_service
 from src.services.run_registry_service import (
     default_ui_run_registry_path,
     get_ui_run_record,
     list_ui_run_records,
     write_ui_run_record,
 )
+from src.utils.errors import AppError
 from src.utils.logging import new_run_context
 
 
@@ -162,3 +167,31 @@ def test_run_registry_service_upserts_existing_record(tmp_path: Path) -> None:
 
     assert loaded == succeeded
     assert isinstance(loaded.run_id, RunId)
+
+
+def test_run_registry_service_connect_failure_is_typed_app_error(
+    external_boundary_mocks_only,
+    assert_app_error,
+) -> None:
+    def _raise_connect(*args, **kwargs):
+        raise sqlite3.OperationalError("connect boom")
+
+    external_boundary_mocks_only.setattr(
+        registry_service.sqlite3, "connect", _raise_connect
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        get_ui_run_record(
+            UiRunRecordGetRequest(
+                schema_version="1.0",
+                registry_path="C:/tmp/ui_runs.sqlite",
+                run_id="run-missing",
+            ),
+            _ctx(),
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="ui_run_registry_unavailable",
+        retryable=True,
+    )

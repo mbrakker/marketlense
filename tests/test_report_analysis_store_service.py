@@ -133,3 +133,29 @@ def test_store_pack_validates_schema_backed_snapshot_pack_names(
     )
 
     assert Path(response.output_path).exists()
+
+
+def test_store_pack_rejects_pack_name_path_traversal(
+    run_context, tmp_path: Path, assert_app_error
+) -> None:
+    output_dir = tmp_path / "out"
+
+    with pytest.raises(AppError) as err:
+        store_pack(
+            AnalysisStorePackRequest(
+                schema_version="1.0",
+                output_dir=str(output_dir),
+                report_id="file123",
+                pack_name="../escaped",
+                payload={"schema_version": "1.0"},
+                report_slug="report",
+            ),
+            run_context,
+        )
+
+    assert_app_error(
+        err.value,
+        code="analysis_pack_name_invalid",
+        retryable=False,
+    )
+    assert not (output_dir / "report" / "report_analysis" / "escaped.json").exists()

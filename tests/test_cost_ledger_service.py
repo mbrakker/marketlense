@@ -3,6 +3,8 @@ import logging
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import pytest
+
 from src.contracts.costs import (
     CostLedgerAppendRequest,
     CostLedgerEntry,
@@ -11,6 +13,7 @@ from src.contracts.costs import (
 )
 from src.contracts.run_context import RunContext
 from src.services.cost_ledger_service import append_entry, generate_cost_report, rollup_daily
+from src.utils.errors import AppError
 
 
 def _ctx() -> RunContext:
@@ -382,3 +385,70 @@ def test_generate_cost_report_by_run(tmp_path: Path) -> None:
     assert report.totals.estimated_cost_usd == 0.03
     assert report.totals.total_output_tokens == 75
     assert [s.step_name for s in report.top_steps] == ["rank_candidates", "openai_analyze"]
+
+
+def test_generate_cost_report_rejects_invalid_filter_combination(
+    tmp_path: Path,
+    assert_app_error,
+) -> None:
+    with pytest.raises(AppError) as exc_info:
+        generate_cost_report(
+            CostReportRequest(
+                schema_version="1.0",
+                ledger_path=str(tmp_path / "ledger.jsonl"),
+                date_utc="2026-01-01",
+                run_id="run-1",
+                top_n=5,
+            ),
+            _ctx(),
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="cost_report_filter_invalid",
+        retryable=False,
+    )
+
+
+def test_generate_cost_report_rejects_non_positive_top_n(
+    tmp_path: Path,
+    assert_app_error,
+) -> None:
+    with pytest.raises(AppError) as exc_info:
+        generate_cost_report(
+            CostReportRequest(
+                schema_version="1.0",
+                ledger_path=str(tmp_path / "ledger.jsonl"),
+                run_id="run-1",
+                top_n=0,
+            ),
+            _ctx(),
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="cost_report_top_n_invalid",
+        retryable=False,
+    )
+
+
+def test_generate_cost_report_rejects_invalid_date(
+    tmp_path: Path,
+    assert_app_error,
+) -> None:
+    with pytest.raises(AppError) as exc_info:
+        generate_cost_report(
+            CostReportRequest(
+                schema_version="1.0",
+                ledger_path=str(tmp_path / "ledger.jsonl"),
+                date_utc="bad-date",
+                top_n=5,
+            ),
+            _ctx(),
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="cost_report_date_invalid",
+        retryable=False,
+    )

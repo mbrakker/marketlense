@@ -42,8 +42,40 @@ class _PromptCacheEntry:
 _PROMPT_CACHE: Dict[str, _PromptCacheEntry] = {}
 
 
+def _resolve_prompt_namespace(namespace: str) -> str:
+    normalized = str(namespace or "").strip()
+    if not normalized:
+        raise AppError(
+            code="prompt_namespace_invalid",
+            message="Prompt namespace is required",
+            retryable=False,
+        )
+    root = PROMPTS_ROOT.resolve()
+    candidate = (root / normalized).resolve()
+    try:
+        relative = candidate.relative_to(root)
+    except ValueError as exc:
+        raise AppError(
+            code="prompt_namespace_invalid",
+            message="Prompt namespace must resolve inside the prompts root",
+            cause=exc,
+            retryable=False,
+            context={"namespace": namespace},
+        ) from exc
+    rel_namespace = str(relative).replace("\\", "/")
+    if not rel_namespace or rel_namespace == ".":
+        raise AppError(
+            code="prompt_namespace_invalid",
+            message="Prompt namespace must resolve to a prompt directory",
+            retryable=False,
+            context={"namespace": namespace},
+        )
+    return rel_namespace
+
+
 def load_prompt_set(request: PromptLoadRequest, ctx: RunContext) -> PromptSet:
-    base = PROMPTS_ROOT / request.namespace
+    namespace = _resolve_prompt_namespace(request.namespace)
+    base = PROMPTS_ROOT / namespace
     system_path = base / "system.yaml"
     user_path = base / "user.yaml"
     logger.info(log_event(
@@ -51,9 +83,9 @@ def load_prompt_set(request: PromptLoadRequest, ctx: RunContext) -> PromptSet:
         role="service",
         event="prompt_load_start",
         module=logger.name,
-        fields={"namespace": request.namespace},
+        fields={"namespace": request.namespace, "resolved_namespace": namespace},
     ))
-    cache_entry = _PROMPT_CACHE.get(request.namespace)
+    cache_entry = _PROMPT_CACHE.get(namespace)
     prompt_set: PromptSet | None = None
     source = "reloaded"
     if cache_entry and not request.force_reload:
@@ -63,7 +95,7 @@ def load_prompt_set(request: PromptLoadRequest, ctx: RunContext) -> PromptSet:
                 role="service",
                 event="prompt_load_cache_hit",
                 module=logger.name,
-                fields={"namespace": request.namespace, "validated": False},
+                fields={"namespace": namespace, "validated": False},
             ))
             prompt_set = cache_entry.prompt_set
             source = "cache"
@@ -74,7 +106,7 @@ def load_prompt_set(request: PromptLoadRequest, ctx: RunContext) -> PromptSet:
                 event="prompt_load_cache_hit",
                 module=logger.name,
                 fields={
-                    "namespace": request.namespace,
+                    "namespace": namespace,
                     "validated": True,
                     "system_path": cache_entry.prompt_set.system.path,
                     "user_path": cache_entry.prompt_set.user.path,
@@ -88,7 +120,7 @@ def load_prompt_set(request: PromptLoadRequest, ctx: RunContext) -> PromptSet:
                 role="service",
                 event="prompt_load_cache_stale",
                 module=logger.name,
-                fields={"namespace": request.namespace},
+                fields={"namespace": namespace},
             ))
     if prompt_set is None:
         system_template = _load_prompt(system_path)
@@ -98,7 +130,7 @@ def load_prompt_set(request: PromptLoadRequest, ctx: RunContext) -> PromptSet:
             system=system_template,
             user=user_template,
         )
-        _PROMPT_CACHE[request.namespace] = _PromptCacheEntry(
+        _PROMPT_CACHE[namespace] = _PromptCacheEntry(
             prompt_set=prompt_set,
             system_mtime=_get_mtime(system_path),
             user_mtime=_get_mtime(user_path),
@@ -232,7 +264,7 @@ def _load_prompt(path: Path) -> PromptTemplate:
             retryable=False,
         ) from exc
     try:
-        data: Dict[str, Any] = yaml.safe_load(raw) or {}
+        data = yaml.safe_load(raw)
     except yaml.YAMLError as exc:
         raise AppError(
             code="prompt_yaml_invalid",
@@ -240,6 +272,15 @@ def _load_prompt(path: Path) -> PromptTemplate:
             cause=exc,
             retryable=False,
         ) from exc
+    if data is None:
+        data = {}
+    if not isinstance(data, dict):
+        raise AppError(
+            code="prompt_yaml_invalid",
+            message=f"Prompt YAML root must be a mapping: {path}",
+            retryable=False,
+            context={"path": str(path)},
+        )
     text = data.get("text", "")
     if not text:
         raise AppError(

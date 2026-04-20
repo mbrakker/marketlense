@@ -1029,6 +1029,25 @@ class TestConfigService(unittest.TestCase):
                 )
             self.assertIn("mapping", str(ctx.exception).lower())
 
+    def test_load_settings_rejects_non_mapping_yaml_root(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = Path(tmp_dir) / "app.yaml"
+            cfg_path.write_text("- not-a-mapping\n", encoding="utf-8")
+
+            with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
+                with self.assertRaises(RuntimeError) as ctx:
+                    load_settings(
+                        ConfigLoadRequest(schema_version="1.0", path=str(cfg_path)),
+                        RunContext(
+                            schema_version="1.0",
+                            run_id="r",
+                            task_id="t",
+                            span_id="s",
+                        ),
+                    )
+
+        self.assertIn("mapping", str(ctx.exception).lower())
+
 
 if __name__ == "__main__":
     unittest.main()

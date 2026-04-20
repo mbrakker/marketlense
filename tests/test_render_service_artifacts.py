@@ -403,3 +403,31 @@ def test_render_is_deterministic_across_calls(tmp_path):
     second_html = Path(second.html_path).read_text(encoding="utf-8")
     assert first.html_path == second.html_path
     assert first_html == second_html
+
+
+def test_render_creates_missing_nested_output_directory(tmp_path):
+    out_dir = tmp_path / "missing" / "nested"
+    req = RenderRequest(
+        schema_version="1.0",
+        data={
+            "title": "Nested Output Report",
+            "tldr": "TLDR",
+            "insights": ["Insight A", "Insight B", "Insight C", "Insight D", "Insight E"],
+            "quote": {"text": "Quote", "author": "Author"},
+            "commentary": "Commentary",
+            "publisher": "Publisher",
+            "taxonomy": ["tag"],
+            "region": "US",
+            "time_period": "2024",
+            "contents_page_number": 0,
+        },
+        doc_name="nested.pdf",
+        file_id="file_nested",
+        out_dir=str(out_dir),
+        preview_png=None,
+    )
+
+    response = render_report(req, _ctx())
+
+    assert out_dir.exists()
+    assert Path(response.html_path).exists()
