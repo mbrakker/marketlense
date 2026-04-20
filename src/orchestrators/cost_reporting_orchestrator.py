@@ -5,6 +5,7 @@ import logging
 from src.contracts.costs import CostReportingRequest, CostReportingResponse
 from src.contracts.run_context import RunContext
 from src.services import cost_ledger_service
+from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.cost_reporting_orchestrator")
@@ -12,7 +13,22 @@ logger = logging.getLogger("market_lense.cost_reporting_orchestrator")
 
 def run_cost_reporting(request: CostReportingRequest, ctx: RunContext) -> CostReportingResponse:
     if request.report_request is None and request.rollup_request is None:
-        raise ValueError("At least one of report_request or rollup_request must be provided.")
+        logger.info(log_event(
+            ctx,
+            role="orchestrator",
+            event="cost_reporting_invalid_request",
+            module=logger.name,
+            fields={
+                "has_report_request": False,
+                "has_rollup_request": False,
+            },
+        ))
+        raise AppError(
+            code="cost_reporting_request_invalid",
+            message="At least one of report_request or rollup_request must be provided.",
+            retryable=False,
+            context={"has_report_request": False, "has_rollup_request": False},
+        )
 
     logger.info(log_event(
         ctx,

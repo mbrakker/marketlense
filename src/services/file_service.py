@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 from pathlib import Path
 from typing import List
 
@@ -34,6 +35,40 @@ from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.file_service")
+_WINDOWS_ABSOLUTE_PATH_RX = re.compile(r"^[A-Za-z]:[\\/]")
+_PDF_CACHE_MD5_RX = re.compile(r"^[0-9a-fA-F]{32}$")
+
+
+def _normalize_glob_pattern(raw_pattern: str) -> str:
+    pattern = str(raw_pattern or "").strip() or "*"
+    normalized = pattern.replace("\\", "/")
+    if normalized.startswith("/") or _WINDOWS_ABSOLUTE_PATH_RX.match(pattern):
+        raise AppError(
+            code="directory_glob_invalid",
+            message="Directory glob pattern must be relative to root_dir",
+            retryable=False,
+            context={"glob_pattern": pattern},
+        )
+    if any(part == ".." for part in normalized.split("/")):
+        raise AppError(
+            code="directory_glob_invalid",
+            message="Directory glob pattern must not escape root_dir",
+            retryable=False,
+            context={"glob_pattern": pattern},
+        )
+    return pattern
+
+
+def _require_pdf_cache_md5(raw_md5: str) -> str:
+    token = str(raw_md5 or "").strip()
+    if not _PDF_CACHE_MD5_RX.fullmatch(token):
+        raise AppError(
+            code="pdf_cache_md5_invalid",
+            message="PDF cache md5 key must be a 32-character hexadecimal digest",
+            retryable=False,
+            context={"md5": token},
+        )
+    return token.lower()
 
 
 def read_text(request: ReadTextRequest, ctx: RunContext) -> ReadTextResponse:
@@ -167,16 +202,14 @@ def list_directory(
             },
         )
     )
-    root = Path(request.root_dir)
+    root = Path(request.root_dir).expanduser().resolve()
     if not root.exists():
         raise AppError(
             code="directory_not_found",
             message=f"Directory not found: {request.root_dir}",
             retryable=False,
         )
-    pattern = request.glob_pattern.strip() if request.glob_pattern else "*"
-    if not pattern:
-        pattern = "*"
+    pattern = _normalize_glob_pattern(request.glob_pattern)
     limit = request.limit if request.limit > 0 else 500
     iterator = root.rglob(pattern) if request.recursive else root.glob(pattern)
     entries: list[DirectoryEntry] = []
@@ -446,7 +479,8 @@ def read_latest_pdf_cache_text(
             fields={"cache_dir": request.cache_dir, "md5": request.md5},
         )
     )
-    root = Path(request.cache_dir) / "pdf_cache" / request.md5
+    md5 = _require_pdf_cache_md5(request.md5)
+    root = Path(request.cache_dir).expanduser().resolve() / "pdf_cache" / md5
     if not root.exists() or not root.is_dir():
         logger.info(
             log_event(
@@ -455,7 +489,7 @@ def read_latest_pdf_cache_text(
                 event="pdf_cache_text_read_complete",
                 module=logger.name,
                 fields={
-                    "md5": request.md5,
+                    "md5": md5,
                     "hit": False,
                     "reason": "cache_dir_missing",
                 },
@@ -474,7 +508,7 @@ def read_latest_pdf_cache_text(
                 event="pdf_cache_text_read_complete",
                 module=logger.name,
                 fields={
-                    "md5": request.md5,
+                    "md5": md5,
                     "hit": False,
                     "reason": "no_text_cache_files",
                 },
@@ -506,7 +540,7 @@ def read_latest_pdf_cache_text(
             event="pdf_cache_text_read_complete",
             module=logger.name,
             fields={
-                "md5": request.md5,
+                "md5": md5,
                 "hit": bool(text),
                 "source_path": str(source_path),
                 "length": len(text),

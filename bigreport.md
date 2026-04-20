@@ -2,10 +2,12 @@
 
 ## Findings
 
-No open findings. All previously listed issues were fixed and confirmed by tests.
+No open findings. All reported issues were fixed and confirmed by tests.
 
 ## Notes
 
-- Scope: first-party code under `src/` plus a quick WordPress syntax sweep. Vendored `tools/browser-use` was not treated as project-owned audit scope.
-- Verification: targeted regression suites passed, standalone runtime validation passed for the changed render/process/registry paths, and the full `pytest -q` suite passed: `1352 passed, 10 deselected, 15 subtests passed`.
-- WordPress: `php -l` passed on the plugin PHP files; no immediate syntax blocker was found there.
+- Scope: filesystem boundary validation and cost-reporting control-plane validation.
+- Verification:
+  - Focused regressions passed: `pytest -q tests/test_file_service.py` and `pytest -q tests/test_cost_reporting_orchestrator.py`
+  - Direct runtime validations passed for the real `file_service` and `cost_reporting_orchestrator` execution paths
+  - Full regression suite passed: `1355 passed, 10 deselected, 12 warnings, 15 subtests passed`

@@ -13,6 +13,7 @@ from src.contracts.costs import (
 )
 from src.contracts.run_context import RunContext
 from src.orchestrators import cost_reporting_orchestrator as orch
+from src.utils.errors import AppError
 
 
 def _ctx() -> RunContext:
@@ -82,6 +83,17 @@ def test_cost_reporting_runs_requested_steps(
     assert_logs_have_required_fields(caplog.records)
 
 
-def test_cost_reporting_requires_work() -> None:
-    with pytest.raises(ValueError):
+def test_cost_reporting_requires_work(
+    caplog,
+    assert_app_error,
+    assert_logs_have_required_fields,
+) -> None:
+    with pytest.raises(AppError) as exc_info:
         orch.run_cost_reporting(CostReportingRequest(schema_version="1.0"), _ctx())
+
+    assert_app_error(
+        exc_info.value,
+        code="cost_reporting_request_invalid",
+        retryable=False,
+    )
+    assert_logs_have_required_fields(caplog.records)
