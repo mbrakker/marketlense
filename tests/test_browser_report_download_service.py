@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+import time
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -13,6 +16,7 @@ from src.contracts.browser_download import (
     BrowserDownloadIdentity,
     BrowserDownloadIdentityField,
     BrowserDownloadPublisherOverride,
+    BrowserDownloadRouteStep,
     BrowserDownloadSettings,
     BrowserReportDownloadRequest,
 )
@@ -20,6 +24,7 @@ from src.contracts.publisher_inventory import PublisherInventoryCandidateTrace
 from src.services._browser_report_download import artifact as artifact_runtime
 from src.services._browser_report_download import browser as browser_runtime
 from src.services._browser_report_download import http as http_runtime
+from src.services._browser_report_download import request as request_runtime
 from src.services._browser_report_download.request import resolve_effective_identity_fields
 from src.services import browser_report_download_service as service
 from src.utils.errors import AppError
@@ -106,8 +111,10 @@ def _runtime(
             headless,
             auto_download_pdfs,
             keep_alive=None,
+            user_data_dir=None,
         ):
             self.downloads_path = str(downloads_path)
+            self.user_data_dir = str(user_data_dir) if user_data_dir is not None else None
             self.headless = headless
             self.auto_download_pdfs = auto_download_pdfs
             self.keep_alive = keep_alive
@@ -1309,6 +1316,154 @@ def test_download_report_with_browser_use_logs_onsite_prompt_guidance(
     assert response.outcome == "captured"
 
 
+def test_download_report_with_browser_use_logs_remembered_route_step_hints(
+    tmp_path: Path,
+    caplog,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="onsite_report",
+        route_summary="Accept cookies and extract the report body.",
+        create_pdf=False,
+        email_submission_completed=None,
+    )
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+    caplog.set_level(logging.INFO, logger=service.logger.name)
+
+    service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/research/report",
+            settings=_settings(tmp_path),
+            route_hint="Accept cookies and extract the report body.",
+            route_step_hints=[
+                BrowserDownloadRouteStep(
+                    schema_version="1.0",
+                    index=0,
+                    action="click",
+                    target_text="Allow all",
+                    target_role="button",
+                    target_url="https://example.com/research/report",
+                    result="Accepted cookies",
+                ),
+                BrowserDownloadRouteStep(
+                    schema_version="1.0",
+                    index=1,
+                    action="extract",
+                    target_text="report article",
+                    target_role="extract",
+                    target_url="https://example.com/research/report",
+                    result="Captured the on-site report body",
+                ),
+            ],
+            route_kind_hint="onsite_report",
+            route_family_hint="browser_onsite_report",
+        ),
+        run_context,
+    )
+
+    prompt_events = [
+        json.loads(record.message)
+        for record in caplog.records
+        if record.name == service.logger.name
+        and json.loads(record.message).get("event")
+        == "browser_report_download_prompt_prepared"
+    ]
+    assert len(prompt_events) == 1
+    rendered_user_prompt = prompt_events[0]["fields"]["rendered_user_prompt"]
+    assert "Replay these remembered structured route steps before broader exploration:" in rendered_user_prompt
+    assert "1. click Allow all -> Accepted cookies" in rendered_user_prompt
+    assert "2. extract report article -> Captured the on-site report body" in rendered_user_prompt
+
+
+def test_download_report_with_browser_use_short_circuits_remembered_onsite_extract_to_direct_html_capture(
+    tmp_path: Path,
+    caplog,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    class FakeResponse:
+        status_code = 200
+        headers = {"content-type": "text/html; charset=utf-8"}
+        url = "https://example.com/research/report"
+        text = (
+            "<html><head><title>Example Report</title></head>"
+            "<body><article><h1>Example Report</h1>"
+            "<p>Market research findings.</p>"
+            "<p>" + ("Long body text. " * 120) + "</p>"
+            "</article></body></html>"
+        )
+
+    external_boundary_mocks_only.setattr(
+        http_runtime.requests,
+        "get",
+        lambda *args, **kwargs: FakeResponse(),
+    )
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: (_ for _ in ()).throw(
+            AssertionError("browser runtime should not start for remembered onsite HTML capture")
+        ),
+    )
+    caplog.set_level(logging.INFO, logger=service.logger.name)
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/research/report",
+            settings=_settings(tmp_path),
+            route_hint="Accept cookies and extract the report body.",
+            route_step_hints=[
+                BrowserDownloadRouteStep(
+                    schema_version="1.0",
+                    index=0,
+                    action="click",
+                    target_text="Allow all",
+                    target_role="button",
+                    target_url="https://example.com/research/report",
+                    result="Accepted cookies",
+                ),
+                BrowserDownloadRouteStep(
+                    schema_version="1.0",
+                    index=1,
+                    action="extract",
+                    target_text="report article",
+                    target_role="extract",
+                    target_url="https://example.com/research/report",
+                    result="Captured the on-site report body",
+                ),
+            ],
+            route_kind_hint="onsite_report",
+            route_family_hint="browser_onsite_report",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "onsite_report"
+    assert response.outcome == "captured"
+    assert response.browser_had_structured_result is False
+    assert response.onsite_capture_path is not None
+    capture_path = Path(str(response.onsite_capture_path))
+    assert capture_path.exists()
+    assert "Long body text." in capture_path.read_text(encoding="utf-8")
+    service_events = [
+        json.loads(record.message)
+        for record in caplog.records
+        if record.name == service.logger.name
+    ]
+    assert any(
+        event.get("event") == "browser_report_download_direct_onsite_attempt_complete"
+        for event in service_events
+    )
+
+
 def test_download_report_with_browser_use_recovers_embedded_pdf_from_encoded_wrapper(
     tmp_path: Path,
     run_context,
@@ -1517,7 +1672,7 @@ def test_download_report_with_browser_use_prefers_form_evidence_over_onsite_hint
             self.browser.title = "Request the report"
             payload = json.loads(super().run_sync(max_steps).final_result())
             payload["route_kind"] = "onsite_report"
-            payload["encountered_form_fields"] = ["Business Email", "Industry"]
+            payload["encountered_form_fields"] = ["Company", "Work email"]
             payload["submit_button_state"] = "disabled"
             payload["post_submit_message"] = "Please use a business email address."
             payload["blocked_reason"] = "blocked_email_domain"
@@ -1548,6 +1703,62 @@ def test_download_report_with_browser_use_prefers_form_evidence_over_onsite_hint
     assert response.route_kind == "email_delivery"
     assert response.outcome == "email_required"
     assert response.blocked_reason == "blocked_email_domain"
+
+
+def test_download_report_with_browser_use_keeps_explicit_onsite_classification_when_optional_form_fields_were_seen(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="onsite_report",
+        route_summary="Accepted cookies, opened the optional form, and captured the article content.",
+        create_pdf=False,
+        email_submission_completed=None,
+    )
+    original_runtime = runtime.Agent
+
+    class ExplicitOnsiteAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            self.browser.url = "https://example.com/research/report"
+            self.browser.title = "Research report"
+            payload = json.loads(super().run_sync(max_steps).final_result())
+            payload["route_kind"] = "onsite_report"
+            payload["route_family"] = "browser_onsite_report"
+            payload["encountered_form_fields"] = ["Company", "Work email"]
+            payload["post_submit_message"] = ""
+            payload["terminal_text_excerpt"] = "Research report executive summary and methodology."
+            payload["onsite_capture_path"] = str(tmp_path / "downloads" / "captured-report.md")
+            payload["onsite_capture_format"] = "md"
+            payload["onsite_completeness_status"] = "complete"
+
+            class ExplicitOnsiteHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return ExplicitOnsiteHistory()
+
+    runtime.Agent = ExplicitOnsiteAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/research/report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_onsite_report",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "onsite_report"
+    assert response.outcome == "captured"
+    assert response.route_status == "verified"
 
 
 def test_download_report_with_browser_use_maps_company_name_and_professional_email_without_false_blocker(
@@ -3107,6 +3318,60 @@ def test_download_report_with_browser_use_prefers_delivery_confirmation_over_con
     assert response.confirmation_evidence.confirmation_score >= 2
 
 
+def test_download_report_with_browser_use_clears_conflicting_blocker_after_verified_pdf(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="Clicked the download CTA and saved the PDF.",
+        create_pdf=True,
+        email_submission_completed=None,
+    )
+    original_runtime = runtime.Agent
+
+    class ConflictingPdfBlockerAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            payload = json.loads(history.final_result())
+            payload["blocked_reason"] = "blocked_unknown_required_enum"
+            payload["blocked_reason_detail"] = "Industry selection is required."
+
+            class ConflictingPdfBlockerHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+                def action_results(self_nonlocal) -> list[Any]:
+                    return history.action_results()
+
+            return ConflictingPdfBlockerHistory()
+
+    runtime.Agent = ConflictingPdfBlockerAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://impact.com/partnerships/5-dos-and-dont-for-influencer-recruiting",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_pdf_click",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "pdf_download"
+    assert response.outcome == "downloaded"
+    assert response.blocked_reason is None
+    assert response.blocked_reason_detail is None
+    assert response.downloaded_file_path is not None
+
+
 def test_download_report_with_browser_use_normalizes_text_field_blocker_to_missing_identity(
     tmp_path: Path,
     run_context,
@@ -3294,3 +3559,371 @@ def test_download_report_with_browser_use_does_not_infer_blocker_from_onsite_art
     assert response.outcome == "captured"
     assert response.blocked_reason is None
     assert response.blocked_reason_detail is None
+
+
+def test_download_report_with_browser_use_salvages_empty_result_via_terminal_html_fetch(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="onsite_report",
+        route_summary="",
+        create_pdf=False,
+        email_submission_completed=None,
+    )
+    original_runtime = runtime.Agent
+
+    class EmptyResultAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            self.browser.url = "chrome://newtab/"
+            self.browser.title = "New Tab"
+            self.browser.html = ""
+
+            class EmptyHistory:
+                def final_result(self_nonlocal) -> str:
+                    return ""
+
+                def action_results(self_nonlocal) -> list[Any]:
+                    return []
+
+            return EmptyHistory()
+
+    runtime.Agent = EmptyResultAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+    external_boundary_mocks_only.setattr(
+        artifact_runtime,
+        "fetch_html_from_url",
+        lambda **kwargs: (
+            "<html><head><title>Digital 2021: Bosnia and Herzegovina</title></head>"
+            "<body><article><h1>Digital 2021: Bosnia and Herzegovina</h1>"
+            "<p>Report overview, audience, and internet usage analysis.</p>"
+            "</article></body></html>"
+        ),
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://datareportal.com/reports/digital-2021-bosnia-and-herzegovina",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_tracker_redirect",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "onsite_report"
+    assert response.outcome == "captured"
+    assert response.final_page_url == "https://datareportal.com/reports/digital-2021-bosnia-and-herzegovina"
+    assert response.onsite_capture_path is not None
+    assert Path(str(response.onsite_capture_path)).exists()
+
+
+def test_download_report_with_browser_use_times_out_stalled_agent(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    settings = _settings(tmp_path)
+    settings = replace(settings, timeout_seconds=0.05, max_steps=1)
+
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="",
+        create_pdf=False,
+        email_submission_completed=None,
+    )
+    original_runtime = runtime.Agent
+    original_browser = runtime.Browser
+    kill_calls: list[str] = []
+    stop_observations: list[bool] = []
+
+    class TrackingBrowser(original_browser):
+        async def kill(self) -> None:
+            kill_calls.append("kill")
+            await super().kill()
+
+    class StalledAgent(original_runtime):
+        def stop(self) -> None:
+            stop_observations.append(hasattr(self, "_task_start_time"))
+            super().stop()
+
+        def run_sync(self, max_steps: int):
+            time.sleep(2.0)
+            return super().run_sync(max_steps)
+
+    runtime.Browser = TrackingBrowser
+    runtime.Agent = StalledAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        service.download_report_with_browser_use(
+            BrowserReportDownloadRequest(
+                schema_version="1.0",
+                url="https://www.centricsoftware.com/whitepapers/eu-cosmetics-regulations-foundations-plm",
+                settings=settings,
+                route_family_hint="browser_pdf_click",
+            ),
+            run_context,
+        )
+
+    assert exc_info.value.code == "browser_download_agent_timeout"
+    assert kill_calls
+    assert stop_observations == [True]
+
+
+def test_download_report_with_browser_use_cleans_stale_browser_use_temp_dirs_before_launch(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    stale_profile_dir = tmp_path / "browser-use-user-data-dir-stale"
+    stale_profile_dir.mkdir(parents=True, exist_ok=True)
+    (stale_profile_dir / "SingletonLock").write_text("lock", encoding="utf-8")
+    stale_download_dir = tmp_path / "browser-use-downloads-stale"
+    stale_download_dir.mkdir(parents=True, exist_ok=True)
+    (stale_download_dir / "artifact.tmp").write_text("x", encoding="utf-8")
+    old_timestamp = time.time() - (browser_runtime._STALE_BROWSER_USE_TEMP_DIR_MIN_AGE_SECONDS + 60.0)
+    os.utime(stale_profile_dir, (old_timestamp, old_timestamp))
+    os.utime(stale_download_dir, (old_timestamp, old_timestamp))
+
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="Open the report page and save the PDF.",
+        create_pdf=True,
+        email_submission_completed=None,
+    )
+    external_boundary_mocks_only.setattr(
+        browser_runtime.tempfile,
+        "gettempdir",
+        lambda: str(tmp_path),
+    )
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/stale-temp-report",
+            settings=_settings(tmp_path),
+        ),
+        run_context,
+    )
+
+    assert response.outcome == "downloaded"
+    assert not stale_profile_dir.exists()
+    assert not stale_download_dir.exists()
+
+
+def test_download_report_with_browser_use_cleans_new_browser_use_temp_dirs_after_run(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="Open the report page and save the PDF.",
+        create_pdf=True,
+        email_submission_completed=None,
+    )
+    original_runtime = runtime.Agent
+
+    class TempLeakAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            leaked_profile_dir = tmp_path / "browseruse-tmp-created-during-run"
+            leaked_profile_dir.mkdir(parents=True, exist_ok=True)
+            (leaked_profile_dir / "cache.tmp").write_text("temp", encoding="utf-8")
+            return super().run_sync(max_steps)
+
+    runtime.Agent = TempLeakAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime.tempfile,
+        "gettempdir",
+        lambda: str(tmp_path),
+    )
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/temp-leak-report",
+            settings=_settings(tmp_path),
+        ),
+        run_context,
+    )
+
+    assert response.outcome == "downloaded"
+    assert not (tmp_path / "browseruse-tmp-created-during-run").exists()
+
+
+def test_prepare_download_dir_tolerates_locked_managed_browser_profile_dir(
+    tmp_path: Path,
+    external_boundary_mocks_only,
+) -> None:
+    normalized_url = "https://www.brightlocal.com/research/local-rankings-investigation-dentist"
+    download_dir = request_runtime.prepare_download_dir(
+        root_dir=str(tmp_path),
+        normalized_url=normalized_url,
+    )
+    locked_profile_dir = download_dir / "browser-use-user-data-dir-profile-locked"
+    locked_profile_dir.mkdir(parents=True, exist_ok=True)
+    (locked_profile_dir / "journal.baj").write_text("locked", encoding="utf-8")
+    stale_artifact = download_dir / "stale.txt"
+    stale_artifact.write_text("stale", encoding="utf-8")
+    original_rmtree = request_runtime.rmtree
+
+    def fake_rmtree(path: str | Path, *args: Any, **kwargs: Any) -> None:
+        candidate = Path(path)
+        if candidate == locked_profile_dir:
+            raise PermissionError(13, "locked", str(candidate))
+        return original_rmtree(path, *args, **kwargs)
+
+    external_boundary_mocks_only.setattr(request_runtime, "rmtree", fake_rmtree)
+
+    prepared_dir = request_runtime.prepare_download_dir(
+        root_dir=str(tmp_path),
+        normalized_url=normalized_url,
+    )
+
+    assert prepared_dir == download_dir
+    assert locked_profile_dir.exists()
+    assert not stale_artifact.exists()
+
+
+def test_kill_browser_force_stops_local_watchdog_process_tree(
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    class _FakeProcess:
+        def __init__(self, pid: int, children: list["_FakeProcess"] | None = None) -> None:
+            self.pid = pid
+            self._children = children or []
+            self.terminate_calls = 0
+            self.kill_calls = 0
+
+        def children(self, recursive: bool = False) -> list["_FakeProcess"]:
+            if not recursive:
+                return list(self._children)
+            descendants: list[_FakeProcess] = []
+            for child in self._children:
+                descendants.append(child)
+                descendants.extend(child.children(recursive=True))
+            return descendants
+
+        def terminate(self) -> None:
+            self.terminate_calls += 1
+
+        def kill(self) -> None:
+            self.kill_calls += 1
+
+    grandchild = _FakeProcess(pid=3003)
+    child = _FakeProcess(pid=3002, children=[grandchild])
+    root = _FakeProcess(pid=3001, children=[child])
+
+    def _fake_psutil_process(pid: int) -> _FakeProcess:
+        assert pid == 3001
+        return root
+
+    def _fake_wait_procs(processes: list[_FakeProcess], timeout: float):
+        assert timeout > 0.0
+        return list(processes), []
+
+    fake_browser = SimpleNamespace(
+        browser_profile=SimpleNamespace(user_data_dir="active-profile"),
+        _local_browser_watchdog=SimpleNamespace(
+            _subprocess=SimpleNamespace(pid=3001),
+            _temp_dirs_to_cleanup=[],
+            _original_user_data_dir=None,
+        ),
+        kill=lambda: (_ for _ in ()).throw(AssertionError("browser.kill should not run")),
+    )
+
+    external_boundary_mocks_only.setattr(
+        browser_runtime.psutil,
+        "Process",
+        _fake_psutil_process,
+    )
+    external_boundary_mocks_only.setattr(
+        browser_runtime.psutil,
+        "wait_procs",
+        _fake_wait_procs,
+    )
+
+    browser_runtime._kill_browser(
+        fake_browser,
+        ctx=run_context,
+        normalized_url="https://example.com/report",
+    )
+
+    assert root.terminate_calls == 1
+    assert child.terminate_calls == 1
+    assert grandchild.terminate_calls == 1
+    assert root.kill_calls == 0
+    assert child.kill_calls == 0
+    assert grandchild.kill_calls == 0
+    assert fake_browser._local_browser_watchdog._subprocess is None
+
+
+def test_download_report_with_browser_use_maps_browser_start_timeout_to_typed_error(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+    assert_app_error,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="",
+        create_pdf=False,
+        email_submission_completed=None,
+    )
+    original_runtime = runtime.Agent
+
+    class BrowserStartTimeoutAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            raise TimeoutError(
+                "Event handler browser_use.browser.watchdog_base.BrowserSession.on_BrowserStartEvent "
+                "timed out after 30.0s and interrupted any processing of 1 child events"
+            )
+
+    runtime.Agent = BrowserStartTimeoutAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        service.download_report_with_browser_use(
+            BrowserReportDownloadRequest(
+                schema_version="1.0",
+                url="https://datareportal.com/reports/digital-2026-mozambique",
+                settings=_settings(tmp_path),
+            ),
+            run_context,
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="browser_download_browser_start_timeout",
+        retryable=True,
+    )

@@ -1099,6 +1099,194 @@ class TestReportStoreService(unittest.TestCase):
                 response.terminal_evidence.network_events[1].signal_kind,
             )
 
+    def test_get_download_route_prefers_reusable_extract_trace_over_newer_scroll_only_trace(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_route_prefers_extract_trace")
+
+            replace_publishers(
+                PublishersReplaceRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_page_url="https://www.notion.so/source",
+                    publishers=[
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-1",
+                            notion_page_url="https://www.notion.so/page-1",
+                            name="Example Publisher",
+                            homepage="https://example.com/",
+                            self_presentation="Example description",
+                            insights_url="https://example.com/report",
+                            icon_source="https://cdn.example.com/example.png",
+                        )
+                    ],
+                ),
+                ctx,
+            )
+
+            record_publisher_download_route(
+                PublisherDownloadRouteRecordRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_url="https://example.com/report",
+                    source_url="https://example.com/report",
+                    route_kind="onsite_report",
+                    route_summary="Accept cookies and extract the on-site report.",
+                    outcome="captured",
+                    route_family="browser_onsite_report",
+                    route_status="verified",
+                    resolved_target_url="https://example.com/report",
+                    route_steps=[
+                        BrowserDownloadRouteStep(
+                            schema_version="1.0",
+                            index=0,
+                            action="click",
+                            target_text="Allow all",
+                            target_role="button",
+                            target_url="https://example.com/report",
+                            result="Accepted cookies",
+                        ),
+                        BrowserDownloadRouteStep(
+                            schema_version="1.0",
+                            index=1,
+                            action="extract",
+                            target_text="report article",
+                            target_role="extract",
+                            target_url="https://example.com/report",
+                            result="Captured the on-site report body",
+                        ),
+                    ],
+                    confirmation_evidence=BrowserDownloadConfirmationEvidence(
+                        schema_version="1.0",
+                        url_changed=False,
+                        visible_confirmation_text="",
+                        submit_button_state="unchanged",
+                        form_disappeared=False,
+                        final_page_url="https://example.com/report",
+                    ),
+                    terminal_evidence=DownloadTerminalEvidence(
+                        schema_version="1.0",
+                        final_page_url="https://example.com/report",
+                        final_page_title="Example report",
+                        terminal_text_excerpt="Report body",
+                        artifact_url="https://example.com/report",
+                        artifact_kind="onsite_report",
+                        artifact_validation_status="verified",
+                        artifact_validation_detail="Captured from on-site article.",
+                        confirmation_signal_count=1,
+                        traversed_page_urls=["https://example.com/report"],
+                        evidence_labels=["structured_result", "onsite_report"],
+                    ),
+                    browser_had_structured_result=True,
+                    used_candidate_pdf_url=False,
+                    used_candidate_source_page=False,
+                    blocked_reason=None,
+                    blocked_reason_detail=None,
+                    last_downloaded_file_path=None,
+                    last_final_page_url="https://example.com/report",
+                    onsite_capture_path="captured.html",
+                    onsite_capture_format="html",
+                    onsite_page_count=1,
+                    onsite_completeness_status="complete",
+                ),
+                ctx,
+            )
+            time.sleep(0.01)
+            record_publisher_download_route(
+                PublisherDownloadRouteRecordRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_url="https://example.com/report",
+                    source_url="https://example.com/report",
+                    route_kind="onsite_report",
+                    route_summary="Navigate to the report page, accept cookies, and scroll.",
+                    outcome="captured",
+                    route_family="browser_onsite_report",
+                    route_status="verified",
+                    resolved_target_url="https://example.com/report",
+                    route_steps=[
+                        BrowserDownloadRouteStep(
+                            schema_version="1.0",
+                            index=0,
+                            action="navigate",
+                            target_text="",
+                            target_role="page",
+                            target_url="https://example.com/report",
+                            result="Opened the report page",
+                        ),
+                        BrowserDownloadRouteStep(
+                            schema_version="1.0",
+                            index=1,
+                            action="click",
+                            target_text="Allow all",
+                            target_role="button",
+                            target_url="https://example.com/report",
+                            result="Accepted cookies",
+                        ),
+                        BrowserDownloadRouteStep(
+                            schema_version="1.0",
+                            index=2,
+                            action="scroll",
+                            target_text="",
+                            target_role="page",
+                            target_url="https://example.com/report",
+                            result="Scrolled down 900px",
+                        ),
+                    ],
+                    confirmation_evidence=BrowserDownloadConfirmationEvidence(
+                        schema_version="1.0",
+                        url_changed=False,
+                        visible_confirmation_text="",
+                        submit_button_state="unchanged",
+                        form_disappeared=False,
+                        final_page_url="https://example.com/report",
+                    ),
+                    terminal_evidence=DownloadTerminalEvidence(
+                        schema_version="1.0",
+                        final_page_url="https://example.com/report",
+                        final_page_title="Example report",
+                        terminal_text_excerpt="Report body",
+                        artifact_url="https://example.com/report",
+                        artifact_kind="onsite_report",
+                        artifact_validation_status="verified",
+                        artifact_validation_detail="Captured from on-site article.",
+                        confirmation_signal_count=1,
+                        traversed_page_urls=["https://example.com/report"],
+                        evidence_labels=["structured_result", "onsite_report"],
+                    ),
+                    browser_had_structured_result=True,
+                    used_candidate_pdf_url=False,
+                    used_candidate_source_page=False,
+                    blocked_reason=None,
+                    blocked_reason_detail=None,
+                    last_downloaded_file_path=None,
+                    last_final_page_url="https://example.com/report",
+                    onsite_capture_path="captured.html",
+                    onsite_capture_format="html",
+                    onsite_page_count=1,
+                    onsite_completeness_status="complete",
+                ),
+                ctx,
+            )
+
+            response = get_publisher_download_route(
+                PublisherDownloadRouteGetRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_url="https://example.com/report",
+                ),
+                ctx,
+            )
+
+            self.assertIsNotNone(response)
+            assert response is not None
+            self.assertEqual(
+                "Accept cookies and extract the on-site report.",
+                response.route_summary,
+            )
+            self.assertEqual(["click", "extract"], [step.action for step in response.route_steps])
+
     def test_replace_publishers_preserves_google_folder_by_name_or_insights_url(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = os.path.join(tmpdir, "reports.sqlite")

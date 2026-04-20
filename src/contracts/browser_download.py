@@ -356,6 +356,12 @@ class BrowserReportDownloadRequest:
             "doc": "Previously successful route summary used to bias the next browser attempt."
         },
     )
+    route_step_hints: list[BrowserDownloadRouteStep] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Previously successful structured route steps reused to bias the next browser attempt when available."
+        },
+    )
     route_kind_hint: Optional[str] = field(
         default=None,
         metadata={
@@ -522,6 +528,10 @@ class ReportDownloadRoutePlanStep:
         default=None,
         metadata={"doc": "Previously successful route summary reused for this attempt when available."},
     )
+    route_step_hints: list[BrowserDownloadRouteStep] = field(
+        default_factory=list,
+        metadata={"doc": "Previously successful structured route steps reused for this attempt when available."},
+    )
     route_kind_hint: Optional[str] = field(
         default=None,
         metadata={"doc": "Previously observed route kind reused for this attempt when available."},
@@ -601,6 +611,10 @@ class PublisherDownloadRouteMemory:
     )
     resolved_target_url: str = field(
         metadata={"doc": "Remembered resolved target URL for this route."}
+    )
+    route_steps: list[BrowserDownloadRouteStep] = field(
+        default_factory=list,
+        metadata={"doc": "Remembered structured route steps previously observed for this URL."},
     )
     attempts: int = field(
         default=0,

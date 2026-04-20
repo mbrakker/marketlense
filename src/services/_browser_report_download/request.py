@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from errno import EACCES
+from errno import EBUSY
+from errno import EPERM
 from hashlib import sha1
 from pathlib import Path
 from shutil import rmtree
@@ -32,6 +35,7 @@ _PUBLIC_EMAIL_DOMAINS = {
     "pm.me",
     "gmx.com",
 }
+_MANAGED_BROWSER_PROFILE_DIR_PREFIX = "browser-use-user-data-dir-profile"
 
 
 def validate_common_request(
@@ -216,12 +220,31 @@ def prepare_download_dir(*, root_dir: str, normalized_url: str) -> Path:
     if download_dir.exists():
         for child in download_dir.iterdir():
             if child.is_dir():
-                rmtree(child)
+                _remove_download_dir_child(child)
             else:
                 child.unlink()
     else:
         download_dir.mkdir(parents=True, exist_ok=True)
     return download_dir
+
+
+def _remove_download_dir_child(child: Path) -> None:
+    try:
+        rmtree(child)
+    except OSError as exc:
+        if _is_locked_managed_browser_profile_dir(child, exc):
+            return
+        raise
+
+
+def _is_locked_managed_browser_profile_dir(child: Path, exc: OSError) -> bool:
+    if not child.is_dir():
+        return False
+    if not child.name.startswith(_MANAGED_BROWSER_PROFILE_DIR_PREFIX):
+        return False
+    errno_value = getattr(exc, "errno", None)
+    winerror_value = getattr(exc, "winerror", None)
+    return errno_value in {EACCES, EBUSY, EPERM} or winerror_value == 32
 
 
 def _validate_email_value(value: str, *, field_name: str) -> None:

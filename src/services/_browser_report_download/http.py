@@ -63,6 +63,23 @@ _HTML_FETCH_HEADERS = {
     "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
     "User-Agent": _PDF_FETCH_HEADERS["User-Agent"],
 }
+_ONSITE_CAPTURE_HTML_MARKERS = (
+    "report",
+    "research",
+    "study",
+    "analysis",
+    "insight",
+    "outlook",
+    "survey",
+    "investigation",
+)
+_ONSITE_CAPTURE_BLOCKED_MARKERS = (
+    "captcha",
+    "cloudflare",
+    "access denied",
+    "security checkpoint",
+    "enable javascript",
+)
 
 
 def try_direct_pdf_download(
@@ -207,6 +224,174 @@ def try_direct_pdf_download(
         )
     )
     return response
+
+
+def try_direct_onsite_capture(
+    *,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    normalized_url: str,
+    download_dir: Path,
+    page_url: str | None = None,
+) -> BrowserReportDownloadResult | None:
+    if not _should_try_direct_onsite_capture(request):
+        return None
+    target_url = str(page_url or request.attempt_url or request.url).strip() or request.url
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_direct_onsite_attempt_start",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "target_url": target_url,
+                "route_family": request.route_family_hint or "",
+                "used_route_hint": bool(request.route_hint),
+            },
+        )
+    )
+    try:
+        response = requests.get(
+            target_url,
+            headers=_HTML_FETCH_HEADERS,
+            timeout=request.settings.timeout_seconds,
+            allow_redirects=True,
+        )
+    except requests.RequestException as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_direct_onsite_attempt_fallback",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "target_url": target_url,
+                    "error_code": "browser_download_html_fetch_failed",
+                    "error_message": str(exc),
+                },
+            )
+        )
+        return None
+    content_type = str(response.headers.get("content-type", "")).casefold()
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_direct_onsite_attempt_response",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "target_url": target_url,
+                "final_url": response.url,
+                "status_code": response.status_code,
+                "content_type": response.headers.get("content-type", ""),
+            },
+        )
+    )
+    if response.status_code >= 400 or ("html" not in content_type and "xml" not in content_type):
+        return None
+    html = str(response.text or "")
+    if not _looks_like_onsite_capture_html(html):
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_direct_onsite_attempt_fallback",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "target_url": target_url,
+                    "error_code": "browser_download_direct_onsite_not_report_like",
+                    "error_message": "Fetched HTML did not look like a reusable on-site report capture",
+                },
+            )
+        )
+        return None
+    capture_path = download_dir / "onsite_capture.html"
+    capture_path.write_text(html, encoding="utf-8")
+    final_url = str(response.url or target_url).strip() or target_url
+    final_title = _extract_html_title(html)
+    terminal_excerpt = _extract_text_excerpt(html)
+    response_result = BrowserReportDownloadResult(
+        schema_version="1.0",
+        source_url=request.url,
+        normalized_url=normalized_url,
+        route_kind="onsite_report",
+        route_family=request.route_family_hint or "browser_onsite_report",
+        route_status="verified",
+        outcome="captured",
+        route_summary="Open the remembered on-site report URL and capture the HTML article directly.",
+        final_page_url=final_url,
+        resolved_target_url=final_url,
+        used_route_hint=bool(request.route_hint),
+        route_steps=[
+            BrowserDownloadRouteStep(
+                schema_version="1.0",
+                index=0,
+                action="open",
+                target_text=final_url,
+                target_role="url",
+                target_url=final_url,
+                result="Fetched the on-site report HTML directly",
+            ),
+            BrowserDownloadRouteStep(
+                schema_version="1.0",
+                index=1,
+                action="extract",
+                target_text="onsite_capture.html",
+                target_role="file",
+                target_url=final_url,
+                result="Saved the on-site report HTML locally",
+            ),
+        ],
+        confirmation_evidence=BrowserDownloadConfirmationEvidence(
+            schema_version="1.0",
+            url_changed=(final_url != target_url),
+            visible_confirmation_text="",
+            submit_button_state="unchanged",
+            form_disappeared=False,
+            final_page_url=final_url,
+        ),
+        terminal_evidence=DownloadTerminalEvidence(
+            schema_version="1.0",
+            final_page_url=final_url,
+            final_page_title=final_title,
+            terminal_text_excerpt=terminal_excerpt,
+            artifact_url=final_url,
+            artifact_kind="onsite_report",
+            artifact_validation_status="verified",
+            artifact_validation_detail="Captured a remembered on-site report directly from HTML.",
+            confirmation_signal_count=0,
+            traversed_page_urls=[final_url],
+            evidence_labels=["direct_html_capture", "onsite_report"],
+        ),
+        browser_had_structured_result=False,
+        used_candidate_pdf_url=False,
+        used_candidate_source_page=bool(request.source_page_url_hint),
+        encountered_form_fields=[],
+        blocked_reason=None,
+        blocked_reason_detail=None,
+        downloaded_file_path=None,
+        downloaded_file_name=None,
+        downloaded_mime_type=None,
+        downloaded_size_bytes=None,
+        onsite_capture_path=str(capture_path),
+        onsite_capture_format="html",
+        onsite_page_count=1,
+        onsite_completeness_status="complete",
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_direct_onsite_attempt_complete",
+            module=logger.name,
+            fields=asdict(response_result),
+        )
+    )
+    return response_result
 
 
 def ensure_downloaded_pdf(
@@ -497,6 +682,59 @@ def download_pdf_from_url(
                 "destination_path": str(destination_path),
             },
         ) from exc
+
+
+def _should_try_direct_onsite_capture(
+    request: BrowserReportDownloadRequest,
+) -> bool:
+    if str(request.route_family_hint or "").strip() != "browser_onsite_report":
+        return False
+    if str(request.route_kind_hint or "").strip() != "onsite_report":
+        return False
+    actions = {
+        str(step.action or "").strip().lower() for step in request.route_step_hints
+    }
+    if "extract" in actions:
+        return True
+    hint = str(request.route_hint or "").casefold()
+    return "extract" in hint or "capture" in hint
+
+
+def _looks_like_onsite_capture_html(html: str) -> bool:
+    token = str(html or "")
+    if not token.strip():
+        return False
+    lowered = token.casefold()
+    if any(marker in lowered for marker in _ONSITE_CAPTURE_BLOCKED_MARKERS):
+        return False
+    plain_text = _html_to_text(token)
+    if len(plain_text) < 800:
+        return False
+    if "<article" in lowered:
+        return True
+    return any(marker in plain_text.casefold() for marker in _ONSITE_CAPTURE_HTML_MARKERS)
+
+
+def _extract_html_title(html: str) -> str:
+    match = re.search(r"(?is)<title[^>]*>(.*?)</title>", str(html or ""))
+    if not match:
+        return ""
+    return " ".join(str(match.group(1) or "").split()).strip()
+
+
+def _html_to_text(html: str) -> str:
+    token = re.sub(r"(?is)<script[^>]*>.*?</script>", " ", str(html or ""))
+    token = re.sub(r"(?is)<style[^>]*>.*?</style>", " ", token)
+    token = re.sub(r"(?is)<[^>]+>", " ", token)
+    token = re.sub(r"\s+", " ", token)
+    return token.strip()
+
+
+def _extract_text_excerpt(html: str, *, limit: int = 280) -> str:
+    plain_text = _html_to_text(html)
+    if len(plain_text) <= limit:
+        return plain_text
+    return plain_text[:limit].rstrip() + "..."
 
 
 def _guess_mime_type(downloaded_path: Path | None) -> str | None:

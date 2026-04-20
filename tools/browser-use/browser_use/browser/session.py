@@ -1,6 +1,7 @@
 """Event-driven browser session with backwards compatibility."""
 
 import asyncio
+import contextlib
 import logging
 import time
 from functools import cached_property
@@ -582,11 +583,17 @@ class BrowserSession(BaseModel):
 		# Suppress auto-reconnect callback during teardown
 		self._intentional_stop = True
 		# Cancel any in-flight reconnection task
-		if self._reconnect_task and not self._reconnect_task.done():
-			self._reconnect_task.cancel()
-			self._reconnect_task = None
+		reconnect_task = self._reconnect_task
+		if reconnect_task and not reconnect_task.done():
+			reconnect_task.cancel()
+			with contextlib.suppress(asyncio.CancelledError):
+				await reconnect_task
+		self._reconnect_task = None
 		self._reconnecting = False
 		self._reconnect_event.set()  # unblock any waiters
+		# Clear reconnect target before the WS handler exits so a late callback
+		# cannot schedule an auto-reconnect during intentional teardown.
+		self.browser_profile.cdp_url = None
 
 		cdp_status = 'connected' if self._cdp_client_root else 'not connected'
 		session_mgr_status = 'exists' if self.session_manager else 'None'
@@ -634,7 +641,9 @@ class BrowserSession(BaseModel):
 			self._demo_mode.reset()
 			self._demo_mode = None
 
-		self._intentional_stop = False
+		# Keep shutdown mode active until the next successful connect() call
+		# reattaches a fresh WS-drop callback for a live session.
+		self._intentional_stop = True
 		self.logger.info('✅ Browser session reset complete')
 
 	def model_post_init(self, __context) -> None:
@@ -685,6 +694,7 @@ class BrowserSession(BaseModel):
 
 		save_event = self.event_bus.dispatch(SaveStorageStateEvent())
 		await save_event
+		self.browser_profile.cdp_url = None
 
 		# Dispatch stop event to kill the browser
 		await self.event_bus.dispatch(BrowserStopEvent(force=True))
@@ -709,6 +719,7 @@ class BrowserSession(BaseModel):
 
 		save_event = self.event_bus.dispatch(SaveStorageStateEvent())
 		await save_event
+		self.browser_profile.cdp_url = None
 
 		# Now dispatch BrowserStopEvent to notify watchdogs
 		await self.event_bus.dispatch(BrowserStopEvent(force=False))

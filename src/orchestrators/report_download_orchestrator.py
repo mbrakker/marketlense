@@ -243,9 +243,10 @@ def run_report_download(
             )
             break
         except AppError as exc:
-            if not is_retryable_app_error(exc):
-                raise
-            last_retryable_error = exc
+            attempt_retryable = _is_download_attempt_retryable(
+                exc=exc,
+                planned_step=planned_step,
+            )
             logger.info(
                 log_event(
                     ctx,
@@ -259,10 +260,14 @@ def run_report_download(
                         "attempt_url": planned_step.attempt_url or "",
                         "error_code": exc.code,
                         "error_message": exc.message,
+                        "attempt_retryable": attempt_retryable,
                         "fallback_on_retryable_error": planned_step.fallback_on_retryable_error,
                     },
                 )
             )
+            if not attempt_retryable:
+                raise
+            last_retryable_error = exc
             if not planned_step.fallback_on_retryable_error:
                 raise
     if result is None:
@@ -465,6 +470,7 @@ def _run_download_attempt(
         settings=request.settings,
         delivery_email=request.delivery_email,
         route_hint=planned_step.route_hint,
+        route_step_hints=list(planned_step.route_step_hints),
         route_kind_hint=planned_step.route_kind_hint,
         candidate_trace=request.candidate_trace,
         publisher_discovery_route_kind=request.publisher_discovery_route_kind,
@@ -484,8 +490,32 @@ def _run_download_attempt(
         policy=policy,
         retry_event="report_download_retry",
         failure_event="report_download_attempt_failed",
+        is_retryable=lambda exc: _is_download_attempt_retryable(
+            exc=exc,
+            planned_step=planned_step,
+        ),
         sleep_fn=dependencies.sleep_fn,
     )
+
+
+def _is_download_attempt_retryable(
+    *,
+    exc: Exception,
+    planned_step: ReportDownloadRoutePlanStep,
+) -> bool:
+    if not is_retryable_app_error(exc):
+        return False
+    if not isinstance(exc, AppError):
+        return False
+    if (
+        planned_step.route_family.startswith("browser_")
+        and exc.code in {
+            "browser_download_agent_timeout",
+            "browser_download_route_summary_too_weak",
+        }
+    ):
+        return False
+    return True
 
 
 def _remembered_route_memory(
@@ -497,6 +527,7 @@ def _remembered_route_memory(
         schema_version="1.0",
         route_kind=remembered_route.route_kind,
         route_summary=remembered_route.route_summary,
+        route_steps=list(remembered_route.route_steps),
         outcome=remembered_route.outcome,
         route_family=remembered_route.route_family,
         route_status=remembered_route.route_status,

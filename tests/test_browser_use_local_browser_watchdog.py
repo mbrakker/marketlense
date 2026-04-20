@@ -17,6 +17,7 @@ if str(VENDORED_BROWSER_USE_ROOT) not in sys.path:
 
 from browser_use.browser.session import BrowserSession
 from browser_use.browser.events import BrowserKillEvent, BrowserStopEvent
+from browser_use.agent import service as agent_service_module
 from browser_use.browser.watchdogs import local_browser_watchdog as watchdog_module
 from browser_use.browser.watchdogs.local_browser_watchdog import LocalBrowserWatchdog
 
@@ -229,3 +230,71 @@ def test_local_browser_watchdog_kill_cleans_browser_process_tree() -> None:
     assert child.is_running() is False
     assert grandchild.is_running() is False
     assert watchdog._subprocess is None
+
+
+def test_browser_session_reset_awaits_cancelled_reconnect_task(
+    tmp_path: Path,
+) -> None:
+    profile_dir = tmp_path / "browser-profile"
+    profile_dir.mkdir()
+
+    state = {"cancelled": False, "finished": False}
+
+    async def _pending_reconnect() -> None:
+        try:
+            await asyncio.sleep(60.0)
+        except asyncio.CancelledError:
+            state["cancelled"] = True
+            raise
+        finally:
+            state["finished"] = True
+
+    async def _exercise() -> None:
+        session = BrowserSession(headless=True, user_data_dir=profile_dir)
+        session.browser_profile.cdp_url = "ws://127.0.0.1/devtools/browser/test"
+        reconnect_task = asyncio.create_task(_pending_reconnect())
+        await asyncio.sleep(0)
+        session._reconnect_task = reconnect_task
+
+        await session.reset()
+
+        assert reconnect_task.cancelled() is True
+        assert session._reconnect_task is None
+        assert session._intentional_stop is True
+        assert session.cdp_url is None
+
+    asyncio.run(_exercise())
+
+    assert state == {"cancelled": True, "finished": True}
+
+
+def test_agent_close_skips_browser_session_cleanup_in_worker_mode(
+    external_boundary_mocks_only,
+) -> None:
+    state = {"kill_calls": 0, "event_bus_stop_calls": 0}
+
+    class _FakeEventBus:
+        async def stop(self, clear: bool, timeout: float) -> None:
+            state["event_bus_stop_calls"] += 1
+
+    class _FakeBrowserSession:
+        browser_profile = SimpleNamespace(keep_alive=True)
+        event_bus = _FakeEventBus()
+
+        async def kill(self) -> None:
+            state["kill_calls"] += 1
+
+    fake_agent = SimpleNamespace(
+        browser_session=_FakeBrowserSession(),
+        skill_service=None,
+        logger=SimpleNamespace(
+            debug=lambda *_args, **_kwargs: None,
+            error=lambda *_args, **_kwargs: None,
+        ),
+    )
+
+    external_boundary_mocks_only.setenv("MARKET_LENSE_BROWSER_AGENT_WORKER", "1")
+
+    asyncio.run(agent_service_module.Agent.close(fake_agent))
+
+    assert state == {"kill_calls": 0, "event_bus_stop_calls": 0}

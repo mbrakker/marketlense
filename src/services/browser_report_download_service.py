@@ -15,6 +15,7 @@ from src.services._browser_report_download.browser import (
     run_browser_report_download_agent,
 )
 from src.services._browser_report_download.http import try_direct_pdf_download
+from src.services._browser_report_download.http import try_direct_onsite_capture
 from src.services._browser_report_download.prompt import (
     render_browser_report_download_prompt,
 )
@@ -132,6 +133,25 @@ def download_report_with_browser_use(
             root_dir=request.settings.output_dir,
             normalized_url=normalized_url,
         )
+
+    direct_onsite_result = try_direct_onsite_capture(
+        request=request,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        download_dir=download_dir,
+        page_url=normalized_execution_url,
+    )
+    if direct_onsite_result is not None:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_complete",
+                module=logger.name,
+                fields=asdict(direct_onsite_result),
+            )
+        )
+        return direct_onsite_result
 
     validate_browser_runtime_settings(request)
     prompt_bundle = render_browser_report_download_prompt(

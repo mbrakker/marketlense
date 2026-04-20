@@ -846,6 +846,41 @@ def _route_projection_rank(route_status: str, outcome: str) -> int:
     return 0
 
 
+def _route_reusability_bonus(
+    *,
+    route_summary: str,
+    route_steps_json: str | None,
+    outcome: str,
+    browser_had_structured_result: bool,
+) -> int:
+    bonus = 0
+    if browser_had_structured_result:
+        bonus += 3
+    route_steps = _parse_route_steps(route_steps_json)
+    if route_steps:
+        bonus += 2
+    actions = [str(step.action or "").strip().lower() for step in route_steps]
+    scroll_count = sum(1 for action in actions if action == "scroll")
+    non_scroll_count = sum(1 for action in actions if action and action != "scroll")
+    bonus += min(non_scroll_count, 3)
+    bonus -= min(scroll_count, 4)
+    normalized_outcome = str(outcome or "").strip().lower()
+    if normalized_outcome == "captured" and "extract" in actions:
+        bonus += 8
+    elif normalized_outcome == "email_requested" and "submit" in actions:
+        bonus += 8
+    elif normalized_outcome == "downloaded" and any(
+        action in {"download", "save_as_pdf"} for action in actions
+    ):
+        bonus += 8
+    normalized_summary = str(route_summary or "").strip().lower()
+    if "extract" in normalized_summary:
+        bonus += 3
+    if "scroll" in normalized_summary and "extract" not in normalized_summary:
+        bonus -= 1
+    return bonus
+
+
 def _is_verified_success(route_status: str, outcome: str) -> bool:
     normalized_status = str(route_status or "").strip().lower()
     normalized_outcome = str(outcome or "").strip().lower()
@@ -2356,7 +2391,7 @@ def get_publisher_download_route(
             (normalized_url,),
         ).fetchall()
         best_history_row = None
-        best_history_rank = -1
+        best_history_score = -1
         history_attempts = len(history_rows)
         history_verified_successes = sum(
             1 for row in history_rows if _is_verified_success(str(row[5] or ""), str(row[3] or ""))
@@ -2367,10 +2402,22 @@ def get_publisher_download_route(
             if str(row[3] or "").strip()
         ]
         for row in history_rows:
-            rank = _route_projection_rank(str(row[5] or "").strip(), str(row[3] or "").strip())
-            if rank > best_history_rank:
+            score = (
+                _route_projection_rank(
+                    str(row[5] or "").strip(),
+                    str(row[3] or "").strip(),
+                )
+                * 100
+                + _route_reusability_bonus(
+                    route_summary=str(row[2] or "").strip(),
+                    route_steps_json=str(row[7] or "").strip() or None,
+                    outcome=str(row[3] or "").strip(),
+                    browser_had_structured_result=_bool_from_db(row[10]),
+                )
+            )
+            if score > best_history_score:
                 best_history_row = row
-                best_history_rank = rank
+                best_history_score = score
         if best_history_row is not None:
             response = PublisherDownloadRouteResponse(
                 schema_version="1.0",
@@ -2424,11 +2471,11 @@ def get_publisher_download_route(
                 confidence_score=_confidence_score_for_history(
                     attempts=history_attempts,
                     verified_successes=history_verified_successes,
-                    route_kind=str(best_history_row[2] or "").strip(),
+                    route_kind=str(best_history_row[1] or "").strip(),
                     route_family=str(best_history_row[4] or "").strip(),
                     route_status=str(best_history_row[5] or "").strip(),
                     outcome=str(best_history_row[3] or "").strip(),
-                    browser_had_structured_result=_bool_from_db(best_history_row[11]),
+                    browser_had_structured_result=_bool_from_db(best_history_row[10]),
                     onsite_completeness_status=str(best_history_row[25] or "").strip()
                     or None,
                 ),
@@ -2817,6 +2864,8 @@ def record_publisher_download_route(
                     route_family,
                     route_status,
                     resolved_target_url,
+                    route_steps_json,
+                    browser_had_structured_result,
                     last_downloaded_file_path,
                     last_final_page_url
                 FROM publisher_download_route_history
@@ -2826,15 +2875,24 @@ def record_publisher_download_route(
                 (normalized_url,),
             ).fetchall()
             best_projection = None
-            best_rank = -1
+            best_score = -1
             for row in best_history_row:
-                rank = _route_projection_rank(
-                    str(row[5] or "").strip(),
-                    str(row[3] or "").strip(),
+                score = (
+                    _route_projection_rank(
+                        str(row[5] or "").strip(),
+                        str(row[3] or "").strip(),
+                    )
+                    * 100
+                    + _route_reusability_bonus(
+                        route_summary=str(row[2] or "").strip(),
+                        route_steps_json=str(row[7] or "").strip() or None,
+                        outcome=str(row[3] or "").strip(),
+                        browser_had_structured_result=_bool_from_db(row[8]),
+                    )
                 )
-                if rank > best_rank:
+                if score > best_score:
                     best_projection = row
-                    best_rank = rank
+                    best_score = score
             projected_source_url = source_url
             projected_route_kind = route_kind
             projected_route_summary = route_summary
@@ -2855,11 +2913,11 @@ def record_publisher_download_route(
                     str(best_projection[3] or "").strip() or projected_outcome
                 )
                 projected_last_downloaded_file_path = (
-                    str(best_projection[7] or "").strip()
+                    str(best_projection[9] or "").strip()
                     or projected_last_downloaded_file_path
                 )
                 projected_last_final_page_url = (
-                    str(best_projection[8] or "").strip()
+                    str(best_projection[10] or "").strip()
                     or projected_last_final_page_url
                 )
             matched_id: Optional[int] = None

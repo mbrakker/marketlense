@@ -4,7 +4,10 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
-from src.contracts.browser_download import BrowserReportDownloadRequest
+from src.contracts.browser_download import (
+    BrowserDownloadRouteStep,
+    BrowserReportDownloadRequest,
+)
 from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download.request import resolve_effective_identity_fields
@@ -55,6 +58,7 @@ def render_browser_report_download_prompt(
         ),
         "route_hint_text": _render_route_hint_text(
             route_hint=request.route_hint,
+            route_step_hints=request.route_step_hints,
             route_kind_hint=request.route_kind_hint,
         ),
         "delivery_instruction": _render_delivery_instruction(
@@ -175,18 +179,39 @@ def _render_identity_prompt(
 def _render_route_hint_text(
     *,
     route_hint: str | None,
+    route_step_hints: list[BrowserDownloadRouteStep],
     route_kind_hint: str | None,
 ) -> str:
-    if not route_hint:
+    if not route_hint and not route_step_hints:
         return "No previously successful route summary is available for this URL."
-    hint_prefix = (
-        f"Previously successful route kind: {route_kind_hint}. "
-        if route_kind_hint
-        else ""
-    )
-    return (
-        f"{hint_prefix}Previously successful route summary for this URL: {route_hint}"
-    )
+    lines: list[str] = []
+    if route_kind_hint:
+        lines.append(f"Previously successful route kind: {route_kind_hint}.")
+    if route_hint:
+        lines.append(
+            f"Previously successful route summary for this URL: {route_hint}"
+        )
+    if route_step_hints:
+        lines.append(
+            "Replay these remembered structured route steps before broader exploration:"
+        )
+        for index, step in enumerate(route_step_hints[:5], start=1):
+            action = str(getattr(step, "action", "") or "").strip() or "follow"
+            target = (
+                str(getattr(step, "target_text", "") or "").strip()
+                or str(getattr(step, "target_role", "") or "").strip()
+                or str(getattr(step, "target_url", "") or "").strip()
+                or "page"
+            )
+            result = str(getattr(step, "result", "") or "").strip()
+            line = f"{index}. {action} {target}"
+            if result:
+                line = f"{line} -> {result}"
+            lines.append(line)
+        lines.append(
+            "If the page already matches that remembered terminal state, capture it immediately instead of re-exploring the site."
+        )
+    return "\n".join(lines)
 
 
 def _render_delivery_instruction(*, delivery_email: str | None) -> str:

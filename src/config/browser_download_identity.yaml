@@ -240,6 +240,16 @@ fields:
   label: Newsletter and report releases
   value: null
   aliases: []
+- schema_version: '1.0'
+  key: company_size
+  label: Company size
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: company_type
+  label: Company type
+  value: null
+  aliases: []
 publisher_overrides:
 - schema_version: '1.0'
   host_pattern: bigcommerce.com

@@ -3,6 +3,7 @@ import gc
 import inspect
 import json
 import logging
+import os
 import re
 import tempfile
 import time
@@ -3909,9 +3910,12 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 	async def close(self):
 		"""Close all resources"""
 		try:
+			worker_mode = os.environ.get('MARKET_LENSE_BROWSER_AGENT_WORKER') == '1'
 			# Only close browser if keep_alive is False (or not set)
 			if self.browser_session is not None:
-				if not self.browser_session.browser_profile.keep_alive:
+				if worker_mode:
+					pass
+				elif not self.browser_session.browser_profile.keep_alive:
 					# Kill the browser session - this dispatches BrowserStopEvent,
 					# stops the EventBus with clear=True, and recreates a fresh EventBus
 					await self.browser_session.kill()

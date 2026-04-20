@@ -446,6 +446,351 @@ def test_run_report_download_falls_back_after_memory_failure_and_retries(
     )
 
 
+def test_run_report_download_does_not_retry_timed_out_browser_step(
+    tmp_path: Path,
+    caplog,
+    run_context,
+) -> None:
+    settings = _settings(tmp_path)
+    browser_calls: list[str] = []
+
+    def _download(req, ctx):
+        route_family = req.route_family_hint or ""
+        if route_family == "http_pdf_probe":
+            raise AppError(
+                code="browser_download_http_probe_failed",
+                message="The planned HTTP probe did not produce a valid PDF artifact",
+                retryable=True,
+                context={"normalized_url": req.url},
+            )
+        browser_calls.append(route_family)
+        raise AppError(
+            code="browser_download_agent_timeout",
+            message="browser-use did not return within the configured execution budget",
+            retryable=True,
+            context={"normalized_url": req.url},
+        )
+
+    def _record_route(req, ctx):
+        return None
+
+    def _file_md5(req, ctx):
+        return FileHashResponse(
+            schema_version="1.0",
+            path=req.path,
+            md5="abc123",
+        )
+
+    def _record_source(req, ctx):
+        return ReportSourceRecordResponse(
+            schema_version="1.0",
+            record_id=1,
+            source_domain=req.source_domain,
+            report_name=req.report_name,
+            landing_page_url=req.landing_page_url,
+            downloaded_at_utc=req.downloaded_at_utc,
+            md5=req.md5,
+        )
+
+    def _upsert_identity(req, ctx):
+        return type(
+            "IdentityUpdate",
+            (),
+            {
+                "path": settings.identity_config_path,
+                "added_field_keys": [],
+                "total_fields": len(settings.identity_profile.fields),
+            },
+        )()
+
+    deps = ReportDownloadDependencies(
+        download_report_with_browser_use=_download,
+        get_publisher_download_route=lambda req, ctx: None,
+        record_publisher_download_route=_record_route,
+        file_md5=_file_md5,
+        record_report_source=_record_source,
+        upsert_browser_download_identity_fields=_upsert_identity,
+        sleep_fn=lambda seconds: None,
+    )
+    caplog.set_level(logging.INFO, logger="market_lense.report_download_orchestrator")
+
+    with pytest.raises(AppError) as exc_info:
+        run_report_download(
+            ReportDownloadOrchestratorRequest(
+                schema_version="1.0",
+                url="https://example.com/report",
+                settings=settings,
+                state_db=settings.state_db,
+                reports_db=settings.reports_db,
+            ),
+            ctx=run_context,
+            dependencies=deps,
+        )
+
+    assert exc_info.value.code == "browser_download_agent_timeout"
+    assert browser_calls == ["browser_pdf_click"]
+    retry_events = [
+        event
+        for event in _events(caplog, "market_lense.report_download_orchestrator")
+        if event.get("event") == "report_download_retry"
+    ]
+    failure_events = [
+        event
+        for event in _events(caplog, "market_lense.report_download_orchestrator")
+        if event.get("event") == "report_download_attempt_failed"
+    ]
+    browser_retry_events = [
+        event
+        for event in retry_events
+        if event.get("fields", {}).get("step") == "report_download_browser_candidate"
+    ]
+    assert browser_retry_events == []
+    assert failure_events
+    assert failure_events[-1]["fields"]["code"] == "browser_download_agent_timeout"
+    assert failure_events[-1]["fields"]["retryable"] is False
+
+
+def test_run_report_download_does_not_fallback_after_non_retryable_memory_browser_timeout(
+    tmp_path: Path,
+    caplog,
+    run_context,
+) -> None:
+    settings = _settings(tmp_path)
+    calls: list[tuple[str, str | None, int]] = []
+
+    def _download(req, ctx):
+        calls.append(
+            (
+                req.route_family_hint or "",
+                req.route_hint,
+                len(req.route_step_hints),
+            )
+        )
+        raise AppError(
+            code="browser_download_agent_timeout",
+            message="browser-use did not return within the configured execution budget",
+            retryable=True,
+            context={"normalized_url": req.url},
+        )
+
+    deps = ReportDownloadDependencies(
+        download_report_with_browser_use=_download,
+        get_publisher_download_route=lambda req, ctx: PublisherDownloadRouteResponse(
+            schema_version="1.0",
+            normalized_url=req.normalized_url,
+            source_url=req.normalized_url,
+            route_kind="onsite_report",
+            route_summary="Accept cookies and extract the on-site report.",
+            outcome="captured",
+            route_family="browser_onsite_report",
+            route_status="verified",
+            resolved_target_url=req.normalized_url,
+            route_steps=[
+                BrowserDownloadRouteStep(
+                    schema_version="1.0",
+                    index=0,
+                    action="click",
+                    target_text="Allow all",
+                    target_role="button",
+                    target_url=req.normalized_url,
+                    result="Accepted cookies",
+                ),
+                BrowserDownloadRouteStep(
+                    schema_version="1.0",
+                    index=1,
+                    action="extract",
+                    target_text="report article",
+                    target_role="extract",
+                    target_url=req.normalized_url,
+                    result="Captured the on-site report body",
+                ),
+            ],
+            confirmation_evidence=BrowserDownloadConfirmationEvidence(
+                schema_version="1.0",
+                url_changed=False,
+                visible_confirmation_text="",
+                submit_button_state="unchanged",
+                form_disappeared=False,
+                final_page_url=req.normalized_url,
+            ),
+            terminal_evidence=DownloadTerminalEvidence(
+                schema_version="1.0",
+                final_page_url=req.normalized_url,
+                final_page_title="",
+                terminal_text_excerpt="",
+                artifact_url=req.normalized_url,
+                artifact_kind="onsite_report",
+                artifact_validation_status="verified",
+                artifact_validation_detail="",
+                confirmation_signal_count=0,
+                traversed_page_urls=[req.normalized_url],
+            ),
+            browser_had_structured_result=True,
+            used_candidate_pdf_url=False,
+            used_candidate_source_page=False,
+            updated_at=1,
+            candidate_pdf_url=None,
+            candidate_source_page_urls=[],
+            candidate_discovery_provenances=[],
+            publisher_discovery_route_kind=None,
+            publisher_recommended_discovery_route_kind=None,
+            blocked_reason=None,
+            blocked_reason_detail=None,
+            last_downloaded_file_path=None,
+            last_final_page_url=req.normalized_url,
+            onsite_capture_path="captured.html",
+            onsite_capture_format="html",
+            onsite_page_count=1,
+            onsite_completeness_status="complete",
+            attempts=2,
+            verified_successes=2,
+            last_n_outcomes=["captured", "captured"],
+            confidence_score=1.0,
+        ),
+        record_publisher_download_route=lambda req, ctx: None,
+        file_md5=lambda req, ctx: FileHashResponse(
+            schema_version="1.0",
+            path=req.path,
+            md5="abc123",
+        ),
+        record_report_source=lambda req, ctx: ReportSourceRecordResponse(
+            schema_version="1.0",
+            record_id=1,
+            source_domain=req.source_domain,
+            report_name=req.report_name,
+            landing_page_url=req.landing_page_url,
+            downloaded_at_utc=req.downloaded_at_utc,
+            md5=req.md5,
+        ),
+        upsert_browser_download_identity_fields=lambda req, ctx: type(
+            "IdentityUpdate",
+            (),
+            {
+                "path": settings.identity_config_path,
+                "added_field_keys": [],
+                "total_fields": len(settings.identity_profile.fields),
+            },
+        )(),
+        sleep_fn=lambda seconds: None,
+    )
+    caplog.set_level(logging.INFO, logger="market_lense.report_download_orchestrator")
+
+    with pytest.raises(AppError) as exc_info:
+        run_report_download(
+            ReportDownloadOrchestratorRequest(
+                schema_version="1.0",
+                url="https://example.com/report",
+                settings=settings,
+                state_db=settings.state_db,
+                reports_db=settings.reports_db,
+            ),
+            ctx=run_context,
+            dependencies=deps,
+        )
+
+    assert exc_info.value.code == "browser_download_agent_timeout"
+    assert calls == [
+        (
+            "browser_onsite_report",
+            "Accept cookies and extract the on-site report.",
+            2,
+        )
+    ]
+    step_failed_events = [
+        event
+        for event in _events(caplog, "market_lense.report_download_orchestrator")
+        if event.get("event") == "report_download_step_failed"
+    ]
+    assert len(step_failed_events) == 1
+    assert step_failed_events[0]["fields"]["step_name"] == "report_download_with_memory_route"
+    assert step_failed_events[0]["fields"]["attempt_retryable"] is False
+    assert step_failed_events[0]["fields"]["fallback_on_retryable_error"] is True
+
+
+def test_run_report_download_does_not_retry_weak_browser_route_summary(
+    tmp_path: Path,
+    caplog,
+    run_context,
+) -> None:
+    settings = _settings(tmp_path)
+    browser_calls: list[str] = []
+
+    def _download(req, ctx):
+        route_family = req.route_family_hint or ""
+        if route_family == "http_pdf_probe":
+            raise AppError(
+                code="browser_download_http_probe_failed",
+                message="The planned HTTP probe did not produce a valid PDF artifact",
+                retryable=True,
+                context={"normalized_url": req.url},
+            )
+        browser_calls.append(route_family)
+        raise AppError(
+            code="browser_download_route_summary_too_weak",
+            message="The browser result did not provide enough route evidence",
+            retryable=True,
+            context={"normalized_url": req.url},
+        )
+
+    deps = ReportDownloadDependencies(
+        download_report_with_browser_use=_download,
+        get_publisher_download_route=lambda req, ctx: None,
+        record_publisher_download_route=lambda req, ctx: None,
+        file_md5=lambda req, ctx: FileHashResponse(
+            schema_version="1.0",
+            path=req.path,
+            md5="abc123",
+        ),
+        record_report_source=lambda req, ctx: ReportSourceRecordResponse(
+            schema_version="1.0",
+            record_id=1,
+            source_domain=req.source_domain,
+            report_name=req.report_name,
+            landing_page_url=req.landing_page_url,
+            downloaded_at_utc=req.downloaded_at_utc,
+            md5=req.md5,
+        ),
+        upsert_browser_download_identity_fields=lambda req, ctx: type(
+            "IdentityUpdate",
+            (),
+            {
+                "path": settings.identity_config_path,
+                "added_field_keys": [],
+                "total_fields": len(settings.identity_profile.fields),
+            },
+        )(),
+        sleep_fn=lambda seconds: None,
+    )
+    caplog.set_level(logging.INFO, logger="market_lense.report_download_orchestrator")
+
+    with pytest.raises(AppError) as exc_info:
+        run_report_download(
+            ReportDownloadOrchestratorRequest(
+                schema_version="1.0",
+                url="https://example.com/report",
+                settings=settings,
+                state_db=settings.state_db,
+                reports_db=settings.reports_db,
+            ),
+            ctx=run_context,
+            dependencies=deps,
+        )
+
+    assert exc_info.value.code == "browser_download_route_summary_too_weak"
+    assert browser_calls == ["browser_pdf_click"]
+    retry_events = [
+        event
+        for event in _events(caplog, "market_lense.report_download_orchestrator")
+        if event.get("event") == "report_download_retry"
+    ]
+    browser_retry_events = [
+        event
+        for event in retry_events
+        if event.get("fields", {}).get("step") == "report_download_browser_candidate"
+    ]
+    assert browser_retry_events == []
+
+
 def test_run_report_download_does_not_fallback_after_non_retryable_memory_failure(
     tmp_path: Path,
     run_context,

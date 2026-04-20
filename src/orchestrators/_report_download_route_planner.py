@@ -175,6 +175,7 @@ def _build_plan(
                 route_family=remembered_route_family,
                 attempt_url=remembered_route.resolved_target_url or None,
                 route_hint=remembered_route.route_summary,
+                route_step_hints=list(remembered_route.route_steps),
                 route_kind_hint=remembered_route.route_kind,
                 uses_memory_route=True,
                 fallback_on_retryable_error=True,

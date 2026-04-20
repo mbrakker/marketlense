@@ -5,10 +5,14 @@ import inspect
 import json
 import logging
 import os
+import psutil
 import re
 import shutil
+import subprocess
+import sys
+import tempfile
 import time
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from importlib import import_module
 from pathlib import Path
 from threading import Thread
@@ -35,6 +39,22 @@ _TERMINAL_TRANSIENT_MARKERS = (
 )
 _TERMINAL_STABILIZATION_POLL_SECONDS = 2.0
 _TERMINAL_STABILIZATION_MAX_ATTEMPTS = 3
+_AGENT_RUN_TIMEOUT_MIN_BUFFER_SECONDS = 1.0
+_AGENT_RUN_TIMEOUT_STEP_BUFFER_SECONDS = 0.5
+_AGENT_RUN_TIMEOUT_MAX_BUFFER_SECONDS = 30.0
+_BROWSER_KILL_TIMEOUT_SECONDS = 15.0
+_BROWSER_RESET_TIMEOUT_SECONDS = 10.0
+_BROWSER_PROFILE_DIR_PREFIX = "browser-use-user-data-dir-profile"
+_BROWSER_USE_TEMP_DIR_PATTERNS = (
+    "browser-use-user-data-dir-*",
+    "browser-use-downloads-*",
+    "browseruse-tmp-*",
+)
+_STALE_BROWSER_USE_TEMP_DIR_MIN_AGE_SECONDS = 15 * 60.0
+_TEMP_CLEANUP_LOG_SAMPLE_LIMIT = 5
+_TIMED_OUT_AGENT_STOP_GRACE_SECONDS = 10.0
+_BROWSER_AGENT_WORKER_ENV = "MARKET_LENSE_BROWSER_AGENT_WORKER"
+_BROWSER_AGENT_WORKER_TIMEOUT_BUFFER_SECONDS = 30.0
 
 
 @dataclass(frozen=True)
@@ -58,6 +78,25 @@ class TerminalSnapshot:
     url: str
     title: str
     html: str
+
+
+@dataclass(frozen=True)
+class BrowserAgentWorkerPayload:
+    schema_version: str
+    request: dict[str, Any]
+    ctx: dict[str, Any]
+    normalized_url: str
+    execution_url: str
+    download_dir: str
+    prompt_bundle: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class BrowserAgentWorkerResponse:
+    schema_version: str
+    status: str
+    result: dict[str, Any] | None
+    error: dict[str, Any] | None
 
 
 def run_browser_report_download_agent(
@@ -85,7 +124,33 @@ def run_browser_report_download_agent(
         )
     )
     browser_use = _load_browser_use_runtime(normalized_url)
+    if _should_run_browser_agent_in_subprocess(browser_use):
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_worker_dispatch",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "download_dir": str(download_dir),
+                },
+            )
+        )
+        return _run_browser_report_download_agent_subprocess(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            execution_url=execution_url,
+            download_dir=download_dir,
+            prompt_bundle=prompt_bundle,
+        )
     browser: Any | None = None
+    _cleanup_stale_browser_use_temp_dirs(ctx=ctx, normalized_url=normalized_url)
+    preexisting_temp_dirs = {str(path) for path in _list_browser_use_temp_dirs()}
+    _cleanup_managed_browser_profile_dirs(download_dir=download_dir)
+    profile_dir = _new_managed_browser_profile_dir(download_dir)
+    profile_dir.mkdir(parents=True, exist_ok=True)
     raw_model_response = ""
     final_page_url = ""
     final_page_title = ""
@@ -99,6 +164,7 @@ def run_browser_report_download_agent(
     try:
         browser = browser_use.Browser(
             downloads_path=str(download_dir),
+            user_data_dir=str(profile_dir),
             headless=not request.settings.headed,
             auto_download_pdfs=True,
             keep_alive=True,
@@ -116,7 +182,14 @@ def run_browser_report_download_agent(
             browser=browser,
             output_model_schema=BrowserUseAgentResult,
         )
-        history = agent.run_sync(max_steps=request.settings.max_steps)
+        history = _run_agent_history_with_timeout(
+            agent=agent,
+            browser=browser,
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+        _prepare_browser_for_shutdown(browser)
         raw_model_response = str(history.final_result() or "").strip()
         history_final_page_url = _read_history_final_page_url(history)
         history_final_page_title = _read_history_final_page_title(history)
@@ -159,7 +232,52 @@ def run_browser_report_download_agent(
         )
         if not screenshot_path:
             screenshot_path = history_screenshot_path
+    except AppError as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_failed",
+                module=logger.name,
+                fields={"normalized_url": normalized_url, "error": exc.message},
+            )
+        )
+        raise
     except Exception as exc:
+        if _is_browser_start_timeout_error(exc):
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="browser_report_download_failed",
+                    module=logger.name,
+                    fields={"normalized_url": normalized_url, "error": str(exc)},
+                )
+            )
+            raise AppError(
+                code="browser_download_browser_start_timeout",
+                message="browser-use timed out while starting the local browser session",
+                cause=exc,
+                retryable=True,
+                context={"normalized_url": normalized_url},
+            ) from exc
+        if _is_no_space_error(exc):
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="browser_report_download_failed",
+                    module=logger.name,
+                    fields={"normalized_url": normalized_url, "error": str(exc)},
+                )
+            )
+            raise AppError(
+                code="browser_download_storage_full",
+                message="The browser download runtime ran out of local disk space",
+                cause=exc,
+                retryable=True,
+                context={"normalized_url": normalized_url},
+            ) from exc
         logger.info(
             log_event(
                 ctx,
@@ -178,7 +296,14 @@ def run_browser_report_download_agent(
         ) from exc
     finally:
         if browser is not None:
+            _prepare_browser_for_shutdown(browser)
             _kill_browser(browser, ctx=ctx, normalized_url=normalized_url)
+        _cleanup_browser_profile_dir(profile_dir)
+        _cleanup_new_browser_use_temp_dirs(
+            ctx=ctx,
+            normalized_url=normalized_url,
+            preexisting_temp_dirs=preexisting_temp_dirs,
+        )
     logger.info(
         log_event(
             ctx,
@@ -212,6 +337,184 @@ def run_browser_report_download_agent(
         network_events=network_events,
         html_snapshot_path=html_snapshot_path,
         screenshot_path=screenshot_path,
+    )
+
+
+def _should_run_browser_agent_in_subprocess(browser_use: Any) -> bool:
+    if os.environ.get(_BROWSER_AGENT_WORKER_ENV) == "1":
+        return False
+    if os.environ.get("PYTEST_CURRENT_TEST"):
+        return False
+    return True
+
+
+def _run_browser_report_download_agent_subprocess(
+    *,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    normalized_url: str,
+    execution_url: str,
+    download_dir: Path,
+    prompt_bundle: BrowserDownloadPromptBundle,
+) -> BrowserAgentRunResult:
+    download_dir.mkdir(parents=True, exist_ok=True)
+    payload = BrowserAgentWorkerPayload(
+        schema_version="1.0",
+        request=asdict(request),
+        ctx=asdict(ctx),
+        normalized_url=normalized_url,
+        execution_url=execution_url,
+        download_dir=str(download_dir),
+        prompt_bundle=asdict(prompt_bundle),
+    )
+    payload_path = download_dir / "browser_agent_worker_request.json"
+    response_path = download_dir / "browser_agent_worker_response.json"
+    payload_path.write_text(
+        json.dumps(asdict(payload), ensure_ascii=True),
+        encoding="utf-8",
+    )
+    response_path.unlink(missing_ok=True)
+    env = dict(os.environ)
+    env[_BROWSER_AGENT_WORKER_ENV] = "1"
+    timeout_seconds = (
+        _resolve_agent_run_timeout_seconds(request)
+        + _BROWSER_AGENT_WORKER_TIMEOUT_BUFFER_SECONDS
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_worker_start",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "payload_path": str(payload_path),
+                "response_path": str(response_path),
+                "timeout_seconds": timeout_seconds,
+            },
+        )
+    )
+    try:
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "src.services._browser_report_download.browser_worker",
+                str(payload_path),
+                str(response_path),
+            ],
+            check=False,
+            cwd=str(Path.cwd()),
+            env=env,
+            timeout=timeout_seconds,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise AppError(
+            code="browser_download_agent_timeout",
+            message="browser-use did not return within the configured execution budget",
+            cause=exc,
+            retryable=True,
+            context={
+                "normalized_url": normalized_url,
+                "timeout_seconds": timeout_seconds,
+                "max_steps": request.settings.max_steps,
+            },
+        ) from exc
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_worker_complete",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "payload_path": str(payload_path),
+                "response_path": str(response_path),
+                "return_code": completed.returncode,
+                "response_exists": response_path.exists(),
+            },
+        )
+    )
+    if not response_path.exists():
+        raise AppError(
+            code="browser_download_agent_missing_result",
+            message="browser-use worker completed without writing a response payload",
+            retryable=True,
+            context={"normalized_url": normalized_url},
+        )
+    raw_response = json.loads(response_path.read_text(encoding="utf-8"))
+    response = BrowserAgentWorkerResponse(
+        schema_version=str(raw_response.get("schema_version", "1.0")),
+        status=str(raw_response.get("status", "")).strip(),
+        result=raw_response.get("result")
+        if isinstance(raw_response.get("result"), dict)
+        else None,
+        error=raw_response.get("error")
+        if isinstance(raw_response.get("error"), dict)
+        else None,
+    )
+    if response.status == "ok" and response.result is not None:
+        return _deserialize_browser_agent_run_result(response.result)
+    if response.error is not None:
+        raise AppError(
+            code=str(response.error.get("code") or "browser_download_agent_failed"),
+            message=str(
+                response.error.get("message")
+                or "browser-use worker failed to complete the report download task"
+            ),
+            retryable=bool(response.error.get("retryable", True)),
+            severity=str(response.error.get("severity") or "error"),
+            context=response.error.get("context")
+            if isinstance(response.error.get("context"), dict)
+            else {"normalized_url": normalized_url},
+        )
+    raise AppError(
+        code="browser_download_agent_failed",
+        message="browser-use worker failed to complete the report download task",
+        retryable=True,
+        context={"normalized_url": normalized_url},
+    )
+
+
+def _deserialize_browser_agent_run_result(payload: dict[str, Any]) -> BrowserAgentRunResult:
+    network_events_payload = payload.get("network_events")
+    network_events: list[BrowserDownloadNetworkEvent] = []
+    if isinstance(network_events_payload, list):
+        for item in network_events_payload:
+            if not isinstance(item, dict):
+                continue
+            network_events.append(
+                BrowserDownloadNetworkEvent(
+                    schema_version=str(item.get("schema_version", "1.0")),
+                    url=str(item.get("url") or "").strip(),
+                    initiator_type=str(item.get("initiator_type") or "other").strip() or "other",
+                    signal_kind=str(item.get("signal_kind") or "other").strip() or "other",
+                )
+            )
+    return BrowserAgentRunResult(
+        schema_version=str(payload.get("schema_version", "1.0")),
+        raw_model_response=str(payload.get("raw_model_response") or ""),
+        final_page_url=str(payload.get("final_page_url") or ""),
+        final_page_title=str(payload.get("final_page_title") or ""),
+        final_page_html=str(payload.get("final_page_html") or ""),
+        downloaded_files=[
+            str(item)
+            for item in payload.get("downloaded_files", [])
+            if str(item or "").strip()
+        ],
+        attachment_paths=[
+            str(item)
+            for item in payload.get("attachment_paths", [])
+            if str(item or "").strip()
+        ],
+        network_resource_urls=[
+            str(item)
+            for item in payload.get("network_resource_urls", [])
+            if str(item or "").strip()
+        ],
+        network_events=network_events,
+        html_snapshot_path=str(payload.get("html_snapshot_path") or ""),
+        screenshot_path=str(payload.get("screenshot_path") or ""),
     )
 
 
@@ -850,12 +1153,11 @@ def _maybe_await(value: Any) -> Any:
     return value
 
 
-def _await_in_current_or_thread(awaitable: Any) -> Any:
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        return asyncio.run(awaitable)
-
+def _await_in_current_or_thread(
+    awaitable: Any,
+    *,
+    timeout_seconds: float | None = None,
+) -> Any:
     payload: dict[str, Any] = {}
     errors: list[Exception] = []
 
@@ -865,9 +1167,25 @@ def _await_in_current_or_thread(awaitable: Any) -> Any:
         except Exception as exc:  # pragma: no cover - defensive thread bridge
             errors.append(exc)
 
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        if timeout_seconds is None:
+            return asyncio.run(awaitable)
+        thread = Thread(target=runner, daemon=True)
+        thread.start()
+        thread.join(timeout_seconds)
+        if thread.is_alive():
+            raise TimeoutError("awaitable execution timed out")
+        if errors:
+            raise errors[0]
+        return payload.get("result")
+
     thread = Thread(target=runner, daemon=True)
     thread.start()
-    thread.join()
+    thread.join(timeout_seconds)
+    if timeout_seconds is not None and thread.is_alive():
+        raise TimeoutError("awaitable execution timed out")
     if errors:
         raise errors[0]
     return payload.get("result")
@@ -887,12 +1205,282 @@ def _load_browser_use_runtime(normalized_url: str) -> Any:
         ) from exc
 
 
+def _run_agent_history_with_timeout(
+    *,
+    agent: Any,
+    browser: Any,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    normalized_url: str,
+) -> Any:
+    payload: dict[str, Any] = {}
+    errors: list[BaseException] = []
+
+    def runner() -> None:
+        try:
+            payload["history"] = agent.run_sync(max_steps=request.settings.max_steps)
+        except BaseException as exc:  # pragma: no cover - defensive thread bridge
+            errors.append(exc)
+
+    worker = Thread(target=runner, daemon=True)
+    worker.start()
+    timeout_seconds = _resolve_agent_run_timeout_seconds(request)
+    worker.join(timeout_seconds)
+    if worker.is_alive():
+        _signal_agent_stop(agent)
+        _prepare_browser_for_shutdown(browser)
+        worker.join(_TIMED_OUT_AGENT_STOP_GRACE_SECONDS)
+        raise AppError(
+            code="browser_download_agent_timeout",
+            message="browser-use did not return within the configured execution budget",
+            retryable=True,
+            context={
+                "normalized_url": normalized_url,
+                "timeout_seconds": timeout_seconds,
+                "max_steps": request.settings.max_steps,
+            },
+        )
+    if errors:
+        raise errors[0]
+    history = payload.get("history")
+    if history is None:
+        raise AppError(
+            code="browser_download_agent_missing_history",
+            message="browser-use completed without returning agent history",
+            retryable=True,
+            context={"normalized_url": normalized_url},
+        )
+    return history
+
+
+def _resolve_agent_run_timeout_seconds(
+    request: BrowserReportDownloadRequest,
+) -> float:
+    buffer_seconds = min(
+        _AGENT_RUN_TIMEOUT_MAX_BUFFER_SECONDS,
+        max(
+            _AGENT_RUN_TIMEOUT_MIN_BUFFER_SECONDS,
+            float(request.settings.max_steps) * _AGENT_RUN_TIMEOUT_STEP_BUFFER_SECONDS,
+        ),
+    )
+    return float(request.settings.timeout_seconds) + buffer_seconds
+
+
+def _signal_agent_stop(agent: Any) -> None:
+    _prime_agent_timing_fields(agent)
+    stop_method = getattr(agent, "stop", None)
+    if not callable(stop_method):
+        return
+    try:
+        stop_method()
+    except Exception:
+        return
+
+
+def _prime_agent_timing_fields(agent: Any) -> None:
+    now = time.time()
+    for attribute_name in ("_session_start_time", "_task_start_time"):
+        if hasattr(agent, attribute_name):
+            continue
+        try:
+            setattr(agent, attribute_name, now)
+        except Exception:
+            continue
+
+
+def _prepare_browser_for_shutdown(browser: Any) -> None:
+    try:
+        setattr(browser, "_intentional_stop", True)
+    except Exception:
+        pass
+    browser_profile = getattr(browser, "browser_profile", None)
+    if browser_profile is not None:
+        try:
+            setattr(browser_profile, "cdp_url", None)
+        except Exception:
+            pass
+    reconnect_task = getattr(browser, "_reconnect_task", None)
+    if reconnect_task is not None:
+        try:
+            if not reconnect_task.done():
+                reconnect_task.cancel()
+            setattr(browser, "_reconnect_task", None)
+        except Exception:
+            pass
+    try:
+        setattr(browser, "_reconnecting", False)
+    except Exception:
+        pass
+    reconnect_event = getattr(browser, "_reconnect_event", None)
+    if reconnect_event is not None:
+        try:
+            reconnect_event.set()
+        except Exception:
+            pass
+
+
+def _cleanup_browser_profile_dir(profile_dir: Path) -> None:
+    try:
+        if profile_dir.exists():
+            shutil.rmtree(profile_dir, ignore_errors=True)
+    except OSError:
+        return
+
+
+def _new_managed_browser_profile_dir(download_dir: Path) -> Path:
+    return download_dir / (
+        f"{_BROWSER_PROFILE_DIR_PREFIX}-{os.getpid()}-{int(time.time() * 1000)}"
+    )
+
+
+def _cleanup_managed_browser_profile_dirs(
+    *,
+    download_dir: Path,
+    active_profile_dir: Path | None = None,
+) -> None:
+    if not download_dir.exists() or not download_dir.is_dir():
+        return
+    for candidate in download_dir.glob(f"{_BROWSER_PROFILE_DIR_PREFIX}*"):
+        if active_profile_dir is not None and candidate == active_profile_dir:
+            continue
+        _cleanup_browser_profile_dir(candidate)
+
+
+def _cleanup_stale_browser_use_temp_dirs(
+    *,
+    ctx: RunContext,
+    normalized_url: str,
+) -> None:
+    now = time.time()
+    stale_dirs: list[Path] = []
+    for path in _list_browser_use_temp_dirs():
+        try:
+            age_seconds = now - path.stat().st_mtime
+        except OSError:
+            continue
+        if age_seconds < _STALE_BROWSER_USE_TEMP_DIR_MIN_AGE_SECONDS:
+            continue
+        stale_dirs.append(path)
+    removed = _remove_browser_use_temp_dirs(stale_dirs)
+    if removed:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_stale_temp_cleanup",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "removed_count": len(removed),
+                    "removed_sample": removed[:_TEMP_CLEANUP_LOG_SAMPLE_LIMIT],
+                },
+            )
+        )
+
+
+def _cleanup_new_browser_use_temp_dirs(
+    *,
+    ctx: RunContext,
+    normalized_url: str,
+    preexisting_temp_dirs: set[str],
+) -> None:
+    new_dirs = [
+        path
+        for path in _list_browser_use_temp_dirs()
+        if str(path) not in preexisting_temp_dirs
+    ]
+    removed = _remove_browser_use_temp_dirs(new_dirs)
+    if removed:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_run_temp_cleanup",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "removed_count": len(removed),
+                    "removed_sample": removed[:_TEMP_CLEANUP_LOG_SAMPLE_LIMIT],
+                },
+            )
+        )
+
+
+def _list_browser_use_temp_dirs() -> list[Path]:
+    try:
+        temp_root = Path(tempfile.gettempdir()).expanduser().resolve()
+    except OSError:
+        return []
+    if not temp_root.exists() or not temp_root.is_dir():
+        return []
+    discovered: list[Path] = []
+    seen: set[str] = set()
+    for pattern in _BROWSER_USE_TEMP_DIR_PATTERNS:
+        for candidate in temp_root.glob(pattern):
+            try:
+                resolved = candidate.resolve()
+            except OSError:
+                continue
+            if not resolved.is_dir() or resolved.parent != temp_root:
+                continue
+            marker = str(resolved)
+            if marker in seen:
+                continue
+            seen.add(marker)
+            discovered.append(resolved)
+    return discovered
+
+
+def _remove_browser_use_temp_dirs(paths: list[Path]) -> list[str]:
+    removed: list[str] = []
+    for path in paths:
+        try:
+            if path.exists():
+                shutil.rmtree(path)
+        except OSError:
+            continue
+        if not path.exists():
+            removed.append(path.name)
+    return removed
+
+
 def _kill_browser(browser: Any, *, ctx: RunContext, normalized_url: str) -> None:
+    if _force_stop_local_browser_process(
+        browser,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    ):
+        return
     try:
         kill_result = browser.kill()
         if inspect.isawaitable(kill_result):
-            _run_awaitable(kill_result)
+            _run_awaitable(kill_result, timeout_seconds=_BROWSER_KILL_TIMEOUT_SECONDS)
+        return
     except Exception as exc:
+        reset_method = getattr(browser, "reset", None)
+        if callable(reset_method):
+            try:
+                reset_result = reset_method()
+                if inspect.isawaitable(reset_result):
+                    _run_awaitable(
+                        reset_result,
+                        timeout_seconds=_BROWSER_RESET_TIMEOUT_SECONDS,
+                    )
+                return
+            except Exception as exc:
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="service",
+                        event="browser_report_download_browser_kill_failed",
+                        module=logger.name,
+                        fields={
+                            "normalized_url": normalized_url,
+                            "error": str(exc),
+                        },
+                    )
+                )
+                return
         logger.info(
             log_event(
                 ctx,
@@ -907,5 +1495,96 @@ def _kill_browser(browser: Any, *, ctx: RunContext, normalized_url: str) -> None
         )
 
 
-def _run_awaitable(awaitable: Any) -> None:
-    _await_in_current_or_thread(awaitable)
+def _force_stop_local_browser_process(
+    browser: Any,
+    *,
+    ctx: RunContext,
+    normalized_url: str,
+) -> bool:
+    watchdog = getattr(browser, "_local_browser_watchdog", None)
+    process = getattr(watchdog, "_subprocess", None) if watchdog is not None else None
+    pid = getattr(process, "pid", None)
+    if pid is None:
+        return False
+    try:
+        root_process = psutil.Process(int(pid))
+        process_tree = [*root_process.children(recursive=True), root_process]
+        for candidate in reversed(process_tree):
+            try:
+                candidate.terminate()
+            except psutil.Error:
+                continue
+        _, alive = psutil.wait_procs(
+            process_tree,
+            timeout=_BROWSER_KILL_TIMEOUT_SECONDS / 2.0,
+        )
+        for candidate in alive:
+            try:
+                candidate.kill()
+            except psutil.Error:
+                continue
+        if alive:
+            psutil.wait_procs(
+                alive,
+                timeout=_BROWSER_KILL_TIMEOUT_SECONDS / 2.0,
+            )
+        setattr(watchdog, "_subprocess", None)
+        temp_dirs = list(getattr(watchdog, "_temp_dirs_to_cleanup", []) or [])
+        for temp_dir in temp_dirs:
+            try:
+                shutil.rmtree(Path(temp_dir), ignore_errors=True)
+            except OSError:
+                continue
+        setattr(watchdog, "_temp_dirs_to_cleanup", [])
+        original_user_data_dir = getattr(watchdog, "_original_user_data_dir", None)
+        browser_profile = getattr(browser, "browser_profile", None)
+        if original_user_data_dir is not None and browser_profile is not None:
+            try:
+                setattr(browser_profile, "user_data_dir", original_user_data_dir)
+            except Exception:
+                pass
+        setattr(watchdog, "_original_user_data_dir", None)
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_browser_process_force_stopped",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "browser_pid": int(pid),
+                    "terminated_process_count": len(process_tree),
+                },
+            )
+        )
+        return True
+    except (psutil.Error, OSError, ValueError) as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_browser_process_force_stop_failed",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "browser_pid": pid,
+                    "error": str(exc),
+                },
+            )
+        )
+        return False
+
+
+def _run_awaitable(awaitable: Any, *, timeout_seconds: float | None = None) -> None:
+    _await_in_current_or_thread(awaitable, timeout_seconds=timeout_seconds)
+
+
+def _is_no_space_error(exc: BaseException) -> bool:
+    if isinstance(exc, OSError) and getattr(exc, "errno", None) == 28:
+        return True
+    return "no space left on device" in str(exc).casefold()
+
+
+def _is_browser_start_timeout_error(exc: BaseException) -> bool:
+    token = str(exc).casefold()
+    return "browserstartevent" in token and "timed out" in token

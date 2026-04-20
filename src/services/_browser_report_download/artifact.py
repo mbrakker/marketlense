@@ -555,6 +555,13 @@ def finalize_browser_report_download_result(
         artifact_validation_status = "blocked"
         artifact_validation_detail = blocked_reason_detail or blocked_reason
 
+    if downloaded_path is not None:
+        blocked_reason = None
+        blocked_reason_detail = None
+    elif route_kind == "onsite_report" and onsite_capture_path:
+        blocked_reason = None
+        blocked_reason_detail = None
+
     outcome, route_status, confirmation_signal_count = _classify_route_result(
         route_kind=route_kind,
         downloaded_path=downloaded_path,
@@ -686,6 +693,21 @@ def _salvage_without_structured_result(
 ) -> BrowserReportDownloadResult:
     browser_html = str(browser_run.final_page_html or "")
     final_page_title = str(browser_run.final_page_title or "").strip()
+    (
+        browser_html,
+        html_snapshot_path,
+        final_url,
+    ) = _recover_salvaged_terminal_html(
+        request=request,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        download_dir=download_dir,
+        final_url=final_url,
+        browser_html=browser_html,
+        html_snapshot_path=str(browser_run.html_snapshot_path or ""),
+    )
+    if not final_page_title:
+        final_page_title = _extract_html_title(browser_html)
     terminal_text_excerpt = _extract_visible_text_from_html(browser_html)
     downloaded_path = _resolve_downloaded_file(
         explicit_path=None,
@@ -721,7 +743,7 @@ def _salvage_without_structured_result(
             final_page_title=final_page_title,
             terminal_text_excerpt=terminal_text_excerpt,
             dom_snapshot_html=browser_html,
-            html_snapshot_path=str(browser_run.html_snapshot_path or ""),
+            html_snapshot_path=html_snapshot_path,
             screenshot_path=str(browser_run.screenshot_path or ""),
             network_resource_urls=list(browser_run.network_resource_urls or []),
             network_events=list(browser_run.network_events or []),
@@ -769,7 +791,7 @@ def _salvage_without_structured_result(
             terminal_text_excerpt=terminal_text_excerpt,
             confirmation_evidence=confirmation_evidence,
             used_candidate_pdf_url=used_candidate_pdf_url,
-            html_snapshot_path=str(browser_run.html_snapshot_path or ""),
+            html_snapshot_path=html_snapshot_path,
             screenshot_path=str(browser_run.screenshot_path or ""),
             network_resource_urls=list(browser_run.network_resource_urls or []),
             network_events=list(browser_run.network_events or []),
@@ -806,7 +828,7 @@ def _salvage_without_structured_result(
             artifact_validation_status="recovered",
             artifact_validation_detail="Recovered an email-delivery terminal state from deterministic browser evidence.",
             browser_html=browser_html,
-            html_snapshot_path=str(browser_run.html_snapshot_path or ""),
+            html_snapshot_path=html_snapshot_path,
             screenshot_path=str(browser_run.screenshot_path or ""),
             network_resource_urls=list(browser_run.network_resource_urls or []),
             network_events=list(browser_run.network_events or []),
@@ -828,7 +850,7 @@ def _salvage_without_structured_result(
             artifact_validation_status="blocked" if blocked_reason else "recovered",
             artifact_validation_detail=terminal_text_excerpt or blocked_reason or "Recovered a gated-form terminal state from browser evidence.",
             browser_html=browser_html,
-            html_snapshot_path=str(browser_run.html_snapshot_path or ""),
+            html_snapshot_path=html_snapshot_path,
             screenshot_path=str(browser_run.screenshot_path or ""),
             network_resource_urls=list(browser_run.network_resource_urls or []),
             network_events=list(browser_run.network_events or []),
@@ -845,6 +867,51 @@ def _salvage_without_structured_result(
             ),
         },
     )
+
+
+def _recover_salvaged_terminal_html(
+    *,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    normalized_url: str,
+    download_dir: Path,
+    final_url: str,
+    browser_html: str,
+    html_snapshot_path: str,
+) -> tuple[str, str, str]:
+    current_html = str(browser_html or "")
+    current_snapshot = str(html_snapshot_path or "").strip()
+    recovered_final_url = str(final_url or "").strip()
+    if current_html.strip():
+        if current_snapshot:
+            return current_html, current_snapshot, recovered_final_url
+        return (
+            current_html,
+            _write_terminal_html_snapshot(download_dir=download_dir, html=current_html),
+            recovered_final_url,
+        )
+    fetch_targets = _normalize_string_list(
+        [
+            recovered_final_url,
+            str(request.attempt_url or "").strip(),
+            normalized_url,
+        ]
+    )
+    for fetch_target in fetch_targets:
+        fetched_html = _try_fetch_terminal_html(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            page_url=fetch_target,
+        )
+        if not fetched_html.strip():
+            continue
+        return (
+            fetched_html,
+            _write_terminal_html_snapshot(download_dir=download_dir, html=fetched_html),
+            fetch_target,
+        )
+    return "", current_snapshot, recovered_final_url
 
 
 def _complete_pdf_artifact(
@@ -1404,13 +1471,17 @@ def _resolve_route_kind(
         return "email_delivery"
     if token in _BLOCKED_REASONS:
         return "email_delivery"
-    if encountered_form_fields or _message_indicates_email_delivery(post_submit_message):
+    if _message_indicates_email_delivery(post_submit_message):
         return "email_delivery"
     if (
-        agent_result.onsite_capture_path
+        token == "onsite_report"
+        or agent_result.onsite_capture_path
         or str(agent_result.onsite_completeness_status or "").strip()
-        or str(request.route_family_hint or "").strip() == "browser_onsite_report"
     ):
+        return "onsite_report"
+    if encountered_form_fields:
+        return "email_delivery"
+    if str(request.route_family_hint or "").strip() == "browser_onsite_report":
         return "onsite_report"
     if token in _ROUTE_KINDS:
         return token
@@ -2964,7 +3035,11 @@ def _try_fetch_terminal_html(
     page_url: str,
 ) -> str:
     token = str(page_url or "").strip()
-    if not token or token.casefold().endswith(".pdf"):
+    if (
+        not token
+        or token.casefold().endswith(".pdf")
+        or not token.casefold().startswith(("http://", "https://"))
+    ):
         return ""
     try:
         return fetch_html_from_url(
