@@ -119,8 +119,11 @@ _UNKNOWN_ENUM_MARKERS = (
     "dropdown",
     "industry",
     "country",
+    "location",
     "state",
+    "region",
     "department",
+    "role",
     "job level",
 )
 _MARKETING_MARKERS = (
@@ -165,29 +168,29 @@ _VERIFIED_EMAIL_SIGNAL_MARKERS = {
 
 class BrowserUseRouteStep(BaseModel):
     index: int | None = Field(default=None)
-    action: str = Field(default="")
-    target_text: str = Field(default="")
-    target_role: str = Field(default="")
-    target_url: str = Field(default="")
-    result: str = Field(default="")
+    action: str | None = Field(default=None)
+    target_text: str | None = Field(default=None)
+    target_role: str | None = Field(default=None)
+    target_url: str | None = Field(default=None)
+    result: str | None = Field(default=None)
 
 
 class BrowserUseAgentResult(BaseModel):
     route_kind: str = Field(description="Either `pdf_download`, `email_delivery`, or `onsite_report`.")
-    route_summary: str = Field(
-        default="",
+    route_summary: str | None = Field(
+        default=None,
         description="Short description of the working clicks/forms for this URL.",
     )
-    route_family: str = Field(
-        default="",
+    route_family: str | None = Field(
+        default=None,
         description="Observed route family for this execution attempt when the agent can classify it.",
     )
-    resolved_target_url: str = Field(
-        default="",
+    resolved_target_url: str | None = Field(
+        default=None,
         description="Resolved target URL that produced the final artifact or email form state.",
     )
-    final_page_url: str = Field(
-        default="",
+    final_page_url: str | None = Field(
+        default=None,
         description="Final browser URL after the task completed.",
     )
     email_submission_completed: bool | None = Field(
@@ -214,36 +217,36 @@ class BrowserUseAgentResult(BaseModel):
         default_factory=list,
         description="Ordered structured action trace for the successful route when the agent can provide it.",
     )
-    post_submit_message: str = Field(
-        default="",
+    post_submit_message: str | None = Field(
+        default=None,
         description="Visible confirmation or status text shown after a form submission attempt.",
     )
     confirmation_url_changed: bool | None = Field(
         default=None,
         description="Whether the page URL changed after the submission or route-completing action.",
     )
-    submit_button_state: str = Field(
-        default="",
+    submit_button_state: str | None = Field(
+        default=None,
         description="Observed submit-button state after submission, for example `disabled` or `replaced`.",
     )
     form_disappeared: bool | None = Field(
         default=None,
         description="Whether the form disappeared after submission.",
     )
-    blocked_reason: str = Field(
-        default="",
+    blocked_reason: str | None = Field(
+        default=None,
         description="Typed blocker code when the flow is blocked instead of completed.",
     )
-    blocked_reason_detail: str = Field(
-        default="",
+    blocked_reason_detail: str | None = Field(
+        default=None,
         description="Human-readable blocker detail captured from the terminal state when available.",
     )
-    final_page_title: str = Field(
-        default="",
+    final_page_title: str | None = Field(
+        default=None,
         description="Observed final page title when available.",
     )
-    terminal_text_excerpt: str = Field(
-        default="",
+    terminal_text_excerpt: str | None = Field(
+        default=None,
         description="Short visible text excerpt captured from the terminal page when available.",
     )
     traversed_page_urls: list[str] = Field(
@@ -262,8 +265,8 @@ class BrowserUseAgentResult(BaseModel):
         default=None,
         description="Number of distinct pages or scroll segments captured for an on-site report when available.",
     )
-    onsite_completeness_status: str = Field(
-        default="",
+    onsite_completeness_status: str | None = Field(
+        default=None,
         description="On-site capture completeness verdict when available.",
     )
 
@@ -561,6 +564,16 @@ def finalize_browser_report_download_result(
     elif route_kind == "onsite_report" and onsite_capture_path:
         blocked_reason = None
         blocked_reason_detail = None
+    elif (
+        route_kind == "email_delivery"
+        and _confirmation_evidence_verifies_email_delivery(confirmation_evidence)
+    ):
+        blocked_reason = None
+        blocked_reason_detail = None
+        artifact_validation_status = "verified"
+        artifact_validation_detail = (
+            "Verified email-delivery confirmation from terminal page evidence."
+        )
 
     outcome, route_status, confirmation_signal_count = _classify_route_result(
         route_kind=route_kind,
@@ -804,14 +817,7 @@ def _salvage_without_structured_result(
         final_page_title=final_page_title,
         terminal_text_excerpt=terminal_text_excerpt,
     )
-    if confirmation_evidence.confirmation_score >= 2 and (
-        _message_indicates_email_delivery(confirmation_evidence.visible_confirmation_text)
-        or "submit_observed" in confirmation_evidence.signal_labels
-        or any(
-            marker in confirmation_evidence.signal_labels
-            for marker in _VERIFIED_EMAIL_SIGNAL_MARKERS
-        )
-    ):
+    if _confirmation_evidence_verifies_email_delivery(confirmation_evidence):
         return _build_salvaged_email_result(
             request=request,
             normalized_url=normalized_url,
@@ -1400,6 +1406,16 @@ def _resolve_route_summary(
     if route_kind == "onsite_report":
         return "Open the on-site report and capture the available longread content."
     if route_summary:
+        if _is_page_load_failure_summary(route_summary):
+            raise AppError(
+                code="browser_download_page_not_loaded",
+                message="browser-use reached an empty or unloaded browser page",
+                retryable=True,
+                context={
+                    "normalized_url": normalized_url,
+                    "route_summary": route_summary,
+                },
+            )
         raise AppError(
             code="browser_download_route_summary_too_weak",
             message="browser-use returned a route summary without enough reusable action detail",
@@ -1414,6 +1430,25 @@ def _resolve_route_summary(
         message="browser-use returned no reusable route summary or route steps",
         retryable=True,
         context={"normalized_url": normalized_url},
+    )
+
+
+def _is_page_load_failure_summary(route_summary: str) -> bool:
+    lowered = " ".join(str(route_summary or "").split()).casefold()
+    if not lowered:
+        return False
+    page_markers = ("page", "tab", "url", "content")
+    failure_markers = (
+        "failed to load",
+        "did not load",
+        "not load",
+        "empty",
+        "blank",
+        "no content",
+        "without content",
+    )
+    return any(marker in lowered for marker in page_markers) and any(
+        marker in lowered for marker in failure_markers
     )
 
 
@@ -1539,7 +1574,7 @@ def _upgrade_confirmation_evidence_from_terminal_html(
     encountered_form_fields: list[str],
     html: str,
 ) -> BrowserDownloadConfirmationEvidence:
-    if email_submission_completed is not True:
+    if email_submission_completed is not True and not encountered_form_fields:
         return confirmation_evidence
     token = str(html or "").strip()
     if not token:
@@ -1562,7 +1597,15 @@ def _upgrade_confirmation_evidence_from_terminal_html(
         url_changed=confirmation_evidence.url_changed,
         submit_button_state=confirmation_evidence.submit_button_state,
         form_disappeared=form_disappeared,
-        email_submission_completed=email_submission_completed,
+        email_submission_completed=(
+            True
+            if (
+                email_submission_completed is True
+                or _message_indicates_email_delivery(terminal_confirmation_text)
+                or _message_indicates_form_success(terminal_confirmation_text)
+            )
+            else email_submission_completed
+        ),
     )
     return BrowserDownloadConfirmationEvidence(
         schema_version=confirmation_evidence.schema_version,
@@ -2209,10 +2252,7 @@ def _classify_route_result(
         )
     if blocked_reason:
         return "email_required", "inferred", confirmation_signal_count
-    if confirmation_signal_count >= 2 and any(
-        marker in confirmation_evidence.signal_labels
-        for marker in _VERIFIED_EMAIL_SIGNAL_MARKERS
-    ):
+    if _confirmation_evidence_verifies_email_delivery(confirmation_evidence):
         return "email_requested", "verified", confirmation_signal_count
     if email_submission_completed is True:
         return "email_required", "inferred", confirmation_signal_count
@@ -2249,6 +2289,16 @@ def _count_confirmation_signals(
     if "network_confirmation_request" in confirmation_evidence.signal_labels:
         count += 1
     return count
+
+
+def _confirmation_evidence_verifies_email_delivery(
+    confirmation_evidence: BrowserDownloadConfirmationEvidence,
+) -> bool:
+    signal_labels = set(confirmation_evidence.signal_labels)
+    return _count_confirmation_signals(confirmation_evidence) >= 2 and (
+        "submit_observed" in signal_labels
+        or any(marker in signal_labels for marker in _VERIFIED_EMAIL_SIGNAL_MARKERS)
+    )
 
 
 def _build_confirmation_signal_labels(
@@ -2340,6 +2390,19 @@ def _message_indicates_unknown_required_enum(message: str) -> bool:
         "select an option",
         "choose an option",
         "dropdown",
+        "not correctly filled",
+        "not correctly selected",
+        "did not resolve",
+        "not confirmed",
+        "valid lookup selection",
+        "could not be successfully filled",
+        "could not be successfully selected",
+        "could not successfully select",
+        "could not be selected",
+        "failed to submit",
+        "preventing form submission",
+        "fill this field",
+        "заполните это поле",
     )
     return any(marker in token for marker in required_markers) and any(
         marker in token for marker in _UNKNOWN_ENUM_MARKERS
@@ -2528,7 +2591,14 @@ def _normalize_explicit_blocked_reason(
     token = str(explicit_blocked_reason or "").strip().lower()
     if token not in _BLOCKED_REASONS:
         return None
+    if token == "blocked_missing_identity_field" and (
+        _message_indicates_unknown_required_enum(blocker_haystack)
+        or _message_mentions_enum_selection_failure(blocker_haystack)
+    ):
+        return "blocked_unknown_required_enum"
     if token != "blocked_unknown_required_enum":
+        return token
+    if any(marker in blocker_haystack for marker in _UNKNOWN_ENUM_MARKERS):
         return token
     if _has_unconfigured_enum_field(
         request=request,
@@ -2542,6 +2612,26 @@ def _normalize_explicit_blocked_reason(
     ):
         return "blocked_missing_identity_field"
     return None
+
+
+def _message_mentions_enum_selection_failure(message: str) -> bool:
+    token = str(message or "").strip().casefold()
+    if not token:
+        return False
+    if not any(marker in token for marker in _UNKNOWN_ENUM_MARKERS):
+        return False
+    failure_markers = (
+        "could not",
+        "failed",
+        "failure",
+        "not confirmed",
+        "not properly",
+        "not selected",
+        "preventing",
+        "submission",
+        "unsuccessful",
+    )
+    return any(marker in token for marker in failure_markers)
 
 
 def _canonical_route_family(*, route_kind: str, route_family: str) -> str:

@@ -23,7 +23,9 @@ from src.contracts.browser_download import (
 from src.contracts.publisher_inventory import PublisherInventoryCandidateTrace
 from src.services._browser_report_download import artifact as artifact_runtime
 from src.services._browser_report_download import browser as browser_runtime
+from src.services._browser_report_download import browser_worker as browser_worker_runtime
 from src.services._browser_report_download import http as http_runtime
+from src.services._browser_report_download import prompt as prompt_runtime
 from src.services._browser_report_download import request as request_runtime
 from src.services._browser_report_download.request import resolve_effective_identity_fields
 from src.services import browser_report_download_service as service
@@ -157,11 +159,20 @@ def _runtime(
             self.kwargs = kwargs
 
     class FakeAgent:
-        def __init__(self, *, task, llm, browser, output_model_schema):
+        def __init__(
+            self,
+            *,
+            task,
+            llm,
+            browser,
+            output_model_schema,
+            use_judge=False,
+        ):
             self.task = task
             self.llm = llm
             self.browser = browser
             self.output_model_schema = output_model_schema
+            self.use_judge = use_judge
 
         def run_sync(self, max_steps: int):
             self.browser.url = "https://example.com/final"
@@ -195,6 +206,35 @@ def _service_events(caplog) -> list[dict[str, object]]:
         if isinstance(payload, dict):
             events.append(payload)
     return events
+
+
+def test_browser_report_download_prompt_marks_unverified_memory_as_weak(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    bundle = prompt_runtime.render_browser_report_download_prompt(
+        request=BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=_settings(tmp_path),
+            route_hint=(
+                "Filled the form but failed to select a valid Location and submit."
+            ),
+            route_kind_hint="email_delivery",
+            route_family_hint="browser_email_form",
+        ),
+        ctx=run_context,
+        normalized_url="https://example.com/report",
+        execution_url="https://example.com/report",
+        download_dir=tmp_path / "downloads",
+        delivery_email="ops@example.com",
+    )
+
+    assert "Previously observed route kind: email_delivery." in bundle.task_prompt
+    assert "Treat this as weak memory" in bundle.task_prompt
+    assert "Previously successful route" not in bundle.task_prompt
+    assert "do not click unrelated navigation links" in bundle.task_prompt
+    assert "click the exact matching option text" in bundle.task_prompt
 
 
 class _FakeResponse:
@@ -266,6 +306,46 @@ def test_download_report_with_browser_use_returns_downloaded_pdf(
     assert response.encountered_form_fields == []
     assert_no_defaulted_required_fields(response)
     assert_logs_have_required_fields(_service_events(caplog))
+
+
+def test_download_report_with_browser_use_disables_browser_use_judge(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="Open the report page and save the PDF.",
+        create_pdf=True,
+        email_submission_completed=None,
+    )
+    observed_use_judge: list[bool] = []
+    original_runtime = runtime.Agent
+
+    class TrackingAgent(original_runtime):
+        def __init__(self, **kwargs):
+            observed_use_judge.append(bool(kwargs.get("use_judge", True)))
+            super().__init__(**kwargs)
+
+    runtime.Agent = TrackingAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=_settings(tmp_path),
+        ),
+        run_context,
+    )
+
+    assert response.outcome == "downloaded"
+    assert observed_use_judge == [False]
 
 
 def test_download_report_with_browser_use_short_circuits_direct_pdf_url(
@@ -680,6 +760,64 @@ def test_download_report_with_browser_use_requires_semantic_route_summary(
     assert_app_error(
         excinfo.value,
         code="browser_download_route_summary_too_weak",
+        retryable=True,
+    )
+
+
+def test_download_report_with_browser_use_maps_empty_page_to_retryable_load_error(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+    assert_app_error,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="blocked_unknown_required_enum",
+        route_summary=(
+            "The target page failed to load after multiple attempts, preventing further interaction."
+        ),
+        create_pdf=False,
+        email_submission_completed=False,
+    )
+    original_runtime = runtime.Agent
+
+    class EmptyPageAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            payload = json.loads(history.final_result())
+            payload["blocked_reason"] = "blocked_unknown_required_enum"
+            payload["blocked_reason_detail"] = (
+                "The page at the provided URL did not load any content after multiple waits."
+            )
+            payload["encountered_form_fields"] = []
+
+            class EmptyPageHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return EmptyPageHistory()
+
+    runtime.Agent = EmptyPageAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    with pytest.raises(AppError) as excinfo:
+        service.download_report_with_browser_use(
+            BrowserReportDownloadRequest(
+                schema_version="1.0",
+                url="https://example.com/report",
+                settings=_settings(tmp_path),
+                route_family_hint="browser_email_form",
+            ),
+            run_context,
+        )
+
+    assert_app_error(
+        excinfo.value,
+        code="browser_download_page_not_loaded",
         retryable=True,
     )
 
@@ -3441,6 +3579,216 @@ def test_download_report_with_browser_use_normalizes_text_field_blocker_to_missi
     assert "Company Website is required" in str(response.blocked_reason_detail)
 
 
+def test_download_report_with_browser_use_preserves_configured_location_lookup_blocker(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    settings = replace(
+        _settings(tmp_path),
+        identity_profile=BrowserDownloadIdentity(
+            schema_version="1.0",
+            fields=[
+                BrowserDownloadIdentityField(
+                    schema_version="1.0",
+                    key="work_email",
+                    label="Work email",
+                    value="ops@example.com",
+                    aliases=["email", "email address"],
+                ),
+                BrowserDownloadIdentityField(
+                    schema_version="1.0",
+                    key="company",
+                    label="Company",
+                    value="Market Lense",
+                    aliases=["company"],
+                ),
+                BrowserDownloadIdentityField(
+                    schema_version="1.0",
+                    key="location",
+                    label="Location",
+                    value="Austria",
+                    aliases=["country", "location"],
+                ),
+            ],
+        ),
+    )
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary=(
+            "Opened the report page, filled the form, clicked submit, and observed the Location blocker."
+        ),
+        create_pdf=False,
+        email_submission_completed=False,
+    )
+    original_runtime = runtime.Agent
+
+    class LocationBlockerAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            payload = json.loads(history.final_result())
+            payload["encountered_form_fields"] = [
+                "Business Email Address",
+                "Company Name",
+                "Location",
+            ]
+            payload["route_steps"] = [
+                {
+                    "index": 0,
+                    "action": "click",
+                    "target_text": "Submit",
+                    "target_role": "button",
+                    "target_url": "https://example.com/report#download",
+                    "result": "Clicked Submit button.",
+                }
+            ]
+            payload["blocked_reason"] = "blocked_missing_identity_field"
+            payload["blocked_reason_detail"] = (
+                "The Location field could not be successfully selected, preventing form submission."
+            )
+
+            class LocationBlockerHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+            return LocationBlockerHistory()
+
+    runtime.Agent = LocationBlockerAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=settings,
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.outcome == "email_required"
+    assert response.blocked_reason == "blocked_unknown_required_enum"
+    assert "Location field could not be successfully selected" in str(
+        response.blocked_reason_detail
+    )
+
+
+def test_browser_report_download_result_trusts_explicit_lookup_enum_blocker(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    settings = replace(
+        _settings(tmp_path),
+        identity_profile=BrowserDownloadIdentity(
+            schema_version="1.0",
+            fields=[
+                BrowserDownloadIdentityField(
+                    schema_version="1.0",
+                    key="work_email",
+                    label="Work email",
+                    value="ops@example.com",
+                    aliases=["email", "email address"],
+                ),
+                BrowserDownloadIdentityField(
+                    schema_version="1.0",
+                    key="company",
+                    label="Company",
+                    value="Market Lense",
+                    aliases=["company"],
+                ),
+                BrowserDownloadIdentityField(
+                    schema_version="1.0",
+                    key="location",
+                    label="Location",
+                    value="Austria",
+                    aliases=["country", "location"],
+                ),
+            ],
+        ),
+    )
+    payload = {
+        "route_kind": "email_delivery",
+        "route_summary": (
+            "Opened the report page, filled the form, and failed to submit "
+            "because the Location lookup could not be selected."
+        ),
+        "route_family": "browser_email_form",
+        "resolved_target_url": "https://example.com/report#download",
+        "final_page_url": "https://example.com/report#download",
+        "email_submission_completed": False,
+        "downloaded_file_path": None,
+        "downloaded_file_name": None,
+        "downloaded_mime_type": None,
+        "encountered_form_fields": [
+            "Business Email Address",
+            "Company Name",
+            "Location",
+        ],
+        "route_steps": [
+            {
+                "index": 0,
+                "action": "click",
+                "target_text": "Submit",
+                "target_role": "button",
+                "target_url": "https://example.com/report#download",
+                "result": "Clicked Submit button.",
+            }
+        ],
+        "post_submit_message": None,
+        "confirmation_url_changed": False,
+        "submit_button_state": None,
+        "form_disappeared": False,
+        "blocked_reason": "blocked_unknown_required_enum",
+        "blocked_reason_detail": (
+            "The Location field could not be properly selected, and the form "
+            "submission failed."
+        ),
+        "final_page_title": "Example report",
+        "terminal_text_excerpt": "",
+        "traversed_page_urls": ["https://example.com/report#download"],
+        "onsite_capture_path": None,
+        "onsite_capture_format": None,
+        "onsite_page_count": None,
+        "onsite_completeness_status": None,
+    }
+
+    response = artifact_runtime.finalize_browser_report_download_result(
+        request=BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=settings,
+            route_family_hint="browser_email_form",
+        ),
+        ctx=run_context,
+        normalized_url="https://example.com/report",
+        delivery_email="ops@example.com",
+        download_dir=tmp_path,
+        browser_run=browser_runtime.BrowserAgentRunResult(
+            schema_version="1.0",
+            raw_model_response=json.dumps(payload),
+            final_page_url="https://example.com/report#download",
+            final_page_title="Example report",
+            final_page_html="",
+            downloaded_files=[],
+            attachment_paths=[],
+            network_resource_urls=[],
+            network_events=[],
+            html_snapshot_path="",
+            screenshot_path="",
+        ),
+    )
+
+    assert response.outcome == "email_required"
+    assert response.blocked_reason == "blocked_unknown_required_enum"
+    assert "could not be properly selected" in str(response.blocked_reason_detail)
+
+
 def test_download_report_with_browser_use_does_not_infer_static_archive_from_please_wait(
     tmp_path: Path,
     run_context,
@@ -3680,6 +4028,980 @@ def test_download_report_with_browser_use_times_out_stalled_agent(
     assert exc_info.value.code == "browser_download_agent_timeout"
     assert kill_calls
     assert stop_observations == [True]
+
+
+def test_download_report_with_browser_use_salvages_completed_history_when_agent_cleanup_stalls(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    settings = replace(_settings(tmp_path), timeout_seconds=0.05, max_steps=1)
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary="Open the report page and submit the form.",
+        create_pdf=False,
+        email_submission_completed=True,
+    )
+    original_runtime = runtime.Agent
+    original_browser = runtime.Browser
+
+    class CompletedHistory:
+        def __init__(self, payload: dict[str, Any]) -> None:
+            self._payload = payload
+            self.history: list[Any] = []
+
+        def is_done(self) -> bool:
+            return True
+
+        def final_result(self) -> str:
+            return json.dumps(self._payload)
+
+        def action_results(self) -> list[Any]:
+            return []
+
+    class CleanupStalledAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            self.browser.url = "https://example.com/thank-you"
+            self.browser.title = "Thank you"
+            self.browser.html = "<html><body><h1>Thank you</h1></body></html>"
+            payload = {
+                "route_kind": "email_delivery",
+                "route_summary": "Submitted the form and reached the thank-you page.",
+                "route_family": "browser_email_form",
+                "resolved_target_url": "https://example.com/thank-you",
+                "final_page_url": "https://example.com/thank-you",
+                "email_submission_completed": True,
+                "downloaded_file_path": None,
+                "downloaded_file_name": None,
+                "downloaded_mime_type": None,
+                "encountered_form_fields": ["Work Email"],
+                "route_steps": [],
+                "post_submit_message": "Thank you",
+                "confirmation_url_changed": True,
+                "submit_button_state": "replaced",
+                "form_disappeared": True,
+                "blocked_reason": "",
+                "blocked_reason_detail": "",
+                "final_page_title": "Thank you",
+                "terminal_text_excerpt": "Thanks for your interest.",
+                "traversed_page_urls": [
+                    "https://example.com/report",
+                    "https://example.com/thank-you",
+                ],
+                "onsite_capture_path": None,
+                "onsite_capture_format": None,
+                "onsite_page_count": None,
+                "onsite_completeness_status": "",
+            }
+            self.history = CompletedHistory(payload)
+            time.sleep(2.0)
+            return self.history
+
+    class CaptureUnsafeBrowser(original_browser):
+        def get_current_page(self):
+            raise AssertionError("salvaged completed history should skip live terminal capture")
+
+    runtime.Agent = CleanupStalledAgent
+    runtime.Browser = CaptureUnsafeBrowser
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=settings,
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.outcome == "email_requested"
+    assert response.final_page_url == "https://example.com/thank-you"
+    assert response.confirmation_evidence is not None
+    assert response.confirmation_evidence.visible_confirmation_text == "Thank you"
+
+
+def test_download_report_with_browser_use_salvages_terminal_state_on_timeout(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    settings = replace(_settings(tmp_path), timeout_seconds=0.05, max_steps=1)
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="Open the report page and click Download.",
+        create_pdf=False,
+        email_submission_completed=None,
+    )
+    original_runtime = runtime.Agent
+
+    class TimeoutSalvageAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            download_dir = Path(self.browser.downloads_path)
+            download_dir.mkdir(parents=True, exist_ok=True)
+            pdf_path = download_dir / "timed-out-report.pdf"
+            pdf_path.write_bytes(b"%PDF-1.7 timeout salvage")
+            self.browser.downloaded_files = [str(pdf_path)]
+            self.browser.url = "https://example.com/report"
+            self.browser.title = "Example report"
+            self.browser.html = "<html><body><h1>Example report</h1></body></html>"
+            time.sleep(2.0)
+            return super().run_sync(max_steps)
+
+    runtime.Agent = TimeoutSalvageAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=settings,
+            route_family_hint="browser_pdf_click",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "pdf_download"
+    assert response.outcome == "downloaded"
+    assert response.downloaded_file_path.endswith("timed-out-report.pdf")
+
+
+def test_download_report_with_browser_use_recovers_lookup_before_completed_history_shutdown(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    settings = replace(_settings(tmp_path), timeout_seconds=0.05, max_steps=1)
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary="Filled the form and clicked submit.",
+        create_pdf=False,
+        email_submission_completed=True,
+    )
+    original_runtime = runtime.Agent
+    original_browser = runtime.Browser
+
+    class CompletedHistory:
+        def __init__(self, payload: dict[str, Any]) -> None:
+            self._payload = payload
+            self.history: list[Any] = []
+
+        def is_done(self) -> bool:
+            return True
+
+        def final_result(self) -> str:
+            return json.dumps(self._payload)
+
+        def action_results(self) -> list[Any]:
+            return []
+
+    class ShutdownSensitiveBrowser(original_browser):
+        def get_current_page(self):
+            if getattr(self, "_intentional_stop", False):
+                raise AssertionError("lookup assist must run before browser shutdown")
+            return super().get_current_page()
+
+    class LookupRecoveredAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            browser = self.browser
+            browser.url = "https://example.com/report#download"
+            browser.title = "Example report"
+            browser.html = ""
+
+            class LookupAssistPage:
+                def evaluate(self, script):
+                    script_text = str(script or "")
+                    if "selected_count" in script_text and ".lookupFormFieldBlock" in script_text:
+                        browser.url = "https://example.com/report#success"
+                        browser.title = "Thank you"
+                        browser.html = (
+                            "<html><body>"
+                            "Thank you for your interest. You will be emailed a "
+                            "downloadable copy of this insight shortly."
+                            "</body></html>"
+                        )
+                        return {
+                            "acted": True,
+                            "selected_count": 1,
+                            "submitted": True,
+                            "final_url": browser.url,
+                        }
+                    if "navigationEntries" in script_text:
+                        return []
+                    if "document.querySelectorAll" in script_text:
+                        return []
+                    return []
+
+            browser.current_page_factory = LookupAssistPage
+            payload = {
+                "route_kind": "email_delivery",
+                "route_summary": "Filled the form and clicked submit.",
+                "route_family": "browser_email_form",
+                "resolved_target_url": "https://example.com/report#download",
+                "final_page_url": "https://example.com/report#download",
+                "email_submission_completed": True,
+                "downloaded_file_path": None,
+                "downloaded_file_name": None,
+                "downloaded_mime_type": None,
+                "encountered_form_fields": [
+                    "First Name",
+                    "Last Name",
+                    "Business Email Address",
+                    "Location",
+                ],
+                "route_steps": [
+                    {
+                        "index": 0,
+                        "action": "click",
+                        "target_text": "Submit",
+                        "target_role": "button",
+                        "target_url": "https://example.com/report#download",
+                        "result": 'Clicked button "Submit"',
+                    }
+                ],
+                "post_submit_message": None,
+                "confirmation_url_changed": False,
+                "submit_button_state": None,
+                "form_disappeared": False,
+                "blocked_reason": None,
+                "blocked_reason_detail": None,
+                "final_page_title": "Example report",
+                "terminal_text_excerpt": None,
+                "traversed_page_urls": [
+                    "https://example.com/report",
+                    "https://example.com/report#download",
+                ],
+                "onsite_capture_path": None,
+                "onsite_capture_format": None,
+                "onsite_page_count": None,
+                "onsite_completeness_status": None,
+            }
+            self.history = CompletedHistory(payload)
+            time.sleep(2.0)
+            return self.history
+
+    runtime.Agent = LookupRecoveredAgent
+    runtime.Browser = ShutdownSensitiveBrowser
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=settings,
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.outcome == "email_requested"
+    assert response.route_status == "verified"
+    assert response.final_page_url == "https://example.com/report#success"
+
+
+def test_download_report_with_browser_use_bounds_lookup_assist_after_completed_history_timeout(
+    tmp_path: Path,
+    caplog,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    caplog.set_level(logging.INFO, logger=service.logger.name)
+    settings = replace(_settings(tmp_path), timeout_seconds=0.05, max_steps=1)
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary="Filled the form but the location lookup still blocked submission.",
+        create_pdf=False,
+        email_submission_completed=False,
+    )
+    original_runtime = runtime.Agent
+
+    class CompletedHistory:
+        def __init__(self, payload: dict[str, Any]) -> None:
+            self._payload = payload
+            self.history: list[Any] = []
+
+        def is_done(self) -> bool:
+            return True
+
+        def final_result(self) -> str:
+            return json.dumps(self._payload)
+
+        def action_results(self) -> list[Any]:
+            return []
+
+    class TimedOutLookupBlockedAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            browser = self.browser
+            browser.url = "https://example.com/report#download"
+            browser.title = "Example report"
+            browser.html = "<html><body><h1>Example report</h1></body></html>"
+
+            class BlockingLookupPage:
+                def evaluate(self, script):
+                    script_text = str(script or "")
+                    if "selected_count" in script_text and ".lookupFormFieldBlock" in script_text:
+                        time.sleep(7.0)
+                        return {"acted": False}
+                    if "navigationEntries" in script_text:
+                        return []
+                    if "document.querySelectorAll" in script_text:
+                        return []
+                    return []
+
+            browser.current_page_factory = BlockingLookupPage
+            payload = {
+                "route_kind": "email_delivery",
+                "route_summary": (
+                    "Filled the form but the location lookup still blocked submission."
+                ),
+                "route_family": "browser_email_form",
+                "resolved_target_url": "https://example.com/report#download",
+                "final_page_url": "https://example.com/report#download",
+                "email_submission_completed": False,
+                "downloaded_file_path": None,
+                "downloaded_file_name": None,
+                "downloaded_mime_type": None,
+                "encountered_form_fields": [
+                    "First Name",
+                    "Last Name",
+                    "Business Email Address",
+                    "Location",
+                ],
+                "route_steps": [
+                    {
+                        "index": 0,
+                        "action": "click",
+                        "target_text": "Submit",
+                        "target_role": "button",
+                        "target_url": "https://example.com/report#download",
+                        "result": 'Clicked button "Submit"',
+                    }
+                ],
+                "post_submit_message": None,
+                "confirmation_url_changed": False,
+                "submit_button_state": None,
+                "form_disappeared": False,
+                "blocked_reason": "blocked_unknown_required_enum",
+                "blocked_reason_detail": (
+                    "The Location field could not be successfully filled or submitted."
+                ),
+                "final_page_title": "Example report",
+                "terminal_text_excerpt": "Location:\nSearch country...",
+                "traversed_page_urls": [
+                    "https://example.com/report",
+                    "https://example.com/report#download",
+                ],
+                "onsite_capture_path": None,
+                "onsite_capture_format": None,
+                "onsite_page_count": None,
+                "onsite_completeness_status": None,
+            }
+            self.history = CompletedHistory(payload)
+            time.sleep(2.0)
+            return self.history
+
+    runtime.Agent = TimedOutLookupBlockedAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=settings,
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.outcome == "email_required"
+    assert "Location field could not be successfully filled or submitted" in str(
+        response.blocked_reason_detail
+    )
+    assert any(
+        event.get("event") == "browser_report_download_timeout_recovery_timed_out"
+        and event.get("fields", {}).get("operation") == "lookup_submission_assist"
+        for event in _service_events(caplog)
+    )
+
+
+def test_download_report_with_browser_use_maps_partial_lookup_timeout_to_blocker(
+    tmp_path: Path,
+    caplog,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    caplog.set_level(logging.INFO, logger=service.logger.name)
+    settings = replace(_settings(tmp_path), timeout_seconds=0.05, max_steps=1)
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary="",
+        create_pdf=False,
+        email_submission_completed=False,
+    )
+    original_runtime = runtime.Agent
+
+    class PartialHistory:
+        def __init__(self, entries: list[Any]) -> None:
+            self.history = entries
+
+        def is_done(self) -> bool:
+            return False
+
+        def final_result(self) -> None:
+            return None
+
+    class TimedOutPartialLookupAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            self.browser.url = "https://example.com/report#download"
+            self.browser.title = "Example report"
+            self.browser.html = "<html><body><form>Location Submit</form></body></html>"
+            self.history = PartialHistory(
+                [
+                    SimpleNamespace(
+                        model_output=SimpleNamespace(
+                            thinking="",
+                            evaluation_previous_goal=(
+                                "The previous attempt to select Austria from the "
+                                "Location dropdown and submit the form was unsuccessful "
+                                "due to incorrect input processing and selection."
+                            ),
+                            memory=(
+                                "All fields are filled except the Location lookup. "
+                                "Submit was clicked, but Location did not resolve."
+                            ),
+                            next_goal=(
+                                "Correctly select Austria from the Location dropdown "
+                                "and then click the submit button."
+                            ),
+                            action=[
+                                {
+                                    "input": {
+                                        "index": 92,
+                                        "text": "Austria",
+                                        "clear": True,
+                                    }
+                                },
+                                {"click": {"index": 1841}},
+                            ],
+                        ),
+                        result=[
+                            SimpleNamespace(
+                                error=None,
+                                long_term_memory='Clicked button "Submit"',
+                                extracted_content=None,
+                            )
+                        ],
+                        state=SimpleNamespace(
+                            url="https://example.com/report#download",
+                            title="Example report",
+                            screenshot_path=None,
+                        ),
+                    )
+                ]
+            )
+            time.sleep(2.0)
+            return self.history
+
+    runtime.Agent = TimedOutPartialLookupAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=settings,
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.outcome == "email_required"
+    assert response.blocked_reason == "blocked_unknown_required_enum"
+    assert "Location field did not resolve" in str(response.blocked_reason_detail)
+    assert response.final_page_url == "https://example.com/report#download"
+    assert any(
+        event.get("event")
+        == "browser_report_download_timeout_salvaged_partial_history_blocker"
+        for event in _service_events(caplog)
+    )
+
+
+def test_download_report_with_browser_use_accepts_nullable_structured_result_fields(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary="Submit the form.",
+        create_pdf=False,
+        email_submission_completed=True,
+    )
+    original_runtime = runtime.Agent
+
+    class NullableResultAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            payload = json.loads(history.final_result())
+            payload["route_steps"] = [
+                {
+                    "index": 0,
+                    "action": "open",
+                    "target_text": None,
+                    "target_role": None,
+                    "target_url": "https://example.com/report",
+                    "result": "opened",
+                }
+            ]
+            payload["post_submit_message"] = None
+            payload["submit_button_state"] = None
+            payload["blocked_reason"] = None
+            payload["blocked_reason_detail"] = None
+            payload["final_page_title"] = "Thank you"
+            payload["terminal_text_excerpt"] = "Thanks for your interest."
+            payload["final_page_url"] = "https://example.com/thank-you"
+            payload["resolved_target_url"] = "https://example.com/thank-you"
+            payload["confirmation_url_changed"] = True
+            payload["form_disappeared"] = True
+            self.browser.url = "https://example.com/thank-you"
+            self.browser.title = "Thank you"
+            self.browser.html = "<html><body><h1>Thank you</h1></body></html>"
+
+            class NullableHistory:
+                def final_result(self) -> str:
+                    return json.dumps(payload)
+
+                def action_results(self) -> list[Any]:
+                    return []
+
+            return NullableHistory()
+
+    runtime.Agent = NullableResultAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.outcome == "email_requested"
+    assert response.route_steps[0].target_text == ""
+    assert response.route_steps[0].target_role == "page"
+
+
+def test_download_report_with_browser_use_lookup_submission_assist_upgrades_email_requested(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary="Open the report page, complete the form, and submit it.",
+        create_pdf=False,
+        email_submission_completed=True,
+    )
+    original_runtime = runtime.Agent
+
+    class LookupAssistAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            browser = self.browser
+            browser.url = "https://example.com/report#download"
+            browser.title = "Example report"
+            browser.html = ""
+
+            class LookupAssistPage:
+                def evaluate(self, script):
+                    script_text = str(script or "")
+                    if "selected_count" in script_text and ".lookupFormFieldBlock" in script_text:
+                        browser.url = "https://example.com/report#success"
+                        browser.title = "Thank you"
+                        browser.html = (
+                            "<html><body>"
+                            "Thank you for your interest. You will be emailed a "
+                            "downloadable copy of this insight shortly."
+                            "</body></html>"
+                        )
+                        return {
+                            "acted": True,
+                            "selected_count": 1,
+                            "submitted": True,
+                            "final_url": browser.url,
+                        }
+                    if "navigationEntries" in script_text:
+                        return []
+                    if "document.querySelectorAll" in script_text:
+                        return []
+                    return []
+
+            browser.current_page_factory = LookupAssistPage
+            payload = {
+                "route_kind": "email_delivery",
+                "route_summary": (
+                    "Opened the form, filled the required fields, and clicked submit."
+                ),
+                "route_family": "browser_email_form",
+                "resolved_target_url": "https://example.com/report#download",
+                "final_page_url": "https://example.com/report#download",
+                "email_submission_completed": True,
+                "downloaded_file_path": None,
+                "downloaded_file_name": None,
+                "downloaded_mime_type": None,
+                "encountered_form_fields": [
+                    "First Name",
+                    "Last Name",
+                    "Business Email Address",
+                    "Business Phone",
+                    "Company Name",
+                    "Role",
+                    "Department",
+                    "Industry",
+                    "Location",
+                ],
+                "route_steps": [],
+                "post_submit_message": None,
+                "confirmation_url_changed": False,
+                "submit_button_state": None,
+                "form_disappeared": False,
+                "blocked_reason": None,
+                "blocked_reason_detail": None,
+                "final_page_title": "Example report",
+                "terminal_text_excerpt": None,
+                "traversed_page_urls": [
+                    "https://example.com/report",
+                    "https://example.com/report#download",
+                ],
+                "onsite_capture_path": None,
+                "onsite_capture_format": None,
+                "onsite_page_count": None,
+                "onsite_completeness_status": None,
+            }
+
+            class LookupAssistHistory:
+                def final_result(self) -> str:
+                    return json.dumps(payload)
+
+                def action_results(self) -> list[Any]:
+                    return []
+
+            return LookupAssistHistory()
+
+    runtime.Agent = LookupAssistAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.outcome == "email_requested"
+    assert response.route_status == "verified"
+    assert response.final_page_url == "https://example.com/report#success"
+    assert response.confirmation_evidence is not None
+    assert response.confirmation_evidence.visible_confirmation_text.startswith(
+        "Thank you for your interest."
+    )
+
+
+def test_download_report_with_browser_use_lookup_submission_assist_recovers_lookup_blocked_submit(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary="Filled the form but the location lookup still blocked submission.",
+        create_pdf=False,
+        email_submission_completed=False,
+    )
+    original_runtime = runtime.Agent
+
+    class LookupBlockedSubmitAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            browser = self.browser
+            browser.url = "https://example.com/report#download"
+            browser.title = "Example report"
+            browser.html = ""
+
+            class LookupBlockedSubmitPage:
+                def evaluate(self, script):
+                    script_text = str(script or "")
+                    if "selected_count" in script_text and ".lookupFormFieldBlock" in script_text:
+                        browser.url = "https://example.com/report#success"
+                        browser.title = "Thank you"
+                        browser.html = (
+                            "<html><body>"
+                            "Thank you for your interest. You will be emailed a "
+                            "downloadable copy of this insight shortly."
+                            "</body></html>"
+                        )
+                        return {
+                            "acted": True,
+                            "selected_count": 1,
+                            "submitted": True,
+                            "final_url": browser.url,
+                        }
+                    if "navigationEntries" in script_text:
+                        return []
+                    if "document.querySelectorAll" in script_text:
+                        return []
+                    return []
+
+            browser.current_page_factory = LookupBlockedSubmitPage
+            payload = {
+                "route_kind": "email_delivery",
+                "route_summary": (
+                    "Filled the form, typed Austria in Location, clicked submit, "
+                    "and remained on the form."
+                ),
+                "route_family": "browser_email_form",
+                "resolved_target_url": "https://example.com/report#download",
+                "final_page_url": "https://example.com/report#download",
+                "email_submission_completed": False,
+                "downloaded_file_path": None,
+                "downloaded_file_name": None,
+                "downloaded_mime_type": None,
+                "encountered_form_fields": [
+                    "First Name",
+                    "Last Name",
+                    "Business Email Address",
+                    "Business Phone",
+                    "Company Name",
+                    "Role",
+                    "Department",
+                    "Industry",
+                    "Location",
+                ],
+                "route_steps": [
+                    {
+                        "index": 10,
+                        "action": "input",
+                        "target_text": "Austria",
+                        "target_role": "textbox",
+                        "target_url": "https://example.com/report#download",
+                        "result": "Typed 'Austria'",
+                    },
+                    {
+                        "index": 11,
+                        "action": "click",
+                        "target_text": "Submit",
+                        "target_role": "button",
+                        "target_url": "https://example.com/report#download",
+                        "result": "Clicked button \"Submit\"",
+                    },
+                ],
+                "post_submit_message": None,
+                "confirmation_url_changed": False,
+                "submit_button_state": None,
+                "form_disappeared": False,
+                "blocked_reason": "blocked_unknown_required_enum",
+                "blocked_reason_detail": (
+                    "The Location field did not resolve to a valid lookup selection."
+                ),
+                "final_page_title": "Example report",
+                "terminal_text_excerpt": None,
+                "traversed_page_urls": [
+                    "https://example.com/report",
+                    "https://example.com/report#download",
+                ],
+                "onsite_capture_path": None,
+                "onsite_capture_format": None,
+                "onsite_page_count": None,
+                "onsite_completeness_status": None,
+            }
+
+            class LookupBlockedSubmitHistory:
+                def final_result(self) -> str:
+                    return json.dumps(payload)
+
+                def action_results(self) -> list[Any]:
+                    return []
+
+            return LookupBlockedSubmitHistory()
+
+    runtime.Agent = LookupBlockedSubmitAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.outcome == "email_requested"
+    assert response.route_status == "verified"
+    assert response.final_page_url == "https://example.com/report#success"
+    assert response.confirmation_evidence is not None
+    assert response.confirmation_evidence.visible_confirmation_text.startswith(
+        "Thank you for your interest."
+    )
+
+
+def test_browser_worker_main_preserves_candidate_trace(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    candidate_trace = PublisherInventoryCandidateTrace(
+        schema_version="1.0",
+        canonical_url="https://example.com/report",
+        title="Example Report",
+        discovered_on_page_number=2,
+        source_page_urls=[
+            "https://example.com/insights",
+            "https://example.com/resources",
+        ],
+        discovery_provenances=["http_parse", "browser_dom"],
+        pdf_url="https://cdn.example.com/example-report.pdf",
+        published_at_text="April 2026",
+        max_confidence=0.92,
+    )
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url=candidate_trace.canonical_url,
+        settings=_settings(tmp_path),
+        candidate_trace=candidate_trace,
+        attempt_url="https://example.com/report?download=1",
+        route_family_hint="browser_pdf_click",
+    )
+    download_dir = tmp_path / "worker-run"
+    payload_path = tmp_path / "browser_agent_worker_request.json"
+    response_path = tmp_path / "browser_agent_worker_response.json"
+    payload_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "request": {
+                    **json.loads(json.dumps(request, default=lambda value: value.__dict__)),
+                },
+                "ctx": run_context.__dict__,
+                "normalized_url": request.url,
+                "execution_url": request.attempt_url,
+                "download_dir": str(download_dir),
+                "prompt_bundle": {
+                    "schema_version": "1.0",
+                    "namespace": "browser_report_download/browser_route",
+                    "system_prompt_path": "system.yaml",
+                    "user_prompt_path": "user.yaml",
+                    "system_prompt_sha256": "system",
+                    "user_prompt_sha256": "user",
+                    "rendered_system_prompt": "system",
+                    "rendered_user_prompt": "user",
+                    "task_prompt": "task",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    observed_requests: list[BrowserReportDownloadRequest] = []
+
+    def fake_run_browser_report_download_agent(**kwargs):
+        observed_requests.append(kwargs["request"])
+        return browser_runtime.BrowserAgentRunResult(
+            schema_version="1.0",
+            raw_model_response="{}",
+            final_page_url="https://example.com/final",
+            final_page_title="Example",
+            final_page_html="<html></html>",
+            downloaded_files=[],
+            attachment_paths=[],
+            network_resource_urls=[],
+            network_events=[],
+            html_snapshot_path="",
+            screenshot_path="",
+        )
+
+    external_boundary_mocks_only.setattr(
+        browser_worker_runtime,
+        "run_browser_report_download_agent",
+        fake_run_browser_report_download_agent,
+    )
+    external_boundary_mocks_only.setattr(
+        browser_worker_runtime,
+        "setup_logging",
+        lambda *args, **kwargs: None,
+    )
+    external_boundary_mocks_only.setattr(
+        browser_worker_runtime.sys,
+        "argv",
+        [
+            "browser_worker.py",
+            str(payload_path),
+            str(response_path),
+        ],
+    )
+
+    assert browser_worker_runtime.main() == 0
+    assert response_path.exists()
+    assert len(observed_requests) == 1
+    observed_request = observed_requests[0]
+    assert observed_request.candidate_trace is not None
+    assert observed_request.candidate_trace.canonical_url == candidate_trace.canonical_url
+    assert observed_request.candidate_trace.pdf_url == candidate_trace.pdf_url
+    assert observed_request.candidate_trace.discovery_provenances == (
+        candidate_trace.discovery_provenances
+    )
 
 
 def test_download_report_with_browser_use_cleans_stale_browser_use_temp_dirs_before_launch(

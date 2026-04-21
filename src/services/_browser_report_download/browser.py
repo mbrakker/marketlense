@@ -44,6 +44,7 @@ _AGENT_RUN_TIMEOUT_STEP_BUFFER_SECONDS = 0.5
 _AGENT_RUN_TIMEOUT_MAX_BUFFER_SECONDS = 30.0
 _BROWSER_KILL_TIMEOUT_SECONDS = 15.0
 _BROWSER_RESET_TIMEOUT_SECONDS = 10.0
+_BROWSER_CLEANUP_GRACE_SECONDS = 5.0
 _BROWSER_PROFILE_DIR_PREFIX = "browser-use-user-data-dir-profile"
 _BROWSER_USE_TEMP_DIR_PATTERNS = (
     "browser-use-user-data-dir-*",
@@ -53,8 +54,41 @@ _BROWSER_USE_TEMP_DIR_PATTERNS = (
 _STALE_BROWSER_USE_TEMP_DIR_MIN_AGE_SECONDS = 15 * 60.0
 _TEMP_CLEANUP_LOG_SAMPLE_LIMIT = 5
 _TIMED_OUT_AGENT_STOP_GRACE_SECONDS = 10.0
+_TIMED_OUT_COMPLETED_HISTORY_GRACE_SECONDS = 2.0
+_TIMED_OUT_RECOVERY_OPERATION_TIMEOUT_SECONDS = 5.0
 _BROWSER_AGENT_WORKER_ENV = "MARKET_LENSE_BROWSER_AGENT_WORKER"
-_BROWSER_AGENT_WORKER_TIMEOUT_BUFFER_SECONDS = 30.0
+# Let the worker finish its own timeout stop/cleanup path and write a typed
+# response instead of being killed by the outer subprocess envelope mid-exit.
+_BROWSER_AGENT_WORKER_TIMEOUT_BUFFER_SECONDS = 45.0
+_BROWSER_AGENT_USE_JUDGE = False
+_LOOKUP_FIELD_MARKERS = (
+    "location",
+    "country",
+    "state",
+    "province",
+    "region",
+    "territory",
+)
+_LOOKUP_FAILURE_MARKERS = (
+    "could not",
+    "did not",
+    "failed",
+    "failure",
+    "incorrect",
+    "not correctly",
+    "not processed",
+    "not resolve",
+    "not selected",
+    "not work",
+    "unsuccessful",
+    "unverified",
+)
+_LOOKUP_SUBMIT_MARKERS = (
+    "submit",
+    "submitted",
+    "submission",
+)
+_PARTIAL_HISTORY_TEXT_MAX_CHARS = 12000
 
 
 @dataclass(frozen=True)
@@ -99,6 +133,49 @@ class BrowserAgentWorkerResponse:
     error: dict[str, Any] | None
 
 
+@dataclass(frozen=True)
+class BrowserAgentHistoryResult:
+    history: Any
+    salvaged_completed_history: bool
+
+
+@dataclass(frozen=True)
+class _SyntheticHistoryState:
+    url: str
+    title: str
+    screenshot_path: str | None = None
+
+
+@dataclass(frozen=True)
+class _SyntheticHistoryEntry:
+    state: _SyntheticHistoryState
+
+
+@dataclass(frozen=True)
+class _SyntheticActionResult:
+    attachments: list[str]
+
+
+class _SyntheticAgentHistory:
+    def __init__(
+        self,
+        *,
+        payload: dict[str, Any],
+        state: _SyntheticHistoryState,
+    ) -> None:
+        self._payload = payload
+        self.history = [_SyntheticHistoryEntry(state=state)]
+
+    def is_done(self) -> bool:
+        return True
+
+    def final_result(self) -> str:
+        return json.dumps(self._payload, ensure_ascii=True)
+
+    def action_results(self) -> list[_SyntheticActionResult]:
+        return [_SyntheticActionResult(attachments=[])]
+
+
 def run_browser_report_download_agent(
     *,
     request: BrowserReportDownloadRequest,
@@ -120,6 +197,7 @@ def run_browser_report_download_agent(
                 "route_family_hint": request.route_family_hint or "",
                 "prompt_namespace": prompt_bundle.namespace,
                 "task_prompt": prompt_bundle.task_prompt,
+                "agent_use_judge": _BROWSER_AGENT_USE_JUDGE,
             },
         )
     )
@@ -181,15 +259,16 @@ def run_browser_report_download_agent(
             llm=llm,
             browser=browser,
             output_model_schema=BrowserUseAgentResult,
+            use_judge=_BROWSER_AGENT_USE_JUDGE,
         )
-        history = _run_agent_history_with_timeout(
+        history_result = _run_agent_history_with_timeout(
             agent=agent,
             browser=browser,
             request=request,
             ctx=ctx,
             normalized_url=normalized_url,
         )
-        _prepare_browser_for_shutdown(browser)
+        history = history_result.history
         raw_model_response = str(history.final_result() or "").strip()
         history_final_page_url = _read_history_final_page_url(history)
         history_final_page_title = _read_history_final_page_title(history)
@@ -198,41 +277,86 @@ def run_browser_report_download_agent(
             history=history,
             download_dir=download_dir,
         )
-        terminal_snapshot = _capture_terminal_snapshot(browser)
-        terminal_snapshot = _stabilize_terminal_snapshot(
-            browser=browser,
-            raw_model_response=raw_model_response,
-            snapshot=terminal_snapshot,
-            ctx=ctx,
-            normalized_url=normalized_url,
-        )
-        current_page = terminal_snapshot.page
-        final_page_url = (
-            terminal_snapshot.url
-            or history_final_page_url
-        )
-        final_page_title = (
-            terminal_snapshot.title
-            or history_final_page_title
-        )
-        final_page_html = terminal_snapshot.html
         downloaded_files = [
             str(path) for path in getattr(browser, "downloaded_files", [])
         ]
-        (
-            network_resource_urls,
-            network_events,
-            html_snapshot_path,
-            screenshot_path,
-        ) = _capture_terminal_assets(
-            browser=browser,
-            page=current_page,
-            download_dir=download_dir,
-            final_page_html=final_page_html,
-        )
-        if not screenshot_path:
+        lookup_submission_assisted = False
+        if _should_attempt_lookup_submission_assist(
+            request=request,
+            raw_model_response=raw_model_response,
+        ):
+            lookup_submission_assisted = _attempt_lookup_submission_assist_with_timeout(
+                browser=browser,
+                ctx=ctx,
+                normalized_url=normalized_url,
+            )
+        if history_result.salvaged_completed_history and not lookup_submission_assisted:
+            final_page_url = history_final_page_url
+            final_page_title = history_final_page_title
             screenshot_path = history_screenshot_path
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="browser_report_download_completed_history_capture_skipped",
+                    module=logger.name,
+                    fields={
+                        "normalized_url": normalized_url,
+                        "history_final_page_url": history_final_page_url,
+                        "history_final_page_title": history_final_page_title,
+                        "downloaded_file_count": len(downloaded_files),
+                        "attachment_count": len(attachment_paths),
+                    },
+                )
+            )
+        else:
+            terminal_snapshot = _capture_terminal_snapshot(browser)
+            terminal_snapshot = _stabilize_terminal_snapshot(
+                browser=browser,
+                raw_model_response=raw_model_response,
+                snapshot=terminal_snapshot,
+                ctx=ctx,
+                normalized_url=normalized_url,
+            )
+            current_page = terminal_snapshot.page
+            final_page_url = (
+                terminal_snapshot.url
+                or history_final_page_url
+            )
+            final_page_title = (
+                terminal_snapshot.title
+                or history_final_page_title
+            )
+            final_page_html = terminal_snapshot.html
+            (
+                network_resource_urls,
+                network_events,
+                html_snapshot_path,
+                screenshot_path,
+            ) = _capture_terminal_assets(
+                browser=browser,
+                page=current_page,
+                download_dir=download_dir,
+                final_page_html=final_page_html,
+            )
+            if not screenshot_path:
+                screenshot_path = history_screenshot_path
     except AppError as exc:
+        if exc.code == "browser_download_agent_timeout" and browser is not None:
+            if str(request.route_family_hint or "").strip() == "browser_email_form":
+                _attempt_lookup_submission_assist_with_timeout(
+                    browser=browser,
+                    ctx=ctx,
+                    normalized_url=normalized_url,
+                )
+            salvaged_run = _salvage_timed_out_browser_run(
+                browser=browser,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                download_dir=download_dir,
+            )
+            if salvaged_run is not None:
+                return salvaged_run
         logger.info(
             log_event(
                 ctx,
@@ -297,7 +421,11 @@ def run_browser_report_download_agent(
     finally:
         if browser is not None:
             _prepare_browser_for_shutdown(browser)
-            _kill_browser(browser, ctx=ctx, normalized_url=normalized_url)
+            _kill_browser_with_timeout(
+                browser,
+                ctx=ctx,
+                normalized_url=normalized_url,
+            )
         _cleanup_browser_profile_dir(profile_dir)
         _cleanup_new_browser_use_temp_dirs(
             ctx=ctx,
@@ -338,6 +466,315 @@ def run_browser_report_download_agent(
         html_snapshot_path=html_snapshot_path,
         screenshot_path=screenshot_path,
     )
+
+
+def _salvage_timed_out_browser_run(
+    *,
+    browser: Any,
+    ctx: RunContext,
+    normalized_url: str,
+    download_dir: Path,
+) -> BrowserAgentRunResult | None:
+    payload: dict[str, BrowserAgentRunResult | None] = {}
+
+    def runner() -> None:
+        payload["result"] = _salvage_timed_out_browser_run_unbounded(
+            browser=browser,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            download_dir=download_dir,
+        )
+
+    worker = Thread(target=runner, daemon=True)
+    worker.start()
+    worker.join(_TIMED_OUT_RECOVERY_OPERATION_TIMEOUT_SECONDS)
+    if worker.is_alive():
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_timeout_recovery_timed_out",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "operation": "terminal_salvage",
+                    "timeout_seconds": _TIMED_OUT_RECOVERY_OPERATION_TIMEOUT_SECONDS,
+                },
+            )
+        )
+        return None
+    return payload.get("result")
+
+
+def _salvage_timed_out_browser_run_unbounded(
+    *,
+    browser: Any,
+    ctx: RunContext,
+    normalized_url: str,
+    download_dir: Path,
+) -> BrowserAgentRunResult | None:
+    downloaded_files = [str(path) for path in getattr(browser, "downloaded_files", [])]
+    final_page_url = ""
+    final_page_title = ""
+    final_page_html = ""
+    network_resource_urls: list[str] = []
+    network_events: list[BrowserDownloadNetworkEvent] = []
+    html_snapshot_path = ""
+    screenshot_path = ""
+    try:
+        terminal_snapshot = _capture_terminal_snapshot(browser)
+        final_page_url = terminal_snapshot.url
+        final_page_title = terminal_snapshot.title
+        final_page_html = terminal_snapshot.html
+        current_page = terminal_snapshot.page
+        if current_page is not None:
+            (
+                network_resource_urls,
+                network_events,
+                html_snapshot_path,
+                screenshot_path,
+            ) = _capture_terminal_assets(
+                browser=browser,
+                page=current_page,
+                download_dir=download_dir,
+                final_page_html=final_page_html,
+            )
+    except Exception:
+        if not downloaded_files:
+            return None
+    if not (
+        downloaded_files
+        or final_page_url
+        or final_page_title
+        or final_page_html.strip()
+    ):
+        return None
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_timeout_terminal_state_salvaged",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "downloaded_file_count": len(downloaded_files),
+                "final_page_url": final_page_url,
+                "final_page_title": final_page_title,
+                "has_final_page_html": bool(final_page_html.strip()),
+            },
+        )
+    )
+    return BrowserAgentRunResult(
+        schema_version="1.0",
+        raw_model_response="",
+        final_page_url=final_page_url,
+        final_page_title=final_page_title,
+        final_page_html=final_page_html,
+        downloaded_files=downloaded_files,
+        attachment_paths=[],
+        network_resource_urls=network_resource_urls,
+        network_events=network_events,
+        html_snapshot_path=html_snapshot_path,
+        screenshot_path=screenshot_path,
+    )
+
+
+def _should_attempt_lookup_submission_assist(
+    *,
+    request: BrowserReportDownloadRequest,
+    raw_model_response: str,
+) -> bool:
+    if str(request.route_family_hint or "").strip() != "browser_email_form":
+        return False
+    payload = _parse_raw_model_response(raw_model_response)
+    if str(payload.get("route_kind") or "").strip() != "email_delivery":
+        return False
+    if payload.get("email_submission_completed") is True:
+        return True
+    if payload.get("confirmation_url_changed") is True:
+        return False
+    if payload.get("form_disappeared") is True:
+        return False
+    return _payload_has_lookup_submission_recovery_signal(payload)
+
+
+def _payload_has_lookup_submission_recovery_signal(payload: dict[str, Any]) -> bool:
+    lookup_fields = {
+        "location",
+        "country",
+        "state",
+        "province",
+        "region",
+        "territory",
+    }
+    encountered_fields = {
+        str(item or "").strip().lower()
+        for item in payload.get("encountered_form_fields", [])
+        if str(item or "").strip()
+    }
+    if not any(
+        any(marker in field for marker in lookup_fields)
+        for field in encountered_fields
+    ):
+        return False
+    for step in payload.get("route_steps", []):
+        if not isinstance(step, dict):
+            continue
+        action = str(step.get("action") or "").strip().lower()
+        target_text = str(step.get("target_text") or "").strip().lower()
+        result = str(step.get("result") or "").strip().lower()
+        if action == "click" and "submit" in " ".join([target_text, result]):
+            return True
+    blocked_reason = str(payload.get("blocked_reason") or "").strip().lower()
+    blocked_reason_detail = str(payload.get("blocked_reason_detail") or "").strip().lower()
+    blocked_text = " ".join([blocked_reason, blocked_reason_detail])
+    return any(marker in blocked_text for marker in lookup_fields)
+
+
+def _attempt_lookup_submission_assist(
+    *,
+    browser: Any,
+    ctx: RunContext,
+    normalized_url: str,
+) -> bool:
+    page = _resolve_current_page(browser)
+    if page is None:
+        return False
+    try:
+        result = _maybe_await(
+            page.evaluate(
+                """
+                () => {
+                  const normalize = (value) => String(value || '').trim().toLowerCase();
+                  const isVisible = (node) =>
+                    Boolean(node) &&
+                    !node.hidden &&
+                    node.getClientRects &&
+                    node.getClientRects().length > 0;
+                  const collectVisibleOptions = (root) => [
+                    ...(root || document).querySelectorAll(
+                      '.ui-menu-item-wrapper, .ui-menu-item, [role="option"]'
+                    ),
+                  ].filter((node) => {
+                    const text = normalize(node.innerText || node.textContent);
+                    return text && isVisible(node);
+                  });
+                  const lookupBlocks = [...document.querySelectorAll('.lookupFormFieldBlock')];
+                  const globalOptions = collectVisibleOptions(document);
+                  let selectedCount = 0;
+                  for (const block of lookupBlocks) {
+                    const input = block.querySelector('input.lookup-behavior');
+                    if (!input || !input.required || !normalize(input.value)) {
+                      continue;
+                    }
+                    const options = [
+                      ...collectVisibleOptions(block),
+                      ...globalOptions,
+                    ].filter((node, index, collection) => {
+                      if (!node) {
+                        return false;
+                      }
+                      return collection.indexOf(node) === index;
+                    });
+                    if (!options.length) {
+                      continue;
+                    }
+                    const currentValue = normalize(input.value);
+                    const exactMatch =
+                      options.find(
+                        (node) =>
+                          normalize(node.innerText || node.textContent) === currentValue
+                      )
+                      || (options.length === 1 ? options[0] : null);
+                    if (!exactMatch) {
+                      continue;
+                    }
+                    exactMatch.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+                    exactMatch.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+                    exactMatch.click();
+                    selectedCount += 1;
+                  }
+                  const submitButton = [
+                    ...document.querySelectorAll(
+                      'button[type="submit"], input[type="submit"], button'
+                    ),
+                  ].find((node) => {
+                    const text = normalize(
+                      node.innerText || node.textContent || node.value || ''
+                    );
+                    return text === 'submit' || text.includes('submit');
+                  });
+                  let submitted = false;
+                  if (selectedCount > 0 && submitButton) {
+                    submitButton.click();
+                    submitted = true;
+                  }
+                  return {
+                    acted: selectedCount > 0,
+                    selected_count: selectedCount,
+                    submitted,
+                    final_url: window.location.href,
+                  };
+                }
+                """
+            )
+        )
+    except Exception:
+        return False
+    if not isinstance(result, dict) or result.get("acted") is not True:
+        return False
+    time.sleep(2.0)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_lookup_submission_assist_applied",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "selected_count": int(result.get("selected_count") or 0),
+                "submitted": bool(result.get("submitted")),
+                "final_url": str(result.get("final_url") or "").strip(),
+            },
+        )
+    )
+    return True
+
+
+def _attempt_lookup_submission_assist_with_timeout(
+    *,
+    browser: Any,
+    ctx: RunContext,
+    normalized_url: str,
+) -> bool:
+    payload: dict[str, bool] = {}
+
+    def runner() -> None:
+        payload["result"] = _attempt_lookup_submission_assist(
+            browser=browser,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
+
+    worker = Thread(target=runner, daemon=True)
+    worker.start()
+    worker.join(_TIMED_OUT_RECOVERY_OPERATION_TIMEOUT_SECONDS)
+    if worker.is_alive():
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_timeout_recovery_timed_out",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "operation": "lookup_submission_assist",
+                    "timeout_seconds": _TIMED_OUT_RECOVERY_OPERATION_TIMEOUT_SECONDS,
+                },
+            )
+        )
+        return False
+    return payload.get("result") is True
 
 
 def _should_run_browser_agent_in_subprocess(browser_use: Any) -> bool:
@@ -1157,7 +1594,7 @@ def _await_in_current_or_thread(
     awaitable: Any,
     *,
     timeout_seconds: float | None = None,
-) -> Any:
+) -> BrowserAgentHistoryResult:
     payload: dict[str, Any] = {}
     errors: list[Exception] = []
 
@@ -1227,9 +1664,93 @@ def _run_agent_history_with_timeout(
     timeout_seconds = _resolve_agent_run_timeout_seconds(request)
     worker.join(timeout_seconds)
     if worker.is_alive():
+        completed_history = _read_completed_agent_history(agent)
+        if completed_history is not None:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="browser_report_download_timeout_salvaged_completed_history",
+                    module=logger.name,
+                    fields={
+                        "normalized_url": normalized_url,
+                        "timeout_seconds": timeout_seconds,
+                        "max_steps": request.settings.max_steps,
+                    },
+                )
+            )
+            return BrowserAgentHistoryResult(
+                history=completed_history,
+                salvaged_completed_history=True,
+            )
+        lookup_blocker_history = _read_lookup_blocker_partial_history(
+            agent=agent,
+            request=request,
+            normalized_url=normalized_url,
+        )
+        if lookup_blocker_history is not None:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="browser_report_download_timeout_salvaged_partial_history_blocker",
+                    module=logger.name,
+                    fields={
+                        "normalized_url": normalized_url,
+                        "timeout_seconds": timeout_seconds,
+                        "max_steps": request.settings.max_steps,
+                    },
+                )
+            )
+            return BrowserAgentHistoryResult(
+                history=lookup_blocker_history,
+                salvaged_completed_history=True,
+            )
         _signal_agent_stop(agent)
         _prepare_browser_for_shutdown(browser)
         worker.join(_TIMED_OUT_AGENT_STOP_GRACE_SECONDS)
+        completed_history = _read_completed_agent_history(agent)
+        if completed_history is not None:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="browser_report_download_timeout_salvaged_completed_history",
+                    module=logger.name,
+                    fields={
+                        "normalized_url": normalized_url,
+                        "timeout_seconds": timeout_seconds,
+                        "max_steps": request.settings.max_steps,
+                    },
+                )
+            )
+            return BrowserAgentHistoryResult(
+                history=completed_history,
+                salvaged_completed_history=True,
+            )
+        lookup_blocker_history = _read_lookup_blocker_partial_history(
+            agent=agent,
+            request=request,
+            normalized_url=normalized_url,
+        )
+        if lookup_blocker_history is not None:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="browser_report_download_timeout_salvaged_partial_history_blocker",
+                    module=logger.name,
+                    fields={
+                        "normalized_url": normalized_url,
+                        "timeout_seconds": timeout_seconds,
+                        "max_steps": request.settings.max_steps,
+                    },
+                )
+            )
+            return BrowserAgentHistoryResult(
+                history=lookup_blocker_history,
+                salvaged_completed_history=True,
+            )
         raise AppError(
             code="browser_download_agent_timeout",
             message="browser-use did not return within the configured execution budget",
@@ -1250,6 +1771,231 @@ def _run_agent_history_with_timeout(
             retryable=True,
             context={"normalized_url": normalized_url},
         )
+    return BrowserAgentHistoryResult(
+        history=history,
+        salvaged_completed_history=False,
+    )
+
+
+def _read_lookup_blocker_partial_history(
+    *,
+    agent: Any,
+    request: BrowserReportDownloadRequest,
+    normalized_url: str,
+) -> Any | None:
+    if str(request.route_family_hint or "").strip() != "browser_email_form":
+        return None
+    history = getattr(agent, "history", None)
+    entries = getattr(history, "history", None)
+    if not isinstance(entries, list) or not entries:
+        return None
+    history_text = _collect_agent_history_text(history)
+    lowered = history_text.casefold()
+    if not (
+        any(marker in lowered for marker in _LOOKUP_FIELD_MARKERS)
+        and any(marker in lowered for marker in _LOOKUP_FAILURE_MARKERS)
+        and any(marker in lowered for marker in _LOOKUP_SUBMIT_MARKERS)
+    ):
+        return None
+    state = _read_history_final_state(history)
+    final_page_url = (
+        str(getattr(state, "url", "") or "").strip()
+        or str(request.attempt_url or request.url).strip()
+        or normalized_url
+    )
+    final_page_title = str(getattr(state, "title", "") or "").strip()
+    screenshot_path = str(getattr(state, "screenshot_path", "") or "").strip() or None
+    lookup_label = _resolve_lookup_blocker_label(lowered)
+    encountered_form_fields = _infer_encountered_form_fields(lowered, lookup_label)
+    payload = {
+        "route_kind": "email_delivery",
+        "route_summary": (
+            "Opened the report page, filled the email form, but could not verify "
+            f"the required {lookup_label} lookup selection before submission."
+        ),
+        "route_family": "browser_email_form",
+        "resolved_target_url": final_page_url,
+        "final_page_url": final_page_url,
+        "email_submission_completed": False,
+        "downloaded_file_path": None,
+        "downloaded_file_name": None,
+        "downloaded_mime_type": None,
+        "encountered_form_fields": encountered_form_fields,
+        "route_steps": [
+            {
+                "index": None,
+                "action": "submit",
+                "target_text": "Submit",
+                "target_role": "button",
+                "target_url": final_page_url,
+                "result": (
+                    f"Submission was not verified because the required {lookup_label} "
+                    "lookup field did not resolve to a valid option."
+                ),
+            }
+        ],
+        "post_submit_message": None,
+        "confirmation_url_changed": False,
+        "submit_button_state": None,
+        "form_disappeared": False,
+        "blocked_reason": "blocked_unknown_required_enum",
+        "blocked_reason_detail": (
+            f"The {lookup_label} field did not resolve to a valid lookup selection "
+            "before submission."
+        ),
+        "final_page_title": final_page_title,
+        "terminal_text_excerpt": _truncate_partial_history_excerpt(history_text),
+        "traversed_page_urls": _read_distinct_history_urls(history, final_page_url),
+        "onsite_capture_path": None,
+        "onsite_capture_format": None,
+        "onsite_page_count": None,
+        "onsite_completeness_status": None,
+    }
+    return _SyntheticAgentHistory(
+        payload=payload,
+        state=_SyntheticHistoryState(
+            url=final_page_url,
+            title=final_page_title,
+            screenshot_path=screenshot_path,
+        ),
+    )
+
+
+def _collect_agent_history_text(history: Any) -> str:
+    pieces: list[str] = []
+    entries = getattr(history, "history", None)
+    if not isinstance(entries, list):
+        return ""
+    for entry in entries:
+        model_output = getattr(entry, "model_output", None)
+        if model_output is not None:
+            for attribute in (
+                "thinking",
+                "evaluation_previous_goal",
+                "memory",
+                "next_goal",
+            ):
+                pieces.append(str(getattr(model_output, attribute, "") or ""))
+            current_state = getattr(model_output, "current_state", None)
+            if current_state is not None:
+                for attribute in (
+                    "thinking",
+                    "evaluation_previous_goal",
+                    "memory",
+                    "next_goal",
+                ):
+                    pieces.append(str(getattr(current_state, attribute, "") or ""))
+            for action in getattr(model_output, "action", []) or []:
+                pieces.append(_serialize_history_fragment(action))
+        for result in getattr(entry, "result", []) or []:
+            for attribute in (
+                "error",
+                "long_term_memory",
+                "extracted_content",
+            ):
+                pieces.append(str(getattr(result, attribute, "") or ""))
+        state = getattr(entry, "state", None)
+        if state is not None:
+            pieces.append(str(getattr(state, "url", "") or ""))
+            pieces.append(str(getattr(state, "title", "") or ""))
+    text = "\n".join(piece for piece in pieces if piece)
+    return text[-_PARTIAL_HISTORY_TEXT_MAX_CHARS:]
+
+
+def _serialize_history_fragment(value: Any) -> str:
+    model_dump = getattr(value, "model_dump", None)
+    if callable(model_dump):
+        try:
+            return json.dumps(
+                model_dump(exclude_none=True, mode="json"),
+                ensure_ascii=True,
+                sort_keys=True,
+            )
+        except Exception:
+            return str(value)
+    if isinstance(value, dict):
+        try:
+            return json.dumps(value, ensure_ascii=True, sort_keys=True)
+        except Exception:
+            return str(value)
+    return str(value)
+
+
+def _resolve_lookup_blocker_label(history_text: str) -> str:
+    for label, markers in (
+        ("Location", ("location",)),
+        ("Country", ("country",)),
+        ("State", ("state", "province", "territory")),
+        ("Region", ("region",)),
+    ):
+        if any(marker in history_text for marker in markers):
+            return label
+    return "Location"
+
+
+def _infer_encountered_form_fields(history_text: str, lookup_label: str) -> list[str]:
+    field_markers = (
+        ("First Name", ("first name", "firstname")),
+        ("Last Name", ("last name", "lastname")),
+        ("Business Email Address", ("business email", "work email", "email")),
+        ("Phone", ("phone", "telephone")),
+        ("Company Name", ("company", "organization", "organisation")),
+        ("Role", ("role", "job level", "seniority")),
+        ("Department", ("department",)),
+        ("Industry", ("industry",)),
+        (lookup_label, (lookup_label.casefold(),)),
+    )
+    fields: list[str] = []
+    seen: set[str] = set()
+    for label, markers in field_markers:
+        if label in seen:
+            continue
+        if any(marker in history_text for marker in markers):
+            seen.add(label)
+            fields.append(label)
+    if lookup_label not in seen:
+        fields.append(lookup_label)
+    return fields
+
+
+def _truncate_partial_history_excerpt(history_text: str) -> str:
+    excerpt = re.sub(r"\s+", " ", history_text).strip()
+    if len(excerpt) <= 500:
+        return excerpt
+    return excerpt[-500:]
+
+
+def _read_distinct_history_urls(history: Any, fallback_url: str) -> list[str]:
+    urls: list[str] = []
+    seen: set[str] = set()
+    entries = getattr(history, "history", None)
+    if isinstance(entries, list):
+        for entry in entries:
+            state = getattr(entry, "state", None)
+            token = str(getattr(state, "url", "") or "").strip()
+            if token and token not in seen:
+                seen.add(token)
+                urls.append(token)
+    if fallback_url and fallback_url not in seen:
+        urls.append(fallback_url)
+    return urls
+
+
+def _read_completed_agent_history(agent: Any) -> Any | None:
+    history = getattr(agent, "history", None)
+    if history is None:
+        return None
+    is_done = getattr(history, "is_done", None)
+    final_result = getattr(history, "final_result", None)
+    if not callable(is_done) or not callable(final_result):
+        return None
+    try:
+        history_done = bool(is_done())
+        rendered_result = str(final_result() or "").strip()
+    except Exception:
+        return None
+    if not history_done or not rendered_result:
+        return None
     return history
 
 
@@ -1490,6 +2236,38 @@ def _kill_browser(browser: Any, *, ctx: RunContext, normalized_url: str) -> None
                 fields={
                     "normalized_url": normalized_url,
                     "error": str(exc),
+                },
+            )
+        )
+
+
+def _kill_browser_with_timeout(
+    browser: Any,
+    *,
+    ctx: RunContext,
+    normalized_url: str,
+) -> None:
+    worker = Thread(
+        target=_kill_browser,
+        kwargs={
+            "browser": browser,
+            "ctx": ctx,
+            "normalized_url": normalized_url,
+        },
+        daemon=True,
+    )
+    worker.start()
+    worker.join(_BROWSER_CLEANUP_GRACE_SECONDS)
+    if worker.is_alive():
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_browser_cleanup_timed_out",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "timeout_seconds": _BROWSER_CLEANUP_GRACE_SECONDS,
                 },
             )
         )

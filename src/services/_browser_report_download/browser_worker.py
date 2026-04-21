@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 import traceback
 from dataclasses import asdict
@@ -15,6 +16,7 @@ from src.contracts.browser_download import (
     BrowserReportDownloadRequest,
 )
 from src.contracts.logging import LoggingSetupRequest
+from src.contracts.publisher_inventory import PublisherInventoryCandidateTrace
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download.browser import (
     BrowserAgentWorkerResponse,
@@ -106,6 +108,38 @@ def _build_settings(payload: dict) -> BrowserDownloadSettings:
     )
 
 
+def _build_candidate_trace(payload: dict) -> PublisherInventoryCandidateTrace | None:
+    if not isinstance(payload, dict):
+        return None
+    canonical_url = str(payload.get("canonical_url") or "").strip()
+    title = str(payload.get("title") or "").strip()
+    if not canonical_url or not title:
+        return None
+    return PublisherInventoryCandidateTrace(
+        schema_version=str(payload.get("schema_version", "1.0")),
+        canonical_url=canonical_url,
+        title=title,
+        discovered_on_page_number=int(payload.get("discovered_on_page_number", 0)),
+        source_page_urls=[
+            str(item)
+            for item in payload.get("source_page_urls", [])
+            if str(item or "").strip()
+        ],
+        discovery_provenances=[
+            str(item)
+            for item in payload.get("discovery_provenances", [])
+            if str(item or "").strip()
+        ],
+        pdf_url=payload.get("pdf_url"),
+        published_at_text=payload.get("published_at_text"),
+        max_confidence=(
+            float(payload.get("max_confidence"))
+            if payload.get("max_confidence") is not None
+            else None
+        ),
+    )
+
+
 def _build_request(payload: dict) -> BrowserReportDownloadRequest:
     route_step_hints_payload = payload.get("route_step_hints", [])
     return BrowserReportDownloadRequest(
@@ -130,7 +164,7 @@ def _build_request(payload: dict) -> BrowserReportDownloadRequest:
             if isinstance(item, dict)
         ],
         route_kind_hint=payload.get("route_kind_hint"),
-        candidate_trace=None,
+        candidate_trace=_build_candidate_trace(payload.get("candidate_trace")),
         publisher_discovery_route_kind=payload.get("publisher_discovery_route_kind"),
         publisher_recommended_discovery_route_kind=payload.get(
             "publisher_recommended_discovery_route_kind"
@@ -229,4 +263,7 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    exit_code = main()
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(exit_code)

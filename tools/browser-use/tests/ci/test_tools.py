@@ -666,3 +666,23 @@ class TestStructuredOutputDoneWithFiles:
 		assert 'files_to_display' not in top_level_props
 		# data should still be present
 		assert 'data' in top_level_props
+
+	async def test_structured_output_accepts_flattened_done_payload(self):
+		"""Structured done payloads may omit the `data` wrapper; accept and normalize them."""
+		from browser_use.tools.views import StructuredOutputAction
+
+		class MyOutput(BaseModel):
+			name: str
+			value: int
+
+		parsed = StructuredOutputAction[MyOutput].model_validate(
+			{
+				'name': 'example',
+				'value': 7,
+				'success': True,
+			}
+		)
+
+		assert parsed.success is True
+		assert parsed.data.name == 'example'
+		assert parsed.data.value == 7

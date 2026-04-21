@@ -279,6 +279,18 @@ def _build_browser_step(
     remembered_route_kind = str(
         remembered_route.route_kind if remembered_route is not None else ""
     ).strip()
+    remembered_route_hint = (
+        str(remembered_route.route_summary or "").strip()
+        if remembered_route is not None
+        else ""
+    )
+    remembered_route_step_hints = (
+        list(remembered_route.route_steps)
+        if remembered_route is not None
+        and str(remembered_route.outcome or "").strip().lower()
+        in {"downloaded", "email_requested", "captured"}
+        else []
+    )
     remembered_route_family = _canonical_memory_route_family(
         route_kind=remembered_route_kind,
         route_family=remembered_route.route_family if remembered_route is not None else "",
@@ -344,7 +356,24 @@ def _build_browser_step(
             step_name="report_download_browser_email_form",
             route_family="browser_email_form",
             attempt_url=normalized_url,
+            route_hint=remembered_route_hint or None,
+            route_step_hints=remembered_route_step_hints,
             route_kind_hint="email_delivery",
+            source_page_url_hint=source_page_url,
+            uses_memory_route=False,
+            fallback_on_retryable_error=False,
+        )
+    if (
+        source_page_url
+        and str(source_page_url).strip() != str(normalized_url).strip()
+        and not _looks_like_listing_url(normalized_url)
+    ):
+        return ReportDownloadRoutePlanStep(
+            schema_version="1.0",
+            step_name="report_download_browser_candidate",
+            route_family="browser_pdf_click",
+            attempt_url=normalized_url,
+            route_kind_hint=None,
             source_page_url_hint=source_page_url,
             uses_memory_route=False,
             fallback_on_retryable_error=False,
@@ -523,7 +552,26 @@ def _looks_like_pdf(url: str) -> bool:
 
 def _looks_like_listing_url(url: str) -> bool:
     path = str(urlsplit(str(url or "").strip()).path or "").strip().lower()
-    return any(marker in path for marker in _LISTING_PATH_MARKERS)
+    if not path:
+        return False
+    segments = [segment for segment in path.split("/") if segment]
+    if not segments:
+        return False
+
+    def is_listing_segment(segment: str) -> bool:
+        return any(marker in segment for marker in _LISTING_PATH_MARKERS)
+
+    if not any(is_listing_segment(segment) for segment in segments):
+        return False
+    last_segment = segments[-1]
+    if len(segments) == 1:
+        return is_listing_segment(last_segment)
+    if is_listing_segment(last_segment):
+        return True
+    if len(segments) == 2 and is_listing_segment(segments[0]):
+        slug_token_count = len([token for token in last_segment.split("-") if token])
+        return slug_token_count < 4
+    return False
 
 
 def _looks_like_tracker_url(url: str) -> bool:

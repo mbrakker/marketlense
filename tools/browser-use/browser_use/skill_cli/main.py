@@ -39,6 +39,38 @@ if '--mcp' in sys.argv:
 	sys.exit(0)
 
 
+def _console_safe_text(text: object, *, stream=None) -> str:
+	"""Return text that the active console can encode without crashing."""
+	token = str(text)
+	target_stream = stream if stream is not None else sys.stdout
+	encoding = str(getattr(target_stream, 'encoding', '') or '').strip()
+	if not encoding:
+		return token
+	try:
+		token.encode(encoding)
+		return token
+	except UnicodeEncodeError:
+		fallback = (
+			token.replace('✓', '[ok]')
+			.replace('✅', '[ok]')
+			.replace('⚠', '[warning]')
+			.replace('⚠️', '[warning]')
+			.replace('○', '[missing]')
+			.replace('✗', '[error]')
+			.replace('❌', '[error]')
+			.replace('📦', '[install]')
+			.replace('⏳', '[wait]')
+			.replace('🚀', '[ready]')
+		)
+		return fallback.encode(encoding, errors='replace').decode(encoding, errors='replace')
+
+
+def _console_print(*values: object, file=None, sep: str = ' ', end: str = '\n') -> None:
+	target_file = file if file is not None else sys.stdout
+	text = sep.join(_console_safe_text(value, stream=target_file) for value in values)
+	print(text, file=target_file, end=end)
+
+
 # Helper to find the subcommand (first non-flag argument)
 def _get_subcommand() -> str | None:
 	"""Get the first non-flag argument (the subcommand)."""
@@ -52,8 +84,8 @@ def _get_subcommand() -> str | None:
 if _get_subcommand() == 'install':
 	import platform
 
-	print('📦 Installing Chromium browser + system dependencies...')
-	print('⏳ This may take a few minutes...\n')
+	_console_print('📦 Installing Chromium browser + system dependencies...')
+	_console_print('⏳ This may take a few minutes...\n')
 
 	# Build command - only use --with-deps on Linux (it fails on Windows/macOS)
 	cmd = ['uvx', 'playwright', 'install', 'chromium']
@@ -64,10 +96,10 @@ if _get_subcommand() == 'install':
 	result = subprocess.run(cmd)
 
 	if result.returncode == 0:
-		print('\n✅ Installation complete!')
-		print('🚀 Ready to use! Run: uvx browser-use')
+		_console_print('\n✅ Installation complete!')
+		_console_print('🚀 Ready to use! Run: uvx browser-use')
 	else:
-		print('\n❌ Installation failed')
+		_console_print('\n❌ Installation failed')
 		sys.exit(1)
 	sys.exit(0)
 
@@ -1039,9 +1071,9 @@ def main() -> int:
 			return 1
 		else:
 			if result.get('status') == 'success':
-				print('\n✓ Setup complete!')
-				print(f'\nMode: {result["mode"]}')
-				print('Next: browser-use open https://example.com')
+				_console_print('\n✓ Setup complete!')
+				_console_print(f'\nMode: {result["mode"]}')
+				_console_print('Next: browser-use open https://example.com')
 		return 0
 
 	# Handle doctor command
@@ -1056,7 +1088,7 @@ def main() -> int:
 		else:
 			# Print check results
 			checks = result.get('checks', {})
-			print('\nDiagnostics:\n')
+			_console_print('\nDiagnostics:\n')
 			for name, check in checks.items():
 				status = check.get('status', 'unknown')
 				message = check.get('message', '')
@@ -1072,17 +1104,17 @@ def main() -> int:
 				else:
 					icon = '✗'
 
-				print(f'  {icon} {name}: {message}')
+				_console_print(f'  {icon} {name}: {message}')
 				if note:
-					print(f'      {note}')
+					_console_print(f'      {note}')
 				if fix:
-					print(f'      Fix: {fix}')
+					_console_print(f'      Fix: {fix}')
 
-			print('')
+			_console_print('')
 			if result.get('status') == 'healthy':
-				print('✓ All checks passed!')
+				_console_print('✓ All checks passed!')
 			else:
-				print(f'⚠ {result.get("summary", "Some checks need attention")}')
+				_console_print(f'⚠ {result.get("summary", "Some checks need attention")}')
 		return 0
 
 	# Handle task command - cloud task management

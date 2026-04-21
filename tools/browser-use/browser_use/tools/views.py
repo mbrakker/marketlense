@@ -1,6 +1,6 @@
 from typing import Generic, TypeVar
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.json_schema import SkipJsonSchema
 
 
@@ -113,6 +113,23 @@ class StructuredOutputAction(BaseModel, Generic[T]):
 	success: bool = Field(default=True, description='True if user_request completed successfully')
 	data: T = Field(description='The actual output data matching the requested schema')
 	files_to_display: list[str] | None = Field(default=[])
+
+	@model_validator(mode='before')
+	@classmethod
+	def _wrap_flattened_output_payload(cls, value):
+		"""Accept `done: {...schema fields...}` by wrapping it into `done.data`."""
+		if not isinstance(value, dict) or 'data' in value:
+			return value
+		internal_keys = {'success', 'files_to_display'}
+		structured_keys = [key for key in value.keys() if key not in internal_keys]
+		if not structured_keys:
+			return value
+		payload = dict(value)
+		payload['data'] = {
+			key: payload.pop(key)
+			for key in structured_keys
+		}
+		return payload
 
 
 class SwitchTabAction(BaseModel):

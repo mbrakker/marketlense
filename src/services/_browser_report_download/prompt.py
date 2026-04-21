@@ -183,13 +183,15 @@ def _render_route_hint_text(
     route_kind_hint: str | None,
 ) -> str:
     if not route_hint and not route_step_hints:
-        return "No previously successful route summary is available for this URL."
+        return "No remembered route summary is available for this URL."
     lines: list[str] = []
     if route_kind_hint:
-        lines.append(f"Previously successful route kind: {route_kind_hint}.")
+        lines.append(f"Previously observed route kind: {route_kind_hint}.")
     if route_hint:
+        lines.append(f"Previously observed route summary for this URL: {route_hint}")
+    if route_hint and not route_step_hints:
         lines.append(
-            f"Previously successful route summary for this URL: {route_hint}"
+            "Treat this as weak memory, not proof of success; avoid repeating any failure point described in the summary."
         )
     if route_step_hints:
         lines.append(
@@ -244,8 +246,13 @@ def _render_route_family_guidance(*, request: BrowserReportDownloadRequest) -> s
         return "\n".join(
             [
                 "Route-family guidance for `browser_email_form`:",
+                "- Stay on the candidate report page or opened form; do not click unrelated navigation links such as login, consulting, related posts, or recommended articles unless they are the report CTA itself.",
+                "- If the form lives behind an in-page anchor such as `#download`, use that form directly instead of exploring unrelated links.",
                 "- Inspect the form before submission and capture all encountered field labels.",
                 "- Use only configured identity values. If a required field is missing, stop and return the correct blocker code instead of guessing.",
+                "- For searchable dropdowns or comboboxes, do not rely on one-shot input alone: click into the field, type with keyboard events, wait for the suggestion list, click the exact matching option text, and verify the visible/input value persists after blur.",
+                "- Before clicking submit, verify that every required field is satisfied and that no required field still shows placeholder text, browser validation UI, or an empty combobox state.",
+                "- If you cannot verify a required searchable field such as Location or Country, do not report a completed submission.",
                 "- After submission, inspect confirmation text, URL change, button state, whether the form disappeared, and whether the terminal page still looks like the same form.",
                 "- If the page shows a transient submit state such as `Please Wait`, do not stop there; keep waiting for the final confirmation or blocker text.",
                 "- Do not keep retrying a field that becomes hidden, detached, or unavailable after a reasonable attempt. If submission is still possible, continue.",

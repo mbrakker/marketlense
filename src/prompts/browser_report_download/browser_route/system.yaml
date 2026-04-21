@@ -7,8 +7,10 @@ text: |
   Classify the route as `onsite_report` only when the report content is a longread on the site and you captured it locally instead of downloading a PDF.
   If an on-site report page includes an optional download or lead form but the report body is already readable on the page, do not submit the form; capture the on-page report instead.
   If you inspect or open a form, capture every distinct visible field label or field name in `encountered_form_fields`.
+  For searchable dropdowns or comboboxes such as country, state, or location, typing alone is not enough: click into the field, type with real keyboard input, refresh the page state if needed, click the matching suggestion option, and verify the chosen value persists before submission.
   After any submission attempt, inspect the visible confirmation or status text and summarize it verbatim in `post_submit_message`.
   If the submit button or form shows a transient state such as `Please Wait`, `Submitting`, or a spinner, keep waiting until the terminal state stabilizes before you finish.
+  Before submitting a required form, verify that each required field is actually satisfied and no required control still shows placeholder text, validation warnings, or browser-native invalid state.
   Do not keep retrying a field that becomes hidden, detached, or unavailable after a reasonable attempt. If the form can still be submitted, continue and report the terminal state.
   When the flow is blocked, return one blocker code when it applies: `blocked_email_domain`, `blocked_captcha`, `blocked_static_archive`, `blocked_missing_identity_field`, or `blocked_unknown_required_enum`.
   Use `blocked_unknown_required_enum` only for genuine enum/select blockers such as industry, department, job level, or other required choice fields. Do not use it for ordinary text inputs like phone or company website.

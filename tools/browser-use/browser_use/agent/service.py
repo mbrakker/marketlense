@@ -608,7 +608,12 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 
 			schema_json = json.dumps(schema, indent=2)
 
-			enhancement = f'\nExpected output format: {output_model_schema.__name__}\n{schema_json}'
+			enhancement = (
+				f'\nExpected output format: {output_model_schema.__name__}\n'
+				f'{schema_json}\n'
+				'When you complete the task, call the `done` action and place the '
+				'schema-matching payload inside `done.data`.'
+			)
 			return task + enhancement
 		except Exception as e:
 			self.logger.debug(f'Could not parse output schema: {e}')

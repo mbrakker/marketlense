@@ -250,6 +250,31 @@ fields:
   label: Company type
   value: null
   aliases: []
+- schema_version: '1.0'
+  key: business_email_address
+  label: Business Email Address
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: department
+  label: Department
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: location
+  label: Location
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: seniority
+  label: Seniority
+  value: null
+  aliases: []
+- schema_version: '1.0'
+  key: marketing_country
+  label: Marketing Country
+  value: null
+  aliases: []
 publisher_overrides:
 - schema_version: '1.0'
   host_pattern: bigcommerce.com
@@ -262,3 +287,27 @@ publisher_overrides:
     aliases:
     - projected annual revenue
     - projected annual online revenue
+- schema_version: '1.0'
+  host_pattern: mintel.com
+  delivery_emails: []
+  field_values:
+  - schema_version: '1.0'
+    key: role
+    label: Role
+    value: Mid-senior
+    aliases: []
+  - schema_version: '1.0'
+    key: department
+    label: Department
+    value: Brand Management
+    aliases: []
+  - schema_version: '1.0'
+    key: industry
+    label: Industry
+    value: Advertising and Marketing
+    aliases: []
+  - schema_version: '1.0'
+    key: location
+    label: Location
+    value: Austria
+    aliases: []

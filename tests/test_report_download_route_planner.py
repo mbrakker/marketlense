@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from src.contracts.browser_download import (
+    BrowserDownloadRouteStep,
     PublisherDownloadRouteMemory,
     ReportDownloadRoutePlanRequest,
 )
@@ -142,6 +143,44 @@ def test_plan_report_download_routes_keeps_onsite_for_insights_longread(
     assert response.steps[-1].route_family == "browser_onsite_report"
 
 
+def test_plan_report_download_routes_uses_direct_detail_url_instead_of_source_listing(
+    run_context,
+) -> None:
+    response = plan_report_download_routes(
+        ReportDownloadRoutePlanRequest(
+            schema_version="1.0",
+            normalized_url=(
+                "https://www.harriswilliams.com/our-insights/"
+                "bs-commercial-industrial-services-m-and-a-trends-q1-2026"
+            ),
+            remembered_route=None,
+            candidate_trace=PublisherInventoryCandidateTrace(
+                schema_version="1.0",
+                canonical_url=(
+                    "https://www.harriswilliams.com/our-insights/"
+                    "bs-commercial-industrial-services-m-and-a-trends-q1-2026"
+                ),
+                title="Commercial & Industrial Services",
+                discovered_on_page_number=1,
+                source_page_urls=["https://www.harriswilliams.com/our-insights"],
+                discovery_provenances=[],
+                pdf_url=None,
+                published_at_text=None,
+                max_confidence=0.8,
+            ),
+            publisher_discovery_route_kind=None,
+            publisher_recommended_discovery_route_kind=None,
+        ),
+        run_context,
+    )
+
+    assert response.steps[-1].route_family == "browser_pdf_click"
+    assert response.steps[-1].attempt_url == (
+        "https://www.harriswilliams.com/our-insights/"
+        "bs-commercial-industrial-services-m-and-a-trends-q1-2026"
+    )
+
+
 def test_plan_report_download_routes_canonicalizes_email_memory_route_family(
     run_context,
 ) -> None:
@@ -190,6 +229,17 @@ def test_plan_report_download_routes_uses_email_form_browser_fallback_from_memor
                 route_family="browser_pdf_click",
                 route_status="verified",
                 resolved_target_url="https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report",
+                route_steps=[
+                    BrowserDownloadRouteStep(
+                        schema_version="1.0",
+                        index=0,
+                        action="click",
+                        target_text="Download report",
+                        target_role="button",
+                        target_url="https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report",
+                        result="opened form",
+                    )
+                ],
                 attempts=3,
                 verified_successes=1,
                 last_n_outcomes=["email_requested"],
@@ -207,3 +257,79 @@ def test_plan_report_download_routes_uses_email_form_browser_fallback_from_memor
     assert response.steps[0].step_name == "report_download_http_probe"
     assert response.steps[1].step_name == "report_download_browser_email_form"
     assert response.steps[1].route_family == "browser_email_form"
+    assert response.steps[1].route_hint == (
+        "Open the report page, fill the form, and submit it."
+    )
+    assert response.steps[1].route_step_hints[0].target_text == "Download report"
+
+
+def test_plan_report_download_routes_prefers_email_form_for_direct_detail_with_email_memory(
+    run_context,
+) -> None:
+    response = plan_report_download_routes(
+        ReportDownloadRoutePlanRequest(
+            schema_version="1.0",
+            normalized_url=(
+                "https://www.mintel.com/insights/food-and-drink/"
+                "global-food-and-drink-trends"
+            ),
+            remembered_route=PublisherDownloadRouteMemory(
+                schema_version="1.0",
+                route_kind="email_delivery",
+                route_summary="Open the page, fill the form, and submit it.",
+                outcome="email_required",
+                route_family="browser_email_form",
+                route_status="inferred",
+                resolved_target_url=(
+                    "https://www.mintel.com/insights/food-and-drink/"
+                    "global-food-and-drink-trends"
+                ),
+                route_steps=[
+                    BrowserDownloadRouteStep(
+                        schema_version="1.0",
+                        index=0,
+                        action="click",
+                        target_text="Download insights",
+                        target_role="button",
+                        target_url=(
+                            "https://www.mintel.com/insights/food-and-drink/"
+                            "global-food-and-drink-trends"
+                        ),
+                        result="opened form",
+                    )
+                ],
+                attempts=1,
+                verified_successes=0,
+                last_n_outcomes=["email_required"],
+                confidence_score=0.4,
+                browser_had_structured_result=True,
+                onsite_completeness_status=None,
+            ),
+            candidate_trace=PublisherInventoryCandidateTrace(
+                schema_version="1.0",
+                canonical_url=(
+                    "https://www.mintel.com/insights/food-and-drink/"
+                    "global-food-and-drink-trends"
+                ),
+                title="2026 Global Food & Drink Predictions",
+                discovered_on_page_number=1,
+                source_page_urls=["https://www.mintel.com/insights/consumer-research"],
+                discovery_provenances=[],
+                pdf_url=None,
+                published_at_text=None,
+                max_confidence=0.8,
+            ),
+            publisher_discovery_route_kind=None,
+            publisher_recommended_discovery_route_kind=None,
+        ),
+        run_context,
+    )
+
+    assert response.steps[0].step_name == "report_download_http_probe"
+    assert response.steps[1].step_name == "report_download_browser_email_form"
+    assert response.steps[1].route_family == "browser_email_form"
+    assert response.steps[1].attempt_url == (
+        "https://www.mintel.com/insights/food-and-drink/global-food-and-drink-trends"
+    )
+    assert response.steps[1].route_hint == "Open the page, fill the form, and submit it."
+    assert response.steps[1].route_step_hints == []
