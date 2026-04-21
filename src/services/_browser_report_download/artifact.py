@@ -5,7 +5,7 @@ import re
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 
 from pydantic import BaseModel, Field, ValidationError
 
@@ -348,6 +348,12 @@ def finalize_browser_report_download_result(
         downloaded_path=downloaded_path,
         target_urls=[
             request.candidate_trace.pdf_url if request.candidate_trace is not None else "",
+            *_resolve_observed_document_urls(
+                network_resource_urls=list(browser_run.network_resource_urls or []),
+                dom_snapshot_html=browser_html,
+                candidate_urls=[resolved_target_url, final_url],
+            ),
+            *list(browser_run.network_resource_urls or []),
             resolved_target_url,
             final_url,
         ],
@@ -420,6 +426,32 @@ def finalize_browser_report_download_result(
         browser_html=browser_html,
         html_snapshot_path=html_snapshot_path,
     )
+    if downloaded_path is None:
+        downloaded_path, observed_used_candidate_pdf_url = _complete_pdf_artifact(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            download_dir=download_dir,
+            downloaded_path=downloaded_path,
+            target_urls=[
+                request.candidate_trace.pdf_url
+                if request.candidate_trace is not None
+                else "",
+                *_resolve_observed_document_urls(
+                    network_resource_urls=list(browser_run.network_resource_urls or []),
+                    dom_snapshot_html=browser_html,
+                    candidate_urls=[resolved_target_url, final_url],
+                ),
+                *list(browser_run.network_resource_urls or []),
+                resolved_target_url,
+                final_url,
+            ],
+        )
+        used_candidate_pdf_url = (
+            used_candidate_pdf_url or observed_used_candidate_pdf_url
+        )
+        if downloaded_path is not None and route_kind != "onsite_report":
+            route_kind = "pdf_download"
     confirmation_evidence = _upgrade_confirmation_evidence_from_terminal_html(
         confirmation_evidence=confirmation_evidence,
         email_submission_completed=agent_result.email_submission_completed,
@@ -782,6 +814,11 @@ def _salvage_without_structured_result(
         downloaded_path=downloaded_path,
         target_urls=[
             request.candidate_trace.pdf_url if request.candidate_trace is not None else "",
+            *_resolve_observed_document_urls(
+                network_resource_urls=list(browser_run.network_resource_urls or []),
+                dom_snapshot_html=browser_html,
+                candidate_urls=[final_url, request.attempt_url or ""],
+            ),
             final_url,
             request.attempt_url or "",
         ],
@@ -1018,6 +1055,7 @@ def _try_fetch_pdf_target(
     download_dir: Path,
     target_url: str,
 ) -> Path | None:
+    target_url = urljoin(str(request.attempt_url or normalized_url).strip(), target_url)
     if not _looks_like_pdf_url(target_url):
         return None
     destination_name = Path(urlsplit(target_url).path).name or "download.pdf"

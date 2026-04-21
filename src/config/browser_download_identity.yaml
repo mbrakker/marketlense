@@ -65,6 +65,7 @@ fields:
   aliases:
   - country
   - country/region
+  - country or region
 - schema_version: '1.0'
   key: city
   label: City
@@ -75,11 +76,16 @@ fields:
 - schema_version: '1.0'
   key: state_region
   label: State or region
-  value: null
+  value: Vienna
   aliases:
   - state
   - region
   - state/region
+  - province
+  - state or region
+  - state/province
+  - state or province
+  - province/region
 - schema_version: '1.0'
   key: website_url
   label: Website URL
@@ -276,6 +282,26 @@ fields:
   value: null
   aliases: []
 publisher_overrides:
+- schema_version: '1.0'
+  host_pattern: centricsoftware.com
+  delivery_emails: []
+  field_values:
+  - schema_version: '1.0'
+    key: industry
+    label: Industry
+    value: Retail
+    aliases:
+    - select your industry
+    - industry
+  - schema_version: '1.0'
+    key: state_region
+    label: State or Region
+    value: Wien
+    aliases:
+    - state
+    - state or region
+    - region
+    - province
 - schema_version: '1.0'
   host_pattern: bigcommerce.com
   delivery_emails: []

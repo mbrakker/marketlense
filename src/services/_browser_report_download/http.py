@@ -80,6 +80,255 @@ _ONSITE_CAPTURE_BLOCKED_MARKERS = (
     "security checkpoint",
     "enable javascript",
 )
+_ACCESS_CHALLENGE_MARKERS = (
+    "captcha",
+    "cloudflare",
+    "verify you are human",
+    "checking if the site connection is secure",
+    "security check",
+    "security checkpoint",
+    "access denied",
+    "enable javascript",
+)
+_ACCESS_CHALLENGE_STATUS_CODES = {401, 403, 429, 503}
+_ACCESS_CHALLENGE_PREFLIGHT_HOSTS = ("centricsoftware.com",)
+_ACCESS_CHALLENGE_PROBE_TIMEOUT_SECONDS = 15.0
+
+
+def try_http_access_challenge_probe(
+    *,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    normalized_url: str,
+    page_url: str | None = None,
+    preflight: bool = False,
+) -> BrowserReportDownloadResult | None:
+    target_url = str(page_url or request.attempt_url or request.url).strip() or request.url
+    host = str(urlsplit(target_url).hostname or "").casefold()
+    if preflight and not any(
+        host == pattern or host.endswith(f".{pattern}")
+        for pattern in _ACCESS_CHALLENGE_PREFLIGHT_HOSTS
+    ):
+        return None
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_access_challenge_probe_start",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "target_url": target_url,
+                "preflight": preflight,
+            },
+        )
+    )
+    try:
+        response = requests.get(
+            target_url,
+            headers=_HTML_FETCH_HEADERS,
+            timeout=min(
+                _ACCESS_CHALLENGE_PROBE_TIMEOUT_SECONDS,
+                max(1.0, float(request.settings.timeout_seconds)),
+            ),
+        )
+    except requests.RequestException as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_access_challenge_probe_fallback",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "target_url": target_url,
+                    "error": str(exc),
+                },
+            )
+        )
+        return None
+    text = str(response.text or "")
+    lowered = text.casefold()
+    matched_marker = next(
+        (marker for marker in _ACCESS_CHALLENGE_MARKERS if marker in lowered),
+        "",
+    )
+    blocked_status = int(response.status_code) in _ACCESS_CHALLENGE_STATUS_CODES
+    challenge_detected = bool(matched_marker) and blocked_status
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_access_challenge_probe_response",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "target_url": target_url,
+                "status_code": int(response.status_code),
+                "matched_marker": matched_marker,
+                "challenge_detected": challenge_detected,
+            },
+        )
+    )
+    if not challenge_detected:
+        return None
+    result = _build_access_challenge_result(
+        request=request,
+        normalized_url=normalized_url,
+        target_url=target_url,
+        status_code=int(response.status_code),
+        matched_marker=matched_marker,
+        route_family=(
+            request.route_family_hint
+            or ("http_access_challenge_preflight" if preflight else "http_access_challenge_probe")
+        ),
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_access_challenge_probe_complete",
+            module=logger.name,
+            fields=asdict(result),
+        )
+    )
+    return result
+
+
+def try_known_publisher_pdf_download(
+    *,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    normalized_url: str,
+    download_dir: Path,
+    page_url: str | None = None,
+) -> BrowserReportDownloadResult | None:
+    target_url = str(page_url or request.attempt_url or request.url).strip() or request.url
+    pdf_url = _resolve_known_publisher_pdf_url(target_url)
+    if not pdf_url:
+        return None
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_known_publisher_pdf_probe_start",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "target_url": target_url,
+                "pdf_url": pdf_url,
+            },
+        )
+    )
+    return try_direct_pdf_download(
+        request=request,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        download_dir=download_dir,
+        probe_url=pdf_url,
+        route_family="known_publisher_pdf_probe",
+        used_candidate_pdf_url=False,
+        used_candidate_source_page=False,
+    )
+
+
+def _resolve_known_publisher_pdf_url(page_url: str) -> str:
+    token = str(page_url or "").strip()
+    if not token:
+        return ""
+    parsed = urlsplit(token)
+    host = str(parsed.hostname or "").casefold()
+    path_parts = [part for part in str(parsed.path or "").split("/") if part]
+    if not (host == "www.algolia.com" or host.endswith(".algolia.com")):
+        return ""
+    if len(path_parts) < 3 or path_parts[-3:-1] != ["resources", "asset"]:
+        return ""
+    slug = path_parts[-1].strip().casefold()
+    if not slug.startswith("ebook-"):
+        return ""
+    ebook_slug = slug.removeprefix("ebook-")
+    if not ebook_slug:
+        return ""
+    return (
+        f"{parsed.scheme or 'https'}://{parsed.netloc}"
+        f"/files/live/sites/www/files/ebooks/Ebook_{ebook_slug}_compressed.pdf"
+    )
+
+
+def _build_access_challenge_result(
+    *,
+    request: BrowserReportDownloadRequest,
+    normalized_url: str,
+    target_url: str,
+    status_code: int,
+    matched_marker: str,
+    route_family: str,
+) -> BrowserReportDownloadResult:
+    detail = (
+        "HTTP access challenge detected before browser interaction "
+        f"(status {status_code}, marker: {matched_marker})."
+    )
+    return BrowserReportDownloadResult(
+        schema_version="1.0",
+        source_url=request.url,
+        normalized_url=normalized_url,
+        route_kind="email_delivery",
+        route_family=route_family,
+        route_status="inferred",
+        outcome="email_required",
+        route_summary="Access challenge blocked the report form before browser completion.",
+        final_page_url=target_url,
+        resolved_target_url=target_url,
+        used_route_hint=False,
+        route_steps=[
+            BrowserDownloadRouteStep(
+                schema_version="1.0",
+                index=0,
+                action="open",
+                target_text=target_url,
+                target_role="url",
+                target_url=target_url,
+                result=detail,
+            )
+        ],
+        confirmation_evidence=BrowserDownloadConfirmationEvidence(
+            schema_version="1.0",
+            url_changed=False,
+            visible_confirmation_text="",
+            submit_button_state="unchanged",
+            form_disappeared=False,
+            final_page_url=target_url,
+            confirmation_score=0,
+            signal_labels=["http_access_challenge"],
+        ),
+        terminal_evidence=DownloadTerminalEvidence(
+            schema_version="1.0",
+            final_page_url=target_url,
+            final_page_title="Access challenge",
+            terminal_text_excerpt=detail,
+            artifact_url=target_url,
+            artifact_kind="email_delivery",
+            artifact_validation_status="blocked",
+            artifact_validation_detail=detail,
+            confirmation_signal_count=0,
+            traversed_page_urls=[target_url],
+            evidence_labels=["blocked", "http_access_challenge", "blocked_captcha"],
+        ),
+        browser_had_structured_result=False,
+        used_candidate_pdf_url=False,
+        used_candidate_source_page=False,
+        encountered_form_fields=[],
+        blocked_reason="blocked_captcha",
+        blocked_reason_detail=detail,
+        downloaded_file_path=None,
+        downloaded_file_name=None,
+        downloaded_mime_type=None,
+        downloaded_size_bytes=None,
+        onsite_capture_path=None,
+        onsite_capture_format=None,
+        onsite_page_count=None,
+        onsite_completeness_status=None,
+    )
 
 
 def try_direct_pdf_download(

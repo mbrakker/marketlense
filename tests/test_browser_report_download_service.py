@@ -236,6 +236,7 @@ def test_browser_report_download_prompt_marks_unverified_memory_as_weak(
     assert "Previously successful route" not in bundle.task_prompt
     assert "do not click unrelated navigation links" in bundle.task_prompt
     assert "click the exact matching option text" in bundle.task_prompt
+    assert "return `blocked_email_domain` immediately" in bundle.task_prompt
 
 
 class _FakeResponse:
@@ -259,6 +260,10 @@ class _FakeResponse:
     def iter_content(self, chunk_size: int = 65536):
         for start in range(0, len(self._content), chunk_size):
             yield self._content[start : start + chunk_size]
+
+    @property
+    def text(self) -> str:
+        return self._content.decode("utf-8", errors="ignore")
 
     def raise_for_status(self) -> None:
         if self.status_code >= 400:
@@ -445,6 +450,110 @@ def test_download_report_with_browser_use_falls_back_from_invalid_direct_pdf(
     assert response.downloaded_file_path is not None
     assert Path(str(response.downloaded_file_path)).exists()
     assert_no_defaulted_required_fields(response)
+
+
+def test_download_report_with_browser_use_short_circuits_known_access_challenge(
+    tmp_path: Path,
+    caplog,
+    run_context,
+    external_boundary_mocks_only,
+    assert_logs_have_required_fields,
+    assert_no_defaulted_required_fields,
+) -> None:
+    def fake_get(*args: Any, **kwargs: Any) -> _FakeResponse:
+        return _FakeResponse(
+            content=(
+                b"<html><title>Just a moment</title>"
+                b"Cloudflare security check. Verify you are human.</html>"
+            ),
+            status_code=403,
+            headers={"Content-Type": "text/html"},
+        )
+
+    def fail_if_browser_loaded(module_name: str) -> Any:
+        raise AssertionError(
+            f"browser runtime should not load for access challenge: {module_name}"
+        )
+
+    external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        fail_if_browser_loaded,
+    )
+    caplog.set_level(logging.INFO, logger=service.logger.name)
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://www.centricsoftware.com/whitepapers/report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.outcome == "email_required"
+    assert response.blocked_reason == "blocked_captcha"
+    assert response.terminal_evidence.artifact_validation_status == "blocked"
+    assert_no_defaulted_required_fields(response)
+    assert_logs_have_required_fields(_service_events(caplog))
+
+
+def test_download_report_with_browser_use_short_circuits_known_algolia_ebook_pdf(
+    tmp_path: Path,
+    caplog,
+    run_context,
+    external_boundary_mocks_only,
+    assert_logs_have_required_fields,
+    assert_no_defaulted_required_fields,
+) -> None:
+    observed_urls: list[str] = []
+
+    def fake_get(url: str, *args: Any, **kwargs: Any) -> _FakeResponse:
+        observed_urls.append(url)
+        return _FakeResponse(
+            content=b"%PDF-1.7 algolia ebook",
+            status_code=200,
+            headers={"Content-Type": "application/pdf"},
+        )
+
+    def fail_if_browser_loaded(module_name: str) -> Any:
+        raise AssertionError(
+            f"browser runtime should not load for known Algolia ebook: {module_name}"
+        )
+
+    external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        fail_if_browser_loaded,
+    )
+    caplog.set_level(logging.INFO, logger=service.logger.name)
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://www.algolia.com/resources/asset/ebook-transforming-search-ai",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "pdf_download"
+    assert response.outcome == "downloaded"
+    assert response.route_family == "known_publisher_pdf_probe"
+    assert observed_urls == [
+        (
+            "https://www.algolia.com/files/live/sites/www/files/ebooks/"
+            "Ebook_transforming-search-ai_compressed.pdf"
+        )
+    ]
+    assert response.downloaded_file_path is not None
+    assert_no_defaulted_required_fields(response)
+    assert_logs_have_required_fields(_service_events(caplog))
 
 
 def test_download_report_with_browser_use_fetches_real_pdf_from_wrapper(
@@ -2278,6 +2387,181 @@ def test_download_report_with_browser_use_records_terminal_snapshot_and_document
     assert response.terminal_evidence.network_events
     assert response.terminal_evidence.network_events[0].signal_kind == "document_request"
     assert response.terminal_evidence.visited_url_timeline
+
+
+def test_download_report_with_browser_use_fetches_relative_observed_pdf_candidate(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary="Opened the gated page and found a form.",
+        create_pdf=False,
+        email_submission_completed=False,
+    )
+    original_runtime = runtime.Agent
+    observed_relative_pdf = "/files/live/sites/www/files/ebooks/report.pdf"
+
+    class RelativePdfObservedAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            payload = json.loads(history.final_result())
+            payload["route_kind"] = "email_delivery"
+            payload["route_family"] = "browser_email_form"
+            payload["encountered_form_fields"] = ["Business Email", "Country"]
+            payload["blocked_reason"] = "blocked_unknown_required_enum"
+            payload["blocked_reason_detail"] = "Country field could not be selected."
+            self.browser.url = "https://example.com/resources/report"
+            self.browser.title = "Example report"
+            self.browser.html = (
+                "<html><body><a href='/files/live/sites/www/files/ebooks/report.pdf'>"
+                "PDF</a></body></html>"
+            )
+
+            class RelativePdfObservedHistory:
+                def final_result(self) -> str:
+                    return json.dumps(payload)
+
+                def action_results(self) -> list[Any]:
+                    return []
+
+            return RelativePdfObservedHistory()
+
+    def _download_pdf_from_url(**kwargs) -> None:
+        assert kwargs["pdf_url"] == (
+            "https://example.com/files/live/sites/www/files/ebooks/report.pdf"
+        )
+        Path(kwargs["destination_path"]).write_bytes(b"%PDF-1.7 observed")
+
+    runtime.Agent = RelativePdfObservedAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+    external_boundary_mocks_only.setattr(
+        artifact_runtime,
+        "download_pdf_from_url",
+        _download_pdf_from_url,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/resources/report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_pdf_click",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "pdf_download"
+    assert response.outcome == "downloaded"
+    assert response.downloaded_file_path is not None
+    assert response.downloaded_file_path.endswith("report.pdf")
+
+
+def test_download_report_with_browser_use_fetches_pdf_after_terminal_html_recovery(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary="Opened the gated page and found a form.",
+        create_pdf=False,
+        email_submission_completed=False,
+    )
+    original_runtime = runtime.Agent
+    observed_relative_pdf = "/files/live/sites/www/files/ebooks/report.pdf"
+
+    class EmptyHtmlPdfObservedAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            self.browser.url = "https://example.com/resources/report"
+            self.browser.title = "Example report"
+            self.browser.html = ""
+            payload = {
+                "route_kind": "email_delivery",
+                "route_summary": "Opened the gated page and found a form.",
+                "route_family": "browser_email_form",
+                "resolved_target_url": "https://example.com/resources/report",
+                "final_page_url": "https://example.com/resources/report",
+                "email_submission_completed": False,
+                "downloaded_file_path": None,
+                "downloaded_file_name": None,
+                "downloaded_mime_type": None,
+                "encountered_form_fields": ["Business Email", "Country"],
+                "route_steps": [],
+                "post_submit_message": None,
+                "confirmation_url_changed": False,
+                "submit_button_state": None,
+                "form_disappeared": False,
+                "blocked_reason": None,
+                "blocked_reason_detail": None,
+                "final_page_title": "Example report",
+                "terminal_text_excerpt": "Unlock this asset",
+                "traversed_page_urls": ["https://example.com/resources/report"],
+                "onsite_capture_path": None,
+                "onsite_capture_format": None,
+                "onsite_page_count": None,
+                "onsite_completeness_status": None,
+            }
+
+            class EmptyHtmlPdfObservedHistory:
+                def final_result(self) -> str:
+                    return json.dumps(payload)
+
+                def action_results(self) -> list[Any]:
+                    return []
+
+            return EmptyHtmlPdfObservedHistory()
+
+    def _fetch_html_from_url(**kwargs) -> str:
+        return (
+            "<html><body><a href='/files/live/sites/www/files/ebooks/report.pdf'>"
+            "PDF</a></body></html>"
+        )
+
+    def _download_pdf_from_url(**kwargs) -> None:
+        assert kwargs["pdf_url"] == (
+            "https://example.com/files/live/sites/www/files/ebooks/report.pdf"
+        )
+        Path(kwargs["destination_path"]).write_bytes(b"%PDF-1.7 observed")
+
+    runtime.Agent = EmptyHtmlPdfObservedAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+    external_boundary_mocks_only.setattr(
+        artifact_runtime,
+        "fetch_html_from_url",
+        _fetch_html_from_url,
+    )
+    external_boundary_mocks_only.setattr(
+        artifact_runtime,
+        "download_pdf_from_url",
+        _download_pdf_from_url,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/resources/report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_pdf_click",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "pdf_download"
+    assert response.outcome == "downloaded"
+    assert response.downloaded_file_path is not None
+    assert observed_relative_pdf in response.terminal_evidence.observed_document_urls
 
 
 def test_download_report_with_browser_use_uses_network_confirmation_signal(
@@ -4248,11 +4532,77 @@ def test_download_report_with_browser_use_times_out_stalled_agent(
     assert stop_observations == [True]
 
 
-def test_download_report_with_browser_use_salvages_completed_history_when_agent_cleanup_stalls(
+def test_download_report_with_browser_use_salvages_cached_terminal_state_when_timeout_recovery_hangs(
     tmp_path: Path,
+    caplog,
     run_context,
     external_boundary_mocks_only,
 ) -> None:
+    caplog.set_level(logging.INFO, logger=service.logger.name)
+    settings = replace(_settings(tmp_path), timeout_seconds=0.05, max_steps=1)
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary="Opened the report form.",
+        create_pdf=False,
+        email_submission_completed=False,
+    )
+    original_runtime = runtime.Agent
+    original_browser = runtime.Browser
+
+    class HangingTerminalBrowser(original_browser):
+        def get_current_page(self):
+            time.sleep(7.0)
+            return super().get_current_page()
+
+    class TimedOutFormAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            self.browser.url = "https://example.com/report#download"
+            self.browser.title = "Download report"
+            self.browser.html = (
+                "<html><body><form>"
+                "<label>Business Email</label><input name='email'>"
+                "<p>Please enter a valid business email address.</p>"
+                "<button>Submit</button>"
+                "</form></body></html>"
+            )
+            time.sleep(2.0)
+            return super().run_sync(max_steps)
+
+    runtime.Browser = HangingTerminalBrowser
+    runtime.Agent = TimedOutFormAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=settings,
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.outcome == "email_required"
+    assert response.blocked_reason == "blocked_email_domain"
+    assert any(
+        event.get("event") == "browser_report_download_timeout_cached_state_salvaged"
+        for event in _service_events(caplog)
+    )
+
+
+def test_download_report_with_browser_use_salvages_completed_history_when_agent_cleanup_stalls(
+    tmp_path: Path,
+    caplog,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    caplog.set_level(logging.INFO, logger=service.logger.name)
     settings = replace(_settings(tmp_path), timeout_seconds=0.05, max_steps=1)
     runtime = _runtime(
         tmp_path,
@@ -4343,6 +4693,15 @@ def test_download_report_with_browser_use_salvages_completed_history_when_agent_
     assert response.final_page_url == "https://example.com/thank-you"
     assert response.confirmation_evidence is not None
     assert response.confirmation_evidence.visible_confirmation_text == "Thank you"
+    events = _service_events(caplog)
+    assert any(
+        event.get("event") == "browser_report_download_completed_history_observed"
+        for event in events
+    )
+    assert not any(
+        event.get("event") == "browser_report_download_timeout_salvaged_completed_history"
+        for event in events
+    )
 
 
 def test_download_report_with_browser_use_salvages_terminal_state_on_timeout(
@@ -4858,6 +5217,116 @@ def test_download_report_with_browser_use_recovers_lookup_before_completed_histo
     assert response.outcome == "email_requested"
     assert response.route_status == "verified"
     assert response.final_page_url == "https://example.com/report#success"
+
+
+def test_download_report_with_browser_use_salvages_partial_business_email_blocker(
+    tmp_path: Path,
+    caplog,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    caplog.set_level(logging.INFO, logger=service.logger.name)
+    settings = replace(_settings(tmp_path), timeout_seconds=0.05, max_steps=1)
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="Clicked Download and reached a form.",
+        create_pdf=False,
+        email_submission_completed=False,
+    )
+    original_runtime = runtime.Agent
+
+    class PartialEmailBlockerHistory:
+        def __init__(self) -> None:
+            self.history = [
+                SimpleNamespace(
+                    model_output=SimpleNamespace(
+                        current_state=SimpleNamespace(
+                            memory=(
+                                "Filled first name, last name, company, and business email. "
+                                "The form has an email error and requires a business email."
+                            ),
+                            evaluation_previous_goal=(
+                                "Submission failed because the configured email is not "
+                                "accepted as a professional email."
+                            ),
+                            next_goal=(
+                                "Do not retry the same email; classify the flow as blocked."
+                            ),
+                        ),
+                        action=[
+                            {
+                                "click": {
+                                    "index": 50,
+                                    "target": "Download report",
+                                }
+                            }
+                        ],
+                    ),
+                    result=[
+                        SimpleNamespace(
+                            error="Email error: please use a business email address.",
+                            long_term_memory="",
+                            extracted_content="",
+                        )
+                    ],
+                    state=SimpleNamespace(
+                        url="https://example.com/report#download",
+                        title="Example ROI report",
+                        screenshot_path="",
+                    ),
+                )
+            ]
+
+        def is_done(self) -> bool:
+            return False
+
+        def final_result(self) -> str:
+            return ""
+
+        def action_results(self) -> list[Any]:
+            return []
+
+    class BusinessEmailBlockedAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            self.history = PartialEmailBlockerHistory()
+            self.browser.url = "https://example.com/report#download"
+            self.browser.title = "Example ROI report"
+            self.browser.html = "<html><body>Business email required</body></html>"
+            time.sleep(2.0)
+            return self.history
+
+    runtime.Agent = BusinessEmailBlockedAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=settings,
+            route_family_hint="browser_pdf_click",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.outcome == "email_required"
+    assert response.blocked_reason == "blocked_email_domain"
+    assert response.blocked_reason_detail
+    assert "business" in response.blocked_reason_detail.casefold()
+    events = _service_events(caplog)
+    assert any(
+        event.get("event") == "browser_report_download_partial_email_blocker_observed"
+        for event in events
+    )
+    assert not any(
+        event.get("event") == "browser_report_download_timeout_salvaged_partial_history_blocker"
+        for event in events
+    )
 
 
 def test_download_report_with_browser_use_bounds_lookup_assist_after_completed_history_timeout(

@@ -394,6 +394,17 @@ def _build_browser_step(
             uses_memory_route=False,
             fallback_on_retryable_error=False,
         )
+    if _looks_like_known_email_form_url(normalized_url):
+        return ReportDownloadRoutePlanStep(
+            schema_version="1.0",
+            step_name="report_download_browser_email_form",
+            route_family="browser_email_form",
+            attempt_url=normalized_url,
+            route_kind_hint="email_delivery",
+            source_page_url_hint=source_page_url,
+            uses_memory_route=False,
+            fallback_on_retryable_error=False,
+        )
     if _looks_like_direct_onsite_report_url(redirect_target_url or normalized_url):
         return ReportDownloadRoutePlanStep(
             schema_version="1.0",
@@ -735,6 +746,17 @@ def _looks_like_onsite_longread_url(url: str | None) -> bool:
     if any(segment in _ONSITE_LONGREAD_SEGMENTS for segment in segments):
         return True
     return any(marker in path for marker in _EDITORIAL_REPORT_MARKERS)
+
+
+def _looks_like_known_email_form_url(url: str | None) -> bool:
+    parsed = urlsplit(str(url or "").strip())
+    host = str(parsed.hostname or "").casefold()
+    path = str(parsed.path or "").casefold()
+    return (
+        (host == "www.centricsoftware.com" or host.endswith(".centricsoftware.com"))
+        and "/whitepapers/" in path
+        and not _looks_like_pdf(path)
+    )
 
 
 def _looks_like_direct_onsite_report_url(url: str | None) -> bool:

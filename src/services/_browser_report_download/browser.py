@@ -55,9 +55,9 @@ _BROWSER_USE_TEMP_DIR_PATTERNS = (
 )
 _STALE_BROWSER_USE_TEMP_DIR_MIN_AGE_SECONDS = 15 * 60.0
 _TEMP_CLEANUP_LOG_SAMPLE_LIMIT = 5
-_TIMED_OUT_AGENT_STOP_GRACE_SECONDS = 10.0
 _TIMED_OUT_COMPLETED_HISTORY_GRACE_SECONDS = 2.0
 _TIMED_OUT_RECOVERY_OPERATION_TIMEOUT_SECONDS = 5.0
+_AGENT_COMPLETED_HISTORY_POLL_SECONDS = 0.25
 _BROWSER_AGENT_WORKER_ENV = "MARKET_LENSE_BROWSER_AGENT_WORKER"
 # Let the worker finish its own timeout stop/cleanup path and write a typed
 # response instead of being killed by the outer subprocess envelope mid-exit.
@@ -89,6 +89,28 @@ _LOOKUP_SUBMIT_MARKERS = (
     "submit",
     "submitted",
     "submission",
+)
+_EMAIL_DOMAIN_BLOCK_MARKERS = (
+    "business email",
+    "work email",
+    "corporate email",
+    "company email",
+    "professional email",
+    "valid business email",
+)
+_EMAIL_DOMAIN_FAILURE_MARKERS = (
+    "email error",
+    "email address error",
+    "invalid email",
+    "not a business email",
+    "not a work email",
+    "not a corporate email",
+    "not a professional email",
+    "requires a business email",
+    "require a business email",
+    "please use a business email",
+    "please enter a business email",
+    "rejected",
 )
 _PARTIAL_HISTORY_TEXT_MAX_CHARS = 12000
 
@@ -368,7 +390,10 @@ def run_browser_report_download_agent(
                 screenshot_path = history_screenshot_path
     except AppError as exc:
         if exc.code == "browser_download_agent_timeout" and browser is not None:
-            if str(request.route_family_hint or "").strip() == "browser_email_form":
+            if _should_attempt_lookup_submission_assist(
+                request=request,
+                raw_model_response=raw_model_response,
+            ):
                 _attempt_lookup_submission_assist_with_timeout(
                     browser=browser,
                     ctx=ctx,
@@ -503,6 +528,13 @@ def _salvage_timed_out_browser_run(
     download_dir: Path,
 ) -> BrowserAgentRunResult | None:
     payload: dict[str, BrowserAgentRunResult | None] = {}
+    cached_result = _build_cached_timed_out_browser_run(
+        request=request,
+        browser=browser,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        download_dir=download_dir,
+    )
 
     def runner() -> None:
         payload["result"] = _salvage_timed_out_browser_run_unbounded(
@@ -530,8 +562,75 @@ def _salvage_timed_out_browser_run(
                 },
             )
         )
+        return cached_result
+    return payload.get("result") or cached_result
+
+
+def _build_cached_timed_out_browser_run(
+    *,
+    request: BrowserReportDownloadRequest,
+    browser: Any,
+    ctx: RunContext,
+    normalized_url: str,
+    download_dir: Path,
+) -> BrowserAgentRunResult | None:
+    downloaded_files = [str(path) for path in getattr(browser, "downloaded_files", [])]
+    final_page_url = str(getattr(browser, "url", "") or "").strip()
+    final_page_title = str(getattr(browser, "title", "") or "").strip()
+    final_page_html = str(getattr(browser, "html", "") or "")
+    if not (downloaded_files or final_page_title or final_page_html.strip()):
         return None
-    return payload.get("result")
+    route_family = str(request.route_family_hint or "").strip()
+    if not downloaded_files and route_family not in {
+        "browser_email_form",
+        "browser_onsite_report",
+        "browser_listing_hub",
+        "browser_tracker_redirect",
+    }:
+        return None
+    materialized_paths = _materialize_external_artifacts(
+        raw_model_response="",
+        attachment_paths=[],
+        downloaded_files=downloaded_files,
+        download_dir=download_dir,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
+    for materialized_path in materialized_paths:
+        if materialized_path not in downloaded_files:
+            downloaded_files.append(materialized_path)
+    html_snapshot_path = _write_terminal_html_snapshot(
+        download_dir=download_dir,
+        final_page_html=final_page_html,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_timeout_cached_state_salvaged",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "downloaded_file_count": len(downloaded_files),
+                "final_page_url": final_page_url,
+                "final_page_title": final_page_title,
+                "has_final_page_html": bool(final_page_html.strip()),
+            },
+        )
+    )
+    return BrowserAgentRunResult(
+        schema_version="1.0",
+        raw_model_response="",
+        final_page_url=final_page_url,
+        final_page_title=final_page_title,
+        final_page_html=final_page_html,
+        downloaded_files=downloaded_files,
+        attachment_paths=[],
+        network_resource_urls=[],
+        network_events=[],
+        html_snapshot_path=html_snapshot_path,
+        screenshot_path="",
+    )
 
 
 def _salvage_timed_out_browser_run_unbounded(
@@ -1661,6 +1760,10 @@ def _looks_like_documentish_url(raw_url: str) -> bool:
     if not token:
         return False
     lowered = token.casefold()
+    if lowered.startswith(("/", "./", "../")) and (
+        lowered.endswith(".pdf") or ".pdf?" in lowered
+    ):
+        return True
     if not lowered.startswith("http"):
         return False
     if lowered.endswith(".pdf") or ".pdf?" in lowered:
@@ -1977,7 +2080,56 @@ def _run_agent_history_with_timeout(
     worker = Thread(target=runner, daemon=True)
     worker.start()
     timeout_seconds = _resolve_agent_run_timeout_seconds(request)
-    worker.join(timeout_seconds)
+    deadline = time.monotonic() + timeout_seconds
+    while worker.is_alive():
+        remaining_seconds = deadline - time.monotonic()
+        if remaining_seconds <= 0:
+            break
+        worker.join(min(_AGENT_COMPLETED_HISTORY_POLL_SECONDS, remaining_seconds))
+        if not worker.is_alive():
+            break
+        completed_history = _read_completed_agent_history(agent)
+        if completed_history is not None:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="browser_report_download_completed_history_observed",
+                    module=logger.name,
+                    fields={
+                        "normalized_url": normalized_url,
+                        "timeout_seconds": timeout_seconds,
+                        "max_steps": request.settings.max_steps,
+                    },
+                )
+            )
+            return BrowserAgentHistoryResult(
+                history=completed_history,
+                salvaged_completed_history=True,
+            )
+        email_blocker_history = _read_email_domain_blocker_partial_history(
+            agent=agent,
+            request=request,
+            normalized_url=normalized_url,
+        )
+        if email_blocker_history is not None:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="browser_report_download_partial_email_blocker_observed",
+                    module=logger.name,
+                    fields={
+                        "normalized_url": normalized_url,
+                        "timeout_seconds": timeout_seconds,
+                        "max_steps": request.settings.max_steps,
+                    },
+                )
+            )
+            return BrowserAgentHistoryResult(
+                history=email_blocker_history,
+                salvaged_completed_history=True,
+            )
     if worker.is_alive():
         completed_history = _read_completed_agent_history(agent)
         if completed_history is not None:
@@ -1998,12 +2150,12 @@ def _run_agent_history_with_timeout(
                 history=completed_history,
                 salvaged_completed_history=True,
             )
-        lookup_blocker_history = _read_lookup_blocker_partial_history(
+        partial_blocker_history = _read_terminal_blocker_partial_history(
             agent=agent,
             request=request,
             normalized_url=normalized_url,
         )
-        if lookup_blocker_history is not None:
+        if partial_blocker_history is not None:
             logger.info(
                 log_event(
                     ctx,
@@ -2018,12 +2170,11 @@ def _run_agent_history_with_timeout(
                 )
             )
             return BrowserAgentHistoryResult(
-                history=lookup_blocker_history,
+                history=partial_blocker_history,
                 salvaged_completed_history=True,
             )
         _signal_agent_stop(agent)
-        _prepare_browser_for_shutdown(browser)
-        worker.join(_TIMED_OUT_AGENT_STOP_GRACE_SECONDS)
+        worker.join(_AGENT_COMPLETED_HISTORY_POLL_SECONDS)
         completed_history = _read_completed_agent_history(agent)
         if completed_history is not None:
             logger.info(
@@ -2043,12 +2194,12 @@ def _run_agent_history_with_timeout(
                 history=completed_history,
                 salvaged_completed_history=True,
             )
-        lookup_blocker_history = _read_lookup_blocker_partial_history(
+        partial_blocker_history = _read_terminal_blocker_partial_history(
             agent=agent,
             request=request,
             normalized_url=normalized_url,
         )
-        if lookup_blocker_history is not None:
+        if partial_blocker_history is not None:
             logger.info(
                 log_event(
                     ctx,
@@ -2063,7 +2214,7 @@ def _run_agent_history_with_timeout(
                 )
             )
             return BrowserAgentHistoryResult(
-                history=lookup_blocker_history,
+                history=partial_blocker_history,
                 salvaged_completed_history=True,
             )
         raise AppError(
@@ -2176,6 +2327,108 @@ def _read_lookup_blocker_partial_history(
     )
 
 
+def _read_terminal_blocker_partial_history(
+    *,
+    agent: Any,
+    request: BrowserReportDownloadRequest,
+    normalized_url: str,
+) -> Any | None:
+    email_blocker_history = _read_email_domain_blocker_partial_history(
+        agent=agent,
+        request=request,
+        normalized_url=normalized_url,
+    )
+    if email_blocker_history is not None:
+        return email_blocker_history
+    return _read_lookup_blocker_partial_history(
+        agent=agent,
+        request=request,
+        normalized_url=normalized_url,
+    )
+
+
+def _read_email_domain_blocker_partial_history(
+    *,
+    agent: Any,
+    request: BrowserReportDownloadRequest,
+    normalized_url: str,
+) -> Any | None:
+    history = getattr(agent, "history", None)
+    entries = getattr(history, "history", None)
+    if not isinstance(entries, list) or not entries:
+        return None
+    history_text = _collect_agent_history_text(history)
+    lowered = history_text.casefold()
+    if not (
+        any(marker in lowered for marker in _EMAIL_DOMAIN_BLOCK_MARKERS)
+        and any(marker in lowered for marker in _EMAIL_DOMAIN_FAILURE_MARKERS)
+    ):
+        return None
+    state = _read_history_final_state(history)
+    final_page_url = (
+        str(getattr(state, "url", "") or "").strip()
+        or str(request.attempt_url or request.url).strip()
+        or normalized_url
+    )
+    final_page_title = str(getattr(state, "title", "") or "").strip()
+    screenshot_path = str(getattr(state, "screenshot_path", "") or "").strip() or None
+    encountered_form_fields = _infer_encountered_form_fields(lowered, "")
+    if "Business Email Address" not in encountered_form_fields:
+        encountered_form_fields.insert(0, "Business Email Address")
+    payload = {
+        "route_kind": "email_delivery",
+        "route_summary": (
+            "Opened the report page and reached an email form, but the configured "
+            "email address was rejected because the site requires a business email."
+        ),
+        "route_family": "browser_email_form",
+        "resolved_target_url": final_page_url,
+        "final_page_url": final_page_url,
+        "email_submission_completed": False,
+        "downloaded_file_path": None,
+        "downloaded_file_name": None,
+        "downloaded_mime_type": None,
+        "encountered_form_fields": encountered_form_fields,
+        "route_steps": [
+            {
+                "index": None,
+                "action": "submit",
+                "target_text": "Download report",
+                "target_role": "button",
+                "target_url": final_page_url,
+                "result": (
+                    "Submission was blocked because the configured email address "
+                    "was rejected as not being a business email."
+                ),
+            }
+        ],
+        "post_submit_message": "The form requires a business email address.",
+        "confirmation_url_changed": False,
+        "submit_button_state": None,
+        "form_disappeared": False,
+        "blocked_reason": "blocked_email_domain",
+        "blocked_reason_detail": (
+            "The form rejected the configured email address as not being a "
+            "business or professional email."
+        ),
+        "final_page_title": final_page_title,
+        "terminal_text_excerpt": _truncate_partial_history_excerpt(history_text),
+        "traversed_page_urls": _read_distinct_history_urls(history, final_page_url),
+        "onsite_capture_path": None,
+        "onsite_capture_format": None,
+        "onsite_page_count": None,
+        "onsite_completeness_status": None,
+    }
+    return _SyntheticAgentHistory(
+        payload=payload,
+        state=_SyntheticHistoryState(
+            url=final_page_url,
+            title=final_page_title,
+            screenshot_path=screenshot_path,
+        ),
+    )
+
+
 def _collect_agent_history_text(history: Any) -> str:
     pieces: list[str] = []
     entries = getattr(history, "history", None)
@@ -2249,7 +2502,7 @@ def _resolve_lookup_blocker_label(history_text: str) -> str:
 
 
 def _infer_encountered_form_fields(history_text: str, lookup_label: str) -> list[str]:
-    field_markers = (
+    field_markers = [
         ("First Name", ("first name", "firstname")),
         ("Last Name", ("last name", "lastname")),
         ("Business Email Address", ("business email", "work email", "email")),
@@ -2258,8 +2511,10 @@ def _infer_encountered_form_fields(history_text: str, lookup_label: str) -> list
         ("Role", ("role", "job level", "seniority")),
         ("Department", ("department",)),
         ("Industry", ("industry",)),
-        (lookup_label, (lookup_label.casefold(),)),
-    )
+    ]
+    lookup_token = str(lookup_label or "").strip()
+    if lookup_token:
+        field_markers.append((lookup_token, (lookup_token.casefold(),)))
     fields: list[str] = []
     seen: set[str] = set()
     for label, markers in field_markers:
@@ -2268,8 +2523,8 @@ def _infer_encountered_form_fields(history_text: str, lookup_label: str) -> list
         if any(marker in history_text for marker in markers):
             seen.add(label)
             fields.append(label)
-    if lookup_label not in seen:
-        fields.append(lookup_label)
+    if lookup_token and lookup_token not in seen:
+        fields.append(lookup_token)
     return fields
 
 

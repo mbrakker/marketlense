@@ -74,6 +74,42 @@ def test_plan_report_download_routes_does_not_treat_yougov_as_tracker_host(
     )
 
 
+def test_plan_report_download_routes_sends_known_centric_whitepaper_to_email_form(
+    run_context,
+) -> None:
+    response = plan_report_download_routes(
+        ReportDownloadRoutePlanRequest(
+            schema_version="1.0",
+            normalized_url=(
+                "https://www.centricsoftware.com/whitepapers/"
+                "the-right-aisle-strategy-for-retail-success/"
+            ),
+            remembered_route=None,
+            candidate_trace=PublisherInventoryCandidateTrace(
+                schema_version="1.0",
+                canonical_url=(
+                    "https://www.centricsoftware.com/whitepapers/"
+                    "the-right-aisle-strategy-for-retail-success/"
+                ),
+                title="The Right Aisle Strategy for Retail Success",
+                discovered_on_page_number=1,
+                source_page_urls=["https://www.centricsoftware.com/whitepapers/"],
+                discovery_provenances=[],
+                pdf_url=None,
+                published_at_text=None,
+                max_confidence=0.8,
+            ),
+            publisher_discovery_route_kind=None,
+            publisher_recommended_discovery_route_kind=None,
+        ),
+        run_context,
+    )
+
+    assert response.steps[-1].step_name == "report_download_browser_email_form"
+    assert response.steps[-1].route_family == "browser_email_form"
+    assert response.steps[-1].route_kind_hint == "email_delivery"
+
+
 def test_plan_report_download_routes_keeps_algorithm_research_url_on_onsite_route(
     run_context,
 ) -> None:
