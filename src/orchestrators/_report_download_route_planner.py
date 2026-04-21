@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from urllib.parse import parse_qs, unquote, urlsplit
 
 from src.contracts.browser_download import (
@@ -31,6 +32,11 @@ _TRACKER_HOST_MARKERS = {
     "pardot",
     "marketo",
 }
+_TRACKER_SHORT_PATH_MARKERS = {
+    "go",
+    "lnk",
+    "trk",
+}
 _LISTING_PATH_MARKERS = {
     "insights",
     "reports",
@@ -50,12 +56,19 @@ _EDITORIAL_NON_REPORT_MARKERS = {
 _EDITORIAL_REPORT_MARKERS = {
     "report",
     "reports",
+    "guide",
+    "guides",
     "insight",
     "insights",
+    "playbook",
     "research",
     "analysis",
     "study",
     "survey",
+    "trend",
+    "trends",
+    "whitepaper",
+    "whitepapers",
 }
 _EMAIL_GATE_PATH_MARKERS = {
     "gated-content-form",
@@ -69,6 +82,17 @@ _EMAIL_GATE_PATH_MARKERS = {
 _ONSITE_LONGREAD_SEGMENTS = {
     "insight",
     "insights",
+    "research",
+    "analysis",
+    "survey",
+    "outlook",
+}
+_DIRECT_ONSITE_REPORT_SEGMENTS = {
+    "guide",
+    "guides",
+    "insight",
+    "playbook",
+    "playbooks",
     "research",
     "analysis",
     "survey",
@@ -295,6 +319,7 @@ def _build_browser_step(
         route_kind=remembered_route_kind,
         route_family=remembered_route.route_family if remembered_route is not None else "",
     )
+    reusable_memory_route = _should_reuse_memory_route(remembered_route)
     if _looks_like_tracker_url(normalized_url):
         if redirect_target_kind == "redirect_to_email_gate":
             return ReportDownloadRoutePlanStep(
@@ -350,7 +375,13 @@ def _build_browser_step(
             uses_memory_route=False,
             fallback_on_retryable_error=False,
         )
-    if remembered_route_kind == "email_delivery" or remembered_route_family == "browser_email_form":
+    if (
+        remembered_route_kind == "email_delivery"
+        or remembered_route_family == "browser_email_form"
+    ) and (
+        reusable_memory_route
+        or _has_actionable_email_memory_hint(remembered_route)
+    ):
         return ReportDownloadRoutePlanStep(
             schema_version="1.0",
             step_name="report_download_browser_email_form",
@@ -359,6 +390,17 @@ def _build_browser_step(
             route_hint=remembered_route_hint or None,
             route_step_hints=remembered_route_step_hints,
             route_kind_hint="email_delivery",
+            source_page_url_hint=source_page_url,
+            uses_memory_route=False,
+            fallback_on_retryable_error=False,
+        )
+    if _looks_like_direct_onsite_report_url(redirect_target_url or normalized_url):
+        return ReportDownloadRoutePlanStep(
+            schema_version="1.0",
+            step_name="report_download_browser_onsite_report",
+            route_family="browser_onsite_report",
+            attempt_url=redirect_target_url or normalized_url,
+            route_kind_hint="onsite_report",
             source_page_url_hint=source_page_url,
             uses_memory_route=False,
             fallback_on_retryable_error=False,
@@ -491,6 +533,45 @@ def _should_reuse_memory_route(
     return remembered_route.confidence_score >= 0.75 and remembered_route.verified_successes >= 1
 
 
+def _has_actionable_email_memory_hint(
+    remembered_route: PublisherDownloadRouteMemory | None,
+) -> bool:
+    if remembered_route is None:
+        return False
+    if remembered_route.route_kind != "email_delivery":
+        return False
+    if remembered_route.outcome not in {"email_required", "email_requested"}:
+        return False
+    if not remembered_route.browser_had_structured_result:
+        return False
+    summary = str(remembered_route.route_summary or "").casefold()
+    if "not found" in summary:
+        return False
+    if "capture" in summary and "onsite" in summary and "form" not in summary:
+        return False
+    action_text = " ".join(
+        " ".join(
+            [
+                str(step.action or ""),
+                str(step.target_text or ""),
+                str(step.target_role or ""),
+                str(step.result or ""),
+            ]
+        )
+        for step in remembered_route.route_steps
+    ).casefold()
+    form_markers = {
+        "download",
+        "email",
+        "form",
+        "request",
+        "submit",
+    }
+    if action_text and any(marker in action_text for marker in form_markers):
+        return True
+    return any(marker in summary for marker in {"fill", "form", "submit"})
+
+
 def _canonical_memory_route_family(*, route_kind: str, route_family: str) -> str:
     token = str(route_family or "").strip()
     if route_kind == "email_delivery" and token in {
@@ -570,7 +651,7 @@ def _looks_like_listing_url(url: str) -> bool:
         return True
     if len(segments) == 2 and is_listing_segment(segments[0]):
         slug_token_count = len([token for token in last_segment.split("-") if token])
-        return slug_token_count < 4
+        return slug_token_count < 2
     return False
 
 
@@ -579,9 +660,24 @@ def _looks_like_tracker_url(url: str) -> bool:
     hostname = str(parsed.hostname or "").strip().lower()
     path = str(parsed.path or "").strip().lower()
     query = str(parsed.query or "").strip().lower()
-    return any(marker in hostname for marker in _TRACKER_HOST_MARKERS) or any(
-        marker in path or marker in query for marker in _TRACKER_HOST_MARKERS
-    )
+    host_labels = [label for label in hostname.split(".") if label]
+    tracker_host = any(label in _TRACKER_HOST_MARKERS for label in host_labels)
+    if tracker_host:
+        return True
+    path_query_tokens = _tracker_path_query_tokens(path=path, query=query)
+    for marker in _TRACKER_HOST_MARKERS:
+        if marker in _TRACKER_SHORT_PATH_MARKERS:
+            if marker in path_query_tokens:
+                return True
+            continue
+        if marker in path or marker in query:
+            return True
+    return False
+
+
+def _tracker_path_query_tokens(*, path: str, query: str) -> set[str]:
+    text = f"{path} {query}"
+    return {token for token in re.split(r"[^a-z0-9]+", text) if token}
 
 
 def _extract_tracker_target_url(url: str) -> str | None:
@@ -608,7 +704,7 @@ def _classify_redirect_target(url: str | None) -> str:
     if _looks_like_onsite_longread_url(token):
         return "redirect_to_onsite_report"
     lowered = str(urlsplit(token).path or "").strip().lower()
-    if any(marker in lowered for marker in _EMAIL_GATE_PATH_MARKERS):
+    if _path_has_email_gate_marker(lowered):
         return "redirect_to_email_gate"
     if any(marker in lowered for marker in _EDITORIAL_NON_REPORT_MARKERS):
         return "redirect_to_non_report"
@@ -639,3 +735,48 @@ def _looks_like_onsite_longread_url(url: str | None) -> bool:
     if any(segment in _ONSITE_LONGREAD_SEGMENTS for segment in segments):
         return True
     return any(marker in path for marker in _EDITORIAL_REPORT_MARKERS)
+
+
+def _looks_like_direct_onsite_report_url(url: str | None) -> bool:
+    parsed = urlsplit(str(url or "").strip())
+    path = str(parsed.path or "").strip().lower()
+    if not path or _looks_like_pdf(path):
+        return False
+    if _path_has_email_gate_marker(path):
+        return False
+    segments = [segment for segment in path.split("/") if segment]
+    if not segments:
+        return False
+    if any(segment in _ONSITE_EXCLUDED_SEGMENTS for segment in segments):
+        return False
+    return any(
+        segment in _DIRECT_ONSITE_REPORT_SEGMENTS
+        or any(
+            segment.startswith(f"{marker}-")
+            for marker in _DIRECT_ONSITE_REPORT_SEGMENTS
+        )
+        for segment in segments
+    )
+
+
+def _path_has_email_gate_marker(path: str) -> bool:
+    token = str(path or "").strip().lower()
+    if not token:
+        return False
+    if "gated-content-form" in token:
+        return True
+    segments = [segment for segment in token.split("/") if segment]
+    split_tokens = {part for part in re.split(r"[^a-z0-9]+", token) if part}
+    for marker in _EMAIL_GATE_PATH_MARKERS:
+        if marker == "gated-content-form":
+            continue
+        if marker in split_tokens:
+            return True
+        for segment in segments:
+            if (
+                segment == marker
+                or segment.startswith(f"{marker}-")
+                or segment.endswith(f"-{marker}")
+            ):
+                return True
+    return False

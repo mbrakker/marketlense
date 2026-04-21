@@ -157,6 +157,15 @@ _SCROLL_GROWTH_MARKERS = (
     "new content",
     "end of article",
 )
+_REPORT_NOT_FOUND_MARKERS = (
+    "specific report",
+    "not found",
+    "0 matches found",
+    "zero matches",
+    "no matches found",
+    "could not find",
+    "unable to find",
+)
 _VERIFIED_EMAIL_SIGNAL_MARKERS = {
     "delivery_text",
     "success_text",
@@ -442,6 +451,26 @@ def finalize_browser_report_download_result(
         route_kind=route_kind,
         blocked_reason=blocked_reason,
     )
+    if _looks_like_report_not_found_terminal(
+        request=request,
+        route_summary=route_summary,
+        route_steps=route_steps,
+        final_url=final_url,
+        terminal_text_excerpt=terminal_text_excerpt,
+    ):
+        raise AppError(
+            code="browser_download_report_not_found",
+            message="browser-use reached a listing or search page where the target report was not found",
+            retryable=False,
+            context={
+                "normalized_url": normalized_url,
+                "final_url": final_url,
+                "candidate_title": (
+                    request.candidate_trace.title if request.candidate_trace else ""
+                ),
+                "route_summary": route_summary,
+            },
+        )
     downloaded_mime_type = resolve_downloaded_mime_type(
         reported_mime_type=str(agent_result.downloaded_mime_type).strip()
         if agent_result.downloaded_mime_type
@@ -487,6 +516,22 @@ def finalize_browser_report_download_result(
                 downloaded_path=downloaded_path,
                 confirmation_evidence=confirmation_evidence,
             ),
+        )
+    if route_kind == "onsite_report":
+        (
+            onsite_capture_path,
+            onsite_capture_format,
+        ) = _ensure_onsite_capture_artifact(
+            request=request,
+            normalized_url=normalized_url,
+            download_dir=download_dir,
+            final_url=final_url,
+            final_page_title=final_page_title,
+            terminal_text_excerpt=terminal_text_excerpt,
+            route_steps=route_steps,
+            browser_html=browser_html,
+            onsite_capture_path=onsite_capture_path,
+            onsite_capture_format=onsite_capture_format,
         )
     (
         route_kind,
@@ -566,6 +611,7 @@ def finalize_browser_report_download_result(
         blocked_reason_detail = None
     elif (
         route_kind == "email_delivery"
+        and blocked_reason in {None, "blocked_unknown_required_enum"}
         and _confirmation_evidence_verifies_email_delivery(confirmation_evidence)
     ):
         blocked_reason = None
@@ -972,6 +1018,8 @@ def _try_fetch_pdf_target(
     download_dir: Path,
     target_url: str,
 ) -> Path | None:
+    if not _looks_like_pdf_url(target_url):
+        return None
     destination_name = Path(urlsplit(target_url).path).name or "download.pdf"
     destination_path = download_dir / destination_name
     try:
@@ -1001,6 +1049,13 @@ def _try_fetch_pdf_target(
     except AppError:
         destination_path.unlink(missing_ok=True)
         return None
+
+
+def _looks_like_pdf_url(url: str) -> bool:
+    lowered = str(url or "").strip().casefold()
+    return lowered.startswith(("http://", "https://")) and (
+        lowered.endswith(".pdf") or ".pdf?" in lowered
+    )
 
 
 def _build_pdf_result(
@@ -1970,6 +2025,24 @@ def _recover_from_invalid_artifact(
     str,
     str,
 ]:
+    if _agent_result_indicates_report_not_found(
+        request=request,
+        agent_result=agent_result,
+        final_url=final_url,
+    ):
+        raise AppError(
+            code="browser_download_report_not_found",
+            message="browser-use reached a listing or search page where the target report was not found",
+            retryable=False,
+            context={
+                "normalized_url": normalized_url,
+                "final_url": final_url,
+                "candidate_title": (
+                    request.candidate_trace.title if request.candidate_trace else ""
+                ),
+                "route_summary": str(agent_result.route_summary or "").strip(),
+            },
+        )
     wrapper_html = _read_text_if_small(downloaded_path, max_bytes=256 * 1024)
     for recovered_pdf_url in extract_embedded_pdf_urls(
         wrapper_html=wrapper_html,
@@ -2013,25 +2086,6 @@ def _recover_from_invalid_artifact(
         agent_result=agent_result,
         blocked_reason=recovered_blocked_reason,
     )
-    lowered_html = wrapper_html.casefold()
-    if (
-        _message_indicates_email_delivery(wrapper_html)
-        or recovered_blocked_reason
-        or _url_indicates_confirmation(final_url)
-    ):
-        return (
-            "email_delivery",
-            None,
-            None,
-            recovered_blocked_reason,
-            recovered_blocked_detail,
-            None,
-            None,
-            None,
-            None,
-            "recovered" if _message_indicates_email_delivery(wrapper_html) else "blocked",
-            "Recovered an email-delivery or blocked-form terminal state from an HTML artifact.",
-        )
     if _looks_like_onsite_report_html(
         wrapper_html=wrapper_html,
         request=request,
@@ -2067,7 +2121,198 @@ def _recover_from_invalid_artifact(
             "captured",
             "Recovered an on-site report capture from an HTML artifact that was misclassified as a PDF.",
         )
+    if (
+        _message_indicates_email_delivery(wrapper_html)
+        or recovered_blocked_reason
+        or _url_indicates_confirmation(final_url)
+    ):
+        return (
+            "email_delivery",
+            None,
+            None,
+            recovered_blocked_reason,
+            recovered_blocked_detail,
+            None,
+            None,
+            None,
+            None,
+            "recovered" if _message_indicates_email_delivery(wrapper_html) else "blocked",
+            "Recovered an email-delivery or blocked-form terminal state from an HTML artifact.",
+        )
     raise original_error
+
+
+def _looks_like_report_not_found_terminal(
+    *,
+    request: BrowserReportDownloadRequest,
+    route_summary: str,
+    route_steps: list[BrowserDownloadRouteStep],
+    final_url: str,
+    terminal_text_excerpt: str,
+) -> bool:
+    candidate_title = (
+        str(request.candidate_trace.title or "").strip().casefold()
+        if request.candidate_trace is not None
+        else ""
+    )
+    haystack = " ".join(
+        [
+            str(route_summary or ""),
+            str(final_url or ""),
+            str(terminal_text_excerpt or ""),
+            *[_route_step_haystack(step) for step in route_steps],
+        ]
+    ).casefold()
+    if not haystack.strip():
+        return False
+    has_not_found_marker = any(marker in haystack for marker in _REPORT_NOT_FOUND_MARKERS)
+    explicit_not_found = has_not_found_marker and (
+        ("not found" in haystack and ("specific report" in haystack or "target report" in haystack))
+        or "0 matches found" in haystack
+        or "no matches found" in haystack
+        or "could not find" in haystack
+        or "unable to find" in haystack
+    )
+    if not explicit_not_found:
+        return False
+    if not candidate_title:
+        return True
+    return candidate_title in haystack or "specific report" in haystack or "target report" in haystack
+
+
+def _agent_result_indicates_report_not_found(
+    *,
+    request: BrowserReportDownloadRequest,
+    agent_result: BrowserUseAgentResult,
+    final_url: str,
+) -> bool:
+    route_steps = _normalize_agent_route_steps_for_completeness(agent_result)
+    return _looks_like_report_not_found_terminal(
+        request=request,
+        route_summary=str(agent_result.route_summary or "").strip(),
+        route_steps=route_steps,
+        final_url=final_url,
+        terminal_text_excerpt=str(agent_result.terminal_text_excerpt or "").strip(),
+    )
+
+
+def _ensure_onsite_capture_artifact(
+    *,
+    request: BrowserReportDownloadRequest,
+    normalized_url: str,
+    download_dir: Path,
+    final_url: str,
+    final_page_title: str,
+    terminal_text_excerpt: str,
+    route_steps: list[BrowserDownloadRouteStep],
+    browser_html: str,
+    onsite_capture_path: str | None,
+    onsite_capture_format: str | None,
+) -> tuple[str | None, str | None]:
+    existing_path = str(onsite_capture_path or "").strip()
+    if existing_path and Path(existing_path).is_file():
+        return existing_path, onsite_capture_format
+    if str(browser_html or "").strip():
+        capture_path = _safe_onsite_capture_path(
+            download_dir=download_dir,
+            claimed_path=existing_path,
+            final_url=final_url,
+            suffix=".html",
+        )
+        capture_path.parent.mkdir(parents=True, exist_ok=True)
+        capture_path.write_text(str(browser_html or ""), encoding="utf-8")
+        return str(capture_path), str(onsite_capture_format or "html").strip() or "html"
+    capture_text = str(terminal_text_excerpt or "").strip()
+    extracted_text = _extract_onsite_capture_text_from_steps(route_steps)
+    if len(extracted_text) > len(capture_text):
+        capture_text = extracted_text
+    if not _looks_like_onsite_report_text(
+        request=request,
+        final_url=final_url,
+        final_page_title=final_page_title,
+        terminal_text_excerpt=capture_text,
+    ):
+        return onsite_capture_path, onsite_capture_format
+    capture_path = _safe_onsite_capture_path(
+        download_dir=download_dir,
+        claimed_path=existing_path,
+        final_url=final_url,
+        suffix=".md",
+    )
+    capture_path.parent.mkdir(parents=True, exist_ok=True)
+    capture_path.write_text(capture_text, encoding="utf-8")
+    return str(capture_path), str(onsite_capture_format or "markdown").strip() or "markdown"
+
+
+def _extract_onsite_capture_text_from_steps(
+    route_steps: list[BrowserDownloadRouteStep],
+) -> str:
+    candidates: list[str] = []
+    for step in route_steps:
+        action = str(step.action or "").strip().casefold()
+        result = str(step.result or "").strip()
+        if not result:
+            continue
+        if action == "extract" or len(result) >= 500:
+            candidates.append(result)
+    if not candidates:
+        return ""
+    candidates.sort(key=len, reverse=True)
+    return candidates[0]
+
+
+def _safe_onsite_capture_path(
+    *,
+    download_dir: Path,
+    claimed_path: str,
+    final_url: str,
+    suffix: str,
+) -> Path:
+    download_root = download_dir.resolve()
+    if claimed_path:
+        candidate = Path(claimed_path).expanduser()
+        try:
+            resolved_candidate = candidate.resolve()
+            if resolved_candidate.is_relative_to(download_root):
+                return resolved_candidate
+        except OSError:
+            pass
+    stem = Path(urlsplit(final_url or "onsite_report").path).stem or "onsite_report"
+    return download_root / f"{stem}{suffix}"
+
+
+def _looks_like_onsite_report_text(
+    *,
+    request: BrowserReportDownloadRequest,
+    final_url: str,
+    final_page_title: str,
+    terminal_text_excerpt: str,
+) -> bool:
+    text = str(terminal_text_excerpt or "").strip()
+    if len(text) < 500:
+        return False
+    haystack = " ".join(
+        [
+            str(final_url or ""),
+            str(final_page_title or ""),
+            text,
+            str(request.candidate_trace.title or "") if request.candidate_trace else "",
+        ]
+    ).casefold()
+    if _contains_non_report_page_marker(haystack):
+        return False
+    return any(marker in haystack for marker in _ONPAGE_REPORT_MARKERS)
+
+
+def _contains_non_report_page_marker(text: str) -> bool:
+    lowered = str(text or "").casefold()
+    if not lowered:
+        return False
+    for marker in _NON_REPORT_PAGE_MARKERS:
+        pattern = rf"(?<![a-z0-9]){re.escape(marker)}(?![a-z0-9])"
+        if re.search(pattern, lowered):
+            return True
+    return False
 
 
 def _prefer_onsite_capture_over_optional_form_submission(
@@ -2189,7 +2434,7 @@ def _likely_onsite_report_context_without_html(
 ) -> bool:
     haystack = " ".join([str(final_url or "").strip(), str(final_page_title or "").strip()]).casefold()
     has_report_marker = any(marker in haystack for marker in _ONPAGE_REPORT_MARKERS)
-    has_non_report_marker = any(marker in haystack for marker in _NON_REPORT_PAGE_MARKERS)
+    has_non_report_marker = _contains_non_report_page_marker(haystack)
     if not has_report_marker or has_non_report_marker:
         return False
     scroll_steps = [
@@ -2234,7 +2479,7 @@ def _classify_route_result(
     if downloaded_path is not None:
         return "downloaded", "verified", confirmation_signal_count
     if route_kind == "onsite_report":
-        if not onsite_capture_path:
+        if not onsite_capture_path or not Path(onsite_capture_path).is_file():
             raise AppError(
                 code="browser_download_onsite_capture_missing",
                 message="browser-use classified the route as an on-site report but no local capture artifact was found",
@@ -2295,6 +2540,19 @@ def _confirmation_evidence_verifies_email_delivery(
     confirmation_evidence: BrowserDownloadConfirmationEvidence,
 ) -> bool:
     signal_labels = set(confirmation_evidence.signal_labels)
+    if _message_indicates_transient_submit_state(
+        confirmation_evidence.visible_confirmation_text
+    ) and not (
+        signal_labels
+        & {
+            "delivery_text",
+            "success_text",
+            "success_url",
+            "form_disappeared",
+            "network_confirmation_request",
+        }
+    ):
+        return False
     return _count_confirmation_signals(confirmation_evidence) >= 2 and (
         "submit_observed" in signal_labels
         or any(marker in signal_labels for marker in _VERIFIED_EMAIL_SIGNAL_MARKERS)
@@ -2333,6 +2591,17 @@ def _build_confirmation_signal_labels(
 def _message_indicates_email_delivery(message: str) -> bool:
     token = str(message or "").strip().casefold()
     if not token:
+        return False
+    if any(
+        marker in token
+        for marker in (
+            "fill out the form",
+            "fill out form",
+            "form below",
+            "complete the form",
+            "submit the form",
+        )
+    ):
         return False
     email_markers = ("email", "inbox", "mailbox", "mail")
     delivery_markers = (
@@ -2728,7 +2997,7 @@ def _looks_like_non_report_terminal(
         ]
     ).casefold()
     has_report_signal = any(marker in combined for marker in _ONPAGE_REPORT_MARKERS)
-    has_non_report_signal = any(marker in combined for marker in _NON_REPORT_PAGE_MARKERS)
+    has_non_report_signal = _contains_non_report_page_marker(combined)
     has_marketing_signal = any(marker in combined for marker in _MARKETING_MARKERS)
     if has_non_report_signal and not has_report_signal:
         return True
@@ -2739,9 +3008,11 @@ def _looks_like_non_report_terminal(
         if request.candidate_trace is not None
         else ""
     )
-    return bool(candidate_title) and any(
-        marker in candidate_title for marker in _NON_REPORT_PAGE_MARKERS
-    ) and not any(marker in candidate_title for marker in _ONPAGE_REPORT_MARKERS)
+    return (
+        bool(candidate_title)
+        and _contains_non_report_page_marker(candidate_title)
+        and not any(marker in candidate_title for marker in _ONPAGE_REPORT_MARKERS)
+    )
 
 
 def _looks_like_onsite_report_html(
@@ -2755,7 +3026,7 @@ def _looks_like_onsite_report_html(
     final_title = str(agent_result.final_page_title or "").casefold()
     final_excerpt = str(agent_result.terminal_text_excerpt or "").casefold()
     route_family = str(request.route_family_hint or agent_result.route_family or "").strip()
-    if any(marker in final_title for marker in _NON_REPORT_PAGE_MARKERS) and not any(
+    if _contains_non_report_page_marker(final_title) and not any(
         marker in final_title for marker in _ONPAGE_REPORT_MARKERS
     ):
         return False
@@ -2962,7 +3233,12 @@ def _resolve_downloaded_file(
     browser_downloaded_files: list[str],
     download_dir: Path,
 ) -> Path | None:
-    ignored_runtime_files = {"terminal_snapshot.html", "terminal_screenshot.png"}
+    ignored_runtime_files = {
+        "browser_agent_worker_request.json",
+        "browser_agent_worker_response.json",
+        "terminal_snapshot.html",
+        "terminal_screenshot.png",
+    }
     external_candidates: list[Path] = []
     local_candidates: list[Path] = []
     seen: set[Path] = set()

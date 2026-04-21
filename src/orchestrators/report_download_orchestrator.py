@@ -102,6 +102,24 @@ _REPORT_TITLE_MARKERS = {
     "insight",
     "analysis",
     "outlook",
+    "whitepaper",
+    "white paper",
+    "guide",
+    "playbook",
+    "trend",
+    "ebook",
+}
+_REPORT_RESOURCE_URL_MARKERS = {
+    "resource",
+    "resources",
+    "whitepaper",
+    "whitepapers",
+    "guide",
+    "guides",
+    "playbook",
+    "playbooks",
+    "ebook",
+    "ebooks",
 }
 _REPORT_SOURCE_PAGE_MARKERS = {
     "insights",
@@ -490,7 +508,7 @@ def _run_download_attempt(
         policy=policy,
         retry_event="report_download_retry",
         failure_event="report_download_attempt_failed",
-        is_retryable=lambda exc: _is_download_attempt_retryable(
+        is_retryable=lambda exc: _is_download_operation_retryable(
             exc=exc,
             planned_step=planned_step,
         ),
@@ -513,6 +531,28 @@ def _is_download_attempt_retryable(
             "browser_download_agent_timeout",
             "browser_download_route_summary_too_weak",
         }
+    ):
+        return False
+    return True
+
+
+def _is_download_operation_retryable(
+    *,
+    exc: Exception,
+    planned_step: ReportDownloadRoutePlanStep,
+) -> bool:
+    if not _is_download_attempt_retryable(exc=exc, planned_step=planned_step):
+        return False
+    if not isinstance(exc, AppError):
+        return False
+    if (
+        planned_step.route_family in {"direct_pdf_probe", "http_pdf_probe"}
+        and exc.code == "browser_download_http_probe_failed"
+    ):
+        return False
+    if (
+        planned_step.route_family.startswith("browser_")
+        and exc.code == "browser_download_pdf_fetch_failed"
     ):
         return False
     return True
@@ -630,6 +670,9 @@ def _evaluate_candidate_download_readiness(
     if any(marker in url_value for marker in _REPORT_TITLE_MARKERS):
         score += 0.25
         signals.append("report_url_marker")
+    if any(marker in url_value for marker in _REPORT_RESOURCE_URL_MARKERS):
+        score += 0.15
+        signals.append("report_resource_url_marker")
     if any(
         any(marker in page for marker in _REPORT_SOURCE_PAGE_MARKERS)
         for page in source_pages

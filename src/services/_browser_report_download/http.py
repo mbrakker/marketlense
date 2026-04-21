@@ -319,10 +319,10 @@ def try_direct_onsite_capture(
         source_url=request.url,
         normalized_url=normalized_url,
         route_kind="onsite_report",
-        route_family=request.route_family_hint or "browser_onsite_report",
+        route_family="browser_onsite_report",
         route_status="verified",
         outcome="captured",
-        route_summary="Open the remembered on-site report URL and capture the HTML article directly.",
+        route_summary="Open the on-site report URL and capture the HTML article directly.",
         final_page_url=final_url,
         resolved_target_url=final_url,
         used_route_hint=bool(request.route_hint),
@@ -687,17 +687,60 @@ def download_pdf_from_url(
 def _should_try_direct_onsite_capture(
     request: BrowserReportDownloadRequest,
 ) -> bool:
-    if str(request.route_family_hint or "").strip() != "browser_onsite_report":
+    route_family = str(request.route_family_hint or "").strip()
+    route_kind = str(request.route_kind_hint or "").strip()
+    if route_family == "browser_onsite_report" and route_kind == "onsite_report":
+        if request.candidate_trace is not None:
+            return True
+        actions = {
+            str(step.action or "").strip().lower() for step in request.route_step_hints
+        }
+        if "extract" in actions:
+            return True
+        hint = str(request.route_hint or "").casefold()
+        return "extract" in hint or "capture" in hint
+    if (
+        request.candidate_trace is not None
+        and route_family == "browser_pdf_click"
+        and route_kind in {"", "pdf_download"}
+        and not str(request.candidate_trace.pdf_url or "").strip()
+    ):
+        return _looks_like_report_detail_candidate(request)
+    return False
+
+
+def _looks_like_report_detail_candidate(request: BrowserReportDownloadRequest) -> bool:
+    candidate = request.candidate_trace
+    target_url = str(
+        (candidate.canonical_url if candidate is not None else "")
+        or request.attempt_url
+        or request.url
+    ).strip()
+    path = str(urlsplit(target_url).path or "").strip().lower()
+    if not path or path.endswith(".pdf"):
         return False
-    if str(request.route_kind_hint or "").strip() != "onsite_report":
+    segments = [segment for segment in path.split("/") if segment]
+    if len(segments) < 2:
         return False
-    actions = {
-        str(step.action or "").strip().lower() for step in request.route_step_hints
+    last_segment_tokens = [token for token in segments[-1].split("-") if token]
+    if len(last_segment_tokens) < 2:
+        return False
+    title = str(candidate.title or "").casefold() if candidate is not None else ""
+    report_markers = {
+        "analysis",
+        "guide",
+        "insight",
+        "playbook",
+        "report",
+        "research",
+        "study",
+        "survey",
+        "trend",
+        "whitepaper",
     }
-    if "extract" in actions:
-        return True
-    hint = str(request.route_hint or "").casefold()
-    return "extract" in hint or "capture" in hint
+    return any(marker in path for marker in report_markers) or any(
+        marker in title for marker in report_markers
+    )
 
 
 def _looks_like_onsite_capture_html(html: str) -> bool:
@@ -705,14 +748,22 @@ def _looks_like_onsite_capture_html(html: str) -> bool:
     if not token.strip():
         return False
     lowered = token.casefold()
-    if any(marker in lowered for marker in _ONSITE_CAPTURE_BLOCKED_MARKERS):
-        return False
     plain_text = _html_to_text(token)
+    plain_lowered = plain_text.casefold()
+    if any(marker in plain_lowered for marker in _ONSITE_CAPTURE_BLOCKED_MARKERS):
+        return False
     if len(plain_text) < 800:
         return False
     if "<article" in lowered:
         return True
-    return any(marker in plain_text.casefold() for marker in _ONSITE_CAPTURE_HTML_MARKERS)
+    strong_non_article_markers = {
+        "complete report",
+        "full report",
+        "read the report",
+    }
+    return any(marker in plain_lowered for marker in strong_non_article_markers) and any(
+        marker in plain_lowered for marker in _ONSITE_CAPTURE_HTML_MARKERS
+    )
 
 
 def _extract_html_title(html: str) -> str:

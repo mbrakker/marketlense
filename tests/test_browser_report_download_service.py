@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import tempfile
 import time
 from dataclasses import replace
 from pathlib import Path
@@ -1029,6 +1030,88 @@ def test_download_report_with_browser_use_adopts_external_pdf_attachment(
     assert downloaded_path.read_bytes().startswith(b"%PDF-")
 
 
+def test_download_report_with_browser_use_materializes_browser_use_temp_pdf_before_cleanup(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="Open the report page and save the report PDF.",
+        create_pdf=False,
+        email_submission_completed=None,
+    )
+    original_runtime = runtime.Agent
+
+    class TempAttachmentAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            self.browser.url = "https://example.com/temp-report"
+            self.browser.title = "Temp attachment report"
+            temp_dir = (
+                Path(tempfile.gettempdir())
+                / f"browseruse-tmp-market-lense-test-{tmp_path.name}"
+            )
+            temp_dir.mkdir(parents=True, exist_ok=True)
+            pdf_path = temp_dir / "temp-report.pdf"
+            pdf_path.write_bytes(b"%PDF-1.7 temp attachment")
+            payload = {
+                "route_kind": "pdf_download",
+                "route_summary": "Saved the report PDF through browser-use.",
+                "final_page_url": "https://example.com/temp-report",
+                "resolved_target_url": "https://example.com/temp-report",
+                "email_submission_completed": None,
+                "downloaded_file_path": str(pdf_path),
+                "downloaded_file_name": "temp-report.pdf",
+                "downloaded_mime_type": "application/pdf",
+                "encountered_form_fields": [],
+                "post_submit_message": "",
+                "route_steps": [
+                    {
+                        "index": 1,
+                        "action": "download",
+                        "target_text": "Download PDF",
+                        "target_role": "link",
+                        "target_url": "https://example.com/temp-report",
+                        "result": "Saved temp-report.pdf",
+                    },
+                ],
+            }
+
+            class TempAttachmentHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+                def action_results(self_nonlocal) -> list[Any]:
+                    return [SimpleNamespace(attachments=[str(pdf_path)])]
+
+            return TempAttachmentHistory()
+
+    runtime.Agent = TempAttachmentAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/temp-report",
+            settings=_settings(tmp_path),
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "pdf_download"
+    assert response.outcome == "downloaded"
+    downloaded_path = Path(str(response.downloaded_file_path))
+    assert downloaded_path.exists()
+    assert str(tmp_path / "downloads") in str(downloaded_path)
+    assert downloaded_path.name == "temp-report.pdf"
+    assert downloaded_path.read_bytes().startswith(b"%PDF-")
+
+
 def test_download_report_with_browser_use_raises_for_unverified_pdf_claim_with_spurious_blocker(
     tmp_path: Path,
     run_context,
@@ -1600,6 +1683,141 @@ def test_download_report_with_browser_use_short_circuits_remembered_onsite_extra
         event.get("event") == "browser_report_download_direct_onsite_attempt_complete"
         for event in service_events
     )
+
+
+def test_download_report_with_browser_use_short_circuits_planned_onsite_candidate_to_direct_html_capture(
+    tmp_path: Path,
+    caplog,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    class FakeResponse:
+        status_code = 200
+        headers = {"content-type": "text/html; charset=utf-8"}
+        url = "https://example.com/commerce-content/report-guide"
+        text = (
+            "<html><head><title>High Performance Content Operations Guide</title></head>"
+            "<body><article><h1>High Performance Content Operations Guide</h1>"
+            "<p>Content operations workflow research and benchmark findings.</p>"
+            "<p>" + ("Operational insight. " * 140) + "</p>"
+            "</article></body></html>"
+        )
+
+    external_boundary_mocks_only.setattr(
+        http_runtime.requests,
+        "get",
+        lambda *args, **kwargs: FakeResponse(),
+    )
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: (_ for _ in ()).throw(
+            AssertionError("browser runtime should not start for planned onsite HTML capture")
+        ),
+    )
+    caplog.set_level(logging.INFO, logger=service.logger.name)
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/commerce-content/report-guide",
+            settings=_settings(tmp_path),
+            candidate_trace=PublisherInventoryCandidateTrace(
+                schema_version="1.0",
+                canonical_url="https://example.com/commerce-content/report-guide",
+                title="High Performance Content Operations Guide",
+                discovered_on_page_number=18,
+                source_page_urls=["https://example.com/search?ft%5B0%5D=report&pg=18"],
+                discovery_provenances=[],
+                pdf_url=None,
+                published_at_text=None,
+                max_confidence=0.8,
+            ),
+            route_kind_hint="onsite_report",
+            route_family_hint="browser_onsite_report",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "onsite_report"
+    assert response.outcome == "captured"
+    assert response.browser_had_structured_result is False
+    assert response.used_candidate_source_page is False
+    assert response.onsite_capture_path is not None
+    capture_path = Path(str(response.onsite_capture_path))
+    assert capture_path.exists()
+    assert "Operational insight." in capture_path.read_text(encoding="utf-8")
+    service_events = [
+        json.loads(record.message)
+        for record in caplog.records
+        if record.name == service.logger.name
+    ]
+    assert any(
+        event.get("event") == "browser_report_download_direct_onsite_attempt_complete"
+        for event in service_events
+    )
+
+
+def test_download_report_with_browser_use_probes_report_detail_candidate_for_direct_onsite_capture(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    class FakeResponse:
+        status_code = 200
+        headers = {"content-type": "text/html; charset=utf-8"}
+        url = "https://data.example/reports/digital-2022-example"
+        text = (
+            "<html><head><title>Digital 2022 Example</title>"
+            "<script>window.grecaptcha = { execute: function() {} };</script>"
+            "</head><body><article><h1>Digital 2022 Example</h1>"
+            "<p>This page contains the complete report findings.</p>"
+            "<p>" + ("Market adoption insight. " * 160) + "</p>"
+            "</article></body></html>"
+        )
+
+    external_boundary_mocks_only.setattr(
+        http_runtime.requests,
+        "get",
+        lambda *args, **kwargs: FakeResponse(),
+    )
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: (_ for _ in ()).throw(
+            AssertionError("browser runtime should not start for direct article capture")
+        ),
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://data.example/reports/digital-2022-example",
+            settings=_settings(tmp_path),
+            candidate_trace=PublisherInventoryCandidateTrace(
+                schema_version="1.0",
+                canonical_url="https://data.example/reports/digital-2022-example",
+                title="Digital 2022 Example Report",
+                discovered_on_page_number=53,
+                source_page_urls=["https://data.example/reports?offset=123"],
+                discovery_provenances=[],
+                pdf_url=None,
+                published_at_text=None,
+                max_confidence=0.8,
+            ),
+            route_kind_hint=None,
+            route_family_hint="browser_pdf_click",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "onsite_report"
+    assert response.route_family == "browser_onsite_report"
+    assert response.outcome == "captured"
+    assert response.onsite_capture_path is not None
+    capture_path = Path(str(response.onsite_capture_path))
+    assert capture_path.exists()
+    assert "Market adoption insight." in capture_path.read_text(encoding="utf-8")
 
 
 def test_download_report_with_browser_use_recovers_embedded_pdf_from_encoded_wrapper(
@@ -4175,6 +4393,332 @@ def test_download_report_with_browser_use_salvages_terminal_state_on_timeout(
     assert response.route_kind == "pdf_download"
     assert response.outcome == "downloaded"
     assert response.downloaded_file_path.endswith("timed-out-report.pdf")
+
+
+def test_download_report_with_browser_use_prefetches_structured_pdf_url_before_cleanup(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="Open the report page and click Download.",
+        create_pdf=False,
+        email_submission_completed=True,
+    )
+    original_runtime = runtime.Agent
+    signed_pdf_url = (
+        "https://cdn.example.com/assets/report.pdf?"
+        "X-Amz-Expires=120&X-Amz-Signature=abc123"
+    )
+
+    class SignedPdfAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            payload = json.loads(history.final_result())
+            payload["resolved_target_url"] = signed_pdf_url
+            payload["final_page_url"] = signed_pdf_url
+            payload["downloaded_file_name"] = "report.pdf"
+            payload["downloaded_mime_type"] = "application/pdf"
+            payload["route_steps"] = [
+                {
+                    "index": 0,
+                    "action": "click",
+                    "target_text": "Download",
+                    "target_role": "button",
+                    "target_url": signed_pdf_url,
+                    "result": "Opened the signed PDF URL.",
+                }
+            ]
+            self.browser.url = signed_pdf_url
+            self.browser.title = "report.pdf"
+            self.browser.html = ""
+
+            class SignedPdfHistory:
+                def final_result(self) -> str:
+                    return json.dumps(payload)
+
+                def action_results(self) -> list[Any]:
+                    return []
+
+            return SignedPdfHistory()
+
+    def _download_pdf_from_url(**kwargs) -> None:
+        assert kwargs["pdf_url"] == signed_pdf_url
+        Path(kwargs["destination_path"]).write_bytes(b"%PDF-1.7 signed")
+
+    runtime.Agent = SignedPdfAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "download_pdf_from_url",
+        _download_pdf_from_url,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_pdf_click",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "pdf_download"
+    assert response.outcome == "downloaded"
+    assert response.downloaded_file_path is not None
+    assert Path(response.downloaded_file_path).read_bytes().startswith(b"%PDF-")
+
+
+def test_download_report_with_browser_use_materializes_claimed_onsite_capture(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="onsite_report",
+        route_summary="Navigated to the report URL and captured the on-site content.",
+        create_pdf=False,
+        email_submission_completed=False,
+    )
+    original_runtime = runtime.Agent
+    long_report_excerpt = (
+        "Local RankFlux research report analysis. "
+        "This report studies ranking volatility across industries. "
+        * 30
+    )
+
+    class ClaimedOnsiteAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            payload = json.loads(history.final_result())
+            claimed_path = Path(self.browser.downloads_path) / "onsite_report.md"
+            payload["route_kind"] = "onsite_report"
+            payload["route_family"] = "browser_tracker_redirect"
+            payload["final_page_url"] = "https://example.com/research/local-rankflux"
+            payload["resolved_target_url"] = "https://example.com/research/local-rankflux"
+            payload["terminal_text_excerpt"] = long_report_excerpt
+            payload["onsite_capture_path"] = str(claimed_path)
+            payload["onsite_capture_format"] = "markdown"
+            payload["onsite_page_count"] = 1
+            payload["onsite_completeness_status"] = "complete"
+            self.browser.url = "https://example.com/research/local-rankflux"
+            self.browser.title = "Local RankFlux Research Report"
+            self.browser.html = ""
+
+            class ClaimedOnsiteHistory:
+                def final_result(self) -> str:
+                    return json.dumps(payload)
+
+                def action_results(self) -> list[Any]:
+                    return []
+
+            return ClaimedOnsiteHistory()
+
+    runtime.Agent = ClaimedOnsiteAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/research/local-rankflux",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_tracker_redirect",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "onsite_report"
+    assert response.outcome == "captured"
+    assert response.onsite_capture_path is not None
+    assert Path(response.onsite_capture_path).read_text(encoding="utf-8").startswith(
+        "Local RankFlux research report analysis."
+    )
+
+
+def test_download_report_with_browser_use_ignores_worker_metadata_when_materializing_onsite_extract(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="onsite_report",
+        route_summary="Opened the report page and extracted on-site report content.",
+        create_pdf=False,
+        email_submission_completed=None,
+    )
+    original_runtime = runtime.Agent
+    extracted_report = (
+        "# The Single Age\n"
+        "The Single Age report explores a global multi-generational cohort. "
+        "The report discusses self-expression, independence, and authenticity. "
+        "This report includes original infographics, case studies, trends, "
+        "and implications for brands and marketers. "
+        * 20
+    )
+
+    class ExtractedOnsiteAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            payload = json.loads(history.final_result())
+            claimed_path = Path(self.browser.downloads_path) / "The Single Age.md"
+            (Path(self.browser.downloads_path) / "browser_agent_worker_response.json").write_text(
+                "{}",
+                encoding="utf-8",
+            )
+            payload["route_kind"] = "onsite_report"
+            payload["route_family"] = "browser_pdf_click"
+            payload["final_page_url"] = "https://www.vml.com/insight/the-single-age"
+            payload["resolved_target_url"] = "https://www.vml.com/insight/the-single-age"
+            payload["terminal_text_excerpt"] = "The Single Age"
+            payload["onsite_capture_path"] = str(claimed_path)
+            payload["onsite_capture_format"] = "md"
+            payload["onsite_page_count"] = 167
+            payload["onsite_completeness_status"] = "complete"
+            payload["route_steps"] = [
+                {
+                    "index": 13,
+                    "action": "extract",
+                    "target_text": "Extract the full content of the report.",
+                    "target_role": "page",
+                    "target_url": "https://www.vml.com/insight/the-single-age",
+                    "result": extracted_report,
+                }
+            ]
+            self.browser.url = "https://www.vml.com/insight/the-single-age"
+            self.browser.title = "The Single Age"
+            self.browser.html = ""
+
+            class ExtractedOnsiteHistory:
+                def final_result(self) -> str:
+                    return json.dumps(payload)
+
+                def action_results(self) -> list[Any]:
+                    return []
+
+            return ExtractedOnsiteHistory()
+
+    runtime.Agent = ExtractedOnsiteAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://www.vml.com/insight/new-trend-report-the-single-age",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_pdf_click",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "onsite_report"
+    assert response.outcome == "captured"
+    assert response.onsite_capture_path is not None
+    capture_path = Path(response.onsite_capture_path)
+    assert capture_path.exists()
+    assert capture_path.name == "The Single Age.md"
+    assert "self-expression" in capture_path.read_text(encoding="utf-8")
+    assert "original infographics" in capture_path.read_text(encoding="utf-8")
+    assert response.downloaded_file_path is None
+
+
+def test_download_report_with_browser_use_rejects_report_not_found_listing(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+    assert_app_error,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="onsite_report",
+        route_summary="Navigated to reports library, but the specific report was not found.",
+        create_pdf=False,
+        email_submission_completed=False,
+    )
+    original_runtime = runtime.Agent
+
+    class NotFoundListingAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            payload = json.loads(history.final_result())
+            payload["route_kind"] = "onsite_report"
+            payload["route_family"] = "browser_listing_hub"
+            payload["final_page_url"] = "https://datareportal.com/reports/?tag=Digital+2022"
+            payload["resolved_target_url"] = "https://datareportal.com/reports/?tag=Digital+2022"
+            payload["terminal_text_excerpt"] = "POSTS TAGGED DIGITAL 2022 Digital 2022: Tuvalu"
+            payload["route_steps"] = [
+                {
+                    "index": 0,
+                    "action": "search_page",
+                    "target_text": "Digital 2022: Wallis and Futuna",
+                    "target_role": "page",
+                    "target_url": "https://datareportal.com/reports/?tag=Digital+2022",
+                    "result": 'Searched page for "Digital 2022: Wallis and Futuna": 0 matches found.',
+                }
+            ]
+            self.browser.url = "https://datareportal.com/reports/?tag=Digital+2022"
+            self.browser.title = "Posts tagged Digital 2022"
+            self.browser.html = "<html><body>POSTS TAGGED DIGITAL 2022</body></html>"
+
+            class NotFoundHistory:
+                def final_result(self) -> str:
+                    return json.dumps(payload)
+
+                def action_results(self) -> list[Any]:
+                    return []
+
+            return NotFoundHistory()
+
+    runtime.Agent = NotFoundListingAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        service.download_report_with_browser_use(
+            BrowserReportDownloadRequest(
+                schema_version="1.0",
+                url="https://datareportal.com/reports/digital-2022-wallis-and-futuna",
+                settings=_settings(tmp_path),
+                route_family_hint="browser_listing_hub",
+                candidate_trace=PublisherInventoryCandidateTrace(
+                    schema_version="1.0",
+                    canonical_url="https://datareportal.com/reports/digital-2022-wallis-and-futuna",
+                    title="Digital 2022: Wallis and Futuna",
+                    discovered_on_page_number=53,
+                    source_page_urls=["https://datareportal.com/reports?offset=1658385029582"],
+                    discovery_provenances=[],
+                    pdf_url=None,
+                    published_at_text=None,
+                    max_confidence=0.8,
+                ),
+            ),
+            run_context,
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="browser_download_report_not_found",
+        retryable=False,
+    )
 
 
 def test_download_report_with_browser_use_recovers_lookup_before_completed_history_shutdown(

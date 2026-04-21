@@ -43,6 +43,225 @@ def test_plan_report_download_routes_prefers_email_form_for_tracker_redirect(
     )
 
 
+def test_plan_report_download_routes_does_not_treat_yougov_as_tracker_host(
+    run_context,
+) -> None:
+    response = plan_report_download_routes(
+        ReportDownloadRoutePlanRequest(
+            schema_version="1.0",
+            normalized_url="https://yougov.com/reports/51871-european-retail-landscape-report-en-2025",
+            remembered_route=None,
+            candidate_trace=PublisherInventoryCandidateTrace(
+                schema_version="1.0",
+                canonical_url="https://yougov.com/reports/51871-european-retail-landscape-report-en-2025",
+                title="European Retail Landscape Report 2025",
+                discovered_on_page_number=3,
+                source_page_urls=["https://yougov.com/reports"],
+                discovery_provenances=[],
+                pdf_url=None,
+                published_at_text=None,
+                max_confidence=0.8,
+            ),
+            publisher_discovery_route_kind=None,
+            publisher_recommended_discovery_route_kind=None,
+        ),
+        run_context,
+    )
+
+    assert response.steps[-1].route_family == "browser_pdf_click"
+    assert response.steps[-1].attempt_url == (
+        "https://yougov.com/reports/51871-european-retail-landscape-report-en-2025"
+    )
+
+
+def test_plan_report_download_routes_keeps_algorithm_research_url_on_onsite_route(
+    run_context,
+) -> None:
+    response = plan_report_download_routes(
+        ReportDownloadRoutePlanRequest(
+            schema_version="1.0",
+            normalized_url=(
+                "https://www.brightlocal.com/research/"
+                "november-2025-local-consumer-review-survey/"
+            ),
+            remembered_route=None,
+            candidate_trace=PublisherInventoryCandidateTrace(
+                schema_version="1.0",
+                canonical_url=(
+                    "https://www.brightlocal.com/research/"
+                    "november-2025-local-consumer-review-survey/"
+                ),
+                title="November 2025 Local Consumer Review Survey",
+                discovered_on_page_number=4,
+                source_page_urls=[
+                    "https://www.brightlocal.com/research/page/4/",
+                ],
+                discovery_provenances=[],
+                pdf_url=None,
+                published_at_text=None,
+                max_confidence=0.78,
+            ),
+            publisher_discovery_route_kind=None,
+            publisher_recommended_discovery_route_kind=None,
+        ),
+        run_context,
+    )
+
+    assert response.steps[-1].route_family == "browser_onsite_report"
+    assert response.steps[-1].attempt_url == (
+        "https://www.brightlocal.com/research/"
+        "november-2025-local-consumer-review-survey/"
+    )
+
+
+def test_plan_report_download_routes_ignores_weak_email_memory_for_onsite_research_url(
+    run_context,
+) -> None:
+    response = plan_report_download_routes(
+        ReportDownloadRoutePlanRequest(
+            schema_version="1.0",
+            normalized_url=(
+                "https://www.brightlocal.com/research/"
+                "november-2019-local-algorithm-fluctuation"
+            ),
+            remembered_route=PublisherDownloadRouteMemory(
+                schema_version="1.0",
+                route_kind="email_delivery",
+                route_summary="Navigated to the report URL and captured the on-site content.",
+                outcome="email_required",
+                route_family="browser_email_form",
+                route_status="inferred",
+                resolved_target_url=(
+                    "https://www.brightlocal.com/research/"
+                    "november-2019-local-algorithm-fluctuation"
+                ),
+                attempts=1,
+                verified_successes=0,
+                last_n_outcomes=["email_required"],
+                confidence_score=0.25,
+                browser_had_structured_result=True,
+                onsite_completeness_status="partial",
+            ),
+            candidate_trace=PublisherInventoryCandidateTrace(
+                schema_version="1.0",
+                canonical_url=(
+                    "https://www.brightlocal.com/research/"
+                    "november-2019-local-algorithm-fluctuation"
+                ),
+                title="Are We Experiencing a Local Algorithm Update?",
+                discovered_on_page_number=4,
+                source_page_urls=["https://www.brightlocal.com/research/page/4"],
+                discovery_provenances=[],
+                pdf_url=None,
+                published_at_text=None,
+                max_confidence=0.8,
+            ),
+            publisher_discovery_route_kind=None,
+            publisher_recommended_discovery_route_kind=None,
+        ),
+        run_context,
+    )
+
+    assert response.steps[-1].route_family == "browser_onsite_report"
+    assert response.steps[-1].uses_memory_route is False
+
+
+def test_plan_report_download_routes_treats_reports_slug_as_detail_page(
+    run_context,
+) -> None:
+    response = plan_report_download_routes(
+        ReportDownloadRoutePlanRequest(
+            schema_version="1.0",
+            normalized_url="https://www.gwi.com/reports/south-africa-consumers",
+            remembered_route=None,
+            candidate_trace=PublisherInventoryCandidateTrace(
+                schema_version="1.0",
+                canonical_url="https://www.gwi.com/reports/south-africa-consumers",
+                title="Understanding consumers in South Africa",
+                discovered_on_page_number=8,
+                source_page_urls=["https://www.gwi.com/reports?page_num=8"],
+                discovery_provenances=[],
+                pdf_url=None,
+                published_at_text=None,
+                max_confidence=0.8,
+            ),
+            publisher_discovery_route_kind=None,
+            publisher_recommended_discovery_route_kind=None,
+        ),
+        run_context,
+    )
+
+    assert response.steps[-1].route_family == "browser_pdf_click"
+    assert response.steps[-1].attempt_url == "https://www.gwi.com/reports/south-africa-consumers"
+
+
+def test_plan_report_download_routes_treats_guide_article_as_onsite_report(
+    run_context,
+) -> None:
+    response = plan_report_download_routes(
+        ReportDownloadRoutePlanRequest(
+            schema_version="1.0",
+            normalized_url=(
+                "https://impact.com/commerce-content/"
+                "guide-to-building-a-high-performance-content-operation"
+            ),
+            remembered_route=None,
+            candidate_trace=PublisherInventoryCandidateTrace(
+                schema_version="1.0",
+                canonical_url=(
+                    "https://impact.com/commerce-content/"
+                    "guide-to-building-a-high-performance-content-operation"
+                ),
+                title="The B2B Guide to Building a High-Performance Content Operations Workflow",
+                discovered_on_page_number=18,
+                source_page_urls=["https://impact.com/search?ft%5B0%5D=report&pg=18"],
+                discovery_provenances=[],
+                pdf_url=None,
+                published_at_text=None,
+                max_confidence=0.8,
+            ),
+            publisher_discovery_route_kind=None,
+            publisher_recommended_discovery_route_kind=None,
+        ),
+        run_context,
+    )
+
+    assert response.steps[-1].route_family == "browser_onsite_report"
+    assert response.steps[-1].route_kind_hint == "onsite_report"
+
+
+def test_plan_report_download_routes_treats_singular_insight_detail_as_onsite_report(
+    run_context,
+) -> None:
+    response = plan_report_download_routes(
+        ReportDownloadRoutePlanRequest(
+            schema_version="1.0",
+            normalized_url="https://www.vml.com/insight/new-trend-report-the-single-age",
+            remembered_route=None,
+            candidate_trace=PublisherInventoryCandidateTrace(
+                schema_version="1.0",
+                canonical_url="https://www.vml.com/insight/new-trend-report-the-single-age",
+                title="New trend report: The Single Age",
+                discovered_on_page_number=2,
+                source_page_urls=["https://www.vml.com/expertise/intelligence/trend-reports"],
+                discovery_provenances=[],
+                pdf_url=None,
+                published_at_text=None,
+                max_confidence=0.8,
+            ),
+            publisher_discovery_route_kind=None,
+            publisher_recommended_discovery_route_kind=None,
+        ),
+        run_context,
+    )
+
+    assert response.steps[-1].route_family == "browser_onsite_report"
+    assert response.steps[-1].route_kind_hint == "onsite_report"
+    assert response.steps[-1].attempt_url == (
+        "https://www.vml.com/insight/new-trend-report-the-single-age"
+    )
+
+
 def test_plan_report_download_routes_does_not_reuse_weak_salvaged_memory(
     run_context,
 ) -> None:

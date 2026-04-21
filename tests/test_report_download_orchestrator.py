@@ -550,6 +550,83 @@ def test_run_report_download_does_not_retry_timed_out_browser_step(
     assert failure_events[-1]["fields"]["retryable"] is False
 
 
+def test_run_report_download_does_not_retry_failed_http_probe_before_browser_fallback(
+    tmp_path: Path,
+    caplog,
+    run_context,
+) -> None:
+    settings = _settings(tmp_path)
+    calls: list[str] = []
+
+    def _download(req, ctx):
+        route_family = req.route_family_hint or ""
+        calls.append(route_family)
+        if route_family == "http_pdf_probe":
+            raise AppError(
+                code="browser_download_http_probe_failed",
+                message="The planned HTTP probe did not produce a valid PDF artifact",
+                retryable=True,
+                context={"normalized_url": req.url},
+            )
+        return _result(
+            url=req.url,
+            used_route_hint=False,
+            path=str(Path(settings.output_dir) / "report.pdf"),
+        )
+
+    deps = ReportDownloadDependencies(
+        download_report_with_browser_use=_download,
+        get_publisher_download_route=lambda req, ctx: None,
+        record_publisher_download_route=lambda req, ctx: None,
+        file_md5=lambda req, ctx: FileHashResponse(
+            schema_version="1.0",
+            path=req.path,
+            md5="abc123",
+        ),
+        record_report_source=lambda req, ctx: ReportSourceRecordResponse(
+            schema_version="1.0",
+            record_id=1,
+            source_domain=req.source_domain,
+            report_name=req.report_name,
+            landing_page_url=req.landing_page_url,
+            downloaded_at_utc=req.downloaded_at_utc,
+            md5=req.md5,
+        ),
+        upsert_browser_download_identity_fields=lambda req, ctx: type(
+            "IdentityUpdate",
+            (),
+            {
+                "path": settings.identity_config_path,
+                "added_field_keys": [],
+                "total_fields": len(settings.identity_profile.fields),
+            },
+        )(),
+        sleep_fn=lambda seconds: None,
+    )
+    caplog.set_level(logging.INFO, logger="market_lense.report_download_orchestrator")
+
+    response = run_report_download(
+        ReportDownloadOrchestratorRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=settings,
+            state_db=settings.state_db,
+            reports_db=settings.reports_db,
+        ),
+        ctx=run_context,
+        dependencies=deps,
+    )
+
+    assert response.outcome == "downloaded"
+    assert calls == ["http_pdf_probe", "browser_pdf_click"]
+    retry_events = [
+        event
+        for event in _events(caplog, "market_lense.report_download_orchestrator")
+        if event.get("event") == "report_download_retry"
+    ]
+    assert retry_events == []
+
+
 def test_run_report_download_does_not_fallback_after_non_retryable_memory_browser_timeout(
     tmp_path: Path,
     caplog,
@@ -1182,6 +1259,104 @@ def test_run_report_download_rejects_non_report_candidate_with_typed_reason(
     assert len(readiness_events) == 1
     assert readiness_events[0]["fields"]["readiness_rejection_reason"] == "candidate_rejected_non_report"
     assert readiness_events[0]["fields"]["download_readiness_score"] < 0.35
+
+
+def test_run_report_download_allows_report_like_resource_candidates(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    settings = _settings(tmp_path)
+    candidates = [
+        PublisherInventoryCandidateTrace(
+            schema_version="1.0",
+            canonical_url="https://www.centricsoftware.com/whitepapers/new-growth-playbook-swimwear-lingerie",
+            title="New Growth Playbook",
+            discovered_on_page_number=1,
+            source_page_urls=["https://www.centricsoftware.com/learning-tools"],
+            discovery_provenances=[],
+            pdf_url=None,
+            published_at_text=None,
+            max_confidence=None,
+        ),
+        PublisherInventoryCandidateTrace(
+            schema_version="1.0",
+            canonical_url="https://impact.com/commerce-content/guide-to-building-a-high-performance-content-operation",
+            title="The B2B Guide to Building a High-Performance Content Operations Workflow",
+            discovered_on_page_number=18,
+            source_page_urls=["https://impact.com/search?ft%5B0%5D=infographic&ft%5B1%5D=report&pg=18"],
+            discovery_provenances=[],
+            pdf_url=None,
+            published_at_text=None,
+            max_confidence=None,
+        ),
+        PublisherInventoryCandidateTrace(
+            schema_version="1.0",
+            canonical_url="https://business.adobe.com/resources/sdk/the-state-of-personalization-maturity-in-travel-and-dining.html",
+            title="Digital-first travel brands drive more personalization",
+            discovered_on_page_number=14,
+            source_page_urls=["https://business.adobe.com/resources/reports.html?page=14"],
+            discovery_provenances=[],
+            pdf_url=None,
+            published_at_text=None,
+            max_confidence=None,
+        ),
+    ]
+    seen_urls: list[str] = []
+
+    def _download(req, ctx):
+        seen_urls.append(req.url)
+        return _result(
+            url=req.url,
+            used_route_hint=False,
+            path=str(Path(settings.output_dir) / "report.pdf"),
+        )
+
+    deps = ReportDownloadDependencies(
+        download_report_with_browser_use=_download,
+        get_publisher_download_route=lambda req, ctx: None,
+        record_publisher_download_route=lambda req, ctx: None,
+        file_md5=lambda req, ctx: FileHashResponse(
+            schema_version="1.0",
+            path=req.path,
+            md5="abc123",
+        ),
+        record_report_source=lambda req, ctx: ReportSourceRecordResponse(
+            schema_version="1.0",
+            record_id=1,
+            source_domain=req.source_domain,
+            report_name=req.report_name,
+            landing_page_url=req.landing_page_url,
+            downloaded_at_utc=req.downloaded_at_utc,
+            md5=req.md5,
+        ),
+        upsert_browser_download_identity_fields=lambda req, ctx: type(
+            "IdentityUpdate",
+            (),
+            {
+                "path": settings.identity_config_path,
+                "added_field_keys": [],
+                "total_fields": len(settings.identity_profile.fields),
+            },
+        )(),
+        sleep_fn=lambda seconds: None,
+    )
+
+    for candidate_trace in candidates:
+        response = run_report_download(
+            ReportDownloadOrchestratorRequest(
+                schema_version="1.0",
+                url=candidate_trace.canonical_url,
+                settings=settings,
+                state_db=settings.state_db,
+                reports_db=settings.reports_db,
+                candidate_trace=candidate_trace,
+            ),
+            ctx=run_context,
+            dependencies=deps,
+        )
+        assert response.outcome == "downloaded"
+
+    assert seen_urls == [candidate.canonical_url for candidate in candidates]
 
 
 def test_run_report_download_allows_thin_candidate_when_pdf_url_is_present(
