@@ -246,10 +246,12 @@ class _FakeResponse:
         content: bytes,
         status_code: int = 200,
         headers: dict[str, str] | None = None,
+        url: str = "",
     ) -> None:
         self._content = content
         self.status_code = status_code
         self.headers = headers or {}
+        self.url = url
 
     def __enter__(self) -> "_FakeResponse":
         return self
@@ -452,6 +454,122 @@ def test_download_report_with_browser_use_falls_back_from_invalid_direct_pdf(
     assert_no_defaulted_required_fields(response)
 
 
+def test_download_report_with_browser_use_short_circuits_report_page_pdf_link(
+    tmp_path: Path,
+    caplog,
+    run_context,
+    external_boundary_mocks_only,
+    assert_logs_have_required_fields,
+    assert_no_defaulted_required_fields,
+) -> None:
+    page_url = "https://example.com/2024-stanford-ai-index-report"
+    pdf_url = "https://example.com/hubfs/Stanford_HAI_2024_AI-Index-Report.pdf"
+    calls: list[str] = []
+
+    def fake_get(url: str, *args: Any, **kwargs: Any) -> _FakeResponse:
+        calls.append(url)
+        if url == pdf_url:
+            return _FakeResponse(
+                content=b"%PDF-1.7 report page pdf bytes",
+                headers={"Content-Type": "application/pdf"},
+            )
+        assert url == page_url
+        return _FakeResponse(
+            content=(
+                b"<html><head><title>Stanford AI Index Report</title></head>"
+                b"<body><a href=\"/hubfs/Stanford_HAI_2024_AI-Index-Report.pdf\">"
+                b"Download the Report</a></body></html>"
+            ),
+            headers={"Content-Type": "text/html; charset=utf-8"},
+        )
+
+    external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: (_ for _ in ()).throw(
+            AssertionError("browser runtime should not start for HTML PDF-link probe")
+        ),
+    )
+    caplog.set_level(logging.INFO, logger=service.logger.name)
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url=page_url,
+            settings=_settings(tmp_path),
+            route_family_hint="browser_pdf_click",
+            route_kind_hint="pdf_download",
+        ),
+        run_context,
+    )
+
+    assert calls == [page_url, pdf_url]
+    assert response.route_kind == "pdf_download"
+    assert response.route_family == "report_page_pdf_link_probe"
+    assert response.outcome == "downloaded"
+    assert response.route_steps[0].action == "open"
+    assert response.route_steps[1].action == "extract"
+    assert response.route_steps[1].target_url == pdf_url
+    assert response.terminal_evidence.traversed_page_urls == [page_url, pdf_url]
+    assert response.downloaded_file_path is not None
+    assert Path(response.downloaded_file_path).read_bytes().startswith(b"%PDF-")
+    assert_no_defaulted_required_fields(response)
+    assert_logs_have_required_fields(_service_events(caplog))
+
+
+def test_download_report_with_browser_use_ignores_unrelated_report_page_pdf_link(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+    assert_no_defaulted_required_fields,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="pdf_download",
+        route_summary="Open the landing page, click Download report, and wait for the PDF save to finish.",
+        create_pdf=True,
+        email_submission_completed=None,
+    )
+    browser_loaded = {"value": False}
+
+    def fake_get(url: str, *args: Any, **kwargs: Any) -> _FakeResponse:
+        return _FakeResponse(
+            content=(
+                b"<html><head><title>Ultimate Guide to SaaS Affiliate Marketing</title></head>"
+                b"<body><a href=\"https://impact.example.com/legal/"
+                b"impact-modern-slavery-statement.pdf\">"
+                b"Modern slavery statement</a></body></html>"
+            ),
+            headers={"Content-Type": "text/html; charset=utf-8"},
+        )
+
+    def load_runtime(module_name: str) -> Any:
+        browser_loaded["value"] = True
+        return runtime
+
+    external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
+    external_boundary_mocks_only.setattr(browser_runtime, "import_module", load_runtime)
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://impact.example.com/partnerships/ultimate-guide-to-saas-affiliate-marketing",
+            settings=_settings(tmp_path),
+            route_family_hint="browser_pdf_click",
+            route_kind_hint="pdf_download",
+        ),
+        run_context,
+    )
+
+    assert browser_loaded["value"] is True
+    assert response.route_family == "browser_pdf_click"
+    assert response.outcome == "downloaded"
+    assert response.downloaded_file_path is not None
+    assert Path(str(response.downloaded_file_path)).exists()
+    assert_no_defaulted_required_fields(response)
+
+
 def test_download_report_with_browser_use_short_circuits_known_access_challenge(
     tmp_path: Path,
     caplog,
@@ -486,7 +604,7 @@ def test_download_report_with_browser_use_short_circuits_known_access_challenge(
     response = service.download_report_with_browser_use(
         BrowserReportDownloadRequest(
             schema_version="1.0",
-            url="https://www.centricsoftware.com/whitepapers/report",
+            url="https://example.com/whitepapers/report",
             settings=_settings(tmp_path),
             route_family_hint="browser_email_form",
         ),
@@ -501,7 +619,7 @@ def test_download_report_with_browser_use_short_circuits_known_access_challenge(
     assert_logs_have_required_fields(_service_events(caplog))
 
 
-def test_download_report_with_browser_use_short_circuits_known_algolia_ebook_pdf(
+def test_download_report_with_browser_use_extracts_email_route_embedded_pdf_link(
     tmp_path: Path,
     caplog,
     run_context,
@@ -509,19 +627,32 @@ def test_download_report_with_browser_use_short_circuits_known_algolia_ebook_pdf
     assert_logs_have_required_fields,
     assert_no_defaulted_required_fields,
 ) -> None:
+    page_url = "https://example.com/resources/asset/ebook-transforming-search-ai"
+    pdf_url = "https://cdn.example.com/files/Ebook_transforming-search-ai_compressed.pdf"
     observed_urls: list[str] = []
 
     def fake_get(url: str, *args: Any, **kwargs: Any) -> _FakeResponse:
         observed_urls.append(url)
+        if url == pdf_url:
+            return _FakeResponse(
+                content=b"%PDF-1.7 embedded ebook",
+                status_code=200,
+                headers={"Content-Type": "application/pdf"},
+            )
+        assert url == page_url
         return _FakeResponse(
-            content=b"%PDF-1.7 algolia ebook",
+            content=(
+                b"<html><body><a href=\"https://cdn.example.com/files/"
+                b"Ebook_transforming-search-ai_compressed.pdf\">"
+                b"Download ebook</a></body></html>"
+            ),
             status_code=200,
-            headers={"Content-Type": "application/pdf"},
+            headers={"Content-Type": "text/html; charset=utf-8"},
         )
 
     def fail_if_browser_loaded(module_name: str) -> Any:
         raise AssertionError(
-            f"browser runtime should not load for known Algolia ebook: {module_name}"
+            f"browser runtime should not load for embedded PDF link: {module_name}"
         )
 
     external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
@@ -535,7 +666,7 @@ def test_download_report_with_browser_use_short_circuits_known_algolia_ebook_pdf
     response = service.download_report_with_browser_use(
         BrowserReportDownloadRequest(
             schema_version="1.0",
-            url="https://www.algolia.com/resources/asset/ebook-transforming-search-ai",
+            url=page_url,
             settings=_settings(tmp_path),
             route_family_hint="browser_email_form",
         ),
@@ -544,13 +675,8 @@ def test_download_report_with_browser_use_short_circuits_known_algolia_ebook_pdf
 
     assert response.route_kind == "pdf_download"
     assert response.outcome == "downloaded"
-    assert response.route_family == "known_publisher_pdf_probe"
-    assert observed_urls == [
-        (
-            "https://www.algolia.com/files/live/sites/www/files/ebooks/"
-            "Ebook_transforming-search-ai_compressed.pdf"
-        )
-    ]
+    assert response.route_family == "report_page_pdf_link_probe"
+    assert observed_urls == [page_url, pdf_url]
     assert response.downloaded_file_path is not None
     assert_no_defaulted_required_fields(response)
     assert_logs_have_required_fields(_service_events(caplog))
@@ -4520,7 +4646,7 @@ def test_download_report_with_browser_use_times_out_stalled_agent(
         service.download_report_with_browser_use(
             BrowserReportDownloadRequest(
                 schema_version="1.0",
-                url="https://www.centricsoftware.com/whitepapers/eu-cosmetics-regulations-foundations-plm",
+                url="https://example.com/whitepapers/eu-cosmetics-regulations-foundations-plm",
                 settings=settings,
                 route_family_hint="browser_pdf_click",
             ),

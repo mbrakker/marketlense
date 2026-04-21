@@ -17,7 +17,7 @@ from src.services._browser_report_download.browser import (
 from src.services._browser_report_download.http import try_direct_pdf_download
 from src.services._browser_report_download.http import try_direct_onsite_capture
 from src.services._browser_report_download.http import try_http_access_challenge_probe
-from src.services._browser_report_download.http import try_known_publisher_pdf_download
+from src.services._browser_report_download.http import try_report_page_pdf_link_download
 from src.services._browser_report_download.prompt import (
     render_browser_report_download_prompt,
 )
@@ -120,6 +120,24 @@ def download_report_with_browser_use(
                 )
             )
             return direct_pdf_result
+        report_page_pdf_link_result = try_report_page_pdf_link_download(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            download_dir=download_dir,
+            page_url=normalized_execution_url,
+        )
+        if report_page_pdf_link_result is not None:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="browser_report_download_complete",
+                    module=logger.name,
+                    fields=asdict(report_page_pdf_link_result),
+                )
+            )
+            return report_page_pdf_link_result
         if request.route_family_hint in {"direct_pdf_probe", "http_pdf_probe"}:
             raise AppError(
                 code="browser_download_http_probe_failed",
@@ -135,6 +153,25 @@ def download_report_with_browser_use(
             root_dir=request.settings.output_dir,
             normalized_url=normalized_url,
         )
+
+    report_page_pdf_link_result = try_report_page_pdf_link_download(
+        request=request,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        download_dir=download_dir,
+        page_url=normalized_execution_url,
+    )
+    if report_page_pdf_link_result is not None:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_complete",
+                module=logger.name,
+                fields=asdict(report_page_pdf_link_result),
+            )
+        )
+        return report_page_pdf_link_result
 
     direct_onsite_result = try_direct_onsite_capture(
         request=request,
@@ -154,25 +191,6 @@ def download_report_with_browser_use(
             )
         )
         return direct_onsite_result
-
-    known_publisher_pdf_result = try_known_publisher_pdf_download(
-        request=request,
-        ctx=ctx,
-        normalized_url=normalized_url,
-        download_dir=download_dir,
-        page_url=normalized_execution_url,
-    )
-    if known_publisher_pdf_result is not None:
-        logger.info(
-            log_event(
-                ctx,
-                role="service",
-                event="browser_report_download_complete",
-                module=logger.name,
-                fields=asdict(known_publisher_pdf_result),
-            )
-        )
-        return known_publisher_pdf_result
 
     if request.route_family_hint == "browser_email_form":
         access_challenge_result = try_http_access_challenge_probe(

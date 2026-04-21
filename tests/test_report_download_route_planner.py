@@ -17,15 +17,15 @@ def test_plan_report_download_routes_prefers_email_form_for_tracker_redirect(
             schema_version="1.0",
             normalized_url=(
                 "https://trk.example.com/click?redirect="
-                "https%3A%2F%2Fwww.algolia.com%2Fresources%2Fasset%2Fwhy-agentic-ai-is-your-next-priority"
+                "https%3A%2F%2Fexample.com%2Fresources%2Fasset%2Fwhy-agentic-ai-is-your-next-priority"
             ),
             remembered_route=None,
             candidate_trace=PublisherInventoryCandidateTrace(
                 schema_version="1.0",
                 canonical_url="https://trk.example.com/click?id=123",
-                title="Algolia asset",
+                title="Report asset",
                 discovered_on_page_number=1,
-                source_page_urls=["https://www.algolia.com/resources"],
+                source_page_urls=["https://example.com/resources"],
                 discovery_provenances=["browser_dom"],
                 pdf_url=None,
                 published_at_text=None,
@@ -39,7 +39,7 @@ def test_plan_report_download_routes_prefers_email_form_for_tracker_redirect(
 
     assert response.steps[0].route_family == "browser_email_form"
     assert response.steps[0].attempt_url == (
-        "https://www.algolia.com/resources/asset/why-agentic-ai-is-your-next-priority"
+        "https://example.com/resources/asset/why-agentic-ai-is-your-next-priority"
     )
 
 
@@ -74,26 +74,26 @@ def test_plan_report_download_routes_does_not_treat_yougov_as_tracker_host(
     )
 
 
-def test_plan_report_download_routes_sends_known_centric_whitepaper_to_email_form(
+def test_plan_report_download_routes_sends_generic_whitepaper_to_email_form(
     run_context,
 ) -> None:
     response = plan_report_download_routes(
         ReportDownloadRoutePlanRequest(
             schema_version="1.0",
             normalized_url=(
-                "https://www.centricsoftware.com/whitepapers/"
+                "https://example.com/whitepapers/"
                 "the-right-aisle-strategy-for-retail-success/"
             ),
             remembered_route=None,
             candidate_trace=PublisherInventoryCandidateTrace(
                 schema_version="1.0",
                 canonical_url=(
-                    "https://www.centricsoftware.com/whitepapers/"
+                    "https://example.com/whitepapers/"
                     "the-right-aisle-strategy-for-retail-success/"
                 ),
                 title="The Right Aisle Strategy for Retail Success",
                 discovered_on_page_number=1,
-                source_page_urls=["https://www.centricsoftware.com/whitepapers/"],
+                source_page_urls=["https://example.com/whitepapers/"],
                 discovery_provenances=[],
                 pdf_url=None,
                 published_at_text=None,
@@ -405,19 +405,19 @@ def test_plan_report_download_routes_uses_direct_detail_url_instead_of_source_li
         ReportDownloadRoutePlanRequest(
             schema_version="1.0",
             normalized_url=(
-                "https://www.harriswilliams.com/our-insights/"
+                "https://example.com/our-insights/"
                 "bs-commercial-industrial-services-m-and-a-trends-q1-2026"
             ),
             remembered_route=None,
             candidate_trace=PublisherInventoryCandidateTrace(
                 schema_version="1.0",
                 canonical_url=(
-                    "https://www.harriswilliams.com/our-insights/"
+                    "https://example.com/our-insights/"
                     "bs-commercial-industrial-services-m-and-a-trends-q1-2026"
                 ),
                 title="Commercial & Industrial Services",
                 discovered_on_page_number=1,
-                source_page_urls=["https://www.harriswilliams.com/our-insights"],
+                source_page_urls=["https://example.com/our-insights"],
                 discovery_provenances=[],
                 pdf_url=None,
                 published_at_text=None,
@@ -431,7 +431,7 @@ def test_plan_report_download_routes_uses_direct_detail_url_instead_of_source_li
 
     assert response.steps[-1].route_family == "browser_pdf_click"
     assert response.steps[-1].attempt_url == (
-        "https://www.harriswilliams.com/our-insights/"
+        "https://example.com/our-insights/"
         "bs-commercial-industrial-services-m-and-a-trends-q1-2026"
     )
 
