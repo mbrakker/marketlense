@@ -1,8 +1,62 @@
 from __future__ import annotations
 
+from dataclasses import MISSING, fields, is_dataclass
+from typing import Any, Iterable
+
 from src.contracts.candidates import Candidate
 from src.contracts.report_models import ReportPayload
 from src.contracts.validation import ValidationIssue, ValidationReport
+from src.utils.errors import AppError
+
+
+def assert_required_dataclass_fields_populated(
+    obj: Any,
+    *,
+    contract_name: str | None = None,
+    sentinel_values: Iterable[str] = (),
+) -> None:
+    if not is_dataclass(obj):
+        raise AppError(
+            code="contract_validation_type_error",
+            message="Expected a dataclass contract instance.",
+            retryable=False,
+            context={"contract": contract_name or type(obj).__name__},
+        )
+
+    sentinels = {
+        str(value).strip().lower() for value in sentinel_values if str(value).strip()
+    }
+    missing: list[str] = []
+    for field_def in fields(obj):
+        is_required = (
+            field_def.default is MISSING and field_def.default_factory is MISSING
+        )
+        if not is_required:
+            continue
+        value = getattr(obj, field_def.name)
+        if _is_defaulted_required_value(value, sentinels):
+            missing.append(field_def.name)
+
+    if missing:
+        name = contract_name or type(obj).__name__
+        raise AppError(
+            code="contract_required_field_missing",
+            message=f"{name} required fields are empty/defaulted: {', '.join(missing)}",
+            retryable=False,
+            severity="error",
+            context={"contract": name, "fields": missing},
+        )
+
+
+def _is_defaulted_required_value(value: Any, sentinel_values: set[str]) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        return not normalized or normalized in sentinel_values
+    if isinstance(value, (list, tuple, dict, set)):
+        return len(value) == 0
+    return False
 
 
 def validate_report_payload(payload: ReportPayload) -> None:
@@ -19,9 +73,13 @@ def validate_report_payload(payload: ReportPayload) -> None:
     if len(payload.categories) > 3:
         raise ValueError("ReportPayload.categories must contain at most 3 items")
     if payload.region is None:
-        raise ValueError("ReportPayload.region is required (use empty string if unknown)")
+        raise ValueError(
+            "ReportPayload.region is required (use empty string if unknown)"
+        )
     if payload.time_period is None:
-        raise ValueError("ReportPayload.time_period is required (use empty string if unknown)")
+        raise ValueError(
+            "ReportPayload.time_period is required (use empty string if unknown)"
+        )
     if not payload.quote.text:
         raise ValueError("ReportPayload.quote.text is required")
     if not payload.figure.title and not payload.figure.evidence:

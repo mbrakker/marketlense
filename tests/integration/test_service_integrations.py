@@ -16,12 +16,17 @@ except ModuleNotFoundError:  # pragma: no cover - depends on PyMuPDF packaging a
 
 from src.contracts.drive import DriveListRequest
 from src.contracts.llm import LLMClientPolicy
-from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIPdfOcrRequest
+from src.contracts.openai import (
+    OpenAIJSONPromptRequest,
+    OpenAIPdfOcrRequest,
+    OpenAIResponseRequest,
+)
 from src.contracts.pdf_text import PdfTextExtractRequest
 from src.contracts.pdf_utils import PdfInfoRequest
 from src.contracts.run_context import RunContext
 from src.contracts.vector_store import (
     VectorStoreCreateRequest,
+    VectorStoreMetadata,
     VectorStoreStatusRequest,
 )
 from src.contracts.wordpress import (
@@ -225,10 +230,14 @@ def test_vector_store_service_live_guarded():
     create = vector_store_service.create_vector_store(
         VectorStoreCreateRequest(
             schema_version="1.0",
-            report_id="integration-vector-store",
-            file_name="integration.pdf",
-            metadata={"purpose": "integration_test"},
-            api_key=api_key,
+            name="integration.pdf",
+            metadata=VectorStoreMetadata(
+                schema_version="1.0",
+                report_id="integration-vector-store",
+                report_name="integration.pdf",
+                taxonomy=[],
+                categories=[],
+            ),
         ),
         _ctx(),
     )
@@ -236,7 +245,6 @@ def test_vector_store_service_live_guarded():
         VectorStoreStatusRequest(
             schema_version="1.0",
             vector_store_id=create.vector_store_id,
-            api_key=api_key,
         ),
         _ctx(),
     )
@@ -303,11 +311,12 @@ def test_llm_service_wraps_openai_service_retry_and_backoff(
         sleep_fn=lambda seconds: sleep_calls.append(float(seconds)),
     )
 
-    response = client.openai_chat_json(
-        request=OpenAIJSONPromptRequest(
+    response = client.openai_respond_with_vector_store(
+        OpenAIResponseRequest(
             schema_version="1.0",
             system_prompt="Return JSON only",
             user_prompt='{"ping":"pong"}',
+            vector_store_id="vs_123",
             model="gpt-4.1-mini",
             temperature=0.0,
             api_key="openai-key",
@@ -316,7 +325,7 @@ def test_llm_service_wraps_openai_service_retry_and_backoff(
             cost_daily_path=str(tmp_path / "daily.json"),
             model_pricing={},
         ),
-        ctx=_ctx(),
+        _ctx(),
     )
 
     assert response.parsed_json == {"ok": True}

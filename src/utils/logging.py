@@ -5,6 +5,12 @@ import re
 from typing import Any, Dict
 from uuid import uuid4
 
+from src.contracts.logging import (
+    LOG_EVENT_ROLES,
+    LOG_EVENT_SCHEMA_VERSION,
+    REQUIRED_LOG_EVENT_FIELDS,
+    LogEventValidationResult,
+)
 from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import RunId, TaskId
 
@@ -48,7 +54,9 @@ SENSITIVE_KEYS = {
 _OPENAI_KEY_RX = re.compile(r"sk-[A-Za-z0-9]{20,}")
 _BEARER_RX = re.compile(r"(?i)bearer\s+[A-Za-z0-9._-]+")
 _EMAIL_RX = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
-_PHONE_RX = re.compile(r"\b(?:\+?\d{1,3}[-.\s]?)?(?:\(\d{2,4}\)|\d{2,4})[-.\s]?\d{3}[-.\s]?\d{4}\b")
+_PHONE_RX = re.compile(
+    r"\b(?:\+?\d{1,3}[-.\s]?)?(?:\(\d{2,4}\)|\d{2,4})[-.\s]?\d{3}[-.\s]?\d{4}\b"
+)
 _SSN_RX = re.compile(r"\b\d{3}-\d{2}-\d{4}\b")
 
 
@@ -116,3 +124,46 @@ def log_event(
             "fields": {"error": "log serialization failed"},
         }
         return json.dumps(fallback, ensure_ascii=True)
+
+
+def validate_log_event_payload(
+    payload: str | dict[str, Any],
+) -> LogEventValidationResult:
+    try:
+        data: Any = json.loads(payload) if isinstance(payload, str) else payload
+    except json.JSONDecodeError:
+        return LogEventValidationResult(
+            schema_version=LOG_EVENT_SCHEMA_VERSION,
+            valid=False,
+            missing_fields=tuple(sorted(REQUIRED_LOG_EVENT_FIELDS)),
+            invalid_fields=("json",),
+        )
+    if not isinstance(data, dict):
+        return LogEventValidationResult(
+            schema_version=LOG_EVENT_SCHEMA_VERSION,
+            valid=False,
+            missing_fields=tuple(sorted(REQUIRED_LOG_EVENT_FIELDS)),
+            invalid_fields=("payload",),
+        )
+
+    missing = tuple(
+        sorted(field for field in REQUIRED_LOG_EVENT_FIELDS if field not in data)
+    )
+    invalid: list[str] = []
+    for field in REQUIRED_LOG_EVENT_FIELDS:
+        value = data.get(field)
+        if field in data and not str(value or "").strip():
+            invalid.append(field)
+    role = str(data.get("role") or "").strip()
+    if role and role not in LOG_EVENT_ROLES:
+        invalid.append("role")
+    fields_value = data.get("fields")
+    if fields_value is not None and not isinstance(fields_value, dict):
+        invalid.append("fields")
+
+    return LogEventValidationResult(
+        schema_version=LOG_EVENT_SCHEMA_VERSION,
+        valid=not missing and not invalid,
+        missing_fields=missing,
+        invalid_fields=tuple(sorted(set(invalid))),
+    )

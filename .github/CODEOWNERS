@@ -1,0 +1,11 @@
+* @marketlense/core-maintainers
+
+/src/contracts/ @marketlense/platform-quality
+/src/schemas/ @marketlense/platform-quality
+/src/services/ @marketlense/platform-services
+/src/generators/ @marketlense/platform-generation
+/src/orchestrators/ @marketlense/platform-control-plane
+/src/prompts/ @marketlense/prompt-quality
+/scripts/ci/ @marketlense/platform-quality
+/.github/ @marketlense/platform-quality
+/Wordpress/ @marketlense/wordpress

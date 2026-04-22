@@ -449,6 +449,45 @@ def test_openai_response_with_vector_store_reads_later_text_blocks(fake_openai) 
     assert result.request_id == "resp_multiblock_1"
 
 
+def test_openai_response_with_vector_store_ignores_empty_output_text(
+    fake_openai,
+) -> None:
+    fake_openai.add(
+        "responses.create",
+        SimpleNamespace(
+            output_text="",
+            output=[
+                SimpleNamespace(
+                    content=[
+                        SimpleNamespace(text='{"result":"fallback"}'),
+                    ],
+                )
+            ],
+            usage=SimpleNamespace(
+                input_tokens=11,
+                output_tokens=7,
+                total_tokens=18,
+            ),
+            id="resp_empty_output_text",
+        ),
+    )
+    req = OpenAIResponseRequest(
+        schema_version="1.0",
+        system_prompt="system",
+        user_prompt="user",
+        vector_store_id="vs_123",
+        model="gpt-4.1-mini",
+        temperature=0.1,
+        api_key="key",
+    )
+
+    result = svc.openai_respond_with_vector_store(req, _ctx())
+
+    assert result.text == '{"result":"fallback"}'
+    assert result.parsed_json == {"result": "fallback"}
+    assert result.request_id == "resp_empty_output_text"
+
+
 def test_openai_vector_store_create_success(
     fake_openai,
     caplog,

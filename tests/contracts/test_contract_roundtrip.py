@@ -102,8 +102,8 @@ def _build_dataclass(contract_cls: type, stack: tuple[type, ...]) -> Any:
         if field.default is not MISSING:
             values[field.name] = field.default
             continue
-        if field.default_factory is not MISSING:  # type: ignore[comparison-overlap]
-            values[field.name] = field.default_factory()  # type: ignore[misc]
+        if field.default_factory is not MISSING:
+            values[field.name] = field.default_factory()
             continue
         annotation = hints.get(field.name, field.type)
         values[field.name] = _build_value(annotation, field.name, stack)
@@ -174,3 +174,15 @@ def test_contract_dataclass_roundtrip(contract_cls: type) -> None:
     payload = asdict(instance)
     reconstructed = _from_plain(contract_cls, payload)
     assert reconstructed == instance
+
+
+@pytest.mark.parametrize(
+    "contract_cls",
+    _contract_dataclasses(),
+    ids=lambda cls: f"{cls.__module__}.{cls.__name__}",
+)
+def test_contract_dataclasses_expose_schema_version(contract_cls: type) -> None:
+    field_by_name = {field.name: field for field in fields(contract_cls)}
+
+    assert "schema_version" in field_by_name
+    assert "doc" in field_by_name["schema_version"].metadata

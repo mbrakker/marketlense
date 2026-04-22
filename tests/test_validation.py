@@ -1,16 +1,49 @@
 import unittest
+from dataclasses import dataclass, field
 
-from src.contracts.validation import ValidationReport
 from src.contracts.candidates import Candidate
 from src.contracts.report_models import Figure, Quote, ReportPayload
+from src.contracts.validation import ValidationReport
+from src.utils.errors import AppError
 from src.utils.validation import (
+    assert_required_dataclass_fields_populated,
     parse_validation_report_payload,
     validate_candidate,
     validate_report_payload,
 )
 
 
+@dataclass(frozen=True)
+class _ExampleContract:
+    schema_version: str = field(metadata={"doc": "Schema version."})
+    name: str = field(metadata={"doc": "Required name."})
+    optional_note: str = ""
+
+
 class TestValidation(unittest.TestCase):
+    def test_required_dataclass_field_guard_rejects_defaulted_required_field(
+        self,
+    ) -> None:
+        with self.assertRaises(AppError) as exc:
+            assert_required_dataclass_fields_populated(
+                _ExampleContract(schema_version="1.0", name="unknown"),
+                sentinel_values={"unknown"},
+            )
+
+        self.assertEqual(exc.exception.code, "contract_required_field_missing")
+        self.assertFalse(exc.exception.retryable)
+        self.assertEqual(
+            exc.exception.context,
+            {"contract": "_ExampleContract", "fields": ["name"]},
+        )
+
+    def test_required_dataclass_field_guard_accepts_populated_required_fields(
+        self,
+    ) -> None:
+        assert_required_dataclass_fields_populated(
+            _ExampleContract(schema_version="1.0", name="Market Lense")
+        )
+
     def test_validate_report_payload_ok(self) -> None:
         payload = ReportPayload(
             tldr="tldr",
@@ -48,6 +81,7 @@ class TestValidation(unittest.TestCase):
         )
         with self.assertRaises(ValueError):
             validate_report_payload(payload)
+
     def test_validate_candidate_ok(self) -> None:
         cand = Candidate(
             schema_version="1.0",

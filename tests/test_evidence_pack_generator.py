@@ -263,6 +263,22 @@ def test_generate_evidence_packs_success(tmp_path):
     assert packs["doc_map"]["doc_id"] == "d1"
 
 
+def test_generate_evidence_packs_creates_context_when_missing(tmp_path):
+    parsed = {"doc_id": "d1", "title": "title", "sections": []}
+    fake_openai = FakeOpenAIClient(parsed)
+    packs = generate_evidence_packs(
+        report_id="r1",
+        report_name="report",
+        vector_store_id="vs_1",
+        settings=_settings(tmp_path),
+        openai_client=fake_openai,
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert packs["doc_map"]["doc_id"] == "d1"
+
+
 def test_generate_evidence_packs_logs_prompt_observability_and_raw_response(
     tmp_path, caplog, assert_logs_have_required_fields
 ):
@@ -273,7 +289,9 @@ def test_generate_evidence_packs_logs_prompt_observability_and_raw_response(
         vector_store_id="vs_1",
         settings=_settings(tmp_path),
         ctx=_ctx(),
-        openai_client=FakeOpenAIClient({"doc_id": "d1", "title": "title", "sections": []}),
+        openai_client=FakeOpenAIClient(
+            {"doc_id": "d1", "title": "title", "sections": []}
+        ),
         prompt_client=FakePromptClient(),
         analysis_store=FakeAnalysisStore(),
     )
@@ -294,7 +312,9 @@ def test_generate_evidence_packs_logs_prompt_observability_and_raw_response(
     assert len(events) >= 2
     assert_logs_have_required_fields(events)
     rendered = next(
-        event for event in events if event.get("event") == "evidence_pack_prompt_rendered"
+        event
+        for event in events
+        if event.get("event") == "evidence_pack_prompt_rendered"
     )
     rendered_fields = rendered["fields"]
     assert rendered_fields["namespace"] == "report_vs/doc_map"
@@ -599,7 +619,9 @@ def test_generate_evidence_packs_derives_docmap_publisher_from_document_title(
 ):
     parsed = {
         "document_title": "Media Reactions (APAC) — Kantar 2025",
-        "sections": [{"title": "Introduction", "summary": "Context and study framing."}],
+        "sections": [
+            {"title": "Introduction", "summary": "Context and study framing."}
+        ],
     }
     fake_openai = FakeOpenAIClient(parsed)
     analysis_store = FakeAnalysisStore()

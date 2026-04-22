@@ -1,13 +1,13 @@
 {
-  "min_score_default": 50.0,
+  "min_score_default": 60.0,
   "schema_version": "1.0",
   "targets": [
     {
-      "killed": 3,
-      "min_score": 50.0,
+      "killed": 1,
+      "min_score": 60.0,
       "module": "src/orchestrators/publish_queue_orchestrator.py",
-      "score": 75.0,
-      "total": 4
+      "score": 100.0,
+      "total": 1
     },
     {
       "killed": 3,
@@ -45,11 +45,11 @@
       "total": 3
     },
     {
-      "killed": 2,
+      "killed": 3,
       "min_score": 60.0,
       "module": "src/services/drive_service.py",
       "score": 100.0,
-      "total": 2
+      "total": 3
     },
     {
       "killed": 3,

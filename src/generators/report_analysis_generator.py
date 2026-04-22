@@ -439,25 +439,20 @@ def complete_report_analysis(
         log_event(
             runtime.ctx,
             role="generator",
-            event="report_analysis_delegate",
+            event="invalid_generator_entrypoint",
             module=logger.name,
             fields={
                 "file_id": runtime.file.file_id,
-                "delegated_to": "src.orchestrators.report_analysis_orchestrator.run_report_analysis",
+                "expected_entrypoint": "src.orchestrators.report_analysis_orchestrator.run_report_analysis",
             },
         )
     )
-    from src.orchestrators.report_analysis_orchestrator import run_report_analysis
-
-    return run_report_analysis(
-        runtime,
-        source,
-        selection,
-        indexing_state,
-        dependencies,
-        evidence_pack_openai_client=evidence_pack_openai_client,
-        artifact_openai_client=artifact_openai_client,
-    )
-    analysis_pdf_path = (
-        source.analysis_pdf_path if source is not None else runtime.local_pdf_path
+    raise AppError(
+        code="invalid_generator_entrypoint",
+        message=(
+            "Report analysis sequencing belongs to "
+            "src.orchestrators.report_analysis_orchestrator.run_report_analysis."
+        ),
+        retryable=False,
+        context={"file_id": runtime.file.file_id},
     )

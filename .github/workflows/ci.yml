@@ -24,10 +24,16 @@ jobs:
           pip install -r requirements-dev.txt
       - name: Format check
         run: python scripts/ci/check_formatting.py
+      - name: Classify change risk
+        run: python scripts/ci/check_risk_policy.py
       - name: Type check
         run: python scripts/ci/run_type_check.py
+      - name: Architecture import gate
+        run: python scripts/ci/check_architecture_imports.py
       - name: Forbidden patching gate
         run: python scripts/ci/check_forbidden_patching.py
+      - name: Contract schema snapshot gate
+        run: python scripts/ci/check_contract_schemas.py --snapshot docs/quality/contract_schemas.json
       - name: WordPress subproject checks
         run: python scripts/ci/check_wordpress_subproject.py
       - name: Run default pytest suite with coverage

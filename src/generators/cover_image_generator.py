@@ -13,7 +13,7 @@ from src.contracts.cover_images import (
     CoverStyleLoadRequest,
 )
 from src.contracts.run_context import RunContext
-from src.services.cover_image_service import render_cover_image
+from src.services import cover_image_service
 from src.services.cover_style_service import load_cover_styles
 from src.utils.cover_path_utils import build_cover_asset_path
 from src.utils.errors import AppError
@@ -199,7 +199,7 @@ def generate_cover_images(
         output_path = str(output_path_obj)
 
         try:
-            render_cover_image(
+            cover_image_service.render_cover_image(
                 CoverImageRenderRequest(
                     schema_version="1.0",
                     output_path=output_path,

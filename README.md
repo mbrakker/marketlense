@@ -886,13 +886,22 @@ RUN_OPENAI_OCR_INTEGRATION=1 OPENAI_API_KEY=... pytest -m integration tests/inte
 CI gates (see `.github/workflows/ci.yml`):
 
 - `python scripts/ci/check_formatting.py` (format gate, `ruff format --check` over changed Python files under `src`, `tests`, `scripts`; skips when no Python files changed unless `FORMAT_PATHS` is set)
+- `python scripts/ci/check_risk_policy.py` (diff-aware risk classifier; exports stricter coverage/mutation thresholds for contract and critical-layer changes in GitHub Actions)
 - `python scripts/ci/run_type_check.py` (type gate, `mypy` over changed Python files under `src`, `tests`, `scripts/ci`; skips when no Python files changed unless `TYPECHECK_PATHS` is set)
+- `python scripts/ci/check_architecture_imports.py` (static cross-layer import gate for contracts/services/generators/orchestrators/utils)
 - `python scripts/ci/check_forbidden_patching.py` (fails on private-helper/dataclass-constructor patching patterns in tests)
+- `python scripts/ci/check_contract_schemas.py --snapshot docs/quality/contract_schemas.json` (dataclass contract schema snapshot gate; run with `--update` after approved contract changes)
 - `python -m pytest --cov=src --cov-report=xml --cov-report=term-missing` (default suite excludes integration tests and includes the direct-I/O boundary gate in `tests/test_io_boundaries.py`)
 - `python scripts/ci/check_coverage.py --coverage-xml coverage.xml` (global + per-critical-package thresholds)
 - `python scripts/ci/run_mutation_gate.py --json-out mutation_results.json` (mutation score gate for critical generators/services/orchestrators)
 - `python scripts/ci/check_quality_regression.py --baseline docs/quality/baseline_2026-02-21.json --coverage-xml coverage.xml --mutation-json mutation_results.json --docpack-root tests/fixtures/docpacks/golden --candidate-root tests/fixtures/candidate_extraction/golden` (baseline non-regression gate)
 - `python scripts/quality/compare_candidate_goldens.py --golden-root "<golden-root-1>" --golden-root "<golden-root-2>" --output-root out/candidate_golden_compare_current` (exact candidate ID/bbox/crop-hash comparison against manually curated candidate goldens)
+- `python scripts/quality/run_health_scorecard.py <log_path> --run-id <run-id>` (local/live-run health summary for latency, retries, validation failures, and cost warnings)
+
+PR governance:
+
+- `.github/CODEOWNERS` assigns review ownership by bounded context.
+- `.github/pull_request_template.md` includes the mandatory architecture and validation checklist.
 
 ---
 

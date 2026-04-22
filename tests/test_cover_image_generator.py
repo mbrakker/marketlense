@@ -5,6 +5,7 @@ import pytest
 from src.contracts.cover_images import CoverImageGenerationRequest, CoverImageReport
 from src.contracts.run_context import RunContext
 from src.generators.cover_image_generator import generate_cover_images
+from src.services import cover_image_service
 from src.utils.errors import AppError
 
 
@@ -35,7 +36,7 @@ def _request(tmp_path: Path) -> CoverImageGenerationRequest:
 
 
 def test_generate_cover_images_propagates_retryable_render_error(
-    tmp_path, monkeypatch, assert_app_error
+    tmp_path, external_boundary_mocks_only, assert_app_error
 ):
     def _raise_retryable(request, ctx):
         del request, ctx
@@ -45,9 +46,8 @@ def test_generate_cover_images_propagates_retryable_render_error(
             retryable=True,
         )
 
-    monkeypatch.setattr(
-        "src.generators.cover_image_generator.render_cover_image",
-        _raise_retryable,
+    external_boundary_mocks_only.setattr(
+        cover_image_service, "render_cover_image", _raise_retryable
     )
 
     with pytest.raises(AppError) as err:

@@ -8,6 +8,7 @@ from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.run_context import RunContext
 from src.generators.report_generation_dependencies import ReportGeneratorDependencies
 from src.generators.report_generation_shared import logger
+from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logging.getLogger("market_lense.report_generator")
@@ -28,23 +29,20 @@ def generate_report(
         log_event(
             ctx,
             role="generator",
-            event="report_generate_delegate",
+            event="invalid_generator_entrypoint",
             module=logger.name,
             fields={
                 "file_id": file.file_id,
-                "delegated_to": "src.orchestrators.report_generation_orchestrator.run_report_generation",
+                "expected_entrypoint": "src.orchestrators.report_generation_orchestrator.run_report_generation",
             },
         )
     )
-    from src.orchestrators.report_generation_orchestrator import run_report_generation
-
-    return run_report_generation(
-        file,
-        local_pdf_path,
-        settings,
-        md5,
-        ctx,
-        evidence_pack_openai_client=evidence_pack_openai_client,
-        artifact_openai_client=artifact_openai_client,
-        dependencies=dependencies,
+    raise AppError(
+        code="invalid_generator_entrypoint",
+        message=(
+            "Report generation sequencing belongs to "
+            "src.orchestrators.report_generation_orchestrator.run_report_generation."
+        ),
+        retryable=False,
+        context={"file_id": file.file_id},
     )
