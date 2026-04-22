@@ -83,6 +83,25 @@ _EMAIL_GATE_PATH_MARKERS = {
     "register",
     "form",
 }
+_EMAIL_GATE_PARENT_SEGMENTS = {
+    "report",
+    "reports",
+    "resources",
+}
+_EMAIL_GATE_DETAIL_TITLE_MARKERS = {
+    "benchmark",
+    "ebook",
+    "e-book",
+    "guide",
+    "outlook",
+    "predictions",
+    "report",
+    "research",
+    "study",
+    "trends",
+    "whitepaper",
+    "white paper",
+}
 _ONSITE_LONGREAD_SEGMENTS = {
     "insight",
     "insights",
@@ -101,6 +120,9 @@ _DIRECT_ONSITE_REPORT_SEGMENTS = {
     "analysis",
     "survey",
     "outlook",
+}
+_DIRECT_ONSITE_REPORT_PATH_PHRASES = {
+    "year-in-review",
 }
 _ONSITE_EXCLUDED_SEGMENTS = {
     "resources",
@@ -250,6 +272,7 @@ def _build_plan(
     browser_step = _build_browser_step(
         normalized_url=request.normalized_url,
         source_page_urls=source_page_urls,
+        candidate_title=str(candidate.title or "") if candidate is not None else "",
         provenances=provenances,
         redirect_target_url=redirect_target_url,
         redirect_target_kind=redirect_target_kind,
@@ -273,7 +296,10 @@ def _build_plan(
         recommended_route_kind == "http_parse"
         or bool(provenances & _PDF_FIRST_DISCOVERY_PROVENANCES)
     )
-    if browser_first and not pdf_first:
+    browser_step_is_email_delivery = browser_step.route_kind_hint == "email_delivery"
+    if browser_step_is_email_delivery:
+        steps.append(browser_step)
+    elif browser_first and not pdf_first:
         steps.append(browser_step)
         steps.append(http_step)
     else:
@@ -298,6 +324,7 @@ def _build_browser_step(
     *,
     normalized_url: str,
     source_page_urls: list[str],
+    candidate_title: str,
     provenances: set[str],
     redirect_target_url: str | None,
     redirect_target_kind: str,
@@ -398,7 +425,11 @@ def _build_browser_step(
             uses_memory_route=False,
             fallback_on_retryable_error=False,
         )
-    if _looks_like_email_form_url(normalized_url):
+    if _looks_like_email_form_url(
+        normalized_url,
+        candidate_title=candidate_title,
+        source_page_urls=source_page_urls,
+    ):
         return ReportDownloadRoutePlanStep(
             schema_version="1.0",
             step_name="report_download_browser_email_form",
@@ -752,13 +783,26 @@ def _looks_like_onsite_longread_url(url: str | None) -> bool:
     return any(marker in path for marker in _EDITORIAL_REPORT_MARKERS)
 
 
-def _looks_like_email_form_url(url: str | None) -> bool:
+def _looks_like_email_form_url(
+    url: str | None,
+    *,
+    candidate_title: str = "",
+    source_page_urls: list[str] | None = None,
+) -> bool:
     path = str(urlsplit(str(url or "").strip()).path or "").strip().lower()
     if not path or _looks_like_pdf(path):
         return False
+    if _path_has_email_gate_marker(path):
+        return True
+    if _looks_like_probable_gated_report_detail_url(
+        path=path,
+        candidate_title=candidate_title,
+        source_page_urls=source_page_urls or [],
+    ):
+        return True
     if _looks_like_direct_onsite_report_url(url):
         return False
-    return _path_has_email_gate_marker(path)
+    return False
 
 
 def _looks_like_direct_onsite_report_url(url: str | None) -> bool:
@@ -773,6 +817,8 @@ def _looks_like_direct_onsite_report_url(url: str | None) -> bool:
         return False
     if any(segment in _ONSITE_EXCLUDED_SEGMENTS for segment in segments):
         return False
+    if any(phrase in path for phrase in _DIRECT_ONSITE_REPORT_PATH_PHRASES):
+        return True
     return any(
         segment in _DIRECT_ONSITE_REPORT_SEGMENTS
         or any(
@@ -803,4 +849,64 @@ def _path_has_email_gate_marker(path: str) -> bool:
                 or segment.endswith(f"-{marker}")
             ):
                 return True
+    return False
+
+
+def _looks_like_probable_gated_report_detail_url(
+    *,
+    path: str,
+    candidate_title: str,
+    source_page_urls: list[str],
+) -> bool:
+    segments = [segment for segment in str(path or "").split("/") if segment]
+    if len(segments) < 2:
+        return False
+    split_tokens = {part for part in re.split(r"[^a-z0-9]+", str(path or "")) if part}
+    title = str(candidate_title or "").strip().lower()
+    title_has_asset_marker = any(
+        marker in title for marker in _EMAIL_GATE_DETAIL_TITLE_MARKERS
+    )
+    slug_has_asset_marker = bool(
+        split_tokens
+        & {
+            "benchmark",
+            "ebook",
+            "guide",
+            "outlook",
+            "predictions",
+            "report",
+            "research",
+            "study",
+            "trends",
+            "whitepaper",
+        }
+    )
+    source_path_text = " ".join(
+        str(urlsplit(str(source_url or "").strip()).path or "").strip().lower()
+        for source_url in source_page_urls
+    )
+    source_is_report_listing = any(
+        segment in _EMAIL_GATE_PARENT_SEGMENTS
+        for segment in re.split(r"[^a-z0-9]+", source_path_text)
+        if segment
+    )
+    if "resources" in segments and "reports" in segments:
+        return True
+    if (
+        source_is_report_listing
+        and title_has_asset_marker
+        and slug_has_asset_marker
+        and any(re.fullmatch(r"\d{4}", segment) for segment in segments)
+    ):
+        return True
+    for index, segment in enumerate(segments[:-1]):
+        if segment not in {"report", "reports"}:
+            continue
+        detail_slug = segments[index + 1]
+        if not detail_slug or detail_slug in _LISTING_PATH_MARKERS:
+            continue
+        if title_has_asset_marker or slug_has_asset_marker:
+            return True
+        if source_is_report_listing and re.match(r"^\d{3,}", detail_slug):
+            return True
     return False

@@ -570,6 +570,273 @@ def test_download_report_with_browser_use_ignores_unrelated_report_page_pdf_link
     assert_no_defaulted_required_fields(response)
 
 
+def test_download_report_with_browser_use_rejects_unrelated_downloaded_pdf_artifact(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+    assert_no_defaulted_required_fields,
+) -> None:
+    runtime = _runtime(
+        tmp_path,
+        route_kind="email_delivery",
+        route_summary="Filled the form but could not verify a required location lookup.",
+        create_pdf=False,
+        email_submission_completed=False,
+    )
+    original_runtime = runtime.Agent
+
+    class WrongPdfAgent(original_runtime):
+        def run_sync(self, max_steps: int):
+            history = super().run_sync(max_steps)
+            wrong_pdf = Path(self.browser.downloads_path) / "Gender_Pay_Gap_Report_2024.pdf"
+            wrong_pdf.write_bytes(b"%PDF-1.7 unrelated")
+            self.browser.downloaded_files = [str(wrong_pdf)]
+            payload = json.loads(history.final_result())
+            payload["route_kind"] = "email_delivery"
+            payload["route_family"] = "browser_email_form"
+            payload["downloaded_file_path"] = str(wrong_pdf)
+            payload["downloaded_file_name"] = wrong_pdf.name
+            payload["downloaded_mime_type"] = "application/pdf"
+            payload["blocked_reason"] = "blocked_unknown_required_enum"
+            payload["blocked_reason_detail"] = "Location did not resolve to a valid option."
+
+            class WrongPdfHistory:
+                def final_result(self_nonlocal) -> str:
+                    return json.dumps(payload)
+
+                def action_results(self_nonlocal) -> list[Any]:
+                    return []
+
+            return WrongPdfHistory()
+
+    runtime.Agent = WrongPdfAgent
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: runtime,
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/insights/global-food-and-drink-trends",
+            settings=_settings(tmp_path),
+            candidate_trace=PublisherInventoryCandidateTrace(
+                schema_version="1.0",
+                canonical_url="https://example.com/insights/global-food-and-drink-trends",
+                title="Global Food & Drink Predictions 2026",
+                discovered_on_page_number=1,
+                source_page_urls=["https://example.com/insights"],
+                discovery_provenances=[],
+                pdf_url=None,
+                published_at_text=None,
+                max_confidence=0.8,
+            ),
+            route_family_hint="browser_email_form",
+            route_kind_hint="email_delivery",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.outcome == "email_required"
+    assert response.blocked_reason == "blocked_unknown_required_enum"
+    assert response.downloaded_file_path is None
+    assert response.terminal_evidence.artifact_kind == "email_delivery"
+    assert_no_defaulted_required_fields(response)
+
+
+def test_download_report_with_browser_use_http_probe_skips_direct_pdf_fetch_for_html_page(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+    assert_app_error,
+) -> None:
+    observed_urls: list[str] = []
+
+    def fake_get(url: str, *args: Any, **kwargs: Any) -> _FakeResponse:
+        observed_urls.append(url)
+        return _FakeResponse(
+            content=b"<html><body><h1>Report landing page</h1></body></html>",
+            headers={"Content-Type": "text/html; charset=utf-8"},
+        )
+
+    external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: (_ for _ in ()).throw(
+            AssertionError("browser runtime should not start for an HTTP probe step")
+        ),
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        service.download_report_with_browser_use(
+            BrowserReportDownloadRequest(
+                schema_version="1.0",
+                url="https://example.com/reports/slow-html-report",
+                settings=_settings(tmp_path),
+                route_family_hint="http_pdf_probe",
+                route_kind_hint="pdf_download",
+            ),
+            run_context,
+        )
+
+    assert observed_urls == ["https://example.com/reports/slow-html-report"]
+    assert_app_error(
+        exc_info.value,
+        code="browser_download_http_probe_failed",
+        retryable=True,
+        severity="error",
+    )
+
+
+def test_download_report_with_browser_use_short_circuits_static_email_gate(
+    tmp_path: Path,
+    caplog,
+    run_context,
+    external_boundary_mocks_only,
+    assert_logs_have_required_fields,
+    assert_no_defaulted_required_fields,
+) -> None:
+    def fake_get(url: str, *args: Any, **kwargs: Any) -> _FakeResponse:
+        return _FakeResponse(
+            content=(
+                b"<html><head><title>Annual Marketing Report</title></head>"
+                b"<body><h1>Annual Marketing Report</h1>"
+                b"<a>Download the report</a>"
+                b"<form><label>Business email address</label>"
+                b"<input name=\"email\"><button>Submit</button></form></body></html>"
+            ),
+            headers={"Content-Type": "text/html; charset=utf-8"},
+        )
+
+    external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: (_ for _ in ()).throw(
+            AssertionError("browser runtime should not start for static email gate")
+        ),
+    )
+    caplog.set_level(logging.INFO, logger=service.logger.name)
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/insights/annual-marketing-report",
+            settings=_settings(tmp_path),
+            route_kind_hint="email_delivery",
+            route_family_hint="browser_pdf_click",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "email_delivery"
+    assert response.route_family == "browser_email_form"
+    assert response.outcome == "email_required"
+    assert response.browser_had_structured_result is False
+    assert response.terminal_evidence.artifact_validation_status == "blocked"
+    assert "static_email_gate" in response.terminal_evidence.evidence_labels
+    assert_no_defaulted_required_fields(response)
+    assert_logs_have_required_fields(_service_events(caplog))
+
+
+def test_download_report_with_browser_use_detects_static_provider_email_gate(
+    tmp_path: Path,
+    caplog,
+    run_context,
+    external_boundary_mocks_only,
+    assert_logs_have_required_fields,
+    assert_no_defaulted_required_fields,
+) -> None:
+    def fake_get(url: str, *args: Any, **kwargs: Any) -> _FakeResponse:
+        return _FakeResponse(
+            content=(
+                b"<html><head><title>Whitepaper Download</title></head>"
+                b"<body><script src=\"/pardot/forms.js\"></script>"
+                b"<a>Download eBook</a><section>Whitepaper report asset</section>"
+                b"</body></html>"
+            ),
+            headers={"Content-Type": "text/html; charset=utf-8"},
+        )
+
+    external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: (_ for _ in ()).throw(
+            AssertionError("browser runtime should not start for provider email gate")
+        ),
+    )
+    caplog.set_level(logging.INFO, logger=service.logger.name)
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/whitepapers/product-lifecycle-management",
+            settings=_settings(tmp_path),
+            route_kind_hint="email_delivery",
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert response.outcome == "email_required"
+    assert response.route_family == "browser_email_form"
+    assert response.browser_had_structured_result is False
+    assert "static_email_gate" in response.terminal_evidence.evidence_labels
+    assert_no_defaulted_required_fields(response)
+    assert_logs_have_required_fields(_service_events(caplog))
+
+
+def test_download_report_with_browser_use_classifies_static_email_timeout(
+    tmp_path: Path,
+    caplog,
+    run_context,
+    external_boundary_mocks_only,
+    assert_logs_have_required_fields,
+    assert_no_defaulted_required_fields,
+) -> None:
+    observed_urls: list[str] = []
+
+    def fake_get(url: str, *args: Any, **kwargs: Any) -> _FakeResponse:
+        observed_urls.append(url)
+        raise requests.Timeout("static preflight timeout")
+
+    external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: (_ for _ in ()).throw(
+            AssertionError("browser runtime should not start after static timeout gate")
+        ),
+    )
+    caplog.set_level(logging.INFO, logger=service.logger.name)
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/resources/reports/annual-marketing-report",
+            settings=_settings(tmp_path),
+            route_kind_hint="email_delivery",
+            route_family_hint="browser_email_form",
+        ),
+        run_context,
+    )
+
+    assert observed_urls == [
+        "https://example.com/resources/reports/annual-marketing-report",
+        "https://example.com/resources/reports/annual-marketing-report",
+    ]
+    assert response.outcome == "email_required"
+    assert response.route_status == "inferred"
+    assert "static_fetch_timeout" in response.terminal_evidence.evidence_labels
+    assert response.terminal_evidence.terminal_text_excerpt
+    assert_no_defaulted_required_fields(response)
+    assert_logs_have_required_fields(_service_events(caplog))
+
+
 def test_download_report_with_browser_use_short_circuits_known_access_challenge(
     tmp_path: Path,
     caplog,
@@ -1990,6 +2257,67 @@ def test_download_report_with_browser_use_short_circuits_planned_onsite_candidat
     assert any(
         event.get("event") == "browser_report_download_direct_onsite_attempt_complete"
         for event in service_events
+    )
+
+
+def test_download_report_with_browser_use_directly_captures_route_confirmed_non_article_longread(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+) -> None:
+    class FakeResponse:
+        status_code = 200
+        headers = {"content-type": "text/html; charset=utf-8"}
+        url = "https://example.com/guides/personalization/"
+        text = (
+            "<html><head><title>What is Personalization and How to Get Started</title></head>"
+            "<body><main><h1>Personalization Guide</h1>"
+            "<section><p>This guide explains research-backed personalization practices.</p>"
+            "<p>" + ("Customer insight and implementation detail. " * 140) + "</p>"
+            "</section></main></body></html>"
+        )
+
+    external_boundary_mocks_only.setattr(
+        http_runtime.requests,
+        "get",
+        lambda *args, **kwargs: FakeResponse(),
+    )
+    external_boundary_mocks_only.setattr(
+        browser_runtime,
+        "import_module",
+        lambda module_name: (_ for _ in ()).throw(
+            AssertionError("browser runtime should not start for route-confirmed longread")
+        ),
+    )
+
+    response = service.download_report_with_browser_use(
+        BrowserReportDownloadRequest(
+            schema_version="1.0",
+            url="https://example.com/guides/personalization",
+            settings=_settings(tmp_path),
+            candidate_trace=PublisherInventoryCandidateTrace(
+                schema_version="1.0",
+                canonical_url="https://example.com/guides/personalization",
+                title="What is Personalization and How to Get Started?",
+                discovered_on_page_number=1,
+                source_page_urls=["https://example.com/guides"],
+                discovery_provenances=[],
+                pdf_url=None,
+                published_at_text=None,
+                max_confidence=0.82,
+            ),
+            route_kind_hint="onsite_report",
+            route_family_hint="browser_onsite_report",
+        ),
+        run_context,
+    )
+
+    assert response.route_kind == "onsite_report"
+    assert response.outcome == "captured"
+    assert response.browser_had_structured_result is False
+    assert response.onsite_capture_path is not None
+    assert Path(response.onsite_capture_path).read_text(encoding="utf-8").startswith(
+        "<html>"
     )
 
 

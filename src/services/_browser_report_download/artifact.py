@@ -1021,6 +1021,11 @@ def _complete_pdf_artifact(
                 document_url=str(request.attempt_url or normalized_url).strip(),
                 timeout_seconds=request.settings.timeout_seconds,
             )
+            if not _downloaded_pdf_matches_requested_report(
+                request=request,
+                downloaded_path=ensured_path,
+            ):
+                return None, False
             return ensured_path, False
         except AppError as exc:
             if exc.code != "browser_download_invalid_pdf":
@@ -1058,6 +1063,8 @@ def _try_fetch_pdf_target(
     target_url = urljoin(str(request.attempt_url or normalized_url).strip(), target_url)
     if not _looks_like_pdf_url(target_url):
         return None
+    if not _pdf_url_matches_requested_report(request=request, pdf_url=target_url):
+        return None
     destination_name = Path(urlsplit(target_url).path).name or "download.pdf"
     destination_path = download_dir / destination_name
     try:
@@ -1094,6 +1101,97 @@ def _looks_like_pdf_url(url: str) -> bool:
     return lowered.startswith(("http://", "https://")) and (
         lowered.endswith(".pdf") or ".pdf?" in lowered
     )
+
+
+_PDF_RELEVANCE_STOPWORDS = {
+    "and",
+    "download",
+    "ebook",
+    "final",
+    "for",
+    "from",
+    "guide",
+    "insight",
+    "insights",
+    "pdf",
+    "report",
+    "reports",
+    "study",
+    "the",
+    "whitepaper",
+    "with",
+}
+
+
+def _downloaded_pdf_matches_requested_report(
+    *,
+    request: BrowserReportDownloadRequest,
+    downloaded_path: Path | None,
+) -> bool:
+    if downloaded_path is None:
+        return True
+    return _pdf_identifier_matches_requested_report(
+        request=request,
+        pdf_identifier=downloaded_path.name,
+    )
+
+
+def _pdf_url_matches_requested_report(
+    *,
+    request: BrowserReportDownloadRequest,
+    pdf_url: str,
+) -> bool:
+    return _pdf_identifier_matches_requested_report(
+        request=request,
+        pdf_identifier=str(urlsplit(str(pdf_url or "")).path or ""),
+    )
+
+
+def _pdf_identifier_matches_requested_report(
+    *,
+    request: BrowserReportDownloadRequest,
+    pdf_identifier: str,
+) -> bool:
+    pdf_tokens = _report_relevance_tokens(pdf_identifier)
+    if len(pdf_tokens) < 3:
+        return True
+    context_tokens = _requested_report_relevance_tokens(request)
+    if len(context_tokens) < 2:
+        return True
+    return len(pdf_tokens & context_tokens) >= 2
+
+
+def _requested_report_relevance_tokens(
+    request: BrowserReportDownloadRequest,
+) -> set[str]:
+    values = [
+        request.url,
+        request.attempt_url or "",
+        request.route_hint or "",
+    ]
+    if request.candidate_trace is not None:
+        values.extend(
+            [
+                request.candidate_trace.title or "",
+                request.candidate_trace.canonical_url or "",
+            ]
+        )
+    tokens: set[str] = set()
+    for value in values:
+        tokens.update(_report_relevance_tokens(value))
+    return tokens
+
+
+def _report_relevance_tokens(value: str | None) -> set[str]:
+    parsed = urlsplit(str(value or "").strip())
+    source = parsed.path if parsed.scheme or parsed.netloc else str(value or "")
+    token = source.casefold()
+    tokens = {
+        match.group(0)
+        for match in re.finditer(r"[a-z0-9]{2,}", token)
+        if match.group(0) not in _PDF_RELEVANCE_STOPWORDS
+    }
+    return {item for item in tokens if len(item) >= 3 or item.isdigit()}
 
 
 def _build_pdf_result(

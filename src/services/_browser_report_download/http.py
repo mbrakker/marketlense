@@ -92,6 +92,9 @@ _ACCESS_CHALLENGE_MARKERS = (
 )
 _ACCESS_CHALLENGE_STATUS_CODES = {401, 403, 429, 503}
 _ACCESS_CHALLENGE_PROBE_TIMEOUT_SECONDS = 15.0
+_STATIC_EMAIL_GATE_PROBE_TIMEOUT_SECONDS = 8.0
+_HTML_PDF_LINK_PROBE_TIMEOUT_SECONDS = 20.0
+_EMAIL_ROUTE_HTML_PDF_LINK_PROBE_TIMEOUT_SECONDS = 8.0
 _HTML_PDF_LINK_PROBE_ROUTE_FAMILIES = {
     "http_pdf_probe",
     "browser_email_form",
@@ -99,6 +102,61 @@ _HTML_PDF_LINK_PROBE_ROUTE_FAMILIES = {
     "browser_tracker_redirect",
     "browser_listing_hub",
 }
+_STATIC_EMAIL_GATE_ROUTE_FAMILIES = {
+    "browser_email_form",
+    "browser_pdf_click",
+    "browser_tracker_redirect",
+}
+_STATIC_EMAIL_FIELD_MARKERS = (
+    "business email",
+    "business email address",
+    "work email",
+    "professional email",
+    "email address",
+)
+_STATIC_REPORT_FORM_MARKERS = (
+    "download ebook",
+    "download e-book",
+    "download report",
+    "download the report",
+    "download insights",
+    "get report",
+    "get the report",
+    "register",
+    "request report",
+    "submit",
+    "whitepaper",
+    "white paper",
+)
+_STATIC_FORM_PROVIDER_MARKERS = (
+    "eloqua",
+    "formstack",
+    "gravityforms",
+    "hs-form",
+    "hubspot",
+    "marketo",
+    "mktoform",
+    "pardot",
+    "salesforce",
+)
+_STATIC_REPORT_CONTEXT_MARKERS = (
+    "benchmark",
+    "ebook",
+    "e-book",
+    "guide",
+    "insight",
+    "insights",
+    "outlook",
+    "predictions",
+    "report",
+    "reports",
+    "research",
+    "study",
+    "trends",
+    "whitepaper",
+    "whitepapers",
+    "white paper",
+)
 _PDF_RELEVANCE_STOPWORDS = {
     "and",
     "brief",
@@ -240,7 +298,10 @@ def try_report_page_pdf_link_download(
         response = requests.get(
             target_url,
             headers=_HTML_FETCH_HEADERS,
-            timeout=min(20.0, max(1.0, float(request.settings.timeout_seconds))),
+            timeout=min(
+                _html_pdf_link_probe_timeout_seconds(request),
+                max(1.0, float(request.settings.timeout_seconds)),
+            ),
             allow_redirects=True,
         )
     except requests.RequestException as exc:
@@ -393,6 +454,143 @@ def try_report_page_pdf_link_download(
     return None
 
 
+def try_static_email_gate_probe(
+    *,
+    request: BrowserReportDownloadRequest,
+    ctx: RunContext,
+    normalized_url: str,
+    page_url: str | None = None,
+) -> BrowserReportDownloadResult | None:
+    if str(request.route_family_hint or "").strip() not in _STATIC_EMAIL_GATE_ROUTE_FAMILIES:
+        return None
+    target_url = str(page_url or request.attempt_url or request.url).strip() or request.url
+    if not _route_context_supports_static_email_gate(
+        request=request,
+        target_url=target_url,
+    ):
+        return None
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_static_email_gate_probe_start",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "target_url": target_url,
+                "route_family": request.route_family_hint or "",
+            },
+        )
+    )
+    try:
+        response = requests.get(
+            target_url,
+            headers=_HTML_FETCH_HEADERS,
+            timeout=min(
+                _STATIC_EMAIL_GATE_PROBE_TIMEOUT_SECONDS,
+                max(1.0, float(request.settings.timeout_seconds)),
+            ),
+            allow_redirects=True,
+        )
+    except requests.Timeout as exc:
+        if _route_context_supports_static_email_gate(request=request, target_url=target_url):
+            result = _build_static_email_gate_result(
+                request=request,
+                normalized_url=normalized_url,
+                target_url=target_url,
+                html="",
+                detection_detail=(
+                    "Route-confirmed email-delivery page exceeded the static "
+                    "HTML preflight timeout before browser interaction."
+                ),
+                evidence_labels=["static_email_gate", "static_fetch_timeout", "email_delivery"],
+            )
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="browser_report_download_static_email_gate_probe_complete",
+                    module=logger.name,
+                    fields=asdict(result),
+                )
+            )
+            return result
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_static_email_gate_probe_fallback",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "target_url": target_url,
+                    "error_code": "browser_download_static_email_gate_timeout",
+                    "error_message": str(exc),
+                },
+            )
+        )
+        return None
+    except requests.RequestException as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_static_email_gate_probe_fallback",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "target_url": target_url,
+                    "error_code": "browser_download_static_email_gate_fetch_failed",
+                    "error_message": str(exc),
+                },
+            )
+        )
+        return None
+    content_type_header = _response_header_value(response.headers, "content-type")
+    content_type = content_type_header.casefold()
+    text = str(response.text or "")
+    final_url = str(response.url or target_url).strip() or target_url
+    gate_detected = (
+        int(response.status_code) < 400
+        and ("html" in content_type or "xml" in content_type)
+        and _looks_like_static_email_gate_html(text)
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_static_email_gate_probe_response",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "target_url": target_url,
+                "final_url": final_url,
+                "status_code": int(response.status_code),
+                "content_type": content_type_header,
+                "gate_detected": gate_detected,
+            },
+        )
+    )
+    if not gate_detected:
+        return None
+    result = _build_static_email_gate_result(
+        request=request,
+        normalized_url=normalized_url,
+        target_url=final_url,
+        html=text,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_static_email_gate_probe_complete",
+            module=logger.name,
+            fields=asdict(result),
+        )
+    )
+    return result
+
+
 def _should_try_report_page_pdf_link_probe(
     request: BrowserReportDownloadRequest,
 ) -> bool:
@@ -405,6 +603,157 @@ def _should_try_report_page_pdf_link_probe(
     if not target_url or _looks_like_pdf_url(target_url):
         return False
     return True
+
+
+def _html_pdf_link_probe_timeout_seconds(
+    request: BrowserReportDownloadRequest,
+) -> float:
+    if (
+        str(request.route_kind_hint or "").strip() == "email_delivery"
+        or str(request.route_family_hint or "").strip() == "browser_email_form"
+    ):
+        return _EMAIL_ROUTE_HTML_PDF_LINK_PROBE_TIMEOUT_SECONDS
+    return _HTML_PDF_LINK_PROBE_TIMEOUT_SECONDS
+
+
+def _looks_like_static_email_gate_html(html: str) -> bool:
+    token = str(html or "")
+    if not token.strip():
+        return False
+    lowered = token.casefold()
+    plain_text = _html_to_text(token).casefold()
+    has_form = "<form" in lowered or "mktoform" in lowered or "hs-form" in lowered
+    has_email = any(marker in plain_text for marker in _STATIC_EMAIL_FIELD_MARKERS)
+    has_report_cta = any(marker in plain_text for marker in _STATIC_REPORT_FORM_MARKERS)
+    has_form_provider = any(
+        marker in lowered or marker in plain_text for marker in _STATIC_FORM_PROVIDER_MARKERS
+    )
+    has_report_context = any(
+        marker in lowered or marker in plain_text for marker in _STATIC_REPORT_CONTEXT_MARKERS
+    )
+    if has_form and has_email and has_report_cta:
+        return True
+    if has_form_provider and has_report_cta and has_report_context:
+        return True
+    if has_form and has_form_provider and has_report_context:
+        return True
+    return False
+
+
+def _route_context_supports_static_email_gate(
+    *,
+    request: BrowserReportDownloadRequest,
+    target_url: str,
+) -> bool:
+    if str(request.route_kind_hint or "").strip() != "email_delivery":
+        return False
+    if str(request.route_family_hint or "").strip() not in _STATIC_EMAIL_GATE_ROUTE_FAMILIES:
+        return False
+    context_parts = [
+        request.url,
+        request.attempt_url or "",
+        target_url,
+        request.source_page_url_hint or "",
+        request.route_hint or "",
+        request.publisher_discovery_route_kind or "",
+        request.publisher_recommended_discovery_route_kind or "",
+    ]
+    if request.candidate_trace is not None:
+        context_parts.extend(
+            [
+                request.candidate_trace.title,
+                request.candidate_trace.canonical_url,
+                " ".join(request.candidate_trace.source_page_urls),
+                " ".join(request.candidate_trace.discovery_provenances),
+            ]
+        )
+    context = " ".join(str(part or "") for part in context_parts).casefold()
+    return any(marker in context for marker in _STATIC_REPORT_CONTEXT_MARKERS)
+
+
+def _build_static_email_gate_result(
+    *,
+    request: BrowserReportDownloadRequest,
+    normalized_url: str,
+    target_url: str,
+    html: str,
+    detection_detail: str = "Detected an email-gated report form before browser interaction.",
+    evidence_labels: list[str] | None = None,
+) -> BrowserReportDownloadResult:
+    title = _extract_html_title(html)
+    if not title and request.candidate_trace is not None:
+        title = str(request.candidate_trace.title or "").strip()
+    if not title:
+        title = normalized_url
+    excerpt = _extract_text_excerpt(html) or detection_detail
+    return BrowserReportDownloadResult(
+        schema_version="1.0",
+        source_url=request.url,
+        normalized_url=normalized_url,
+        route_kind="email_delivery",
+        route_family="browser_email_form",
+        route_status="inferred",
+        outcome="email_required",
+        route_summary="Detected an email-gated report form in the landing-page HTML before browser interaction.",
+        final_page_url=target_url,
+        resolved_target_url=target_url,
+        used_route_hint=False,
+        route_steps=[
+            BrowserDownloadRouteStep(
+                schema_version="1.0",
+                index=0,
+                action="open",
+                target_text=target_url,
+                target_role="url",
+                target_url=target_url,
+                result="Fetched the report landing page HTML",
+            ),
+            BrowserDownloadRouteStep(
+                schema_version="1.0",
+                index=1,
+                action="inspect",
+                target_text="email-gated report form",
+                target_role="form",
+                target_url=target_url,
+                result="Detected form, email field, and report download/request CTA",
+            ),
+        ],
+        confirmation_evidence=BrowserDownloadConfirmationEvidence(
+            schema_version="1.0",
+            url_changed=(target_url != request.url),
+            visible_confirmation_text="",
+            submit_button_state="unchanged",
+            form_disappeared=False,
+            final_page_url=target_url,
+        ),
+        terminal_evidence=DownloadTerminalEvidence(
+            schema_version="1.0",
+            final_page_url=target_url,
+            final_page_title=title,
+            terminal_text_excerpt=excerpt,
+            artifact_url=target_url,
+            artifact_kind="email_delivery",
+            artifact_validation_status="blocked",
+            artifact_validation_detail=detection_detail,
+            confirmation_signal_count=0,
+            traversed_page_urls=[target_url],
+            evidence_labels=evidence_labels or ["static_email_gate", "email_delivery"],
+        ),
+        browser_had_structured_result=False,
+        used_candidate_pdf_url=False,
+        used_candidate_source_page=bool(request.source_page_url_hint),
+        encountered_form_fields=[],
+        blocked_reason=None,
+        blocked_reason_detail=None,
+        downloaded_file_path=None,
+        downloaded_file_name=None,
+        downloaded_mime_type=None,
+        downloaded_size_bytes=None,
+        onsite_capture_path=None,
+        onsite_capture_format=None,
+        onsite_page_count=None,
+        onsite_completeness_status=None,
+    )
 
 
 def _filter_relevant_pdf_candidates(
@@ -755,7 +1104,11 @@ def try_direct_onsite_capture(
     if response.status_code >= 400 or ("html" not in content_type and "xml" not in content_type):
         return None
     html = str(response.text or "")
-    if not _looks_like_onsite_capture_html(html):
+    if not _looks_like_onsite_capture_html(
+        html,
+        request=request,
+        final_url=str(response.url or target_url).strip() or target_url,
+    ):
         logger.info(
             log_event(
                 ctx,
@@ -1205,7 +1558,12 @@ def _looks_like_report_detail_candidate(request: BrowserReportDownloadRequest) -
     )
 
 
-def _looks_like_onsite_capture_html(html: str) -> bool:
+def _looks_like_onsite_capture_html(
+    html: str,
+    *,
+    request: BrowserReportDownloadRequest | None = None,
+    final_url: str | None = None,
+) -> bool:
     token = str(html or "")
     if not token.strip():
         return False
@@ -1223,9 +1581,58 @@ def _looks_like_onsite_capture_html(html: str) -> bool:
         "full report",
         "read the report",
     }
-    return any(marker in plain_lowered for marker in strong_non_article_markers) and any(
+    if any(marker in plain_lowered for marker in strong_non_article_markers) and any(
         marker in plain_lowered for marker in _ONSITE_CAPTURE_HTML_MARKERS
+    ):
+        return True
+    return _route_context_supports_direct_onsite_capture(
+        request=request,
+        final_url=final_url,
+        title=_extract_html_title(token),
+        plain_text=plain_text,
     )
+
+
+def _route_context_supports_direct_onsite_capture(
+    *,
+    request: BrowserReportDownloadRequest | None,
+    final_url: str | None,
+    title: str,
+    plain_text: str,
+) -> bool:
+    if request is None:
+        return False
+    route_family = str(request.route_family_hint or "").strip()
+    route_kind = str(request.route_kind_hint or "").strip()
+    if route_family != "browser_onsite_report" or route_kind != "onsite_report":
+        return False
+    if len(plain_text) < 2500:
+        return False
+    context = " ".join(
+        [
+            str(final_url or ""),
+            str(request.url or ""),
+            str(request.attempt_url or ""),
+            str(title or ""),
+            str(request.candidate_trace.title if request.candidate_trace is not None else ""),
+        ]
+    ).casefold()
+    positive_markers = {
+        "analysis",
+        "benchmark",
+        "findings",
+        "guide",
+        "insight",
+        "outlook",
+        "report",
+        "research",
+        "study",
+        "survey",
+        "trend",
+        "year in review",
+        "year-in-review",
+    }
+    return any(marker in context for marker in positive_markers)
 
 
 def _extract_html_title(html: str) -> str:

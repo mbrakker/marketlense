@@ -43,7 +43,7 @@ def test_plan_report_download_routes_prefers_email_form_for_tracker_redirect(
     )
 
 
-def test_plan_report_download_routes_does_not_treat_yougov_as_tracker_host(
+def test_plan_report_download_routes_sends_report_id_detail_to_email_form(
     run_context,
 ) -> None:
     response = plan_report_download_routes(
@@ -68,7 +68,8 @@ def test_plan_report_download_routes_does_not_treat_yougov_as_tracker_host(
         run_context,
     )
 
-    assert response.steps[-1].route_family == "browser_pdf_click"
+    assert response.steps[-1].route_family == "browser_email_form"
+    assert response.steps[-1].route_kind_hint == "email_delivery"
     assert response.steps[-1].attempt_url == (
         "https://yougov.com/reports/51871-european-retail-landscape-report-en-2025"
     )
@@ -362,7 +363,7 @@ def test_plan_report_download_routes_does_not_reuse_incomplete_onsite_memory(
     assert response.steps[0].step_name != "report_download_with_memory_route"
 
 
-def test_plan_report_download_routes_prefers_pdf_click_for_resource_report_pages(
+def test_plan_report_download_routes_sends_resource_report_pages_to_email_form(
     run_context,
 ) -> None:
     response = plan_report_download_routes(
@@ -377,7 +378,43 @@ def test_plan_report_download_routes_prefers_pdf_click_for_resource_report_pages
         run_context,
     )
 
-    assert response.steps[-1].route_family == "browser_pdf_click"
+    assert response.steps[-1].route_family == "browser_email_form"
+    assert response.steps[-1].route_kind_hint == "email_delivery"
+
+
+def test_plan_report_download_routes_sends_nested_report_title_page_to_email_form(
+    run_context,
+) -> None:
+    response = plan_report_download_routes(
+        ReportDownloadRoutePlanRequest(
+            schema_version="1.0",
+            normalized_url=(
+                "https://www.nielsen.com/insights/2024/"
+                "maximizing-roi-in-a-fragmented-world-nielsen-annual-marketing-report"
+            ),
+            remembered_route=None,
+            candidate_trace=PublisherInventoryCandidateTrace(
+                schema_version="1.0",
+                canonical_url=(
+                    "https://www.nielsen.com/insights/2024/"
+                    "maximizing-roi-in-a-fragmented-world-nielsen-annual-marketing-report"
+                ),
+                title="2024 Annual Marketing Report",
+                discovered_on_page_number=3,
+                source_page_urls=["https://www.nielsen.com/insights/type/report"],
+                discovery_provenances=[],
+                pdf_url=None,
+                published_at_text=None,
+                max_confidence=0.8,
+            ),
+            publisher_discovery_route_kind=None,
+            publisher_recommended_discovery_route_kind=None,
+        ),
+        run_context,
+    )
+
+    assert response.steps[-1].route_family == "browser_email_form"
+    assert response.steps[-1].route_kind_hint == "email_delivery"
 
 
 def test_plan_report_download_routes_keeps_onsite_for_insights_longread(
@@ -396,6 +433,35 @@ def test_plan_report_download_routes_keeps_onsite_for_insights_longread(
     )
 
     assert response.steps[-1].route_family == "browser_onsite_report"
+
+
+def test_plan_report_download_routes_treats_year_in_review_as_onsite_longread(
+    run_context,
+) -> None:
+    response = plan_report_download_routes(
+        ReportDownloadRoutePlanRequest(
+            schema_version="1.0",
+            normalized_url="https://example.com/year-in-review-2022",
+            remembered_route=None,
+            candidate_trace=PublisherInventoryCandidateTrace(
+                schema_version="1.0",
+                canonical_url="https://example.com/year-in-review-2022",
+                title="Year in Review 2022",
+                discovered_on_page_number=2,
+                source_page_urls=["https://example.com/reports"],
+                discovery_provenances=[],
+                pdf_url=None,
+                published_at_text=None,
+                max_confidence=0.8,
+            ),
+            publisher_discovery_route_kind=None,
+            publisher_recommended_discovery_route_kind=None,
+        ),
+        run_context,
+    )
+
+    assert response.steps[-1].route_family == "browser_onsite_report"
+    assert response.steps[-1].route_kind_hint == "onsite_report"
 
 
 def test_plan_report_download_routes_uses_direct_detail_url_instead_of_source_listing(
@@ -509,13 +575,12 @@ def test_plan_report_download_routes_uses_email_form_browser_fallback_from_memor
         run_context,
     )
 
-    assert response.steps[0].step_name == "report_download_http_probe"
-    assert response.steps[1].step_name == "report_download_browser_email_form"
-    assert response.steps[1].route_family == "browser_email_form"
-    assert response.steps[1].route_hint == (
+    assert response.steps[0].step_name == "report_download_browser_email_form"
+    assert response.steps[0].route_family == "browser_email_form"
+    assert response.steps[0].route_hint == (
         "Open the report page, fill the form, and submit it."
     )
-    assert response.steps[1].route_step_hints[0].target_text == "Download report"
+    assert response.steps[0].route_step_hints[0].target_text == "Download report"
 
 
 def test_plan_report_download_routes_prefers_email_form_for_direct_detail_with_email_memory(
@@ -580,11 +645,10 @@ def test_plan_report_download_routes_prefers_email_form_for_direct_detail_with_e
         run_context,
     )
 
-    assert response.steps[0].step_name == "report_download_http_probe"
-    assert response.steps[1].step_name == "report_download_browser_email_form"
-    assert response.steps[1].route_family == "browser_email_form"
-    assert response.steps[1].attempt_url == (
+    assert response.steps[0].step_name == "report_download_browser_email_form"
+    assert response.steps[0].route_family == "browser_email_form"
+    assert response.steps[0].attempt_url == (
         "https://www.mintel.com/insights/food-and-drink/global-food-and-drink-trends"
     )
-    assert response.steps[1].route_hint == "Open the page, fill the form, and submit it."
-    assert response.steps[1].route_step_hints == []
+    assert response.steps[0].route_hint == "Open the page, fill the form, and submit it."
+    assert response.steps[0].route_step_hints == []

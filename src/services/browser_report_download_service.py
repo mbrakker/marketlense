@@ -18,6 +18,7 @@ from src.services._browser_report_download.http import try_direct_pdf_download
 from src.services._browser_report_download.http import try_direct_onsite_capture
 from src.services._browser_report_download.http import try_http_access_challenge_probe
 from src.services._browser_report_download.http import try_report_page_pdf_link_download
+from src.services._browser_report_download.http import try_static_email_gate_probe
 from src.services._browser_report_download.prompt import (
     render_browser_report_download_prompt,
 )
@@ -85,11 +86,41 @@ def download_report_with_browser_use(
         )
     )
 
-    should_try_http_probe = (
-        request.route_family_hint in {"direct_pdf_probe", "http_pdf_probe"}
+    if request.route_family_hint == "http_pdf_probe":
+        report_page_pdf_link_result = try_report_page_pdf_link_download(
+            request=request,
+            ctx=ctx,
+            normalized_url=normalized_url,
+            download_dir=download_dir,
+            page_url=normalized_execution_url,
+        )
+        if report_page_pdf_link_result is not None:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="browser_report_download_complete",
+                    module=logger.name,
+                    fields=asdict(report_page_pdf_link_result),
+                )
+            )
+            return report_page_pdf_link_result
+        raise AppError(
+            code="browser_download_http_probe_failed",
+            message="The planned HTTP probe did not produce a valid PDF artifact",
+            retryable=True,
+            context={
+                "normalized_url": normalized_url,
+                "execution_url": normalized_execution_url,
+                "route_family_hint": request.route_family_hint,
+            },
+        )
+
+    should_try_direct_pdf_fetch = (
+        request.route_family_hint == "direct_pdf_probe"
         or url_looks_like_direct_pdf(normalized_execution_url)
     )
-    if should_try_http_probe:
+    if should_try_direct_pdf_fetch:
         direct_pdf_result = try_direct_pdf_download(
             request=request,
             ctx=ctx,
@@ -138,7 +169,7 @@ def download_report_with_browser_use(
                 )
             )
             return report_page_pdf_link_result
-        if request.route_family_hint in {"direct_pdf_probe", "http_pdf_probe"}:
+        if request.route_family_hint == "direct_pdf_probe":
             raise AppError(
                 code="browser_download_http_probe_failed",
                 message="The planned HTTP probe did not produce a valid PDF artifact",
@@ -191,6 +222,24 @@ def download_report_with_browser_use(
             )
         )
         return direct_onsite_result
+
+    static_email_gate_result = try_static_email_gate_probe(
+        request=request,
+        ctx=ctx,
+        normalized_url=normalized_url,
+        page_url=normalized_execution_url,
+    )
+    if static_email_gate_result is not None:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_complete",
+                module=logger.name,
+                fields=asdict(static_email_gate_result),
+            )
+        )
+        return static_email_gate_result
 
     if request.route_family_hint == "browser_email_form":
         access_challenge_result = try_http_access_challenge_probe(
