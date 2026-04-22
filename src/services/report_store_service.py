@@ -31,6 +31,8 @@ from src.contracts.report_store import (
     PublisherInventoryTestStatusRecordRequest,
     PublishersReplaceRequest,
     PublishersReplaceResponse,
+    ReportDownloadDriveFolderLookupRequest,
+    ReportDownloadDriveFolderLookupResponse,
     PublishersListRequest,
     PublishersListResponse,
     ReportMetadataDbAccessRequest,
@@ -219,7 +221,9 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE reports ADD COLUMN vector_store_id TEXT")
     if "evidence_packs_json" not in cols:
         conn.execute("ALTER TABLE reports ADD COLUMN evidence_packs_json TEXT")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_reports_file_name ON reports(file_name)")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_reports_file_name ON reports(file_name)"
+    )
     _ensure_report_sources_schema(conn)
     _ensure_publishers_schema(conn)
     _ensure_publisher_download_route_history_schema(conn)
@@ -284,9 +288,13 @@ def _ensure_report_sources_schema(conn: sqlite3.Connection) -> None:
             normalized_landing_page_url = _normalize_optional_url_key(landing_page_url)
             if not landing_page_url or not normalized_landing_page_url:
                 continue
-            downloaded_at_utc = str(source.get("downloaded_at_utc") or "").strip() or None
+            downloaded_at_utc = (
+                str(source.get("downloaded_at_utc") or "").strip() or None
+            )
             md5 = str(source.get("md5") or "").strip().lower() or None
-            source_status = str(source.get("source_status") or "").strip() or "downloaded"
+            source_status = (
+                str(source.get("source_status") or "").strip() or "downloaded"
+            )
             source_page_url = (
                 str(source.get("source_page_url") or "").strip() or landing_page_url
             )
@@ -350,7 +358,9 @@ def _ensure_report_sources_indexes(conn: sqlite3.Connection) -> None:
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_report_sources_status ON report_sources(source_status)"
     )
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_report_sources_md5 ON report_sources(md5)")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_report_sources_md5 ON report_sources(md5)"
+    )
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_report_sources_discovered_at ON report_sources(discovered_at_utc)"
     )
@@ -411,7 +421,9 @@ def _ensure_publisher_download_route_history_schema(conn: sqlite3.Connection) ->
 def _ensure_publisher_inventory_candidate_recovery_cache_schema(
     conn: sqlite3.Connection,
 ) -> None:
-    cur = conn.execute("PRAGMA table_info(publisher_inventory_candidate_recovery_cache)")
+    cur = conn.execute(
+        "PRAGMA table_info(publisher_inventory_candidate_recovery_cache)"
+    )
     cols = {str(row[1]) for row in cur.fetchall()}
     expected = {
         "id",
@@ -428,7 +440,9 @@ def _ensure_publisher_inventory_candidate_recovery_cache_schema(
         "updated_at",
     }
     if cols != expected:
-        conn.execute("DROP TABLE IF EXISTS publisher_inventory_candidate_recovery_cache_new")
+        conn.execute(
+            "DROP TABLE IF EXISTS publisher_inventory_candidate_recovery_cache_new"
+        )
         conn.execute(
             """
             CREATE TABLE publisher_inventory_candidate_recovery_cache_new (
@@ -474,7 +488,9 @@ def _ensure_publisher_inventory_candidate_recovery_cache_schema(
                     FROM publisher_inventory_candidate_recovery_cache
                     """
                 )
-        conn.execute("DROP TABLE IF EXISTS publisher_inventory_candidate_recovery_cache")
+        conn.execute(
+            "DROP TABLE IF EXISTS publisher_inventory_candidate_recovery_cache"
+        )
         conn.execute(
             "ALTER TABLE publisher_inventory_candidate_recovery_cache_new RENAME TO publisher_inventory_candidate_recovery_cache"
         )
@@ -535,7 +551,9 @@ def _parse_inventory_route_trace(payload: Optional[str]):
             followed_report_listing=bool(parsed.get("followed_report_listing", False)),
             applied_report_filter=bool(parsed.get("applied_report_filter", False)),
             selected_filters=clean_string_list(parsed.get("selected_filters", [])),
-            selected_tab_labels=clean_string_list(parsed.get("selected_tab_labels", [])),
+            selected_tab_labels=clean_string_list(
+                parsed.get("selected_tab_labels", [])
+            ),
             pagination_mode=str(parsed.get("pagination_mode") or "none").strip()
             or "none",
             preferred_control_labels=clean_string_list(
@@ -654,7 +672,13 @@ def _parse_route_steps(payload: Optional[str]) -> List[BrowserDownloadRouteStep]
             steps.append(
                 BrowserDownloadRouteStep(
                     schema_version=str(item.get("schema_version") or "1.0"),
-                    index=int(item.get("index") if item.get("index") is not None else index),
+                    index=int(
+                        str(
+                            item.get("index")
+                            if item.get("index") is not None
+                            else index
+                        )
+                    ),
                     action=str(item.get("action") or "").strip(),
                     target_text=str(item.get("target_text") or "").strip(),
                     target_role=str(item.get("target_role") or "").strip(),
@@ -756,7 +780,9 @@ def _parse_terminal_evidence(
             schema_version=str(parsed.get("schema_version") or "1.0"),
             final_page_url=str(parsed.get("final_page_url") or final_page_url).strip(),
             final_page_title=str(parsed.get("final_page_title") or "").strip(),
-            terminal_text_excerpt=str(parsed.get("terminal_text_excerpt") or "").strip(),
+            terminal_text_excerpt=str(
+                parsed.get("terminal_text_excerpt") or ""
+            ).strip(),
             artifact_url=str(parsed.get("artifact_url") or "").strip(),
             artifact_kind=str(parsed.get("artifact_kind") or "none").strip() or "none",
             artifact_validation_status=str(
@@ -767,9 +793,15 @@ def _parse_terminal_evidence(
                 parsed.get("artifact_validation_detail") or ""
             ).strip(),
             confirmation_signal_count=int(parsed.get("confirmation_signal_count") or 0),
-            traversed_page_urls=clean_string_list(parsed.get("traversed_page_urls") or []),
-            visited_url_timeline=clean_string_list(parsed.get("visited_url_timeline") or []),
-            observed_document_urls=clean_string_list(parsed.get("observed_document_urls") or []),
+            traversed_page_urls=clean_string_list(
+                parsed.get("traversed_page_urls") or []
+            ),
+            visited_url_timeline=clean_string_list(
+                parsed.get("visited_url_timeline") or []
+            ),
+            observed_document_urls=clean_string_list(
+                parsed.get("observed_document_urls") or []
+            ),
             network_events=_parse_network_events(parsed.get("network_events")),
             html_snapshot_path=str(parsed.get("html_snapshot_path") or "").strip(),
             screenshot_path=str(parsed.get("screenshot_path") or "").strip(),
@@ -819,7 +851,8 @@ def _parse_network_events(payload: object) -> List[BrowserDownloadNetworkEvent]:
             BrowserDownloadNetworkEvent(
                 schema_version=str(item.get("schema_version") or "1.0"),
                 url=url,
-                initiator_type=str(item.get("initiator_type") or "other").strip() or "other",
+                initiator_type=str(item.get("initiator_type") or "other").strip()
+                or "other",
                 signal_kind=str(item.get("signal_kind") or "other").strip() or "other",
             )
         )
@@ -921,10 +954,10 @@ def _confidence_score_for_history(
             base += 0.05
     elif str(outcome or "").strip().lower() == "email_required":
         base += 0.05
-    if (
-        not browser_had_structured_result
-        and normalized_route_family not in {"direct_pdf_probe", "http_pdf_probe"}
-    ):
+    if not browser_had_structured_result and normalized_route_family not in {
+        "direct_pdf_probe",
+        "http_pdf_probe",
+    }:
         base -= 0.15
     if normalized_route_kind == "onsite_report" and completeness != "complete":
         base -= 0.2
@@ -932,7 +965,7 @@ def _confidence_score_for_history(
 
 
 def _bool_from_db(value: object) -> bool:
-    return bool(int(value or 0))
+    return bool(int(str(value or 0)))
 
 
 def _parse_json_string_list(payload: Optional[str]) -> List[str]:
@@ -1107,9 +1140,7 @@ def _configure_sqlite_connection(
     busy_timeout_seconds: float,
 ) -> None:
     conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute(
-        f"PRAGMA busy_timeout={max(0, int(busy_timeout_seconds * 1000))}"
-    )
+    conn.execute(f"PRAGMA busy_timeout={max(0, int(busy_timeout_seconds * 1000))}")
     conn.execute("PRAGMA synchronous=NORMAL")
 
 
@@ -1157,75 +1188,87 @@ def _row_to_metadata_response(row: tuple, ctx: RunContext) -> ReportMetadataGetR
         if isinstance(parsed, list):
             taxonomy = clean_string_list([str(item) for item in parsed])
     except json.JSONDecodeError:
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="report_metadata_taxonomy_parse_failed",
-            module=logger.name,
-            fields={"file_id": file_id},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="report_metadata_taxonomy_parse_failed",
+                module=logger.name,
+                fields={"file_id": file_id},
+            )
+        )
     try:
         parsed_cats = json.loads(categories_json)
         if isinstance(parsed_cats, list):
             categories = clean_string_list([str(item) for item in parsed_cats])
     except json.JSONDecodeError:
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="report_metadata_categories_parse_failed",
-            module=logger.name,
-            fields={"file_id": file_id},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="report_metadata_categories_parse_failed",
+                module=logger.name,
+                fields={"file_id": file_id},
+            )
+        )
     try:
         parsed_meta = json.loads(metadata_json)
         if isinstance(parsed_meta, dict):
             pdf_metadata = _clean_metadata({str(k): v for k, v in parsed_meta.items()})
     except json.JSONDecodeError:
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="report_metadata_pdf_metadata_parse_failed",
-            module=logger.name,
-            fields={"file_id": file_id},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="report_metadata_pdf_metadata_parse_failed",
+                module=logger.name,
+                fields={"file_id": file_id},
+            )
+        )
     try:
         if page_count_raw is not None:
             page_int = int(page_count_raw)
             if page_int >= 0:
                 page_count = page_int
     except (TypeError, ValueError):
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="report_metadata_page_count_invalid",
-            module=logger.name,
-            fields={"file_id": file_id, "raw": page_count_raw},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="report_metadata_page_count_invalid",
+                module=logger.name,
+                fields={"file_id": file_id, "raw": page_count_raw},
+            )
+        )
     try:
         if contents_page_raw is not None:
             page_int = int(contents_page_raw)
             if page_int >= 0:
                 contents_page_number = page_int
     except (TypeError, ValueError):
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="report_metadata_contents_page_invalid",
-            module=logger.name,
-            fields={"file_id": file_id, "raw": contents_page_raw},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="report_metadata_contents_page_invalid",
+                module=logger.name,
+                fields={"file_id": file_id, "raw": contents_page_raw},
+            )
+        )
     try:
         parsed_packs = json.loads(evidence_packs_json)
         if isinstance(parsed_packs, dict):
             evidence_pack_paths = {str(k): str(v) for k, v in parsed_packs.items()}
     except json.JSONDecodeError:
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="report_metadata_evidence_packs_parse_failed",
-            module=logger.name,
-            fields={"file_id": file_id},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="report_metadata_evidence_packs_parse_failed",
+                module=logger.name,
+                fields={"file_id": file_id},
+            )
+        )
 
     return ReportMetadataGetResponse(
         schema_version="1.1",
@@ -1251,14 +1294,21 @@ def _row_to_metadata_response(row: tuple, ctx: RunContext) -> ReportMetadataGetR
     )
 
 
-def check_report_db_access(request: ReportMetadataDbAccessRequest, ctx: RunContext) -> ReportMetadataDbAccessResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="report_db_access_start",
-        module=logger.name,
-        fields={"db_path": request.db_path, "timeout_seconds": request.timeout_seconds},
-    ))
+def check_report_db_access(
+    request: ReportMetadataDbAccessRequest, ctx: RunContext
+) -> ReportMetadataDbAccessResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="report_db_access_start",
+            module=logger.name,
+            fields={
+                "db_path": request.db_path,
+                "timeout_seconds": request.timeout_seconds,
+            },
+        )
+    )
     if not request.db_path or not request.db_path.strip():
         raise AppError(
             code="metadata_db_missing",
@@ -1266,24 +1316,32 @@ def check_report_db_access(request: ReportMetadataDbAccessRequest, ctx: RunConte
             retryable=False,
             severity="error",
         )
-    timeout = request.timeout_seconds if request.timeout_seconds >= 0 else ACCESS_TIMEOUT_SECONDS
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="report_db_access_config",
-        module=logger.name,
-        fields={"timeout_seconds": timeout},
-    ))
+    timeout = (
+        request.timeout_seconds
+        if request.timeout_seconds >= 0
+        else ACCESS_TIMEOUT_SECONDS
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="report_db_access_config",
+            module=logger.name,
+            fields={"timeout_seconds": timeout},
+        )
+    )
     try:
         conn = sqlite3.connect(request.db_path, timeout=timeout)
     except sqlite3.Error as exc:
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="report_db_access_connect_failed",
-            module=logger.name,
-            fields={"db_path": request.db_path, "error": str(exc)},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="report_db_access_connect_failed",
+                module=logger.name,
+                fields={"db_path": request.db_path, "error": str(exc)},
+            )
+        )
         raise AppError(
             code="metadata_db_unavailable",
             message="Failed to open report metadata DB",
@@ -1293,24 +1351,28 @@ def check_report_db_access(request: ReportMetadataDbAccessRequest, ctx: RunConte
         ) from exc
     try:
         _configure_sqlite_connection(conn, busy_timeout_seconds=timeout)
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="report_db_access_probe",
-            module=logger.name,
-            fields={"db_path": request.db_path},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="report_db_access_probe",
+                module=logger.name,
+                fields={"db_path": request.db_path},
+            )
+        )
         conn.execute("PRAGMA schema_version")
     except sqlite3.OperationalError as exc:
         if _is_lock_error(exc):
             message = str(exc)
-            logger.info(log_event(
-                ctx,
-                role="service",
-                event="report_db_access_locked",
-                module=logger.name,
-                fields={"db_path": request.db_path, "error": message},
-            ))
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="report_db_access_locked",
+                    module=logger.name,
+                    fields={"db_path": request.db_path, "error": message},
+                )
+            )
             response = ReportMetadataDbAccessResponse(
                 schema_version="1.0",
                 db_path=request.db_path,
@@ -1318,26 +1380,30 @@ def check_report_db_access(request: ReportMetadataDbAccessRequest, ctx: RunConte
                 locked=True,
                 message=message,
             )
-            logger.info(log_event(
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="report_db_access_complete",
+                    module=logger.name,
+                    fields={
+                        "db_path": response.db_path,
+                        "accessible": response.accessible,
+                        "locked": response.locked,
+                        "message": response.message,
+                    },
+                )
+            )
+            return response
+        logger.info(
+            log_event(
                 ctx,
                 role="service",
-                event="report_db_access_complete",
+                event="report_db_access_failed",
                 module=logger.name,
-                fields={
-                    "db_path": response.db_path,
-                    "accessible": response.accessible,
-                    "locked": response.locked,
-                    "message": response.message,
-                },
-            ))
-            return response
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="report_db_access_failed",
-            module=logger.name,
-            fields={"db_path": request.db_path, "error": str(exc)},
-        ))
+                fields={"db_path": request.db_path, "error": str(exc)},
+            )
+        )
         raise AppError(
             code="metadata_db_unavailable",
             message="Report metadata DB is not accessible",
@@ -1354,18 +1420,20 @@ def check_report_db_access(request: ReportMetadataDbAccessRequest, ctx: RunConte
         locked=False,
         message="",
     )
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="report_db_access_complete",
-        module=logger.name,
-        fields={
-            "db_path": response.db_path,
-            "accessible": response.accessible,
-            "locked": response.locked,
-            "message": response.message,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="report_db_access_complete",
+            module=logger.name,
+            fields={
+                "db_path": response.db_path,
+                "accessible": response.accessible,
+                "locked": response.locked,
+                "message": response.message,
+            },
+        )
+    )
     return response
 
 
@@ -1386,48 +1454,85 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
         )
 
     title = request.title.strip()
-    file_name = request.file_name.strip() if request.file_name and request.file_name.strip() else None
-    publisher = request.publisher.strip() if request.publisher and request.publisher.strip() else None
-    source_url = request.source_url.strip() if request.source_url and request.source_url.strip() else None
-    html_path = request.html_path.strip() if request.html_path and request.html_path.strip() else None
+    file_name = (
+        request.file_name.strip()
+        if request.file_name and request.file_name.strip()
+        else None
+    )
+    publisher = (
+        request.publisher.strip()
+        if request.publisher and request.publisher.strip()
+        else None
+    )
+    source_url = (
+        request.source_url.strip()
+        if request.source_url and request.source_url.strip()
+        else None
+    )
+    html_path = (
+        request.html_path.strip()
+        if request.html_path and request.html_path.strip()
+        else None
+    )
     md5 = request.md5.strip() if request.md5 and request.md5.strip() else None
-    page_count = request.page_count if isinstance(request.page_count, int) and request.page_count >= 0 else None
-    contents_page = request.contents_page_number if isinstance(request.contents_page_number, int) and request.contents_page_number >= 0 else 0
+    page_count = (
+        request.page_count
+        if isinstance(request.page_count, int) and request.page_count >= 0
+        else None
+    )
+    contents_page = (
+        request.contents_page_number
+        if isinstance(request.contents_page_number, int)
+        and request.contents_page_number >= 0
+        else 0
+    )
     taxonomy = clean_string_list(request.taxonomy)
     taxonomy_json = json.dumps(taxonomy, ensure_ascii=True)
     categories = clean_string_list(request.categories)
     categories_json = json.dumps(categories, ensure_ascii=True)
-    region = request.region.strip() if request.region and request.region.strip() else None
-    raw_time_period = request.time_period.strip() if request.time_period and request.time_period.strip() else None
+    region = (
+        request.region.strip() if request.region and request.region.strip() else None
+    )
+    raw_time_period = (
+        request.time_period.strip()
+        if request.time_period and request.time_period.strip()
+        else None
+    )
     time_period = normalize_time_period(raw_time_period)
     metadata_clean = _clean_metadata(request.pdf_metadata)
     metadata_json = json.dumps(metadata_clean, ensure_ascii=True)
-    analysis_mode = request.analysis_mode.strip() if request.analysis_mode else "vector_store"
-    vector_store_id = request.vector_store_id.strip() if request.vector_store_id else None
+    analysis_mode = (
+        request.analysis_mode.strip() if request.analysis_mode else "vector_store"
+    )
+    vector_store_id = (
+        request.vector_store_id.strip() if request.vector_store_id else None
+    )
     evidence_packs = request.evidence_pack_paths or {}
     evidence_packs_json = json.dumps(evidence_packs, ensure_ascii=False)
 
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="report_metadata_upsert_start",
-        module=logger.name,
-        fields={
-            "file_id": request.file_id,
-            "db_path": request.db_path,
-            "file_name": file_name,
-            "title": title,
-            "publisher": publisher,
-            "taxonomy_count": len(taxonomy),
-            "region": region,
-            "time_period": time_period,
-            "raw_time_period": raw_time_period,
-            "categories_count": len(categories),
-            "page_count": page_count,
-            "contents_page": contents_page,
-            "metadata_keys": list(metadata_clean.keys()),
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="report_metadata_upsert_start",
+            module=logger.name,
+            fields={
+                "file_id": request.file_id,
+                "db_path": request.db_path,
+                "file_name": file_name,
+                "title": title,
+                "publisher": publisher,
+                "taxonomy_count": len(taxonomy),
+                "region": region,
+                "time_period": time_period,
+                "raw_time_period": raw_time_period,
+                "categories_count": len(categories),
+                "page_count": page_count,
+                "contents_page": contents_page,
+                "metadata_keys": list(metadata_clean.keys()),
+            },
+        )
+    )
     with _metadata_conn(request.db_path) as conn:
         conn.execute(
             """
@@ -1472,23 +1577,29 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
                 evidence_packs_json,
             ),
         )
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="report_metadata_upsert_complete",
-        module=logger.name,
-        fields={"file_id": request.file_id},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="report_metadata_upsert_complete",
+            module=logger.name,
+            fields={"file_id": request.file_id},
+        )
+    )
 
 
-def get_metadata(request: ReportMetadataGetRequest, ctx: RunContext) -> Optional[ReportMetadataGetResponse]:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="report_metadata_get_start",
-        module=logger.name,
-        fields={"file_id": request.file_id, "db_path": request.db_path},
-    ))
+def get_metadata(
+    request: ReportMetadataGetRequest, ctx: RunContext
+) -> Optional[ReportMetadataGetResponse]:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="report_metadata_get_start",
+            module=logger.name,
+            fields={"file_id": request.file_id, "db_path": request.db_path},
+        )
+    )
     with _metadata_conn(request.db_path) as conn:
         cur = conn.execute(
             """
@@ -1501,34 +1612,42 @@ def get_metadata(request: ReportMetadataGetRequest, ctx: RunContext) -> Optional
         row = cur.fetchone()
 
     if not row:
-        logger.info(log_event(
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="report_metadata_get_complete",
+                module=logger.name,
+                fields={"file_id": request.file_id, "found": False},
+            )
+        )
+        return None
+
+    response = _row_to_metadata_response(row, ctx)
+    logger.info(
+        log_event(
             ctx,
             role="service",
             event="report_metadata_get_complete",
             module=logger.name,
-            fields={"file_id": request.file_id, "found": False},
-        ))
-        return None
-
-    response = _row_to_metadata_response(row, ctx)
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="report_metadata_get_complete",
-        module=logger.name,
-        fields={"file_id": request.file_id, "found": True},
-    ))
+            fields={"file_id": request.file_id, "found": True},
+        )
+    )
     return response
 
 
-def list_metadata(request: ReportMetadataListRequest, ctx: RunContext) -> ReportMetadataListResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="report_metadata_list_start",
-        module=logger.name,
-        fields={"db_path": request.db_path},
-    ))
+def list_metadata(
+    request: ReportMetadataListRequest, ctx: RunContext
+) -> ReportMetadataListResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="report_metadata_list_start",
+            module=logger.name,
+            fields={"db_path": request.db_path},
+        )
+    )
     rows: List[ReportMetadataGetResponse] = []
     with _metadata_conn(request.db_path) as conn:
         cur = conn.execute(
@@ -1540,13 +1659,15 @@ def list_metadata(request: ReportMetadataListRequest, ctx: RunContext) -> Report
         )
         for row in cur.fetchall():
             rows.append(_row_to_metadata_response(row, ctx))
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="report_metadata_list_complete",
-        module=logger.name,
-        fields={"db_path": request.db_path, "count": len(rows)},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="report_metadata_list_complete",
+            module=logger.name,
+            fields={"db_path": request.db_path, "count": len(rows)},
+        )
+    )
     return ReportMetadataListResponse(schema_version="1.1", records=rows)
 
 
@@ -1611,20 +1732,22 @@ def record_report_source(
             severity="error",
         )
 
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="report_source_record_start",
-        module=logger.name,
-        fields={
-            "db_path": db_path,
-            "source_domain": source_domain,
-            "report_name": report_name,
-            "landing_page_url": landing_page_url,
-            "downloaded_at_utc": downloaded_at_utc,
-            "md5": md5,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="report_source_record_start",
+            module=logger.name,
+            fields={
+                "db_path": db_path,
+                "source_domain": source_domain,
+                "report_name": report_name,
+                "landing_page_url": landing_page_url,
+                "downloaded_at_utc": downloaded_at_utc,
+                "md5": md5,
+            },
+        )
+    )
     try:
         with _metadata_conn(db_path) as conn:
             existing_row = conn.execute(
@@ -1721,21 +1844,153 @@ def record_report_source(
         downloaded_at_utc=downloaded_at_utc,
         md5=md5,
     )
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="report_source_record_complete",
-        module=logger.name,
-        fields={
-            "record_id": response.record_id,
-            "source_domain": response.source_domain,
-            "report_name": response.report_name,
-            "landing_page_url": response.landing_page_url,
-            "downloaded_at_utc": response.downloaded_at_utc,
-            "md5": response.md5,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="report_source_record_complete",
+            module=logger.name,
+            fields={
+                "record_id": response.record_id,
+                "source_domain": response.source_domain,
+                "report_name": response.report_name,
+                "landing_page_url": response.landing_page_url,
+                "downloaded_at_utc": response.downloaded_at_utc,
+                "md5": response.md5,
+            },
+        )
+    )
     return response
+
+
+def get_report_download_drive_folder(
+    request: ReportDownloadDriveFolderLookupRequest,
+    ctx: RunContext,
+) -> Optional[ReportDownloadDriveFolderLookupResponse]:
+    db_path = request.db_path.strip()
+    normalized_landing_page_url = request.normalized_landing_page_url.strip()
+    publisher_insights_url = (
+        normalize_url(request.publisher_insights_url.strip())
+        if request.publisher_insights_url and request.publisher_insights_url.strip()
+        else None
+    )
+    if not db_path:
+        raise AppError(
+            code="report_download_drive_folder_db_missing",
+            message="Report metadata DB path is required for Drive folder lookup",
+            retryable=False,
+            severity="error",
+        )
+    if not normalized_landing_page_url and not publisher_insights_url:
+        raise AppError(
+            code="report_download_drive_folder_lookup_key_missing",
+            message="A normalized landing-page URL or publisher insights URL is required for Drive folder lookup",
+            retryable=False,
+            severity="error",
+        )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="report_download_drive_folder_lookup_start",
+            module=logger.name,
+            fields={
+                "db_path": db_path,
+                "normalized_landing_page_url": normalized_landing_page_url,
+                "publisher_insights_url": publisher_insights_url or "",
+            },
+        )
+    )
+    with _metadata_conn(db_path) as conn:
+        if publisher_insights_url:
+            rows = conn.execute(
+                """
+                SELECT name, insights_url, google_folder
+                FROM publishers
+                WHERE insights_url <> ''
+                ORDER BY id ASC
+                """
+            ).fetchall()
+            for row in rows:
+                insights_url = str(row[1] or "").strip()
+                google_folder = str(row[2] or "").strip()
+                if (
+                    normalize_url(insights_url) == publisher_insights_url
+                    and google_folder
+                ):
+                    response = ReportDownloadDriveFolderLookupResponse(
+                        schema_version="1.0",
+                        publisher_name=str(row[0] or "").strip(),
+                        google_folder=google_folder,
+                        resolution_source="publisher_insights_url",
+                    )
+                    logger.info(
+                        log_event(
+                            ctx,
+                            role="service",
+                            event="report_download_drive_folder_lookup_complete",
+                            module=logger.name,
+                            fields={
+                                "found": True,
+                                "publisher_name": response.publisher_name,
+                                "resolution_source": response.resolution_source,
+                            },
+                        )
+                    )
+                    return response
+        if normalized_landing_page_url:
+            row = conn.execute(
+                """
+                SELECT
+                    rs.publisher_name,
+                    p.google_folder
+                FROM report_sources rs
+                JOIN publishers p ON lower(trim(p.name)) = lower(trim(rs.publisher_name))
+                WHERE rs.normalized_landing_page_url=?
+                  AND rs.publisher_name IS NOT NULL
+                  AND trim(rs.publisher_name) <> ''
+                  AND p.google_folder IS NOT NULL
+                  AND trim(p.google_folder) <> ''
+                ORDER BY rs.updated_at DESC, rs.id DESC
+                LIMIT 1
+                """,
+                (normalized_landing_page_url,),
+            ).fetchone()
+            if row is not None:
+                response = ReportDownloadDriveFolderLookupResponse(
+                    schema_version="1.0",
+                    publisher_name=str(row[0] or "").strip(),
+                    google_folder=str(row[1] or "").strip(),
+                    resolution_source="report_source_publisher",
+                )
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="service",
+                        event="report_download_drive_folder_lookup_complete",
+                        module=logger.name,
+                        fields={
+                            "found": True,
+                            "publisher_name": response.publisher_name,
+                            "resolution_source": response.resolution_source,
+                        },
+                    )
+                )
+                return response
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="report_download_drive_folder_lookup_complete",
+            module=logger.name,
+            fields={
+                "found": False,
+                "normalized_landing_page_url": normalized_landing_page_url,
+                "publisher_insights_url": publisher_insights_url or "",
+            },
+        )
+    )
+    return None
 
 
 def record_discovered_report_source(
@@ -2068,33 +2323,8 @@ def replace_publishers(
                 FROM publishers
                 """
             ).fetchall()
-            preserved_by_insights_url: dict[
-                str,
-                tuple[
-                    Optional[str],
-                    Optional[str],
-                    Optional[str],
-                    Optional[str],
-                    Optional[str],
-                    Optional[str],
-                    Optional[str],
-                    Optional[str],
-                    Optional[int],
-                    Optional[str],
-                    Optional[str],
-                    Optional[str],
-                    Optional[int],
-                    Optional[str],
-                    Optional[str],
-                    Optional[str],
-                    Optional[int],
-                    Optional[str],
-                    Optional[int],
-                    Optional[str],
-                    Optional[int],
-                ],
-            ] = {}
-            preserved_by_name = dict(preserved_by_insights_url)
+            preserved_by_insights_url: dict[str, tuple[object, ...]] = {}
+            preserved_by_name: dict[str, tuple[object, ...]] = {}
             for row in preserved_rows:
                 name_key = _normalize_publisher_key(str(row[0] or ""))
                 insights_url_key = _normalize_optional_url_key(str(row[1] or ""))
@@ -2120,7 +2350,10 @@ def replace_publishers(
                     str(row[20] or "").strip() or None,
                     int(row[21]) if row[21] is not None else None,
                 )
-                if insights_url_key and insights_url_key not in preserved_by_insights_url:
+                if (
+                    insights_url_key
+                    and insights_url_key not in preserved_by_insights_url
+                ):
                     preserved_by_insights_url[insights_url_key] = preserved_payload
                 if name_key and name_key not in preserved_by_name:
                     preserved_by_name[name_key] = preserved_payload
@@ -2404,7 +2637,9 @@ def get_publisher_download_route(
         best_history_score = -1
         history_attempts = len(history_rows)
         history_verified_successes = sum(
-            1 for row in history_rows if _is_verified_success(str(row[5] or ""), str(row[3] or ""))
+            1
+            for row in history_rows
+            if _is_verified_success(str(row[5] or ""), str(row[3] or ""))
         )
         history_last_outcomes = [
             str(row[3] or "").strip()
@@ -2412,18 +2647,14 @@ def get_publisher_download_route(
             if str(row[3] or "").strip()
         ]
         for row in history_rows:
-            score = (
-                _route_projection_rank(
-                    str(row[5] or "").strip(),
-                    str(row[3] or "").strip(),
-                )
-                * 100
-                + _route_reusability_bonus(
-                    route_summary=str(row[2] or "").strip(),
-                    route_steps_json=str(row[7] or "").strip() or None,
-                    outcome=str(row[3] or "").strip(),
-                    browser_had_structured_result=_bool_from_db(row[10]),
-                )
+            score = _route_projection_rank(
+                str(row[5] or "").strip(),
+                str(row[3] or "").strip(),
+            ) * 100 + _route_reusability_bonus(
+                route_summary=str(row[2] or "").strip(),
+                route_steps_json=str(row[7] or "").strip() or None,
+                outcome=str(row[3] or "").strip(),
+                browser_had_structured_result=_bool_from_db(row[10]),
             )
             if score > best_history_score:
                 best_history_row = row
@@ -2463,7 +2694,9 @@ def get_publisher_download_route(
                 ),
                 publisher_discovery_route_kind=str(best_history_row[16] or "").strip()
                 or None,
-                publisher_recommended_discovery_route_kind=str(best_history_row[17] or "").strip()
+                publisher_recommended_discovery_route_kind=str(
+                    best_history_row[17] or ""
+                ).strip()
                 or None,
                 blocked_reason=str(best_history_row[18] or "").strip() or None,
                 blocked_reason_detail=str(best_history_row[19] or "").strip() or None,
@@ -2547,7 +2780,9 @@ def get_publisher_download_route(
                 else "browser_pdf_click"
             ),
             route_status=(
-                "verified" if legacy_outcome in {"downloaded", "email_requested"} else "inferred"
+                "verified"
+                if legacy_outcome in {"downloaded", "email_requested"}
+                else "inferred"
             ),
             resolved_target_url=legacy_final_page_url or insights_url,
             route_steps=[],
@@ -2605,7 +2840,11 @@ def get_publisher_download_route(
             role="service",
             event="publisher_route_get_complete",
             module=logger.name,
-            fields={"db_path": db_path, "normalized_url": normalized_url, "found": False},
+            fields={
+                "db_path": db_path,
+                "normalized_url": normalized_url,
+                "found": False,
+            },
         )
     )
     return None
@@ -2627,7 +2866,8 @@ def record_publisher_download_route(
     browser_had_structured_result = bool(request.browser_had_structured_result)
     last_downloaded_file_path = (
         request.last_downloaded_file_path.strip()
-        if request.last_downloaded_file_path and request.last_downloaded_file_path.strip()
+        if request.last_downloaded_file_path
+        and request.last_downloaded_file_path.strip()
         else None
     )
     last_final_page_url = (
@@ -2840,7 +3080,9 @@ def record_publisher_download_route(
                         separators=(",", ":"),
                     ),
                     str(request.publisher_discovery_route_kind or "").strip() or None,
-                    str(request.publisher_recommended_discovery_route_kind or "").strip()
+                    str(
+                        request.publisher_recommended_discovery_route_kind or ""
+                    ).strip()
                     or None,
                     blocked_reason,
                     blocked_reason_detail,
@@ -2887,18 +3129,14 @@ def record_publisher_download_route(
             best_projection = None
             best_score = -1
             for row in best_history_row:
-                score = (
-                    _route_projection_rank(
-                        str(row[5] or "").strip(),
-                        str(row[3] or "").strip(),
-                    )
-                    * 100
-                    + _route_reusability_bonus(
-                        route_summary=str(row[2] or "").strip(),
-                        route_steps_json=str(row[7] or "").strip() or None,
-                        outcome=str(row[3] or "").strip(),
-                        browser_had_structured_result=_bool_from_db(row[8]),
-                    )
+                score = _route_projection_rank(
+                    str(row[5] or "").strip(),
+                    str(row[3] or "").strip(),
+                ) * 100 + _route_reusability_bonus(
+                    route_summary=str(row[2] or "").strip(),
+                    route_steps_json=str(row[7] or "").strip() or None,
+                    outcome=str(row[3] or "").strip(),
+                    browser_had_structured_result=_bool_from_db(row[8]),
                 )
                 if score > best_score:
                     best_projection = row
@@ -2944,7 +3182,11 @@ def record_publisher_download_route(
             if matched_id is None:
                 parsed = urlsplit(projected_source_url)
                 placeholder_name = parsed.netloc or projected_source_url
-                homepage = f"{parsed.scheme}://{parsed.netloc}/" if parsed.scheme and parsed.netloc else ""
+                homepage = (
+                    f"{parsed.scheme}://{parsed.netloc}/"
+                    if parsed.scheme and parsed.netloc
+                    else ""
+                )
                 cur = conn.execute(
                     """
                     INSERT INTO publishers(
@@ -3010,24 +3252,24 @@ def record_publisher_download_route(
             role="service",
             event="publisher_route_record_complete",
             module=logger.name,
-                fields={
-                    "db_path": db_path,
-                    "normalized_url": normalized_url,
-                    "source_url": recorded_source_url,
-                    "route_kind": recorded_route_kind,
-                    "route_family": route_family,
-                    "route_status": route_status,
-                    "outcome": recorded_outcome,
-                    "projected_route_kind": projected_route_kind,
-                    "projected_outcome": projected_outcome,
-                    "blocked_reason": blocked_reason or "",
-                    "onsite_capture_path": onsite_capture_path or "",
-                    "attempts": attempts,
-                    "verified_successes": verified_successes,
-                    "confidence_score": confidence_score,
-                },
-            )
+            fields={
+                "db_path": db_path,
+                "normalized_url": normalized_url,
+                "source_url": recorded_source_url,
+                "route_kind": recorded_route_kind,
+                "route_family": route_family,
+                "route_status": route_status,
+                "outcome": recorded_outcome,
+                "projected_route_kind": projected_route_kind,
+                "projected_outcome": projected_outcome,
+                "blocked_reason": blocked_reason or "",
+                "onsite_capture_path": onsite_capture_path or "",
+                "attempts": attempts,
+                "verified_successes": verified_successes,
+                "confidence_score": confidence_score,
+            },
         )
+    )
 
 
 def get_publisher_inventory_state(
@@ -3148,7 +3390,11 @@ def get_publisher_inventory_state(
             role="service",
             event="publisher_inventory_state_get_complete",
             module=logger.name,
-            fields={"db_path": db_path, "normalized_url": normalized_url, "found": False},
+            fields={
+                "db_path": db_path,
+                "normalized_url": normalized_url,
+                "found": False,
+            },
         )
     )
     return None
@@ -3231,7 +3477,11 @@ def record_publisher_inventory_test_status(
             message="Failed to record publisher discovery test status",
             cause=exc,
             retryable=True,
-            context={"db_path": db_path, "normalized_url": normalized_url, "status": status},
+            context={
+                "db_path": db_path,
+                "normalized_url": normalized_url,
+                "status": status,
+            },
         ) from exc
     logger.info(
         log_event(
@@ -3691,7 +3941,10 @@ def record_publisher_inventory_state(
                     message="Publisher inventory state cannot be recorded because the publisher row was not found",
                     retryable=False,
                     severity="error",
-                    context={"normalized_url": normalized_url, "source_url": source_url},
+                    context={
+                        "normalized_url": normalized_url,
+                        "source_url": source_url,
+                    },
                 )
             conn.execute(
                 """

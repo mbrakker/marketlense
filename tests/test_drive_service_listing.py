@@ -10,6 +10,7 @@ from src.contracts.drive import (
     DriveFolderFileListRequest,
     DriveListRequest,
     DriveUploadBytesRequest,
+    DriveUploadLocalFileRequest,
     DriveFile,
 )
 from src.contracts.run_context import RunContext
@@ -35,7 +36,9 @@ class _FakeFilesResource:
         query = kwargs.get("q", "")
         if self._raise_on_query and self._raise_on_query == query:
             raise RuntimeError("boom")
-        return _FakeListCall(self._responses.get(query, {"files": [], "nextPageToken": None}))
+        return _FakeListCall(
+            self._responses.get(query, {"files": [], "nextPageToken": None})
+        )
 
     def create(self, **kwargs):
         payload = {
@@ -54,14 +57,22 @@ class _FakeFilesResource:
 
 class _FakeDriveClient:
     def __init__(self, responses: dict[str, dict], raise_on_query: str | None = None):
-        self._files_resource = _FakeFilesResource(responses, raise_on_query=raise_on_query)
+        self._files_resource = _FakeFilesResource(
+            responses, raise_on_query=raise_on_query
+        )
 
     def files(self):
         return self._files_resource
 
 
 class _FakeAuthorizedUserCredentials:
-    def __init__(self, *, valid: bool = True, expired: bool = False, refresh_token: str | None = "refresh-token"):
+    def __init__(
+        self,
+        *,
+        valid: bool = True,
+        expired: bool = False,
+        refresh_token: str | None = "refresh-token",
+    ):
         self.valid = valid
         self.expired = expired
         self.refresh_token = refresh_token
@@ -103,15 +114,36 @@ def test_list_pdfs_includes_nested_subfolders(monkeypatch):
             "nextPageToken": None,
         },
         "'root-folder' in parents and mimeType='application/pdf' and trashed=false": {
-            "files": [{"id": "root-pdf", "name": "Root.pdf", "modifiedTime": "2025-01-01T00:00:00Z", "md5Checksum": "aaa"}],
+            "files": [
+                {
+                    "id": "root-pdf",
+                    "name": "Root.pdf",
+                    "modifiedTime": "2025-01-01T00:00:00Z",
+                    "md5Checksum": "aaa",
+                }
+            ],
             "nextPageToken": None,
         },
         "'child-folder' in parents and mimeType='application/pdf' and trashed=false": {
-            "files": [{"id": "child-pdf", "name": "Child.pdf", "modifiedTime": "2025-01-02T00:00:00Z", "md5Checksum": "bbb"}],
+            "files": [
+                {
+                    "id": "child-pdf",
+                    "name": "Child.pdf",
+                    "modifiedTime": "2025-01-02T00:00:00Z",
+                    "md5Checksum": "bbb",
+                }
+            ],
             "nextPageToken": None,
         },
         "'grandchild-folder' in parents and mimeType='application/pdf' and trashed=false": {
-            "files": [{"id": "grandchild-pdf", "name": "Grandchild.pdf", "modifiedTime": "2025-01-03T00:00:00Z", "md5Checksum": "ccc"}],
+            "files": [
+                {
+                    "id": "grandchild-pdf",
+                    "name": "Grandchild.pdf",
+                    "modifiedTime": "2025-01-03T00:00:00Z",
+                    "md5Checksum": "ccc",
+                }
+            ],
             "nextPageToken": None,
         },
     }
@@ -219,6 +251,56 @@ def test_upload_bytes_creates_drive_file(monkeypatch):
     assert fake_drive.files().created_payloads[0]["body"]["parents"] == ["root-folder"]
 
 
+def test_upload_local_file_reads_and_uploads_artifact(monkeypatch, tmp_path):
+    fake_drive = _FakeDriveClient({})
+    monkeypatch.setattr(
+        drive_service.Credentials,
+        "from_service_account_file",
+        staticmethod(lambda _sa_path, scopes: object()),
+    )
+    monkeypatch.setattr(drive_service, "build", lambda *_args, **_kwargs: fake_drive)
+    drive_service._DRIVE_CLIENTS = {}
+    source_path = tmp_path / "report.html"
+    source_path.write_text("<html>report</html>", encoding="utf-8")
+
+    response = drive_service.upload_local_file(
+        DriveUploadLocalFileRequest(
+            schema_version="1.0",
+            folder_id="root-folder",
+            service_account_path="/tmp/fake-sa.json",
+            source_path=str(source_path),
+            file_name=None,
+            mime_type="text/html",
+        ),
+        _ctx(),
+    )
+
+    assert response.source_path == str(source_path)
+    assert response.size == len(source_path.read_bytes())
+    assert response.md5 is not None
+    assert response.file.file_id == "uploaded-file"
+    created = fake_drive.files().created_payloads[0]
+    assert created["body"]["name"] == "report.html"
+    assert created["body"]["parents"] == ["root-folder"]
+
+
+def test_upload_local_file_requires_existing_file(tmp_path):
+    missing_path = tmp_path / "missing.pdf"
+
+    with pytest.raises(AppError) as excinfo:
+        drive_service.upload_local_file(
+            DriveUploadLocalFileRequest(
+                schema_version="1.0",
+                folder_id="root-folder",
+                service_account_path="/tmp/fake-sa.json",
+                source_path=str(missing_path),
+            ),
+            _ctx(),
+        )
+
+    assert excinfo.value.code == "drive_upload_source_path_invalid"
+
+
 def test_list_pdfs_uses_oauth_user_credentials(monkeypatch, tmp_path):
     responses = {
         "'root-folder' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false": {
@@ -226,7 +308,14 @@ def test_list_pdfs_uses_oauth_user_credentials(monkeypatch, tmp_path):
             "nextPageToken": None,
         },
         "'root-folder' in parents and mimeType='application/pdf' and trashed=false": {
-            "files": [{"id": "root-pdf", "name": "Root.pdf", "modifiedTime": "2025-01-01T00:00:00Z", "md5Checksum": "aaa"}],
+            "files": [
+                {
+                    "id": "root-pdf",
+                    "name": "Root.pdf",
+                    "modifiedTime": "2025-01-01T00:00:00Z",
+                    "md5Checksum": "aaa",
+                }
+            ],
             "nextPageToken": None,
         },
     }
@@ -297,7 +386,9 @@ def test_list_pdfs_wraps_missing_service_account_path_as_typed_error(
     monkeypatch.setattr(
         drive_service.Credentials,
         "from_service_account_file",
-        staticmethod(lambda _sa_path, scopes: (_ for _ in ()).throw(FileNotFoundError("missing"))),
+        staticmethod(
+            lambda _sa_path, scopes: (_ for _ in ()).throw(FileNotFoundError("missing"))
+        ),
     )
     drive_service._DRIVE_CLIENTS = {}
 

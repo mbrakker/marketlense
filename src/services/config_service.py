@@ -1191,9 +1191,7 @@ def _resolve_drive_auth_settings(
 def _to_ingest_settings(app_settings: AppSettings) -> IngestSettings:
     payload = asdict(app_settings)
     allowed = {field.name for field in fields(IngestSettings)}
-    filtered_payload = {
-        key: value for key, value in payload.items() if key in allowed
-    }
+    filtered_payload = {key: value for key, value in payload.items() if key in allowed}
     return IngestSettings(**filtered_payload)
 
 
@@ -1408,7 +1406,9 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         drive_list_mode=drive_settings["drive_list_mode"],
         openai_api_key=need_env("OPENAI_API_KEY"),
         openai_model=openai_model,
-        openai_models=_normalize_openai_models(sections.data.get("openai_models") or {}),
+        openai_models=_normalize_openai_models(
+            sections.data.get("openai_models") or {}
+        ),
         batch_limit=ingest_runtime["batch_limit"],
         ingest_worker_limit=ingest_runtime["ingest_worker_limit"],
         report_worker_limit=ingest_runtime["report_worker_limit"],
@@ -1728,8 +1728,22 @@ def load_browser_download_settings(
 
     paths = data.get("paths", {}) or {}
     ingest = data.get("ingest", {}) or {}
+    drive_cfg = ingest.get("drive", {}) or {}
     browser_download = data.get("browser_download", {}) or {}
+    drive_upload_cfg = browser_download.get("drive_upload", {}) or {}
     retry_cfg = browser_download.get("retry", {}) or {}
+    drive_upload_enabled = _to_bool(
+        drive_upload_cfg.get("enabled")
+        if not _is_missing(drive_upload_cfg.get("enabled"))
+        else _env_value("BROWSER_DOWNLOAD_DRIVE_UPLOAD_ENABLED"),
+        True,
+    )
+    drive_upload_required = _to_bool(
+        drive_upload_cfg.get("required")
+        if not _is_missing(drive_upload_cfg.get("required"))
+        else _env_value("BROWSER_DOWNLOAD_DRIVE_UPLOAD_REQUIRED"),
+        True,
+    )
 
     output_root = (
         browser_download.get("output_dir")
@@ -1763,12 +1777,26 @@ def load_browser_download_settings(
         resolver.missing.append(
             "browser_download.identity_config_path|env:BROWSER_DOWNLOAD_IDENTITY_CONFIG_PATH"
         )
+    drive_auth_settings: dict[str, str | None] = {
+        "drive_auth_mode": "service_account",
+        "google_sa_path": "",
+        "google_oauth_client_path": None,
+        "google_oauth_token_path": None,
+    }
+    drive_settings = _resolve_drive_settings(drive_cfg)
+    if drive_upload_enabled:
+        drive_auth_settings = _resolve_drive_auth_settings(
+            ingest,
+            drive_cfg,
+            runtime_base_path=runtime_base_path,
+            resolver=resolver,
+        )
 
     api_key = _env_value("OPENROUTER_API_KEY")
     if _is_missing(api_key):
         resolver.missing.append("env:OPENROUTER_API_KEY")
 
-    http_referer = _env_value("OPENROUTER_HTTP_REFERER")
+    http_referer: str | None = _env_value("OPENROUTER_HTTP_REFERER")
     if _is_missing(http_referer):
         http_referer = None
 
@@ -1877,6 +1905,19 @@ def load_browser_download_settings(
             ),
             0.0,
         ),
+        drive_upload_enabled=drive_upload_enabled,
+        drive_upload_required=drive_upload_required,
+        drive_upload_google_sa_path=str(drive_auth_settings["google_sa_path"] or ""),
+        drive_upload_auth_mode=str(
+            drive_auth_settings["drive_auth_mode"] or "service_account"
+        ),
+        drive_upload_oauth_client_path=drive_auth_settings["google_oauth_client_path"],
+        drive_upload_oauth_token_path=drive_auth_settings["google_oauth_token_path"],
+        drive_upload_supports_all_drives=drive_settings["drive_supports_all_drives"],
+        drive_upload_include_items_from_all_drives=drive_settings[
+            "drive_include_items_from_all_drives"
+        ],
+        drive_upload_drive_id=drive_settings["drive_id"],
     )
 
     Path(settings.output_dir).mkdir(parents=True, exist_ok=True)
@@ -1903,6 +1944,9 @@ def load_browser_download_settings(
                 "retry_base_delay_seconds": settings.retry_base_delay_seconds,
                 "retry_backoff_step_seconds": settings.retry_backoff_step_seconds,
                 "retry_jitter_seconds": settings.retry_jitter_seconds,
+                "drive_upload_enabled": settings.drive_upload_enabled,
+                "drive_upload_required": settings.drive_upload_required,
+                "drive_upload_auth_mode": settings.drive_upload_auth_mode,
             },
         )
     )
@@ -1982,7 +2026,7 @@ def load_publisher_inventory_settings(
     if _is_missing(api_key):
         resolver.missing.append("env:OPENROUTER_API_KEY")
 
-    http_referer = _env_value("OPENROUTER_HTTP_REFERER")
+    http_referer: str | None = _env_value("OPENROUTER_HTTP_REFERER")
     if _is_missing(http_referer):
         http_referer = None
 
@@ -1994,7 +2038,9 @@ def load_publisher_inventory_settings(
         or "openai/gpt-5-mini"
     ).strip()
     if not model:
-        resolver.missing.append("publisher_discovery.model|env:PUBLISHER_DISCOVERY_MODEL")
+        resolver.missing.append(
+            "publisher_discovery.model|env:PUBLISHER_DISCOVERY_MODEL"
+        )
 
     candidate_screening_enabled = _to_bool(
         candidate_screening_cfg.get("enabled")
@@ -2127,18 +2173,14 @@ def load_publisher_inventory_settings(
         ),
         enable_structured_route_reuse=_to_bool(
             publisher_discovery.get("enable_structured_route_reuse")
-            if not _is_missing(
-                publisher_discovery.get("enable_structured_route_reuse")
-            )
+            if not _is_missing(publisher_discovery.get("enable_structured_route_reuse"))
             else _env_value("PUBLISHER_DISCOVERY_ENABLE_STRUCTURED_ROUTE_REUSE"),
             False,
         ),
         enable_preflight_classifier_and_direct_detail=_to_bool(
             publisher_discovery.get("enable_preflight_classifier_and_direct_detail")
             if not _is_missing(
-                publisher_discovery.get(
-                    "enable_preflight_classifier_and_direct_detail"
-                )
+                publisher_discovery.get("enable_preflight_classifier_and_direct_detail")
             )
             else _env_value(
                 "PUBLISHER_DISCOVERY_ENABLE_PREFLIGHT_CLASSIFIER_AND_DIRECT_DETAIL"
@@ -2322,8 +2364,12 @@ def load_publisher_inventory_settings(
                 "candidate_quality_check_timeout_seconds": settings.candidate_quality_check_timeout_seconds,
                 "candidate_quality_check_max_workers": settings.candidate_quality_check_max_workers,
                 "llm_retry_retries": llm_runtime["llm_retry_retries"],
-                "llm_retry_base_delay_seconds": llm_runtime["llm_retry_base_delay_seconds"],
-                "llm_retry_backoff_step_seconds": llm_runtime["llm_retry_backoff_step_seconds"],
+                "llm_retry_base_delay_seconds": llm_runtime[
+                    "llm_retry_base_delay_seconds"
+                ],
+                "llm_retry_backoff_step_seconds": llm_runtime[
+                    "llm_retry_backoff_step_seconds"
+                ],
                 "llm_retry_jitter_seconds": llm_runtime["llm_retry_jitter_seconds"],
             },
         )

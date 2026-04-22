@@ -127,7 +127,9 @@ class TestConfigService(unittest.TestCase):
         self.assertEqual("./out/cost-ledger.jsonl", settings.cost_ledger_path)
         self.assertIn("AI", settings.html_tag_acronyms)
         self.assertIn("ROI", settings.html_tag_acronyms)
-        self.assertTrue(settings.publisher_profiles_path.endswith("publisher-profiles.json"))
+        self.assertTrue(
+            settings.publisher_profiles_path.endswith("publisher-profiles.json")
+        )
 
     def test_html_tag_acronyms_can_be_configured(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -679,6 +681,13 @@ class TestConfigService(unittest.TestCase):
             Path(tmp_dir, "browser_download_identity.yaml").resolve(),
             Path(settings.identity_config_path).resolve(),
         )
+        self.assertTrue(settings.drive_upload_enabled)
+        self.assertTrue(settings.drive_upload_required)
+        self.assertEqual("service_account", settings.drive_upload_auth_mode)
+        self.assertEqual(
+            Path(tmp_dir, "sa.json").resolve(),
+            Path(settings.drive_upload_google_sa_path).resolve(),
+        )
         self.assertEqual(2, len(settings.identity_profile.fields))
 
     def test_browser_download_settings_load_publisher_overrides(self) -> None:
@@ -775,7 +784,9 @@ class TestConfigService(unittest.TestCase):
             [field["key"] for field in payload["fields"]],
         )
 
-    def test_upsert_browser_download_identity_fields_skips_generic_controls(self) -> None:
+    def test_upsert_browser_download_identity_fields_skips_generic_controls(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(tmp_dir, include_publish=False)
             cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
@@ -802,13 +813,17 @@ class TestConfigService(unittest.TestCase):
             [field["key"] for field in payload["fields"]],
         )
 
-    def test_publisher_inventory_settings_load_and_fallback_to_browser_download(self) -> None:
+    def test_publisher_inventory_settings_load_and_fallback_to_browser_download(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(tmp_dir, include_publish=False)
             cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
             cfg_data["browser_download"] = {
                 "model": "gpt-5-mini",
-                "identity_config_path": str(Path(tmp_dir) / "browser_download_identity.yaml"),
+                "identity_config_path": str(
+                    Path(tmp_dir) / "browser_download_identity.yaml"
+                ),
                 "temperature": 0.1,
                 "timeout_seconds": 45,
                 "max_steps": 12,
@@ -878,7 +893,9 @@ class TestConfigService(unittest.TestCase):
             Path(settings.google_sa_path).resolve(),
         )
 
-    def test_load_settings_supports_oauth_drive_auth_without_service_account(self) -> None:
+    def test_load_settings_supports_oauth_drive_auth_without_service_account(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(tmp_dir, include_analysis=False)
             cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
@@ -956,7 +973,9 @@ class TestConfigService(unittest.TestCase):
             cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
             cfg_data["browser_download"] = {
                 "model": "gpt-5-mini",
-                "identity_config_path": str(Path(tmp_dir) / "browser_download_identity.yaml"),
+                "identity_config_path": str(
+                    Path(tmp_dir) / "browser_download_identity.yaml"
+                ),
             }
             cfg_data["publisher_discovery"] = {
                 "candidate_screening": {

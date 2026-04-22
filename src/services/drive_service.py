@@ -15,6 +15,7 @@ from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
 from google.oauth2.credentials import Credentials as AuthorizedUserCredentials
 from google.oauth2.service_account import Credentials as ServiceAccountCredentials
+
 try:
     from google_auth_oauthlib.flow import InstalledAppFlow
 except ImportError:  # pragma: no cover - dependency guard
@@ -35,6 +36,8 @@ from src.contracts.drive import (
     DriveOAuthAuthorizeResponse,
     DriveUploadBytesRequest,
     DriveUploadBytesResponse,
+    DriveUploadLocalFileRequest,
+    DriveUploadLocalFileResponse,
 )
 from src.contracts.run_context import RunContext
 from src.utils.errors import AppError
@@ -102,9 +105,7 @@ def _persist_authorized_user_credentials(credentials, token_path: str) -> None:
     path.write_text(credentials.to_json(), encoding="utf-8")
 
 
-def _load_authorized_user_credentials(
-    *, token_path: str, ctx: RunContext
-):
+def _load_authorized_user_credentials(*, token_path: str, ctx: RunContext):
     if not token_path:
         raise AppError(
             code="drive_oauth_token_path_missing",
@@ -200,28 +201,42 @@ def _get_drive_client(
 ):
     thread_id = threading.get_ident()
     principal_path = (
-        service_account_path if auth_mode == "service_account" else str(oauth_token_path or "")
+        service_account_path
+        if auth_mode == "service_account"
+        else str(oauth_token_path or "")
     )
     cache_key = (auth_mode, principal_path, thread_id)
     if cache_key in _DRIVE_CLIENTS:
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="drive_client_reuse",
-            module=logger.name,
-            fields={"auth_mode": auth_mode, "credential_path": principal_path, "thread_id": thread_id},
-        ))
-        return _DRIVE_CLIENTS[cache_key]
-    with _DRIVE_CLIENTS_LOCK:
-        cached = _DRIVE_CLIENTS.get(cache_key)
-        if cached is not None:
-            logger.info(log_event(
+        logger.info(
+            log_event(
                 ctx,
                 role="service",
                 event="drive_client_reuse",
                 module=logger.name,
-                fields={"auth_mode": auth_mode, "credential_path": principal_path, "thread_id": thread_id},
-            ))
+                fields={
+                    "auth_mode": auth_mode,
+                    "credential_path": principal_path,
+                    "thread_id": thread_id,
+                },
+            )
+        )
+        return _DRIVE_CLIENTS[cache_key]
+    with _DRIVE_CLIENTS_LOCK:
+        cached = _DRIVE_CLIENTS.get(cache_key)
+        if cached is not None:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="drive_client_reuse",
+                    module=logger.name,
+                    fields={
+                        "auth_mode": auth_mode,
+                        "credential_path": principal_path,
+                        "thread_id": thread_id,
+                    },
+                )
+            )
             return cached
         client = _build_drive_client(
             auth_mode=auth_mode,
@@ -230,13 +245,19 @@ def _get_drive_client(
             ctx=ctx,
         )
         _DRIVE_CLIENTS[cache_key] = client
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="drive_client_created",
-        module=logger.name,
-        fields={"auth_mode": auth_mode, "credential_path": principal_path, "thread_id": thread_id},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="drive_client_created",
+            module=logger.name,
+            fields={
+                "auth_mode": auth_mode,
+                "credential_path": principal_path,
+                "thread_id": thread_id,
+            },
+        )
+    )
     return client
 
 
@@ -266,8 +287,9 @@ def _request_auth_mode(request) -> str:
     return _normalize_drive_auth_mode(getattr(request, "auth_mode", "service_account"))
 
 
-
-def _list_files_paginated(drive, list_kwargs: dict, request: DriveListRequest, ctx: RunContext) -> list[dict]:
+def _list_files_paginated(
+    drive, list_kwargs: dict, request: DriveListRequest, ctx: RunContext
+) -> list[dict]:
     page_token: Optional[str] = None
     items: list[dict] = []
     while True:
@@ -276,13 +298,15 @@ def _list_files_paginated(drive, list_kwargs: dict, request: DriveListRequest, c
             kwargs["pageToken"] = page_token
             resp = drive.files().list(**kwargs).execute()
         except DRIVE_BOUNDARY_EXCEPTIONS as exc:
-            logger.info(log_event(
-                ctx,
-                role="service",
-                event="drive_list_error",
-                module=logger.name,
-                fields={"folder_id": request.folder_id, "error": str(exc)},
-            ))
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="drive_list_error",
+                    module=logger.name,
+                    fields={"folder_id": request.folder_id, "error": str(exc)},
+                )
+            )
             raise AppError(
                 code="drive_list_failed",
                 message="Drive list failed",
@@ -297,7 +321,9 @@ def _list_files_paginated(drive, list_kwargs: dict, request: DriveListRequest, c
     return items
 
 
-def _resolve_folder_scope(drive, request: DriveListRequest, ctx: RunContext) -> list[str]:
+def _resolve_folder_scope(
+    drive, request: DriveListRequest, ctx: RunContext
+) -> list[str]:
     folder_ids = [request.folder_id]
     seen = {request.folder_id}
     queue = [request.folder_id]
@@ -323,35 +349,42 @@ def _resolve_folder_scope(drive, request: DriveListRequest, ctx: RunContext) -> 
             folder_ids.append(subfolder_id)
             queue.append(subfolder_id)
 
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="drive_list_folder_scope_resolved",
-        module=logger.name,
-        fields={"root_folder_id": request.folder_id, "folder_count": len(folder_ids)},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="drive_list_folder_scope_resolved",
+            module=logger.name,
+            fields={
+                "root_folder_id": request.folder_id,
+                "folder_count": len(folder_ids),
+            },
+        )
+    )
     return folder_ids
 
 
 def list_pdfs(request: DriveListRequest, ctx: RunContext) -> Iterable[DriveFile]:
     auth_mode = _request_auth_mode(request)
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="drive_list_start",
-        module=logger.name,
-        fields={
-            "folder_id": request.folder_id,
-            "page_size": request.page_size,
-            "order_by": request.order_by or "",
-            "modified_after": request.modified_after or "",
-            "list_mode": request.list_mode,
-            "supports_all_drives": request.supports_all_drives,
-            "include_items_from_all_drives": request.include_items_from_all_drives,
-            "drive_id": request.drive_id or "",
-            "auth_mode": auth_mode,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="drive_list_start",
+            module=logger.name,
+            fields={
+                "folder_id": request.folder_id,
+                "page_size": request.page_size,
+                "order_by": request.order_by or "",
+                "modified_after": request.modified_after or "",
+                "list_mode": request.list_mode,
+                "supports_all_drives": request.supports_all_drives,
+                "include_items_from_all_drives": request.include_items_from_all_drives,
+                "drive_id": request.drive_id or "",
+                "auth_mode": auth_mode,
+            },
+        )
+    )
     _require_drive_auth(
         auth_mode=auth_mode,
         service_account_path=request.service_account_path,
@@ -407,24 +440,30 @@ def list_pdfs(request: DriveListRequest, ctx: RunContext) -> Iterable[DriveFile]
                 )
         completed = True
     finally:
-        logger.info(log_event(
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="drive_list_complete",
+                module=logger.name,
+                fields={"count": total, "partial": not completed},
+            )
+        )
+
+
+def get_file_metadata(
+    request: DriveFileMetadataRequest, ctx: RunContext
+) -> DriveFileMetadataResponse:
+    auth_mode = _request_auth_mode(request)
+    logger.info(
+        log_event(
             ctx,
             role="service",
-            event="drive_list_complete",
+            event="drive_file_metadata_start",
             module=logger.name,
-            fields={"count": total, "partial": not completed},
-        ))
-
-
-def get_file_metadata(request: DriveFileMetadataRequest, ctx: RunContext) -> DriveFileMetadataResponse:
-    auth_mode = _request_auth_mode(request)
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="drive_file_metadata_start",
-        module=logger.name,
-        fields={"file_id": request.file_id, "auth_mode": auth_mode},
-    ))
+            fields={"file_id": request.file_id, "auth_mode": auth_mode},
+        )
+    )
     _require_drive_auth(
         auth_mode=auth_mode,
         service_account_path=request.service_account_path,
@@ -443,15 +482,24 @@ def get_file_metadata(request: DriveFileMetadataRequest, ctx: RunContext) -> Dri
         ctx=ctx,
     )
     try:
-        resp = drive.files().get(fileId=request.file_id, fields="id,name,modifiedTime,md5Checksum,mimeType").execute()
+        resp = (
+            drive.files()
+            .get(
+                fileId=request.file_id,
+                fields="id,name,modifiedTime,md5Checksum,mimeType",
+            )
+            .execute()
+        )
     except DRIVE_BOUNDARY_EXCEPTIONS as exc:
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="drive_file_metadata_failed",
-            module=logger.name,
-            fields={"file_id": request.file_id, "error": str(exc)},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="drive_file_metadata_failed",
+                module=logger.name,
+                fields={"file_id": request.file_id, "error": str(exc)},
+            )
+        )
         raise AppError(
             code="drive_metadata_failed",
             message="Drive metadata fetch failed",
@@ -467,13 +515,15 @@ def get_file_metadata(request: DriveFileMetadataRequest, ctx: RunContext) -> Dri
         md5_checksum=resp.get("md5Checksum"),
         mime_type=resp.get("mimeType"),
     )
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="drive_file_metadata_complete",
-        module=logger.name,
-        fields={"file_id": file.file_id, "name": file.name or ""},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="drive_file_metadata_complete",
+            module=logger.name,
+            fields={"file_id": file.file_id, "name": file.name or ""},
+        )
+    )
     return DriveFileMetadataResponse(schema_version="1.0", file=file)
 
 
@@ -483,17 +533,25 @@ def _md5_for_bytes(data: bytes) -> str:
     return h.hexdigest()
 
 
-def download_pdf(request: DriveDownloadRequest, ctx: RunContext) -> DriveDownloadResponse:
+def download_pdf(
+    request: DriveDownloadRequest, ctx: RunContext
+) -> DriveDownloadResponse:
     file_meta = request.file
     auth_mode = _request_auth_mode(request)
 
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="drive_download_start",
-        module=logger.name,
-        fields={"file_id": file_meta.file_id, "name": file_meta.name, "auth_mode": auth_mode},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="drive_download_start",
+            module=logger.name,
+            fields={
+                "file_id": file_meta.file_id,
+                "name": file_meta.name,
+                "auth_mode": auth_mode,
+            },
+        )
+    )
 
     _require_drive_auth(
         auth_mode=auth_mode,
@@ -530,13 +588,15 @@ def download_pdf(request: DriveDownloadRequest, ctx: RunContext) -> DriveDownloa
 
     content = buffer.getvalue()
     md5 = _md5_for_bytes(content) if content else None
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="drive_download_complete",
-        module=logger.name,
-        fields={"md5": md5, "size": len(content)},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="drive_download_complete",
+            module=logger.name,
+            fields={"md5": md5, "size": len(content)},
+        )
+    )
 
     return DriveDownloadResponse(
         schema_version="1.0",
@@ -547,23 +607,27 @@ def download_pdf(request: DriveDownloadRequest, ctx: RunContext) -> DriveDownloa
     )
 
 
-def download_pdf_to_path(request: DriveDownloadToPathRequest, ctx: RunContext) -> DriveDownloadToPathResponse:
+def download_pdf_to_path(
+    request: DriveDownloadToPathRequest, ctx: RunContext
+) -> DriveDownloadToPathResponse:
     file_meta = request.file
     auth_mode = _request_auth_mode(request)
 
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="drive_download_to_path_start",
-        module=logger.name,
-        fields={
-            "file_id": file_meta.file_id,
-            "name": file_meta.name,
-            "output_path": request.output_path,
-            "make_parents": request.make_parents,
-            "auth_mode": auth_mode,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="drive_download_to_path_start",
+            module=logger.name,
+            fields={
+                "file_id": file_meta.file_id,
+                "name": file_meta.name,
+                "output_path": request.output_path,
+                "make_parents": request.make_parents,
+                "auth_mode": auth_mode,
+            },
+        )
+    )
 
     _require_drive_auth(
         auth_mode=auth_mode,
@@ -610,20 +674,31 @@ def download_pdf_to_path(request: DriveDownloadToPathRequest, ctx: RunContext) -
         try:
             path.unlink(missing_ok=True)
         except OSError:
-            logger.info(log_event(
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="drive_download_partial_cleanup_failed",
+                    module=logger.name,
+                    fields={
+                        "file_id": file_meta.file_id,
+                        "output_path": request.output_path,
+                    },
+                )
+            )
+        logger.info(
+            log_event(
                 ctx,
                 role="service",
-                event="drive_download_partial_cleanup_failed",
+                event="drive_download_to_path_failed",
                 module=logger.name,
-                fields={"file_id": file_meta.file_id, "output_path": request.output_path},
-            ))
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="drive_download_to_path_failed",
-            module=logger.name,
-            fields={"file_id": file_meta.file_id, "output_path": request.output_path, "error": str(exc)},
-        ))
+                fields={
+                    "file_id": file_meta.file_id,
+                    "output_path": request.output_path,
+                    "error": str(exc),
+                },
+            )
+        )
         raise AppError(
             code="drive_download_failed",
             message="Drive download failed",
@@ -632,13 +707,15 @@ def download_pdf_to_path(request: DriveDownloadToPathRequest, ctx: RunContext) -
             context={"file_id": file_meta.file_id, "output_path": request.output_path},
         ) from exc
 
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="drive_download_to_path_complete",
-        module=logger.name,
-        fields={"md5": md5, "size": size, "output_path": request.output_path},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="drive_download_to_path_complete",
+            module=logger.name,
+            fields={"md5": md5, "size": size, "output_path": request.output_path},
+        )
+    )
 
     return DriveDownloadToPathResponse(
         schema_version="1.0",
@@ -706,21 +783,26 @@ def list_files_in_folder(
     if request.drive_id:
         list_kwargs["driveId"] = request.drive_id
         list_kwargs["corpora"] = "drive"
-    rows = _list_files_paginated(drive, list_kwargs, DriveListRequest(
-        schema_version="1.0",
-        folder_id=request.folder_id,
-        service_account_path=request.service_account_path,
-        page_size=request.page_size,
-        order_by=request.order_by,
-        modified_after=None,
-        list_mode="full",
-        supports_all_drives=request.supports_all_drives,
-        include_items_from_all_drives=request.include_items_from_all_drives,
-        drive_id=request.drive_id,
-        auth_mode=request.auth_mode,
-        oauth_client_path=request.oauth_client_path,
-        oauth_token_path=request.oauth_token_path,
-    ), ctx)
+    rows = _list_files_paginated(
+        drive,
+        list_kwargs,
+        DriveListRequest(
+            schema_version="1.0",
+            folder_id=request.folder_id,
+            service_account_path=request.service_account_path,
+            page_size=request.page_size,
+            order_by=request.order_by,
+            modified_after=None,
+            list_mode="full",
+            supports_all_drives=request.supports_all_drives,
+            include_items_from_all_drives=request.include_items_from_all_drives,
+            drive_id=request.drive_id,
+            auth_mode=request.auth_mode,
+            oauth_client_path=request.oauth_client_path,
+            oauth_token_path=request.oauth_token_path,
+        ),
+        ctx,
+    )
     files = [
         DriveFile(
             schema_version="1.0",
@@ -752,7 +834,9 @@ def list_files_in_folder(
     return response
 
 
-def upload_bytes(request: DriveUploadBytesRequest, ctx: RunContext) -> DriveUploadBytesResponse:
+def upload_bytes(
+    request: DriveUploadBytesRequest, ctx: RunContext
+) -> DriveUploadBytesResponse:
     auth_mode = _request_auth_mode(request)
     logger.info(
         log_event(
@@ -854,6 +938,104 @@ def upload_bytes(request: DriveUploadBytesRequest, ctx: RunContext) -> DriveUplo
                 "folder_id": request.folder_id,
                 "file_id": response.file.file_id,
                 "file_name": response.file.name or "",
+                "size": response.size,
+                "md5": response.md5 or "",
+            },
+        )
+    )
+    return response
+
+
+def upload_local_file(
+    request: DriveUploadLocalFileRequest,
+    ctx: RunContext,
+) -> DriveUploadLocalFileResponse:
+    source_path = str(request.source_path or "").strip()
+    file_name = str(request.file_name or "").strip()
+    if not source_path:
+        raise AppError(
+            code="drive_upload_source_path_missing",
+            message="Local source path is required to upload a Drive file",
+            retryable=False,
+        )
+    path = Path(source_path)
+    if not path.exists() or not path.is_file():
+        raise AppError(
+            code="drive_upload_source_path_invalid",
+            message="Local source path does not exist or is not a file",
+            retryable=False,
+            context={"source_path": source_path},
+        )
+    if not file_name:
+        file_name = path.name
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="drive_upload_local_file_start",
+            module=logger.name,
+            fields={
+                "folder_id": request.folder_id,
+                "source_path": source_path,
+                "file_name": file_name,
+                "mime_type": request.mime_type,
+                "supports_all_drives": request.supports_all_drives,
+                "auth_mode": _request_auth_mode(request),
+            },
+        )
+    )
+    try:
+        content = path.read_bytes()
+    except OSError as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="drive_upload_local_file_read_failed",
+                module=logger.name,
+                fields={"source_path": source_path, "error": str(exc)},
+            )
+        )
+        raise AppError(
+            code="drive_upload_source_read_failed",
+            message="Local source file could not be read for Drive upload",
+            cause=exc,
+            retryable=True,
+            context={"source_path": source_path},
+        ) from exc
+    upload_response = upload_bytes(
+        DriveUploadBytesRequest(
+            schema_version="1.0",
+            folder_id=request.folder_id,
+            service_account_path=request.service_account_path,
+            file_name=file_name,
+            content=content,
+            mime_type=request.mime_type,
+            supports_all_drives=request.supports_all_drives,
+            auth_mode=request.auth_mode,
+            oauth_client_path=request.oauth_client_path,
+            oauth_token_path=request.oauth_token_path,
+        ),
+        ctx,
+    )
+    response = DriveUploadLocalFileResponse(
+        schema_version="1.0",
+        file=upload_response.file,
+        source_path=source_path,
+        size=upload_response.size,
+        md5=upload_response.md5,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="drive_upload_local_file_complete",
+            module=logger.name,
+            fields={
+                "folder_id": request.folder_id,
+                "source_path": response.source_path,
+                "file_id": response.file.file_id,
+                "file_name": response.file.name or file_name,
                 "size": response.size,
                 "md5": response.md5 or "",
             },

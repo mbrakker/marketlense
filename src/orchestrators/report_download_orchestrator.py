@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import mimetypes
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -16,14 +17,23 @@ from src.contracts.browser_download import (
     PublisherDownloadRouteMemory,
     ReportDownloadRoutePlanRequest,
     ReportDownloadRoutePlanStep,
+    ReportDownloadDriveUpload,
     ReportDownloadOrchestratorRequest,
     ReportDownloadOrchestratorResult,
+)
+from src.contracts.drive import (
+    DriveFolderFileListRequest,
+    DriveFolderFileListResponse,
+    DriveUploadLocalFileRequest,
+    DriveUploadLocalFileResponse,
 )
 from src.contracts.files import FileHashRequest, FileHashResponse
 from src.contracts.report_store import (
     PublisherDownloadRouteGetRequest,
     PublisherDownloadRouteRecordRequest,
     PublisherDownloadRouteResponse,
+    ReportDownloadDriveFolderLookupRequest,
+    ReportDownloadDriveFolderLookupResponse,
     ReportSourceRecordRequest,
     ReportSourceRecordResponse,
 )
@@ -40,12 +50,15 @@ from src.services.browser_report_download_service import (
     download_report_with_browser_use,
 )
 from src.services.file_service import file_md5
+from src.services.drive_service import list_files_in_folder, upload_local_file
 from src.services.report_store_service import (
+    get_report_download_drive_folder,
     get_publisher_download_route,
     record_publisher_download_route,
     record_report_source,
 )
 from src.services.config_service import upsert_browser_download_identity_fields
+from src.utils.drive_utils import extract_drive_folder_id
 from src.utils.logging import log_event
 from src.utils.errors import AppError
 from src.utils.url_utils import normalize_url
@@ -154,6 +167,18 @@ class ReportDownloadDependencies:
         BrowserDownloadIdentityFieldUpsertResponse,
     ]
     sleep_fn: Callable[[float], None]
+    get_report_download_drive_folder: Callable[
+        [ReportDownloadDriveFolderLookupRequest, RunContext],
+        Optional[ReportDownloadDriveFolderLookupResponse],
+    ] = get_report_download_drive_folder
+    list_files_in_folder: Callable[
+        [DriveFolderFileListRequest, RunContext],
+        DriveFolderFileListResponse,
+    ] = list_files_in_folder
+    upload_local_file: Callable[
+        [DriveUploadLocalFileRequest, RunContext],
+        DriveUploadLocalFileResponse,
+    ] = upload_local_file
 
     @classmethod
     def default(cls) -> "ReportDownloadDependencies":
@@ -163,6 +188,9 @@ class ReportDownloadDependencies:
             record_publisher_download_route=record_publisher_download_route,
             file_md5=file_md5,
             record_report_source=record_report_source,
+            get_report_download_drive_folder=get_report_download_drive_folder,
+            list_files_in_folder=list_files_in_folder,
+            upload_local_file=upload_local_file,
             upsert_browser_download_identity_fields=upsert_browser_download_identity_fields,
             sleep_fn=time.sleep,
         )
@@ -188,6 +216,9 @@ def run_report_download(
                 "reports_db": request.reports_db,
                 "has_delivery_email": bool(request.delivery_email),
                 "has_candidate_trace": request.candidate_trace is not None,
+                "has_publisher_insights_url": bool(request.publisher_insights_url),
+                "has_publisher_google_folder": bool(request.publisher_google_folder),
+                "drive_upload_enabled": request.settings.drive_upload_enabled,
                 "publisher_discovery_route_kind": request.publisher_discovery_route_kind
                 or "",
                 "publisher_recommended_discovery_route_kind": (
@@ -196,7 +227,9 @@ def run_report_download(
             },
         )
     )
-    _assert_candidate_download_ready(request=request, normalized_url=normalized_url, ctx=ctx)
+    _assert_candidate_download_ready(
+        request=request, normalized_url=normalized_url, ctx=ctx
+    )
     remembered_route = deps.get_publisher_download_route(
         PublisherDownloadRouteGetRequest(
             schema_version="1.0",
@@ -425,6 +458,14 @@ def run_report_download(
         )
     )
 
+    drive_uploads = _archive_successful_report_artifacts(
+        request=request,
+        result=result,
+        normalized_url=normalized_url,
+        policy=policy,
+        ctx=ctx,
+        dependencies=deps,
+    )
     response = ReportDownloadOrchestratorResult(
         schema_version="1.0",
         source_url=result.source_url,
@@ -455,6 +496,7 @@ def run_report_download(
         onsite_capture_format=result.onsite_capture_format,
         onsite_page_count=result.onsite_page_count,
         onsite_completeness_status=result.onsite_completeness_status,
+        drive_uploads=drive_uploads,
     )
     logger.info(
         log_event(
@@ -468,6 +510,7 @@ def run_report_download(
                 "outcome": response.outcome,
                 "used_memory_route": response.used_memory_route,
                 "downloaded_file_path": response.downloaded_file_path or "",
+                "drive_upload_count": len(response.drive_uploads),
             },
         )
     )
@@ -516,6 +559,326 @@ def _run_download_attempt(
     )
 
 
+def _archive_successful_report_artifacts(
+    *,
+    request: ReportDownloadOrchestratorRequest,
+    result: BrowserReportDownloadResult,
+    normalized_url: str,
+    policy: RetryPolicy,
+    ctx: RunContext,
+    dependencies: ReportDownloadDependencies,
+) -> list[ReportDownloadDriveUpload]:
+    if not request.settings.drive_upload_enabled:
+        return []
+    if result.outcome not in {"downloaded", "captured"}:
+        return []
+    artifact_paths = _local_terminal_artifact_paths(result)
+    if not artifact_paths:
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="report_download_drive_upload_no_artifacts",
+                module=logger.name,
+                fields={"normalized_url": normalized_url, "outcome": result.outcome},
+            )
+        )
+        return []
+    try:
+        folder_id = _resolve_drive_upload_folder_id(
+            request=request,
+            normalized_url=normalized_url,
+            ctx=ctx,
+            dependencies=dependencies,
+        )
+        uploads = []
+        for path in artifact_paths:
+            uploads.append(
+                _archive_single_artifact(
+                    request=request,
+                    result=result,
+                    local_path=path,
+                    folder_id=folder_id,
+                    policy=policy,
+                    ctx=ctx,
+                    dependencies=dependencies,
+                )
+            )
+        return uploads
+    except AppError:
+        if request.settings.drive_upload_required:
+            raise
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="report_download_drive_upload_best_effort_failed",
+                module=logger.name,
+                fields={"normalized_url": normalized_url},
+            )
+        )
+        return []
+
+
+def _resolve_drive_upload_folder_id(
+    *,
+    request: ReportDownloadOrchestratorRequest,
+    normalized_url: str,
+    ctx: RunContext,
+    dependencies: ReportDownloadDependencies,
+) -> str:
+    explicit_folder_id = extract_drive_folder_id(request.publisher_google_folder or "")
+    if explicit_folder_id:
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="report_download_drive_folder_resolved",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "resolution_source": "request_publisher_google_folder",
+                    "folder_id": explicit_folder_id,
+                },
+            )
+        )
+        return explicit_folder_id
+    lookup = dependencies.get_report_download_drive_folder(
+        ReportDownloadDriveFolderLookupRequest(
+            schema_version="1.0",
+            db_path=request.reports_db,
+            normalized_landing_page_url=normalized_url,
+            publisher_insights_url=request.publisher_insights_url,
+        ),
+        ctx,
+    )
+    folder_id = extract_drive_folder_id(lookup.google_folder if lookup else "")
+    if folder_id:
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="report_download_drive_folder_resolved",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "resolution_source": lookup.resolution_source if lookup else "",
+                    "publisher_name": lookup.publisher_name if lookup else "",
+                    "folder_id": folder_id,
+                },
+            )
+        )
+        return folder_id
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="report_download_drive_folder_missing",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "has_publisher_insights_url": bool(request.publisher_insights_url),
+            },
+        )
+    )
+    raise AppError(
+        code="report_download_drive_folder_missing",
+        message="Publisher Drive folder could not be resolved for acquired report archival",
+        retryable=False,
+        severity="error",
+        context={
+            "normalized_url": normalized_url,
+            "publisher_insights_url": request.publisher_insights_url or "",
+        },
+    )
+
+
+def _archive_single_artifact(
+    *,
+    request: ReportDownloadOrchestratorRequest,
+    result: BrowserReportDownloadResult,
+    local_path: str,
+    folder_id: str,
+    policy: RetryPolicy,
+    ctx: RunContext,
+    dependencies: ReportDownloadDependencies,
+) -> ReportDownloadDriveUpload:
+    path = Path(local_path)
+    file_name = path.name
+    mime_type = _mime_type_for_artifact(result=result, path=path)
+    file_hash = dependencies.file_md5(
+        FileHashRequest(schema_version="1.0", path=str(path)),
+        ctx,
+    )
+    size = path.stat().st_size
+    duplicate = _find_duplicate_drive_file(
+        request=request,
+        folder_id=folder_id,
+        file_name=file_name,
+        md5=file_hash.md5,
+        policy=policy,
+        ctx=ctx,
+        dependencies=dependencies,
+    )
+    if duplicate is not None:
+        upload = ReportDownloadDriveUpload(
+            schema_version="1.0",
+            local_path=str(path),
+            file_name=file_name,
+            mime_type=mime_type,
+            folder_id=folder_id,
+            status="skipped_duplicate",
+            size=size,
+            md5=file_hash.md5,
+            drive_file=duplicate,
+        )
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="report_download_drive_upload_skipped_duplicate",
+                module=logger.name,
+                fields={
+                    "local_path": upload.local_path,
+                    "folder_id": folder_id,
+                    "file_name": file_name,
+                    "drive_file_id": duplicate.file_id,
+                    "md5": file_hash.md5,
+                },
+            )
+        )
+        return upload
+    upload_response = run_with_retry(
+        step_name="report_download_drive_upload",
+        operation=lambda: dependencies.upload_local_file(
+            DriveUploadLocalFileRequest(
+                schema_version="1.0",
+                folder_id=folder_id,
+                service_account_path=request.settings.drive_upload_google_sa_path,
+                source_path=str(path),
+                file_name=file_name,
+                mime_type=mime_type,
+                supports_all_drives=request.settings.drive_upload_supports_all_drives,
+                auth_mode=request.settings.drive_upload_auth_mode,
+                oauth_client_path=request.settings.drive_upload_oauth_client_path,
+                oauth_token_path=request.settings.drive_upload_oauth_token_path,
+            ),
+            ctx,
+        ),
+        ctx=ctx,
+        logger=logger,
+        module_name=logger.name,
+        policy=policy,
+        retry_event="report_download_drive_upload_retry",
+        failure_event="report_download_drive_upload_failed",
+        sleep_fn=dependencies.sleep_fn,
+    )
+    upload = ReportDownloadDriveUpload(
+        schema_version="1.0",
+        local_path=str(path),
+        file_name=file_name,
+        mime_type=mime_type,
+        folder_id=folder_id,
+        status="uploaded",
+        size=upload_response.size,
+        md5=upload_response.md5,
+        drive_file=upload_response.file,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="report_download_drive_uploaded",
+            module=logger.name,
+            fields={
+                "local_path": upload.local_path,
+                "folder_id": folder_id,
+                "file_name": file_name,
+                "drive_file_id": upload.drive_file.file_id,
+                "size": upload.size,
+                "md5": upload.md5 or "",
+            },
+        )
+    )
+    return upload
+
+
+def _find_duplicate_drive_file(
+    *,
+    request: ReportDownloadOrchestratorRequest,
+    folder_id: str,
+    file_name: str,
+    md5: str,
+    policy: RetryPolicy,
+    ctx: RunContext,
+    dependencies: ReportDownloadDependencies,
+):
+    response = run_with_retry(
+        step_name="report_download_drive_duplicate_check",
+        operation=lambda: dependencies.list_files_in_folder(
+            DriveFolderFileListRequest(
+                schema_version="1.0",
+                folder_id=folder_id,
+                service_account_path=request.settings.drive_upload_google_sa_path,
+                name_prefix=file_name,
+                supports_all_drives=request.settings.drive_upload_supports_all_drives,
+                include_items_from_all_drives=(
+                    request.settings.drive_upload_include_items_from_all_drives
+                ),
+                drive_id=request.settings.drive_upload_drive_id,
+                auth_mode=request.settings.drive_upload_auth_mode,
+                oauth_client_path=request.settings.drive_upload_oauth_client_path,
+                oauth_token_path=request.settings.drive_upload_oauth_token_path,
+            ),
+            ctx,
+        ),
+        ctx=ctx,
+        logger=logger,
+        module_name=logger.name,
+        policy=policy,
+        retry_event="report_download_drive_duplicate_check_retry",
+        failure_event="report_download_drive_duplicate_check_failed",
+        sleep_fn=dependencies.sleep_fn,
+    )
+    for file in response.files:
+        if (file.name or "") == file_name and (file.md5_checksum or "") == md5:
+            return file
+    return None
+
+
+def _local_terminal_artifact_paths(result: BrowserReportDownloadResult) -> list[str]:
+    candidates = [
+        result.downloaded_file_path,
+        result.onsite_capture_path,
+        result.terminal_evidence.html_snapshot_path,
+        result.terminal_evidence.screenshot_path,
+    ]
+    seen: set[str] = set()
+    paths: list[str] = []
+    for candidate in candidates:
+        value = str(candidate or "").strip()
+        if not value:
+            continue
+        key = str(Path(value))
+        if key in seen:
+            continue
+        seen.add(key)
+        paths.append(value)
+    return paths
+
+
+def _mime_type_for_artifact(*, result: BrowserReportDownloadResult, path: Path) -> str:
+    if result.downloaded_file_path and Path(result.downloaded_file_path) == path:
+        return result.downloaded_mime_type or "application/octet-stream"
+    if result.onsite_capture_path and Path(result.onsite_capture_path) == path:
+        if result.onsite_capture_format in {"html", "html+markdown"}:
+            return "text/html"
+        if result.onsite_capture_format == "markdown":
+            return "text/markdown"
+    guessed, _ = mimetypes.guess_type(str(path))
+    return guessed or "application/octet-stream"
+
+
 def _is_download_attempt_retryable(
     *,
     exc: Exception,
@@ -525,13 +888,10 @@ def _is_download_attempt_retryable(
         return False
     if not isinstance(exc, AppError):
         return False
-    if (
-        planned_step.route_family.startswith("browser_")
-        and exc.code in {
-            "browser_download_agent_timeout",
-            "browser_download_route_summary_too_weak",
-        }
-    ):
+    if planned_step.route_family.startswith("browser_") and exc.code in {
+        "browser_download_agent_timeout",
+        "browser_download_route_summary_too_weak",
+    }:
         return False
     return True
 
@@ -596,9 +956,11 @@ def _assert_candidate_download_ready(
         return
     if candidate.pdf_url or normalized_url.endswith(".pdf"):
         return
-    readiness_score, rejection_reason, readiness_signals = _evaluate_candidate_download_readiness(
-        request=request,
-        normalized_url=normalized_url,
+    readiness_score, rejection_reason, readiness_signals = (
+        _evaluate_candidate_download_readiness(
+            request=request,
+            normalized_url=normalized_url,
+        )
     )
     logger.info(
         log_event(
@@ -658,7 +1020,9 @@ def _evaluate_candidate_download_readiness(
         return 1.0, None, ["no_candidate_trace"]
     title = str(candidate.title or "").strip().casefold()
     url_value = str(candidate.canonical_url or normalized_url).strip().casefold()
-    source_pages = [str(value or "").strip().casefold() for value in candidate.source_page_urls]
+    source_pages = [
+        str(value or "").strip().casefold() for value in candidate.source_page_urls
+    ]
     provenances = {
         str(value or "").strip().casefold() for value in candidate.discovery_provenances
     }
@@ -685,7 +1049,10 @@ def _evaluate_candidate_download_readiness(
     if "direct_pdf_source" in provenances:
         score += 0.3
         signals.append("direct_pdf_source")
-    if "browser_dom" in provenances or "browser_rendered_html_supplement" in provenances:
+    if (
+        "browser_dom" in provenances
+        or "browser_rendered_html_supplement" in provenances
+    ):
         score += 0.1
         signals.append("browser_provenance")
 
@@ -727,6 +1094,9 @@ def _report_name_for_result(result: BrowserReportDownloadResult) -> str:
 
 
 def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace(
-        "+00:00", "Z"
+    return (
+        datetime.now(timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
     )

@@ -573,6 +573,54 @@
     "src.contracts.browser_download.BrowserDownloadSettings": {
       "additionalProperties": false,
       "properties": {
+        "drive_upload_auth_mode": {
+          "type": "string"
+        },
+        "drive_upload_drive_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "drive_upload_enabled": {
+          "type": "boolean"
+        },
+        "drive_upload_google_sa_path": {
+          "type": "string"
+        },
+        "drive_upload_include_items_from_all_drives": {
+          "type": "boolean"
+        },
+        "drive_upload_oauth_client_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "drive_upload_oauth_token_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "drive_upload_required": {
+          "type": "boolean"
+        },
+        "drive_upload_supports_all_drives": {
+          "type": "boolean"
+        },
         "headed": {
           "type": "boolean"
         },
@@ -1101,6 +1149,57 @@
       ],
       "type": "object"
     },
+    "src.contracts.browser_download.ReportDownloadDriveUpload": {
+      "additionalProperties": false,
+      "properties": {
+        "drive_file": {
+          "$ref": "#/$defs/src.contracts.drive.DriveFile"
+        },
+        "file_name": {
+          "type": "string"
+        },
+        "folder_id": {
+          "type": "string"
+        },
+        "local_path": {
+          "type": "string"
+        },
+        "md5": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mime_type": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "size": {
+          "type": "integer"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "local_path",
+        "file_name",
+        "mime_type",
+        "folder_id",
+        "status",
+        "size",
+        "md5",
+        "drive_file"
+      ],
+      "type": "object"
+    },
     "src.contracts.browser_download.ReportDownloadOrchestratorRequest": {
       "additionalProperties": false,
       "properties": {
@@ -1125,6 +1224,26 @@
           ]
         },
         "publisher_discovery_route_kind": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "publisher_google_folder": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "publisher_insights_url": {
           "anyOf": [
             {
               "type": "string"
@@ -1237,6 +1356,12 @@
               "type": "null"
             }
           ]
+        },
+        "drive_uploads": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.browser_download.ReportDownloadDriveUpload"
+          },
+          "type": "array"
         },
         "encountered_form_fields": {
           "items": {
@@ -5118,6 +5243,104 @@
       "required": [
         "schema_version",
         "file",
+        "size",
+        "md5"
+      ],
+      "type": "object"
+    },
+    "src.contracts.drive.DriveUploadLocalFileRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "auth_mode": {
+          "type": "string"
+        },
+        "file_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "folder_id": {
+          "type": "string"
+        },
+        "mime_type": {
+          "type": "string"
+        },
+        "oauth_client_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "oauth_token_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "service_account_path": {
+          "type": "string"
+        },
+        "source_path": {
+          "type": "string"
+        },
+        "supports_all_drives": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema_version",
+        "folder_id",
+        "service_account_path",
+        "source_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.drive.DriveUploadLocalFileResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "file": {
+          "$ref": "#/$defs/src.contracts.drive.DriveFile"
+        },
+        "md5": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "size": {
+          "type": "integer"
+        },
+        "source_path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "file",
+        "source_path",
         "size",
         "md5"
       ],
@@ -13235,6 +13458,60 @@
         "source_page_url",
         "previous_count",
         "replaced_count"
+      ],
+      "type": "object"
+    },
+    "src.contracts.report_store.ReportDownloadDriveFolderLookupRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "normalized_landing_page_url": {
+          "type": "string"
+        },
+        "publisher_insights_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "normalized_landing_page_url"
+      ],
+      "type": "object"
+    },
+    "src.contracts.report_store.ReportDownloadDriveFolderLookupResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "google_folder": {
+          "type": "string"
+        },
+        "publisher_name": {
+          "type": "string"
+        },
+        "resolution_source": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "publisher_name",
+        "google_folder",
+        "resolution_source"
       ],
       "type": "object"
     },

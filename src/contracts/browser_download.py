@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 
+from src.contracts.drive import DriveFile
 from src.contracts.publisher_inventory import PublisherInventoryCandidateTrace
 
 
@@ -141,7 +142,9 @@ class BrowserDownloadSettings:
         metadata={"doc": "SQLite state DB used to remember successful per-URL routes."}
     )
     reports_db: str = field(
-        metadata={"doc": "SQLite reports DB used to store downloaded-report source rows."}
+        metadata={
+            "doc": "SQLite reports DB used to store downloaded-report source rows."
+        }
     )
     identity_config_path: str = field(
         metadata={
@@ -179,6 +182,81 @@ class BrowserDownloadSettings:
         default=0.25,
         metadata={"doc": "Maximum jitter added to browser download retry delays."},
     )
+    drive_upload_enabled: bool = field(
+        default=False,
+        metadata={
+            "doc": "Whether successful report acquisitions should upload local terminal artifacts to Google Drive."
+        },
+    )
+    drive_upload_required: bool = field(
+        default=True,
+        metadata={
+            "doc": "Whether Drive archival failure should fail the report download workflow."
+        },
+    )
+    drive_upload_google_sa_path: str = field(
+        default="",
+        metadata={
+            "doc": "Filesystem path to the Google service account JSON used for Drive archival when auth mode is service_account."
+        },
+    )
+    drive_upload_auth_mode: str = field(
+        default="service_account",
+        metadata={"doc": "Drive auth mode used for report acquisition archival."},
+    )
+    drive_upload_oauth_client_path: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Optional OAuth desktop client JSON path used for report acquisition archival."
+        },
+    )
+    drive_upload_oauth_token_path: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "OAuth authorized-user token JSON path used for report acquisition archival."
+        },
+    )
+    drive_upload_supports_all_drives: bool = field(
+        default=True,
+        metadata={"doc": "Whether Drive archival upload calls support shared drives."},
+    )
+    drive_upload_include_items_from_all_drives: bool = field(
+        default=True,
+        metadata={
+            "doc": "Whether duplicate checks for Drive archival include items from shared drives."
+        },
+    )
+    drive_upload_drive_id: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Optional shared Drive ID used when checking for duplicate archived artifacts."
+        },
+    )
+
+
+@dataclass(frozen=True)
+class ReportDownloadDriveUpload:
+    schema_version: str = field(
+        metadata={"doc": "Report-download Drive upload result schema version."}
+    )
+    local_path: str = field(
+        metadata={"doc": "Local artifact path considered for Drive archival."}
+    )
+    file_name: str = field(
+        metadata={"doc": "Drive file name for the archived artifact."}
+    )
+    mime_type: str = field(metadata={"doc": "MIME type used for the Drive artifact."})
+    folder_id: str = field(metadata={"doc": "Target Google Drive folder ID."})
+    status: str = field(
+        metadata={"doc": "Archival status: uploaded or skipped_duplicate."}
+    )
+    size: int = field(metadata={"doc": "Archived or duplicate artifact size in bytes."})
+    md5: Optional[str] = field(
+        metadata={"doc": "MD5 checksum of the local artifact when available."}
+    )
+    drive_file: DriveFile = field(
+        metadata={"doc": "Metadata for the uploaded or duplicate Drive file."}
+    )
 
 
 @dataclass(frozen=True)
@@ -190,19 +268,29 @@ class BrowserDownloadRouteStep:
         metadata={"doc": "Zero-based step index in the observed route execution trace."}
     )
     action: str = field(
-        metadata={"doc": "Observed action kind, for example `open`, `click`, `fill`, or `submit`."}
+        metadata={
+            "doc": "Observed action kind, for example `open`, `click`, `fill`, or `submit`."
+        }
     )
     target_text: str = field(
-        metadata={"doc": "Human-readable target label, URL fragment, or visible copy for the step."}
+        metadata={
+            "doc": "Human-readable target label, URL fragment, or visible copy for the step."
+        }
     )
     target_role: str = field(
-        metadata={"doc": "Observed target role, for example `button`, `link`, `form`, or `page`."}
+        metadata={
+            "doc": "Observed target role, for example `button`, `link`, `form`, or `page`."
+        }
     )
     target_url: str = field(
-        metadata={"doc": "Resolved target URL associated with the step when known, else empty string."}
+        metadata={
+            "doc": "Resolved target URL associated with the step when known, else empty string."
+        }
     )
     result: str = field(
-        metadata={"doc": "Observed outcome of the step, for example `opened`, `submitted`, or `downloaded`."}
+        metadata={
+            "doc": "Observed outcome of the step, for example `opened`, `submitted`, or `downloaded`."
+        }
     )
 
 
@@ -212,19 +300,27 @@ class BrowserDownloadConfirmationEvidence:
         metadata={"doc": "Browser download confirmation-evidence schema version."}
     )
     url_changed: bool = field(
-        metadata={"doc": "Whether the page URL changed after the relevant route action."}
+        metadata={
+            "doc": "Whether the page URL changed after the relevant route action."
+        }
     )
     visible_confirmation_text: str = field(
-        metadata={"doc": "Visible confirmation or status text observed after the relevant route action, else empty string."}
+        metadata={
+            "doc": "Visible confirmation or status text observed after the relevant route action, else empty string."
+        }
     )
     submit_button_state: str = field(
-        metadata={"doc": "Observed submit-button state after submission, for example `unchanged`, `disabled`, or `replaced`."}
+        metadata={
+            "doc": "Observed submit-button state after submission, for example `unchanged`, `disabled`, or `replaced`."
+        }
     )
     form_disappeared: bool = field(
         metadata={"doc": "Whether the form disappeared after a submission attempt."}
     )
     final_page_url: str = field(
-        metadata={"doc": "Final page URL associated with the captured confirmation evidence."}
+        metadata={
+            "doc": "Final page URL associated with the captured confirmation evidence."
+        }
     )
     confirmation_score: int = field(
         default=0,
@@ -246,13 +342,19 @@ class BrowserDownloadNetworkEvent:
         metadata={"doc": "Browser download network-event schema version."}
     )
     url: str = field(
-        metadata={"doc": "Observed request URL associated with the terminal browser state."}
+        metadata={
+            "doc": "Observed request URL associated with the terminal browser state."
+        }
     )
     initiator_type: str = field(
-        metadata={"doc": "Browser-reported initiator type, for example `navigation`, `fetch`, `xmlhttprequest`, or `beacon`."}
+        metadata={
+            "doc": "Browser-reported initiator type, for example `navigation`, `fetch`, `xmlhttprequest`, or `beacon`."
+        }
     )
     signal_kind: str = field(
-        metadata={"doc": "Stable semantic classification for the request, for example `document_request`, `submission_request`, `confirmation_request`, or `other`."}
+        metadata={
+            "doc": "Stable semantic classification for the request, for example `document_request`, `submission_request`, `confirmation_request`, or `other`."
+        }
     )
 
 
@@ -268,26 +370,40 @@ class DownloadTerminalEvidence:
         metadata={"doc": "Observed final page title when available, else empty string."}
     )
     terminal_text_excerpt: str = field(
-        metadata={"doc": "Short visible text excerpt captured from the terminal page when available, else empty string."}
+        metadata={
+            "doc": "Short visible text excerpt captured from the terminal page when available, else empty string."
+        }
     )
     artifact_url: str = field(
-        metadata={"doc": "Best known artifact URL associated with the terminal state when available, else empty string."}
+        metadata={
+            "doc": "Best known artifact URL associated with the terminal state when available, else empty string."
+        }
     )
     artifact_kind: str = field(
-        metadata={"doc": "Detected artifact kind for the terminal state, for example `pdf`, `html`, `email_delivery`, `onsite_report`, or `none`."}
+        metadata={
+            "doc": "Detected artifact kind for the terminal state, for example `pdf`, `html`, `email_delivery`, `onsite_report`, or `none`."
+        }
     )
     artifact_validation_status: str = field(
-        metadata={"doc": "Artifact validation status, for example `verified`, `recovered`, `invalid`, `blocked`, `captured`, or `none`."}
+        metadata={
+            "doc": "Artifact validation status, for example `verified`, `recovered`, `invalid`, `blocked`, `captured`, or `none`."
+        }
     )
     artifact_validation_detail: str = field(
-        metadata={"doc": "Short detail describing why the terminal artifact was accepted, recovered, blocked, or rejected."}
+        metadata={
+            "doc": "Short detail describing why the terminal artifact was accepted, recovered, blocked, or rejected."
+        }
     )
     confirmation_signal_count: int = field(
-        metadata={"doc": "Number of independent confirmation signals observed for this terminal state."}
+        metadata={
+            "doc": "Number of independent confirmation signals observed for this terminal state."
+        }
     )
     traversed_page_urls: list[str] = field(
         default_factory=list,
-        metadata={"doc": "Distinct page URLs traversed while reaching the terminal state."},
+        metadata={
+            "doc": "Distinct page URLs traversed while reaching the terminal state."
+        },
     )
     visited_url_timeline: list[str] = field(
         default_factory=list,
@@ -416,13 +532,19 @@ class BrowserReportDownloadResult:
         metadata={"doc": "Normalized URL used for route-memory lookup and storage."}
     )
     route_kind: str = field(
-        metadata={"doc": "Detected delivery path: `pdf_download`, `email_delivery`, or `onsite_report`."}
+        metadata={
+            "doc": "Detected delivery path: `pdf_download`, `email_delivery`, or `onsite_report`."
+        }
     )
     route_family: str = field(
-        metadata={"doc": "Planned or observed route family that produced the result, for example `direct_pdf_probe` or `browser_email_form`."}
+        metadata={
+            "doc": "Planned or observed route family that produced the result, for example `direct_pdf_probe` or `browser_email_form`."
+        }
     )
     route_status: str = field(
-        metadata={"doc": "Verification status for the route result, for example `verified` or `inferred`."}
+        metadata={
+            "doc": "Verification status for the route result, for example `verified` or `inferred`."
+        }
     )
     outcome: str = field(
         metadata={
@@ -436,28 +558,42 @@ class BrowserReportDownloadResult:
         metadata={"doc": "Final browser URL after the agent finished."}
     )
     resolved_target_url: str = field(
-        metadata={"doc": "Resolved target URL that produced the final artifact or email form state."}
+        metadata={
+            "doc": "Resolved target URL that produced the final artifact or email form state."
+        }
     )
     used_route_hint: bool = field(
         metadata={"doc": "Whether the execution used a previously stored route hint."}
     )
     route_steps: list[BrowserDownloadRouteStep] = field(
-        metadata={"doc": "Structured route execution trace captured for reuse and verification."}
+        metadata={
+            "doc": "Structured route execution trace captured for reuse and verification."
+        }
     )
     confirmation_evidence: BrowserDownloadConfirmationEvidence = field(
-        metadata={"doc": "Structured confirmation evidence captured for email-gated or ambiguous routes."}
+        metadata={
+            "doc": "Structured confirmation evidence captured for email-gated or ambiguous routes."
+        }
     )
     terminal_evidence: DownloadTerminalEvidence = field(
-        metadata={"doc": "Canonical terminal evidence captured for successful or failed browser acquisition attempts."}
+        metadata={
+            "doc": "Canonical terminal evidence captured for successful or failed browser acquisition attempts."
+        }
     )
     browser_had_structured_result: bool = field(
-        metadata={"doc": "Whether browser-use returned a structured JSON result instead of requiring fallback salvage."}
+        metadata={
+            "doc": "Whether browser-use returned a structured JSON result instead of requiring fallback salvage."
+        }
     )
     used_candidate_pdf_url: bool = field(
-        metadata={"doc": "Whether the result reused a discovery-provided candidate PDF URL."}
+        metadata={
+            "doc": "Whether the result reused a discovery-provided candidate PDF URL."
+        }
     )
     used_candidate_source_page: bool = field(
-        metadata={"doc": "Whether the result reused a discovery-provided candidate source page URL."}
+        metadata={
+            "doc": "Whether the result reused a discovery-provided candidate source page URL."
+        }
     )
     encountered_form_fields: list[str] = field(
         default_factory=list,
@@ -467,11 +603,15 @@ class BrowserReportDownloadResult:
     )
     blocked_reason: Optional[str] = field(
         default=None,
-        metadata={"doc": "Typed blocker code when the browser reached a blocked email-gated or static terminal state."},
+        metadata={
+            "doc": "Typed blocker code when the browser reached a blocked email-gated or static terminal state."
+        },
     )
     blocked_reason_detail: Optional[str] = field(
         default=None,
-        metadata={"doc": "Human-readable blocker detail captured from the terminal state when available."},
+        metadata={
+            "doc": "Human-readable blocker detail captured from the terminal state when available."
+        },
     )
     downloaded_file_path: Optional[str] = field(
         default=None,
@@ -493,19 +633,27 @@ class BrowserReportDownloadResult:
     )
     onsite_capture_path: Optional[str] = field(
         default=None,
-        metadata={"doc": "Absolute path of the captured on-site report artifact when outcome=`captured`."},
+        metadata={
+            "doc": "Absolute path of the captured on-site report artifact when outcome=`captured`."
+        },
     )
     onsite_capture_format: Optional[str] = field(
         default=None,
-        metadata={"doc": "Stored on-site capture format, for example `html`, `markdown`, or `html+markdown`."},
+        metadata={
+            "doc": "Stored on-site capture format, for example `html`, `markdown`, or `html+markdown`."
+        },
     )
     onsite_page_count: Optional[int] = field(
         default=None,
-        metadata={"doc": "Number of distinct pages or scroll segments captured for an on-site report when known."},
+        metadata={
+            "doc": "Number of distinct pages or scroll segments captured for an on-site report when known."
+        },
     )
     onsite_completeness_status: Optional[str] = field(
         default=None,
-        metadata={"doc": "On-site capture completeness verdict, for example `complete`, `partial`, or `bounded_incomplete`."},
+        metadata={
+            "doc": "On-site capture completeness verdict, for example `complete`, `partial`, or `bounded_incomplete`."
+        },
     )
 
 
@@ -518,27 +666,39 @@ class ReportDownloadRoutePlanStep:
         metadata={"doc": "Stable orchestrator step name for this route attempt."}
     )
     route_family: str = field(
-        metadata={"doc": "Planned route family for this attempt, for example `direct_pdf_probe` or `browser_email_form`."}
+        metadata={
+            "doc": "Planned route family for this attempt, for example `direct_pdf_probe` or `browser_email_form`."
+        }
     )
     attempt_url: Optional[str] = field(
         default=None,
-        metadata={"doc": "Concrete URL the service should attempt first for this route step when known."},
+        metadata={
+            "doc": "Concrete URL the service should attempt first for this route step when known."
+        },
     )
     route_hint: Optional[str] = field(
         default=None,
-        metadata={"doc": "Previously successful route summary reused for this attempt when available."},
+        metadata={
+            "doc": "Previously successful route summary reused for this attempt when available."
+        },
     )
     route_step_hints: list[BrowserDownloadRouteStep] = field(
         default_factory=list,
-        metadata={"doc": "Previously successful structured route steps reused for this attempt when available."},
+        metadata={
+            "doc": "Previously successful structured route steps reused for this attempt when available."
+        },
     )
     route_kind_hint: Optional[str] = field(
         default=None,
-        metadata={"doc": "Previously observed route kind reused for this attempt when available."},
+        metadata={
+            "doc": "Previously observed route kind reused for this attempt when available."
+        },
     )
     source_page_url_hint: Optional[str] = field(
         default=None,
-        metadata={"doc": "Discovery source page URL to revisit when the candidate URL is thin, gated, or tracker-like."},
+        metadata={
+            "doc": "Discovery source page URL to revisit when the candidate URL is thin, gated, or tracker-like."
+        },
     )
     uses_memory_route: bool = field(
         default=False,
@@ -546,7 +706,9 @@ class ReportDownloadRoutePlanStep:
     )
     fallback_on_retryable_error: bool = field(
         default=False,
-        metadata={"doc": "Whether the orchestrator should continue to the next planned step when this attempt fails with a retryable error."},
+        metadata={
+            "doc": "Whether the orchestrator should continue to the next planned step when this attempt fails with a retryable error."
+        },
     )
 
 
@@ -564,15 +726,21 @@ class ReportDownloadRoutePlanRequest:
     )
     candidate_trace: Optional[PublisherInventoryCandidateTrace] = field(
         default=None,
-        metadata={"doc": "Optional discovery-phase candidate trace reused to choose and verify route order."},
+        metadata={
+            "doc": "Optional discovery-phase candidate trace reused to choose and verify route order."
+        },
     )
     publisher_discovery_route_kind: Optional[str] = field(
         default=None,
-        metadata={"doc": "Optional publisher-level discovery route kind from the inventory/diff phase."},
+        metadata={
+            "doc": "Optional publisher-level discovery route kind from the inventory/diff phase."
+        },
     )
     publisher_recommended_discovery_route_kind: Optional[str] = field(
         default=None,
-        metadata={"doc": "Optional publisher-level recommended discovery route kind from the inventory/diff phase."},
+        metadata={
+            "doc": "Optional publisher-level recommended discovery route kind from the inventory/diff phase."
+        },
     )
 
 
@@ -585,7 +753,9 @@ class ReportDownloadRoutePlanResponse:
         metadata={"doc": "Ordered download attempts the orchestrator should execute."}
     )
     planning_reason: str = field(
-        metadata={"doc": "Short human-readable explanation of why this route order was chosen."}
+        metadata={
+            "doc": "Short human-readable explanation of why this route order was chosen."
+        }
     )
 
 
@@ -607,22 +777,30 @@ class PublisherDownloadRouteMemory:
         metadata={"doc": "Remembered route family previously observed for this URL."}
     )
     route_status: str = field(
-        metadata={"doc": "Remembered route verification status previously observed for this URL."}
+        metadata={
+            "doc": "Remembered route verification status previously observed for this URL."
+        }
     )
     resolved_target_url: str = field(
         metadata={"doc": "Remembered resolved target URL for this route."}
     )
     route_steps: list[BrowserDownloadRouteStep] = field(
         default_factory=list,
-        metadata={"doc": "Remembered structured route steps previously observed for this URL."},
+        metadata={
+            "doc": "Remembered structured route steps previously observed for this URL."
+        },
     )
     attempts: int = field(
         default=0,
-        metadata={"doc": "Remembered attempt count backing this route-memory record when available."},
+        metadata={
+            "doc": "Remembered attempt count backing this route-memory record when available."
+        },
     )
     verified_successes: int = field(
         default=0,
-        metadata={"doc": "Remembered verified success count backing this route-memory record when available."},
+        metadata={
+            "doc": "Remembered verified success count backing this route-memory record when available."
+        },
     )
     last_n_outcomes: list[str] = field(
         default_factory=list,
@@ -659,7 +837,9 @@ class ReportDownloadOrchestratorRequest:
         metadata={"doc": "SQLite state DB used to remember successful per-URL routes."}
     )
     reports_db: str = field(
-        metadata={"doc": "SQLite reports DB used to store downloaded-report source rows."}
+        metadata={
+            "doc": "SQLite reports DB used to store downloaded-report source rows."
+        }
     )
     delivery_email: Optional[str] = field(
         default=None,
@@ -685,6 +865,18 @@ class ReportDownloadOrchestratorRequest:
             "doc": "Optional publisher-level recommended discovery route kind from the inventory/diff phase."
         },
     )
+    publisher_insights_url: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Optional publisher insights URL used to resolve the target Drive folder for acquisition archival."
+        },
+    )
+    publisher_google_folder: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Optional publisher Google Drive folder URL or folder ID used for acquisition archival."
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -697,13 +889,19 @@ class ReportDownloadOrchestratorResult:
         metadata={"doc": "Normalized URL used for state lookup and storage."}
     )
     route_kind: str = field(
-        metadata={"doc": "Detected delivery path: `pdf_download`, `email_delivery`, or `onsite_report`."}
+        metadata={
+            "doc": "Detected delivery path: `pdf_download`, `email_delivery`, or `onsite_report`."
+        }
     )
     route_family: str = field(
-        metadata={"doc": "Planned or observed route family that produced the result, for example `direct_pdf_probe` or `browser_email_form`."}
+        metadata={
+            "doc": "Planned or observed route family that produced the result, for example `direct_pdf_probe` or `browser_email_form`."
+        }
     )
     route_status: str = field(
-        metadata={"doc": "Verification status for the route result, for example `verified` or `inferred`."}
+        metadata={
+            "doc": "Verification status for the route result, for example `verified` or `inferred`."
+        }
     )
     outcome: str = field(
         metadata={
@@ -717,7 +915,9 @@ class ReportDownloadOrchestratorResult:
         metadata={"doc": "Final browser URL after orchestration completed."}
     )
     resolved_target_url: str = field(
-        metadata={"doc": "Resolved target URL that produced the final artifact or email form state."}
+        metadata={
+            "doc": "Resolved target URL that produced the final artifact or email form state."
+        }
     )
     used_memory_route: bool = field(
         metadata={
@@ -725,22 +925,34 @@ class ReportDownloadOrchestratorResult:
         }
     )
     route_steps: list[BrowserDownloadRouteStep] = field(
-        metadata={"doc": "Structured route execution trace captured for reuse and verification."}
+        metadata={
+            "doc": "Structured route execution trace captured for reuse and verification."
+        }
     )
     confirmation_evidence: BrowserDownloadConfirmationEvidence = field(
-        metadata={"doc": "Structured confirmation evidence captured for email-gated or ambiguous routes."}
+        metadata={
+            "doc": "Structured confirmation evidence captured for email-gated or ambiguous routes."
+        }
     )
     terminal_evidence: DownloadTerminalEvidence = field(
-        metadata={"doc": "Canonical terminal evidence captured for the final successful browser acquisition attempt."}
+        metadata={
+            "doc": "Canonical terminal evidence captured for the final successful browser acquisition attempt."
+        }
     )
     browser_had_structured_result: bool = field(
-        metadata={"doc": "Whether browser-use returned a structured JSON result instead of requiring fallback salvage."}
+        metadata={
+            "doc": "Whether browser-use returned a structured JSON result instead of requiring fallback salvage."
+        }
     )
     used_candidate_pdf_url: bool = field(
-        metadata={"doc": "Whether the result reused a discovery-provided candidate PDF URL."}
+        metadata={
+            "doc": "Whether the result reused a discovery-provided candidate PDF URL."
+        }
     )
     used_candidate_source_page: bool = field(
-        metadata={"doc": "Whether the result reused a discovery-provided candidate source page URL."}
+        metadata={
+            "doc": "Whether the result reused a discovery-provided candidate source page URL."
+        }
     )
     encountered_form_fields: list[str] = field(
         default_factory=list,
@@ -756,11 +968,15 @@ class ReportDownloadOrchestratorResult:
     )
     blocked_reason: Optional[str] = field(
         default=None,
-        metadata={"doc": "Typed blocker code when the final route is blocked instead of completed."},
+        metadata={
+            "doc": "Typed blocker code when the final route is blocked instead of completed."
+        },
     )
     blocked_reason_detail: Optional[str] = field(
         default=None,
-        metadata={"doc": "Human-readable blocker detail captured from the final terminal state when available."},
+        metadata={
+            "doc": "Human-readable blocker detail captured from the final terminal state when available."
+        },
     )
     downloaded_file_path: Optional[str] = field(
         default=None,
@@ -780,17 +996,31 @@ class ReportDownloadOrchestratorResult:
     )
     onsite_capture_path: Optional[str] = field(
         default=None,
-        metadata={"doc": "Absolute local path of the captured on-site report artifact when outcome=`captured`."},
+        metadata={
+            "doc": "Absolute local path of the captured on-site report artifact when outcome=`captured`."
+        },
     )
     onsite_capture_format: Optional[str] = field(
         default=None,
-        metadata={"doc": "Stored on-site capture format, for example `html`, `markdown`, or `html+markdown`."},
+        metadata={
+            "doc": "Stored on-site capture format, for example `html`, `markdown`, or `html+markdown`."
+        },
     )
     onsite_page_count: Optional[int] = field(
         default=None,
-        metadata={"doc": "Number of distinct pages or scroll segments captured for an on-site report when known."},
+        metadata={
+            "doc": "Number of distinct pages or scroll segments captured for an on-site report when known."
+        },
     )
     onsite_completeness_status: Optional[str] = field(
         default=None,
-        metadata={"doc": "On-site capture completeness verdict, for example `complete`, `partial`, or `bounded_incomplete`."},
+        metadata={
+            "doc": "On-site capture completeness verdict, for example `complete`, `partial`, or `bounded_incomplete`."
+        },
+    )
+    drive_uploads: list[ReportDownloadDriveUpload] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Drive archival results for successful local terminal artifacts."
+        },
     )

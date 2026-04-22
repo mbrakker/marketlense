@@ -140,12 +140,20 @@ def _update_ui_run_record(
         command=existing.command,
         created_at_utc=existing.created_at_utc,
         updated_at_utc=_utc_now(),
-        started_at_utc=started_at_utc if started_at_utc is not None else existing.started_at_utc,
-        finished_at_utc=finished_at_utc if finished_at_utc is not None else existing.finished_at_utc,
+        started_at_utc=started_at_utc
+        if started_at_utc is not None
+        else existing.started_at_utc,
+        finished_at_utc=finished_at_utc
+        if finished_at_utc is not None
+        else existing.finished_at_utc,
         output_path=existing.output_path,
         request_path=existing.request_path,
-        artifact_paths=artifact_paths if artifact_paths is not None else existing.artifact_paths,
-        result_summary=result_summary if result_summary is not None else existing.result_summary,
+        artifact_paths=artifact_paths
+        if artifact_paths is not None
+        else existing.artifact_paths,
+        result_summary=result_summary
+        if result_summary is not None
+        else existing.result_summary,
         pid=pid if pid is not None else existing.pid,
         exit_code=exit_code if exit_code is not None else existing.exit_code,
         error_code=error_code,
@@ -169,7 +177,9 @@ def _run_ui_worker_payload(
     payload = worker_request.request_payload
     run_type = worker_request.run_type
     if run_type == "ingest":
-        app_settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), run_ctx)
+        app_settings = load_settings(
+            ConfigLoadRequest(schema_version="1.0", path=""), run_ctx
+        )
         settings = build_ingest_settings(
             IngestSettingsBuildRequest(schema_version="1.0", app_settings=app_settings),
             run_ctx,
@@ -189,7 +199,9 @@ def _run_ui_worker_payload(
             [item.html_path for item in outcomes if item.html_path],
         )
     if run_type == "candidate_extraction":
-        app_settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), run_ctx)
+        app_settings = load_settings(
+            ConfigLoadRequest(schema_version="1.0", path=""), run_ctx
+        )
         settings = build_ingest_settings(
             IngestSettingsBuildRequest(schema_version="1.0", app_settings=app_settings),
             run_ctx,
@@ -218,14 +230,18 @@ def _run_ui_worker_payload(
             artifact_paths,
         )
     if run_type == "cover_images":
-        settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), run_ctx)
+        settings = load_settings(
+            ConfigLoadRequest(schema_version="1.0", path=""), run_ctx
+        )
         outcomes = run_cover_image_generation(
             CoverImageOrchestratorRequest(
                 schema_version="1.0",
                 reports_db=settings.reports_db,
                 output_dir=settings.output_dir,
                 style_config_path=str(payload.get("style_config_path") or "").strip(),
-                limit=int(payload["limit"]) if payload.get("limit") is not None else None,
+                limit=int(payload["limit"])
+                if payload.get("limit") is not None
+                else None,
                 file_id=str(payload.get("file_id") or "").strip() or None,
             ),
             ctx=run_ctx,
@@ -233,12 +249,16 @@ def _run_ui_worker_payload(
         return (
             {
                 "total_count": len(outcomes),
-                "generated_count": len([item for item in outcomes if item.status == "generated"]),
+                "generated_count": len(
+                    [item for item in outcomes if item.status == "generated"]
+                ),
             },
             [item.output_path for item in outcomes if item.output_path],
         )
     if run_type == "publish":
-        settings = load_publish_settings(ConfigLoadRequest(schema_version="1.0", path=""), run_ctx)
+        settings = load_publish_settings(
+            ConfigLoadRequest(schema_version="1.0", path=""), run_ctx
+        )
         outcomes = run_publish(
             settings,
             limit=int(payload["limit"]) if payload.get("limit") is not None else None,
@@ -247,7 +267,9 @@ def _run_ui_worker_payload(
         return (
             {
                 "total_count": len(outcomes),
-                "published_count": len([item for item in outcomes if item.status == "published"]),
+                "published_count": len(
+                    [item for item in outcomes if item.status == "published"]
+                ),
             },
             [item.html_path for item in outcomes if item.html_path],
         )
@@ -289,6 +311,14 @@ def _run_ui_worker_payload(
                 state_db=settings.state_db,
                 reports_db=settings.reports_db,
                 delivery_email=str(payload.get("delivery_email") or "").strip() or None,
+                publisher_insights_url=str(
+                    payload.get("publisher_insights_url") or ""
+                ).strip()
+                or None,
+                publisher_google_folder=str(
+                    payload.get("publisher_google_folder") or ""
+                ).strip()
+                or None,
             ),
             ctx=run_ctx,
         )
@@ -308,7 +338,9 @@ def _run_ui_worker_payload(
             artifact_paths,
         )
     if run_type == "acquisition_audit":
-        app_settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), run_ctx)
+        app_settings = load_settings(
+            ConfigLoadRequest(schema_version="1.0", path=""), run_ctx
+        )
         inventory_settings = load_publisher_inventory_settings(
             ConfigLoadRequest(schema_version="1.0", path=""),
             run_ctx,
@@ -325,8 +357,14 @@ def _run_ui_worker_payload(
                 browser_download_settings=browser_settings,
                 output_dir=app_settings.output_dir,
                 delivery_email=str(payload.get("delivery_email") or "").strip() or None,
-                publisher_limit=int(payload["publisher_limit"]) if payload.get("publisher_limit") is not None else None,
-                candidate_limit_per_publisher=int(payload["candidate_limit_per_publisher"]) if payload.get("candidate_limit_per_publisher") is not None else None,
+                publisher_limit=int(payload["publisher_limit"])
+                if payload.get("publisher_limit") is not None
+                else None,
+                candidate_limit_per_publisher=int(
+                    payload["candidate_limit_per_publisher"]
+                )
+                if payload.get("candidate_limit_per_publisher") is not None
+                else None,
             ),
             ctx=run_ctx,
         )
@@ -751,6 +789,14 @@ def download_report(
         None,
         help="Optional email address used when the report is gated behind an email form",
     ),
+    publisher_insights_url: str = typer.Option(
+        None,
+        help="Optional publisher insights URL used to resolve the publisher Drive folder",
+    ),
+    publisher_google_folder: str = typer.Option(
+        None,
+        help="Optional publisher Drive folder URL or folder ID for acquired artifacts",
+    ),
 ):
     ctx = new_run_context(task_id="cli_download_report")
     setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
@@ -763,6 +809,8 @@ def download_report(
             fields={
                 "url": url,
                 "has_delivery_email": bool(delivery_email),
+                "has_publisher_insights_url": bool(publisher_insights_url),
+                "has_publisher_google_folder": bool(publisher_google_folder),
             },
         )
     )
@@ -778,6 +826,8 @@ def download_report(
             state_db=settings.state_db,
             reports_db=settings.reports_db,
             delivery_email=delivery_email,
+            publisher_insights_url=publisher_insights_url,
+            publisher_google_folder=publisher_google_folder,
         ),
         ctx=ctx,
     )
@@ -800,6 +850,12 @@ def download_report(
         ", ".join(result.identity_fields_added),
     )
     table.add_row("File", result.downloaded_file_path or "")
+    table.add_row(
+        "Drive uploads",
+        ", ".join(
+            f"{item.status}:{item.drive_file.file_id}" for item in result.drive_uploads
+        ),
+    )
     table.add_row("Summary", result.route_summary)
     console.print(table)
 
@@ -889,13 +945,21 @@ def drive_oauth_login(
 ):
     ctx = new_run_context(task_id="cli_drive_oauth_login")
     setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
-    resolved_client_json = client_json.strip() or os.getenv("GOOGLE_OAUTH_CLIENT_JSON", "").strip()
-    resolved_token_json = token_json.strip() or os.getenv("GOOGLE_OAUTH_TOKEN_JSON", "").strip()
+    resolved_client_json = (
+        client_json.strip() or os.getenv("GOOGLE_OAUTH_CLIENT_JSON", "").strip()
+    )
+    resolved_token_json = (
+        token_json.strip() or os.getenv("GOOGLE_OAUTH_TOKEN_JSON", "").strip()
+    )
     if not resolved_client_json:
-        console.print("[red]Missing OAuth client JSON path. Pass --client-json or set GOOGLE_OAUTH_CLIENT_JSON.[/red]")
+        console.print(
+            "[red]Missing OAuth client JSON path. Pass --client-json or set GOOGLE_OAUTH_CLIENT_JSON.[/red]"
+        )
         raise typer.Exit(code=1)
     if not resolved_token_json:
-        console.print("[red]Missing OAuth token output path. Pass --token-json or set GOOGLE_OAUTH_TOKEN_JSON.[/red]")
+        console.print(
+            "[red]Missing OAuth token output path. Pass --token-json or set GOOGLE_OAUTH_TOKEN_JSON.[/red]"
+        )
         raise typer.Exit(code=1)
     result = authorize_oauth_user(
         DriveOAuthAuthorizeRequest(

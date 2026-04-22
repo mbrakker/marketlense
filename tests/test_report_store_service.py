@@ -22,6 +22,7 @@ from src.contracts.report_store import (
     PublisherInventoryStateRecordRequest,
     PublisherInventoryTestStatusRecordRequest,
     PublishersReplaceRequest,
+    ReportDownloadDriveFolderLookupRequest,
     ReportMetadataDbAccessRequest,
     ReportSourceDiscoveryRecordRequest,
     ReportMetadataGetRequest,
@@ -37,6 +38,7 @@ from src.contracts.publisher_inventory import (
 from src.contracts.publisher_profiles import PublisherProfileRecord
 from src.services.report_store_service import (
     check_report_db_access,
+    get_report_download_drive_folder,
     get_metadata,
     get_publisher_inventory_recovery_cache_record,
     record_discovered_report_source,
@@ -81,7 +83,9 @@ class TestReportStoreService(unittest.TestCase):
                 ctx,
             )
             first = get_metadata(
-                ReportMetadataGetRequest(schema_version="1.1", db_path=db_path, file_id="file-1"),
+                ReportMetadataGetRequest(
+                    schema_version="1.1", db_path=db_path, file_id="file-1"
+                ),
                 ctx,
             )
             self.assertIsNotNone(first)
@@ -117,7 +121,9 @@ class TestReportStoreService(unittest.TestCase):
                 ctx,
             )
             second = get_metadata(
-                ReportMetadataGetRequest(schema_version="1.1", db_path=db_path, file_id="file-1"),
+                ReportMetadataGetRequest(
+                    schema_version="1.1", db_path=db_path, file_id="file-1"
+                ),
                 ctx,
             )
             assert second is not None
@@ -131,7 +137,10 @@ class TestReportStoreService(unittest.TestCase):
             self.assertIsNone(second.publisher)
             self.assertIsNone(second.source_url)
             self.assertEqual("North America", second.region)
-            self.assertEqual("Jun 2023, Jul 2023, Aug 2023, Sep 2023, Oct 2023, Nov 2023", second.time_period)
+            self.assertEqual(
+                "Jun 2023, Jul 2023, Aug 2023, Sep 2023, Oct 2023, Nov 2023",
+                second.time_period,
+            )
             self.assertEqual(0, second.contents_page_number)
 
             time.sleep(0.01)
@@ -153,7 +162,9 @@ class TestReportStoreService(unittest.TestCase):
                 ctx,
             )
             third = get_metadata(
-                ReportMetadataGetRequest(schema_version="1.1", db_path=db_path, file_id="file-1"),
+                ReportMetadataGetRequest(
+                    schema_version="1.1", db_path=db_path, file_id="file-1"
+                ),
                 ctx,
             )
             assert third is not None
@@ -164,7 +175,9 @@ class TestReportStoreService(unittest.TestCase):
             db_path = os.path.join(tmpdir, "reports.sqlite")
             ctx = new_run_context(task_id="test_missing")
             resp = get_metadata(
-                ReportMetadataGetRequest(schema_version="1.1", db_path=db_path, file_id="missing"),
+                ReportMetadataGetRequest(
+                    schema_version="1.1", db_path=db_path, file_id="missing"
+                ),
                 ctx,
             )
             self.assertIsNone(resp)
@@ -196,7 +209,9 @@ class TestReportStoreService(unittest.TestCase):
             conn.execute("BEGIN EXCLUSIVE")
             try:
                 resp = check_report_db_access(
-                    ReportMetadataDbAccessRequest(schema_version="1.0", db_path=db_path, timeout_seconds=0.0),
+                    ReportMetadataDbAccessRequest(
+                        schema_version="1.0", db_path=db_path, timeout_seconds=0.0
+                    ),
                     new_run_context(task_id="test_db_access_lock"),
                 )
                 self.assertFalse(resp.accessible)
@@ -209,7 +224,9 @@ class TestReportStoreService(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = os.path.join(tmpdir, "reports.sqlite")
             resp = check_report_db_access(
-                ReportMetadataDbAccessRequest(schema_version="1.0", db_path=db_path, timeout_seconds=0.0),
+                ReportMetadataDbAccessRequest(
+                    schema_version="1.0", db_path=db_path, timeout_seconds=0.0
+                ),
                 new_run_context(task_id="test_db_access_ok"),
             )
             self.assertTrue(resp.accessible)
@@ -321,10 +338,14 @@ class TestReportStoreService(unittest.TestCase):
                 row,
             )
 
-    def test_record_discovered_report_source_collapses_tracking_query_variants(self) -> None:
+    def test_record_discovered_report_source_collapses_tracking_query_variants(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = os.path.join(tmpdir, "reports.sqlite")
-            ctx = new_run_context(task_id="test_discovered_report_source_tracking_dedupe")
+            ctx = new_run_context(
+                task_id="test_discovered_report_source_tracking_dedupe"
+            )
 
             first = record_discovered_report_source(
                 ReportSourceDiscoveryRecordRequest(
@@ -702,7 +723,9 @@ class TestReportStoreService(unittest.TestCase):
                 response_after_replace.route_summary,
             )
 
-    def test_publisher_download_route_projection_preserves_best_memory_without_rewriting_latest_history(self) -> None:
+    def test_publisher_download_route_projection_preserves_best_memory_without_rewriting_latest_history(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = os.path.join(tmpdir, "reports.sqlite")
             ctx = new_run_context(task_id="test_publisher_route_projection")
@@ -763,7 +786,11 @@ class TestReportStoreService(unittest.TestCase):
                     traversed_page_urls=[
                         "https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report/"
                     ],
-                    evidence_labels=["structured_result", "confirmed", "email_delivery"],
+                    evidence_labels=[
+                        "structured_result",
+                        "confirmed",
+                        "email_delivery",
+                    ],
                 ),
                 browser_had_structured_result=True,
                 used_candidate_pdf_url=False,
@@ -869,7 +896,9 @@ class TestReportStoreService(unittest.TestCase):
                 publisher_projection,
             )
 
-    def test_get_download_route_preserves_confirmation_score_and_signal_labels(self) -> None:
+    def test_get_download_route_preserves_confirmation_score_and_signal_labels(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = os.path.join(tmpdir, "reports.sqlite")
             ctx = new_run_context(task_id="test_route_confirmation_round_trip")
@@ -936,7 +965,11 @@ class TestReportStoreService(unittest.TestCase):
                         traversed_page_urls=[
                             "https://www.bigcommerce.com/resources/reports/global-b2b-buyer-report-cdl-report-ty/"
                         ],
-                        evidence_labels=["structured_result", "confirmed", "email_delivery"],
+                        evidence_labels=[
+                            "structured_result",
+                            "confirmed",
+                            "email_delivery",
+                        ],
                     ),
                     browser_had_structured_result=True,
                     used_candidate_pdf_url=False,
@@ -1099,7 +1132,9 @@ class TestReportStoreService(unittest.TestCase):
                 response.terminal_evidence.network_events[1].signal_kind,
             )
 
-    def test_get_download_route_prefers_reusable_extract_trace_over_newer_scroll_only_trace(self) -> None:
+    def test_get_download_route_prefers_reusable_extract_trace_over_newer_scroll_only_trace(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = os.path.join(tmpdir, "reports.sqlite")
             ctx = new_run_context(task_id="test_route_prefers_extract_trace")
@@ -1285,9 +1320,13 @@ class TestReportStoreService(unittest.TestCase):
                 "Accept cookies and extract the on-site report.",
                 response.route_summary,
             )
-            self.assertEqual(["click", "extract"], [step.action for step in response.route_steps])
+            self.assertEqual(
+                ["click", "extract"], [step.action for step in response.route_steps]
+            )
 
-    def test_replace_publishers_preserves_google_folder_by_name_or_insights_url(self) -> None:
+    def test_replace_publishers_preserves_google_folder_by_name_or_insights_url(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = os.path.join(tmpdir, "reports.sqlite")
             ctx = new_run_context(task_id="test_publishers_google_folder_preserve")
@@ -1411,6 +1450,77 @@ class TestReportStoreService(unittest.TestCase):
                 rows,
             )
 
+    def test_get_report_download_drive_folder_resolves_source_publisher_folder(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_report_download_drive_folder_lookup")
+
+            replace_publishers(
+                PublishersReplaceRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_page_url="https://notion.local/report-sources",
+                    publishers=[
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-1",
+                            notion_page_url="https://www.notion.so/page-1",
+                            name="Activate Consulting",
+                            homepage="https://www.activate.com/",
+                            self_presentation="Strategy consultancy.",
+                            insights_url="https://www.activate.com/insights",
+                            icon_source="https://cdn.example.com/activate.png",
+                        )
+                    ],
+                ),
+                ctx,
+            )
+            conn = sqlite3.connect(db_path)
+            try:
+                conn.execute(
+                    "UPDATE publishers SET google_folder=? WHERE name=?",
+                    (
+                        "https://drive.google.com/drive/folders/folder123",
+                        "Activate Consulting",
+                    ),
+                )
+                conn.commit()
+            finally:
+                conn.close()
+            record_discovered_report_source(
+                ReportSourceDiscoveryRecordRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    publisher_name="Activate Consulting",
+                    source_domain="cdn.sanity.io",
+                    report_name="2025 Outlook",
+                    landing_page_url="https://cdn.sanity.io/files/report-2025.pdf",
+                    source_page_url="https://www.activate.com/insights",
+                    discovered_at_utc="2026-03-29T14:00:00Z",
+                    discovered_on_page_number=1,
+                ),
+                ctx,
+            )
+
+            response = get_report_download_drive_folder(
+                ReportDownloadDriveFolderLookupRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_landing_page_url="https://cdn.sanity.io/files/report-2025.pdf",
+                ),
+                ctx,
+            )
+
+            assert response is not None
+            self.assertEqual("Activate Consulting", response.publisher_name)
+            self.assertEqual(
+                "https://drive.google.com/drive/folders/folder123",
+                response.google_folder,
+            )
+            self.assertEqual("report_source_publisher", response.resolution_source)
+
     def test_record_discovered_report_source_inserts_pending_row(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = os.path.join(tmpdir, "reports.sqlite")
@@ -1533,10 +1643,14 @@ class TestReportStoreService(unittest.TestCase):
                 row,
             )
 
-    def test_get_publisher_inventory_state_tolerates_empty_string_timestamps(self) -> None:
+    def test_get_publisher_inventory_state_tolerates_empty_string_timestamps(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = os.path.join(tmpdir, "reports.sqlite")
-            ctx = new_run_context(task_id="test_inventory_state_empty_string_timestamps")
+            ctx = new_run_context(
+                task_id="test_inventory_state_empty_string_timestamps"
+            )
 
             replace_publishers(
                 PublishersReplaceRequest(
@@ -1606,7 +1720,9 @@ class TestReportStoreService(unittest.TestCase):
             self.assertIsNone(state.inventory_snapshot_drive_file_id)
             self.assertIsNone(state.discovery_test_status)
 
-    def test_replace_publishers_migrates_old_schema_and_drops_removed_columns(self) -> None:
+    def test_replace_publishers_migrates_old_schema_and_drops_removed_columns(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = os.path.join(tmpdir, "reports.sqlite")
             conn = sqlite3.connect(db_path)

@@ -144,6 +144,9 @@ browser_download:
   max_steps: 30
   output_dir: "./out/browser_downloads"
   headed: true
+  drive_upload:
+    enabled: true
+    required: true
   retry:
     retries: 1
     base_delay_seconds: 1.0

@@ -12,17 +12,29 @@ from src.contracts.acquisition_audit import (
     AcquisitionAuditCandidateResult,
     AcquisitionAuditPublisherSummary,
 )
-from src.contracts.browser_download import ReportDownloadOrchestratorRequest, ReportDownloadOrchestratorResult
+from src.contracts.browser_download import (
+    ReportDownloadOrchestratorRequest,
+    ReportDownloadOrchestratorResult,
+)
 from src.contracts.files import WriteBytesRequest, WriteBytesResponse
-from src.contracts.publisher_inventory import PublisherInventoryDiscoveryRequest, PublisherInventoryDiscoveryResult
-from src.contracts.report_store import PublisherListItem, PublishersListRequest, PublishersListResponse
+from src.contracts.publisher_inventory import (
+    PublisherInventoryDiscoveryRequest,
+    PublisherInventoryDiscoveryResult,
+)
+from src.contracts.report_store import (
+    PublisherListItem,
+    PublishersListRequest,
+    PublishersListResponse,
+)
 from src.contracts.run_context import RunContext
 from src.generators.acquisition_audit_generator import (
     build_acquisition_audit_candidate,
     build_acquisition_audit_publisher_summary,
     serialize_acquisition_audit_result,
 )
-from src.orchestrators.publisher_inventory_orchestrator import run_publisher_inventory_discovery
+from src.orchestrators.publisher_inventory_orchestrator import (
+    run_publisher_inventory_discovery,
+)
 from src.orchestrators.report_download_orchestrator import run_report_download
 from src.services.file_service import write_bytes
 from src.services.report_store_service import list_publishers
@@ -34,7 +46,9 @@ logger = logging.getLogger("market_lense.acquisition_audit_orchestrator")
 
 @dataclass(frozen=True)
 class AcquisitionAuditDependencies:
-    list_publishers: Callable[[PublishersListRequest, RunContext], PublishersListResponse]
+    list_publishers: Callable[
+        [PublishersListRequest, RunContext], PublishersListResponse
+    ]
     run_publisher_inventory_discovery: Callable[
         [PublisherInventoryDiscoveryRequest, RunContext],
         PublisherInventoryDiscoveryResult,
@@ -49,9 +63,11 @@ class AcquisitionAuditDependencies:
     def default(cls) -> "AcquisitionAuditDependencies":
         return cls(
             list_publishers=list_publishers,
-            run_publisher_inventory_discovery=lambda req, ctx: run_publisher_inventory_discovery(
-                req,
-                ctx=ctx,
+            run_publisher_inventory_discovery=lambda req, ctx: (
+                run_publisher_inventory_discovery(
+                    req,
+                    ctx=ctx,
+                )
             ),
             run_report_download=lambda req, ctx: run_report_download(req, ctx=ctx),
             write_bytes=write_bytes,
@@ -72,6 +88,7 @@ def run_acquisition_audit(
     download_settings = replace(
         request.browser_download_settings,
         output_dir=str(artifact_dir / "downloads"),
+        drive_upload_enabled=False,
     )
     logger.info(
         log_event(
@@ -100,7 +117,9 @@ def run_acquisition_audit(
     publisher_summaries: list[AcquisitionAuditPublisherSummary] = []
     candidate_results: list[AcquisitionAuditCandidateResult] = []
     for publisher in publisher_response.publishers:
-        publisher_ctx = child_context(ctx, task_id=f"audit_{_safe_task_token(publisher.publisher_name)}")
+        publisher_ctx = child_context(
+            ctx, task_id=f"audit_{_safe_task_token(publisher.publisher_name)}"
+        )
         publisher_candidate_results = _audit_publisher(
             publisher=publisher,
             request=request,
@@ -310,21 +329,30 @@ def _audit_publisher(
 
 
 def _artifact_dir(output_dir: str, generated_at_utc: str) -> Path:
-    token = generated_at_utc.replace("-", "").replace(":", "").replace("T", "__").replace("Z", "")
+    token = (
+        generated_at_utc.replace("-", "")
+        .replace(":", "")
+        .replace("T", "__")
+        .replace("Z", "")
+    )
     return Path(output_dir) / "acquisition_audit" / token
 
 
 def _safe_task_token(value: str) -> str:
     token = "".join(
-        char.lower() if char.isalnum() else "_"
-        for char in str(value or "").strip()
+        char.lower() if char.isalnum() else "_" for char in str(value or "").strip()
     )
     collapsed = "_".join(part for part in token.split("_") if part)
     return collapsed or "item"
 
 
 def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace(
-        "+00:00",
-        "Z",
+    return (
+        datetime.now(timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace(
+            "+00:00",
+            "Z",
+        )
     )
