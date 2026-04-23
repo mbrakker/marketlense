@@ -1922,6 +1922,9 @@
         "confidence_score": {
           "type": "number"
         },
+        "exact_route_found": {
+          "type": "boolean"
+        },
         "last_n_outcomes": {
           "items": {
             "type": "string"
@@ -1941,6 +1944,12 @@
         "outcome": {
           "type": "string"
         },
+        "publisher_route_policy": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.browser_download.PublisherDownloadRoutePolicySignal"
+          },
+          "type": "array"
+        },
         "resolved_target_url": {
           "type": "string"
         },
@@ -1949,6 +1958,12 @@
         },
         "route_kind": {
           "type": "string"
+        },
+        "route_policy": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.browser_download.PublisherDownloadRoutePolicySignal"
+          },
+          "type": "array"
         },
         "route_status": {
           "type": "string"
@@ -1977,6 +1992,74 @@
         "route_family",
         "route_status",
         "resolved_target_url"
+      ],
+      "type": "object"
+    },
+    "src.contracts.browser_download.PublisherDownloadRoutePolicySignal": {
+      "additionalProperties": false,
+      "properties": {
+        "attempts": {
+          "type": "integer"
+        },
+        "blocked_attempts": {
+          "type": "integer"
+        },
+        "confidence_score": {
+          "type": "number"
+        },
+        "last_blocked_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "last_outcome": {
+          "type": "string"
+        },
+        "last_route_status": {
+          "type": "string"
+        },
+        "rank_score": {
+          "type": "number"
+        },
+        "recent_outcomes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "route_family": {
+          "type": "string"
+        },
+        "route_kind": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "success_rate": {
+          "type": "number"
+        },
+        "verified_successes": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "route_family",
+        "route_kind",
+        "attempts",
+        "verified_successes",
+        "blocked_attempts",
+        "success_rate",
+        "confidence_score",
+        "rank_score",
+        "last_outcome",
+        "last_route_status"
       ],
       "type": "object"
     },
@@ -13467,6 +13550,16 @@
         "normalized_url": {
           "type": "string"
         },
+        "publisher_scope_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "schema_version": {
           "type": "string"
         }
@@ -13747,6 +13840,9 @@
         "confirmation_evidence": {
           "$ref": "#/$defs/src.contracts.browser_download.BrowserDownloadConfirmationEvidence"
         },
+        "exact_route_found": {
+          "type": "boolean"
+        },
         "last_downloaded_file_path": {
           "anyOf": [
             {
@@ -13839,6 +13935,22 @@
             }
           ]
         },
+        "publisher_route_policy": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.browser_download.PublisherDownloadRoutePolicySignal"
+          },
+          "type": "array"
+        },
+        "publisher_scope_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "resolved_target_url": {
           "type": "string"
         },
@@ -13847,6 +13959,12 @@
         },
         "route_kind": {
           "type": "string"
+        },
+        "route_policy": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.browser_download.PublisherDownloadRoutePolicySignal"
+          },
+          "type": "array"
         },
         "route_status": {
           "type": "string"

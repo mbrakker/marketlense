@@ -235,6 +235,7 @@ def run_report_download(
             schema_version="1.0",
             db_path=request.reports_db,
             normalized_url=normalized_url,
+            publisher_scope_url=_publisher_scope_url_for_request(request),
         ),
         ctx,
     )
@@ -249,16 +250,27 @@ def run_report_download(
             )
         )
     else:
+        memory_event = (
+            "report_download_memory_hit"
+            if remembered_route.exact_route_found
+            else "report_download_publisher_policy_hit"
+        )
         logger.info(
             log_event(
                 ctx,
                 role="orchestrator",
-                event="report_download_memory_hit",
+                event=memory_event,
                 module=logger.name,
                 fields={
                     "normalized_url": normalized_url,
+                    "exact_route_found": remembered_route.exact_route_found,
                     "route_kind": remembered_route.route_kind,
                     "outcome": remembered_route.outcome,
+                    "publisher_scope_url": remembered_route.publisher_scope_url or "",
+                    "publisher_route_policy_order": [
+                        signal.route_family
+                        for signal in remembered_route.publisher_route_policy
+                    ],
                 },
             )
         )
@@ -936,9 +948,25 @@ def _remembered_route_memory(
         verified_successes=remembered_route.verified_successes,
         last_n_outcomes=list(remembered_route.last_n_outcomes),
         confidence_score=remembered_route.confidence_score,
+        exact_route_found=remembered_route.exact_route_found,
         browser_had_structured_result=remembered_route.browser_had_structured_result,
         onsite_completeness_status=remembered_route.onsite_completeness_status,
+        route_policy=list(remembered_route.route_policy),
+        publisher_route_policy=list(remembered_route.publisher_route_policy),
     )
+
+
+def _publisher_scope_url_for_request(
+    request: ReportDownloadOrchestratorRequest,
+) -> str | None:
+    if request.publisher_insights_url:
+        return request.publisher_insights_url
+    if request.candidate_trace is not None:
+        for source_page_url in request.candidate_trace.source_page_urls:
+            token = str(source_page_url or "").strip()
+            if token:
+                return token
+    return request.url
 
 
 def _source_domain_for_url(url: str) -> str:

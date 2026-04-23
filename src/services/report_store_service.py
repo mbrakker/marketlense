@@ -8,7 +8,7 @@ import sqlite3
 import threading
 from contextlib import contextmanager
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, cast
 from urllib.parse import urlsplit
 
 from src.contracts.browser_download import (
@@ -16,6 +16,7 @@ from src.contracts.browser_download import (
     BrowserDownloadNetworkEvent,
     BrowserDownloadRouteStep,
     DownloadTerminalEvidence,
+    PublisherDownloadRoutePolicySignal,
 )
 from src.contracts.report_store import (
     PublisherListItem,
@@ -278,9 +279,7 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
             "ALTER TABLE reports ADD COLUMN projection_error_retryable INTEGER"
         )
     if "projection_generated_at_utc" not in cols:
-        conn.execute(
-            "ALTER TABLE reports ADD COLUMN projection_generated_at_utc TEXT"
-        )
+        conn.execute("ALTER TABLE reports ADD COLUMN projection_generated_at_utc TEXT")
     if "projection_updated_at_utc" not in cols:
         conn.execute("ALTER TABLE reports ADD COLUMN projection_updated_at_utc TEXT")
     conn.execute(
@@ -1027,6 +1026,217 @@ def _confidence_score_for_history(
     if normalized_route_kind == "onsite_report" and completeness != "complete":
         base -= 0.2
     return min(1.0, round(base, 3))
+
+
+def _route_policy_signals(
+    history_rows: list[tuple],
+) -> List[PublisherDownloadRoutePolicySignal]:
+    grouped: dict[str, dict[str, object]] = {}
+    for row in history_rows:
+        route_kind = str(row[1] or "").strip()
+        route_family = str(row[4] or "").strip() or _default_route_family_for_kind(
+            route_kind
+        )
+        route_status = str(row[5] or "").strip()
+        outcome = str(row[3] or "").strip()
+        blocked_reason = str(row[18] or "").strip()
+        browser_had_structured_result = _bool_from_db(row[10])
+        onsite_completeness_status = str(row[25] or "").strip() or None
+        bucket = grouped.setdefault(
+            route_family,
+            {
+                "route_family": route_family,
+                "route_kind": route_kind,
+                "attempts": 0,
+                "verified_successes": 0,
+                "blocked_attempts": 0,
+                "recent_outcomes": [],
+                "last_outcome": outcome,
+                "last_route_status": route_status,
+                "last_blocked_reason": blocked_reason,
+                "last_browser_had_structured_result": browser_had_structured_result,
+                "last_onsite_completeness_status": onsite_completeness_status,
+            },
+        )
+        bucket["attempts"] = _bucket_int(bucket, "attempts") + 1
+        if route_kind:
+            bucket["route_kind"] = route_kind
+        if _is_verified_success(route_status, outcome):
+            bucket["verified_successes"] = _bucket_int(bucket, "verified_successes") + 1
+        if blocked_reason:
+            bucket["blocked_attempts"] = _bucket_int(bucket, "blocked_attempts") + 1
+            if not bucket.get("last_blocked_reason"):
+                bucket["last_blocked_reason"] = blocked_reason
+        recent_outcomes = bucket["recent_outcomes"]
+        if isinstance(recent_outcomes, list) and outcome and len(recent_outcomes) < 5:
+            recent_outcomes.append(outcome)
+
+    signals: List[PublisherDownloadRoutePolicySignal] = []
+    for bucket in grouped.values():
+        attempts = _bucket_int(bucket, "attempts")
+        verified_successes = _bucket_int(bucket, "verified_successes")
+        blocked_attempts = _bucket_int(bucket, "blocked_attempts")
+        route_kind = str(bucket["route_kind"] or "").strip()
+        route_family = str(bucket["route_family"] or "").strip()
+        last_route_status = str(bucket["last_route_status"] or "").strip()
+        last_outcome = str(bucket["last_outcome"] or "").strip()
+        success_rate = round(verified_successes / attempts, 3) if attempts else 0.0
+        confidence_score = _confidence_score_for_history(
+            attempts=attempts,
+            verified_successes=verified_successes,
+            route_kind=route_kind,
+            route_family=route_family,
+            route_status=last_route_status,
+            outcome=last_outcome,
+            browser_had_structured_result=bool(
+                bucket["last_browser_had_structured_result"]
+            ),
+            onsite_completeness_status=str(
+                bucket["last_onsite_completeness_status"] or ""
+            ).strip()
+            or None,
+        )
+        blocked_rate = blocked_attempts / attempts if attempts else 0.0
+        latest_verified_bonus = (
+            0.08 if _is_verified_success(last_route_status, last_outcome) else 0.0
+        )
+        rank_score = min(
+            1.0,
+            max(
+                0.0,
+                (confidence_score * 0.6)
+                + (success_rate * 0.35)
+                + latest_verified_bonus
+                - min(0.25, blocked_rate * 0.25),
+            ),
+        )
+        recent_outcomes_value = bucket["recent_outcomes"]
+        signals.append(
+            PublisherDownloadRoutePolicySignal(
+                schema_version="1.0",
+                route_family=route_family,
+                route_kind=route_kind,
+                attempts=attempts,
+                verified_successes=verified_successes,
+                blocked_attempts=blocked_attempts,
+                success_rate=success_rate,
+                confidence_score=confidence_score,
+                rank_score=round(rank_score, 3),
+                last_outcome=last_outcome,
+                last_route_status=last_route_status,
+                last_blocked_reason=str(bucket["last_blocked_reason"] or "").strip()
+                or None,
+                recent_outcomes=(
+                    list(recent_outcomes_value)
+                    if isinstance(recent_outcomes_value, list)
+                    else []
+                ),
+            )
+        )
+    return sorted(
+        signals,
+        key=lambda signal: (
+            signal.rank_score,
+            signal.confidence_score,
+            signal.success_rate,
+            signal.verified_successes,
+            -signal.blocked_attempts,
+        ),
+        reverse=True,
+    )
+
+
+def _publisher_scope_history_rows(
+    *,
+    conn: sqlite3.Connection,
+    normalized_url: str,
+    publisher_scope_url: str | None,
+) -> list[tuple]:
+    scope_hosts = {
+        _url_host(value)
+        for value in [publisher_scope_url, normalized_url]
+        if str(value or "").strip()
+    }
+    scope_hosts.discard("")
+    if not scope_hosts:
+        return []
+    rows = conn.execute(
+        """
+        SELECT
+            source_url,
+            route_kind,
+            route_summary,
+            outcome,
+            route_family,
+            route_status,
+            resolved_target_url,
+            route_steps_json,
+            confirmation_evidence_json,
+            terminal_evidence_json,
+            browser_had_structured_result,
+            used_candidate_pdf_url,
+            used_candidate_source_page,
+            candidate_pdf_url,
+            candidate_source_page_urls_json,
+            candidate_discovery_provenances_json,
+            publisher_discovery_route_kind,
+            publisher_recommended_discovery_route_kind,
+            blocked_reason,
+            blocked_reason_detail,
+            last_downloaded_file_path,
+            last_final_page_url,
+            onsite_capture_path,
+            onsite_capture_format,
+            onsite_page_count,
+            onsite_completeness_status,
+            attempts,
+            verified_successes,
+            last_n_outcomes_json,
+            confidence_score,
+            updated_at,
+            normalized_url
+        FROM publisher_download_route_history
+        WHERE normalized_url <> ?
+        ORDER BY updated_at DESC, id DESC
+        LIMIT 500
+        """,
+        (normalized_url,),
+    ).fetchall()
+    scoped_rows: list[tuple] = []
+    for row in rows:
+        row_scope_values = [
+            str(row[0] or "").strip(),
+            str(row[31] or "").strip(),
+            *_parse_json_string_list(str(row[14] or "").strip() or None),
+        ]
+        row_hosts = {_url_host(value) for value in row_scope_values if value}
+        row_hosts.discard("")
+        if row_hosts & scope_hosts:
+            scoped_rows.append(row[:31])
+    return scoped_rows
+
+
+def _url_host(value: str | None) -> str:
+    try:
+        return str(urlsplit(str(value or "").strip()).hostname or "").strip().lower()
+    except ValueError:
+        return ""
+
+
+def _bucket_int(bucket: dict[str, object], key: str) -> int:
+    value = bucket.get(key, 0)
+    if isinstance(value, int):
+        return value
+    return int(cast(str, value))
+
+
+def _default_route_family_for_kind(route_kind: str) -> str:
+    normalized_route_kind = str(route_kind or "").strip()
+    if normalized_route_kind == "email_delivery":
+        return "browser_email_form"
+    if normalized_route_kind == "onsite_report":
+        return "browser_onsite_report"
+    return "browser_pdf_click"
 
 
 def _bool_from_db(value: object) -> bool:
@@ -2634,6 +2844,7 @@ def get_publisher_download_route(
 ) -> Optional[PublisherDownloadRouteResponse]:
     db_path = request.db_path.strip()
     normalized_url = request.normalized_url.strip()
+    publisher_scope_url = str(request.publisher_scope_url or "").strip() or None
     if not db_path:
         raise AppError(
             code="publisher_route_db_missing",
@@ -2698,6 +2909,11 @@ def get_publisher_download_route(
             """,
             (normalized_url,),
         ).fetchall()
+        publisher_history_rows = _publisher_scope_history_rows(
+            conn=conn,
+            normalized_url=normalized_url,
+            publisher_scope_url=publisher_scope_url,
+        )
         best_history_row = None
         best_history_score = -1
         history_attempts = len(history_rows)
@@ -2711,6 +2927,8 @@ def get_publisher_download_route(
             for row in history_rows[:5]
             if str(row[3] or "").strip()
         ]
+        route_policy = _route_policy_signals(history_rows)
+        publisher_route_policy = _route_policy_signals(publisher_history_rows)
         for row in history_rows:
             score = _route_projection_rank(
                 str(row[5] or "").strip(),
@@ -2787,6 +3005,10 @@ def get_publisher_download_route(
                     onsite_completeness_status=str(best_history_row[25] or "").strip()
                     or None,
                 ),
+                exact_route_found=True,
+                publisher_scope_url=publisher_scope_url,
+                route_policy=route_policy,
+                publisher_route_policy=publisher_route_policy,
             )
             logger.info(
                 log_event(
@@ -2804,6 +3026,76 @@ def get_publisher_download_route(
                         "route_status": response.route_status,
                         "outcome": response.outcome,
                         "history_backed": True,
+                        "route_policy_order": [
+                            signal.route_family for signal in route_policy
+                        ],
+                        "publisher_route_policy_order": [
+                            signal.route_family for signal in publisher_route_policy
+                        ],
+                    },
+                )
+            )
+            return response
+        if publisher_route_policy:
+            response = PublisherDownloadRouteResponse(
+                schema_version="1.0",
+                normalized_url=normalized_url,
+                source_url=publisher_scope_url or normalized_url,
+                route_kind="",
+                route_summary="No exact URL route memory is available; publisher-scope route policy is available.",
+                outcome="policy_only",
+                route_family="",
+                route_status="inferred",
+                resolved_target_url=normalized_url,
+                route_steps=[],
+                confirmation_evidence=_empty_confirmation_evidence(
+                    final_page_url=normalized_url
+                ),
+                terminal_evidence=_empty_terminal_evidence(
+                    final_page_url=normalized_url
+                ),
+                browser_had_structured_result=False,
+                used_candidate_pdf_url=False,
+                used_candidate_source_page=False,
+                updated_at=0,
+                candidate_pdf_url=None,
+                candidate_source_page_urls=[],
+                candidate_discovery_provenances=[],
+                publisher_discovery_route_kind=None,
+                publisher_recommended_discovery_route_kind=None,
+                blocked_reason=None,
+                blocked_reason_detail=None,
+                last_downloaded_file_path=None,
+                last_final_page_url=None,
+                onsite_capture_path=None,
+                onsite_capture_format=None,
+                onsite_page_count=None,
+                onsite_completeness_status=None,
+                attempts=0,
+                verified_successes=0,
+                last_n_outcomes=[],
+                confidence_score=0.0,
+                exact_route_found=False,
+                publisher_scope_url=publisher_scope_url,
+                route_policy=[],
+                publisher_route_policy=publisher_route_policy,
+            )
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="publisher_route_get_complete",
+                    module=logger.name,
+                    fields={
+                        "db_path": db_path,
+                        "normalized_url": normalized_url,
+                        "found": True,
+                        "history_backed": False,
+                        "exact_route_found": False,
+                        "publisher_scope_url": publisher_scope_url or "",
+                        "publisher_route_policy_order": [
+                            signal.route_family for signal in publisher_route_policy
+                        ],
                     },
                 )
             )
@@ -2878,6 +3170,10 @@ def get_publisher_download_route(
             verified_successes=0,
             last_n_outcomes=[],
             confidence_score=0.0,
+            exact_route_found=True,
+            publisher_scope_url=publisher_scope_url,
+            route_policy=[],
+            publisher_route_policy=publisher_route_policy,
         )
         logger.info(
             log_event(

@@ -121,15 +121,6 @@ Scoring rubric:
 
 ## 4) Publisher Inventory & Browser Acquisition
 
-- **Title:** Publisher-specific route-policy learning engine [Impact: 5/5, Effort: 4/5]
-  - Explanation: Learn preferred acquisition strategy per publisher from route history. Hard-route success rates can improve by >10x over static heuristics.
-  - Pros: Self-improving acquisition.
-  - Cons: Requires policy governance and drift monitoring.
-  - Acceptance Criteria:
-    - Route outcome history persisted with typed reasons.
-    - Planner ranks strategies by historical success.
-    - A/B test shows success-rate uplift.
-
 - **Title:** DOM-event quorum stabilization for browser terminal states [Impact: 4/5, Effort: 3/5]
   - Explanation: Replace brittle fixed sleeps with event quorum checks (URL, DOM markers, network). Flaky transient failures can drop by >10x.
   - Pros: More deterministic browser automation.
@@ -410,7 +401,6 @@ Scoring rubric:
 
 - #2 adaptive model routing
 - #3 page triage classifier
-- #4 route-policy learning engine
 - #5 checkpoint/restart
 - #8 performance+cost regression gate
 

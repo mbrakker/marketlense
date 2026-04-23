@@ -4,6 +4,7 @@ import sqlite3
 import tempfile
 import time
 import unittest
+from dataclasses import replace
 
 from src.contracts.browser_download import (
     BrowserDownloadConfirmationEvidence,
@@ -895,6 +896,229 @@ class TestReportStoreService(unittest.TestCase):
                 ),
                 publisher_projection,
             )
+
+    def test_get_download_route_returns_ranked_route_policy_from_history(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_publisher_route_policy")
+            normalized_url = "https://example.com/reports/brand-study"
+
+            replace_publishers(
+                PublishersReplaceRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_page_url="https://www.notion.so/source",
+                    publishers=[
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-1",
+                            notion_page_url="https://www.notion.so/page-1",
+                            name="Example Publisher",
+                            homepage="https://example.com/",
+                            self_presentation="Example description",
+                            insights_url=normalized_url,
+                            icon_source="https://cdn.example.com/example.png",
+                        )
+                    ],
+                ),
+                ctx,
+            )
+
+            email_success = PublisherDownloadRouteRecordRequest(
+                schema_version="1.0",
+                db_path=db_path,
+                normalized_url=normalized_url,
+                source_url=normalized_url,
+                route_kind="email_delivery",
+                route_summary="Open the report page, fill the form, and submit it.",
+                outcome="email_requested",
+                route_family="browser_email_form",
+                route_status="verified",
+                resolved_target_url=f"{normalized_url}/thank-you",
+                route_steps=[],
+                confirmation_evidence=BrowserDownloadConfirmationEvidence(
+                    schema_version="1.0",
+                    url_changed=True,
+                    visible_confirmation_text="Check your inbox for the report.",
+                    submit_button_state="submitted",
+                    form_disappeared=True,
+                    final_page_url=f"{normalized_url}/thank-you",
+                    confirmation_score=3,
+                    signal_labels=["success_text", "form_disappeared"],
+                ),
+                terminal_evidence=DownloadTerminalEvidence(
+                    schema_version="1.0",
+                    final_page_url=f"{normalized_url}/thank-you",
+                    final_page_title="Thank you",
+                    terminal_text_excerpt="Check your inbox for the report.",
+                    artifact_url=f"{normalized_url}/thank-you",
+                    artifact_kind="email_delivery",
+                    artifact_validation_status="confirmed",
+                    artifact_validation_detail="Email delivery confirmed.",
+                    confirmation_signal_count=3,
+                    traversed_page_urls=[normalized_url, f"{normalized_url}/thank-you"],
+                    evidence_labels=["confirmed", "email_delivery"],
+                ),
+                browser_had_structured_result=True,
+                used_candidate_pdf_url=False,
+                used_candidate_source_page=False,
+                blocked_reason=None,
+                blocked_reason_detail=None,
+                last_downloaded_file_path=None,
+                last_final_page_url=f"{normalized_url}/thank-you",
+                onsite_capture_path=None,
+                onsite_capture_format=None,
+                onsite_page_count=None,
+                onsite_completeness_status=None,
+            )
+            record_publisher_download_route(email_success, ctx)
+            record_publisher_download_route(
+                replace(
+                    email_success,
+                    route_summary="Repeat the same email form route.",
+                    resolved_target_url=f"{normalized_url}/thanks",
+                    last_final_page_url=f"{normalized_url}/thanks",
+                ),
+                ctx,
+            )
+            record_publisher_download_route(
+                replace(
+                    email_success,
+                    route_kind="pdf_download",
+                    route_summary="HTTP probing did not find a downloadable PDF.",
+                    outcome="email_required",
+                    route_family="http_pdf_probe",
+                    route_status="inferred",
+                    resolved_target_url=normalized_url,
+                    browser_had_structured_result=False,
+                    blocked_reason="blocked_no_pdf_link",
+                    blocked_reason_detail="No PDF link found in static HTML.",
+                    last_final_page_url=normalized_url,
+                ),
+                ctx,
+            )
+
+            response = get_publisher_download_route(
+                PublisherDownloadRouteGetRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_url=normalized_url,
+                ),
+                ctx,
+            )
+
+            self.assertIsNotNone(response)
+            assert response is not None
+            self.assertGreaterEqual(len(response.route_policy), 2)
+            self.assertEqual(
+                "browser_email_form", response.route_policy[0].route_family
+            )
+            self.assertEqual(2, response.route_policy[0].verified_successes)
+            self.assertEqual("http_pdf_probe", response.route_policy[1].route_family)
+            self.assertEqual(
+                "blocked_no_pdf_link", response.route_policy[1].last_blocked_reason
+            )
+
+    def test_get_download_route_returns_publisher_policy_for_new_url(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_publisher_scope_route_policy")
+            source_url = "https://example.com/reports"
+            base_request = PublisherDownloadRouteRecordRequest(
+                schema_version="1.0",
+                db_path=db_path,
+                normalized_url="https://example.com/reports/known-study-1",
+                source_url=source_url,
+                route_kind="onsite_report",
+                route_summary="Open the on-site report URL and capture the article.",
+                outcome="captured",
+                route_family="browser_onsite_report",
+                route_status="verified",
+                resolved_target_url="https://example.com/reports/known-study-1",
+                route_steps=[
+                    BrowserDownloadRouteStep(
+                        schema_version="1.0",
+                        index=0,
+                        action="extract",
+                        target_text="article",
+                        target_role="document",
+                        target_url="https://example.com/reports/known-study-1",
+                        result="captured",
+                    )
+                ],
+                confirmation_evidence=BrowserDownloadConfirmationEvidence(
+                    schema_version="1.0",
+                    url_changed=False,
+                    visible_confirmation_text="",
+                    submit_button_state="unchanged",
+                    form_disappeared=False,
+                    final_page_url="https://example.com/reports/known-study-1",
+                ),
+                terminal_evidence=DownloadTerminalEvidence(
+                    schema_version="1.0",
+                    final_page_url="https://example.com/reports/known-study-1",
+                    final_page_title="Known study",
+                    terminal_text_excerpt="Known study report article.",
+                    artifact_url="https://example.com/reports/known-study-1",
+                    artifact_kind="onsite_report",
+                    artifact_validation_status="verified",
+                    artifact_validation_detail="Captured on-site report.",
+                    confirmation_signal_count=0,
+                    traversed_page_urls=["https://example.com/reports/known-study-1"],
+                    evidence_labels=["direct_html_capture"],
+                ),
+                browser_had_structured_result=False,
+                used_candidate_pdf_url=False,
+                used_candidate_source_page=True,
+                candidate_pdf_url=None,
+                candidate_source_page_urls=[source_url],
+                candidate_discovery_provenances=[],
+                publisher_discovery_route_kind=None,
+                publisher_recommended_discovery_route_kind=None,
+                blocked_reason=None,
+                blocked_reason_detail=None,
+                last_downloaded_file_path=None,
+                last_final_page_url="https://example.com/reports/known-study-1",
+                onsite_capture_path=os.path.join(tmpdir, "known-study-1.html"),
+                onsite_capture_format="html",
+                onsite_page_count=1,
+                onsite_completeness_status="complete",
+            )
+
+            for index in range(1, 4):
+                url = f"https://example.com/reports/known-study-{index}"
+                record_publisher_download_route(
+                    replace(
+                        base_request,
+                        normalized_url=url,
+                        resolved_target_url=url,
+                        last_final_page_url=url,
+                        onsite_capture_path=os.path.join(
+                            tmpdir, f"known-study-{index}.html"
+                        ),
+                    ),
+                    ctx,
+                )
+
+            response = get_publisher_download_route(
+                PublisherDownloadRouteGetRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_url="https://example.com/reports/new-study",
+                    publisher_scope_url=source_url,
+                ),
+                ctx,
+            )
+
+            self.assertIsNotNone(response)
+            assert response is not None
+            self.assertFalse(response.exact_route_found)
+            self.assertEqual([], response.route_policy)
+            self.assertEqual(
+                "browser_onsite_report",
+                response.publisher_route_policy[0].route_family,
+            )
+            self.assertEqual(3, response.publisher_route_policy[0].verified_successes)
 
     def test_get_download_route_preserves_confirmation_score_and_signal_labels(
         self,

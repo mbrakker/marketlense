@@ -2,14 +2,17 @@ from __future__ import annotations
 
 import logging
 import re
+from dataclasses import replace
 from urllib.parse import parse_qs, unquote, urlsplit
 
 from src.contracts.browser_download import (
     PublisherDownloadRouteMemory,
+    PublisherDownloadRoutePolicySignal,
     ReportDownloadRoutePlanRequest,
     ReportDownloadRoutePlanResponse,
     ReportDownloadRoutePlanStep,
 )
+from src.contracts.publisher_inventory import PublisherInventoryCandidateTrace
 from src.contracts.run_context import RunContext
 from src.utils.logging import log_event
 
@@ -186,6 +189,22 @@ def plan_report_download_routes(
                 "step_names": [step.step_name for step in response.steps],
                 "route_families": [step.route_family for step in response.steps],
                 "attempt_urls": [step.attempt_url or "" for step in response.steps],
+                "route_policy_order": [
+                    signal.route_family
+                    for signal in (
+                        request.remembered_route.route_policy
+                        if request.remembered_route is not None
+                        else []
+                    )
+                ],
+                "publisher_route_policy_order": [
+                    signal.route_family
+                    for signal in (
+                        request.remembered_route.publisher_route_policy
+                        if request.remembered_route is not None
+                        else []
+                    )
+                ],
             },
         )
     )
@@ -210,10 +229,20 @@ def _build_plan(
     recommended_route_kind = str(
         request.publisher_recommended_discovery_route_kind or ""
     ).strip()
+    policy_signal = _preferred_policy_signal(remembered_route)
+    policy_scope = "exact_url" if policy_signal is not None else ""
+    if policy_signal is None:
+        policy_signal = _preferred_publisher_policy_signal(
+            remembered_route=remembered_route,
+            normalized_url=request.normalized_url,
+            candidate=candidate,
+        )
+        policy_scope = "publisher_scope" if policy_signal is not None else ""
+    policy_route_family = policy_signal.route_family if policy_signal else ""
     redirect_target_url = _extract_tracker_target_url(request.normalized_url)
     redirect_target_kind = _classify_redirect_target(redirect_target_url)
 
-    if _should_reuse_memory_route(remembered_route):
+    if remembered_route is not None and _should_reuse_memory_route(remembered_route):
         remembered_route_family = _canonical_memory_route_family(
             route_kind=remembered_route.route_kind,
             route_family=remembered_route.route_family,
@@ -278,6 +307,11 @@ def _build_plan(
         redirect_target_kind=redirect_target_kind,
         remembered_route=remembered_route,
     )
+    if policy_route_family.startswith("browser_"):
+        browser_step = _apply_policy_route_family(
+            browser_step,
+            policy_signal=policy_signal,
+        )
     http_step = ReportDownloadRoutePlanStep(
         schema_version="1.0",
         step_name="report_download_http_probe",
@@ -288,16 +322,24 @@ def _build_plan(
         fallback_on_retryable_error=True,
     )
 
-    browser_first = (
-        recommended_route_kind == "browser_render"
-        or bool(provenances & _BROWSER_DISCOVERY_PROVENANCES)
+    browser_first = recommended_route_kind == "browser_render" or bool(
+        provenances & _BROWSER_DISCOVERY_PROVENANCES
     )
-    pdf_first = (
-        recommended_route_kind == "http_parse"
-        or bool(provenances & _PDF_FIRST_DISCOVERY_PROVENANCES)
+    pdf_first = recommended_route_kind == "http_parse" or bool(
+        provenances & _PDF_FIRST_DISCOVERY_PROVENANCES
     )
+    if policy_route_family in {"direct_pdf_probe", "http_pdf_probe"}:
+        browser_first = False
+        pdf_first = True
+    elif policy_route_family.startswith("browser_"):
+        browser_first = True
+        pdf_first = False
+    policy_prefers_pdf_probe = policy_route_family in {
+        "direct_pdf_probe",
+        "http_pdf_probe",
+    }
     browser_step_is_email_delivery = browser_step.route_kind_hint == "email_delivery"
-    if browser_step_is_email_delivery:
+    if browser_step_is_email_delivery and not policy_prefers_pdf_probe:
         steps.append(browser_step)
     elif browser_first and not pdf_first:
         steps.append(browser_step)
@@ -312,6 +354,8 @@ def _build_plan(
         candidate_pdf_url=candidate_pdf_url,
         browser_first=browser_first,
         source_page_urls=source_page_urls,
+        policy_signal=policy_signal,
+        policy_scope=policy_scope,
     )
     return ReportDownloadRoutePlanResponse(
         schema_version="1.0",
@@ -348,7 +392,9 @@ def _build_browser_step(
     )
     remembered_route_family = _canonical_memory_route_family(
         route_kind=remembered_route_kind,
-        route_family=remembered_route.route_family if remembered_route is not None else "",
+        route_family=remembered_route.route_family
+        if remembered_route is not None
+        else "",
     )
     reusable_memory_route = _should_reuse_memory_route(remembered_route)
     if _looks_like_tracker_url(normalized_url):
@@ -410,8 +456,7 @@ def _build_browser_step(
         remembered_route_kind == "email_delivery"
         or remembered_route_family == "browser_email_form"
     ) and (
-        reusable_memory_route
-        or _has_actionable_email_memory_hint(remembered_route)
+        reusable_memory_route or _has_actionable_email_memory_hint(remembered_route)
     ):
         return ReportDownloadRoutePlanStep(
             schema_version="1.0",
@@ -506,30 +551,163 @@ def _planning_reason(
     candidate_pdf_url: str,
     browser_first: bool,
     source_page_urls: list[str],
+    policy_signal: PublisherDownloadRoutePolicySignal | None,
+    policy_scope: str,
 ) -> str:
     if _should_reuse_memory_route(remembered_route):
         if candidate_pdf_url:
-            return (
-                "Reuse the verified remembered route first, then verify the discovery-provided candidate PDF before broader fallback."
-            )
+            return "Reuse the verified remembered route first, then verify the discovery-provided candidate PDF before broader fallback."
+        return "Reuse the verified remembered route first, then fall back to discovery-aware HTTP and browser attempts only on retryable failure."
+    if policy_signal is not None:
+        scope_label = (
+            "Publisher-domain route-policy history"
+            if policy_scope == "publisher_scope"
+            else "Publisher route-policy history"
+        )
         return (
-            "Reuse the verified remembered route first, then fall back to discovery-aware HTTP and browser attempts only on retryable failure."
+            f"{scope_label} prefers "
+            f"{policy_signal.route_family} "
+            f"(success rate {policy_signal.success_rate:.3f}, confidence {policy_signal.confidence_score:.3f}), "
+            "so rank acquisition strategies by learned success before static fallback."
         )
     if candidate_pdf_url:
-        return (
-            "The discovery phase already exposed a candidate PDF URL, so verify that target before broader HTTP or browser exploration."
-        )
+        return "The discovery phase already exposed a candidate PDF URL, so verify that target before broader HTTP or browser exploration."
     if browser_first and source_page_urls:
-        return (
-            "Discovery evidence points to a browser-derived route from a source page, so revisit that page before generic PDF probing."
-        )
+        return "Discovery evidence points to a browser-derived route from a source page, so revisit that page before generic PDF probing."
     if browser_first:
-        return (
-            "Discovery evidence points to a browser-derived route, so prefer browser execution before generic PDF probing."
-        )
-    return (
-        "No verified remembered route is available, so start with discovery-aware PDF probing before falling back to browser execution."
+        return "Discovery evidence points to a browser-derived route, so prefer browser execution before generic PDF probing."
+    return "No verified remembered route is available, so start with discovery-aware PDF probing before falling back to browser execution."
+
+
+def _preferred_policy_signal(
+    remembered_route: PublisherDownloadRouteMemory | None,
+) -> PublisherDownloadRoutePolicySignal | None:
+    if remembered_route is None:
+        return None
+    for signal in remembered_route.route_policy:
+        if signal.attempts < 2:
+            continue
+        if signal.verified_successes < 1:
+            continue
+        if signal.rank_score < 0.45:
+            continue
+        if signal.confidence_score < 0.45 and signal.success_rate < 0.5:
+            continue
+        return signal
+    return None
+
+
+def _preferred_publisher_policy_signal(
+    *,
+    remembered_route: PublisherDownloadRouteMemory | None,
+    normalized_url: str,
+    candidate: PublisherInventoryCandidateTrace | None,
+) -> PublisherDownloadRoutePolicySignal | None:
+    if remembered_route is None:
+        return None
+    candidate_pdf_url = str(candidate.pdf_url or "").strip() if candidate else ""
+    source_page_urls = _clean_string_list(
+        candidate.source_page_urls if candidate is not None else []
     )
+    candidate_title = (
+        str(candidate.title or "").strip() if candidate is not None else ""
+    )
+    for signal in remembered_route.publisher_route_policy:
+        if signal.attempts < 3:
+            continue
+        if signal.verified_successes < 2:
+            continue
+        if signal.success_rate < 0.667:
+            continue
+        if signal.rank_score < 0.65:
+            continue
+        if signal.confidence_score < 0.65:
+            continue
+        if (
+            signal.blocked_attempts
+            and (signal.blocked_attempts / signal.attempts) > 0.25
+        ):
+            continue
+        if not _publisher_policy_signal_matches_context(
+            signal=signal,
+            normalized_url=normalized_url,
+            candidate_pdf_url=candidate_pdf_url,
+            candidate_title=candidate_title,
+            source_page_urls=source_page_urls,
+        ):
+            continue
+        return signal
+    return None
+
+
+def _publisher_policy_signal_matches_context(
+    *,
+    signal: PublisherDownloadRoutePolicySignal,
+    normalized_url: str,
+    candidate_pdf_url: str,
+    candidate_title: str,
+    source_page_urls: list[str],
+) -> bool:
+    route_family = str(signal.route_family or "").strip()
+    if candidate_pdf_url and route_family not in {"direct_pdf_probe", "http_pdf_probe"}:
+        return False
+    if _looks_like_pdf(normalized_url) and route_family not in {
+        "direct_pdf_probe",
+        "http_pdf_probe",
+    }:
+        return False
+    if route_family == "browser_onsite_report":
+        return not _looks_like_email_form_url(
+            normalized_url,
+            candidate_title=candidate_title,
+            source_page_urls=source_page_urls,
+        )
+    return True
+
+
+def _apply_policy_route_family(
+    step: ReportDownloadRoutePlanStep,
+    *,
+    policy_signal: PublisherDownloadRoutePolicySignal | None,
+) -> ReportDownloadRoutePlanStep:
+    if policy_signal is None:
+        return step
+    route_family = str(policy_signal.route_family or "").strip()
+    if route_family not in {
+        "browser_email_form",
+        "browser_onsite_report",
+        "browser_pdf_click",
+        "browser_tracker_redirect",
+        "browser_listing_hub",
+    }:
+        return step
+    return replace(
+        step,
+        step_name=_policy_step_name(route_family),
+        route_family=route_family,
+        route_kind_hint=_route_kind_hint_for_policy_family(route_family),
+        fallback_on_retryable_error=False,
+    )
+
+
+def _policy_step_name(route_family: str) -> str:
+    if route_family == "browser_email_form":
+        return "report_download_policy_browser_email_form"
+    if route_family == "browser_onsite_report":
+        return "report_download_policy_browser_onsite_report"
+    if route_family == "browser_listing_hub":
+        return "report_download_policy_browser_listing_hub"
+    if route_family == "browser_tracker_redirect":
+        return "report_download_policy_browser_tracker_redirect"
+    return "report_download_policy_browser_candidate"
+
+
+def _route_kind_hint_for_policy_family(route_family: str) -> str | None:
+    if route_family == "browser_email_form":
+        return "email_delivery"
+    if route_family == "browser_onsite_report":
+        return "onsite_report"
+    return None
 
 
 def _default_route_family_for_kind(route_kind: str) -> str:
@@ -545,6 +723,8 @@ def _should_reuse_memory_route(
 ) -> bool:
     if remembered_route is None:
         return False
+    if not remembered_route.exact_route_found:
+        return False
     if remembered_route.route_status != "verified":
         return False
     if remembered_route.outcome not in {"downloaded", "email_requested", "captured"}:
@@ -559,10 +739,10 @@ def _should_reuse_memory_route(
         route_kind=remembered_route.route_kind,
         route_family=remembered_route.route_family,
     )
-    if (
-        not remembered_route.browser_had_structured_result
-        and route_family not in {"direct_pdf_probe", "http_pdf_probe"}
-    ):
+    if not remembered_route.browser_had_structured_result and route_family not in {
+        "direct_pdf_probe",
+        "http_pdf_probe",
+    }:
         return False
     minimum_confidence = 0.5
     if route_family in {"direct_pdf_probe", "http_pdf_probe"}:
@@ -573,10 +753,17 @@ def _should_reuse_memory_route(
         minimum_confidence = 0.6
     if remembered_route.confidence_score < minimum_confidence:
         return False
-    required_successes = 1 if route_family in {"direct_pdf_probe", "http_pdf_probe", "browser_email_form"} else 2
+    required_successes = (
+        1
+        if route_family in {"direct_pdf_probe", "http_pdf_probe", "browser_email_form"}
+        else 2
+    )
     if remembered_route.verified_successes >= required_successes:
         return True
-    return remembered_route.confidence_score >= 0.75 and remembered_route.verified_successes >= 1
+    return (
+        remembered_route.confidence_score >= 0.75
+        and remembered_route.verified_successes >= 1
+    )
 
 
 def _has_actionable_email_memory_hint(
@@ -672,8 +859,11 @@ def _clean_string_list(values: list[str]) -> list[str]:
 
 
 def _looks_like_pdf(url: str) -> bool:
-    return str(urlsplit(str(url or "").strip()).path or "").strip().lower().endswith(
-        ".pdf"
+    return (
+        str(urlsplit(str(url or "").strip()).path or "")
+        .strip()
+        .lower()
+        .endswith(".pdf")
     )
 
 

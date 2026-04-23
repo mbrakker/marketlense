@@ -3,6 +3,7 @@ from __future__ import annotations
 from src.contracts.browser_download import (
     BrowserDownloadRouteStep,
     PublisherDownloadRouteMemory,
+    PublisherDownloadRoutePolicySignal,
     ReportDownloadRoutePlanRequest,
 )
 from src.contracts.publisher_inventory import PublisherInventoryCandidateTrace
@@ -41,6 +42,208 @@ def test_plan_report_download_routes_prefers_email_form_for_tracker_redirect(
     assert response.steps[0].attempt_url == (
         "https://example.com/resources/asset/why-agentic-ai-is-your-next-priority"
     )
+
+
+def test_plan_report_download_routes_uses_learned_policy_to_rank_browser_email_first(
+    run_context,
+) -> None:
+    response = plan_report_download_routes(
+        ReportDownloadRoutePlanRequest(
+            schema_version="1.0",
+            normalized_url="https://example.com/brand-study",
+            remembered_route=PublisherDownloadRouteMemory(
+                schema_version="1.0",
+                route_kind="pdf_download",
+                route_summary="Static click route was inconclusive.",
+                outcome="email_required",
+                route_family="browser_pdf_click",
+                route_status="inferred",
+                resolved_target_url="https://example.com/brand-study",
+                attempts=4,
+                verified_successes=2,
+                last_n_outcomes=["email_requested", "downloaded", "email_required"],
+                confidence_score=0.3,
+                browser_had_structured_result=True,
+                onsite_completeness_status=None,
+                route_policy=[
+                    PublisherDownloadRoutePolicySignal(
+                        schema_version="1.0",
+                        route_family="browser_email_form",
+                        route_kind="email_delivery",
+                        attempts=3,
+                        verified_successes=2,
+                        blocked_attempts=0,
+                        success_rate=0.667,
+                        confidence_score=0.817,
+                        rank_score=0.803,
+                        last_outcome="email_requested",
+                        last_route_status="verified",
+                        last_blocked_reason=None,
+                        recent_outcomes=["email_requested", "email_requested"],
+                    ),
+                    PublisherDownloadRoutePolicySignal(
+                        schema_version="1.0",
+                        route_family="http_pdf_probe",
+                        route_kind="pdf_download",
+                        attempts=2,
+                        verified_successes=0,
+                        blocked_attempts=1,
+                        success_rate=0.0,
+                        confidence_score=0.0,
+                        rank_score=0.0,
+                        last_outcome="email_required",
+                        last_route_status="inferred",
+                        last_blocked_reason="blocked_missing_identity_field",
+                        recent_outcomes=["email_required"],
+                    ),
+                ],
+            ),
+            candidate_trace=None,
+            publisher_discovery_route_kind=None,
+            publisher_recommended_discovery_route_kind=None,
+        ),
+        run_context,
+    )
+
+    assert response.steps[0].step_name == "report_download_policy_browser_email_form"
+    assert response.steps[0].route_family == "browser_email_form"
+    assert response.steps[0].route_kind_hint == "email_delivery"
+    assert response.steps[0].uses_memory_route is False
+    assert (
+        "Publisher route-policy history prefers browser_email_form"
+        in response.planning_reason
+    )
+
+
+def test_plan_report_download_routes_uses_learned_policy_to_override_browser_first_hint(
+    run_context,
+) -> None:
+    response = plan_report_download_routes(
+        ReportDownloadRoutePlanRequest(
+            schema_version="1.0",
+            normalized_url="https://example.com/reports/latest-study",
+            remembered_route=PublisherDownloadRouteMemory(
+                schema_version="1.0",
+                route_kind="pdf_download",
+                route_summary="HTTP probe has historically found embedded PDFs.",
+                outcome="downloaded",
+                route_family="http_pdf_probe",
+                route_status="inferred",
+                resolved_target_url="https://example.com/reports/latest-study",
+                attempts=4,
+                verified_successes=2,
+                last_n_outcomes=["downloaded", "downloaded", "email_required"],
+                confidence_score=0.3,
+                browser_had_structured_result=False,
+                onsite_completeness_status=None,
+                route_policy=[
+                    PublisherDownloadRoutePolicySignal(
+                        schema_version="1.0",
+                        route_family="http_pdf_probe",
+                        route_kind="pdf_download",
+                        attempts=3,
+                        verified_successes=2,
+                        blocked_attempts=0,
+                        success_rate=0.667,
+                        confidence_score=0.967,
+                        rank_score=0.893,
+                        last_outcome="downloaded",
+                        last_route_status="verified",
+                        last_blocked_reason=None,
+                        recent_outcomes=["downloaded", "downloaded"],
+                    )
+                ],
+            ),
+            candidate_trace=PublisherInventoryCandidateTrace(
+                schema_version="1.0",
+                canonical_url="https://example.com/reports/latest-study",
+                title="Latest study",
+                discovered_on_page_number=1,
+                source_page_urls=["https://example.com/reports"],
+                discovery_provenances=["browser_dom"],
+                pdf_url=None,
+                published_at_text=None,
+                max_confidence=0.8,
+            ),
+            publisher_discovery_route_kind="browser_render",
+            publisher_recommended_discovery_route_kind="browser_render",
+        ),
+        run_context,
+    )
+
+    assert response.steps[0].route_family == "http_pdf_probe"
+    assert response.steps[1].route_family.startswith("browser_")
+    assert (
+        "Publisher route-policy history prefers http_pdf_probe"
+        in response.planning_reason
+    )
+
+
+def test_plan_report_download_routes_uses_publisher_policy_for_new_report_url(
+    run_context,
+) -> None:
+    response = plan_report_download_routes(
+        ReportDownloadRoutePlanRequest(
+            schema_version="1.0",
+            normalized_url="https://example.com/research/industry-outlook",
+            remembered_route=PublisherDownloadRouteMemory(
+                schema_version="1.0",
+                route_kind="",
+                route_summary=(
+                    "No exact URL route memory is available; publisher-scope route "
+                    "policy is available."
+                ),
+                outcome="policy_only",
+                route_family="",
+                route_status="inferred",
+                resolved_target_url="https://example.com/research/industry-outlook",
+                attempts=0,
+                verified_successes=0,
+                last_n_outcomes=[],
+                confidence_score=0.0,
+                exact_route_found=False,
+                browser_had_structured_result=False,
+                onsite_completeness_status=None,
+                route_policy=[],
+                publisher_route_policy=[
+                    PublisherDownloadRoutePolicySignal(
+                        schema_version="1.0",
+                        route_family="browser_onsite_report",
+                        route_kind="onsite_report",
+                        attempts=4,
+                        verified_successes=4,
+                        blocked_attempts=0,
+                        success_rate=1.0,
+                        confidence_score=1.0,
+                        rank_score=1.0,
+                        last_outcome="captured",
+                        last_route_status="verified",
+                        last_blocked_reason=None,
+                        recent_outcomes=["captured", "captured", "captured"],
+                    )
+                ],
+            ),
+            candidate_trace=PublisherInventoryCandidateTrace(
+                schema_version="1.0",
+                canonical_url="https://example.com/research/industry-outlook",
+                title="Industry outlook",
+                discovered_on_page_number=1,
+                source_page_urls=["https://example.com/research"],
+                discovery_provenances=[],
+                pdf_url=None,
+                published_at_text=None,
+                max_confidence=0.8,
+            ),
+            publisher_discovery_route_kind=None,
+            publisher_recommended_discovery_route_kind=None,
+        ),
+        run_context,
+    )
+
+    assert response.steps[0].step_name == "report_download_policy_browser_onsite_report"
+    assert response.steps[0].route_family == "browser_onsite_report"
+    assert response.steps[0].route_kind_hint == "onsite_report"
+    assert "Publisher-domain route-policy history prefers" in response.planning_reason
 
 
 def test_plan_report_download_routes_sends_report_id_detail_to_email_form(
@@ -229,7 +432,10 @@ def test_plan_report_download_routes_treats_reports_slug_as_detail_page(
     )
 
     assert response.steps[-1].route_family == "browser_pdf_click"
-    assert response.steps[-1].attempt_url == "https://www.gwi.com/reports/south-africa-consumers"
+    assert (
+        response.steps[-1].attempt_url
+        == "https://www.gwi.com/reports/south-africa-consumers"
+    )
 
 
 def test_plan_report_download_routes_treats_guide_article_as_onsite_report(
@@ -280,7 +486,9 @@ def test_plan_report_download_routes_treats_singular_insight_detail_as_onsite_re
                 canonical_url="https://www.vml.com/insight/new-trend-report-the-single-age",
                 title="New trend report: The Single Age",
                 discovered_on_page_number=2,
-                source_page_urls=["https://www.vml.com/expertise/intelligence/trend-reports"],
+                source_page_urls=[
+                    "https://www.vml.com/expertise/intelligence/trend-reports"
+                ],
                 discovery_provenances=[],
                 pdf_url=None,
                 published_at_text=None,
@@ -650,5 +858,7 @@ def test_plan_report_download_routes_prefers_email_form_for_direct_detail_with_e
     assert response.steps[0].attempt_url == (
         "https://www.mintel.com/insights/food-and-drink/global-food-and-drink-trends"
     )
-    assert response.steps[0].route_hint == "Open the page, fill the form, and submit it."
+    assert (
+        response.steps[0].route_hint == "Open the page, fill the form, and submit it."
+    )
     assert response.steps[0].route_step_hints == []

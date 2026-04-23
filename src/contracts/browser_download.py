@@ -760,6 +760,67 @@ class ReportDownloadRoutePlanResponse:
 
 
 @dataclass(frozen=True)
+class PublisherDownloadRoutePolicySignal:
+    schema_version: str = field(
+        metadata={"doc": "Publisher route-policy signal schema version."}
+    )
+    route_family: str = field(
+        metadata={
+            "doc": "Route family this policy signal describes, for example `http_pdf_probe` or `browser_email_form`."
+        }
+    )
+    route_kind: str = field(
+        metadata={
+            "doc": "Most recent or dominant route kind observed for this route family."
+        }
+    )
+    attempts: int = field(
+        metadata={"doc": "Number of recorded attempts for this route family."}
+    )
+    verified_successes: int = field(
+        metadata={
+            "doc": "Number of verified successful outcomes recorded for this route family."
+        }
+    )
+    blocked_attempts: int = field(
+        metadata={
+            "doc": "Number of attempts that ended with a typed blocker for this route family."
+        }
+    )
+    success_rate: float = field(
+        metadata={
+            "doc": "Verified-success ratio for this route family, rounded to three decimals."
+        }
+    )
+    confidence_score: float = field(
+        metadata={"doc": "Policy confidence score for preferring this route family."}
+    )
+    rank_score: float = field(
+        metadata={
+            "doc": "Planner ranking score derived from success rate, confidence, recency, and blocker penalty."
+        }
+    )
+    last_outcome: str = field(
+        metadata={"doc": "Most recent outcome observed for this route family."}
+    )
+    last_route_status: str = field(
+        metadata={
+            "doc": "Most recent verification status observed for this route family."
+        }
+    )
+    last_blocked_reason: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Most recent typed blocker reason observed for this route family, if any."
+        },
+    )
+    recent_outcomes: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Recent outcome labels observed for this route family."},
+    )
+
+
+@dataclass(frozen=True)
 class PublisherDownloadRouteMemory:
     schema_version: str = field(
         metadata={"doc": "Publisher remembered download-route schema version."}
@@ -810,6 +871,12 @@ class PublisherDownloadRouteMemory:
         default=0.0,
         metadata={"doc": "Confidence score for reusing this remembered route."},
     )
+    exact_route_found: bool = field(
+        default=True,
+        metadata={
+            "doc": "Whether this memory includes exact normalized-URL route history; false means only broader publisher-scope policy was available."
+        },
+    )
     browser_had_structured_result: bool = field(
         default=True,
         metadata={
@@ -820,6 +887,18 @@ class PublisherDownloadRouteMemory:
         default=None,
         metadata={
             "doc": "Remembered on-site completeness verdict when the route kind is `onsite_report`."
+        },
+    )
+    route_policy: list[PublisherDownloadRoutePolicySignal] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Ranked route-family policy signals learned from exact normalized-URL route history."
+        },
+    )
+    publisher_route_policy: list[PublisherDownloadRoutePolicySignal] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Ranked route-family policy signals learned from same-publisher route history outside the exact URL."
         },
     )
 

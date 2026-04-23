@@ -7,6 +7,7 @@ from src.contracts.browser_download import (
     BrowserDownloadConfirmationEvidence,
     BrowserDownloadRouteStep,
     DownloadTerminalEvidence,
+    PublisherDownloadRoutePolicySignal,
 )
 from src.contracts.docpacks import DocPackPathMap
 from src.contracts.publisher_inventory import (
@@ -508,6 +509,12 @@ class PublisherDownloadRouteGetRequest:
             "doc": "Normalized URL used to find the matching publisher insights_url."
         }
     )
+    publisher_scope_url: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Optional publisher, source, or listing URL used to aggregate route policy across report URLs on the same publisher domain."
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -859,6 +866,30 @@ class PublisherDownloadRouteResponse:
     confidence_score: float = field(
         default=0.0,
         metadata={"doc": "Confidence score assigned to this remembered route."},
+    )
+    exact_route_found: bool = field(
+        default=True,
+        metadata={
+            "doc": "Whether this response includes exact normalized-URL route memory; false means only broader publisher-scope policy was available."
+        },
+    )
+    publisher_scope_url: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Publisher, source, or listing URL used to aggregate publisher-scope route policy when available."
+        },
+    )
+    route_policy: List[PublisherDownloadRoutePolicySignal] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Ranked route-family policy signals learned from exact normalized-URL route history."
+        },
+    )
+    publisher_route_policy: List[PublisherDownloadRoutePolicySignal] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Ranked route-family policy signals learned from same-publisher route history outside the exact URL."
+        },
     )
 
 
