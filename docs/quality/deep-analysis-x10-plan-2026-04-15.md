@@ -1,6 +1,6 @@
 # Deep Analysis and x10 Improvement Plan (2026-04-17)
 
-Last updated: 2026-04-22
+Last updated: 2026-04-23
 
 This file is intentionally formatted like `CONSOLIDATED_TODO.md`: every proposal has a title, explanation (what + why), pros/cons, and acceptance criteria.
 
@@ -68,15 +68,6 @@ Scoring rubric:
     - Routing decision + reason logged per call.
     - Quality/cost benchmark shows target savings without quality drop.
 
-- **Title:** Semantic response cache (`prompt_hash + context_hash + params`) [Impact: 5/5, Effort: 3/5]
-  - Explanation: Cache stable LLM outputs so reruns/regeneration loops skip repeated calls. Repeated workloads commonly see >10x token savings.
-  - Pros: Fast reruns, direct cost reduction.
-  - Cons: Cache invalidation and drift handling.
-  - Acceptance Criteria:
-    - Deterministic cache keys and TTL policy implemented.
-    - Cache hit/miss metrics logged.
-    - Rerun benchmarks show material token/latency reductions.
-
 - **Title:** Prompt budget planner with automatic context compaction [Impact: 4/5, Effort: 3/5]
   - Explanation: Pre-compact low-value context before model calls to cap token bloat. Large-report scenarios can gain >10x latency reduction in worst cases.
   - Pros: Predictable token budgets, fewer timeout risks.
@@ -94,15 +85,6 @@ Scoring rubric:
     - Primary/secondary fallback policy exists and is tested.
     - Error taxonomy normalized across providers.
     - DR test demonstrates failover success.
-
-- **Title:** Refusal/error-type-aware retry policy [Impact: 4/5, Effort: 2/5]
-  - Explanation: Differentiate retryable transient errors from permanent refusals so retries stop wasting budget. Failed-attempt efficiency can improve by >10x for refusal-heavy paths.
-  - Pros: Cleaner retries, lower waste.
-  - Cons: Requires taxonomy tuning as providers evolve.
-  - Acceptance Criteria:
-    - Refusal classes mapped to retry/no-retry.
-    - Retry reasons logged with structured code.
-    - Tests assert bounded retry behavior per error class.
 
 ---
 
@@ -134,24 +116,6 @@ Scoring rubric:
     - Confidence metric defined and logged.
     - OCR called only when threshold fails.
     - Cost report shows reduced OCR usage.
-
-- **Title:** Typed candidate-feature contract for ranking/crop decisions [Impact: 4/5, Effort: 4/5]
-  - Explanation: Replace ad-hoc `meta` keys with typed feature contracts for quality/ranking inputs. Prevents key drift bugs and improves ranking consistency significantly.
-  - Pros: Safer evolution, better testability.
-  - Cons: Broad migration across extraction/ranking.
-  - Acceptance Criteria:
-    - New feature dataclass replaces required `meta` lookups.
-    - Serialization round-trip tests added.
-    - Ranking/crop modules consume typed features only.
-
-- **Title:** Shared raster/statistics probe cache for bbox analysis [Impact: 3/5, Effort: 3/5]
-  - Explanation: Reuse rendered probes and derived stats across heuristics that inspect the same bbox. Graphics-heavy PDFs gain significant extraction speedups.
-  - Pros: Less repeated rendering work.
-  - Cons: Key correctness is critical.
-  - Acceptance Criteria:
-    - Cache key includes page+bbox+render profile.
-    - Probe reuse observed in extraction logs.
-    - Benchmarks show extraction time reduction.
 
 ---
 
@@ -439,7 +403,6 @@ Scoring rubric:
 
 ### Phase 1 (2-4 weeks)
 
-- #2 semantic response cache
 - #3 OCR confidence gating
 - #5 idempotency checksum
 

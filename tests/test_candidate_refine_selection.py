@@ -4,7 +4,7 @@ from dataclasses import replace
 
 from pypdf import PdfWriter
 
-from src.contracts.candidates import Candidate
+from src.contracts.candidates import Candidate, CandidateFeatures
 from src.contracts.ingest import IngestSettings
 from src.contracts.report_assets import CropRefineResponse, CropRefineResult
 from src.contracts.report_models import Figure, Quote, RankedCandidate, ReportPayload
@@ -107,6 +107,47 @@ def _pdf_path(tmp_path: Path) -> str:
     with path.open("wb") as handle:
         writer.write(handle)
     return str(path)
+
+
+def test_prefilter_uses_typed_candidate_features_without_meta():
+    table = Candidate(
+        schema_version="1.0",
+        id="typed_table",
+        kind="table",
+        page=0,
+        bbox=(10.0, 10.0, 300.0, 220.0),
+        caption="",
+        preview_text="",
+        meta={},
+        features=CandidateFeatures(
+            schema_version="1.0",
+            area_frac=0.12,
+            rows=6,
+            cols=4,
+            numeric_ratio=0.25,
+            avg_words_per_cell=1.8,
+        ),
+    )
+    chart = Candidate(
+        schema_version="1.0",
+        id="typed_chart",
+        kind="chart",
+        page=0,
+        bbox=(10.0, 10.0, 300.0, 220.0),
+        caption="Figure 1",
+        preview_text="",
+        meta={},
+        features=CandidateFeatures(
+            schema_version="1.0",
+            area_frac=0.14,
+            text_ratio=0.2,
+        ),
+    )
+
+    assert rsg._candidate_prefilter_reject_reason(table) == ""
+    assert rsg._candidate_prefilter_reject_reason(chart) == ""
+    assert rsg._candidate_is_obvious_pass(table) is True
+    assert rsg._candidate_is_obvious_pass(chart) is True
 
 
 def test_refine_selection_adaptive_obvious_pass_skips_llm(tmp_path):
@@ -239,9 +280,7 @@ def test_refine_selection_adaptive_ambiguous_calls_llm(tmp_path):
 
 
 def test_refine_selection_batches_same_page_candidates_by_phase(tmp_path):
-    settings = _settings(
-        tmp_path, crop_refine_enabled=True, crop_refine_mode="always"
-    )
+    settings = _settings(tmp_path, crop_refine_enabled=True, crop_refine_mode="always")
     llm_calls: list[list[str]] = []
 
     def _refine(req, ctx):
@@ -334,9 +373,7 @@ def test_refine_selection_batches_same_page_candidates_by_phase(tmp_path):
 
 
 def test_refine_selection_batched_page_maps_mixed_valid_invalid_decisions(tmp_path):
-    settings = _settings(
-        tmp_path, crop_refine_enabled=True, crop_refine_mode="always"
-    )
+    settings = _settings(tmp_path, crop_refine_enabled=True, crop_refine_mode="always")
     llm_calls: list[list[str]] = []
 
     def _refine(req, ctx):
@@ -453,9 +490,7 @@ def test_refine_selection_batched_page_maps_mixed_valid_invalid_decisions(tmp_pa
 
 
 def test_refine_selection_recovers_missing_batched_decisions(tmp_path):
-    settings = _settings(
-        tmp_path, crop_refine_enabled=True, crop_refine_mode="always"
-    )
+    settings = _settings(tmp_path, crop_refine_enabled=True, crop_refine_mode="always")
     llm_calls: list[tuple[str, list[str]]] = []
 
     def _refine(req, ctx):
@@ -563,7 +598,10 @@ def test_refine_selection_recovers_missing_batched_decisions(tmp_path):
         dependencies=deps,
     )
 
-    assert llm_calls[:2] == [("coarse", ["chart_1", "chart_2"]), ("coarse", ["chart_2"])]
+    assert llm_calls[:2] == [
+        ("coarse", ["chart_1", "chart_2"]),
+        ("coarse", ["chart_2"]),
+    ]
     assert [item.id for item in items] == ["chart_1", "chart_2"]
     assert [candidate.id for candidate in accepted] == ["chart_1", "chart_2"]
 
@@ -658,10 +696,42 @@ def test_refine_selection_enforces_per_kind_limit(tmp_path):
         ),
     ]
     ranked_rows = [
-        RankedCandidate(id="table_a", type="table", score=99, quality_score=99, insight_score=99, data_score=99, keep=True),
-        RankedCandidate(id="table_b", type="table", score=98, quality_score=98, insight_score=98, data_score=98, keep=True),
-        RankedCandidate(id="chart_a", type="chart", score=97, quality_score=97, insight_score=97, data_score=97, keep=True),
-        RankedCandidate(id="chart_b", type="chart", score=96, quality_score=96, insight_score=96, data_score=96, keep=True),
+        RankedCandidate(
+            id="table_a",
+            type="table",
+            score=99,
+            quality_score=99,
+            insight_score=99,
+            data_score=99,
+            keep=True,
+        ),
+        RankedCandidate(
+            id="table_b",
+            type="table",
+            score=98,
+            quality_score=98,
+            insight_score=98,
+            data_score=98,
+            keep=True,
+        ),
+        RankedCandidate(
+            id="chart_a",
+            type="chart",
+            score=97,
+            quality_score=97,
+            insight_score=97,
+            data_score=97,
+            keep=True,
+        ),
+        RankedCandidate(
+            id="chart_b",
+            type="chart",
+            score=96,
+            quality_score=96,
+            insight_score=96,
+            data_score=96,
+            keep=True,
+        ),
     ]
 
     items, accepted = rsg.select_refined_candidate_items(
@@ -686,13 +756,48 @@ def test_refine_selection_enforces_per_kind_limit(tmp_path):
 
 def test_select_fallback_candidate_crop_paths_prefers_ranked_order(tmp_path):
     candidates = [
-        _candidate(cid="table_a", kind="table", page=0, meta={"rows": 6, "cols": 4, "numeric_ratio": 0.3, "area_frac": 0.2}),
-        _candidate(cid="chart_a", kind="chart", page=1, caption="Figure 1", meta={"area_frac": 0.18, "text_ratio": 0.2}),
-        _candidate(cid="chart_b", kind="chart", page=2, caption="Figure 2", meta={"area_frac": 0.2, "text_ratio": 0.2}),
+        _candidate(
+            cid="table_a",
+            kind="table",
+            page=0,
+            meta={"rows": 6, "cols": 4, "numeric_ratio": 0.3, "area_frac": 0.2},
+        ),
+        _candidate(
+            cid="chart_a",
+            kind="chart",
+            page=1,
+            caption="Figure 1",
+            meta={"area_frac": 0.18, "text_ratio": 0.2},
+        ),
+        _candidate(
+            cid="chart_b",
+            kind="chart",
+            page=2,
+            caption="Figure 2",
+            meta={"area_frac": 0.2, "text_ratio": 0.2},
+        ),
     ]
     ranked_rows = [
-        RankedCandidate(id="chart_b", type="chart", score=97, quality_score=97, insight_score=97, data_score=97, keep=False, reject_reason="model_reject"),
-        RankedCandidate(id="table_a", type="table", score=91, quality_score=91, insight_score=91, data_score=91, keep=False, reject_reason="model_reject"),
+        RankedCandidate(
+            id="chart_b",
+            type="chart",
+            score=97,
+            quality_score=97,
+            insight_score=97,
+            data_score=97,
+            keep=False,
+            reject_reason="model_reject",
+        ),
+        RankedCandidate(
+            id="table_a",
+            type="table",
+            score=91,
+            quality_score=91,
+            insight_score=91,
+            data_score=91,
+            keep=False,
+            reject_reason="model_reject",
+        ),
     ]
 
     paths, selected, stats = rsg._select_fallback_candidate_crop_paths(
@@ -716,11 +821,31 @@ def test_select_fallback_candidate_crop_paths_prefers_ranked_order(tmp_path):
 
 def test_select_fallback_candidate_crop_paths_skips_obvious_rejects():
     candidates = [
-        _candidate(cid="bad_chart", kind="chart", page=0, meta={"area_frac": 0.04, "text_ratio": 0.95}),
-        _candidate(cid="good_chart", kind="chart", page=1, caption="Figure 3", meta={"area_frac": 0.18, "text_ratio": 0.2}),
+        _candidate(
+            cid="bad_chart",
+            kind="chart",
+            page=0,
+            meta={"area_frac": 0.04, "text_ratio": 0.95},
+        ),
+        _candidate(
+            cid="good_chart",
+            kind="chart",
+            page=1,
+            caption="Figure 3",
+            meta={"area_frac": 0.18, "text_ratio": 0.2},
+        ),
     ]
     ranked_rows = [
-        RankedCandidate(id="bad_chart", type="chart", score=99, quality_score=99, insight_score=99, data_score=99, keep=False, reject_reason="model_reject")
+        RankedCandidate(
+            id="bad_chart",
+            type="chart",
+            score=99,
+            quality_score=99,
+            insight_score=99,
+            data_score=99,
+            keep=False,
+            reject_reason="model_reject",
+        )
     ]
 
     paths, selected, stats = rsg._select_fallback_candidate_crop_paths(
@@ -822,7 +947,7 @@ def test_candidate_prefilter_rejects_obvious_table_text_blocks():
     reference_block = _candidate(
         cid="table_refs",
         kind="table",
-        preview_text="IEA (2025a), \"Energy and AI\", https://www.iea.org/reports/energy-and-ai.",
+        preview_text='IEA (2025a), "Energy and AI", https://www.iea.org/reports/energy-and-ai.',
         meta={
             "rows": 48,
             "cols": 5,

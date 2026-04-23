@@ -110,6 +110,22 @@ class OpenAIResponseRequest:
         default_factory=dict,
         metadata={"doc": "Per-model pricing table for cost estimation."},
     )
+    response_cache_enabled: bool = field(
+        default=False,
+        metadata={
+            "doc": "Whether semantic response caching is enabled for this request."
+        },
+    )
+    response_cache_dir: str = field(
+        default="./cache",
+        metadata={"doc": "Root cache directory for semantic OpenAI responses."},
+    )
+    response_cache_ttl_seconds: Optional[float] = field(
+        default=604800.0,
+        metadata={
+            "doc": "Semantic response cache TTL in seconds; None disables expiry."
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -168,6 +184,22 @@ class OpenAIJSONPromptRequest:
         default_factory=dict,
         metadata={"doc": "Per-model pricing table for cost estimation."},
     )
+    response_cache_enabled: bool = field(
+        default=False,
+        metadata={
+            "doc": "Whether semantic response caching is enabled for this request."
+        },
+    )
+    response_cache_dir: str = field(
+        default="./cache",
+        metadata={"doc": "Root cache directory for semantic OpenAI responses."},
+    )
+    response_cache_ttl_seconds: Optional[float] = field(
+        default=604800.0,
+        metadata={
+            "doc": "Semantic response cache TTL in seconds; None disables expiry."
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -201,6 +233,22 @@ class OpenAIJSONImagePromptRequest:
         default_factory=dict,
         metadata={"doc": "Per-model pricing table for cost estimation."},
     )
+    response_cache_enabled: bool = field(
+        default=False,
+        metadata={
+            "doc": "Whether semantic response caching is enabled for this request."
+        },
+    )
+    response_cache_dir: str = field(
+        default="./cache",
+        metadata={"doc": "Root cache directory for semantic OpenAI responses."},
+    )
+    response_cache_ttl_seconds: Optional[float] = field(
+        default=604800.0,
+        metadata={
+            "doc": "Semantic response cache TTL in seconds; None disables expiry."
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -230,6 +278,22 @@ class OpenAIPdfOcrRequest:
     model_pricing: dict = field(
         default_factory=dict,
         metadata={"doc": "Per-model pricing table for cost estimation."},
+    )
+    response_cache_enabled: bool = field(
+        default=False,
+        metadata={
+            "doc": "Whether semantic response caching is enabled for this request."
+        },
+    )
+    response_cache_dir: str = field(
+        default="./cache",
+        metadata={"doc": "Root cache directory for semantic OpenAI responses."},
+    )
+    response_cache_ttl_seconds: Optional[float] = field(
+        default=604800.0,
+        metadata={
+            "doc": "Semantic response cache TTL in seconds; None disables expiry."
+        },
     )
 
 

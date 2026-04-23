@@ -16,7 +16,7 @@ from typing import Dict, List, Optional
 import pymupdf as fitz
 from PIL import Image, ImageFilter, ImageStat
 
-from src.contracts.candidates import Candidate
+from src.contracts.candidates import Candidate, CandidateFeatures
 
 from .figures import (
     CHART_CAPTION_HINTS,
@@ -34,6 +34,7 @@ from .figures import (
     _candidate_index_from_id,
     _caption_near_top,
     _caption_blocks,
+    _ChartRect,
     _chart_candidate_score,
     _infographic_is_label_dense_not_prose,
     _chart_is_label_dense_not_prose,
@@ -121,9 +122,7 @@ _FIGURE_HINT_RX = re.compile(
 )
 _BOX_HINT_RX = re.compile(r"^\s*box\b", re.IGNORECASE)
 _URL_REF_RX = re.compile(r"https?://|doi\.org|www\.", re.IGNORECASE)
-_SOURCE_OR_STATLINK_RX = re.compile(
-    r"(?im)(?:^|\n)\s*(?:source:|statlink\b)"
-)
+_SOURCE_OR_STATLINK_RX = re.compile(r"(?im)(?:^|\n)\s*(?:source:|statlink\b)")
 _EXPLANATORY_FIGURE_REF_RX = re.compile(
     r"^\s*(?:figure|fig\.|chart|exhibit|infographic)\s+\d+(?:\.\d+)?(?:\s*[,:\-]\s*|\s+)"
     r"(?:[\w’'/-]+\s+){0,8}"
@@ -170,7 +169,8 @@ class _VisualPageContext:
     relaxed_bot: float
     page_has_chart_captions: bool
     artifacts: PdfPageArtifacts
-    rect_items: List[object]
+    rect_items: List[_ChartRect]
+    probe_cache: _RasterProbeCache
 
 
 @dataclass
@@ -180,6 +180,94 @@ class _VisualPageCandidateEntry:
     score: float
     sequence: int
     recovered_only: bool
+
+
+@dataclass
+class _RasterProbeCache:
+    images: dict[tuple[object, ...], Optional[Image.Image]]
+    profiles: dict[tuple[object, ...], Optional[dict[str, float]]]
+    hits: int = 0
+    misses: int = 0
+
+    @staticmethod
+    def _rect_key(rect: fitz.Rect) -> tuple[float, float, float, float]:
+        return (
+            round(float(rect.x0), 3),
+            round(float(rect.y0), 3),
+            round(float(rect.x1), 3),
+            round(float(rect.y1), 3),
+        )
+
+    def image_key(
+        self,
+        page: fitz.Page,
+        rect: fitz.Rect,
+        *,
+        max_dim_px: int,
+    ) -> tuple[object, ...]:
+        return (
+            "raster_image",
+            int(getattr(page, "number", 0) or 0),
+            self._rect_key(rect),
+            int(max_dim_px),
+            "rgb",
+        )
+
+    def profile_key(
+        self,
+        page: fitz.Page,
+        rect: fitz.Rect,
+        *,
+        max_dim_px: int,
+    ) -> tuple[object, ...]:
+        return (
+            "raster_profile",
+            int(getattr(page, "number", 0) or 0),
+            self._rect_key(rect),
+            int(max_dim_px),
+            "white_dark_saturation_edges",
+        )
+
+    def record_image(
+        self,
+        key: tuple[object, ...],
+        image: Optional[Image.Image],
+    ) -> Optional[Image.Image]:
+        self.images[key] = image
+        return image
+
+    def image_or_none(self, key: tuple[object, ...]) -> Optional[Image.Image]:
+        if key in self.images:
+            self.hits += 1
+            return self.images[key]
+        self.misses += 1
+        return None
+
+    def record_profile(
+        self,
+        key: tuple[object, ...],
+        profile: Optional[dict[str, float]],
+    ) -> Optional[dict[str, float]]:
+        self.profiles[key] = profile
+        return profile
+
+    def profile_or_none(
+        self,
+        key: tuple[object, ...],
+    ) -> Optional[dict[str, float]]:
+        if key in self.profiles:
+            self.hits += 1
+            return self.profiles[key]
+        self.misses += 1
+        return None
+
+    def stats(self) -> dict[str, int]:
+        return {
+            "hits": self.hits,
+            "misses": self.misses,
+            "image_entries": len(self.images),
+            "profile_entries": len(self.profiles),
+        }
 
 
 def _iter_visual_context_lines(text: str, *, max_lines: int = 4, max_chars: int = 200):
@@ -213,7 +301,8 @@ def _has_side_by_side_visual_sibling(
             continue
         horizontal_gap = max(
             0.0,
-            max(rect_item.rect.x0, other_rect.x0) - min(rect_item.rect.x1, other_rect.x1),
+            max(rect_item.rect.x0, other_rect.x0)
+            - min(rect_item.rect.x1, other_rect.x1),
         )
         if horizontal_gap > page_rect.width * 0.12:
             continue
@@ -231,10 +320,29 @@ def _render_visual_probe_image(
     rect: fitz.Rect,
     *,
     max_dim_px: int = 320,
+    probe_cache: Optional[_RasterProbeCache] = None,
 ) -> Optional[Image.Image]:
+    cache_key = (
+        probe_cache.image_key(page, rect, max_dim_px=max_dim_px)
+        if probe_cache is not None
+        else None
+    )
+    if (
+        probe_cache is not None
+        and cache_key is not None
+        and cache_key in probe_cache.images
+    ):
+        probe_cache.hits += 1
+        return probe_cache.images[cache_key]
+    if probe_cache is not None:
+        probe_cache.misses += 1
     clip = fitz.Rect(rect) & page.rect
     if clip.is_empty or clip.width <= 1.0 or clip.height <= 1.0:
-        return None
+        return (
+            probe_cache.record_image(cache_key, None)
+            if probe_cache is not None and cache_key is not None
+            else None
+        )
     max_dim = max(float(clip.width), float(clip.height))
     scale = min(1.0, max_dim_px / max(1.0, max_dim))
     scale = max(0.35, scale)
@@ -245,14 +353,46 @@ def _render_visual_probe_image(
             alpha=False,
         )
     except Exception:
-        return None
-    return Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        return (
+            probe_cache.record_image(cache_key, None)
+            if probe_cache is not None and cache_key is not None
+            else None
+        )
+    image = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+    return (
+        probe_cache.record_image(cache_key, image)
+        if probe_cache is not None and cache_key is not None
+        else image
+    )
 
 
-def _visual_probe_profile(page: fitz.Page, rect: fitz.Rect) -> Optional[dict[str, float]]:
-    image = _render_visual_probe_image(page, rect)
+def _visual_probe_profile(
+    page: fitz.Page,
+    rect: fitz.Rect,
+    *,
+    probe_cache: Optional[_RasterProbeCache] = None,
+) -> Optional[dict[str, float]]:
+    cache_key = (
+        probe_cache.profile_key(page, rect, max_dim_px=320)
+        if probe_cache is not None
+        else None
+    )
+    if (
+        probe_cache is not None
+        and cache_key is not None
+        and cache_key in probe_cache.profiles
+    ):
+        probe_cache.hits += 1
+        return probe_cache.profiles[cache_key]
+    if probe_cache is not None:
+        probe_cache.misses += 1
+    image = _render_visual_probe_image(page, rect, probe_cache=probe_cache)
     if image is None:
-        return None
+        return (
+            probe_cache.record_profile(cache_key, None)
+            if probe_cache is not None and cache_key is not None
+            else None
+        )
     rgb = image.convert("RGB")
     gray = rgb.convert("L")
     hsv = rgb.convert("HSV")
@@ -269,29 +409,43 @@ def _visual_probe_profile(page: fitz.Page, rect: fitz.Rect) -> Optional[dict[str
     edge_hist = edges.histogram()
     edge_density = sum(edge_hist[36:]) / total_pixels
 
-    return {
+    profile = {
         "white_frac": float(white_frac),
         "dark_frac": float(dark_frac),
         "sat_mean": float(sat_mean),
         "edge_density": float(edge_density),
     }
+    return (
+        probe_cache.record_profile(cache_key, profile)
+        if probe_cache is not None and cache_key is not None
+        else profile
+    )
 
 
-def _embedded_visual_looks_chart_like(page: fitz.Page, rect: fitz.Rect) -> bool:
-    profile = _visual_probe_profile(page, rect)
+def _embedded_visual_looks_chart_like(
+    page: fitz.Page,
+    rect: fitz.Rect,
+    *,
+    probe_cache: Optional[_RasterProbeCache] = None,
+) -> bool:
+    profile = _visual_probe_profile(page, rect, probe_cache=probe_cache)
     if profile is None:
         return False
     white_frac = profile["white_frac"]
     sat_mean = profile["sat_mean"]
     edge_density = profile["edge_density"]
-    return (
-        (white_frac >= 0.28 and sat_mean <= 95.0 and edge_density >= 0.008)
-        or (white_frac >= 0.62 and sat_mean <= 70.0)
+    return (white_frac >= 0.28 and sat_mean <= 95.0 and edge_density >= 0.008) or (
+        white_frac >= 0.62 and sat_mean <= 70.0
     )
 
 
-def _embedded_visual_looks_decorative(page: fitz.Page, rect: fitz.Rect) -> bool:
-    profile = _visual_probe_profile(page, rect)
+def _embedded_visual_looks_decorative(
+    page: fitz.Page,
+    rect: fitz.Rect,
+    *,
+    probe_cache: Optional[_RasterProbeCache] = None,
+) -> bool:
+    profile = _visual_probe_profile(page, rect, probe_cache=probe_cache)
     if profile is None:
         return False
     return (
@@ -301,8 +455,13 @@ def _embedded_visual_looks_decorative(page: fitz.Page, rect: fitz.Rect) -> bool:
     )
 
 
-def _embedded_visual_looks_photo_like(page: fitz.Page, rect: fitz.Rect) -> bool:
-    profile = _visual_probe_profile(page, rect)
+def _embedded_visual_looks_photo_like(
+    page: fitz.Page,
+    rect: fitz.Rect,
+    *,
+    probe_cache: Optional[_RasterProbeCache] = None,
+) -> bool:
+    profile = _visual_probe_profile(page, rect, probe_cache=probe_cache)
     if profile is None:
         return False
     if profile["white_frac"] > PHOTO_LIKE_RASTER_MAX_WHITE_FRAC:
@@ -325,10 +484,7 @@ def _embedded_visual_is_oversized_wrapper(
     rect = fitz.Rect(rect_item.rect)
     overflow_x = max(0.0, page_rect.x0 - rect.x0) + max(0.0, rect.x1 - page_rect.x1)
     overflow_y = max(0.0, page_rect.y0 - rect.y0) + max(0.0, rect.y1 - page_rect.y1)
-    if (
-        overflow_x <= page_rect.width * 0.04
-        and overflow_y <= page_rect.height * 0.04
-    ):
+    if overflow_x <= page_rect.width * 0.04 and overflow_y <= page_rect.height * 0.04:
         return False
     clipped_rect = rect & page_rect
     clipped_area = clipped_rect.get_area()
@@ -362,10 +518,11 @@ def _embedded_visual_qualifies_relaxed_geometry(
     rect: fitz.Rect,
     *,
     area_frac: float,
+    probe_cache: Optional[_RasterProbeCache] = None,
 ) -> bool:
     if area_frac < 0.12:
         return False
-    profile = _visual_probe_profile(page, rect)
+    profile = _visual_probe_profile(page, rect, probe_cache=probe_cache)
     if profile is None:
         return False
     return (
@@ -407,6 +564,7 @@ def _embedded_visual_qualifies_contextual_card(
     *,
     area_frac: float,
     blocks: List[tuple[float, float, float, float, str]],
+    probe_cache: Optional[_RasterProbeCache] = None,
 ) -> bool:
     if (
         area_frac < CONTEXTUAL_RASTER_CARD_MIN_AREA_FRAC
@@ -430,7 +588,10 @@ def _embedded_visual_qualifies_contextual_card(
         <= CONTEXTUAL_RASTER_CARD_MAX_HEIGHT_FRAC
     ):
         return False
-    if x0_frac < CONTEXTUAL_RASTER_CARD_MIN_X0_FRAC or x1_frac < CONTEXTUAL_RASTER_CARD_MIN_X1_FRAC:
+    if (
+        x0_frac < CONTEXTUAL_RASTER_CARD_MIN_X0_FRAC
+        or x1_frac < CONTEXTUAL_RASTER_CARD_MIN_X1_FRAC
+    ):
         return False
     left_chars, left_blocks = _left_side_context_signal(blocks, rect, page_rect)
     if (
@@ -438,7 +599,7 @@ def _embedded_visual_qualifies_contextual_card(
         or left_chars < CONTEXTUAL_RASTER_CARD_MIN_LEFT_CONTEXT_CHARS
     ):
         return False
-    profile = _visual_probe_profile(page, rect)
+    profile = _visual_probe_profile(page, rect, probe_cache=probe_cache)
     if profile is None:
         return False
     return (
@@ -518,9 +679,7 @@ def _visual_candidate_looks_table_like(
     total_chars = sum(len(line) for line in lines)
     avg_line_len = total_chars / max(1, len(lines))
     short_line_ratio = sum(1 for line in lines if len(line) <= 28) / max(1, len(lines))
-    numeric_row_hits = sum(
-        1 for line in lines if len(_NUMBER_RX.findall(line)) >= 3
-    )
+    numeric_row_hits = sum(1 for line in lines if len(_NUMBER_RX.findall(line)) >= 3)
     terminal_numeric_hits = sum(
         1
         for line in lines
@@ -840,12 +999,9 @@ def _visual_candidate_looks_section_opener_banner(
         or _panel_chart_has_structured_card_signal(text)
     ):
         return False
-    return (
-        numeric_hits <= 2
-        and (
-            (len(lines) <= 4 and total_chars <= 160 and avg_line_len <= 40.0)
-            or (len(lines) <= 24 and total_chars <= 280 and avg_line_len <= 22.0)
-        )
+    return numeric_hits <= 2 and (
+        (len(lines) <= 4 and total_chars <= 160 and avg_line_len <= 40.0)
+        or (len(lines) <= 24 and total_chars <= 280 and avg_line_len <= 22.0)
     )
 
 
@@ -860,6 +1016,7 @@ def _visual_candidate_looks_photo_narrative_card(
     aspect: float,
     text_chars: int,
     panel_data_signal: bool,
+    probe_cache: Optional[_RasterProbeCache] = None,
 ) -> bool:
     if kind != "panel":
         return False
@@ -883,7 +1040,11 @@ def _visual_candidate_looks_photo_narrative_card(
         return False
     if ":" in str(caption or ""):
         return False
-    return _embedded_visual_looks_photo_like(page, rect_candidate)
+    return _embedded_visual_looks_photo_like(
+        page,
+        rect_candidate,
+        probe_cache=probe_cache,
+    )
 
 
 def _visual_candidate_looks_narrative_panel_card(
@@ -919,31 +1080,20 @@ def _visual_candidate_looks_narrative_panel_card(
         return False
     if _panel_chart_has_compact_stat_card_signal(text):
         return False
-    fragmented_prose = (
-        text_ratio >= 0.3
-        and sentence_hits >= 3
-        and long_line_hits >= 8
-    )
+    fragmented_prose = text_ratio >= 0.3 and sentence_hits >= 3 and long_line_hits >= 8
     if _SOURCE_OR_STATLINK_RX.search(text):
         return False
     if colon_hits >= 3 and short_line_ratio >= 0.2:
         return False
-    if (
-        has_data_signal
-        and (
-            numeric_row_hits >= 3
-            or (short_line_ratio >= 0.35 and not fragmented_prose)
-        )
+    if has_data_signal and (
+        numeric_row_hits >= 3 or (short_line_ratio >= 0.35 and not fragmented_prose)
     ):
         return False
     return (
         text_ratio >= 0.22
         and sentence_hits >= 2
         and numeric_hits <= max(12, len(lines))
-        and (
-            avg_line_len >= 28.0
-            or fragmented_prose
-        )
+        and (avg_line_len >= 28.0 or fragmented_prose)
     )
 
 
@@ -981,7 +1131,9 @@ def _next_figure_caption_below(
     *,
     blocks: Optional[List[tuple[float, float, float, float, str]]] = None,
 ) -> Optional[fitz.Rect]:
-    for other_rect, other_text in _caption_blocks(page, CHART_CAPTION_HINTS, blocks=blocks):
+    for other_rect, other_text in _caption_blocks(
+        page, CHART_CAPTION_HINTS, blocks=blocks
+    ):
         if other_rect.y0 <= cap_rect.y0 + 8.0:
             continue
         if not _caption_has_figure_hint(other_text):
@@ -1000,20 +1152,25 @@ def _visual_text_dense_recovery_allowed(
     lines = _visual_nonempty_lines(text)
     avg_line_len = text_chars / max(1, text_lines)
     numeric_hits = len(_NUMBER_RX.findall(text))
-    return _chart_is_label_dense_not_prose(text) or (
-        kind == "panel" and _panel_chart_is_label_dense_not_prose(text)
-    ) or (
-        text_lines >= CHART_DENSE_RECOVERY_MIN_LINES
-        and text_chars >= CHART_DENSE_RECOVERY_MIN_CHARS
-        and not _chart_text_heavy(text_lines, text_chars, text_ratio)
-    ) or (
-        kind == "draw"
-        and bool(_SOURCE_OR_STATLINK_RX.search(text))
-        and text_lines >= 12
-        and numeric_hits >= 10
-        and avg_line_len <= 42.0
-        and text_ratio <= 0.68
-        and not _caption_looks_explanatory_figure_reference(lines[0] if lines else "")
+    return (
+        _chart_is_label_dense_not_prose(text)
+        or (kind == "panel" and _panel_chart_is_label_dense_not_prose(text))
+        or (
+            text_lines >= CHART_DENSE_RECOVERY_MIN_LINES
+            and text_chars >= CHART_DENSE_RECOVERY_MIN_CHARS
+            and not _chart_text_heavy(text_lines, text_chars, text_ratio)
+        )
+        or (
+            kind == "draw"
+            and bool(_SOURCE_OR_STATLINK_RX.search(text))
+            and text_lines >= 12
+            and numeric_hits >= 10
+            and avg_line_len <= 42.0
+            and text_ratio <= 0.68
+            and not _caption_looks_explanatory_figure_reference(
+                lines[0] if lines else ""
+            )
+        )
     )
 
 
@@ -1055,6 +1212,7 @@ def _build_visual_page_context(
             text_dict=artifacts.text_dict,
             blocks=artifacts.text_blocks,
         ),
+        probe_cache=_RasterProbeCache(images={}, profiles={}),
     )
 
 
@@ -1108,9 +1266,7 @@ def _emit_visual_page_candidates(
     page_number: int,
     page_candidates: List[_VisualPageCandidateEntry],
 ) -> None:
-    page_candidates.sort(
-        key=lambda entry: (entry.recovered_only, entry.sequence)
-    )
+    page_candidates.sort(key=lambda entry: (entry.recovered_only, entry.sequence))
     for local_index, entry in enumerate(page_candidates):
         out.append(replace(entry.candidate, id=f"chart-{page_number}-{local_index}"))
 
@@ -1165,10 +1321,15 @@ def _extract_visuals_sequential(
                 cap_lower = (cap or "").lower()
                 has_hint = _text_has_visual_context_hint(cap or "")
                 has_context_hint = has_hint or rect_item.kind == "panel"
-                aspect_max = INFO_CHART_MAX_ASPECT if rect_item.kind in (
-                    "heading",
-                    "panel",
-                ) else 2.5
+                aspect_max = (
+                    INFO_CHART_MAX_ASPECT
+                    if rect_item.kind
+                    in (
+                        "heading",
+                        "panel",
+                    )
+                    else 2.5
+                )
                 if (
                     rect_item.kind == "draw"
                     and cap_rect is not None
@@ -1182,19 +1343,29 @@ def _extract_visuals_sequential(
                     and not has_hint
                     and not page_ctx.page_has_chart_captions
                 ):
-                    relaxed_image_geometry = _embedded_visual_qualifies_relaxed_geometry(
-                        page_ctx.page,
-                        rect_candidate,
-                        area_frac=area_frac,
+                    relaxed_image_geometry = (
+                        _embedded_visual_qualifies_relaxed_geometry(
+                            page_ctx.page,
+                            rect_candidate,
+                            area_frac=area_frac,
+                            probe_cache=page_ctx.probe_cache,
+                        )
                     )
                     contextual_image_card = _embedded_visual_qualifies_contextual_card(
                         page_ctx.page,
                         rect_candidate,
                         area_frac=area_frac,
                         blocks=page_ctx.artifacts.text_blocks,
+                        probe_cache=page_ctx.probe_cache,
                     )
-                min_aspect = 0.45 if (relaxed_image_geometry or contextual_image_card) else 0.55
-                max_aspect = 3.4 if (relaxed_image_geometry or contextual_image_card) else aspect_max
+                min_aspect = (
+                    0.45 if (relaxed_image_geometry or contextual_image_card) else 0.55
+                )
+                max_aspect = (
+                    3.4
+                    if (relaxed_image_geometry or contextual_image_card)
+                    else aspect_max
+                )
                 if rect_item.kind == "panel" and aspect > max_aspect:
                     try:
                         pre_geom_panel_text = page_ctx.page.get_text(
@@ -1256,8 +1427,10 @@ def _extract_visuals_sequential(
                     raw_bbox_text = ""
                 raw_text_lines, raw_text_chars = _text_stats(raw_bbox_text)
                 raw_text_ratio = (
-                    raw_text_chars / page_ctx.page_chars
-                ) if page_ctx.page_chars else 0.0
+                    (raw_text_chars / page_ctx.page_chars)
+                    if page_ctx.page_chars
+                    else 0.0
+                )
                 bbox_text = raw_bbox_text
                 text_lines = raw_text_lines
                 text_chars = raw_text_chars
@@ -1277,15 +1450,24 @@ def _extract_visuals_sequential(
                         stats["rejected"] = _int_count(stats["rejected"]) + 1
                         _tally_reason(stats, "oversized_wrapper_image")
                         continue
-                    image_chart_like = contextual_image_card or _embedded_visual_looks_chart_like(
-                        page_ctx.page, rect_candidate
+                    image_chart_like = (
+                        contextual_image_card
+                        or _embedded_visual_looks_chart_like(
+                            page_ctx.page,
+                            rect_candidate,
+                            probe_cache=page_ctx.probe_cache,
+                        )
                     )
                     image_photo_like = _embedded_visual_looks_photo_like(
-                        page_ctx.page, rect_candidate
+                        page_ctx.page,
+                        rect_candidate,
+                        probe_cache=page_ctx.probe_cache,
                     )
                     if not image_chart_like:
                         image_decorative = _embedded_visual_looks_decorative(
-                            page_ctx.page, rect_candidate
+                            page_ctx.page,
+                            rect_candidate,
+                            probe_cache=page_ctx.probe_cache,
                         )
                 text_dense_recovery_allowed = False
                 infographic_dense_recovery_allowed = False
@@ -1318,8 +1500,10 @@ def _extract_visuals_sequential(
                         bbox_text = raw_bbox_text
                     text_lines, text_chars = _text_stats(bbox_text)
                     text_ratio = (
-                        text_chars / page_ctx.page_chars
-                    ) if page_ctx.page_chars else 0.0
+                        (text_chars / page_ctx.page_chars)
+                        if page_ctx.page_chars
+                        else 0.0
+                    )
                     text_dense_recovery_allowed = _visual_text_dense_recovery_allowed(
                         rect_item.kind,
                         bbox_text,
@@ -1349,15 +1533,12 @@ def _extract_visuals_sequential(
                         stats["rejected"] = _int_count(stats["rejected"]) + 1
                         _tally_reason(stats, "panel_shadowed_by_larger_panel")
                         continue
-                    if (
-                        not panel_data_signal
-                        and (
-                            raw_text_heavy
-                            or (
-                                raw_text_lines >= 5
-                                and raw_text_chars >= 150
-                                and raw_text_ratio >= 0.25
-                            )
+                    if not panel_data_signal and (
+                        raw_text_heavy
+                        or (
+                            raw_text_lines >= 5
+                            and raw_text_chars >= 150
+                            and raw_text_ratio >= 0.25
                         )
                     ):
                         stats["rejected"] = _int_count(stats["rejected"]) + 1
@@ -1374,8 +1555,7 @@ def _extract_visuals_sequential(
                         continue
                     if (
                         not image_chart_like
-                        and
-                        (not cap or len(cap.strip()) < 8)
+                        and (not cap or len(cap.strip()) < 8)
                         and text_chars <= 8
                         and area_frac < 0.5
                     ):
@@ -1384,8 +1564,7 @@ def _extract_visuals_sequential(
                         continue
                     if (
                         not image_chart_like
-                        and
-                        text_chars <= 8
+                        and text_chars <= 8
                         and area_frac <= 0.2
                         and _has_side_by_side_visual_sibling(
                             rect_item,
@@ -1406,11 +1585,7 @@ def _extract_visuals_sequential(
                         stats["rejected"] = _int_count(stats["rejected"]) + 1
                         _tally_reason(stats, "small_decorative_image")
                         continue
-                    if (
-                        image_decorative
-                        and text_chars <= 24
-                        and area_frac <= 0.5
-                    ):
+                    if image_decorative and text_chars <= 24 and area_frac <= 0.5:
                         stats["rejected"] = _int_count(stats["rejected"]) + 1
                         _tally_reason(stats, "decorative_image")
                         continue
@@ -1425,7 +1600,8 @@ def _extract_visuals_sequential(
                                 and (
                                     (
                                         panel_data_signal
-                                        and raw_text_ratio <= PANEL_CHART_CONTEXT_TEXT_RATIO_MAX
+                                        and raw_text_ratio
+                                        <= PANEL_CHART_CONTEXT_TEXT_RATIO_MAX
                                     )
                                     or _panel_chart_is_label_dense_not_prose(
                                         bbox_text if bbox_text else raw_bbox_text
@@ -1467,7 +1643,9 @@ def _extract_visuals_sequential(
                     if rect_item.kind == "panel":
                         panel_min_x = None
                         panel_max_x = None
-                        compact_stat_caption = _panel_caption_looks_metric_stub(cap or "")
+                        compact_stat_caption = _panel_caption_looks_metric_stub(
+                            cap or ""
+                        )
                         if (
                             cap_rect is not None
                             and not _caption_has_figure_hint(cap or "")
@@ -1663,12 +1841,9 @@ def _extract_visuals_sequential(
                                 else 0.0
                             ),
                         )
-                if (
-                    cap_rect is not None
-                    and _panel_should_clamp_to_internal_caption(
-                        rect_item,
-                        page_ctx.rect_items,
-                    )
+                if cap_rect is not None and _panel_should_clamp_to_internal_caption(
+                    rect_item,
+                    page_ctx.rect_items,
                 ):
                     final_rect = _clamp_top_to_caption(
                         final_rect,
@@ -1688,8 +1863,8 @@ def _extract_visuals_sequential(
                     bbox_text = ""
                 text_lines, text_chars = _text_stats(bbox_text)
                 text_ratio = (
-                    text_chars / page_ctx.page_chars
-                ) if page_ctx.page_chars else 0.0
+                    (text_chars / page_ctx.page_chars) if page_ctx.page_chars else 0.0
+                )
                 if _visual_candidate_looks_table_like(
                     cap or "",
                     bbox_text,
@@ -1745,6 +1920,7 @@ def _extract_visuals_sequential(
                     aspect=aspect,
                     text_chars=text_chars,
                     panel_data_signal=panel_data_signal,
+                    probe_cache=page_ctx.probe_cache,
                 ):
                     stats["rejected"] = _int_count(stats["rejected"]) + 1
                     _tally_reason(stats, "photo_panel")
@@ -1802,12 +1978,8 @@ def _extract_visuals_sequential(
                     and not _chart_is_label_dense_not_prose(bbox_text)
                     and not _panel_chart_has_data_signal(bbox_text)
                 )
-                if (
-                    next_caption_rect is not None
-                    and (
-                        final_rect.y1 >= next_caption_rect.y0 - 6.0
-                        or weak_stacked_upper
-                    )
+                if next_caption_rect is not None and (
+                    final_rect.y1 >= next_caption_rect.y0 - 6.0 or weak_stacked_upper
                 ):
                     stats["rejected"] = _int_count(stats["rejected"]) + 1
                     _tally_reason(stats, "stacked_top_figure")
@@ -1843,6 +2015,14 @@ def _extract_visuals_sequential(
                     thumb_path = Path(thumb)
                     rel_thumb = Path(report_name) / "thumbs" / thumb_path.name
                     thumb = rel_thumb.as_posix()
+                features = CandidateFeatures(
+                    schema_version="1.0",
+                    area_frac=round(area_frac, 3),
+                    aspect=round(aspect, 2),
+                    text_lines=text_lines,
+                    text_chars=text_chars,
+                    text_ratio=round(text_ratio, 3),
+                )
                 candidate = Candidate(
                     schema_version="1.0",
                     id=cid,
@@ -1858,12 +2038,13 @@ def _extract_visuals_sequential(
                     caption=cap,
                     thumb_path=thumb,
                     meta={
-                        "area_frac": round(area_frac, 3),
-                        "aspect": round(aspect, 2),
-                        "text_lines": text_lines,
-                        "text_chars": text_chars,
-                        "text_ratio": round(text_ratio, 3),
+                        "area_frac": features.area_frac,
+                        "aspect": features.aspect,
+                        "text_lines": features.text_lines,
+                        "text_chars": features.text_chars,
+                        "text_ratio": features.text_ratio,
                     },
+                    features=features,
                 )
                 score = _chart_candidate_score(
                     area_frac, has_context_hint, cap or "", note_included
@@ -1890,6 +2071,23 @@ def _extract_visuals_sequential(
                 out,
                 page_number=pno,
                 page_candidates=page_candidates,
+            )
+            probe_stats = page_ctx.probe_cache.stats()
+            stats["raster_probe_cache_hits"] = (
+                _int_count(stats.get("raster_probe_cache_hits", 0))
+                + probe_stats["hits"]
+            )
+            stats["raster_probe_cache_misses"] = (
+                _int_count(stats.get("raster_probe_cache_misses", 0))
+                + probe_stats["misses"]
+            )
+            stats["raster_probe_image_entries"] = (
+                _int_count(stats.get("raster_probe_image_entries", 0))
+                + probe_stats["image_entries"]
+            )
+            stats["raster_probe_profile_entries"] = (
+                _int_count(stats.get("raster_probe_profile_entries", 0))
+                + probe_stats["profile_entries"]
             )
     finally:
         if doc is None:
@@ -1925,7 +2123,9 @@ def extract_visual_candidates(
         finally:
             temp_doc.close()
     page_numbers = pages if pages is not None else all_pages
-    worker_count = _resolve_candidate_parallel_workers(parallel_workers, len(page_numbers))
+    worker_count = _resolve_candidate_parallel_workers(
+        parallel_workers, len(page_numbers)
+    )
     if worker_count <= 1 or len(page_numbers) <= 1:
         return _extract_visuals_sequential(
             pdf_path,

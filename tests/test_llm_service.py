@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from types import SimpleNamespace
+from typing import Any, cast
 
 import pytest
 
@@ -69,11 +70,13 @@ def test_llm_service_retries_with_backoff(
     assert sleeps == [1.0]
     events = _events(caplog)
     retry_events = [event for event in events if event.get("event") == "llm_call_retry"]
-    complete_events = [event for event in events if event.get("event") == "llm_call_complete"]
+    complete_events = [
+        event for event in events if event.get("event") == "llm_call_complete"
+    ]
     assert len(retry_events) == 1
     assert len(complete_events) == 1
     assert_logs_have_required_fields(retry_events + complete_events)
-    retry_fields = retry_events[0]["fields"]
+    retry_fields = cast(dict[str, Any], retry_events[0]["fields"])
     assert retry_fields["operation"] == "openai_chat_json"
     assert retry_fields["attempt"] == 1
     assert retry_fields["delay_seconds"] == 1.0
@@ -127,7 +130,9 @@ def test_llm_service_opens_circuit_after_repeated_failures(
     assert calls["count"] == 2
 
     events = _events(caplog)
-    opened_events = [event for event in events if event.get("event") == "llm_circuit_opened"]
+    opened_events = [
+        event for event in events if event.get("event") == "llm_circuit_opened"
+    ]
     short_circuit_events = [
         event for event in events if event.get("event") == "llm_circuit_short_circuit"
     ]
@@ -180,8 +185,65 @@ def test_llm_service_allows_half_open_probe_after_recovery(
     assert response.parsed_json == {"ok": True}
     assert calls["count"] == 3
     events = _events(caplog)
-    half_open_events = [event for event in events if event.get("event") == "llm_circuit_half_open"]
-    closed_events = [event for event in events if event.get("event") == "llm_circuit_closed"]
+    half_open_events = [
+        event for event in events if event.get("event") == "llm_circuit_half_open"
+    ]
+    closed_events = [
+        event for event in events if event.get("event") == "llm_circuit_closed"
+    ]
     assert len(half_open_events) == 1
     assert len(closed_events) == 1
     assert_logs_have_required_fields(half_open_events + closed_events)
+
+
+def test_llm_service_does_not_retry_refusal_class_errors(
+    caplog,
+    assert_app_error,
+    assert_logs_have_required_fields,
+) -> None:
+    caplog.set_level(logging.INFO, logger="market_lense.llm_service")
+    calls = {"count": 0}
+
+    class _RefusalClient:
+        def openai_chat_json(self, req, ctx):
+            calls["count"] += 1
+            raise AppError(
+                code="openai_refusal",
+                message="policy refusal",
+                retryable=True,
+            )
+
+    client = llm_service.build_openai_client(
+        base_client=_RefusalClient(),
+        policy=LLMClientPolicy(
+            schema_version="1.0",
+            scope="llm-service-refusal",
+            retries=3,
+            base_delay_seconds=0.0,
+            backoff_step_seconds=0.0,
+            jitter_seconds=0.0,
+            circuit_breaker_failure_threshold=0,
+            circuit_breaker_recovery_seconds=0.0,
+        ),
+        sleep_fn=lambda _seconds: None,
+        monotonic_fn=lambda: 100.0,
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        client.openai_chat_json(SimpleNamespace(model="gpt-5-mini"), _ctx())
+
+    assert_app_error(exc_info.value, code="openai_refusal", retryable=True)
+    assert calls["count"] == 1
+    events = _events(caplog)
+    retry_events = [event for event in events if event.get("event") == "llm_call_retry"]
+    failed_events = [
+        event for event in events if event.get("event") == "llm_call_failed"
+    ]
+    assert retry_events == []
+    assert len(failed_events) == 1
+    failed_fields = cast(dict[str, Any], failed_events[0]["fields"])
+    assert (
+        failed_fields["retry_decision_code"]
+        == "non_retryable_error_code:openai_refusal"
+    )
+    assert_logs_have_required_fields(failed_events)

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import logging
 import mimetypes
 import re
-from dataclasses import dataclass
+import time
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict
@@ -62,7 +64,9 @@ from src.utils.json_recovery import (
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.openai_service")
-OPENAI_ERROR_TYPES = tuple(
+SEMANTIC_RESPONSE_CACHE_SCHEMA_VERSION = "1.0"
+SEMANTIC_RESPONSE_CACHE_SUBDIR = "semantic_responses"
+OPENAI_ERROR_TYPES: tuple[type[Exception], ...] = tuple(
     error_type
     for error_type in (
         getattr(openai_legacy, "OpenAIError", None),
@@ -75,17 +79,25 @@ OPENAI_ERROR_TYPES = tuple(
         getattr(openai_legacy, "BadRequestError", None),
         getattr(openai_legacy, "AuthenticationError", None),
     )
-    if isinstance(error_type, type)
+    if isinstance(error_type, type) and issubclass(error_type, Exception)
 )
-OPENAI_REQUEST_EXCEPTIONS = OPENAI_ERROR_TYPES + (
+OPENAI_REQUEST_EXCEPTIONS: tuple[type[Exception], ...] = OPENAI_ERROR_TYPES + (
     RuntimeError,
     OSError,
     ValueError,
     TypeError,
     AttributeError,
 )
-OPENAI_CLIENT_INIT_EXCEPTIONS = OPENAI_ERROR_TYPES + (OSError, ValueError)
-OPENAI_LEDGER_EXCEPTIONS = (AppError, OSError, ValueError, TypeError)
+OPENAI_CLIENT_INIT_EXCEPTIONS: tuple[type[Exception], ...] = OPENAI_ERROR_TYPES + (
+    OSError,
+    ValueError,
+)
+OPENAI_LEDGER_EXCEPTIONS: tuple[type[Exception], ...] = (
+    AppError,
+    OSError,
+    ValueError,
+    TypeError,
+)
 
 REQUIRED_KEYS = (
     "tldr",
@@ -132,6 +144,17 @@ OPENAI_OCR_RESPONSE_FORMAT = {
 
 
 @dataclass(frozen=True)
+class _SemanticResponseCacheSpec:
+    operation: str
+    key: str
+    path: Path
+    prompt_hash: str
+    context_hash: str
+    params_hash: str
+    ttl_seconds: float | None
+
+
+@dataclass(frozen=True)
 class _VectorStoreOperationSpec:
     operation: str
     start_event: str
@@ -175,6 +198,284 @@ _VECTOR_STORE_UPDATE_METADATA_OPERATION = _VectorStoreOperationSpec(
     error_code="openai_vector_store_update_metadata_failed",
     error_message="OpenAI vector store metadata update request failed",
 )
+
+
+def _stable_json(payload: dict[str, Any]) -> str:
+    return json.dumps(payload, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
+
+
+def _sha256_text(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _sha256_payload(payload: dict[str, Any]) -> str:
+    return _sha256_text(_stable_json(payload))
+
+
+def _file_fingerprint(path: str, *, content_hash: bool) -> dict[str, Any]:
+    normalized = str(path or "").strip()
+    payload: dict[str, Any] = {"path": normalized}
+    if not normalized:
+        return payload
+    file_path = Path(normalized)
+    try:
+        stat = file_path.stat()
+    except OSError as exc:
+        payload["error"] = type(exc).__name__
+        return payload
+    payload["size_bytes"] = int(stat.st_size)
+    if content_hash:
+        try:
+            payload["sha256"] = hashlib.sha256(file_path.read_bytes()).hexdigest()
+        except OSError as exc:
+            payload["error"] = type(exc).__name__
+    else:
+        payload["mtime_ns"] = int(stat.st_mtime_ns)
+    return payload
+
+
+def _semantic_response_cache_spec(
+    request: Any,
+    *,
+    operation: str,
+    params: dict[str, Any],
+    context: dict[str, Any] | None = None,
+) -> _SemanticResponseCacheSpec | None:
+    if not bool(getattr(request, "response_cache_enabled", False)):
+        return None
+    cache_dir = str(getattr(request, "response_cache_dir", "") or "").strip()
+    if not cache_dir:
+        return None
+    prompt_hash = _sha256_payload(
+        {
+            "schema_version": SEMANTIC_RESPONSE_CACHE_SCHEMA_VERSION,
+            "system_prompt": str(getattr(request, "system_prompt", "") or ""),
+        }
+    )
+    context_hash = _sha256_payload(
+        {
+            "schema_version": SEMANTIC_RESPONSE_CACHE_SCHEMA_VERSION,
+            "user_prompt": str(getattr(request, "user_prompt", "") or ""),
+            "context": context or {},
+        }
+    )
+    params_payload = {
+        "schema_version": SEMANTIC_RESPONSE_CACHE_SCHEMA_VERSION,
+        "operation": operation,
+        **params,
+    }
+    params_hash = _sha256_payload(params_payload)
+    key = _sha256_payload(
+        {
+            "schema_version": SEMANTIC_RESPONSE_CACHE_SCHEMA_VERSION,
+            "operation": operation,
+            "prompt_hash": prompt_hash,
+            "context_hash": context_hash,
+            "params": params_payload,
+        }
+    )
+    ttl_raw = getattr(request, "response_cache_ttl_seconds", 604800.0)
+    ttl_seconds = None if ttl_raw is None else max(0.0, float(ttl_raw))
+    cache_path = (
+        Path(cache_dir) / SEMANTIC_RESPONSE_CACHE_SUBDIR / operation / f"{key}.json"
+    )
+    return _SemanticResponseCacheSpec(
+        operation=operation,
+        key=key,
+        path=cache_path,
+        prompt_hash=prompt_hash,
+        context_hash=context_hash,
+        params_hash=params_hash,
+        ttl_seconds=ttl_seconds,
+    )
+
+
+def _log_semantic_cache_event(
+    ctx: RunContext,
+    *,
+    event: str,
+    spec: _SemanticResponseCacheSpec,
+    fields: dict[str, Any] | None = None,
+) -> None:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event=event,
+            module=logger.name,
+            fields={
+                "operation": spec.operation,
+                "cache_key": spec.key,
+                "cache_path": str(spec.path),
+                "prompt_hash": spec.prompt_hash,
+                "context_hash": spec.context_hash,
+                "params_hash": spec.params_hash,
+                **(fields or {}),
+            },
+        )
+    )
+
+
+def _read_semantic_response_cache(
+    spec: _SemanticResponseCacheSpec,
+    ctx: RunContext,
+) -> dict[str, Any] | None:
+    try:
+        raw = spec.path.read_text(encoding="utf-8")
+        payload = json.loads(raw)
+    except FileNotFoundError:
+        _log_semantic_cache_event(
+            ctx,
+            event="openai_semantic_cache_miss",
+            spec=spec,
+            fields={"reason": "missing"},
+        )
+        return None
+    except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
+        _log_semantic_cache_event(
+            ctx,
+            event="openai_semantic_cache_miss",
+            spec=spec,
+            fields={"reason": "read_failed", "error_type": type(exc).__name__},
+        )
+        return None
+    if not isinstance(payload, dict):
+        _log_semantic_cache_event(
+            ctx,
+            event="openai_semantic_cache_miss",
+            spec=spec,
+            fields={"reason": "invalid_payload"},
+        )
+        return None
+    metadata = payload.get("_cache")
+    if not isinstance(metadata, dict) or metadata.get("key") != spec.key:
+        _log_semantic_cache_event(
+            ctx,
+            event="openai_semantic_cache_miss",
+            spec=spec,
+            fields={"reason": "key_mismatch"},
+        )
+        return None
+    cached_at = float(metadata.get("cached_at_epoch", 0.0) or 0.0)
+    if spec.ttl_seconds is not None and spec.ttl_seconds >= 0.0:
+        age_seconds = max(0.0, time.time() - cached_at)
+        if age_seconds > spec.ttl_seconds:
+            _log_semantic_cache_event(
+                ctx,
+                event="openai_semantic_cache_miss",
+                spec=spec,
+                fields={"reason": "expired", "age_seconds": round(age_seconds, 3)},
+            )
+            return None
+    response_payload = payload.get("response")
+    if not isinstance(response_payload, dict):
+        _log_semantic_cache_event(
+            ctx,
+            event="openai_semantic_cache_miss",
+            spec=spec,
+            fields={"reason": "missing_response"},
+        )
+        return None
+    _log_semantic_cache_event(ctx, event="openai_semantic_cache_hit", spec=spec)
+    return response_payload
+
+
+def _write_semantic_response_cache(
+    spec: _SemanticResponseCacheSpec | None,
+    ctx: RunContext,
+    *,
+    response_payload: dict[str, Any],
+) -> None:
+    if spec is None:
+        return
+    payload = {
+        "schema_version": SEMANTIC_RESPONSE_CACHE_SCHEMA_VERSION,
+        "_cache": {
+            "schema_version": SEMANTIC_RESPONSE_CACHE_SCHEMA_VERSION,
+            "key": spec.key,
+            "operation": spec.operation,
+            "prompt_hash": spec.prompt_hash,
+            "context_hash": spec.context_hash,
+            "params_hash": spec.params_hash,
+            "ttl_seconds": spec.ttl_seconds,
+            "cached_at_utc": datetime.now(timezone.utc).isoformat(),
+            "cached_at_epoch": time.time(),
+        },
+        "response": response_payload,
+    }
+    try:
+        spec.path.parent.mkdir(parents=True, exist_ok=True)
+        spec.path.write_text(
+            json.dumps(payload, sort_keys=True, ensure_ascii=True, indent=2),
+            encoding="utf-8",
+        )
+    except (OSError, TypeError, ValueError) as exc:
+        _log_semantic_cache_event(
+            ctx,
+            event="openai_semantic_cache_write_failed",
+            spec=spec,
+            fields={"error_type": type(exc).__name__, "error": str(exc)},
+        )
+        return
+    _log_semantic_cache_event(ctx, event="openai_semantic_cache_write", spec=spec)
+
+
+def _openai_response_result_from_cache(payload: dict[str, Any]) -> OpenAIResponseResult:
+    return OpenAIResponseResult(
+        schema_version=str(payload.get("schema_version") or "1.0"),
+        text=str(payload.get("text") or ""),
+        parsed_json=payload.get("parsed_json")
+        if isinstance(payload.get("parsed_json"), dict)
+        else None,
+        input_tokens=int(payload["input_tokens"])
+        if payload.get("input_tokens") is not None
+        else None,
+        output_tokens=int(payload["output_tokens"])
+        if payload.get("output_tokens") is not None
+        else None,
+        tool_calls=int(payload["tool_calls"])
+        if payload.get("tool_calls") is not None
+        else None,
+        model=str(payload.get("model") or ""),
+        total_tokens=int(payload["total_tokens"])
+        if payload.get("total_tokens") is not None
+        else None,
+        request_id=str(payload.get("request_id"))
+        if payload.get("request_id")
+        else None,
+    )
+
+
+def _ocr_response_from_cache(payload: dict[str, Any]) -> OpenAIPdfOcrResponse:
+    raw_pages_value = payload.get("pages")
+    raw_pages: list[Any] = raw_pages_value if isinstance(raw_pages_value, list) else []
+    pages = [
+        PdfOcrPageText(
+            schema_version=str(item.get("schema_version") or "1.0"),
+            page_number=int(item.get("page_number") or 0),
+            text=str(item.get("text") or ""),
+        )
+        for item in raw_pages
+        if isinstance(item, dict)
+    ]
+    return OpenAIPdfOcrResponse(
+        schema_version=str(payload.get("schema_version") or "1.0"),
+        pages=pages,
+        raw_text=str(payload.get("raw_text") or ""),
+        model=str(payload.get("model") or ""),
+        input_tokens=int(payload["input_tokens"])
+        if payload.get("input_tokens") is not None
+        else None,
+        output_tokens=int(payload["output_tokens"])
+        if payload.get("output_tokens") is not None
+        else None,
+        tool_calls=int(payload["tool_calls"])
+        if payload.get("tool_calls") is not None
+        else None,
+        request_id=str(payload.get("request_id"))
+        if payload.get("request_id")
+        else None,
+    )
 
 
 def _bytes_to_data_url(raw: bytes, *, mime: str) -> str:
@@ -237,6 +538,64 @@ def _extract_unsupported_parameter(exc: Exception) -> str | None:
             if isinstance(body_param, str) and body_param.strip():
                 return body_param.strip()
     return None
+
+
+def _openai_error_status_code(exc: Exception) -> int | None:
+    status = getattr(exc, "status_code", None)
+    if status is None:
+        response = getattr(exc, "response", None)
+        status = getattr(response, "status_code", None)
+    try:
+        return int(status) if status is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _openai_error_body_code(exc: Exception) -> str:
+    body = getattr(exc, "body", None)
+    if isinstance(body, dict):
+        error_obj = body.get("error")
+        if isinstance(error_obj, dict):
+            for key in ("code", "type"):
+                value = error_obj.get(key)
+                if isinstance(value, str) and value.strip():
+                    return value.strip().lower()
+    return ""
+
+
+def _classify_openai_request_error(
+    exc: Exception,
+    *,
+    default_code: str,
+    default_message: str,
+) -> tuple[str, str, bool]:
+    error_type = type(exc).__name__.lower()
+    message = str(exc).lower()
+    body_code = _openai_error_body_code(exc)
+    combined = " ".join(part for part in (error_type, message, body_code) if part)
+    if any(
+        token in combined
+        for token in (
+            "content_filter",
+            "content policy",
+            "policy_violation",
+            "refusal",
+            "safety",
+            "blocked",
+        )
+    ):
+        return (
+            "openai_refusal",
+            "OpenAI request was refused or blocked by policy",
+            False,
+        )
+    if "authentication" in error_type or "invalid_api_key" in combined:
+        return ("openai_authentication_failed", "OpenAI authentication failed", False)
+    status_code = _openai_error_status_code(exc)
+    if status_code in {400, 401, 403, 404} or "badrequest" in error_type:
+        return ("openai_bad_request", "OpenAI request was rejected permanently", False)
+    return (default_code, default_message, True)
+
 
 def _parse_json_object_from_text(text: str) -> tuple[dict | None, str]:
     parsed, strategy = parse_json_from_text(text, accepted_types=(dict,))
@@ -475,7 +834,9 @@ def _append_cost_entry_safe(
             ),
             ctx,
         )
-    except OPENAI_LEDGER_EXCEPTIONS as exc:  # pragma: no cover - ledger failures must not break main flow
+    except (
+        OPENAI_LEDGER_EXCEPTIONS
+    ) as exc:  # pragma: no cover - ledger failures must not break main flow
         logger.info(
             log_event(
                 ctx,
@@ -611,11 +972,15 @@ def _modern_chat_completion_call(
     return _ChatCompletionRun(
         payload=resp.choices[0].message.content or "",
         request_id=getattr(resp, "id", None),
-        prompt_tokens=getattr(usage, "prompt_tokens", None) if usage is not None else None,
+        prompt_tokens=getattr(usage, "prompt_tokens", None)
+        if usage is not None
+        else None,
         completion_tokens=getattr(usage, "completion_tokens", None)
         if usage is not None
         else None,
-        total_tokens=getattr(usage, "total_tokens", None) if usage is not None else None,
+        total_tokens=getattr(usage, "total_tokens", None)
+        if usage is not None
+        else None,
     )
 
 
@@ -695,12 +1060,20 @@ def analyze_report(
         completion_tokens = run.completion_tokens
         total_tokens = run.total_tokens
     except OPENAI_REQUEST_EXCEPTIONS as exc:
+        code, message, retryable = _classify_openai_request_error(
+            exc,
+            default_code="openai_request_failed",
+            default_message="OpenAI request failed",
+        )
         raise AppError(
-            code="openai_request_failed",
-            message="OpenAI request failed",
+            code=code,
+            message=message,
             cause=exc,
-            retryable=True,
-            context={"model": request.model},
+            retryable=retryable,
+            context={
+                "model": request.model,
+                "provider_error_type": type(exc).__name__,
+            },
         ) from exc
 
     payload_text = payload if isinstance(payload, str) else ""
@@ -868,6 +1241,20 @@ def openai_chat_json(
             },
         )
     )
+    cache_spec = _semantic_response_cache_spec(
+        request,
+        operation="openai_chat_json",
+        params={
+            "model": request.model,
+            "temperature": request.temperature,
+            "seed": request.seed,
+            "response_format": "json_object",
+        },
+    )
+    if cache_spec is not None:
+        cached_payload = _read_semantic_response_cache(cache_spec, ctx)
+        if cached_payload is not None:
+            return _openai_response_result_from_cache(cached_payload)
     metadata = _OpenAIResponseMetadata(
         text="",
         request_id=None,
@@ -891,12 +1278,20 @@ def openai_chat_json(
         )
         metadata = _adapt_chat_completion_metadata(run)
     except OPENAI_REQUEST_EXCEPTIONS as exc:
+        code, message, retryable = _classify_openai_request_error(
+            exc,
+            default_code="openai_chat_failed",
+            default_message="OpenAI chat request failed",
+        )
         raise AppError(
-            code="openai_chat_failed",
-            message="OpenAI chat request failed",
+            code=code,
+            message=message,
             cause=exc,
-            retryable=True,
-            context={"model": request.model},
+            retryable=retryable,
+            context={
+                "model": request.model,
+                "provider_error_type": type(exc).__name__,
+            },
         ) from exc
 
     estimated_cost = estimate_cost_usd(
@@ -964,7 +1359,7 @@ def openai_chat_json(
         )
     )
 
-    return OpenAIResponseResult(
+    result = OpenAIResponseResult(
         schema_version="1.0",
         text=metadata.text,
         parsed_json=metadata.parsed_json,
@@ -975,6 +1370,12 @@ def openai_chat_json(
         total_tokens=metadata.total_tokens,
         request_id=metadata.request_id,
     )
+    _write_semantic_response_cache(
+        cache_spec,
+        ctx,
+        response_payload=asdict(result),
+    )
+    return result
 
 
 def openai_chat_json_with_images(
@@ -1001,6 +1402,26 @@ def openai_chat_json_with_images(
             message="openai_chat_json_with_images requires at least one image path",
             retryable=False,
         )
+    cache_spec = _semantic_response_cache_spec(
+        request,
+        operation="openai_chat_json_with_images",
+        params={
+            "model": request.model,
+            "temperature": request.temperature,
+            "seed": request.seed,
+            "response_format": "json_object",
+        },
+        context={
+            "image_fingerprints": [
+                _file_fingerprint(path, content_hash=True)
+                for path in (request.image_paths or [])
+            ],
+        },
+    )
+    if cache_spec is not None:
+        cached_payload = _read_semantic_response_cache(cache_spec, ctx)
+        if cached_payload is not None:
+            return _openai_response_result_from_cache(cached_payload)
     image_urls = [_image_path_to_data_url(path) for path in request.image_paths]
     try:
         client = _build_openai_client(
@@ -1051,6 +1472,11 @@ def openai_chat_json_with_images(
     except AppError:
         raise
     except OPENAI_REQUEST_EXCEPTIONS as exc:
+        code, message, retryable = _classify_openai_request_error(
+            exc,
+            default_code="openai_chat_images_failed",
+            default_message="OpenAI JSON+images request failed",
+        )
         logger.info(
             log_event(
                 ctx,
@@ -1065,11 +1491,14 @@ def openai_chat_json_with_images(
             )
         )
         raise AppError(
-            code="openai_chat_images_failed",
-            message="OpenAI JSON+images request failed",
+            code=code,
+            message=message,
             cause=exc,
-            retryable=True,
-            context={"model": request.model},
+            retryable=retryable,
+            context={
+                "model": request.model,
+                "provider_error_type": type(exc).__name__,
+            },
         ) from exc
 
     metadata = _adapt_responses_metadata(resp, recover_json_object=False)
@@ -1137,7 +1566,7 @@ def openai_chat_json_with_images(
             },
         )
     )
-    return OpenAIResponseResult(
+    result = OpenAIResponseResult(
         schema_version="1.0",
         text=metadata.text,
         parsed_json=metadata.parsed_json,
@@ -1148,6 +1577,12 @@ def openai_chat_json_with_images(
         total_tokens=metadata.total_tokens,
         request_id=metadata.request_id,
     )
+    _write_semantic_response_cache(
+        cache_spec,
+        ctx,
+        response_payload=asdict(result),
+    )
+    return result
 
 
 def openai_ocr_pdf(
@@ -1177,6 +1612,26 @@ def openai_ocr_pdf(
             cause=exc,
             retryable=False,
         ) from exc
+
+    cache_spec = _semantic_response_cache_spec(
+        request,
+        operation="openai_ocr_pdf",
+        params={
+            "model": request.model,
+            "response_format": "pdf_ocr_pages",
+        },
+        context={
+            "pdf": {
+                "path": str(pdf_path),
+                "size_bytes": len(pdf_bytes),
+                "sha256": hashlib.sha256(pdf_bytes).hexdigest(),
+            },
+        },
+    )
+    if cache_spec is not None:
+        cached_payload = _read_semantic_response_cache(cache_spec, ctx)
+        if cached_payload is not None:
+            return _ocr_response_from_cache(cached_payload)
 
     logger.info(
         log_event(
@@ -1223,6 +1678,11 @@ def openai_ocr_pdf(
     except AppError:
         raise
     except OPENAI_REQUEST_EXCEPTIONS as exc:
+        code, message, retryable = _classify_openai_request_error(
+            exc,
+            default_code="openai_ocr_request_failed",
+            default_message="OpenAI OCR request failed",
+        )
         logger.info(
             log_event(
                 ctx,
@@ -1238,11 +1698,15 @@ def openai_ocr_pdf(
             )
         )
         raise AppError(
-            code="openai_ocr_request_failed",
-            message="OpenAI OCR request failed",
+            code=code,
+            message=message,
             cause=exc,
-            retryable=True,
-            context={"model": request.model, "pdf_path": str(pdf_path)},
+            retryable=retryable,
+            context={
+                "model": request.model,
+                "pdf_path": str(pdf_path),
+                "provider_error_type": type(exc).__name__,
+            },
         ) from exc
 
     resolved_model = str(getattr(resp, "model", None) or request.model)
@@ -1314,6 +1778,11 @@ def openai_ocr_pdf(
             },
         )
     )
+    _write_semantic_response_cache(
+        cache_spec,
+        ctx,
+        response_payload=asdict(response),
+    )
     return response
 
 
@@ -1340,6 +1809,21 @@ def openai_respond_with_vector_store(
             message="vector_store_id is required for file search responses",
             retryable=False,
         )
+    cache_spec = _semantic_response_cache_spec(
+        request,
+        operation="openai_response_vector_store",
+        params={
+            "model": request.model,
+            "temperature": request.temperature,
+            "seed": request.seed,
+            "tools": ["file_search"],
+        },
+        context={"vector_store_id": request.vector_store_id},
+    )
+    if cache_spec is not None:
+        cached_payload = _read_semantic_response_cache(cache_spec, ctx)
+        if cached_payload is not None:
+            return _openai_response_result_from_cache(cached_payload)
     payload_args = {
         "model": request.model,
         "instructions": request.system_prompt,
@@ -1368,6 +1852,11 @@ def openai_respond_with_vector_store(
     except AppError:
         raise
     except OPENAI_REQUEST_EXCEPTIONS as exc:
+        code, message, retryable = _classify_openai_request_error(
+            exc,
+            default_code="openai_response_failed",
+            default_message="OpenAI responses request failed",
+        )
         logger.info(
             log_event(
                 ctx,
@@ -1383,14 +1872,15 @@ def openai_respond_with_vector_store(
             )
         )
         raise AppError(
-            code="openai_response_failed",
-            message="OpenAI responses request failed",
+            code=code,
+            message=message,
             cause=exc,
-            retryable=True,
+            retryable=retryable,
             context={
                 "model": request.model,
                 "vector_store_id": request.vector_store_id,
                 "error": str(exc),
+                "provider_error_type": type(exc).__name__,
             },
         ) from exc
 
@@ -1486,7 +1976,7 @@ def openai_respond_with_vector_store(
                 "response_text_preview": metadata.text[:240],
             },
         )
-    return OpenAIResponseResult(
+    result = OpenAIResponseResult(
         schema_version="1.0",
         text=metadata.text,
         parsed_json=metadata.parsed_json,
@@ -1497,6 +1987,12 @@ def openai_respond_with_vector_store(
         total_tokens=metadata.total_tokens,
         request_id=metadata.request_id,
     )
+    _write_semantic_response_cache(
+        cache_spec,
+        ctx,
+        response_payload=asdict(result),
+    )
+    return result
 
 
 def _require_api_key(api_key: str, *, operation: str) -> str:
@@ -1746,7 +2242,9 @@ def openai_vector_store_status(
         timeout_seconds=request.timeout_seconds,
         spec=_VECTOR_STORE_STATUS_OPERATION,
         ctx=ctx,
-        request_fn=lambda client: client.vector_stores.retrieve(request.vector_store_id),
+        request_fn=lambda client: client.vector_stores.retrieve(
+            request.vector_store_id
+        ),
         error_context={"vector_store_id": request.vector_store_id},
     )
     status = _value_from_response(resp, "status")

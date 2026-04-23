@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from types import SimpleNamespace
 
 import pytest
@@ -85,6 +86,75 @@ def test_openai_chat_json_uses_modern_chat_completion(monkeypatch, tmp_path) -> 
     assert captured_payloads[0]["seed"] == 7
 
 
+def test_openai_chat_json_semantic_response_cache_skips_repeated_provider_call(
+    monkeypatch,
+    tmp_path,
+    caplog,
+    assert_logs_have_required_fields,
+) -> None:
+    caplog.set_level(logging.INFO, logger="market_lense.openai_service")
+    call_count = {"value": 0}
+
+    class _FakeChatCompletions:
+        def create(self, **kwargs):
+            call_count["value"] += 1
+            usage = SimpleNamespace(
+                prompt_tokens=12,
+                completion_tokens=5,
+                total_tokens=17,
+            )
+            message = SimpleNamespace(content=json.dumps({"ok": True}))
+            choice = SimpleNamespace(message=message)
+            return SimpleNamespace(
+                id=f"chat_{call_count['value']}", choices=[choice], usage=usage
+            )
+
+    class _FakeClient:
+        def __init__(self, **kwargs):
+            self.chat = SimpleNamespace(completions=_FakeChatCompletions())
+
+    monkeypatch.setattr(svc, "OpenAI", _FakeClient)
+    request = OpenAIJSONPromptRequest(
+        **{
+            **_chat_request(tmp_path).__dict__,
+            "response_cache_enabled": True,
+            "response_cache_dir": str(tmp_path / "cache"),
+            "response_cache_ttl_seconds": 3600.0,
+        }
+    )
+
+    first = svc.openai_chat_json(request, _ctx())
+    second = svc.openai_chat_json(request, _ctx())
+
+    assert first.parsed_json == {"ok": True}
+    assert second.parsed_json == {"ok": True}
+    assert first.request_id == "chat_1"
+    assert second.request_id == "chat_1"
+    assert call_count["value"] == 1
+    events = [
+        json.loads(record.message)
+        for record in caplog.records
+        if record.name == "market_lense.openai_service"
+    ]
+    cache_events = [
+        event
+        for event in events
+        if event.get("event")
+        in {
+            "openai_semantic_cache_miss",
+            "openai_semantic_cache_write",
+            "openai_semantic_cache_hit",
+        }
+    ]
+    assert [event["event"] for event in cache_events] == [
+        "openai_semantic_cache_miss",
+        "openai_semantic_cache_write",
+        "openai_semantic_cache_hit",
+    ]
+    assert cache_events[0]["fields"]["reason"] == "missing"
+    assert_logs_have_required_fields(cache_events)
+
+
 def test_analyze_report_falls_back_to_legacy_chat_completion(
     monkeypatch, tmp_path
 ) -> None:
@@ -118,9 +188,7 @@ def test_analyze_report_falls_back_to_legacy_chat_completion(
             }
 
     monkeypatch.setattr(svc, "OpenAI", None)
-    monkeypatch.setattr(
-        svc.openai_legacy, "ChatCompletion", _FakeLegacyChatCompletion
-    )
+    monkeypatch.setattr(svc.openai_legacy, "ChatCompletion", _FakeLegacyChatCompletion)
 
     result = svc.analyze_report(_analyze_request(tmp_path), _ctx())
 
@@ -150,6 +218,26 @@ def test_openai_chat_json_maps_provider_failure_to_typed_app_error(
         svc.openai_chat_json(_chat_request(tmp_path), _ctx())
 
     assert_app_error(exc_info.value, code="openai_chat_failed", retryable=True)
+
+
+def test_openai_chat_json_maps_content_filter_to_non_retryable_refusal(
+    monkeypatch, tmp_path, assert_app_error
+) -> None:
+    class _RefusingChatCompletions:
+        def create(self, **kwargs):
+            raise RuntimeError("content_filter blocked by safety policy")
+
+    class _RefusingClient:
+        def __init__(self, **kwargs):
+            self.chat = SimpleNamespace(completions=_RefusingChatCompletions())
+
+    monkeypatch.setattr(svc, "OpenAI", _RefusingClient)
+
+    with pytest.raises(AppError) as exc_info:
+        svc.openai_chat_json(_chat_request(tmp_path), _ctx())
+
+    assert_app_error(exc_info.value, code="openai_refusal", retryable=False)
+    assert exc_info.value.context["provider_error_type"] == "RuntimeError"
 
 
 def test_legacy_chat_completion_timeout_does_not_leak_between_requests(

@@ -33,18 +33,41 @@ class _RateLimiterState:
     next_allowed_monotonic: float
 
 
+@dataclass(frozen=True)
+class _LLMRetryDecision:
+    retryable: bool
+    reason_code: str
+
+
+NON_RETRYABLE_LLM_ERROR_CODES = {
+    "openai_authentication_failed",
+    "openai_bad_request",
+    "openai_content_filter",
+    "openai_invalid_request",
+    "openai_policy_violation",
+    "openai_refusal",
+    "openai_response_refusal",
+}
 _CIRCUIT_BREAKERS_LOCK = threading.Lock()
 _CIRCUIT_BREAKERS: dict[str, _CircuitBreakerState] = {}
 _RATE_LIMITERS_LOCK = threading.Lock()
 _RATE_LIMITERS: dict[str, _RateLimiterState] = {}
 
 
+def _llm_retry_decision(exc: Exception) -> _LLMRetryDecision:
+    if not isinstance(exc, AppError):
+        return _LLMRetryDecision(False, "non_app_error")
+    if exc.code == "llm_circuit_open":
+        return _LLMRetryDecision(False, "circuit_open")
+    if exc.code in NON_RETRYABLE_LLM_ERROR_CODES:
+        return _LLMRetryDecision(False, f"non_retryable_error_code:{exc.code}")
+    if not bool(exc.retryable):
+        return _LLMRetryDecision(False, "app_error_non_retryable")
+    return _LLMRetryDecision(True, f"retryable_error_code:{exc.code}")
+
+
 def _is_retryable_llm_error(exc: Exception) -> bool:
-    return (
-        isinstance(exc, AppError)
-        and bool(exc.retryable)
-        and exc.code != "llm_circuit_open"
-    )
+    return _llm_retry_decision(exc).retryable
 
 
 def _retry_delay_seconds(policy: LLMClientPolicy, attempt_index: int) -> float:
@@ -68,7 +91,9 @@ def _circuit_breaker_enabled(policy: LLMClientPolicy) -> bool:
     )
 
 
-def _get_circuit_breaker_state(policy: LLMClientPolicy, operation_name: str) -> _CircuitBreakerState:
+def _get_circuit_breaker_state(
+    policy: LLMClientPolicy, operation_name: str
+) -> _CircuitBreakerState:
     scope = _policy_scope(policy, operation_name)
     with _CIRCUIT_BREAKERS_LOCK:
         state = _CIRCUIT_BREAKERS.get(scope)
@@ -78,7 +103,9 @@ def _get_circuit_breaker_state(policy: LLMClientPolicy, operation_name: str) -> 
         return state
 
 
-def _get_rate_limiter_state(policy: LLMClientPolicy, operation_name: str) -> _RateLimiterState | None:
+def _get_rate_limiter_state(
+    policy: LLMClientPolicy, operation_name: str
+) -> _RateLimiterState | None:
     max_in_flight = policy.rate_limit_max_in_flight
     if max_in_flight is None or int(max_in_flight) <= 0:
         return None
@@ -153,7 +180,9 @@ def _with_rate_limit(
             with limiter.gate_lock:
                 now = monotonic_fn()
                 scheduled = max(now, limiter.next_allowed_monotonic)
-                limiter.next_allowed_monotonic = scheduled + limiter.min_interval_seconds
+                limiter.next_allowed_monotonic = (
+                    scheduled + limiter.min_interval_seconds
+                )
             sleep_for = max(0.0, scheduled - monotonic_fn())
             if sleep_for > 0:
                 sleep_fn(sleep_for)
@@ -291,8 +320,8 @@ def _record_circuit_failure(
             state.consecutive_failures += 1
         state.half_open_in_flight = False
         if state.consecutive_failures >= int(policy.circuit_breaker_failure_threshold):
-            state.opened_until_monotonic = (
-                monotonic_fn() + float(policy.circuit_breaker_recovery_seconds)
+            state.opened_until_monotonic = monotonic_fn() + float(
+                policy.circuit_breaker_recovery_seconds
             )
             logger.info(
                 log_event(
@@ -369,7 +398,8 @@ def _execute_with_policy(
                 monotonic_fn=monotonic_fn,
                 exc=exc,
             )
-            retryable = _is_retryable_llm_error(exc)
+            retry_decision = _llm_retry_decision(exc)
+            retryable = retry_decision.retryable
             if not retryable or attempt >= retries:
                 logger.info(
                     log_event(
@@ -382,8 +412,11 @@ def _execute_with_policy(
                             "scope": policy.scope,
                             "attempt": attempt,
                             "retryable": retryable,
+                            "retry_decision_code": retry_decision.reason_code,
                             "code": exc.code if isinstance(exc, AppError) else "",
-                            "error": exc.message if isinstance(exc, AppError) else str(exc),
+                            "error": exc.message
+                            if isinstance(exc, AppError)
+                            else str(exc),
                         },
                     )
                 )
@@ -400,6 +433,7 @@ def _execute_with_policy(
                         "scope": policy.scope,
                         "attempt": attempt + 1,
                         "delay_seconds": retry_delay,
+                        "retry_decision_code": retry_decision.reason_code,
                         "code": exc.code if isinstance(exc, AppError) else "",
                         "error": exc.message if isinstance(exc, AppError) else str(exc),
                     },
@@ -491,7 +525,9 @@ class _CallableOpenAIAdapter:
         openai_chat_json: Optional[Callable[[Any, RunContext], Any]] = None,
         openai_chat_json_with_images: Optional[Callable[[Any, RunContext], Any]] = None,
         openai_ocr_pdf: Optional[Callable[[Any, RunContext], Any]] = None,
-        openai_respond_with_vector_store: Optional[Callable[[Any, RunContext], Any]] = None,
+        openai_respond_with_vector_store: Optional[
+            Callable[[Any, RunContext], Any]
+        ] = None,
     ) -> None:
         self._openai_chat_json = openai_chat_json
         self._openai_chat_json_with_images = openai_chat_json_with_images

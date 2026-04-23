@@ -35,6 +35,7 @@ from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.generators.report_generation_dependencies import ReportGeneratorDependencies
 from src.generators.report_generation_shared import logger, read_cache_json
 from src.utils.cache_utils import sha256_json
+from src.utils.candidate_features import candidate_features, candidate_features_payload
 from src.utils.coercion import coerce_float, coerce_int
 from src.utils.logging import child_context, log_event
 from src.utils.model_resolver import resolve_model
@@ -48,8 +49,9 @@ class _RankBatchResult:
 
 
 def _candidate_meta(candidate: Candidate, key: str, default: float = 0.0) -> float:
-    meta = candidate.meta if isinstance(candidate.meta, dict) else {}
-    return coerce_float(meta.get(key), default)
+    features = candidate_features(candidate)
+    value = getattr(features, key, default)
+    return coerce_float(value, default)
 
 
 def _candidate_prefilter_reject_reason(candidate: Candidate) -> str:
@@ -57,12 +59,11 @@ def _candidate_prefilter_reject_reason(candidate: Candidate) -> str:
     if area <= 0.0:
         return "missing_area"
     if candidate.kind == "table":
-        rows = coerce_int((candidate.meta or {}).get("rows"), 0)
-        cols = coerce_int((candidate.meta or {}).get("cols"), 0)
+        features = candidate_features(candidate)
+        rows = coerce_int(features.rows, 0)
+        cols = coerce_int(features.cols, 0)
         numeric_ratio = _candidate_meta(candidate, "numeric_ratio", 0.0)
-        avg_words_per_cell = coerce_float(
-            (candidate.meta or {}).get("avg_words_per_cell"), 0.0
-        )
+        avg_words_per_cell = coerce_float(features.avg_words_per_cell, 0.0)
         preview_normalized = " ".join(
             str(candidate.preview_text or "").replace("|", " ").lower().split()
         )
@@ -112,8 +113,9 @@ def _candidate_prefilter_reject_reason(candidate: Candidate) -> str:
 def _candidate_prefilter_priority(candidate: Candidate) -> float:
     area = _candidate_meta(candidate, "area_frac", 0.0)
     if candidate.kind == "table":
-        rows = coerce_int((candidate.meta or {}).get("rows"), 0)
-        cols = coerce_int((candidate.meta or {}).get("cols"), 0)
+        features = candidate_features(candidate)
+        rows = coerce_int(features.rows, 0)
+        cols = coerce_int(features.cols, 0)
         numeric_ratio = _candidate_meta(candidate, "numeric_ratio", 0.0)
         return area * 100.0 + rows * 2.5 + cols * 1.5 + numeric_ratio * 50.0
     caption_bonus = 12.0 if (candidate.caption or "").strip() else 0.0
@@ -126,8 +128,9 @@ def _candidate_is_obvious_reject(candidate: Candidate) -> tuple[bool, str]:
     if reason:
         return True, reason
     if candidate.kind == "table":
-        rows = coerce_int((candidate.meta or {}).get("rows"), 0)
-        cols = coerce_int((candidate.meta or {}).get("cols"), 0)
+        features = candidate_features(candidate)
+        rows = coerce_int(features.rows, 0)
+        cols = coerce_int(features.cols, 0)
         numeric_ratio = _candidate_meta(candidate, "numeric_ratio", 0.0)
         if rows < 3 and cols < 3 and numeric_ratio < 0.1:
             return True, "table_ambiguous_low_data"
@@ -141,8 +144,9 @@ def _candidate_is_obvious_reject(candidate: Candidate) -> tuple[bool, str]:
 
 def _candidate_is_obvious_pass(candidate: Candidate) -> bool:
     if candidate.kind == "table":
-        rows = coerce_int((candidate.meta or {}).get("rows"), 0)
-        cols = coerce_int((candidate.meta or {}).get("cols"), 0)
+        features = candidate_features(candidate)
+        rows = coerce_int(features.rows, 0)
+        cols = coerce_int(features.cols, 0)
         numeric_ratio = _candidate_meta(candidate, "numeric_ratio", 0.0)
         area = _candidate_meta(candidate, "area_frac", 0.0)
         return rows >= 4 and cols >= 3 and numeric_ratio >= 0.15 and area >= 0.05
@@ -262,7 +266,7 @@ def _rank_candidates_batch(
             "id": candidate.id,
             "type": candidate.kind,
             "page": candidate.page,
-            "meta": candidate.meta or {},
+            "features": candidate_features_payload(candidate),
             "title_or_caption": (candidate.caption or "")[:300],
             "table_preview": candidate.preview_text[:400]
             if candidate.kind == "table"
@@ -341,6 +345,8 @@ def _rank_candidates_batch(
             cost_ledger_path=settings.cost_ledger_path,
             cost_daily_path=settings.cost_daily_path,
             model_pricing=settings.model_pricing,
+            response_cache_enabled=True,
+            response_cache_dir=settings.cache_dir,
         ),
         ctx,
     )
@@ -448,7 +454,7 @@ def _crop_refine_entry_key(
             "candidate_id": candidate.id,
             "page": candidate.page,
             "bbox": list(candidate.bbox),
-            "meta": candidate.meta or {},
+            "features": candidate_features_payload(candidate),
             "caption": candidate.caption or "",
             "preview_text": candidate.preview_text or "",
             "model": model,
@@ -803,7 +809,7 @@ def select_refined_candidate_items(
                 "bbox": [float(value) for value in bbox],
                 "caption": (candidate.caption or "")[:400],
                 "preview_text": (candidate.preview_text or "")[:600],
-                "meta": candidate.meta or {},
+                "features": candidate_features_payload(candidate),
             }
             if include_proposed_bbox:
                 payload_item["proposed_bbox"] = [float(value) for value in bbox]
@@ -822,9 +828,7 @@ def select_refined_candidate_items(
                         "page_width": page_render.page_width,
                         "page_height": page_render.page_height,
                         "phase": phase,
-                        "candidates_json": json.dumps(
-                            phase_payload, ensure_ascii=True
-                        ),
+                        "candidates_json": json.dumps(phase_payload, ensure_ascii=True),
                     },
                 ),
                 ctx,
@@ -838,7 +842,9 @@ def select_refined_candidate_items(
                     fields={
                         "page": page_number,
                         "phase": phase,
-                        "candidate_ids": [candidate.id for candidate in phase_candidates],
+                        "candidate_ids": [
+                            candidate.id for candidate in phase_candidates
+                        ],
                         "candidate_count": len(phase_candidates),
                     },
                 )
@@ -873,6 +879,8 @@ def select_refined_candidate_items(
                     cost_ledger_path=settings.cost_ledger_path,
                     cost_daily_path=settings.cost_daily_path,
                     model_pricing=settings.model_pricing,
+                    response_cache_enabled=True,
+                    response_cache_dir=settings.cache_dir,
                 ),
                 ctx,
             )
@@ -885,7 +893,9 @@ def select_refined_candidate_items(
                     fields={
                         "page": page_number,
                         "phase": phase,
-                        "candidate_ids": [candidate.id for candidate in phase_candidates],
+                        "candidate_ids": [
+                            candidate.id for candidate in phase_candidates
+                        ],
                         "candidate_count": len(phase_candidates),
                         "content": crop_refine_resp.raw_content,
                     },
@@ -908,6 +918,7 @@ def select_refined_candidate_items(
                     caption=candidate.caption or "",
                     preview_text=candidate.preview_text or "",
                     meta=candidate.meta or {},
+                    features=candidate_features(candidate),
                 )
             )
             phase_payload.append(
@@ -955,7 +966,9 @@ def select_refined_candidate_items(
                     [phase_payload[recovery_index]],
                 )
                 coarse_resp.results.extend(recovery_resp.results)
-        coarse_results = {result_item.id: result_item for result_item in coarse_resp.results}
+        coarse_results = {
+            result_item.id: result_item for result_item in coarse_resp.results
+        }
         page_results: dict[int, dict[str, Any]] = {}
         finalize_candidates: list[CropRefineCandidate] = []
         finalize_payload: list[dict[str, Any]] = []
@@ -994,6 +1007,7 @@ def select_refined_candidate_items(
                     caption=candidate.caption or "",
                     preview_text=candidate.preview_text or "",
                     meta=candidate.meta or {},
+                    features=candidate_features(candidate),
                 )
             )
             finalize_payload.append(
@@ -1015,14 +1029,18 @@ def select_refined_candidate_items(
                 module=logger.name,
                 fields={
                     "page": page_number,
-                    "candidate_ids": [candidate.id for candidate in finalize_candidates],
+                    "candidate_ids": [
+                        candidate.id for candidate in finalize_candidates
+                    ],
                     "candidate_count": len(finalize_candidates),
                 },
             )
         )
         finalize_resp = _invoke_phase("finalize", finalize_candidates, finalize_payload)
         expected_finalize_ids = {candidate.id for candidate in finalize_candidates}
-        returned_finalize_ids = {result_item.id for result_item in finalize_resp.results}
+        returned_finalize_ids = {
+            result_item.id for result_item in finalize_resp.results
+        }
         missing_finalize_ids = expected_finalize_ids - returned_finalize_ids
         if missing_finalize_ids:
             logger.warning(
@@ -1067,9 +1085,7 @@ def select_refined_candidate_items(
                 page_results[plan_index] = {
                     "is_valid_candidate": False,
                     "reason": "missing_decision:finalize",
-                    "refined_bbox": [
-                        float(value) for value in finalize_candidate.bbox
-                    ],
+                    "refined_bbox": [float(value) for value in finalize_candidate.bbox],
                 }
                 continue
             final_bbox = _bbox_tuple(finalize_decision.refined_bbox)
@@ -1201,9 +1217,13 @@ def select_refined_candidate_items(
                 page_number = candidate.page
                 llm_result = plan.get("llm_result")
                 if not isinstance(llm_result, dict):
-                    pending_plan_indices = list(llm_pending_by_page.get(page_number, [idx]))
+                    pending_plan_indices = list(
+                        llm_pending_by_page.get(page_number, [idx])
+                    )
                     if llm_executor is not None:
-                        future = llm_inflight.pop(page_number, None) or llm_executor.submit(
+                        future = llm_inflight.pop(
+                            page_number, None
+                        ) or llm_executor.submit(
                             _run_crop_refine_llm_page,
                             page_number,
                             pending_plan_indices,

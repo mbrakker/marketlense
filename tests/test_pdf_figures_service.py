@@ -4,6 +4,7 @@ import io
 import json
 import logging
 from pathlib import Path
+from typing import Any, cast
 
 try:
     import fitz
@@ -47,9 +48,11 @@ from src.services._pdf.figures import (
     _validate_table_candidate,
 )
 from src.services._pdf.visual_candidates import (
+    _RasterProbeCache,
     _embedded_visual_looks_chart_like,
     _page_has_chart_caption_blocks,
     _text_has_visual_context_hint,
+    _visual_probe_profile,
     _visual_candidate_looks_bare_heading_fragment,
     _visual_candidate_looks_cover_art,
     _visual_candidate_looks_inline_numbered_panel,
@@ -78,6 +81,31 @@ def _events(caplog, logger_name: str) -> list[dict[str, object]]:
         if isinstance(payload, dict):
             events.append(payload)
     return events
+
+
+def test_visual_probe_profile_reuses_shared_raster_cache():
+    doc = fitz.open()
+    try:
+        page = doc.new_page(width=300, height=240)
+        page.draw_rect(fitz.Rect(40, 40, 220, 160), color=(0, 0, 0), width=1.5)
+        page.draw_line(
+            fitz.Point(60, 135), fitz.Point(200, 85), color=(0, 0, 1), width=2
+        )
+        rect = fitz.Rect(35, 35, 225, 165)
+        cache = _RasterProbeCache(images={}, profiles={})
+
+        first = _visual_probe_profile(page, rect, probe_cache=cache)
+        second = _visual_probe_profile(page, rect, probe_cache=cache)
+
+        assert first == second
+        assert first is not None
+        stats = cache.stats()
+        assert stats["hits"] >= 1
+        assert stats["misses"] >= 1
+        assert stats["image_entries"] == 1
+        assert stats["profile_entries"] == 1
+    finally:
+        doc.close()
 
 
 def _chart_image_bytes() -> bytes:
@@ -159,7 +187,9 @@ def _portrait_chart_image_bytes() -> bytes:
     draw.text((18, 18), "% of markets seeing shopper growth", fill="black")
     for idx, year in enumerate(["2023", "2024"]):
         x = 40 + idx * 84
-        draw.rectangle((x, 124, x + 36, 304), fill=(238, 241, 246), outline=(210, 220, 232))
+        draw.rectangle(
+            (x, 124, x + 36, 304), fill=(238, 241, 246), outline=(210, 220, 232)
+        )
         draw.rectangle((x, 204 - idx * 26, x + 36, 304), fill=(80, 167, 184))
         draw.text((x - 4, 320), year, fill="black")
     draw.text((102, 372), "Source: synthetic narrow chart panel.", fill="black")
@@ -356,7 +386,9 @@ def _build_axis_stroke_extension_pdf(path: Path) -> None:
     page.insert_text((54, 52), "Chart 1: Fiscal outlook", fontsize=16)
     page.insert_text((92, 88), "Outlays in USD trillion", fontsize=11)
     baseline_y = 332
-    page.draw_line((86, baseline_y), (520, baseline_y), color=(0.3, 0.3, 0.3), width=0.7)
+    page.draw_line(
+        (86, baseline_y), (520, baseline_y), color=(0.3, 0.3, 0.3), width=0.7
+    )
     for idx, height in enumerate([18, 24, 20, 16, 44, 39, 20, 26, 18]):
         x0 = 96 + idx * 34
         page.draw_rect(
@@ -374,7 +406,9 @@ def _build_axis_stroke_extension_pdf(path: Path) -> None:
             width=0.5,
         )
     for x in [414, 458, 502]:
-        page.draw_line((x, baseline_y - 1), (x, baseline_y + 4), color=(0.3, 0.3, 0.3), width=0.5)
+        page.draw_line(
+            (x, baseline_y - 1), (x, baseline_y + 4), color=(0.3, 0.3, 0.3), width=0.5
+        )
     page.insert_text((414, 352), "2025", fontsize=10)
     page.insert_text((458, 352), "2030", fontsize=10)
     page.insert_text((502, 352), "2035", fontsize=10)
@@ -415,7 +449,12 @@ def _build_internal_panel_cards_pdf(path: Path) -> None:
         color=(0.25, 0.66, 0.90),
         fill=(0.25, 0.66, 0.90),
     )
-    page.insert_text((168, 422), "3 ways retailers can prepare for 2026", fontsize=18, color=(1, 1, 1))
+    page.insert_text(
+        (168, 422),
+        "3 ways retailers can prepare for 2026",
+        fontsize=18,
+        color=(1, 1, 1),
+    )
     page.draw_line((214, 438), (214, 710), color=(0.25, 0.35, 0.58), width=1.0)
     page.draw_line((388, 438), (388, 710), color=(0.25, 0.35, 0.58), width=1.0)
     page.insert_textbox(
@@ -458,11 +497,18 @@ def _build_panel_metric_band_with_quote_card_pdf(path: Path) -> None:
     page = doc.new_page(width=620, height=420)
     page.insert_text((42, 68), "Invisible AI", fontsize=26, color=(1, 1, 1))
     page.insert_text((42, 148), "71% of consumers", fontsize=24, color=(1, 1, 1))
-    page.insert_text((42, 178), "want Gen AI-integrated shopping interactions", fontsize=14, color=(1, 1, 1))
+    page.insert_text(
+        (42, 178),
+        "want Gen AI-integrated shopping interactions",
+        fontsize=14,
+        color=(1, 1, 1),
+    )
     page.insert_text((250, 158), "compared to", fontsize=14, color=(1, 1, 1))
     page.insert_text((250, 194), "56% who said", fontsize=24, color=(1, 1, 1))
     page.insert_text((250, 224), "the same last year.", fontsize=14, color=(1, 1, 1))
-    page.insert_text((470, 194), "Source: Example dataset", fontsize=11, color=(0.2, 0.9, 0.9))
+    page.insert_text(
+        (470, 194), "Source: Example dataset", fontsize=11, color=(0.2, 0.9, 0.9)
+    )
     page.draw_rect(
         fitz.Rect(42, 244, 560, 338),
         color=(0.35, 0.4, 0.62),
@@ -506,7 +552,9 @@ def _build_internal_label_grid_panel_pdf(path: Path) -> None:
         ("Captures my attention", 580, 314),
     ]
     for text, cx, cy in labels:
-        page.draw_line((cx - 92, cy - 40), (cx - 92, cy + 40), color=(0.1, 0.1, 0.1), width=1.2)
+        page.draw_line(
+            (cx - 92, cy - 40), (cx - 92, cy + 40), color=(0.1, 0.1, 0.1), width=1.2
+        )
         box = fitz.Rect(cx - 76, cy - 22, cx + 16, cy + 30)
         page.draw_rect(box, color=(0.82, 0.42, 0.92), fill=(0.82, 0.42, 0.92))
         page.insert_textbox(
@@ -551,7 +599,9 @@ def _build_internal_panel_with_side_labels_pdf(path: Path) -> None:
     page.insert_text((486, 196), "Trust as a", fontsize=15, color=(0.12, 0.12, 0.12))
     page.insert_text((496, 218), "profit", fontsize=15, color=(0.12, 0.12, 0.12))
     page.insert_text((488, 240), "driver:", fontsize=15, color=(0.12, 0.12, 0.12))
-    page.insert_text((474, 268), "Driving margins", fontsize=15, color=(0.12, 0.12, 0.12))
+    page.insert_text(
+        (474, 268), "Driving margins", fontsize=15, color=(0.12, 0.12, 0.12)
+    )
     page.insert_textbox(
         fitz.Rect(266, 132, 374, 214),
         "Searchless\nretail:\n03",
@@ -573,9 +623,13 @@ def _build_internal_panel_with_bottom_labels_pdf(path: Path) -> None:
         color=(0.12, 0.12, 0.12),
     )
     page.draw_circle((322, 302), 128, color=(0.94, 0.28, 0.28), width=36)
-    page.draw_circle((322, 302), 76, color=(0.96, 0.84, 0.82), fill=(0.96, 0.84, 0.82), width=2)
+    page.draw_circle(
+        (322, 302), 76, color=(0.96, 0.84, 0.82), fill=(0.96, 0.84, 0.82), width=2
+    )
     page.insert_text((146, 180), "Stayed and", fontsize=16, color=(0.14, 0.14, 0.14))
-    page.insert_text((146, 204), "maintained trust", fontsize=16, color=(0.14, 0.14, 0.14))
+    page.insert_text(
+        (146, 204), "maintained trust", fontsize=16, color=(0.14, 0.14, 0.14)
+    )
     page.insert_text((150, 238), "29%", fontsize=28, color=(0.14, 0.14, 0.14))
     page.insert_text((430, 180), "Stayed but", fontsize=16, color=(0.14, 0.14, 0.14))
     page.insert_text((430, 204), "lost trust", fontsize=16, color=(0.14, 0.14, 0.14))
@@ -712,7 +766,9 @@ def _build_stacked_independent_panel_cards_pdf(path: Path) -> None:
         fill=(0.95, 0.97, 0.91),
         width=0.5,
     )
-    page.insert_text((136, 584), "3 ways retailers can prepare for a searchless future:", fontsize=16)
+    page.insert_text(
+        (136, 584), "3 ways retailers can prepare for a searchless future:", fontsize=16
+    )
     columns = [
         (
             74,
@@ -837,7 +893,9 @@ def _build_infographic_chart_pdf(path: Path) -> None:
         fontsize=18,
     )
     page.insert_text((42, 202), "% annual real growth", fontsize=12)
-    for idx, year in enumerate(["2018", "2019", "2020", "2021", "2022", "2023", "2024"]):
+    for idx, year in enumerate(
+        ["2018", "2019", "2020", "2021", "2022", "2023", "2024"]
+    ):
         x = 56 + idx * 48
         page.insert_text((x, 376), year, fontsize=9)
         page.insert_text((x, 344 - idx * 10), str(idx * 2), fontsize=9)
@@ -846,7 +904,16 @@ def _build_infographic_chart_pdf(path: Path) -> None:
         "Many countries turn to foreign-trained doctors",
         fontsize=18,
     )
-    countries = ["Norway", "UK", "Australia", "Canada", "Germany", "France", "Colombia", "Mexico"]
+    countries = [
+        "Norway",
+        "UK",
+        "Australia",
+        "Canada",
+        "Germany",
+        "France",
+        "Colombia",
+        "Mexico",
+    ]
     for idx, country in enumerate(countries):
         y = 236 + idx * 24
         page.insert_text((352, y), country, fontsize=11)
@@ -1336,7 +1403,28 @@ def _build_wide_panel_chart_pdf(path: Path) -> None:
         width=0.5,
     )
     page.draw_line((42, 270), (920, 270), color=(0.2, 0.2, 0.2), width=1.0)
-    values = [68, 58, 54, 51, 48, 44, 41, 40, 37, 35, 29, 28, 20, 19, 14, 8, 4, -16, -30, -38]
+    values = [
+        68,
+        58,
+        54,
+        51,
+        48,
+        44,
+        41,
+        40,
+        37,
+        35,
+        29,
+        28,
+        20,
+        19,
+        14,
+        8,
+        4,
+        -16,
+        -30,
+        -38,
+    ]
     for idx, value in enumerate(values):
         x = 52 + idx * 42
         if value >= 0:
@@ -1360,8 +1448,12 @@ def _build_wide_panel_chart_pdf(path: Path) -> None:
 def _build_multiline_title_panel_with_side_card_pdf(path: Path) -> None:
     doc = fitz.open()
     page = doc.new_page(width=720, height=405)
-    page.insert_text((28, 42), "As digital content grows, the need for innovation", fontsize=20)
-    page.insert_text((28, 66), "in ensuring media quality within digital video", fontsize=20)
+    page.insert_text(
+        (28, 42), "As digital content grows, the need for innovation", fontsize=20
+    )
+    page.insert_text(
+        (28, 66), "in ensuring media quality within digital video", fontsize=20
+    )
     page.insert_text((28, 90), "platforms is especially important", fontsize=20)
     page.draw_rect(
         fitz.Rect(28, 128, 418, 332),
@@ -1370,7 +1462,9 @@ def _build_multiline_title_panel_with_side_card_pdf(path: Path) -> None:
         width=0.5,
     )
     page.draw_line((28, 168), (418, 168), color=(0.2, 0.2, 0.2), width=1.0)
-    page.insert_text((28, 158), "Media Quality Considerations on Social Media", fontsize=16)
+    page.insert_text(
+        (28, 158), "Media Quality Considerations on Social Media", fontsize=16
+    )
     page.insert_textbox(
         fitz.Rect(28, 192, 208, 300),
         "Viewability is an important metric when assessing social media campaigns",
@@ -1500,8 +1594,18 @@ def _build_dense_numeric_panel_chart_pdf(path: Path) -> None:
     categories = [
         ("Content that contains inaccurate information", "22%", "9%", "68%"),
         ("Content that provides an ad-spammy user experience", "26%", "11%", "63%"),
-        ("Content that regurgitates or plagiarizes existing content", "25%", "14%", "61%"),
-        ("Content that comes from unknown domains with no editorial team", "24%", "17%", "59%"),
+        (
+            "Content that regurgitates or plagiarizes existing content",
+            "25%",
+            "14%",
+            "61%",
+        ),
+        (
+            "Content that comes from unknown domains with no editorial team",
+            "24%",
+            "17%",
+            "59%",
+        ),
     ]
     for idx, (label, safe, unsure, avoid) in enumerate(categories):
         y = 124 + idx * 46
@@ -1558,8 +1662,12 @@ def _build_cross_panel_label_pdf(path: Path) -> None:
     page.draw_rect(left, color=(0.93, 0.93, 0.93), fill=(0.93, 0.93, 0.93), width=0.5)
     page.draw_rect(right, color=(0.93, 0.93, 0.93), fill=(0.93, 0.93, 0.93), width=0.5)
     page.insert_textbox(fitz.Rect(52, 214, 550, 248), "37% 35%", fontsize=26)
-    page.insert_textbox(fitz.Rect(66, 430, 440, 460), "Netflix Pinterest Amazon", fontsize=12)
-    page.insert_textbox(fitz.Rect(536, 430, 906, 460), "Netflix Spotify Prime Video", fontsize=12)
+    page.insert_textbox(
+        fitz.Rect(66, 430, 440, 460), "Netflix Pinterest Amazon", fontsize=12
+    )
+    page.insert_textbox(
+        fitz.Rect(536, 430, 906, 460), "Netflix Spotify Prime Video", fontsize=12
+    )
     doc.save(path.as_posix())
     doc.close()
 
@@ -1828,7 +1936,9 @@ def _build_table_context_pdf(path: Path) -> None:
 def _build_table_legend_footer_pdf(path: Path) -> None:
     doc = fitz.open()
     page = doc.new_page(width=620, height=900)
-    page.insert_text((40, 82), "Table 1.2. Dashboard on health status, 2023", fontsize=18)
+    page.insert_text(
+        (40, 82), "Table 1.2. Dashboard on health status, 2023", fontsize=18
+    )
 
     x0, y0, x1, y1 = 40, 130, 560, 420
     page.draw_rect(fitz.Rect(x0, y0, x1, y1), color=(0, 0, 0))
@@ -1959,10 +2069,16 @@ def _build_stream_table_spillover_pdf(path: Path) -> None:
         ("GDP at market prices", ["1 333.5", "3.7", "3.8", "4.5", "4.2", "4.0"]),
         ("Private consumption", ["827.9", "4.8", "3.4", "4.3", "3.6", "3.3"]),
         ("Government consumption", ["252.6", "6.1", "5.6", "5.4", "4.0", "3.8"]),
-        ("Gross fixed capital formation", ["354.9", "3.0", "13.2", "12.0", "7.3", "7.4"]),
+        (
+            "Gross fixed capital formation",
+            ["354.9", "3.0", "13.2", "12.0", "7.3", "7.4"],
+        ),
         ("Final domestic demand", ["1 435.4", "4.7", "6.2", "6.5", "4.7", "4.4"]),
         ("Stockbuilding", ["51.3", "0.6", "-0.1", "1.2", "0.5", "0.0"]),
-        ("Current account balance (% of GDP)", ["", "-1.0", "-1.2", "-2.0", "-2.0", "-2.2"]),
+        (
+            "Current account balance (% of GDP)",
+            ["", "-1.0", "-1.2", "-2.0", "-2.0", "-2.2"],
+        ),
     ]
     for row_index, (label, values) in enumerate(rows):
         y = 448 + row_index * 22
@@ -1977,7 +2093,9 @@ def _build_stream_table_spillover_pdf(path: Path) -> None:
         "1. Contributions to changes in real GDP, actual amount in the first column.",
         fontsize=9,
     )
-    page.insert_text((40, 640), "Source: OECD Economic Outlook 118 database.", fontsize=9)
+    page.insert_text(
+        (40, 640), "Source: OECD Economic Outlook 118 database.", fontsize=9
+    )
     page.insert_text((405, 660), "StatLink https://stat.link/6ptr2h", fontsize=9)
     page.insert_text(
         (40, 708),
@@ -2194,12 +2312,21 @@ def _build_stream_country_table_split_pdf(path: Path) -> None:
         ("GDP at market prices", ["561.3", "1.7", "1.1", "1.1", "1.1", "1.2"]),
         ("Private consumption", ["289.7", "1.1", "2.0", "1.9", "1.1", "0.9"]),
         ("Government consumption", ["131.6", "2.7", "1.8", "1.0", "1.0", "0.5"]),
-        ("Gross fixed capital formation", ["134.3", "3.1", "2.0", "-1.1", "1.1", "1.4"]),
+        (
+            "Gross fixed capital formation",
+            ["134.3", "3.1", "2.0", "-1.1", "1.1", "1.4"],
+        ),
         ("Final domestic demand", ["555.6", "1.9", "2.0", "0.9", "1.1", "0.9"]),
         ("Stockbuilding¹", ["18.8", "-0.8", "-0.5", "0.4", "0.0", "0.0"]),
         ("Total domestic demand", ["574.4", "1.1", "1.4", "1.4", "1.1", "0.9"]),
-        ("Exports of goods and services", ["530.0", "-7.2", "-1.7", "-0.4", "1.1", "2.2"]),
-        ("Imports of goods and services", ["543.1", "-7.6", "-1.3", "0.0", "1.1", "1.8"]),
+        (
+            "Exports of goods and services",
+            ["530.0", "-7.2", "-1.7", "-0.4", "1.1", "2.2"],
+        ),
+        (
+            "Imports of goods and services",
+            ["543.1", "-7.6", "-1.3", "0.0", "1.1", "1.8"],
+        ),
         ("Net exports¹", ["-13.1", "0.6", "-0.3", "-0.3", "-0.1", "0.3"]),
     ]
     for row_index, (label, values) in enumerate(rows):
@@ -2211,10 +2338,22 @@ def _build_stream_country_table_split_pdf(path: Path) -> None:
     page.insert_text((40, 400), "Memorandum items", fontsize=11)
     memo_rows = [
         ("GDP deflator", ["", "5.5", "1.9", "2.4", "1.5", "1.8"]),
-        ("Harmonised index of consumer prices", ["", "2.3", "4.3", "3.0", "1.6", "1.7"]),
-        ("Harmonised index of core inflation²", ["", "6.0", "3.4", "2.2", "2.3", "1.8"]),
-        ("Unemployment rate (% of labour force)", ["", "5.5", "5.7", "6.0", "6.0", "5.9"]),
-        ("General government financial balance (% of GDP)", ["", "-4.0", "-4.4", "-5.5", "-5.4", "-5.2"]),
+        (
+            "Harmonised index of consumer prices",
+            ["", "2.3", "4.3", "3.0", "1.6", "1.7"],
+        ),
+        (
+            "Harmonised index of core inflation²",
+            ["", "6.0", "3.4", "2.2", "2.3", "1.8"],
+        ),
+        (
+            "Unemployment rate (% of labour force)",
+            ["", "5.5", "5.7", "6.0", "6.0", "5.9"],
+        ),
+        (
+            "General government financial balance (% of GDP)",
+            ["", "-4.0", "-4.4", "-5.5", "-5.4", "-5.2"],
+        ),
     ]
     for row_index, (label, values) in enumerate(memo_rows):
         y = 420 + row_index * 18
@@ -2248,7 +2387,9 @@ def _build_stream_country_table_split_pdf(path: Path) -> None:
         "Continuation of note 3 to ensure wrapped footnotes remain attached to the crop.",
         fontsize=9,
     )
-    page.insert_text((40, 628), "Source: OECD Economic Outlook 118 database.", fontsize=9)
+    page.insert_text(
+        (40, 628), "Source: OECD Economic Outlook 118 database.", fontsize=9
+    )
     page.insert_text((445, 648), "StatLink https://stat.link/example", fontsize=9)
     page.insert_textbox(
         fitz.Rect(40, 700, 650, 820),
@@ -2342,11 +2483,21 @@ def _build_contents_like_pdf(path: Path) -> None:
         ("References", "61", 14, 40),
         ("2. Time for a Regulatory Reset?", "67", 18, 20),
         ("Summary", "67", 14, 40),
-        ("The productivity slowdown has been underpinned by a decline in economic dynamism", "68", 14, 40),
+        (
+            "The productivity slowdown has been underpinned by a decline in economic dynamism",
+            "68",
+            14,
+            40,
+        ),
         ("The case for a regulatory reset", "69", 14, 40),
         ("Executing the regulatory reset", "79", 14, 40),
         ("References", "96", 14, 40),
-        ("3. Developments in individual OECD and selected non-member economies", "105", 18, 20),
+        (
+            "3. Developments in individual OECD and selected non-member economies",
+            "105",
+            18,
+            20,
+        ),
         ("Argentina", "106", 14, 40),
         ("Australia", "109", 14, 40),
         ("Austria", "112", 14, 40),
@@ -2472,7 +2623,8 @@ def test_collect_candidates_skips_full_page_scan_without_text(tmp_path, caplog) 
     complete = next(
         event for event in events if event.get("event") == "extract_candidates_complete"
     )
-    assert int((complete.get("fields") or {}).get("triaged_full_scan_pages", 0)) == 1
+    complete_fields = cast(dict[str, Any], complete.get("fields") or {})
+    assert int(complete_fields.get("triaged_full_scan_pages", 0)) == 1
 
 
 def test_collect_candidates_chart_bbox_excludes_corner_page_number_and_body_text(
@@ -2492,7 +2644,9 @@ def test_collect_candidates_chart_bbox_excludes_corner_page_number_and_body_text
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
     assert len(charts) == 1
     chart = charts[0]
 
@@ -2502,7 +2656,9 @@ def test_collect_candidates_chart_bbox_excludes_corner_page_number_and_body_text
     assert chart.bbox[3] < 602.0
 
 
-def test_clamp_top_to_caption_reserves_crop_padding_from_prior_paragraph(tmp_path) -> None:
+def test_clamp_top_to_caption_reserves_crop_padding_from_prior_paragraph(
+    tmp_path,
+) -> None:
     pdf_path = tmp_path / "chart-caption-spillover.pdf"
     _build_chart_caption_spillover_pdf(pdf_path)
 
@@ -2524,7 +2680,9 @@ def test_clamp_top_to_caption_reserves_crop_padding_from_prior_paragraph(tmp_pat
     assert clamped.y0 < 187.0
 
 
-def test_collect_candidates_chart_bbox_keeps_full_partial_note_overlap(tmp_path) -> None:
+def test_collect_candidates_chart_bbox_keeps_full_partial_note_overlap(
+    tmp_path,
+) -> None:
     pdf_path = tmp_path / "chart-partial-note-overlap.pdf"
     out_dir = tmp_path / "out"
     _build_chart_partial_note_overlap_pdf(pdf_path)
@@ -2539,7 +2697,9 @@ def test_collect_candidates_chart_bbox_keeps_full_partial_note_overlap(tmp_path)
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
     assert len(charts) == 1
     chart = charts[0]
 
@@ -2562,7 +2722,9 @@ def test_collect_candidates_chart_flow_recognizes_infographic_caption(tmp_path) 
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
     assert len(charts) == 1
     assert "infographic 1" in (charts[0].caption or "").lower()
 
@@ -2584,7 +2746,9 @@ def test_collect_candidates_chart_flow_keeps_dense_label_chart_above_section_hea
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
     target = next(
         candidate
         for candidate in charts
@@ -2611,16 +2775,20 @@ def test_collect_candidates_chart_flow_keeps_upper_dense_chart_before_next_figur
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
     upper = next(
         candidate
         for candidate in charts
-        if "figure 5.26" in ((candidate.caption or candidate.preview_text or "").lower())
+        if "figure 5.26"
+        in ((candidate.caption or candidate.preview_text or "").lower())
     )
     lower = next(
         candidate
         for candidate in charts
-        if "figure 5.27" in ((candidate.caption or candidate.preview_text or "").lower())
+        if "figure 5.27"
+        in ((candidate.caption or candidate.preview_text or "").lower())
     )
     assert lower.id == "chart-0-0"
     assert upper.id == "chart-0-1"
@@ -2628,7 +2796,9 @@ def test_collect_candidates_chart_flow_keeps_upper_dense_chart_before_next_figur
     assert lower.bbox[1] > 430.0
 
 
-def test_collect_candidates_detects_wide_captioned_draw_chart_with_source(tmp_path) -> None:
+def test_collect_candidates_detects_wide_captioned_draw_chart_with_source(
+    tmp_path,
+) -> None:
     pdf_path = tmp_path / "wide-captioned-draw-chart.pdf"
     out_dir = tmp_path / "out"
     _build_wide_captioned_draw_chart_pdf(pdf_path)
@@ -2643,7 +2813,9 @@ def test_collect_candidates_detects_wide_captioned_draw_chart_with_source(tmp_pa
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
     assert len(charts) == 1
     chart = charts[0]
     assert (chart.caption or "").lower() == "figure 1"
@@ -2666,7 +2838,9 @@ def test_collect_candidates_splits_stacked_captioned_draw_charts(tmp_path) -> No
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
     assert len(charts) == 2
     upper = next(
         candidate
@@ -2702,7 +2876,9 @@ def test_collect_candidates_rejects_top_stacked_captioned_draw_chart(tmp_path) -
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
     assert len(charts) == 1
     assert (charts[0].caption or "").lower().startswith("figure 2")
 
@@ -2724,7 +2900,9 @@ def test_collect_candidates_chart_flow_rejects_side_by_side_photo_examples_witho
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
     assert not any(candidate.page == 1 for candidate in charts)
 
 
@@ -2745,7 +2923,9 @@ def test_collect_candidates_detects_captionless_embedded_chart_image_card(
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
     assert len(charts) == 1
     chart = charts[0]
     assert chart.bbox[0] >= 315.0
@@ -2804,7 +2984,9 @@ def test_collect_candidates_does_not_relax_captioned_embedded_chart_geometry(
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
     assert not any(candidate.page == 1 for candidate in charts)
 
 
@@ -2825,7 +3007,9 @@ def test_collect_candidates_rejects_decorative_photo_panel_without_figure_contex
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
     assert charts == []
 
 
@@ -2846,8 +3030,12 @@ def test_collect_candidates_detects_ranked_table_slide_without_chart_duplicate(
         _ctx(),
     )
 
-    tables = [candidate for candidate in response.candidates if candidate.kind == "table"]
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    tables = [
+        candidate for candidate in response.candidates if candidate.kind == "table"
+    ]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
 
     assert len(tables) == 1
     assert charts == []
@@ -2873,8 +3061,12 @@ def test_collect_candidates_detects_full_page_image_table_without_photo_false_po
         _ctx(),
     )
 
-    tables = [candidate for candidate in response.candidates if candidate.kind == "table"]
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    tables = [
+        candidate for candidate in response.candidates if candidate.kind == "table"
+    ]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
 
     assert len(tables) == 1
     table = tables[0]
@@ -2928,7 +3120,9 @@ def test_prune_charts_overlapping_ranked_tables_removes_chart_duplicate() -> Non
     assert [candidate.id for candidate in kept] == ["chart-0-1"]
 
 
-def test_prune_charts_overlapping_ranked_tables_prunes_table_shadow_for_any_table_method() -> None:
+def test_prune_charts_overlapping_ranked_tables_prunes_table_shadow_for_any_table_method() -> (
+    None
+):
     charts = [
         Candidate(
             schema_version="1.0",
@@ -3018,7 +3212,9 @@ def test_visual_candidate_looks_reference_or_prose_rejects_box_text() -> None:
     )
 
 
-def test_visual_candidate_looks_reference_or_prose_rejects_long_prose_with_numbered_notes() -> None:
+def test_visual_candidate_looks_reference_or_prose_rejects_long_prose_with_numbered_notes() -> (
+    None
+):
     text = (
         "The growth of stablecoins may also pose risks to banks. Companies with crypto-related "
         "business models, including stablecoin issuers, also hold bank deposits.\n"
@@ -3061,7 +3257,9 @@ def test_visual_candidate_looks_reference_or_prose_rejects_long_prose_with_numbe
     )
 
 
-def test_visual_candidate_looks_reference_or_prose_keeps_structured_instruction_card() -> None:
+def test_visual_candidate_looks_reference_or_prose_keeps_structured_instruction_card() -> (
+    None
+):
     text = (
         "3 ways retailers can win with invisible AI experiences\n"
         "Shift from personalization to contextualization: Shift from personalization to contextualization.\n"
@@ -3084,7 +3282,9 @@ def test_visual_candidate_looks_reference_or_prose_keeps_structured_instruction_
     )
 
 
-def test_visual_candidate_looks_reference_or_prose_rejects_explanatory_figure_reference() -> None:
+def test_visual_candidate_looks_reference_or_prose_rejects_explanatory_figure_reference() -> (
+    None
+):
     text = (
         "Figure 10.4 is based on the European Union Statistics on Income and Living Conditions data.\n"
         "Self-reported health reflects people’s overall perception of their own health.\n"
@@ -3103,7 +3303,9 @@ def test_visual_candidate_looks_reference_or_prose_rejects_explanatory_figure_re
     )
 
 
-def test_visual_candidate_looks_reference_or_prose_rejects_explanatory_figure_reference_with_comma() -> None:
+def test_visual_candidate_looks_reference_or_prose_rejects_explanatory_figure_reference_with_comma() -> (
+    None
+):
     text = (
         "Figure 10.19, Japan’s data are added on an exceptional basis for comparability.\n"
         "This indicator is shown only for descriptive context and should not be treated as a chart.\n"
@@ -3150,7 +3352,9 @@ def test_visual_candidate_looks_note_fragment_rejects_mid_sentence_note_slice() 
     )
 
 
-def test_visual_candidate_looks_note_fragment_keeps_bare_heading_chart_with_source() -> None:
+def test_visual_candidate_looks_note_fragment_keeps_bare_heading_chart_with_source() -> (
+    None
+):
     text = (
         "Austria\n"
         "The pick up in inflation is driven by energy costs\n"
@@ -3169,7 +3373,9 @@ def test_visual_candidate_looks_note_fragment_keeps_bare_heading_chart_with_sour
     )
 
 
-def test_visual_candidate_looks_bare_heading_fragment_rejects_empty_country_slice() -> None:
+def test_visual_candidate_looks_bare_heading_fragment_rejects_empty_country_slice() -> (
+    None
+):
     assert (
         _visual_candidate_looks_bare_heading_fragment(
             "Argentina",
@@ -3203,7 +3409,9 @@ def test_visual_candidate_looks_table_like_rejects_forecast_header_block() -> No
     )
 
 
-def test_final_chart_candidate_looks_heading_slice_rejects_bare_country_banner() -> None:
+def test_final_chart_candidate_looks_heading_slice_rejects_bare_country_banner() -> (
+    None
+):
     candidate = Candidate(
         schema_version="1.0",
         id="chart-258-0",
@@ -3228,10 +3436,15 @@ def test_final_chart_candidate_looks_heading_slice_keeps_large_panel_chart() -> 
         caption="Trustworthy Ads",
     )
 
-    assert _final_chart_candidate_looks_heading_slice(candidate, "Trustworthy Ads\n") is False
+    assert (
+        _final_chart_candidate_looks_heading_slice(candidate, "Trustworthy Ads\n")
+        is False
+    )
 
 
-def test_final_chart_candidate_looks_forecast_table_rejects_country_table_shadow() -> None:
+def test_final_chart_candidate_looks_forecast_table_rejects_country_table_shadow() -> (
+    None
+):
     candidate = Candidate(
         schema_version="1.0",
         id="chart-271-0",
@@ -3253,7 +3466,9 @@ def test_final_chart_candidate_looks_forecast_table_rejects_country_table_shadow
     assert _final_chart_candidate_looks_forecast_table(candidate, text) is True
 
 
-def test_final_chart_candidate_looks_forecast_table_rejects_split_year_header_shadow() -> None:
+def test_final_chart_candidate_looks_forecast_table_rejects_split_year_header_shadow() -> (
+    None
+):
     candidate = Candidate(
         schema_version="1.0",
         id="chart-271-0",
@@ -3369,7 +3584,9 @@ def test_visual_candidate_looks_section_opener_banner_rejects_top_card() -> None
     )
 
 
-def test_visual_candidate_looks_section_opener_banner_rejects_fragmented_banner() -> None:
+def test_visual_candidate_looks_section_opener_banner_rejects_fragmented_banner() -> (
+    None
+):
     rect = fitz.Rect(0.0, 0.0, 595.0, 248.0)
     page_rect = fitz.Rect(0.0, 0.0, 595.0, 842.0)
     text = (
@@ -3402,7 +3619,9 @@ def test_visual_candidate_looks_section_opener_banner_rejects_fragmented_banner(
     )
 
 
-def test_visual_candidate_looks_narrative_panel_card_rejects_long_worldpanel_style_card() -> None:
+def test_visual_candidate_looks_narrative_panel_card_rejects_long_worldpanel_style_card() -> (
+    None
+):
     text = (
         "The inflation headwind returns\n"
         "Brand growth is about to face its sternest test since 2022.\n"
@@ -3440,7 +3659,9 @@ def test_panel_chart_has_data_signal_rejects_non_numeric_label_grid() -> None:
     assert _panel_chart_has_data_signal(text) is False
 
 
-def test_visual_candidate_looks_inline_numbered_panel_rejects_short_numbered_sidebar() -> None:
+def test_visual_candidate_looks_inline_numbered_panel_rejects_short_numbered_sidebar() -> (
+    None
+):
     text = (
         "Euro area 2\n"
         "The euro has appreciated strongly\n"
@@ -3478,18 +3699,26 @@ def test_collect_candidates_detects_panel_charts_without_figure_captions(
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
-    tables = [candidate for candidate in response.candidates if candidate.kind == "table"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
+    tables = [
+        candidate for candidate in response.candidates if candidate.kind == "table"
+    ]
 
     assert len(charts) == 2
     assert tables == []
     captions = sorted((candidate.caption or "").lower() for candidate in charts)
     assert captions == ["better quality ads", "trustworthy ads"]
     left = next(
-        candidate for candidate in charts if (candidate.caption or "").lower() == "trustworthy ads"
+        candidate
+        for candidate in charts
+        if (candidate.caption or "").lower() == "trustworthy ads"
     )
     right = next(
-        candidate for candidate in charts if (candidate.caption or "").lower() == "better quality ads"
+        candidate
+        for candidate in charts
+        if (candidate.caption or "").lower() == "better quality ads"
     )
     assert left.bbox[2] < 500.0
     assert right.bbox[0] > 460.0
@@ -3512,12 +3741,15 @@ def test_collect_candidates_groups_shared_title_split_panels_into_one_chart(
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
 
     assert len(charts) == 1
-    assert "top anticipated media challenges by company type" in (
-        charts[0].caption or ""
-    ).lower()
+    assert (
+        "top anticipated media challenges by company type"
+        in (charts[0].caption or "").lower()
+    )
     assert charts[0].bbox[2] > 900.0
 
 
@@ -3560,12 +3792,15 @@ def test_collect_candidates_groups_stacked_shared_title_panels_into_one_chart(
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
 
     assert len(charts) == 1
-    assert "year-on-year growth in brand switching behaviour" in (
-        charts[0].caption or ""
-    ).lower()
+    assert (
+        "year-on-year growth in brand switching behaviour"
+        in (charts[0].caption or "").lower()
+    )
     assert charts[0].bbox[2] >= 748.0
     assert charts[0].bbox[3] >= 476.0
 
@@ -3587,7 +3822,9 @@ def test_collect_candidates_keeps_stacked_independent_panel_cards_separate(
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
 
     assert len(charts) == 2
     captions = sorted((candidate.caption or "").lower() for candidate in charts)
@@ -3598,16 +3835,16 @@ def test_collect_candidates_keeps_stacked_independent_panel_cards_separate(
     lower = next(
         candidate
         for candidate in charts
-        if (candidate.caption or "").lower().startswith(
-            "3 ways retailers can prepare for a searchless future"
-        )
+        if (candidate.caption or "")
+        .lower()
+        .startswith("3 ways retailers can prepare for a searchless future")
     )
     upper = next(
         candidate
         for candidate in charts
-        if (candidate.caption or "").lower().startswith(
-            "of shoppers make purchases based on ai"
-        )
+        if (candidate.caption or "")
+        .lower()
+        .startswith("of shoppers make purchases based on ai")
     )
     assert lower.bbox[1] >= 540.0
     assert upper.bbox[3] <= 560.0
@@ -3630,12 +3867,11 @@ def test_collect_candidates_detects_wide_panel_chart_with_resource_title(
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
     assert len(charts) == 1
-    assert (
-        "changes in budget/resource allocation"
-        in (charts[0].caption or "").lower()
-    )
+    assert "changes in budget/resource allocation" in (charts[0].caption or "").lower()
     assert charts[0].bbox[0] > 0.0
     assert charts[0].bbox[2] < 960.0
     assert charts[0].bbox[3] < 520.0
@@ -3666,7 +3902,9 @@ def test_collect_candidates_detects_right_column_raster_chart_card_with_left_con
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
 
     assert len(charts) == 1
     assert charts[0].bbox[0] >= 440.0
@@ -3691,7 +3929,9 @@ def test_collect_candidates_rejects_right_column_raster_photo_card_with_left_con
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
     assert charts == []
 
 
@@ -3712,7 +3952,9 @@ def test_collect_candidates_rejects_light_raster_photo_card(
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
     assert charts == []
 
 
@@ -3733,7 +3975,9 @@ def test_collect_candidates_does_not_treat_prose_mention_of_figure_as_caption_hi
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
     assert charts == []
 
 
@@ -3754,7 +3998,9 @@ def test_collect_candidates_rejects_small_uncaptioned_decorative_raster_card(
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
     assert charts == []
 
 
@@ -3775,7 +4021,9 @@ def test_collect_candidates_prefers_inside_chart_over_oversized_xref_wrapper(
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
     assert len(charts) == 1
     assert charts[0].bbox[0] >= 290.0
     assert charts[0].bbox[2] <= 665.0
@@ -3798,7 +4046,9 @@ def test_collect_candidates_rejects_panel_action_card_without_data_signal(
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
     assert charts == []
 
 
@@ -3858,7 +4108,9 @@ def test_clamp_panel_rect_to_dominant_fill_rect_prefers_local_compact_card() -> 
     assert clamped.y1 < 180.0
 
 
-def test_clamp_panel_rect_to_dominant_fill_rect_leaves_multi_stat_card_unchanged() -> None:
+def test_clamp_panel_rect_to_dominant_fill_rect_leaves_multi_stat_card_unchanged() -> (
+    None
+):
     doc = fitz.open()
     page = doc.new_page(width=600, height=800)
     page.draw_rect(fitz.Rect(40, 100, 360, 240), color=None, fill=(0.1, 0.3, 0.6))
@@ -3906,7 +4158,9 @@ def test_panel_component_looks_like_guidance_card_accepts_step_and_key_cards() -
     assert _panel_component_looks_like_guidance_card(colon_text) is True
 
 
-def test_panel_label_block_looks_like_footer_banner_accepts_mixed_year_page_line() -> None:
+def test_panel_label_block_looks_like_footer_banner_accepts_mixed_year_page_line() -> (
+    None
+):
     assert (
         _panel_label_block_looks_like_footer_banner(
             fitz.Rect(28.0, 503.0, 114.0, 519.0),
@@ -3950,8 +4204,7 @@ def test_panel_candidate_shadowed_by_heading_candidate_for_metric_stub_panel() -
     )
 
     assert (
-        _panel_candidate_shadowed_by_heading_candidate(panel, [panel, heading])
-        is True
+        _panel_candidate_shadowed_by_heading_candidate(panel, [panel, heading]) is True
     )
     assert (
         _panel_candidate_shadowed_by_heading_candidate(heading, [panel, heading])
@@ -4093,7 +4346,9 @@ def test_chart_axis_label_band_like_accepts_dense_short_label_block() -> None:
     )
 
 
-def test_panel_preferred_local_title_line_prefers_near_component_title(tmp_path) -> None:
+def test_panel_preferred_local_title_line_prefers_near_component_title(
+    tmp_path,
+) -> None:
     pdf_path = tmp_path / "panel-local-title-preference.pdf"
     _build_panel_local_title_preference_pdf(pdf_path)
 
@@ -4177,7 +4432,9 @@ def test_collect_candidates_merges_multiline_metric_band_with_quote_card(
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
     assert len(charts) == 1
     assert charts[0].bbox[0] < 60.0
     assert charts[0].bbox[1] < 150.0
@@ -4218,9 +4475,13 @@ def test_collect_candidates_keeps_dense_numeric_panel_chart(
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
     assert len(charts) == 1
-    assert "adjacencies to unsuitable gen ai content" in (charts[0].caption or "").lower()
+    assert (
+        "adjacencies to unsuitable gen ai content" in (charts[0].caption or "").lower()
+    )
     assert charts[0].bbox[2] >= 648.0
     assert charts[0].bbox[3] >= 300.0
 
@@ -4242,12 +4503,15 @@ def test_collect_candidates_merges_multiline_panel_title_with_numeric_side_card(
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
 
     assert len(charts) == 1
-    assert "as digital content grows, the need for innovation" in (
-        charts[0].caption or ""
-    ).lower()
+    assert (
+        "as digital content grows, the need for innovation"
+        in (charts[0].caption or "").lower()
+    )
     assert charts[0].bbox[1] < 36.0
     assert charts[0].bbox[2] > 660.0
 
@@ -4281,12 +4545,18 @@ def test_collect_candidates_recovers_internal_panel_cards_without_external_title
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
-    tables = [candidate for candidate in response.candidates if candidate.kind == "table"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
+    tables = [
+        candidate for candidate in response.candidates if candidate.kind == "table"
+    ]
     assert len(charts) == 2
     captions = [(chart.caption or "").lower() for chart in charts]
     assert any("lower-cost" in caption for caption in captions)
-    assert any("3 ways retailers can prepare for 2026" in caption for caption in captions)
+    assert any(
+        "3 ways retailers can prepare for 2026" in caption for caption in captions
+    )
     assert all(chart.bbox[2] > 520.0 for chart in charts)
     assert tables == []
 
@@ -4308,7 +4578,9 @@ def test_collect_candidates_rejects_internal_label_grid_without_metric_signal(
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
     assert charts == []
 
 
@@ -4327,7 +4599,9 @@ def test_collect_candidates_extends_internal_panel_to_side_labels(tmp_path) -> N
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
     assert len(charts) == 1
     chart = charts[0]
     assert chart.bbox[2] > 560.0
@@ -4350,7 +4624,9 @@ def test_collect_candidates_extends_titled_panel_to_bottom_labels(tmp_path) -> N
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
     assert len(charts) == 1
     chart = charts[0]
     assert chart.bbox[1] <= 90.0
@@ -4372,7 +4648,9 @@ def test_collect_candidates_keeps_internal_panel_title_band_padding(tmp_path) ->
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
 
     assert len(charts) == 1
     assert charts[0].bbox[1] < 40.0
@@ -4393,7 +4671,9 @@ def test_collect_candidates_rejects_contents_panel_page(tmp_path) -> None:
         _ctx(),
     )
 
-    charts = [candidate for candidate in response.candidates if candidate.kind == "chart"]
+    charts = [
+        candidate for candidate in response.candidates if candidate.kind == "chart"
+    ]
     assert charts == []
 
 
@@ -4426,7 +4706,9 @@ def test_extend_panel_with_adjacent_text_blocks_keeps_wide_internal_title_band(
     assert expanded.y0 < 120.0
 
 
-def test_extend_panel_with_adjacent_text_blocks_rejects_cross_panel_text(tmp_path) -> None:
+def test_extend_panel_with_adjacent_text_blocks_rejects_cross_panel_text(
+    tmp_path,
+) -> None:
     pdf_path = tmp_path / "cross-panel-label.pdf"
     _build_cross_panel_label_pdf(pdf_path)
 
@@ -4628,7 +4910,9 @@ def test_collect_candidates_table_bbox_keeps_title_and_notes_but_excludes_body_t
         _ctx(),
     )
 
-    tables = [candidate for candidate in response.candidates if candidate.kind == "table"]
+    tables = [
+        candidate for candidate in response.candidates if candidate.kind == "table"
+    ]
     assert tables
     table = max(tables, key=lambda candidate: candidate.bbox[2] - candidate.bbox[0])
 
@@ -4637,7 +4921,9 @@ def test_collect_candidates_table_bbox_keeps_title_and_notes_but_excludes_body_t
     assert table.bbox[3] < 485.0
 
 
-def test_expand_table_bbox_stream_trims_unrelated_top_notes_and_body_text(tmp_path) -> None:
+def test_expand_table_bbox_stream_trims_unrelated_top_notes_and_body_text(
+    tmp_path,
+) -> None:
     pdf_path = tmp_path / "stream-table-spillover.pdf"
     _build_stream_table_spillover_pdf(pdf_path)
 
@@ -4654,7 +4940,9 @@ def test_expand_table_bbox_stream_trims_unrelated_top_notes_and_body_text(tmp_pa
     assert expanded[3] < 708.0
 
 
-def test_expand_table_bbox_stream_keeps_trailing_row_and_wrapped_footnotes(tmp_path) -> None:
+def test_expand_table_bbox_stream_keeps_trailing_row_and_wrapped_footnotes(
+    tmp_path,
+) -> None:
     pdf_path = tmp_path / "stream-country-table-split.pdf"
     _build_stream_country_table_split_pdf(pdf_path)
 
@@ -4671,7 +4959,9 @@ def test_expand_table_bbox_stream_keeps_trailing_row_and_wrapped_footnotes(tmp_p
     assert expanded[3] < 690.0
 
 
-def test_expand_table_bbox_stream_clamps_internal_title_and_references(tmp_path) -> None:
+def test_expand_table_bbox_stream_clamps_internal_title_and_references(
+    tmp_path,
+) -> None:
     pdf_path = tmp_path / "stream-table-heading-bounds.pdf"
     _build_stream_table_with_heading_bounds_pdf(pdf_path)
 
@@ -4806,7 +5096,9 @@ def test_collect_candidates_rejects_boxed_prose_false_table(tmp_path) -> None:
         _ctx(),
     )
 
-    tables = [candidate for candidate in response.candidates if candidate.kind == "table"]
+    tables = [
+        candidate for candidate in response.candidates if candidate.kind == "table"
+    ]
     assert tables == []
 
 
@@ -4829,7 +5121,9 @@ def test_collect_candidates_rejects_contents_like_false_table(tmp_path, caplog) 
         _ctx(),
     )
 
-    tables = [candidate for candidate in response.candidates if candidate.kind == "table"]
+    tables = [
+        candidate for candidate in response.candidates if candidate.kind == "table"
+    ]
     assert tables == []
     events = _events(caplog, "market_lense.pdf_service.candidate_extraction")
     complete = next(

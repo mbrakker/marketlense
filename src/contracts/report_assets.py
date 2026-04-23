@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
-from src.contracts.candidates import Candidate
+from src.contracts.candidates import Candidate, CandidateFeatures
 from src.contracts.pdf_context import PdfContext
 from src.contracts.report_models import CropItem, RankedCandidate
 
@@ -234,6 +234,12 @@ class CropRefineCandidate:
         default_factory=dict,
         metadata={"doc": "Candidate metadata with heuristic signals."},
     )
+    features: Optional[CandidateFeatures] = field(
+        default=None,
+        metadata={
+            "doc": "Typed candidate features used for crop refinement decisions."
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -309,6 +315,22 @@ class CropRefineRequest:
         default_factory=dict,
         metadata={"doc": "Per-model pricing table for cost estimation."},
     )
+    response_cache_enabled: bool = field(
+        default=False,
+        metadata={
+            "doc": "Whether semantic response caching is enabled for this request."
+        },
+    )
+    response_cache_dir: str = field(
+        default="./cache",
+        metadata={"doc": "Root cache directory for semantic OpenAI responses."},
+    )
+    response_cache_ttl_seconds: Optional[float] = field(
+        default=604800.0,
+        metadata={
+            "doc": "Semantic response cache TTL in seconds; None disables expiry."
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -371,6 +393,22 @@ class RankRequest:
     model_pricing: dict = field(
         default_factory=dict,
         metadata={"doc": "Per-model pricing table for cost estimation."},
+    )
+    response_cache_enabled: bool = field(
+        default=False,
+        metadata={
+            "doc": "Whether semantic response caching is enabled for this request."
+        },
+    )
+    response_cache_dir: str = field(
+        default="./cache",
+        metadata={"doc": "Root cache directory for semantic OpenAI responses."},
+    )
+    response_cache_ttl_seconds: Optional[float] = field(
+        default=604800.0,
+        metadata={
+            "doc": "Semantic response cache TTL in seconds; None disables expiry."
+        },
     )
 
 

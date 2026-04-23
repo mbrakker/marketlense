@@ -15,7 +15,7 @@ import pdfplumber
 import pymupdf as fitz
 from PIL import ImageFilter
 
-from src.contracts.candidates import Candidate
+from src.contracts.candidates import Candidate, CandidateFeatures
 
 from .figures import (
     TABLE_SETTINGS_LATTICE,
@@ -61,6 +61,36 @@ from .figures import (
 )
 from .page_artifacts import build_page_artifacts, is_full_page_scan_without_text
 from .visual_candidates import _render_visual_probe_image, _visual_probe_profile
+
+
+def _table_candidate_features(candidate: _TableCandidate) -> CandidateFeatures:
+    return CandidateFeatures(
+        schema_version="1.0",
+        area_frac=round(candidate.area_frac, 4),
+        aspect=round(candidate.aspect, 2),
+        text_chars=candidate.text_len,
+        rows=candidate.row_count,
+        cols=candidate.col_count,
+        numeric_ratio=round(candidate.numeric_ratio, 3),
+        avg_words_per_cell=round(candidate.avg_words_per_cell, 2),
+        method=candidate.method,
+    )
+
+
+def _table_candidate_meta(candidate: _TableCandidate) -> dict[str, object]:
+    features = _table_candidate_features(candidate)
+    return {
+        "method": features.method,
+        "rows": features.rows,
+        "cols": features.cols,
+        "non_empty_cells": candidate.non_empty_cells,
+        "numeric_ratio": features.numeric_ratio,
+        "avg_words_per_cell": features.avg_words_per_cell,
+        "index_page_ratio": round(candidate.index_page_ratio, 2),
+        "text_len": candidate.text_len,
+        "area_frac": features.area_frac,
+        "aspect": features.aspect,
+    }
 
 
 def _mask_run_count(mask: np.ndarray) -> int:
@@ -299,6 +329,9 @@ def _extract_tables_sequential(
                                 fitz_page
                             )
                             if image_table_candidate is not None:
+                                features = _table_candidate_features(
+                                    image_table_candidate
+                                )
                                 out.append(
                                     Candidate(
                                         schema_version="1.0",
@@ -309,32 +342,16 @@ def _extract_tables_sequential(
                                         preview_text="",
                                         caption=None,
                                         thumb_path=None,
-                                        meta={
-                                            "method": image_table_candidate.method,
-                                            "rows": image_table_candidate.row_count,
-                                            "cols": image_table_candidate.col_count,
-                                            "non_empty_cells": image_table_candidate.non_empty_cells,
-                                            "numeric_ratio": round(
-                                                image_table_candidate.numeric_ratio, 3
-                                            ),
-                                            "avg_words_per_cell": round(
-                                                image_table_candidate.avg_words_per_cell, 2
-                                            ),
-                                            "index_page_ratio": round(
-                                                image_table_candidate.index_page_ratio, 2
-                                            ),
-                                            "text_len": image_table_candidate.text_len,
-                                            "area_frac": round(
-                                                image_table_candidate.area_frac, 4
-                                            ),
-                                            "aspect": round(
-                                                image_table_candidate.aspect, 2
-                                            ),
-                                        },
+                                        meta=_table_candidate_meta(
+                                            image_table_candidate
+                                        ),
+                                        features=features,
                                     )
                                 )
                                 continue
-                            stats["skipped_pages"] = _int_count(stats.get("skipped_pages", 0)) + 1
+                            stats["skipped_pages"] = (
+                                _int_count(stats.get("skipped_pages", 0)) + 1
+                            )
                             _tally_reason(stats, "page_full_scan_no_text")
                             continue
                         page_artifacts = build_page_artifacts(fitz_page)
@@ -400,9 +417,7 @@ def _extract_tables_sequential(
                             page_text_blocks=page_text_blocks,
                             page_text_bands=page_text_bands,
                         )
-                    final_candidates.append(
-                        replace(candidate, bbox=(x0, y0, x1, y1))
-                    )
+                    final_candidates.append(replace(candidate, bbox=(x0, y0, x1, y1)))
                 if fitz_page is not None:
                     image_table_candidate = _full_page_image_table_candidate(fitz_page)
                     if image_table_candidate is not None:
@@ -423,11 +438,14 @@ def _extract_tables_sequential(
                         containment = _table_containment_ratio(
                             candidate.bbox, existing.bbox
                         )
-                        ranked_overlap = (
-                            containment >= 0.8
-                            and ("ranked" in (candidate.method, existing.method))
+                        ranked_overlap = containment >= 0.8 and (
+                            "ranked" in (candidate.method, existing.method)
                         )
-                        if iou < TABLE_DEDUP_IOU and containment < 0.98 and not ranked_overlap:
+                        if (
+                            iou < TABLE_DEDUP_IOU
+                            and containment < 0.98
+                            and not ranked_overlap
+                        ):
                             continue
                         preferred = candidate
                         if containment >= 0.98:
@@ -466,6 +484,7 @@ def _extract_tables_sequential(
                 ):
                     x0, y0, x1, y1 = candidate.bbox
                     cid = f"table-{pno}-{index}"
+                    features = _table_candidate_features(candidate)
                     out.append(
                         Candidate(
                             schema_version="1.0",
@@ -476,22 +495,8 @@ def _extract_tables_sequential(
                             preview_text=candidate.preview,
                             caption=None,
                             thumb_path=None,
-                            meta={
-                                "method": candidate.method,
-                                "rows": candidate.row_count,
-                                "cols": candidate.col_count,
-                                "non_empty_cells": candidate.non_empty_cells,
-                                "numeric_ratio": round(candidate.numeric_ratio, 3),
-                                "avg_words_per_cell": round(
-                                    candidate.avg_words_per_cell, 2
-                                ),
-                                "index_page_ratio": round(
-                                    candidate.index_page_ratio, 2
-                                ),
-                                "text_len": candidate.text_len,
-                                "area_frac": round(candidate.area_frac, 4),
-                                "aspect": round(candidate.aspect, 2),
-                            },
+                            meta=_table_candidate_meta(candidate),
+                            features=features,
                         )
                     )
                     if max_candidates > 0 and len(out) >= max_candidates:
@@ -534,7 +539,9 @@ def extract_table_candidates(
             doc=doc,
         )
     page_numbers = pages if pages is not None else all_pages
-    worker_count = _resolve_candidate_parallel_workers(parallel_workers, len(page_numbers))
+    worker_count = _resolve_candidate_parallel_workers(
+        parallel_workers, len(page_numbers)
+    )
     if worker_count <= 1 or len(page_numbers) <= 1:
         return _extract_tables_sequential(
             pdf_path,

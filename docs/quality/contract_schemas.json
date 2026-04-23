@@ -2594,6 +2594,16 @@
             }
           ]
         },
+        "features": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.candidates.CandidateFeatures"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "id": {
           "type": "string"
         },
@@ -2639,6 +2649,46 @@
         "bbox",
         "preview_text"
       ],
+      "type": "object"
+    },
+    "src.contracts.candidates.CandidateFeatures": {
+      "additionalProperties": false,
+      "properties": {
+        "area_frac": {
+          "type": "number"
+        },
+        "aspect": {
+          "type": "number"
+        },
+        "avg_words_per_cell": {
+          "type": "number"
+        },
+        "cols": {
+          "type": "integer"
+        },
+        "method": {
+          "type": "string"
+        },
+        "numeric_ratio": {
+          "type": "number"
+        },
+        "rows": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "text_chars": {
+          "type": "integer"
+        },
+        "text_lines": {
+          "type": "integer"
+        },
+        "text_ratio": {
+          "type": "number"
+        }
+      },
+      "required": [],
       "type": "object"
     },
     "src.contracts.categories.CategoryAssignment": {
@@ -7649,6 +7699,22 @@
         "model_pricing": {
           "type": "string"
         },
+        "response_cache_dir": {
+          "type": "string"
+        },
+        "response_cache_enabled": {
+          "type": "boolean"
+        },
+        "response_cache_ttl_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "schema_version": {
           "type": "string"
         },
@@ -7710,6 +7776,22 @@
         },
         "model_pricing": {
           "type": "string"
+        },
+        "response_cache_dir": {
+          "type": "string"
+        },
+        "response_cache_enabled": {
+          "type": "boolean"
+        },
+        "response_cache_ttl_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "schema_version": {
           "type": "string"
@@ -7774,6 +7856,22 @@
         },
         "pdf_path": {
           "type": "string"
+        },
+        "response_cache_dir": {
+          "type": "string"
+        },
+        "response_cache_enabled": {
+          "type": "boolean"
+        },
+        "response_cache_ttl_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "schema_version": {
           "type": "string"
@@ -7889,6 +7987,22 @@
         },
         "model_pricing": {
           "type": "string"
+        },
+        "response_cache_dir": {
+          "type": "string"
+        },
+        "response_cache_enabled": {
+          "type": "boolean"
+        },
+        "response_cache_ttl_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "schema_version": {
           "type": "string"
@@ -11898,6 +12012,16 @@
         "caption": {
           "type": "string"
         },
+        "features": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.candidates.CandidateFeatures"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "id": {
           "type": "string"
         },
@@ -12053,6 +12177,22 @@
         },
         "prompt_user_sha256": {
           "type": "string"
+        },
+        "response_cache_dir": {
+          "type": "string"
+        },
+        "response_cache_enabled": {
+          "type": "boolean"
+        },
+        "response_cache_ttl_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "schema_version": {
           "type": "string"
@@ -12522,6 +12662,22 @@
         },
         "prompt_user_sha256": {
           "type": "string"
+        },
+        "response_cache_dir": {
+          "type": "string"
+        },
+        "response_cache_enabled": {
+          "type": "boolean"
+        },
+        "response_cache_ttl_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "schema_version": {
           "type": "string"
