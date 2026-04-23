@@ -10,6 +10,7 @@ from urllib.parse import urlsplit
 
 from src.contracts.drive import (
     DriveDownloadRequest,
+    DriveDownloadResponse,
     DriveFile,
     DriveFolderFileListRequest,
     DriveFolderFileListResponse,
@@ -156,8 +157,10 @@ class PublisherInventoryDependencies:
         [DriveFolderFileListRequest, RunContext],
         DriveFolderFileListResponse,
     ]
-    download_pdf: Callable[[DriveDownloadRequest, RunContext], object]
-    upload_bytes: Callable[[DriveUploadBytesRequest, RunContext], DriveUploadBytesResponse]
+    download_pdf: Callable[[DriveDownloadRequest, RunContext], DriveDownloadResponse]
+    upload_bytes: Callable[
+        [DriveUploadBytesRequest, RunContext], DriveUploadBytesResponse
+    ]
 
     @classmethod
     def default(cls) -> "PublisherInventoryDependencies":
@@ -167,7 +170,9 @@ class PublisherInventoryDependencies:
             validate_publisher_inventory_coverage=validate_publisher_inventory_coverage,
             evaluate_publisher_inventory_run_quality=evaluate_publisher_inventory_run_quality,
             parse_publisher_inventory_snapshot=lambda snapshot_json, source, ctx: (
-                parse_publisher_inventory_snapshot(snapshot_json, source=source, ctx=ctx)
+                parse_publisher_inventory_snapshot(
+                    snapshot_json, source=source, ctx=ctx
+                )
             ),
             screen_publisher_inventory_candidates=screen_publisher_inventory_candidates,
             qualify_publisher_inventory_candidates=qualify_publisher_inventory_candidates,
@@ -246,7 +251,12 @@ def run_publisher_inventory_discovery(
             },
         )
     try:
-        previous_snapshot, previous_snapshot_file_id, previous_snapshot_file_name, previous_snapshot_sha256 = _load_previous_snapshot(
+        (
+            previous_snapshot,
+            previous_snapshot_file_id,
+            previous_snapshot_file_name,
+            previous_snapshot_sha256,
+        ) = _load_previous_snapshot(
             publisher_state=publisher_state,
             folder_id=folder_id,
             settings=request.settings,
@@ -269,6 +279,7 @@ def run_publisher_inventory_discovery(
                 remembered_route_trace=publisher_state.inventory_route_trace,
                 remembered_scenario_summary=publisher_state.inventory_scenario_summary,
                 previous_run_quality_summary=publisher_state.inventory_run_quality_summary,
+                route_policy=publisher_state.inventory_route_policy,
                 enable_structured_route_reuse=request.settings.enable_structured_route_reuse,
             ),
             ctx,
@@ -447,8 +458,8 @@ def run_publisher_inventory_discovery(
             ctx=ctx,
             dependencies=deps,
         )
-        candidate_snapshot_changed = (
-            build_response.snapshot_sha256 != (previous_snapshot_sha256 or "")
+        candidate_snapshot_changed = build_response.snapshot_sha256 != (
+            previous_snapshot_sha256 or ""
         )
         coverage_response = deps.validate_publisher_inventory_coverage(
             PublisherInventoryCoverageValidationRequest(
@@ -563,7 +574,9 @@ def run_publisher_inventory_discovery(
                     },
                 )
             )
-        snapshot_changed = candidate_snapshot_changed and coverage_response.snapshot_allowed
+        snapshot_changed = (
+            candidate_snapshot_changed and coverage_response.snapshot_allowed
+        )
         no_report_assets_detected = coverage_response.no_report_assets_detected
         run_quality_summary = deps.evaluate_publisher_inventory_run_quality(
             PublisherInventoryRunQualityEvaluationRequest(
@@ -618,7 +631,10 @@ def run_publisher_inventory_discovery(
         )
         if coverage_response.should_raise_error:
             raise AppError(
-                code=str(coverage_response.error_code or "publisher_inventory_coverage_invalid"),
+                code=str(
+                    coverage_response.error_code
+                    or "publisher_inventory_coverage_invalid"
+                ),
                 message=str(
                     coverage_response.error_message
                     or coverage_response.reason
@@ -755,9 +771,7 @@ def run_publisher_inventory_discovery(
                 db_path=request.reports_db,
                 normalized_url=normalized_url,
                 status=(
-                    "passed:no_report_assets"
-                    if no_report_assets_detected
-                    else "passed"
+                    "passed:no_report_assets" if no_report_assets_detected else "passed"
                 ),
             ),
             ctx,
@@ -1152,7 +1166,12 @@ def _snapshot_file_name() -> str:
 
 
 def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return (
+        datetime.now(timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def _source_domain_for_url(url: str) -> str:

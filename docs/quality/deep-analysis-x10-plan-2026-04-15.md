@@ -148,15 +148,6 @@ Scoring rubric:
     - Logs include artifact links and error class.
     - Triage playbook uses bundle consistently.
 
-- **Title:** Adaptive route switching retries with learned ordering [Impact: 5/5, Effort: 4/5]
-  - Explanation: Use dynamic retry sequencing (HTTP -> browser -> email/onsite) based on learned success. Avoids repeated dead-ends and improves success-per-attempt by >10x on gated domains.
-  - Pros: Better yield, fewer wasted attempts.
-  - Cons: More complex planner and observability needs.
-  - Acceptance Criteria:
-    - Retry planner supports conditional route switching.
-    - Attempt count and route reasons are logged.
-    - Candidate cohorts show uplift in download success.
-
 ---
 
 ## 5) State, Idempotency, and Control-Plane Durability

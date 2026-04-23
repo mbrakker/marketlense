@@ -29,10 +29,14 @@ class PublisherInventoryRawCandidate:
         metadata={"doc": "Raw candidate title text extracted from the source page."}
     )
     source_page_url: str = field(
-        metadata={"doc": "Absolute URL of the inventory page where this candidate was found."}
+        metadata={
+            "doc": "Absolute URL of the inventory page where this candidate was found."
+        }
     )
     discovered_on_page_number: int = field(
-        metadata={"doc": "One-based inventory page number where this candidate was found."}
+        metadata={
+            "doc": "One-based inventory page number where this candidate was found."
+        }
     )
     pdf_url: Optional[str] = field(
         default=None,
@@ -40,15 +44,21 @@ class PublisherInventoryRawCandidate:
     )
     published_at_text: Optional[str] = field(
         default=None,
-        metadata={"doc": "Optional raw published-date text extracted for this candidate."},
+        metadata={
+            "doc": "Optional raw published-date text extracted for this candidate."
+        },
     )
     provenance: Optional[str] = field(
         default=None,
-        metadata={"doc": "Optional extraction provenance for the raw candidate, for example browser_dom, browser_rendered_html_supplement, http_supplement, http_parse, or direct_pdf_source."},
+        metadata={
+            "doc": "Optional extraction provenance for the raw candidate, for example browser_dom, browser_rendered_html_supplement, http_supplement, http_parse, or direct_pdf_source."
+        },
     )
     confidence: Optional[float] = field(
         default=None,
-        metadata={"doc": "Optional deterministic extraction-confidence score in the range 0.0-1.0 when a route computes candidate-quality confidence before acceptance."},
+        metadata={
+            "doc": "Optional deterministic extraction-confidence score in the range 0.0-1.0 when a route computes candidate-quality confidence before acceptance."
+        },
     )
 
 
@@ -62,11 +72,15 @@ class PublisherInventoryItem:
     )
     title: str = field(metadata={"doc": "Normalized report title."})
     discovered_on_page_number: int = field(
-        metadata={"doc": "One-based inventory page number where the item was first found."}
+        metadata={
+            "doc": "One-based inventory page number where the item was first found."
+        }
     )
     pdf_url: Optional[str] = field(
         default=None,
-        metadata={"doc": "Normalized PDF URL when the report link points directly to a PDF or one is known."},
+        metadata={
+            "doc": "Normalized PDF URL when the report link points directly to a PDF or one is known."
+        },
     )
     published_at_text: Optional[str] = field(
         default=None,
@@ -84,17 +98,25 @@ class PublisherInventoryCandidateTrace:
     )
     title: str = field(metadata={"doc": "Normalized candidate title."})
     discovered_on_page_number: int = field(
-        metadata={"doc": "One-based inventory page number where the candidate was first found."}
+        metadata={
+            "doc": "One-based inventory page number where the candidate was first found."
+        }
     )
     source_page_urls: List[str] = field(
-        metadata={"doc": "Distinct inventory page URLs where the candidate was observed during the run."}
+        metadata={
+            "doc": "Distinct inventory page URLs where the candidate was observed during the run."
+        }
     )
     discovery_provenances: List[str] = field(
-        metadata={"doc": "Distinct extraction provenance labels observed for the candidate during the run."}
+        metadata={
+            "doc": "Distinct extraction provenance labels observed for the candidate during the run."
+        }
     )
     pdf_url: Optional[str] = field(
         default=None,
-        metadata={"doc": "Normalized PDF URL when the candidate directly exposes a PDF or one was observed."},
+        metadata={
+            "doc": "Normalized PDF URL when the candidate directly exposes a PDF or one was observed."
+        },
     )
     published_at_text: Optional[str] = field(
         default=None,
@@ -102,7 +124,9 @@ class PublisherInventoryCandidateTrace:
     )
     max_confidence: Optional[float] = field(
         default=None,
-        metadata={"doc": "Maximum raw extraction-confidence value observed for the candidate during the run when available."},
+        metadata={
+            "doc": "Maximum raw extraction-confidence value observed for the candidate during the run when available."
+        },
     )
 
 
@@ -124,10 +148,14 @@ class PublisherInventorySnapshot:
         metadata={"doc": "UTC timestamp when the snapshot was produced."}
     )
     route_kind: str = field(
-        metadata={"doc": "Discovery route kind used for this snapshot: http_parse or browser_render."}
+        metadata={
+            "doc": "Discovery route kind used for this snapshot: http_parse or browser_render."
+        }
     )
     route_summary: str = field(
-        metadata={"doc": "Summary of the successful discovery route for reuse on later runs."}
+        metadata={
+            "doc": "Summary of the successful discovery route for reuse on later runs."
+        }
     )
     final_page_url: str = field(
         metadata={"doc": "Final page URL observed at the end of the discovery run."}
@@ -146,11 +174,15 @@ class PublisherInventoryDiffItem:
         metadata={"doc": "Publisher inventory diff item schema version."}
     )
     canonical_url: str = field(
-        metadata={"doc": "Normalized canonical report URL that is new in the current snapshot."}
+        metadata={
+            "doc": "Normalized canonical report URL that is new in the current snapshot."
+        }
     )
     title: str = field(metadata={"doc": "Normalized title for the new report."})
     discovered_on_page_number: int = field(
-        metadata={"doc": "One-based inventory page number where the new report link was found."}
+        metadata={
+            "doc": "One-based inventory page number where the new report link was found."
+        }
     )
 
 
@@ -160,7 +192,9 @@ class PublisherInventorySettings:
         metadata={"doc": "Publisher inventory discovery settings schema version."}
     )
     openrouter_api_key: str = field(
-        metadata={"doc": "OpenRouter API key used when browser-render fallback is required."}
+        metadata={
+            "doc": "OpenRouter API key used when browser-render fallback is required."
+        }
     )
     model: str = field(
         metadata={"doc": "Model ID used by the browser-render fallback flow."}
@@ -178,23 +212,33 @@ class PublisherInventorySettings:
         metadata={"doc": "Root directory used for temporary browser discovery output."}
     )
     reports_db: str = field(
-        metadata={"doc": "SQLite reports DB path used for publisher lookups and snapshot indexing."}
+        metadata={
+            "doc": "SQLite reports DB path used for publisher lookups and snapshot indexing."
+        }
     )
     google_sa_path: str = field(
-        metadata={"doc": "Filesystem path to the Google service account JSON used for Drive access when drive_auth_mode=service_account."}
+        metadata={
+            "doc": "Filesystem path to the Google service account JSON used for Drive access when drive_auth_mode=service_account."
+        }
     )
     prompt_namespace: str = field(
-        metadata={"doc": "Prompt namespace used for browser-render inventory discovery."}
+        metadata={
+            "doc": "Prompt namespace used for browser-render inventory discovery."
+        }
     )
     pagination_max_pages: int = field(
-        metadata={"doc": "Hard upper bound on inventory pages traversed in one discovery run."}
+        metadata={
+            "doc": "Hard upper bound on inventory pages traversed in one discovery run."
+        }
     )
     http_timeout_seconds: float = field(
         metadata={"doc": "HTTP timeout in seconds for direct HTML fetch discovery."}
     )
     command_time_budget_seconds: float = field(
         default=570.0,
-        metadata={"doc": "Hard per-publisher workflow budget in seconds. The orchestrator must stop the run before this budget is exceeded so the command fails explicitly instead of hanging until an external shell timeout."},
+        metadata={
+            "doc": "Hard per-publisher workflow budget in seconds. The orchestrator must stop the run before this budget is exceeded so the command fails explicitly instead of hanging until an external shell timeout."
+        },
     )
     drive_auth_mode: str = field(
         default="service_account",
@@ -202,11 +246,15 @@ class PublisherInventorySettings:
     )
     google_oauth_client_path: Optional[str] = field(
         default=None,
-        metadata={"doc": "Optional OAuth desktop client JSON path when drive_auth_mode=oauth_user."},
+        metadata={
+            "doc": "Optional OAuth desktop client JSON path when drive_auth_mode=oauth_user."
+        },
     )
     google_oauth_token_path: Optional[str] = field(
         default=None,
-        metadata={"doc": "Optional OAuth authorized-user token JSON path when drive_auth_mode=oauth_user."},
+        metadata={
+            "doc": "Optional OAuth authorized-user token JSON path when drive_auth_mode=oauth_user."
+        },
     )
     openrouter_http_referer: Optional[str] = field(
         default=None,
@@ -214,23 +262,33 @@ class PublisherInventorySettings:
     )
     headed: bool = field(
         default=False,
-        metadata={"doc": "Whether browser-render discovery should run in a visible browser."},
+        metadata={
+            "doc": "Whether browser-render discovery should run in a visible browser."
+        },
     )
     force_browser: bool = field(
         default=False,
-        metadata={"doc": "Whether discovery must use the browser-render route instead of direct HTTP parsing."},
+        metadata={
+            "doc": "Whether discovery must use the browser-render route instead of direct HTTP parsing."
+        },
     )
     enable_deferred_candidate_recovery: bool = field(
         default=False,
-        metadata={"doc": "Whether the orchestrator may schedule deferred second-pass recovery for strong candidates rejected only due to recoverable landing-page failures."},
+        metadata={
+            "doc": "Whether the orchestrator may schedule deferred second-pass recovery for strong candidates rejected only due to recoverable landing-page failures."
+        },
     )
     enable_structured_route_reuse: bool = field(
         default=False,
-        metadata={"doc": "Whether discovery route planning may prefer typed remembered route traces over legacy free-text route summaries."},
+        metadata={
+            "doc": "Whether discovery route planning may prefer typed remembered route traces over legacy free-text route summaries."
+        },
     )
     enable_preflight_classifier_and_direct_detail: bool = field(
         default=False,
-        metadata={"doc": "Whether discovery may use cheap scenario classification and direct-detail short-circuiting before broader archive traversal."},
+        metadata={
+            "doc": "Whether discovery may use cheap scenario classification and direct-detail short-circuiting before broader archive traversal."
+        },
     )
     retry_retries: int = field(
         default=1,
@@ -250,87 +308,129 @@ class PublisherInventorySettings:
     )
     openai_api_key: str = field(
         default="",
-        metadata={"doc": "OpenAI API key used for candidate screening before report_sources persistence when candidate_screening_enabled=true."},
+        metadata={
+            "doc": "OpenAI API key used for candidate screening before report_sources persistence when candidate_screening_enabled=true."
+        },
     )
     openai_models: dict[str, str] = field(
         default_factory=dict,
-        metadata={"doc": "Optional per-namespace OpenAI model overrides used by publisher-inventory candidate screening."},
+        metadata={
+            "doc": "Optional per-namespace OpenAI model overrides used by publisher-inventory candidate screening."
+        },
     )
     openai_seed: Optional[int] = field(
         default=None,
-        metadata={"doc": "Optional OpenAI seed used for publisher-inventory candidate screening."},
+        metadata={
+            "doc": "Optional OpenAI seed used for publisher-inventory candidate screening."
+        },
     )
     candidate_screening_enabled: bool = field(
         default=True,
-        metadata={"doc": "Whether new diff candidates should be screened by OpenAI before insertion into report_sources."},
+        metadata={
+            "doc": "Whether new diff candidates should be screened by OpenAI before insertion into report_sources."
+        },
     )
     candidate_screening_model: str = field(
         default="gpt-5-nano",
-        metadata={"doc": "Base OpenAI model used for candidate screening before report_sources persistence."},
+        metadata={
+            "doc": "Base OpenAI model used for candidate screening before report_sources persistence."
+        },
     )
     candidate_screening_temperature: float = field(
         default=1.0,
-        metadata={"doc": "Sampling temperature for publisher-inventory candidate screening."},
+        metadata={
+            "doc": "Sampling temperature for publisher-inventory candidate screening."
+        },
     )
     candidate_screening_timeout_seconds: float = field(
         default=120.0,
-        metadata={"doc": "Timeout in seconds for publisher-inventory candidate screening calls."},
+        metadata={
+            "doc": "Timeout in seconds for publisher-inventory candidate screening calls."
+        },
     )
     candidate_screening_batch_size: int = field(
         default=20,
-        metadata={"doc": "Maximum number of candidates sent to a single publisher-inventory screening LLM call."},
+        metadata={
+            "doc": "Maximum number of candidates sent to a single publisher-inventory screening LLM call."
+        },
     )
     candidate_screening_prompt_namespace: str = field(
         default="publisher_inventory/meaningful_candidate_screen",
-        metadata={"doc": "Prompt namespace used to screen new publisher-inventory diff candidates before queueing them for download."},
+        metadata={
+            "doc": "Prompt namespace used to screen new publisher-inventory diff candidates before queueing them for download."
+        },
     )
     candidate_quality_check_enabled: bool = field(
         default=True,
-        metadata={"doc": "Whether landing-page quality checks should run after LLM screening and before report_sources persistence."},
+        metadata={
+            "doc": "Whether landing-page quality checks should run after LLM screening and before report_sources persistence."
+        },
     )
     candidate_quality_check_timeout_seconds: float = field(
         default=15.0,
-        metadata={"doc": "Per-candidate HTTP timeout in seconds for landing-page quality checks before report_sources persistence."},
+        metadata={
+            "doc": "Per-candidate HTTP timeout in seconds for landing-page quality checks before report_sources persistence."
+        },
     )
     candidate_quality_check_max_workers: int = field(
         default=6,
-        metadata={"doc": "Maximum parallel landing-page fetch workers used by the candidate quality-check service."},
+        metadata={
+            "doc": "Maximum parallel landing-page fetch workers used by the candidate quality-check service."
+        },
     )
     cost_ledger_path: str = field(
         default="./out/cost-ledger.jsonl",
-        metadata={"doc": "Filesystem path for OpenAI cost ledger entries produced by candidate screening."},
+        metadata={
+            "doc": "Filesystem path for OpenAI cost ledger entries produced by candidate screening."
+        },
     )
     cost_daily_path: str = field(
         default="./out/cost-daily.json",
-        metadata={"doc": "Filesystem path for daily OpenAI cost rollups produced by candidate screening."},
+        metadata={
+            "doc": "Filesystem path for daily OpenAI cost rollups produced by candidate screening."
+        },
     )
     model_pricing: dict = field(
         default_factory=dict,
-        metadata={"doc": "Per-model pricing table used for candidate-screening cost estimation."},
+        metadata={
+            "doc": "Per-model pricing table used for candidate-screening cost estimation."
+        },
     )
     llm_retry_retries: int = field(
         default=1,
-        metadata={"doc": "Maximum retry count for individual candidate-screening LLM calls."},
+        metadata={
+            "doc": "Maximum retry count for individual candidate-screening LLM calls."
+        },
     )
     llm_retry_base_delay_seconds: float = field(
         default=1.0,
-        metadata={"doc": "Base delay in seconds before the first candidate-screening LLM retry."},
+        metadata={
+            "doc": "Base delay in seconds before the first candidate-screening LLM retry."
+        },
     )
     llm_retry_backoff_step_seconds: float = field(
         default=1.0,
-        metadata={"doc": "Additional linear backoff delay added per candidate-screening LLM retry attempt."},
+        metadata={
+            "doc": "Additional linear backoff delay added per candidate-screening LLM retry attempt."
+        },
     )
     llm_retry_jitter_seconds: float = field(
         default=0.25,
-        metadata={"doc": "Maximum jitter in seconds added to each candidate-screening LLM retry delay."},
+        metadata={
+            "doc": "Maximum jitter in seconds added to each candidate-screening LLM retry delay."
+        },
     )
     llm_circuit_breaker_failure_threshold: int = field(
         default=3,
-        metadata={"doc": "Consecutive retryable candidate-screening LLM failures required to open the circuit breaker."},
+        metadata={
+            "doc": "Consecutive retryable candidate-screening LLM failures required to open the circuit breaker."
+        },
     )
     llm_circuit_breaker_recovery_seconds: float = field(
         default=30.0,
-        metadata={"doc": "Cooldown in seconds before the candidate-screening LLM circuit breaker allows a probe call."},
+        metadata={
+            "doc": "Cooldown in seconds before the candidate-screening LLM circuit breaker allows a probe call."
+        },
     )
 
 
@@ -340,11 +440,15 @@ class PublisherInventoryCandidateScreeningItem:
         metadata={"doc": "Publisher inventory candidate-screening item schema version."}
     )
     canonical_url: str = field(
-        metadata={"doc": "Normalized candidate URL under review for future download persistence."}
+        metadata={
+            "doc": "Normalized candidate URL under review for future download persistence."
+        }
     )
     title: str = field(metadata={"doc": "Normalized candidate title under review."})
     discovered_on_page_number: int = field(
-        metadata={"doc": "One-based inventory page number where the candidate was found."}
+        metadata={
+            "doc": "One-based inventory page number where the candidate was found."
+        }
     )
     source_page_url: str = field(
         metadata={"doc": "Inventory page URL where the candidate was found."}
@@ -354,42 +458,58 @@ class PublisherInventoryCandidateScreeningItem:
 @dataclass(frozen=True)
 class PublisherInventoryCandidateScreeningDecision:
     schema_version: str = field(
-        metadata={"doc": "Publisher inventory candidate-screening decision schema version."}
+        metadata={
+            "doc": "Publisher inventory candidate-screening decision schema version."
+        }
     )
     canonical_url: str = field(
         metadata={"doc": "Normalized candidate URL that was screened."}
     )
     accepted: bool = field(
-        metadata={"doc": "Whether the candidate is a meaningful report-like asset that should be queued for future download."}
+        metadata={
+            "doc": "Whether the candidate is a meaningful report-like asset that should be queued for future download."
+        }
     )
     reason: str = field(
-        metadata={"doc": "Short human-readable reason explaining the screening decision."}
+        metadata={
+            "doc": "Short human-readable reason explaining the screening decision."
+        }
     )
 
 
 @dataclass(frozen=True)
 class PublisherInventoryCandidateScreeningRequest:
     schema_version: str = field(
-        metadata={"doc": "Publisher inventory candidate-screening request schema version."}
+        metadata={
+            "doc": "Publisher inventory candidate-screening request schema version."
+        }
     )
     publisher_name: str = field(
         metadata={"doc": "Publisher display name resolved from the reports database."}
     )
     insights_url: str = field(
-        metadata={"doc": "Publisher insights URL whose new diff items are being screened."}
+        metadata={
+            "doc": "Publisher insights URL whose new diff items are being screened."
+        }
     )
     candidates: List[PublisherInventoryCandidateScreeningItem] = field(
-        metadata={"doc": "New diff candidates to evaluate before persistence into report_sources."}
+        metadata={
+            "doc": "New diff candidates to evaluate before persistence into report_sources."
+        }
     )
     settings: PublisherInventorySettings = field(
-        metadata={"doc": "Loaded publisher inventory discovery settings including candidate-screening configuration."}
+        metadata={
+            "doc": "Loaded publisher inventory discovery settings including candidate-screening configuration."
+        }
     )
 
 
 @dataclass(frozen=True)
 class PublisherInventoryCandidateScreeningResponse:
     schema_version: str = field(
-        metadata={"doc": "Publisher inventory candidate-screening response schema version."}
+        metadata={
+            "doc": "Publisher inventory candidate-screening response schema version."
+        }
     )
     approved_items: List[PublisherInventoryCandidateScreeningItem] = field(
         metadata={"doc": "Candidates accepted for future download persistence."}
@@ -398,18 +518,24 @@ class PublisherInventoryCandidateScreeningResponse:
         metadata={"doc": "Candidates rejected by the LLM screening step."}
     )
     decisions: List[PublisherInventoryCandidateScreeningDecision] = field(
-        metadata={"doc": "Full screening decision set returned for all reviewed candidates."}
+        metadata={
+            "doc": "Full screening decision set returned for all reviewed candidates."
+        }
     )
     model: str = field(
         metadata={"doc": "Resolved OpenAI model ID used for candidate screening."}
     )
     request_id: Optional[str] = field(
         default=None,
-        metadata={"doc": "Provider request identifier for the screening call, if available."},
+        metadata={
+            "doc": "Provider request identifier for the screening call, if available."
+        },
     )
     raw_response: str = field(
         default="",
-        metadata={"doc": "Raw model response text returned by the candidate-screening call."},
+        metadata={
+            "doc": "Raw model response text returned by the candidate-screening call."
+        },
     )
 
 
@@ -419,13 +545,19 @@ class PublisherInventoryLandingPageInspectionItem:
         metadata={"doc": "Landing-page inspection item schema version."}
     )
     canonical_url: str = field(
-        metadata={"doc": "Normalized candidate URL whose destination page should be inspected."}
+        metadata={
+            "doc": "Normalized candidate URL whose destination page should be inspected."
+        }
     )
     title: str = field(
-        metadata={"doc": "Current normalized candidate title carried into landing-page inspection."}
+        metadata={
+            "doc": "Current normalized candidate title carried into landing-page inspection."
+        }
     )
     discovered_on_page_number: int = field(
-        metadata={"doc": "One-based inventory page number where the candidate was found."}
+        metadata={
+            "doc": "One-based inventory page number where the candidate was found."
+        }
     )
     source_page_url: str = field(
         metadata={"doc": "Inventory page URL where the candidate was found."}
@@ -441,13 +573,19 @@ class PublisherInventoryLandingPageInspectionRequest:
         metadata={"doc": "Publisher display name for logging and inspection context."}
     )
     items: List[PublisherInventoryLandingPageInspectionItem] = field(
-        metadata={"doc": "Candidate landing pages that should be fetched and inspected."}
+        metadata={
+            "doc": "Candidate landing pages that should be fetched and inspected."
+        }
     )
     timeout_seconds: float = field(
-        metadata={"doc": "Per-request HTTP timeout in seconds used for landing-page inspection fetches."}
+        metadata={
+            "doc": "Per-request HTTP timeout in seconds used for landing-page inspection fetches."
+        }
     )
     max_workers: int = field(
-        metadata={"doc": "Maximum concurrent fetch workers used for landing-page inspection."}
+        metadata={
+            "doc": "Maximum concurrent fetch workers used for landing-page inspection."
+        }
     )
 
 
@@ -466,89 +604,133 @@ class PublisherInventoryLandingPageObservation:
         metadata={"doc": "Final URL after redirects during landing-page inspection."}
     )
     final_title: str = field(
-        metadata={"doc": "HTML <title> text extracted from the landing page when available."}
+        metadata={
+            "doc": "HTML <title> text extracted from the landing page when available."
+        }
     )
     h1_title: str = field(
-        metadata={"doc": "First H1 text extracted from the landing page when available."}
+        metadata={
+            "doc": "First H1 text extracted from the landing page when available."
+        }
     )
     og_title: str = field(
-        metadata={"doc": "Open Graph title extracted from the landing page when available."}
+        metadata={
+            "doc": "Open Graph title extracted from the landing page when available."
+        }
     )
     http_status_code: Optional[int] = field(
         default=None,
-        metadata={"doc": "HTTP status code observed for the landing page when available."},
+        metadata={
+            "doc": "HTTP status code observed for the landing page when available."
+        },
     )
     content_type: str = field(
         default="",
-        metadata={"doc": "Observed response Content-Type header for the landing page fetch."},
+        metadata={
+            "doc": "Observed response Content-Type header for the landing page fetch."
+        },
     )
     fetch_error: str = field(
         default="",
-        metadata={"doc": "Short fetch error message when the landing page could not be retrieved successfully."},
+        metadata={
+            "doc": "Short fetch error message when the landing page could not be retrieved successfully."
+        },
     )
     is_pdf: bool = field(
         default=False,
-        metadata={"doc": "Whether the inspected target resolved to a direct PDF/document asset."},
+        metadata={
+            "doc": "Whether the inspected target resolved to a direct PDF/document asset."
+        },
     )
     has_asset_type_term: bool = field(
         default=False,
-        metadata={"doc": "Whether the landing page URL/title/content contains report-like asset type terms."},
+        metadata={
+            "doc": "Whether the landing page URL/title/content contains report-like asset type terms."
+        },
     )
     has_download_language: bool = field(
         default=False,
-        metadata={"doc": "Whether the landing page includes strong download/access/get-report language."},
+        metadata={
+            "doc": "Whether the landing page includes strong download/access/get-report language."
+        },
     )
     has_gated_form: bool = field(
         default=False,
-        metadata={"doc": "Whether the landing page includes a form likely used to access the asset."},
+        metadata={
+            "doc": "Whether the landing page includes a form likely used to access the asset."
+        },
     )
     has_document_structure: bool = field(
         default=False,
-        metadata={"doc": "Whether the landing page exposes report-like document structure such as contents, methodology, or findings."},
+        metadata={
+            "doc": "Whether the landing page exposes report-like document structure such as contents, methodology, or findings."
+        },
     )
     has_price_or_purchase: bool = field(
         default=False,
-        metadata={"doc": "Whether the landing page exposes report product signals such as price, buy, or add-to-cart."},
+        metadata={
+            "doc": "Whether the landing page exposes report product signals such as price, buy, or add-to-cart."
+        },
     )
     has_print_language: bool = field(
         default=False,
-        metadata={"doc": "Whether the landing page includes print/printable/read-report language consistent with a document asset."},
+        metadata={
+            "doc": "Whether the landing page includes print/printable/read-report language consistent with a document asset."
+        },
     )
     has_editorial_url_pattern: bool = field(
         default=False,
-        metadata={"doc": "Whether the landing page URL matches common blog/news/article/editorial path patterns."},
+        metadata={
+            "doc": "Whether the landing page URL matches common blog/news/article/editorial path patterns."
+        },
     )
     has_editorial_markers: bool = field(
         default=False,
-        metadata={"doc": "Whether the landing page content exposes blog/article/news style markers."},
+        metadata={
+            "doc": "Whether the landing page content exposes blog/article/news style markers."
+        },
     )
     has_related_posts: bool = field(
         default=False,
-        metadata={"doc": "Whether the landing page prominently exposes related-post/article recommendations."},
+        metadata={
+            "doc": "Whether the landing page prominently exposes related-post/article recommendations."
+        },
     )
     has_newsletter_cta: bool = field(
         default=False,
-        metadata={"doc": "Whether the landing page prominently exposes newsletter signup CTAs."},
+        metadata={
+            "doc": "Whether the landing page prominently exposes newsletter signup CTAs."
+        },
     )
     has_contact_sales_cta: bool = field(
         default=False,
-        metadata={"doc": "Whether the landing page prominently exposes contact-sales or demo-booking CTAs."},
+        metadata={
+            "doc": "Whether the landing page prominently exposes contact-sales or demo-booking CTAs."
+        },
     )
     has_dead_page_marker: bool = field(
         default=False,
-        metadata={"doc": "Whether the landing page looks missing, 404, or otherwise dead."},
+        metadata={
+            "doc": "Whether the landing page looks missing, 404, or otherwise dead."
+        },
     )
     verification_class: str = field(
         default="verified",
-        metadata={"doc": "Deterministic landing-page verification class: verified, dead, challenge, transient_fetch_failure, protected_document, or weak_signal_html."},
+        metadata={
+            "doc": "Deterministic landing-page verification class: verified, dead, challenge, transient_fetch_failure, protected_document, or weak_signal_html."
+        },
     )
     recovery_eligible: bool = field(
         default=False,
-        metadata={"doc": "Whether this observation is eligible for orchestrator-owned deferred recovery instead of immediate hard rejection."},
+        metadata={
+            "doc": "Whether this observation is eligible for orchestrator-owned deferred recovery instead of immediate hard rejection."
+        },
     )
     source_surface_class: str = field(
         default="unknown",
-        metadata={"doc": "Deterministic surface class inferred from the candidate/source route: archive_feed, direct_detail, mixed_content_hub, service_membership, research_hub, or unknown."},
+        metadata={
+            "doc": "Deterministic surface class inferred from the candidate/source route: archive_feed, direct_detail, mixed_content_hub, service_membership, research_hub, or unknown."
+        },
     )
 
 
@@ -558,7 +740,9 @@ class PublisherInventoryLandingPageInspectionResponse:
         metadata={"doc": "Landing-page inspection response schema version."}
     )
     observations: List[PublisherInventoryLandingPageObservation] = field(
-        metadata={"doc": "Landing-page observations returned for the inspected candidate set."}
+        metadata={
+            "doc": "Landing-page observations returned for the inspected candidate set."
+        }
     )
 
 
@@ -568,13 +752,19 @@ class PublisherInventoryQualifiedCandidateItem:
         metadata={"doc": "Qualified candidate item schema version."}
     )
     canonical_url: str = field(
-        metadata={"doc": "Normalized candidate URL approved or rejected by the landing-page quality check."}
+        metadata={
+            "doc": "Normalized candidate URL approved or rejected by the landing-page quality check."
+        }
     )
     title: str = field(
-        metadata={"doc": "Resolved report-like title used after landing-page qualification."}
+        metadata={
+            "doc": "Resolved report-like title used after landing-page qualification."
+        }
     )
     discovered_on_page_number: int = field(
-        metadata={"doc": "One-based inventory page number where the candidate was found."}
+        metadata={
+            "doc": "One-based inventory page number where the candidate was found."
+        }
     )
     source_page_url: str = field(
         metadata={"doc": "Inventory page URL where the candidate was found."}
@@ -587,24 +777,36 @@ class PublisherInventoryCandidateQualityDecision:
         metadata={"doc": "Candidate landing-page quality decision schema version."}
     )
     canonical_url: str = field(
-        metadata={"doc": "Normalized candidate URL evaluated by the landing-page quality check."}
+        metadata={
+            "doc": "Normalized candidate URL evaluated by the landing-page quality check."
+        }
     )
     accepted: bool = field(
-        metadata={"doc": "Whether the landing page qualifies as a report-like asset worth queueing for download."}
+        metadata={
+            "doc": "Whether the landing page qualifies as a report-like asset worth queueing for download."
+        }
     )
     reason: str = field(
-        metadata={"doc": "Short human-readable reason explaining the landing-page quality decision."}
+        metadata={
+            "doc": "Short human-readable reason explaining the landing-page quality decision."
+        }
     )
     resolved_title: str = field(
-        metadata={"doc": "Best resolved title chosen from the candidate and landing-page metadata."}
+        metadata={
+            "doc": "Best resolved title chosen from the candidate and landing-page metadata."
+        }
     )
     source_surface_class: str = field(
         default="unknown",
-        metadata={"doc": "Deterministic surface class inferred for the candidate landing page."},
+        metadata={
+            "doc": "Deterministic surface class inferred for the candidate landing page."
+        },
     )
     recovery_recipe: Optional["PublisherInventoryRecoveryRecipe"] = field(
         default=None,
-        metadata={"doc": "Optional deferred recovery recipe attached only to strong candidates rejected for recoverable verification failures."},
+        metadata={
+            "doc": "Optional deferred recovery recipe attached only to strong candidates rejected for recoverable verification failures."
+        },
     )
 
 
@@ -617,29 +819,96 @@ class PublisherInventoryCandidateQualityRequest:
         metadata={"doc": "Publisher display name resolved from the reports database."}
     )
     insights_url: str = field(
-        metadata={"doc": "Publisher insights URL whose already-screened candidates are being qualified."}
+        metadata={
+            "doc": "Publisher insights URL whose already-screened candidates are being qualified."
+        }
     )
     candidates: List[PublisherInventoryCandidateScreeningItem] = field(
-        metadata={"doc": "Candidates already accepted by the LLM screening stage and pending final landing-page quality qualification."}
+        metadata={
+            "doc": "Candidates already accepted by the LLM screening stage and pending final landing-page quality qualification."
+        }
     )
     settings: PublisherInventorySettings = field(
-        metadata={"doc": "Loaded publisher inventory discovery settings including quality-check configuration."}
+        metadata={
+            "doc": "Loaded publisher inventory discovery settings including quality-check configuration."
+        }
     )
 
 
 @dataclass(frozen=True)
 class PublisherInventoryCandidateQualityResponse:
     schema_version: str = field(
-        metadata={"doc": "Candidate landing-page quality-check response schema version."}
+        metadata={
+            "doc": "Candidate landing-page quality-check response schema version."
+        }
     )
     approved_items: List[PublisherInventoryQualifiedCandidateItem] = field(
-        metadata={"doc": "Candidates accepted for report_sources persistence after landing-page qualification."}
+        metadata={
+            "doc": "Candidates accepted for report_sources persistence after landing-page qualification."
+        }
     )
     rejected_items: List[PublisherInventoryQualifiedCandidateItem] = field(
         metadata={"doc": "Candidates rejected by the landing-page quality check."}
     )
     decisions: List[PublisherInventoryCandidateQualityDecision] = field(
-        metadata={"doc": "Full landing-page quality decision set returned for all reviewed candidates."}
+        metadata={
+            "doc": "Full landing-page quality decision set returned for all reviewed candidates."
+        }
+    )
+
+
+@dataclass(frozen=True)
+class PublisherInventoryRoutePolicySignal:
+    schema_version: str = field(
+        metadata={"doc": "Publisher inventory route-policy signal schema version."}
+    )
+    route_kind: str = field(
+        metadata={
+            "doc": "Discovery route kind this policy signal describes, for example `http_parse` or `browser_render`."
+        }
+    )
+    attempts: int = field(
+        metadata={"doc": "Number of recorded discovery attempts for this route kind."}
+    )
+    successful_attempts: int = field(
+        metadata={
+            "doc": "Number of successful discovery attempts recorded for this route kind."
+        }
+    )
+    review_required_attempts: int = field(
+        metadata={
+            "doc": "Number of attempts whose run quality required review for this route kind."
+        }
+    )
+    success_rate: float = field(
+        metadata={"doc": "Successful-attempt ratio for this route kind."}
+    )
+    confidence_score: float = field(
+        metadata={"doc": "Confidence score for preferring this route kind."}
+    )
+    rank_score: float = field(
+        metadata={
+            "doc": "Planner ranking score derived from success rate, quality, recency, and review penalty."
+        }
+    )
+    last_outcome: str = field(
+        metadata={"doc": "Most recent run-quality outcome for this route kind."}
+    )
+    last_status: str = field(
+        metadata={"doc": "Most recent discovery status for this route kind."}
+    )
+    last_quality_band: str = field(
+        metadata={"doc": "Most recent quality band for this route kind."}
+    )
+    last_scenario_class: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Most recent scenario class associated with this route kind, if available."
+        },
+    )
+    recent_outcomes: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Recent outcome labels observed for this route kind."},
     )
 
 
@@ -649,15 +918,21 @@ class PublisherInventoryRoutePlanStep:
         metadata={"doc": "Publisher inventory route-plan step schema version."}
     )
     step_name: str = field(
-        metadata={"doc": "Unique orchestrator step name used for the planned discovery attempt."}
+        metadata={
+            "doc": "Unique orchestrator step name used for the planned discovery attempt."
+        }
     )
     route_kind_hint: Optional[str] = field(
         default=None,
-        metadata={"doc": "Discovery route kind to request for this step when known: http_parse or browser_render."},
+        metadata={
+            "doc": "Discovery route kind to request for this step when known: http_parse or browser_render."
+        },
     )
     route_hint: Optional[str] = field(
         default=None,
-        metadata={"doc": "Remembered route summary to reuse for this step when available."},
+        metadata={
+            "doc": "Remembered route summary to reuse for this step when available."
+        },
     )
     uses_memory_route: bool = field(
         default=False,
@@ -665,7 +940,9 @@ class PublisherInventoryRoutePlanStep:
     )
     fallback_on_retryable_error: bool = field(
         default=False,
-        metadata={"doc": "Whether the orchestrator should continue to the next planned step only when this step fails with a retryable AppError."},
+        metadata={
+            "doc": "Whether the orchestrator should continue to the next planned step only when this step fails with a retryable AppError."
+        },
     )
 
 
@@ -675,49 +952,77 @@ class PublisherInventoryRunQualitySummary:
         metadata={"doc": "Publisher inventory run-quality summary schema version."}
     )
     outcome: str = field(
-        metadata={"doc": "Run-level quality outcome, for example accepted, no_report_assets, raw_only_delta_rejected, undercoverage_regression, or unreachable_delta_tolerated."}
+        metadata={
+            "doc": "Run-level quality outcome, for example accepted, no_report_assets, raw_only_delta_rejected, undercoverage_regression, or unreachable_delta_tolerated."
+        }
     )
     status: str = field(
-        metadata={"doc": "Final run status string aligned with discovery test-status semantics, for example passed, passed:no_report_assets, or failed:<error_code>."}
+        metadata={
+            "doc": "Final run status string aligned with discovery test-status semantics, for example passed, passed:no_report_assets, or failed:<error_code>."
+        }
     )
     quality_band: str = field(
-        metadata={"doc": "Deterministic quality band for route-planning and drift monitoring: high, medium, or low."}
+        metadata={
+            "doc": "Deterministic quality band for route-planning and drift monitoring: high, medium, or low."
+        }
     )
     route_kind: str = field(
-        metadata={"doc": "Discovery route kind used for the run-quality summary: http_parse or browser_render."}
+        metadata={
+            "doc": "Discovery route kind used for the run-quality summary: http_parse or browser_render."
+        }
     )
     recommended_route_kind: str = field(
-        metadata={"doc": "Route kind recommended for the next discovery run based on this run's quality evidence."}
+        metadata={
+            "doc": "Route kind recommended for the next discovery run based on this run's quality evidence."
+        }
     )
     used_memory_route: bool = field(
-        metadata={"doc": "Whether the successful discovery attempt reused remembered route memory."}
+        metadata={
+            "doc": "Whether the successful discovery attempt reused remembered route memory."
+        }
     )
     page_count: int = field(
         metadata={"doc": "Number of inventory pages traversed during the run."}
     )
     raw_candidate_count: int = field(
-        metadata={"doc": "Number of normalized raw inventory items produced before diff screening."}
+        metadata={
+            "doc": "Number of normalized raw inventory items produced before diff screening."
+        }
     )
     current_report_count: int = field(
-        metadata={"doc": "Number of normalized report items in the current snapshot candidate."}
+        metadata={
+            "doc": "Number of normalized report items in the current snapshot candidate."
+        }
     )
     previous_report_count: int = field(
-        metadata={"doc": "Number of normalized report items in the previous snapshot when available, else zero."}
+        metadata={
+            "doc": "Number of normalized report items in the previous snapshot when available, else zero."
+        }
     )
     raw_new_report_count: int = field(
-        metadata={"doc": "Number of raw diff items before screening and landing-page qualification."}
+        metadata={
+            "doc": "Number of raw diff items before screening and landing-page qualification."
+        }
     )
     screened_new_report_count: int = field(
-        metadata={"doc": "Number of diff items approved by the screening step before landing-page qualification."}
+        metadata={
+            "doc": "Number of diff items approved by the screening step before landing-page qualification."
+        }
     )
     qualified_new_report_count: int = field(
-        metadata={"doc": "Number of diff items approved after landing-page qualification."}
+        metadata={
+            "doc": "Number of diff items approved after landing-page qualification."
+        }
     )
     snapshot_changed: bool = field(
-        metadata={"doc": "Whether the canonical publisher snapshot changed after all quality gates."}
+        metadata={
+            "doc": "Whether the canonical publisher snapshot changed after all quality gates."
+        }
     )
     requires_review: bool = field(
-        metadata={"doc": "Whether the run should be treated as drift-prone and reviewed before trusting route reuse."}
+        metadata={
+            "doc": "Whether the run should be treated as drift-prone and reviewed before trusting route reuse."
+        }
     )
     recommended_route_reason: str = field(
         metadata={"doc": "Short explanation for the recommended route kind."}
@@ -727,11 +1032,15 @@ class PublisherInventoryRunQualitySummary:
     )
     candidate_provenance_counts: dict[str, int] = field(
         default_factory=dict,
-        metadata={"doc": "Counts of candidate provenance markers contributing to the run, keyed by provenance label."},
+        metadata={
+            "doc": "Counts of candidate provenance markers contributing to the run, keyed by provenance label."
+        },
     )
     scenario_class: Optional[str] = field(
         default=None,
-        metadata={"doc": "Optional preflight scenario classification that described the landing surface for the run, for example direct_detail_html, filtered_archive, or mixed_content_hub."},
+        metadata={
+            "doc": "Optional preflight scenario classification that described the landing surface for the run, for example direct_detail_html, filtered_archive, or mixed_content_hub."
+        },
     )
 
 
@@ -742,35 +1051,51 @@ class PublisherInventoryRouteTrace:
     )
     followed_report_listing: bool = field(
         default=False,
-        metadata={"doc": "Whether discovery followed a dedicated report-listing entry point before collecting candidates."},
+        metadata={
+            "doc": "Whether discovery followed a dedicated report-listing entry point before collecting candidates."
+        },
     )
     applied_report_filter: bool = field(
         default=False,
-        metadata={"doc": "Whether discovery applied an explicit report-only filter during traversal."},
+        metadata={
+            "doc": "Whether discovery applied an explicit report-only filter during traversal."
+        },
     )
     selected_filters: List[str] = field(
         default_factory=list,
-        metadata={"doc": "Deterministic labels for filters that were applied during traversal."},
+        metadata={
+            "doc": "Deterministic labels for filters that were applied during traversal."
+        },
     )
     selected_tab_labels: List[str] = field(
         default_factory=list,
-        metadata={"doc": "Ordered tab labels traversed during discovery when the archive used tabbed content sections."},
+        metadata={
+            "doc": "Ordered tab labels traversed during discovery when the archive used tabbed content sections."
+        },
     )
     pagination_mode: str = field(
         default="none",
-        metadata={"doc": "Pagination mode observed during traversal: none, next_link, button_next, load_more, tabbed, or mixed."},
+        metadata={
+            "doc": "Pagination mode observed during traversal: none, next_link, button_next, load_more, tabbed, or mixed."
+        },
     )
     preferred_control_labels: List[str] = field(
         default_factory=list,
-        metadata={"doc": "Deterministic control labels preferred by the remembered route for pagination or expansion."},
+        metadata={
+            "doc": "Deterministic control labels preferred by the remembered route for pagination or expansion."
+        },
     )
     candidate_surface_guard: str = field(
         default="none",
-        metadata={"doc": "Guard describing how remembered traversal avoided irrelevant surfaces: none, candidate_density, report_filter, or tab_guard."},
+        metadata={
+            "doc": "Guard describing how remembered traversal avoided irrelevant surfaces: none, candidate_density, report_filter, or tab_guard."
+        },
     )
     surface_class: str = field(
         default="unknown",
-        metadata={"doc": "Deterministic traversal surface class aligned with scenario/source-surface taxonomy."},
+        metadata={
+            "doc": "Deterministic traversal surface class aligned with scenario/source-surface taxonomy."
+        },
     )
 
 
@@ -780,27 +1105,39 @@ class PublisherInventoryScenarioSummary:
         metadata={"doc": "Publisher inventory scenario-summary schema version."}
     )
     scenario_class: str = field(
-        metadata={"doc": "Deterministic scenario class inferred before or during discovery: direct_pdf, direct_detail_html, filtered_archive, tabbed_archive, mixed_content_hub, js_hydrated_archive, challenge_prone, or unknown."}
+        metadata={
+            "doc": "Deterministic scenario class inferred before or during discovery: direct_pdf, direct_detail_html, filtered_archive, tabbed_archive, mixed_content_hub, js_hydrated_archive, challenge_prone, or unknown."
+        }
     )
     source_surface_class: str = field(
         default="unknown",
-        metadata={"doc": "Best-effort surface class aligned with candidate quality taxonomy."},
+        metadata={
+            "doc": "Best-effort surface class aligned with candidate quality taxonomy."
+        },
     )
     confidence: float = field(
         default=0.0,
-        metadata={"doc": "Deterministic scenario confidence score in the range 0.0-1.0."},
+        metadata={
+            "doc": "Deterministic scenario confidence score in the range 0.0-1.0."
+        },
     )
     direct_detail_eligible: bool = field(
         default=False,
-        metadata={"doc": "Whether the scenario strongly supports a direct-detail short-circuit instead of archive traversal."},
+        metadata={
+            "doc": "Whether the scenario strongly supports a direct-detail short-circuit instead of archive traversal."
+        },
     )
     browser_preferred: bool = field(
         default=False,
-        metadata={"doc": "Whether browser traversal should be preferred for this scenario when route planning has a choice."},
+        metadata={
+            "doc": "Whether browser traversal should be preferred for this scenario when route planning has a choice."
+        },
     )
     notes: str = field(
         default="",
-        metadata={"doc": "Short human-readable explanation for the chosen scenario class."},
+        metadata={
+            "doc": "Short human-readable explanation for the chosen scenario class."
+        },
     )
 
 
@@ -810,16 +1147,22 @@ class PublisherInventoryRecoveryRecipe:
         metadata={"doc": "Publisher inventory recovery-recipe schema version."}
     )
     verification_class: str = field(
-        metadata={"doc": "Verification class that triggered the deferred recovery recipe."}
+        metadata={
+            "doc": "Verification class that triggered the deferred recovery recipe."
+        }
     )
     source_surface_class: str = field(
         metadata={"doc": "Surface class of the candidate the recipe applies to."}
     )
     recovery_action: str = field(
-        metadata={"doc": "Deterministic deferred recovery action, for example browser_retry, headless_retry, http_recheck, or protected_document_probe."}
+        metadata={
+            "doc": "Deterministic deferred recovery action, for example browser_retry, headless_retry, http_recheck, or protected_document_probe."
+        }
     )
     reason: str = field(
-        metadata={"doc": "Short explanation of why deferred recovery is allowed for this candidate."}
+        metadata={
+            "doc": "Short explanation of why deferred recovery is allowed for this candidate."
+        }
     )
 
 
@@ -829,7 +1172,9 @@ class PublisherInventoryRecoveryRecord:
         metadata={"doc": "Publisher inventory recovery-cache record schema version."}
     )
     normalized_url: str = field(
-        metadata={"doc": "Normalized publisher insights URL that owned the recovery attempt."}
+        metadata={
+            "doc": "Normalized publisher insights URL that owned the recovery attempt."
+        }
     )
     canonical_url: str = field(
         metadata={"doc": "Normalized candidate URL whose recovery history is cached."}
@@ -838,25 +1183,37 @@ class PublisherInventoryRecoveryRecord:
         metadata={"doc": "Surface class associated with the cached candidate."}
     )
     verification_class: str = field(
-        metadata={"doc": "Latest landing-page verification class associated with the candidate."}
+        metadata={
+            "doc": "Latest landing-page verification class associated with the candidate."
+        }
     )
     recovery_action: str = field(
-        metadata={"doc": "Most recent deferred recovery action recorded for the candidate."}
+        metadata={
+            "doc": "Most recent deferred recovery action recorded for the candidate."
+        }
     )
     last_outcome: str = field(
-        metadata={"doc": "Outcome of the latest recovery attempt, for example scheduled, recovered, skipped, or failed."}
+        metadata={
+            "doc": "Outcome of the latest recovery attempt, for example scheduled, recovered, skipped, or failed."
+        }
     )
     last_http_status: Optional[int] = field(
         default=None,
-        metadata={"doc": "Latest observed HTTP status code for the candidate when available."},
+        metadata={
+            "doc": "Latest observed HTTP status code for the candidate when available."
+        },
     )
     last_error_marker: Optional[str] = field(
         default=None,
-        metadata={"doc": "Latest normalized error marker recorded for the candidate when available."},
+        metadata={
+            "doc": "Latest normalized error marker recorded for the candidate when available."
+        },
     )
     updated_at_utc: str = field(
         default="",
-        metadata={"doc": "UTC timestamp when this recovery cache record was last updated."},
+        metadata={
+            "doc": "UTC timestamp when this recovery cache record was last updated."
+        },
     )
 
 
@@ -869,19 +1226,27 @@ class PublisherInventoryRoutePlanRequest:
         metadata={"doc": "Normalized publisher insights URL used for route planning."}
     )
     force_browser: bool = field(
-        metadata={"doc": "Whether discovery must prefer browser traversal regardless of HTTP availability."}
+        metadata={
+            "doc": "Whether discovery must prefer browser traversal regardless of HTTP availability."
+        }
     )
     remembered_route_kind: Optional[str] = field(
         default=None,
-        metadata={"doc": "Previously successful remembered discovery route kind when available."},
+        metadata={
+            "doc": "Previously successful remembered discovery route kind when available."
+        },
     )
     remembered_route_summary: Optional[str] = field(
         default=None,
-        metadata={"doc": "Previously successful remembered discovery route summary when available."},
+        metadata={
+            "doc": "Previously successful remembered discovery route summary when available."
+        },
     )
     remembered_route_trace: Optional[PublisherInventoryRouteTrace] = field(
         default=None,
-        metadata={"doc": "Previously successful remembered discovery route trace when available."},
+        metadata={
+            "doc": "Previously successful remembered discovery route trace when available."
+        },
     )
     remembered_scenario_summary: Optional[PublisherInventoryScenarioSummary] = field(
         default=None,
@@ -889,11 +1254,21 @@ class PublisherInventoryRoutePlanRequest:
     )
     previous_run_quality_summary: Optional[PublisherInventoryRunQualitySummary] = field(
         default=None,
-        metadata={"doc": "Previously persisted run-quality summary used to bias route ordering when no remembered route exists."},
+        metadata={
+            "doc": "Previously persisted run-quality summary used to bias route ordering when no remembered route exists."
+        },
+    )
+    route_policy: List[PublisherInventoryRoutePolicySignal] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Ranked discovery route-kind policy signals learned from publisher inventory history."
+        },
     )
     enable_structured_route_reuse: bool = field(
         default=False,
-        metadata={"doc": "Whether the planner may prioritize typed remembered route traces over legacy route summaries."},
+        metadata={
+            "doc": "Whether the planner may prioritize typed remembered route traces over legacy route summaries."
+        },
     )
 
 
@@ -906,29 +1281,41 @@ class PublisherInventoryRoutePlanResponse:
         metadata={"doc": "Ordered discovery attempts the orchestrator should execute."}
     )
     planning_reason: str = field(
-        metadata={"doc": "Short human-readable explanation of why this route order was chosen."}
+        metadata={
+            "doc": "Short human-readable explanation of why this route order was chosen."
+        }
     )
 
 
 @dataclass(frozen=True)
 class PublisherInventoryCoverageValidationRequest:
     schema_version: str = field(
-        metadata={"doc": "Publisher inventory coverage-validation request schema version."}
+        metadata={
+            "doc": "Publisher inventory coverage-validation request schema version."
+        }
     )
     publisher_name: str = field(
         metadata={"doc": "Publisher display name for logging and error context."}
     )
     normalized_url: str = field(
-        metadata={"doc": "Normalized publisher insights URL used as the coverage-validation key."}
+        metadata={
+            "doc": "Normalized publisher insights URL used as the coverage-validation key."
+        }
     )
     previous_snapshot_available: bool = field(
-        metadata={"doc": "Whether a previous canonical snapshot exists for this publisher."}
+        metadata={
+            "doc": "Whether a previous canonical snapshot exists for this publisher."
+        }
     )
     previous_page_count: int = field(
-        metadata={"doc": "Number of pages recorded in the previous canonical snapshot when available, else zero."}
+        metadata={
+            "doc": "Number of pages recorded in the previous canonical snapshot when available, else zero."
+        }
     )
     previous_report_count: int = field(
-        metadata={"doc": "Number of items recorded in the previous canonical snapshot when available, else zero."}
+        metadata={
+            "doc": "Number of items recorded in the previous canonical snapshot when available, else zero."
+        }
     )
     current_page_count: int = field(
         metadata={"doc": "Number of pages traversed in the current candidate snapshot."}
@@ -937,42 +1324,64 @@ class PublisherInventoryCoverageValidationRequest:
         metadata={"doc": "Number of items in the current candidate snapshot."}
     )
     raw_new_report_count: int = field(
-        metadata={"doc": "Number of raw diff items before screening and landing-page qualification."}
+        metadata={
+            "doc": "Number of raw diff items before screening and landing-page qualification."
+        }
     )
     screened_new_report_count: int = field(
-        metadata={"doc": "Number of diff items approved by the candidate-screening step."}
+        metadata={
+            "doc": "Number of diff items approved by the candidate-screening step."
+        }
     )
     qualified_new_report_count: int = field(
-        metadata={"doc": "Number of diff items approved after landing-page qualification."}
+        metadata={
+            "doc": "Number of diff items approved after landing-page qualification."
+        }
     )
     candidate_snapshot_changed: bool = field(
-        metadata={"doc": "Whether the candidate snapshot hash differs from the previous canonical snapshot hash."}
+        metadata={
+            "doc": "Whether the candidate snapshot hash differs from the previous canonical snapshot hash."
+        }
     )
     quality_rejection_reasons: List[str] = field(
         default_factory=list,
-        metadata={"doc": "Ordered landing-page quality rejection reasons used for systematic-unreachable detection."},
+        metadata={
+            "doc": "Ordered landing-page quality rejection reasons used for systematic-unreachable detection."
+        },
     )
 
 
 @dataclass(frozen=True)
 class PublisherInventoryCoverageValidationResponse:
     schema_version: str = field(
-        metadata={"doc": "Publisher inventory coverage-validation response schema version."}
+        metadata={
+            "doc": "Publisher inventory coverage-validation response schema version."
+        }
     )
     verdict: str = field(
-        metadata={"doc": "Coverage-validation verdict: accepted, no_report_assets, raw_only_delta_rejected, undercoverage_regression, unreachable_delta_failure, or unreachable_delta_tolerated."}
+        metadata={
+            "doc": "Coverage-validation verdict: accepted, no_report_assets, raw_only_delta_rejected, undercoverage_regression, unreachable_delta_failure, or unreachable_delta_tolerated."
+        }
     )
     reason: str = field(
-        metadata={"doc": "Short human-readable reason explaining the coverage-validation verdict."}
+        metadata={
+            "doc": "Short human-readable reason explaining the coverage-validation verdict."
+        }
     )
     snapshot_allowed: bool = field(
-        metadata={"doc": "Whether the candidate snapshot is allowed to become canonical after coverage validation."}
+        metadata={
+            "doc": "Whether the candidate snapshot is allowed to become canonical after coverage validation."
+        }
     )
     no_report_assets_detected: bool = field(
-        metadata={"doc": "Whether the run should be treated as an archive with no qualifying report assets."}
+        metadata={
+            "doc": "Whether the run should be treated as an archive with no qualifying report assets."
+        }
     )
     should_raise_error: bool = field(
-        metadata={"doc": "Whether the orchestrator must fail the run based on this coverage verdict."}
+        metadata={
+            "doc": "Whether the orchestrator must fail the run based on this coverage verdict."
+        }
     )
     error_code: Optional[str] = field(
         default=None,
@@ -980,57 +1389,83 @@ class PublisherInventoryCoverageValidationResponse:
     )
     error_message: Optional[str] = field(
         default=None,
-        metadata={"doc": "Typed AppError message to raise when should_raise_error=true."},
+        metadata={
+            "doc": "Typed AppError message to raise when should_raise_error=true."
+        },
     )
 
 
 @dataclass(frozen=True)
 class PublisherInventoryRunQualityEvaluationRequest:
     schema_version: str = field(
-        metadata={"doc": "Publisher inventory run-quality evaluation request schema version."}
+        metadata={
+            "doc": "Publisher inventory run-quality evaluation request schema version."
+        }
     )
     publisher_name: str = field(
         metadata={"doc": "Publisher display name for the completed discovery run."}
     )
     normalized_url: str = field(
-        metadata={"doc": "Normalized publisher insights URL used as the run-quality key."}
+        metadata={
+            "doc": "Normalized publisher insights URL used as the run-quality key."
+        }
     )
     route_kind: str = field(
         metadata={"doc": "Discovery route kind used successfully for the run."}
     )
     used_memory_route: bool = field(
-        metadata={"doc": "Whether the successful discovery attempt reused remembered route memory."}
+        metadata={
+            "doc": "Whether the successful discovery attempt reused remembered route memory."
+        }
     )
     page_count: int = field(
         metadata={"doc": "Number of inventory pages traversed during the run."}
     )
     raw_candidate_count: int = field(
-        metadata={"doc": "Number of normalized items in the current candidate snapshot before diff screening."}
+        metadata={
+            "doc": "Number of normalized items in the current candidate snapshot before diff screening."
+        }
     )
     current_report_count: int = field(
-        metadata={"doc": "Number of normalized items in the canonical current snapshot candidate."}
+        metadata={
+            "doc": "Number of normalized items in the canonical current snapshot candidate."
+        }
     )
     previous_report_count: int = field(
-        metadata={"doc": "Number of normalized items in the previous canonical snapshot when available, else zero."}
+        metadata={
+            "doc": "Number of normalized items in the previous canonical snapshot when available, else zero."
+        }
     )
     raw_new_report_count: int = field(
-        metadata={"doc": "Number of raw diff items before screening and landing-page qualification."}
+        metadata={
+            "doc": "Number of raw diff items before screening and landing-page qualification."
+        }
     )
     screened_new_report_count: int = field(
-        metadata={"doc": "Number of diff items approved by the candidate-screening step."}
+        metadata={
+            "doc": "Number of diff items approved by the candidate-screening step."
+        }
     )
     qualified_new_report_count: int = field(
-        metadata={"doc": "Number of diff items approved after landing-page qualification."}
+        metadata={
+            "doc": "Number of diff items approved after landing-page qualification."
+        }
     )
     snapshot_changed: bool = field(
-        metadata={"doc": "Whether the canonical snapshot changed after all quality gates."}
+        metadata={
+            "doc": "Whether the canonical snapshot changed after all quality gates."
+        }
     )
     coverage_validation: PublisherInventoryCoverageValidationResponse = field(
-        metadata={"doc": "Explicit coverage-validation verdict for the completed discovery run."}
+        metadata={
+            "doc": "Explicit coverage-validation verdict for the completed discovery run."
+        }
     )
     candidate_provenance_counts: dict[str, int] = field(
         default_factory=dict,
-        metadata={"doc": "Counts of candidate provenance markers contributing to the run, keyed by provenance label."},
+        metadata={
+            "doc": "Counts of candidate provenance markers contributing to the run, keyed by provenance label."
+        },
     )
 
 
@@ -1043,7 +1478,9 @@ class PublisherInventoryDiscoveryRequest:
         metadata={"doc": "Publisher insights URL to crawl and diff."}
     )
     reports_db: str = field(
-        metadata={"doc": "SQLite reports DB path used for publisher lookup and state persistence."}
+        metadata={
+            "doc": "SQLite reports DB path used for publisher lookup and state persistence."
+        }
     )
     settings: PublisherInventorySettings = field(
         metadata={"doc": "Loaded publisher inventory discovery settings."}
@@ -1065,7 +1502,9 @@ class PublisherInventoryDiscoveryResult:
         metadata={"doc": "Normalized publisher insights URL used as the memory key."}
     )
     new_report_urls: List[PublisherInventoryDiffItem] = field(
-        metadata={"doc": "List of report URLs that are new versus the previous snapshot."}
+        metadata={
+            "doc": "List of report URLs that are new versus the previous snapshot."
+        }
     )
     current_report_count: int = field(
         metadata={"doc": "Number of normalized reports in the current snapshot."}
@@ -1074,18 +1513,27 @@ class PublisherInventoryDiscoveryResult:
         metadata={"doc": "Number of normalized reports in the previous snapshot."}
     )
     used_memory_route: bool = field(
-        metadata={"doc": "Whether a remembered route hint was used on the successful run."}
+        metadata={
+            "doc": "Whether a remembered route hint was used on the successful run."
+        }
     )
     snapshot_changed: bool = field(
-        metadata={"doc": "Whether the normalized current snapshot differed from the previous snapshot."}
+        metadata={
+            "doc": "Whether the normalized current snapshot differed from the previous snapshot."
+        }
     )
     run_quality_summary: PublisherInventoryRunQualitySummary = field(
-        metadata={"doc": "Deterministic run-quality summary persisted for future route planning and drift monitoring."}
+        metadata={
+            "doc": "Deterministic run-quality summary persisted for future route planning and drift monitoring."
+        }
     )
     current_candidates: List[PublisherInventoryCandidateTrace] = field(
         default_factory=list,
-        metadata={"doc": "Current normalized report candidates from the discovery run, enriched with discovery provenance for audit/report-download follow-up."},
+        metadata={
+            "doc": "Current normalized report candidates from the discovery run, enriched with discovery provenance for audit/report-download follow-up."
+        },
     )
+
 
 @dataclass(frozen=True)
 class PublisherInventoryServiceRequest:
@@ -1100,12 +1548,18 @@ class PublisherInventoryServiceRequest:
     )
     route_hint: Optional[str] = field(
         default=None,
-        metadata={"doc": "Previously successful route summary used to bias browser-render discovery."},
+        metadata={
+            "doc": "Previously successful route summary used to bias browser-render discovery."
+        },
     )
     route_kind_hint: Optional[str] = field(
         default=None,
-        metadata={"doc": "Previously successful route kind when known: http_parse or browser_render."},
+        metadata={
+            "doc": "Previously successful route kind when known: http_parse or browser_render."
+        },
     )
+
+
 @dataclass(frozen=True)
 class PublisherInventoryServiceResponse:
     schema_version: str = field(
@@ -1118,10 +1572,14 @@ class PublisherInventoryServiceResponse:
         metadata={"doc": "Normalized publisher insights URL used as the memory key."}
     )
     route_kind: str = field(
-        metadata={"doc": "Discovery route kind used successfully: http_parse or browser_render."}
+        metadata={
+            "doc": "Discovery route kind used successfully: http_parse or browser_render."
+        }
     )
     route_summary: str = field(
-        metadata={"doc": "Summary of the successful discovery route for reuse on later runs."}
+        metadata={
+            "doc": "Summary of the successful discovery route for reuse on later runs."
+        }
     )
     final_page_url: str = field(
         metadata={"doc": "Final page URL observed at the end of the discovery run."}
@@ -1137,11 +1595,15 @@ class PublisherInventoryServiceResponse:
     )
     route_trace: Optional[PublisherInventoryRouteTrace] = field(
         default=None,
-        metadata={"doc": "Optional structured trace capturing actual traversal decisions for future reuse."},
+        metadata={
+            "doc": "Optional structured trace capturing actual traversal decisions for future reuse."
+        },
     )
     scenario_summary: Optional[PublisherInventoryScenarioSummary] = field(
         default=None,
-        metadata={"doc": "Optional scenario summary describing the discovery surface encountered during the run."},
+        metadata={
+            "doc": "Optional scenario summary describing the discovery surface encountered during the run."
+        },
     )
 
 
@@ -1208,5 +1670,7 @@ class PublisherInventoryBuildResponse:
     )
     current_candidates: List[PublisherInventoryCandidateTrace] = field(
         default_factory=list,
-        metadata={"doc": "Current normalized report candidates from the discovery run, enriched with discovery provenance details."},
+        metadata={
+            "doc": "Current normalized report candidates from the discovery run, enriched with discovery provenance details."
+        },
     )

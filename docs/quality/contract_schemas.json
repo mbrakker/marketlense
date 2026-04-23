@@ -10776,6 +10776,12 @@
             }
           ]
         },
+        "route_policy": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.publisher_inventory.PublisherInventoryRoutePolicySignal"
+          },
+          "type": "array"
+        },
         "schema_version": {
           "type": "string"
         }
@@ -10849,6 +10855,74 @@
       "required": [
         "schema_version",
         "step_name"
+      ],
+      "type": "object"
+    },
+    "src.contracts.publisher_inventory.PublisherInventoryRoutePolicySignal": {
+      "additionalProperties": false,
+      "properties": {
+        "attempts": {
+          "type": "integer"
+        },
+        "confidence_score": {
+          "type": "number"
+        },
+        "last_outcome": {
+          "type": "string"
+        },
+        "last_quality_band": {
+          "type": "string"
+        },
+        "last_scenario_class": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "last_status": {
+          "type": "string"
+        },
+        "rank_score": {
+          "type": "number"
+        },
+        "recent_outcomes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "review_required_attempts": {
+          "type": "integer"
+        },
+        "route_kind": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "success_rate": {
+          "type": "number"
+        },
+        "successful_attempts": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "route_kind",
+        "attempts",
+        "successful_attempts",
+        "review_required_attempts",
+        "success_rate",
+        "confidence_score",
+        "rank_score",
+        "last_outcome",
+        "last_status",
+        "last_quality_band"
       ],
       "type": "object"
     },
@@ -14245,6 +14319,12 @@
               "type": "null"
             }
           ]
+        },
+        "inventory_route_policy": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.publisher_inventory.PublisherInventoryRoutePolicySignal"
+          },
+          "type": "array"
         },
         "inventory_route_summary": {
           "anyOf": [

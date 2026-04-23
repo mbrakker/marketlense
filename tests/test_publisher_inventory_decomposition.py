@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from src.contracts.publisher_inventory import (
     PublisherInventoryCoverageValidationRequest,
+    PublisherInventoryRoutePolicySignal,
     PublisherInventoryRouteTrace,
     PublisherInventoryRoutePlanRequest,
     PublisherInventoryRunQualityEvaluationRequest,
@@ -96,8 +97,49 @@ def test_route_planner_prefers_structured_memory_then_scenario_guided_fallback(
         run_context,
     )
 
-    assert response.steps[0].step_name == "publisher_inventory_discovery_with_structured_memory_route"
+    assert (
+        response.steps[0].step_name
+        == "publisher_inventory_discovery_with_structured_memory_route"
+    )
     assert response.steps[0].route_kind_hint == "browser_render"
+
+
+def test_route_planner_prefers_learned_browser_policy_for_cold_publisher(
+    run_context,
+) -> None:
+    response = plan_publisher_inventory_routes(
+        PublisherInventoryRoutePlanRequest(
+            schema_version="1.0",
+            normalized_url="https://example.com/insights/holdout",
+            force_browser=False,
+            remembered_route_kind=None,
+            remembered_route_summary=None,
+            route_policy=[
+                PublisherInventoryRoutePolicySignal(
+                    schema_version="1.0",
+                    route_kind="browser_render",
+                    attempts=4,
+                    successful_attempts=4,
+                    review_required_attempts=0,
+                    success_rate=1.0,
+                    confidence_score=1.0,
+                    rank_score=1.0,
+                    last_outcome="accepted",
+                    last_status="passed",
+                    last_quality_band="high",
+                    last_scenario_class="js_hydrated_archive",
+                    recent_outcomes=["accepted", "accepted", "accepted"],
+                )
+            ],
+        ),
+        run_context,
+    )
+
+    assert response.steps[0].step_name == "publisher_inventory_discovery_policy_browser"
+    assert response.steps[0].route_kind_hint == "browser_render"
+    assert response.steps[0].fallback_on_retryable_error is True
+    assert response.steps[1].route_kind_hint == "http_parse"
+    assert "route-policy history prefers browser_render" in response.planning_reason
 
 
 def test_coverage_validation_rejects_raw_only_delta_with_previous_snapshot(

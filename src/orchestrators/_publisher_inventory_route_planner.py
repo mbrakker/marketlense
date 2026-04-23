@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 
 from src.contracts.publisher_inventory import (
+    PublisherInventoryRoutePolicySignal,
     PublisherInventoryRoutePlanRequest,
     PublisherInventoryRoutePlanResponse,
     PublisherInventoryRoutePlanStep,
@@ -44,6 +45,9 @@ def plan_publisher_inventory_routes(
                     if request.previous_run_quality_summary is not None
                     else ""
                 ),
+                "route_policy_order": [
+                    signal.route_kind for signal in request.route_policy
+                ],
             },
         )
     )
@@ -59,7 +63,12 @@ def plan_publisher_inventory_routes(
                 "planning_reason": response.planning_reason,
                 "step_names": [step.step_name for step in response.steps],
                 "route_kinds": [step.route_kind_hint or "" for step in response.steps],
-                "uses_memory_route": [step.uses_memory_route for step in response.steps],
+                "uses_memory_route": [
+                    step.uses_memory_route for step in response.steps
+                ],
+                "route_policy_order": [
+                    signal.route_kind for signal in request.route_policy
+                ],
             },
         )
     )
@@ -164,6 +173,19 @@ def _build_plan(
                 "The previous run-quality summary flagged drift, so the next run should start with the stronger browser route before falling back to direct HTTP."
             ),
         )
+    policy_signal = _preferred_route_policy_signal(request.route_policy)
+    if policy_signal is not None and not request.force_browser:
+        policy_steps = _policy_guided_steps(policy_signal, request)
+        return PublisherInventoryRoutePlanResponse(
+            schema_version="1.0",
+            steps=policy_steps,
+            planning_reason=(
+                "Publisher inventory route-policy history prefers "
+                f"{policy_signal.route_kind} "
+                f"(success rate {policy_signal.success_rate:.3f}, confidence {policy_signal.confidence_score:.3f}), "
+                "so start discovery with the learned route before static fallback."
+            ),
+        )
     default_steps = _scenario_guided_steps(request)
     return PublisherInventoryRoutePlanResponse(
         schema_version="1.0",
@@ -241,6 +263,62 @@ def _scenario_guided_steps(
                 fallback_on_retryable_error=True,
             ),
         ]
+    return _default_non_memory_steps(request)
+
+
+def _preferred_route_policy_signal(
+    signals: list[PublisherInventoryRoutePolicySignal],
+) -> PublisherInventoryRoutePolicySignal | None:
+    for signal in signals:
+        if signal.route_kind not in {"http_parse", "browser_render"}:
+            continue
+        if signal.attempts < 3:
+            continue
+        if signal.successful_attempts < 2:
+            continue
+        if signal.success_rate < 0.667:
+            continue
+        if signal.confidence_score < 0.65:
+            continue
+        if signal.rank_score < 0.65:
+            continue
+        if (
+            signal.review_required_attempts
+            and (signal.review_required_attempts / signal.attempts) > 0.25
+        ):
+            continue
+        return signal
+    return None
+
+
+def _policy_guided_steps(
+    signal: PublisherInventoryRoutePolicySignal,
+    request: PublisherInventoryRoutePlanRequest,
+) -> list[PublisherInventoryRoutePlanStep]:
+    first_kind = signal.route_kind
+    if first_kind == "browser_render":
+        steps = [
+            PublisherInventoryRoutePlanStep(
+                schema_version="1.0",
+                step_name="publisher_inventory_discovery_policy_browser",
+                route_kind_hint="browser_render",
+                route_hint=None,
+                uses_memory_route=False,
+                fallback_on_retryable_error=True,
+            )
+        ]
+        if not request.force_browser:
+            steps.append(
+                PublisherInventoryRoutePlanStep(
+                    schema_version="1.0",
+                    step_name="publisher_inventory_discovery_http",
+                    route_kind_hint="http_parse",
+                    route_hint=None,
+                    uses_memory_route=False,
+                    fallback_on_retryable_error=True,
+                )
+            )
+        return _dedupe_steps(steps)
     return _default_non_memory_steps(request)
 
 

@@ -18,6 +18,7 @@ from src.contracts.browser_download import (
     DownloadTerminalEvidence,
     PublisherDownloadRoutePolicySignal,
 )
+from src.contracts.publisher_inventory import PublisherInventoryRoutePolicySignal
 from src.contracts.report_store import (
     PublisherListItem,
     PublisherDownloadRouteGetRequest,
@@ -203,6 +204,29 @@ CREATE TABLE IF NOT EXISTS publisher_inventory_candidate_recovery_cache (
   updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
 );
 
+CREATE TABLE IF NOT EXISTS publisher_inventory_route_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  normalized_url TEXT NOT NULL,
+  source_host TEXT NOT NULL,
+  route_kind TEXT NOT NULL,
+  outcome TEXT NOT NULL,
+  status TEXT NOT NULL,
+  quality_band TEXT NOT NULL,
+  recommended_route_kind TEXT NOT NULL,
+  used_memory_route INTEGER NOT NULL,
+  page_count INTEGER NOT NULL,
+  raw_candidate_count INTEGER NOT NULL,
+  current_report_count INTEGER NOT NULL,
+  raw_new_report_count INTEGER NOT NULL,
+  screened_new_report_count INTEGER NOT NULL,
+  qualified_new_report_count INTEGER NOT NULL,
+  snapshot_changed INTEGER NOT NULL,
+  requires_review INTEGER NOT NULL,
+  scenario_class TEXT,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_publishers_name ON publishers(name);
 CREATE INDEX IF NOT EXISTS idx_publishers_homepage ON publishers(homepage);
 CREATE INDEX IF NOT EXISTS idx_publishers_insights_url ON publishers(insights_url);
@@ -210,6 +234,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_publisher_inventory_candidate_recovery_cac
   ON publisher_inventory_candidate_recovery_cache(normalized_url, canonical_url);
 CREATE INDEX IF NOT EXISTS idx_publisher_inventory_candidate_recovery_cache_updated_at
   ON publisher_inventory_candidate_recovery_cache(updated_at);
+CREATE INDEX IF NOT EXISTS idx_publisher_inventory_route_history_normalized_url
+  ON publisher_inventory_route_history(normalized_url);
+CREATE INDEX IF NOT EXISTS idx_publisher_inventory_route_history_source_host
+  ON publisher_inventory_route_history(source_host);
+CREATE INDEX IF NOT EXISTS idx_publisher_inventory_route_history_updated_at
+  ON publisher_inventory_route_history(updated_at);
 CREATE INDEX IF NOT EXISTS idx_download_route_history_normalized_url
   ON publisher_download_route_history(normalized_url);
 CREATE INDEX IF NOT EXISTS idx_download_route_history_updated_at
@@ -1221,6 +1251,161 @@ def _url_host(value: str | None) -> str:
         return str(urlsplit(str(value or "").strip()).hostname or "").strip().lower()
     except ValueError:
         return ""
+
+
+def _publisher_inventory_route_policy_signals(
+    history_rows: list[tuple],
+) -> List[PublisherInventoryRoutePolicySignal]:
+    grouped: dict[str, dict[str, object]] = {}
+    for row in history_rows:
+        route_kind = str(row[0] or "").strip()
+        outcome = str(row[1] or "").strip()
+        status = str(row[2] or "").strip()
+        quality_band = str(row[3] or "").strip()
+        requires_review = _bool_from_db(row[4])
+        scenario_class = str(row[5] or "").strip() or None
+        bucket = grouped.setdefault(
+            route_kind,
+            {
+                "route_kind": route_kind,
+                "attempts": 0,
+                "successful_attempts": 0,
+                "review_required_attempts": 0,
+                "recent_outcomes": [],
+                "last_outcome": outcome,
+                "last_status": status,
+                "last_quality_band": quality_band,
+                "last_scenario_class": scenario_class,
+            },
+        )
+        bucket["attempts"] = _bucket_int(bucket, "attempts") + 1
+        if _inventory_route_attempt_succeeded(
+            outcome=outcome,
+            status=status,
+            quality_band=quality_band,
+            requires_review=requires_review,
+        ):
+            bucket["successful_attempts"] = (
+                _bucket_int(bucket, "successful_attempts") + 1
+            )
+        if requires_review:
+            bucket["review_required_attempts"] = (
+                _bucket_int(bucket, "review_required_attempts") + 1
+            )
+        recent_outcomes = bucket["recent_outcomes"]
+        if isinstance(recent_outcomes, list) and outcome and len(recent_outcomes) < 5:
+            recent_outcomes.append(outcome)
+
+    signals: List[PublisherInventoryRoutePolicySignal] = []
+    for bucket in grouped.values():
+        route_kind = str(bucket["route_kind"] or "").strip()
+        attempts = _bucket_int(bucket, "attempts")
+        successful_attempts = _bucket_int(bucket, "successful_attempts")
+        review_required_attempts = _bucket_int(bucket, "review_required_attempts")
+        success_rate = round(successful_attempts / attempts, 3) if attempts else 0.0
+        review_rate = review_required_attempts / attempts if attempts else 0.0
+        confidence_score = min(
+            1.0,
+            max(
+                0.0,
+                success_rate
+                + min(0.2, successful_attempts * 0.04)
+                - min(0.35, review_rate * 0.35),
+            ),
+        )
+        quality_bonus = (
+            0.08 if str(bucket["last_quality_band"] or "").strip() == "high" else 0.0
+        )
+        rank_score = min(
+            1.0,
+            max(
+                0.0,
+                (confidence_score * 0.6)
+                + (success_rate * 0.35)
+                + quality_bonus
+                - min(0.2, review_rate * 0.2),
+            ),
+        )
+        recent_outcomes = bucket["recent_outcomes"]
+        signals.append(
+            PublisherInventoryRoutePolicySignal(
+                schema_version="1.0",
+                route_kind=route_kind,
+                attempts=attempts,
+                successful_attempts=successful_attempts,
+                review_required_attempts=review_required_attempts,
+                success_rate=success_rate,
+                confidence_score=round(confidence_score, 3),
+                rank_score=round(rank_score, 3),
+                last_outcome=str(bucket["last_outcome"] or "").strip(),
+                last_status=str(bucket["last_status"] or "").strip(),
+                last_quality_band=str(bucket["last_quality_band"] or "").strip(),
+                last_scenario_class=str(bucket["last_scenario_class"] or "").strip()
+                or None,
+                recent_outcomes=(
+                    list(recent_outcomes) if isinstance(recent_outcomes, list) else []
+                ),
+            )
+        )
+    return sorted(
+        signals,
+        key=lambda signal: (
+            signal.rank_score,
+            signal.confidence_score,
+            signal.success_rate,
+            signal.successful_attempts,
+            -signal.review_required_attempts,
+        ),
+        reverse=True,
+    )
+
+
+def _inventory_route_attempt_succeeded(
+    *,
+    outcome: str,
+    status: str,
+    quality_band: str,
+    requires_review: bool,
+) -> bool:
+    normalized_status = str(status or "").strip().lower()
+    normalized_outcome = str(outcome or "").strip().lower()
+    normalized_quality = str(quality_band or "").strip().lower()
+    if normalized_status.startswith("failed:"):
+        return False
+    if requires_review and normalized_quality == "low":
+        return False
+    return normalized_outcome in {
+        "accepted",
+        "no_report_assets",
+        "unreachable_delta_tolerated",
+    } and normalized_status.startswith("passed")
+
+
+def _publisher_inventory_route_policy_rows(
+    *,
+    conn: sqlite3.Connection,
+    normalized_url: str,
+) -> list[tuple]:
+    source_host = _url_host(normalized_url)
+    if not source_host:
+        return []
+    return conn.execute(
+        """
+        SELECT
+            route_kind,
+            outcome,
+            status,
+            quality_band,
+            requires_review,
+            scenario_class
+        FROM publisher_inventory_route_history
+        WHERE source_host = ?
+          AND normalized_url <> ?
+        ORDER BY updated_at DESC, id DESC
+        LIMIT 200
+        """,
+        (source_host, normalized_url),
+    ).fetchall()
 
 
 def _bucket_int(bucket: dict[str, object], key: str) -> int:
@@ -3687,6 +3872,12 @@ def get_publisher_inventory_state(
             ORDER BY id ASC
             """
         ).fetchall()
+        inventory_route_policy = _publisher_inventory_route_policy_signals(
+            _publisher_inventory_route_policy_rows(
+                conn=conn,
+                normalized_url=normalized_url,
+            )
+        )
     for row in rows:
         insights_url = str(row[1] or "").strip()
         if not insights_url or normalize_url(insights_url) != normalized_url:
@@ -3716,6 +3907,7 @@ def get_publisher_inventory_state(
                 str(row[14] or "").strip() or None
             ),
             inventory_run_quality_updated_at=_optional_int(row[15]),
+            inventory_route_policy=inventory_route_policy,
         )
         logger.info(
             log_event(
@@ -3741,6 +3933,9 @@ def get_publisher_inventory_state(
                     "has_inventory_run_quality": bool(
                         response.inventory_run_quality_summary
                     ),
+                    "inventory_route_policy_order": [
+                        signal.route_kind for signal in inventory_route_policy
+                    ],
                 },
             )
         )
@@ -3931,6 +4126,55 @@ def record_publisher_inventory_run_quality(
                 (
                     summary_json,
                     matched_id,
+                ),
+            )
+            conn.execute(
+                """
+                INSERT INTO publisher_inventory_route_history(
+                    normalized_url,
+                    source_host,
+                    route_kind,
+                    outcome,
+                    status,
+                    quality_band,
+                    recommended_route_kind,
+                    used_memory_route,
+                    page_count,
+                    raw_candidate_count,
+                    current_report_count,
+                    raw_new_report_count,
+                    screened_new_report_count,
+                    qualified_new_report_count,
+                    snapshot_changed,
+                    requires_review,
+                    scenario_class,
+                    created_at,
+                    updated_at
+                )
+                VALUES(
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                    strftime('%s','now'),
+                    strftime('%s','now')
+                )
+                """,
+                (
+                    normalized_url,
+                    _url_host(normalized_url),
+                    request.summary.route_kind,
+                    request.summary.outcome,
+                    request.summary.status,
+                    request.summary.quality_band,
+                    request.summary.recommended_route_kind,
+                    1 if request.summary.used_memory_route else 0,
+                    request.summary.page_count,
+                    request.summary.raw_candidate_count,
+                    request.summary.current_report_count,
+                    request.summary.raw_new_report_count,
+                    request.summary.screened_new_report_count,
+                    request.summary.qualified_new_report_count,
+                    1 if request.summary.snapshot_changed else 0,
+                    1 if request.summary.requires_review else 0,
+                    request.summary.scenario_class,
                 ),
             )
     except sqlite3.Error as exc:

@@ -1189,6 +1189,8 @@ Publisher inventory state now persists both the legacy free-text route summary a
 
 A dedicated `publisher_inventory_candidate_recovery_cache` table also stores deferred recovery outcomes for challenge/protected/transient candidate failures keyed by normalized publisher URL plus canonical candidate URL.
 
+Discovery run-quality outcomes are also appended to `publisher_inventory_route_history`. `get_publisher_inventory_state` derives ranked host-level `inventory_route_policy` signals from that history so cold sibling publisher URLs can start with the route kind that has already succeeded for the same host, while still falling back on retryable errors.
+
 The three rollout flags now default to `true` in `src/config/app.yaml`:
 
 - `enable_deferred_candidate_recovery`

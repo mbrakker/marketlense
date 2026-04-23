@@ -12,6 +12,7 @@ from src.contracts.browser_download import (
 from src.contracts.docpacks import DocPackPathMap
 from src.contracts.publisher_inventory import (
     PublisherInventoryRecoveryRecord,
+    PublisherInventoryRoutePolicySignal,
     PublisherInventoryRouteTrace,
     PublisherInventoryRunQualitySummary,
     PublisherInventoryScenarioSummary,
@@ -992,6 +993,12 @@ class PublisherInventoryStateResponse:
         default=None,
         metadata={
             "doc": "Unix timestamp when the last publisher-inventory run-quality summary was recorded."
+        },
+    )
+    inventory_route_policy: List[PublisherInventoryRoutePolicySignal] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Ranked discovery route-kind policy signals learned from publisher inventory history."
         },
     )
 
