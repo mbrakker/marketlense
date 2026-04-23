@@ -349,15 +349,6 @@ Scoring rubric:
     - Per-file publish decisions consume the batch snapshot instead of re-querying common state.
     - Tests verify parity with current skip/already-published behavior.
 
-- **Title:** Preflight browser-report downloads with lightweight HTTP and wrapper inspection before agent launch [Impact: 4/5, Effort: 3/5]
-  - Explanation: `src/services/browser_report_download_service.py` builds the browser-use runtime immediately, even when a direct PDF or simple wrapper page could be identified through a lightweight HTTP fetch. Add a preflight path that checks direct PDF signatures and embedded PDF wrappers before spinning up the browser agent.
-  - Pros: Lower cost and latency for simple download routes.
-  - Cons: Needs careful heuristics to avoid false positives on JS-heavy pages.
-  - Acceptance Criteria:
-    - Direct PDF and simple wrapper cases are handled without browser-agent startup.
-    - Browser-agent launch remains the fallback for ambiguous or JS-dependent routes.
-    - Tests cover direct-PDF, wrapper-page, and browser-required cases.
-
 - **Title:** Move browser-download task prompts into prompt-service namespaces [Impact: 3/5, Effort: 2/5]
   - Explanation: `src/services/browser_report_download_service.py` currently constructs its agent task prompt inline. Move that text into dedicated prompt namespaces so browser-download instructions are versioned, hash-logged, and maintained consistently with the rest of the prompt system.
   - Pros: Better prompt observability, easier iteration, and reduced service-level string assembly.

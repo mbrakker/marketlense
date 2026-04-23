@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import asdict
+from dataclasses import asdict, replace
 
 from src.contracts.browser_download import (
     BrowserReportDownloadRequest,
@@ -19,6 +19,9 @@ from src.services._browser_report_download.http import try_direct_onsite_capture
 from src.services._browser_report_download.http import try_http_access_challenge_probe
 from src.services._browser_report_download.http import try_report_page_pdf_link_download
 from src.services._browser_report_download.http import try_static_email_gate_probe
+from src.services._browser_report_download.prediction import (
+    predict_pre_browser_doc_type,
+)
 from src.services._browser_report_download.prompt import (
     render_browser_report_download_prompt,
 )
@@ -85,6 +88,20 @@ def download_report_with_browser_use(
             },
         )
     )
+    doc_type_prediction = predict_pre_browser_doc_type(
+        request=request,
+        normalized_url=normalized_url,
+        normalized_execution_url=normalized_execution_url,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_doc_type_prediction",
+            module=logger.name,
+            fields=asdict(doc_type_prediction),
+        )
+    )
 
     if request.route_family_hint == "http_pdf_probe":
         report_page_pdf_link_result = try_report_page_pdf_link_download(
@@ -116,9 +133,15 @@ def download_report_with_browser_use(
             },
         )
 
+    predicted_direct_pdf_probe_url = (
+        doc_type_prediction.probe_url
+        if doc_type_prediction.predicted_doc_type == "direct_pdf"
+        else normalized_execution_url
+    )
     should_try_direct_pdf_fetch = (
         request.route_family_hint == "direct_pdf_probe"
         or url_looks_like_direct_pdf(normalized_execution_url)
+        or doc_type_prediction.predicted_doc_type == "direct_pdf"
     )
     if should_try_direct_pdf_fetch:
         direct_pdf_result = try_direct_pdf_download(
@@ -126,17 +149,21 @@ def download_report_with_browser_use(
             ctx=ctx,
             normalized_url=normalized_url,
             download_dir=download_dir,
-            probe_url=normalized_execution_url,
-            route_family=request.route_family_hint or "direct_pdf_probe",
+            probe_url=predicted_direct_pdf_probe_url,
+            route_family=(
+                request.route_family_hint
+                if request.route_family_hint == "direct_pdf_probe"
+                else "direct_pdf_probe"
+            ),
             used_candidate_pdf_url=bool(
                 request.candidate_trace is not None
                 and request.candidate_trace.pdf_url
-                and normalized_execution_url
+                and predicted_direct_pdf_probe_url
                 == validate_and_normalize_url(request.candidate_trace.pdf_url)
             ),
             used_candidate_source_page=bool(
                 request.source_page_url_hint
-                and normalized_execution_url
+                and predicted_direct_pdf_probe_url
                 == validate_and_normalize_url(request.source_page_url_hint)
             ),
         )
@@ -185,8 +212,14 @@ def download_report_with_browser_use(
             normalized_url=normalized_url,
         )
 
+    report_page_link_request = request
+    if (
+        doc_type_prediction.predicted_doc_type == "report_page_pdf_link"
+        and request.route_family_hint not in {"http_pdf_probe", "browser_email_form", "browser_pdf_click", "browser_tracker_redirect", "browser_listing_hub"}
+    ):
+        report_page_link_request = replace(request, route_family_hint="browser_pdf_click")
     report_page_pdf_link_result = try_report_page_pdf_link_download(
-        request=request,
+        request=report_page_link_request,
         ctx=ctx,
         normalized_url=normalized_url,
         download_dir=download_dir,

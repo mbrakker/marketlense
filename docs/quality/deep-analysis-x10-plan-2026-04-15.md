@@ -130,15 +130,6 @@ Scoring rubric:
     - Terminal-state logs include quorum evidence.
     - Flake rate reduced in CI/integration runs.
 
-- **Title:** Lightweight pre-browser doc-type predictor [Impact: 4/5, Effort: 2/5]
-  - Explanation: Predict direct-PDF opportunities before launching full browser automation. Easy-route latency/cost can improve by >10x.
-  - Pros: Fast path for common cases.
-  - Cons: Misclassification fallback must be safe.
-  - Acceptance Criteria:
-    - Predictor score logged with decision reason.
-    - False negatives trigger browser fallback.
-    - End-to-end timing report shows speed gains.
-
 - **Title:** Failure forensics pack (HAR + DOM + route evidence) [Impact: 3/5, Effort: 3/5]
   - Explanation: Persist standardized forensic artifacts for failed acquisition attempts. MTTR can improve by >10x due to faster debugging.
   - Pros: Better root-cause visibility.

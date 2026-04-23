@@ -1910,6 +1910,48 @@
       ],
       "type": "object"
     },
+    "src.contracts.browser_download.PreBrowserDocTypePrediction": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence_score": {
+          "type": "number"
+        },
+        "decision_reason": {
+          "type": "string"
+        },
+        "evidence_labels": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "predicted_doc_type": {
+          "type": "string"
+        },
+        "predicted_route_family": {
+          "type": "string"
+        },
+        "probe_url": {
+          "type": "string"
+        },
+        "requires_browser": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "predicted_doc_type",
+        "predicted_route_family",
+        "probe_url",
+        "confidence_score",
+        "decision_reason",
+        "requires_browser"
+      ],
+      "type": "object"
+    },
     "src.contracts.browser_download.PublisherDownloadRouteMemory": {
       "additionalProperties": false,
       "properties": {

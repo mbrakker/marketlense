@@ -450,6 +450,49 @@ class DownloadTerminalEvidence:
 
 
 @dataclass(frozen=True)
+class PreBrowserDocTypePrediction:
+    schema_version: str = field(
+        metadata={"doc": "Pre-browser doc-type prediction schema version."}
+    )
+    predicted_doc_type: str = field(
+        metadata={
+            "doc": "Predicted lightweight document type before browser startup, for example `direct_pdf`, `report_page_pdf_link`, or `browser_required`."
+        }
+    )
+    predicted_route_family: str = field(
+        metadata={
+            "doc": "Predicted route family that should be attempted first based on lightweight pre-browser evidence."
+        }
+    )
+    probe_url: str = field(
+        metadata={
+            "doc": "Resolved URL that should be probed first before browser startup."
+        }
+    )
+    confidence_score: float = field(
+        metadata={
+            "doc": "Deterministic confidence score between 0.0 and 1.0 for the predicted document type."
+        }
+    )
+    decision_reason: str = field(
+        metadata={
+            "doc": "Short human-readable explanation of the strongest evidence supporting the prediction."
+        }
+    )
+    requires_browser: bool = field(
+        metadata={
+            "doc": "Whether the prediction still requires full browser automation after lightweight preflight checks."
+        }
+    )
+    evidence_labels: list[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Stable labels describing which deterministic pre-browser signals contributed to the prediction."
+        },
+    )
+
+
+@dataclass(frozen=True)
 class BrowserReportDownloadRequest:
     schema_version: str = field(
         metadata={"doc": "Browser report download request schema version."}
