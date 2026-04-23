@@ -145,6 +145,55 @@ def test_validate_evidence_references_passes_for_known_ids():
     validate_evidence_references(artifacts_payload, evidence_packs, _ctx())
 
 
+def test_validate_evidence_references_accepts_key_metric_ids():
+    artifacts_payload = {
+        "summary": {"claim_evidence_map": [{"claim": "c", "evidence_id": "m2"}]},
+        "insights_candidates": [{"id": "i1", "evidence_id": "m3"}],
+        "insights_final": [{"id": "i2", "evidence_id": "m4"}],
+        "quotes_final": [{"text": "q", "evidence_id": "m5"}],
+    }
+    evidence_packs = {
+        "key_metrics": {
+            "schema_version": "1.0",
+            "key_metrics": [
+                {
+                    "id": "m2",
+                    "metric": "Priority share",
+                    "value": "8.8%",
+                    "unit": "percent",
+                    "evidence_id": "",
+                    "pages": [25],
+                },
+                {
+                    "id": "m3",
+                    "metric": "Personalization share",
+                    "value": "10.8%",
+                    "unit": "percent",
+                    "evidence_id": "",
+                    "pages": [20],
+                },
+                {
+                    "id": "m4",
+                    "metric": "AI priority share",
+                    "value": "40.6%",
+                    "unit": "percent",
+                    "evidence_id": "",
+                    "pages": [6],
+                },
+                {
+                    "id": "m5",
+                    "metric": "Conversion increase",
+                    "value": "+258%",
+                    "unit": "percent",
+                    "evidence_id": "",
+                    "pages": [24],
+                },
+            ],
+        }
+    }
+    validate_evidence_references(artifacts_payload, evidence_packs, _ctx())
+
+
 def test_validate_evidence_references_fails_for_unknown_ids():
     artifacts_payload = {
         "summary": {"claim_evidence_map": [{"claim": "c", "evidence_id": "missing"}]},

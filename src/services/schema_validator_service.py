@@ -168,6 +168,14 @@ def validate_evidence_references(
             value = str(section.get("id") or "").strip()
             if value:
                 evidence_ids.add(value)
+    metrics_payload = evidence_pack_payloads.get("key_metrics")
+    if isinstance(metrics_payload, dict):
+        for item in metrics_payload.get("key_metrics") or []:
+            if not isinstance(item, dict):
+                continue
+            value = str(item.get("id") or "").strip()
+            if value:
+                evidence_ids.add(value)
 
     references: list[str] = []
     summary = artifacts_payload.get("summary")
