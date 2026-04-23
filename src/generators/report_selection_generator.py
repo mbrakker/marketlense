@@ -1400,6 +1400,50 @@ def _candidate_crop_path_map(
     return mapping
 
 
+def _candidate_extraction_output_path(
+    settings: IngestSettings,
+    report_name: str,
+) -> Path:
+    return Path(settings.output_dir) / str(report_name or "").strip() / "candidates" / "candidates.json"
+
+
+def _load_candidate_crop_path_map(
+    *,
+    settings: IngestSettings,
+    report_name: str,
+    ctx,
+    dependencies: ReportGeneratorDependencies,
+) -> dict[str, str]:
+    candidates_path = _candidate_extraction_output_path(settings, report_name)
+    payload = read_cache_json(candidates_path, ctx, dependencies)
+    if not isinstance(payload, dict):
+        return {}
+    rows_value = payload.get("candidates")
+    rows = rows_value if isinstance(rows_value, list) else []
+    path_map: dict[str, str] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        candidate_id = str(row.get("id") or "").strip()
+        crop_path = str(row.get("crop_path") or "").strip()
+        if candidate_id and crop_path:
+            path_map[candidate_id] = crop_path
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="candidate_crop_paths_loaded",
+            module=logger.name,
+            fields={
+                "path": str(candidates_path),
+                "candidate_row_count": len(rows),
+                "crop_path_count": len(path_map),
+            },
+        )
+    )
+    return path_map
+
+
 def _empty_figure_response() -> FigureExtractResponse:
     return FigureExtractResponse(
         schema_version="1.0",
@@ -1885,92 +1929,170 @@ def select_report_figures(
                 settings=runtime.settings,
             )
             if fallback_candidates:
-                fallback_items = [
-                    CropItem(
-                        id=candidate.id,
-                        type=candidate.kind,
-                        score=0.0,
-                        page=candidate.page,
-                        bbox=candidate.bbox,
-                    )
-                    for candidate in fallback_candidates
-                ]
-                logger.info(
-                    log_event(
-                        runtime.ctx,
-                        role="generator",
-                        event="candidate_crops_start",
-                        module=logger.name,
-                        fields={"count": len(fallback_items), "subdir": "candidates"},
-                    )
+                candidate_path_by_id = _load_candidate_crop_path_map(
+                    settings=runtime.settings,
+                    report_name=runtime.report_name,
+                    ctx=runtime.ctx,
+                    dependencies=dependencies,
                 )
-                try:
-                    fallback_crop_resp = dependencies.crop_regions(
-                        CropRequest(
-                            schema_version="1.0",
-                            pdf_path=runtime.local_pdf_path,
-                            out_dir=runtime.settings.output_dir,
-                            report_name=runtime.report_name,
-                            subdir="candidates",
-                            items=fallback_items,
-                            mode="legacy",
-                            pdf_context=source.pdf_context,
-                        ),
-                        runtime.ctx,
-                    )
-                    fallback_paths: list[str] = []
-                    fallback_candidates_with_paths: list[Candidate] = []
-                    for candidate, path in zip(
-                        fallback_candidates,
-                        fallback_crop_resp.paths,
-                    ):
-                        normalized_path = str(path or "").strip()
-                        if not normalized_path:
-                            continue
-                        fallback_paths.append(normalized_path)
-                        fallback_candidates_with_paths.append(candidate)
-                    if fallback_paths:
-                        sliced_paths = fallback_paths
-                        figure_candidates = fallback_candidates_with_paths
-                        logger.info(
-                            log_event(
-                                runtime.ctx,
-                                role="generator",
-                                event="candidate_crops_complete",
-                                module=logger.name,
-                                fields={
-                                    "count": len(fallback_paths),
-                                    "subdir": "candidates",
-                                },
-                            )
+                fallback_path_by_id: dict[str, str] = {}
+                reuse_stats: dict[str, Any] = {}
+                if candidate_path_by_id:
+                    reused_paths, reused_candidates, reuse_stats = (
+                        _select_fallback_candidate_crop_paths(
+                            ranked_rows=ranked,
+                            prefiltered_candidates=prefiltered_candidates,
+                            candidate_path_by_id=candidate_path_by_id,
+                            selected_kind_max=max(
+                                1, int(runtime.settings.rank_selected_max)
+                            ),
+                            settings=runtime.settings,
                         )
+                    )
+                    fallback_path_by_id.update(
+                        _candidate_crop_path_map(reused_candidates, reused_paths)
+                    )
+                    if fallback_path_by_id:
                         logger.info(
                             log_event(
                                 runtime.ctx,
                                 role="generator",
-                                event="figure_section_fallback_candidate_crops_enabled",
+                                event="candidate_crops_reused",
                                 module=logger.name,
                                 fields={
                                     "file_id": runtime.file.file_id,
-                                    "ranked_count": len(ranked),
-                                    "prefiltered_count": len(prefiltered_candidates),
-                                    "candidate_crop_count": len(fallback_items),
-                                    "skipped_missing_crop": max(
-                                        0,
-                                        len(fallback_items) - len(fallback_paths),
-                                    ),
-                                    **fallback_stats,
+                                    **reuse_stats,
                                 },
                             )
                         )
-                except Exception as exc:
+                missing_fallback_candidates = [
+                    candidate
+                    for candidate in fallback_candidates
+                    if str(candidate.id or "").strip() not in fallback_path_by_id
+                ]
+                newly_cropped_count = 0
+                if missing_fallback_candidates:
+                    fallback_items = [
+                        CropItem(
+                            id=candidate.id,
+                            type=candidate.kind,
+                            score=0.0,
+                            page=candidate.page,
+                            bbox=candidate.bbox,
+                        )
+                        for candidate in missing_fallback_candidates
+                    ]
                     logger.info(
                         log_event(
                             runtime.ctx,
                             role="generator",
-                            event="candidate_crops_failed",
+                            event="candidate_crops_start",
                             module=logger.name,
-                            fields={"error": str(exc), "subdir": "candidates"},
+                            fields={
+                                "count": len(fallback_items),
+                                "subdir": "candidates",
+                                "reuse_count": len(fallback_path_by_id),
+                            },
+                        )
+                    )
+                    try:
+                        fallback_crop_resp = dependencies.crop_regions(
+                            CropRequest(
+                                schema_version="1.0",
+                                pdf_path=runtime.local_pdf_path,
+                                out_dir=runtime.settings.output_dir,
+                                report_name=runtime.report_name,
+                                subdir="candidates",
+                                items=fallback_items,
+                                mode="legacy",
+                                pdf_context=source.pdf_context,
+                            ),
+                            runtime.ctx,
+                        )
+                        fallback_path_by_id.update(
+                            _candidate_crop_path_map(
+                                missing_fallback_candidates,
+                                fallback_crop_resp.paths,
+                            )
+                        )
+                        newly_cropped_count = sum(
+                            1
+                            for candidate in missing_fallback_candidates
+                            if str(candidate.id or "").strip() in fallback_path_by_id
+                        )
+                        if newly_cropped_count:
+                            logger.info(
+                                log_event(
+                                    runtime.ctx,
+                                    role="generator",
+                                    event="candidate_crops_complete",
+                                    module=logger.name,
+                                    fields={
+                                        "count": newly_cropped_count,
+                                        "subdir": "candidates",
+                                        "reuse_count": len(fallback_path_by_id)
+                                        - newly_cropped_count,
+                                    },
+                                ),
+                            )
+                    except Exception as exc:
+                        logger.info(
+                            log_event(
+                                runtime.ctx,
+                                role="generator",
+                                event="candidate_crops_failed",
+                                module=logger.name,
+                                fields={"error": str(exc), "subdir": "candidates"},
+                            )
+                        )
+                fallback_paths: list[str] = []
+                fallback_candidates_with_paths: list[Candidate] = []
+                for candidate in fallback_candidates:
+                    normalized_path = str(
+                        fallback_path_by_id.get(str(candidate.id or "").strip()) or ""
+                    ).strip()
+                    if not normalized_path:
+                        continue
+                    fallback_paths.append(normalized_path)
+                    fallback_candidates_with_paths.append(candidate)
+                if fallback_paths:
+                    sliced_paths = fallback_paths
+                    figure_candidates = fallback_candidates_with_paths
+                    logger.info(
+                        log_event(
+                            runtime.ctx,
+                            role="generator",
+                            event="figure_section_fallback_candidate_crops_enabled",
+                            module=logger.name,
+                            fields={
+                                "file_id": runtime.file.file_id,
+                                "ranked_count": len(ranked),
+                                "prefiltered_count": len(prefiltered_candidates),
+                                "candidate_crop_count": len(candidate_path_by_id),
+                                "selected_count": len(fallback_paths),
+                                "reused_crop_count": len(fallback_path_by_id)
+                                - newly_cropped_count,
+                                "new_crop_count": newly_cropped_count,
+                                "skipped_missing_crop": max(
+                                    0,
+                                    len(fallback_candidates) - len(fallback_paths),
+                                ),
+                                "ordered_candidate_count": int(
+                                    fallback_stats.get("ordered_candidate_count", 0)
+                                ),
+                                "selected_by_kind": fallback_stats.get(
+                                    "selected_by_kind", {}
+                                ),
+                                "selected_by_source": fallback_stats.get(
+                                    "selected_by_source", {}
+                                ),
+                                "rejected_reasons": fallback_stats.get(
+                                    "rejected_reasons", {}
+                                ),
+                                "skipped_kind_limit": int(
+                                    fallback_stats.get("skipped_kind_limit", 0)
+                                ),
+                            },
                         )
                     )
         if figure_candidates:

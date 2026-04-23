@@ -387,14 +387,6 @@ Scoring rubric:
     - Dedupe algorithm updated and benchmarked with large PDFs.
     - No regressions in deduplication correctness tests.
 
-- **Title:** Reuse candidate crop output path / guard unused crop pass [Impact: 3/5, Effort: 2/5]
-  - Explanation: Ensure candidate crop output paths are used or guard/remove the unused crop pass to avoid wasted computation and confusion.
-  - Pros: Removes wasted I/O and clarifies pipeline.
-  - Cons: Requires auditing downstream consumers.
-  - Acceptance Criteria:
-    - Unused crop pass removed or guarded behind config.
-    - Crop output paths are consumed by report generator or persisted for debug.
-
 - **Title:** Add per-stage feature flags for controlled rollout [Impact: 3/5, Effort: 3/5]
   - Explanation: Add feature-flagging at the stage level to enable controlled rollouts, A/B tests, and emergency disable switches for costly steps.
   - Pros: Safer deployments and cost governance.
