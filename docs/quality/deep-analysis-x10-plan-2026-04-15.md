@@ -259,15 +259,6 @@ Scoring rubric:
     - Drift detector alerts on significant deviations.
     - Alert payload includes likely affected modules.
 
-- **Title:** Deterministic replay command by `run_id` [Impact: 5/5, Effort: 3/5]
-  - Explanation: Re-run pipeline using recorded inputs/config/prompts/artifacts for exact reproduction. MTTR often improves by >10x.
-  - Pros: Powerful incident response.
-  - Cons: Artifact retention and privacy controls required.
-  - Acceptance Criteria:
-    - Replay CLI/orchestrator path exists.
-    - Replay logs compare output deltas against original run.
-    - Incident playbook includes replay workflow.
-
 ---
 
 ## 8) CI/Testing Gates and Quality Integrity

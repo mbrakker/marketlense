@@ -17743,6 +17743,550 @@
       ],
       "type": "object"
     },
+    "src.contracts.ui_run_replay.UiRunArtifactFingerprint": {
+      "additionalProperties": false,
+      "properties": {
+        "exists": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "size_bytes": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "path",
+        "exists",
+        "size_bytes",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_replay.UiRunArtifactFingerprintRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_paths": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "run_id",
+        "artifact_paths"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_replay.UiRunArtifactFingerprintResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_fingerprints": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.ui_run_replay.UiRunArtifactFingerprint"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "artifact_fingerprints"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_replay.UiRunExecutionResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_paths": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "config_fingerprint": {
+          "type": "string"
+        },
+        "config_snapshot": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "error_code": {
+          "type": "string"
+        },
+        "error_message": {
+          "type": "string"
+        },
+        "result_summary": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "run_type": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "run_id",
+        "run_type",
+        "status",
+        "result_summary",
+        "artifact_paths",
+        "config_snapshot",
+        "config_fingerprint"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_replay.UiRunReplayCaptureRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_paths": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "config_fingerprint": {
+          "type": "string"
+        },
+        "config_snapshot": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "error_code": {
+          "type": "string"
+        },
+        "error_message": {
+          "type": "string"
+        },
+        "prompt_tree_root": {
+          "type": "string"
+        },
+        "recorded_at_utc": {
+          "type": "string"
+        },
+        "registry_path": {
+          "type": "string"
+        },
+        "request_payload": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "result_summary": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "run_type": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_tree_root": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "registry_path",
+        "run_id",
+        "run_type",
+        "status",
+        "recorded_at_utc",
+        "request_payload",
+        "config_snapshot",
+        "config_fingerprint",
+        "source_tree_root",
+        "prompt_tree_root",
+        "artifact_paths",
+        "result_summary"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_replay.UiRunReplayCaptureResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "manifest": {
+          "$ref": "#/$defs/src.contracts.ui_run_replay.UiRunReplayManifest"
+        },
+        "manifest_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "manifest_path",
+        "manifest"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_replay.UiRunReplayDelta": {
+      "additionalProperties": false,
+      "properties": {
+        "field_name": {
+          "type": "string"
+        },
+        "matches": {
+          "type": "boolean"
+        },
+        "original_value": {},
+        "replay_value": {},
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "field_name",
+        "matches",
+        "original_value",
+        "replay_value"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_replay.UiRunReplayManifest": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_fingerprints": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.ui_run_replay.UiRunArtifactFingerprint"
+          },
+          "type": "array"
+        },
+        "config_fingerprint": {
+          "type": "string"
+        },
+        "config_snapshot": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "error_code": {
+          "type": "string"
+        },
+        "error_message": {
+          "type": "string"
+        },
+        "prompt_tree_fingerprint": {
+          "type": "string"
+        },
+        "prompt_tree_root": {
+          "type": "string"
+        },
+        "recorded_at_utc": {
+          "type": "string"
+        },
+        "request_payload": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "result_summary": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "run_type": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_tree_fingerprint": {
+          "type": "string"
+        },
+        "source_tree_root": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "run_id",
+        "run_type",
+        "recorded_at_utc",
+        "status",
+        "request_payload",
+        "config_snapshot",
+        "config_fingerprint",
+        "source_tree_root",
+        "source_tree_fingerprint",
+        "prompt_tree_root",
+        "prompt_tree_fingerprint",
+        "result_summary",
+        "artifact_fingerprints"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_replay.UiRunReplayReadRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "registry_path": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "registry_path",
+        "run_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_replay.UiRunReplayReadResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "manifest": {
+          "$ref": "#/$defs/src.contracts.ui_run_replay.UiRunReplayManifest"
+        },
+        "manifest_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "manifest_path",
+        "manifest"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_replay.UiRunReplayReport": {
+      "additionalProperties": false,
+      "properties": {
+        "config_fingerprint_match": {
+          "type": "boolean"
+        },
+        "deltas": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.ui_run_replay.UiRunReplayDelta"
+          },
+          "type": "array"
+        },
+        "matched": {
+          "type": "boolean"
+        },
+        "prompt_fingerprint_match": {
+          "type": "boolean"
+        },
+        "replay_status": {
+          "type": "string"
+        },
+        "replayed_at_utc": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_fingerprint_match": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema_version",
+        "run_id",
+        "replayed_at_utc",
+        "replay_status",
+        "source_fingerprint_match",
+        "prompt_fingerprint_match",
+        "config_fingerprint_match",
+        "deltas",
+        "matched"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_replay.UiRunReplayReportWriteRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "registry_path": {
+          "type": "string"
+        },
+        "report": {
+          "$ref": "#/$defs/src.contracts.ui_run_replay.UiRunReplayReport"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "registry_path",
+        "run_id",
+        "report"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_replay.UiRunReplayReportWriteResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "report": {
+          "$ref": "#/$defs/src.contracts.ui_run_replay.UiRunReplayReport"
+        },
+        "report_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "report_path",
+        "report"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_replay.UiRunReplayRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "registry_path": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "registry_path",
+        "run_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_replay.UiRunReplayResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "manifest_path": {
+          "type": "string"
+        },
+        "original_record": {
+          "$ref": "#/$defs/src.contracts.ui_run_control.UiRunRecord"
+        },
+        "report": {
+          "$ref": "#/$defs/src.contracts.ui_run_replay.UiRunReplayReport"
+        },
+        "report_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "original_record",
+        "manifest_path",
+        "report_path",
+        "report"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_replay.UiRunWorkspaceFingerprintRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "prompt_tree_root": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_tree_root": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "run_id",
+        "source_tree_root",
+        "prompt_tree_root"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_replay.UiRunWorkspaceFingerprintResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "prompt_tree_fingerprint": {
+          "type": "string"
+        },
+        "prompt_tree_root": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_tree_fingerprint": {
+          "type": "string"
+        },
+        "source_tree_root": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "source_tree_root",
+        "source_tree_fingerprint",
+        "prompt_tree_root",
+        "prompt_tree_fingerprint"
+      ],
+      "type": "object"
+    },
     "src.contracts.validation.ValidationIssue": {
       "additionalProperties": false,
       "properties": {

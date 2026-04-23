@@ -26,6 +26,10 @@ from src.contracts.ui_run_control import (
     UiRunRecordWriteRequest,
     UiRunWorkerRequest,
 )
+from src.contracts.ui_run_replay import (
+    UiRunReplayCaptureRequest,
+    UiRunReplayRequest,
+)
 from src.orchestrators.report_download_orchestrator import run_report_download
 from src.orchestrators.acquisition_audit_orchestrator import run_acquisition_audit
 from src.orchestrators.cost_reporting_orchestrator import run_cost_reporting
@@ -38,6 +42,12 @@ from src.orchestrators.publisher_inventory_orchestrator import (
 from src.orchestrators.publisher_sync_orchestrator import run_publisher_sync
 from src.orchestrators.publish_orchestrator import run_publish
 from src.orchestrators.recategorize_orchestrator import run_recategorize
+from src.orchestrators.ui_run_execution_orchestrator import (
+    PROMPT_TREE_ROOT,
+    SOURCE_TREE_ROOT,
+    execute_ui_run,
+)
+from src.orchestrators.ui_run_replay_orchestrator import replay_ui_run
 from src.orchestrators.wp_category_update_orchestrator import run_update_wp_categories
 from src.services.config_service import (
     build_ingest_settings,
@@ -48,7 +58,12 @@ from src.services.config_service import (
 )
 from src.services.drive_service import authorize_oauth_user
 from src.services.logging_service import setup_logging
-from src.services.run_registry_service import get_ui_run_record, write_ui_run_record
+from src.services.run_registry_service import (
+    default_ui_run_registry_path,
+    get_ui_run_record,
+    write_ui_run_record,
+)
+from src.services.ui_run_replay_service import write_ui_run_replay_manifest
 from src.utils.logging import log_event, new_run_context
 
 
@@ -168,220 +183,6 @@ def _update_ui_run_record(
         run_ctx,
     )
     return updated
-
-
-def _run_ui_worker_payload(
-    worker_request: UiRunWorkerRequest,
-    run_ctx,
-) -> tuple[dict[str, object], list[str]]:
-    payload = worker_request.request_payload
-    run_type = worker_request.run_type
-    if run_type == "ingest":
-        app_settings = load_settings(
-            ConfigLoadRequest(schema_version="1.0", path=""), run_ctx
-        )
-        settings = build_ingest_settings(
-            IngestSettingsBuildRequest(schema_version="1.0", app_settings=app_settings),
-            run_ctx,
-        )
-        outcomes = run_ingest(
-            settings,
-            folder_id=str(payload.get("folder_id") or "").strip() or None,
-            limit=int(payload["limit"]) if payload.get("limit") is not None else None,
-            ctx=run_ctx,
-        )
-        processed_count = len([item for item in outcomes if item.status == "processed"])
-        return (
-            {
-                "processed_count": processed_count,
-                "total_count": len(outcomes),
-            },
-            [item.html_path for item in outcomes if item.html_path],
-        )
-    if run_type == "candidate_extraction":
-        app_settings = load_settings(
-            ConfigLoadRequest(schema_version="1.0", path=""), run_ctx
-        )
-        settings = build_ingest_settings(
-            IngestSettingsBuildRequest(schema_version="1.0", app_settings=app_settings),
-            run_ctx,
-        )
-        outcomes = run_candidate_extraction(
-            settings,
-            folder_id=str(payload.get("folder_id") or "").strip() or None,
-            limit=int(payload["limit"]) if payload.get("limit") is not None else None,
-            file_id=str(payload.get("file_id") or "").strip() or None,
-            pdf_path=str(payload.get("pdf_path") or "").strip() or None,
-            report_id=str(payload.get("report_id") or "").strip() or None,
-            ctx=run_ctx,
-        )
-        artifact_paths: list[str] = []
-        for outcome in outcomes:
-            if outcome.candidates_path:
-                artifact_paths.append(outcome.candidates_path)
-            artifact_paths.extend(outcome.crop_paths[:5])
-        return (
-            {
-                "total_count": len(outcomes),
-                "candidate_count": sum(item.candidate_count for item in outcomes),
-                "chart_count": sum(item.chart_count for item in outcomes),
-                "table_count": sum(item.table_count for item in outcomes),
-            },
-            artifact_paths,
-        )
-    if run_type == "cover_images":
-        settings = load_settings(
-            ConfigLoadRequest(schema_version="1.0", path=""), run_ctx
-        )
-        outcomes = run_cover_image_generation(
-            CoverImageOrchestratorRequest(
-                schema_version="1.0",
-                reports_db=settings.reports_db,
-                output_dir=settings.output_dir,
-                style_config_path=str(payload.get("style_config_path") or "").strip(),
-                limit=int(payload["limit"])
-                if payload.get("limit") is not None
-                else None,
-                file_id=str(payload.get("file_id") or "").strip() or None,
-            ),
-            ctx=run_ctx,
-        )
-        return (
-            {
-                "total_count": len(outcomes),
-                "generated_count": len(
-                    [item for item in outcomes if item.status == "generated"]
-                ),
-            },
-            [item.output_path for item in outcomes if item.output_path],
-        )
-    if run_type == "publish":
-        settings = load_publish_settings(
-            ConfigLoadRequest(schema_version="1.0", path=""), run_ctx
-        )
-        outcomes = run_publish(
-            settings,
-            limit=int(payload["limit"]) if payload.get("limit") is not None else None,
-            ctx=run_ctx,
-        )
-        return (
-            {
-                "total_count": len(outcomes),
-                "published_count": len(
-                    [item for item in outcomes if item.status == "published"]
-                ),
-            },
-            [item.html_path for item in outcomes if item.html_path],
-        )
-    if run_type == "publisher_discovery":
-        settings = load_publisher_inventory_settings(
-            ConfigLoadRequest(schema_version="1.0", path=""),
-            run_ctx,
-        )
-        result = run_publisher_inventory_discovery(
-            PublisherInventoryDiscoveryRequest(
-                schema_version="1.0",
-                insights_url=str(payload.get("insights_url") or "").strip(),
-                reports_db=settings.reports_db,
-                settings=settings,
-            ),
-            ctx=run_ctx,
-        )
-        return (
-            {
-                "publisher_name": result.publisher_name,
-                "current_report_count": result.current_report_count,
-                "previous_report_count": result.previous_report_count,
-                "new_report_count": len(result.new_report_urls),
-                "quality_band": result.run_quality_summary.quality_band,
-                "recommended_route_kind": result.run_quality_summary.recommended_route_kind,
-            },
-            [],
-        )
-    if run_type == "report_download":
-        settings = load_browser_download_settings(
-            ConfigLoadRequest(schema_version="1.0", path=""),
-            run_ctx,
-        )
-        result = run_report_download(
-            ReportDownloadOrchestratorRequest(
-                schema_version="1.0",
-                url=str(payload.get("url") or "").strip(),
-                settings=settings,
-                state_db=settings.state_db,
-                reports_db=settings.reports_db,
-                delivery_email=str(payload.get("delivery_email") or "").strip() or None,
-                publisher_insights_url=str(
-                    payload.get("publisher_insights_url") or ""
-                ).strip()
-                or None,
-                publisher_google_folder=str(
-                    payload.get("publisher_google_folder") or ""
-                ).strip()
-                or None,
-            ),
-            ctx=run_ctx,
-        )
-        artifact_paths = [
-            path
-            for path in [result.downloaded_file_path, result.onsite_capture_path]
-            if path
-        ]
-        return (
-            {
-                "route_kind": result.route_kind,
-                "route_family": result.route_family,
-                "outcome": result.outcome,
-                "final_page_url": result.final_page_url,
-                "downloaded_file_name": result.downloaded_file_name or "",
-            },
-            artifact_paths,
-        )
-    if run_type == "acquisition_audit":
-        app_settings = load_settings(
-            ConfigLoadRequest(schema_version="1.0", path=""), run_ctx
-        )
-        inventory_settings = load_publisher_inventory_settings(
-            ConfigLoadRequest(schema_version="1.0", path=""),
-            run_ctx,
-        )
-        browser_settings = load_browser_download_settings(
-            ConfigLoadRequest(schema_version="1.0", path=""),
-            run_ctx,
-        )
-        result = run_acquisition_audit(
-            AcquisitionAuditBatchRequest(
-                schema_version="1.0",
-                reports_db=app_settings.reports_db,
-                publisher_inventory_settings=inventory_settings,
-                browser_download_settings=browser_settings,
-                output_dir=app_settings.output_dir,
-                delivery_email=str(payload.get("delivery_email") or "").strip() or None,
-                publisher_limit=int(payload["publisher_limit"])
-                if payload.get("publisher_limit") is not None
-                else None,
-                candidate_limit_per_publisher=int(
-                    payload["candidate_limit_per_publisher"]
-                )
-                if payload.get("candidate_limit_per_publisher") is not None
-                else None,
-            ),
-            ctx=run_ctx,
-        )
-        return (
-            {
-                "publisher_count": result.publisher_count,
-                "candidate_count": result.candidate_count,
-                "output_path": result.output_path,
-            },
-            [result.output_path],
-        )
-    raise AppError(
-        code="ui_run_type_unknown",
-        message=f"Unknown UI run type: {run_type}",
-        retryable=False,
-        context={"run_type": run_type},
-    )
 
 
 @cli_app.command("ingest")
@@ -1095,6 +896,43 @@ def sync_publishers(
     console.print(table)
 
 
+@cli_app.command("replay-run")
+def replay_run(
+    run_id: str = typer.Option(..., help="Original UI run identifier to replay"),
+    registry_path: str | None = typer.Option(
+        None,
+        help="Optional UI-run registry path. Defaults to the configured state DB sibling.",
+    ),
+):
+    ctx = new_run_context(task_id=f"cli_replay_run:{run_id}")
+    setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
+    resolved_registry_path = str(registry_path or "").strip()
+    if not resolved_registry_path:
+        settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+        resolved_registry_path = default_ui_run_registry_path(settings.state_db)
+    result = replay_ui_run(
+        UiRunReplayRequest(
+            schema_version="1.0",
+            registry_path=resolved_registry_path,
+            run_id=run_id,
+        ),
+        ctx,
+    )
+    table = Table(title="UI Run Replay", box=box.SIMPLE_HEAVY)
+    table.add_column("Field")
+    table.add_column("Value")
+    table.add_row("Run ID", str(result.original_record.run_id))
+    table.add_row("Run type", result.original_record.run_type)
+    table.add_row("Replay status", result.report.replay_status)
+    table.add_row("Matched", str(result.report.matched))
+    table.add_row("Manifest", result.manifest_path)
+    table.add_row("Report", result.report_path)
+    table.add_row("Delta count", str(len(result.report.deltas)))
+    console.print(table)
+    if not result.report.matched:
+        raise typer.Exit(code=1)
+
+
 @cli_app.command("ui-run-worker", hidden=True)
 def ui_run_worker(
     request_json: str = typer.Option(
@@ -1119,16 +957,53 @@ def ui_run_worker(
         flush=True,
     )
     try:
-        result_summary, artifact_paths = _run_ui_worker_payload(worker_request, ctx)
+        execution = execute_ui_run(worker_request, ctx)
+        finished_at = _utc_now()
+        write_ui_run_replay_manifest(
+            UiRunReplayCaptureRequest(
+                schema_version="1.0",
+                registry_path=worker_request.registry_path,
+                run_id=worker_request.run_id,
+                run_type=worker_request.run_type,
+                status=execution.status,
+                recorded_at_utc=finished_at,
+                request_payload=worker_request.request_payload,
+                config_snapshot=execution.config_snapshot,
+                config_fingerprint=execution.config_fingerprint,
+                source_tree_root=str(SOURCE_TREE_ROOT),
+                prompt_tree_root=str(PROMPT_TREE_ROOT),
+                artifact_paths=execution.artifact_paths,
+                result_summary=execution.result_summary,
+                error_code=execution.error_code,
+                error_message=execution.error_message,
+            ),
+            ctx,
+        )
+        if execution.status != "succeeded":
+            _update_ui_run_record(
+                worker_request=worker_request,
+                run_ctx=ctx,
+                status="failed",
+                finished_at_utc=finished_at,
+                pid=os.getpid(),
+                exit_code=1,
+                error_code=execution.error_code or "ui_run_worker_failed",
+                error_message=execution.error_message or "UI run execution failed.",
+            )
+            print(
+                f"[ui-run-worker] failed run_id={worker_request.run_id} code={execution.error_code} message={execution.error_message}",
+                flush=True,
+            )
+            raise typer.Exit(code=1)
         _update_ui_run_record(
             worker_request=worker_request,
             run_ctx=ctx,
             status="succeeded",
-            finished_at_utc=_utc_now(),
+            finished_at_utc=finished_at,
             pid=os.getpid(),
             exit_code=0,
-            result_summary=result_summary,
-            artifact_paths=artifact_paths,
+            result_summary=execution.result_summary,
+            artifact_paths=execution.artifact_paths,
         )
         print(
             f"[ui-run-worker] completed run_id={worker_request.run_id}",

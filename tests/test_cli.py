@@ -3,6 +3,8 @@ import types
 import unittest
 from unittest.mock import patch
 
+import click
+
 from src.contracts.browser_download import (
     BrowserDownloadConfirmationEvidence,
     BrowserDownloadIdentity,
@@ -12,6 +14,8 @@ from src.contracts.browser_download import (
     DownloadTerminalEvidence,
     ReportDownloadOrchestratorResult,
 )
+from src.contracts.ui_run_control import UiRunRecord
+from src.contracts.ui_run_replay import UiRunReplayReport, UiRunReplayResponse
 from src.contracts.acquisition_audit import (
     AcquisitionAuditBatchResult,
     AcquisitionAuditCandidateResult,
@@ -683,6 +687,121 @@ class TestCli(unittest.TestCase):
         self.assertEqual("./google_oauth_client.json", request.client_secret_path)
         self.assertEqual("./google_oauth_token.json", request.token_output_path)
         self.assertTrue(request.open_browser)
+
+    def test_replay_run_uses_default_registry_and_orchestrator(self) -> None:
+        import src.cli as cli
+
+        settings = AppSettings(
+            schema_version="1.0",
+            google_sa_path="sa.json",
+            gdrive_folder_id="folder",
+            openai_api_key="key",
+            openai_model="gpt-5",
+            batch_limit=5,
+            output_dir="./out",
+            cache_dir="./cache",
+            state_db="./state/index.sqlite",
+            reports_db="./state/reports.sqlite",
+            publisher_profiles_path="./Wordpress/config/publisher-profiles.json",
+            category_mapping_path="./src/config/category-mappings.yaml",
+            cover_style_path="./src/config/cover-styles.yaml",
+            ingest_lock_path="./state/ingest.lock",
+            ingest_lock_ttl_seconds=7200.0,
+            temperature=1.0,
+            cost_ledger_path="./out/cost-ledger.jsonl",
+            cost_daily_path="./out/cost-daily.json",
+            model_pricing={},
+        )
+        response = UiRunReplayResponse(
+            schema_version="1.0",
+            original_record=UiRunRecord(
+                schema_version="1.0",
+                run_id="run-1",
+                run_type="report_download",
+                display_name="Report download",
+                status="succeeded",
+                request_payload={"url": "https://example.com/report.pdf"},
+                command=["python", "-m", "src.cli", "ui-run-worker"],
+                created_at_utc="2026-04-23T10:00:00+00:00",
+                updated_at_utc="2026-04-23T10:00:05+00:00",
+                artifact_paths=[],
+                result_summary={},
+            ),
+            manifest_path="./state/ui_runs/run-1/replay_manifest.json",
+            report_path="./state/ui_runs/run-1/replays/report.json",
+            report=UiRunReplayReport(
+                schema_version="1.0",
+                run_id="run-1",
+                replayed_at_utc="2026-04-23T10:00:06+00:00",
+                replay_status="succeeded",
+                source_fingerprint_match=True,
+                prompt_fingerprint_match=True,
+                config_fingerprint_match=True,
+                deltas=[],
+                matched=True,
+            ),
+        )
+
+        with patch.object(cli, "load_settings", return_value=settings) as load_mock:
+            with patch.object(
+                cli,
+                "default_ui_run_registry_path",
+                return_value="./state/ui_runs.sqlite",
+            ) as default_registry_mock:
+                with patch.object(
+                    cli, "replay_ui_run", return_value=response
+                ) as replay_mock:
+                    with patch.object(cli.console, "print"):
+                        cli.replay_run(run_id="run-1", registry_path=None)
+
+        load_mock.assert_called_once()
+        default_registry_mock.assert_called_once_with("./state/index.sqlite")
+        replay_mock.assert_called_once()
+        request = replay_mock.call_args.args[0]
+        self.assertEqual("./state/ui_runs.sqlite", request.registry_path)
+        self.assertEqual("run-1", request.run_id)
+
+    def test_replay_run_exits_nonzero_when_replay_differs(self) -> None:
+        import src.cli as cli
+
+        response = UiRunReplayResponse(
+            schema_version="1.0",
+            original_record=UiRunRecord(
+                schema_version="1.0",
+                run_id="run-1",
+                run_type="report_download",
+                display_name="Report download",
+                status="succeeded",
+                request_payload={"url": "https://example.com/report.pdf"},
+                command=["python", "-m", "src.cli", "ui-run-worker"],
+                created_at_utc="2026-04-23T10:00:00+00:00",
+                updated_at_utc="2026-04-23T10:00:05+00:00",
+                artifact_paths=[],
+                result_summary={},
+            ),
+            manifest_path="./state/ui_runs/run-1/replay_manifest.json",
+            report_path="./state/ui_runs/run-1/replays/report.json",
+            report=UiRunReplayReport(
+                schema_version="1.0",
+                run_id="run-1",
+                replayed_at_utc="2026-04-23T10:00:06+00:00",
+                replay_status="blocked_drift",
+                source_fingerprint_match=False,
+                prompt_fingerprint_match=True,
+                config_fingerprint_match=True,
+                deltas=[],
+                matched=False,
+            ),
+        )
+
+        with patch.object(cli, "replay_ui_run", return_value=response):
+            with patch.object(cli.console, "print"):
+                with self.assertRaises(click.exceptions.Exit) as exc_info:
+                    cli.replay_run(
+                        run_id="run-1", registry_path="./state/ui_runs.sqlite"
+                    )
+
+        self.assertEqual(1, exc_info.exception.exit_code)
 
 
 if __name__ == "__main__":
