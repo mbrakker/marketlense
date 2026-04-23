@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
+from typing import Callable, Optional
 
+from src.contracts.analytics_projection import (
+    AnalyticsProjectionRunRequest,
+    PROJECTION_SCHEMA_VERSION,
+)
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.report_generation import ReportRuntimeState
@@ -16,6 +20,7 @@ from src.generators.report_render_generator import (
 )
 from src.generators.report_selection_generator import select_report_figures
 from src.generators.report_source_generator import prepare_report_source
+from src.orchestrators.analytics_projection_orchestrator import run_analytics_projection
 from src.orchestrators.report_analysis_orchestrator import run_report_analysis
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -138,6 +143,9 @@ def run_report_generation(
     evidence_pack_openai_client=None,
     artifact_openai_client=None,
     dependencies: Optional[ReportGeneratorDependencies] = None,
+    analytics_projection_fn: Optional[
+        Callable[[AnalyticsProjectionRunRequest], object]
+    ] = None,
 ) -> IngestOutcome:
     deps = dependencies or ReportGeneratorDependencies.default()
     runtime = _build_runtime_state(file, local_pdf_path, settings, md5, ctx)
@@ -183,7 +191,7 @@ def run_report_generation(
             evidence_pack_openai_client=evidence_pack_openai_client,
             artifact_openai_client=artifact_openai_client,
         )
-        return render_report_output(
+        outcome = render_report_output(
             runtime,
             source,
             selection,
@@ -191,6 +199,33 @@ def run_report_generation(
             deps,
             preview_resp=preview_resp,
         )
+        project = analytics_projection_fn or run_analytics_projection
+        try:
+            project(
+                AnalyticsProjectionRunRequest(
+                    schema_version=PROJECTION_SCHEMA_VERSION,
+                    db_path=runtime.settings.reports_db,
+                    analysis=analysis,
+                    rendered_html_path=outcome.html_path or "",
+                    ctx=runtime.ctx,
+                )
+            )
+        except AppError as projection_error:
+            logger.error(
+                log_event(
+                    runtime.ctx,
+                    role="orchestrator",
+                    event="analytics_projection_failed_nonblocking",
+                    module=logger.name,
+                    fields={
+                        "file_id": runtime.file.file_id,
+                        "error_code": projection_error.code,
+                        "error_retryable": projection_error.retryable,
+                        "error_message": projection_error.message,
+                    },
+                )
+            )
+        return outcome
     except AppError as exc:
         if exc.code == "pdf_text_unextractable":
             return _pdf_text_unextractable_outcome(runtime, exc)

@@ -40,6 +40,14 @@ class ReportId(SemanticId):
     kind = "report_id"
 
 
+class EntityUid(SemanticId):
+    kind = "entity_uid"
+
+
+class PublisherId(SemanticId):
+    kind = "publisher_id"
+
+
 class SemanticIdContract:
     """Dataclass mixin that coerces and validates semantic ID fields."""
 

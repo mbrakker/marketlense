@@ -789,10 +789,25 @@ Key contracts live under `src/contracts/`:
 - `pdf_context.py`: shared PDF context (PyMuPDF + pypdf handles) and build request/response contracts
 - `pdf_utils.py`: EOF check and PDF info (page count + metadata) contracts
 - `report_store.py`: report metadata upsert/get/list contracts, including page count and flattened PDF metadata
-- `semantic_ids.py`: typed `RunId`, `TaskId`, and `ReportId` wrappers used by core contracts to block cross-ID reuse while preserving string-compatible JSON/state boundaries
+- `semantic_ids.py`: typed `RunId`, `TaskId`, `ReportId`, `PublisherId`, and `EntityUid` wrappers used by core contracts to block cross-ID reuse while preserving string-compatible JSON/state boundaries
+- `analytics_projection.py`: canonical report/entity projection rows, projection status/failure requests, and vector-ready queue contracts
 - `validation.py`: validation requests, issues, and reports (persisted per report)
 - `regeneration.py`: validation-regeneration issues, plans, attempt results, loop state, and typed single-pass request/response contracts
 - `docpacks.py`: typed contracts for core/variety docpack payloads and map aliases
+
+---
+
+## Analytics Projection Foundation
+
+After the rendered report outcome has been successfully assembled, `src/orchestrators/report_generation_orchestrator.py` invokes `src/orchestrators/analytics_projection_orchestrator.py`. The projection pass maps existing DocMap, FindingsPack, KeyMetricsPack, taxonomy, context-category fit, artifacts, validation, and figure payloads into normalized SQLite tables plus `vector_projection_queue`.
+
+The projection is additive. Existing JSON packs, audit artifacts, vector-store-first analysis, and HTML rendering remain the source behavior. Projection failures are persisted on the `reports` row with `projection_status='failed'`, attempt count, and typed error fields, then logged as `analytics_projection_failed_nonblocking` without blocking the processed HTML outcome.
+
+Projection-owned tables include `report_sections`, `report_findings`, `report_metrics`, `report_quotes`, `report_claims`, `report_tags`, `report_categories`, `report_figures`, and `vector_projection_queue`. `report_id` is the existing Drive file ID, and `source_file_id` is not stored separately when it would duplicate `report_id`.
+
+`vector_projection_queue` stages future embedding work with deterministic `entity_uid`, canonical `text_payload`, `content_hash`, metadata JSON, `content_class`, and `embedding_status` constrained to `pending`, `embedded`, or `failed`. The queue does not implement global retrieval yet.
+
+Implementation notes live in `docs/quality/analytics-projection-foundation.md`.
 
 ---
 

@@ -376,6 +376,7 @@ def run_report_analysis(
             ),
         ),
     ):
+        packs[pack_name] = payload
         stored_pack = dependencies.analysis_store_pack(
             AnalysisStorePackRequest(
                 schema_version="1.0",

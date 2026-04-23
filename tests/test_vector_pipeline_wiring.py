@@ -562,6 +562,7 @@ def test_ingest_orchestrator_records_doc_map_summary(tmp_path) -> None:
 def test_generate_report_vector_store_with_validation(
     tmp_path,
     assert_no_defaulted_required_fields,
+    caplog,
 ) -> None:
     settings = _ingest_settings(tmp_path)
     settings = settings.__class__(
@@ -807,17 +808,38 @@ def test_generate_report_vector_store_with_validation(
         ),
     )
 
-    outcome = rgo.run_report_generation(
-        file,
-        str(pdf_path),
-        settings,
-        md5="md5",
-        ctx=ctx,
-        dependencies=deps,
-    )
+    projection_requests = []
+
+    def _failing_projection(req):
+        projection_requests.append(req)
+        raise AppError(
+            code="analytics_projection_test_failure",
+            message="projection failed",
+            retryable=False,
+            severity="error",
+        )
+
+    with caplog.at_level(logging.ERROR, logger=rgo.logger.name):
+        outcome = rgo.run_report_generation(
+            file,
+            str(pdf_path),
+            settings,
+            md5="md5",
+            ctx=ctx,
+            dependencies=deps,
+            analytics_projection_fn=_failing_projection,
+        )
 
     assert_no_defaulted_required_fields(outcome)
     assert outcome.status == "processed"
+    assert projection_requests[0].rendered_html_path == outcome.html_path
+    events = _decode_log_events(caplog, rgo.logger.name)
+    assert any(
+        event.get("event") == "analytics_projection_failed_nonblocking"
+        and event.get("fields", {}).get("error_code")
+        == "analytics_projection_test_failure"
+        for event in events
+    )
     assert outcome.vector_store_id == "vs_new"
     assert outcome.evidence_packs is not None
     assert "doc_map" in outcome.evidence_packs

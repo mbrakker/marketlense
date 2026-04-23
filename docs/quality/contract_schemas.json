@@ -324,6 +324,837 @@
       ],
       "type": "object"
     },
+    "src.contracts.analytics_projection.AnalyticsProjectionBatch": {
+      "additionalProperties": false,
+      "properties": {
+        "categories": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.analytics_projection.ReportCategoryProjection"
+          },
+          "type": "array"
+        },
+        "claims": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.analytics_projection.ReportClaimProjection"
+          },
+          "type": "array"
+        },
+        "figures": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.analytics_projection.ReportFigureProjection"
+          },
+          "type": "array"
+        },
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.analytics_projection.ReportFindingProjection"
+          },
+          "type": "array"
+        },
+        "metrics": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.analytics_projection.ReportMetricProjection"
+          },
+          "type": "array"
+        },
+        "projection_version": {
+          "type": "string"
+        },
+        "quotes": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.analytics_projection.ReportQuoteProjection"
+          },
+          "type": "array"
+        },
+        "report": {
+          "$ref": "#/$defs/src.contracts.analytics_projection.AnalyticsReportRow"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "sections": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.analytics_projection.ReportSectionProjection"
+          },
+          "type": "array"
+        },
+        "tags": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.analytics_projection.ReportTagProjection"
+          },
+          "type": "array"
+        },
+        "vector_queue": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.analytics_projection.VectorProjectionQueueRow"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "projection_version",
+        "report",
+        "sections",
+        "findings",
+        "metrics",
+        "quotes",
+        "claims",
+        "tags",
+        "categories",
+        "figures",
+        "vector_queue"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.AnalyticsProjectionBuildRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "analysis": {
+          "$ref": "#/$defs/src.contracts.report_generation.ReportAnalysisState"
+        },
+        "generated_at_utc": {
+          "type": "string"
+        },
+        "rendered_html_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "analysis",
+        "rendered_html_path",
+        "generated_at_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.AnalyticsProjectionFailureRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "error_code": {
+          "type": "string"
+        },
+        "error_message": {
+          "type": "string"
+        },
+        "error_retryable": {
+          "type": "boolean"
+        },
+        "generated_at_utc": {
+          "type": "string"
+        },
+        "projection_schema_version": {
+          "type": "string"
+        },
+        "projection_version": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "report_id",
+        "projection_schema_version",
+        "projection_version",
+        "generated_at_utc",
+        "error_code",
+        "error_message",
+        "error_retryable"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.AnalyticsProjectionFailureResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "projection_attempt_count": {
+          "type": "integer"
+        },
+        "projection_status": {
+          "enum": [
+            "not_projected",
+            "projected",
+            "failed"
+          ]
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "report_id",
+        "projection_status",
+        "projection_attempt_count"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.AnalyticsProjectionRunRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "analysis": {
+          "$ref": "#/$defs/src.contracts.report_generation.ReportAnalysisState"
+        },
+        "ctx": {
+          "$ref": "#/$defs/src.contracts.run_context.RunContext"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "rendered_html_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "analysis",
+        "rendered_html_path",
+        "ctx"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.AnalyticsProjectionUpsertRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "batch": {
+          "$ref": "#/$defs/src.contracts.analytics_projection.AnalyticsProjectionBatch"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "batch"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.AnalyticsProjectionUpsertResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "projection_attempt_count": {
+          "type": "integer"
+        },
+        "projection_status": {
+          "enum": [
+            "not_projected",
+            "projected",
+            "failed"
+          ]
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "rows_upserted": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "vector_queue_count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "report_id",
+        "projection_status",
+        "projection_attempt_count",
+        "rows_upserted",
+        "vector_queue_count"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.AnalyticsReportRow": {
+      "additionalProperties": false,
+      "properties": {
+        "analysis_run_id": {
+          "type": "string"
+        },
+        "ingest_run_id": {
+          "type": "string"
+        },
+        "projection_generated_at_utc": {
+          "type": "string"
+        },
+        "projection_version": {
+          "type": "string"
+        },
+        "publisher": {
+          "type": "string"
+        },
+        "publisher_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "region": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_md5": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "text_density": {
+          "type": "number"
+        },
+        "text_not_available": {
+          "type": "boolean"
+        },
+        "time_period": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "validation_severity": {
+          "type": "string"
+        },
+        "validation_status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "projection_version",
+        "report_id",
+        "title",
+        "publisher"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.ProjectionLineage": {
+      "additionalProperties": false,
+      "properties": {
+        "analysis_run_id": {
+          "type": "string"
+        },
+        "generated_at_utc": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "projection_version": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_pack": {
+          "type": "string"
+        },
+        "source_ref": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "projection_version",
+        "source_pack",
+        "source_ref",
+        "generated_at_utc",
+        "analysis_run_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.ReportCategoryProjection": {
+      "additionalProperties": false,
+      "properties": {
+        "category_id": {
+          "type": "string"
+        },
+        "category_uid": {
+          "type": "string"
+        },
+        "decision": {
+          "type": "string"
+        },
+        "evidence_sections": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "fit_score": {
+          "type": "number"
+        },
+        "label": {
+          "type": "string"
+        },
+        "lineage": {
+          "$ref": "#/$defs/src.contracts.analytics_projection.ProjectionLineage"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "selected": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema_version",
+        "category_uid",
+        "report_id",
+        "category_id",
+        "label",
+        "fit_score",
+        "decision",
+        "selected",
+        "evidence_sections",
+        "lineage"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.ReportClaimProjection": {
+      "additionalProperties": false,
+      "properties": {
+        "claim": {
+          "type": "string"
+        },
+        "claim_uid": {
+          "type": "string"
+        },
+        "evidence": {
+          "type": "string"
+        },
+        "evidence_id": {
+          "type": "string"
+        },
+        "lineage": {
+          "$ref": "#/$defs/src.contracts.analytics_projection.ProjectionLineage"
+        },
+        "pages": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "claim_uid",
+        "report_id",
+        "claim",
+        "evidence_id",
+        "evidence",
+        "pages",
+        "lineage"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.ReportFigureProjection": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_id": {
+          "type": "string"
+        },
+        "caption_source": {
+          "type": "string"
+        },
+        "detected_caption": {
+          "type": "string"
+        },
+        "display_caption": {
+          "type": "string"
+        },
+        "figure_uid": {
+          "type": "string"
+        },
+        "generated_caption": {
+          "type": "string"
+        },
+        "image_path": {
+          "type": "string"
+        },
+        "is_primary": {
+          "type": "boolean"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "lineage": {
+          "$ref": "#/$defs/src.contracts.analytics_projection.ProjectionLineage"
+        },
+        "page": {
+          "type": "integer"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "figure_uid",
+        "report_id",
+        "candidate_id",
+        "image_path",
+        "kind",
+        "page",
+        "is_primary",
+        "detected_caption",
+        "generated_caption",
+        "display_caption",
+        "caption_source",
+        "lineage"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.ReportFindingProjection": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "type": "string"
+        },
+        "evidence": {
+          "type": "string"
+        },
+        "finding_id": {
+          "type": "string"
+        },
+        "finding_uid": {
+          "type": "string"
+        },
+        "lineage": {
+          "$ref": "#/$defs/src.contracts.analytics_projection.ProjectionLineage"
+        },
+        "pages": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "finding_uid",
+        "report_id",
+        "finding_id",
+        "text",
+        "evidence",
+        "confidence",
+        "pages",
+        "lineage"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.ReportMetricProjection": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_id": {
+          "type": "string"
+        },
+        "lineage": {
+          "$ref": "#/$defs/src.contracts.analytics_projection.ProjectionLineage"
+        },
+        "metric": {
+          "type": "string"
+        },
+        "metric_id": {
+          "type": "string"
+        },
+        "metric_uid": {
+          "type": "string"
+        },
+        "pages": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "metric_uid",
+        "report_id",
+        "metric_id",
+        "metric",
+        "value",
+        "unit",
+        "evidence_id",
+        "pages",
+        "lineage"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.ReportQuoteProjection": {
+      "additionalProperties": false,
+      "properties": {
+        "citation": {
+          "type": "string"
+        },
+        "evidence_id": {
+          "type": "string"
+        },
+        "lineage": {
+          "$ref": "#/$defs/src.contracts.analytics_projection.ProjectionLineage"
+        },
+        "page": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "quote_id": {
+          "type": "string"
+        },
+        "quote_uid": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "speaker": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "quote_uid",
+        "report_id",
+        "quote_id",
+        "text",
+        "speaker",
+        "citation",
+        "page",
+        "evidence_id",
+        "lineage"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.ReportSectionProjection": {
+      "additionalProperties": false,
+      "properties": {
+        "key_points": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "lineage": {
+          "$ref": "#/$defs/src.contracts.analytics_projection.ProjectionLineage"
+        },
+        "order_index": {
+          "type": "integer"
+        },
+        "pages": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "section_id": {
+          "type": "string"
+        },
+        "section_uid": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "section_uid",
+        "report_id",
+        "section_id",
+        "title",
+        "summary",
+        "key_points",
+        "pages",
+        "order_index",
+        "lineage"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.ReportTagProjection": {
+      "additionalProperties": false,
+      "properties": {
+        "lineage": {
+          "$ref": "#/$defs/src.contracts.analytics_projection.ProjectionLineage"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        },
+        "tag_type": {
+          "type": "string"
+        },
+        "tag_uid": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "tag_uid",
+        "report_id",
+        "tag",
+        "tag_type",
+        "lineage"
+      ],
+      "type": "object"
+    },
+    "src.contracts.analytics_projection.VectorProjectionQueueRow": {
+      "additionalProperties": false,
+      "properties": {
+        "content_class": {
+          "enum": [
+            "evidence",
+            "derived_evidence",
+            "editorial"
+          ]
+        },
+        "content_hash": {
+          "type": "string"
+        },
+        "created_at_utc": {
+          "type": "string"
+        },
+        "embedding_status": {
+          "enum": [
+            "pending",
+            "embedded",
+            "failed"
+          ]
+        },
+        "embedding_version": {
+          "type": "string"
+        },
+        "entity_type": {
+          "type": "string"
+        },
+        "entity_uid": {
+          "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "text_payload": {
+          "type": "string"
+        },
+        "updated_at_utc": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "entity_uid",
+        "entity_type",
+        "report_id",
+        "text_payload",
+        "content_hash",
+        "metadata",
+        "content_class",
+        "embedding_status",
+        "embedding_version",
+        "created_at_utc",
+        "updated_at_utc"
+      ],
+      "type": "object"
+    },
     "src.contracts.browser_download.BrowserDownloadConfirmationEvidence": {
       "additionalProperties": false,
       "properties": {

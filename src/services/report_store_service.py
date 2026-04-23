@@ -80,6 +80,24 @@ CREATE TABLE IF NOT EXISTS reports (
   analysis_mode TEXT,
   vector_store_id TEXT,
   evidence_packs_json TEXT,
+  report_id TEXT,
+  publisher_id TEXT,
+  source_md5 TEXT,
+  ingest_run_id TEXT,
+  analysis_run_id TEXT,
+  validation_status TEXT,
+  validation_severity TEXT,
+  text_density REAL,
+  text_not_available INTEGER,
+  projection_schema_version TEXT,
+  projection_version TEXT,
+  projection_status TEXT NOT NULL DEFAULT 'not_projected' CHECK(projection_status IN ('not_projected','projected','failed')),
+  projection_attempt_count INTEGER NOT NULL DEFAULT 0,
+  projection_error_code TEXT,
+  projection_error_message TEXT,
+  projection_error_retryable INTEGER,
+  projection_generated_at_utc TEXT,
+  projection_updated_at_utc TEXT,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
@@ -221,8 +239,55 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE reports ADD COLUMN vector_store_id TEXT")
     if "evidence_packs_json" not in cols:
         conn.execute("ALTER TABLE reports ADD COLUMN evidence_packs_json TEXT")
+    if "report_id" not in cols:
+        conn.execute("ALTER TABLE reports ADD COLUMN report_id TEXT")
+    if "publisher_id" not in cols:
+        conn.execute("ALTER TABLE reports ADD COLUMN publisher_id TEXT")
+    if "source_md5" not in cols:
+        conn.execute("ALTER TABLE reports ADD COLUMN source_md5 TEXT")
+    if "ingest_run_id" not in cols:
+        conn.execute("ALTER TABLE reports ADD COLUMN ingest_run_id TEXT")
+    if "analysis_run_id" not in cols:
+        conn.execute("ALTER TABLE reports ADD COLUMN analysis_run_id TEXT")
+    if "validation_status" not in cols:
+        conn.execute("ALTER TABLE reports ADD COLUMN validation_status TEXT")
+    if "validation_severity" not in cols:
+        conn.execute("ALTER TABLE reports ADD COLUMN validation_severity TEXT")
+    if "text_density" not in cols:
+        conn.execute("ALTER TABLE reports ADD COLUMN text_density REAL")
+    if "text_not_available" not in cols:
+        conn.execute("ALTER TABLE reports ADD COLUMN text_not_available INTEGER")
+    if "projection_schema_version" not in cols:
+        conn.execute("ALTER TABLE reports ADD COLUMN projection_schema_version TEXT")
+    if "projection_version" not in cols:
+        conn.execute("ALTER TABLE reports ADD COLUMN projection_version TEXT")
+    if "projection_status" not in cols:
+        conn.execute(
+            "ALTER TABLE reports ADD COLUMN projection_status TEXT NOT NULL DEFAULT 'not_projected' CHECK(projection_status IN ('not_projected','projected','failed'))"
+        )
+    if "projection_attempt_count" not in cols:
+        conn.execute(
+            "ALTER TABLE reports ADD COLUMN projection_attempt_count INTEGER NOT NULL DEFAULT 0"
+        )
+    if "projection_error_code" not in cols:
+        conn.execute("ALTER TABLE reports ADD COLUMN projection_error_code TEXT")
+    if "projection_error_message" not in cols:
+        conn.execute("ALTER TABLE reports ADD COLUMN projection_error_message TEXT")
+    if "projection_error_retryable" not in cols:
+        conn.execute(
+            "ALTER TABLE reports ADD COLUMN projection_error_retryable INTEGER"
+        )
+    if "projection_generated_at_utc" not in cols:
+        conn.execute(
+            "ALTER TABLE reports ADD COLUMN projection_generated_at_utc TEXT"
+        )
+    if "projection_updated_at_utc" not in cols:
+        conn.execute("ALTER TABLE reports ADD COLUMN projection_updated_at_utc TEXT")
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_reports_file_name ON reports(file_name)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_reports_projection_status ON reports(projection_status)"
     )
     _ensure_report_sources_schema(conn)
     _ensure_publishers_schema(conn)
