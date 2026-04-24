@@ -374,16 +374,6 @@ Each quick-win should be documented with a short task when prioritized.
 
 ### 8.4 Architecture-Fit Additions
 
-- **Title:** Finish PDF extraction internal split and remove private cross-module imports [Impact: 5/5, Effort: 5/5]
-  - Explanation: `src/services/_pdf/visual_candidates.py` and `src/services/_pdf/table_candidates.py` still import dozens of private helpers and constants from `src/services/_pdf/figures.py`, which keeps `figures.py` as a 7k-line god module. Extract shared geometry/text/caption/scoring heuristics into explicit internal modules and keep `pdf_service` as the only public boundary.
-  - Pros: Lower cognitive load, clearer ownership of PDF heuristics, and easier performance tuning without touching one giant file.
-  - Cons: Broad refactor with risk of subtle heuristic regressions if test coverage misses edge cases.
-  - Acceptance Criteria:
-    - Capability modules no longer import private helpers directly from `figures.py`.
-    - Shared heuristics live in named internal modules with focused tests.
-    - `src/services/pdf_service.py` remains the single canonical public boundary.
-    - Existing candidate-extraction and crop tests continue to pass without behavior drift.
-
 - **Title:** Externalize publisher-inventory browser scripts and traversal state [Impact: 3/5, Effort: 4/5]
   - Explanation: `src/services/publisher_inventory_service.py` embeds large JavaScript snippets with repeated selector, visibility, and normalization helpers, while traversal metrics are rebuilt repeatedly during browser flows. Move browser actions/state extraction into named internal script modules or assets, reuse one helper bundle, and model traversal state updates through explicit typed state helpers.
   - Pros: Smaller service surface, less duplicated browser logic, easier targeted testing, and less brittle DOM-script maintenance.

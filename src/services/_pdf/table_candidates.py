@@ -18,7 +18,7 @@ from PIL import ImageFilter
 
 from src.contracts.candidates import Candidate, CandidateFeatures
 
-from .figures import (
+from .table_heuristics import (
     TABLE_SETTINGS_LATTICE,
     TABLE_SETTINGS_STREAM,
     TABLE_DEDUP_IOU,

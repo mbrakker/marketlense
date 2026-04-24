@@ -18,7 +18,7 @@ from PIL import Image, ImageFilter, ImageStat
 
 from src.contracts.candidates import Candidate, CandidateFeatures
 
-from .figures import (
+from .visual_heuristics import (
     CHART_CAPTION_HINTS,
     CHART_CAPTIONED_DRAW_MAX_ASPECT,
     CHART_DENSE_RECOVERY_MIN_CHARS,
