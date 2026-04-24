@@ -1,0 +1,26 @@
+schema_version: "1.0"
+
+# Copy the keys you need into src/config/app.local.yaml or a separate config file
+# referenced by MARKET_LENSE_CONFIG_PATH. Keep secrets in environment variables.
+
+ingest:
+  google_sa_path: "./sa.json"
+  gdrive_folder_id: "replace-with-drive-folder-id"
+  drive:
+    auth_mode: "service_account"
+    oauth_client_path: "./google_oauth_client.json"
+    oauth_token_path: "./google_oauth_token.json"
+
+publish:
+  wp:
+    site_url: "https://example.com"
+    username: "admin"
+    post_status: "publish"
+    post_type: "ml_report"
+    ssl_verify: true
+
+browser_download:
+  model: "google/gemini-2.5-flash-lite"
+
+publisher_discovery:
+  model: "google/gemini-2.5-flash-lite"

@@ -74,9 +74,12 @@ agent-skills/
 *.log
 *.bak
 *.tmp
+logs/*.csv
+logs/*.json
 
 # MyPy
 .mypy_cache/
 
 # Local artifacts
 sa.json
+src/config/app.local.yaml

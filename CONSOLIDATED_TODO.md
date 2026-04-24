@@ -401,20 +401,6 @@ Each quick-win should be documented with a short task when prioritized.
 
 ### 8.4 Architecture-Fit Additions
 
-- **Title:** Normalize config defaults, portability, and shared YAML loading [Impact: 4/5, Effort: 4/5]
-  - Explanation: Merge the config-portability cleanup with the repeated YAML-loading/parsing refactor. Move concrete deployment values (e.g., Drive folder IDs, site URLs, usernames) out of committed defaults into environment overlays (`app.example.yaml` + env vars), move hardcoded defaults and keyword lists out of `src/services/config_service.py` into one documented source of truth, centralize shared YAML load/root-shape/parse-error wrapping where semantics match, and stop tracking generated operational artifacts such as `logs/*.csv` and `logs/*.json` unless they are intentional fixtures.
-  - Pros: Safer repo defaults, easier onboarding across environments, less duplicated YAML boilerplate, and lower risk of accidental prod coupling.
-  - Cons: Requires migration docs, bootstrap scripts, careful preservation of service-specific YAML error semantics, and a review of any current tracked artifacts treated as fixtures.
-  - Acceptance Criteria:
-    - `src/config/app.yaml` contains environment-neutral defaults only.
-    - Config defaults are defined in one source of truth and documented in the README.
-    - Shared YAML-loading helpers replace repeated load/root-shape/parse-error boilerplate where semantics match.
-    - Service-specific error codes remain explicit at the public boundary.
-    - Example/local override pattern documented in README.
-    - Generated log artifacts are ignored or moved to a documented fixture/snapshot location with rationale.
-    - Bootstrapping tests verify env/profile overrides resolve correctly.
-    - File-not-found and invalid-YAML tests still distinguish the correct failure modes.
-
 - **Title:** Finish PDF extraction internal split and remove private cross-module imports [Impact: 5/5, Effort: 5/5]
   - Explanation: `src/services/_pdf/visual_candidates.py` and `src/services/_pdf/table_candidates.py` still import dozens of private helpers and constants from `src/services/_pdf/figures.py`, which keeps `figures.py` as a 7k-line god module. Extract shared geometry/text/caption/scoring heuristics into explicit internal modules and keep `pdf_service` as the only public boundary.
   - Pros: Lower cognitive load, clearer ownership of PDF heuristics, and easier performance tuning without touching one giant file.

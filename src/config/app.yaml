@@ -12,20 +12,20 @@ paths:
   ingest_lock: "./state/ingest.lock"
 
 ingest:
-  google_sa_path: "./sa.json"
-  gdrive_folder_id: "11eruy9ojkd6HdOXK_Uwqvq1TWEKiINTW"
+  google_sa_path: ""
+  gdrive_folder_id: ""
   drive:
-    auth_mode: "oauth_user"
-    oauth_client_path: "./google_oauth_client.json"
-    oauth_token_path: "./google_oauth_token.json"
+    auth_mode: "service_account"
+    oauth_client_path: ""
+    oauth_token_path: ""
     supports_all_drives: true
     include_items_from_all_drives: true
     drive_id: ""
     list_mode: "metadata"
   openai_model: "gpt-5-mini"
   temperature: 1.0
-  taxonomy_temperature: 0.2
-  timeout_seconds: 7200
+  taxonomy_temperature: 1.0
+  timeout_seconds: 600
   llm:
     retries: 1
     base_delay_seconds: 1.0
@@ -36,8 +36,8 @@ ingest:
   lock_ttl_seconds: 7200
   seed: null
   batch_limit: 20
-  worker_limit: 8
-  report_worker_limit: 8
+  worker_limit: 2
+  report_worker_limit: 2
   cover_cache_enabled: true
   pdf_text:
     max_pages: 5
@@ -45,14 +45,14 @@ ingest:
     min_density: 250
     sample_pages: 3
     ocr_fallback:
-      enabled: true
+      enabled: false
       model: "gpt-5-mini"
       timeout_seconds: 600
       prompt_namespace: "pdf_text/ocr_fallback"
       cache_enabled: true
       chunk_page_count: 8
   figure_captions:
-    enabled: true
+    enabled: false
     temperature: 0.2
     timeout_seconds: 600
     prompt_namespace: "report_vs/figure_caption"
@@ -70,8 +70,8 @@ ingest:
     preview_enabled: true
     render_dpi: 144
   evidence_packs:
-    parallel_workers: 10
-    global_max_in_flight: 5
+    parallel_workers: 3
+    global_max_in_flight: 2
     global_min_interval_ms: 250
     doc_map_max_attempts: 3
     doc_map_retry_delay_ms: 500
@@ -84,8 +84,8 @@ ingest:
       - "quote_candidates"
     enable_new_variety_packs: false
   artifacts:
-    parallel_workers: 10
-    global_max_in_flight: 5
+    parallel_workers: 4
+    global_max_in_flight: 2
     global_min_interval_ms: 250
 
 openai_models:
@@ -121,29 +121,29 @@ rank:
   min_insight_score: 75
   min_data_score: 70
   crop_refine_enabled: true
-  crop_refine_mode: "always"
+  crop_refine_mode: "adaptive"
   crop_refine_page_dpi: 110
   crop_refine_temperature: 0.0
   crop_refine_timeout_seconds: 7200
 
 publish:
   wp:
-    site_url: "https://marketlense.medianewsonline.com"
-    username: "admin"
+    site_url: ""
+    username: ""
     post_status: "publish"
-    post_type: "posts"
-    ssl_verify: false
+    post_type: "ml_report"
+    ssl_verify: true
   validation:
     policy: "block"
 
 browser_download:
-  model: "google/gemini-2.5-flash-lite"
+  model: "openai/gpt-5-mini"
   identity_config_path: "./browser_download_identity.yaml"
   temperature: 0.0
-  timeout_seconds: 360
+  timeout_seconds: 180
   max_steps: 30
   output_dir: "./out/browser_downloads"
-  headed: true
+  headed: false
   drive_upload:
     enabled: true
     required: true
@@ -154,7 +154,7 @@ browser_download:
     jitter_seconds: 0.25
 
 publisher_discovery:
-  model: "google/gemini-2.5-flash-lite"
+  model: "openai/gpt-5-mini"
   temperature: 0.0
   timeout_seconds: 360
   max_steps: 30
@@ -163,11 +163,11 @@ publisher_discovery:
   pagination_max_pages: 75
   http_timeout_seconds: 30
   command_time_budget_seconds: 570
-  headed: true
-  force_browser: true
-  enable_deferred_candidate_recovery: true
-  enable_structured_route_reuse: true
-  enable_preflight_classifier_and_direct_detail: true
+  headed: false
+  force_browser: false
+  enable_deferred_candidate_recovery: false
+  enable_structured_route_reuse: false
+  enable_preflight_classifier_and_direct_detail: false
   retry:
     retries: 1
     base_delay_seconds: 1.0

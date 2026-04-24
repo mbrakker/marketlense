@@ -1030,6 +1030,68 @@ class TestConfigService(unittest.TestCase):
             final_payload = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
             self.assertEqual(37, final_payload["ingest"]["batch_limit"])
 
+    def test_load_settings_uses_env_config_path_profile_and_local_overlay(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = Path(self._write_config(tmp_dir, include_analysis=False))
+            profile_path = cfg_path.with_name("app.dev.yaml")
+            local_path = cfg_path.with_name("app.local.yaml")
+            profile_path.write_text(
+                yaml.safe_dump(
+                    {
+                        "ingest": {
+                            "batch_limit": 31,
+                            "contents_page": {"keywords": ["overview", "toc"]},
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            local_path.write_text(
+                yaml.safe_dump({"ingest": {"batch_limit": 41}}),
+                encoding="utf-8",
+            )
+
+            env = {
+                "MARKET_LENSE_CONFIG_PATH": str(cfg_path),
+                "MARKET_LENSE_CONFIG_PROFILE": "dev",
+                "OPENAI_API_KEY": "key",
+            }
+            with patch.dict(os.environ, env, clear=True):
+                settings = load_settings(
+                    ConfigLoadRequest(schema_version="1.0", path=""),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
+                )
+
+        self.assertEqual(41, settings.batch_limit)
+        self.assertEqual(["overview", "toc"], settings.contents_keywords)
+
+    def test_read_app_config_missing_file_raises_not_found_code(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = Path(tmp_dir) / "missing.yaml"
+            with self.assertRaises(AppError) as ctx:
+                read_app_config(
+                    AppConfigReadRequest(schema_version="1.0", path=str(cfg_path)),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
+                )
+        self.assertEqual("config_file_not_found", ctx.exception.code)
+
+    def test_read_app_config_invalid_yaml_raises_invalid_code(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = Path(tmp_dir) / "app.yaml"
+            cfg_path.write_text("schema_version: [1,\n", encoding="utf-8")
+            with self.assertRaises(AppError) as ctx:
+                read_app_config(
+                    AppConfigReadRequest(schema_version="1.0", path=str(cfg_path)),
+                    RunContext(
+                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                    ),
+                )
+        self.assertEqual("config_yaml_invalid", ctx.exception.code)
+
     def test_write_app_config_rejects_non_mapping_yaml(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = Path(tmp_dir) / "app.yaml"
@@ -1066,6 +1128,24 @@ class TestConfigService(unittest.TestCase):
                     )
 
         self.assertIn("mapping", str(ctx.exception).lower())
+
+    def test_load_settings_rejects_missing_config_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = Path(tmp_dir) / "missing.yaml"
+
+            with patch.dict(os.environ, {"OPENAI_API_KEY": "key"}, clear=True):
+                with self.assertRaises(RuntimeError) as ctx:
+                    load_settings(
+                        ConfigLoadRequest(schema_version="1.0", path=str(cfg_path)),
+                        RunContext(
+                            schema_version="1.0",
+                            run_id="r",
+                            task_id="t",
+                            span_id="s",
+                        ),
+                    )
+
+        self.assertIn("not found", str(ctx.exception).lower())
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import logging
+from functools import lru_cache
 from dataclasses import asdict, dataclass, fields
 from datetime import datetime, timezone
 from pathlib import Path
@@ -36,6 +37,12 @@ from src.services._config_identity import (
     normalize_browser_download_identity_key as _normalize_browser_download_identity_key,
     should_upsert_browser_download_identity_field as _should_upsert_browser_download_identity_field,
 )
+from src.services._yaml_config import (
+    YamlMappingError,
+    deep_merge_mappings,
+    load_yaml_mapping as _read_yaml_mapping,
+    parse_yaml_mapping as _parse_yaml_mapping,
+)
 from src.utils.coercion import (
     coerce_bool as _to_bool,
     coerce_extended_bool as _to_config_bool,
@@ -48,6 +55,8 @@ from src.utils.logging import log_event
 logger = logging.getLogger("market_lense.config_service")
 
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "config" / "app.yaml"
+CONFIG_PATH_ENV_KEY = "MARKET_LENSE_CONFIG_PATH"
+CONFIG_PROFILE_ENV_KEY = "MARKET_LENSE_CONFIG_PROFILE"
 DEFAULT_HTML_TAG_ACRONYMS_PATH = (
     Path(__file__).resolve().parents[1] / "config" / "html-tag-acronyms.yaml"
 )
@@ -147,17 +156,52 @@ def _resolve_runtime_base_path(config_path: Path) -> Path:
     return normalized.parent
 
 
-def _load_yaml_mapping(path: str, *, label: str) -> dict[str, Any]:
-    cfg_path = Path(path)
-    if not cfg_path.exists():
-        raise RuntimeError(f"{label} YAML not found: {path}")
+def _resolve_bootstrap_config_path(path: str) -> Path:
+    requested = path.strip()
+    if requested:
+        return Path(requested).resolve()
+    env_path = _env_value(CONFIG_PATH_ENV_KEY)
+    if env_path:
+        return Path(env_path).expanduser().resolve()
+    return CONFIG_PATH.resolve()
+
+
+def _iter_config_overlay_paths(config_path: Path) -> list[Path]:
+    if config_path.name != "app.yaml":
+        return []
+    overlays: list[Path] = []
+    profile = _env_value(CONFIG_PROFILE_ENV_KEY)
+    if profile:
+        overlays.append(config_path.with_name(f"app.{profile}.yaml"))
+    local_overlay = config_path.with_name("app.local.yaml")
+    if local_overlay not in overlays:
+        overlays.append(local_overlay)
+    return [candidate for candidate in overlays if candidate.exists()]
+
+
+def _load_yaml_mapping_or_runtime_error(path: str | Path, *, label: str) -> dict[str, Any]:
     try:
-        payload = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
-    except yaml.YAMLError as exc:
-        raise RuntimeError(f"{label} YAML invalid: {path}") from exc
-    if not isinstance(payload, dict):
-        raise RuntimeError(f"{label} YAML must be a mapping: {path}")
-    return payload
+        return _read_yaml_mapping(path, label=label)
+    except YamlMappingError as exc:
+        raise RuntimeError(str(exc)) from exc.cause or exc
+
+
+@lru_cache(maxsize=1)
+def _default_config_data() -> dict[str, Any]:
+    return _read_yaml_mapping(CONFIG_PATH, label="Config")
+
+
+def _default_config_value(*keys: str, fallback: Any) -> Any:
+    current: Any = _default_config_data()
+    for key in keys:
+        if not isinstance(current, dict) or key not in current:
+            return fallback
+        current = current[key]
+    return current
+
+
+def _load_yaml_mapping(path: str, *, label: str) -> dict[str, Any]:
+    return _load_yaml_mapping_or_runtime_error(path, label=label)
 
 
 def _normalize_html_tag_acronyms(values: object) -> list[str]:
@@ -178,15 +222,7 @@ def _normalize_html_tag_acronyms(values: object) -> list[str]:
 
 
 def _load_html_tag_acronyms(path: str) -> list[str]:
-    cfg_path = Path(path)
-    if not cfg_path.exists():
-        raise RuntimeError(f"HTML acronym YAML not found: {path}")
-    try:
-        payload = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
-    except yaml.YAMLError as exc:
-        raise RuntimeError(f"HTML acronym YAML invalid: {path}") from exc
-    if not isinstance(payload, dict):
-        raise RuntimeError(f"HTML acronym YAML must be a mapping: {path}")
+    payload = _load_yaml_mapping_or_runtime_error(path, label="HTML acronym")
     acronyms = _normalize_html_tag_acronyms(payload.get("html_tag_acronyms"))
     if not acronyms:
         raise RuntimeError(
@@ -195,24 +231,27 @@ def _load_html_tag_acronyms(path: str) -> list[str]:
     return acronyms
 
 
-def _load_config(path: str) -> dict:
-    cfg_path = Path(path)
-    if not cfg_path.exists():
-        raise RuntimeError(f"Config file not found: {path}")
+def _load_config(path: str, *, include_overlays: bool = True) -> dict[str, Any]:
+    config_path = Path(path).resolve()
     try:
-        payload = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
-    except yaml.YAMLError as exc:
-        raise RuntimeError(f"Config YAML invalid: {path}") from exc
-    if not isinstance(payload, dict):
-        raise RuntimeError(f"Config YAML must be a mapping: {path}")
-    return payload
+        payload = _read_yaml_mapping(config_path, label="Config")
+        if include_overlays:
+            for overlay_path in _iter_config_overlay_paths(config_path):
+                overlay_payload = _read_yaml_mapping(overlay_path, label="Config overlay")
+                payload = deep_merge_mappings(payload, overlay_payload)
+        return payload
+    except YamlMappingError as exc:
+        if exc.kind == "not_found":
+            raise RuntimeError(f"Config file not found: {exc.path}") from exc
+        if exc.kind == "invalid":
+            raise RuntimeError(f"Config YAML invalid: {exc.path}") from exc
+        if exc.kind == "root_invalid":
+            raise RuntimeError(f"Config YAML must be a mapping: {exc.path}") from exc
+        raise RuntimeError(str(exc)) from exc
 
 
 def _resolve_config_path(path: str) -> Path:
-    raw_path = path.strip()
-    if raw_path:
-        return Path(raw_path)
-    return CONFIG_PATH
+    return _resolve_bootstrap_config_path(path)
 
 
 def read_app_config(
@@ -246,22 +285,22 @@ def read_app_config(
             context={"path": str(cfg_path)},
         ) from exc
     try:
-        payload = yaml.safe_load(content) or {}
-    except yaml.YAMLError as exc:
-        raise AppError(
-            code="config_yaml_invalid",
-            message=f"Config YAML invalid: {cfg_path}",
-            cause=exc,
-            retryable=False,
-            context={"path": str(cfg_path)},
-        ) from exc
-    if not isinstance(payload, dict):
+        payload = _parse_yaml_mapping(content, label="Config", path=cfg_path)
+    except YamlMappingError as exc:
+        if exc.kind == "invalid":
+            raise AppError(
+                code="config_yaml_invalid",
+                message=f"Config YAML invalid: {cfg_path}",
+                cause=exc.cause,
+                retryable=False,
+                context={"path": str(cfg_path)},
+            ) from exc
         raise AppError(
             code="config_yaml_root_invalid",
             message=f"Config YAML root must be a mapping: {cfg_path}",
             retryable=False,
-            context={"path": str(cfg_path), "root_type": type(payload).__name__},
-        )
+            context={"path": str(cfg_path), "root_type": exc.root_type or ""},
+        ) from exc
     stat = cfg_path.stat()
     response = AppConfigReadResponse(
         schema_version="1.0",
@@ -309,22 +348,22 @@ def write_app_config(
     if normalized_content and not normalized_content.endswith("\n"):
         normalized_content = f"{normalized_content}\n"
     try:
-        payload = yaml.safe_load(normalized_content) or {}
-    except yaml.YAMLError as exc:
-        raise AppError(
-            code="config_yaml_invalid",
-            message=f"Config YAML invalid: {cfg_path}",
-            cause=exc,
-            retryable=False,
-            context={"path": str(cfg_path)},
-        ) from exc
-    if not isinstance(payload, dict):
+        payload = _parse_yaml_mapping(normalized_content, label="Config", path=cfg_path)
+    except YamlMappingError as exc:
+        if exc.kind == "invalid":
+            raise AppError(
+                code="config_yaml_invalid",
+                message=f"Config YAML invalid: {cfg_path}",
+                cause=exc.cause,
+                retryable=False,
+                context={"path": str(cfg_path)},
+            ) from exc
         raise AppError(
             code="config_yaml_root_invalid",
             message=f"Config YAML root must be a mapping: {cfg_path}",
             retryable=False,
-            context={"path": str(cfg_path), "root_type": type(payload).__name__},
-        )
+            context={"path": str(cfg_path), "root_type": exc.root_type or ""},
+        ) from exc
 
     cfg_path.parent.mkdir(parents=True, exist_ok=True)
     backup_path: str | None = None
@@ -425,7 +464,7 @@ class _ResolvedAppSettingsLoad:
 
 
 def _load_config_sections(request: ConfigLoadRequest) -> _ConfigLoadSections:
-    config_path = Path(request.path or str(CONFIG_PATH)).resolve()
+    config_path = _resolve_bootstrap_config_path(request.path)
     data = _load_config(str(config_path))
     ingest = data.get("ingest", {}) or {}
     return _ConfigLoadSections(
@@ -468,14 +507,29 @@ def _normalize_keyword_list(raw_value: Any, *, default_values: list[str]) -> lis
 
 
 def _normalize_evidence_pack_registry(raw_value: Any) -> list[str]:
-    default_pack_registry = [
-        "doc_map",
-        "scope",
-        "methods",
-        "findings",
-        "limitations",
-        "quote_candidates",
-    ]
+    default_pack_registry = _normalize_keyword_list(
+        _default_config_value(
+            "ingest",
+            "evidence_packs",
+            "registry",
+            fallback=[
+                "doc_map",
+                "scope",
+                "methods",
+                "findings",
+                "limitations",
+                "quote_candidates",
+            ],
+        ),
+        default_values=[
+            "doc_map",
+            "scope",
+            "methods",
+            "findings",
+            "limitations",
+            "quote_candidates",
+        ],
+    )
     evidence_pack_registry: list[str] = []
     if isinstance(raw_value, list):
         for value in raw_value:
@@ -544,21 +598,27 @@ def _resolve_ingest_runtime_settings(
             _SettingSpec(
                 field_name="temperature",
                 config_key="temperature",
-                default=1.0,
+                default=_to_float(
+                    _default_config_value("ingest", "temperature", fallback=1.0), 1.0
+                ),
                 coerce=_to_float,
                 env_key="TEMPERATURE",
             ),
             _SettingSpec(
                 field_name="batch_limit",
                 config_key="batch_limit",
-                default=20,
+                default=_to_int(
+                    _default_config_value("ingest", "batch_limit", fallback=20), 20
+                ),
                 coerce=_to_int,
                 env_key="BATCH_LIMIT",
             ),
             _SettingSpec(
                 field_name="ingest_worker_limit",
                 config_key="worker_limit",
-                default=2,
+                default=_to_int(
+                    _default_config_value("ingest", "worker_limit", fallback=2), 2
+                ),
                 coerce=_to_int,
                 env_key="INGEST_WORKER_LIMIT",
                 minimum=1,
@@ -566,7 +626,12 @@ def _resolve_ingest_runtime_settings(
             _SettingSpec(
                 field_name="report_worker_limit",
                 config_key="report_worker_limit",
-                default=2,
+                default=_to_int(
+                    _default_config_value(
+                        "ingest", "report_worker_limit", fallback=2
+                    ),
+                    2,
+                ),
                 coerce=_to_int,
                 env_key="INGEST_REPORT_WORKER_LIMIT",
                 minimum=1,
@@ -574,21 +639,34 @@ def _resolve_ingest_runtime_settings(
             _SettingSpec(
                 field_name="openai_timeout_seconds",
                 config_key="timeout_seconds",
-                default=600.0,
+                default=_to_float(
+                    _default_config_value("ingest", "timeout_seconds", fallback=600.0),
+                    600.0,
+                ),
                 coerce=_to_float,
                 env_key="OPENAI_TIMEOUT_SECONDS",
             ),
             _SettingSpec(
                 field_name="ingest_lock_ttl_seconds",
                 config_key="lock_ttl_seconds",
-                default=7200.0,
+                default=_to_float(
+                    _default_config_value(
+                        "ingest", "lock_ttl_seconds", fallback=7200.0
+                    ),
+                    7200.0,
+                ),
                 coerce=_to_float,
                 env_key="INGEST_LOCK_TTL_SECONDS",
             ),
             _SettingSpec(
                 field_name="taxonomy_temperature",
                 config_key="taxonomy_temperature",
-                default=0.0,
+                default=_to_float(
+                    _default_config_value(
+                        "ingest", "taxonomy_temperature", fallback=0.0
+                    ),
+                    0.0,
+                ),
                 coerce=_to_float,
                 env_key="TAXONOMY_TEMPERATURE",
                 env_first=True,
@@ -596,7 +674,12 @@ def _resolve_ingest_runtime_settings(
             _SettingSpec(
                 field_name="cover_cache_enabled",
                 config_key="cover_cache_enabled",
-                default=True,
+                default=_to_config_bool(
+                    _default_config_value(
+                        "ingest", "cover_cache_enabled", fallback=True
+                    ),
+                    True,
+                ),
                 coerce=_to_config_bool,
             ),
         ],
@@ -626,42 +709,75 @@ def _resolve_llm_runtime_settings(llm_cfg: dict[str, Any]) -> dict[str, Any]:
             _SettingSpec(
                 field_name="llm_retry_retries",
                 config_key="retries",
-                default=1,
+                default=_to_int(
+                    _default_config_value("ingest", "llm", "retries", fallback=1), 1
+                ),
                 coerce=_to_int,
                 minimum=0,
             ),
             _SettingSpec(
                 field_name="llm_retry_base_delay_seconds",
                 config_key="base_delay_seconds",
-                default=1.0,
+                default=_to_float(
+                    _default_config_value(
+                        "ingest", "llm", "base_delay_seconds", fallback=1.0
+                    ),
+                    1.0,
+                ),
                 coerce=_to_float,
                 minimum=0.0,
             ),
             _SettingSpec(
                 field_name="llm_retry_backoff_step_seconds",
                 config_key="backoff_step_seconds",
-                default=1.0,
+                default=_to_float(
+                    _default_config_value(
+                        "ingest", "llm", "backoff_step_seconds", fallback=1.0
+                    ),
+                    1.0,
+                ),
                 coerce=_to_float,
                 minimum=0.0,
             ),
             _SettingSpec(
                 field_name="llm_retry_jitter_seconds",
                 config_key="jitter_seconds",
-                default=0.25,
+                default=_to_float(
+                    _default_config_value(
+                        "ingest", "llm", "jitter_seconds", fallback=0.25
+                    ),
+                    0.25,
+                ),
                 coerce=_to_float,
                 minimum=0.0,
             ),
             _SettingSpec(
                 field_name="llm_circuit_breaker_failure_threshold",
                 config_key="circuit_breaker_failure_threshold",
-                default=3,
+                default=_to_int(
+                    _default_config_value(
+                        "ingest",
+                        "llm",
+                        "circuit_breaker_failure_threshold",
+                        fallback=3,
+                    ),
+                    3,
+                ),
                 coerce=_to_int,
                 minimum=0,
             ),
             _SettingSpec(
                 field_name="llm_circuit_breaker_recovery_seconds",
                 config_key="circuit_breaker_recovery_seconds",
-                default=30.0,
+                default=_to_float(
+                    _default_config_value(
+                        "ingest",
+                        "llm",
+                        "circuit_breaker_recovery_seconds",
+                        fallback=30.0,
+                    ),
+                    30.0,
+                ),
                 coerce=_to_float,
                 minimum=0.0,
             ),
@@ -688,55 +804,81 @@ def _resolve_rank_settings(
             _SettingSpec(
                 field_name="rank_max_candidates",
                 config_key="max_candidates",
-                default=40,
+                default=_to_int(
+                    _default_config_value("rank", "max_candidates", fallback=40), 40
+                ),
                 coerce=_to_int,
             ),
             _SettingSpec(
                 field_name="rank_selected_max",
                 config_key="selected_max",
-                default=5,
+                default=_to_int(
+                    _default_config_value("rank", "selected_max", fallback=5), 5
+                ),
                 coerce=_to_int,
             ),
             _SettingSpec(
                 field_name="rank_min_overall_score",
                 config_key="min_overall_score",
-                default=78,
+                default=_to_int(
+                    _default_config_value("rank", "min_overall_score", fallback=78),
+                    78,
+                ),
                 coerce=_to_int,
             ),
             _SettingSpec(
                 field_name="rank_min_quality_score",
                 config_key="min_quality_score",
-                default=75,
+                default=_to_int(
+                    _default_config_value("rank", "min_quality_score", fallback=75),
+                    75,
+                ),
                 coerce=_to_int,
             ),
             _SettingSpec(
                 field_name="rank_min_insight_score",
                 config_key="min_insight_score",
-                default=75,
+                default=_to_int(
+                    _default_config_value("rank", "min_insight_score", fallback=75),
+                    75,
+                ),
                 coerce=_to_int,
             ),
             _SettingSpec(
                 field_name="rank_min_data_score",
                 config_key="min_data_score",
-                default=70,
+                default=_to_int(
+                    _default_config_value("rank", "min_data_score", fallback=70), 70
+                ),
                 coerce=_to_int,
             ),
             _SettingSpec(
                 field_name="crop_refine_enabled",
                 config_key="crop_refine_enabled",
-                default=True,
+                default=_to_config_bool(
+                    _default_config_value("rank", "crop_refine_enabled", fallback=True),
+                    True,
+                ),
                 coerce=_to_config_bool,
             ),
             _SettingSpec(
                 field_name="crop_refine_page_dpi",
                 config_key="crop_refine_page_dpi",
-                default=110,
+                default=_to_int(
+                    _default_config_value("rank", "crop_refine_page_dpi", fallback=110),
+                    110,
+                ),
                 coerce=_to_int,
             ),
             _SettingSpec(
                 field_name="crop_refine_temperature",
                 config_key="crop_refine_temperature",
-                default=0.0,
+                default=_to_float(
+                    _default_config_value(
+                        "rank", "crop_refine_temperature", fallback=0.0
+                    ),
+                    0.0,
+                ),
                 coerce=_to_float,
             ),
             _SettingSpec(
@@ -747,11 +889,20 @@ def _resolve_rank_settings(
             ),
         ],
     )
-    resolved["rank_model"] = rank.get("model") or openai_model
+    resolved["rank_model"] = (
+        str(rank.get("model") or "").strip()
+        or str(_default_config_value("rank", "model", fallback="")).strip()
+        or openai_model
+    )
     resolved["rank_seed"] = _opt_int(rank.get("seed"))
     resolved["crop_refine_mode"] = _resolve_allowed_string(
-        rank.get("crop_refine_mode", "adaptive"),
-        default="adaptive",
+        rank.get(
+            "crop_refine_mode",
+            _default_config_value("rank", "crop_refine_mode", fallback="adaptive"),
+        ),
+        default=str(
+            _default_config_value("rank", "crop_refine_mode", fallback="adaptive")
+        ),
         allowed={"adaptive", "always", "off"},
     )
     resolved["crop_refine_timeout_seconds"] = _to_float(
@@ -772,14 +923,24 @@ def _resolve_figure_caption_settings(
             _SettingSpec(
                 field_name="figure_caption_enabled",
                 config_key="enabled",
-                default=False,
+                default=_to_config_bool(
+                    _default_config_value(
+                        "ingest", "figure_captions", "enabled", fallback=False
+                    ),
+                    False,
+                ),
                 coerce=_to_config_bool,
                 env_key="FIGURE_CAPTION_ENABLED",
             ),
             _SettingSpec(
                 field_name="figure_caption_temperature",
                 config_key="temperature",
-                default=0.2,
+                default=_to_float(
+                    _default_config_value(
+                        "ingest", "figure_captions", "temperature", fallback=0.2
+                    ),
+                    0.2,
+                ),
                 coerce=_to_float,
                 env_key="FIGURE_CAPTION_TEMPERATURE",
             ),
@@ -793,7 +954,12 @@ def _resolve_figure_caption_settings(
             _SettingSpec(
                 field_name="figure_caption_max_chars",
                 config_key="max_chars",
-                default=500,
+                default=_to_int(
+                    _default_config_value(
+                        "ingest", "figure_captions", "max_chars", fallback=500
+                    ),
+                    500,
+                ),
                 coerce=_to_int,
                 env_key="FIGURE_CAPTION_MAX_CHARS",
                 minimum=1,
@@ -807,12 +973,26 @@ def _resolve_figure_caption_settings(
             _SettingSpec(
                 field_name="figure_caption_prompt_namespace",
                 config_key="prompt_namespace",
-                default="report_vs/figure_caption",
+                default=str(
+                    _default_config_value(
+                        "ingest",
+                        "figure_captions",
+                        "prompt_namespace",
+                        fallback="report_vs/figure_caption",
+                    )
+                ),
                 coerce=_to_str,
                 env_key="FIGURE_CAPTION_PROMPT_NAMESPACE",
             ),
         ),
-        "report_vs/figure_caption",
+        str(
+            _default_config_value(
+                "ingest",
+                "figure_captions",
+                "prompt_namespace",
+                fallback="report_vs/figure_caption",
+            )
+        ),
     )
     return resolved
 
@@ -824,32 +1004,60 @@ def _resolve_contents_settings(contents_page: dict[str, Any]) -> dict[str, Any]:
             _SettingSpec(
                 field_name="contents_max_pages",
                 config_key="max_pages",
-                default=8,
+                default=_to_int(
+                    _default_config_value(
+                        "ingest", "contents_page", "max_pages", fallback=8
+                    ),
+                    8,
+                ),
                 coerce=_to_int,
             ),
             _SettingSpec(
                 field_name="contents_min_headings",
                 config_key="min_headings",
-                default=3,
+                default=_to_int(
+                    _default_config_value(
+                        "ingest", "contents_page", "min_headings", fallback=3
+                    ),
+                    3,
+                ),
                 coerce=_to_int,
             ),
             _SettingSpec(
                 field_name="contents_preview_enabled",
                 config_key="preview_enabled",
-                default=True,
+                default=_to_config_bool(
+                    _default_config_value(
+                        "ingest", "contents_page", "preview_enabled", fallback=True
+                    ),
+                    True,
+                ),
                 coerce=_to_config_bool,
             ),
             _SettingSpec(
                 field_name="contents_preview_dpi",
                 config_key="render_dpi",
-                default=144,
+                default=_to_int(
+                    _default_config_value(
+                        "ingest", "contents_page", "render_dpi", fallback=144
+                    ),
+                    144,
+                ),
                 coerce=_to_int,
             ),
         ],
     )
     resolved["contents_keywords"] = _normalize_keyword_list(
         contents_page.get("keywords"),
-        default_values=["table of contents", "contents", "index"],
+        default_values=_normalize_keyword_list(
+            _default_config_value(
+                "ingest",
+                "contents_page",
+                "keywords",
+                fallback=["table of contents", "contents", "index"],
+            ),
+            default_values=["table of contents", "contents", "index"],
+        ),
     )
     return resolved
 
@@ -863,7 +1071,15 @@ def _resolve_evidence_pack_settings(
             _SettingSpec(
                 field_name="evidence_pack_parallel_workers",
                 config_key="parallel_workers",
-                default=3,
+                default=_to_int(
+                    _default_config_value(
+                        "ingest",
+                        "evidence_packs",
+                        "parallel_workers",
+                        fallback=3,
+                    ),
+                    3,
+                ),
                 coerce=_to_int,
                 env_key="EVIDENCE_PACK_PARALLEL_WORKERS",
                 minimum=1,
@@ -871,7 +1087,15 @@ def _resolve_evidence_pack_settings(
             _SettingSpec(
                 field_name="evidence_pack_global_max_in_flight",
                 config_key="global_max_in_flight",
-                default=2,
+                default=_to_int(
+                    _default_config_value(
+                        "ingest",
+                        "evidence_packs",
+                        "global_max_in_flight",
+                        fallback=2,
+                    ),
+                    2,
+                ),
                 coerce=_to_int,
                 env_key="EVIDENCE_PACK_GLOBAL_MAX_IN_FLIGHT",
                 minimum=1,
@@ -879,7 +1103,15 @@ def _resolve_evidence_pack_settings(
             _SettingSpec(
                 field_name="evidence_pack_global_min_interval_ms",
                 config_key="global_min_interval_ms",
-                default=250,
+                default=_to_int(
+                    _default_config_value(
+                        "ingest",
+                        "evidence_packs",
+                        "global_min_interval_ms",
+                        fallback=250,
+                    ),
+                    250,
+                ),
                 coerce=_to_int,
                 env_key="EVIDENCE_PACK_GLOBAL_MIN_INTERVAL_MS",
                 minimum=0,
@@ -887,7 +1119,15 @@ def _resolve_evidence_pack_settings(
             _SettingSpec(
                 field_name="evidence_pack_doc_map_max_attempts",
                 config_key="doc_map_max_attempts",
-                default=3,
+                default=_to_int(
+                    _default_config_value(
+                        "ingest",
+                        "evidence_packs",
+                        "doc_map_max_attempts",
+                        fallback=3,
+                    ),
+                    3,
+                ),
                 coerce=_to_int,
                 env_key="EVIDENCE_PACK_DOC_MAP_MAX_ATTEMPTS",
                 minimum=1,
@@ -895,7 +1135,15 @@ def _resolve_evidence_pack_settings(
             _SettingSpec(
                 field_name="evidence_pack_doc_map_retry_delay_ms",
                 config_key="doc_map_retry_delay_ms",
-                default=500,
+                default=_to_int(
+                    _default_config_value(
+                        "ingest",
+                        "evidence_packs",
+                        "doc_map_retry_delay_ms",
+                        fallback=500,
+                    ),
+                    500,
+                ),
                 coerce=_to_int,
                 env_key="EVIDENCE_PACK_DOC_MAP_RETRY_DELAY_MS",
                 minimum=0,
@@ -903,7 +1151,15 @@ def _resolve_evidence_pack_settings(
             _SettingSpec(
                 field_name="evidence_pack_enable_new_variety_packs",
                 config_key="enable_new_variety_packs",
-                default=False,
+                default=_to_config_bool(
+                    _default_config_value(
+                        "ingest",
+                        "evidence_packs",
+                        "enable_new_variety_packs",
+                        fallback=False,
+                    ),
+                    False,
+                ),
                 coerce=_to_config_bool,
                 env_key="EVIDENCE_PACK_ENABLE_NEW_VARIETY_PACKS",
             ),
@@ -930,7 +1186,12 @@ def _resolve_artifact_settings(artifacts_cfg: dict[str, Any]) -> dict[str, Any]:
             _SettingSpec(
                 field_name="artifact_parallel_workers",
                 config_key="parallel_workers",
-                default=4,
+                default=_to_int(
+                    _default_config_value(
+                        "ingest", "artifacts", "parallel_workers", fallback=4
+                    ),
+                    4,
+                ),
                 coerce=_to_int,
                 env_key="ARTIFACT_PARALLEL_WORKERS",
                 minimum=1,
@@ -938,7 +1199,12 @@ def _resolve_artifact_settings(artifacts_cfg: dict[str, Any]) -> dict[str, Any]:
             _SettingSpec(
                 field_name="artifact_global_max_in_flight",
                 config_key="global_max_in_flight",
-                default=2,
+                default=_to_int(
+                    _default_config_value(
+                        "ingest", "artifacts", "global_max_in_flight", fallback=2
+                    ),
+                    2,
+                ),
                 coerce=_to_int,
                 env_key="ARTIFACT_GLOBAL_MAX_IN_FLIGHT",
                 minimum=1,
@@ -946,7 +1212,12 @@ def _resolve_artifact_settings(artifacts_cfg: dict[str, Any]) -> dict[str, Any]:
             _SettingSpec(
                 field_name="artifact_global_min_interval_ms",
                 config_key="global_min_interval_ms",
-                default=250,
+                default=_to_int(
+                    _default_config_value(
+                        "ingest", "artifacts", "global_min_interval_ms", fallback=250
+                    ),
+                    250,
+                ),
                 coerce=_to_int,
                 env_key="ARTIFACT_GLOBAL_MIN_INTERVAL_MS",
                 minimum=0,
@@ -965,25 +1236,43 @@ def _resolve_pdf_text_settings(
             _SettingSpec(
                 field_name="pdf_text_max_pages",
                 config_key="max_pages",
-                default=5,
+                default=_to_int(
+                    _default_config_value("ingest", "pdf_text", "max_pages", fallback=5),
+                    5,
+                ),
                 coerce=_to_int,
             ),
             _SettingSpec(
                 field_name="pdf_text_max_chars",
                 config_key="max_chars",
-                default=80_000,
+                default=_to_int(
+                    _default_config_value(
+                        "ingest", "pdf_text", "max_chars", fallback=80_000
+                    ),
+                    80_000,
+                ),
                 coerce=_to_int,
             ),
             _SettingSpec(
                 field_name="pdf_text_min_density",
                 config_key="min_density",
-                default=250.0,
+                default=_to_float(
+                    _default_config_value(
+                        "ingest", "pdf_text", "min_density", fallback=250.0
+                    ),
+                    250.0,
+                ),
                 coerce=_to_float,
             ),
             _SettingSpec(
                 field_name="pdf_text_sample_pages",
                 config_key="sample_pages",
-                default=3,
+                default=_to_int(
+                    _default_config_value(
+                        "ingest", "pdf_text", "sample_pages", fallback=3
+                    ),
+                    3,
+                ),
                 coerce=_to_int,
             ),
         ],
@@ -996,7 +1285,16 @@ def _resolve_pdf_text_settings(
                 _SettingSpec(
                     field_name="pdf_text_ocr_enabled",
                     config_key="enabled",
-                    default=False,
+                    default=_to_bool(
+                        _default_config_value(
+                            "ingest",
+                            "pdf_text",
+                            "ocr_fallback",
+                            "enabled",
+                            fallback=False,
+                        ),
+                        False,
+                    ),
                     coerce=_to_bool,
                 ),
                 _SettingSpec(
@@ -1008,13 +1306,31 @@ def _resolve_pdf_text_settings(
                 _SettingSpec(
                     field_name="pdf_text_ocr_cache_enabled",
                     config_key="cache_enabled",
-                    default=True,
+                    default=_to_bool(
+                        _default_config_value(
+                            "ingest",
+                            "pdf_text",
+                            "ocr_fallback",
+                            "cache_enabled",
+                            fallback=True,
+                        ),
+                        True,
+                    ),
                     coerce=_to_bool,
                 ),
                 _SettingSpec(
                     field_name="pdf_text_ocr_chunk_page_count",
                     config_key="chunk_page_count",
-                    default=8,
+                    default=_to_int(
+                        _default_config_value(
+                            "ingest",
+                            "pdf_text",
+                            "ocr_fallback",
+                            "chunk_page_count",
+                            fallback=8,
+                        ),
+                        8,
+                    ),
                     coerce=_to_int,
                     minimum=1,
                 ),
@@ -1023,11 +1339,23 @@ def _resolve_pdf_text_settings(
     )
     resolved["pdf_text_ocr_model"] = _to_str(
         ocr_fallback_cfg.get("model"),
-        "gpt-5-mini",
+        str(
+            _default_config_value(
+                "ingest", "pdf_text", "ocr_fallback", "model", fallback="gpt-5-mini"
+            )
+        ),
     )
     resolved["pdf_text_ocr_prompt_namespace"] = _to_str(
         ocr_fallback_cfg.get("prompt_namespace"),
-        "pdf_text/ocr_fallback",
+        str(
+            _default_config_value(
+                "ingest",
+                "pdf_text",
+                "ocr_fallback",
+                "prompt_namespace",
+                fallback="pdf_text/ocr_fallback",
+            )
+        ),
     )
     return resolved
 
@@ -1039,7 +1367,15 @@ def _resolve_validation_settings(validation_cfg: dict[str, Any]) -> dict[str, An
             _SettingSpec(
                 field_name="validation_regeneration_max_attempts",
                 config_key="regeneration_max_attempts",
-                default=3,
+                default=_to_int(
+                    _default_config_value(
+                        "ingest",
+                        "validation",
+                        "regeneration_max_attempts",
+                        fallback=3,
+                    ),
+                    3,
+                ),
                 coerce=_to_int,
                 env_key="VALIDATION_REGENERATION_MAX_ATTEMPTS",
                 minimum=1,
@@ -1047,8 +1383,17 @@ def _resolve_validation_settings(validation_cfg: dict[str, Any]) -> dict[str, An
         ],
     )
     resolved["validation_data_gap_policy"] = _resolve_allowed_string(
-        validation_cfg.get("data_gap_policy", "warn"),
-        default="warn",
+        validation_cfg.get(
+            "data_gap_policy",
+            _default_config_value(
+                "ingest", "validation", "data_gap_policy", fallback="warn"
+            ),
+        ),
+        default=str(
+            _default_config_value(
+                "ingest", "validation", "data_gap_policy", fallback="warn"
+            )
+        ),
         allowed={"warn", "fail"},
     )
     return resolved
@@ -1066,7 +1411,12 @@ def _resolve_analysis_settings(
             _SettingSpec(
                 field_name="vector_store_keep",
                 config_key="vector_store_keep",
-                default=True,
+                default=_to_config_bool(
+                    _default_config_value(
+                        "analysis", "vector_store_keep", fallback=True
+                    ),
+                    True,
+                ),
                 coerce=_to_config_bool,
                 env_key="VECTOR_STORE_KEEP",
                 env_first=True,
@@ -1074,7 +1424,12 @@ def _resolve_analysis_settings(
             _SettingSpec(
                 field_name="artifacts_use_vector_store",
                 config_key="artifacts_use_vector_store",
-                default=False,
+                default=_to_config_bool(
+                    _default_config_value(
+                        "analysis", "artifacts_use_vector_store", fallback=False
+                    ),
+                    False,
+                ),
                 coerce=_to_config_bool,
                 env_key="ARTIFACTS_USE_VECTOR_STORE",
                 env_first=True,
@@ -1082,7 +1437,14 @@ def _resolve_analysis_settings(
             _SettingSpec(
                 field_name="validation_grounding_use_vector_store",
                 config_key="validation_grounding_use_vector_store",
-                default=False,
+                default=_to_config_bool(
+                    _default_config_value(
+                        "analysis",
+                        "validation_grounding_use_vector_store",
+                        fallback=False,
+                    ),
+                    False,
+                ),
                 coerce=_to_config_bool,
                 env_key="VALIDATION_GROUNDING_USE_VECTOR_STORE",
                 env_first=True,
@@ -1090,7 +1452,12 @@ def _resolve_analysis_settings(
             _SettingSpec(
                 field_name="strict_schema_validation",
                 config_key="strict_schema_validation",
-                default=True,
+                default=_to_config_bool(
+                    _default_config_value(
+                        "analysis", "strict_schema_validation", fallback=True
+                    ),
+                    True,
+                ),
                 coerce=_to_config_bool,
                 env_key="STRICT_SCHEMA_VALIDATION",
                 env_first=True,
@@ -1103,18 +1470,29 @@ def _resolve_analysis_settings(
             _SettingSpec(
                 field_name="cost_ledger_path",
                 config_key="cost_ledger_path",
-                default="./out/cost-ledger.jsonl",
+                default=str(
+                    _default_config_value(
+                        "analysis", "cost_ledger_path", fallback="./out/cost-ledger.jsonl"
+                    )
+                ),
                 coerce=_to_str,
                 env_key="COST_LEDGER_PATH",
                 env_first=True,
             ),
         )
-        or "./out/cost-ledger.jsonl"
+        or str(
+            _default_config_value(
+                "analysis", "cost_ledger_path", fallback="./out/cost-ledger.jsonl"
+            )
+        )
     )
     resolved["cost_daily_path"] = str(
-        cost_cfg.get("daily_path") or "./out/cost-daily.json"
+        cost_cfg.get("daily_path")
+        or _default_config_value("cost", "daily_path", fallback="./out/cost-daily.json")
     )
-    resolved["model_pricing"] = cost_cfg.get("pricing") or {}
+    resolved["model_pricing"] = cost_cfg.get("pricing") or _default_config_value(
+        "cost", "pricing", fallback={}
+    )
     resolved["html_tag_acronyms"] = _load_html_tag_acronyms(html_tag_acronyms_path)
     return resolved
 
@@ -1123,17 +1501,39 @@ def _resolve_drive_settings(drive_cfg: dict[str, Any]) -> dict[str, Any]:
     drive_id_raw = drive_cfg.get("drive_id")
     return {
         "drive_supports_all_drives": _to_config_bool(
-            drive_cfg.get("supports_all_drives"), True
+            drive_cfg.get("supports_all_drives"),
+            _to_config_bool(
+                _default_config_value(
+                    "ingest", "drive", "supports_all_drives", fallback=True
+                ),
+                True,
+            ),
         ),
         "drive_include_items_from_all_drives": _to_config_bool(
-            drive_cfg.get("include_items_from_all_drives"), True
+            drive_cfg.get("include_items_from_all_drives"),
+            _to_config_bool(
+                _default_config_value(
+                    "ingest",
+                    "drive",
+                    "include_items_from_all_drives",
+                    fallback=True,
+                ),
+                True,
+            ),
         ),
         "drive_id": str(drive_id_raw).strip()
         if not _is_missing(drive_id_raw)
         else None,
         "drive_list_mode": _resolve_allowed_string(
-            drive_cfg.get("list_mode", "metadata"),
-            default="metadata",
+            drive_cfg.get(
+                "list_mode",
+                _default_config_value("ingest", "drive", "list_mode", fallback="metadata"),
+            ),
+            default=str(
+                _default_config_value(
+                    "ingest", "drive", "list_mode", fallback="metadata"
+                )
+            ),
             allowed={"full", "metadata"},
         ),
     }
@@ -1147,8 +1547,16 @@ def _resolve_drive_auth_settings(
     resolver: _ConfigResolver,
 ) -> dict[str, Any]:
     auth_mode = _resolve_allowed_string(
-        drive_cfg.get("auth_mode") or _env_value("GOOGLE_DRIVE_AUTH_MODE"),
-        default="service_account",
+        drive_cfg.get("auth_mode")
+        or _env_value("GOOGLE_DRIVE_AUTH_MODE")
+        or _default_config_value(
+            "ingest", "drive", "auth_mode", fallback="service_account"
+        ),
+        default=str(
+            _default_config_value(
+                "ingest", "drive", "auth_mode", fallback="service_account"
+            )
+        ),
         allowed={"service_account", "oauth_user"},
     )
     google_sa_path = _resolve_optional_path(
@@ -1345,12 +1753,13 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
     need_env = resolver.need_env
 
     paths_settings = _resolve_paths_settings(sections.paths, resolver)
-    openai_model = need(
-        sections.ingest,
-        "openai_model",
-        "ingest.openai_model",
-        "OPENAI_MODEL",
-    )
+    openai_model = str(
+        sections.ingest.get("openai_model")
+        or _env_value("OPENAI_MODEL")
+        or _default_config_value("ingest", "openai_model", fallback="")
+    ).strip()
+    if not openai_model:
+        resolver.missing.append("ingest.openai_model|env:OPENAI_MODEL")
     ingest_runtime = _resolve_ingest_runtime_settings(sections.ingest)
     llm_runtime = _resolve_llm_runtime_settings(sections.llm_cfg)
     rank_settings = _resolve_rank_settings(
@@ -1407,7 +1816,8 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         openai_api_key=need_env("OPENAI_API_KEY"),
         openai_model=openai_model,
         openai_models=_normalize_openai_models(
-            sections.data.get("openai_models") or {}
+            sections.data.get("openai_models")
+            or _default_config_value("openai_models", fallback={})
         ),
         batch_limit=ingest_runtime["batch_limit"],
         ingest_worker_limit=ingest_runtime["ingest_worker_limit"],
@@ -1638,12 +2048,22 @@ def load_publish_settings(
         bearer_token=bearer_token or None,
         post_status=wp_cfg.get("post_status")
         or _env_value("WP_POST_STATUS")
-        or "publish",
+        or _default_config_value("publish", "wp", "post_status", fallback="publish"),
         post_type=(
-            str(wp_cfg.get("post_type") or _env_value("WP_POST_TYPE") or "ml_report")
+            str(
+                wp_cfg.get("post_type")
+                or _env_value("WP_POST_TYPE")
+                or _default_config_value(
+                    "publish", "wp", "post_type", fallback="ml_report"
+                )
+            )
             .strip()
             .strip("/")
-            or "ml_report"
+            or str(
+                _default_config_value(
+                    "publish", "wp", "post_type", fallback="ml_report"
+                )
+            )
         ),
         ssl_verify=ssl_verify,
         ca_bundle_path=ca_bundle_path or None,
@@ -1652,7 +2072,7 @@ def load_publish_settings(
     validation_policy_raw = (
         validation_cfg.get("policy")
         or _env_value("PUBLISH_VALIDATION_POLICY")
-        or "block"
+        or _default_config_value("publish", "validation", "policy", fallback="block")
     )
     validation_policy = str(validation_policy_raw).strip().lower()
     if validation_policy not in {"block", "warn"}:
@@ -1736,13 +2156,23 @@ def load_browser_download_settings(
         drive_upload_cfg.get("enabled")
         if not _is_missing(drive_upload_cfg.get("enabled"))
         else _env_value("BROWSER_DOWNLOAD_DRIVE_UPLOAD_ENABLED"),
-        True,
+        _to_bool(
+            _default_config_value(
+                "browser_download", "drive_upload", "enabled", fallback=True
+            ),
+            True,
+        ),
     )
     drive_upload_required = _to_bool(
         drive_upload_cfg.get("required")
         if not _is_missing(drive_upload_cfg.get("required"))
         else _env_value("BROWSER_DOWNLOAD_DRIVE_UPLOAD_REQUIRED"),
-        True,
+        _to_bool(
+            _default_config_value(
+                "browser_download", "drive_upload", "required", fallback=True
+            ),
+            True,
+        ),
     )
 
     output_root = (
@@ -1803,8 +2233,9 @@ def load_browser_download_settings(
     model = str(
         browser_download.get("model")
         or _env_value("BROWSER_DOWNLOAD_MODEL")
-        or "openai/gpt-5-mini"
-        or ""
+        or _default_config_value(
+            "browser_download", "model", fallback="openai/gpt-5-mini"
+        )
     ).strip()
     if not model:
         resolver.missing.append("browser_download.model|env:BROWSER_DOWNLOAD_MODEL")
@@ -1837,14 +2268,24 @@ def load_browser_download_settings(
             browser_download.get("temperature")
             if not _is_missing(browser_download.get("temperature"))
             else _env_value("BROWSER_DOWNLOAD_TEMPERATURE"),
-            0.0,
+            _to_float(
+                _default_config_value(
+                    "browser_download", "temperature", fallback=0.0
+                ),
+                0.0,
+            ),
         ),
         timeout_seconds=max(
             _to_float(
                 browser_download.get("timeout_seconds")
                 if not _is_missing(browser_download.get("timeout_seconds"))
                 else _env_value("BROWSER_DOWNLOAD_TIMEOUT_SECONDS"),
-                180.0,
+                _to_float(
+                    _default_config_value(
+                        "browser_download", "timeout_seconds", fallback=180.0
+                    ),
+                    180.0,
+                ),
             ),
             1.0,
         ),
@@ -1853,7 +2294,12 @@ def load_browser_download_settings(
                 browser_download.get("max_steps")
                 if not _is_missing(browser_download.get("max_steps"))
                 else _env_value("BROWSER_DOWNLOAD_MAX_STEPS"),
-                30,
+                _to_int(
+                    _default_config_value(
+                        "browser_download", "max_steps", fallback=30
+                    ),
+                    30,
+                ),
             ),
             1,
         ),
@@ -1867,14 +2313,22 @@ def load_browser_download_settings(
             browser_download.get("headed")
             if not _is_missing(browser_download.get("headed"))
             else _env_value("BROWSER_DOWNLOAD_HEADED"),
-            False,
+            _to_bool(
+                _default_config_value("browser_download", "headed", fallback=False),
+                False,
+            ),
         ),
         retry_retries=max(
             _to_int(
                 retry_cfg.get("retries")
                 if not _is_missing(retry_cfg.get("retries"))
                 else _env_value("BROWSER_DOWNLOAD_RETRIES"),
-                1,
+                _to_int(
+                    _default_config_value(
+                        "browser_download", "retry", "retries", fallback=1
+                    ),
+                    1,
+                ),
             ),
             0,
         ),
@@ -1883,7 +2337,15 @@ def load_browser_download_settings(
                 retry_cfg.get("base_delay_seconds")
                 if not _is_missing(retry_cfg.get("base_delay_seconds"))
                 else _env_value("BROWSER_DOWNLOAD_BASE_DELAY_SECONDS"),
-                1.0,
+                _to_float(
+                    _default_config_value(
+                        "browser_download",
+                        "retry",
+                        "base_delay_seconds",
+                        fallback=1.0,
+                    ),
+                    1.0,
+                ),
             ),
             0.0,
         ),
@@ -1892,7 +2354,15 @@ def load_browser_download_settings(
                 retry_cfg.get("backoff_step_seconds")
                 if not _is_missing(retry_cfg.get("backoff_step_seconds"))
                 else _env_value("BROWSER_DOWNLOAD_BACKOFF_STEP_SECONDS"),
-                1.0,
+                _to_float(
+                    _default_config_value(
+                        "browser_download",
+                        "retry",
+                        "backoff_step_seconds",
+                        fallback=1.0,
+                    ),
+                    1.0,
+                ),
             ),
             0.0,
         ),
@@ -1901,7 +2371,12 @@ def load_browser_download_settings(
                 retry_cfg.get("jitter_seconds")
                 if not _is_missing(retry_cfg.get("jitter_seconds"))
                 else _env_value("BROWSER_DOWNLOAD_JITTER_SECONDS"),
-                0.25,
+                _to_float(
+                    _default_config_value(
+                        "browser_download", "retry", "jitter_seconds", fallback=0.25
+                    ),
+                    0.25,
+                ),
             ),
             0.0,
         ),
@@ -2035,7 +2510,13 @@ def load_publisher_inventory_settings(
         or _env_value("PUBLISHER_DISCOVERY_MODEL")
         or browser_download.get("model")
         or _env_value("BROWSER_DOWNLOAD_MODEL")
-        or "openai/gpt-5-mini"
+        or _default_config_value(
+            "publisher_discovery",
+            "model",
+            fallback=_default_config_value(
+                "browser_download", "model", fallback="openai/gpt-5-mini"
+            ),
+        )
     ).strip()
     if not model:
         resolver.missing.append(
@@ -2046,7 +2527,15 @@ def load_publisher_inventory_settings(
         candidate_screening_cfg.get("enabled")
         if not _is_missing(candidate_screening_cfg.get("enabled"))
         else _env_value("PUBLISHER_DISCOVERY_CANDIDATE_SCREENING_ENABLED"),
-        True,
+        _to_bool(
+            _default_config_value(
+                "publisher_discovery",
+                "candidate_screening",
+                "enabled",
+                fallback=True,
+            ),
+            True,
+        ),
     )
     openai_api_key = _env_value("OPENAI_API_KEY")
     if candidate_screening_enabled and _is_missing(openai_api_key):
@@ -2078,7 +2567,10 @@ def load_publisher_inventory_settings(
                 or browser_download.get("temperature")
                 or _env_value("BROWSER_DOWNLOAD_TEMPERATURE")
             ),
-            0.0,
+            _to_float(
+                _default_config_value("publisher_discovery", "temperature", fallback=0.0),
+                0.0,
+            ),
         ),
         timeout_seconds=max(
             _to_float(
@@ -2089,7 +2581,12 @@ def load_publisher_inventory_settings(
                     or browser_download.get("timeout_seconds")
                     or _env_value("BROWSER_DOWNLOAD_TIMEOUT_SECONDS")
                 ),
-                360.0,
+                _to_float(
+                    _default_config_value(
+                        "publisher_discovery", "timeout_seconds", fallback=360.0
+                    ),
+                    360.0,
+                ),
             ),
             1.0,
         ),
@@ -2102,7 +2599,12 @@ def load_publisher_inventory_settings(
                     or browser_download.get("max_steps")
                     or _env_value("BROWSER_DOWNLOAD_MAX_STEPS")
                 ),
-                30,
+                _to_int(
+                    _default_config_value(
+                        "publisher_discovery", "max_steps", fallback=30
+                    ),
+                    30,
+                ),
             ),
             1,
         ),
@@ -2112,14 +2614,23 @@ def load_publisher_inventory_settings(
         prompt_namespace=str(
             publisher_discovery.get("prompt_namespace")
             or _env_value("PUBLISHER_DISCOVERY_PROMPT_NAMESPACE")
-            or DEFAULT_PUBLISHER_INVENTORY_PROMPT_NAMESPACE
+            or _default_config_value(
+                "publisher_discovery",
+                "prompt_namespace",
+                fallback=DEFAULT_PUBLISHER_INVENTORY_PROMPT_NAMESPACE,
+            )
         ).strip(),
         pagination_max_pages=max(
             _to_int(
                 publisher_discovery.get("pagination_max_pages")
                 if not _is_missing(publisher_discovery.get("pagination_max_pages"))
                 else _env_value("PUBLISHER_DISCOVERY_PAGINATION_MAX_PAGES"),
-                75,
+                _to_int(
+                    _default_config_value(
+                        "publisher_discovery", "pagination_max_pages", fallback=75
+                    ),
+                    75,
+                ),
             ),
             1,
         ),
@@ -2128,7 +2639,12 @@ def load_publisher_inventory_settings(
                 publisher_discovery.get("http_timeout_seconds")
                 if not _is_missing(publisher_discovery.get("http_timeout_seconds"))
                 else _env_value("PUBLISHER_DISCOVERY_HTTP_TIMEOUT_SECONDS"),
-                30.0,
+                _to_float(
+                    _default_config_value(
+                        "publisher_discovery", "http_timeout_seconds", fallback=30.0
+                    ),
+                    30.0,
+                ),
             ),
             1.0,
         ),
@@ -2139,7 +2655,14 @@ def load_publisher_inventory_settings(
                     publisher_discovery.get("command_time_budget_seconds")
                 )
                 else _env_value("PUBLISHER_DISCOVERY_COMMAND_TIME_BUDGET_SECONDS"),
-                570.0,
+                _to_float(
+                    _default_config_value(
+                        "publisher_discovery",
+                        "command_time_budget_seconds",
+                        fallback=570.0,
+                    ),
+                    570.0,
+                ),
             ),
             1.0,
         ),
@@ -2155,13 +2678,21 @@ def load_publisher_inventory_settings(
                 or browser_download.get("headed")
                 or _env_value("BROWSER_DOWNLOAD_HEADED")
             ),
-            False,
+            _to_bool(
+                _default_config_value("publisher_discovery", "headed", fallback=False),
+                False,
+            ),
         ),
         force_browser=_to_bool(
             publisher_discovery.get("force_browser")
             if not _is_missing(publisher_discovery.get("force_browser"))
             else _env_value("PUBLISHER_DISCOVERY_FORCE_BROWSER"),
-            False,
+            _to_bool(
+                _default_config_value(
+                    "publisher_discovery", "force_browser", fallback=False
+                ),
+                False,
+            ),
         ),
         enable_deferred_candidate_recovery=_to_bool(
             publisher_discovery.get("enable_deferred_candidate_recovery")
@@ -2169,13 +2700,27 @@ def load_publisher_inventory_settings(
                 publisher_discovery.get("enable_deferred_candidate_recovery")
             )
             else _env_value("PUBLISHER_DISCOVERY_ENABLE_DEFERRED_CANDIDATE_RECOVERY"),
-            False,
+            _to_bool(
+                _default_config_value(
+                    "publisher_discovery",
+                    "enable_deferred_candidate_recovery",
+                    fallback=False,
+                ),
+                False,
+            ),
         ),
         enable_structured_route_reuse=_to_bool(
             publisher_discovery.get("enable_structured_route_reuse")
             if not _is_missing(publisher_discovery.get("enable_structured_route_reuse"))
             else _env_value("PUBLISHER_DISCOVERY_ENABLE_STRUCTURED_ROUTE_REUSE"),
-            False,
+            _to_bool(
+                _default_config_value(
+                    "publisher_discovery",
+                    "enable_structured_route_reuse",
+                    fallback=False,
+                ),
+                False,
+            ),
         ),
         enable_preflight_classifier_and_direct_detail=_to_bool(
             publisher_discovery.get("enable_preflight_classifier_and_direct_detail")
@@ -2185,7 +2730,14 @@ def load_publisher_inventory_settings(
             else _env_value(
                 "PUBLISHER_DISCOVERY_ENABLE_PREFLIGHT_CLASSIFIER_AND_DIRECT_DETAIL"
             ),
-            False,
+            _to_bool(
+                _default_config_value(
+                    "publisher_discovery",
+                    "enable_preflight_classifier_and_direct_detail",
+                    fallback=False,
+                ),
+                False,
+            ),
         ),
         retry_retries=max(
             _to_int(
@@ -2195,7 +2747,12 @@ def load_publisher_inventory_settings(
                     _env_value("PUBLISHER_DISCOVERY_RETRIES")
                     or _env_value("BROWSER_DOWNLOAD_RETRIES")
                 ),
-                1,
+                _to_int(
+                    _default_config_value(
+                        "publisher_discovery", "retry", "retries", fallback=1
+                    ),
+                    1,
+                ),
             ),
             0,
         ),
@@ -2207,7 +2764,15 @@ def load_publisher_inventory_settings(
                     _env_value("PUBLISHER_DISCOVERY_BASE_DELAY_SECONDS")
                     or _env_value("BROWSER_DOWNLOAD_BASE_DELAY_SECONDS")
                 ),
-                1.0,
+                _to_float(
+                    _default_config_value(
+                        "publisher_discovery",
+                        "retry",
+                        "base_delay_seconds",
+                        fallback=1.0,
+                    ),
+                    1.0,
+                ),
             ),
             0.0,
         ),
@@ -2219,7 +2784,15 @@ def load_publisher_inventory_settings(
                     _env_value("PUBLISHER_DISCOVERY_BACKOFF_STEP_SECONDS")
                     or _env_value("BROWSER_DOWNLOAD_BACKOFF_STEP_SECONDS")
                 ),
-                1.0,
+                _to_float(
+                    _default_config_value(
+                        "publisher_discovery",
+                        "retry",
+                        "backoff_step_seconds",
+                        fallback=1.0,
+                    ),
+                    1.0,
+                ),
             ),
             0.0,
         ),
@@ -2231,12 +2804,23 @@ def load_publisher_inventory_settings(
                     _env_value("PUBLISHER_DISCOVERY_JITTER_SECONDS")
                     or _env_value("BROWSER_DOWNLOAD_JITTER_SECONDS")
                 ),
-                0.25,
+                _to_float(
+                    _default_config_value(
+                        "publisher_discovery",
+                        "retry",
+                        "jitter_seconds",
+                        fallback=0.25,
+                    ),
+                    0.25,
+                ),
             ),
             0.0,
         ),
         openai_api_key=openai_api_key,
-        openai_models=_normalize_openai_models(data.get("openai_models") or {}),
+        openai_models=_normalize_openai_models(
+            data.get("openai_models")
+            or _default_config_value("openai_models", fallback={})
+        ),
         openai_seed=_opt_int(
             ingest.get("seed") if not _is_missing(ingest.get("seed")) else None
         ),
@@ -2244,13 +2828,26 @@ def load_publisher_inventory_settings(
         candidate_screening_model=str(
             candidate_screening_cfg.get("model")
             or _env_value("PUBLISHER_DISCOVERY_CANDIDATE_SCREENING_MODEL")
-            or "gpt-5-nano"
+            or _default_config_value(
+                "publisher_discovery",
+                "candidate_screening",
+                "model",
+                fallback="gpt-5-nano",
+            )
         ).strip(),
         candidate_screening_temperature=_to_float(
             candidate_screening_cfg.get("temperature")
             if not _is_missing(candidate_screening_cfg.get("temperature"))
             else _env_value("PUBLISHER_DISCOVERY_CANDIDATE_SCREENING_TEMPERATURE"),
-            1.0,
+            _to_float(
+                _default_config_value(
+                    "publisher_discovery",
+                    "candidate_screening",
+                    "temperature",
+                    fallback=1.0,
+                ),
+                1.0,
+            ),
         ),
         candidate_screening_timeout_seconds=max(
             _to_float(
@@ -2259,7 +2856,15 @@ def load_publisher_inventory_settings(
                 else _env_value(
                     "PUBLISHER_DISCOVERY_CANDIDATE_SCREENING_TIMEOUT_SECONDS"
                 ),
-                120.0,
+                _to_float(
+                    _default_config_value(
+                        "publisher_discovery",
+                        "candidate_screening",
+                        "timeout_seconds",
+                        fallback=120.0,
+                    ),
+                    120.0,
+                ),
             ),
             1.0,
         ),
@@ -2268,20 +2873,41 @@ def load_publisher_inventory_settings(
                 candidate_screening_cfg.get("batch_size")
                 if not _is_missing(candidate_screening_cfg.get("batch_size"))
                 else _env_value("PUBLISHER_DISCOVERY_CANDIDATE_SCREENING_BATCH_SIZE"),
-                10,
+                _to_int(
+                    _default_config_value(
+                        "publisher_discovery",
+                        "candidate_screening",
+                        "batch_size",
+                        fallback=10,
+                    ),
+                    10,
+                ),
             ),
             1,
         ),
         candidate_screening_prompt_namespace=str(
             candidate_screening_cfg.get("prompt_namespace")
             or _env_value("PUBLISHER_DISCOVERY_CANDIDATE_SCREENING_PROMPT_NAMESPACE")
-            or DEFAULT_PUBLISHER_INVENTORY_CANDIDATE_SCREENING_PROMPT_NAMESPACE
+            or _default_config_value(
+                "publisher_discovery",
+                "candidate_screening",
+                "prompt_namespace",
+                fallback=DEFAULT_PUBLISHER_INVENTORY_CANDIDATE_SCREENING_PROMPT_NAMESPACE,
+            )
         ).strip(),
         candidate_quality_check_enabled=_to_bool(
             candidate_quality_cfg.get("enabled")
             if not _is_missing(candidate_quality_cfg.get("enabled"))
             else _env_value("PUBLISHER_DISCOVERY_CANDIDATE_QUALITY_CHECK_ENABLED"),
-            True,
+            _to_bool(
+                _default_config_value(
+                    "publisher_discovery",
+                    "candidate_quality_check",
+                    "enabled",
+                    fallback=True,
+                ),
+                True,
+            ),
         ),
         candidate_quality_check_timeout_seconds=max(
             _to_float(
@@ -2290,7 +2916,15 @@ def load_publisher_inventory_settings(
                 else _env_value(
                     "PUBLISHER_DISCOVERY_CANDIDATE_QUALITY_CHECK_TIMEOUT_SECONDS"
                 ),
-                15.0,
+                _to_float(
+                    _default_config_value(
+                        "publisher_discovery",
+                        "candidate_quality_check",
+                        "timeout_seconds",
+                        fallback=15.0,
+                    ),
+                    15.0,
+                ),
             ),
             1.0,
         ),
@@ -2301,7 +2935,15 @@ def load_publisher_inventory_settings(
                 else _env_value(
                     "PUBLISHER_DISCOVERY_CANDIDATE_QUALITY_CHECK_MAX_WORKERS"
                 ),
-                6,
+                _to_int(
+                    _default_config_value(
+                        "publisher_discovery",
+                        "candidate_quality_check",
+                        "max_workers",
+                        fallback=6,
+                    ),
+                    6,
+                ),
             ),
             1,
         ),
