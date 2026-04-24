@@ -23,15 +23,16 @@ from src.generators.pdf_text_ocr_generator import recover_pdf_text_with_ocr
 from src.generators.report_generation_dependencies import ReportGeneratorDependencies
 from src.generators.report_generation_shared import (
     base_payload,
-    cache_dir,
-    cache_path,
     contents_cache_key,
     logger,
     pdf_info_cache_key,
-    read_cache_json,
     resolve_publisher,
     text_cache_key,
-    write_cache_json,
+)
+from src.generators.report_source_cache import (
+    bind_report_source_cache,
+    load_report_source_cache,
+    write_report_source_cache,
 )
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
@@ -45,6 +46,114 @@ class TextStatus(TypedDict):
     char_count: int
     not_available: bool
     reason: str
+
+
+def _cached_int(value: object) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    return None
+
+
+def _cached_float(value: object) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    return None
+
+
+def _cached_bool(value: object) -> bool | None:
+    if isinstance(value, bool):
+        return value
+    return None
+
+
+def _cached_str(value: object) -> str | None:
+    if isinstance(value, str):
+        return value
+    return None
+
+
+def _cached_metadata(value: object) -> dict[str, str] | None:
+    if not isinstance(value, dict):
+        return None
+    metadata: dict[str, str] = {}
+    for key, item in value.items():
+        if not isinstance(key, str) or not isinstance(item, str):
+            return None
+        metadata[key] = item
+    return metadata
+
+
+def _adapt_cached_pdf_info(
+    payload: dict[str, object],
+    *,
+    pdf_path: str,
+) -> PdfInfoResponse | None:
+    page_count = _cached_int(payload.get("page_count"))
+    metadata = _cached_metadata(payload.get("metadata"))
+    if page_count is None or metadata is None:
+        return None
+    return PdfInfoResponse(
+        schema_version="1.0",
+        path=pdf_path,
+        page_count=page_count,
+        metadata=metadata,
+    )
+
+
+def _adapt_cached_contents(
+    payload: dict[str, object],
+    *,
+    analysis_pdf_path: str,
+) -> PdfContentsDetectionResponse | None:
+    has_contents = _cached_bool(payload.get("has_contents"))
+    page_index = _cached_int(payload.get("page_index"))
+    page_number = _cached_int(payload.get("page_number"))
+    heading = _cached_str(payload.get("heading"))
+    confidence = _cached_float(payload.get("confidence"))
+    if (
+        has_contents is None
+        or page_index is None
+        or page_number is None
+        or heading is None
+        or confidence is None
+    ):
+        return None
+    return PdfContentsDetectionResponse(
+        schema_version="1.0",
+        path=analysis_pdf_path,
+        has_contents=has_contents,
+        page_index=page_index,
+        page_number=page_number,
+        heading=heading,
+        confidence=confidence,
+    )
+
+
+def _adapt_cached_text(payload: dict[str, object]) -> PdfTextExtractResponse | None:
+    text = _cached_str(payload.get("text"))
+    pages_extracted = _cached_int(payload.get("pages_extracted"))
+    char_count = _cached_int(payload.get("char_count"))
+    text_density = _cached_float(payload.get("text_density"))
+    if (
+        text is None
+        or pages_extracted is None
+        or char_count is None
+        or text_density is None
+    ):
+        return None
+    return PdfTextExtractResponse(
+        schema_version="1.0",
+        text=text,
+        pages_extracted=pages_extracted,
+        char_count=char_count,
+        text_density=text_density,
+    )
 
 
 def _select_sample_pages(
@@ -119,52 +228,25 @@ def _load_pdf_info(
     dependencies: ReportGeneratorDependencies,
 ) -> PdfInfoResponse:
     info_ctx = child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:pdf_info")
-    info_resp = None
-    info_cache_hit = False
-    cache_root = cache_dir(runtime.settings, runtime.md5) if runtime.md5 else None
-    info_cache_key = ""
-    info_cache_path = None
-    if runtime.md5 and cache_root is not None:
-        info_cache_key = pdf_info_cache_key(runtime.md5)
-        info_cache_path = cache_path(cache_root, "pdf_info", info_cache_key)
-        cached = read_cache_json(info_cache_path, info_ctx, dependencies)
-        if cached and cached.get("key") == info_cache_key:
-            info_resp = PdfInfoResponse(
-                schema_version="1.0",
-                path=runtime.local_pdf_path,
-                page_count=int(cached.get("page_count") or 0),
-                metadata=(
-                    cached.get("metadata")
-                    if isinstance(cached.get("metadata"), dict)
-                    else {}
-                ),
-            )
-            info_cache_hit = True
-            logger.info(
-                log_event(
-                    info_ctx,
-                    role="generator",
-                    event="pdf_info_cache_hit",
-                    module=logger.name,
-                    fields={
-                        "file_id": runtime.file.file_id,
-                        "cache_path": str(info_cache_path),
-                    },
-                )
-            )
-        else:
-            logger.info(
-                log_event(
-                    info_ctx,
-                    role="generator",
-                    event="pdf_info_cache_miss",
-                    module=logger.name,
-                    fields={
-                        "file_id": runtime.file.file_id,
-                        "cache_path": str(info_cache_path) if info_cache_path else "",
-                    },
-                )
-            )
+    info_binding = bind_report_source_cache(
+        settings=runtime.settings,
+        md5=runtime.md5,
+        file_id=runtime.file.file_id,
+        phase="pdf_info",
+        prefix="pdf_info",
+        cache_key=pdf_info_cache_key(runtime.md5) if runtime.md5 else "",
+    )
+    info_cached = load_report_source_cache(
+        info_binding,
+        ctx=info_ctx,
+        dependencies=dependencies,
+        adapt_payload=lambda payload: _adapt_cached_pdf_info(
+            payload,
+            pdf_path=runtime.local_pdf_path,
+        ),
+    )
+    info_resp = info_cached.value
+    info_cache_hit = info_cached.cache_hit
     if info_resp is None:
         info_resp = dependencies.extract_pdf_info(
             PdfInfoRequest(
@@ -174,30 +256,17 @@ def _load_pdf_info(
             ),
             info_ctx,
         )
-        if runtime.md5 and cache_root is not None and info_cache_path is not None:
-            write_cache_json(
-                info_cache_path,
-                {
-                    "schema_version": "1.0",
-                    "key": info_cache_key,
-                    "page_count": info_resp.page_count,
-                    "metadata": info_resp.metadata,
-                },
-                info_ctx,
-                dependencies,
-            )
-            logger.info(
-                log_event(
-                    info_ctx,
-                    role="generator",
-                    event="pdf_info_cache_written",
-                    module=logger.name,
-                    fields={
-                        "file_id": runtime.file.file_id,
-                        "cache_path": str(info_cache_path),
-                    },
-                )
-            )
+        write_report_source_cache(
+            info_binding,
+            payload={
+                "schema_version": "1.0",
+                "key": info_binding.cache_key,
+                "page_count": info_resp.page_count,
+                "metadata": info_resp.metadata,
+            },
+            ctx=info_ctx,
+            dependencies=dependencies,
+        )
     logger.info(
         log_event(
             info_ctx,
@@ -230,53 +299,27 @@ def _load_contents(
     local_contents_heading = ""
     local_contents_image = ""
     try:
-        contents_resp = None
-        contents_cache_hit = False
-        cache_root = cache_dir(runtime.settings, runtime.md5) if runtime.md5 else None
-        contents_key = ""
-        contents_cache_path = None
-        if runtime.md5 and cache_root is not None:
-            contents_key = contents_cache_key(runtime.md5, runtime.settings)
-            contents_cache_path = cache_path(cache_root, cache_prefix, contents_key)
-            cached = read_cache_json(contents_cache_path, contents_ctx, dependencies)
-            if cached and cached.get("key") == contents_key:
-                contents_resp = PdfContentsDetectionResponse(
-                    schema_version="1.0",
-                    path=analysis_pdf_path,
-                    has_contents=bool(cached.get("has_contents")),
-                    page_index=int(cached.get("page_index") or -1),
-                    page_number=int(cached.get("page_number") or 0),
-                    heading=str(cached.get("heading") or ""),
-                    confidence=float(cached.get("confidence") or 0.0),
-                )
-                contents_cache_hit = True
-                logger.info(
-                    log_event(
-                        contents_ctx,
-                        role="generator",
-                        event="contents_cache_hit",
-                        module=logger.name,
-                        fields={
-                            "file_id": runtime.file.file_id,
-                            "cache_path": str(contents_cache_path),
-                        },
-                    )
-                )
-            else:
-                logger.info(
-                    log_event(
-                        contents_ctx,
-                        role="generator",
-                        event="contents_cache_miss",
-                        module=logger.name,
-                        fields={
-                            "file_id": runtime.file.file_id,
-                            "cache_path": str(contents_cache_path)
-                            if contents_cache_path
-                            else "",
-                        },
-                    )
-                )
+        contents_binding = bind_report_source_cache(
+            settings=runtime.settings,
+            md5=runtime.md5,
+            file_id=runtime.file.file_id,
+            phase="contents",
+            prefix=cache_prefix,
+            cache_key=contents_cache_key(runtime.md5, runtime.settings)
+            if runtime.md5
+            else "",
+        )
+        contents_cached = load_report_source_cache(
+            contents_binding,
+            ctx=contents_ctx,
+            dependencies=dependencies,
+            adapt_payload=lambda payload: _adapt_cached_contents(
+                payload,
+                analysis_pdf_path=analysis_pdf_path,
+            ),
+        )
+        contents_resp = contents_cached.value
+        contents_cache_hit = contents_cached.cache_hit
         if contents_resp is None:
             contents_resp = dependencies.detect_contents_page(
                 PdfContentsDetectionRequest(
@@ -289,37 +332,20 @@ def _load_contents(
                 ),
                 contents_ctx,
             )
-            if (
-                runtime.md5
-                and cache_root is not None
-                and contents_cache_path is not None
-            ):
-                write_cache_json(
-                    contents_cache_path,
-                    {
-                        "schema_version": "1.0",
-                        "key": contents_key,
-                        "has_contents": contents_resp.has_contents,
-                        "page_index": contents_resp.page_index,
-                        "page_number": contents_resp.page_number,
-                        "heading": contents_resp.heading,
-                        "confidence": contents_resp.confidence,
-                    },
-                    contents_ctx,
-                    dependencies,
-                )
-                logger.info(
-                    log_event(
-                        contents_ctx,
-                        role="generator",
-                        event="contents_cache_written",
-                        module=logger.name,
-                        fields={
-                            "file_id": runtime.file.file_id,
-                            "cache_path": str(contents_cache_path),
-                        },
-                    )
-                )
+            write_report_source_cache(
+                contents_binding,
+                payload={
+                    "schema_version": "1.0",
+                    "key": contents_binding.cache_key,
+                    "has_contents": contents_resp.has_contents,
+                    "page_index": contents_resp.page_index,
+                    "page_number": contents_resp.page_number,
+                    "heading": contents_resp.heading,
+                    "confidence": contents_resp.confidence,
+                },
+                ctx=contents_ctx,
+                dependencies=dependencies,
+            )
         if contents_resp.has_contents:
             local_contents_page = contents_resp.page_number
             local_contents_heading = contents_resp.heading or ""
@@ -390,49 +416,24 @@ def _load_text(
     dependencies: ReportGeneratorDependencies,
 ) -> tuple[PdfTextExtractResponse, TextStatus]:
     text_ctx = child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:text")
-    text_resp = None
-    text_cache_hit = False
-    cache_root = cache_dir(runtime.settings, runtime.md5) if runtime.md5 else None
-    text_key = ""
-    text_cache_path = None
-    if runtime.md5 and cache_root is not None:
-        text_key = text_cache_key(runtime.md5, runtime.settings)
-        text_cache_path = cache_path(cache_root, cache_prefix, text_key)
-        cached = read_cache_json(text_cache_path, text_ctx, dependencies)
-        if cached and cached.get("key") == text_key:
-            text_resp = PdfTextExtractResponse(
-                schema_version="1.0",
-                text=str(cached.get("text") or ""),
-                pages_extracted=int(cached.get("pages_extracted") or 0),
-                char_count=int(cached.get("char_count") or 0),
-                text_density=float(cached.get("text_density") or 0.0),
-            )
-            text_cache_hit = True
-            logger.info(
-                log_event(
-                    text_ctx,
-                    role="generator",
-                    event="text_cache_hit",
-                    module=logger.name,
-                    fields={
-                        "file_id": runtime.file.file_id,
-                        "cache_path": str(text_cache_path),
-                    },
-                )
-            )
-        else:
-            logger.info(
-                log_event(
-                    text_ctx,
-                    role="generator",
-                    event="text_cache_miss",
-                    module=logger.name,
-                    fields={
-                        "file_id": runtime.file.file_id,
-                        "cache_path": str(text_cache_path) if text_cache_path else "",
-                    },
-                )
-            )
+    text_binding = bind_report_source_cache(
+        settings=runtime.settings,
+        md5=runtime.md5,
+        file_id=runtime.file.file_id,
+        phase="text",
+        prefix=cache_prefix,
+        cache_key=text_cache_key(runtime.md5, runtime.settings)
+        if runtime.md5
+        else "",
+    )
+    text_cached = load_report_source_cache(
+        text_binding,
+        ctx=text_ctx,
+        dependencies=dependencies,
+        adapt_payload=_adapt_cached_text,
+    )
+    text_resp = text_cached.value
+    text_cache_hit = text_cached.cache_hit
     if text_resp is None:
         text_resp = dependencies.extract_pdf_text(
             PdfTextExtractRequest(
@@ -444,32 +445,19 @@ def _load_text(
             ),
             text_ctx,
         )
-        if runtime.md5 and cache_root is not None and text_cache_path is not None:
-            write_cache_json(
-                text_cache_path,
-                {
-                    "schema_version": "1.0",
-                    "key": text_key,
-                    "text": text_resp.text,
-                    "pages_extracted": text_resp.pages_extracted,
-                    "char_count": text_resp.char_count,
-                    "text_density": text_resp.text_density,
-                },
-                text_ctx,
-                dependencies,
-            )
-            logger.info(
-                log_event(
-                    text_ctx,
-                    role="generator",
-                    event="text_cache_written",
-                    module=logger.name,
-                    fields={
-                        "file_id": runtime.file.file_id,
-                        "cache_path": str(text_cache_path),
-                    },
-                )
-            )
+        write_report_source_cache(
+            text_binding,
+            payload={
+                "schema_version": "1.0",
+                "key": text_binding.cache_key,
+                "text": text_resp.text,
+                "pages_extracted": text_resp.pages_extracted,
+                "char_count": text_resp.char_count,
+                "text_density": text_resp.text_density,
+            },
+            ctx=text_ctx,
+            dependencies=dependencies,
+        )
     text_status: TextStatus = {
         "schema_version": "1.0",
         "text_density": float(text_resp.text_density or 0.0),

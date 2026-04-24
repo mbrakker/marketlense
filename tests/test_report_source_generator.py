@@ -19,7 +19,13 @@ from src.contracts.pdf_utils import PdfInfoResponse
 from src.contracts.report_generation import ReportRuntimeState
 from src.contracts.run_context import RunContext
 from src.generators.report_generation_dependencies import ReportGeneratorDependencies
-from src.generators.report_generation_shared import derive_title, report_slug
+from src.generators.report_generation_shared import (
+    contents_cache_key,
+    derive_title,
+    pdf_info_cache_key,
+    report_slug,
+    text_cache_key,
+)
 from src.generators.report_source_generator import prepare_report_source
 from src.services import prompt_service
 from src.utils.cache_utils import sha256_json
@@ -143,6 +149,210 @@ def test_prepare_report_source_writes_caches_and_marks_low_density(
 
     assert state.text_validation_status == "pass"
     assert state.payload._text_not_available is True
+    assert any("pdf_info_" in path for path in writes)
+    assert any("contents_" in path for path in writes)
+    assert any("text_" in path for path in writes)
+
+
+def test_prepare_report_source_uses_cached_source_phase_payloads(
+    ingest_settings, run_context, tmp_path
+):
+    runtime = _runtime(ingest_settings, run_context, tmp_path)
+    cache_root = Path(runtime.settings.cache_dir) / "pdf_cache" / str(runtime.md5)
+    cache_root.mkdir(parents=True, exist_ok=True)
+
+    info_key = pdf_info_cache_key(str(runtime.md5))
+    contents_key = contents_cache_key(str(runtime.md5), runtime.settings)
+    text_key = text_cache_key(str(runtime.md5), runtime.settings)
+
+    (cache_root / f"pdf_info_{info_key}.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "key": info_key,
+                "page_count": 7,
+                "metadata": {"Author": "Cached"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    (cache_root / f"contents_{contents_key}.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "key": contents_key,
+                "has_contents": False,
+                "page_index": -1,
+                "page_number": 0,
+                "heading": "",
+                "confidence": 0.0,
+            }
+        ),
+        encoding="utf-8",
+    )
+    (cache_root / f"text_{text_key}.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "key": text_key,
+                "text": "cached body",
+                "pages_extracted": 2,
+                "char_count": 11,
+                "text_density": 5.5,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    deps = _deps(
+        read_text=lambda req, ctx: SimpleNamespace(
+            content=Path(req.path).read_text(encoding="utf-8")
+        ),
+        extract_pdf_info=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("extract_pdf_info should be skipped on cache hit")
+        ),
+        detect_contents_page=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("detect_contents_page should be skipped on cache hit")
+        ),
+        extract_pdf_text=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("extract_pdf_text should be skipped on cache hit")
+        ),
+        write_bytes=lambda req, ctx: (_ for _ in ()).throw(
+            AssertionError("write_bytes should be skipped on cache hit")
+        ),
+        sample_pdf_text=lambda req, ctx: PdfTextSampleResponse(
+            schema_version="1.0",
+            samples=[
+                PdfTextSample(
+                    page_index=0,
+                    page_number=1,
+                    char_count=14,
+                    has_text=True,
+                )
+            ],
+            any_text=True,
+        ),
+    )
+
+    state = prepare_report_source(runtime, deps)
+
+    assert state.info_response.page_count == 7
+    assert state.info_response.metadata == {"Author": "Cached"}
+    assert state.contents_page_number == 0
+    assert state.text_response.text == "cached body"
+    assert state.text_response.pages_extracted == 2
+    assert state.text_response.char_count == 11
+
+
+def test_prepare_report_source_ignores_stale_source_cache_keys(
+    ingest_settings, run_context, tmp_path
+):
+    writes: list[str] = []
+    runtime = _runtime(ingest_settings, run_context, tmp_path)
+    cache_root = Path(runtime.settings.cache_dir) / "pdf_cache" / str(runtime.md5)
+    cache_root.mkdir(parents=True, exist_ok=True)
+
+    info_key = pdf_info_cache_key(str(runtime.md5))
+    contents_key = contents_cache_key(str(runtime.md5), runtime.settings)
+    text_key = text_cache_key(str(runtime.md5), runtime.settings)
+
+    (cache_root / f"pdf_info_{info_key}.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "key": "stale-info",
+                "page_count": 99,
+                "metadata": {"Author": "Stale"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    (cache_root / f"contents_{contents_key}.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "key": "stale-contents",
+                "has_contents": True,
+                "page_index": 4,
+                "page_number": 5,
+                "heading": "Stale contents",
+                "confidence": 0.9,
+            }
+        ),
+        encoding="utf-8",
+    )
+    (cache_root / f"text_{text_key}.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "key": "stale-text",
+                "text": "stale body",
+                "pages_extracted": 9,
+                "char_count": 999,
+                "text_density": 99.0,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    calls = {"info": 0, "contents": 0, "text": 0}
+
+    deps = _deps(
+        read_text=lambda req, ctx: SimpleNamespace(
+            content=Path(req.path).read_text(encoding="utf-8")
+        ),
+        extract_pdf_info=lambda req, ctx: (
+            calls.__setitem__("info", calls["info"] + 1)
+            or PdfInfoResponse(
+                schema_version="1.0",
+                path=req.path,
+                page_count=3,
+                metadata={"Author": "Fresh"},
+            )
+        ),
+        detect_contents_page=lambda req, ctx: (
+            calls.__setitem__("contents", calls["contents"] + 1)
+            or SimpleNamespace(
+                schema_version="1.0",
+                path=req.path,
+                has_contents=False,
+                page_index=-1,
+                page_number=0,
+                heading="",
+                confidence=0.0,
+            )
+        ),
+        extract_pdf_text=lambda req, ctx: (
+            calls.__setitem__("text", calls["text"] + 1)
+            or PdfTextExtractResponse(
+                schema_version="1.0",
+                text="fresh body",
+                pages_extracted=1,
+                char_count=10,
+                text_density=10.0,
+            )
+        ),
+        sample_pdf_text=lambda req, ctx: PdfTextSampleResponse(
+            schema_version="1.0",
+            samples=[
+                PdfTextSample(
+                    page_index=0,
+                    page_number=1,
+                    char_count=12,
+                    has_text=True,
+                )
+            ],
+            any_text=True,
+        ),
+        write_bytes=lambda req, ctx: writes.append(req.path) or None,
+    )
+
+    state = prepare_report_source(runtime, deps)
+
+    assert calls == {"info": 1, "contents": 1, "text": 1}
+    assert state.info_response.page_count == 3
+    assert state.info_response.metadata == {"Author": "Fresh"}
+    assert state.text_response.text == "fresh body"
     assert any("pdf_info_" in path for path in writes)
     assert any("contents_" in path for path in writes)
     assert any("text_" in path for path in writes)

@@ -200,15 +200,6 @@ Scoring rubric:
     - Cost per ranking call measurably reduced in benchmarks.
     - No regression in ranking quality on held-out set.
 
-- **Title:** Consolidate report-source cache boilerplate into one typed helper [Impact: 3/5, Effort: 2/5]
-  - Explanation: `src/generators/report_source_generator.py` repeats near-identical cache load/write flows for PDF info, contents detection, and extracted text. Replace those repeated blocks with a shared typed helper, similar in spirit to `analysis_pack_cache.py`, while keeping pack-specific validation explicit.
-  - Pros: Smaller generator surface, fewer cache bugs, and easier extension of source-analysis phases.
-  - Cons: Needs careful API design to avoid over-generalizing distinct cache semantics.
-  - Acceptance Criteria:
-    - Repeated cache read/write/miss logging paths in report-source generation are centralized.
-    - Each cached phase still validates its own payload shape explicitly.
-    - Existing source-generation tests continue to cover hit/miss/stale-cache behavior.
-
 ---
 
 ## 5. Orchestration, Durability & Performance
