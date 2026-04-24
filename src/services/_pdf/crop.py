@@ -50,6 +50,11 @@ from .figures import (
     _trim_top_page_number,
     _vertical_overlap_ratio,
 )
+from .page_artifacts import (
+    create_page_artifact_cache,
+    get_crop_refine_text_block_rects,
+    get_page_text_block_pairs,
+)
 from .shared import crop_logger, preview_logger
 
 PDF_CROP_EXCEPTIONS = (RuntimeError, ValueError, TypeError, AttributeError, OSError)
@@ -243,12 +248,19 @@ def _uniform_border_trim_amounts(
     return (top, bottom, left, right)
 
 
-def _chart_has_internal_top_band(page: fitz.Page, rect: fitz.Rect) -> bool:
+def _chart_has_internal_top_band(
+    page: fitz.Page,
+    rect: fitz.Rect,
+    *,
+    artifact_cache=None,
+) -> bool:
     top_limit = rect.y0 + min(LEGACY_CHART_TOP_BAND_MAX_GAP, rect.height * 0.2)
     center_x = rect.x0 + rect.width / 2.0
-    for block in page.get_text("blocks"):
-        block_rect = fitz.Rect(block[:4])
-        text = _table_normalize_text(str(block[4]))
+    for block_rect, raw_text in get_page_text_block_pairs(
+        page,
+        cache=artifact_cache,
+    ):
+        text = _table_normalize_text(str(raw_text))
         if not text:
             continue
         if block_rect.y0 < rect.y0 - 1.0:
@@ -275,13 +287,20 @@ def _chart_has_internal_top_band(page: fitz.Page, rect: fitz.Rect) -> bool:
     return False
 
 
-def _chart_has_bottom_edge_text(page: fitz.Page, rect: fitz.Rect) -> bool:
+def _chart_has_bottom_edge_text(
+    page: fitz.Page,
+    rect: fitz.Rect,
+    *,
+    artifact_cache=None,
+) -> bool:
     bottom_gap = min(LEGACY_CHART_BOTTOM_EDGE_TEXT_MAX_GAP, rect.height * 0.12)
     lower_bound = rect.y0 + rect.height * 0.45
     page_center_x = page.rect.x0 + page.rect.width / 2.0
-    for block in page.get_text("blocks"):
-        block_rect = fitz.Rect(block[:4])
-        text = _table_normalize_text(str(block[4]))
+    for block_rect, raw_text in get_page_text_block_pairs(
+        page,
+        cache=artifact_cache,
+    ):
+        text = _table_normalize_text(str(raw_text))
         if not text:
             continue
         if block_rect.y0 < lower_bound:
@@ -304,7 +323,13 @@ def _chart_has_bottom_edge_text(page: fitz.Page, rect: fitz.Rect) -> bool:
     return False
 
 
-def _legacy_chart_border_trim(page: fitz.Page, rect: fitz.Rect, img: Image.Image) -> Image.Image:
+def _legacy_chart_border_trim(
+    page: fitz.Page,
+    rect: fitz.Rect,
+    img: Image.Image,
+    *,
+    artifact_cache=None,
+) -> Image.Image:
     top, bottom, left, right = _uniform_border_trim_amounts(
         img,
         allow_top=True,
@@ -315,11 +340,15 @@ def _legacy_chart_border_trim(page: fitz.Page, rect: fitz.Rect, img: Image.Image
     extra_top_keep = 0
     if (
         top >= CROP_TRIM_MIN_PX
-        and _chart_has_internal_top_band(page, rect)
+        and _chart_has_internal_top_band(page, rect, artifact_cache=artifact_cache)
     ):
         extra_top_keep = LEGACY_CHART_TOP_BAND_EXTRA_KEEP_PX
     extra_bottom_keep = 0
-    if bottom >= CROP_TRIM_MIN_PX and _chart_has_bottom_edge_text(page, rect):
+    if bottom >= CROP_TRIM_MIN_PX and _chart_has_bottom_edge_text(
+        page,
+        rect,
+        artifact_cache=artifact_cache,
+    ):
         extra_bottom_keep = LEGACY_CHART_BOTTOM_EXTRA_KEEP_PX
     if (
         top >= CROP_TRIM_MIN_PX
@@ -540,13 +569,9 @@ def _text_has_note_marker(text: str) -> bool:
     return False
 
 
-def _page_text_blocks(page: fitz.Page) -> list[Tuple[fitz.Rect, str]]:
+def _page_text_blocks(page: fitz.Page, *, artifact_cache=None) -> list[Tuple[fitz.Rect, str]]:
     try:
-        return [
-            (fitz.Rect(x0, y0, x1, y1), str(text or ""))
-            for x0, y0, x1, y1, text, *_ in page.get_text("blocks")
-            if text
-        ]
+        return get_page_text_block_pairs(page, cache=artifact_cache)
     except PDF_CROP_EXCEPTIONS:
         return []
 
@@ -554,10 +579,12 @@ def _page_text_blocks(page: fitz.Page) -> list[Tuple[fitz.Rect, str]]:
 def _find_explicit_table_title_block(
     page: fitz.Page,
     rect: fitz.Rect,
+    *,
+    artifact_cache=None,
 ) -> Optional[fitz.Rect]:
     search_bottom = rect.y0 + min(96.0, rect.height * 0.25)
     candidates: list[fitz.Rect] = []
-    for block, text in _page_text_blocks(page):
+    for block, text in _page_text_blocks(page, artifact_cache=artifact_cache):
         if block.y1 < rect.y0 - 1.0 or block.y0 > search_bottom:
             continue
         if _horizontal_overlap_ratio(block, rect) < 0.2:
@@ -570,14 +597,18 @@ def _find_explicit_table_title_block(
     return min(candidates, key=lambda block: (block.y0, block.x0))
 
 
-def _table_title_strip_rect(page: fitz.Page, rect: fitz.Rect) -> Optional[fitz.Rect]:
-    title_block = _find_explicit_table_title_block(page, rect)
+def _table_title_strip_rect(page: fitz.Page, rect: fitz.Rect, *, artifact_cache=None) -> Optional[fitz.Rect]:
+    title_block = _find_explicit_table_title_block(
+        page,
+        rect,
+        artifact_cache=artifact_cache,
+    )
     if title_block is None:
         return None
     next_top = min(
         (
             block.y0
-            for block, _ in _page_text_blocks(page)
+            for block, _ in _page_text_blocks(page, artifact_cache=artifact_cache)
             if block.y0 >= title_block.y1 - 1.0
             and block.y0 <= rect.y0 + min(140.0, rect.height * 0.35)
             and _horizontal_overlap_ratio(block, rect) >= 0.2
@@ -595,8 +626,11 @@ def _table_title_strip_rect(page: fitz.Page, rect: fitz.Rect) -> Optional[fitz.R
     return fitz.Rect(rect.x0, strip_top, rect.x1, strip_bottom)
 
 
-def _table_note_strip_rect(page: fitz.Page, rect: fitz.Rect) -> Optional[fitz.Rect]:
-    blocks = sorted(_page_text_blocks(page), key=lambda item: (item[0].y0, item[0].x0))
+def _table_note_strip_rect(page: fitz.Page, rect: fitz.Rect, *, artifact_cache=None) -> Optional[fitz.Rect]:
+    blocks = sorted(
+        _page_text_blocks(page, artifact_cache=artifact_cache),
+        key=lambda item: (item[0].y0, item[0].x0),
+    )
     lower_band = rect.y0 + rect.height * 0.45
     start_index: Optional[int] = None
     for idx, (block, text) in enumerate(blocks):
@@ -629,11 +663,15 @@ def _table_note_strip_rect(page: fitz.Page, rect: fitz.Rect) -> Optional[fitz.Re
     return fitz.Rect(rect.x0, strip_top, rect.x1, strip_bottom)
 
 
-def _table_header_tokens(page: fitz.Page, rect: fitz.Rect) -> set[str]:
-    title_block = _find_explicit_table_title_block(page, rect)
+def _table_header_tokens(page: fitz.Page, rect: fitz.Rect, *, artifact_cache=None) -> set[str]:
+    title_block = _find_explicit_table_title_block(
+        page,
+        rect,
+        artifact_cache=artifact_cache,
+    )
     max_y = rect.y0 + min(140.0, rect.height * 0.35)
     tokens: set[str] = set()
-    for block, text in _page_text_blocks(page):
+    for block, text in _page_text_blocks(page, artifact_cache=artifact_cache):
         if block.y1 < rect.y0 - 1.0 or block.y0 > max_y:
             continue
         if _horizontal_overlap_ratio(block, rect) < 0.2:
@@ -679,6 +717,8 @@ def _render_clip_image(page: fitz.Page, rect: fitz.Rect) -> Image.Image:
 def _build_table_continuation_augments(
     doc: fitz.Document,
     regions: list[_ResolvedCropRegion],
+    *,
+    artifact_cache=None,
 ) -> dict[int, _TableContinuationAugment]:
     augments: dict[int, _TableContinuationAugment] = {}
     tables = [region for region in regions if region.item.type == "table"]
@@ -702,16 +742,38 @@ def _build_table_continuation_augments(
             continue
         if abs(prev.rect.x1 - nxt.rect.x1) > prev_page_rect.width * TABLE_CONTINUATION_MAX_EDGE_DRIFT_FRAC:
             continue
-        title_strip = _table_title_strip_rect(prev_page, prev.rect)
-        note_strip = _table_note_strip_rect(next_page, nxt.rect)
+        title_strip = _table_title_strip_rect(
+            prev_page,
+            prev.rect,
+            artifact_cache=artifact_cache,
+        )
+        note_strip = _table_note_strip_rect(
+            next_page,
+            nxt.rect,
+            artifact_cache=artifact_cache,
+        )
         if title_strip is None or note_strip is None:
             continue
-        if _table_title_strip_rect(next_page, nxt.rect) is not None:
+        if _table_title_strip_rect(
+            next_page,
+            nxt.rect,
+            artifact_cache=artifact_cache,
+        ) is not None:
             continue
-        if _table_note_strip_rect(prev_page, prev.rect) is not None:
+        if _table_note_strip_rect(
+            prev_page,
+            prev.rect,
+            artifact_cache=artifact_cache,
+        ) is not None:
             continue
-        shared_tokens = _table_header_tokens(prev_page, prev.rect) & _table_header_tokens(
-            next_page, nxt.rect
+        shared_tokens = _table_header_tokens(
+            prev_page,
+            prev.rect,
+            artifact_cache=artifact_cache,
+        ) & _table_header_tokens(
+            next_page,
+            nxt.rect,
+            artifact_cache=artifact_cache,
         )
         if len(shared_tokens) < TABLE_CONTINUATION_HEADER_TOKEN_MIN_SHARED:
             continue
@@ -737,6 +799,11 @@ def _crop_output_filename(report_name: str, item: CropItem, idx: int) -> str:
 
 
 def crop_regions(request: CropRequest, ctx: RunContext) -> CropResponse:
+    artifact_cache = (
+        getattr(request.pdf_context, "page_artifact_cache", None)
+        if request.pdf_context is not None
+        else None
+    ) or create_page_artifact_cache()
     crop_logger.info(log_event(
         ctx,
         role="service",
@@ -759,13 +826,17 @@ def crop_regions(request: CropRequest, ctx: RunContext) -> CropResponse:
         pad=request.pad,
         mode=request.mode,
         doc=request.pdf_context.fitz_doc if request.pdf_context else None,
+        artifact_cache=artifact_cache,
     )
     crop_logger.info(log_event(
         ctx,
         role="service",
         event="crop_regions_complete",
         module=crop_logger.name,
-        fields={"count": len(paths)},
+        fields={
+            "count": len(paths),
+            "page_artifact_cache": artifact_cache.stats(),
+        },
     ))
     return CropResponse(schema_version="1.0", paths=paths)
 
@@ -779,6 +850,7 @@ def _crop_regions(
     pad: int = 8,
     mode: str = "legacy",
     doc: Optional[fitz.Document] = None,
+    artifact_cache=None,
 ) -> List[str]:
     safe_report_name = safe_path_segment(report_name, fallback="report")
     safe_subdir = safe_path_segment(subdir or "slices", fallback="slices")
@@ -815,7 +887,11 @@ def _crop_regions(
                 )
             )
 
-        augments = _build_table_continuation_augments(local_doc, regions)
+        augments = _build_table_continuation_augments(
+            local_doc,
+            regions,
+            artifact_cache=artifact_cache,
+        )
 
         for region in regions:
             it = region.item
@@ -858,7 +934,12 @@ def _crop_regions(
                             allow_right=True,
                         )
                     else:
-                        img = _legacy_chart_border_trim(page, region.rect, img)
+                        img = _legacy_chart_border_trim(
+                            page,
+                            region.rect,
+                            img,
+                            artifact_cache=artifact_cache,
+                        )
                 except PDF_CROP_EXCEPTIONS:
                     img = None
 
@@ -976,6 +1057,11 @@ def apply_crop_refine_bbox(request: CropRefineBBoxApplyRequest, ctx: RunContext)
         },
     ))
     local_doc = request.pdf_context.fitz_doc if request.pdf_context else None
+    artifact_cache = (
+        getattr(request.pdf_context, "page_artifact_cache", None)
+        if request.pdf_context is not None
+        else None
+    ) or create_page_artifact_cache()
     owns_doc = local_doc is None
     if local_doc is None:
         local_doc = fitz.open(request.pdf_path)
@@ -993,7 +1079,11 @@ def apply_crop_refine_bbox(request: CropRefineBBoxApplyRequest, ctx: RunContext)
         rect = input_rect & page.rect
         if rect.is_empty:
             rect = page.rect
-        rect = _crop_refine_edge_guard_rect(page, rect)
+        rect = _crop_refine_edge_guard_rect(
+            page,
+            rect,
+            artifact_cache=artifact_cache,
+        )
         if rect.width < 1:
             rect = fitz.Rect(rect.x0, rect.y0, min(page.rect.x1, rect.x0 + 1), rect.y1)
         if rect.height < 1:
@@ -1020,28 +1110,23 @@ def apply_crop_refine_bbox(request: CropRefineBBoxApplyRequest, ctx: RunContext)
     return response
 
 
-def _crop_refine_text_blocks(page: fitz.Page) -> list[fitz.Rect]:
-    blocks: list[fitz.Rect] = []
+def _crop_refine_text_blocks(page: fitz.Page, *, artifact_cache=None) -> list[fitz.Rect]:
     try:
-        raw_blocks = page.get_text("blocks")
+        return get_crop_refine_text_block_rects(
+            page,
+            cache=artifact_cache,
+            is_page_number_text=_is_page_number_text,
+        )
     except PDF_CROP_EXCEPTIONS:
-        return blocks
-    for x0, y0, x1, y1, text, *_ in raw_blocks:
-        text_str = str(text or "").strip()
-        if not text_str:
-            continue
-        if _is_page_number_text(text_str):
-            continue
-        blocks.append(fitz.Rect(float(x0), float(y0), float(x1), float(y1)))
-    return blocks
+        return []
 
 
-def _crop_refine_edge_guard_rect(page: fitz.Page, rect: fitz.Rect) -> fitz.Rect:
+def _crop_refine_edge_guard_rect(page: fitz.Page, rect: fitz.Rect, *, artifact_cache=None) -> fitz.Rect:
     page_rect = page.rect
     pad_x = min(max(page_rect.width * CROP_REFINE_BBOX_PAD_X_FRAC, CROP_REFINE_BBOX_PAD_MIN), CROP_REFINE_BBOX_PAD_MAX)
     pad_y = min(max(page_rect.height * CROP_REFINE_BBOX_PAD_Y_FRAC, CROP_REFINE_BBOX_PAD_MIN), CROP_REFINE_BBOX_PAD_MAX)
     adjusted = fitz.Rect(rect.x0 - pad_x, rect.y0 - pad_y, rect.x1 + pad_x, rect.y1 + pad_y) & page_rect
-    blocks = _crop_refine_text_blocks(page)
+    blocks = _crop_refine_text_blocks(page, artifact_cache=artifact_cache)
     if not blocks:
         return adjusted
 

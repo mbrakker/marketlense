@@ -59,7 +59,7 @@ from .figures import (
     _text_stats,
     _validate_table_candidate,
 )
-from .page_artifacts import build_page_artifacts, is_full_page_scan_without_text
+from .page_artifacts import PdfPageArtifactCache, get_page_artifacts
 from .visual_candidates import _render_visual_probe_image, _visual_probe_profile
 
 
@@ -288,6 +288,7 @@ def _extract_tables_sequential(
     max_candidates: int = 0,
     pages: Optional[List[int]] = None,
     doc: Optional[fitz.Document] = None,
+    artifact_cache: Optional[PdfPageArtifactCache] = None,
 ) -> tuple[List[Candidate], Dict[str, object]]:
     out: List[Candidate] = []
     stats: Dict[str, object] = {
@@ -324,7 +325,11 @@ def _extract_tables_sequential(
                 if fitz_doc is not None and pno < len(fitz_doc):
                     try:
                         fitz_page = fitz_doc[pno]
-                        if is_full_page_scan_without_text(fitz_page):
+                        page_artifacts = get_page_artifacts(
+                            fitz_page,
+                            cache=artifact_cache,
+                        )
+                        if page_artifacts.full_page_scan_without_text:
                             image_table_candidate = _full_page_image_table_candidate(
                                 fitz_page
                             )
@@ -354,7 +359,6 @@ def _extract_tables_sequential(
                             )
                             _tally_reason(stats, "page_full_scan_no_text")
                             continue
-                        page_artifacts = build_page_artifacts(fitz_page)
                     except Exception:
                         fitz_page = None
                         page_artifacts = None
@@ -521,6 +525,7 @@ def extract_table_candidates(
     parallel_workers: int = 1,
     pages: Optional[List[int]] = None,
     doc: Optional[fitz.Document] = None,
+    artifact_cache: Optional[PdfPageArtifactCache] = None,
 ) -> tuple[List[Candidate], Dict[str, object]]:
     try:
         if doc is not None:
@@ -537,6 +542,7 @@ def extract_table_candidates(
             max_candidates=max_candidates,
             pages=pages,
             doc=doc,
+            artifact_cache=artifact_cache,
         )
     page_numbers = pages if pages is not None else all_pages
     worker_count = _resolve_candidate_parallel_workers(
@@ -548,6 +554,7 @@ def extract_table_candidates(
             max_candidates=max_candidates,
             pages=page_numbers,
             doc=doc,
+            artifact_cache=artifact_cache,
         )
     chunks = _split_even_chunks(page_numbers, worker_count)
     merged_stats: Dict[str, object] = {
@@ -561,7 +568,14 @@ def extract_table_candidates(
     merged_candidates: List[Candidate] = []
     with ThreadPoolExecutor(max_workers=worker_count) as executor:
         futures = {
-            executor.submit(_extract_tables_sequential, pdf_path, 0, chunk, None): chunk
+            executor.submit(
+                _extract_tables_sequential,
+                pdf_path,
+                0,
+                chunk,
+                None,
+                artifact_cache,
+            ): chunk
             for chunk in chunks
         }
         for future in as_completed(futures):

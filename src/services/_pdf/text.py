@@ -33,6 +33,7 @@ from src.contracts.pdf_utils import (
 from src.contracts.run_context import RunContext
 from src.utils.errors import AppError
 from src.utils.logging import log_event
+from .page_artifacts import create_page_artifact_cache
 from src.utils.pdf_utils import pdf_has_eof_marker as _pdf_has_eof_marker
 
 from .shared import EOF_TAIL_BYTES, logger
@@ -139,6 +140,9 @@ def build_pdf_context(
         path=request.path,
         fitz_doc=fitz_doc,
         pypdf_reader=pypdf_reader,
+        page_artifact_cache=create_page_artifact_cache()
+        if fitz_doc is not None
+        else None,
     )
 
     logger.info(

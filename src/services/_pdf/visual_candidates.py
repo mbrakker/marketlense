@@ -86,9 +86,9 @@ from .figures import (
     _vertical_overlap_ratio,
 )
 from .page_artifacts import (
+    PdfPageArtifactCache,
     PdfPageArtifacts,
-    build_page_artifacts,
-    is_full_page_scan_without_text,
+    get_page_artifacts,
 )
 
 PANEL_CHART_CONTEXT_TEXT_RATIO_MAX = 0.85
@@ -1182,19 +1182,15 @@ def _build_visual_page_context(
     page: fitz.Page,
     page_number: int,
     stats: Dict[str, object],
+    *,
+    artifact_cache: Optional[PdfPageArtifactCache] = None,
 ) -> Optional[_VisualPageContext]:
-    try:
-        page_text = page.get_text("text") or ""
-    except Exception:
-        page_text = ""
-    if is_full_page_scan_without_text(page, page_text=page_text):
+    artifacts = get_page_artifacts(page, cache=artifact_cache)
+    if artifacts.full_page_scan_without_text:
         stats["skipped_pages"] = _int_count(stats.get("skipped_pages", 0)) + 1
         _tally_reason(stats, "page_full_scan_no_text")
         return None
-    artifacts = build_page_artifacts(page)
     page_chars = artifacts.text_char_count
-    if page_chars <= 0:
-        page_chars = _text_stats(page_text)[1]
     page_rect = page.rect
     return _VisualPageContext(
         page_number=page_number,
@@ -1278,6 +1274,7 @@ def _extract_visuals_sequential(
     save_thumbs: bool = False,
     doc: Optional[fitz.Document] = None,
     pages: Optional[List[int]] = None,
+    artifact_cache: Optional[PdfPageArtifactCache] = None,
 ) -> tuple[List[Candidate], Dict[str, object]]:
     out: List[Candidate] = []
     stats = _initial_visual_stats()
@@ -1289,7 +1286,12 @@ def _extract_visuals_sequential(
             if pno < 0 or pno >= len(local_doc):
                 continue
             page = local_doc[pno]
-            page_ctx = _build_visual_page_context(page, pno, stats)
+            page_ctx = _build_visual_page_context(
+                page,
+                pno,
+                stats,
+                artifact_cache=artifact_cache,
+            )
             if page_ctx is None:
                 continue
             kept: List[tuple[fitz.Rect, float, int]] = []
@@ -2104,6 +2106,7 @@ def extract_visual_candidates(
     doc: Optional[fitz.Document] = None,
     parallel_workers: int = 1,
     pages: Optional[List[int]] = None,
+    artifact_cache: Optional[PdfPageArtifactCache] = None,
 ) -> tuple[List[Candidate], Dict[str, object]]:
     if save_thumbs:
         return _extract_visuals_sequential(
@@ -2113,6 +2116,7 @@ def extract_visual_candidates(
             save_thumbs=save_thumbs,
             doc=doc,
             pages=pages,
+            artifact_cache=artifact_cache,
         )
     if doc is not None:
         all_pages = list(range(len(doc)))
@@ -2134,6 +2138,7 @@ def extract_visual_candidates(
             save_thumbs=save_thumbs,
             doc=doc,
             pages=page_numbers,
+            artifact_cache=artifact_cache,
         )
     chunks = _split_even_chunks(page_numbers, worker_count)
     merged_stats: Dict[str, object] = {
@@ -2153,6 +2158,7 @@ def extract_visual_candidates(
                 False,
                 None,
                 chunk,
+                artifact_cache,
             ): chunk
             for chunk in chunks
         }

@@ -14,7 +14,10 @@ except ModuleNotFoundError:  # pragma: no cover - depends on PyMuPDF packaging a
 from PIL import Image, ImageDraw
 
 from src.contracts.candidates import Candidate
+from src.contracts.pdf_context import PdfContextBuildRequest
 from src.contracts.report_assets import ExtractCandidatesRequest, FigureExtractRequest
+from src.contracts.report_assets import CropRequest
+from src.contracts.report_models import CropItem
 from src.contracts.run_context import RunContext
 from src.services._pdf.figures import (
     _ChartRect,
@@ -63,7 +66,12 @@ from src.services._pdf.visual_candidates import (
     _visual_candidate_looks_table_like,
     _visual_text_dense_recovery_allowed,
 )
-from src.services.pdf_service import collect_candidates, extract_best_figure
+from src.services.pdf_service import (
+    build_pdf_context,
+    collect_candidates,
+    crop_regions,
+    extract_best_figure,
+)
 
 
 def _ctx() -> RunContext:
@@ -2597,6 +2605,113 @@ def test_collect_candidates_returns_chart_and_table_contracts(
     assert_logs_have_required_fields(events)
     event_names = {str(event["event"]) for event in events}
     assert {"extract_candidates_start", "extract_candidates_complete"} <= event_names
+
+
+def test_pdf_page_artifact_cache_reused_across_candidate_and_crop_passes(
+    tmp_path,
+    caplog,
+) -> None:
+    pdf_path = tmp_path / "candidates-cache.pdf"
+    out_dir = tmp_path / "out"
+    _build_candidates_pdf(pdf_path)
+
+    caplog.set_level(logging.INFO, logger="market_lense.pdf_service")
+    caplog.set_level(
+        logging.INFO, logger="market_lense.pdf_service.candidate_extraction"
+    )
+    caplog.set_level(logging.INFO, logger="market_lense.pdf_service.crop")
+
+    context_response = build_pdf_context(
+        PdfContextBuildRequest(schema_version="1.0", path=pdf_path.as_posix()),
+        _ctx(),
+    )
+    pdf_context = context_response.context
+    try:
+        cache = pdf_context.page_artifact_cache
+
+        assert cache is not None
+        assert cache.stats()["artifact_entries"] == 0
+
+        candidates_response = collect_candidates(
+            ExtractCandidatesRequest(
+                schema_version="1.0",
+                pdf_path=pdf_path.as_posix(),
+                out_dir=out_dir.as_posix(),
+                report_name="cache-report",
+                pdf_context=pdf_context,
+            ),
+            _ctx(),
+        )
+
+        chart_candidate = next(
+            candidate
+            for candidate in candidates_response.candidates
+            if candidate.kind == "chart"
+        )
+        after_collect_stats = cache.stats()
+
+        assert after_collect_stats["artifact_entries"] >= 1
+        assert after_collect_stats["misses"] >= 1
+
+        crop_response = crop_regions(
+            CropRequest(
+                schema_version="1.0",
+                pdf_path=pdf_path.as_posix(),
+                out_dir=out_dir.as_posix(),
+                report_name="cache-report",
+                subdir="candidates",
+                items=[
+                    CropItem(
+                        id=chart_candidate.id,
+                        type=chart_candidate.kind,
+                        score=1.0,
+                        page=chart_candidate.page,
+                        bbox=chart_candidate.bbox,
+                    )
+                ],
+                pdf_context=pdf_context,
+            ),
+            _ctx(),
+        )
+
+        after_crop_stats = cache.stats()
+
+        assert len(crop_response.paths) == 1
+        assert (
+            after_crop_stats["artifact_entries"]
+            == after_collect_stats["artifact_entries"]
+        )
+        assert after_crop_stats["text_block_pair_entries"] >= 1
+        assert after_crop_stats["hits"] > after_collect_stats["hits"]
+
+        candidate_events = _events(
+            caplog,
+            "market_lense.pdf_service.candidate_extraction",
+        )
+        candidate_complete = next(
+            event
+            for event in candidate_events
+            if event.get("event") == "extract_candidates_complete"
+        )
+        candidate_fields = cast(dict[str, Any], candidate_complete.get("fields") or {})
+        candidate_cache = cast(
+            dict[str, Any],
+            candidate_fields.get("page_artifact_cache") or {},
+        )
+        assert int(candidate_cache.get("artifact_entries", 0)) >= 1
+
+        crop_events = _events(caplog, "market_lense.pdf_service.crop")
+        crop_complete = next(
+            event
+            for event in crop_events
+            if event.get("event") == "crop_regions_complete"
+        )
+        crop_fields = cast(dict[str, Any], crop_complete.get("fields") or {})
+        crop_cache = cast(dict[str, Any], crop_fields.get("page_artifact_cache") or {})
+        assert int(crop_cache.get("artifact_entries", 0)) >= 1
+        assert int(crop_cache.get("text_block_pair_entries", 0)) >= 1
+    finally:
+        pdf_context.close()
 
 
 def test_collect_candidates_skips_full_page_scan_without_text(tmp_path, caplog) -> None:

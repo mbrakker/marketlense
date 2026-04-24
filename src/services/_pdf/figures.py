@@ -28,7 +28,11 @@ from src.utils.logging import log_event
 from src.utils.path_utils import safe_path_segment
 from src.utils.slugify import slugify
 
-from .page_artifacts import is_full_page_scan_without_text
+from .page_artifacts import (
+    PdfPageArtifactCache,
+    create_page_artifact_cache,
+    get_page_artifacts,
+)
 from .shared import candidate_logger, figure_logger
 
 # BEGIN PDF CANDIDATE EXTRACTION
@@ -6047,6 +6051,7 @@ def _extract_charts_sequential(
     save_thumbs: bool = False,
     doc: Optional[fitz.Document] = None,
     pages: Optional[List[int]] = None,
+    artifact_cache: Optional[PdfPageArtifactCache] = None,
 ) -> Tuple[List[Candidate], Dict[str, object]]:
     from .visual_candidates import _extract_visuals_sequential
 
@@ -6057,6 +6062,7 @@ def _extract_charts_sequential(
         save_thumbs=save_thumbs,
         doc=doc,
         pages=pages,
+        artifact_cache=artifact_cache,
     )
 
 
@@ -6120,6 +6126,7 @@ def _extract_charts(
     doc: Optional[fitz.Document] = None,
     parallel_workers: int = 1,
     pages: Optional[List[int]] = None,
+    artifact_cache: Optional[PdfPageArtifactCache] = None,
 ) -> Tuple[List[Candidate], Dict[str, object]]:
     from .visual_candidates import extract_visual_candidates
 
@@ -6131,6 +6138,7 @@ def _extract_charts(
         doc=doc,
         parallel_workers=parallel_workers,
         pages=pages,
+        artifact_cache=artifact_cache,
     )
 
 
@@ -6138,6 +6146,7 @@ def _extract_tables_sequential(
     pdf_path: str,
     max_candidates: int = 0,
     pages: Optional[List[int]] = None,
+    artifact_cache: Optional[PdfPageArtifactCache] = None,
 ) -> Tuple[List[Candidate], Dict[str, object]]:
     from .table_candidates import _extract_tables_sequential as _run_tables_sequential
 
@@ -6145,6 +6154,7 @@ def _extract_tables_sequential(
         pdf_path,
         max_candidates=max_candidates,
         pages=pages,
+        artifact_cache=artifact_cache,
     )
 
 
@@ -6154,6 +6164,7 @@ def _extract_tables(
     parallel_workers: int = 1,
     pages: Optional[List[int]] = None,
     doc: Optional[fitz.Document] = None,
+    artifact_cache: Optional[PdfPageArtifactCache] = None,
 ) -> Tuple[List[Candidate], Dict[str, object]]:
     from .table_candidates import extract_table_candidates
 
@@ -6163,6 +6174,7 @@ def _extract_tables(
         parallel_workers=parallel_workers,
         pages=pages,
         doc=doc,
+        artifact_cache=artifact_cache,
     )
 
 
@@ -7569,6 +7581,8 @@ def _open_candidate_triage_doc(
 def _plan_candidate_pages(
     triage_doc: fitz.Document,
     excluded_pages: set[int],
+    *,
+    artifact_cache: PdfPageArtifactCache,
 ) -> _CandidatePagePlan:
     requested_pages = [
         index for index in range(len(triage_doc)) if index not in excluded_pages
@@ -7577,7 +7591,10 @@ def _plan_candidate_pages(
     triaged_full_scan_pages = 0
     for index in requested_pages:
         try:
-            if is_full_page_scan_without_text(triage_doc[index]):
+            if get_page_artifacts(
+                triage_doc[index],
+                cache=artifact_cache,
+            ).full_page_scan_without_text:
                 triaged_full_scan_pages += 1
                 continue
         except PDF_FIGURE_TRIAGE_EXCEPTIONS:
@@ -7597,6 +7614,7 @@ def _extract_candidate_artifacts(
     triage_doc: Optional[fitz.Document],
     parallel_workers: int,
     page_plan: _CandidatePagePlan,
+    artifact_cache: PdfPageArtifactCache,
 ) -> _CandidateExtractionArtifacts:
     artifacts = _CandidateExtractionArtifacts(
         charts=[],
@@ -7616,12 +7634,14 @@ def _extract_candidate_artifacts(
         doc=triage_doc if parallel_workers <= 1 else None,
         parallel_workers=parallel_workers,
         pages=page_plan.chart_pages,
+        artifact_cache=artifact_cache,
     )
     artifacts.tables, artifacts.table_stats = _extract_tables(
         request.pdf_path,
         parallel_workers=parallel_workers,
         pages=page_plan.table_pages,
         doc=triage_doc if parallel_workers <= 1 else None,
+        artifact_cache=artifact_cache,
     )
     (
         artifacts.charts,
@@ -7701,6 +7721,11 @@ def collect_candidates(
         excluded_count=0,
         triaged_full_scan_pages=0,
     )
+    artifact_cache = (
+        getattr(request.pdf_context, "page_artifact_cache", None)
+        if request.pdf_context is not None
+        else None
+    ) or create_page_artifact_cache()
     artifacts = _CandidateExtractionArtifacts(
         charts=[],
         tables=[],
@@ -7711,12 +7736,17 @@ def collect_candidates(
     try:
         triage_doc, close_doc = _open_candidate_triage_doc(request.pdf_path, shared_doc)
         if triage_doc is not None:
-            page_plan = _plan_candidate_pages(triage_doc, excluded_pages)
+            page_plan = _plan_candidate_pages(
+                triage_doc,
+                excluded_pages,
+                artifact_cache=artifact_cache,
+            )
         artifacts = _extract_candidate_artifacts(
             request,
             triage_doc=triage_doc,
             parallel_workers=parallel_workers,
             page_plan=page_plan,
+            artifact_cache=artifact_cache,
         )
         (
             artifacts.charts,
@@ -7760,6 +7790,7 @@ def collect_candidates(
                 "table_chart_overlap_pruned": artifacts.table_chart_overlap_pruned,
                 "excluded_count": page_plan.excluded_count,
                 "triaged_full_scan_pages": page_plan.triaged_full_scan_pages,
+                "page_artifact_cache": artifact_cache.stats(),
             },
         )
     )

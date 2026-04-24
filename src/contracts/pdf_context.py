@@ -10,6 +10,12 @@ class PdfContext:
     path: str = field(metadata={"doc": "Filesystem path to the PDF used to open handles."})
     fitz_doc: Optional[Any] = field(default=None, metadata={"doc": "Pre-opened PyMuPDF document handle, if available."})
     pypdf_reader: Optional[Any] = field(default=None, metadata={"doc": "Pre-opened pypdf PdfReader handle, if available."})
+    page_artifact_cache: Optional[Any] = field(
+        default=None,
+        metadata={
+            "doc": "Optional internal per-page artifact cache reused across PDF candidate and crop passes."
+        },
+    )
 
     def close(self) -> None:
         """Close any managed PDF handles. Failures are swallowed to keep cleanup best-effort."""

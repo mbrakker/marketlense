@@ -200,15 +200,6 @@ Scoring rubric:
     - Cost per ranking call measurably reduced in benchmarks.
     - No regression in ranking quality on held-out set.
 
-- **Title:** Share PDF page-artifact caches across visual, table, and crop passes [Impact: 5/5, Effort: 4/5]
-  - Explanation: `src/services/_pdf/page_artifacts.py` is only reused by parts of extraction today, while crop and related flows still rebuild page text/block state separately. Introduce one internal page-artifact cache per page/document and feed it through visual, table, and crop services.
-  - Pros: Less repeated PDF parsing, lower CPU cost on large reports, and fewer divergent heuristics.
-  - Cons: Requires careful lifecycle management for document/page objects.
-  - Acceptance Criteria:
-    - Shared page artifact/context objects are reused across figure, table, and crop flows.
-    - Duplicate text-block extraction paths are removed or delegated to the shared cache.
-    - Benchmarks on large PDFs show reduced repeated page parsing work.
-
 - **Title:** Consolidate report-source cache boilerplate into one typed helper [Impact: 3/5, Effort: 2/5]
   - Explanation: `src/generators/report_source_generator.py` repeats near-identical cache load/write flows for PDF info, contents detection, and extracted text. Replace those repeated blocks with a shared typed helper, similar in spirit to `analysis_pack_cache.py`, while keeping pack-specific validation explicit.
   - Pros: Smaller generator surface, fewer cache bugs, and easier extension of source-analysis phases.
