@@ -1,10 +1,10 @@
-from __future__ import annotations
-
 """Capability module for chart and infographic candidate extraction.
 
 This split keeps `figures.collect_candidates()` as the single service boundary
 while isolating visual-candidate orchestration into its own upgrade surface.
 """
+
+from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, replace
@@ -29,7 +29,6 @@ from .figures import (
     CHART_MARGIN_RELAX_FRAC,
     INFO_CHART_MAX_ASPECT,
     PANEL_CHART_INTERNAL_TITLE_EXTRA_TOP_PAD,
-    VISUAL_CONTEXT_HINTS,
     _adjust_rect_for_text_margins,
     _candidate_index_from_id,
     _caption_near_top,
@@ -401,6 +400,13 @@ def _visual_probe_profile(
     gray_hist = gray.histogram()
     white_frac = sum(gray_hist[241:]) / total_pixels
     dark_frac = sum(gray_hist[:40]) / total_pixels
+    visual_entropy = 0.0
+    for count in gray_hist:
+        if count <= 0:
+            continue
+        probability = count / total_pixels
+        visual_entropy -= probability * math.log2(probability)
+    visual_entropy = min(1.0, max(0.0, visual_entropy / 8.0))
 
     saturation = hsv.split()[1]
     sat_mean = ImageStat.Stat(saturation).mean[0]
@@ -414,6 +420,7 @@ def _visual_probe_profile(
         "dark_frac": float(dark_frac),
         "sat_mean": float(sat_mean),
         "edge_density": float(edge_density),
+        "visual_entropy": float(visual_entropy),
     }
     return (
         probe_cache.record_profile(cache_key, profile)
@@ -436,6 +443,64 @@ def _embedded_visual_looks_chart_like(
     edge_density = profile["edge_density"]
     return (white_frac >= 0.28 and sat_mean <= 95.0 and edge_density >= 0.008) or (
         white_frac >= 0.62 and sat_mean <= 70.0
+    )
+
+
+def _bounded_quality(value: float) -> float:
+    if not math.isfinite(value):
+        return 0.0
+    return min(1.0, max(0.0, value))
+
+
+def _candidate_ocr_density(text_chars: int, area_frac: float) -> float:
+    if text_chars <= 0 or area_frac <= 0.0:
+        return 0.0
+    return round(float(text_chars) / max(1.0, float(area_frac) * 100.0), 2)
+
+
+def _chart_confidence_score(
+    *,
+    area_frac: float,
+    has_context_hint: bool,
+    caption: str,
+    bbox_text: str,
+    text_lines: int,
+    text_chars: int,
+    note_included: bool,
+    profile: Optional[dict[str, float]],
+) -> float:
+    area_score = _bounded_quality(area_frac / 0.18) * 0.22
+    caption_score = 0.16 if caption.strip() else 0.0
+    context_score = 0.16 if has_context_hint else 0.0
+    note_score = 0.06 if note_included else 0.0
+    text_score = 0.0
+    if _chart_is_label_dense_not_prose(bbox_text) or _panel_chart_has_data_signal(
+        bbox_text
+    ):
+        text_score = 0.22
+    elif text_lines >= 3 and text_chars >= 40:
+        text_score = 0.12
+
+    visual_score = 0.0
+    if profile is not None:
+        entropy = float(profile.get("visual_entropy", 0.0) or 0.0)
+        edge_density = float(profile.get("edge_density", 0.0) or 0.0)
+        white_frac = float(profile.get("white_frac", 0.0) or 0.0)
+        entropy_score = _bounded_quality(entropy / 0.55)
+        edge_score = _bounded_quality(edge_density / 0.08)
+        background_score = 1.0 if white_frac >= 0.18 else 0.65
+        visual_score = min(entropy_score, edge_score, background_score) * 0.18
+
+    return round(
+        _bounded_quality(
+            area_score
+            + caption_score
+            + context_score
+            + note_score
+            + text_score
+            + visual_score
+        ),
+        3,
     )
 
 
@@ -2017,6 +2082,26 @@ def _extract_visuals_sequential(
                     thumb_path = Path(thumb)
                     rel_thumb = Path(report_name) / "thumbs" / thumb_path.name
                     thumb = rel_thumb.as_posix()
+                profile = _visual_probe_profile(
+                    page_ctx.page,
+                    final_rect,
+                    probe_cache=page_ctx.probe_cache,
+                )
+                visual_entropy = (
+                    round(float(profile.get("visual_entropy", 0.0) or 0.0), 3)
+                    if profile is not None
+                    else 0.0
+                )
+                chart_confidence = _chart_confidence_score(
+                    area_frac=area_frac,
+                    has_context_hint=has_context_hint,
+                    caption=cap or "",
+                    bbox_text=bbox_text,
+                    text_lines=text_lines,
+                    text_chars=text_chars,
+                    note_included=note_included,
+                    profile=profile,
+                )
                 features = CandidateFeatures(
                     schema_version="1.0",
                     area_frac=round(area_frac, 3),
@@ -2024,6 +2109,9 @@ def _extract_visuals_sequential(
                     text_lines=text_lines,
                     text_chars=text_chars,
                     text_ratio=round(text_ratio, 3),
+                    ocr_density=_candidate_ocr_density(text_chars, area_frac),
+                    visual_entropy=visual_entropy,
+                    chart_confidence=chart_confidence,
                 )
                 candidate = Candidate(
                     schema_version="1.0",
@@ -2045,6 +2133,9 @@ def _extract_visuals_sequential(
                         "text_lines": features.text_lines,
                         "text_chars": features.text_chars,
                         "text_ratio": features.text_ratio,
+                        "ocr_density": features.ocr_density,
+                        "visual_entropy": features.visual_entropy,
+                        "chart_confidence": features.chart_confidence,
                     },
                     features=features,
                 )

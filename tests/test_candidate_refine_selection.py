@@ -151,6 +151,105 @@ def test_prefilter_uses_typed_candidate_features_without_meta():
     assert rsg._candidate_is_obvious_pass(chart) is True
 
 
+def test_rank_candidates_payload_includes_quality_signals(tmp_path):
+    settings = _settings(tmp_path, rank_model="gpt-rank")
+    captured_rows: list[dict[str, object]] = []
+
+    def _render_prompt(req, ctx):
+        if "candidates_json" in req.variables:
+            captured_rows.extend(json.loads(req.variables["candidates_json"]))
+        return SimpleNamespace(text=req.variables.get("candidates_json", "system"))
+
+    def _rank_candidates(req, ctx):
+        assert req.candidate_count == 1
+        assert '"quality_signals"' in req.user_prompt
+        return SimpleNamespace(
+            results=[
+                RankedCandidate(
+                    id="chart_signals",
+                    type="chart",
+                    score=94,
+                    quality_score=93,
+                    insight_score=92,
+                    data_score=91,
+                    keep=True,
+                )
+            ],
+            prompt_tokens=10,
+            completion_tokens=5,
+            total_tokens=15,
+            request_id="rank",
+            raw_content="{}",
+        )
+
+    deps = _deps(render_prompt=_render_prompt, rank_candidates=_rank_candidates)
+    candidate = Candidate(
+        schema_version="1.0",
+        id="chart_signals",
+        kind="chart",
+        page=0,
+        bbox=(10.0, 20.0, 300.0, 260.0),
+        caption="Figure 1. Revenue growth",
+        preview_text="Revenue 2024 2025 2026",
+        meta={},
+        features=CandidateFeatures(
+            schema_version="1.0",
+            area_frac=0.18,
+            text_chars=72,
+            text_ratio=0.2,
+            ocr_density=4.0,
+            visual_entropy=0.62,
+            chart_confidence=0.84,
+        ),
+    )
+
+    result = rsg._rank_candidates_batch(
+        candidates=[candidate],
+        kind="chart",
+        settings=settings,
+        ctx=_ctx(),
+        dependencies=deps,
+    )
+
+    assert result.ranked[0].id == "chart_signals"
+    assert captured_rows
+    row = captured_rows[0]
+    assert row["quality_signals"] == {
+        "ocr_density": 4.0,
+        "visual_entropy": 0.62,
+        "chart_confidence": 0.84,
+        "table_confidence": 0.0,
+    }
+    features = row["features"]
+    assert isinstance(features, dict)
+    assert features["ocr_density"] == 4.0
+    assert features["visual_entropy"] == 0.62
+    assert features["chart_confidence"] == 0.84
+
+
+def test_prefilter_rejects_low_signal_chart_fragment():
+    candidate = Candidate(
+        schema_version="1.0",
+        id="chart_fragment",
+        kind="chart",
+        page=0,
+        bbox=(10.0, 10.0, 140.0, 70.0),
+        caption="",
+        preview_text="",
+        meta={},
+        features=CandidateFeatures(
+            schema_version="1.0",
+            area_frac=0.08,
+            text_chars=12,
+            text_ratio=0.05,
+            visual_entropy=0.02,
+            chart_confidence=0.18,
+        ),
+    )
+
+    assert rsg._candidate_prefilter_reject_reason(candidate) == "chart_low_confidence"
+
+
 def test_refine_selection_adaptive_obvious_pass_skips_llm(tmp_path):
     settings = _settings(
         tmp_path, crop_refine_enabled=True, crop_refine_mode="adaptive"

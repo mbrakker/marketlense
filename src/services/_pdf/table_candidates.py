@@ -1,13 +1,14 @@
-from __future__ import annotations
-
 """Capability module for table-candidate extraction.
 
 This split keeps `figures.collect_candidates()` as the single service boundary
 while isolating pdfplumber/table heuristics into a dedicated upgrade surface.
 """
 
+from __future__ import annotations
+
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import replace
+import math
 from typing import Dict, List, Optional
 
 import numpy as np
@@ -63,7 +64,51 @@ from .page_artifacts import PdfPageArtifactCache, get_page_artifacts
 from .visual_candidates import _render_visual_probe_image, _visual_probe_profile
 
 
-def _table_candidate_features(candidate: _TableCandidate) -> CandidateFeatures:
+def _bounded_quality(value: float) -> float:
+    if not math.isfinite(value):
+        return 0.0
+    return min(1.0, max(0.0, value))
+
+
+def _candidate_ocr_density(text_chars: int, area_frac: float) -> float:
+    if text_chars <= 0 or area_frac <= 0.0:
+        return 0.0
+    return round(float(text_chars) / max(1.0, float(area_frac) * 100.0), 2)
+
+
+def _table_confidence_score(candidate: _TableCandidate) -> float:
+    method_score = {
+        "ranked": 0.24,
+        "lattice": 0.22,
+        "stream": 0.16,
+        "full_page_image": 0.18,
+    }.get(candidate.method, 0.12)
+    structure_score = (
+        _bounded_quality(candidate.row_count / 8.0) * 0.16
+        + _bounded_quality(candidate.col_count / 5.0) * 0.12
+        + _bounded_quality(candidate.col_consistency) * 0.12
+    )
+    data_score = _bounded_quality(candidate.numeric_ratio / 0.35) * 0.18
+    compactness_score = (
+        _bounded_quality(1.0 - max(0.0, candidate.avg_words_per_cell - 3.0) / 9.0)
+        * 0.1
+    )
+    area_score = _bounded_quality(candidate.area_frac / 0.16) * 0.08
+    return round(
+        _bounded_quality(
+            method_score
+            + structure_score
+            + data_score
+            + compactness_score
+            + area_score
+        ),
+        3,
+    )
+
+
+def _table_candidate_features(
+    candidate: _TableCandidate, *, visual_entropy: float = 0.0
+) -> CandidateFeatures:
     return CandidateFeatures(
         schema_version="1.0",
         area_frac=round(candidate.area_frac, 4),
@@ -73,12 +118,17 @@ def _table_candidate_features(candidate: _TableCandidate) -> CandidateFeatures:
         cols=candidate.col_count,
         numeric_ratio=round(candidate.numeric_ratio, 3),
         avg_words_per_cell=round(candidate.avg_words_per_cell, 2),
+        ocr_density=_candidate_ocr_density(candidate.text_len, candidate.area_frac),
+        visual_entropy=round(float(visual_entropy or 0.0), 3),
+        table_confidence=_table_confidence_score(candidate),
         method=candidate.method,
     )
 
 
-def _table_candidate_meta(candidate: _TableCandidate) -> dict[str, object]:
-    features = _table_candidate_features(candidate)
+def _table_candidate_meta(
+    candidate: _TableCandidate, *, visual_entropy: float = 0.0
+) -> dict[str, object]:
+    features = _table_candidate_features(candidate, visual_entropy=visual_entropy)
     return {
         "method": features.method,
         "rows": features.rows,
@@ -90,6 +140,9 @@ def _table_candidate_meta(candidate: _TableCandidate) -> dict[str, object]:
         "text_len": candidate.text_len,
         "area_frac": features.area_frac,
         "aspect": features.aspect,
+        "ocr_density": features.ocr_density,
+        "visual_entropy": features.visual_entropy,
+        "table_confidence": features.table_confidence,
     }
 
 
@@ -334,8 +387,20 @@ def _extract_tables_sequential(
                                 fitz_page
                             )
                             if image_table_candidate is not None:
+                                profile = _visual_probe_profile(
+                                    fitz_page,
+                                    fitz.Rect(image_table_candidate.bbox),
+                                )
+                                visual_entropy = (
+                                    float(
+                                        profile.get("visual_entropy", 0.0) or 0.0
+                                    )
+                                    if profile is not None
+                                    else 0.0
+                                )
                                 features = _table_candidate_features(
-                                    image_table_candidate
+                                    image_table_candidate,
+                                    visual_entropy=visual_entropy,
                                 )
                                 out.append(
                                     Candidate(
@@ -348,7 +413,8 @@ def _extract_tables_sequential(
                                         caption=None,
                                         thumb_path=None,
                                         meta=_table_candidate_meta(
-                                            image_table_candidate
+                                            image_table_candidate,
+                                            visual_entropy=visual_entropy,
                                         ),
                                         features=features,
                                     )
@@ -488,7 +554,20 @@ def _extract_tables_sequential(
                 ):
                     x0, y0, x1, y1 = candidate.bbox
                     cid = f"table-{pno}-{index}"
-                    features = _table_candidate_features(candidate)
+                    profile = (
+                        _visual_probe_profile(fitz_page, fitz.Rect(candidate.bbox))
+                        if fitz_page is not None
+                        else None
+                    )
+                    visual_entropy = (
+                        float(profile.get("visual_entropy", 0.0) or 0.0)
+                        if profile is not None
+                        else 0.0
+                    )
+                    features = _table_candidate_features(
+                        candidate,
+                        visual_entropy=visual_entropy,
+                    )
                     out.append(
                         Candidate(
                             schema_version="1.0",
@@ -499,7 +578,10 @@ def _extract_tables_sequential(
                             preview_text=candidate.preview,
                             caption=None,
                             thumb_path=None,
-                            meta=_table_candidate_meta(candidate),
+                            meta=_table_candidate_meta(
+                                candidate,
+                                visual_entropy=visual_entropy,
+                            ),
                             features=features,
                         )
                     )

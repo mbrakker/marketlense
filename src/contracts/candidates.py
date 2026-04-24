@@ -48,6 +48,28 @@ class CandidateFeatures:
         default=0.0,
         metadata={"doc": "Average words per table cell, or 0 when not applicable."},
     )
+    ocr_density: float = field(
+        default=0.0,
+        metadata={
+            "doc": "Extracted text characters per one percent of page area covered by the candidate."
+        },
+    )
+    visual_entropy: float = field(
+        default=0.0,
+        metadata={
+            "doc": "Normalized grayscale entropy of the rendered candidate crop, from 0.0 to 1.0."
+        },
+    )
+    chart_confidence: float = field(
+        default=0.0,
+        metadata={
+            "doc": "Heuristic chart/infographic confidence score from 0.0 to 1.0."
+        },
+    )
+    table_confidence: float = field(
+        default=0.0,
+        metadata={"doc": "Heuristic table confidence score from 0.0 to 1.0."},
+    )
     method: str = field(
         default="",
         metadata={"doc": "Extraction method that produced the candidate."},

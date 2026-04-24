@@ -13,7 +13,7 @@ except ModuleNotFoundError:  # pragma: no cover - depends on PyMuPDF packaging a
 
 from PIL import Image, ImageDraw
 
-from src.contracts.candidates import Candidate
+from src.contracts.candidates import Candidate, CandidateFeatures
 from src.contracts.pdf_context import PdfContextBuildRequest
 from src.contracts.report_assets import ExtractCandidatesRequest, FigureExtractRequest
 from src.contracts.report_assets import CropRequest
@@ -2600,6 +2600,17 @@ def test_collect_candidates_returns_chart_and_table_contracts(
     assert_no_defaulted_required_fields(response)
     for candidate in response.candidates:
         assert_no_defaulted_required_fields(candidate)
+        assert isinstance(candidate.features, CandidateFeatures)
+        assert candidate.features.ocr_density >= 0.0
+        assert 0.0 <= candidate.features.visual_entropy <= 1.0
+        if candidate.kind == "chart":
+            assert candidate.features.chart_confidence > 0.0
+            assert candidate.meta is not None
+            assert "chart_confidence" in candidate.meta
+        if candidate.kind == "table":
+            assert candidate.features.table_confidence > 0.0
+            assert candidate.meta is not None
+            assert "table_confidence" in candidate.meta
 
     events = _events(caplog, "market_lense.pdf_service.candidate_extraction")
     assert_logs_have_required_fields(events)

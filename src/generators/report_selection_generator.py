@@ -54,6 +54,16 @@ def _candidate_meta(candidate: Candidate, key: str, default: float = 0.0) -> flo
     return coerce_float(value, default)
 
 
+def _candidate_quality_signals(candidate: Candidate) -> dict[str, float]:
+    features = candidate_features(candidate)
+    return {
+        "ocr_density": coerce_float(features.ocr_density, 0.0),
+        "visual_entropy": coerce_float(features.visual_entropy, 0.0),
+        "chart_confidence": coerce_float(features.chart_confidence, 0.0),
+        "table_confidence": coerce_float(features.table_confidence, 0.0),
+    }
+
+
 def _candidate_prefilter_reject_reason(candidate: Candidate) -> str:
     area = _candidate_meta(candidate, "area_frac", 0.0)
     if area <= 0.0:
@@ -64,6 +74,7 @@ def _candidate_prefilter_reject_reason(candidate: Candidate) -> str:
         cols = coerce_int(features.cols, 0)
         numeric_ratio = _candidate_meta(candidate, "numeric_ratio", 0.0)
         avg_words_per_cell = coerce_float(features.avg_words_per_cell, 0.0)
+        table_confidence = coerce_float(features.table_confidence, 0.0)
         preview_normalized = " ".join(
             str(candidate.preview_text or "").replace("|", " ").lower().split()
         )
@@ -99,14 +110,27 @@ def _candidate_prefilter_reject_reason(candidate: Candidate) -> str:
             and avg_words_per_cell >= 8.0
         ):
             return "table_large_text_block"
+        if (
+            0.0 < table_confidence < 0.32
+            and numeric_ratio < 0.12
+            and rows < 5
+        ):
+            return "table_low_confidence"
         return ""
     text_ratio = _candidate_meta(candidate, "text_ratio", 0.0)
+    text_chars = _candidate_meta(candidate, "text_chars", 0.0)
+    visual_entropy = _candidate_meta(candidate, "visual_entropy", 0.0)
+    chart_confidence = _candidate_meta(candidate, "chart_confidence", 0.0)
     if area < 0.035:
         return "chart_too_small"
     if text_ratio > 0.9 and area < 0.12:
         return "chart_text_fragment"
     if not (candidate.caption or "").strip() and area < 0.05 and text_ratio < 0.02:
         return "chart_decorative"
+    if 0.0 < chart_confidence < 0.24 and area < 0.11:
+        return "chart_low_confidence"
+    if 0.0 < visual_entropy < 0.04 and text_chars < 30:
+        return "chart_low_visual_entropy"
     return ""
 
 
@@ -117,10 +141,27 @@ def _candidate_prefilter_priority(candidate: Candidate) -> float:
         rows = coerce_int(features.rows, 0)
         cols = coerce_int(features.cols, 0)
         numeric_ratio = _candidate_meta(candidate, "numeric_ratio", 0.0)
-        return area * 100.0 + rows * 2.5 + cols * 1.5 + numeric_ratio * 50.0
+        table_confidence = coerce_float(features.table_confidence, 0.0)
+        ocr_density = coerce_float(features.ocr_density, 0.0)
+        return (
+            area * 100.0
+            + rows * 2.5
+            + cols * 1.5
+            + numeric_ratio * 50.0
+            + table_confidence * 22.0
+            + min(ocr_density, 35.0) * 0.18
+        )
     caption_bonus = 12.0 if (candidate.caption or "").strip() else 0.0
     text_ratio = _candidate_meta(candidate, "text_ratio", 0.0)
-    return area * 100.0 + caption_bonus + max(0.0, (0.6 - text_ratio) * 20.0)
+    chart_confidence = _candidate_meta(candidate, "chart_confidence", 0.0)
+    visual_entropy = _candidate_meta(candidate, "visual_entropy", 0.0)
+    return (
+        area * 100.0
+        + caption_bonus
+        + max(0.0, (0.6 - text_ratio) * 20.0)
+        + chart_confidence * 26.0
+        + visual_entropy * 8.0
+    )
 
 
 def _candidate_is_obvious_reject(candidate: Candidate) -> tuple[bool, str]:
@@ -267,6 +308,7 @@ def _rank_candidates_batch(
             "type": candidate.kind,
             "page": candidate.page,
             "features": candidate_features_payload(candidate),
+            "quality_signals": _candidate_quality_signals(candidate),
             "title_or_caption": (candidate.caption or "")[:300],
             "table_preview": candidate.preview_text[:400]
             if candidate.kind == "table"
@@ -455,6 +497,7 @@ def _crop_refine_entry_key(
             "page": candidate.page,
             "bbox": list(candidate.bbox),
             "features": candidate_features_payload(candidate),
+            "quality_signals": _candidate_quality_signals(candidate),
             "caption": candidate.caption or "",
             "preview_text": candidate.preview_text or "",
             "model": model,
@@ -810,6 +853,7 @@ def select_refined_candidate_items(
                 "caption": (candidate.caption or "")[:400],
                 "preview_text": (candidate.preview_text or "")[:600],
                 "features": candidate_features_payload(candidate),
+                "quality_signals": _candidate_quality_signals(candidate),
             }
             if include_proposed_bbox:
                 payload_item["proposed_bbox"] = [float(value) for value in bbox]

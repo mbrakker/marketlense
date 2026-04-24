@@ -2,6 +2,10 @@ text: |
   Task: select the strongest chart/table candidates for final HTML.
   Prioritize high data density, clear metrics, and insightfulness.
   Reject decorative, low-data, or likely-fragment visuals.
+  Use quality_signals and features when scoring:
+  - ocr_density: extracted text characters per one percent of page area
+  - visual_entropy: normalized rendered-crop entropy
+  - chart_confidence/table_confidence: deterministic extraction confidence
 
   Return STRICT JSON:
   {

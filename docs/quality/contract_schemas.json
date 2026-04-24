@@ -2788,6 +2788,9 @@
         "avg_words_per_cell": {
           "type": "number"
         },
+        "chart_confidence": {
+          "type": "number"
+        },
         "cols": {
           "type": "integer"
         },
@@ -2797,11 +2800,17 @@
         "numeric_ratio": {
           "type": "number"
         },
+        "ocr_density": {
+          "type": "number"
+        },
         "rows": {
           "type": "integer"
         },
         "schema_version": {
           "type": "string"
+        },
+        "table_confidence": {
+          "type": "number"
         },
         "text_chars": {
           "type": "integer"
@@ -2810,6 +2819,9 @@
           "type": "integer"
         },
         "text_ratio": {
+          "type": "number"
+        },
+        "visual_entropy": {
           "type": "number"
         }
       },
@@ -8765,6 +8777,14 @@
       "additionalProperties": false,
       "properties": {
         "fitz_doc": {
+          "anyOf": [
+            {},
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "page_artifact_cache": {
           "anyOf": [
             {},
             {

@@ -182,15 +182,6 @@ Scoring rubric:
 
 ## 4. Candidate Extraction, Ranking & Quality
 
-- **Title:** Improve figure candidate quality signals [Impact: 4/5, Effort: 4/5]
-  - Explanation: Add richer candidate signals (OCR density, chart/table confidence, visual entropy) and include them in rank payloads; tighten crop bounds to remove low-value fragments.
-  - Pros: Higher-quality selected figures; fewer low-information assets.
-  - Cons: Extra compute and feature engineering; ranking payloads grow.
-  - Acceptance Criteria:
-    - Candidate objects include new quality fields.
-    - Ranking inputs include these fields and scoring improves on a validation set.
-    - Reduced rate of low-signal selected figures in sample reports.
-
 - **Title:** Pre-filter / compress candidate payload before LLM ranking [Impact: 4/5, Effort: 3/5]
   - Explanation: Reduce prompt size and cost by pre-filtering unpromising candidates and compressing payloads prior to model calls.
   - Pros: Lower cost and faster ranking.
