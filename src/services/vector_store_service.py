@@ -226,7 +226,7 @@ def attach_file(request: VectorStoreAttachFileRequest, ctx: Optional[RunContext]
         code="vector_store_attach_failed",
         message="Vector store attach request failed",
     )
-    attached_id = _require_response_id(
+    _require_response_id(
         resp.openai_file_id,
         code="vector_store_attach_failed",
         message="Vector store attach did not return an id",

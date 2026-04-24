@@ -10,24 +10,10 @@ import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Dict
+from typing import Any, Callable
 
 import openai as openai_legacy
 
-OpenAI: Any | None = None
-try:
-    from openai import OpenAI as _OpenAI
-
-    OpenAI = _OpenAI
-except ImportError:  # pragma: no cover - compatibility fallback
-    OpenAI = None
-
-from src.contracts.costs import (
-    CostLedgerAppendRequest,
-    CostLedgerEntry,
-    CostRollupRequest,
-)
-from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.openai import (
     OpenAIAnalyzeRequest,
     OpenAIAnalyzeResponse,
@@ -47,21 +33,23 @@ from src.contracts.openai import (
     OpenAIVectorStoreStatusResponse,
     OpenAIVectorStoreUpdateMetadataRequest,
     OpenAIVectorStoreUpdateMetadataResponse,
+    OpenAIUsageAccountingRequest,
 )
 from src.contracts.pdf_ocr import PdfOcrPageText
+from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.run_context import RunContext
-from src.services.cost_ledger_service import (
-    append_entry as append_cost_entry,
-    rollup_daily,
-)
-from src.utils.costing import estimate_cost_usd
+from src.services import openai_accounting_service
 from src.utils.errors import AppError
-from src.utils.json_recovery import (
-    extract_json_value as _extract_json_value,
-    parse_json_from_text,
-    strip_json_fence as _strip_json_fence,
-)
+from src.utils.json_recovery import parse_json_from_text, strip_json_fence
 from src.utils.logging import log_event
+
+OpenAI: Any | None = None
+try:
+    from openai import OpenAI as _OpenAI
+
+    OpenAI = _OpenAI
+except ImportError:  # pragma: no cover - compatibility fallback
+    OpenAI = None
 
 logger = logging.getLogger("market_lense.openai_service")
 SEMANTIC_RESPONSE_CACHE_SCHEMA_VERSION = "1.0"
@@ -92,13 +80,6 @@ OPENAI_CLIENT_INIT_EXCEPTIONS: tuple[type[Exception], ...] = OPENAI_ERROR_TYPES 
     OSError,
     ValueError,
 )
-OPENAI_LEDGER_EXCEPTIONS: tuple[type[Exception], ...] = (
-    AppError,
-    OSError,
-    ValueError,
-    TypeError,
-)
-
 REQUIRED_KEYS = (
     "tldr",
     "title",
@@ -602,6 +583,10 @@ def _parse_json_object_from_text(text: str) -> tuple[dict | None, str]:
     return parsed if isinstance(parsed, dict) else None, strategy
 
 
+def _strip_json_fence(text: str) -> str:
+    return strip_json_fence(text)
+
+
 def _responses_create_with_unsupported_param_retry(
     *,
     client: Any,
@@ -783,7 +768,7 @@ def _adapt_responses_metadata(
     )
 
 
-def _append_cost_entry_safe(
+def _record_usage_accounting(
     *,
     ctx: RunContext,
     step_name: str,
@@ -797,55 +782,22 @@ def _append_cost_entry_safe(
     request_id: str | None,
     cached_input_tokens: int | None = None,
 ) -> None:
-    estimated_cost = estimate_cost_usd(
-        model,
-        int(input_tokens or 0),
-        int(output_tokens or 0),
-        int(tool_calls or 0),
-        pricing=model_pricing or {},
-    )
-    try:
-        entry = CostLedgerEntry(
+    openai_accounting_service.record_usage(
+        OpenAIUsageAccountingRequest(
             schema_version="1.0",
-            timestamp_utc=datetime.now(timezone.utc).isoformat(),
-            run_id=ctx.run_id,
-            task_id=ctx.task_id,
-            span_id=ctx.span_id,
             step_name=step_name,
             model=model,
-            input_tokens=int(input_tokens or 0),
-            output_tokens=int(output_tokens or 0),
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
             cached_input_tokens=cached_input_tokens,
             tool_calls=int(tool_calls or 0),
-            estimated_cost_usd=estimated_cost,
-            extra={"request_id": str(request_id) if request_id else None},
-        )
-        append_cost_entry(
-            CostLedgerAppendRequest(
-                schema_version="1.0", path=cost_ledger_path, entry=entry
-            ),
-            ctx,
-        )
-        rollup_daily(
-            CostRollupRequest(
-                schema_version="1.0",
-                ledger_path=cost_ledger_path,
-                out_path=cost_daily_path,
-            ),
-            ctx,
-        )
-    except (
-        OPENAI_LEDGER_EXCEPTIONS
-    ) as exc:  # pragma: no cover - ledger failures must not break main flow
-        logger.info(
-            log_event(
-                ctx,
-                role="service",
-                event="cost_ledger_write_failed",
-                module=logger.name,
-                fields={"error": str(exc)},
-            )
-        )
+            cost_ledger_path=cost_ledger_path,
+            cost_daily_path=cost_daily_path,
+            model_pricing=model_pricing or {},
+            request_id=request_id,
+        ),
+        ctx,
+    )
 
 
 def _coerce_pdf_ocr_pages(payload: dict | None) -> list[PdfOcrPageText]:
@@ -1105,57 +1057,19 @@ def analyze_report(
             context={"model": request.model},
         ) from exc
 
-    estimated_cost = estimate_cost_usd(
-        request.model,
-        int(prompt_tokens or 0),
-        int(completion_tokens or 0),
-        int(tool_calls or 0),
-        pricing=request.model_pricing or {},
+    _record_usage_accounting(
+        ctx=ctx,
+        step_name="openai_analyze",
+        model=request.model,
+        input_tokens=prompt_tokens,
+        output_tokens=completion_tokens,
+        cached_input_tokens=int(cached_tokens) if cached_tokens is not None else None,
+        tool_calls=tool_calls,
+        cost_ledger_path=request.cost_ledger_path,
+        cost_daily_path=request.cost_daily_path,
+        model_pricing=request.model_pricing,
+        request_id=request_id,
     )
-    try:
-        entry = CostLedgerEntry(
-            schema_version="1.0",
-            timestamp_utc=datetime.now(timezone.utc).isoformat(),
-            run_id=ctx.run_id,
-            task_id=ctx.task_id,
-            span_id=ctx.span_id,
-            step_name="openai_analyze",
-            model=request.model,
-            input_tokens=int(prompt_tokens or 0),
-            output_tokens=int(completion_tokens or 0),
-            cached_input_tokens=int(cached_tokens)
-            if cached_tokens is not None
-            else None,
-            tool_calls=int(tool_calls or 0),
-            estimated_cost_usd=estimated_cost,
-            extra={"request_id": str(request_id) if request_id else None},
-        )
-        append_cost_entry(
-            CostLedgerAppendRequest(
-                schema_version="1.0", path=request.cost_ledger_path, entry=entry
-            ),
-            ctx,
-        )
-        rollup_daily(
-            CostRollupRequest(
-                schema_version="1.0",
-                ledger_path=request.cost_ledger_path,
-                out_path=request.cost_daily_path,
-            ),
-            ctx,
-        )
-    except (
-        Exception
-    ) as exc:  # pragma: no cover - ledger failures must not break main flow
-        logger.info(
-            log_event(
-                ctx,
-                role="service",
-                event="cost_ledger_write_failed",
-                module=logger.name,
-                fields={"error": str(exc)},
-            )
-        )
 
     logger.info(
         log_event(
@@ -1294,53 +1208,18 @@ def openai_chat_json(
             },
         ) from exc
 
-    estimated_cost = estimate_cost_usd(
-        request.model,
-        int(metadata.input_tokens or 0),
-        int(metadata.output_tokens or 0),
-        int(metadata.tool_calls or 0),
-        pricing=request.model_pricing or {},
+    _record_usage_accounting(
+        ctx=ctx,
+        step_name="openai_chat_json",
+        model=request.model,
+        input_tokens=metadata.input_tokens,
+        output_tokens=metadata.output_tokens,
+        tool_calls=metadata.tool_calls,
+        cost_ledger_path=request.cost_ledger_path,
+        cost_daily_path=request.cost_daily_path,
+        model_pricing=request.model_pricing,
+        request_id=metadata.request_id,
     )
-    try:
-        entry = CostLedgerEntry(
-            schema_version="1.0",
-            timestamp_utc=datetime.now(timezone.utc).isoformat(),
-            run_id=ctx.run_id,
-            task_id=ctx.task_id,
-            span_id=ctx.span_id,
-            step_name="openai_chat_json",
-            model=request.model,
-            input_tokens=int(metadata.input_tokens or 0),
-            output_tokens=int(metadata.output_tokens or 0),
-            cached_input_tokens=None,
-            tool_calls=int(metadata.tool_calls or 0),
-            estimated_cost_usd=estimated_cost,
-            extra={"request_id": metadata.request_id},
-        )
-        append_cost_entry(
-            CostLedgerAppendRequest(
-                schema_version="1.0", path=request.cost_ledger_path, entry=entry
-            ),
-            ctx,
-        )
-        rollup_daily(
-            CostRollupRequest(
-                schema_version="1.0",
-                ledger_path=request.cost_ledger_path,
-                out_path=request.cost_daily_path,
-            ),
-            ctx,
-        )
-    except OPENAI_LEDGER_EXCEPTIONS as exc:  # pragma: no cover
-        logger.info(
-            log_event(
-                ctx,
-                role="service",
-                event="cost_ledger_write_failed",
-                module=logger.name,
-                fields={"error": str(exc)},
-            )
-        )
 
     logger.info(
         log_event(
@@ -1502,53 +1381,18 @@ def openai_chat_json_with_images(
         ) from exc
 
     metadata = _adapt_responses_metadata(resp, recover_json_object=False)
-    estimated_cost = estimate_cost_usd(
-        request.model,
-        int(metadata.input_tokens or 0),
-        int(metadata.output_tokens or 0),
-        int(metadata.tool_calls or 0),
-        pricing=request.model_pricing or {},
+    _record_usage_accounting(
+        ctx=ctx,
+        step_name="openai_chat_json_with_images",
+        model=request.model,
+        input_tokens=metadata.input_tokens,
+        output_tokens=metadata.output_tokens,
+        tool_calls=metadata.tool_calls,
+        cost_ledger_path=request.cost_ledger_path,
+        cost_daily_path=request.cost_daily_path,
+        model_pricing=request.model_pricing,
+        request_id=metadata.request_id,
     )
-    try:
-        entry = CostLedgerEntry(
-            schema_version="1.0",
-            timestamp_utc=datetime.now(timezone.utc).isoformat(),
-            run_id=ctx.run_id,
-            task_id=ctx.task_id,
-            span_id=ctx.span_id,
-            step_name="openai_chat_json_with_images",
-            model=request.model,
-            input_tokens=int(metadata.input_tokens or 0),
-            output_tokens=int(metadata.output_tokens or 0),
-            cached_input_tokens=None,
-            tool_calls=int(metadata.tool_calls or 0),
-            estimated_cost_usd=estimated_cost,
-            extra={"request_id": metadata.request_id},
-        )
-        append_cost_entry(
-            CostLedgerAppendRequest(
-                schema_version="1.0", path=request.cost_ledger_path, entry=entry
-            ),
-            ctx,
-        )
-        rollup_daily(
-            CostRollupRequest(
-                schema_version="1.0",
-                ledger_path=request.cost_ledger_path,
-                out_path=request.cost_daily_path,
-            ),
-            ctx,
-        )
-    except OPENAI_LEDGER_EXCEPTIONS as exc:  # pragma: no cover
-        logger.info(
-            log_event(
-                ctx,
-                role="service",
-                event="cost_ledger_write_failed",
-                module=logger.name,
-                fields={"error": str(exc)},
-            )
-        )
     logger.info(
         log_event(
             ctx,
@@ -1742,7 +1586,7 @@ def openai_ocr_pdf(
             },
         )
 
-    _append_cost_entry_safe(
+    _record_usage_accounting(
         ctx=ctx,
         step_name="openai_ocr_pdf",
         model=resolved_model,
@@ -1898,53 +1742,18 @@ def openai_respond_with_vector_store(
             parse_error_code = "openai_response_invalid_json"
             parse_error_message = "OpenAI response is not valid JSON"
 
-    estimated_cost = estimate_cost_usd(
-        request.model,
-        int(metadata.input_tokens or 0),
-        int(metadata.output_tokens or 0),
-        int(metadata.tool_calls or 0),
-        pricing=request.model_pricing or {},
+    _record_usage_accounting(
+        ctx=ctx,
+        step_name="openai_response_vector_store",
+        model=request.model,
+        input_tokens=metadata.input_tokens,
+        output_tokens=metadata.output_tokens,
+        tool_calls=metadata.tool_calls,
+        cost_ledger_path=request.cost_ledger_path,
+        cost_daily_path=request.cost_daily_path,
+        model_pricing=request.model_pricing,
+        request_id=metadata.request_id,
     )
-    try:
-        entry = CostLedgerEntry(
-            schema_version="1.0",
-            timestamp_utc=datetime.now(timezone.utc).isoformat(),
-            run_id=ctx.run_id,
-            task_id=ctx.task_id,
-            span_id=ctx.span_id,
-            step_name="openai_response_vector_store",
-            model=request.model,
-            input_tokens=int(metadata.input_tokens or 0),
-            output_tokens=int(metadata.output_tokens or 0),
-            cached_input_tokens=None,
-            tool_calls=int(metadata.tool_calls or 0),
-            estimated_cost_usd=estimated_cost,
-            extra={"request_id": metadata.request_id},
-        )
-        append_cost_entry(
-            CostLedgerAppendRequest(
-                schema_version="1.0", path=request.cost_ledger_path, entry=entry
-            ),
-            ctx,
-        )
-        rollup_daily(
-            CostRollupRequest(
-                schema_version="1.0",
-                ledger_path=request.cost_ledger_path,
-                out_path=request.cost_daily_path,
-            ),
-            ctx,
-        )
-    except OPENAI_LEDGER_EXCEPTIONS as exc:  # pragma: no cover
-        logger.info(
-            log_event(
-                ctx,
-                role="service",
-                event="cost_ledger_write_failed",
-                module=logger.name,
-                fields={"error": str(exc)},
-            )
-        )
 
     logger.info(
         log_event(

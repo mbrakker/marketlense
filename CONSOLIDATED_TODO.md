@@ -397,19 +397,6 @@ Each quick-win should be documented with a short task when prioritized.
 
 ### 8.5 AGENTS.md Compliance Backlog
 
-- **Title:** Finish remaining generator/service/control-flow refactors and boundary cleanup [Impact: 5/5, Effort: 5/5]
-  - Explanation: Merge the remaining monolith-split work, oversized generation/validation phase splits, and the OpenAI/CLI/control-flow helper cleanup into one refactor track. Break the remaining oversized mixed-responsibility modules (notably `artifact_generator` and `openai_service`) into role-appropriate, single-purpose modules wired by orchestrators; phase-split large domain flows such as `generate_artifacts`, `_generate_pack`, `validate_report`, `_run_grounding_check`, `extract_taxonomy`, and `analyze_report`; remove cross-role side effects in `src/services/openai_service.py`; centralize repeated OpenAI cost/accounting and response-adaptation helpers; and route repeated CLI/control-flow status rendering through named helpers. The PDF service internal split, the report-generator phase split, the validation-generator rule split, and the evidence-pack strategy split are complete and removed from this backlog item.
-  - Pros: Easier maintenance, lower regression risk, clearer service boundaries, and more focused tests around core generation flows.
-  - Cons: Large refactor with broad test impact and small API/signature changes between services, generators, orchestrators, and CLI helpers.
-  - Acceptance Criteria:
-    - Remaining oversized service/generator modules extract cross-cutting orchestration and I/O concerns to proper layers.
-    - The listed generation/validation flows are split into named phase helpers with typed intermediate contracts where appropriate.
-    - OpenAI service emits cost/accounting data without directly persisting ledger side effects.
-    - OpenAI cost/accounting and response adaptation use shared helpers instead of repeated internal blocks.
-    - CLI status formatting and major branch policies in remaining control-flow hotspots are routed through named helpers with focused tests.
-    - Generator logs continue to expose the same prompt and validation observability after the split.
-    - Equivalent behavior is validated by pipeline tests without introducing default-filled or sentinel-filled intermediate payloads.
-
 - **Title:** Meet minimum integration-test coverage per service module [Impact: 4/5, Effort: 5/5]
   - Explanation: Add at least one marked integration test per service module and keep live API calls out of unit tests.
   - Pros: Better boundary confidence and fewer production surprises.

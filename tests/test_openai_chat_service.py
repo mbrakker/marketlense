@@ -6,7 +6,11 @@ from types import SimpleNamespace
 
 import pytest
 
-from src.contracts.openai import OpenAIAnalyzeRequest, OpenAIJSONPromptRequest
+from src.contracts.openai import (
+    OpenAIAnalyzeRequest,
+    OpenAIJSONPromptRequest,
+    OpenAIUsageAccountingResponse,
+)
 from src.contracts.run_context import RunContext
 from src.services import openai_service as svc
 from src.utils.errors import AppError
@@ -84,6 +88,57 @@ def test_openai_chat_json_uses_modern_chat_completion(monkeypatch, tmp_path) -> 
     assert captured_client_kwargs == [{"api_key": "key", "timeout": 5.0}]
     assert captured_payloads[0]["response_format"] == {"type": "json_object"}
     assert captured_payloads[0]["seed"] == 7
+
+
+def test_openai_chat_json_delegates_usage_accounting(
+    external_boundary_mocks_only, tmp_path
+) -> None:
+    captured_accounting = []
+
+    class _FakeChatCompletions:
+        def create(self, **kwargs):
+            usage = SimpleNamespace(
+                prompt_tokens=12,
+                completion_tokens=5,
+                total_tokens=17,
+            )
+            message = SimpleNamespace(content=json.dumps({"ok": True}))
+            choice = SimpleNamespace(message=message)
+            return SimpleNamespace(id="chat_1", choices=[choice], usage=usage)
+
+    class _FakeClient:
+        def __init__(self, **kwargs):
+            self.chat = SimpleNamespace(completions=_FakeChatCompletions())
+
+    def _record_usage(request, ctx):
+        captured_accounting.append((request, ctx))
+        return OpenAIUsageAccountingResponse(
+            schema_version="1.0",
+            recorded=True,
+            estimated_cost_usd=0.0,
+            ledger_path=request.cost_ledger_path,
+            daily_path=request.cost_daily_path,
+        )
+
+    external_boundary_mocks_only.setattr(svc, "OpenAI", _FakeClient)
+    external_boundary_mocks_only.setattr(
+        svc.openai_accounting_service, "record_usage", _record_usage
+    )
+
+    result = svc.openai_chat_json(_chat_request(tmp_path), _ctx())
+
+    assert result.parsed_json == {"ok": True}
+    assert len(captured_accounting) == 1
+    accounting_request, accounting_ctx = captured_accounting[0]
+    assert accounting_ctx == _ctx()
+    assert accounting_request.step_name == "openai_chat_json"
+    assert accounting_request.model == "gpt-4.1-mini"
+    assert accounting_request.input_tokens == 12
+    assert accounting_request.output_tokens == 5
+    assert accounting_request.tool_calls == 0
+    assert accounting_request.request_id == "chat_1"
+    assert accounting_request.cost_ledger_path == str(tmp_path / "ledger.jsonl")
+    assert not (tmp_path / "ledger.jsonl").exists()
 
 
 def test_openai_chat_json_semantic_response_cache_skips_repeated_provider_call(

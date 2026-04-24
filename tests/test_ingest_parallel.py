@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 from src.contracts.drive import DriveDownloadToPathResponse, DriveFile
 from src.contracts.ingest import IngestOutcome
-from src.contracts.state import StateBatchCheckResponse, StateProcessedListRequest
+from src.contracts.state import StateProcessedListRequest
 from src.orchestrators import ingest_orchestrator as orch
 from src.orchestrators.ingest_file_orchestrator import (
     IngestFileDependencies,

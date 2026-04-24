@@ -3650,7 +3650,6 @@ def record_publisher_download_route(
             )
             recorded_source_url = source_url
             recorded_route_kind = route_kind
-            recorded_route_summary = route_summary
             recorded_outcome = outcome
             best_history_row = conn.execute(
                 """

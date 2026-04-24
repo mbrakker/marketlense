@@ -1,11 +1,11 @@
-from __future__ import annotations
-
 """Shared generator-layer loader for cached analysis packs.
 
 This centralizes the repeated resolve-path, read, decode, and cache-key-match
 flow while leaving pack-specific validation and typed response adaptation in the
 calling generator.
 """
+
+from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field

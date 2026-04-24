@@ -70,11 +70,11 @@ def _seed_report_metadata(
 
 def _json_events(caplog, logger_name: str) -> list[dict[str, object]]:
     events: list[dict[str, object]] = []
-    for record in caplog.records:
-        if record.name != logger_name:
+    for log_record in caplog.records:
+        if log_record.name != logger_name:
             continue
         try:
-            payload = json.loads(record.getMessage())
+            payload = json.loads(log_record.getMessage())
         except json.JSONDecodeError:
             continue
         if isinstance(payload, dict):

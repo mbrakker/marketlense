@@ -1,10 +1,64 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from src.contracts.pdf_ocr import PdfOcrPageText
 from src.contracts.report_models import ReportPayload
+
+
+@dataclass(frozen=True)
+class OpenAIUsageAccountingRequest:
+    schema_version: str = field(
+        metadata={"doc": "OpenAI usage accounting request schema version."}
+    )
+    step_name: str = field(
+        metadata={"doc": "Logical OpenAI step name used for cost aggregation."}
+    )
+    model: str = field(metadata={"doc": "OpenAI model ID used for the call."})
+    input_tokens: Optional[int] = field(
+        metadata={"doc": "Provider input token count, if available."}
+    )
+    output_tokens: Optional[int] = field(
+        metadata={"doc": "Provider output token count, if available."}
+    )
+    tool_calls: int = field(
+        metadata={"doc": "Provider tool-call count billed for the call."}
+    )
+    cost_ledger_path: str = field(
+        metadata={"doc": "Filesystem path for the cost ledger JSONL output."}
+    )
+    cost_daily_path: str = field(
+        metadata={"doc": "Filesystem path for daily cost rollups."}
+    )
+    model_pricing: Dict[str, Any] = field(
+        metadata={"doc": "Per-model pricing table for cost estimation."}
+    )
+    request_id: Optional[str] = field(
+        default=None, metadata={"doc": "Provider request ID, if available."}
+    )
+    cached_input_tokens: Optional[int] = field(
+        default=None, metadata={"doc": "Input tokens served from cache, if reported."}
+    )
+
+
+@dataclass(frozen=True)
+class OpenAIUsageAccountingResponse:
+    schema_version: str = field(
+        metadata={"doc": "OpenAI usage accounting response schema version."}
+    )
+    recorded: bool = field(
+        metadata={"doc": "Whether usage was appended to the cost ledger."}
+    )
+    estimated_cost_usd: float = field(
+        metadata={"doc": "Estimated USD cost for the OpenAI call."}
+    )
+    ledger_path: str = field(metadata={"doc": "Cost ledger path used."})
+    daily_path: str = field(metadata={"doc": "Daily rollup path used."})
+    error: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Sanitized non-fatal accounting error, when recording failed."},
+    )
 
 
 @dataclass(frozen=True)

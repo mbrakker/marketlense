@@ -1,10 +1,10 @@
-from __future__ import annotations
-
 """Lightweight cached page artifacts for PDF candidate extraction.
 
 This module keeps repeated text-dictionary parsing out of hot extraction loops
 without changing the public `pdf_service` boundary.
 """
+
+from __future__ import annotations
 
 from dataclasses import dataclass, field
 from threading import Lock

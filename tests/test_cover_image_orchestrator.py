@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from src.contracts.cover_images import CoverImageOrchestratorRequest

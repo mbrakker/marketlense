@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import hashlib
 import threading
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -82,6 +83,16 @@ def _load_rows_from_offset(path: Path, offset: int) -> List[dict]:
                 continue
             rows.append(row)
     return rows
+
+
+def _file_sha256(path: Path) -> str:
+    if not path.exists():
+        return ""
+    hasher = hashlib.sha256()
+    with path.open("rb") as file_obj:
+        for chunk in iter(lambda: file_obj.read(1024 * 1024), b""):
+            hasher.update(chunk)
+    return hasher.hexdigest()
 
 
 def _date_key(row: dict) -> str | None:
@@ -185,6 +196,7 @@ def _serialize_rollup(
     out_path: Path,
     ledger_size_bytes: int,
     ledger_mtime_ns: int,
+    ledger_sha256: str,
     totals_by_date: Dict[str, DailyCostTotal],
     totals_by_run: Dict[str, CostTotals],
     totals_by_task: Dict[str, CostTotals],
@@ -198,6 +210,7 @@ def _serialize_rollup(
             "ledger_path": str(ledger_path),
             "size_bytes": int(ledger_size_bytes),
             "mtime_ns": int(ledger_mtime_ns),
+            "sha256": ledger_sha256,
         },
         "totals": {day: total.__dict__ for day, total in totals_by_date.items()},
         "totals_by_date": {day: total.__dict__ for day, total in totals_by_date.items()},
@@ -261,12 +274,14 @@ def _load_rollup_cache(out_path: Path) -> dict[str, Any] | None:
     try:
         ledger_size_bytes = int(ledger_state.get("size_bytes", 0) or 0)
         ledger_mtime_ns = int(ledger_state.get("mtime_ns", 0) or 0)
+        ledger_sha256 = str(ledger_state.get("sha256") or "")
     except (TypeError, ValueError):
         return None
     return {
         "ledger_path": str(ledger_state.get("ledger_path") or ""),
         "ledger_size_bytes": ledger_size_bytes,
         "ledger_mtime_ns": ledger_mtime_ns,
+        "ledger_sha256": ledger_sha256,
         "totals_by_date": totals_by_date,
         "totals_by_run": totals_by_run,
         "totals_by_task": totals_by_task,
@@ -279,6 +294,7 @@ def _write_rollup_cache(
     out_path: Path,
     ledger_size_bytes: int,
     ledger_mtime_ns: int,
+    ledger_sha256: str,
     totals_by_date: Dict[str, DailyCostTotal],
     totals_by_run: Dict[str, CostTotals],
     totals_by_task: Dict[str, CostTotals],
@@ -289,6 +305,7 @@ def _write_rollup_cache(
         out_path=out_path,
         ledger_size_bytes=ledger_size_bytes,
         ledger_mtime_ns=ledger_mtime_ns,
+        ledger_sha256=ledger_sha256,
         totals_by_date=totals_by_date,
         totals_by_run=totals_by_run,
         totals_by_task=totals_by_task,
@@ -361,15 +378,18 @@ def rollup_daily(request: CostRollupRequest, ctx: RunContext) -> CostRollupRespo
                 ledger_stat = ledger_path.stat()
                 ledger_size_bytes = int(ledger_stat.st_size)
                 ledger_mtime_ns = int(getattr(ledger_stat, "st_mtime_ns", int(ledger_stat.st_mtime * 1_000_000_000)))
+                ledger_sha256 = _file_sha256(ledger_path)
             else:
                 ledger_size_bytes = 0
                 ledger_mtime_ns = 0
+                ledger_sha256 = ""
 
             if (
                 cached
                 and cached["ledger_path"] == str(ledger_path)
                 and ledger_size_bytes == cached["ledger_size_bytes"]
                 and ledger_mtime_ns == cached["ledger_mtime_ns"]
+                and ledger_sha256 == cached["ledger_sha256"]
             ):
                 totals_by_date = cached["totals_by_date"]
                 totals_by_run = cached["totals_by_run"]
@@ -412,6 +432,7 @@ def rollup_daily(request: CostRollupRequest, ctx: RunContext) -> CostRollupRespo
                     out_path=out_path,
                     ledger_size_bytes=ledger_size_bytes,
                     ledger_mtime_ns=ledger_mtime_ns,
+                    ledger_sha256=ledger_sha256,
                     totals_by_date=totals_by_date,
                     totals_by_run=totals_by_run,
                     totals_by_task=totals_by_task,
@@ -426,6 +447,7 @@ def rollup_daily(request: CostRollupRequest, ctx: RunContext) -> CostRollupRespo
                     out_path=out_path,
                     ledger_size_bytes=ledger_size_bytes,
                     ledger_mtime_ns=ledger_mtime_ns,
+                    ledger_sha256=ledger_sha256,
                     totals_by_date=totals_by_date,
                     totals_by_run=totals_by_run,
                     totals_by_task=totals_by_task,

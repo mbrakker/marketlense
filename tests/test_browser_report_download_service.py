@@ -2856,7 +2856,6 @@ def test_download_report_with_browser_use_fetches_relative_observed_pdf_candidat
         email_submission_completed=False,
     )
     original_runtime = runtime.Agent
-    observed_relative_pdf = "/files/live/sites/www/files/ebooks/report.pdf"
 
     class RelativePdfObservedAgent(original_runtime):
         def run_sync(self, max_steps: int):

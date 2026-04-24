@@ -1,11 +1,11 @@
-from __future__ import annotations
-
 """Shared generator-layer bridge for analysis-pack storage compatibility.
 
 Generators own the decision to accept either the canonical dataclass service
 boundary or legacy positional test doubles. Centralizing that compatibility
 keeps the behavior consistent without duplicating dispatch logic.
 """
+
+from __future__ import annotations
 
 from typing import Any, Optional
 

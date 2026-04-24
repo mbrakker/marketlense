@@ -12,7 +12,6 @@ from src.contracts.publisher_inventory import (
     PublisherInventoryCandidateQualityResponse,
     PublisherInventoryLandingPageInspectionItem,
     PublisherInventoryLandingPageInspectionRequest,
-    PublisherInventoryLandingPageInspectionResponse,
     PublisherInventoryLandingPageObservation,
     PublisherInventoryRecoveryRecipe,
     PublisherInventoryQualifiedCandidateItem,

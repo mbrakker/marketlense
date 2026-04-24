@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
-from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Optional
 
 from src.contracts.categories import (
     CategoryAssignment,
@@ -14,7 +12,6 @@ from src.contracts.context_category_fit import (
     ReportCategoryContext,
     ReportContextBuildRequest,
 )
-from src.contracts.report_analysis import AnalysisStorePackRequest
 from src.contracts.report_generation import (
     ReportAnalysisState,
     ReportRuntimeState,
@@ -24,28 +21,18 @@ from src.contracts.report_generation import (
 from src.contracts.report_store import ReportMetadataGetResponse
 from src.contracts.state import StateGetRequest
 from src.contracts.taxonomy import TaxonomyExtractRequest
-from src.contracts.validation import (
-    ValidationIssue,
-    ValidationReport,
-    ValidationRequest,
-)
 from src.contracts.vector_store import (
     VectorStoreAttachFileRequest,
     VectorStoreCreateRequest,
     VectorStoreMetadata,
     VectorStoreStatusRequest,
-    VectorStoreUpdateMetadataRequest,
     VectorStoreUploadFileRequest,
     VectorStoreWaitRequest,
 )
-from src.generators.normalize_generator import normalize_report
 from src.generators.report_generation_dependencies import ReportGeneratorDependencies
 from src.generators.report_generation_shared import (
     logger,
-    merge_artifacts_into_payload,
-    pack_paths,
     record_state_progress,
-    resolve_doc_map_metadata,
 )
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event

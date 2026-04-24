@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, Optional, Tuple
@@ -46,11 +45,7 @@ from src.services.schema_validator_service import validate_schema
 from src.utils.cache_utils import sha256_json
 from src.utils.coercion import coerce_int
 from src.utils.errors import AppError
-from src.utils.json_recovery import (
-    extract_json_value as _extract_json_value,
-    parse_json_from_text,
-    strip_json_fence as _strip_json_fence,
-)
+from src.utils.json_recovery import parse_json_from_text, strip_json_fence
 from src.utils.logging import child_context, log_event, new_run_context
 
 logger = logging.getLogger("market_lense.evidence_pack_generator")
@@ -89,6 +84,11 @@ def _resolve_pack_steps(settings: AppSettings) -> list[EvidencePackStrategy]:
 
 def _prompt_namespace_for_strategy(strategy: EvidencePackStrategy) -> str:
     return f"report_vs/{strategy.prompt_namespace_suffix}"
+
+
+def _strip_json_fence(text: str) -> str:
+    return strip_json_fence(text)
+
 
 def _parse_json_payload_from_text(text: str) -> Optional[object]:
     parsed, _strategy = parse_json_from_text(text, accepted_types=(dict, list))

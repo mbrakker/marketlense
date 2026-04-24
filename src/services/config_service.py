@@ -1995,7 +1995,6 @@ def load_publish_settings(
     )
     data = _load_config(request.path or str(CONFIG_PATH))
     config_path = Path(request.path or str(CONFIG_PATH)).resolve()
-    runtime_base_path = _resolve_runtime_base_path(config_path)
     resolver = _ConfigResolver()
     need = resolver.need
     missing = resolver.missing
