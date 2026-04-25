@@ -38,6 +38,8 @@ class _PromptCacheEntry:
     prompt_set: PromptSet
     system_mtime: int
     user_mtime: int
+    system_size: int
+    user_size: int
 
 
 @dataclass(frozen=True)
@@ -45,7 +47,7 @@ class _PromptNamespaceCacheEntry:
     root: Path
     namespaces: tuple[str, ...]
     watched_dirs: tuple[Path, ...]
-    directory_mtimes: tuple[tuple[str, int], ...]
+    directory_mtimes: tuple[tuple[str, int, tuple[str, ...]], ...]
 
 
 _PROMPT_CACHE: Dict[str, _PromptCacheEntry] = {}
@@ -152,6 +154,8 @@ def load_prompt_set(request: PromptLoadRequest, ctx: RunContext) -> PromptSet:
             prompt_set=prompt_set,
             system_mtime=_get_mtime(system_path),
             user_mtime=_get_mtime(user_path),
+            system_size=_get_size(system_path),
+            user_size=_get_size(user_path),
         )
     else:
         system_template = prompt_set.system
@@ -281,13 +285,19 @@ def _get_mtime(path: Path) -> int:
     return int(getattr(stat, "st_mtime_ns", int(stat.st_mtime * 1_000_000_000)))
 
 
+def _get_size(path: Path) -> int:
+    return int(path.stat().st_size)
+
+
 def _is_prompt_cache_valid(
     entry: _PromptCacheEntry, system_path: Path, user_path: Path
 ) -> bool:
     try:
         return (
-            entry.system_mtime == system_path.stat().st_mtime
-            and entry.user_mtime == user_path.stat().st_mtime
+            entry.system_mtime == _get_mtime(system_path)
+            and entry.user_mtime == _get_mtime(user_path)
+            and entry.system_size == _get_size(system_path)
+            and entry.user_size == _get_size(user_path)
         )
     except FileNotFoundError:
         return False
@@ -340,13 +350,21 @@ def _discover_prompt_namespaces(root: Path) -> tuple[tuple[str, ...], tuple[Path
     return namespaces, tuple(sorted(watched_dirs))
 
 
-def _directory_mtimes(paths: tuple[Path, ...]) -> tuple[tuple[str, int], ...]:
-    mtimes: list[tuple[str, int]] = []
+def _directory_mtimes(
+    paths: tuple[Path, ...],
+) -> tuple[tuple[str, int, tuple[str, ...]], ...]:
+    mtimes: list[tuple[str, int, tuple[str, ...]]] = []
     for path in paths:
         try:
-            mtimes.append((str(path), _get_mtime(path)))
+            child_names = tuple(
+                sorted(
+                    f"{'d' if child.is_dir() else 'f'}:{child.name}"
+                    for child in path.iterdir()
+                )
+            )
+            mtimes.append((str(path), _get_mtime(path), child_names))
         except FileNotFoundError:
-            mtimes.append((str(path), -1))
+            mtimes.append((str(path), -1, ()))
     return tuple(mtimes)
 
 

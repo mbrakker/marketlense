@@ -502,6 +502,139 @@ class TestReportStoreService(unittest.TestCase):
                 rows,
             )
 
+    def test_publishers_persist_normalized_lookup_key_and_index(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_publishers_normalized_lookup")
+
+            replace_publishers(
+                PublishersReplaceRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_page_url="https://www.notion.so/source",
+                    publishers=[
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-1",
+                            notion_page_url="https://www.notion.so/page-1",
+                            name="Example Publisher",
+                            homepage="https://example.com/",
+                            self_presentation="Example description",
+                            insights_url="https://Example.com/insights/?utm_source=newsletter",
+                            icon_source="https://cdn.example.com/example.png",
+                        )
+                    ],
+                ),
+                ctx,
+            )
+
+            conn = sqlite3.connect(db_path)
+            try:
+                row = conn.execute(
+                    """
+                    SELECT insights_url, normalized_insights_url
+                    FROM publishers
+                    """
+                ).fetchone()
+                index_names = {
+                    str(index_row[1])
+                    for index_row in conn.execute(
+                        "PRAGMA index_list(publishers)"
+                    ).fetchall()
+                }
+                query_plan = " ".join(
+                    str(plan_row)
+                    for plan_row in conn.execute(
+                        """
+                        EXPLAIN QUERY PLAN
+                        SELECT id
+                        FROM publishers
+                        WHERE normalized_insights_url=?
+                        ORDER BY id ASC
+                        LIMIT 1
+                        """,
+                        ("https://example.com/insights",),
+                    ).fetchall()
+                )
+            finally:
+                conn.close()
+
+            self.assertEqual(
+                (
+                    "https://Example.com/insights/?utm_source=newsletter",
+                    "https://example.com/insights",
+                ),
+                row,
+            )
+            self.assertIn("idx_publishers_normalized_insights_url", index_names)
+            self.assertIn("idx_publishers_normalized_insights_url", query_plan)
+
+    def test_publisher_normalized_lookup_collision_updates_first_row(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            ctx = new_run_context(task_id="test_publishers_normalized_collision")
+
+            replace_publishers(
+                PublishersReplaceRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    source_page_url="https://www.notion.so/source",
+                    publishers=[
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-1",
+                            notion_page_url="https://www.notion.so/page-1",
+                            name="First Example",
+                            homepage="https://example.com/",
+                            self_presentation="First description",
+                            insights_url="https://example.com/insights/",
+                            icon_source="https://cdn.example.com/first.png",
+                        ),
+                        PublisherProfileRecord(
+                            schema_version="1.0",
+                            notion_page_id="page-2",
+                            notion_page_url="https://www.notion.so/page-2",
+                            name="Second Example",
+                            homepage="https://example.com/",
+                            self_presentation="Second description",
+                            insights_url="https://example.com/insights?utm_source=duplicate",
+                            icon_source="https://cdn.example.com/second.png",
+                        ),
+                    ],
+                ),
+                ctx,
+            )
+
+            record_publisher_inventory_test_status(
+                PublisherInventoryTestStatusRecordRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_url="https://example.com/insights",
+                    status="passed",
+                ),
+                ctx,
+            )
+
+            conn = sqlite3.connect(db_path)
+            try:
+                rows = conn.execute(
+                    """
+                    SELECT name, normalized_insights_url, discovery_test_status
+                    FROM publishers
+                    ORDER BY id ASC
+                    """
+                ).fetchall()
+            finally:
+                conn.close()
+
+            self.assertEqual(
+                [
+                    ("First Example", "https://example.com/insights", "passed"),
+                    ("Second Example", "https://example.com/insights", None),
+                ],
+                rows,
+            )
+
     def test_list_publishers_returns_current_rows_with_inventory_state(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = os.path.join(tmpdir, "reports.sqlite")
@@ -2031,6 +2164,7 @@ class TestReportStoreService(unittest.TestCase):
                     "homepage",
                     "self_presentation",
                     "insights_url",
+                    "normalized_insights_url",
                     "google_folder",
                     "discovery_test_status",
                     "download_route_kind",
@@ -2063,6 +2197,82 @@ class TestReportStoreService(unittest.TestCase):
                 ),
                 row,
             )
+
+    def test_publisher_legacy_schema_backfills_normalized_lookup_key(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "reports.sqlite")
+            conn = sqlite3.connect(db_path)
+            try:
+                conn.executescript(
+                    """
+                    CREATE TABLE publishers (
+                      id INTEGER PRIMARY KEY AUTOINCREMENT,
+                      name TEXT NOT NULL,
+                      homepage TEXT NOT NULL,
+                      self_presentation TEXT NOT NULL,
+                      insights_url TEXT NOT NULL,
+                      download_route_kind TEXT,
+                      download_route_summary TEXT,
+                      download_route_outcome TEXT,
+                      download_route_updated_at INTEGER
+                    );
+                    INSERT INTO publishers(
+                      name,
+                      homepage,
+                      self_presentation,
+                      insights_url,
+                      download_route_kind,
+                      download_route_summary,
+                      download_route_outcome,
+                      download_route_updated_at
+                    ) VALUES(
+                      'Legacy Publisher',
+                      'https://legacy.example.com/',
+                      'Legacy description',
+                      'https://legacy.example.com/insights/?utm_source=archive',
+                      'browser_pdf_click',
+                      'Click the PDF download button.',
+                      'downloaded',
+                      1770000000
+                    );
+                    """
+                )
+                conn.commit()
+            finally:
+                conn.close()
+
+            route = get_publisher_download_route(
+                PublisherDownloadRouteGetRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    normalized_url="https://legacy.example.com/insights",
+                ),
+                new_run_context(task_id="test_publisher_legacy_backfill"),
+            )
+
+            conn = sqlite3.connect(db_path)
+            try:
+                row = conn.execute(
+                    """
+                    SELECT normalized_insights_url
+                    FROM publishers
+                    WHERE name='Legacy Publisher'
+                    """
+                ).fetchone()
+                index_names = {
+                    str(index_row[1])
+                    for index_row in conn.execute(
+                        "PRAGMA index_list(publishers)"
+                    ).fetchall()
+                }
+            finally:
+                conn.close()
+
+            assert route is not None
+            self.assertEqual("browser_pdf_click", route.route_kind)
+            self.assertEqual("Click the PDF download button.", route.route_summary)
+            self.assertEqual(("https://legacy.example.com/insights",), row)
+            self.assertIn("idx_publishers_normalized_insights_url", index_names)
 
     def test_publisher_inventory_state_roundtrip_and_preserved_on_replace(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

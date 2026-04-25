@@ -125,6 +125,44 @@ def test_list_prompt_namespaces_refreshes_stale_prompt_hash(
     assert updated.namespaces[0].user_sha256 != first.namespaces[0].user_sha256
 
 
+def test_load_prompt_set_reuses_validated_cache(
+    tmp_path: Path,
+    external_boundary_mocks_only,
+    caplog,
+) -> None:
+    prompts_root = tmp_path / "prompts"
+    _write_prompt_namespace(prompts_root, "alpha", "system-a", "user-a")
+    external_boundary_mocks_only.setattr(prompt_service, "PROMPTS_ROOT", prompts_root)
+    caplog.set_level(logging.INFO, logger="market_lense.prompt_service")
+
+    first = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="alpha",
+            reload_if_changed=True,
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    second = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="alpha",
+            reload_if_changed=True,
+            force_reload=False,
+        ),
+        _ctx(),
+    )
+
+    assert second.system.sha256 == first.system.sha256
+    assert second.user.sha256 == first.user.sha256
+    assert any(
+        "prompt_load_cache_hit" in record.message
+        and '"validated": true' in record.message
+        for record in caplog.records
+    )
+
+
 def test_load_prompt_set_rejects_namespace_traversal(
     tmp_path: Path,
     external_boundary_mocks_only,

@@ -590,16 +590,6 @@ Suggested priority order:
     - Orchestrators remain responsible for wiring and retry policy.
     - Tests fail if unused or cross-capability dependencies are reintroduced.
 
-- **Title:** Persist normalized publisher lookup keys and replace Python-side table scans [Impact: 4/5, Effort: 4/5]
-  - Explanation: `src/services/report_store_service.py` repeatedly loads publisher rows and normalizes `insights_url` in Python for route and inventory lookups/updates. Persist normalized lookup keys in the database, index them, and query/update rows directly in SQL.
-  - Pros: Faster publisher-state lookups, less repeated normalization logic, smaller service methods.
-  - Cons: Requires schema migration and collision handling.
-  - Acceptance Criteria:
-    - Normalized publisher lookup columns are stored and backfilled.
-    - Indexed SQL lookups replace `fetchall()` plus Python filtering paths.
-    - Collision behavior is defined and tested.
-    - Existing route/inventory tests pass against the migrated schema.
-
 - **Title:** Stream Drive listings and bound Drive client/scope caches [Impact: 3/5, Effort: 3/5]
   - Explanation: Merge Drive pagination streaming, recursive folder-scope caching, and bounded thread-scoped client caches. Large-folder operations should yield incrementally, reuse stable folder topology, and evict stale clients.
   - Pros: Lower memory usage, fewer Drive API calls, cleaner long-lived process behavior.

@@ -130,6 +130,7 @@ CREATE TABLE IF NOT EXISTS publishers (
   homepage TEXT NOT NULL,
   self_presentation TEXT NOT NULL,
   insights_url TEXT NOT NULL,
+  normalized_insights_url TEXT NOT NULL DEFAULT '',
   google_folder TEXT,
   discovery_test_status TEXT,
   download_route_kind TEXT,
@@ -1450,6 +1451,7 @@ def _ensure_publishers_schema(conn: sqlite3.Connection) -> None:
         "homepage",
         "self_presentation",
         "insights_url",
+        "normalized_insights_url",
         "google_folder",
         "discovery_test_status",
         "download_route_kind",
@@ -1473,6 +1475,8 @@ def _ensure_publishers_schema(conn: sqlite3.Connection) -> None:
     }
     current = {str(row[1]) for row in rows}
     if current == expected:
+        _backfill_publisher_normalized_insights_urls(conn)
+        _ensure_publishers_indexes(conn)
         return
 
     conn.execute("DROP TABLE IF EXISTS publishers_new")
@@ -1484,6 +1488,7 @@ def _ensure_publishers_schema(conn: sqlite3.Connection) -> None:
           homepage TEXT NOT NULL,
           self_presentation TEXT NOT NULL,
           insights_url TEXT NOT NULL,
+          normalized_insights_url TEXT NOT NULL DEFAULT '',
           google_folder TEXT,
           discovery_test_status TEXT,
           download_route_kind TEXT,
@@ -1508,47 +1513,69 @@ def _ensure_publishers_schema(conn: sqlite3.Connection) -> None:
         """
     )
     if rows:
-        selectable = [
-            col
-            for col in (
-                "name",
-                "homepage",
-                "self_presentation",
-                "insights_url",
-                "google_folder",
-                "discovery_test_status",
-                "download_route_kind",
-                "download_route_summary",
-                "download_route_outcome",
-                "download_route_last_downloaded_file_path",
-                "download_route_last_final_page_url",
-                "download_route_updated_at",
-                "inventory_route_kind",
-                "inventory_route_summary",
-                "inventory_route_trace_json",
-                "inventory_scenario_summary_json",
-                "inventory_route_last_final_page_url",
-                "inventory_route_updated_at",
-                "inventory_snapshot_drive_file_id",
-                "inventory_snapshot_drive_file_name",
-                "inventory_snapshot_sha256",
-                "inventory_snapshot_updated_at",
-                "inventory_run_quality_json",
-                "inventory_run_quality_updated_at",
-            )
-            if col in current
+        order_column = "id" if "id" in current else "rowid"
+        fetched_rows = conn.execute(
+            f"SELECT * FROM publishers ORDER BY {order_column} ASC"
+        ).fetchall()
+        column_order = [str(row[1]) for row in rows]
+        insert_columns = [
+            "id",
+            "name",
+            "homepage",
+            "self_presentation",
+            "insights_url",
+            "normalized_insights_url",
+            "google_folder",
+            "discovery_test_status",
+            "download_route_kind",
+            "download_route_summary",
+            "download_route_outcome",
+            "download_route_last_downloaded_file_path",
+            "download_route_last_final_page_url",
+            "download_route_updated_at",
+            "inventory_route_kind",
+            "inventory_route_summary",
+            "inventory_route_trace_json",
+            "inventory_scenario_summary_json",
+            "inventory_route_last_final_page_url",
+            "inventory_route_updated_at",
+            "inventory_snapshot_drive_file_id",
+            "inventory_snapshot_drive_file_name",
+            "inventory_snapshot_sha256",
+            "inventory_snapshot_updated_at",
+            "inventory_run_quality_json",
+            "inventory_run_quality_updated_at",
         ]
-        if selectable:
-            quoted = ", ".join(selectable)
+        available_insert_columns = [
+            column for column in insert_columns if column != "id" or column in current
+        ]
+        placeholders = ", ".join("?" for _ in available_insert_columns)
+        for fetched in fetched_rows:
+            source = dict(zip(column_order, fetched))
+            insights_url = str(source.get("insights_url") or "").strip()
+            normalized_insights_url = str(
+                source.get("normalized_insights_url") or ""
+            ).strip() or _normalize_optional_url_key(insights_url)
+            values: list[object] = []
+            for column in available_insert_columns:
+                if column == "normalized_insights_url":
+                    values.append(normalized_insights_url)
+                    continue
+                values.append(source.get(column))
             conn.execute(
                 f"""
-                INSERT INTO publishers_new({quoted})
-                SELECT {quoted}
-                FROM publishers
-                """
+                INSERT INTO publishers_new({", ".join(available_insert_columns)})
+                VALUES({placeholders})
+                """,
+                values,
             )
     conn.execute("DROP TABLE IF EXISTS publishers")
     conn.execute("ALTER TABLE publishers_new RENAME TO publishers")
+    _backfill_publisher_normalized_insights_urls(conn)
+    _ensure_publishers_indexes(conn)
+
+
+def _ensure_publishers_indexes(conn: sqlite3.Connection) -> None:
     conn.execute("CREATE INDEX IF NOT EXISTS idx_publishers_name ON publishers(name)")
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_publishers_homepage ON publishers(homepage)"
@@ -1556,6 +1583,37 @@ def _ensure_publishers_schema(conn: sqlite3.Connection) -> None:
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_publishers_insights_url ON publishers(insights_url)"
     )
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_publishers_normalized_insights_url
+        ON publishers(normalized_insights_url)
+        """
+    )
+
+
+def _backfill_publisher_normalized_insights_urls(conn: sqlite3.Connection) -> None:
+    rows = conn.execute(
+        """
+        SELECT id, insights_url
+        FROM publishers
+        WHERE trim(insights_url) <> ''
+          AND (
+            normalized_insights_url IS NULL
+            OR trim(normalized_insights_url) = ''
+          )
+        ORDER BY id ASC
+        """
+    ).fetchall()
+    for row in rows:
+        normalized_insights_url = _normalize_optional_url_key(str(row[1] or ""))
+        conn.execute(
+            """
+            UPDATE publishers
+            SET normalized_insights_url=?
+            WHERE id=?
+            """,
+            (normalized_insights_url, int(row[0])),
+        )
 
 
 @contextmanager
@@ -2363,41 +2421,39 @@ def get_report_download_drive_folder(
     )
     with _metadata_conn(db_path) as conn:
         if publisher_insights_url:
-            rows = conn.execute(
+            row = conn.execute(
                 """
                 SELECT name, insights_url, google_folder
                 FROM publishers
-                WHERE insights_url <> ''
+                WHERE normalized_insights_url=?
+                  AND google_folder IS NOT NULL
+                  AND trim(google_folder) <> ''
                 ORDER BY id ASC
-                """
-            ).fetchall()
-            for row in rows:
-                insights_url = str(row[1] or "").strip()
-                google_folder = str(row[2] or "").strip()
-                if (
-                    normalize_url(insights_url) == publisher_insights_url
-                    and google_folder
-                ):
-                    response = ReportDownloadDriveFolderLookupResponse(
-                        schema_version="1.0",
-                        publisher_name=str(row[0] or "").strip(),
-                        google_folder=google_folder,
-                        resolution_source="publisher_insights_url",
+                LIMIT 1
+                """,
+                (publisher_insights_url,),
+            ).fetchone()
+            if row is not None:
+                response = ReportDownloadDriveFolderLookupResponse(
+                    schema_version="1.0",
+                    publisher_name=str(row[0] or "").strip(),
+                    google_folder=str(row[2] or "").strip(),
+                    resolution_source="publisher_insights_url",
+                )
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="service",
+                        event="report_download_drive_folder_lookup_complete",
+                        module=logger.name,
+                        fields={
+                            "found": True,
+                            "publisher_name": response.publisher_name,
+                            "resolution_source": response.resolution_source,
+                        },
                     )
-                    logger.info(
-                        log_event(
-                            ctx,
-                            role="service",
-                            event="report_download_drive_folder_lookup_complete",
-                            module=logger.name,
-                            fields={
-                                "found": True,
-                                "publisher_name": response.publisher_name,
-                                "resolution_source": response.resolution_source,
-                            },
-                        )
-                    )
-                    return response
+                )
+                return response
         if normalized_landing_page_url:
             row = conn.execute(
                 """
@@ -2698,13 +2754,14 @@ def replace_publishers(
         )
 
     seen_ids: set[str] = set()
-    rows: list[tuple[str, str, str, str]] = []
+    rows: list[tuple[str, str, str, str, str]] = []
     for publisher in publishers:
         notion_page_id = publisher.notion_page_id.strip()
         name = publisher.name.strip()
         homepage = publisher.homepage.strip()
         self_presentation = publisher.self_presentation.strip()
         insights_url = publisher.insights_url.strip()
+        normalized_insights_url = _normalize_optional_url_key(insights_url)
 
         if not notion_page_id:
             raise AppError(
@@ -2735,6 +2792,7 @@ def replace_publishers(
                 homepage,
                 self_presentation,
                 insights_url,
+                normalized_insights_url,
             )
         )
 
@@ -2760,6 +2818,7 @@ def replace_publishers(
                 SELECT
                     name,
                     insights_url,
+                    normalized_insights_url,
                     google_folder,
                     discovery_test_status,
                     download_route_kind,
@@ -2787,28 +2846,30 @@ def replace_publishers(
             preserved_by_name: dict[str, tuple[object, ...]] = {}
             for row in preserved_rows:
                 name_key = _normalize_publisher_key(str(row[0] or ""))
-                insights_url_key = _normalize_optional_url_key(str(row[1] or ""))
+                insights_url_key = str(
+                    row[2] or ""
+                ).strip() or _normalize_optional_url_key(str(row[1] or ""))
                 preserved_payload = (
-                    str(row[2] or "").strip() or None,
                     str(row[3] or "").strip() or None,
                     str(row[4] or "").strip() or None,
                     str(row[5] or "").strip() or None,
                     str(row[6] or "").strip() or None,
                     str(row[7] or "").strip() or None,
                     str(row[8] or "").strip() or None,
-                    int(row[9]) if row[9] is not None else None,
-                    str(row[10] or "").strip() or None,
+                    str(row[9] or "").strip() or None,
+                    int(row[10]) if row[10] is not None else None,
                     str(row[11] or "").strip() or None,
                     str(row[12] or "").strip() or None,
                     str(row[13] or "").strip() or None,
                     str(row[14] or "").strip() or None,
-                    int(row[15]) if row[15] is not None else None,
-                    str(row[16] or "").strip() or None,
+                    str(row[15] or "").strip() or None,
+                    int(row[16]) if row[16] is not None else None,
                     str(row[17] or "").strip() or None,
                     str(row[18] or "").strip() or None,
-                    int(row[19]) if row[19] is not None else None,
-                    str(row[20] or "").strip() or None,
-                    int(row[21]) if row[21] is not None else None,
+                    str(row[19] or "").strip() or None,
+                    int(row[20]) if row[20] is not None else None,
+                    str(row[21] or "").strip() or None,
+                    int(row[22]) if row[22] is not None else None,
                 )
                 if (
                     insights_url_key
@@ -2821,7 +2882,7 @@ def replace_publishers(
             if rows:
                 rows_with_routes = []
                 for row in rows:
-                    insights_url_key = _normalize_optional_url_key(row[3])
+                    insights_url_key = row[4]
                     name_key = _normalize_publisher_key(row[0])
                     preserved = (
                         preserved_by_insights_url.get(insights_url_key)
@@ -2861,6 +2922,7 @@ def replace_publishers(
                         homepage,
                         self_presentation,
                         insights_url,
+                        normalized_insights_url,
                         google_folder,
                         discovery_test_status,
                         download_route_kind,
@@ -2882,7 +2944,7 @@ def replace_publishers(
                         inventory_run_quality_json,
                         inventory_run_quality_updated_at
                     )
-                    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     rows_with_routes,
                 )
@@ -2976,20 +3038,21 @@ def list_publishers(
                 name,
                 homepage,
                 insights_url,
+                normalized_insights_url,
                 google_folder,
                 discovery_test_status,
                 inventory_route_kind,
                 inventory_route_summary,
                 inventory_run_quality_json
             FROM publishers
-            WHERE insights_url <> ''
+            WHERE normalized_insights_url <> ''
             ORDER BY id ASC
             """
         ).fetchall()
     publishers: list[PublisherListItem] = []
     for row in rows:
         insights_url = str(row[2] or "").strip()
-        normalized_insights_url = _normalize_optional_url_key(insights_url)
+        normalized_insights_url = str(row[3] or "").strip()
         if not normalized_insights_url:
             continue
         publishers.append(
@@ -2999,12 +3062,12 @@ def list_publishers(
                 homepage=str(row[1] or "").strip(),
                 insights_url=insights_url,
                 normalized_insights_url=normalized_insights_url,
-                google_folder=str(row[3] or "").strip() or None,
-                discovery_test_status=str(row[4] or "").strip() or None,
-                inventory_route_kind=str(row[5] or "").strip() or None,
-                inventory_route_summary=str(row[6] or "").strip() or None,
+                google_folder=str(row[4] or "").strip() or None,
+                discovery_test_status=str(row[5] or "").strip() or None,
+                inventory_route_kind=str(row[6] or "").strip() or None,
+                inventory_route_summary=str(row[7] or "").strip() or None,
                 inventory_run_quality_summary=_parse_inventory_run_quality_summary(
-                    str(row[7] or "").strip() or None
+                    str(row[8] or "").strip() or None
                 ),
             )
         )
@@ -3285,7 +3348,7 @@ def get_publisher_download_route(
                 )
             )
             return response
-        rows = conn.execute(
+        row = conn.execute(
             """
             SELECT
                 insights_url,
@@ -3296,17 +3359,15 @@ def get_publisher_download_route(
                 download_route_last_final_page_url,
                 download_route_updated_at
             FROM publishers
-            WHERE insights_url <> ''
+            WHERE normalized_insights_url=?
               AND download_route_summary IS NOT NULL
             ORDER BY id ASC
-            """
-        ).fetchall()
-    for row in rows:
+            LIMIT 1
+            """,
+            (normalized_url,),
+        ).fetchone()
+    if row is not None:
         insights_url = str(row[0] or "").strip()
-        if not insights_url:
-            continue
-        if normalize_url(insights_url) != normalized_url:
-            continue
         legacy_final_page_url = str(row[5] or "").strip()
         legacy_outcome = str(row[3] or "").strip()
         response = PublisherDownloadRouteResponse(
@@ -3713,19 +3774,27 @@ def record_publisher_download_route(
                     str(best_projection[10] or "").strip()
                     or projected_last_final_page_url
                 )
+            publisher_row = conn.execute(
+                """
+                SELECT id, insights_url
+                FROM publishers
+                WHERE normalized_insights_url=?
+                ORDER BY id ASC
+                LIMIT 1
+                """,
+                (normalized_url,),
+            ).fetchone()
             matched_id: Optional[int] = None
-            rows = conn.execute(
-                "SELECT id, insights_url FROM publishers WHERE insights_url <> '' ORDER BY id ASC"
-            ).fetchall()
-            for row in rows:
-                if normalize_url(str(row[1] or "").strip()) == normalized_url:
-                    matched_id = int(row[0])
-                    projected_source_url = (
-                        str(row[1] or "").strip() or projected_source_url
-                    )
-                    break
+            if publisher_row is not None:
+                matched_id = int(publisher_row[0])
+                projected_source_url = (
+                    str(publisher_row[1] or "").strip() or projected_source_url
+                )
             if matched_id is None:
                 parsed = urlsplit(projected_source_url)
+                normalized_projected_source_url = _normalize_optional_url_key(
+                    projected_source_url
+                )
                 placeholder_name = parsed.netloc or projected_source_url
                 homepage = (
                     f"{parsed.scheme}://{parsed.netloc}/"
@@ -3739,6 +3808,7 @@ def record_publisher_download_route(
                         homepage,
                         self_presentation,
                         insights_url,
+                        normalized_insights_url,
                         download_route_kind,
                         download_route_summary,
                         download_route_outcome,
@@ -3746,13 +3816,14 @@ def record_publisher_download_route(
                         download_route_last_final_page_url,
                         download_route_updated_at
                     )
-                    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%s','now'))
+                    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%s','now'))
                     """,
                     (
                         placeholder_name,
                         homepage,
                         "",
                         projected_source_url,
+                        normalized_projected_source_url,
                         projected_route_kind,
                         projected_route_summary,
                         projected_outcome,
@@ -3847,7 +3918,7 @@ def get_publisher_inventory_state(
         )
     )
     with _metadata_conn(db_path) as conn:
-        rows = conn.execute(
+        row = conn.execute(
             """
             SELECT
                 name,
@@ -3867,20 +3938,20 @@ def get_publisher_inventory_state(
                 inventory_run_quality_json,
                 inventory_run_quality_updated_at
             FROM publishers
-            WHERE insights_url <> ''
+            WHERE normalized_insights_url=?
             ORDER BY id ASC
-            """
-        ).fetchall()
+            LIMIT 1
+            """,
+            (normalized_url,),
+        ).fetchone()
         inventory_route_policy = _publisher_inventory_route_policy_signals(
             _publisher_inventory_route_policy_rows(
                 conn=conn,
                 normalized_url=normalized_url,
             )
         )
-    for row in rows:
+    if row is not None:
         insights_url = str(row[1] or "").strip()
-        if not insights_url or normalize_url(insights_url) != normalized_url:
-            continue
         response = PublisherInventoryStateResponse(
             schema_version="1.0",
             publisher_name=str(row[0] or "").strip(),
@@ -3998,15 +4069,17 @@ def record_publisher_inventory_test_status(
     )
     try:
         with _metadata_conn(db_path) as conn:
-            matched_id: Optional[int] = None
-            rows = conn.execute(
-                "SELECT id, insights_url FROM publishers WHERE insights_url <> '' ORDER BY id ASC"
-            ).fetchall()
-            for row in rows:
-                if normalize_url(str(row[1] or "").strip()) != normalized_url:
-                    continue
-                matched_id = int(row[0])
-                break
+            row = conn.execute(
+                """
+                SELECT id
+                FROM publishers
+                WHERE normalized_insights_url=?
+                ORDER BY id ASC
+                LIMIT 1
+                """,
+                (normalized_url,),
+            ).fetchone()
+            matched_id = int(row[0]) if row is not None else None
             if matched_id is None:
                 raise AppError(
                     code="publisher_inventory_test_status_not_found",
@@ -4098,15 +4171,17 @@ def record_publisher_inventory_run_quality(
     )
     try:
         with _metadata_conn(db_path) as conn:
-            matched_id: Optional[int] = None
-            rows = conn.execute(
-                "SELECT id, insights_url FROM publishers WHERE insights_url <> '' ORDER BY id ASC"
-            ).fetchall()
-            for row in rows:
-                if normalize_url(str(row[1] or "").strip()) != normalized_url:
-                    continue
-                matched_id = int(row[0])
-                break
+            row = conn.execute(
+                """
+                SELECT id
+                FROM publishers
+                WHERE normalized_insights_url=?
+                ORDER BY id ASC
+                LIMIT 1
+                """,
+                (normalized_url,),
+            ).fetchone()
+            matched_id = int(row[0]) if row is not None else None
             if matched_id is None:
                 raise AppError(
                     code="publisher_inventory_run_quality_not_found",
@@ -4507,8 +4582,7 @@ def record_publisher_inventory_state(
     )
     try:
         with _metadata_conn(db_path) as conn:
-            matched = None
-            rows = conn.execute(
+            matched = conn.execute(
                 """
                 SELECT
                     id,
@@ -4519,26 +4593,24 @@ def record_publisher_inventory_state(
                     inventory_route_trace_json,
                     inventory_scenario_summary_json
                 FROM publishers
-                WHERE insights_url <> ''
+                WHERE normalized_insights_url=?
                 ORDER BY id ASC
-                """
-            ).fetchall()
-            for row in rows:
-                if normalize_url(str(row[1] or "").strip()) != normalized_url:
-                    continue
-                matched = row
-                source_url = str(row[1] or "").strip() or source_url
+                LIMIT 1
+                """,
+                (normalized_url,),
+            ).fetchone()
+            if matched is not None:
+                source_url = str(matched[1] or "").strip() or source_url
                 if snapshot_drive_file_id is None:
-                    snapshot_drive_file_id = str(row[2] or "").strip() or None
+                    snapshot_drive_file_id = str(matched[2] or "").strip() or None
                 if snapshot_drive_file_name is None:
-                    snapshot_drive_file_name = str(row[3] or "").strip() or None
+                    snapshot_drive_file_name = str(matched[3] or "").strip() or None
                 if snapshot_sha256 is None:
-                    snapshot_sha256 = str(row[4] or "").strip() or None
+                    snapshot_sha256 = str(matched[4] or "").strip() or None
                 if route_trace_json is None:
-                    route_trace_json = str(row[5] or "").strip() or None
+                    route_trace_json = str(matched[5] or "").strip() or None
                 if scenario_summary_json is None:
-                    scenario_summary_json = str(row[6] or "").strip() or None
-                break
+                    scenario_summary_json = str(matched[6] or "").strip() or None
             if matched is None:
                 raise AppError(
                     code="publisher_inventory_state_not_found",
