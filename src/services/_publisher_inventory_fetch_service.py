@@ -20,7 +20,12 @@ from src.contracts.publisher_inventory import (
     PublisherInventoryServiceRequest,
     PublisherInventoryServiceResponse,
 )
+from src.contracts.http_acquisition import (
+    HttpAcquisitionRequest,
+    HttpAcquisitionResponsePolicy,
+)
 from src.contracts.run_context import RunContext
+from src.services._http_acquisition import execute_http_acquisition
 from src.services._publisher_inventory_discovery_activity import (
     _anchor_fingerprint,
     _extract_component_link_anchors,
@@ -178,6 +183,9 @@ _DEAD_PAGE_MARKERS = (
 )
 _TRANSIENT_HTTP_STATUS_CODES = {408, 425, 429, 500, 502, 503, 504}
 _PROTECTED_DOCUMENT_HTTP_STATUS_CODES = {401, 403}
+_INVENTORY_HTML_MAX_BYTES = 4 * 1024 * 1024
+_SCRIPT_FETCH_MAX_BYTES = 1024 * 1024
+_LANDING_PAGE_HTML_MAX_BYTES = 2 * 1024 * 1024
 
 
 class _InventoryHtmlParser(HTMLParser):
@@ -396,38 +404,49 @@ def discover_inventory_via_http(
             )
         )
         response = None
-        last_request_error: Exception | None = None
-        try:
-            for request_url in request_urls:
-                try:
-                    response = requests_module.get(
-                        request_url,
-                        timeout=request.settings.http_timeout_seconds,
+        last_request_error: AppError | None = None
+        for request_url in request_urls:
+            try:
+                response = execute_http_acquisition(
+                    request=HttpAcquisitionRequest(
+                        schema_version="1.0",
+                        purpose="publisher_inventory_http_page_fetch",
+                        method="GET",
+                        url=request_url,
                         headers=headers,
-                    )
-                    response.raise_for_status()
-                    break
-                except requests_module.RequestException as exc:
-                    last_request_error = exc
-                    response = None
-                    continue
-            if response is None:
-                raise last_request_error or AppError(
-                    code="publisher_inventory_http_failed",
-                    message="Failed to fetch publisher inventory page via HTTP",
-                    retryable=True,
-                    context={"page_url": current_url},
+                        timeout_seconds=request.settings.http_timeout_seconds,
+                        response_policy=HttpAcquisitionResponsePolicy(
+                            schema_version="1.0",
+                            require_success_status=True,
+                            capture_text=True,
+                            capture_content_type_markers=("html", "xml"),
+                            max_body_bytes=_INVENTORY_HTML_MAX_BYTES,
+                            truncate_body=True,
+                        ),
+                        error_code="publisher_inventory_http_failed",
+                        error_message="Failed to fetch publisher inventory page via HTTP",
+                        context_fields={
+                            "page_url": current_url,
+                            "request_url": request_url,
+                        },
+                    ),
+                    ctx=ctx,
+                    requests_module=requests_module,
                 )
-        except requests_module.RequestException as exc:
-            raise AppError(
+                break
+            except AppError as exc:
+                last_request_error = exc
+                response = None
+                continue
+        if response is None:
+            raise last_request_error or AppError(
                 code="publisher_inventory_http_failed",
                 message="Failed to fetch publisher inventory page via HTTP",
-                cause=exc,
                 retryable=True,
                 context={"page_url": current_url},
-            ) from exc
-        final_page_url = _normalize_absolute_url(str(response.url or current_url))
-        html = response.text or ""
+            )
+        final_page_url = _normalize_absolute_url(str(response.final_url or current_url))
+        html = str(response.text_body or "")
         page_title = _extract_html_page_title(html)
         logger.info(
             log_event(
@@ -440,6 +459,7 @@ def discover_inventory_via_http(
                     "final_page_url": final_page_url,
                     "status_code": response.status_code,
                     "html_length": len(html),
+                    "body_truncated": response.body_truncated,
                 },
             )
         )
@@ -647,6 +667,7 @@ def _discover_inventory_via_wordpress_ajax(
     if ajax_config is None:
         return [], [], ""
     action_names = _discover_wordpress_ajax_actions(
+        ctx=ctx,
         html=html,
         page_url=page_url,
         page_title=page_title,
@@ -683,20 +704,41 @@ def _discover_inventory_via_wordpress_ajax(
                 "paged": str(page_number),
             }
             try:
-                response = requests_module.post(
-                    ajax_config["url"],
-                    timeout=request.settings.http_timeout_seconds,
-                    headers={
-                        **headers,
-                        "X-Requested-With": "XMLHttpRequest",
-                    },
-                    data=payload,
+                response = execute_http_acquisition(
+                    request=HttpAcquisitionRequest(
+                        schema_version="1.0",
+                        purpose="publisher_inventory_wordpress_ajax_fetch",
+                        method="POST",
+                        url=ajax_config["url"],
+                        headers={
+                            **headers,
+                            "X-Requested-With": "XMLHttpRequest",
+                        },
+                        timeout_seconds=request.settings.http_timeout_seconds,
+                        response_policy=HttpAcquisitionResponsePolicy(
+                            schema_version="1.0",
+                            require_success_status=True,
+                            capture_text=True,
+                            capture_content_type_markers=("json", "javascript", "text"),
+                            max_body_bytes=_INVENTORY_HTML_MAX_BYTES,
+                            truncate_body=True,
+                        ),
+                        error_code="publisher_inventory_http_failed",
+                        error_message="Failed to fetch publisher inventory page via HTTP",
+                        data=payload,
+                        context_fields={
+                            "page_url": page_url,
+                            "action": action_name,
+                            "paged": str(page_number),
+                        },
+                    ),
+                    ctx=ctx,
+                    requests_module=requests_module,
                 )
-                response.raise_for_status()
-            except requests_module.RequestException:
+            except AppError:
                 break
             try:
-                response_payload = json.loads(response.text or "{}")
+                response_payload = json.loads(response.text_body or "{}")
             except json.JSONDecodeError:
                 break
             posts_html = str(response_payload.get("posts") or "").strip()
@@ -821,6 +863,7 @@ def _extract_wordpress_ajax_config(
 
 def _discover_wordpress_ajax_actions(
     *,
+    ctx: RunContext,
     html: str,
     page_url: str,
     page_title: str,
@@ -835,17 +878,34 @@ def _discover_wordpress_ajax_actions(
     }
     for script_url in _same_host_script_urls(html=html, page_url=page_url):
         try:
-            response = requests_module.get(
-                script_url,
-                timeout=timeout_seconds,
-                headers=headers,
+            response = execute_http_acquisition(
+                request=HttpAcquisitionRequest(
+                    schema_version="1.0",
+                    purpose="publisher_inventory_wordpress_script_fetch",
+                    method="GET",
+                    url=script_url,
+                    headers=headers,
+                    timeout_seconds=timeout_seconds,
+                    response_policy=HttpAcquisitionResponsePolicy(
+                        schema_version="1.0",
+                        require_success_status=True,
+                        capture_text=True,
+                        capture_content_type_markers=("javascript", "json", "text"),
+                        max_body_bytes=_SCRIPT_FETCH_MAX_BYTES,
+                        truncate_body=True,
+                    ),
+                    error_code="publisher_inventory_http_failed",
+                    error_message="Failed to fetch publisher inventory page via HTTP",
+                    context_fields={"script_url": script_url, "page_url": page_url},
+                ),
+                ctx=ctx,
+                requests_module=requests_module,
             )
-            response.raise_for_status()
-        except requests_module.RequestException:
+        except AppError:
             continue
         action_names.update(
             str(match.group("action") or "").strip()
-            for match in _WORDPRESS_ACTION_RE.finditer(response.text or "")
+            for match in _WORDPRESS_ACTION_RE.finditer(response.text_body or "")
             if str(match.group("action") or "").strip()
         )
         if action_names:
@@ -1064,21 +1124,38 @@ def _inspect_landing_page_item(
         )
     )
     try:
-        response = requests_module.get(
-            normalized_url,
-            timeout=timeout_seconds,
-            headers=headers,
-            allow_redirects=True,
-            stream=True,
+        response = execute_http_acquisition(
+            request=HttpAcquisitionRequest(
+                schema_version="1.0",
+                purpose="publisher_inventory_landing_page_fetch",
+                method="GET",
+                url=normalized_url,
+                headers=headers,
+                timeout_seconds=timeout_seconds,
+                response_policy=HttpAcquisitionResponsePolicy(
+                    schema_version="1.0",
+                    require_success_status=False,
+                    capture_text=True,
+                    capture_content_type_markers=("html", "xml"),
+                    max_body_bytes=_LANDING_PAGE_HTML_MAX_BYTES,
+                    truncate_body=True,
+                ),
+                error_code="publisher_inventory_quality_fetch_failed",
+                error_message="Failed to fetch landing page during publisher inventory quality inspection",
+                allow_redirects=True,
+                context_fields={"candidate_url": normalized_url},
+            ),
+            ctx=ctx,
+            requests_module=requests_module,
         )
-    except requests_module.RequestException as exc:
+    except AppError as exc:
         return _dead_observation(
             item=item,
             final_url=normalized_url,
-            fetch_error=str(exc),
+            fetch_error=exc.message,
         )
-    final_url = _normalize_absolute_url(str(response.url or normalized_url)) or normalized_url
-    content_type = str(response.headers.get("Content-Type", "") or "").strip()
+    final_url = _normalize_absolute_url(str(response.final_url or normalized_url)) or normalized_url
+    content_type = str(response.content_type or "").strip()
     status_code = int(response.status_code)
     logger.info(
         log_event(
@@ -1091,12 +1168,12 @@ def _inspect_landing_page_item(
                 "final_url": final_url,
                 "status_code": status_code,
                 "content_type": content_type,
+                "body_truncated": response.body_truncated,
             },
         )
     )
     lowered_content_type = content_type.casefold()
     if final_url.casefold().endswith(".pdf") or "application/pdf" in lowered_content_type:
-        response.close()
         verification_class, recovery_eligible = _classify_verification(
             final_url=final_url,
             final_title="",
@@ -1142,10 +1219,7 @@ def _inspect_landing_page_item(
                 source_title=item.title,
             ),
         )
-    try:
-        html = response.text or ""
-    finally:
-        response.close()
+    html = str(response.text_body or "")
     parser = _LandingPageInspectionHtmlParser()
     try:
         parser.feed(html)

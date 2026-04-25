@@ -16,7 +16,12 @@ from src.contracts.browser_download import (
     BrowserReportDownloadResult,
     DownloadTerminalEvidence,
 )
+from src.contracts.http_acquisition import (
+    HttpAcquisitionRequest,
+    HttpAcquisitionResponsePolicy,
+)
 from src.contracts.run_context import RunContext
+from src.services._http_acquisition import execute_http_acquisition
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -174,6 +179,8 @@ _PDF_RELEVANCE_STOPWORDS = {
     "the",
     "with",
 }
+_HTML_FETCH_MAX_BYTES = 4 * 1024 * 1024
+_PDF_FETCH_MAX_BYTES = 128 * 1024 * 1024
 
 
 def try_http_access_challenge_probe(
@@ -199,15 +206,36 @@ def try_http_access_challenge_probe(
         )
     )
     try:
-        response = requests.get(
-            target_url,
-            headers=_HTML_FETCH_HEADERS,
-            timeout=min(
-                _ACCESS_CHALLENGE_PROBE_TIMEOUT_SECONDS,
-                max(1.0, float(request.settings.timeout_seconds)),
+        response = execute_http_acquisition(
+            request=HttpAcquisitionRequest(
+                schema_version="1.0",
+                purpose="browser_report_download_access_challenge_probe",
+                method="GET",
+                url=target_url,
+                headers=_HTML_FETCH_HEADERS,
+                timeout_seconds=min(
+                    _ACCESS_CHALLENGE_PROBE_TIMEOUT_SECONDS,
+                    max(1.0, float(request.settings.timeout_seconds)),
+                ),
+                response_policy=HttpAcquisitionResponsePolicy(
+                    schema_version="1.0",
+                    require_success_status=False,
+                    capture_text=True,
+                    capture_content_type_markers=("html", "xml"),
+                    max_body_bytes=_HTML_FETCH_MAX_BYTES,
+                    truncate_body=True,
+                ),
+                error_code="browser_download_access_challenge_probe_failed",
+                error_message="Failed to probe the report page for an access challenge",
+                context_fields={
+                    "normalized_url": normalized_url,
+                    "target_url": target_url,
+                },
             ),
+            ctx=ctx,
+            requests_module=requests,
         )
-    except requests.RequestException as exc:
+    except AppError as exc:
         logger.info(
             log_event(
                 ctx,
@@ -217,12 +245,12 @@ def try_http_access_challenge_probe(
                 fields={
                     "normalized_url": normalized_url,
                     "target_url": target_url,
-                    "error": str(exc),
+                    "error": exc.message,
                 },
             )
         )
         return None
-    text = str(response.text or "")
+    text = str(response.text_body or "")
     lowered = text.casefold()
     matched_marker = next(
         (marker for marker in _ACCESS_CHALLENGE_MARKERS if marker in lowered),
@@ -242,6 +270,7 @@ def try_http_access_challenge_probe(
                 "status_code": int(response.status_code),
                 "matched_marker": matched_marker,
                 "challenge_detected": challenge_detected,
+                "body_truncated": response.body_truncated,
             },
         )
     )
@@ -295,16 +324,37 @@ def try_report_page_pdf_link_download(
         )
     )
     try:
-        response = requests.get(
-            target_url,
-            headers=_HTML_FETCH_HEADERS,
-            timeout=min(
-                _html_pdf_link_probe_timeout_seconds(request),
-                max(1.0, float(request.settings.timeout_seconds)),
+        response = execute_http_acquisition(
+            request=HttpAcquisitionRequest(
+                schema_version="1.0",
+                purpose="browser_report_download_html_pdf_link_probe",
+                method="GET",
+                url=target_url,
+                headers=_HTML_FETCH_HEADERS,
+                timeout_seconds=min(
+                    _html_pdf_link_probe_timeout_seconds(request),
+                    max(1.0, float(request.settings.timeout_seconds)),
+                ),
+                response_policy=HttpAcquisitionResponsePolicy(
+                    schema_version="1.0",
+                    require_success_status=False,
+                    capture_text=True,
+                    capture_content_type_markers=("html", "xml"),
+                    max_body_bytes=_HTML_FETCH_MAX_BYTES,
+                    truncate_body=True,
+                ),
+                error_code="browser_download_html_pdf_link_fetch_failed",
+                error_message="Failed to fetch the report page while probing for embedded PDF links",
+                allow_redirects=True,
+                context_fields={
+                    "normalized_url": normalized_url,
+                    "target_url": target_url,
+                },
             ),
-            allow_redirects=True,
+            ctx=ctx,
+            requests_module=requests,
         )
-    except requests.RequestException as exc:
+    except AppError as exc:
         logger.info(
             log_event(
                 ctx,
@@ -315,7 +365,7 @@ def try_report_page_pdf_link_download(
                     "normalized_url": normalized_url,
                     "target_url": target_url,
                     "error_code": "browser_download_html_pdf_link_fetch_failed",
-                    "error_message": str(exc),
+                    "error_message": exc.message,
                 },
             )
         )
@@ -331,20 +381,21 @@ def try_report_page_pdf_link_download(
             fields={
                 "normalized_url": normalized_url,
                 "target_url": target_url,
-                "final_url": response.url,
+                "final_url": response.final_url,
                 "status_code": int(response.status_code),
                 "content_type": content_type_header,
+                "body_truncated": response.body_truncated,
             },
         )
     )
     if response.status_code >= 400 or ("html" not in content_type and "xml" not in content_type):
         return None
-    final_url = str(response.url or target_url).strip() or target_url
+    final_url = str(response.final_url or target_url).strip() or target_url
     pdf_candidates = _filter_relevant_pdf_candidates(
         request=request,
         page_url=final_url,
         candidates=extract_embedded_pdf_urls(
-            wrapper_html=str(response.text or ""),
+            wrapper_html=str(response.text_body or ""),
             document_url=final_url,
         ),
     )
@@ -483,17 +534,39 @@ def try_static_email_gate_probe(
         )
     )
     try:
-        response = requests.get(
-            target_url,
-            headers=_HTML_FETCH_HEADERS,
-            timeout=min(
-                _STATIC_EMAIL_GATE_PROBE_TIMEOUT_SECONDS,
-                max(1.0, float(request.settings.timeout_seconds)),
+        response = execute_http_acquisition(
+            request=HttpAcquisitionRequest(
+                schema_version="1.0",
+                purpose="browser_report_download_static_email_gate_probe",
+                method="GET",
+                url=target_url,
+                headers=_HTML_FETCH_HEADERS,
+                timeout_seconds=min(
+                    _STATIC_EMAIL_GATE_PROBE_TIMEOUT_SECONDS,
+                    max(1.0, float(request.settings.timeout_seconds)),
+                ),
+                response_policy=HttpAcquisitionResponsePolicy(
+                    schema_version="1.0",
+                    require_success_status=False,
+                    capture_text=True,
+                    capture_content_type_markers=("html", "xml"),
+                    max_body_bytes=_HTML_FETCH_MAX_BYTES,
+                    truncate_body=True,
+                ),
+                error_code="browser_download_static_email_gate_fetch_failed",
+                error_message="Failed to fetch the route-confirmed landing page while checking for an email gate",
+                allow_redirects=True,
+                context_fields={
+                    "normalized_url": normalized_url,
+                    "target_url": target_url,
+                },
             ),
-            allow_redirects=True,
+            ctx=ctx,
+            requests_module=requests,
         )
-    except requests.Timeout as exc:
-        if _route_context_supports_static_email_gate(request=request, target_url=target_url):
+    except AppError as exc:
+        timeout_cause = isinstance(exc.cause, requests.Timeout)
+        if timeout_cause and _route_context_supports_static_email_gate(request=request, target_url=target_url):
             result = _build_static_email_gate_result(
                 request=request,
                 normalized_url=normalized_url,
@@ -524,32 +597,20 @@ def try_static_email_gate_probe(
                 fields={
                     "normalized_url": normalized_url,
                     "target_url": target_url,
-                    "error_code": "browser_download_static_email_gate_timeout",
-                    "error_message": str(exc),
-                },
-            )
-        )
-        return None
-    except requests.RequestException as exc:
-        logger.info(
-            log_event(
-                ctx,
-                role="service",
-                event="browser_report_download_static_email_gate_probe_fallback",
-                module=logger.name,
-                fields={
-                    "normalized_url": normalized_url,
-                    "target_url": target_url,
-                    "error_code": "browser_download_static_email_gate_fetch_failed",
-                    "error_message": str(exc),
+                    "error_code": (
+                        "browser_download_static_email_gate_timeout"
+                        if timeout_cause
+                        else "browser_download_static_email_gate_fetch_failed"
+                    ),
+                    "error_message": exc.message,
                 },
             )
         )
         return None
     content_type_header = _response_header_value(response.headers, "content-type")
     content_type = content_type_header.casefold()
-    text = str(response.text or "")
-    final_url = str(response.url or target_url).strip() or target_url
+    text = str(response.text_body or "")
+    final_url = str(response.final_url or target_url).strip() or target_url
     gate_detected = (
         int(response.status_code) < 400
         and ("html" in content_type or "xml" in content_type)
@@ -568,6 +629,7 @@ def try_static_email_gate_probe(
                 "status_code": int(response.status_code),
                 "content_type": content_type_header,
                 "gate_detected": gate_detected,
+                "body_truncated": response.body_truncated,
             },
         )
     )
@@ -1063,13 +1125,34 @@ def try_direct_onsite_capture(
         )
     )
     try:
-        response = requests.get(
-            target_url,
-            headers=_HTML_FETCH_HEADERS,
-            timeout=request.settings.timeout_seconds,
-            allow_redirects=True,
+        response = execute_http_acquisition(
+            request=HttpAcquisitionRequest(
+                schema_version="1.0",
+                purpose="browser_report_download_direct_onsite_capture",
+                method="GET",
+                url=target_url,
+                headers=_HTML_FETCH_HEADERS,
+                timeout_seconds=request.settings.timeout_seconds,
+                response_policy=HttpAcquisitionResponsePolicy(
+                    schema_version="1.0",
+                    require_success_status=False,
+                    capture_text=True,
+                    capture_content_type_markers=("html", "xml"),
+                    max_body_bytes=_HTML_FETCH_MAX_BYTES,
+                    truncate_body=True,
+                ),
+                error_code="browser_download_html_fetch_failed",
+                error_message="Failed to fetch terminal HTML for on-site capture recovery",
+                allow_redirects=True,
+                context_fields={
+                    "normalized_url": normalized_url,
+                    "target_url": target_url,
+                },
+            ),
+            ctx=ctx,
+            requests_module=requests,
         )
-    except requests.RequestException as exc:
+    except AppError as exc:
         logger.info(
             log_event(
                 ctx,
@@ -1080,7 +1163,7 @@ def try_direct_onsite_capture(
                     "normalized_url": normalized_url,
                     "target_url": target_url,
                     "error_code": "browser_download_html_fetch_failed",
-                    "error_message": str(exc),
+                    "error_message": exc.message,
                 },
             )
         )
@@ -1095,19 +1178,20 @@ def try_direct_onsite_capture(
             fields={
                 "normalized_url": normalized_url,
                 "target_url": target_url,
-                "final_url": response.url,
+                "final_url": response.final_url,
                 "status_code": response.status_code,
                 "content_type": response.headers.get("content-type", ""),
+                "body_truncated": response.body_truncated,
             },
         )
     )
     if response.status_code >= 400 or ("html" not in content_type and "xml" not in content_type):
         return None
-    html = str(response.text or "")
+    html = str(response.text_body or "")
     if not _looks_like_onsite_capture_html(
         html,
         request=request,
-        final_url=str(response.url or target_url).strip() or target_url,
+        final_url=str(response.final_url or target_url).strip() or target_url,
     ):
         logger.info(
             log_event(
@@ -1126,7 +1210,7 @@ def try_direct_onsite_capture(
         return None
     capture_path = download_dir / "onsite_capture.html"
     capture_path.write_text(html, encoding="utf-8")
-    final_url = str(response.url or target_url).strip() or target_url
+    final_url = str(response.final_url or target_url).strip() or target_url
     final_title = _extract_html_title(html)
     terminal_excerpt = _extract_text_excerpt(html)
     response_result = BrowserReportDownloadResult(
@@ -1283,13 +1367,34 @@ def fetch_html_from_url(
         )
     )
     try:
-        response = requests.get(
-            page_url,
-            headers=_HTML_FETCH_HEADERS,
-            timeout=timeout_seconds,
-            allow_redirects=True,
+        response = execute_http_acquisition(
+            request=HttpAcquisitionRequest(
+                schema_version="1.0",
+                purpose="browser_report_download_terminal_html_fetch",
+                method="GET",
+                url=page_url,
+                headers=_HTML_FETCH_HEADERS,
+                timeout_seconds=timeout_seconds,
+                response_policy=HttpAcquisitionResponsePolicy(
+                    schema_version="1.0",
+                    require_success_status=False,
+                    capture_text=True,
+                    capture_content_type_markers=("html", "xml"),
+                    max_body_bytes=_HTML_FETCH_MAX_BYTES,
+                    truncate_body=True,
+                ),
+                error_code="browser_download_html_fetch_failed",
+                error_message="Failed to fetch terminal HTML for on-site capture recovery",
+                allow_redirects=True,
+                context_fields={
+                    "normalized_url": normalized_url,
+                    "page_url": page_url,
+                },
+            ),
+            ctx=ctx,
+            requests_module=requests,
         )
-    except requests.RequestException as exc:
+    except AppError as exc:
         raise AppError(
             code="browser_download_html_fetch_failed",
             message="Failed to fetch terminal HTML for on-site capture recovery",
@@ -1311,6 +1416,7 @@ def fetch_html_from_url(
                 "page_url": page_url,
                 "status_code": response.status_code,
                 "content_type": response.headers.get("content-type", ""),
+                "body_truncated": response.body_truncated,
             },
         )
     )
@@ -1337,7 +1443,7 @@ def fetch_html_from_url(
                 "content_type": response.headers.get("content-type", ""),
             },
         )
-    return response.text
+    return str(response.text_body or "")
 
 
 def resolve_downloaded_mime_type(
@@ -1442,61 +1548,57 @@ def download_pdf_from_url(
     )
     temp_path = destination_path.with_suffix(destination_path.suffix + ".part")
     try:
-        with requests.get(
-            pdf_url,
-            headers=_PDF_FETCH_HEADERS,
-            stream=True,
-            timeout=timeout_seconds,
-        ) as response:
-            content_type = str(response.headers.get("Content-Type", "")).strip()
-            logger.info(
-                log_event(
-                    ctx,
-                    role="service",
-                    event="browser_report_download_pdf_fetch_response",
-                    module=logger.name,
-                    fields={
-                        "normalized_url": normalized_url,
-                        "pdf_url": pdf_url,
-                        "status_code": response.status_code,
-                        "content_type": content_type,
-                    },
-                )
+        response = execute_http_acquisition(
+            request=HttpAcquisitionRequest(
+                schema_version="1.0",
+                purpose="browser_report_download_pdf_fetch",
+                method="GET",
+                url=pdf_url,
+                headers=_PDF_FETCH_HEADERS,
+                timeout_seconds=timeout_seconds,
+                response_policy=HttpAcquisitionResponsePolicy(
+                    schema_version="1.0",
+                    require_success_status=True,
+                    capture_text=False,
+                    stream_to_path=str(temp_path),
+                    max_stream_bytes=_PDF_FETCH_MAX_BYTES,
+                ),
+                error_code="browser_download_pdf_fetch_failed",
+                error_message="Failed to fetch the real PDF from the wrapper page",
+                context_fields={
+                    "normalized_url": normalized_url,
+                    "pdf_url": pdf_url,
+                    "destination_path": str(destination_path),
+                },
+                body_too_large_code="browser_download_pdf_fetch_failed",
+                body_too_large_message="Fetched PDF exceeded the configured size cap",
+                write_error_code="browser_download_pdf_write_failed",
+                write_error_message="Failed to write the fetched PDF to disk",
+            ),
+            ctx=ctx,
+            requests_module=requests,
+        )
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_pdf_fetch_response",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "pdf_url": pdf_url,
+                    "status_code": response.status_code,
+                    "content_type": response.content_type,
+                    "streamed_bytes": response.streamed_bytes,
+                    "used_pooled_session": response.used_pooled_session,
+                },
             )
-            response.raise_for_status()
-            with temp_path.open("wb") as handle:
-                for chunk in response.iter_content(chunk_size=64 * 1024):
-                    if chunk:
-                        handle.write(chunk)
+        )
         temp_path.replace(destination_path)
-    except requests.RequestException as exc:
+    except AppError as exc:
         if temp_path.exists():
             temp_path.unlink(missing_ok=True)
-        raise AppError(
-            code="browser_download_pdf_fetch_failed",
-            message="Failed to fetch the real PDF from the wrapper page",
-            cause=exc,
-            retryable=True,
-            context={
-                "normalized_url": normalized_url,
-                "pdf_url": pdf_url,
-                "destination_path": str(destination_path),
-            },
-        ) from exc
-    except OSError as exc:
-        if temp_path.exists():
-            temp_path.unlink(missing_ok=True)
-        raise AppError(
-            code="browser_download_pdf_write_failed",
-            message="Failed to write the fetched PDF to disk",
-            cause=exc,
-            retryable=True,
-            context={
-                "normalized_url": normalized_url,
-                "pdf_url": pdf_url,
-                "destination_path": str(destination_path),
-            },
-        ) from exc
+        raise exc
 
 
 def _should_try_direct_onsite_capture(

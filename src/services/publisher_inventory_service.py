@@ -15,6 +15,10 @@ from urllib.parse import urlsplit
 
 import requests
 
+from src.contracts.http_acquisition import (
+    HttpAcquisitionRequest,
+    HttpAcquisitionResponsePolicy,
+)
 from src.contracts.publisher_inventory import (
     PublisherInventoryLandingPageInspectionRequest,
     PublisherInventoryLandingPageInspectionResponse,
@@ -26,6 +30,7 @@ from src.contracts.publisher_inventory import (
     PublisherInventoryServiceResponse,
 )
 from src.contracts.run_context import RunContext
+from src.services._http_acquisition import execute_http_acquisition
 from src.services._publisher_inventory_discovery_activity import (
     _build_browser_route_summary,
     _candidate_url_signature,
@@ -65,6 +70,8 @@ from src.utils.logging import log_event
 logger = logging.getLogger("market_lense.publisher_inventory_service")
 
 _ROUTE_KINDS = {"http_parse", "browser_render"}
+_PREFLIGHT_HTML_MAX_BYTES = 1024 * 1024
+_HTTP_SUPPLEMENT_HTML_MAX_BYTES = 2 * 1024 * 1024
 
 
 @dataclass(frozen=True)
@@ -213,13 +220,31 @@ def _classify_preflight_scenario(
             notes="The source URL looks like a broad insight or resource hub.",
         )
     try:
-        response = requests.get(
-            normalized_url,
-            timeout=min(float(request.settings.http_timeout_seconds), 10.0),
-            headers=dict(HTTP_BROWSER_HEADERS),
-            allow_redirects=True,
+        response = execute_http_acquisition(
+            request=HttpAcquisitionRequest(
+                schema_version="1.0",
+                purpose="publisher_inventory_preflight_probe",
+                method="GET",
+                url=normalized_url,
+                headers=dict(HTTP_BROWSER_HEADERS),
+                timeout_seconds=min(float(request.settings.http_timeout_seconds), 10.0),
+                response_policy=HttpAcquisitionResponsePolicy(
+                    schema_version="1.0",
+                    require_success_status=False,
+                    capture_text=True,
+                    capture_content_type_markers=("html", "xml"),
+                    max_body_bytes=_PREFLIGHT_HTML_MAX_BYTES,
+                    truncate_body=True,
+                ),
+                error_code="publisher_inventory_preflight_failed",
+                error_message="Preflight classification could not fetch the source page",
+                allow_redirects=True,
+                context_fields={"normalized_url": normalized_url},
+            ),
+            ctx=ctx,
+            requests_module=requests,
         )
-    except requests.RequestException as exc:
+    except AppError as exc:
         marker = str(exc).casefold()
         if any(term in marker for term in ("captcha", "access denied", "just a moment", "timed out", "temporarily unavailable")):
             return _build_scenario_summary(
@@ -238,10 +263,9 @@ def _classify_preflight_scenario(
             browser_preferred=bool(request.settings.force_browser),
             notes="Preflight classification could not fetch the source page.",
         )
-    final_url = _normalize_absolute_url(str(response.url or normalized_url)) or normalized_url
-    content_type = str(response.headers.get("Content-Type", "") or "").casefold()
-    html = response.text or ""
-    response.close()
+    final_url = _normalize_absolute_url(str(response.final_url or normalized_url)) or normalized_url
+    content_type = str(response.content_type or "").casefold()
+    html = str(response.text_body or "")
     lower_html = html.casefold()
     title_start = lower_html.find("<title")
     title_text = ""
@@ -2606,14 +2630,35 @@ def _extract_browser_http_supplement_candidates(
             )
         )
         try:
-            response = requests.get(
-                request_url,
-                timeout=request.settings.http_timeout_seconds,
-                headers=headers,
+            response = execute_http_acquisition(
+                request=HttpAcquisitionRequest(
+                    schema_version="1.0",
+                    purpose="publisher_inventory_browser_http_supplement",
+                    method="GET",
+                    url=request_url,
+                    headers=headers,
+                    timeout_seconds=request.settings.http_timeout_seconds,
+                    response_policy=HttpAcquisitionResponsePolicy(
+                        schema_version="1.0",
+                        require_success_status=True,
+                        capture_text=True,
+                        capture_content_type_markers=("html", "xml"),
+                        max_body_bytes=_HTTP_SUPPLEMENT_HTML_MAX_BYTES,
+                        truncate_body=True,
+                    ),
+                    error_code="publisher_inventory_http_failed",
+                    error_message="Failed to fetch publisher inventory page via HTTP",
+                    context_fields={
+                        "page_url": page.page_url,
+                        "page_number": str(page.page_number),
+                        "request_url": request_url,
+                    },
+                ),
+                ctx=ctx,
+                requests_module=requests,
             )
-            response.raise_for_status()
             break
-        except requests.RequestException as exc:
+        except AppError as exc:
             logger.info(
                 log_event(
                     ctx,
@@ -2624,7 +2669,7 @@ def _extract_browser_http_supplement_candidates(
                         "page_url": page.page_url,
                         "page_number": page.page_number,
                         "request_url": request_url,
-                        "error": str(exc),
+                        "error": exc.message,
                     },
                 )
             )
@@ -2632,8 +2677,8 @@ def _extract_browser_http_supplement_candidates(
     if response is None:
         return []
 
-    final_page_url = _validate_and_normalize_url(str(response.url or page.page_url))
-    html = response.text or ""
+    final_page_url = _validate_and_normalize_url(str(response.final_url or page.page_url))
+    html = str(response.text_body or "")
     logger.info(
         log_event(
             ctx,
@@ -2646,6 +2691,7 @@ def _extract_browser_http_supplement_candidates(
                 "final_page_url": final_page_url,
                 "status_code": response.status_code,
                 "html_length": len(html),
+                "body_truncated": response.body_truncated,
             },
         )
     )

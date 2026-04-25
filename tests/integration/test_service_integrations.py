@@ -19,6 +19,10 @@ from src.contracts.file_cache import (
     FileCacheMd5SidecarWriteRequest,
 )
 from src.contracts.drive import DriveListRequest
+from src.contracts.http_acquisition import (
+    HttpAcquisitionRequest,
+    HttpAcquisitionResponsePolicy,
+)
 from src.contracts.llm import LLMClientPolicy
 from src.contracts.openai import (
     OpenAIJSONPromptRequest,
@@ -41,6 +45,7 @@ from src.contracts.wordpress import (
 from src.services import (
     drive_service,
     file_cache_service,
+    _http_acquisition as http_acquisition_service,
     llm_service,
     openai_service,
     pdf_service,
@@ -119,6 +124,56 @@ def test_file_cache_service_roundtrips_local_sidecar(tmp_path):
     assert write_response.written is True
     assert resolve_response.hit is True
     assert resolve_response.resolved_md5 == "0123456789abcdef0123456789abcdef"
+
+
+class _HttpAcquisitionStubHandler(BaseHTTPRequestHandler):
+    def do_GET(self) -> None:  # noqa: N802
+        body = b"<html><body><h1>Integration HTTP</h1></body></html>"
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, format: str, *args) -> None:  # noqa: A003
+        return
+
+
+@pytest.mark.integration
+def test_http_acquisition_service_against_local_stub():
+    http_acquisition_service._SESSION_POOL._sessions.clear()
+    server = HTTPServer(("127.0.0.1", 0), _HttpAcquisitionStubHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        response = http_acquisition_service.execute_http_acquisition(
+            request=HttpAcquisitionRequest(
+                schema_version="1.0",
+                purpose="http_acquisition_integration",
+                method="GET",
+                url=f"http://127.0.0.1:{server.server_port}/report",
+                headers={"Accept": "text/html"},
+                timeout_seconds=5.0,
+                response_policy=HttpAcquisitionResponsePolicy(
+                    schema_version="1.0",
+                    require_success_status=True,
+                    capture_text=True,
+                    capture_content_type_markers=("html",),
+                    max_body_bytes=4096,
+                ),
+                error_code="http_acquisition_integration_failed",
+                error_message="Integration HTTP acquisition failed",
+            ),
+            ctx=_ctx(),
+        )
+
+        assert response.status_code == 200
+        assert response.used_pooled_session is True
+        assert "Integration HTTP" in str(response.text_body or "")
+    finally:
+        server.shutdown()
+        thread.join(timeout=2)
+        server.server_close()
 
 
 class _WordPressStubHandler(BaseHTTPRequestHandler):

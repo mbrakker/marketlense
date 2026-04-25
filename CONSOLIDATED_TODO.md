@@ -231,16 +231,6 @@ Suggested priority order:
     - Retention policy controls sensitive or large artifacts.
     - Triage playbook uses the bundle consistently.
 
-- **Title:** Introduce shared HTTP acquisition executor with session pooling and response policy [Impact: 4/5, Effort: 4/5]
-  - Explanation: Browser-download and publisher-inventory HTTP paths issue repeated raw `requests.get` calls with similar timeout, header, redirect, error, and capture handling. Add one internal HTTP acquisition executor per acquisition boundary with pooled sessions, optional HEAD/range probes, response-size caps, retry classification, and sanitized response metadata.
-  - Pros: Faster repeated HTTP acquisition, fewer duplicated request branches, clearer error taxonomy.
-  - Cons: Must preserve route-specific behavior and avoid hiding useful failure evidence.
-  - Acceptance Criteria:
-    - HTTP acquisition calls use a shared executor/session helper inside the acquisition service boundary.
-    - Executor logs request metadata, response metadata, byte caps, redirect chain, and error taxonomy.
-    - Tests cover timeout, redirect, oversized response, partial download, retryable failure, and permanent failure cases.
-    - Benchmark shows reduced connection overhead on repeated publisher/report acquisition.
-
 - **Title:** Externalize publisher-inventory browser scripts and traversal state [Impact: 3/5, Effort: 4/5]
   - Explanation: `src/services/publisher_inventory_service.py` embeds large JavaScript snippets with repeated selector, visibility, and normalization helpers. Move browser action/state extraction into named internal script builders or assets, reuse one helper bundle, and model traversal-state updates through explicit typed helpers.
   - Pros: Smaller service surface, less duplicated browser logic, easier targeted tests.
