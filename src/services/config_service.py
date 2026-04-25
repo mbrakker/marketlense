@@ -2032,14 +2032,14 @@ def load_publish_settings(
     if not app_password and not bearer_token:
         missing.append("env:WP_APP_PASSWORD|WP_BEARER_TOKEN")
 
-    ssl_verify_raw = wp_cfg.get("ssl_verify")
+    ssl_verify_raw = _env_value("WP_SSL_VERIFY")
     if _is_missing(ssl_verify_raw):
-        ssl_verify_raw = _env_value("WP_SSL_VERIFY")
+        ssl_verify_raw = wp_cfg.get("ssl_verify")
     ssl_verify = _to_bool(ssl_verify_raw, True)
 
-    ca_bundle_path_raw = wp_cfg.get("ca_bundle_path")
+    ca_bundle_path_raw = _env_value("WP_CA_BUNDLE_PATH")
     if _is_missing(ca_bundle_path_raw):
-        ca_bundle_path_raw = _env_value("WP_CA_BUNDLE_PATH")
+        ca_bundle_path_raw = wp_cfg.get("ca_bundle_path")
     ca_bundle_path = _resolve_optional_path(
         ca_bundle_path_raw,
         base_path=config_path.parent,

@@ -128,7 +128,8 @@ def run_publish(
     max_n = limit if limit is not None else len(list_resp.html_paths)
 
     outcomes: List[PublishOutcome] = []
-    processed = 0
+    attempted = 0
+    published = 0
     base_url = settings.wp.site_url.rstrip("/")
     auth_header = build_auth_header(
         username=settings.wp.username,
@@ -152,8 +153,9 @@ def run_publish(
         html_file_id_map = {}
 
     for html_path in list_resp.html_paths:
-        if processed >= max_n:
+        if attempted >= max_n:
             break
+        attempted += 1
 
         file_ctx = child_context(root_ctx, task_id=html_path)
         preloaded_html: Optional[str] = None
@@ -458,7 +460,7 @@ def run_publish(
         if outcome is not None:
             outcomes.append(outcome)
             if outcome.status == "published":
-                processed += 1
+                published += 1
             continue
         logger.info(
             log_event(
@@ -487,7 +489,7 @@ def run_publish(
             role="orchestrator",
             event="publish_complete",
             module=logger.name,
-            fields={"published": processed},
+            fields={"attempted": attempted, "published": published},
         )
     )
     return outcomes

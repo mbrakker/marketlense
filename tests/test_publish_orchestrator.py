@@ -124,6 +124,35 @@ def test_publish_runs_when_processed(
     assert publish_row.wp_post_url == "https://example.com/post/10"
 
 
+def test_publish_limit_applies_to_attempted_items_when_first_item_errors(
+    publish_settings_factory, run_context, wordpress_http
+) -> None:
+    settings = publish_settings_factory(validation_policy="warn")
+    _write_html(settings.output_dir, "first.html", "Drive fileId: first123")
+    _write_html(settings.output_dir, "second.html", "Drive fileId: second123")
+    _record_processed(settings.state_db, "first123", run_context)
+    _record_processed(settings.state_db, "second123", run_context)
+    wordpress_http.add(
+        "GET",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        RuntimeError("ssl certificate verify failed"),
+    )
+
+    results = orch.run_publish(settings, limit=1)
+
+    assert len(results) == 1
+    assert results[0].file_id == "first123"
+    assert results[0].status == "error"
+    assert (
+        len(
+            wordpress_http.calls_for(
+                "GET", "https://example.com/wp-json/wp/v2/ml_report"
+            )
+        )
+        == 1
+    )
+
+
 def test_publish_blocks_when_validation_fails(
     publish_settings_factory, run_context, wordpress_http
 ) -> None:

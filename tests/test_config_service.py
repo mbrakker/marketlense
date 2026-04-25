@@ -628,6 +628,9 @@ class TestConfigService(unittest.TestCase):
     def test_publish_settings_ssl_verify_env_override(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(tmp_dir, include_publish=True)
+            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
+            cfg_data["publish"]["wp"]["ssl_verify"] = True
+            Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
             env = {
                 "WP_SITE_URL": "https://example.com",
                 "WP_APP_PASSWORD": "app-pass",
@@ -656,6 +659,7 @@ class TestConfigService(unittest.TestCase):
                 "WP_SITE_URL": "https://example.com",
                 "WP_APP_PASSWORD": "app-pass",
                 "WP_BEARER_TOKEN": "",
+                "WP_SSL_VERIFY": "true",
             }
             with patch.dict(os.environ, env, clear=True):
                 with self.assertRaises(RuntimeError) as ctx:

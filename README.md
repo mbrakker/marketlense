@@ -468,7 +468,7 @@ This repo currently publishes into core WordPress posts with `publish.wp.post_ty
 
 The checked-in `publish.wp.site_url` value targets `https://marketlense.medianewsonline.com` so publish flows and follow-on tooling stop reinforcing the legacy `http` scheme.
 
-If root config disables WordPress TLS verification (`publish.wp.ssl_verify: false`), the Python publish service suppresses `urllib3` insecure-request warnings for those calls, but the HTTPS connection remains untrusted until the host certificate chain is fixed. The WordPress shell/Python provisioning scripts also honor `WP_SSL_VERIFY` and `WP_CA_BUNDLE_PATH`, so hosted admin/provisioning runs can match the same TLS policy as publish flows.
+If root config disables WordPress TLS verification (`publish.wp.ssl_verify: false`), the Python publish service suppresses `urllib3` insecure-request warnings for those calls, but the HTTPS connection remains untrusted until the host certificate chain is fixed. `WP_SSL_VERIFY` and `WP_CA_BUNDLE_PATH` override the checked-in publish TLS settings for the Python publish path, and the WordPress shell/Python provisioning scripts honor the same variables so hosted admin/provisioning runs can match publish flows.
 
 When the hosting layer blocks direct `/wp-content/uploads/...` access, the plugin serves attachments through a frontend proxy route (`/?ml_media=<attachment_id>`) and rewrites frontend digest content/thumbnail URLs to that proxy so uploaded media still renders publicly.
 
@@ -1077,7 +1077,7 @@ Operational note:
 
 - Common codes: `wp_post_lookup_redirected`, `wp_post_client_error`, `wp_post_server_error`, `wp_media_client_error`, `wp_media_server_error`, plus matching taxonomy/tag lookup/create errors.
 - Typical fix: confirm `WP_SITE_URL`, `WP_USERNAME`, and `WP_APP_PASSWORD` or `WP_BEARER_TOKEN` are correct; ensure the site is serving the expected REST root without redirect loops; and fix the server certificate chain before relying on `publish.wp.ssl_verify=false`.
-- TLS-specific controls: `WP_SSL_VERIFY` and `WP_CA_BUNDLE_PATH` are honored by the shell/Python provisioning scripts, and `publish.wp.ssl_verify` / `publish.wp.ca_bundle_path` govern the Python publish path.
+- TLS-specific controls: `WP_SSL_VERIFY` and `WP_CA_BUNDLE_PATH` are honored by the shell/Python provisioning scripts and override `publish.wp.ssl_verify` / `publish.wp.ca_bundle_path` for the Python publish path.
 - Extra signal: WordPress 5xx and redirect failures log bounded response headers/body excerpts to make REST misroutes and hosting issues visible.
 
 ### Smoke Test Skipped
