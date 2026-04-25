@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 import os
 import time
@@ -41,17 +40,12 @@ from src.services.drive_service import (
     get_file_metadata,
     list_pdfs,
 )
-from src.services.file_service import (
-    delete_file,
-    file_stat,
-    read_text,
-    write_bytes,
+from src.services.file_cache_service import (
+    resolve_md5_sidecar,
+    write_md5_sidecar,
 )
-from src.contracts.files import (
-    FileStatRequest,
-    ReadTextRequest,
-    WriteBytesRequest,
-)
+from src.services.file_service import delete_file, file_stat
+from src.contracts.files import FileStatRequest
 from src.services.lock_service import acquire_lock, release_lock
 from src.services.report_store_service import (
     check_report_db_access,
@@ -82,8 +76,6 @@ from src.utils.path_utils import safe_pdf_name
 
 logger = logging.getLogger("market_lense.ingest_orchestrator")
 DB_ACCESS_TIMEOUT_SECONDS = 0.0
-MD5_SIDECAR_SUFFIX = ".md5.json"
-MD5_SIDECAR_SCHEMA = "1.0"
 EOF_RETRY_LIMIT = 1
 STATE_PREFILTER_BATCH_SIZE = 200
 
@@ -170,101 +162,6 @@ def _cache_pdf_path(settings: IngestSettings, file: DriveFile) -> str:
     return str(Path(settings.cache_dir) / cache_name)
 
 
-def _md5_sidecar_path(cache_path: str) -> str:
-    return f"{cache_path}{MD5_SIDECAR_SUFFIX}"
-
-
-def _normalize_mtime(value: Optional[float]) -> Optional[int]:
-    if value is None:
-        return None
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None
-
-
-def _load_md5_sidecar(path: str, file_id: str, ctx: RunContext) -> Optional[dict]:
-    try:
-        resp = read_text(ReadTextRequest(schema_version="1.0", path=path), ctx)
-    except AppError as exc:
-        if exc.code == "file_not_found":
-            logger.info(
-                log_event(
-                    ctx,
-                    role="orchestrator",
-                    event="md5_sidecar_missing",
-                    module=logger.name,
-                    fields={"file_id": file_id, "path": path},
-                )
-            )
-            return None
-        logger.info(
-            log_event(
-                ctx,
-                role="orchestrator",
-                event="md5_sidecar_read_failed",
-                module=logger.name,
-                fields={"file_id": file_id, "path": path, "error": exc.message},
-            )
-        )
-        return None
-    try:
-        payload = json.loads(resp.content)
-    except json.JSONDecodeError as exc:
-        logger.info(
-            log_event(
-                ctx,
-                role="orchestrator",
-                event="md5_sidecar_invalid_json",
-                module=logger.name,
-                fields={"file_id": file_id, "path": path, "error": str(exc)},
-            )
-        )
-        return None
-    if not isinstance(payload, dict):
-        logger.info(
-            log_event(
-                ctx,
-                role="orchestrator",
-                event="md5_sidecar_invalid_payload",
-                module=logger.name,
-                fields={"file_id": file_id, "path": path},
-            )
-        )
-        return None
-    logger.info(
-        log_event(
-            ctx,
-            role="orchestrator",
-            event="md5_sidecar_loaded",
-            module=logger.name,
-            fields={"file_id": file_id, "path": path},
-        )
-    )
-    return payload
-
-
-def _sidecar_md5_for_stat(
-    payload: dict, size_bytes: Optional[int], mtime_utc: Optional[float]
-) -> Optional[str]:
-    if not payload:
-        return None
-    md5 = str(payload.get("md5") or "").strip()
-    if not md5:
-        return None
-    try:
-        sidecar_size = int(payload.get("size_bytes"))
-    except (TypeError, ValueError):
-        return None
-    sidecar_mtime = _normalize_mtime(payload.get("mtime_utc"))
-    stat_mtime = _normalize_mtime(mtime_utc)
-    if size_bytes is None or sidecar_size != size_bytes:
-        return None
-    if sidecar_mtime is None or stat_mtime is None or sidecar_mtime != stat_mtime:
-        return None
-    return md5
-
-
 def _ensure_file_name(
     file: DriveFile, settings: IngestSettings, ctx: RunContext
 ) -> DriveFile:
@@ -306,42 +203,6 @@ def _ensure_file_name(
             modified_time=file.modified_time,
             md5_checksum=file.md5_checksum,
         )
-
-
-def _write_md5_sidecar(
-    path: str,
-    file: DriveFile,
-    md5: Optional[str],
-    size_bytes: Optional[int],
-    mtime_utc: Optional[float],
-    ctx: RunContext,
-) -> None:
-    if not md5 or size_bytes is None or mtime_utc is None:
-        return
-    payload = {
-        "schema_version": MD5_SIDECAR_SCHEMA,
-        "file_id": file.file_id,
-        "name": file.name or "",
-        "md5": md5,
-        "size_bytes": int(size_bytes),
-        "mtime_utc": _normalize_mtime(mtime_utc),
-    }
-    content = json.dumps(payload, ensure_ascii=True)
-    write_bytes(
-        WriteBytesRequest(
-            schema_version="1.0", path=path, content=content.encode("utf-8")
-        ),
-        ctx,
-    )
-    logger.info(
-        log_event(
-            ctx,
-            role="orchestrator",
-            event="md5_sidecar_written",
-            module=logger.name,
-            fields={"file_id": file.file_id, "path": path, "size_bytes": size_bytes},
-        )
-    )
 
 
 def _existing_report_html(
@@ -422,11 +283,9 @@ def _process_file(
     dependencies = IngestFileDependencies(
         should_skip=_should_skip,
         cache_pdf_path=_cache_pdf_path,
-        md5_sidecar_path=_md5_sidecar_path,
-        load_md5_sidecar=_load_md5_sidecar,
-        sidecar_md5_for_stat=_sidecar_md5_for_stat,
+        resolve_md5_sidecar=resolve_md5_sidecar,
         ensure_file_name=_ensure_file_name,
-        write_md5_sidecar=_write_md5_sidecar,
+        write_md5_sidecar=write_md5_sidecar,
         existing_report_html=_existing_report_html,
         run_step_with_retry=_run_step_with_retry,
         file_stat=file_stat,

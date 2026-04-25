@@ -6,6 +6,10 @@ from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
+from src.contracts.file_cache import (
+    FileCacheMd5SidecarResolveResponse,
+    FileCacheMd5SidecarWriteResponse,
+)
 from src.contracts.drive import DriveDownloadToPathResponse, DriveFile
 from src.contracts.pdf_utils import PdfEofCheckResponse
 from src.orchestrators import ingest_orchestrator as orch
@@ -127,11 +131,25 @@ def test_retry_on_retryable_app_error(
             cache_pdf_path=lambda settings_obj, drive: str(
                 Path(settings_obj.cache_dir) / f"{drive.file_id}.pdf"
             ),
-            md5_sidecar_path=lambda path: f"{path}.md5.json",
-            load_md5_sidecar=lambda *_args, **_kwargs: None,
-            sidecar_md5_for_stat=lambda *_args, **_kwargs: None,
+            resolve_md5_sidecar=lambda request, _ctx: FileCacheMd5SidecarResolveResponse(
+                schema_version="1.0",
+                cache_path=request.cache_path,
+                sidecar_path=f"{request.cache_path}.md5.json",
+                sidecar_exists=False,
+                record=None,
+                resolved_md5=None,
+                hit=False,
+                reason="missing",
+            ),
             ensure_file_name=lambda current_file, *_args, **_kwargs: current_file,
-            write_md5_sidecar=lambda *_args, **_kwargs: None,
+            write_md5_sidecar=lambda request, _ctx: FileCacheMd5SidecarWriteResponse(
+                schema_version="1.0",
+                cache_path=request.cache_path,
+                sidecar_path=f"{request.cache_path}.md5.json",
+                record=None,
+                written=False,
+                reason="skipped",
+            ),
             existing_report_html=lambda *_args, **_kwargs: None,
             run_step_with_retry=_run_step_with_retry,
             file_stat=_file_stat,

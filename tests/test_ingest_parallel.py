@@ -6,6 +6,10 @@ from pathlib import Path
 from threading import Barrier, Lock, get_ident
 from types import SimpleNamespace
 
+from src.contracts.file_cache import (
+    FileCacheMd5SidecarResolveResponse,
+    FileCacheMd5SidecarWriteResponse,
+)
 from src.contracts.drive import DriveDownloadToPathResponse, DriveFile
 from src.contracts.ingest import IngestOutcome
 from src.contracts.state import StateProcessedListRequest
@@ -58,11 +62,25 @@ def _make_real_process_file(
             cache_pdf_path=lambda current_settings, current_file: str(
                 Path(current_settings.cache_dir) / f"{current_file.file_id}.pdf"
             ),
-            md5_sidecar_path=lambda cache_path: f"{cache_path}.md5.json",
-            load_md5_sidecar=lambda *_args: None,
-            sidecar_md5_for_stat=lambda *_args: None,
+            resolve_md5_sidecar=lambda request, _ctx: FileCacheMd5SidecarResolveResponse(
+                schema_version="1.0",
+                cache_path=request.cache_path,
+                sidecar_path=f"{request.cache_path}.md5.json",
+                sidecar_exists=False,
+                record=None,
+                resolved_md5=None,
+                hit=False,
+                reason="missing",
+            ),
             ensure_file_name=lambda current_file, _settings, _ctx: current_file,
-            write_md5_sidecar=lambda *_args: None,
+            write_md5_sidecar=lambda request, _ctx: FileCacheMd5SidecarWriteResponse(
+                schema_version="1.0",
+                cache_path=request.cache_path,
+                sidecar_path=f"{request.cache_path}.md5.json",
+                record=None,
+                written=False,
+                reason="skipped",
+            ),
             existing_report_html=lambda *_args: None,
             run_step_with_retry=lambda _step, _ctx, operation, _retries: operation(),
             file_stat=file_stat,

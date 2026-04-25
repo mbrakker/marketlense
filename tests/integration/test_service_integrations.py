@@ -14,6 +14,10 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - depends on PyMuPDF packaging alias
     import pymupdf as fitz
 
+from src.contracts.file_cache import (
+    FileCacheMd5SidecarResolveRequest,
+    FileCacheMd5SidecarWriteRequest,
+)
 from src.contracts.drive import DriveListRequest
 from src.contracts.llm import LLMClientPolicy
 from src.contracts.openai import (
@@ -36,6 +40,7 @@ from src.contracts.wordpress import (
 )
 from src.services import (
     drive_service,
+    file_cache_service,
     llm_service,
     openai_service,
     pdf_service,
@@ -80,6 +85,40 @@ def test_pdf_service_extracts_local_pdf(tmp_path):
     assert info.page_count == 1
     assert extracted.pages_extracted == 1
     assert "Integration PDF text 2026" in extracted.text
+
+
+@pytest.mark.integration
+def test_file_cache_service_roundtrips_local_sidecar(tmp_path):
+    cache_path = tmp_path / "sample.pdf"
+    cache_path.write_bytes(b"%PDF-1.4\n%%EOF\n")
+    stat = cache_path.stat()
+
+    write_response = file_cache_service.write_md5_sidecar(
+        FileCacheMd5SidecarWriteRequest(
+            schema_version="1.0",
+            cache_path=str(cache_path),
+            file_id="integration-file",
+            file_name="sample.pdf",
+            md5="0123456789abcdef0123456789abcdef",
+            size_bytes=stat.st_size,
+            mtime_utc=stat.st_mtime,
+        ),
+        _ctx(),
+    )
+    resolve_response = file_cache_service.resolve_md5_sidecar(
+        FileCacheMd5SidecarResolveRequest(
+            schema_version="1.0",
+            cache_path=str(cache_path),
+            file_id="integration-file",
+            size_bytes=stat.st_size,
+            mtime_utc=stat.st_mtime,
+        ),
+        _ctx(),
+    )
+
+    assert write_response.written is True
+    assert resolve_response.hit is True
+    assert resolve_response.resolved_md5 == "0123456789abcdef0123456789abcdef"
 
 
 class _WordPressStubHandler(BaseHTTPRequestHandler):

@@ -4,6 +4,12 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
+from src.contracts.file_cache import (
+    FileCacheMd5SidecarResolveRequest,
+    FileCacheMd5SidecarResolveResponse,
+    FileCacheMd5SidecarWriteRequest,
+    FileCacheMd5SidecarWriteResponse,
+)
 from src.contracts.drive import DriveDownloadToPathRequest, DriveFile
 from src.contracts.files import DeleteFileRequest, FileStatRequest
 from src.contracts.ingest import IngestOutcome, IngestSettings
@@ -17,15 +23,14 @@ from src.utils.logging import child_context, log_event
 class IngestFileDependencies:
     should_skip: Callable[[DriveFile, Optional[str], str, RunContext], bool]
     cache_pdf_path: Callable[[IngestSettings, DriveFile], str]
-    md5_sidecar_path: Callable[[str], str]
-    load_md5_sidecar: Callable[[str, str, RunContext], Optional[dict]]
-    sidecar_md5_for_stat: Callable[
-        [dict, Optional[int], Optional[float]], Optional[str]
+    resolve_md5_sidecar: Callable[
+        [FileCacheMd5SidecarResolveRequest, RunContext],
+        FileCacheMd5SidecarResolveResponse,
     ]
     ensure_file_name: Callable[[DriveFile, IngestSettings, RunContext], DriveFile]
     write_md5_sidecar: Callable[
-        [str, DriveFile, Optional[str], Optional[int], Optional[float], RunContext],
-        None,
+        [FileCacheMd5SidecarWriteRequest, RunContext],
+        FileCacheMd5SidecarWriteResponse,
     ]
     existing_report_html: Callable[
         [DriveFile, str, IngestSettings, RunContext], Optional[str]
@@ -55,7 +60,6 @@ class _IngestFileRuntime:
     file: DriveFile
     display_name: str
     cache_path: str
-    sidecar_path: str
     md5: str | None
     drive_md5: str | None
     state_checked_md5: str | None
@@ -174,20 +178,17 @@ def _resolve_cached_pdf(
         )
         return False
 
-    sidecar_payload = dependencies.load_md5_sidecar(
-        runtime.sidecar_path,
-        runtime.file.file_id,
+    sidecar_response = dependencies.resolve_md5_sidecar(
+        FileCacheMd5SidecarResolveRequest(
+            schema_version="1.0",
+            cache_path=runtime.cache_path,
+            file_id=runtime.file.file_id,
+            size_bytes=stat_resp.size_bytes,
+            mtime_utc=stat_resp.mtime_utc,
+        ),
         file_ctx,
     )
-    runtime.md5 = (
-        dependencies.sidecar_md5_for_stat(
-            sidecar_payload,
-            stat_resp.size_bytes,
-            stat_resp.mtime_utc,
-        )
-        if sidecar_payload is not None
-        else None
-    )
+    runtime.md5 = sidecar_response.resolved_md5
     if runtime.md5:
         sidecar_used = True
         logger.info(
@@ -198,13 +199,13 @@ def _resolve_cached_pdf(
                 module=logger_name,
                 fields={
                     "file_id": runtime.file.file_id,
-                    "path": runtime.sidecar_path,
+                    "path": sidecar_response.sidecar_path,
                     "md5": runtime.md5,
                 },
             )
         )
     else:
-        if sidecar_payload:
+        if sidecar_response.sidecar_exists:
             logger.info(
                 log_event(
                     file_ctx,
@@ -213,7 +214,8 @@ def _resolve_cached_pdf(
                     module=logger_name,
                     fields={
                         "file_id": runtime.file.file_id,
-                        "path": runtime.sidecar_path,
+                        "path": sidecar_response.sidecar_path,
+                        "reason": sidecar_response.reason,
                     },
                 )
             )
@@ -228,11 +230,15 @@ def _resolve_cached_pdf(
         runtime.md5 = stat_resp.md5
         if runtime.md5:
             dependencies.write_md5_sidecar(
-                runtime.sidecar_path,
-                runtime.file,
-                runtime.md5,
-                stat_resp.size_bytes,
-                stat_resp.mtime_utc,
+                FileCacheMd5SidecarWriteRequest(
+                    schema_version="1.0",
+                    cache_path=runtime.cache_path,
+                    file_id=runtime.file.file_id,
+                    file_name=runtime.file.name,
+                    md5=runtime.md5,
+                    size_bytes=stat_resp.size_bytes,
+                    mtime_utc=stat_resp.mtime_utc,
+                ),
                 file_ctx,
             )
     if runtime.drive_md5 and runtime.md5:
@@ -336,11 +342,15 @@ def _download_pdf_for_processing(
         file_ctx,
     )
     dependencies.write_md5_sidecar(
-        runtime.sidecar_path,
-        runtime.file,
-        runtime.md5,
-        stat_resp.size_bytes,
-        stat_resp.mtime_utc,
+        FileCacheMd5SidecarWriteRequest(
+            schema_version="1.0",
+            cache_path=runtime.cache_path,
+            file_id=runtime.file.file_id,
+            file_name=runtime.file.name,
+            md5=runtime.md5,
+            size_bytes=stat_resp.size_bytes,
+            mtime_utc=stat_resp.mtime_utc,
+        ),
         file_ctx,
     )
 
@@ -367,11 +377,15 @@ def _ensure_runtime_md5(
         return
     runtime.md5 = md5_stat.md5
     dependencies.write_md5_sidecar(
-        runtime.sidecar_path,
-        runtime.file,
-        runtime.md5,
-        md5_stat.size_bytes,
-        md5_stat.mtime_utc,
+        FileCacheMd5SidecarWriteRequest(
+            schema_version="1.0",
+            cache_path=runtime.cache_path,
+            file_id=runtime.file.file_id,
+            file_name=runtime.file.name,
+            md5=runtime.md5,
+            size_bytes=md5_stat.size_bytes,
+            mtime_utc=md5_stat.mtime_utc,
+        ),
         file_ctx,
     )
     logging.getLogger(logger_name).info(
@@ -404,9 +418,6 @@ def run_ingest_file(
         file=file,
         display_name=file.name or file.file_id,
         cache_path=dependencies.cache_pdf_path(settings, file),
-        sidecar_path=dependencies.md5_sidecar_path(
-            dependencies.cache_pdf_path(settings, file)
-        ),
         md5=None,
         drive_md5=file.md5_checksum.strip() if file.md5_checksum else None,
         state_checked_md5=file.md5_checksum.strip() if file.md5_checksum else None,
@@ -508,13 +519,13 @@ def run_ingest_file(
         if not settings.vector_store_keep:
             logger.info(
                 log_event(
-                file_ctx,
-                role="orchestrator",
-                event="report_cache_disabled_vector_store_keep_false",
-                module=logger_name,
-                fields={"file_id": runtime.file.file_id},
+                    file_ctx,
+                    role="orchestrator",
+                    event="report_cache_disabled_vector_store_keep_false",
+                    module=logger_name,
+                    fields={"file_id": runtime.file.file_id},
+                )
             )
-        )
 
         outcome = dependencies.run_step_with_retry(
             "generate_report",

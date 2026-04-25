@@ -324,15 +324,6 @@ Suggested priority order:
     - Polling/backoff lives in orchestrators or retry helpers with structured logging.
     - Vector-store timeout/failure behavior is preserved by pipeline tests.
 
-- **Title:** Promote MD5 sidecar handling into a dedicated typed file-cache service [Impact: 3/5, Effort: 3/5]
-  - Explanation: `src/orchestrators/ingest_orchestrator.py` owns sidecar path construction, JSON parsing, stat reconciliation, and fallback logic. Move it behind a service/contract pair so ingest orchestration consumes typed cache answers.
-  - Pros: Smaller orchestrator surface and fewer ad hoc cache behaviors.
-  - Cons: Requires moving a well-tested but intertwined path across layers.
-  - Acceptance Criteria:
-    - Sidecar pathing, load, validation, and write logic live behind a service boundary.
-    - Ingest orchestration no longer parses sidecar JSON directly.
-    - Existing cache-hit/cache-miss behavior is preserved by tests.
-
 - **Title:** Add dynamic concurrency controller with capacity-aware publisher fairness [Impact: 5/5, Effort: 4/5]
   - Explanation: Merge dynamic concurrency and fair scheduling. Adjust concurrency based on queue depth, failure budget, cost budget, browser capacity, and publisher cohort fairness.
   - Pros: Better throughput stability, less starvation, safer burst handling.

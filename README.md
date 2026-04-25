@@ -574,8 +574,8 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
 
 4. **Download + integrity check**
    - Cache paths are keyed by `file_id` (not file name) under `cache_dir`.
-   - `file_service.file_stat(...)` reads exists/size/mtime and consults a `.md5.json` sidecar to avoid re-hashing cached files.
-   - Before report generation, if md5 is still missing, ingest computes md5 from the cached PDF and writes/refreshes the md5 sidecar so md5-gated caches remain eligible.
+   - `file_service.file_stat(...)` reads exists/size/mtime (and can hash on demand), while `file_cache_service.resolve_md5_sidecar(...)` owns `.md5.json` sidecar pathing, load/validation, and stat reconciliation so ingest orchestration consumes typed cache answers instead of parsing sidecar JSON directly.
+   - Before report generation, if md5 is still missing, ingest computes md5 from the cached PDF and `file_cache_service.write_md5_sidecar(...)` writes or refreshes the sidecar so md5-gated caches remain eligible.
    - Cache hits skip EOF checks; if Drive provides `md5Checksum`, it is compared against cached md5.
    - Drive API clients are cached per thread to keep googleapiclient/httplib2 usage thread-safe when `ingest.worker_limit > 1`.
    - `drive_service.download_pdf_to_path(...)` streams PDF bytes directly to disk while computing md5.

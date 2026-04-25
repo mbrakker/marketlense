@@ -11,6 +11,10 @@ import pytest
 from pypdf import PdfWriter
 
 from src.contracts.drive import DriveFile
+from src.contracts.file_cache import (
+    FileCacheMd5SidecarResolveResponse,
+    FileCacheMd5SidecarWriteResponse,
+)
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.context_category_fit import (
     CategoryFitCandidate,
@@ -250,11 +254,25 @@ def _make_ingest_process(*, generate_report):
             cache_pdf_path=lambda current_settings, current_file: str(
                 Path(current_settings.cache_dir) / f"{current_file.file_id}.pdf"
             ),
-            md5_sidecar_path=lambda cache_path: f"{cache_path}.md5.json",
-            load_md5_sidecar=lambda *_args: None,
-            sidecar_md5_for_stat=lambda *_args: None,
+            resolve_md5_sidecar=lambda request, _ctx: FileCacheMd5SidecarResolveResponse(
+                schema_version="1.0",
+                cache_path=request.cache_path,
+                sidecar_path=f"{request.cache_path}.md5.json",
+                sidecar_exists=False,
+                record=None,
+                resolved_md5=None,
+                hit=False,
+                reason="missing",
+            ),
             ensure_file_name=lambda current_file, _settings, _ctx: current_file,
-            write_md5_sidecar=lambda *_args: None,
+            write_md5_sidecar=lambda request, _ctx: FileCacheMd5SidecarWriteResponse(
+                schema_version="1.0",
+                cache_path=request.cache_path,
+                sidecar_path=f"{request.cache_path}.md5.json",
+                record=None,
+                written=False,
+                reason="skipped",
+            ),
             existing_report_html=lambda *_args: None,
             run_step_with_retry=lambda _step, _ctx, operation, _retries: operation(),
             file_stat=file_stat,

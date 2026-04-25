@@ -3,6 +3,10 @@ from __future__ import annotations
 from dataclasses import replace
 from types import SimpleNamespace
 
+from src.contracts.file_cache import (
+    FileCacheMd5SidecarResolveResponse,
+    FileCacheMd5SidecarWriteResponse,
+)
 from src.contracts.drive import DriveDownloadToPathResponse, DriveFile
 from src.contracts.files import DeleteFileResponse, FileStatResponse
 from src.contracts.ingest import IngestOutcome
@@ -40,9 +44,16 @@ def _base_dependencies(
     return IngestFileDependencies(
         should_skip=lambda *_args, **_kwargs: False,
         cache_pdf_path=lambda settings, file: f"{settings.cache_dir}/{file.file_id}.pdf",
-        md5_sidecar_path=lambda cache_path: f"{cache_path}.md5.json",
-        load_md5_sidecar=lambda *_args, **_kwargs: None,
-        sidecar_md5_for_stat=lambda *_args, **_kwargs: None,
+        resolve_md5_sidecar=lambda request, _ctx: FileCacheMd5SidecarResolveResponse(
+            schema_version="1.0",
+            cache_path=request.cache_path,
+            sidecar_path=f"{request.cache_path}.md5.json",
+            sidecar_exists=False,
+            record=None,
+            resolved_md5=None,
+            hit=False,
+            reason="missing",
+        ),
         ensure_file_name=lambda file, _settings, _ctx: file,
         write_md5_sidecar=write_md5_sidecar_fn,
         existing_report_html=lambda *_args, **_kwargs: None,
@@ -108,8 +119,22 @@ def test_missing_md5_is_computed_before_pipeline(ingest_settings, run_context):
     dependencies = _base_dependencies(
         file_stat_fn=_file_stat,
         run_report_pipeline_fn=_run_report_pipeline,
-        write_md5_sidecar_fn=lambda sidecar_path, current_file, md5, size_bytes, mtime_utc, _ctx: sidecar_writes.append(
-            (sidecar_path, current_file.file_id, md5, size_bytes, mtime_utc)
+        write_md5_sidecar_fn=lambda request, _ctx: sidecar_writes.append(
+            (
+                f"{request.cache_path}.md5.json",
+                request.file_id,
+                request.md5,
+                request.size_bytes,
+                request.mtime_utc,
+            )
+        )
+        or FileCacheMd5SidecarWriteResponse(
+            schema_version="1.0",
+            cache_path=request.cache_path,
+            sidecar_path=f"{request.cache_path}.md5.json",
+            record=None,
+            written=True,
+            reason="written",
         ),
     )
 
@@ -158,8 +183,22 @@ def test_sidecar_is_written_after_computed_md5(ingest_settings, run_context):
     dependencies = _base_dependencies(
         file_stat_fn=_file_stat,
         run_report_pipeline_fn=lambda current_file, _cache_path, _settings, md5, _ctx: _outcome(current_file, md5),
-        write_md5_sidecar_fn=lambda sidecar_path, current_file, md5, size_bytes, mtime_utc, _ctx: sidecar_writes.append(
-            (sidecar_path, current_file.file_id, md5, size_bytes, mtime_utc)
+        write_md5_sidecar_fn=lambda request, _ctx: sidecar_writes.append(
+            (
+                f"{request.cache_path}.md5.json",
+                request.file_id,
+                request.md5,
+                request.size_bytes,
+                request.mtime_utc,
+            )
+        )
+        or FileCacheMd5SidecarWriteResponse(
+            schema_version="1.0",
+            cache_path=request.cache_path,
+            sidecar_path=f"{request.cache_path}.md5.json",
+            record=None,
+            written=True,
+            reason="written",
         ),
     )
 
@@ -199,12 +238,27 @@ def test_existing_md5_path_unchanged_without_rehash(ingest_settings, run_context
         run_report_pipeline_fn=lambda current_file, _cache_path, _settings, md5, _ctx: (
             pipeline_md5.__setitem__("value", md5) or _outcome(current_file, md5)
         ),
-        write_md5_sidecar_fn=lambda *_args, **_kwargs: None,
+        write_md5_sidecar_fn=lambda request, _ctx: FileCacheMd5SidecarWriteResponse(
+            schema_version="1.0",
+            cache_path=request.cache_path,
+            sidecar_path=f"{request.cache_path}.md5.json",
+            record=None,
+            written=False,
+            reason="skipped",
+        ),
     )
     dependencies = replace(
         dependencies,
-        load_md5_sidecar=lambda *_args, **_kwargs: {"md5": "drive-md5", "size_bytes": 10, "mtime_utc": 123},
-        sidecar_md5_for_stat=lambda *_args, **_kwargs: "drive-md5",
+        resolve_md5_sidecar=lambda request, _ctx: FileCacheMd5SidecarResolveResponse(
+            schema_version="1.0",
+            cache_path=request.cache_path,
+            sidecar_path=f"{request.cache_path}.md5.json",
+            sidecar_exists=True,
+            record=None,
+            resolved_md5="drive-md5",
+            hit=True,
+            reason="matched",
+        ),
     )
 
     result = run_ingest_file(file, 0, settings, run_context, dependencies)
