@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from src.contracts.run_context import RunContext
+from src.contracts.semantic_ids import RunId
 from src.contracts.ui_run_replay import (
     UiRunArtifactFingerprint,
     UiRunArtifactFingerprintRequest,
@@ -132,7 +133,9 @@ def _fingerprint_tree(root: Path) -> str:
                 "size_bytes": int(file_path.stat().st_size),
             }
         )
-    return hashlib.sha256(stable_json_dumps({"files": payload}).encode("utf-8")).hexdigest()
+    return hashlib.sha256(
+        stable_json_dumps({"files": payload}).encode("utf-8")
+    ).hexdigest()
 
 
 def _artifact_fingerprint_dicts(
@@ -142,13 +145,21 @@ def _artifact_fingerprint_dicts(
 
 
 def _manifest_from_payload(payload: dict[str, Any]) -> UiRunReplayManifest:
+    run_id = str(payload.get("run_id") or "").strip()
+    if not run_id:
+        raise AppError(
+            code="ui_run_replay_manifest_invalid",
+            message="Replay manifest run_id is required",
+            retryable=False,
+            context={"field": "run_id"},
+        )
     artifact_fingerprints = [
         UiRunArtifactFingerprint(**dict(item))
         for item in list(payload.get("artifact_fingerprints") or [])
     ]
     return UiRunReplayManifest(
         schema_version=str(payload.get("schema_version") or "1.0"),
-        run_id=str(payload.get("run_id") or "").strip(),
+        run_id=RunId(run_id),
         run_type=str(payload.get("run_type") or "").strip(),
         recorded_at_utc=str(payload.get("recorded_at_utc") or "").strip(),
         status=str(payload.get("status") or "").strip(),
@@ -389,6 +400,20 @@ def read_ui_run_replay_manifest(
     try:
         payload = json.loads(manifest_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="ui_run_replay_manifest_status",
+                module=logger.name,
+                fields={
+                    "artifact_kind": "ui_run_replay_manifest",
+                    "manifest_path": str(manifest_path),
+                    "status_code": "invalid_json",
+                    "recovery_policy": "fatal",
+                },
+            )
+        )
         raise AppError(
             code="ui_run_replay_manifest_invalid",
             message=f"Replay manifest JSON invalid: {manifest_path}",
@@ -397,6 +422,20 @@ def read_ui_run_replay_manifest(
             context={"manifest_path": str(manifest_path)},
         ) from exc
     if not isinstance(payload, dict):
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="ui_run_replay_manifest_status",
+                module=logger.name,
+                fields={
+                    "artifact_kind": "ui_run_replay_manifest",
+                    "manifest_path": str(manifest_path),
+                    "status_code": "invalid_schema",
+                    "recovery_policy": "fatal",
+                },
+            )
+        )
         raise AppError(
             code="ui_run_replay_manifest_invalid",
             message=f"Replay manifest root must be an object: {manifest_path}",

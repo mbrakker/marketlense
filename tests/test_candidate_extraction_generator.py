@@ -5,7 +5,12 @@ from types import SimpleNamespace
 
 from src.contracts.candidate_extraction import CandidateExtractRequest
 from src.contracts.candidates import Candidate
-from src.contracts.report_assets import CropResponse, ExtractCandidatesResponse
+from src.contracts.report_assets import (
+    CropResponse,
+    ExtractCandidatesResponse,
+    PdfCandidateExtractionStats,
+    PdfDegradedPage,
+)
 from src.contracts.run_context import RunContext
 from src.generators import candidate_extraction_generator as gen
 
@@ -108,6 +113,76 @@ def test_generate_candidate_pack_success_with_crops(
     assert payload["candidate_count"] == 2
     assert payload["candidates"][0]["crop_path"] == "candidates/c1.png"
     assert pdf_ctx.closed is True
+
+
+def test_generate_candidate_pack_persists_degraded_page_reasons(
+    tmp_path,
+    external_boundary_mocks_only,
+):
+    written: dict[str, object] = {}
+    degraded_page = PdfDegradedPage(
+        schema_version="1.0",
+        page=0,
+        stage="triage",
+        reason_code="pdf_candidate_page_triage_failed",
+        policy="include_with_warning",
+        message="triage failed",
+    )
+    candidate = Candidate(
+        schema_version="1.0",
+        id="c1",
+        kind="chart",
+        page=0,
+        bbox=(1.0, 2.0, 10.0, 20.0),
+        preview_text="candidate one",
+        meta={
+            "degraded_page_reasons": [
+                {
+                    "stage": degraded_page.stage,
+                    "reason_code": degraded_page.reason_code,
+                    "policy": degraded_page.policy,
+                    "message": degraded_page.message,
+                }
+            ]
+        },
+    )
+    external_boundary_mocks_only.setattr(
+        gen.pdf_service,
+        "build_pdf_context",
+        lambda req, ctx: (_ for _ in ()).throw(RuntimeError("context failed")),
+    )
+    external_boundary_mocks_only.setattr(
+        gen.pdf_service,
+        "collect_candidates",
+        lambda req, ctx: ExtractCandidatesResponse(
+            schema_version="1.0",
+            candidates=[candidate],
+            stats=PdfCandidateExtractionStats(
+                schema_version="1.0",
+                degraded_pages=[degraded_page],
+                triage_failure_count=1,
+                extraction_failure_count=0,
+            ),
+        ),
+    )
+    external_boundary_mocks_only.setattr(
+        gen.file_service,
+        "write_bytes",
+        lambda req, ctx: (
+            written.update({"path": req.path, "content": req.content})
+            or SimpleNamespace(path=req.path)
+        ),
+    )
+
+    outcome = gen.generate_candidate_pack(_request(tmp_path, save_crops=False), _ctx())
+
+    assert outcome.candidate_count == 1
+    payload = json.loads((written.get("content") or b"{}").decode("utf-8"))
+    assert payload["degraded_pages"][0]["reason_code"] == degraded_page.reason_code
+    assert (
+        payload["candidates"][0]["meta"]["degraded_page_reasons"][0]["reason_code"]
+        == degraded_page.reason_code
+    )
 
 
 def test_generate_candidate_pack_continues_when_pdf_context_build_fails(

@@ -47,9 +47,11 @@ from src.services._pdf.figures import (
     _panel_should_clamp_to_internal_caption,
     _panel_title_looks_short_proper_name,
     _panel_title_slice_bounds,
+    _plan_candidate_pages,
     _prune_charts_overlapping_ranked_tables,
     _validate_table_candidate,
 )
+from src.services._pdf.page_artifacts import create_page_artifact_cache
 from src.services._pdf.visual_candidates import (
     _RasterProbeCache,
     _embedded_visual_looks_chart_like,
@@ -72,6 +74,7 @@ from src.services.pdf_service import (
     crop_regions,
     extract_best_figure,
 )
+from src.utils.errors import AppError
 
 
 def _ctx() -> RunContext:
@@ -2751,6 +2754,57 @@ def test_collect_candidates_skips_full_page_scan_without_text(tmp_path, caplog) 
     )
     complete_fields = cast(dict[str, Any], complete.get("fields") or {})
     assert int(complete_fields.get("triaged_full_scan_pages", 0)) == 1
+
+
+class _ExplodingTriageDoc:
+    def __len__(self) -> int:
+        return 1
+
+    def __getitem__(self, index: int):
+        raise RuntimeError(f"triage failed on page {index}")
+
+
+def test_candidate_page_plan_records_triage_failure_include_policy() -> None:
+    plan = _plan_candidate_pages(
+        _ExplodingTriageDoc(),
+        set(),
+        artifact_cache=create_page_artifact_cache(),
+        degraded_page_policy="include_with_warning",
+    )
+
+    assert plan.chart_pages == [0]
+    assert plan.table_pages == [0]
+    assert len(plan.degraded_pages) == 1
+    assert plan.degraded_pages[0].reason_code == "pdf_candidate_page_triage_failed"
+    assert plan.degraded_pages[0].policy == "include_with_warning"
+
+
+def test_candidate_page_plan_records_triage_failure_skip_policy() -> None:
+    plan = _plan_candidate_pages(
+        _ExplodingTriageDoc(),
+        set(),
+        artifact_cache=create_page_artifact_cache(),
+        degraded_page_policy="skip_with_warning",
+    )
+
+    assert plan.chart_pages == []
+    assert plan.table_pages == []
+    assert plan.degraded_pages[0].policy == "skip_with_warning"
+
+
+def test_candidate_page_plan_fails_on_triage_failure_fail_policy() -> None:
+    try:
+        _plan_candidate_pages(
+            _ExplodingTriageDoc(),
+            set(),
+            artifact_cache=create_page_artifact_cache(),
+            degraded_page_policy="fail",
+        )
+    except AppError as exc:
+        assert exc.code == "pdf_candidate_page_triage_failed"
+        assert exc.context["page"] == 0
+    else:
+        raise AssertionError("fail policy must raise AppError")
 
 
 def test_collect_candidates_chart_bbox_excludes_corner_page_number_and_body_text(

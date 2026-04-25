@@ -117,6 +117,8 @@ def generate_candidate_pack(
                     "candidate_count": len(candidates_resp.candidates),
                     "chart_count": chart_count,
                     "table_count": table_count,
+                    "triage_failure_count": candidates_resp.stats.triage_failure_count,
+                    "degraded_page_count": len(candidates_resp.stats.degraded_pages),
                 },
             )
         )
@@ -166,6 +168,16 @@ def generate_candidate_pack(
             "candidate_count": len(candidates_resp.candidates),
             "chart_count": chart_count,
             "table_count": table_count,
+            "degraded_pages": [
+                {
+                    "page": item.page,
+                    "stage": item.stage,
+                    "reason_code": item.reason_code,
+                    "policy": item.policy,
+                    "message": item.message,
+                }
+                for item in candidates_resp.stats.degraded_pages
+            ],
             "candidates": _candidate_payload(candidates_resp.candidates, crop_map),
         }
         output_path = _candidates_path(

@@ -9,6 +9,37 @@ from src.contracts.report_models import CropItem, RankedCandidate
 
 
 @dataclass(frozen=True)
+class PdfDegradedPage:
+    schema_version: str = field(
+        metadata={"doc": "PDF degraded-page record schema version."}
+    )
+    page: int = field(metadata={"doc": "Zero-based page index affected."})
+    stage: str = field(metadata={"doc": "Extraction stage that degraded."})
+    reason_code: str = field(metadata={"doc": "Typed reason code for degradation."})
+    policy: str = field(metadata={"doc": "Applied degraded-page policy."})
+    message: str = field(metadata={"doc": "Sanitized degradation detail."})
+
+
+@dataclass(frozen=True)
+class PdfCandidateExtractionStats:
+    schema_version: str = field(
+        metadata={"doc": "PDF candidate-extraction stats schema version."}
+    )
+    degraded_pages: List[PdfDegradedPage] = field(
+        default_factory=list,
+        metadata={"doc": "Pages processed under degraded extraction policy."},
+    )
+    triage_failure_count: int = field(
+        default=0,
+        metadata={"doc": "Count of page-triage failures encountered."},
+    )
+    extraction_failure_count: int = field(
+        default=0,
+        metadata={"doc": "Count of non-fatal extraction failures encountered."},
+    )
+
+
+@dataclass(frozen=True)
 class ExtractCandidatesRequest:
     schema_version: str = field(
         metadata={"doc": "Candidate extraction request schema version."}
@@ -34,6 +65,12 @@ class ExtractCandidatesRequest:
             "doc": "Zero-based PDF page indices to skip during candidate selection output filtering."
         },
     )
+    degraded_page_policy: str = field(
+        default="include_with_warning",
+        metadata={
+            "doc": "Policy for degraded page triage: fail, include_with_warning, or skip_with_warning."
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -42,6 +79,12 @@ class ExtractCandidatesResponse:
         metadata={"doc": "Candidate extraction response schema version."}
     )
     candidates: List[Candidate] = field(metadata={"doc": "Extracted candidates."})
+    stats: PdfCandidateExtractionStats = field(
+        default_factory=lambda: PdfCandidateExtractionStats(
+            schema_version="1.0",
+        ),
+        metadata={"doc": "Typed candidate-extraction stats and degradation records."},
+    )
 
 
 @dataclass(frozen=True)

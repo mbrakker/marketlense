@@ -2633,11 +2633,11 @@ def _has_caption_hint(
     try:
         text += page.get_text("text", clip=above) or ""
     except PDF_FIGURE_EXCEPTIONS:
-        pass
+        text += ""
     try:
         text += " " + (page.get_text("text", clip=below) or "")
     except PDF_FIGURE_EXCEPTIONS:
-        pass
+        text += ""
     lowered = text.lower()
     return any(hint in lowered for hint in TABLE_CAPTION_HINTS)
 

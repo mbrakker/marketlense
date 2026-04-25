@@ -40,7 +40,12 @@ def _raise_cost_report_validation_error(
 
 
 def _empty_metrics() -> Dict[str, float | int]:
-    return {"estimated_cost_usd": 0.0, "input_tokens": 0, "output_tokens": 0, "tool_calls": 0}
+    return {
+        "estimated_cost_usd": 0.0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "tool_calls": 0,
+    }
 
 
 def _update_metrics(metrics: Dict[str, float | int], row: dict) -> None:
@@ -121,7 +126,9 @@ def _to_cost_totals(metrics: Dict[str, float | int]) -> CostTotals:
         total_input_tokens=int(metrics.get("input_tokens", 0) or 0),
         total_output_tokens=int(metrics.get("output_tokens", 0) or 0),
         total_tool_calls=int(metrics.get("tool_calls", 0) or 0),
-        estimated_cost_usd=round(float(metrics.get("estimated_cost_usd", 0.0) or 0.0), 6),
+        estimated_cost_usd=round(
+            float(metrics.get("estimated_cost_usd", 0.0) or 0.0), 6
+        ),
     )
 
 
@@ -143,7 +150,9 @@ def _metrics_from_daily_total(total: DailyCostTotal) -> Dict[str, float | int]:
     }
 
 
-def _daily_total_from_metrics(day: str, metrics: Dict[str, float | int]) -> DailyCostTotal:
+def _daily_total_from_metrics(
+    day: str, metrics: Dict[str, float | int]
+) -> DailyCostTotal:
     return DailyCostTotal(
         schema_version="1.0",
         date_utc=day,
@@ -213,9 +222,15 @@ def _serialize_rollup(
             "sha256": ledger_sha256,
         },
         "totals": {day: total.__dict__ for day, total in totals_by_date.items()},
-        "totals_by_date": {day: total.__dict__ for day, total in totals_by_date.items()},
-        "totals_by_run": {run_id: total.__dict__ for run_id, total in totals_by_run.items()},
-        "totals_by_task": {task_id: total.__dict__ for task_id, total in totals_by_task.items()},
+        "totals_by_date": {
+            day: total.__dict__ for day, total in totals_by_date.items()
+        },
+        "totals_by_run": {
+            run_id: total.__dict__ for run_id, total in totals_by_run.items()
+        },
+        "totals_by_task": {
+            task_id: total.__dict__ for task_id, total in totals_by_task.items()
+        },
     }
 
 
@@ -256,26 +271,96 @@ def _coerce_daily_totals_map(payload: Any) -> Dict[str, DailyCostTotal]:
     return totals
 
 
-def _load_rollup_cache(out_path: Path) -> dict[str, Any] | None:
+def _log_rollup_cache_status(
+    *,
+    ctx: RunContext,
+    out_path: Path,
+    status_code: str,
+    recovery_policy: str,
+    detail: str = "",
+) -> None:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="cost_rollup_cache_status",
+            module=logger.name,
+            fields={
+                "artifact_kind": "cost_rollup",
+                "path": str(out_path),
+                "status_code": status_code,
+                "recovery_policy": recovery_policy,
+                "detail": detail,
+            },
+        )
+    )
+
+
+def _load_rollup_cache(out_path: Path, ctx: RunContext) -> dict[str, Any] | None:
     if not out_path.exists():
+        _log_rollup_cache_status(
+            ctx=ctx,
+            out_path=out_path,
+            status_code="missing",
+            recovery_policy="full_rebuild",
+        )
         return None
     try:
         data = json.loads(out_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    except OSError as exc:
+        _log_rollup_cache_status(
+            ctx=ctx,
+            out_path=out_path,
+            status_code="read_failed",
+            recovery_policy="full_rebuild",
+            detail=str(exc),
+        )
+        return None
+    except json.JSONDecodeError as exc:
+        _log_rollup_cache_status(
+            ctx=ctx,
+            out_path=out_path,
+            status_code="invalid_json",
+            recovery_policy="full_rebuild",
+            detail=str(exc),
+        )
         return None
     if not isinstance(data, dict):
+        _log_rollup_cache_status(
+            ctx=ctx,
+            out_path=out_path,
+            status_code="invalid_schema",
+            recovery_policy="full_rebuild",
+            detail=type(data).__name__,
+        )
         return None
     ledger_state = data.get("ledger_state")
     if not isinstance(ledger_state, dict):
+        _log_rollup_cache_status(
+            ctx=ctx,
+            out_path=out_path,
+            status_code="invalid_schema",
+            recovery_policy="full_rebuild",
+            detail="ledger_state_missing",
+        )
         return None
-    totals_by_date = _coerce_daily_totals_map(data.get("totals_by_date") or data.get("totals"))
+    totals_by_date = _coerce_daily_totals_map(
+        data.get("totals_by_date") or data.get("totals")
+    )
     totals_by_run = _coerce_cost_totals_map(data.get("totals_by_run"))
     totals_by_task = _coerce_cost_totals_map(data.get("totals_by_task"))
     try:
         ledger_size_bytes = int(ledger_state.get("size_bytes", 0) or 0)
         ledger_mtime_ns = int(ledger_state.get("mtime_ns", 0) or 0)
         ledger_sha256 = str(ledger_state.get("sha256") or "")
-    except (TypeError, ValueError):
+    except (TypeError, ValueError) as exc:
+        _log_rollup_cache_status(
+            ctx=ctx,
+            out_path=out_path,
+            status_code="invalid_schema",
+            recovery_policy="full_rebuild",
+            detail=str(exc),
+        )
         return None
     return {
         "ledger_path": str(ledger_state.get("ledger_path") or ""),
@@ -310,7 +395,9 @@ def _write_rollup_cache(
         totals_by_run=totals_by_run,
         totals_by_task=totals_by_task,
     )
-    out_path.write_text(json.dumps(serialized, ensure_ascii=False, indent=2), encoding="utf-8")
+    out_path.write_text(
+        json.dumps(serialized, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
 
 def _step_totals(step_name: str, metrics: Dict[str, float | int]) -> StepCostTotal:
@@ -320,20 +407,26 @@ def _step_totals(step_name: str, metrics: Dict[str, float | int]) -> StepCostTot
         total_input_tokens=int(metrics.get("input_tokens", 0) or 0),
         total_output_tokens=int(metrics.get("output_tokens", 0) or 0),
         total_tool_calls=int(metrics.get("tool_calls", 0) or 0),
-        estimated_cost_usd=round(float(metrics.get("estimated_cost_usd", 0.0) or 0.0), 6),
+        estimated_cost_usd=round(
+            float(metrics.get("estimated_cost_usd", 0.0) or 0.0), 6
+        ),
     )
 
 
-def append_entry(request: CostLedgerAppendRequest, ctx: RunContext) -> CostLedgerAppendResponse:
+def append_entry(
+    request: CostLedgerAppendRequest, ctx: RunContext
+) -> CostLedgerAppendResponse:
     path = Path(request.path)
     with _LEDGER_LOCK:
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="cost_ledger_append_start",
-            module=logger.name,
-            fields={"path": str(path)},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="cost_ledger_append_start",
+                module=logger.name,
+                fields={"path": str(path)},
+            )
+        )
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
             with path.open("a", encoding="utf-8") as f:
@@ -346,13 +439,15 @@ def append_entry(request: CostLedgerAppendRequest, ctx: RunContext) -> CostLedge
                 retryable=False,
                 context={"path": str(path)},
             ) from exc
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="cost_ledger_append_complete",
-            module=logger.name,
-            fields={"path": str(path)},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="cost_ledger_append_complete",
+                module=logger.name,
+                fields={"path": str(path)},
+            )
+        )
         return CostLedgerAppendResponse(schema_version="1.0", path=str(path))
 
 
@@ -365,19 +460,27 @@ def rollup_daily(request: CostRollupRequest, ctx: RunContext) -> CostRollupRespo
         totals_by_task: Dict[str, CostTotals] = {}
         mode = "full_rebuild"
         rows_processed = 0
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="cost_ledger_rollup_start",
-            module=logger.name,
-            fields={"ledger_path": str(ledger_path), "out_path": str(out_path)},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="cost_ledger_rollup_start",
+                module=logger.name,
+                fields={"ledger_path": str(ledger_path), "out_path": str(out_path)},
+            )
+        )
         try:
-            cached = _load_rollup_cache(out_path)
+            cached = _load_rollup_cache(out_path, ctx)
             if ledger_path.exists():
                 ledger_stat = ledger_path.stat()
                 ledger_size_bytes = int(ledger_stat.st_size)
-                ledger_mtime_ns = int(getattr(ledger_stat, "st_mtime_ns", int(ledger_stat.st_mtime * 1_000_000_000)))
+                ledger_mtime_ns = int(
+                    getattr(
+                        ledger_stat,
+                        "st_mtime_ns",
+                        int(ledger_stat.st_mtime * 1_000_000_000),
+                    )
+                )
                 ledger_sha256 = _file_sha256(ledger_path)
             else:
                 ledger_size_bytes = 0
@@ -401,7 +504,9 @@ def rollup_daily(request: CostRollupRequest, ctx: RunContext) -> CostRollupRespo
                 and ledger_size_bytes > cached["ledger_size_bytes"]
                 and ledger_mtime_ns >= cached["ledger_mtime_ns"]
             ):
-                appended_rows = _load_rows_from_offset(ledger_path, cached["ledger_size_bytes"])
+                appended_rows = _load_rows_from_offset(
+                    ledger_path, cached["ledger_size_bytes"]
+                )
                 rows_processed = len(appended_rows)
                 daily_metrics = {
                     day: _metrics_from_daily_total(total)
@@ -417,15 +522,23 @@ def rollup_daily(request: CostRollupRequest, ctx: RunContext) -> CostRollupRespo
                 }
                 for row in appended_rows:
                     day_key = _date_key(row) or "unknown"
-                    _update_metrics(daily_metrics.setdefault(day_key, _empty_metrics()), row)
+                    _update_metrics(
+                        daily_metrics.setdefault(day_key, _empty_metrics()), row
+                    )
                     run_key = str(row.get("run_id") or "unknown")
-                    _update_metrics(run_metrics.setdefault(run_key, _empty_metrics()), row)
+                    _update_metrics(
+                        run_metrics.setdefault(run_key, _empty_metrics()), row
+                    )
                     task_key = str(row.get("task_id") or "unknown")
-                    _update_metrics(task_metrics.setdefault(task_key, _empty_metrics()), row)
-                totals_by_date, totals_by_run, totals_by_task = _build_rollup_from_metrics(
-                    daily_metrics=daily_metrics,
-                    run_metrics=run_metrics,
-                    task_metrics=task_metrics,
+                    _update_metrics(
+                        task_metrics.setdefault(task_key, _empty_metrics()), row
+                    )
+                totals_by_date, totals_by_run, totals_by_task = (
+                    _build_rollup_from_metrics(
+                        daily_metrics=daily_metrics,
+                        run_metrics=run_metrics,
+                        task_metrics=task_metrics,
+                    )
                 )
                 _write_rollup_cache(
                     ledger_path=ledger_path,
@@ -439,9 +552,19 @@ def rollup_daily(request: CostRollupRequest, ctx: RunContext) -> CostRollupRespo
                 )
                 mode = "incremental"
             else:
+                if cached and cached["ledger_path"] != str(ledger_path):
+                    _log_rollup_cache_status(
+                        ctx=ctx,
+                        out_path=out_path,
+                        status_code="key_mismatch",
+                        recovery_policy="full_rebuild",
+                        detail="ledger_path",
+                    )
                 rows = _load_rows(ledger_path)
                 rows_processed = len(rows)
-                totals_by_date, totals_by_run, totals_by_task = _build_rollup_from_rows(rows)
+                totals_by_date, totals_by_run, totals_by_task = _build_rollup_from_rows(
+                    rows
+                )
                 _write_rollup_cache(
                     ledger_path=ledger_path,
                     out_path=out_path,
@@ -460,20 +583,22 @@ def rollup_daily(request: CostRollupRequest, ctx: RunContext) -> CostRollupRespo
                 retryable=False,
                 context={"ledger_path": str(ledger_path), "out_path": str(out_path)},
             ) from exc
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="cost_ledger_rollup_complete",
-            module=logger.name,
-            fields={
-                "out_path": str(out_path),
-                "days": len(totals_by_date),
-                "runs": len(totals_by_run),
-                "tasks": len(totals_by_task),
-                "mode": mode,
-                "rows_processed": rows_processed,
-            },
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="cost_ledger_rollup_complete",
+                module=logger.name,
+                fields={
+                    "out_path": str(out_path),
+                    "days": len(totals_by_date),
+                    "runs": len(totals_by_run),
+                    "tasks": len(totals_by_task),
+                    "mode": mode,
+                    "rows_processed": rows_processed,
+                },
+            )
+        )
         return CostRollupResponse(
             schema_version="1.1",
             out_path=str(out_path),
@@ -483,14 +608,21 @@ def rollup_daily(request: CostRollupRequest, ctx: RunContext) -> CostRollupRespo
         )
 
 
-def generate_cost_report(request: CostReportRequest, ctx: RunContext) -> CostReportResponse:
+def generate_cost_report(
+    request: CostReportRequest, ctx: RunContext
+) -> CostReportResponse:
     with _LEDGER_LOCK:
         ledger_path = Path(request.ledger_path)
-        if (request.date_utc and request.run_id) or (not request.date_utc and not request.run_id):
+        if (request.date_utc and request.run_id) or (
+            not request.date_utc and not request.run_id
+        ):
             _raise_cost_report_validation_error(
                 code="cost_report_filter_invalid",
                 message="Provide exactly one of date_utc or run_id for cost reporting.",
-                context={"date_utc": request.date_utc or "", "run_id": request.run_id or ""},
+                context={
+                    "date_utc": request.date_utc or "",
+                    "run_id": request.run_id or "",
+                },
             )
         if request.top_n <= 0:
             _raise_cost_report_validation_error(
@@ -499,18 +631,20 @@ def generate_cost_report(request: CostReportRequest, ctx: RunContext) -> CostRep
                 context={"top_n": request.top_n},
             )
 
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="cost_report_generate_start",
-            module=logger.name,
-            fields={
-                "ledger_path": str(ledger_path),
-                "date_utc": request.date_utc,
-                "run_id": request.run_id,
-                "top_n": request.top_n,
-            },
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="cost_report_generate_start",
+                module=logger.name,
+                fields={
+                    "ledger_path": str(ledger_path),
+                    "date_utc": request.date_utc,
+                    "run_id": request.run_id,
+                    "top_n": request.top_n,
+                },
+            )
+        )
 
         rows = _load_rows(ledger_path)
         filtered: List[dict] = []
@@ -539,7 +673,9 @@ def generate_cost_report(request: CostReportRequest, ctx: RunContext) -> CostRep
         totals_metrics = _empty_metrics()
         for row in filtered:
             _update_metrics(totals_metrics, row)
-        step_agg = _aggregate_rows(filtered, lambda row: str(row.get("step_name") or "unknown"))
+        step_agg = _aggregate_rows(
+            filtered, lambda row: str(row.get("step_name") or "unknown")
+        )
         top_steps = sorted(
             (_step_totals(name, metrics) for name, metrics in step_agg.items()),
             key=lambda t: (-t.estimated_cost_usd, t.step_name),
@@ -553,16 +689,18 @@ def generate_cost_report(request: CostReportRequest, ctx: RunContext) -> CostRep
             top_steps=top_steps,
             matched_entries=len(filtered),
         )
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="cost_report_generate_complete",
-            module=logger.name,
-            fields={
-                "filter_type": filter_type,
-                "filter_value": filter_value,
-                "matched_entries": len(filtered),
-                "top_steps": len(top_steps),
-            },
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="cost_report_generate_complete",
+                module=logger.name,
+                fields={
+                    "filter_type": filter_type,
+                    "filter_value": filter_value,
+                    "matched_entries": len(filtered),
+                    "top_steps": len(top_steps),
+                },
+            )
+        )
         return response

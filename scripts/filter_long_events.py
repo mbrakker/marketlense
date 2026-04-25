@@ -17,10 +17,10 @@ if __name__ == "__main__":
         try:
             threshold = int(sys.argv[1])
         except ValueError:
-            pass
+            threshold = THRESHOLD_SECONDS
     if len(sys.argv) > 2:
         try:
             top = int(sys.argv[2])
         except ValueError:
-            pass
+            top = 50
     main(threshold, top)

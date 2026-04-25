@@ -1,4 +1,5 @@
 import json
+import logging
 from types import SimpleNamespace
 
 import pytest
@@ -95,8 +96,69 @@ def test_load_cached_pack_returns_key_mismatch_without_adapting():
     )
 
     assert result.status == "key_mismatch"
+    assert result.status_code == "key_mismatch"
     assert result.value is None
     assert adapted == []
+
+
+def test_load_cached_pack_classifies_invalid_json_and_logs_status(
+    caplog,
+    assert_logs_have_required_fields,
+):
+    caplog.set_level(logging.INFO, logger="market_lense.analysis_pack_cache")
+
+    result = load_cached_pack(
+        cache_key="cache-key",
+        ctx=_ctx(),
+        resolve_path=lambda: "packs/corrupt.json",
+        read_text=lambda request, ctx: SimpleNamespace(content="{not-json"),
+        on_read_failed=lambda exc, path: None,
+        adapt_payload=lambda payload, path: CachedPackAdaptResult(
+            schema_version="1.0",
+            status="hit",
+            value=payload,
+        ),
+    )
+
+    assert result.status == "invalid_json"
+    assert result.status_code == "invalid_json"
+    events = [
+        json.loads(record.message)
+        for record in caplog.records
+        if record.name == "market_lense.analysis_pack_cache"
+    ]
+    assert_logs_have_required_fields(events)
+    assert events[-1]["fields"]["artifact_kind"] == "analysis_pack"
+    assert events[-1]["fields"]["status_code"] == "invalid_json"
+    assert events[-1]["fields"]["recovery_policy"] == "regenerate"
+
+
+def test_load_cached_pack_classifies_expired_cache_metadata():
+    result = load_cached_pack(
+        cache_key="cache-key",
+        ctx=_ctx(),
+        resolve_path=lambda: "packs/expired.json",
+        read_text=lambda request, ctx: SimpleNamespace(
+            content=json.dumps(
+                {
+                    "_cache": {
+                        "key": "cache-key",
+                        "expires_at_utc": "2020-01-01T00:00:00+00:00",
+                    },
+                    "status": "pass",
+                }
+            )
+        ),
+        on_read_failed=lambda exc, path: None,
+        adapt_payload=lambda payload, path: CachedPackAdaptResult(
+            schema_version="1.0",
+            status="hit",
+            value=payload,
+        ),
+    )
+
+    assert result.status == "expired"
+    assert result.status_code == "expired"
 
 
 def test_load_cached_pack_calls_read_failed_callback_for_non_missing_file():

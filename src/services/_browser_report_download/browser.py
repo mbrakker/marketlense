@@ -25,8 +25,12 @@ from src.contracts.browser_download import (
 )
 from src.contracts.run_context import RunContext
 from src.services._browser_report_download.artifact import BrowserUseAgentResult
-from src.services._browser_report_download.http import download_pdf_from_url, is_pdf_file
+from src.services._browser_report_download.http import (
+    download_pdf_from_url,
+    is_pdf_file,
+)
 from src.services._browser_report_download.prompt import BrowserDownloadPromptBundle
+from src.utils.coercion import normalize_optional_bool_signal
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -250,7 +254,11 @@ def run_browser_report_download_agent(
     browser: Any | None = None
     _cleanup_stale_browser_use_temp_dirs(ctx=ctx, normalized_url=normalized_url)
     preexisting_temp_dirs = {str(path) for path in _list_browser_use_temp_dirs()}
-    _cleanup_managed_browser_profile_dirs(download_dir=download_dir)
+    _cleanup_managed_browser_profile_dirs(
+        download_dir=download_dir,
+        ctx=ctx,
+        normalized_url=normalized_url,
+    )
     profile_dir = _new_managed_browser_profile_dir(download_dir)
     profile_dir.mkdir(parents=True, exist_ok=True)
     raw_model_response = ""
@@ -366,14 +374,8 @@ def run_browser_report_download_agent(
                 normalized_url=normalized_url,
             )
             current_page = terminal_snapshot.page
-            final_page_url = (
-                terminal_snapshot.url
-                or history_final_page_url
-            )
-            final_page_title = (
-                terminal_snapshot.title
-                or history_final_page_title
-            )
+            final_page_url = terminal_snapshot.url or history_final_page_url
+            final_page_title = terminal_snapshot.title or history_final_page_title
             final_page_html = terminal_snapshot.html
             (
                 network_resource_urls,
@@ -471,13 +473,21 @@ def run_browser_report_download_agent(
         ) from exc
     finally:
         if browser is not None:
-            _prepare_browser_for_shutdown(browser)
+            _prepare_browser_for_shutdown(
+                browser,
+                ctx=ctx,
+                normalized_url=normalized_url,
+            )
             _kill_browser_with_timeout(
                 browser,
                 ctx=ctx,
                 normalized_url=normalized_url,
             )
-        _cleanup_browser_profile_dir(profile_dir)
+        _cleanup_browser_profile_dir(
+            profile_dir,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
         _cleanup_new_browser_use_temp_dirs(
             ctx=ctx,
             normalized_url=normalized_url,
@@ -731,11 +741,14 @@ def _should_attempt_lookup_submission_assist(
     payload = _parse_raw_model_response(raw_model_response)
     if str(payload.get("route_kind") or "").strip() != "email_delivery":
         return False
-    if payload.get("email_submission_completed") is True:
+    if (
+        normalize_optional_bool_signal(payload.get("email_submission_completed"))
+        is True
+    ):
         return True
-    if payload.get("confirmation_url_changed") is True:
+    if normalize_optional_bool_signal(payload.get("confirmation_url_changed")) is True:
         return False
-    if payload.get("form_disappeared") is True:
+    if normalize_optional_bool_signal(payload.get("form_disappeared")) is True:
         return False
     return _payload_has_lookup_submission_recovery_signal(payload)
 
@@ -755,8 +768,7 @@ def _payload_has_lookup_submission_recovery_signal(payload: dict[str, Any]) -> b
         if str(item or "").strip()
     }
     if not any(
-        any(marker in field for marker in lookup_fields)
-        for field in encountered_fields
+        any(marker in field for marker in lookup_fields) for field in encountered_fields
     ):
         return False
     for step in payload.get("route_steps", []):
@@ -768,7 +780,9 @@ def _payload_has_lookup_submission_recovery_signal(payload: dict[str, Any]) -> b
         if action == "click" and "submit" in " ".join([target_text, result]):
             return True
     blocked_reason = str(payload.get("blocked_reason") or "").strip().lower()
-    blocked_reason_detail = str(payload.get("blocked_reason_detail") or "").strip().lower()
+    blocked_reason_detail = (
+        str(payload.get("blocked_reason_detail") or "").strip().lower()
+    )
     blocked_text = " ".join([blocked_reason, blocked_reason_detail])
     return any(marker in blocked_text for marker in lookup_fields)
 
@@ -916,7 +930,7 @@ def _attempt_lookup_submission_assist_with_timeout(
             )
         )
         return False
-    return payload.get("result") is True
+    return normalize_optional_bool_signal(payload.get("result")) is True
 
 
 def _should_run_browser_agent_in_subprocess(browser_use: Any) -> bool:
@@ -1055,7 +1069,9 @@ def _run_browser_report_download_agent_subprocess(
     )
 
 
-def _deserialize_browser_agent_run_result(payload: dict[str, Any]) -> BrowserAgentRunResult:
+def _deserialize_browser_agent_run_result(
+    payload: dict[str, Any],
+) -> BrowserAgentRunResult:
     network_events_payload = payload.get("network_events")
     network_events: list[BrowserDownloadNetworkEvent] = []
     if isinstance(network_events_payload, list):
@@ -1066,8 +1082,10 @@ def _deserialize_browser_agent_run_result(payload: dict[str, Any]) -> BrowserAge
                 BrowserDownloadNetworkEvent(
                     schema_version=str(item.get("schema_version", "1.0")),
                     url=str(item.get("url") or "").strip(),
-                    initiator_type=str(item.get("initiator_type") or "other").strip() or "other",
-                    signal_kind=str(item.get("signal_kind") or "other").strip() or "other",
+                    initiator_type=str(item.get("initiator_type") or "other").strip()
+                    or "other",
+                    signal_kind=str(item.get("signal_kind") or "other").strip()
+                    or "other",
                 )
             )
     return BrowserAgentRunResult(
@@ -1169,7 +1187,10 @@ def _terminal_stabilization_reason(
     snapshot: TerminalSnapshot,
 ) -> str:
     payload = _parse_raw_model_response(raw_model_response)
-    email_submission_completed = payload.get("email_submission_completed") is True
+    email_submission_completed = (
+        normalize_optional_bool_signal(payload.get("email_submission_completed"))
+        is True
+    )
     post_submit_message = str(payload.get("post_submit_message") or "").strip()
     submit_button_state = str(payload.get("submit_button_state") or "").strip().lower()
     snapshot_transient = _contains_transient_terminal_marker(
@@ -1389,7 +1410,11 @@ def _copy_external_artifact(
             if source_path.samefile(target_path):
                 return _safe_resolve_path(target_path)
         except OSError:
-            pass
+            target_path = (
+                download_dir / f"{source_path.stem}_{counter}{source_path.suffix}"
+            )
+            counter += 1
+            continue
         target_path = download_dir / f"{source_path.stem}_{counter}{source_path.suffix}"
         counter += 1
     try:
@@ -1397,7 +1422,11 @@ def _copy_external_artifact(
     except OSError:
         return None
     resolved_target = _safe_resolve_path(target_path)
-    if resolved_target is None or not resolved_target.exists() or not resolved_target.is_file():
+    if (
+        resolved_target is None
+        or not resolved_target.exists()
+        or not resolved_target.is_file()
+    ):
         return None
     return resolved_target
 
@@ -1623,7 +1652,10 @@ def _classify_network_signal_kind(*, url: str, initiator_type: str) -> str:
         return "other"
     if lowered_url.endswith(".pdf") or ".pdf?" in lowered_url:
         return "document_request"
-    if any(marker in lowered_url for marker in ("thank", "success", "confirm", "complete", "done")):
+    if any(
+        marker in lowered_url
+        for marker in ("thank", "success", "confirm", "complete", "done")
+    ):
         return "confirmation_request"
     if any(
         marker in lowered_url
@@ -1684,7 +1716,11 @@ def _collect_page_resource_urls(page: Any) -> list[str]:
     except Exception:
         return []
     resource_urls = _coerce_evaluate_list(resource_urls)
-    return [str(raw_url or "").strip() for raw_url in resource_urls if str(raw_url or "").strip()]
+    return [
+        str(raw_url or "").strip()
+        for raw_url in resource_urls
+        if str(raw_url or "").strip()
+    ]
 
 
 def _collect_dom_candidate_urls(page: Any) -> list[str]:
@@ -1724,7 +1760,11 @@ def _collect_dom_candidate_urls(page: Any) -> list[str]:
     except Exception:
         return []
     candidate_urls = _coerce_evaluate_list(candidate_urls)
-    return [str(raw_url or "").strip() for raw_url in candidate_urls if str(raw_url or "").strip()]
+    return [
+        str(raw_url or "").strip()
+        for raw_url in candidate_urls
+        if str(raw_url or "").strip()
+    ]
 
 
 def _coerce_evaluate_list(value: Any) -> list[Any]:
@@ -2012,7 +2052,7 @@ def _await_in_current_or_thread(
     awaitable: Any,
     *,
     timeout_seconds: float | None = None,
-) -> BrowserAgentHistoryResult:
+) -> Any:
     payload: dict[str, Any] = {}
     errors: list[Exception] = []
 
@@ -2604,43 +2644,106 @@ def _prime_agent_timing_fields(agent: Any) -> None:
             continue
 
 
-def _prepare_browser_for_shutdown(browser: Any) -> None:
+def _log_browser_cleanup_failure(
+    *,
+    ctx: RunContext,
+    normalized_url: str,
+    operation: str,
+    error: Exception,
+) -> None:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_report_download_cleanup_failed",
+            module=logger.name,
+            fields={
+                "normalized_url": normalized_url,
+                "operation": operation,
+                "error": str(error),
+            },
+        )
+    )
+
+
+def _prepare_browser_for_shutdown(
+    browser: Any,
+    *,
+    ctx: RunContext,
+    normalized_url: str,
+) -> None:
     try:
         setattr(browser, "_intentional_stop", True)
-    except Exception:
-        pass
+    except Exception as exc:
+        _log_browser_cleanup_failure(
+            ctx=ctx,
+            normalized_url=normalized_url,
+            operation="set_intentional_stop",
+            error=exc,
+        )
     browser_profile = getattr(browser, "browser_profile", None)
     if browser_profile is not None:
         try:
             setattr(browser_profile, "cdp_url", None)
-        except Exception:
-            pass
+        except Exception as exc:
+            _log_browser_cleanup_failure(
+                ctx=ctx,
+                normalized_url=normalized_url,
+                operation="clear_browser_profile_cdp_url",
+                error=exc,
+            )
     reconnect_task = getattr(browser, "_reconnect_task", None)
     if reconnect_task is not None:
         try:
             if not reconnect_task.done():
                 reconnect_task.cancel()
             setattr(browser, "_reconnect_task", None)
-        except Exception:
-            pass
+        except Exception as exc:
+            _log_browser_cleanup_failure(
+                ctx=ctx,
+                normalized_url=normalized_url,
+                operation="cancel_reconnect_task",
+                error=exc,
+            )
     try:
         setattr(browser, "_reconnecting", False)
-    except Exception:
-        pass
+    except Exception as exc:
+        _log_browser_cleanup_failure(
+            ctx=ctx,
+            normalized_url=normalized_url,
+            operation="clear_reconnecting_flag",
+            error=exc,
+        )
     reconnect_event = getattr(browser, "_reconnect_event", None)
     if reconnect_event is not None:
         try:
             reconnect_event.set()
-        except Exception:
-            pass
+        except Exception as exc:
+            _log_browser_cleanup_failure(
+                ctx=ctx,
+                normalized_url=normalized_url,
+                operation="set_reconnect_event",
+                error=exc,
+            )
 
 
-def _cleanup_browser_profile_dir(profile_dir: Path) -> None:
+def _cleanup_browser_profile_dir(
+    profile_dir: Path,
+    *,
+    ctx: RunContext | None = None,
+    normalized_url: str = "",
+) -> None:
     try:
         if profile_dir.exists():
             shutil.rmtree(profile_dir, ignore_errors=True)
-    except OSError:
-        return
+    except OSError as exc:
+        if ctx is not None:
+            _log_browser_cleanup_failure(
+                ctx=ctx,
+                normalized_url=normalized_url,
+                operation="remove_browser_profile_dir",
+                error=exc,
+            )
 
 
 def _new_managed_browser_profile_dir(download_dir: Path) -> Path:
@@ -2653,13 +2756,19 @@ def _cleanup_managed_browser_profile_dirs(
     *,
     download_dir: Path,
     active_profile_dir: Path | None = None,
+    ctx: RunContext | None = None,
+    normalized_url: str = "",
 ) -> None:
     if not download_dir.exists() or not download_dir.is_dir():
         return
     for candidate in download_dir.glob(f"{_BROWSER_PROFILE_DIR_PREFIX}*"):
         if active_profile_dir is not None and candidate == active_profile_dir:
             continue
-        _cleanup_browser_profile_dir(candidate)
+        _cleanup_browser_profile_dir(
+            candidate,
+            ctx=ctx,
+            normalized_url=normalized_url,
+        )
 
 
 def _cleanup_stale_browser_use_temp_dirs(
@@ -2783,7 +2892,7 @@ def _kill_browser(browser: Any, *, ctx: RunContext, normalized_url: str) -> None
                         timeout_seconds=_BROWSER_RESET_TIMEOUT_SECONDS,
                     )
                 return
-            except Exception as exc:
+            except Exception as reset_exc:
                 logger.info(
                     log_event(
                         ctx,
@@ -2792,7 +2901,7 @@ def _kill_browser(browser: Any, *, ctx: RunContext, normalized_url: str) -> None
                         module=logger.name,
                         fields={
                             "normalized_url": normalized_url,
-                            "error": str(exc),
+                            "error": str(reset_exc),
                         },
                     )
                 )
@@ -2889,8 +2998,13 @@ def _force_stop_local_browser_process(
         if original_user_data_dir is not None and browser_profile is not None:
             try:
                 setattr(browser_profile, "user_data_dir", original_user_data_dir)
-            except Exception:
-                pass
+            except Exception as exc:
+                _log_browser_cleanup_failure(
+                    ctx=ctx,
+                    normalized_url=normalized_url,
+                    operation="restore_browser_profile_user_data_dir",
+                    error=exc,
+                )
         setattr(watchdog, "_original_user_data_dir", None)
         logger.info(
             log_event(

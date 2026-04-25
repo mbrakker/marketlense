@@ -24,11 +24,15 @@ from src.contracts.browser_download import (
 from src.contracts.publisher_inventory import PublisherInventoryCandidateTrace
 from src.services._browser_report_download import artifact as artifact_runtime
 from src.services._browser_report_download import browser as browser_runtime
-from src.services._browser_report_download import browser_worker as browser_worker_runtime
+from src.services._browser_report_download import (
+    browser_worker as browser_worker_runtime,
+)
 from src.services._browser_report_download import http as http_runtime
 from src.services._browser_report_download import prompt as prompt_runtime
 from src.services._browser_report_download import request as request_runtime
-from src.services._browser_report_download.request import resolve_effective_identity_fields
+from src.services._browser_report_download.request import (
+    resolve_effective_identity_fields,
+)
 from src.services import browser_report_download_service as service
 from src.utils.errors import AppError
 
@@ -117,7 +121,9 @@ def _runtime(
             user_data_dir=None,
         ):
             self.downloads_path = str(downloads_path)
-            self.user_data_dir = str(user_data_dir) if user_data_dir is not None else None
+            self.user_data_dir = (
+                str(user_data_dir) if user_data_dir is not None else None
+            )
             self.headless = headless
             self.auto_download_pdfs = auto_download_pdfs
             self.keep_alive = keep_alive
@@ -150,7 +156,9 @@ def _runtime(
 
             return FakePage()
 
-        def take_screenshot(self, path=None, full_page=False, format="png", quality=None, clip=None):
+        def take_screenshot(
+            self, path=None, full_page=False, format="png", quality=None, clip=None
+        ):
             if path:
                 Path(path).write_bytes(b"fake-screenshot")
             return b"fake-screenshot"
@@ -178,7 +186,9 @@ def _runtime(
         def run_sync(self, max_steps: int):
             self.browser.url = "https://example.com/final"
             self.browser.title = "Example report terminal"
-            self.browser.html = "<html><body><h1>Example report terminal</h1></body></html>"
+            self.browser.html = (
+                "<html><body><h1>Example report terminal</h1></body></html>"
+            )
             download_dir = Path(self.browser.downloads_path)
             download_dir.mkdir(parents=True, exist_ok=True)
             if create_pdf:
@@ -207,6 +217,80 @@ def _service_events(caplog) -> list[dict[str, object]]:
         if isinstance(payload, dict):
             events.append(payload)
     return events
+
+
+@pytest.mark.parametrize(
+    ("raw_value", "expected"),
+    [
+        (True, True),
+        (False, False),
+        ("true", True),
+        ("yes", True),
+        ("1", True),
+        (1, True),
+        ("false", False),
+        ("no", False),
+        ("0", False),
+        (0, False),
+        (None, None),
+    ],
+)
+def test_browser_agent_result_normalizes_boolean_terminal_signals(
+    raw_value,
+    expected,
+    run_context,
+) -> None:
+    result = artifact_runtime._parse_browser_result(
+        raw_model_response=json.dumps(
+            {
+                "route_kind": "email_delivery",
+                "email_submission_completed": raw_value,
+                "confirmation_url_changed": raw_value,
+                "form_disappeared": raw_value,
+            }
+        ),
+        normalized_url="https://example.com/report",
+        ctx=run_context,
+    )
+
+    assert result is not None
+    assert result.email_submission_completed is expected
+    assert result.confirmation_url_changed is expected
+    assert result.form_disappeared is expected
+
+
+def test_browser_agent_result_logs_ambiguous_boolean_terminal_signal(
+    caplog,
+    run_context,
+) -> None:
+    caplog.set_level(
+        logging.INFO, logger="market_lense.browser_report_download_artifact"
+    )
+    result = artifact_runtime._parse_browser_result(
+        raw_model_response=json.dumps(
+            {
+                "route_kind": "email_delivery",
+                "email_submission_completed": "completed",
+            }
+        ),
+        normalized_url="https://example.com/report",
+        ctx=run_context,
+    )
+
+    assert result is not None
+    assert result.email_submission_completed is None
+    events = [
+        json.loads(record.message)
+        for record in caplog.records
+        if record.name == "market_lense.browser_report_download_artifact"
+    ]
+    assert events[-1]["event"] == "browser_report_download_terminal_signal_ambiguous"
+    assert (
+        events[-1]["fields"]["raw_signals"]["email_submission_completed"] == "completed"
+    )
+    assert (
+        events[-1]["fields"]["normalized_signals"]["email_submission_completed"] is None
+    )
 
 
 def test_browser_report_download_prompt_marks_unverified_memory_as_weak(
@@ -371,7 +455,9 @@ def test_download_report_with_browser_use_short_circuits_direct_pdf_url(
         )
 
     def fail_if_browser_loaded(module_name: str) -> Any:
-        raise AssertionError(f"browser runtime should not load for direct pdf URL: {module_name}")
+        raise AssertionError(
+            f"browser runtime should not load for direct pdf URL: {module_name}"
+        )
 
     external_boundary_mocks_only.setattr(http_runtime.requests, "get", fake_get)
     external_boundary_mocks_only.setattr(
@@ -395,12 +481,18 @@ def test_download_report_with_browser_use_short_circuits_direct_pdf_url(
     assert response.route_kind == "pdf_download"
     assert response.outcome == "downloaded"
     assert response.used_route_hint is False
-    assert response.final_page_url == "https://cdn.example.com/reports/outlook-2026.pdf?download=1"
+    assert (
+        response.final_page_url
+        == "https://cdn.example.com/reports/outlook-2026.pdf?download=1"
+    )
     assert response.downloaded_file_path is not None
     assert Path(str(response.downloaded_file_path)).read_bytes().startswith(b"%PDF-")
     assert response.downloaded_file_name == "outlook-2026.pdf"
     assert response.downloaded_mime_type == "application/pdf"
-    assert response.route_summary == "Open the direct PDF URL and save the returned PDF file locally."
+    assert (
+        response.route_summary
+        == "Open the direct PDF URL and save the returned PDF file locally."
+    )
     assert_no_defaulted_required_fields(response)
     assert_logs_have_required_fields(_service_events(caplog))
 
@@ -477,7 +569,7 @@ def test_download_report_with_browser_use_short_circuits_report_page_pdf_link(
         return _FakeResponse(
             content=(
                 b"<html><head><title>Stanford AI Index Report</title></head>"
-                b"<body><a href=\"/hubfs/Stanford_HAI_2024_AI-Index-Report.pdf\">"
+                b'<body><a href="/hubfs/Stanford_HAI_2024_AI-Index-Report.pdf">'
                 b"Download the Report</a></body></html>"
             ),
             headers={"Content-Type": "text/html; charset=utf-8"},
@@ -537,8 +629,8 @@ def test_download_report_with_browser_use_ignores_unrelated_report_page_pdf_link
         return _FakeResponse(
             content=(
                 b"<html><head><title>Ultimate Guide to SaaS Affiliate Marketing</title></head>"
-                b"<body><a href=\"https://impact.example.com/legal/"
-                b"impact-modern-slavery-statement.pdf\">"
+                b'<body><a href="https://impact.example.com/legal/'
+                b'impact-modern-slavery-statement.pdf">'
                 b"Modern slavery statement</a></body></html>"
             ),
             headers={"Content-Type": "text/html; charset=utf-8"},
@@ -588,7 +680,9 @@ def test_download_report_with_browser_use_rejects_unrelated_downloaded_pdf_artif
     class WrongPdfAgent(original_runtime):
         def run_sync(self, max_steps: int):
             history = super().run_sync(max_steps)
-            wrong_pdf = Path(self.browser.downloads_path) / "Gender_Pay_Gap_Report_2024.pdf"
+            wrong_pdf = (
+                Path(self.browser.downloads_path) / "Gender_Pay_Gap_Report_2024.pdf"
+            )
             wrong_pdf.write_bytes(b"%PDF-1.7 unrelated")
             self.browser.downloaded_files = [str(wrong_pdf)]
             payload = json.loads(history.final_result())
@@ -598,7 +692,9 @@ def test_download_report_with_browser_use_rejects_unrelated_downloaded_pdf_artif
             payload["downloaded_file_name"] = wrong_pdf.name
             payload["downloaded_mime_type"] = "application/pdf"
             payload["blocked_reason"] = "blocked_unknown_required_enum"
-            payload["blocked_reason_detail"] = "Location did not resolve to a valid option."
+            payload["blocked_reason_detail"] = (
+                "Location did not resolve to a valid option."
+            )
 
             class WrongPdfHistory:
                 def final_result(self_nonlocal) -> str:
@@ -706,7 +802,7 @@ def test_download_report_with_browser_use_short_circuits_static_email_gate(
                 b"<body><h1>Annual Marketing Report</h1>"
                 b"<a>Download the report</a>"
                 b"<form><label>Business email address</label>"
-                b"<input name=\"email\"><button>Submit</button></form></body></html>"
+                b'<input name="email"><button>Submit</button></form></body></html>'
             ),
             headers={"Content-Type": "text/html; charset=utf-8"},
         )
@@ -754,7 +850,7 @@ def test_download_report_with_browser_use_detects_static_provider_email_gate(
         return _FakeResponse(
             content=(
                 b"<html><head><title>Whitepaper Download</title></head>"
-                b"<body><script src=\"/pardot/forms.js\"></script>"
+                b'<body><script src="/pardot/forms.js"></script>'
                 b"<a>Download eBook</a><section>Whitepaper report asset</section>"
                 b"</body></html>"
             ),
@@ -895,7 +991,9 @@ def test_download_report_with_browser_use_extracts_email_route_embedded_pdf_link
     assert_no_defaulted_required_fields,
 ) -> None:
     page_url = "https://example.com/resources/asset/ebook-transforming-search-ai"
-    pdf_url = "https://cdn.example.com/files/Ebook_transforming-search-ai_compressed.pdf"
+    pdf_url = (
+        "https://cdn.example.com/files/Ebook_transforming-search-ai_compressed.pdf"
+    )
     observed_urls: list[str] = []
 
     def fake_get(url: str, *args: Any, **kwargs: Any) -> _FakeResponse:
@@ -909,8 +1007,8 @@ def test_download_report_with_browser_use_extracts_email_route_embedded_pdf_link
         assert url == page_url
         return _FakeResponse(
             content=(
-                b"<html><body><a href=\"https://cdn.example.com/files/"
-                b"Ebook_transforming-search-ai_compressed.pdf\">"
+                b'<html><body><a href="https://cdn.example.com/files/'
+                b'Ebook_transforming-search-ai_compressed.pdf">'
                 b"Download ebook</a></body></html>"
             ),
             status_code=200,
@@ -1694,7 +1792,9 @@ def test_download_report_with_browser_use_raises_for_invalid_pdf_stub(
             download_dir = Path(self.browser.downloads_path)
             download_dir.mkdir(parents=True, exist_ok=True)
             wrapper_path = download_dir / "report.pdf"
-            wrapper_path.write_text("<html><body>not a pdf</body></html>", encoding="utf-8")
+            wrapper_path.write_text(
+                "<html><body>not a pdf</body></html>", encoding="utf-8"
+            )
             self.browser.downloaded_files = [str(wrapper_path)]
             payload = json.loads(super().run_sync(max_steps).final_result())
             payload["downloaded_file_path"] = str(wrapper_path)
@@ -1994,7 +2094,10 @@ def test_download_report_with_browser_use_logs_onsite_prompt_guidance(
             history = super().run_sync(max_steps)
             payload = json.loads(history.final_result())
             onsite_path = Path(self.browser.downloads_path) / "onsite-report.html"
-            onsite_path.write_text("<article><h1>Market Outlook</h1><p>Longread body.</p></article>", encoding="utf-8")
+            onsite_path.write_text(
+                "<article><h1>Market Outlook</h1><p>Longread body.</p></article>",
+                encoding="utf-8",
+            )
             payload["onsite_capture_path"] = str(onsite_path)
             payload["onsite_capture_format"] = "html"
             payload["onsite_page_count"] = 1
@@ -2100,9 +2203,15 @@ def test_download_report_with_browser_use_logs_remembered_route_step_hints(
     ]
     assert len(prompt_events) == 1
     rendered_user_prompt = prompt_events[0]["fields"]["rendered_user_prompt"]
-    assert "Replay these remembered structured route steps before broader exploration:" in rendered_user_prompt
+    assert (
+        "Replay these remembered structured route steps before broader exploration:"
+        in rendered_user_prompt
+    )
     assert "1. click Allow all -> Accepted cookies" in rendered_user_prompt
-    assert "2. extract report article -> Captured the on-site report body" in rendered_user_prompt
+    assert (
+        "2. extract report article -> Captured the on-site report body"
+        in rendered_user_prompt
+    )
 
 
 def test_download_report_with_browser_use_short_circuits_remembered_onsite_extract_to_direct_html_capture(
@@ -2132,7 +2241,9 @@ def test_download_report_with_browser_use_short_circuits_remembered_onsite_extra
         browser_runtime,
         "import_module",
         lambda module_name: (_ for _ in ()).throw(
-            AssertionError("browser runtime should not start for remembered onsite HTML capture")
+            AssertionError(
+                "browser runtime should not start for remembered onsite HTML capture"
+            )
         ),
     )
     caplog.set_level(logging.INFO, logger=service.logger.name)
@@ -2214,7 +2325,9 @@ def test_download_report_with_browser_use_short_circuits_planned_onsite_candidat
         browser_runtime,
         "import_module",
         lambda module_name: (_ for _ in ()).throw(
-            AssertionError("browser runtime should not start for planned onsite HTML capture")
+            AssertionError(
+                "browser runtime should not start for planned onsite HTML capture"
+            )
         ),
     )
     caplog.set_level(logging.INFO, logger=service.logger.name)
@@ -2286,7 +2399,9 @@ def test_download_report_with_browser_use_directly_captures_route_confirmed_non_
         browser_runtime,
         "import_module",
         lambda module_name: (_ for _ in ()).throw(
-            AssertionError("browser runtime should not start for route-confirmed longread")
+            AssertionError(
+                "browser runtime should not start for route-confirmed longread"
+            )
         ),
     )
 
@@ -2316,8 +2431,10 @@ def test_download_report_with_browser_use_directly_captures_route_confirmed_non_
     assert response.outcome == "captured"
     assert response.browser_had_structured_result is False
     assert response.onsite_capture_path is not None
-    assert Path(response.onsite_capture_path).read_text(encoding="utf-8").startswith(
-        "<html>"
+    assert (
+        Path(response.onsite_capture_path)
+        .read_text(encoding="utf-8")
+        .startswith("<html>")
     )
 
 
@@ -2348,7 +2465,9 @@ def test_download_report_with_browser_use_probes_report_detail_candidate_for_dir
         browser_runtime,
         "import_module",
         lambda module_name: (_ for _ in ()).throw(
-            AssertionError("browser runtime should not start for direct article capture")
+            AssertionError(
+                "browser runtime should not start for direct article capture"
+            )
         ),
     )
 
@@ -2407,7 +2526,7 @@ def test_download_report_with_browser_use_recovers_embedded_pdf_from_encoded_wra
             wrapper_path.write_text(
                 (
                     "<html><body><iframe "
-                    "src=\"/viewer?downloadData=https%3A%2F%2Fcdn.example.com%2Freal-report.pdf\">"
+                    'src="/viewer?downloadData=https%3A%2F%2Fcdn.example.com%2Freal-report.pdf">'
                     "</iframe></body></html>"
                 ),
                 encoding="utf-8",
@@ -2647,8 +2766,12 @@ def test_download_report_with_browser_use_keeps_explicit_onsite_classification_w
             payload["route_family"] = "browser_onsite_report"
             payload["encountered_form_fields"] = ["Company", "Work email"]
             payload["post_submit_message"] = ""
-            payload["terminal_text_excerpt"] = "Research report executive summary and methodology."
-            payload["onsite_capture_path"] = str(tmp_path / "downloads" / "captured-report.md")
+            payload["terminal_text_excerpt"] = (
+                "Research report executive summary and methodology."
+            )
+            payload["onsite_capture_path"] = str(
+                tmp_path / "downloads" / "captured-report.md"
+            )
             payload["onsite_capture_format"] = "md"
             payload["onsite_completeness_status"] = "complete"
 
@@ -2837,9 +2960,14 @@ def test_download_report_with_browser_use_records_terminal_snapshot_and_document
     assert Path(response.terminal_evidence.html_snapshot_path).exists()
     assert response.terminal_evidence.screenshot_path
     assert Path(response.terminal_evidence.screenshot_path).exists()
-    assert "https://cdn.example.com/reports/final-report.pdf" in response.terminal_evidence.observed_document_urls
+    assert (
+        "https://cdn.example.com/reports/final-report.pdf"
+        in response.terminal_evidence.observed_document_urls
+    )
     assert response.terminal_evidence.network_events
-    assert response.terminal_evidence.network_events[0].signal_kind == "document_request"
+    assert (
+        response.terminal_evidence.network_events[0].signal_kind == "document_request"
+    )
     assert response.terminal_evidence.visited_url_timeline
 
 
@@ -3079,7 +3207,9 @@ def test_download_report_with_browser_use_uses_network_confirmation_signal(
 
     assert response.route_kind == "email_delivery"
     assert response.outcome == "email_requested"
-    assert "network_confirmation_request" in response.confirmation_evidence.signal_labels
+    assert (
+        "network_confirmation_request" in response.confirmation_evidence.signal_labels
+    )
     assert any(
         event.signal_kind == "confirmation_request"
         for event in response.terminal_evidence.network_events
@@ -3103,9 +3233,9 @@ def test_download_report_with_browser_use_falls_back_to_page_screenshot(
     class PageScreenshotAgent(original_runtime):
         def run_sync(self, max_steps: int):
             history = super().run_sync(max_steps)
-            self.browser.take_screenshot = lambda *args, **kwargs: (_ for _ in ()).throw(
-                RuntimeError("browser screenshot failed")
-            )
+            self.browser.take_screenshot = lambda *args, **kwargs: (
+                _ for _ in ()
+            ).throw(RuntimeError("browser screenshot failed"))
 
             class AsyncPage:
                 url = "https://example.com/final"
@@ -3253,7 +3383,10 @@ def test_download_report_with_browser_use_parses_stringified_page_evaluate_paylo
         event.signal_kind == "confirmation_request"
         for event in response.terminal_evidence.network_events
     )
-    assert "https://cdn.example.com/reports/final-report.pdf" in response.terminal_evidence.observed_document_urls
+    assert (
+        "https://cdn.example.com/reports/final-report.pdf"
+        in response.terminal_evidence.observed_document_urls
+    )
 
 
 def test_download_report_with_browser_use_falls_back_to_history_terminal_state(
@@ -3276,9 +3409,9 @@ def test_download_report_with_browser_use_falls_back_to_history_terminal_state(
             self.browser.url = ""
             self.browser.title = ""
             self.browser.html = ""
-            self.browser.take_screenshot = lambda *args, **kwargs: (_ for _ in ()).throw(
-                RuntimeError("browser screenshot failed")
-            )
+            self.browser.take_screenshot = lambda *args, **kwargs: (
+                _ for _ in ()
+            ).throw(RuntimeError("browser screenshot failed"))
 
             def raise_current_page():
                 raise RuntimeError("browser session already reset")
@@ -3329,7 +3462,10 @@ def test_download_report_with_browser_use_falls_back_to_history_terminal_state(
     assert response.route_kind == "email_delivery"
     assert response.outcome == "email_requested"
     assert response.final_page_url == "https://example.com/report/thank-you"
-    assert response.terminal_evidence.final_page_title == "Thank you for downloading the report"
+    assert (
+        response.terminal_evidence.final_page_title
+        == "Thank you for downloading the report"
+    )
     assert response.terminal_evidence.screenshot_path
     assert Path(response.terminal_evidence.screenshot_path).exists()
 
@@ -3442,7 +3578,10 @@ def test_download_report_with_browser_use_stabilizes_transient_submit_state(
     assert response.route_kind == "email_delivery"
     assert response.outcome == "email_requested"
     assert response.final_page_url == "https://example.com/report/thank-you"
-    assert response.terminal_evidence.final_page_title == "Thank you for downloading the report"
+    assert (
+        response.terminal_evidence.final_page_title
+        == "Thank you for downloading the report"
+    )
     assert "success_url" in response.confirmation_evidence.signal_labels
 
 
@@ -3503,7 +3642,9 @@ def test_download_report_with_browser_use_clears_phantom_pdf_metadata_without_fi
     assert response.downloaded_mime_type is None
 
 
-def test_resolve_effective_identity_fields_hydrates_semantic_alias_values(tmp_path: Path) -> None:
+def test_resolve_effective_identity_fields_hydrates_semantic_alias_values(
+    tmp_path: Path,
+) -> None:
     request = BrowserReportDownloadRequest(
         schema_version="1.0",
         url="https://example.com/form",
@@ -4037,7 +4178,9 @@ def test_download_report_with_browser_use_prefers_onsite_capture_over_optional_f
             payload = json.loads(history.final_result())
             payload["route_kind"] = "email_delivery"
             payload["route_family"] = "browser_onsite_report"
-            payload["final_page_url"] = "https://example.com/insights/global-innovation-outlook"
+            payload["final_page_url"] = (
+                "https://example.com/insights/global-innovation-outlook"
+            )
             payload["final_page_title"] = "Global innovation outlook report"
             payload["encountered_form_fields"] = ["Full name", "Work email"]
             payload["post_submit_message"] = "Thank you for submitting the form."
@@ -4075,7 +4218,7 @@ def test_download_report_with_browser_use_prefers_onsite_capture_over_optional_f
                     "target_text": "Submit",
                     "target_role": "button",
                     "target_url": "https://example.com/insights/global-innovation-outlook",
-                    "result": "Clicked button \"Submit\"",
+                    "result": 'Clicked button "Submit"',
                 },
             ]
 
@@ -4133,7 +4276,9 @@ def test_download_report_with_browser_use_fetches_onsite_html_when_browser_html_
             payload = json.loads(history.final_result())
             payload["route_kind"] = "email_delivery"
             payload["route_family"] = "browser_onsite_report"
-            payload["final_page_url"] = "https://example.com/insights/global-innovation-outlook"
+            payload["final_page_url"] = (
+                "https://example.com/insights/global-innovation-outlook"
+            )
             payload["final_page_title"] = "Global innovation outlook report"
             payload["post_submit_message"] = "Thank you for submitting the form."
             payload["encountered_form_fields"] = ["Full name", "Work email"]
@@ -4273,7 +4418,10 @@ def test_download_report_with_browser_use_fetches_terminal_html_for_email_delive
     assert Path(response.terminal_evidence.html_snapshot_path).exists()
     assert response.terminal_evidence.dom_snapshot_sha256
     assert response.final_page_url == "https://example.com/report/thank-you"
-    assert response.terminal_evidence.final_page_title == "Thank you for downloading the report"
+    assert (
+        response.terminal_evidence.final_page_title
+        == "Thank you for downloading the report"
+    )
 
 
 def test_download_report_with_browser_use_infers_form_disappeared_from_fetched_terminal_html(
@@ -4922,7 +5070,10 @@ def test_download_report_with_browser_use_salvages_empty_result_via_terminal_htm
 
     assert response.route_kind == "onsite_report"
     assert response.outcome == "captured"
-    assert response.final_page_url == "https://datareportal.com/reports/digital-2021-bosnia-and-herzegovina"
+    assert (
+        response.final_page_url
+        == "https://datareportal.com/reports/digital-2021-bosnia-and-herzegovina"
+    )
     assert response.onsite_capture_path is not None
     assert Path(str(response.onsite_capture_path)).exists()
 
@@ -5121,7 +5272,9 @@ def test_download_report_with_browser_use_salvages_completed_history_when_agent_
 
     class CaptureUnsafeBrowser(original_browser):
         def get_current_page(self):
-            raise AssertionError("salvaged completed history should skip live terminal capture")
+            raise AssertionError(
+                "salvaged completed history should skip live terminal capture"
+            )
 
     runtime.Agent = CleanupStalledAgent
     runtime.Browser = CaptureUnsafeBrowser
@@ -5152,7 +5305,8 @@ def test_download_report_with_browser_use_salvages_completed_history_when_agent_
         for event in events
     )
     assert not any(
-        event.get("event") == "browser_report_download_timeout_salvaged_completed_history"
+        event.get("event")
+        == "browser_report_download_timeout_salvaged_completed_history"
         for event in events
     )
 
@@ -5303,8 +5457,7 @@ def test_download_report_with_browser_use_materializes_claimed_onsite_capture(
     original_runtime = runtime.Agent
     long_report_excerpt = (
         "Local RankFlux research report analysis. "
-        "This report studies ranking volatility across industries. "
-        * 30
+        "This report studies ranking volatility across industries. " * 30
     )
 
     class ClaimedOnsiteAgent(original_runtime):
@@ -5315,7 +5468,9 @@ def test_download_report_with_browser_use_materializes_claimed_onsite_capture(
             payload["route_kind"] = "onsite_report"
             payload["route_family"] = "browser_tracker_redirect"
             payload["final_page_url"] = "https://example.com/research/local-rankflux"
-            payload["resolved_target_url"] = "https://example.com/research/local-rankflux"
+            payload["resolved_target_url"] = (
+                "https://example.com/research/local-rankflux"
+            )
             payload["terminal_text_excerpt"] = long_report_excerpt
             payload["onsite_capture_path"] = str(claimed_path)
             payload["onsite_capture_format"] = "markdown"
@@ -5354,8 +5509,10 @@ def test_download_report_with_browser_use_materializes_claimed_onsite_capture(
     assert response.route_kind == "onsite_report"
     assert response.outcome == "captured"
     assert response.onsite_capture_path is not None
-    assert Path(response.onsite_capture_path).read_text(encoding="utf-8").startswith(
-        "Local RankFlux research report analysis."
+    assert (
+        Path(response.onsite_capture_path)
+        .read_text(encoding="utf-8")
+        .startswith("Local RankFlux research report analysis.")
     )
 
 
@@ -5377,8 +5534,7 @@ def test_download_report_with_browser_use_ignores_worker_metadata_when_materiali
         "The Single Age report explores a global multi-generational cohort. "
         "The report discusses self-expression, independence, and authenticity. "
         "This report includes original infographics, case studies, trends, "
-        "and implications for brands and marketers. "
-        * 20
+        "and implications for brands and marketers. " * 20
     )
 
     class ExtractedOnsiteAgent(original_runtime):
@@ -5386,14 +5542,18 @@ def test_download_report_with_browser_use_ignores_worker_metadata_when_materiali
             history = super().run_sync(max_steps)
             payload = json.loads(history.final_result())
             claimed_path = Path(self.browser.downloads_path) / "The Single Age.md"
-            (Path(self.browser.downloads_path) / "browser_agent_worker_response.json").write_text(
+            (
+                Path(self.browser.downloads_path) / "browser_agent_worker_response.json"
+            ).write_text(
                 "{}",
                 encoding="utf-8",
             )
             payload["route_kind"] = "onsite_report"
             payload["route_family"] = "browser_pdf_click"
             payload["final_page_url"] = "https://www.vml.com/insight/the-single-age"
-            payload["resolved_target_url"] = "https://www.vml.com/insight/the-single-age"
+            payload["resolved_target_url"] = (
+                "https://www.vml.com/insight/the-single-age"
+            )
             payload["terminal_text_excerpt"] = "The Single Age"
             payload["onsite_capture_path"] = str(claimed_path)
             payload["onsite_capture_format"] = "md"
@@ -5471,9 +5631,15 @@ def test_download_report_with_browser_use_rejects_report_not_found_listing(
             payload = json.loads(history.final_result())
             payload["route_kind"] = "onsite_report"
             payload["route_family"] = "browser_listing_hub"
-            payload["final_page_url"] = "https://datareportal.com/reports/?tag=Digital+2022"
-            payload["resolved_target_url"] = "https://datareportal.com/reports/?tag=Digital+2022"
-            payload["terminal_text_excerpt"] = "POSTS TAGGED DIGITAL 2022 Digital 2022: Tuvalu"
+            payload["final_page_url"] = (
+                "https://datareportal.com/reports/?tag=Digital+2022"
+            )
+            payload["resolved_target_url"] = (
+                "https://datareportal.com/reports/?tag=Digital+2022"
+            )
+            payload["terminal_text_excerpt"] = (
+                "POSTS TAGGED DIGITAL 2022 Digital 2022: Tuvalu"
+            )
             payload["route_steps"] = [
                 {
                     "index": 0,
@@ -5516,7 +5682,9 @@ def test_download_report_with_browser_use_rejects_report_not_found_listing(
                     canonical_url="https://datareportal.com/reports/digital-2022-wallis-and-futuna",
                     title="Digital 2022: Wallis and Futuna",
                     discovered_on_page_number=53,
-                    source_page_urls=["https://datareportal.com/reports?offset=1658385029582"],
+                    source_page_urls=[
+                        "https://datareportal.com/reports?offset=1658385029582"
+                    ],
                     discovery_provenances=[],
                     pdf_url=None,
                     published_at_text=None,
@@ -5579,7 +5747,10 @@ def test_download_report_with_browser_use_recovers_lookup_before_completed_histo
             class LookupAssistPage:
                 def evaluate(self, script):
                     script_text = str(script or "")
-                    if "selected_count" in script_text and ".lookupFormFieldBlock" in script_text:
+                    if (
+                        "selected_count" in script_text
+                        and ".lookupFormFieldBlock" in script_text
+                    ):
                         browser.url = "https://example.com/report#success"
                         browser.title = "Thank you"
                         browser.html = (
@@ -5777,7 +5948,8 @@ def test_download_report_with_browser_use_salvages_partial_business_email_blocke
         for event in events
     )
     assert not any(
-        event.get("event") == "browser_report_download_timeout_salvaged_partial_history_blocker"
+        event.get("event")
+        == "browser_report_download_timeout_salvaged_partial_history_blocker"
         for event in events
     )
 
@@ -5823,7 +5995,10 @@ def test_download_report_with_browser_use_bounds_lookup_assist_after_completed_h
             class BlockingLookupPage:
                 def evaluate(self, script):
                     script_text = str(script or "")
-                    if "selected_count" in script_text and ".lookupFormFieldBlock" in script_text:
+                    if (
+                        "selected_count" in script_text
+                        and ".lookupFormFieldBlock" in script_text
+                    ):
                         time.sleep(7.0)
                         return {"acted": False}
                     if "navigationEntries" in script_text:
@@ -6119,7 +6294,10 @@ def test_download_report_with_browser_use_lookup_submission_assist_upgrades_emai
             class LookupAssistPage:
                 def evaluate(self, script):
                     script_text = str(script or "")
-                    if "selected_count" in script_text and ".lookupFormFieldBlock" in script_text:
+                    if (
+                        "selected_count" in script_text
+                        and ".lookupFormFieldBlock" in script_text
+                    ):
                         browser.url = "https://example.com/report#success"
                         browser.title = "Thank you"
                         browser.html = (
@@ -6243,7 +6421,10 @@ def test_download_report_with_browser_use_lookup_submission_assist_recovers_look
             class LookupBlockedSubmitPage:
                 def evaluate(self, script):
                     script_text = str(script or "")
-                    if "selected_count" in script_text and ".lookupFormFieldBlock" in script_text:
+                    if (
+                        "selected_count" in script_text
+                        and ".lookupFormFieldBlock" in script_text
+                    ):
                         browser.url = "https://example.com/report#success"
                         browser.title = "Thank you"
                         browser.html = (
@@ -6304,7 +6485,7 @@ def test_download_report_with_browser_use_lookup_submission_assist_recovers_look
                         "target_text": "Submit",
                         "target_role": "button",
                         "target_url": "https://example.com/report#download",
-                        "result": "Clicked button \"Submit\"",
+                        "result": 'Clicked button "Submit"',
                     },
                 ],
                 "post_submit_message": None,
@@ -6398,7 +6579,9 @@ def test_browser_worker_main_preserves_candidate_trace(
             {
                 "schema_version": "1.0",
                 "request": {
-                    **json.loads(json.dumps(request, default=lambda value: value.__dict__)),
+                    **json.loads(
+                        json.dumps(request, default=lambda value: value.__dict__)
+                    ),
                 },
                 "ctx": run_context.__dict__,
                 "normalized_url": request.url,
@@ -6463,7 +6646,9 @@ def test_browser_worker_main_preserves_candidate_trace(
     assert len(observed_requests) == 1
     observed_request = observed_requests[0]
     assert observed_request.candidate_trace is not None
-    assert observed_request.candidate_trace.canonical_url == candidate_trace.canonical_url
+    assert (
+        observed_request.candidate_trace.canonical_url == candidate_trace.canonical_url
+    )
     assert observed_request.candidate_trace.pdf_url == candidate_trace.pdf_url
     assert observed_request.candidate_trace.discovery_provenances == (
         candidate_trace.discovery_provenances
@@ -6481,7 +6666,9 @@ def test_download_report_with_browser_use_cleans_stale_browser_use_temp_dirs_bef
     stale_download_dir = tmp_path / "browser-use-downloads-stale"
     stale_download_dir.mkdir(parents=True, exist_ok=True)
     (stale_download_dir / "artifact.tmp").write_text("x", encoding="utf-8")
-    old_timestamp = time.time() - (browser_runtime._STALE_BROWSER_USE_TEMP_DIR_MIN_AGE_SECONDS + 60.0)
+    old_timestamp = time.time() - (
+        browser_runtime._STALE_BROWSER_USE_TEMP_DIR_MIN_AGE_SECONDS + 60.0
+    )
     os.utime(stale_profile_dir, (old_timestamp, old_timestamp))
     os.utime(stale_download_dir, (old_timestamp, old_timestamp))
 
@@ -6567,7 +6754,9 @@ def test_prepare_download_dir_tolerates_locked_managed_browser_profile_dir(
     tmp_path: Path,
     external_boundary_mocks_only,
 ) -> None:
-    normalized_url = "https://www.brightlocal.com/research/local-rankings-investigation-dentist"
+    normalized_url = (
+        "https://www.brightlocal.com/research/local-rankings-investigation-dentist"
+    )
     download_dir = request_runtime.prepare_download_dir(
         root_dir=str(tmp_path),
         normalized_url=normalized_url,
@@ -6602,7 +6791,9 @@ def test_kill_browser_force_stops_local_watchdog_process_tree(
     external_boundary_mocks_only,
 ) -> None:
     class _FakeProcess:
-        def __init__(self, pid: int, children: list["_FakeProcess"] | None = None) -> None:
+        def __init__(
+            self, pid: int, children: list["_FakeProcess"] | None = None
+        ) -> None:
             self.pid = pid
             self._children = children or []
             self.terminate_calls = 0
@@ -6642,7 +6833,9 @@ def test_kill_browser_force_stops_local_watchdog_process_tree(
             _temp_dirs_to_cleanup=[],
             _original_user_data_dir=None,
         ),
-        kill=lambda: (_ for _ in ()).throw(AssertionError("browser.kill should not run")),
+        kill=lambda: (_ for _ in ()).throw(
+            AssertionError("browser.kill should not run")
+        ),
     )
 
     external_boundary_mocks_only.setattr(

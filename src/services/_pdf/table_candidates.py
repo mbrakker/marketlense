@@ -90,17 +90,12 @@ def _table_confidence_score(candidate: _TableCandidate) -> float:
     )
     data_score = _bounded_quality(candidate.numeric_ratio / 0.35) * 0.18
     compactness_score = (
-        _bounded_quality(1.0 - max(0.0, candidate.avg_words_per_cell - 3.0) / 9.0)
-        * 0.1
+        _bounded_quality(1.0 - max(0.0, candidate.avg_words_per_cell - 3.0) / 9.0) * 0.1
     )
     area_score = _bounded_quality(candidate.area_frac / 0.16) * 0.08
     return round(
         _bounded_quality(
-            method_score
-            + structure_score
-            + data_score
-            + compactness_score
-            + area_score
+            method_score + structure_score + data_score + compactness_score + area_score
         ),
         3,
     )
@@ -392,9 +387,7 @@ def _extract_tables_sequential(
                                     fitz.Rect(image_table_candidate.bbox),
                                 )
                                 visual_entropy = (
-                                    float(
-                                        profile.get("visual_entropy", 0.0) or 0.0
-                                    )
+                                    float(profile.get("visual_entropy", 0.0) or 0.0)
                                     if profile is not None
                                     else 0.0
                                 )
@@ -595,7 +588,7 @@ def _extract_tables_sequential(
             try:
                 fitz_doc.close()
             except Exception:
-                pass
+                fitz_doc = None
 
     return out, stats
 

@@ -68,11 +68,8 @@ def launch_process(
     for key, value in request.env.items():
         env[str(key)] = str(value)
     creationflags = 0
-    popen_kwargs: dict[str, object] = {}
     if _is_windows():
         creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
-    else:
-        popen_kwargs["start_new_session"] = True
     try:
         handle = output_path.open("ab")
     except Exception as exc:
@@ -84,16 +81,26 @@ def launch_process(
             context={"output_path": str(output_path)},
         ) from exc
     try:
-        process = subprocess.Popen(
-            command,
-            cwd=cwd,
-            stdout=handle,
-            stderr=subprocess.STDOUT,
-            stdin=subprocess.DEVNULL,
-            env=env,
-            creationflags=creationflags,
-            **popen_kwargs,
-        )
+        if _is_windows():
+            process = subprocess.Popen(
+                command,
+                cwd=cwd,
+                stdout=handle,
+                stderr=subprocess.STDOUT,
+                stdin=subprocess.DEVNULL,
+                env=env,
+                creationflags=creationflags,
+            )
+        else:
+            process = subprocess.Popen(
+                command,
+                cwd=cwd,
+                stdout=handle,
+                stderr=subprocess.STDOUT,
+                stdin=subprocess.DEVNULL,
+                env=env,
+                start_new_session=True,
+            )
     except Exception as exc:
         handle.close()
         raise AppError(
@@ -215,9 +222,26 @@ def terminate_process(
                         context={"pid": pid, "details": details},
                     )
         else:
-            os.killpg(os.getpgid(pid), 15)
+            getpgid = getattr(os, "getpgid", None)
+            killpg = getattr(os, "killpg", None)
+            if not callable(getpgid) or not callable(killpg):
+                raise AppError(
+                    code="process_terminate_unsupported_platform",
+                    message="Process-group termination is not supported on this platform",
+                    retryable=False,
+                    context={"pid": pid},
+                )
+            killpg(getpgid(pid), 15)
     except ProcessLookupError:
-        pass
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="process_terminate_already_absent",
+                module=logger.name,
+                fields={"pid": pid},
+            )
+        )
     except OSError as exc:
         raise AppError(
             code="process_terminate_failed",

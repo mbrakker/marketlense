@@ -28,15 +28,19 @@ def _force_utf8_stdio() -> None:
             continue
 
 
-def setup_logging(request: LoggingSetupRequest, ctx: RunContext) -> LoggingSetupResponse:
+def setup_logging(
+    request: LoggingSetupRequest, ctx: RunContext
+) -> LoggingSetupResponse:
     logger = logging.getLogger(SERVICE_LOGGER_NAME)
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="logging_setup_start",
-        module=SERVICE_LOGGER_NAME,
-        fields={"level": request.level},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="logging_setup_start",
+            module=SERVICE_LOGGER_NAME,
+            fields={"level": request.level},
+        )
+    )
 
     _force_utf8_stdio()
     root = logging.getLogger()
@@ -44,8 +48,19 @@ def setup_logging(request: LoggingSetupRequest, ctx: RunContext) -> LoggingSetup
         root.removeHandler(h)
         try:
             h.close()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="logging_handler_close_failed",
+                    module=SERVICE_LOGGER_NAME,
+                    fields={
+                        "handler_type": type(h).__name__,
+                        "error": str(exc),
+                    },
+                )
+            )
 
     use_rich = os.getenv("RICH_DISABLE", "").lower() not in ("1", "true", "yes")
     if use_rich and hasattr(sys.stdout, "isatty") and not sys.stdout.isatty():
@@ -70,18 +85,20 @@ def setup_logging(request: LoggingSetupRequest, ctx: RunContext) -> LoggingSetup
         handlers=handlers,
     )
     logger = logging.getLogger(SERVICE_LOGGER_NAME)
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="logging_setup_complete",
-        module=SERVICE_LOGGER_NAME,
-        fields={
-            "level": request.level,
-            "log_dir": log_dir,
-            "log_path": log_path,
-            "use_rich": use_rich,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="logging_setup_complete",
+            module=SERVICE_LOGGER_NAME,
+            fields={
+                "level": request.level,
+                "log_dir": log_dir,
+                "log_path": log_path,
+                "use_rich": use_rich,
+            },
+        )
+    )
     return LoggingSetupResponse(
         schema_version="1.0",
         level=request.level,

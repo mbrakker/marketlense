@@ -661,7 +661,7 @@ def _close_pypdf_reader(reader: PdfReader) -> None:
         if callable(close_fn):
             close_fn()
     except (AttributeError, RuntimeError, ValueError, TypeError):
-        pass
+        return
 
 
 def _compute_text_density(text: str, pages: int) -> float:

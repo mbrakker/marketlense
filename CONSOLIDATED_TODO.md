@@ -30,13 +30,12 @@ Scoring rubric:
 
 Suggested priority order:
 
-1. `10. Bugs & Defects`
-2. `1. LLM, Prompts, Cost & Provider Policy`
-3. `3. PDF, OCR, Candidate Extraction & Ranking`
-4. `5. Orchestration, State, Idempotency & Scheduling`
-5. `6. Publishing & WordPress`
-6. `8. CI, Observability, Governance & Release Safety`
-7. `9. Architecture Simplification & Code Reduction`
+1. `1. LLM, Prompts, Cost & Provider Policy`
+2. `3. PDF, OCR, Candidate Extraction & Ranking`
+3. `5. Orchestration, State, Idempotency & Scheduling`
+4. `6. Publishing & WordPress`
+5. `8. CI, Observability, Governance & Release Safety`
+6. `9. Architecture Simplification & Code Reduction`
 
 ---
 
@@ -677,79 +676,10 @@ Suggested priority order:
     - New audit findings are merged into existing items or added as concrete workstream tasks.
     - Duplicate titles or overlapping acceptance criteria are removed during review.
 
----
-
-## 10. Bugs & Defects
-
-- **Title:** Fix type-check gate blind spot and current full-repo mypy failures [Impact: 5/5, Effort: 4/5]
-  - Explanation: `python scripts/ci/run_type_check.py` currently skips when no changed Python files are detected, but a direct `python -m mypy src` run reports 270 errors across 70 files. The failures include UI run branch type confusion, optional dict access, branded ID/string mismatches, and platform-specific process-service typing.
-  - Pros: Restores trust in the type gate and catches real regressions earlier.
-  - Cons: Broad cleanup touches many modules and may require a temporary baseline.
-  - Acceptance Criteria:
-    - CI has a full-repo or baseline-enforced type-check job in addition to any changed-file fast path.
-    - `python -m mypy src` passes, or a checked-in baseline tracks every remaining error with owner and expiry.
-    - `ui_run_execution_orchestrator` branch variables are typed per run type instead of reusing incompatible variables across branches.
-    - New Python changes cannot add unbaselined mypy errors.
-
-- **Title:** Fix UI run worker payload coercion and generic failure classification [Impact: 4/5, Effort: 3/5]
-  - Explanation: `src/orchestrators/ui_run_execution_orchestrator.py` directly coerces payload values such as `int(payload["limit"])` inside workflow branches. Invalid UI payloads fall through the broad `except Exception` path and are reported as `ui_run_worker_failed` instead of typed validation errors.
-  - Pros: Clearer operator errors, safer UI run replay, better negative-path tests.
-  - Cons: Requires per-run-type payload validation contracts and test updates.
-  - Acceptance Criteria:
-    - Each UI run type validates and normalizes its payload before invoking workflow logic.
-    - Invalid numeric/string payloads raise typed `AppError` codes with field-level context.
-    - The broad `except Exception` path no longer masks expected validation failures.
-    - Tests cover invalid `limit`, missing required URL/path fields, and replay of failed UI runs.
-
-- **Title:** Replace pass-only exception swallowing in production paths [Impact: 4/5, Effort: 3/5]
-  - Explanation: Static scan found pass-only exception handlers in production modules including browser cleanup/shutdown, browser-download artifacts, PDF figure/table/text extraction, logging setup, and process termination. These paths can hide cleanup leaks, parser defects, or lost observability.
-  - Pros: Makes latent failures visible and easier to triage.
-  - Cons: Some cleanup paths need careful non-fatal logging to avoid noisy failures.
-  - Acceptance Criteria:
-    - Pass-only `except` handlers are removed or explicitly allowlisted with justification and expiry.
-    - Non-fatal cleanup failures are logged with `run_id`, `task_id`, `span_id`, `role`, `module`, and `event`.
-    - Parser/extraction failures either return typed degraded results with reason codes or raise typed `AppError`.
-    - Tests assert logs or errors for representative browser cleanup, PDF extraction, and logging handler-close failures.
-
-- **Title:** Normalize browser-download boolean signals before terminal-state decisions [Impact: 3/5, Effort: 2/5]
-  - Explanation: Browser-download code compares model/result fields with exact identity checks such as `payload.get("email_submission_completed") is True`. If a model or worker emits `"true"`, `"yes"`, `1`, or other truthy serialized values, terminal-state and recovery decisions can be misclassified.
-  - Pros: More robust browser form handling and fewer false recovery/skipped states.
-  - Cons: Needs strict normalization so ambiguous values do not become false positives.
-  - Acceptance Criteria:
-    - Browser agent result adaptation normalizes boolean-like fields through one strict helper.
-    - Terminal-state decisions use normalized booleans, not raw `is True`/`is False` checks.
-    - Tests cover native booleans, string booleans, numeric booleans, missing fields, and ambiguous values.
-    - Logs include the raw and normalized terminal-signal summary when values are ambiguous.
-
-- **Title:** Stop PDF triage/extraction failures from silently changing candidate scope [Impact: 4/5, Effort: 3/5]
-  - Explanation: PDF candidate planning currently catches triage/extraction exceptions and can continue by including pages or keeping stale text, which may silently broaden candidate scope or hide parser bugs. This can degrade speed and ranking quality without a visible failure reason.
-  - Pros: More deterministic candidate extraction and easier PDF parser debugging.
-  - Cons: Some malformed PDFs may need explicit degraded-mode policies.
-  - Acceptance Criteria:
-    - PDF triage failures are counted, logged, and reflected in typed extraction stats.
-    - Degraded behavior is policy-driven: fail, include page with warning, or skip page with warning.
-    - Candidate extraction tests cover triage exception, page text exception, and malformed PDF paths.
-    - Ranking payloads include degraded-page reason codes when candidates come from degraded extraction.
-
-- **Title:** Classify corrupt cache/state artifacts instead of silently degrading [Impact: 4/5, Effort: 3/5]
-  - Explanation: Several cache and state readers return `None`, cache misses, or default values on JSON decode/type failures. Silent degradation can trigger unnecessary reruns, hide corrupted artifacts, and make reproduction from logs unreliable.
-  - Pros: Better reproducibility, clearer rerun reasons, fewer hidden data-integrity failures.
-  - Cons: Requires tuning which corrupt artifacts are fatal versus recoverable.
-  - Acceptance Criteria:
-    - Cache/state readers emit typed status codes for missing, invalid JSON, invalid schema, key mismatch, and expired artifacts.
-    - Corrupt artifacts are logged with sanitized path, artifact kind, and recovery policy.
-    - Orchestrators decide whether corrupt artifacts are retryable, recoverable, or fatal.
-    - Tests cover corrupt sidecars, corrupt cache packs, corrupt cost rollups, and corrupt state JSON.
-
----
-
 ## Priority Launch Plan
 
 ### Phase 1: Highest-Leverage Foundations (2-4 weeks)
 
-- Type-check gate blind spot and current full-repo mypy failures.
-- UI run worker payload coercion and generic failure classification.
-- Pass-only production exception swallowing.
 - OCR confidence gating.
 - Idempotency checksum per side-effecting orchestrator step.
 - Real-time spend guardrails.

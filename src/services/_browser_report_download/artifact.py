@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
+import logging
 from hashlib import sha256
 import re
 import shutil
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterable
 from urllib.parse import urljoin, urlsplit
 
 from pydantic import BaseModel, Field, ValidationError
@@ -34,7 +36,12 @@ from src.services._config_identity import (
     identity_field_match_tokens,
     normalize_browser_download_identity_key,
 )
+from src.utils.coercion import (
+    is_ambiguous_optional_bool_signal,
+    normalize_optional_bool_signal,
+)
 from src.utils.errors import AppError
+from src.utils.logging import log_event
 from src.utils.url_utils import normalize_url
 
 if TYPE_CHECKING:
@@ -138,7 +145,14 @@ _ONSITE_ROUTE_FAMILIES = {
     "browser_onsite_report",
     "browser_listing_hub",
 }
-_ONPAGE_REPORT_MARKERS = ("report", "research", "insight", "analysis", "survey", "outlook")
+_ONPAGE_REPORT_MARKERS = (
+    "report",
+    "research",
+    "insight",
+    "analysis",
+    "survey",
+    "outlook",
+)
 _NON_REPORT_PAGE_MARKERS = ("blog", "news", "press", "case study", "customer story")
 _PAGINATION_END_MARKERS = (
     "last page",
@@ -173,6 +187,12 @@ _VERIFIED_EMAIL_SIGNAL_MARKERS = {
     "form_disappeared",
     "network_confirmation_request",
 }
+_TERMINAL_BOOLEAN_FIELDS = (
+    "email_submission_completed",
+    "confirmation_url_changed",
+    "form_disappeared",
+)
+logger = logging.getLogger("market_lense.browser_report_download_artifact")
 
 
 class BrowserUseRouteStep(BaseModel):
@@ -185,7 +205,9 @@ class BrowserUseRouteStep(BaseModel):
 
 
 class BrowserUseAgentResult(BaseModel):
-    route_kind: str = Field(description="Either `pdf_download`, `email_delivery`, or `onsite_report`.")
+    route_kind: str = Field(
+        description="Either `pdf_download`, `email_delivery`, or `onsite_report`."
+    )
     route_summary: str | None = Field(
         default=None,
         description="Short description of the working clicks/forms for this URL.",
@@ -300,6 +322,7 @@ def finalize_browser_report_download_result(
     agent_result = _parse_browser_result(
         raw_model_response=browser_run.raw_model_response,
         normalized_url=normalized_url,
+        ctx=ctx,
     )
     if agent_result is None:
         return _salvage_without_structured_result(
@@ -321,7 +344,10 @@ def finalize_browser_report_download_result(
     onsite_capture_path = str(agent_result.onsite_capture_path or "").strip() or None
     if onsite_capture_path and downloaded_path is not None:
         try:
-            if downloaded_path.resolve() == Path(onsite_capture_path).expanduser().resolve():
+            if (
+                downloaded_path.resolve()
+                == Path(onsite_capture_path).expanduser().resolve()
+            ):
                 downloaded_path = None
         except OSError:
             downloaded_path = None
@@ -347,7 +373,9 @@ def finalize_browser_report_download_result(
         download_dir=download_dir,
         downloaded_path=downloaded_path,
         target_urls=[
-            request.candidate_trace.pdf_url if request.candidate_trace is not None else "",
+            request.candidate_trace.pdf_url
+            if request.candidate_trace is not None
+            else "",
             *_resolve_observed_document_urls(
                 network_resource_urls=list(browser_run.network_resource_urls or []),
                 dom_snapshot_html=browser_html,
@@ -460,10 +488,9 @@ def finalize_browser_report_download_result(
     )
     if not final_page_title:
         final_page_title = _extract_html_title(browser_html)
-    terminal_text_excerpt = (
-        str(agent_result.terminal_text_excerpt or "").strip()
-        or _extract_visible_text_from_html(browser_html)
-    )
+    terminal_text_excerpt = str(
+        agent_result.terminal_text_excerpt or ""
+    ).strip() or _extract_visible_text_from_html(browser_html)
     blocked_reason_detail = _resolve_blocked_reason_detail(
         agent_result=agent_result,
         blocked_reason=blocked_reason,
@@ -509,8 +536,14 @@ def finalize_browser_report_download_result(
         else None,
         downloaded_path=downloaded_path,
     )
-    onsite_capture_format = str(agent_result.onsite_capture_format or "").strip() or None
-    if route_kind == "onsite_report" and not onsite_capture_path and browser_html.strip():
+    onsite_capture_format = (
+        str(agent_result.onsite_capture_format or "").strip() or None
+    )
+    if (
+        route_kind == "onsite_report"
+        and not onsite_capture_path
+        and browser_html.strip()
+    ):
         onsite_capture_path = str(
             _capture_salvaged_onsite_html(
                 request=request,
@@ -630,7 +663,9 @@ def finalize_browser_report_download_result(
             )
     elif route_kind == "onsite_report":
         artifact_validation_status = "captured"
-        artifact_validation_detail = "Captured on-site report content without a local PDF."
+        artifact_validation_detail = (
+            "Captured on-site report content without a local PDF."
+        )
     elif blocked_reason:
         artifact_validation_status = "blocked"
         artifact_validation_detail = blocked_reason_detail or blocked_reason
@@ -724,9 +759,9 @@ def finalize_browser_report_download_result(
 
 def _resolve_terminal_final_url(
     *,
-    browser_run_final_url: str,
-    agent_result_final_url: str,
-    request_attempt_url: str,
+    browser_run_final_url: str | None,
+    agent_result_final_url: str | None,
+    request_attempt_url: str | None,
     normalized_url: str,
 ) -> str:
     browser_url = str(browser_run_final_url or "").strip()
@@ -740,8 +775,8 @@ def _resolve_terminal_final_url(
 
 def _resolve_terminal_final_page_title(
     *,
-    browser_run_final_page_title: str,
-    agent_result_final_page_title: str,
+    browser_run_final_page_title: str | None,
+    agent_result_final_page_title: str | None,
 ) -> str:
     browser_title = str(browser_run_final_page_title or "").strip()
     if browser_title:
@@ -753,12 +788,41 @@ def _parse_browser_result(
     *,
     raw_model_response: str,
     normalized_url: str,
+    ctx: RunContext,
 ) -> BrowserUseAgentResult | None:
-    payload = str(raw_model_response or "").strip()
-    if not payload:
+    raw_payload = str(raw_model_response or "").strip()
+    if not raw_payload:
         return None
     try:
-        return BrowserUseAgentResult.model_validate_json(payload)
+        payload = json.loads(raw_payload)
+    except json.JSONDecodeError as exc:
+        raise AppError(
+            code="browser_download_invalid_result",
+            message="browser-use returned invalid structured JSON",
+            cause=exc,
+            retryable=True,
+            context={
+                "normalized_url": normalized_url,
+                "raw_model_response": raw_model_response,
+            },
+        ) from exc
+    if not isinstance(payload, dict):
+        raise AppError(
+            code="browser_download_invalid_result",
+            message="browser-use structured result root must be an object",
+            retryable=True,
+            context={
+                "normalized_url": normalized_url,
+                "raw_model_response": raw_model_response,
+            },
+        )
+    payload = _normalize_terminal_boolean_payload(
+        payload,
+        normalized_url=normalized_url,
+        ctx=ctx,
+    )
+    try:
+        return BrowserUseAgentResult.model_validate(payload)
     except ValidationError as exc:
         raise AppError(
             code="browser_download_invalid_result",
@@ -770,6 +834,42 @@ def _parse_browser_result(
                 "raw_model_response": raw_model_response,
             },
         ) from exc
+
+
+def _normalize_terminal_boolean_payload(
+    payload: dict[str, object],
+    *,
+    normalized_url: str,
+    ctx: RunContext,
+) -> dict[str, object]:
+    normalized = dict(payload)
+    raw_summary: dict[str, object] = {}
+    normalized_summary: dict[str, bool | None] = {}
+    ambiguous_fields: list[str] = []
+    for field_name in _TERMINAL_BOOLEAN_FIELDS:
+        raw_value = payload.get(field_name)
+        normalized_value = normalize_optional_bool_signal(raw_value)
+        raw_summary[field_name] = raw_value
+        normalized_summary[field_name] = normalized_value
+        normalized[field_name] = normalized_value
+        if is_ambiguous_optional_bool_signal(raw_value):
+            ambiguous_fields.append(field_name)
+    if ambiguous_fields:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="browser_report_download_terminal_signal_ambiguous",
+                module=logger.name,
+                fields={
+                    "normalized_url": normalized_url,
+                    "raw_signals": raw_summary,
+                    "normalized_signals": normalized_summary,
+                    "ambiguous_fields": ambiguous_fields,
+                },
+            )
+        )
+    return normalized
 
 
 def _salvage_without_structured_result(
@@ -813,7 +913,9 @@ def _salvage_without_structured_result(
         download_dir=download_dir,
         downloaded_path=downloaded_path,
         target_urls=[
-            request.candidate_trace.pdf_url if request.candidate_trace is not None else "",
+            request.candidate_trace.pdf_url
+            if request.candidate_trace is not None
+            else "",
             *_resolve_observed_document_urls(
                 network_resource_urls=list(browser_run.network_resource_urls or []),
                 dom_snapshot_html=browser_html,
@@ -937,7 +1039,9 @@ def _salvage_without_structured_result(
             route_status="inferred",
             outcome="email_required",
             artifact_validation_status="blocked" if blocked_reason else "recovered",
-            artifact_validation_detail=terminal_text_excerpt or blocked_reason or "Recovered a gated-form terminal state from browser evidence.",
+            artifact_validation_detail=terminal_text_excerpt
+            or blocked_reason
+            or "Recovered a gated-form terminal state from browser evidence.",
             browser_html=browser_html,
             html_snapshot_path=html_snapshot_path,
             screenshot_path=str(browser_run.screenshot_path or ""),
@@ -1010,7 +1114,7 @@ def _complete_pdf_artifact(
     normalized_url: str,
     download_dir: Path,
     downloaded_path: Path | None,
-    target_urls: list[str],
+    target_urls: Iterable[str | None],
 ) -> tuple[Path | None, bool]:
     if downloaded_path is not None:
         try:
@@ -1303,10 +1407,7 @@ def _build_salvaged_confirmation_evidence(
 ) -> BrowserDownloadConfirmationEvidence:
     submit_observed = bool(
         (
-            (
-                _html_contains_form(html)
-                and not _html_contains_submit_control(html)
-            )
+            (_html_contains_form(html) and not _html_contains_submit_control(html))
             or "please wait" in terminal_text_excerpt.casefold()
             or _url_indicates_confirmation(final_url)
         )
@@ -1316,8 +1417,12 @@ def _build_salvaged_confirmation_evidence(
     signal_labels = _build_confirmation_signal_labels(
         visible_confirmation_text=terminal_text_excerpt,
         final_page_url=final_url,
-        url_changed=bool(final_url and final_url != str(request.attempt_url or request.url).strip()),
-        submit_button_state="disabled" if "please wait" in terminal_text_excerpt.casefold() else "unchanged",
+        url_changed=bool(
+            final_url and final_url != str(request.attempt_url or request.url).strip()
+        ),
+        submit_button_state="disabled"
+        if "please wait" in terminal_text_excerpt.casefold()
+        else "unchanged",
         form_disappeared=not _html_contains_form(html),
         email_submission_completed=True if submit_observed else None,
         network_signal_labels=_build_network_confirmation_signal_labels(
@@ -1326,7 +1431,9 @@ def _build_salvaged_confirmation_evidence(
     )
     return BrowserDownloadConfirmationEvidence(
         schema_version="1.0",
-        url_changed=bool(final_url and final_url != str(request.attempt_url or request.url).strip()),
+        url_changed=bool(
+            final_url and final_url != str(request.attempt_url or request.url).strip()
+        ),
         visible_confirmation_text=terminal_text_excerpt,
         submit_button_state="disabled"
         if "please wait" in terminal_text_excerpt.casefold()
@@ -1412,7 +1519,11 @@ def _build_salvaged_email_result(
             screenshot_path=str(screenshot_path or "").strip(),
             dom_snapshot_sha256=_dom_snapshot_sha256(browser_html),
             evidence_labels=_normalize_string_list(
-                [*confirmation_evidence.signal_labels, "salvaged_browser_terminal", "email_delivery"]
+                [
+                    *confirmation_evidence.signal_labels,
+                    "salvaged_browser_terminal",
+                    "email_delivery",
+                ]
             ),
         ),
         browser_had_structured_result=False,
@@ -1455,7 +1566,11 @@ def _build_salvaged_onsite_result(
     )
     page_count = max(
         1,
-        len(_normalize_traversed_page_urls(raw_urls=[request.attempt_url or "", final_url])),
+        len(
+            _normalize_traversed_page_urls(
+                raw_urls=[request.attempt_url or "", final_url]
+            )
+        ),
     )
     completeness_status = _infer_onsite_completeness_status(
         html=browser_html,
@@ -1517,7 +1632,11 @@ def _build_salvaged_onsite_result(
             html_snapshot_path=str(html_snapshot_path or "").strip(),
             screenshot_path=str(screenshot_path or "").strip(),
             dom_snapshot_sha256=_dom_snapshot_sha256(browser_html),
-            evidence_labels=["onsite_report", completeness_status, "salvaged_browser_terminal"],
+            evidence_labels=[
+                "onsite_report",
+                completeness_status,
+                "salvaged_browser_terminal",
+            ],
         ),
         browser_had_structured_result=False,
         used_candidate_pdf_url=used_candidate_pdf_url,
@@ -1571,17 +1690,22 @@ def _extract_form_fields_from_html(html: str) -> list[str]:
 
 def _html_contains_form(html: str) -> bool:
     token = str(html or "").casefold()
-    return "<form" in token or "<input" in token or "<select" in token or "<textarea" in token
+    return (
+        "<form" in token
+        or "<input" in token
+        or "<select" in token
+        or "<textarea" in token
+    )
 
 
 def _html_contains_submit_control(html: str) -> bool:
     token = str(html or "").casefold()
-    return "type=\"submit\"" in token or "type='submit'" in token or ">submit<" in token
+    return 'type="submit"' in token or "type='submit'" in token or ">submit<" in token
 
 
 def _resolve_route_summary(
     *,
-    raw_summary: str,
+    raw_summary: str | None,
     route_steps: list[BrowserDownloadRouteStep],
     normalized_url: str,
     route_kind: str,
@@ -1593,7 +1717,9 @@ def _resolve_route_summary(
     if route_steps:
         return _derive_route_summary(route_steps)
     if route_kind == "email_delivery" and blocked_reason:
-        return f"Open the gated page and stop when the form is blocked ({blocked_reason})."
+        return (
+            f"Open the gated page and stop when the form is blocked ({blocked_reason})."
+        )
     if route_kind == "onsite_report":
         return "Open the on-site report and capture the available longread content."
     if route_summary:
@@ -1687,7 +1813,7 @@ def _resolve_route_kind(
     route_kind: str,
     downloaded_path: Path | None,
     encountered_form_fields: list[str],
-    post_submit_message: str,
+    post_submit_message: str | None,
     blocked_reason: str | None,
 ) -> str:
     token = str(route_kind or "").strip().lower()
@@ -1818,9 +1944,9 @@ def _resolve_terminal_confirmation_text_from_html(
     terminal_text = _extract_visible_text_from_html(html, max_chars=800)
     if not terminal_text:
         return fallback_text
-    if _message_indicates_email_delivery(terminal_text) or _message_indicates_form_success(
+    if _message_indicates_email_delivery(
         terminal_text
-    ):
+    ) or _message_indicates_form_success(terminal_text):
         return terminal_text
     if _message_indicates_transient_submit_state(
         fallback_text
@@ -1959,14 +2085,14 @@ def _resolve_visited_url_timeline(
 
 def _resolve_observed_document_urls(
     *,
-    network_resource_urls: list[str],
+    network_resource_urls: Iterable[str | None],
     dom_snapshot_html: str,
-    candidate_urls: list[str],
+    candidate_urls: Iterable[str | None],
 ) -> list[str]:
     observed: list[str] = []
     seen: set[str] = set()
 
-    def add(raw_value: str) -> None:
+    def add(raw_value: str | None) -> None:
         token = str(raw_value or "").strip()
         if not token:
             return
@@ -2068,7 +2194,9 @@ def _resolve_blocked_reason(
         encountered_form_fields=encountered_form_fields,
     ):
         return "blocked_unknown_required_enum"
-    if encountered_form_fields and _message_indicates_unknown_required_enum(blocker_haystack):
+    if encountered_form_fields and _message_indicates_unknown_required_enum(
+        blocker_haystack
+    ):
         return "blocked_unknown_required_enum"
     return None
 
@@ -2083,14 +2211,19 @@ def _resolve_blocked_reason_detail(
     detail = str(agent_result.blocked_reason_detail or "").strip()
     if detail:
         return detail
-    return str(agent_result.post_submit_message or agent_result.terminal_text_excerpt or "").strip() or blocked_reason
+    return (
+        str(
+            agent_result.post_submit_message or agent_result.terminal_text_excerpt or ""
+        ).strip()
+        or blocked_reason
+    )
 
 
 def _resolve_route_steps(
     *,
     request: BrowserReportDownloadRequest,
     agent_result: BrowserUseAgentResult,
-    raw_summary: str,
+    raw_summary: str | None,
     resolved_target_url: str,
     downloaded_path: Path | None,
     confirmation_evidence: BrowserDownloadConfirmationEvidence,
@@ -2118,7 +2251,10 @@ def _resolve_route_steps(
     if not _is_semantic_route_summary(str(raw_summary or "").strip()):
         return []
     fallback_result = "downloaded" if downloaded_path is not None else "completed"
-    if confirmation_evidence.visible_confirmation_text or confirmation_evidence.url_changed:
+    if (
+        confirmation_evidence.visible_confirmation_text
+        or confirmation_evidence.url_changed
+    ):
         fallback_result = "submitted"
     return [
         BrowserDownloadRouteStep(
@@ -2231,18 +2367,21 @@ def _recover_from_invalid_artifact(
         capture_path = _resolve_onsite_capture_path(downloaded_path)
         page_count = agent_result.onsite_page_count or max(
             1,
-            len(_normalize_traversed_page_urls(raw_urls=agent_result.traversed_page_urls)),
+            len(
+                _normalize_traversed_page_urls(
+                    raw_urls=agent_result.traversed_page_urls
+                )
+            ),
         )
-        completeness_status = (
-            str(agent_result.onsite_completeness_status or "").strip()
-            or _infer_onsite_completeness_status(
-                html=wrapper_html,
-                final_page_title=str(agent_result.final_page_title or "").strip(),
-                terminal_text_excerpt=str(agent_result.terminal_text_excerpt or "").strip(),
-                page_count=page_count,
-                traversed_page_urls=list(agent_result.traversed_page_urls),
-                route_steps=_normalize_agent_route_steps_for_completeness(agent_result),
-            )
+        completeness_status = str(
+            agent_result.onsite_completeness_status or ""
+        ).strip() or _infer_onsite_completeness_status(
+            html=wrapper_html,
+            final_page_title=str(agent_result.final_page_title or "").strip(),
+            terminal_text_excerpt=str(agent_result.terminal_text_excerpt or "").strip(),
+            page_count=page_count,
+            traversed_page_urls=list(agent_result.traversed_page_urls),
+            route_steps=_normalize_agent_route_steps_for_completeness(agent_result),
         )
         return (
             "onsite_report",
@@ -2272,7 +2411,9 @@ def _recover_from_invalid_artifact(
             None,
             None,
             None,
-            "recovered" if _message_indicates_email_delivery(wrapper_html) else "blocked",
+            "recovered"
+            if _message_indicates_email_delivery(wrapper_html)
+            else "blocked",
             "Recovered an email-delivery or blocked-form terminal state from an HTML artifact.",
         )
     raise original_error
@@ -2301,9 +2442,14 @@ def _looks_like_report_not_found_terminal(
     ).casefold()
     if not haystack.strip():
         return False
-    has_not_found_marker = any(marker in haystack for marker in _REPORT_NOT_FOUND_MARKERS)
+    has_not_found_marker = any(
+        marker in haystack for marker in _REPORT_NOT_FOUND_MARKERS
+    )
     explicit_not_found = has_not_found_marker and (
-        ("not found" in haystack and ("specific report" in haystack or "target report" in haystack))
+        (
+            "not found" in haystack
+            and ("specific report" in haystack or "target report" in haystack)
+        )
         or "0 matches found" in haystack
         or "no matches found" in haystack
         or "could not find" in haystack
@@ -2313,7 +2459,11 @@ def _looks_like_report_not_found_terminal(
         return False
     if not candidate_title:
         return True
-    return candidate_title in haystack or "specific report" in haystack or "target report" in haystack
+    return (
+        candidate_title in haystack
+        or "specific report" in haystack
+        or "target report" in haystack
+    )
 
 
 def _agent_result_indicates_report_not_found(
@@ -2377,7 +2527,9 @@ def _ensure_onsite_capture_artifact(
     )
     capture_path.parent.mkdir(parents=True, exist_ok=True)
     capture_path.write_text(capture_text, encoding="utf-8")
-    return str(capture_path), str(onsite_capture_format or "markdown").strip() or "markdown"
+    return str(capture_path), str(
+        onsite_capture_format or "markdown"
+    ).strip() or "markdown"
 
 
 def _extract_onsite_capture_text_from_steps(
@@ -2412,7 +2564,7 @@ def _safe_onsite_capture_path(
             if resolved_candidate.is_relative_to(download_root):
                 return resolved_candidate
         except OSError:
-            pass
+            claimed_path = ""
     stem = Path(urlsplit(final_url or "onsite_report").path).stem or "onsite_report"
     return download_root / f"{stem}{suffix}"
 
@@ -2494,7 +2646,9 @@ def _prefer_onsite_capture_over_optional_form_submission(
             onsite_page_count,
             onsite_completeness_status,
         )
-    if _message_indicates_email_delivery(confirmation_evidence.visible_confirmation_text):
+    if _message_indicates_email_delivery(
+        confirmation_evidence.visible_confirmation_text
+    ):
         return (
             route_kind,
             onsite_capture_path,
@@ -2545,7 +2699,9 @@ def _prefer_onsite_capture_over_optional_form_submission(
             )
         ),
     )
-    completeness = str(onsite_completeness_status or "").strip() or _infer_onsite_completeness_status(
+    completeness = str(
+        onsite_completeness_status or ""
+    ).strip() or _infer_onsite_completeness_status(
         html=capture_html,
         final_page_title=final_page_title,
         terminal_text_excerpt=terminal_text_excerpt,
@@ -2568,7 +2724,9 @@ def _likely_onsite_report_context_without_html(
     final_page_title: str,
     route_steps: list[BrowserDownloadRouteStep],
 ) -> bool:
-    haystack = " ".join([str(final_url or "").strip(), str(final_page_title or "").strip()]).casefold()
+    haystack = " ".join(
+        [str(final_url or "").strip(), str(final_page_title or "").strip()]
+    ).casefold()
     has_report_marker = any(marker in haystack for marker in _ONPAGE_REPORT_MARKERS)
     has_non_report_marker = _contains_non_report_page_marker(haystack)
     if not has_report_marker or has_non_report_marker:
@@ -2653,9 +2811,13 @@ def _count_confirmation_signals(
     if confirmation_evidence.signal_labels:
         return len(confirmation_evidence.signal_labels)
     count = 0
-    if _message_indicates_email_delivery(confirmation_evidence.visible_confirmation_text):
+    if _message_indicates_email_delivery(
+        confirmation_evidence.visible_confirmation_text
+    ):
         count += 1
-    elif _message_indicates_form_success(confirmation_evidence.visible_confirmation_text):
+    elif _message_indicates_form_success(
+        confirmation_evidence.visible_confirmation_text
+    ):
         count += 1
     if confirmation_evidence.url_changed and _url_indicates_confirmation(
         confirmation_evidence.final_page_url
@@ -2724,7 +2886,7 @@ def _build_confirmation_signal_labels(
     return labels
 
 
-def _message_indicates_email_delivery(message: str) -> bool:
+def _message_indicates_email_delivery(message: str | None) -> bool:
     token = str(message or "").strip().casefold()
     if not token:
         return False
@@ -2763,7 +2925,7 @@ def _message_indicates_transient_submit_state(message: str) -> bool:
     return any(marker in token for marker in _TRANSIENT_SUBMIT_MESSAGE_MARKERS)
 
 
-def _message_indicates_confirmed_email_delivery(message: str) -> bool:
+def _message_indicates_confirmed_email_delivery(message: str | None) -> bool:
     token = str(message or "").strip().casefold()
     if not token:
         return False
@@ -2849,7 +3011,7 @@ def _resolve_route_family(
     return "browser_pdf_click"
 
 
-def _normalize_string_list(values: list[str]) -> list[str]:
+def _normalize_string_list(values: Iterable[str | None]) -> list[str]:
     normalized: list[str] = []
     seen: set[str] = set()
     for raw_value in values:
@@ -2935,7 +3097,8 @@ def _has_missing_identity_field(
             "region",
         }
         if needs_direct_match and not (
-            configured_tokens.intersection({token}) or semantic_families & needs_direct_match
+            configured_tokens.intersection({token})
+            or semantic_families & needs_direct_match
         ):
             return True
     return False
@@ -2943,10 +3106,16 @@ def _has_missing_identity_field(
 
 def _identity_semantic_families(tokens: set[str]) -> set[str]:
     families: set[str] = set()
-    lowered = {str(token or "").strip().casefold() for token in tokens if str(token or "").strip()}
+    lowered = {
+        str(token or "").strip().casefold()
+        for token in tokens
+        if str(token or "").strip()
+    }
     if any("email" in token for token in lowered):
         families.add("email")
-    if any("name" in token or token in {"given", "surname", "family"} for token in lowered):
+    if any(
+        "name" in token or token in {"given", "surname", "family"} for token in lowered
+    ):
         families.add("name")
     if any(
         marker in token
@@ -2954,11 +3123,7 @@ def _identity_semantic_families(tokens: set[str]) -> set[str]:
         for marker in ("company", "organization", "business", "employer", "workplace")
     ):
         families.add("company")
-    if any(
-        marker in token
-        for token in lowered
-        for marker in ("title", "role", "job")
-    ):
+    if any(marker in token for token in lowered for marker in ("title", "role", "job")):
         families.add("role")
     if any(
         marker in token
@@ -2967,9 +3132,7 @@ def _identity_semantic_families(tokens: set[str]) -> set[str]:
     ):
         families.add("phone")
     if any(
-        marker in token
-        for token in lowered
-        for marker in ("website", "site", "domain")
+        marker in token for token in lowered for marker in ("website", "site", "domain")
     ):
         families.add("website")
     if any("country" in token for token in lowered):
@@ -3161,7 +3324,9 @@ def _looks_like_onsite_report_html(
     lowered = str(wrapper_html or "").casefold()
     final_title = str(agent_result.final_page_title or "").casefold()
     final_excerpt = str(agent_result.terminal_text_excerpt or "").casefold()
-    route_family = str(request.route_family_hint or agent_result.route_family or "").strip()
+    route_family = str(
+        request.route_family_hint or agent_result.route_family or ""
+    ).strip()
     if _contains_non_report_page_marker(final_title) and not any(
         marker in final_title for marker in _ONPAGE_REPORT_MARKERS
     ):
@@ -3223,13 +3388,18 @@ def _infer_onsite_completeness_status(
         1
         for step in route_steps
         if str(step.action or "").strip().lower() in {"navigate", "click"}
-        and any(marker in _route_step_haystack(step) for marker in ("next", "page=", "?page", "&page", "pagination"))
+        and any(
+            marker in _route_step_haystack(step)
+            for marker in ("next", "page=", "?page", "&page", "pagination")
+        )
     )
     duplicate_heading_penalty = _duplicate_heading_penalty(html)
     multi_section_body = (
         text_length >= 1800 and heading_count >= 2 and duplicate_heading_penalty < 0.5
     )
-    pagination_expected = page_count > 1 or traversed_count > 1 or pagination_actions > 0
+    pagination_expected = (
+        page_count > 1 or traversed_count > 1 or pagination_actions > 0
+    )
     pagination_reached_end = _pagination_reached_end(
         page_count=page_count,
         traversed_count=traversed_count,
@@ -3260,12 +3430,18 @@ def _infer_onsite_completeness_status(
     ):
         return "complete"
     if (
-        any(marker in str(final_page_title or "").casefold() for marker in _ONPAGE_REPORT_MARKERS)
+        any(
+            marker in str(final_page_title or "").casefold()
+            for marker in _ONPAGE_REPORT_MARKERS
+        )
         and text_length >= 1200
     ):
         return "partial"
     if (
-        any(marker in str(terminal_text_excerpt or "").casefold() for marker in _ONPAGE_REPORT_MARKERS)
+        any(
+            marker in str(terminal_text_excerpt or "").casefold()
+            for marker in _ONPAGE_REPORT_MARKERS
+        )
         and text_length >= 1200
     ):
         return "partial"
@@ -3329,7 +3505,10 @@ def _pagination_reached_end(
         if match and int(match.group(1)) >= int(match.group(2)) >= 1:
             return True
         fraction_match = re.search(r"\b(\d+)\s*/\s*(\d+)\b", haystack)
-        if fraction_match and int(fraction_match.group(1)) >= int(fraction_match.group(2)) >= 2:
+        if (
+            fraction_match
+            and int(fraction_match.group(1)) >= int(fraction_match.group(2)) >= 2
+        ):
             return True
     return False
 
@@ -3454,7 +3633,11 @@ def _adopt_external_downloaded_file(
             if source_path.samefile(target_path):
                 return target_path.resolve()
         except OSError:
-            pass
+            target_path = (
+                download_dir / f"{source_path.stem}_{counter}{source_path.suffix}"
+            )
+            counter += 1
+            continue
         target_path = download_dir / f"{source_path.stem}_{counter}{source_path.suffix}"
         counter += 1
     try:

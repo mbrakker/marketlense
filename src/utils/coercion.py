@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterable
+from typing import Any, Iterable, cast
 
 
 DEFAULT_TRUE_TOKENS = frozenset({"1", "true", "yes", "on"})
@@ -11,7 +11,7 @@ EXTENDED_FALSE_TOKENS = frozenset({"0", "false", "no", "n", "off", "f"})
 
 def coerce_int(value: object, default: int = 0, *, min_value: int | None = None) -> int:
     try:
-        parsed = int(value)
+        parsed = int(cast(Any, value))
     except (TypeError, ValueError):
         parsed = default
     if min_value is not None and parsed < min_value:
@@ -21,7 +21,7 @@ def coerce_int(value: object, default: int = 0, *, min_value: int | None = None)
 
 def coerce_float(value: object, default: float = 0.0) -> float:
     try:
-        return float(value)
+        return float(cast(Any, value))
     except (TypeError, ValueError):
         return default
 
@@ -56,7 +56,48 @@ def coerce_extended_bool(value: object, default: bool = False) -> bool:
     )
 
 
-def clean_string_list(values: Iterable[object], *, dedupe_casefold: bool = False) -> list[str]:
+STRICT_TRUE_TOKENS = frozenset({"1", "true", "yes"})
+STRICT_FALSE_TOKENS = frozenset({"0", "false", "no"})
+
+
+def normalize_optional_bool_signal(value: object) -> bool | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int) and not isinstance(value, bool):
+        if value == 1:
+            return True
+        if value == 0:
+            return False
+        return None
+    if isinstance(value, float):
+        if value == 1.0:
+            return True
+        if value == 0.0:
+            return False
+        return None
+    token = str(value).strip().lower()
+    if not token:
+        return None
+    if token in STRICT_TRUE_TOKENS:
+        return True
+    if token in STRICT_FALSE_TOKENS:
+        return False
+    return None
+
+
+def is_ambiguous_optional_bool_signal(value: object) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str) and not value.strip():
+        return False
+    return normalize_optional_bool_signal(value) is None
+
+
+def clean_string_list(
+    values: Iterable[object], *, dedupe_casefold: bool = False
+) -> list[str]:
     cleaned: list[str] = []
     seen: set[str] = set()
     for value in values:

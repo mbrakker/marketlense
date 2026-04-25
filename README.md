@@ -923,7 +923,7 @@ CI gates (see `.github/workflows/ci.yml`):
 
 - `python scripts/ci/check_formatting.py` (format gate, `ruff format --check` over changed Python files under `src`, `tests`, `scripts`; skips when no Python files changed unless `FORMAT_PATHS` is set)
 - `python scripts/ci/check_risk_policy.py` (diff-aware risk classifier; exports stricter coverage/mutation thresholds for contract and critical-layer changes in GitHub Actions)
-- `python scripts/ci/run_type_check.py` (type gate, `mypy` over changed Python files under `src`, `tests`, `scripts/ci`; skips when no Python files changed unless `TYPECHECK_PATHS` is set)
+- `python scripts/ci/run_type_check.py` (type gate, full-repo `mypy` over `src` by default with `docs/quality/mypy_baseline.json` tracking existing debt; set `TYPECHECK_CHANGED_ONLY=1` only for an explicit fast path, and use `--update-baseline` after triaging ownership/expiry for baseline changes)
 - `python scripts/ci/check_architecture_imports.py` (static cross-layer import gate for contracts/services/generators/orchestrators/utils)
 - `python scripts/ci/check_forbidden_patching.py` (fails on private-helper/dataclass-constructor patching patterns in tests)
 - `python scripts/ci/check_contract_schemas.py --snapshot docs/quality/contract_schemas.json` (dataclass contract schema snapshot gate; run with `--update` after approved contract changes)

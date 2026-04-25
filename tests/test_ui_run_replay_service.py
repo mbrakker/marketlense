@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 
@@ -49,7 +50,10 @@ def test_ui_run_replay_manifest_roundtrip_and_fingerprints(
             status="succeeded",
             recorded_at_utc="2026-04-23T10:00:00+00:00",
             request_payload={"url": "https://example.com/report.pdf"},
-            config_snapshot={"run_type": "report_download", "settings": {"headed": False}},
+            config_snapshot={
+                "run_type": "report_download",
+                "settings": {"headed": False},
+            },
             config_fingerprint="cfg-sha",
             source_tree_root=str(source_root),
             prompt_tree_root=str(source_root / "prompts"),
@@ -89,7 +93,9 @@ def test_ui_run_replay_manifest_roundtrip_and_fingerprints(
     assert_no_defaulted_required_fields(capture.manifest)
     assert capture.manifest.source_tree_fingerprint == workspace.source_tree_fingerprint
     assert capture.manifest.prompt_tree_fingerprint == workspace.prompt_tree_fingerprint
-    assert artifacts.artifact_fingerprints[0] == capture.manifest.artifact_fingerprints[0]
+    assert (
+        artifacts.artifact_fingerprints[0] == capture.manifest.artifact_fingerprints[0]
+    )
     assert artifacts.artifact_fingerprints[0].exists is True
     assert artifacts.artifact_fingerprints[0].sha256
     assert_logs_have_required_fields(
@@ -119,3 +125,39 @@ def test_read_ui_run_replay_manifest_missing_returns_typed_error(
         code="ui_run_replay_manifest_missing",
         retryable=False,
     )
+
+
+def test_read_ui_run_replay_manifest_corrupt_json_logs_status(
+    tmp_path: Path,
+    caplog,
+    assert_app_error,
+    assert_logs_have_required_fields,
+) -> None:
+    caplog.set_level(logging.INFO, logger="market_lense.ui_run_replay_service")
+    manifest_path = tmp_path / "state" / "ui_runs" / "run-1" / "replay_manifest.json"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text("{not-json", encoding="utf-8")
+
+    with pytest.raises(Exception) as exc_info:
+        ui_run_replay_service.read_ui_run_replay_manifest(
+            UiRunReplayReadRequest(
+                schema_version="1.0",
+                registry_path=_registry_path(tmp_path),
+                run_id="run-1",
+            ),
+            _ctx(),
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="ui_run_replay_manifest_invalid",
+        retryable=False,
+    )
+    events = [
+        json.loads(record.message)
+        for record in caplog.records
+        if record.name == "market_lense.ui_run_replay_service"
+    ]
+    assert_logs_have_required_fields(events)
+    assert events[-1]["event"] == "ui_run_replay_manifest_status"
+    assert events[-1]["fields"]["status_code"] == "invalid_json"

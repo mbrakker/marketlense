@@ -889,7 +889,7 @@ def _legacy_chat_completion_call(
             try:
                 delattr(openai_legacy, "timeout")
             except AttributeError:
-                pass
+                had_timeout_attr = False
 
 
 def _modern_chat_completion_call(

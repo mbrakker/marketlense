@@ -22,6 +22,8 @@ from src.contracts.report_assets import (
     ExtractCandidatesResponse,
     FigureExtractRequest,
     FigureExtractResponse,
+    PdfCandidateExtractionStats,
+    PdfDegradedPage,
 )
 from src.contracts.run_context import RunContext
 from src.utils.candidate_features import candidate_features
@@ -40,11 +42,6 @@ from .shared import candidate_logger, figure_logger
 # Compatibility re-exports for legacy tests and crop helpers. New extraction
 # capabilities import shared heuristics from table_heuristics/visual_heuristics.
 from .table_heuristics import (
-    CAPTION_HINTS,
-    EMAIL_ADDRESS_RX,
-    NOTE_LABEL_PREFIXES,
-    PDF_FIGURE_EXCEPTIONS,
-    TABLE_CAPTION_HINTS,
     TABLE_CONTACT_MAX_COLS,
     TABLE_CONTACT_MAX_NUMERIC_RATIO,
     TABLE_CONTACT_MIN_AREA_FRAC,
@@ -240,18 +237,14 @@ from .table_heuristics import (
     TEXT_BLOCK_MIN_AVG_LINE_LEN,
     TEXT_BLOCK_MIN_LINES,
     _FIGURE_CONTEXT_RX,
-    _PAGE_NUMBER_RX,
     _PDFMINER_LOGGERS,
     _PageTextBlock,
-    _PageTextLine,
     _RankedTableRegion,
     _TABLE_FOOTNOTE_RX,
     _TableCandidate,
     _TableTextBand,
-    _alpha_ratio,
     _avg_first_col_words,
     _avg_words_per_cell,
-    _candidate_index_from_id,
     _cell_is_numeric,
     _cell_is_page_number,
     _cell_words,
@@ -272,26 +265,18 @@ from .table_heuristics import (
     _has_caption_hint,
     _has_figure_context_hint,
     _heading_like_block,
-    _horizontal_overlap_ratio,
     _index_page_ratio,
-    _int_count,
-    _is_page_number_text,
     _nonempty_text_lines,
     _numeric_char_ratio,
     _prefer_inner_lattice_table,
     _prose_box_like,
     _ranked_table_panel_region,
-    _rect_intersection_area,
     _reference_block_like,
-    _resolve_candidate_parallel_workers,
     _row_len_cv,
     _row_nonempty_counts,
     _row_text_lengths,
-    _s,
     _section_list_like,
     _shrink_stream_table_rect,
-    _split_even_chunks,
-    _starts_with_lower_alpha,
     _stream_infobox_like,
     _stream_list_like,
     _stream_low_consistency,
@@ -332,10 +317,8 @@ from .table_heuristics import (
     _table_fragment_is_numeric,
     _table_horizontal_rule_rects,
     _table_iou,
-    _table_normalize_text,
     _table_page_body_font_size,
     _table_page_text_blocks,
-    _table_page_text_lines,
     _table_preview,
     _table_quality,
     _table_rank_value,
@@ -347,14 +330,11 @@ from .table_heuristics import (
     _table_text_has_note_marker,
     _table_text_lines,
     _table_text_starts_with_footnote_marker,
-    _tally_reason,
     _terminal_page_number_hits,
     _text_block_like,
     _text_block_like_loose,
     _text_block_stats,
-    _text_stats,
     _validate_table_candidate,
-    _vertical_overlap_ratio,
     _visual_quote_page_like,
 )
 from .visual_heuristics import (
@@ -668,150 +648,6 @@ CHART_RANKED_TABLE_DUP_IOU = 0.65
 CHART_RANKED_TABLE_DUP_CONTAINMENT = 0.82
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 def _panel_title_looks_short_proper_name(text: str) -> bool:
     normalized = _s(text).strip()
     if not normalized or len(normalized) > 28:
@@ -824,134 +660,6 @@ def _panel_title_looks_short_proper_name(text: str) -> bool:
     if normalized.upper() == normalized:
         return False
     return PANEL_SHORT_PROPER_NAME_RX.fullmatch(normalized) is not None
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def _extract_charts_sequential(
@@ -974,14 +682,6 @@ def _extract_charts_sequential(
         pages=pages,
         artifact_cache=artifact_cache,
     )
-
-
-
-
-
-
-
-
 
 
 def _extract_charts(
@@ -1042,110 +742,6 @@ def _extract_tables(
         doc=doc,
         artifact_cache=artifact_cache,
     )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def _prune_charts_overlapping_ranked_tables(
@@ -1286,14 +882,6 @@ def _prune_tables_overlapping_chart_panels(
             continue
         kept.append(table)
     return kept, pruned
-
-
-
-
-
-
-
-
 
 
 def _final_chart_candidate_looks_heading_slice(
@@ -1440,7 +1028,7 @@ def _prune_final_chart_candidates(
             try:
                 text = page.get_text("text", clip=fitz.Rect(candidate.bbox))
             except PDF_FIGURE_EXCEPTIONS:
-                pass
+                text = ""
         if _final_chart_candidate_looks_forecast_table(candidate, text):
             pruned += 1
             continue
@@ -1457,6 +1045,7 @@ class _CandidatePagePlan:
     table_pages: Optional[List[int]]
     excluded_count: int
     triaged_full_scan_pages: int
+    degraded_pages: List[PdfDegradedPage]
 
 
 @dataclass
@@ -1503,12 +1092,15 @@ def _plan_candidate_pages(
     excluded_pages: set[int],
     *,
     artifact_cache: PdfPageArtifactCache,
+    degraded_page_policy: str = "include_with_warning",
 ) -> _CandidatePagePlan:
     requested_pages = [
         index for index in range(len(triage_doc)) if index not in excluded_pages
     ]
     triaged_pages: list[int] = []
+    table_pages = list(requested_pages)
     triaged_full_scan_pages = 0
+    degraded_pages: list[PdfDegradedPage] = []
     for index in requested_pages:
         try:
             if get_page_artifacts(
@@ -1517,14 +1109,74 @@ def _plan_candidate_pages(
             ).full_page_scan_without_text:
                 triaged_full_scan_pages += 1
                 continue
-        except PDF_FIGURE_TRIAGE_EXCEPTIONS:
-            pass
+        except PDF_FIGURE_TRIAGE_EXCEPTIONS as exc:
+            degraded_page = _degraded_page_record(
+                page=index,
+                stage="triage",
+                reason_code="pdf_candidate_page_triage_failed",
+                policy=degraded_page_policy,
+                message=str(exc),
+            )
+            action = _resolve_degraded_page_action(
+                degraded_page=degraded_page,
+            )
+            degraded_pages.append(degraded_page)
+            if action == "fail":
+                raise AppError(
+                    code=degraded_page.reason_code,
+                    message="PDF candidate page triage failed",
+                    cause=exc,
+                    retryable=False,
+                    context={
+                        "page": index,
+                        "policy": degraded_page.policy,
+                        "stage": degraded_page.stage,
+                    },
+                ) from exc
+            if action == "skip":
+                table_pages = [page for page in table_pages if page != index]
+                continue
         triaged_pages.append(index)
     return _CandidatePagePlan(
         chart_pages=triaged_pages,
-        table_pages=requested_pages,
+        table_pages=table_pages,
         excluded_count=max(0, len(triage_doc) - len(requested_pages)),
         triaged_full_scan_pages=triaged_full_scan_pages,
+        degraded_pages=degraded_pages,
+    )
+
+
+def _degraded_page_record(
+    *,
+    page: int,
+    stage: str,
+    reason_code: str,
+    policy: str,
+    message: str,
+) -> PdfDegradedPage:
+    return PdfDegradedPage(
+        schema_version="1.0",
+        page=int(page),
+        stage=str(stage or "").strip() or "unknown",
+        reason_code=str(reason_code or "").strip() or "pdf_candidate_degraded",
+        policy=str(policy or "").strip() or "include_with_warning",
+        message=str(message or "").strip()[:500],
+    )
+
+
+def _resolve_degraded_page_action(*, degraded_page: PdfDegradedPage) -> str:
+    policy = str(degraded_page.policy or "").strip().lower()
+    if policy == "fail":
+        return "fail"
+    if policy == "skip_with_warning":
+        return "skip"
+    if policy == "include_with_warning":
+        return "include"
+    raise AppError(
+        code="pdf_candidate_degraded_policy_invalid",
+        message="Unsupported PDF candidate degraded-page policy",
+        retryable=False,
+        context={"policy": degraded_page.policy},
     )
 
 
@@ -1600,7 +1252,49 @@ def _finalize_chart_collection(
             try:
                 final_doc.close()
             except PDF_FIGURE_EXCEPTIONS:
-                pass
+                final_doc = None
+
+
+def _annotate_degraded_candidates(
+    candidates: List[Candidate],
+    degraded_pages: List[PdfDegradedPage],
+) -> List[Candidate]:
+    if not degraded_pages:
+        return candidates
+    degraded_by_page: Dict[int, List[PdfDegradedPage]] = {}
+    for page in degraded_pages:
+        degraded_by_page.setdefault(int(page.page), []).append(page)
+    annotated: List[Candidate] = []
+    for candidate in candidates:
+        page_reasons = degraded_by_page.get(int(candidate.page), [])
+        if not page_reasons:
+            annotated.append(candidate)
+            continue
+        existing_meta = dict(candidate.meta or {})
+        existing_meta["degraded_page_reasons"] = [
+            {
+                "stage": reason.stage,
+                "reason_code": reason.reason_code,
+                "policy": reason.policy,
+                "message": reason.message,
+            }
+            for reason in page_reasons
+        ]
+        annotated.append(
+            Candidate(
+                schema_version=candidate.schema_version,
+                id=candidate.id,
+                kind=candidate.kind,
+                page=candidate.page,
+                bbox=candidate.bbox,
+                preview_text=candidate.preview_text,
+                caption=candidate.caption,
+                thumb_path=candidate.thumb_path,
+                meta=existing_meta,
+                features=candidate.features,
+            )
+        )
+    return annotated
 
 
 def collect_candidates(
@@ -1640,6 +1334,7 @@ def collect_candidates(
         table_pages=None,
         excluded_count=0,
         triaged_full_scan_pages=0,
+        degraded_pages=[],
     )
     artifact_cache = (
         getattr(request.pdf_context, "page_artifact_cache", None)
@@ -1660,6 +1355,7 @@ def collect_candidates(
                 triage_doc,
                 excluded_pages,
                 artifact_cache=artifact_cache,
+                degraded_page_policy=request.degraded_page_policy,
             )
         artifacts = _extract_candidate_artifacts(
             request,
@@ -1685,13 +1381,24 @@ def collect_candidates(
             artifacts.chart_stats["final_header_reanchored"] = (
                 artifacts.final_chart_header_reanchored
             )
-        candidates = artifacts.charts + artifacts.tables
+        candidates = _annotate_degraded_candidates(
+            artifacts.charts + artifacts.tables,
+            page_plan.degraded_pages,
+        )
     finally:
         if close_doc and triage_doc is not None:
             try:
                 triage_doc.close()
-            except PDF_FIGURE_EXCEPTIONS:
-                pass
+            except PDF_FIGURE_EXCEPTIONS as exc:
+                page_plan.degraded_pages.append(
+                    _degraded_page_record(
+                        page=-1,
+                        stage="cleanup",
+                        reason_code="pdf_candidate_triage_doc_close_failed",
+                        policy="include_with_warning",
+                        message=str(exc),
+                    )
+                )
     chart_count = sum(1 for candidate in candidates if candidate.kind == "chart")
     table_count = sum(1 for candidate in candidates if candidate.kind == "table")
     candidate_logger.info(
@@ -1710,11 +1417,34 @@ def collect_candidates(
                 "table_chart_overlap_pruned": artifacts.table_chart_overlap_pruned,
                 "excluded_count": page_plan.excluded_count,
                 "triaged_full_scan_pages": page_plan.triaged_full_scan_pages,
+                "degraded_page_count": len(page_plan.degraded_pages),
+                "degraded_pages": [
+                    {
+                        "page": item.page,
+                        "stage": item.stage,
+                        "reason_code": item.reason_code,
+                        "policy": item.policy,
+                    }
+                    for item in page_plan.degraded_pages
+                ],
                 "page_artifact_cache": artifact_cache.stats(),
             },
         )
     )
-    return ExtractCandidatesResponse(schema_version="1.0", candidates=candidates)
+    return ExtractCandidatesResponse(
+        schema_version="1.0",
+        candidates=candidates,
+        stats=PdfCandidateExtractionStats(
+            schema_version="1.0",
+            degraded_pages=page_plan.degraded_pages,
+            triage_failure_count=len(
+                [item for item in page_plan.degraded_pages if item.stage == "triage"]
+            ),
+            extraction_failure_count=len(
+                [item for item in page_plan.degraded_pages if item.stage != "triage"]
+            ),
+        ),
+    )
 
 
 # BEGIN PDF FIGURE EXTRACTION

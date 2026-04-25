@@ -13,6 +13,9 @@ from src.contracts.ui_run_replay import (
     UiRunWorkspaceFingerprintResponse,
 )
 from src.orchestrators import ui_run_replay_orchestrator as orchestrator
+from src.orchestrators.ui_run_execution_orchestrator import (
+    resolve_ui_run_config_snapshot,
+)
 from src.services.run_registry_service import write_ui_run_record
 from src.services.ui_run_replay_service import write_ui_run_replay_manifest
 from src.utils.cache_utils import sha256_json
@@ -217,3 +220,80 @@ def test_replay_ui_run_blocks_on_environment_drift(
     assert result.report.matched is False
     assert result.report.replay_status == "blocked_drift"
     assert called["count"] == 0
+
+
+def test_replay_ui_run_replays_failed_validation_run(tmp_path: Path) -> None:
+    registry_path = _registry_path(tmp_path)
+    record = UiRunRecord(
+        schema_version="1.0",
+        run_id="run-validation",
+        run_type="report_download",
+        display_name="Report download",
+        status="failed",
+        request_payload={},
+        command=["python", "-m", "src.cli", "ui-run-worker"],
+        created_at_utc="2026-04-23T10:00:00+00:00",
+        updated_at_utc="2026-04-23T10:00:01+00:00",
+        started_at_utc="2026-04-23T10:00:01+00:00",
+        finished_at_utc="2026-04-23T10:00:05+00:00",
+        output_path="out.log",
+        request_path="request.json",
+        artifact_paths=[],
+        result_summary={},
+        error_code="ui_run_payload_url_missing",
+        error_message="UI run payload field is required: url",
+    )
+    write_ui_run_record(
+        UiRunRecordWriteRequest(
+            schema_version="1.0",
+            registry_path=registry_path,
+            record=record,
+        ),
+        _ctx(),
+    )
+    source_root = tmp_path / "workspace" / "src"
+    prompt_root = source_root / "prompts"
+    source_root.mkdir(parents=True, exist_ok=True)
+    prompt_root.mkdir(parents=True, exist_ok=True)
+    (source_root / "sample.py").write_text("print('ok')\n", encoding="utf-8")
+    (prompt_root / "system.yaml").write_text("system: test\n", encoding="utf-8")
+    worker_request = orchestrator.UiRunWorkerRequest(
+        schema_version="1.0",
+        registry_path=registry_path,
+        run_id="run-validation",
+        run_type="report_download",
+        request_payload={},
+    )
+    config_snapshot = resolve_ui_run_config_snapshot(worker_request, _ctx())
+    write_ui_run_replay_manifest(
+        UiRunReplayCaptureRequest(
+            schema_version="1.0",
+            registry_path=registry_path,
+            run_id="run-validation",
+            run_type="report_download",
+            status="failed",
+            recorded_at_utc="2026-04-23T10:00:05+00:00",
+            request_payload={},
+            config_snapshot=config_snapshot,
+            config_fingerprint=sha256_json(config_snapshot),
+            source_tree_root=str(source_root),
+            prompt_tree_root=str(prompt_root),
+            artifact_paths=[],
+            result_summary={},
+            error_code="ui_run_payload_url_missing",
+            error_message="UI run payload field is required: url",
+        ),
+        _ctx(),
+    )
+
+    result = orchestrator.replay_ui_run(
+        UiRunReplayRequest(
+            schema_version="1.0",
+            registry_path=registry_path,
+            run_id="run-validation",
+        ),
+        _ctx(),
+    )
+
+    assert result.report.replay_status == "failed"
+    assert result.report.matched is True

@@ -7,9 +7,17 @@ from typing import Any, Optional
 @dataclass
 class PdfContext:
     schema_version: str = field(metadata={"doc": "PDF context schema version."})
-    path: str = field(metadata={"doc": "Filesystem path to the PDF used to open handles."})
-    fitz_doc: Optional[Any] = field(default=None, metadata={"doc": "Pre-opened PyMuPDF document handle, if available."})
-    pypdf_reader: Optional[Any] = field(default=None, metadata={"doc": "Pre-opened pypdf PdfReader handle, if available."})
+    path: str = field(
+        metadata={"doc": "Filesystem path to the PDF used to open handles."}
+    )
+    fitz_doc: Optional[Any] = field(
+        default=None,
+        metadata={"doc": "Pre-opened PyMuPDF document handle, if available."},
+    )
+    pypdf_reader: Optional[Any] = field(
+        default=None,
+        metadata={"doc": "Pre-opened pypdf PdfReader handle, if available."},
+    )
     page_artifact_cache: Optional[Any] = field(
         default=None,
         metadata={
@@ -25,7 +33,7 @@ class PdfContext:
                 if callable(close_fn):
                     close_fn()
         except Exception:
-            pass
+            object.__setattr__(self, "fitz_doc", None)
         try:
             if self.pypdf_reader is not None:
                 stream = getattr(self.pypdf_reader, "stream", None)
@@ -34,20 +42,35 @@ class PdfContext:
                     if callable(close_fn):
                         close_fn()
         except Exception:
-            pass
+            object.__setattr__(self, "pypdf_reader", None)
 
 
 @dataclass(frozen=True)
 class PdfContextBuildRequest:
-    schema_version: str = field(metadata={"doc": "PDF context build request schema version."})
+    schema_version: str = field(
+        metadata={"doc": "PDF context build request schema version."}
+    )
     path: str = field(metadata={"doc": "Filesystem path to the PDF."})
-    load_fitz: bool = field(default=True, metadata={"doc": "Whether to pre-open a PyMuPDF document handle."})
-    load_pypdf: bool = field(default=True, metadata={"doc": "Whether to pre-open a pypdf reader handle."})
+    load_fitz: bool = field(
+        default=True, metadata={"doc": "Whether to pre-open a PyMuPDF document handle."}
+    )
+    load_pypdf: bool = field(
+        default=True, metadata={"doc": "Whether to pre-open a pypdf reader handle."}
+    )
 
 
 @dataclass(frozen=True)
 class PdfContextBuildResponse:
-    schema_version: str = field(metadata={"doc": "PDF context build response schema version."})
-    context: PdfContext = field(metadata={"doc": "Prepared PDF context with any available handles."})
-    fitz_error: Optional[str] = field(default=None, metadata={"doc": "Error message if PyMuPDF failed to open, if any."})
-    pypdf_error: Optional[str] = field(default=None, metadata={"doc": "Error message if pypdf failed to open, if any."})
+    schema_version: str = field(
+        metadata={"doc": "PDF context build response schema version."}
+    )
+    context: PdfContext = field(
+        metadata={"doc": "Prepared PDF context with any available handles."}
+    )
+    fitz_error: Optional[str] = field(
+        default=None,
+        metadata={"doc": "Error message if PyMuPDF failed to open, if any."},
+    )
+    pypdf_error: Optional[str] = field(
+        default=None, metadata={"doc": "Error message if pypdf failed to open, if any."}
+    )
