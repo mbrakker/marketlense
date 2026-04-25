@@ -68,7 +68,6 @@ from src.contracts.vector_store import (
     VectorStoreStatusRequest,
     VectorStoreUpdateMetadataRequest,
     VectorStoreUploadFileRequest,
-    VectorStoreWaitRequest,
 )
 from src.generators.artifact_generator import generate_artifacts
 from src.generators.context_category_fit_generator import (
@@ -217,7 +216,6 @@ class ReportAnalysisDependencies:
     vector_store_create: Callable[[VectorStoreCreateRequest, RunContext], Any]
     vector_store_upload_file: Callable[[VectorStoreUploadFileRequest, RunContext], Any]
     vector_store_attach_file: Callable[[VectorStoreAttachFileRequest, RunContext], Any]
-    vector_store_wait_until_indexed: Callable[[VectorStoreWaitRequest, RunContext], Any]
     vector_store_update_metadata: Callable[
         [VectorStoreUpdateMetadataRequest, RunContext], Any
     ]
@@ -247,7 +245,6 @@ class ReportAnalysisDependencies:
             vector_store_create=vector_store_service.create_vector_store,
             vector_store_upload_file=vector_store_service.upload_file,
             vector_store_attach_file=vector_store_service.attach_file,
-            vector_store_wait_until_indexed=vector_store_service.wait_until_indexed,
             vector_store_update_metadata=vector_store_service.update_metadata,
             extract_taxonomy=extract_taxonomy,
             build_report_category_context=build_report_category_context,

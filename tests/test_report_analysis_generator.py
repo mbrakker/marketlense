@@ -34,6 +34,7 @@ from src.generators.report_generation_dependencies import (
     ReportAnalysisDependencies,
 )
 from src.generators.report_generation_shared import derive_title, report_slug
+from src.orchestrators import retry_orchestrator as retry_orch
 from src.orchestrators.report_analysis_orchestrator import run_report_analysis
 from src.utils.errors import AppError
 
@@ -263,7 +264,7 @@ def _deps(
     )
     seeded = replace(
         replace(base, figure_caption=figure_caption),
-        vector_store_wait_until_indexed=lambda req, ctx: SimpleNamespace(
+        vector_store_get_status=lambda req, ctx: SimpleNamespace(
             status="completed",
             indexed_at_utc="2026-01-01T00:00:00Z",
             last_error=None,
@@ -291,6 +292,116 @@ def _deps(
         vector_store_update_metadata=lambda req, ctx: None,
     )
     return replace(seeded, **overrides)
+
+
+def test_run_report_analysis_polls_vector_store_status_until_ready(
+    tmp_path,
+    caplog,
+    assert_logs_have_required_fields,
+):
+    caplog.set_level(logging.INFO, logger="market_lense.report_analysis_orchestrator")
+    runtime = replace(_runtime(tmp_path), settings=replace(_runtime(tmp_path).settings, openai_timeout_seconds=10.0))
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    statuses = iter(
+        [
+            SimpleNamespace(
+                status="in_progress",
+                indexed_at_utc=None,
+                last_error=None,
+            ),
+            SimpleNamespace(
+                status="completed",
+                indexed_at_utc="2026-01-01T00:00:00Z",
+                last_error=None,
+            ),
+        ]
+    )
+    status_calls: list[str] = []
+
+    deps = _deps(
+        vector_store_get_status=lambda req, ctx: (
+            status_calls.append(req.vector_store_id) or next(statuses)
+        ),
+        generate_evidence_packs=lambda **kwargs: {
+            "doc_map": {"docMap": {"title": "Doc Title", "publisher": "Doc Publisher"}}
+        },
+        generate_artifacts=lambda **kwargs: _artifacts(),
+        run_validation=lambda *args, **kwargs: ValidationReport(
+            schema_version="1.1",
+            status="pass",
+            issues=[],
+            severity="pass",
+            source_path=str(tmp_path / "out" / "validation.json"),
+        ),
+    )
+
+    state = run_report_analysis(
+        runtime,
+        source,
+        selection,
+        VectorStoreIndexingState(
+            vector_store_id="vs_1",
+            openai_file_id="file_1",
+            vector_store_status="indexing",
+            indexed_at_utc=None,
+            last_error=None,
+        ),
+        deps,
+    )
+
+    assert state.vector_store_status == "completed"
+    assert status_calls == ["vs_1", "vs_1"]
+    events = _orchestrator_events(caplog)
+    assert_logs_have_required_fields(events)
+    assert any(
+        event.get("event") == "vector_store_wait_retry"
+        and event.get("fields", {}).get("status") == "in_progress"
+        and event.get("fields", {}).get("poll_interval_s") == 5
+        for event in events
+    )
+
+
+def test_run_report_analysis_surfaces_vector_store_timeout(
+    tmp_path,
+    external_boundary_mocks_only,
+    assert_app_error,
+):
+    runtime = replace(_runtime(tmp_path), settings=replace(_runtime(tmp_path).settings, openai_timeout_seconds=5.0))
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    external_boundary_mocks_only.setattr(retry_orch.time, "sleep", lambda _seconds: None)
+
+    deps = _deps(
+        vector_store_get_status=lambda req, ctx: SimpleNamespace(
+            status="in_progress",
+            indexed_at_utc=None,
+            last_error=None,
+        )
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        run_report_analysis(
+            runtime,
+            source,
+            selection,
+            VectorStoreIndexingState(
+                vector_store_id="vs_1",
+                openai_file_id="file_1",
+                vector_store_status="indexing",
+                indexed_at_utc=None,
+                last_error=None,
+            ),
+            deps,
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="vector_store_index_timeout",
+        retryable=True,
+        severity="error",
+    )
+    assert exc_info.value.context["last_status"] == "in_progress"
 
 
 def _orchestrator_events(caplog) -> list[dict]:

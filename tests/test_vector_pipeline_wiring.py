@@ -314,6 +314,11 @@ def _base_vector_report_dependencies(
 ) -> ReportGenerationDependencies:
     base = {
         "state_get": lambda req, ctx: None,
+        "vector_store_get_status": lambda req, ctx: SimpleNamespace(
+            status="completed",
+            indexed_at_utc="2024-01-01T00:00:00Z",
+            last_error=None,
+        ),
         "vector_store_create": lambda req, ctx: SimpleNamespace(
             vector_store_id="vs_new"
         ),
@@ -321,11 +326,6 @@ def _base_vector_report_dependencies(
             openai_file_id="file_upload"
         ),
         "vector_store_attach_file": lambda req, ctx: None,
-        "vector_store_wait_until_indexed": lambda req, ctx: SimpleNamespace(
-            status="completed",
-            indexed_at_utc="2024-01-01T00:00:00Z",
-            last_error=None,
-        ),
         "extract_pdf_info": lambda req, ctx: SimpleNamespace(
             schema_version="1.0",
             path=req.path,
@@ -467,7 +467,7 @@ def _runtime_state(
     )
 
 
-def test_ensure_vector_store_creates_and_waits(tmp_path):
+def test_start_vector_store_indexing_creates_without_wait_loop(tmp_path):
     settings = _ingest_settings(tmp_path)
     ctx = RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
     file = DriveFile(
@@ -488,8 +488,8 @@ def test_ensure_vector_store_creates_and_waits(tmp_path):
             calls.append("upload") or SimpleNamespace(openai_file_id="file_upload_1")
         ),
         vector_store_attach_file=lambda req, ctx: calls.append("attach") or None,
-        vector_store_wait_until_indexed=lambda req, ctx: (
-            calls.append("wait")
+        vector_store_get_status=lambda req, ctx: (
+            calls.append("status")
             or SimpleNamespace(
                 status="completed",
                 indexed_at_utc="2024-01-01T00:00:00Z",
@@ -505,16 +505,14 @@ def test_ensure_vector_store_creates_and_waits(tmp_path):
         md5="md5",
         ctx=ctx,
     )
-    vector_store_id, openai_file_id, status, indexed_at_utc, last_error = (
-        rag.ensure_vector_store(runtime, deps)
-    )
+    state = rag.start_vector_store_indexing(runtime, None, deps)
 
-    assert calls == ["create", "upload", "attach", "wait"]
-    assert vector_store_id == "vs_123"
-    assert openai_file_id == "file_upload_1"
-    assert status == "completed"
-    assert indexed_at_utc == "2024-01-01T00:00:00Z"
-    assert last_error is None
+    assert calls == ["create", "upload", "attach"]
+    assert state.vector_store_id == "vs_123"
+    assert state.openai_file_id == "file_upload_1"
+    assert state.vector_store_status == "indexing"
+    assert state.indexed_at_utc is None
+    assert state.last_error is None
 
 
 def test_ingest_orchestrator_records_vector_events(
@@ -706,15 +704,13 @@ def test_generate_report_vector_store_with_validation(
             )
         )
 
-    def _wait_until_indexed(req, ctx):
-        execution_trace.append("vector_wait")
+    def _get_vector_store_status(req, ctx):
+        execution_trace.append("vector_status")
         vector_calls.append(
             (
-                "wait",
+                "status",
                 {
                     "vector_store_id": req.vector_store_id,
-                    "timeout_s": req.timeout_s,
-                    "poll_interval_s": req.poll_interval_s,
                 },
             )
         )
@@ -841,7 +837,7 @@ def test_generate_report_vector_store_with_validation(
         vector_store_create=_create_vector_store,
         vector_store_upload_file=_upload_file,
         vector_store_attach_file=_attach_file,
-        vector_store_wait_until_indexed=_wait_until_indexed,
+        vector_store_get_status=_get_vector_store_status,
         extract_best_figure=_extract_best_figure,
         collect_candidates=_collect_candidates,
         render_preview=_render_preview,
@@ -919,11 +915,11 @@ def test_generate_report_vector_store_with_validation(
     assert validation_calls == ["file_vs"]
     assert overlap_flags["taxonomy_saw_evidence"] is True
     assert overlap_flags["evidence_saw_taxonomy"] is True
-    assert execution_trace.index("pdf_figure") < execution_trace.index("vector_wait")
+    assert execution_trace.index("pdf_figure") < execution_trace.index("vector_status")
     assert execution_trace.index("pdf_candidates") < execution_trace.index(
-        "vector_wait"
+        "vector_status"
     )
-    assert execution_trace.index("pdf_preview") < execution_trace.index("vector_wait")
+    assert execution_trace.index("pdf_preview") < execution_trace.index("vector_status")
     assert vector_calls == [
         (
             "create",
@@ -948,11 +944,9 @@ def test_generate_report_vector_store_with_validation(
             },
         ),
         (
-            "wait",
+            "status",
             {
                 "vector_store_id": "vs_new",
-                "timeout_s": 3600,
-                "poll_interval_s": 5,
             },
         ),
     ]

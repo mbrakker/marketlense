@@ -604,7 +604,7 @@ Prompts are YAML (system/user), hashed and logged by `src/services/prompt_servic
      - **LLM analysis**:
        - `vector_store` mode (only path): Ensures a vector store exists (create -> upload PDF -> attach) and starts provider-side indexing first.
        - While indexing runs, the generator continues PDF-only work (figure/candidate extraction and preview rendering).
-       - It waits for indexing only right before vector-dependent stages (taxonomy/evidence/artifacts) via `vector_store_service.wait_until_indexed`.
+       - It waits for indexing only right before vector-dependent stages (taxonomy/evidence/artifacts), but the polling/backoff now lives in `src/orchestrators/report_analysis_orchestrator.py` using the shared retry policy while `vector_store_service.get_vector_store_status(...)` stays a single status-fetch boundary.
        - After indexing is ready, taxonomy/category resolution and evidence-pack generation run concurrently when `ingest.report_worker_limit > 1` (serial when `= 1`).
       - Evidence packs are generated via `src/generators/evidence_pack_generator.py`, which now stays as the orchestration entrypoint while per-pack normalization/metadata live under `src/generators/evidence_packs/*.py`. The config-driven registry (`ingest.evidence_packs.registry`) and optional variety expansion (`ingest.evidence_packs.enable_new_variety_packs`) cover `doc_map`, `scope`, `methods`, `findings`, `limitations`, `quote_candidates`, and optional `key_metrics`, `risk_register`, `recommendations`, `contradictions`. The generator now schedules work directly from `EvidencePackStrategy` objects, `doc_map` runs first as a hard gate, and remaining packs run in parallel (`ingest.evidence_packs.parallel_workers`). Global evidence-pack rate limiting is applied at the orchestrator boundary (`src/orchestrators/report_pipeline_orchestrator.py`) using `ingest.evidence_packs.global_max_in_flight` + `ingest.evidence_packs.global_min_interval_ms`.
       - Artifacts are generated via `src/generators/artifact_generator.py` using a dependency-aware parallel DAG: `toc` + `summary` + `insights_candidates` + `quotes` in parallel, then `insights_final`, then `expert_comment` + `linkedin_post` in parallel. Independent steps use `ingest.artifacts.parallel_workers`. Global artifact rate limiting is applied at the orchestrator boundary (`src/orchestrators/report_pipeline_orchestrator.py`) using `ingest.artifacts.global_max_in_flight` + `ingest.artifacts.global_min_interval_ms`. By default these artifact model calls run closed-context (`chat_json`); vector retrieval is opt-in via `analysis.artifacts_use_vector_store`.
@@ -1059,7 +1059,7 @@ Operational note:
 
 - Meaning: the OpenAI vector store was created and attached, but indexing never reached a ready state or returned an explicit failed status.
 - Typical fix: retry the run, confirm `OPENAI_API_KEY` is present, and check whether provider-side indexing latency is temporarily high. If timeouts are recurrent, inspect the logged `last_status` and vector-store metadata in state/report DB records.
-- Related code path: `src/services/vector_store_service.py` waits for `completed` / `ready` / `indexed` and raises on timeout or failed indexing.
+- Related code path: `src/orchestrators/report_analysis_orchestrator.py` polls `vector_store_service.get_vector_store_status(...)` under the shared retry policy and raises on timeout or failed indexing.
 
 ### OpenAI Credential Or Response Errors
 

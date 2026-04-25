@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-import time
 from typing import Callable, Dict, Optional, TypeVar
 
 from src.contracts.openai import (
@@ -26,7 +25,6 @@ from src.contracts.vector_store import (
     VectorStoreUpdateMetadataResponse,
     VectorStoreUploadFileRequest,
     VectorStoreUploadFileResponse,
-    VectorStoreWaitRequest,
 )
 from src.services import openai_service
 from src.utils.coercion import clean_string_list
@@ -280,47 +278,6 @@ def get_vector_store_status(request: VectorStoreStatusRequest, ctx: Optional[Run
         status=status or "",
         indexed_at_utc=str(indexed_at) if indexed_at is not None else None,
         last_error=str(last_error) if last_error else None,
-    )
-
-
-def wait_until_indexed(request: VectorStoreWaitRequest, ctx: Optional[RunContext] = None) -> VectorStoreStatusResponse:
-    ctx = _ctx_or_new(ctx)
-    vector_store_id = _require_non_empty(request.vector_store_id, "vector_store_id")
-    timeout_s = int(request.timeout_s)
-    poll_interval_s = int(request.poll_interval_s)
-    if timeout_s <= 0:
-        raise AppError(
-            code="vector_store_invalid_request",
-            message="timeout_s must be positive",
-            retryable=False,
-        )
-    if poll_interval_s <= 0:
-        raise AppError(
-            code="vector_store_invalid_request",
-            message="poll_interval_s must be positive",
-            retryable=False,
-        )
-    deadline = time.time() + timeout_s
-    last_resp: Optional[VectorStoreStatusResponse] = None
-    while time.time() < deadline:
-        last_resp = get_vector_store_status(
-            VectorStoreStatusRequest(schema_version="1.0", vector_store_id=vector_store_id),
-            ctx,
-        )
-        if last_resp.status in {"completed", "ready", "indexed"}:
-            return last_resp
-        if last_resp.status in {"failed", "errored"}:
-            raise AppError(
-                code="vector_store_index_failed",
-                message=f"Vector store indexing failed: {last_resp.last_error or last_resp.status}",
-                retryable=False,
-            )
-        time.sleep(poll_interval_s)
-    raise AppError(
-        code="vector_store_index_timeout",
-        message="Timed out waiting for vector store indexing",
-        retryable=True,
-        context={"vector_store_id": vector_store_id, "last_status": last_resp.status if last_resp else None},
     )
 
 

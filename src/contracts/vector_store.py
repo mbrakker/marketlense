@@ -74,14 +74,6 @@ class VectorStoreStatusResponse:
 
 
 @dataclass(frozen=True)
-class VectorStoreWaitRequest:
-    schema_version: str = field(metadata={"doc": "Vector store wait request schema version."})
-    vector_store_id: str = field(metadata={"doc": "Vector store identifier to poll."})
-    timeout_s: int = field(default=300, metadata={"doc": "Timeout in seconds while waiting for indexing."})
-    poll_interval_s: int = field(default=5, metadata={"doc": "Polling interval in seconds for status checks."})
-
-
-@dataclass(frozen=True)
 class VectorStoreUpdateMetadataRequest:
     schema_version: str = field(metadata={"doc": "Vector store metadata update request schema version."})
     vector_store_id: str = field(metadata={"doc": "Vector store identifier to update."})

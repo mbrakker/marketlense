@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import itertools
-
 import pytest
 
 from src.contracts.openai import (
@@ -16,13 +14,12 @@ from src.contracts.vector_store import (
     VectorStoreCreateRequest,
     VectorStoreCreateResponse,
     VectorStoreMetadata,
+    VectorStoreStatusRequest,
     VectorStoreStatusResponse,
     VectorStoreUploadFileRequest,
     VectorStoreUploadFileResponse,
-    VectorStoreWaitRequest,
 )
 from src.services import vector_store_service as svc
-from src.utils.errors import AppError
 
 
 def _install_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -97,7 +94,7 @@ def test_attach_file(monkeypatch: pytest.MonkeyPatch):
     assert resp.openai_file_id == "file_123"
 
 
-def test_wait_until_indexed_success(monkeypatch: pytest.MonkeyPatch):
+def test_get_vector_store_status(monkeypatch: pytest.MonkeyPatch):
     _install_api_key(monkeypatch)
 
     def _status(req, ctx):
@@ -110,50 +107,11 @@ def test_wait_until_indexed_success(monkeypatch: pytest.MonkeyPatch):
         )
 
     monkeypatch.setattr(svc.openai_service, "openai_vector_store_status", _status)
-    resp = svc.wait_until_indexed(
-        VectorStoreWaitRequest(
+    resp = svc.get_vector_store_status(
+        VectorStoreStatusRequest(
             schema_version="1.0",
             vector_store_id="vs_123",
-            timeout_s=1,
-            poll_interval_s=1,
         )
     )
     assert isinstance(resp, VectorStoreStatusResponse)
     assert resp.status == "completed"
-
-
-def test_wait_until_indexed_timeout(monkeypatch: pytest.MonkeyPatch):
-    _install_api_key(monkeypatch)
-    statuses = iter(
-        [
-            OpenAIVectorStoreStatusResponse(
-                schema_version="1.0",
-                vector_store_id="vs_123",
-                status="in_progress",
-                indexed_at_utc=None,
-                last_error=None,
-            ),
-            OpenAIVectorStoreStatusResponse(
-                schema_version="1.0",
-                vector_store_id="vs_123",
-                status="in_progress",
-                indexed_at_utc=None,
-                last_error=None,
-            ),
-        ]
-    )
-
-    monkeypatch.setattr(svc.openai_service, "openai_vector_store_status", lambda req, ctx: next(statuses))
-    tick = itertools.chain([0.0, 0.1, 0.2, 1.1], itertools.repeat(1.1))
-    monkeypatch.setattr(svc.time, "time", lambda: next(tick))
-    monkeypatch.setattr(svc.time, "sleep", lambda _seconds: None)
-    with pytest.raises(AppError) as exc:
-        svc.wait_until_indexed(
-            VectorStoreWaitRequest(
-                schema_version="1.0",
-                vector_store_id="vs_123",
-                timeout_s=1,
-                poll_interval_s=1,
-            )
-        )
-    assert exc.value.code == "vector_store_index_timeout"

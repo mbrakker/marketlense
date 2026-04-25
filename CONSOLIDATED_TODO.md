@@ -315,15 +315,6 @@ Suggested priority order:
     - Ops dashboards expose dead-letter backlog and age trends.
     - Recovery or discard actions are logged.
 
-- **Title:** Move vector-store wait loops into orchestrator retry policy [Impact: 4/5, Effort: 3/5]
-  - Explanation: Service boundaries should expose status fetches, while polling/backoff/wait policy belongs in orchestrators. Keep OpenAI/vector service calls focused on one external interaction.
-  - Pros: Cleaner role boundaries, easier retry testing, reusable status checks.
-  - Cons: Requires touching vector-store orchestration and dependent tests.
-  - Acceptance Criteria:
-    - Service layer exposes status fetch without internal wait loops.
-    - Polling/backoff lives in orchestrators or retry helpers with structured logging.
-    - Vector-store timeout/failure behavior is preserved by pipeline tests.
-
 - **Title:** Add dynamic concurrency controller with capacity-aware publisher fairness [Impact: 5/5, Effort: 4/5]
   - Explanation: Merge dynamic concurrency and fair scheduling. Adjust concurrency based on queue depth, failure budget, cost budget, browser capacity, and publisher cohort fairness.
   - Pros: Better throughput stability, less starvation, safer burst handling.

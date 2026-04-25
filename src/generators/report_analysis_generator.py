@@ -27,7 +27,6 @@ from src.contracts.vector_store import (
     VectorStoreMetadata,
     VectorStoreStatusRequest,
     VectorStoreUploadFileRequest,
-    VectorStoreWaitRequest,
 )
 from src.generators.report_generation_dependencies import ReportAnalysisDependencies
 from src.generators.report_generation_shared import (
@@ -219,108 +218,30 @@ def start_vector_store_indexing(
     )
 
 
-def _await_vector_store_indexing(
-    state: VectorStoreIndexingState,
-    runtime: ReportRuntimeState,
-    mode_ctx,
-    dependencies: ReportAnalysisDependencies,
-) -> VectorStoreIndexingState:
-    vector_store_id = state.vector_store_id
-    if not vector_store_id:
-        raise AppError(
-            code="vector_store_missing",
-            message="vector_store_id is required before awaiting indexing",
-            retryable=False,
-        )
-    if _is_vector_store_ready(state.vector_store_status):
-        logger.info(
-            log_event(
-                mode_ctx,
-                role="generator",
-                event="vector_store_wait_skipped",
-                module=logger.name,
-                fields={
-                    "vector_store_id": vector_store_id,
-                    "status": state.vector_store_status or "",
-                    "indexed_at_utc": state.indexed_at_utc or "",
-                },
-            )
-        )
-        logger.info(
-            log_event(
-                mode_ctx,
-                role="generator",
-                event="vector_store_ready",
-                module=logger.name,
-                fields={
-                    "vector_store_id": vector_store_id,
-                    "status": state.vector_store_status,
-                    "indexed_at_utc": state.indexed_at_utc or "",
-                },
-            )
-        )
-        return state
-    logger.info(
-        log_event(
-            mode_ctx,
-            role="generator",
-            event="vector_store_wait_start",
-            module=logger.name,
-            fields={
-                "vector_store_id": vector_store_id,
-                "status": state.vector_store_status or "",
-            },
-        )
-    )
-    status_resp = dependencies.vector_store_wait_until_indexed(
-        VectorStoreWaitRequest(
-            schema_version="1.0",
-            vector_store_id=vector_store_id,
-            timeout_s=int(runtime.settings.openai_timeout_seconds),
-            poll_interval_s=5,
-        ),
-        mode_ctx,
-    )
-    ready_state = VectorStoreIndexingState(
-        vector_store_id=vector_store_id,
-        openai_file_id=state.openai_file_id,
-        vector_store_status=status_resp.status,
-        indexed_at_utc=status_resp.indexed_at_utc,
-        last_error=status_resp.last_error,
-    )
-    logger.info(
-        log_event(
-            mode_ctx,
-            role="generator",
-            event="vector_store_ready",
-            module=logger.name,
-            fields={
-                "vector_store_id": ready_state.vector_store_id,
-                "status": ready_state.vector_store_status,
-                "indexed_at_utc": ready_state.indexed_at_utc or "",
-            },
-        )
-    )
-    return ready_state
-
-
 def ensure_vector_store(
     runtime: ReportRuntimeState,
     dependencies: ReportAnalysisDependencies,
 ) -> tuple[Optional[str], Optional[str], Optional[str], Optional[str], Optional[str]]:
-    indexing_state = start_vector_store_indexing(runtime, None, dependencies)
-    ready_state = _await_vector_store_indexing(
-        indexing_state,
-        runtime,
-        child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:vector_store"),
-        dependencies,
+    logger.info(
+        log_event(
+            runtime.ctx,
+            role="generator",
+            event="invalid_generator_entrypoint",
+            module=logger.name,
+            fields={
+                "file_id": runtime.file.file_id,
+                "expected_entrypoint": "src.orchestrators.report_analysis_orchestrator.run_report_analysis",
+            },
+        )
     )
-    return (
-        ready_state.vector_store_id,
-        ready_state.openai_file_id,
-        ready_state.vector_store_status,
-        ready_state.indexed_at_utc,
-        ready_state.last_error,
+    raise AppError(
+        code="invalid_generator_entrypoint",
+        message=(
+            "Vector-store wait sequencing belongs to "
+            "src.orchestrators.report_analysis_orchestrator.run_report_analysis."
+        ),
+        retryable=False,
+        context={"file_id": runtime.file.file_id},
     )
 
 
