@@ -773,7 +773,7 @@ src/prompts/report_vs/artifacts/regenerate/  # targeted regeneration prompts per
 
 Prompts are rendered with Jinja2 (`{{ variable }}`), loaded and hashed by `src/services/prompt_service.py`, and logged with their SHA256 hashes for reproducibility.
 
-- Prompt caching: prompt sets are cached in-memory per namespace for the duration of a process. `PromptLoadRequest` supports `reload_if_changed` (mtime check) and `force_reload` (bypass cache) when you need to pick up edited prompt files mid-run.
+- Prompt caching: prompt sets are cached in-memory per namespace for the duration of a process. Prompt namespace listing uses an in-memory manifest and validates known prompt-directory mtimes instead of rescanning the whole prompt tree on steady-state reads. `PromptLoadRequest` supports `reload_if_changed` (nanosecond mtime check) and `force_reload` (bypass cache) when you need to pick up edited prompt files mid-run.
 
 ---
 
@@ -926,6 +926,10 @@ CI gates (see `.github/workflows/ci.yml`):
 - `python scripts/ci/run_type_check.py` (type gate, full-repo `mypy` over `src` by default with `docs/quality/mypy_baseline.json` tracking existing debt; set `TYPECHECK_CHANGED_ONLY=1` only for an explicit fast path, and use `--update-baseline` after triaging ownership/expiry for baseline changes)
 - `python scripts/ci/check_architecture_imports.py` (static cross-layer import gate for contracts/services/generators/orchestrators/utils)
 - `python scripts/ci/check_forbidden_patching.py` (fails on private-helper/dataclass-constructor patching patterns in tests)
+- `python scripts/ci/check_repository_hygiene.py` (fails on tracked temp/runtime artifacts, local credentials, logs, coverage outputs, and oversized generated files unless explicitly allowlisted in `docs/quality/repository_hygiene_allowlist.yaml`)
+- `python scripts/ci/check_quality_ledger.py` (validates monthly initiative ownership, baseline/current/target metrics, review dates, and stalled-work decisions in `docs/quality/initiative_ledger.yaml`)
+- `python scripts/ci/check_remediation_runbooks.py` (validates top typed-failure runbooks, alert labels, and dry-run remediation hooks in `docs/ops/failure_remediation.yaml`)
+- `python scripts/ci/check_backlog_source.py` (enforces `CONSOLIDATED_TODO.md` as the only active backlog source)
 - `python scripts/ci/check_contract_schemas.py --snapshot docs/quality/contract_schemas.json` (dataclass contract schema snapshot gate; run with `--update` after approved contract changes)
 - `python -m pytest --cov=src --cov-report=xml --cov-report=term-missing` (default suite excludes integration tests and includes the direct-I/O boundary gate in `tests/test_io_boundaries.py`)
 - `python scripts/ci/check_coverage.py --coverage-xml coverage.xml` (global + per-critical-package thresholds)
@@ -948,6 +952,8 @@ PR governance:
 - Golden corpus: `tests/fixtures/docpacks/golden/` (copied from `out/1/*/report_analysis`)
 - Golden candidate corpus: `tests/fixtures/candidate_extraction/golden/` (copied from `out/1/*/candidates/candidates.json`, or another root via `--source-candidate-root`)
 - Comparator: `scripts/ci/check_quality_regression.py` blocks merge if coverage, mutation, docpack metrics, or candidate-extraction metrics drop below baseline.
+- Monthly initiative ledger: `docs/quality/initiative_ledger.yaml` records owner, baseline/current/target metric, review date, and decision for active quality initiatives; `docs/quality/monthly_quality_review.md` is the recurring review agenda.
+- Operational remediation registry: `docs/ops/failure_remediation.yaml` maps top typed failure classes to runbooks, alert labels, and bounded dry-run remediation hooks; `docs/ops/top_failure_runbooks.md` holds the operator playbooks and drill metadata.
 - Feature controls:
   - `ingest.evidence_packs.registry`
   - `ingest.evidence_packs.enable_new_variety_packs`
@@ -962,7 +968,6 @@ See:
 - `docs/docpacks/prompt-authoring.md`
 - `docs/architecture/role-boundaries.md`
 - `docs/testing/integrity-rules.md`
-- `docs/quality/ineffective-choices-top50.md` (archived audit note pointing to the consolidated backlog)
 
 ---
 

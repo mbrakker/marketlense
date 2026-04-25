@@ -1,0 +1,70 @@
+schema_version: "1.0"
+last_drill_date: "2026-04-25"
+owner: "operations"
+runbooks:
+  - failure_code: "pdf_text_unextractable"
+    owner: "pipeline"
+    severity: "warning"
+    runbook_path: "docs/ops/top_failure_runbooks.md"
+    dashboard_link: "local://logs?event=text_extractability_failed"
+    alert_labels:
+      stage: "ingest"
+      family: "pdf_text"
+    detector_log_events:
+      - "text_extractability_failed"
+    remediation_hooks:
+      - name: "rerun_single_ingest_with_ocr_policy_check"
+        trigger: "operator_approved"
+        dry_run: true
+        command: "python -m src.cli ingest --limit 1"
+        safety: "Requires operator to verify OCR fallback policy and source PDF identity before execution."
+  - failure_code: "pdf_text_ocr_failed"
+    owner: "pipeline"
+    severity: "error"
+    runbook_path: "docs/ops/top_failure_runbooks.md"
+    dashboard_link: "local://logs?event=pdf_text_ocr_failed"
+    alert_labels:
+      stage: "ingest"
+      family: "ocr"
+    detector_log_events:
+      - "pdf_text_ocr_failed"
+      - "ocr_fallback_triggered"
+    remediation_hooks:
+      - name: "rerun_single_ingest_after_ocr_timeout_review"
+        trigger: "operator_approved"
+        dry_run: true
+        command: "python -m src.cli ingest --limit 1"
+        safety: "Requires timeout and prompt namespace verification before execution."
+  - failure_code: "browser_download_timeout"
+    owner: "acquisition"
+    severity: "warning"
+    runbook_path: "docs/ops/top_failure_runbooks.md"
+    dashboard_link: "local://logs?event=browser_report_download_failed"
+    alert_labels:
+      stage: "acquisition"
+      family: "browser_download"
+    detector_log_events:
+      - "browser_report_download_failed"
+      - "browser_report_download_timeout_recovery_timed_out"
+    remediation_hooks:
+      - name: "audit_one_acquisition_path"
+        trigger: "operator_approved"
+        dry_run: true
+        command: "python -m src.cli audit-acquisition-paths --publisher-limit 1 --candidate-limit-per-publisher 1"
+        safety: "Runs a bounded acquisition audit instead of broad browser retry."
+  - failure_code: "publisher_inventory_http_empty"
+    owner: "acquisition"
+    severity: "warning"
+    runbook_path: "docs/ops/top_failure_runbooks.md"
+    dashboard_link: "local://logs?event=publisher_inventory_http_empty"
+    alert_labels:
+      stage: "publisher_inventory"
+      family: "http_parse"
+    detector_log_events:
+      - "publisher_inventory_http_empty"
+    remediation_hooks:
+      - name: "run_single_publisher_browser_discovery"
+        trigger: "operator_approved"
+        dry_run: true
+        command: "python -m src.cli discover-publisher-inventory \"https://example.com/insights\""
+        safety: "Replace the example URL with the affected publisher insights URL before execution."

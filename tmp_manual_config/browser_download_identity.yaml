@@ -1,8 +1,0 @@
-schema_version: '1.0'
-fields:
-- schema_version: '1.0'
-  key: work_email
-  label: Work email
-  value: ops@example.com
-  aliases:
-  - email

@@ -20,6 +20,8 @@ pip-wheel-metadata/
 .pytest_cache/
 .coverage
 coverage.xml
+mutation_results.json
+mutation_cov_*/
 
 # Ignore local test fixtures (large PDFs, generated data)
 tests/fixtures/*

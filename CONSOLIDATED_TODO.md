@@ -13,7 +13,7 @@ Deep-analysis evidence used for this consolidation:
 - Architecture import gate passes: `python scripts/ci/check_architecture_imports.py`.
 - Forbidden patching gate passes: `python scripts/ci/check_forbidden_patching.py`.
 - Long-file concentration remains high in `src/services/report_store_service.py`, `src/services/_pdf/visual_heuristics.py`, `src/services/_browser_report_download/artifact.py`, `src/services/config_service.py`, `src/ui/streamlit_pages.py`, `src/services/_browser_report_download/browser.py`, `src/services/publisher_inventory_service.py`, `src/generators/report_selection_generator.py`, and large paired tests.
-- Additional hotspots from the 2026-04-25 scan: `src/generators/report_generation_dependencies.py` imports 37 internal dependencies, several model-call paths mix `openai_service` and `llm_service`, SQLite DDL/migrations are embedded in service startup paths, and tracked `tmp_*` artifacts still exist despite ignore rules.
+- Additional hotspots from the 2026-04-25 scan: `src/generators/report_generation_dependencies.py` imports 37 internal dependencies, several model-call paths mix `openai_service` and `llm_service`, and SQLite DDL/migrations are embedded in service startup paths.
 - Current x10 opportunities concentrate around cost-aware LLM routing, PDF/OCR triage, resumable orchestration, browser acquisition stability, publish durability, and regression gates.
 
 How to use this backlog:
@@ -50,15 +50,6 @@ Suggested priority order:
     - Missing variables and template syntax errors fail before runtime.
     - Prompt file paths, version/hash, exact rendered prompts, and model parameters are logged for each model call.
     - Fixture coverage exists for report, validation, ranking, browser-download, and publishing prompt families.
-
-- **Title:** Build a prompt namespace manifest and stop full-tree prompt scans on steady-state reads [Impact: 3/5, Effort: 3/5]
-  - Explanation: `src/services/prompt_service.py` discovers namespaces by recursively scanning `src/prompts/**`. Add a manifest or cached namespace inventory so UI/tooling can list prompts without repeated traversal and hashing.
-  - Pros: Faster settings/prompt screens, less filesystem churn, simpler prompt discovery behavior.
-  - Cons: Manifest invalidation and regeneration must be reliable.
-  - Acceptance Criteria:
-    - Prompt namespace listing no longer requires full recursive scans for steady-state reads.
-    - Manifest/cache invalidation occurs when prompt files change.
-    - Prompt listing tests cover add, remove, rename, and stale-manifest scenarios.
 
 - **Title:** Add prompt variant/A-B harness with offline scored corpora [Impact: 4/5, Effort: 4/5]
   - Explanation: Merge multi-prompt variants and the deep-analysis A/B harness into one capability: config-driven variants, deterministic selection, fixed corpora, and scorecards for schema validity, grounding, and cost.
@@ -510,16 +501,6 @@ Suggested priority order:
     - Required structured log fields are asserted for each orchestrator and service.
     - Contract round-trip tests cover every added/modified dataclass contract.
 
-- **Title:** Add repository artifact and secret hygiene gate [Impact: 5/5, Effort: 2/5]
-  - Explanation: The scan found tracked temporary JSON/JSONL artifacts even though `.gitignore` blocks local outputs and secrets. Add a CI gate that rejects committed runtime artifacts, local credentials, token files, coverage outputs, probe downloads, and oversized generated files unless explicitly allowlisted.
-  - Pros: Lower security risk, smaller repository, faster clone/search/test cycles.
-  - Cons: Requires one-time cleanup and an allowlist for intentional fixtures.
-  - Acceptance Criteria:
-    - CI fails on tracked files matching runtime artifact, credential, token, cache, log, coverage, or probe-output patterns.
-    - Existing tracked `tmp_*` artifacts are removed or moved into documented fixtures if still needed.
-    - Allowlist entries require owner, reason, max size, and expiry.
-    - Pre-commit or local script provides the same check before CI.
-
 - **Title:** Decompose mega-tests into behavior suites with shared fixture builders [Impact: 4/5, Effort: 4/5]
   - Explanation: Tests such as `test_browser_report_download_service.py`, `test_pdf_figures_service.py`, and `test_publisher_inventory_service.py` are thousands of lines long. Split them by externally observable behavior and introduce shared builders that keep assertions semantic rather than broad mock narratives.
   - Pros: Faster review, easier targeted test runs, clearer failure localization.
@@ -583,24 +564,6 @@ Suggested priority order:
     - Canary cohorts and rollback thresholds are defined.
     - Rollback triggers on validation, cost, latency, or error SLO breaches.
     - Post-deploy report records canary outcomes.
-
-- **Title:** Add operational runbooks and auto-remediation hooks for top failures [Impact: 4/5, Effort: 2/5]
-  - Explanation: Pair top typed failure classes with remediation scripts, runbooks, and dashboard/alert links.
-  - Pros: Lower MTTR and reduced manual triage.
-  - Cons: Needs disciplined upkeep.
-  - Acceptance Criteria:
-    - Top failure classes map to remediation actions.
-    - Runbooks are linked in alerts/dashboard.
-    - Monthly drill verifies runbook freshness.
-
-- **Title:** Run monthly quality ledger review and prune low-ROI initiatives [Impact: 3/5, Effort: 1/5]
-  - Explanation: Track each x10 initiative with baseline/current/target metrics and remove or re-plan work that fails to show measurable impact.
-  - Pros: Sustained governance discipline and less roadmap sprawl.
-  - Cons: Requires recurring ownership.
-  - Acceptance Criteria:
-    - Monthly review agenda and owners are established.
-    - Each initiative reports baseline/current/target metrics.
-    - Stalled items are de-scoped or re-planned explicitly.
 
 ---
 
@@ -667,15 +630,6 @@ Suggested priority order:
     - Session-state contracts remain explicit and tested.
     - UI tests cover navigation and representative page rendering.
 
-- **Title:** Keep supplemental code-reduction intake merged into concrete workstream tasks [Impact: 2/5, Effort: 1/5]
-  - Explanation: Avoid reintroducing append-only audit backlogs. Any remaining code-reduction ideas from older docs must be converted into concrete workstream items with acceptance criteria before implementation.
-  - Pros: Prevents TODO sprawl and duplicate planning.
-  - Cons: Requires backlog discipline.
-  - Acceptance Criteria:
-    - No active TODO source exists outside this file.
-    - New audit findings are merged into existing items or added as concrete workstream tasks.
-    - Duplicate titles or overlapping acceptance criteria are removed during review.
-
 ## Priority Launch Plan
 
 ### Phase 1: Highest-Leverage Foundations (2-4 weeks)
@@ -685,7 +639,6 @@ Suggested priority order:
 - Real-time spend guardrails.
 - Prompt dry-run validation.
 - Performance/cost regression baseline.
-- Repository artifact and secret hygiene gate.
 
 ### Phase 2: Speed and Recovery (4-8 weeks)
 
@@ -713,4 +666,3 @@ Suggested priority order:
 - Streamlit workflow page decomposition.
 - Contract module family split.
 - Report-generation dependency-bundle split.
-- Monthly quality ledger review.

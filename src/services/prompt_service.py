@@ -32,14 +32,24 @@ JINJA_ENV = Environment(
     keep_trailing_newline=True,
 )
 
+
 @dataclass(frozen=True)
 class _PromptCacheEntry:
     prompt_set: PromptSet
-    system_mtime: float
-    user_mtime: float
+    system_mtime: int
+    user_mtime: int
+
+
+@dataclass(frozen=True)
+class _PromptNamespaceCacheEntry:
+    root: Path
+    namespaces: tuple[str, ...]
+    watched_dirs: tuple[Path, ...]
+    directory_mtimes: tuple[tuple[str, int], ...]
 
 
 _PROMPT_CACHE: Dict[str, _PromptCacheEntry] = {}
+_PROMPT_NAMESPACE_CACHE: _PromptNamespaceCacheEntry | None = None
 
 
 def _resolve_prompt_namespace(namespace: str) -> str:
@@ -78,50 +88,58 @@ def load_prompt_set(request: PromptLoadRequest, ctx: RunContext) -> PromptSet:
     base = PROMPTS_ROOT / namespace
     system_path = base / "system.yaml"
     user_path = base / "user.yaml"
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="prompt_load_start",
-        module=logger.name,
-        fields={"namespace": request.namespace, "resolved_namespace": namespace},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="prompt_load_start",
+            module=logger.name,
+            fields={"namespace": request.namespace, "resolved_namespace": namespace},
+        )
+    )
     cache_entry = _PROMPT_CACHE.get(namespace)
     prompt_set: PromptSet | None = None
     source = "reloaded"
     if cache_entry and not request.force_reload:
         if not request.reload_if_changed:
-            logger.info(log_event(
-                ctx,
-                role="service",
-                event="prompt_load_cache_hit",
-                module=logger.name,
-                fields={"namespace": namespace, "validated": False},
-            ))
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="prompt_load_cache_hit",
+                    module=logger.name,
+                    fields={"namespace": namespace, "validated": False},
+                )
+            )
             prompt_set = cache_entry.prompt_set
             source = "cache"
         elif _is_prompt_cache_valid(cache_entry, system_path, user_path):
-            logger.info(log_event(
-                ctx,
-                role="service",
-                event="prompt_load_cache_hit",
-                module=logger.name,
-                fields={
-                    "namespace": namespace,
-                    "validated": True,
-                    "system_path": cache_entry.prompt_set.system.path,
-                    "user_path": cache_entry.prompt_set.user.path,
-                },
-            ))
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="prompt_load_cache_hit",
+                    module=logger.name,
+                    fields={
+                        "namespace": namespace,
+                        "validated": True,
+                        "system_path": cache_entry.prompt_set.system.path,
+                        "user_path": cache_entry.prompt_set.user.path,
+                    },
+                )
+            )
             prompt_set = cache_entry.prompt_set
             source = "cache_validated"
         else:
-            logger.info(log_event(
-                ctx,
-                role="service",
-                event="prompt_load_cache_stale",
-                module=logger.name,
-                fields={"namespace": namespace},
-            ))
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="prompt_load_cache_stale",
+                    module=logger.name,
+                    fields={"namespace": namespace},
+                )
+            )
     if prompt_set is None:
         system_template = _load_prompt(system_path)
         user_template = _load_prompt(user_path)
@@ -138,40 +156,46 @@ def load_prompt_set(request: PromptLoadRequest, ctx: RunContext) -> PromptSet:
     else:
         system_template = prompt_set.system
         user_template = prompt_set.user
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="prompt_load_complete",
-        module=logger.name,
-        fields={
-            "system_path": system_template.path,
-            "system_sha256": system_template.sha256,
-            "user_path": user_template.path,
-            "user_sha256": user_template.sha256,
-            "cached": source != "reloaded",
-            "source": source,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="prompt_load_complete",
+            module=logger.name,
+            fields={
+                "system_path": system_template.path,
+                "system_sha256": system_template.sha256,
+                "user_path": user_template.path,
+                "user_sha256": user_template.sha256,
+                "cached": source != "reloaded",
+                "source": source,
+            },
+        )
+    )
     return prompt_set
 
 
-def list_prompt_namespaces(request: PromptNamespaceListRequest, ctx: RunContext) -> PromptNamespaceListResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="prompt_namespace_list_start",
-        module=logger.name,
-        fields={
-            "reload_if_changed": request.reload_if_changed,
-            "force_reload": request.force_reload,
-        },
-    ))
+def list_prompt_namespaces(
+    request: PromptNamespaceListRequest, ctx: RunContext
+) -> PromptNamespaceListResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="prompt_namespace_list_start",
+            module=logger.name,
+            fields={
+                "reload_if_changed": request.reload_if_changed,
+                "force_reload": request.force_reload,
+            },
+        )
+    )
     namespaces: list[PromptNamespaceSummary] = []
-    for system_path in sorted(PROMPTS_ROOT.rglob("system.yaml")):
-        user_path = system_path.parent / "user.yaml"
-        if not user_path.exists():
-            continue
-        rel_namespace = str(system_path.parent.relative_to(PROMPTS_ROOT)).replace("\\", "/")
+    namespace_names = _list_prompt_namespace_names(
+        reload_if_changed=request.reload_if_changed,
+        force_reload=request.force_reload,
+    )
+    for rel_namespace in namespace_names:
         prompt_set = load_prompt_set(
             PromptLoadRequest(
                 schema_version="1.0",
@@ -181,33 +205,41 @@ def list_prompt_namespaces(request: PromptNamespaceListRequest, ctx: RunContext)
             ),
             ctx,
         )
-        namespaces.append(PromptNamespaceSummary(
-            schema_version="1.0",
-            namespace=rel_namespace,
-            system_path=prompt_set.system.path,
-            user_path=prompt_set.user.path,
-            system_sha256=prompt_set.system.sha256,
-            user_sha256=prompt_set.user.sha256,
-        ))
+        namespaces.append(
+            PromptNamespaceSummary(
+                schema_version="1.0",
+                namespace=rel_namespace,
+                system_path=prompt_set.system.path,
+                user_path=prompt_set.user.path,
+                system_sha256=prompt_set.system.sha256,
+                user_sha256=prompt_set.user.sha256,
+            )
+        )
     response = PromptNamespaceListResponse(schema_version="1.0", namespaces=namespaces)
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="prompt_namespace_list_complete",
-        module=logger.name,
-        fields={"count": len(namespaces)},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="prompt_namespace_list_complete",
+            module=logger.name,
+            fields={"count": len(namespaces)},
+        )
+    )
     return response
 
 
-def render_prompt(request: PromptRenderRequest, ctx: RunContext) -> PromptRenderResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="prompt_render_start",
-        module=logger.name,
-        fields={"template_path": request.template.path},
-    ))
+def render_prompt(
+    request: PromptRenderRequest, ctx: RunContext
+) -> PromptRenderResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="prompt_render_start",
+            module=logger.name,
+            fields={"template_path": request.template.path},
+        )
+    )
     try:
         template = JINJA_ENV.from_string(request.template.text)
         text = template.render(**request.variables)
@@ -232,25 +264,94 @@ def render_prompt(request: PromptRenderRequest, ctx: RunContext) -> PromptRender
             cause=exc,
             retryable=False,
         ) from exc
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="prompt_render_complete",
-        module=logger.name,
-        fields={"template_path": request.template.path, "length": len(text)},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="prompt_render_complete",
+            module=logger.name,
+            fields={"template_path": request.template.path, "length": len(text)},
+        )
+    )
     return PromptRenderResponse(schema_version="1.0", text=text)
 
 
-def _get_mtime(path: Path) -> float:
-    return path.stat().st_mtime
+def _get_mtime(path: Path) -> int:
+    stat = path.stat()
+    return int(getattr(stat, "st_mtime_ns", int(stat.st_mtime * 1_000_000_000)))
 
 
-def _is_prompt_cache_valid(entry: _PromptCacheEntry, system_path: Path, user_path: Path) -> bool:
+def _is_prompt_cache_valid(
+    entry: _PromptCacheEntry, system_path: Path, user_path: Path
+) -> bool:
     try:
-        return entry.system_mtime == system_path.stat().st_mtime and entry.user_mtime == user_path.stat().st_mtime
+        return (
+            entry.system_mtime == system_path.stat().st_mtime
+            and entry.user_mtime == user_path.stat().st_mtime
+        )
     except FileNotFoundError:
         return False
+
+
+def _list_prompt_namespace_names(
+    *, reload_if_changed: bool, force_reload: bool
+) -> tuple[str, ...]:
+    global _PROMPT_NAMESPACE_CACHE
+    root = PROMPTS_ROOT.resolve()
+    cache_entry = _PROMPT_NAMESPACE_CACHE
+    if (
+        cache_entry is not None
+        and cache_entry.root == root
+        and not force_reload
+        and (not reload_if_changed or _is_prompt_namespace_cache_valid(cache_entry))
+    ):
+        return cache_entry.namespaces
+
+    namespaces, watched_dirs = _discover_prompt_namespaces(root)
+    _PROMPT_NAMESPACE_CACHE = _PromptNamespaceCacheEntry(
+        root=root,
+        namespaces=namespaces,
+        watched_dirs=watched_dirs,
+        directory_mtimes=_directory_mtimes(watched_dirs),
+    )
+    return namespaces
+
+
+def _discover_prompt_namespaces(root: Path) -> tuple[tuple[str, ...], tuple[Path, ...]]:
+    namespace_dirs: list[Path] = []
+    watched_dirs = {root}
+    for system_path in sorted(root.rglob("system.yaml")):
+        watched_dirs.add(system_path.parent)
+        user_path = system_path.parent / "user.yaml"
+        if not user_path.exists():
+            continue
+        namespace_dirs.append(system_path.parent)
+    for namespace_dir in namespace_dirs:
+        current = namespace_dir
+        while True:
+            watched_dirs.add(current)
+            if current == root:
+                break
+            current = current.parent
+    namespaces = tuple(
+        str(namespace_dir.relative_to(root)).replace("\\", "/")
+        for namespace_dir in sorted(namespace_dirs)
+    )
+    return namespaces, tuple(sorted(watched_dirs))
+
+
+def _directory_mtimes(paths: tuple[Path, ...]) -> tuple[tuple[str, int], ...]:
+    mtimes: list[tuple[str, int]] = []
+    for path in paths:
+        try:
+            mtimes.append((str(path), _get_mtime(path)))
+        except FileNotFoundError:
+            mtimes.append((str(path), -1))
+    return tuple(mtimes)
+
+
+def _is_prompt_namespace_cache_valid(entry: _PromptNamespaceCacheEntry) -> bool:
+    return _directory_mtimes(entry.watched_dirs) == entry.directory_mtimes
 
 
 def _load_prompt(path: Path) -> PromptTemplate:
