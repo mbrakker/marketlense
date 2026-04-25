@@ -131,6 +131,47 @@ class TestConfigService(unittest.TestCase):
             settings.publisher_profiles_path.endswith("publisher-profiles.json")
         )
 
+    def test_capability_settings_loaders_honor_env_config_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_path = self._write_config(
+                tmp_dir,
+                include_analysis=True,
+                include_publish=True,
+            )
+            env = {
+                "MARKET_LENSE_CONFIG_PATH": cfg_path,
+                "OPENAI_API_KEY": "openai-key",
+                "OPENROUTER_API_KEY": "openrouter-key",
+                "WP_SITE_URL": "https://wp.example",
+                "WP_APP_PASSWORD": "wp-password",
+            }
+            with patch.dict(os.environ, env, clear=True):
+                request = ConfigLoadRequest(schema_version="1.0", path="")
+                ctx = RunContext(
+                    schema_version="1.0", run_id="r", task_id="t", span_id="s"
+                )
+                publish_settings = load_publish_settings(request, ctx)
+                browser_settings = load_browser_download_settings(request, ctx)
+                inventory_settings = load_publisher_inventory_settings(request, ctx)
+
+            tmp_path = Path(tmp_dir).resolve()
+            self.assertEqual(
+                tmp_path / "out",
+                Path(publish_settings.output_dir).resolve(),
+            )
+            self.assertEqual(
+                tmp_path / "state" / "reports.sqlite",
+                Path(publish_settings.reports_db).resolve(),
+            )
+            self.assertEqual(
+                tmp_path / "out" / "browser_downloads",
+                Path(browser_settings.output_dir).resolve(),
+            )
+            self.assertEqual(
+                tmp_path / "out" / "browser_downloads",
+                Path(inventory_settings.output_dir).resolve(),
+            )
+
     def test_html_tag_acronyms_can_be_configured(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = self._write_config(tmp_dir, include_analysis=False)

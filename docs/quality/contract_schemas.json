@@ -8267,6 +8267,123 @@
       ],
       "type": "object"
     },
+    "src.contracts.openai.OpenAIUsageAccountingRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "cached_input_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cost_daily_path": {
+          "type": "string"
+        },
+        "cost_ledger_path": {
+          "type": "string"
+        },
+        "input_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "model": {
+          "type": "string"
+        },
+        "model_pricing": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "output_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "request_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "step_name": {
+          "type": "string"
+        },
+        "tool_calls": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "step_name",
+        "model",
+        "input_tokens",
+        "output_tokens",
+        "tool_calls",
+        "cost_ledger_path",
+        "cost_daily_path",
+        "model_pricing"
+      ],
+      "type": "object"
+    },
+    "src.contracts.openai.OpenAIUsageAccountingResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "daily_path": {
+          "type": "string"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "estimated_cost_usd": {
+          "type": "number"
+        },
+        "ledger_path": {
+          "type": "string"
+        },
+        "recorded": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "recorded",
+        "estimated_cost_usd",
+        "ledger_path",
+        "daily_path"
+      ],
+      "type": "object"
+    },
     "src.contracts.openai.OpenAIVectorStoreAttachFileRequest": {
       "additionalProperties": false,
       "properties": {
@@ -12656,6 +12773,9 @@
     "src.contracts.report_assets.ExtractCandidatesRequest": {
       "additionalProperties": false,
       "properties": {
+        "degraded_page_policy": {
+          "type": "string"
+        },
         "exclude_page_indices": {
           "items": {
             "type": "integer"
@@ -12707,6 +12827,9 @@
         },
         "schema_version": {
           "type": "string"
+        },
+        "stats": {
+          "$ref": "#/$defs/src.contracts.report_assets.PdfCandidateExtractionStats"
         }
       },
       "required": [
@@ -12783,6 +12906,62 @@
         "schema_version",
         "image_path",
         "caption"
+      ],
+      "type": "object"
+    },
+    "src.contracts.report_assets.PdfCandidateExtractionStats": {
+      "additionalProperties": false,
+      "properties": {
+        "degraded_pages": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.report_assets.PdfDegradedPage"
+          },
+          "type": "array"
+        },
+        "extraction_failure_count": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "triage_failure_count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts.report_assets.PdfDegradedPage": {
+      "additionalProperties": false,
+      "properties": {
+        "message": {
+          "type": "string"
+        },
+        "page": {
+          "type": "integer"
+        },
+        "policy": {
+          "type": "string"
+        },
+        "reason_code": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "stage": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "page",
+        "stage",
+        "reason_code",
+        "policy",
+        "message"
       ],
       "type": "object"
     },
@@ -17760,6 +17939,262 @@
         "run_id",
         "run_type",
         "request_payload"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_payloads.AcquisitionAuditUiRunPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_limit_per_publisher": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "delivery_email": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "publisher_limit": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_payloads.CandidateExtractionUiRunPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "file_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "folder_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "limit": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pdf_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "report_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_payloads.CoverImagesUiRunPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "file_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "limit": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "style_config_path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "style_config_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_payloads.IngestUiRunPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "folder_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "limit": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_payloads.PublishUiRunPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_payloads.PublisherDiscoveryUiRunPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "insights_url": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "insights_url"
+      ],
+      "type": "object"
+    },
+    "src.contracts.ui_run_payloads.ReportDownloadUiRunPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "delivery_email": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "publisher_google_folder": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "publisher_insights_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "url"
       ],
       "type": "object"
     },

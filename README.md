@@ -494,6 +494,7 @@ Bootstrap / override order:
 
 For dev wiring, use `src.services.config_service.build_ingest_settings` with `IngestSettingsBuildRequest` to adapt `AppSettings` into `IngestSettings` without hand-copying fields; new config keys are picked up automatically.
 `src/services/config_service.py` now resolves ingest settings through section resolvers plus reusable field specs, so env fallback, coercion, defaults, and minimum-value behavior are localized to the relevant config section instead of one long inline parsing chain.
+Capability-specific loaders such as browser-download, publisher-inventory discovery, and WordPress publish settings use the same `MARKET_LENSE_CONFIG_PATH` bootstrap resolution as the main app settings loader, so isolated task runs and alternate config files do not fall back to `src/config/app.yaml`.
 
 Key fields and env overrides:
 

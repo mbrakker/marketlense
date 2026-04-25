@@ -179,7 +179,9 @@ def _iter_config_overlay_paths(config_path: Path) -> list[Path]:
     return [candidate for candidate in overlays if candidate.exists()]
 
 
-def _load_yaml_mapping_or_runtime_error(path: str | Path, *, label: str) -> dict[str, Any]:
+def _load_yaml_mapping_or_runtime_error(
+    path: str | Path, *, label: str
+) -> dict[str, Any]:
     try:
         return _read_yaml_mapping(path, label=label)
     except YamlMappingError as exc:
@@ -237,7 +239,9 @@ def _load_config(path: str, *, include_overlays: bool = True) -> dict[str, Any]:
         payload = _read_yaml_mapping(config_path, label="Config")
         if include_overlays:
             for overlay_path in _iter_config_overlay_paths(config_path):
-                overlay_payload = _read_yaml_mapping(overlay_path, label="Config overlay")
+                overlay_payload = _read_yaml_mapping(
+                    overlay_path, label="Config overlay"
+                )
                 payload = deep_merge_mappings(payload, overlay_payload)
         return payload
     except YamlMappingError as exc:
@@ -627,9 +631,7 @@ def _resolve_ingest_runtime_settings(
                 field_name="report_worker_limit",
                 config_key="report_worker_limit",
                 default=_to_int(
-                    _default_config_value(
-                        "ingest", "report_worker_limit", fallback=2
-                    ),
+                    _default_config_value("ingest", "report_worker_limit", fallback=2),
                     2,
                 ),
                 coerce=_to_int,
@@ -1237,7 +1239,9 @@ def _resolve_pdf_text_settings(
                 field_name="pdf_text_max_pages",
                 config_key="max_pages",
                 default=_to_int(
-                    _default_config_value("ingest", "pdf_text", "max_pages", fallback=5),
+                    _default_config_value(
+                        "ingest", "pdf_text", "max_pages", fallback=5
+                    ),
                     5,
                 ),
                 coerce=_to_int,
@@ -1472,7 +1476,9 @@ def _resolve_analysis_settings(
                 config_key="cost_ledger_path",
                 default=str(
                     _default_config_value(
-                        "analysis", "cost_ledger_path", fallback="./out/cost-ledger.jsonl"
+                        "analysis",
+                        "cost_ledger_path",
+                        fallback="./out/cost-ledger.jsonl",
                     )
                 ),
                 coerce=_to_str,
@@ -1527,7 +1533,9 @@ def _resolve_drive_settings(drive_cfg: dict[str, Any]) -> dict[str, Any]:
         "drive_list_mode": _resolve_allowed_string(
             drive_cfg.get(
                 "list_mode",
-                _default_config_value("ingest", "drive", "list_mode", fallback="metadata"),
+                _default_config_value(
+                    "ingest", "drive", "list_mode", fallback="metadata"
+                ),
             ),
             default=str(
                 _default_config_value(
@@ -1983,6 +1991,7 @@ def load_publish_settings(
     request: ConfigLoadRequest, ctx: RunContext
 ) -> PublishSettings:
     load_dotenv(find_dotenv(filename=".env", usecwd=True))
+    config_path = _resolve_bootstrap_config_path(request.path)
 
     logger.info(
         log_event(
@@ -1990,11 +1999,10 @@ def load_publish_settings(
             role="service",
             event="publish_config_load_start",
             module=logger.name,
-            fields={"path": request.path or str(CONFIG_PATH)},
+            fields={"path": str(config_path)},
         )
     )
-    data = _load_config(request.path or str(CONFIG_PATH))
-    config_path = Path(request.path or str(CONFIG_PATH)).resolve()
+    data = _load_config(str(config_path))
     resolver = _ConfigResolver()
     need = resolver.need
     missing = resolver.missing
@@ -2130,6 +2138,7 @@ def load_browser_download_settings(
     request: ConfigLoadRequest, ctx: RunContext
 ) -> BrowserDownloadSettings:
     load_dotenv(find_dotenv(filename=".env", usecwd=True))
+    config_path = _resolve_bootstrap_config_path(request.path)
 
     logger.info(
         log_event(
@@ -2137,11 +2146,10 @@ def load_browser_download_settings(
             role="service",
             event="browser_download_config_load_start",
             module=logger.name,
-            fields={"path": request.path or str(CONFIG_PATH)},
+            fields={"path": str(config_path)},
         )
     )
-    data = _load_config(request.path or str(CONFIG_PATH))
-    config_path = Path(request.path or str(CONFIG_PATH)).resolve()
+    data = _load_config(str(config_path))
     runtime_base_path = _resolve_runtime_base_path(config_path)
     resolver = _ConfigResolver()
 
@@ -2268,9 +2276,7 @@ def load_browser_download_settings(
             if not _is_missing(browser_download.get("temperature"))
             else _env_value("BROWSER_DOWNLOAD_TEMPERATURE"),
             _to_float(
-                _default_config_value(
-                    "browser_download", "temperature", fallback=0.0
-                ),
+                _default_config_value("browser_download", "temperature", fallback=0.0),
                 0.0,
             ),
         ),
@@ -2294,9 +2300,7 @@ def load_browser_download_settings(
                 if not _is_missing(browser_download.get("max_steps"))
                 else _env_value("BROWSER_DOWNLOAD_MAX_STEPS"),
                 _to_int(
-                    _default_config_value(
-                        "browser_download", "max_steps", fallback=30
-                    ),
+                    _default_config_value("browser_download", "max_steps", fallback=30),
                     30,
                 ),
             ),
@@ -2431,6 +2435,7 @@ def load_publisher_inventory_settings(
     request: ConfigLoadRequest, ctx: RunContext
 ) -> PublisherInventorySettings:
     load_dotenv(find_dotenv(filename=".env", usecwd=True))
+    config_path = _resolve_bootstrap_config_path(request.path)
 
     logger.info(
         log_event(
@@ -2438,11 +2443,10 @@ def load_publisher_inventory_settings(
             role="service",
             event="publisher_inventory_config_load_start",
             module=logger.name,
-            fields={"path": request.path or str(CONFIG_PATH)},
+            fields={"path": str(config_path)},
         )
     )
-    data = _load_config(request.path or str(CONFIG_PATH))
-    config_path = Path(request.path or str(CONFIG_PATH)).resolve()
+    data = _load_config(str(config_path))
     runtime_base_path = _resolve_runtime_base_path(config_path)
     resolver = _ConfigResolver()
 
@@ -2567,7 +2571,9 @@ def load_publisher_inventory_settings(
                 or _env_value("BROWSER_DOWNLOAD_TEMPERATURE")
             ),
             _to_float(
-                _default_config_value("publisher_discovery", "temperature", fallback=0.0),
+                _default_config_value(
+                    "publisher_discovery", "temperature", fallback=0.0
+                ),
                 0.0,
             ),
         ),
