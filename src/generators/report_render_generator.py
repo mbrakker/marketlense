@@ -17,7 +17,7 @@ from src.contracts.report_store import (
     ReportMetadataGetRequest,
     ReportMetadataUpsertRequest,
 )
-from src.generators.report_generation_dependencies import ReportGeneratorDependencies
+from src.generators.report_generation_dependencies import ReportRenderDependencies
 from src.generators.report_generation_shared import (
     html_cache_key,
     logger,
@@ -63,7 +63,7 @@ def _build_metadata_upsert_request(
 def render_preview_asset(
     runtime: ReportRuntimeState,
     source: ReportSourceState,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: ReportRenderDependencies,
 ):
     if source.contents_page_number == 1 and source.contents_image:
         logger.info(
@@ -102,7 +102,7 @@ def render_report_output(
     source: ReportSourceState,
     selection: ReportSelectionState,
     analysis: ReportAnalysisState,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: ReportRenderDependencies,
     *,
     preview_resp,
 ) -> IngestOutcome:

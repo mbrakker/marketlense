@@ -42,7 +42,7 @@ from src.generators.report_analysis_generator import (
     _resolve_categories_from_report_context,
     _resolve_taxonomy,
 )
-from src.generators.report_generation_dependencies import ReportGeneratorDependencies
+from src.generators.report_generation_dependencies import ReportAnalysisDependencies
 from src.generators.report_generation_shared import (
     merge_artifacts_into_payload,
     pack_paths,
@@ -171,7 +171,7 @@ def run_report_analysis(
     source: ReportSourceState,
     selection: ReportSelectionState,
     indexing_state: VectorStoreIndexingState,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: ReportAnalysisDependencies,
     *,
     evidence_pack_openai_client=None,
     artifact_openai_client=None,
@@ -347,7 +347,7 @@ def run_report_analysis(
         file_id=runtime.file.file_id,
         md5=runtime.md5,
         ctx=mode_ctx,
-        dependencies=dependencies,
+        dependencies=dependencies.figure_caption,
         stage="evidence_packs",
         vector_store_id=vector_state.vector_store_id,
         vector_store_status=vector_state.vector_store_status,
@@ -510,7 +510,7 @@ def run_report_analysis(
         if isinstance(packs.get("findings"), dict)
         else {},
         artifacts_payload=artifacts_payload or {},
-        dependencies=dependencies,
+        dependencies=dependencies.figure_caption,
     )
     if caption_result.pack_path:
         mode_evidence_paths["figure_captions"] = caption_result.pack_path
@@ -666,7 +666,7 @@ def _run_validation_regeneration_loop(
     source_status: Dict[str, Any],
     category_labels: List[str],
     vector_store_id: Optional[str],
-    dependencies: ReportGeneratorDependencies,
+    dependencies: ReportAnalysisDependencies,
 ) -> tuple[
     Dict[str, Any],
     ValidationReport,
@@ -909,7 +909,7 @@ def _run_validation_with_fallback(
     *,
     runtime: ReportRuntimeState,
     mode_ctx,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: ReportAnalysisDependencies,
     validation_req: ValidationRequest,
     pack_name: str,
 ) -> ValidationReport:
@@ -993,7 +993,7 @@ def _run_validation_with_fallback(
 def _store_validation_snapshot(
     *,
     runtime: ReportRuntimeState,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: ReportAnalysisDependencies,
     report: ValidationReport,
     pack_name: str,
     ctx,

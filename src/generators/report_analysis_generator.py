@@ -29,7 +29,7 @@ from src.contracts.vector_store import (
     VectorStoreUploadFileRequest,
     VectorStoreWaitRequest,
 )
-from src.generators.report_generation_dependencies import ReportGeneratorDependencies
+from src.generators.report_generation_dependencies import ReportAnalysisDependencies
 from src.generators.report_generation_shared import (
     logger,
     record_state_progress,
@@ -68,7 +68,7 @@ def _is_vector_store_ready(status: Optional[str]) -> bool:
 def start_vector_store_indexing(
     runtime: ReportRuntimeState,
     source: ReportSourceState | None,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: ReportAnalysisDependencies,
 ) -> VectorStoreIndexingState:
     vector_store_id = None
     openai_file_id = None
@@ -223,7 +223,7 @@ def _await_vector_store_indexing(
     state: VectorStoreIndexingState,
     runtime: ReportRuntimeState,
     mode_ctx,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: ReportAnalysisDependencies,
 ) -> VectorStoreIndexingState:
     vector_store_id = state.vector_store_id
     if not vector_store_id:
@@ -306,7 +306,7 @@ def _await_vector_store_indexing(
 
 def ensure_vector_store(
     runtime: ReportRuntimeState,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: ReportAnalysisDependencies,
 ) -> tuple[Optional[str], Optional[str], Optional[str], Optional[str], Optional[str]]:
     indexing_state = start_vector_store_indexing(runtime, None, dependencies)
     ready_state = _await_vector_store_indexing(
@@ -328,7 +328,7 @@ def _resolve_taxonomy(
     runtime: ReportRuntimeState,
     mode_ctx,
     vector_store_id: Optional[str],
-    dependencies: ReportGeneratorDependencies,
+    dependencies: ReportAnalysisDependencies,
 ) -> _TaxonomyState:
     taxonomy_ctx = child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:taxonomy")
     taxonomy_resp = dependencies.extract_taxonomy(
@@ -358,7 +358,7 @@ def _resolve_categories_from_report_context(
     taxonomy_state: _TaxonomyState,
     evidence_pack_paths: dict[str, str],
     mode_ctx,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: ReportAnalysisDependencies,
 ) -> _ContextCategoryState:
     category_ctx = child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:categories")
     report_metadata = ReportMetadataGetResponse(
@@ -417,7 +417,7 @@ def complete_report_analysis(
     source: ReportSourceState,
     selection: ReportSelectionState,
     indexing_state: VectorStoreIndexingState,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: ReportAnalysisDependencies,
     *,
     evidence_pack_openai_client=None,
     artifact_openai_client=None,

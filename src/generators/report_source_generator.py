@@ -20,7 +20,7 @@ from src.contracts.report_assets import PreviewRequest
 from src.contracts.report_generation import ReportRuntimeState, ReportSourceState
 from src.contracts.report_models import ReportPayload
 from src.generators.pdf_text_ocr_generator import recover_pdf_text_with_ocr
-from src.generators.report_generation_dependencies import ReportGeneratorDependencies
+from src.generators.report_generation_dependencies import ReportSourceDependencies
 from src.generators.report_generation_shared import (
     base_payload,
     contents_cache_key,
@@ -178,7 +178,7 @@ def _report_worker_config(runtime: ReportRuntimeState) -> tuple[int, bool]:
 
 def _build_pdf_context(
     runtime: ReportRuntimeState,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: ReportSourceDependencies,
 ) -> object | None:
     if runtime.parallel_within_file:
         return None
@@ -225,7 +225,7 @@ def _build_pdf_context(
 def _load_pdf_info(
     runtime: ReportRuntimeState,
     pdf_context_for_tasks: object | None,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: ReportSourceDependencies,
 ) -> PdfInfoResponse:
     info_ctx = child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:pdf_info")
     info_binding = bind_report_source_cache(
@@ -292,7 +292,7 @@ def _load_contents(
     detection_pdf_context: object | None,
     preview_pdf_context: object | None,
     cache_prefix: str,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: ReportSourceDependencies,
 ) -> tuple[int, str, str]:
     contents_ctx = child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:contents")
     local_contents_page = 0
@@ -413,7 +413,7 @@ def _load_text(
     analysis_pdf_path: str,
     pdf_context_for_tasks: object | None,
     cache_prefix: str,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: ReportSourceDependencies,
 ) -> tuple[PdfTextExtractResponse, TextStatus]:
     text_ctx = child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:text")
     text_binding = bind_report_source_cache(
@@ -533,7 +533,7 @@ def _validate_extractable_text(
     pdf_path: str,
     page_count: int,
     pdf_context: object | None,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: ReportSourceDependencies,
 ) -> tuple[str, str, list[int]]:
     sample_ctx = child_context(
         runtime.ctx, task_id=f"{runtime.ctx.task_id}:text_sample"
@@ -591,7 +591,7 @@ def _validate_extractable_text(
 
 def prepare_report_source(
     runtime: ReportRuntimeState,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: ReportSourceDependencies,
 ) -> ReportSourceState:
     pdf_context = _build_pdf_context(runtime, dependencies)
     _, parallel_within_file = _report_worker_config(runtime)

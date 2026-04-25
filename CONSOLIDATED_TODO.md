@@ -580,16 +580,6 @@ Suggested priority order:
     - Long-file report shows reduced concentration in the named hotspots.
     - Golden and behavior tests prove parity or explicitly approved improvements.
 
-- **Title:** Replace report-generation mega dependency bundle with capability-scoped dependency contracts [Impact: 4/5, Effort: 4/5]
-  - Explanation: `src/generators/report_generation_dependencies.py` imports dozens of services, generators, and contracts, making report-generation flows hard to understand and easy to over-couple. Split dependency bundles by capability boundary such as source preparation, vector/evidence, artifact generation, validation/regeneration, rendering, and metadata persistence.
-  - Pros: Smaller dependency surfaces, easier tests, clearer generator/orchestrator wiring.
-  - Cons: Requires careful migration to avoid pass-through wrappers and duplicate configuration.
-  - Acceptance Criteria:
-    - Capability-specific dependency dataclasses replace the single broad dependency bundle.
-    - Each generator receives only dependencies it actually uses.
-    - Orchestrators remain responsible for wiring and retry policy.
-    - Tests fail if unused or cross-capability dependencies are reintroduced.
-
 - **Title:** Stream Drive listings and bound Drive client/scope caches [Impact: 3/5, Effort: 3/5]
   - Explanation: Merge Drive pagination streaming, recursive folder-scope caching, and bounded thread-scoped client caches. Large-folder operations should yield incrementally, reuse stable folder topology, and evict stale clients.
   - Pros: Lower memory usage, fewer Drive API calls, cleaner long-lived process behavior.

@@ -12,7 +12,7 @@ from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.report_generation import ReportRuntimeState
 from src.contracts.run_context import RunContext
 from src.generators.report_analysis_generator import start_vector_store_indexing
-from src.generators.report_generation_dependencies import ReportGeneratorDependencies
+from src.generators.report_generation_dependencies import ReportGenerationDependencies
 from src.generators.report_generation_shared import derive_title, report_slug
 from src.generators.report_render_generator import (
     render_preview_asset,
@@ -142,12 +142,12 @@ def run_report_generation(
     *,
     evidence_pack_openai_client=None,
     artifact_openai_client=None,
-    dependencies: Optional[ReportGeneratorDependencies] = None,
+    dependencies: Optional[ReportGenerationDependencies] = None,
     analytics_projection_fn: Optional[
         Callable[[AnalyticsProjectionRunRequest], object]
     ] = None,
 ) -> IngestOutcome:
-    deps = dependencies or ReportGeneratorDependencies.default()
+    deps = dependencies or ReportGenerationDependencies.default()
     runtime = _build_runtime_state(file, local_pdf_path, settings, md5, ctx)
     logger.info(
         log_event(
@@ -178,16 +178,16 @@ def run_report_generation(
     source = None
     vector_state = None
     try:
-        source = prepare_report_source(runtime, deps)
-        vector_state = start_vector_store_indexing(runtime, source, deps)
-        selection = select_report_figures(runtime, source, deps)
-        preview_resp = render_preview_asset(runtime, source, deps)
+        source = prepare_report_source(runtime, deps.source)
+        vector_state = start_vector_store_indexing(runtime, source, deps.analysis)
+        selection = select_report_figures(runtime, source, deps.selection)
+        preview_resp = render_preview_asset(runtime, source, deps.render)
         analysis = run_report_analysis(
             runtime,
             source,
             selection,
             vector_state,
-            deps,
+            deps.analysis,
             evidence_pack_openai_client=evidence_pack_openai_client,
             artifact_openai_client=artifact_openai_client,
         )
@@ -196,7 +196,7 @@ def run_report_generation(
             source,
             selection,
             analysis,
-            deps,
+            deps.render,
             preview_resp=preview_resp,
         )
         project = analytics_projection_fn or run_analytics_projection

@@ -30,7 +30,9 @@ from src.contracts.validation import ValidationIssue, ValidationReport
 from src.generators.report_analysis_generator import (
     VectorStoreIndexingState,
 )
-from src.generators.report_generation_dependencies import ReportGeneratorDependencies
+from src.generators.report_generation_dependencies import (
+    ReportAnalysisDependencies,
+)
 from src.generators.report_generation_shared import derive_title, report_slug
 from src.orchestrators.report_analysis_orchestrator import run_report_analysis
 from src.utils.errors import AppError
@@ -249,10 +251,18 @@ def _fit_response(
     )
 
 
-def _deps(**overrides) -> ReportGeneratorDependencies:
-    base = ReportGeneratorDependencies.default()
+def _deps(
+    *,
+    figure_caption_overrides: dict | None = None,
+    **overrides,
+) -> ReportAnalysisDependencies:
+    base = ReportAnalysisDependencies.default()
+    figure_caption = replace(
+        base.figure_caption,
+        **(figure_caption_overrides or {}),
+    )
     seeded = replace(
-        base,
+        replace(base, figure_caption=figure_caption),
         vector_store_wait_until_indexed=lambda req, ctx: SimpleNamespace(
             status="completed",
             indexed_at_utc="2026-01-01T00:00:00Z",
@@ -263,9 +273,6 @@ def _deps(**overrides) -> ReportGeneratorDependencies:
             taxonomy=["tag"],
             region="US",
             time_period="2026",
-        ),
-        load_category_mappings=lambda req, ctx: SimpleNamespace(
-            mappings=SimpleNamespace(uncategorized=[], categories=[])
         ),
         build_report_category_context=lambda req, ctx: ReportCategoryContext(
             schema_version="1.0",

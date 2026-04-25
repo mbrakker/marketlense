@@ -18,7 +18,7 @@ from src.contracts.pdf_text import (
 from src.contracts.pdf_utils import PdfInfoResponse
 from src.contracts.report_generation import ReportRuntimeState
 from src.contracts.run_context import RunContext
-from src.generators.report_generation_dependencies import ReportGeneratorDependencies
+from src.generators.report_generation_dependencies import ReportSourceDependencies
 from src.generators.report_generation_shared import (
     contents_cache_key,
     derive_title,
@@ -62,8 +62,8 @@ def _runtime(
     )
 
 
-def _deps(**overrides) -> ReportGeneratorDependencies:
-    base = ReportGeneratorDependencies.default()
+def _deps(**overrides) -> ReportSourceDependencies:
+    base = ReportSourceDependencies.default()
     seeded = replace(
         base,
         build_pdf_context=lambda req, ctx: SimpleNamespace(

@@ -27,7 +27,14 @@ from src.contracts.state import StateGetRequest
 from src.contracts.taxonomy import TaxonomyExtractResponse
 from src.contracts.validation import ValidationReport
 from src.generators import report_analysis_generator as rag
-from src.generators.report_generation_dependencies import ReportGeneratorDependencies
+from src.generators.report_generation_dependencies import (
+    FigureCaptionDependencies,
+    ReportAnalysisDependencies,
+    ReportGenerationDependencies,
+    ReportRenderDependencies,
+    ReportSelectionDependencies,
+    ReportSourceDependencies,
+)
 from src.generators.report_generation_shared import derive_title, report_slug
 from src.orchestrators import ingest_orchestrator as orch
 from src.orchestrators.ingest_file_orchestrator import (
@@ -167,8 +174,58 @@ def _analysis_artifacts(**overrides) -> dict:
     return payload
 
 
-def _report_dependencies(**overrides) -> ReportGeneratorDependencies:
-    return replace(ReportGeneratorDependencies.default(), **overrides)
+def _analysis_dependencies(**overrides) -> ReportAnalysisDependencies:
+    return replace(ReportAnalysisDependencies.default(), **overrides)
+
+
+def _report_dependencies(**overrides) -> ReportGenerationDependencies:
+    base = ReportGenerationDependencies.default()
+    source_updates = {}
+    selection_updates = {}
+    analysis_updates = {}
+    render_updates = {}
+    figure_caption_updates = {}
+    source_fields = set(ReportSourceDependencies.__dataclass_fields__)
+    selection_fields = set(ReportSelectionDependencies.__dataclass_fields__)
+    analysis_fields = set(ReportAnalysisDependencies.__dataclass_fields__) - {
+        "figure_caption"
+    }
+    render_fields = set(ReportRenderDependencies.__dataclass_fields__)
+    figure_caption_fields = set(FigureCaptionDependencies.__dataclass_fields__)
+
+    for key, value in overrides.items():
+        applied = False
+        if key in source_fields:
+            source_updates[key] = value
+            applied = True
+        if key in selection_fields:
+            selection_updates[key] = value
+            applied = True
+        if key in analysis_fields:
+            analysis_updates[key] = value
+            applied = True
+        if key in render_fields:
+            render_updates[key] = value
+            applied = True
+        if key in figure_caption_fields:
+            figure_caption_updates[key] = value
+            applied = True
+        if not applied:
+            raise AssertionError(f"Unknown report dependency override: {key}")
+
+    analysis = replace(base.analysis, **analysis_updates)
+    if figure_caption_updates:
+        analysis = replace(
+            analysis,
+            figure_caption=replace(analysis.figure_caption, **figure_caption_updates),
+        )
+    return replace(
+        base,
+        source=replace(base.source, **source_updates),
+        selection=replace(base.selection, **selection_updates),
+        analysis=analysis,
+        render=replace(base.render, **render_updates),
+    )
 
 
 def _batch_dependencies(**overrides) -> orch.IngestBatchDependencies:
@@ -236,7 +293,7 @@ def _decode_log_events(caplog, logger_name: str) -> list[dict]:
 
 def _base_vector_report_dependencies(
     tmp_path: Path, **overrides
-) -> ReportGeneratorDependencies:
+) -> ReportGenerationDependencies:
     base = {
         "state_get": lambda req, ctx: None,
         "vector_store_create": lambda req, ctx: SimpleNamespace(
@@ -282,13 +339,6 @@ def _base_vector_report_dependencies(
             pages_extracted=1,
             char_count=4,
             text_density=4.0,
-        ),
-        "load_category_mappings": lambda req, ctx: SimpleNamespace(
-            mappings=SimpleNamespace(
-                schema_version="1.0",
-                categories=[],
-                uncategorized=[],
-            )
         ),
         "build_report_category_context": lambda req, ctx: ReportCategoryContext(
             schema_version="1.0",
@@ -411,7 +461,7 @@ def test_ensure_vector_store_creates_and_waits(tmp_path):
     )
     calls: list[str] = []
 
-    deps = _report_dependencies(
+    deps = _analysis_dependencies(
         state_get=lambda req, ctx: None,
         vector_store_create=lambda req, ctx: (
             calls.append("create") or SimpleNamespace(vector_store_id="vs_123")

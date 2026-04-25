@@ -6,7 +6,7 @@ from typing import Callable, Generic, Optional, TypeVar
 
 from src.contracts.ingest import IngestSettings
 from src.contracts.run_context import RunContext
-from src.generators.report_generation_dependencies import ReportGeneratorDependencies
+from src.generators.report_generation_dependencies import ReportSourceDependencies
 from src.generators.report_generation_shared import (
     cache_dir,
     cache_path,
@@ -91,7 +91,7 @@ def load_report_source_cache(
     binding: ReportSourceCacheBinding,
     *,
     ctx: RunContext,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: ReportSourceDependencies,
     adapt_payload: Callable[[dict[str, object]], Optional[T]],
 ) -> ReportSourceCacheLoadResult[T]:
     if not binding.enabled or not binding.cache_path or not binding.cache_key:
@@ -150,7 +150,7 @@ def write_report_source_cache(
     *,
     payload: dict[str, object],
     ctx: RunContext,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: ReportSourceDependencies,
 ) -> None:
     if not binding.enabled or not binding.cache_path:
         return

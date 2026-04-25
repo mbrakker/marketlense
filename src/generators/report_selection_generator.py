@@ -32,7 +32,7 @@ from src.contracts.report_generation import (
 )
 from src.contracts.report_models import ReportFigureAsset, ReportPayload
 from src.generators.prompt_preparation import prepare_prompt_bundle
-from src.generators.report_generation_dependencies import ReportGeneratorDependencies
+from src.generators.report_generation_dependencies import ReportSelectionDependencies
 from src.generators.report_generation_shared import logger, read_cache_json
 from src.utils.cache_utils import sha256_json
 from src.utils.candidate_features import candidate_features, candidate_features_payload
@@ -290,7 +290,7 @@ def _rank_candidates_batch(
     kind: str,
     settings: IngestSettings,
     ctx,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: ReportSelectionDependencies,
 ) -> _RankBatchResult:
     if not candidates:
         return _RankBatchResult(
@@ -515,7 +515,7 @@ def _crop_refine_cache_path(
     file_id: str,
     report_name: str,
     ctx,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: ReportSelectionDependencies,
 ) -> str:
     return dependencies.analysis_pack_path(
         AnalysisPackPathRequest(
@@ -536,7 +536,7 @@ def _load_crop_refine_cache(
     report_name: str,
     profile_key: str,
     ctx,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: ReportSelectionDependencies,
 ) -> dict[str, dict]:
     crop_cache_path = _crop_refine_cache_path(
         settings,
@@ -572,7 +572,7 @@ def _write_crop_refine_cache(
     profile: dict,
     entries: dict[str, dict],
     ctx,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: ReportSelectionDependencies,
 ) -> None:
     rows = []
     for entry_key, payload in entries.items():
@@ -610,7 +610,7 @@ def select_refined_candidate_items(
     pdf_context: Any,
     fallback_model: str,
     selected_kind_max: int,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: ReportSelectionDependencies,
 ) -> tuple[list[CropItem], list[Candidate]]:
     id2cand = {candidate.id: candidate for candidate in ranked_candidates}
     thresholded: list[tuple[Any, Candidate]] = []
@@ -1456,7 +1456,7 @@ def _load_candidate_crop_path_map(
     settings: IngestSettings,
     report_name: str,
     ctx,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: ReportSelectionDependencies,
 ) -> dict[str, str]:
     candidates_path = _candidate_extraction_output_path(settings, report_name)
     payload = read_cache_json(candidates_path, ctx, dependencies)
@@ -1727,7 +1727,7 @@ def _build_figure_assets(
 def select_report_figures(
     runtime: ReportRuntimeState,
     source: ReportSourceState,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: ReportSelectionDependencies,
 ) -> ReportSelectionState:
     data = source.payload
     fig_resp: FigureExtractResponse = _empty_figure_response()

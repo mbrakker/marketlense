@@ -15,7 +15,7 @@ from src.contracts.report_generation import ReportRuntimeState
 from src.contracts.report_models import Figure, Quote, ReportFigureAsset, ReportPayload
 from src.contracts.run_context import RunContext
 from src.generators.figure_caption_generator import generate_figure_captions
-from src.generators.report_generation_dependencies import ReportGeneratorDependencies
+from src.generators.report_generation_dependencies import FigureCaptionDependencies
 
 
 def _events(caplog) -> list[dict[str, Any]]:
@@ -193,7 +193,7 @@ def test_generate_figure_captions_builds_context_and_updates_assets(
         return _render_prompt(request, ctx)
 
     dependencies = replace(
-        ReportGeneratorDependencies.default(),
+        FigureCaptionDependencies.default(),
         load_prompt_set=lambda request, _ctx: _prompt_set(),
         render_prompt=_render_and_capture,
         openai_chat_json_with_images=_openai_chat_json_with_images,
@@ -358,7 +358,7 @@ def test_generate_figure_captions_fail_open_uses_fallback_sources(
         )
 
     dependencies = replace(
-        ReportGeneratorDependencies.default(),
+        FigureCaptionDependencies.default(),
         load_prompt_set=lambda request, _ctx: _prompt_set(),
         render_prompt=_render_prompt,
         openai_chat_json_with_images=_openai_chat_json_with_images,
@@ -422,7 +422,7 @@ def test_generate_figure_captions_skips_when_disabled(
     store_calls = []
 
     dependencies = replace(
-        ReportGeneratorDependencies.default(),
+        FigureCaptionDependencies.default(),
         load_prompt_set=lambda request, _ctx: _prompt_set(),
         render_prompt=_render_prompt,
         openai_chat_json_with_images=lambda request, _ctx: openai_calls.append(request),

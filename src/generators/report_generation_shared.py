@@ -4,7 +4,7 @@ import hashlib
 import json
 import logging
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional, Protocol
 
 from src.contracts.files import ReadTextRequest, WriteBytesRequest
 from src.contracts.ingest import IngestSettings
@@ -12,7 +12,6 @@ from src.contracts.report_analysis import AnalysisPackPathRequest
 from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.run_context import RunContext
 from src.contracts.state import StateRecordRequest
-from src.generators.report_generation_dependencies import ReportGeneratorDependencies
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 from src.utils.slugify import slugify
@@ -20,6 +19,22 @@ from src.utils.cache_utils import sha256_json
 
 LOGGER_NAME = "market_lense.report_generator"
 logger = logging.getLogger(LOGGER_NAME)
+
+
+class SupportsReadText(Protocol):
+    read_text: Callable[[ReadTextRequest, RunContext], Any]
+
+
+class SupportsWriteBytes(Protocol):
+    write_bytes: Callable[[WriteBytesRequest, RunContext], Any]
+
+
+class SupportsAnalysisPackPath(Protocol):
+    analysis_pack_path: Callable[[AnalysisPackPathRequest, RunContext], Any]
+
+
+class SupportsStateRecord(Protocol):
+    state_record: Callable[[StateRecordRequest, RunContext], Any]
 
 
 def derive_title(name: str) -> str:
@@ -39,7 +54,7 @@ def cache_dir(settings: IngestSettings, md5: str) -> Path:
 def read_cache_json(
     path: Path,
     ctx: RunContext,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: SupportsReadText,
 ) -> Optional[dict]:
     try:
         resp = dependencies.read_text(
@@ -81,7 +96,7 @@ def write_cache_json(
     path: Path,
     payload: dict,
     ctx: RunContext,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: SupportsWriteBytes,
 ) -> None:
     data = json.dumps(payload, ensure_ascii=True)
     dependencies.write_bytes(
@@ -126,7 +141,7 @@ def cache_path(cache_root: Path, prefix: str, cache_key: str) -> Path:
 def template_sha256(
     path: Path,
     ctx: RunContext,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: SupportsReadText,
 ) -> Optional[str]:
     try:
         resp = dependencies.read_text(
@@ -366,7 +381,7 @@ def pack_paths(
     report_name: str,
     pack_names: list[str],
     ctx: RunContext,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: SupportsAnalysisPackPath,
 ) -> dict[str, str]:
     return {
         name: dependencies.analysis_pack_path(
@@ -389,7 +404,7 @@ def record_state_progress(
     file_id: str,
     md5: Optional[str],
     ctx: RunContext,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: SupportsStateRecord,
     stage: str,
     vector_store_id: Optional[str] = None,
     vector_store_status: Optional[str] = None,

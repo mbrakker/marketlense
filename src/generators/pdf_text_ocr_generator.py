@@ -18,7 +18,7 @@ from src.contracts.pdf_ocr import (
 )
 from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.contracts.report_generation import ReportRuntimeState
-from src.generators.report_generation_dependencies import ReportGeneratorDependencies
+from src.generators.report_generation_dependencies import ReportSourceDependencies
 from src.generators.report_generation_shared import (
     cache_dir,
     read_cache_json,
@@ -34,7 +34,7 @@ def recover_pdf_text_with_ocr(
     runtime: ReportRuntimeState,
     *,
     page_count: int,
-    dependencies: ReportGeneratorDependencies,
+    dependencies: ReportSourceDependencies,
 ) -> PdfOcrFallbackResponse:
     logger = logging.getLogger("market_lense.pdf_text_ocr_generator")
     ocr_ctx = child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:ocr_fallback")

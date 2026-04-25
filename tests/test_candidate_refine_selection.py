@@ -11,7 +11,7 @@ from src.contracts.report_assets import CropRefineResponse, CropRefineResult
 from src.contracts.report_models import Figure, Quote, RankedCandidate, ReportPayload
 from src.contracts.run_context import RunContext
 from src.generators import report_selection_generator as rsg
-from src.generators.report_generation_dependencies import ReportGeneratorDependencies
+from src.generators.report_generation_dependencies import ReportSelectionDependencies
 
 
 def _ctx() -> RunContext:
@@ -44,8 +44,8 @@ def _settings(tmp_path, **overrides) -> IngestSettings:
     return IngestSettings(**payload)
 
 
-def _deps(**overrides) -> ReportGeneratorDependencies:
-    base = ReportGeneratorDependencies.default()
+def _deps(**overrides) -> ReportSelectionDependencies:
+    base = ReportSelectionDependencies.default()
     seeded = replace(
         base,
         load_prompt_set=lambda req, ctx: SimpleNamespace(

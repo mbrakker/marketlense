@@ -21,7 +21,7 @@ from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.report_store import ReportMetadataGetResponse
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationReport
-from src.generators.report_generation_dependencies import ReportGeneratorDependencies
+from src.generators.report_generation_dependencies import ReportRenderDependencies
 from src.generators.report_generation_shared import (
     derive_title,
     html_cache_key,
@@ -177,8 +177,8 @@ def _analysis(
     )
 
 
-def _deps(**overrides) -> ReportGeneratorDependencies:
-    base = ReportGeneratorDependencies.default()
+def _deps(**overrides) -> ReportRenderDependencies:
+    base = ReportRenderDependencies.default()
     seeded = replace(
         base,
         render_preview=lambda req, ctx: SimpleNamespace(

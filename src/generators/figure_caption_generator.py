@@ -12,7 +12,7 @@ from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.contracts.report_analysis import AnalysisStorePackRequest
 from src.contracts.report_generation import ReportRuntimeState
 from src.contracts.report_models import ReportFigureAsset, ReportPayload
-from src.generators.report_generation_dependencies import ReportGeneratorDependencies
+from src.generators.report_generation_dependencies import FigureCaptionDependencies
 from src.services import llm_service
 from src.utils.logging import child_context, log_event
 from src.utils.model_resolver import resolve_model
@@ -295,7 +295,7 @@ def generate_figure_captions(
     doc_map: dict[str, Any],
     findings_pack: dict[str, Any],
     artifacts_payload: dict[str, Any],
-    dependencies: ReportGeneratorDependencies,
+    dependencies: FigureCaptionDependencies,
 ) -> FigureCaptionGenerationResult:
     assets = list(payload._figure_assets or [])
     if not runtime.settings.figure_caption_enabled or not assets:

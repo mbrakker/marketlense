@@ -6,7 +6,7 @@ from typing import Optional
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestOutcome, IngestSettings
 from src.contracts.run_context import RunContext
-from src.generators.report_generation_dependencies import ReportGeneratorDependencies
+from src.generators.report_generation_dependencies import ReportGenerationDependencies
 from src.generators.report_generation_shared import logger
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -23,7 +23,7 @@ def generate_report(
     *,
     evidence_pack_openai_client=None,
     artifact_openai_client=None,
-    dependencies: Optional[ReportGeneratorDependencies] = None,
+    dependencies: Optional[ReportGenerationDependencies] = None,
 ) -> IngestOutcome:
     logger.info(
         log_event(
