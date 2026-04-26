@@ -105,16 +105,6 @@ Suggested priority order:
     - Interrupted writes cannot leave partial final artifacts.
     - Tests cover overwrite, failure-mid-write, and stale temp cleanup scenarios.
 
-- **Title:** Add performance and cost regression gate for fixture corpus [Impact: 5/5, Effort: 3/5]
-  - Explanation: Add CI or scheduled regression checks for runtime, token usage, OCR usage, browser attempts, and generated cost per fixture corpus. This prevents slow/cost creep after optimization work lands.
-  - Pros: Sustains speed/cost gains and catches regressions early.
-  - Cons: Benchmarks need stable fixtures and variance handling.
-  - Acceptance Criteria:
-    - Baseline budgets are stored as versioned artifacts.
-    - CI or nightly checks fail on unapproved regressions.
-    - Reports include per-stage deltas for runtime, tokens, OCR calls, browser attempts, and cost.
-    - Allowlist entries require explicit justification and expiry.
-
 ---
 
 ## 3. PDF, OCR, Candidate Extraction & Ranking
@@ -561,7 +551,6 @@ Suggested priority order:
 - Idempotency checksum per side-effecting orchestrator step.
 - Real-time spend guardrails.
 - Prompt dry-run validation.
-- Performance/cost regression baseline.
 
 ### Phase 2: Speed and Recovery (4-8 weeks)
 

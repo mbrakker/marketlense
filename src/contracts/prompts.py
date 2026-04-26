@@ -5,6 +5,27 @@ from typing import Any, Dict
 
 
 @dataclass(frozen=True)
+class PromptDryRunBenchmark:
+    schema_version: str = field(metadata={"doc": "Prompt dry-run benchmark schema version."})
+    expected_output_tokens: int = field(
+        default=0,
+        metadata={"doc": "Expected output-token budget used for fixture-corpus cost estimation."},
+    )
+    expected_tool_calls: int = field(
+        default=0,
+        metadata={"doc": "Expected tool-call count used for fixture-corpus cost estimation."},
+    )
+    expected_browser_attempts: int = field(
+        default=0,
+        metadata={"doc": "Expected browser-attempt count represented by this fixture."},
+    )
+    expected_ocr_calls: int = field(
+        default=0,
+        metadata={"doc": "Expected OCR-call count represented by this fixture."},
+    )
+
+
+@dataclass(frozen=True)
 class PromptLoadRequest:
     schema_version: str = field(metadata={"doc": "Prompt load request schema version."})
     namespace: str = field(metadata={"doc": "Prompt namespace under src/prompts."})
@@ -74,6 +95,10 @@ class PromptDryRunFixture:
     user_variables: Dict[str, Any] = field(
         metadata={"doc": "Variables used to render the user prompt template."}
     )
+    benchmark: PromptDryRunBenchmark = field(
+        default_factory=lambda: PromptDryRunBenchmark(schema_version="1.0"),
+        metadata={"doc": "Benchmark metadata used for fixture-corpus regression budgets."},
+    )
     model: str = field(
         default="",
         metadata={"doc": "Representative model identifier for this prompt fixture."},
@@ -118,6 +143,14 @@ class PromptDryRunResult:
     )
     rendered_user_prompt: str = field(
         metadata={"doc": "Rendered user prompt text produced by the dry-run."}
+    )
+    benchmark: PromptDryRunBenchmark = field(
+        default_factory=lambda: PromptDryRunBenchmark(schema_version="1.0"),
+        metadata={"doc": "Benchmark metadata copied from the fixture registry."},
+    )
+    render_runtime_ms: float = field(
+        default=0.0,
+        metadata={"doc": "Measured prompt load and render runtime for this namespace in milliseconds."},
     )
     model: str = field(
         default="",

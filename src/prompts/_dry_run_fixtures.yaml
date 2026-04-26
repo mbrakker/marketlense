@@ -38,11 +38,39 @@ shared:
     [{"candidate_id":"cand-1","kind":"chart","page_number":4,"title":"Wallet adoption by region","ocr_text":"Wallet adoption by region","quality_signals":{"ocr_density":0.31,"visual_entropy":0.68,"chart_confidence":0.84,"table_confidence":0.05}}]
   figure_context_json: &figure_context_json >-
     {"title":"Enterprise Payments Outlook 2026","publisher":"Market Lense Research","region":"Global","time_period":"2026","summary":"Wallet growth and payment orchestration are reshaping enterprise checkout.","nearest_section":"Market landscape"}
+  benchmark_browser_download: &benchmark_browser_download
+    expected_output_tokens: 450
+    expected_browser_attempts: 1
+  benchmark_ocr_fallback: &benchmark_ocr_fallback
+    expected_output_tokens: 5000
+    expected_ocr_calls: 1
+  benchmark_publisher_discovery: &benchmark_publisher_discovery
+    expected_output_tokens: 500
+    expected_browser_attempts: 1
+  benchmark_publisher_screen: &benchmark_publisher_screen
+    expected_output_tokens: 180
+  benchmark_ranking: &benchmark_ranking
+    expected_output_tokens: 220
+  benchmark_publishing_artifact: &benchmark_publishing_artifact
+    expected_output_tokens: 700
+  benchmark_publishing_regeneration: &benchmark_publishing_regeneration
+    expected_output_tokens: 650
+  benchmark_report_extract: &benchmark_report_extract
+    expected_output_tokens: 1100
+  benchmark_report_classification: &benchmark_report_classification
+    expected_output_tokens: 180
+  benchmark_figure_caption: &benchmark_figure_caption
+    expected_output_tokens: 160
+  benchmark_taxonomy: &benchmark_taxonomy
+    expected_output_tokens: 100
+  benchmark_validation: &benchmark_validation
+    expected_output_tokens: 380
 fixtures:
   - namespace: "browser_report_download/browser_route"
     family: "browser_download"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_browser_download
     system_variables: {}
     user_variables:
       normalized_url: "https://example.com/reports/enterprise-payments-outlook-2026"
@@ -73,6 +101,7 @@ fixtures:
     family: "report"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_ocr_fallback
     system_variables: {}
     user_variables:
       source_page_start: 1
@@ -82,6 +111,7 @@ fixtures:
     family: "publisher_inventory"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_publisher_discovery
     system_variables: {}
     user_variables:
       insights_url: "https://example.com/insights"
@@ -92,6 +122,7 @@ fixtures:
     family: "publisher_inventory"
     model: "gpt-5-nano"
     temperature: 1.0
+    benchmark: *benchmark_publisher_screen
     system_variables: {}
     user_variables:
       publisher_name: "Example Research"
@@ -101,6 +132,7 @@ fixtures:
     family: "ranking"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_ranking
     system_variables: {}
     user_variables:
       candidates_json: *candidates_json
@@ -108,6 +140,7 @@ fixtures:
     family: "ranking"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_ranking
     system_variables: {}
     user_variables:
       candidates_json: *candidates_json
@@ -118,6 +151,7 @@ fixtures:
     family: "publishing"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_publishing_artifact
     system_variables:
       expert_domain: "enterprise payments strategy"
     user_variables:
@@ -128,6 +162,7 @@ fixtures:
     family: "publishing"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_publishing_artifact
     system_variables: {}
     user_variables:
       doc_map_json: *doc_map_json
@@ -136,6 +171,7 @@ fixtures:
     family: "publishing"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_publishing_artifact
     system_variables: {}
     user_variables:
       doc_map_json: *doc_map_json
@@ -145,6 +181,7 @@ fixtures:
     family: "publishing"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_publishing_artifact
     system_variables: {}
     user_variables:
       summary_json: *summary_json
@@ -153,6 +190,7 @@ fixtures:
     family: "publishing"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_publishing_artifact
     system_variables: {}
     user_variables:
       doc_map_json: *doc_map_json
@@ -162,6 +200,7 @@ fixtures:
     family: "publishing"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_publishing_regeneration
     system_variables: {}
     user_variables:
       target_section: "expert_comment"
@@ -178,6 +217,7 @@ fixtures:
     family: "publishing"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_publishing_regeneration
     system_variables: {}
     user_variables:
       target_section: "insights_candidates"
@@ -192,6 +232,7 @@ fixtures:
     family: "publishing"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_publishing_regeneration
     system_variables: {}
     user_variables:
       target_section: "insights_final"
@@ -207,6 +248,7 @@ fixtures:
     family: "publishing"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_publishing_regeneration
     system_variables: {}
     user_variables:
       target_section: "linkedin_post"
@@ -221,6 +263,7 @@ fixtures:
     family: "publishing"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_publishing_regeneration
     system_variables: {}
     user_variables:
       target_section: "quotes"
@@ -236,6 +279,7 @@ fixtures:
     family: "publishing"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_publishing_regeneration
     system_variables: {}
     user_variables:
       target_section: "summary"
@@ -250,6 +294,7 @@ fixtures:
     family: "publishing"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_publishing_artifact
     system_variables: {}
     user_variables:
       doc_map_json: *doc_map_json
@@ -258,6 +303,7 @@ fixtures:
     family: "report"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_report_classification
     system_variables: {}
     user_variables:
       report_context_json: *report_context_json
@@ -266,66 +312,77 @@ fixtures:
     family: "report"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_report_extract
     system_variables: {}
     user_variables: {}
   - namespace: "report_vs/evidence_packs/contradictions"
     family: "report"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_report_extract
     system_variables: {}
     user_variables: {}
   - namespace: "report_vs/evidence_packs/findings"
     family: "report"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_report_extract
     system_variables: {}
     user_variables: {}
   - namespace: "report_vs/evidence_packs/key_metrics"
     family: "report"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_report_extract
     system_variables: {}
     user_variables: {}
   - namespace: "report_vs/evidence_packs/limitations"
     family: "report"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_report_extract
     system_variables: {}
     user_variables: {}
   - namespace: "report_vs/evidence_packs/methods"
     family: "report"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_report_extract
     system_variables: {}
     user_variables: {}
   - namespace: "report_vs/evidence_packs/quote_candidates"
     family: "report"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_report_extract
     system_variables: {}
     user_variables: {}
   - namespace: "report_vs/evidence_packs/recommendations"
     family: "report"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_report_extract
     system_variables: {}
     user_variables: {}
   - namespace: "report_vs/evidence_packs/risk_register"
     family: "report"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_report_extract
     system_variables: {}
     user_variables: {}
   - namespace: "report_vs/evidence_packs/scope"
     family: "report"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_report_extract
     system_variables: {}
     user_variables: {}
   - namespace: "report_vs/figure_caption"
     family: "report"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_figure_caption
     system_variables:
       max_chars: 400
     user_variables:
@@ -335,6 +392,7 @@ fixtures:
     family: "report"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_taxonomy
     system_variables: {}
     user_variables:
       report_title: "Enterprise Payments Outlook 2026"
@@ -344,6 +402,7 @@ fixtures:
     family: "validation"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_validation
     system_variables: {}
     user_variables:
       report_json: *report_json
@@ -352,6 +411,7 @@ fixtures:
     family: "validation"
     model: "openai/gpt-5-mini"
     temperature: 0.0
+    benchmark: *benchmark_validation
     system_variables: {}
     user_variables:
       metrics_json: *metrics_json

@@ -52,3 +52,5 @@ jobs:
         run: python scripts/ci/run_mutation_gate.py --json-out mutation_results.json
       - name: Quality non-regression gate
         run: python scripts/ci/check_quality_regression.py --baseline docs/quality/baseline_2026-02-21.json --coverage-xml coverage.xml --mutation-json mutation_results.json --docpack-root tests/fixtures/docpacks/golden
+      - name: Prompt fixture corpus regression gate
+        run: python scripts/ci/check_prompt_fixture_regression.py --baseline docs/quality/prompt_fixture_corpus_baseline_2026-04-26.json --config src/config/app.yaml --iterations 3

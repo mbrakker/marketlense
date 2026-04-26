@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict
@@ -10,6 +11,7 @@ import yaml
 from jinja2 import Environment, StrictUndefined, TemplateSyntaxError, UndefinedError
 
 from src.contracts.prompts import (
+    PromptDryRunBenchmark,
     PromptDryRunFixture,
     PromptDryRunRequest,
     PromptDryRunResponse,
@@ -361,6 +363,7 @@ def validate_prompt_dry_run(
     results: list[PromptDryRunResult] = []
     for namespace in target_namespaces:
         fixture = fixtures_by_namespace[namespace]
+        started_at = time.perf_counter()
         prompt_set = load_prompt_set(
             PromptLoadRequest(
                 schema_version="1.0",
@@ -386,10 +389,12 @@ def validate_prompt_dry_run(
             ),
             ctx,
         )
+        render_runtime_ms = round((time.perf_counter() - started_at) * 1000.0, 6)
         result = PromptDryRunResult(
             schema_version="1.0",
             namespace=namespace,
             family=fixture.family,
+            benchmark=fixture.benchmark,
             fixture_path=str(PROMPT_DRY_RUN_FIXTURE_PATH),
             system_path=prompt_set.system.path,
             user_path=prompt_set.user.path,
@@ -397,6 +402,7 @@ def validate_prompt_dry_run(
             user_sha256=prompt_set.user.sha256,
             rendered_system_prompt=rendered_system.text,
             rendered_user_prompt=rendered_user.text,
+            render_runtime_ms=render_runtime_ms,
             model=fixture.model,
             temperature=float(fixture.temperature),
         )
@@ -416,8 +422,15 @@ def validate_prompt_dry_run(
                     "user_sha256": result.user_sha256,
                     "rendered_system_prompt": result.rendered_system_prompt,
                     "rendered_user_prompt": result.rendered_user_prompt,
+                    "render_runtime_ms": result.render_runtime_ms,
                     "model": result.model,
                     "temperature": result.temperature,
+                    "benchmark": {
+                        "expected_output_tokens": result.benchmark.expected_output_tokens,
+                        "expected_tool_calls": result.benchmark.expected_tool_calls,
+                        "expected_browser_attempts": result.benchmark.expected_browser_attempts,
+                        "expected_ocr_calls": result.benchmark.expected_ocr_calls,
+                    },
                     "system_variable_keys": sorted(fixture.system_variables.keys()),
                     "user_variable_keys": sorted(fixture.user_variables.keys()),
                 },
@@ -618,6 +631,10 @@ def _build_prompt_dry_run_fixture(
         schema_version=str(payload.get("schema_version", "1.0")),
         namespace=namespace,
         family=family,
+        benchmark=_coerce_prompt_benchmark(
+            payload.get("benchmark", {}),
+            namespace=namespace,
+        ),
         system_variables=system_variables,
         user_variables=user_variables,
         model=str(payload.get("model") or "").strip(),
@@ -638,6 +655,70 @@ def _coerce_prompt_variable_mapping(
             context={"namespace": namespace, "field_name": field_name},
         )
     return {str(key): value for key, value in payload.items()}
+
+
+def _coerce_prompt_benchmark(
+    payload: object, *, namespace: str
+) -> PromptDryRunBenchmark:
+    if payload is None:
+        payload = {}
+    if not isinstance(payload, dict):
+        raise AppError(
+            code="prompt_dry_run_fixture_registry_invalid",
+            message="Prompt dry-run fixture benchmark must be a mapping",
+            retryable=False,
+            context={"namespace": namespace, "field_name": "benchmark"},
+        )
+    return PromptDryRunBenchmark(
+        schema_version=str(payload.get("schema_version", "1.0")),
+        expected_output_tokens=_coerce_prompt_benchmark_int(
+            payload.get("expected_output_tokens", 0),
+            namespace=namespace,
+            field_name="expected_output_tokens",
+        ),
+        expected_tool_calls=_coerce_prompt_benchmark_int(
+            payload.get("expected_tool_calls", 0),
+            namespace=namespace,
+            field_name="expected_tool_calls",
+        ),
+        expected_browser_attempts=_coerce_prompt_benchmark_int(
+            payload.get("expected_browser_attempts", 0),
+            namespace=namespace,
+            field_name="expected_browser_attempts",
+        ),
+        expected_ocr_calls=_coerce_prompt_benchmark_int(
+            payload.get("expected_ocr_calls", 0),
+            namespace=namespace,
+            field_name="expected_ocr_calls",
+        ),
+    )
+
+
+def _coerce_prompt_benchmark_int(
+    value: object, *, namespace: str, field_name: str
+) -> int:
+    try:
+        parsed = int(value or 0)
+    except (TypeError, ValueError) as exc:
+        raise AppError(
+            code="prompt_dry_run_fixture_registry_invalid",
+            message=f"Prompt dry-run fixture benchmark {field_name} must be an integer",
+            retryable=False,
+            cause=exc,
+            context={"namespace": namespace, "field_name": field_name},
+        ) from exc
+    if parsed < 0:
+        raise AppError(
+            code="prompt_dry_run_fixture_registry_invalid",
+            message=f"Prompt dry-run fixture benchmark {field_name} must be >= 0",
+            retryable=False,
+            context={
+                "namespace": namespace,
+                "field_name": field_name,
+                "value": parsed,
+            },
+        )
+    return parsed
 
 
 def _load_prompt(path: Path) -> PromptTemplate:

@@ -203,6 +203,10 @@ cost:
       input_tokens_per_1k_usd: 0.00025
       output_tokens_per_1k_usd: 0.002
       tool_call_usd: 0.0025
+    gpt-5-nano:
+      input_tokens_per_1k_usd: 0.00005
+      output_tokens_per_1k_usd: 0.0004
+      tool_call_usd: 0.0025
     o3:
       input_tokens_per_1k_usd: 0.002
       output_tokens_per_1k_usd: 0.008
