@@ -541,7 +541,7 @@ def qualify_publisher_inventory_candidates(
             decisions=[],
         )
     if not request.settings.candidate_quality_check_enabled:
-        approved_items = [
+        passthrough_items = [
             PublisherInventoryQualifiedCandidateItem(
                 schema_version="1.0",
                 canonical_url=item.canonical_url,
@@ -551,7 +551,7 @@ def qualify_publisher_inventory_candidates(
             )
             for item in candidates
         ]
-        decisions = [
+        passthrough_decisions = [
             PublisherInventoryCandidateQualityDecision(
                 schema_version="1.0",
                 canonical_url=item.canonical_url,
@@ -563,9 +563,9 @@ def qualify_publisher_inventory_candidates(
         ]
         response = PublisherInventoryCandidateQualityResponse(
             schema_version="1.0",
-            approved_items=approved_items,
+            approved_items=passthrough_items,
             rejected_items=[],
-            decisions=decisions,
+            decisions=passthrough_decisions,
         )
         logger.info(
             log_event(

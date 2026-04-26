@@ -9,7 +9,7 @@ from src.contracts.pdf_contents import (
     PdfContentsDetectionRequest,
     PdfContentsDetectionResponse,
 )
-from src.contracts.pdf_context import PdfContextBuildRequest
+from src.contracts.pdf_context import PdfContext, PdfContextBuildRequest
 from src.contracts.pdf_text import (
     PdfTextExtractRequest,
     PdfTextExtractResponse,
@@ -179,7 +179,7 @@ def _report_worker_config(runtime: ReportRuntimeState) -> tuple[int, bool]:
 def _build_pdf_context(
     runtime: ReportRuntimeState,
     dependencies: ReportSourceDependencies,
-) -> object | None:
+) -> PdfContext | None:
     if runtime.parallel_within_file:
         return None
     try:
@@ -224,7 +224,7 @@ def _build_pdf_context(
 
 def _load_pdf_info(
     runtime: ReportRuntimeState,
-    pdf_context_for_tasks: object | None,
+    pdf_context_for_tasks: PdfContext | None,
     dependencies: ReportSourceDependencies,
 ) -> PdfInfoResponse:
     info_ctx = child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:pdf_info")
@@ -289,8 +289,8 @@ def _load_contents(
     *,
     analysis_pdf_path: str,
     preview_pdf_path: str,
-    detection_pdf_context: object | None,
-    preview_pdf_context: object | None,
+    detection_pdf_context: PdfContext | None,
+    preview_pdf_context: PdfContext | None,
     cache_prefix: str,
     dependencies: ReportSourceDependencies,
 ) -> tuple[int, str, str]:
@@ -411,7 +411,7 @@ def _load_text(
     runtime: ReportRuntimeState,
     *,
     analysis_pdf_path: str,
-    pdf_context_for_tasks: object | None,
+    pdf_context_for_tasks: PdfContext | None,
     cache_prefix: str,
     dependencies: ReportSourceDependencies,
 ) -> tuple[PdfTextExtractResponse, TextStatus]:
@@ -532,7 +532,7 @@ def _validate_extractable_text(
     *,
     pdf_path: str,
     page_count: int,
-    pdf_context: object | None,
+    pdf_context: PdfContext | None,
     dependencies: ReportSourceDependencies,
 ) -> tuple[str, str, list[int]]:
     sample_ctx = child_context(

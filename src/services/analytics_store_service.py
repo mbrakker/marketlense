@@ -17,6 +17,7 @@ from src.contracts.analytics_projection import (
     PROJECTION_SCHEMA_VERSION,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.semantic_ids import ReportId
 from src.contracts.sqlite_migration import SqliteMigrationApplyRequest
 from src.services.sqlite_migration_service import apply_reports_db_migrations
 from src.utils.errors import AppError
@@ -906,7 +907,7 @@ def upsert_projection(
     )
     response = AnalyticsProjectionUpsertResponse(
         schema_version=PROJECTION_SCHEMA_VERSION,
-        report_id=report_id,
+        report_id=ReportId(report_id),
         projection_status="projected",
         projection_attempt_count=attempt_count,
         rows_upserted=rows_upserted,
@@ -1009,7 +1010,7 @@ def record_projection_failure(
 
     response = AnalyticsProjectionFailureResponse(
         schema_version=PROJECTION_SCHEMA_VERSION,
-        report_id=report_id,
+        report_id=ReportId(report_id),
         projection_status="failed",
         projection_attempt_count=attempt_count,
     )

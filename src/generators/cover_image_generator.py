@@ -193,7 +193,7 @@ def generate_cover_images(
             request.output_dir,
             normalized.file_id,
             normalized.title,
-            normalized.publisher,
+            normalized.publisher or "",
             normalized.report_slug,
         )
         output_path = str(output_path_obj)

@@ -217,9 +217,18 @@ def pricing_from_editor_records(value: Any) -> tuple[dict[str, dict[str, float]]
         if not model:
             continue
         try:
-            input_cost = float(row.get("input_tokens_per_1k_usd"))
-            output_cost = float(row.get("output_tokens_per_1k_usd"))
-            tool_cost = float(row.get("tool_call_usd"))
+            raw_input_cost = row.get("input_tokens_per_1k_usd")
+            raw_output_cost = row.get("output_tokens_per_1k_usd")
+            raw_tool_cost = row.get("tool_call_usd")
+            if (
+                raw_input_cost is None
+                or raw_output_cost is None
+                or raw_tool_cost is None
+            ):
+                raise ValueError("missing pricing value")
+            input_cost = float(raw_input_cost)
+            output_cost = float(raw_output_cost)
+            tool_cost = float(raw_tool_cost)
         except (TypeError, ValueError):
             errors.append(f"Row {idx} ({model}) has invalid numeric pricing values.")
             continue

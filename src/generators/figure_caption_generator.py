@@ -12,6 +12,7 @@ from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.contracts.report_analysis import AnalysisStorePackRequest
 from src.contracts.report_generation import ReportRuntimeState
 from src.contracts.report_models import ReportFigureAsset, ReportPayload
+from src.contracts.semantic_ids import ReportId
 from src.generators.report_generation_dependencies import FigureCaptionDependencies
 from src.services import llm_service
 from src.utils.logging import child_context, log_event
@@ -542,7 +543,7 @@ def generate_figure_captions(
         AnalysisStorePackRequest(
             schema_version="1.0",
             output_dir=runtime.settings.output_dir,
-            report_id=runtime.file.file_id,
+            report_id=ReportId(runtime.file.file_id),
             pack_name="figure_captions",
             payload=pack_payload,
             report_slug=runtime.report_name,

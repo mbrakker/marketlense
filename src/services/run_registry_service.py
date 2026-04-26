@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from src.contracts.run_context import RunContext
+from src.contracts.semantic_ids import RunId
 from src.contracts.sqlite_migration import SqliteMigrationApplyRequest
 from src.contracts.ui_run_control import (
     UiRunRecord,
@@ -104,7 +105,7 @@ def _record_to_row(record: UiRunRecord) -> tuple[object, ...]:
 def _row_to_record(row: sqlite3.Row) -> UiRunRecord:
     return UiRunRecord(
         schema_version="1.0",
-        run_id=str(row["run_id"]),
+        run_id=RunId(str(row["run_id"])),
         run_type=str(row["run_type"]),
         display_name=str(row["display_name"]),
         status=str(row["status"]),

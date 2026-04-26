@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, Optional, Sequence
 
 from src.contracts.files import FileStatRequest, ListDirectoryRequest, ReadTextRequest
 from src.contracts.lock import LockGetRequest
@@ -96,8 +96,16 @@ def discover_log_files(
             schema_version="1.0",
             path=str(row.get("path") or ""),
             name=str(row.get("name") or ""),
-            mtime_utc=float(row.get("mtime_utc")) if row.get("mtime_utc") is not None else None,
-            size_bytes=int(row.get("size_bytes")) if row.get("size_bytes") is not None else None,
+            mtime_utc=(
+                float(raw_mtime)
+                if (raw_mtime := row.get("mtime_utc")) is not None
+                else None
+            ),
+            size_bytes=(
+                int(raw_size)
+                if (raw_size := row.get("size_bytes")) is not None
+                else None
+            ),
         )
         for row in rows
         if str(row.get("path") or "").strip()
@@ -356,16 +364,17 @@ def load_state_rows(
         module=logger.name,
         fields={"state_db": request.state_db, "kind": kind, "limit": limit},
     ))
+    response_rows: Sequence[object]
     if kind == "processed":
-        response = state_service.list_processed(
+        response_rows = state_service.list_processed(
             StateProcessedListRequest(schema_version="1.0", state_db=request.state_db, limit=limit),
             child_context(ctx, task_id="streamlit:list_processed"),
-        )
+        ).rows
     elif kind == "published":
-        response = state_service.list_published(
+        response_rows = state_service.list_published(
             StatePublishedListRequest(schema_version="1.0", state_db=request.state_db, limit=limit),
             child_context(ctx, task_id="streamlit:list_published"),
-        )
+        ).rows
     else:
         raise AppError(
             code="invalid_state_kind",
@@ -373,7 +382,7 @@ def load_state_rows(
             retryable=False,
             context={"kind": request.kind},
         )
-    rows = row_dicts(response.rows, include_object_attrs=True)
+    rows = row_dicts(response_rows, include_object_attrs=True)
     logger.info(log_event(
         ctx,
         role="generator",

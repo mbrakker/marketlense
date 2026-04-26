@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import inspect
+import inspect
 import logging
+from typing import Mapping
 import time
 from typing import Callable, Optional
 
@@ -56,7 +58,9 @@ def _invoke_report_fn(
 ) -> IngestOutcome:
     kwargs = {}
     try:
-        parameters = inspect.signature(report_fn).parameters
+        parameters: Mapping[str, inspect.Parameter] = inspect.signature(
+            report_fn
+        ).parameters
     except (TypeError, ValueError):
         parameters = {}
     if "evidence_pack_openai_client" in parameters:

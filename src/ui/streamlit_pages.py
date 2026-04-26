@@ -41,6 +41,7 @@ from src.contracts.streamlit_dashboard import (
     StorageTarget,
     ValidationArtifactSummaryRequest,
 )
+from src.contracts.semantic_ids import RunId
 from src.generators.streamlit_dashboard_generator import (
     collect_directory_counts,
     collect_storage_health,
@@ -1805,12 +1806,14 @@ def _render_category_manager(settings: Any, publish_settings: Any | None) -> Non
     if sync_clicked and publish_settings:
         _append_terminal("WP category sync requested from UI.")
         try:
-            outcomes = run_update_wp_categories(publish_settings)
-            st.session_state["last_wp_sync_outcomes"] = outcomes
+            wp_sync_outcomes = run_update_wp_categories(publish_settings)
+            st.session_state["last_wp_sync_outcomes"] = wp_sync_outcomes
             _invalidate_dashboard_read_models(st.session_state, reason="publish")
-            _append_terminal(f"WP category sync complete. outcomes={len(outcomes)}")
+            _append_terminal(
+                f"WP category sync complete. outcomes={len(wp_sync_outcomes)}"
+            )
             st.success(
-                f"WordPress category sync completed for {len(outcomes)} reports."
+                f"WordPress category sync completed for {len(wp_sync_outcomes)} reports."
             )
         except UI_SURFACE_EXCEPTIONS as exc:
             _append_terminal(f"WP category sync failed: {exc}")
@@ -1917,6 +1920,9 @@ def _render_cost_and_usage(settings: Any) -> None:
             st.warning("Enter a run_id before running the cost report.")
             return
         try:
+            resolved_run_id = (
+                RunId(run_id_value) if filter_mode == "run_id" and run_id_value else None
+            )
             reporting = run_cost_reporting(
                 CostReportingRequest(
                     schema_version="1.0",
@@ -1924,7 +1930,7 @@ def _render_cost_and_usage(settings: Any) -> None:
                         schema_version="1.0",
                         ledger_path=settings.cost_ledger_path,
                         date_utc=filter_value if filter_mode == "date" else None,
-                        run_id=run_id_value if filter_mode == "run_id" else None,
+                        run_id=resolved_run_id,
                         top_n=int(top_n),
                     ),
                 ),

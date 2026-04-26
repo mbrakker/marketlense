@@ -20,6 +20,7 @@ from src.contracts.drive import DriveOAuthAuthorizeRequest
 from src.contracts.logging import LoggingSetupRequest
 from src.contracts.publisher_inventory import PublisherInventoryDiscoveryRequest
 from src.contracts.publisher_profiles import PublisherSyncRequest
+from src.contracts.semantic_ids import RunId
 from src.contracts.ui_run_control import (
     UiRunRecord,
     UiRunRecordGetRequest,
@@ -111,7 +112,7 @@ def _load_ui_run_worker_request(path: str) -> UiRunWorkerRequest:
     return UiRunWorkerRequest(
         schema_version=str(payload.get("schema_version", "1.0")),
         registry_path=str(payload.get("registry_path") or "").strip(),
-        run_id=str(payload.get("run_id") or "").strip(),
+        run_id=RunId(str(payload.get("run_id") or "").strip()),
         run_type=str(payload.get("run_type") or "").strip(),
         request_payload=dict(payload.get("request_payload") or {}),
     )
@@ -521,7 +522,7 @@ def cost_report(
                     schema_version="1.0",
                     ledger_path=settings.cost_ledger_path,
                     date_utc=date,
-                    run_id=run_id,
+                    run_id=RunId(run_id) if run_id else None,
                     top_n=top,
                 ),
             ),
@@ -914,7 +915,7 @@ def replay_run(
         UiRunReplayRequest(
             schema_version="1.0",
             registry_path=resolved_registry_path,
-            run_id=run_id,
+            run_id=RunId(run_id),
         ),
         ctx,
     )

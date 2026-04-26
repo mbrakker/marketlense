@@ -438,16 +438,16 @@ def render_run_center() -> None:
                     "Choose a run from the selector above. The same selected run follows you into logs and cost views.",
                 )
             else:
-                record = polled.record
+                selected_record = polled.record
                 summary_cols = st.columns(2)
-                summary_cols[0].metric("Status", record.status)
-                summary_cols[1].metric("Artifacts", len(record.artifact_paths))
+                summary_cols[0].metric("Status", selected_record.status)
+                summary_cols[1].metric("Artifacts", len(selected_record.artifact_paths))
                 st.caption(
-                    f"Run `{record.run_id[:8]}` | type `{record.run_type}` | created `{record.created_at_utc}`"
+                    f"Run `{selected_record.run_id[:8]}` | type `{selected_record.run_type}` | created `{selected_record.created_at_utc}`"
                 )
-                if record.artifact_paths:
+                if selected_record.artifact_paths:
                     st.dataframe(
-                        [{"path": path} for path in record.artifact_paths],
+                        [{"path": path} for path in selected_record.artifact_paths],
                         width="stretch",
                         hide_index=True,
                         column_config={
@@ -455,13 +455,13 @@ def render_run_center() -> None:
                         },
                     )
                 with st.expander("Result summary", expanded=True):
-                    st.json(record.result_summary)
+                    st.json(selected_record.result_summary)
                 with st.expander("Request payload"):
-                    st.json(record.request_payload)
+                    st.json(selected_record.request_payload)
                 with st.expander("Registry record"):
-                    st.json(record.__dict__)
+                    st.json(selected_record.__dict__)
                 with st.container(horizontal=True):
-                    if record.status in {"queued", "running"}:
+                    if selected_record.status in {"queued", "running"}:
                         if st.button(
                             "Cancel run",
                             type="primary",
@@ -487,8 +487,8 @@ def render_run_center() -> None:
                         ):
                             launch_background_run(
                                 settings,
-                                run_type=record.run_type,
-                                display_name=record.display_name,
-                                request_payload=record.request_payload,
+                                run_type=selected_record.run_type,
+                                display_name=selected_record.display_name,
+                                request_payload=selected_record.request_payload,
                             )
                             st.rerun()

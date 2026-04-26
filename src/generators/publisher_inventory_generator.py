@@ -374,20 +374,32 @@ def _build_candidate_traces(
         confidence = candidate.confidence
         if confidence is not None:
             current_max = entry["max_confidence"]
-            if current_max is None or float(confidence) > float(current_max):
-                entry["max_confidence"] = float(confidence)
+            current_max_value = (
+                float(current_max)
+                if isinstance(current_max, (int, float, str, bytes, bytearray))
+                else None
+            )
+            confidence_value = float(confidence)
+            if current_max_value is None or confidence_value > current_max_value:
+                entry["max_confidence"] = confidence_value
 
     traces: list[PublisherInventoryCandidateTrace] = []
     for item in normalized_items:
         details = raw_by_url.get(item.canonical_url, {})
+        raw_source_page_urls = details.get("source_page_urls")
+        source_page_url_values = (
+            raw_source_page_urls if isinstance(raw_source_page_urls, set) else set()
+        )
         source_page_urls = sorted(
             str(value).strip()
-            for value in details.get("source_page_urls", set())
+            for value in source_page_url_values
             if str(value).strip()
         )
+        raw_provenances = details.get("provenances")
+        provenance_values = raw_provenances if isinstance(raw_provenances, set) else set()
         provenances = sorted(
             str(value).strip()
-            for value in details.get("provenances", set())
+            for value in provenance_values
             if str(value).strip()
         )
         max_confidence = details.get("max_confidence")
@@ -401,9 +413,11 @@ def _build_candidate_traces(
                 discovery_provenances=provenances,
                 pdf_url=item.pdf_url,
                 published_at_text=item.published_at_text,
-                max_confidence=float(max_confidence)
-                if max_confidence is not None
-                else None,
+                max_confidence=(
+                    float(max_confidence)
+                    if isinstance(max_confidence, (int, float, str, bytes, bytearray))
+                    else None
+                ),
             )
         )
     return traces

@@ -71,24 +71,24 @@ def run_cover_image_generation(
     list_ctx = child_context(root_ctx, task_id="cover_list_reports")
     reports: List[CoverImageReport] = []
     if request.file_id:
-        response = get_metadata(
+        single_response = get_metadata(
             ReportMetadataGetRequest(schema_version="1.0", db_path=request.reports_db, file_id=request.file_id),
             list_ctx,
         )
-        if response is None:
+        if single_response is None:
             raise AppError(
                 code="cover_report_not_found",
                 message=f"Report metadata not found for file_id: {request.file_id}",
                 retryable=False,
                 context={"file_id": request.file_id, "reports_db": request.reports_db},
             )
-        reports.append(_report_from_metadata(response))
+        reports.append(_report_from_metadata(single_response))
     else:
-        response = list_metadata(
+        list_response = list_metadata(
             ReportMetadataListRequest(schema_version="1.0", db_path=request.reports_db),
             list_ctx,
         )
-        for metadata in response.records:
+        for metadata in list_response.records:
             reports.append(_report_from_metadata(metadata))
 
     if request.limit is not None:

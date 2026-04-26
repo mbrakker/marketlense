@@ -4,7 +4,7 @@ import logging
 import threading
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Set, Tuple
+from typing import Any, Dict, List, Set, Tuple
 
 import yaml
 
@@ -58,6 +58,10 @@ def _clean_tags(tags: List[str]) -> List[str]:
 
 
 def _clean_int(value: object, default: int) -> int:
+    if isinstance(value, bool):
+        return int(value)
+    if not isinstance(value, (int, float, str, bytes, bytearray)):
+        return default
     try:
         return int(value)
     except (TypeError, ValueError):
@@ -65,6 +69,10 @@ def _clean_int(value: object, default: int) -> int:
 
 
 def _clean_float(value: object, default: float) -> float:
+    if isinstance(value, bool):
+        return float(value)
+    if not isinstance(value, (int, float, str, bytes, bytearray)):
+        return default
     try:
         return float(value)
     except (TypeError, ValueError):
@@ -287,6 +295,7 @@ def update_uncategorized_tags(request: UncategorizedTagsUpdateRequest, ctx: RunC
 
 def flush_uncategorized_tags(request: UncategorizedTagsFlushRequest, ctx: RunContext) -> None:
     path = Path(request.path or DEFAULT_MAPPING_PATH).resolve()
+    cached_entry = _CATEGORY_CACHE.get(path)
     logger.info(log_event(
         ctx,
         role="service",
@@ -295,7 +304,7 @@ def flush_uncategorized_tags(request: UncategorizedTagsFlushRequest, ctx: RunCon
         fields={
             "path": str(path),
             "cached": path in _CATEGORY_CACHE,
-            "dirty": _CATEGORY_CACHE.get(path).dirty_uncategorized if path in _CATEGORY_CACHE else False,
+            "dirty": cached_entry.dirty_uncategorized if cached_entry else False,
         },
     ))
     with _CATEGORY_LOCK:
@@ -350,7 +359,7 @@ def _merge_uncategorized(
         if normalize_slug_tag(tag)
     }
 
-    cleaned_uncategorized = []
+    cleaned_uncategorized: List[dict[str, Any]] = []
     for entry in existing_uncategorized:
         if not isinstance(entry, dict):
             continue
@@ -381,14 +390,24 @@ def _merge_uncategorized(
         merged = False
         for entry in cleaned_uncategorized:
             if entry.get("title") == report_title:
-                existing_norms = {normalize_slug_tag(t) for t in entry["tags"]}
-                entry["tags"].extend(
+                existing_tags = [
+                    str(tag).strip()
+                    for tag in entry.get("tags", [])
+                    if str(tag).strip()
+                ]
+                existing_norms = {
+                    normalize_slug_tag(tag)
+                    for tag in existing_tags
+                    if normalize_slug_tag(tag)
+                }
+                existing_tags.extend(
                     [
                         tag
                         for tag in new_tags
                         if normalize_slug_tag(tag) not in existing_norms
                     ]
                 )
+                entry["tags"] = existing_tags
                 merged = True
                 break
         if not merged:

@@ -10,6 +10,7 @@ from src.contracts.report_analysis import AnalysisPackPathRequest, AnalysisStore
 from src.contracts.run_context import RunContext
 from src.contracts.categories import CategoryMappingLoadRequest, TaxonomyInferenceRule
 from src.contracts.schema_validation import SchemaValidateRequest
+from src.contracts.semantic_ids import ReportId
 from src.contracts.taxonomy import (
     TaxonomyExtractRequest,
     TaxonomyExtractResponse,
@@ -387,7 +388,7 @@ def _resolve_pack_path(
         request=AnalysisPackPathRequest(
             schema_version="1.0",
             output_dir=output_dir,
-            report_id=report_id,
+            report_id=ReportId(report_id),
             pack_name="taxonomy",
             report_slug=report_slug,
         ),
@@ -409,7 +410,7 @@ def _store_pack(
         request=AnalysisStorePackRequest(
             schema_version="1.0",
             output_dir=output_dir,
-            report_id=report_id,
+            report_id=ReportId(report_id),
             pack_name="taxonomy",
             payload=payload,
             report_slug=report_slug,

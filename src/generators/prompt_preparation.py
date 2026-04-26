@@ -59,7 +59,7 @@ def prepare_prompt_bundle(
         ),
         ctx,
     )
-    fallback_model = default_model or getattr(settings, "openai_model", "")
+    fallback_model = str(default_model or getattr(settings, "openai_model", "") or "")
     resolved_model = resolve_model(
         namespace,
         getattr(settings, "openai_models", {}),

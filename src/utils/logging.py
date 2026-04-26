@@ -15,6 +15,10 @@ from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import RunId, TaskId
 
 
+def _coerce_task_id(task_id: TaskId | str | None) -> TaskId:
+    return task_id if isinstance(task_id, TaskId) else TaskId(task_id or str(uuid4()))
+
+
 def new_run_context(
     task_id: TaskId | str | None = None,
     span_id: str | None = None,
@@ -22,7 +26,7 @@ def new_run_context(
     return RunContext(
         schema_version="1.0",
         run_id=RunId(str(uuid4())),
-        task_id=TaskId(task_id or str(uuid4())),
+        task_id=_coerce_task_id(task_id),
         span_id=span_id or str(uuid4()),
     )
 
@@ -35,7 +39,7 @@ def child_context(
     return RunContext(
         schema_version=parent.schema_version,
         run_id=parent.run_id,
-        task_id=task_id or parent.task_id,
+        task_id=_coerce_task_id(task_id) if task_id is not None else parent.task_id,
         span_id=str(uuid4()),
     )
 

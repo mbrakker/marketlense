@@ -617,7 +617,7 @@ def _process_ingest_batch(
             results.append(deps.process_file(file, idx, settings, root_ctx))
         return results
 
-    with deps.thread_pool_executor_factory(max_workers=worker_limit) as executor:
+    with deps.thread_pool_executor_factory(worker_limit) as executor:
         futures = {
             executor.submit(deps.process_file, file, idx, settings, root_ctx): (
                 idx,

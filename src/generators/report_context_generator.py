@@ -10,6 +10,7 @@ from src.contracts.context_category_fit import (
     ReportContextSection,
 )
 from src.contracts.files import ReadTextRequest
+from src.contracts.semantic_ids import ReportId
 from src.services import file_service
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
@@ -49,7 +50,7 @@ def build_report_category_context(
     )
     context = ReportCategoryContext(
         schema_version="1.0",
-        report_id=report.file_id,
+        report_id=ReportId(report.file_id),
         title=report.title,
         publisher=str(report.publisher or "").strip(),
         region=str(report.region or "").strip(),

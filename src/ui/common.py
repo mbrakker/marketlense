@@ -301,6 +301,8 @@ def _as_utc(ts: int | float | str | None) -> str:
             if "T" in ts:
                 return ts
             ts = float(ts)
+        if not isinstance(ts, (int, float)):
+            return str(ts)
         return datetime.fromtimestamp(float(ts), timezone.utc).strftime("%Y-%m-%d %H:%M:%SZ")
     except (TypeError, ValueError, OSError):
         return str(ts)

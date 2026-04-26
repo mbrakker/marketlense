@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import Callable, Dict, Optional, TypeVar
+from typing import Callable, Dict, NoReturn, Optional, TypeVar
 
 from src.contracts.openai import (
     OpenAIVectorStoreAttachFileRequest,
@@ -51,7 +51,7 @@ def _api_key_from_env() -> str:
     return api_key
 
 
-def _raise_vector_store_error(exc: AppError, *, code: str, message: str) -> None:
+def _raise_vector_store_error(exc: AppError, *, code: str, message: str) -> NoReturn:
     raise AppError(
         code=code,
         message=message,

@@ -293,7 +293,7 @@ def pick_non_empty_text(*values: Any) -> str:
 
 
 def resolve_doc_map_metadata(doc_map_pack: dict[str, Any]) -> tuple[str, str, str, str]:
-    candidate = doc_map_pack
+    candidate: dict[str, Any] = doc_map_pack
     candidate_prefix = "doc_map"
     for key in ("doc_map", "docmap", "docMap"):
         wrapped = doc_map_pack.get(key)
@@ -301,9 +301,8 @@ def resolve_doc_map_metadata(doc_map_pack: dict[str, Any]) -> tuple[str, str, st
             candidate = wrapped
             candidate_prefix = key
             break
-    document = (
-        candidate.get("document") if isinstance(candidate.get("document"), dict) else {}
-    )
+    raw_document = candidate.get("document")
+    document: dict[str, Any] = raw_document if isinstance(raw_document, dict) else {}
 
     title = pick_non_empty_text(
         candidate.get("title"),
@@ -365,16 +364,15 @@ def resolve_doc_map_metadata(doc_map_pack: dict[str, Any]) -> tuple[str, str, st
 
 
 def resolve_doc_map_primary_contributor(doc_map_pack: dict[str, Any]) -> str:
-    candidate = doc_map_pack
+    candidate: dict[str, Any] = doc_map_pack
     for key in ("doc_map", "docmap", "docMap"):
         wrapped = doc_map_pack.get(key)
         if isinstance(wrapped, dict):
             candidate = wrapped
             break
-    contributors = (
-        candidate.get("contributors")
-        if isinstance(candidate.get("contributors"), list)
-        else []
+    raw_contributors = candidate.get("contributors")
+    contributors: list[Any] = (
+        raw_contributors if isinstance(raw_contributors, list) else []
     )
     for contributor in contributors:
         if not isinstance(contributor, dict):

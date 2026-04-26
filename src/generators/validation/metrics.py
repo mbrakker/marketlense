@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence
 
 from src.contracts.validation import ValidationIssue
 
@@ -31,7 +31,8 @@ def validate_insight_metrics(
     for idx, insight in enumerate(insights):
         if not isinstance(insight, dict):
             continue
-        metric = insight.get("metric") if isinstance(insight.get("metric"), dict) else {}
+        raw_metric = insight.get("metric")
+        metric: dict[str, Any] = raw_metric if isinstance(raw_metric, dict) else {}
         evidence_id = s(insight.get("evidence_id"))
         evidence_text = s(insight.get("evidence")) or evidence_map.get(evidence_id, "")
         label = s(insight.get("id") or f"insight_{idx + 1}")
@@ -126,4 +127,3 @@ def validate_insight_metrics(
                     )
                 )
     return issues
-

@@ -13,6 +13,7 @@ from src.contracts.publisher_profiles import (
     PublisherProfilesSnapshotLoadRequest,
     PublisherSyncRequest,
 )
+from src.contracts.ui_run_control import UiRunPollResponse
 from src.generators.publisher_profiles_generator import (
     load_publisher_profiles_snapshot,
 )
@@ -36,14 +37,16 @@ _AUDIT_PRESETS: dict[str, tuple[int, int]] = {
 }
 
 
-def _selected_run_payload(settings: object, *, run_type: str):
+def _selected_run_payload(
+    settings: object, *, run_type: str
+) -> UiRunPollResponse | None:
     polled = poll_selected_run(settings, max_bytes=64000)
     if polled is None or polled.record.run_type != run_type:
         return None
     return polled
 
 
-def _run_status_presentation(polled: object | None) -> tuple[str, str]:
+def _run_status_presentation(polled: UiRunPollResponse | None) -> tuple[str, str]:
     if polled is None:
         return "Ready", "info"
     status = str(getattr(polled.record, "status", "") or "").strip().lower()
@@ -232,7 +235,7 @@ def _render_payload_area(
 
 
 def _render_run_summary(
-    polled: object | None,
+    polled: UiRunPollResponse | None,
     *,
     key_prefix: str,
     empty_title: str,
@@ -278,7 +281,7 @@ def _render_run_summary(
 
 
 def _render_run_details(
-    polled: object | None,
+    polled: UiRunPollResponse | None,
     *,
     key_prefix: str,
     empty_title: str,
@@ -1052,7 +1055,7 @@ def render_publisher_sync() -> None:
                         snapshot_path=snapshot_path.strip(),
                         reports_db=settings.reports_db,
                     ),
-                    _ctx("publisher_sync"),
+                    ctx=_ctx("publisher_sync"),
                 )
                 st.session_state["last_publisher_sync_result"] = result
                 st.success(f"Publisher sync complete: {result.replaced_count} rows replaced.")

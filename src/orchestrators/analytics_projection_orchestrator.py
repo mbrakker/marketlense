@@ -16,6 +16,7 @@ from src.contracts.analytics_projection import (
     PROJECTION_VERSION,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.semantic_ids import ReportId
 from src.generators.analytics_projection_generator import build_projection
 from src.services.analytics_store_service import (
     record_projection_failure,
@@ -96,7 +97,7 @@ def _record_failure(
         AnalyticsProjectionFailureRequest(
             schema_version=PROJECTION_SCHEMA_VERSION,
             db_path=request.db_path,
-            report_id=request.analysis.runtime.file.file_id,
+            report_id=ReportId(request.analysis.runtime.file.file_id),
             projection_schema_version=PROJECTION_SCHEMA_VERSION,
             projection_version=PROJECTION_VERSION,
             generated_at_utc=generated_at_utc,

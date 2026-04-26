@@ -13,6 +13,7 @@ from src.contracts.context_category_fit import (
 )
 from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIResponseResult
 from src.contracts.schema_validation import SchemaValidateRequest
+from src.contracts.semantic_ids import ReportId
 from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.services import llm_service, prompt_service
 from src.services.category_mapping_service import load_mappings as load_category_mappings
@@ -249,7 +250,10 @@ def _coerce_fit_response(
         if decision not in {"primary", "secondary", "reject"}:
             decision = "reject"
         try:
-            fit_score = float(item.get("fit_score"))
+            raw_fit_score = item.get("fit_score")
+            if raw_fit_score is None:
+                raise ValueError("missing fit_score")
+            fit_score = float(raw_fit_score)
         except (TypeError, ValueError):
             fit_score = 0.0
         fit_score = max(0.0, min(1.0, fit_score))
@@ -294,7 +298,7 @@ def _coerce_fit_response(
     labels = [profile_by_id[item]["label"] for item in selected_ids]
     return ContextCategoryFitResponse(
         schema_version="1.0",
-        report_id=report_id,
+        report_id=ReportId(report_id),
         categories=selected_ids,
         category_labels=labels,
         fits=fits,

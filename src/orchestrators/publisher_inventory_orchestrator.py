@@ -931,7 +931,7 @@ def run_publisher_inventory_discovery(
             else:
                 source_record = run_with_retry(
                     step_name="publisher_inventory_report_source_record",
-                    operation=lambda item=item: deps.record_discovered_report_source(
+                    operation=lambda: deps.record_discovered_report_source(
                         source_record_request,
                         ctx,
                     ),

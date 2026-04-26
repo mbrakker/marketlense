@@ -11,6 +11,7 @@ from src.contracts.analytics_projection import (
     AnalyticsProjectionBatch,
     AnalyticsProjectionBuildRequest,
     AnalyticsReportRow,
+    ContentClass,
     PROJECTION_SCHEMA_VERSION,
     PROJECTION_VERSION,
     ProjectionLineage,
@@ -24,6 +25,7 @@ from src.contracts.analytics_projection import (
     ReportTagProjection,
     VectorProjectionQueueRow,
 )
+from src.contracts.semantic_ids import EntityUid, PublisherId, ReportId
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -69,18 +71,20 @@ def _safe_token(value: str) -> str:
     return cleaned[:96] if cleaned else ""
 
 
-def _uid(report_id: str, entity_type: str, local_id: str, payload: Any) -> str:
+def _uid(
+    report_id: ReportId, entity_type: str, local_id: str, payload: Any
+) -> EntityUid:
     token = _safe_token(local_id)
     if not token:
         token = _hash_payload(payload)[:16]
-    return f"{report_id}:{entity_type}:{token}"
+    return EntityUid(f"{report_id}:{entity_type}:{token}")
 
 
-def _publisher_id(publisher: str) -> Optional[str]:
+def _publisher_id(publisher: str) -> Optional[PublisherId]:
     token = _safe_token(publisher.lower())
     if not token:
         return None
-    return f"publisher:{token}"
+    return PublisherId(f"publisher:{token}")
 
 
 def _lineage(
@@ -113,7 +117,8 @@ def _unwrap_doc_map(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _source_pack_model(payload: dict[str, Any]) -> str:
-    cache = payload.get("_cache") if isinstance(payload.get("_cache"), dict) else {}
+    raw_cache = payload.get("_cache")
+    cache: dict[str, Any] = raw_cache if isinstance(raw_cache, dict) else {}
     return _clean_text(payload.get("model") or cache.get("model"))
 
 
@@ -229,12 +234,12 @@ def _queue_metadata(
 
 def _queue_row(
     *,
-    entity_uid: str,
+    entity_uid: EntityUid,
     entity_type: str,
-    report_id: str,
+    report_id: ReportId,
     text_payload: str,
     metadata: dict[str, Any],
-    content_class: str,
+    content_class: ContentClass,
     generated_at_utc: str,
 ) -> VectorProjectionQueueRow:
     content_hash = _hash_payload(
@@ -254,7 +259,7 @@ def _queue_row(
         text_payload=text_payload,
         content_hash=content_hash,
         metadata=metadata,
-        content_class=content_class,  # type: ignore[arg-type]
+        content_class=content_class,
         embedding_status="pending",
         embedding_version="",
         created_at_utc=generated_at_utc,
@@ -264,12 +269,13 @@ def _queue_row(
 
 def _build_sections(
     *,
-    report_id: str,
+    report_id: ReportId,
     doc_map: dict[str, Any],
     generated_at_utc: str,
     analysis_run_id: str,
 ) -> list[ReportSectionProjection]:
-    sections = doc_map.get("sections") if isinstance(doc_map.get("sections"), list) else []
+    raw_sections = doc_map.get("sections")
+    sections: list[Any] = raw_sections if isinstance(raw_sections, list) else []
     rows: list[ReportSectionProjection] = []
     for index, raw in enumerate(sections):
         if not isinstance(raw, dict):
@@ -309,16 +315,13 @@ def _build_sections(
 
 def _build_findings(
     *,
-    report_id: str,
+    report_id: ReportId,
     findings_pack: dict[str, Any],
     generated_at_utc: str,
     analysis_run_id: str,
 ) -> list[ReportFindingProjection]:
-    findings = (
-        findings_pack.get("findings")
-        if isinstance(findings_pack.get("findings"), list)
-        else []
-    )
+    raw_findings = findings_pack.get("findings")
+    findings: list[Any] = raw_findings if isinstance(raw_findings, list) else []
     rows: list[ReportFindingProjection] = []
     for index, raw in enumerate(findings):
         if not isinstance(raw, dict):
@@ -357,16 +360,13 @@ def _build_findings(
 
 def _build_metrics(
     *,
-    report_id: str,
+    report_id: ReportId,
     metrics_pack: dict[str, Any],
     generated_at_utc: str,
     analysis_run_id: str,
 ) -> list[ReportMetricProjection]:
-    metrics = (
-        metrics_pack.get("key_metrics")
-        if isinstance(metrics_pack.get("key_metrics"), list)
-        else []
-    )
+    raw_metrics = metrics_pack.get("key_metrics")
+    metrics: list[Any] = raw_metrics if isinstance(raw_metrics, list) else []
     rows: list[ReportMetricProjection] = []
     for index, raw in enumerate(metrics):
         if not isinstance(raw, dict):
@@ -407,7 +407,7 @@ def _build_metrics(
 
 def _build_quotes(
     *,
-    report_id: str,
+    report_id: ReportId,
     artifacts: dict[str, Any],
     quote_candidates: dict[str, Any],
     generated_at_utc: str,
@@ -462,17 +462,15 @@ def _build_quotes(
 
 def _build_claims(
     *,
-    report_id: str,
+    report_id: ReportId,
     artifacts: dict[str, Any],
     generated_at_utc: str,
     analysis_run_id: str,
 ) -> list[ReportClaimProjection]:
-    summary = artifacts.get("summary") if isinstance(artifacts.get("summary"), dict) else {}
-    claims = (
-        summary.get("claim_evidence_map")
-        if isinstance(summary.get("claim_evidence_map"), list)
-        else []
-    )
+    raw_summary = artifacts.get("summary")
+    summary: dict[str, Any] = raw_summary if isinstance(raw_summary, dict) else {}
+    raw_claims = summary.get("claim_evidence_map")
+    claims: list[Any] = raw_claims if isinstance(raw_claims, list) else []
     rows: list[ReportClaimProjection] = []
     for index, raw in enumerate(claims):
         if not isinstance(raw, dict):
@@ -510,7 +508,7 @@ def _build_claims(
 
 def _build_tags(
     *,
-    report_id: str,
+    report_id: ReportId,
     taxonomy_pack: dict[str, Any],
     payload_taxonomy: list[str],
     generated_at_utc: str,
@@ -545,17 +543,14 @@ def _build_tags(
 
 def _build_categories(
     *,
-    report_id: str,
+    report_id: ReportId,
     category_pack: dict[str, Any],
     generated_at_utc: str,
     analysis_run_id: str,
 ) -> list[ReportCategoryProjection]:
     selected_ids = _clean_string_list(category_pack.get("selected_category_ids") or [])
-    fits = (
-        category_pack.get("category_fits")
-        if isinstance(category_pack.get("category_fits"), list)
-        else []
-    )
+    raw_fits = category_pack.get("category_fits")
+    fits: list[Any] = raw_fits if isinstance(raw_fits, list) else []
     rows: list[ReportCategoryProjection] = []
     seen: set[str] = set()
     for index, raw in enumerate(fits):
@@ -613,7 +608,7 @@ def _build_categories(
 
 def _build_figures(
     *,
-    report_id: str,
+    report_id: ReportId,
     figure_assets: list[Any],
     figure_pack: dict[str, Any],
     generated_at_utc: str,
@@ -673,8 +668,9 @@ def _build_vector_queue(
     generated_at_utc: str,
 ) -> list[VectorProjectionQueueRow]:
     rows: list[VectorProjectionQueueRow] = []
-    report_id = str(report.report_id)
-    summary = artifacts.get("summary") if isinstance(artifacts.get("summary"), dict) else {}
+    report_id = report.report_id
+    raw_summary = artifacts.get("summary")
+    summary: dict[str, Any] = raw_summary if isinstance(raw_summary, dict) else {}
     report_summary = _report_summary_text(
         title=report.title,
         publisher=report.publisher,
@@ -718,7 +714,7 @@ def _build_vector_queue(
         )
         rows.append(
             _queue_row(
-                entity_uid=str(section.section_uid),
+                entity_uid=section.section_uid,
                 entity_type="section",
                 report_id=report_id,
                 text_payload=_section_text(section),
@@ -740,7 +736,7 @@ def _build_vector_queue(
         )
         rows.append(
             _queue_row(
-                entity_uid=str(finding.finding_uid),
+                entity_uid=finding.finding_uid,
                 entity_type="finding",
                 report_id=report_id,
                 text_payload=_finding_text(finding),
@@ -762,7 +758,7 @@ def _build_vector_queue(
         )
         rows.append(
             _queue_row(
-                entity_uid=str(claim.claim_uid),
+                entity_uid=claim.claim_uid,
                 entity_type="claim",
                 report_id=report_id,
                 text_payload=_claim_text(claim),
@@ -784,7 +780,7 @@ def _build_vector_queue(
         )
         rows.append(
             _queue_row(
-                entity_uid=str(metric.metric_uid),
+                entity_uid=metric.metric_uid,
                 entity_type="metric",
                 report_id=report_id,
                 text_payload=_metric_text(metric),
@@ -806,7 +802,7 @@ def _build_vector_queue(
         )
         rows.append(
             _queue_row(
-                entity_uid=str(quote.quote_uid),
+                entity_uid=quote.quote_uid,
                 entity_type="quote",
                 report_id=report_id,
                 text_payload=_quote_text(quote),
@@ -828,7 +824,7 @@ def _build_vector_queue(
         )
         rows.append(
             _queue_row(
-                entity_uid=str(figure.figure_uid),
+                entity_uid=figure.figure_uid,
                 entity_type="figure_caption",
                 report_id=report_id,
                 text_payload=_figure_text(figure),
@@ -844,7 +840,7 @@ def build_projection(
     request: AnalyticsProjectionBuildRequest,
 ) -> AnalyticsProjectionBatch:
     analysis = request.analysis
-    report_id = str(analysis.runtime.file.file_id)
+    report_id = ReportId(str(analysis.runtime.file.file_id))
     payload = analysis.normalized_payload
     title = _clean_text(payload.title or analysis.runtime.report_title)
     if not title:
@@ -862,10 +858,24 @@ def build_projection(
     validation_severity = (
         analysis.validation_report.severity if analysis.validation_report else ""
     )
-    taxonomy_pack = analysis.evidence_packs.get("taxonomy", {})
-    category_pack = analysis.evidence_packs.get("context_category_fit", {})
-    artifacts = analysis.artifacts_payload or {}
-    doc_map = _unwrap_doc_map(analysis.evidence_packs.get("doc_map", {}))
+    taxonomy_pack: dict[str, Any] = (
+        analysis.evidence_packs.get("taxonomy", {})
+        if isinstance(analysis.evidence_packs.get("taxonomy", {}), dict)
+        else {}
+    )
+    category_pack: dict[str, Any] = (
+        analysis.evidence_packs.get("context_category_fit", {})
+        if isinstance(analysis.evidence_packs.get("context_category_fit", {}), dict)
+        else {}
+    )
+    artifacts: dict[str, Any] = (
+        analysis.artifacts_payload if isinstance(analysis.artifacts_payload, dict) else {}
+    )
+    doc_map = _unwrap_doc_map(
+        analysis.evidence_packs.get("doc_map", {})
+        if isinstance(analysis.evidence_packs.get("doc_map", {}), dict)
+        else {}
+    )
     generated_at_utc = request.generated_at_utc
     analysis_run_id = str(analysis.runtime.ctx.run_id)
     report = AnalyticsReportRow(

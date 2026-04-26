@@ -5,10 +5,15 @@ from typing import Any
 
 from src.contracts.ui_run_control import (
     UiRunCancelRequest,
+    UiRunCancelResponse,
     UiRunLaunchRequest,
+    UiRunLaunchResponse,
     UiRunListRequest,
+    UiRunListResponse,
     UiRunPollRequest,
+    UiRunPollResponse,
 )
+from src.contracts.semantic_ids import RunId
 from src.orchestrators.ui_run_control_orchestrator import (
     cancel_ui_run,
     launch_ui_run,
@@ -25,7 +30,7 @@ def launch_background_run(
     run_type: str,
     display_name: str,
     request_payload: dict[str, Any],
-):
+) -> UiRunLaunchResponse:
     registry_path = ui_state.get_ui_run_registry_path(settings)
     response = launch_ui_run(
         UiRunLaunchRequest(
@@ -42,7 +47,9 @@ def launch_background_run(
     return response
 
 
-def poll_selected_run(settings: Any, *, max_bytes: int = 32768):
+def poll_selected_run(
+    settings: Any, *, max_bytes: int = 32768
+) -> UiRunPollResponse | None:
     run_id = ui_state.get_selected_run_id()
     if not run_id:
         return None
@@ -50,14 +57,14 @@ def poll_selected_run(settings: Any, *, max_bytes: int = 32768):
         UiRunPollRequest(
             schema_version="1.0",
             registry_path=ui_state.get_ui_run_registry_path(settings),
-            run_id=run_id,
+            run_id=RunId(run_id),
             output_tail_bytes=max_bytes,
         ),
         _ctx("poll_selected_run"),
     )
 
 
-def cancel_selected_run(settings: Any):
+def cancel_selected_run(settings: Any) -> UiRunCancelResponse | None:
     run_id = ui_state.get_selected_run_id()
     if not run_id:
         return None
@@ -65,13 +72,15 @@ def cancel_selected_run(settings: Any):
         UiRunCancelRequest(
             schema_version="1.0",
             registry_path=ui_state.get_ui_run_registry_path(settings),
-            run_id=run_id,
+            run_id=RunId(run_id),
         ),
         _ctx("cancel_selected_run"),
     )
 
 
-def list_recent_runs(settings: Any, *, statuses: list[str] | None = None, limit: int = 20):
+def list_recent_runs(
+    settings: Any, *, statuses: list[str] | None = None, limit: int = 20
+) -> UiRunListResponse:
     return list_ui_runs(
         UiRunListRequest(
             schema_version="1.0",

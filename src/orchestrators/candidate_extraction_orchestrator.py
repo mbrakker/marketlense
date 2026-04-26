@@ -15,6 +15,7 @@ from src.contracts.files import FileExistsRequest, FileHashRequest, WriteBytesRe
 from src.contracts.ingest import IngestSettings
 from src.contracts.pdf_utils import PdfEofCheckRequest
 from src.contracts.run_context import RunContext
+from src.contracts.semantic_ids import ReportId
 from src.generators.candidate_extraction_generator import generate_candidate_pack
 from src.services.drive_service import download_pdf, list_pdfs
 from src.services.file_service import file_exists, file_md5, write_bytes
@@ -211,7 +212,7 @@ def run_candidate_extraction(
             outcomes.append(
                 CandidateExtractOutcome(
                     schema_version="1.0",
-                    report_id=report_id or name,
+                    report_id=ReportId(report_id or name),
                     report_name=name,
                     pdf_path=pdf_path,
                     candidates_path="",
@@ -232,7 +233,7 @@ def run_candidate_extraction(
             outcome = deps.generate_candidate_pack(
                 CandidateExtractRequest(
                     schema_version="1.0",
-                    report_id=resolved_report_id,
+                    report_id=ReportId(resolved_report_id),
                     pdf_path=pdf_path,
                     output_dir=settings.output_dir,
                     report_name=name,
@@ -253,7 +254,7 @@ def run_candidate_extraction(
             outcomes.append(
                 CandidateExtractOutcome(
                     schema_version="1.0",
-                    report_id=resolved_report_id,
+                    report_id=ReportId(resolved_report_id),
                     report_name=name,
                     pdf_path=pdf_path,
                     candidates_path="",
@@ -296,7 +297,7 @@ def run_candidate_extraction(
             outcome = deps.generate_candidate_pack(
                 CandidateExtractRequest(
                     schema_version="1.0",
-                    report_id=file.file_id,
+                    report_id=ReportId(file.file_id),
                     pdf_path=cache_path,
                     output_dir=settings.output_dir,
                     report_name=report_name,
@@ -318,7 +319,7 @@ def run_candidate_extraction(
             outcomes.append(
                 CandidateExtractOutcome(
                     schema_version="1.0",
-                    report_id=file.file_id,
+                    report_id=ReportId(file.file_id),
                     report_name=file.name or file.file_id,
                     pdf_path="",
                     candidates_path="",

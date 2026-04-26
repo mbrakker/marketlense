@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from src.contracts.run_context import RunContext
+from src.contracts.semantic_ids import RunId
 from src.contracts.ui_run_control import UiRunRecordGetRequest, UiRunWorkerRequest
 from src.contracts.ui_run_replay import (
     UiRunArtifactFingerprintRequest,
@@ -67,7 +68,7 @@ def _build_report(
 ) -> UiRunReplayReport:
     return UiRunReplayReport(
         schema_version="1.0",
-        run_id=run_id,
+        run_id=RunId(run_id),
         replayed_at_utc=_utc_now(),
         replay_status=replay_status,
         source_fingerprint_match=source_fingerprint_match,
@@ -92,7 +93,7 @@ def _write_report(
         UiRunReplayReportWriteRequest(
             schema_version="1.0",
             registry_path=registry_path,
-            run_id=run_id,
+            run_id=RunId(run_id),
             report=report,
         ),
         ctx,

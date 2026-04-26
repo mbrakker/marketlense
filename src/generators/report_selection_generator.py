@@ -13,6 +13,7 @@ from src.contracts.report_analysis import (
     AnalysisPackPathRequest,
     AnalysisStorePackRequest,
 )
+from src.contracts.semantic_ids import ReportId
 from src.contracts.report_assets import (
     CropRefineBBoxApplyRequest,
     CropRefineCandidate,
@@ -635,7 +636,7 @@ def _crop_refine_cache_path(
         AnalysisPackPathRequest(
             schema_version="1.0",
             output_dir=settings.output_dir,
-            report_id=file_id,
+            report_id=ReportId(file_id),
             pack_name="crop_refine",
             report_slug=report_name,
         ),
@@ -698,7 +699,7 @@ def _write_crop_refine_cache(
         AnalysisStorePackRequest(
             schema_version="1.0",
             output_dir=settings.output_dir,
-            report_id=file_id,
+            report_id=ReportId(file_id),
             pack_name="crop_refine",
             payload={
                 "schema_version": "1.0",

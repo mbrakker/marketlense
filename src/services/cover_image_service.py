@@ -16,7 +16,7 @@ logger = logging.getLogger("market_lense.cover_image_service")
 FONT_SIZE_STEP = 2
 
 
-def _normalize_text(value: str) -> str:
+def _normalize_text(value: str | None) -> str:
     return str(value or "").strip()
 
 
@@ -30,7 +30,11 @@ def _parse_hex_color(value: str, label: str) -> Tuple[int, int, int]:
     if len(hex_value) != 6:
         raise AppError(code="cover_color_invalid", message=f"{label} must be 3 or 6 hex digits", retryable=False)
     try:
-        return tuple(int(hex_value[i:i + 2], 16) for i in (0, 2, 4))
+        return (
+            int(hex_value[0:2], 16),
+            int(hex_value[2:4], 16),
+            int(hex_value[4:6], 16),
+        )
     except ValueError as exc:
         raise AppError(code="cover_color_invalid", message=f"{label} has invalid hex digits", cause=exc, retryable=False) from exc
 

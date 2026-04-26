@@ -9,6 +9,7 @@ from src.contracts.report_analysis import (
 )
 from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
+from src.contracts.semantic_ids import ReportId
 from src.contracts.validation import (
     ValidationIssue,
     ValidationReport,
@@ -98,7 +99,7 @@ def resolve_pack_path(
         request=AnalysisPackPathRequest(
             schema_version="1.0",
             output_dir=output_dir,
-            report_id=report_id,
+            report_id=ReportId(report_id),
             pack_name=pack_name,
             report_slug=report_name,
         ),
@@ -121,7 +122,7 @@ def store_pack(
         request=AnalysisStorePackRequest(
             schema_version="1.0",
             output_dir=output_dir,
-            report_id=report_id,
+            report_id=ReportId(report_id),
             pack_name=pack_name,
             payload=payload,
             report_slug=report_name,
@@ -221,9 +222,8 @@ def _adapt_cached_validation_payload(
 
 
 def validation_report_from_payload(payload: dict, path: str) -> ValidationReport:
-    issues_raw = (
-        payload.get("issues") if isinstance(payload.get("issues"), list) else []
-    )
+    raw_issues = payload.get("issues")
+    issues_raw: list[Any] = raw_issues if isinstance(raw_issues, list) else []
     issues: List[ValidationIssue] = []
     for entry in issues_raw:
         if not isinstance(entry, dict):

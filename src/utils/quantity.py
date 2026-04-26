@@ -357,7 +357,7 @@ def _extract_main(text: str) -> List[Quantity]:
 def _dedupe_quantities(values: Sequence[Quantity]) -> List[Quantity]:
     ordered = sorted(values, key=lambda q: (q.start, q.end))
     deduped: List[Quantity] = []
-    seen: set[Tuple[str, str, int, int, str]] = set()
+    seen: set[Tuple[str, str, int, int, int]] = set()
     for quantity in ordered:
         key = (
             quantity.unit_family,

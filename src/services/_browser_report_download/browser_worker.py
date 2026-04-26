@@ -18,6 +18,7 @@ from src.contracts.browser_download import (
 from src.contracts.logging import LoggingSetupRequest
 from src.contracts.publisher_inventory import PublisherInventoryCandidateTrace
 from src.contracts.run_context import RunContext
+from src.contracts.semantic_ids import RunId, TaskId
 from src.services._browser_report_download.browser import (
     BrowserAgentWorkerResponse,
     run_browser_report_download_agent,
@@ -81,6 +82,7 @@ def _build_identity(payload: dict) -> BrowserDownloadIdentity:
 
 
 def _build_settings(payload: dict) -> BrowserDownloadSettings:
+    identity_payload = payload.get("identity_profile")
     return BrowserDownloadSettings(
         schema_version=str(payload.get("schema_version", "1.0")),
         openrouter_api_key=str(payload.get("openrouter_api_key") or ""),
@@ -93,9 +95,7 @@ def _build_settings(payload: dict) -> BrowserDownloadSettings:
         reports_db=str(payload.get("reports_db") or ""),
         identity_config_path=str(payload.get("identity_config_path") or ""),
         identity_profile=_build_identity(
-            payload.get("identity_profile")
-            if isinstance(payload.get("identity_profile"), dict)
-            else {}
+            identity_payload if isinstance(identity_payload, dict) else {}
         ),
         openrouter_http_referer=payload.get("openrouter_http_referer"),
         headed=bool(payload.get("headed", False)),
@@ -133,8 +133,8 @@ def _build_candidate_trace(payload: dict) -> PublisherInventoryCandidateTrace | 
         pdf_url=payload.get("pdf_url"),
         published_at_text=payload.get("published_at_text"),
         max_confidence=(
-            float(payload.get("max_confidence"))
-            if payload.get("max_confidence") is not None
+            float(raw_max_confidence)
+            if (raw_max_confidence := payload.get("max_confidence")) is not None
             else None
         ),
     )
@@ -142,11 +142,13 @@ def _build_candidate_trace(payload: dict) -> PublisherInventoryCandidateTrace | 
 
 def _build_request(payload: dict) -> BrowserReportDownloadRequest:
     route_step_hints_payload = payload.get("route_step_hints", [])
+    settings_payload = payload.get("settings")
+    candidate_trace_payload = payload.get("candidate_trace")
     return BrowserReportDownloadRequest(
         schema_version=str(payload.get("schema_version", "1.0")),
         url=str(payload.get("url") or "").strip(),
         settings=_build_settings(
-            payload.get("settings") if isinstance(payload.get("settings"), dict) else {}
+            settings_payload if isinstance(settings_payload, dict) else {}
         ),
         delivery_email=payload.get("delivery_email"),
         route_hint=payload.get("route_hint"),
@@ -164,7 +166,9 @@ def _build_request(payload: dict) -> BrowserReportDownloadRequest:
             if isinstance(item, dict)
         ],
         route_kind_hint=payload.get("route_kind_hint"),
-        candidate_trace=_build_candidate_trace(payload.get("candidate_trace")),
+        candidate_trace=_build_candidate_trace(
+            candidate_trace_payload if isinstance(candidate_trace_payload, dict) else {}
+        ),
         publisher_discovery_route_kind=payload.get("publisher_discovery_route_kind"),
         publisher_recommended_discovery_route_kind=payload.get(
             "publisher_recommended_discovery_route_kind"
@@ -192,8 +196,8 @@ def _build_prompt_bundle(payload: dict) -> BrowserDownloadPromptBundle:
 def _build_ctx(payload: dict) -> RunContext:
     return RunContext(
         schema_version=str(payload.get("schema_version", "1.0")),
-        run_id=str(payload.get("run_id") or ""),
-        task_id=str(payload.get("task_id") or ""),
+        run_id=RunId(str(payload.get("run_id") or "")),
+        task_id=TaskId(str(payload.get("task_id") or "")),
         span_id=str(payload.get("span_id") or ""),
     )
 

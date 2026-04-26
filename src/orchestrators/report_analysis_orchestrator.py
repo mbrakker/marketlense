@@ -31,6 +31,7 @@ from src.contracts.validation import (
     ValidationReport,
     ValidationRequest,
 )
+from src.contracts.semantic_ids import ReportId
 from src.contracts.vector_store import (
     VectorStoreStatusRequest,
     VectorStoreMetadata,
@@ -593,7 +594,7 @@ def run_report_analysis(
             AnalysisStorePackRequest(
                 schema_version="1.0",
                 output_dir=runtime.settings.output_dir,
-                report_id=runtime.file.file_id,
+                report_id=ReportId(runtime.file.file_id),
                 pack_name=pack_name,
                 payload=payload,
                 report_slug=runtime.report_name,
@@ -608,7 +609,7 @@ def run_report_analysis(
                 vector_store_id=vector_state.vector_store_id,
                 metadata=VectorStoreMetadata(
                     schema_version="1.0",
-                    report_id=runtime.file.file_id,
+                    report_id=ReportId(runtime.file.file_id),
                     report_name=runtime.report_title,
                     taxonomy=taxonomy_state.taxonomy,
                     categories=category_assignment.categories,
@@ -746,7 +747,7 @@ def run_report_analysis(
         dependencies=dependencies,
         validation_req=ValidationRequest(
             schema_version="1.0",
-            report_id=runtime.file.file_id,
+            report_id=ReportId(runtime.file.file_id),
             report=normalized_payload,
             artifacts=artifacts_payload or {},
             evidence_packs=packs,
@@ -835,7 +836,7 @@ def run_report_analysis(
         AnalysisStorePackRequest(
             schema_version="1.0",
             output_dir=runtime.settings.output_dir,
-            report_id=runtime.file.file_id,
+            report_id=ReportId(runtime.file.file_id),
             pack_name=snapshot_name,
             payload=data_dict,
             report_slug=runtime.report_name,
@@ -980,7 +981,7 @@ def _run_validation_regeneration_loop(
         validation_before_status = current_validation_report.status
         regeneration_response = dependencies.regenerate_artifacts(
             ArtifactRegenerationRequest(
-                report_id=runtime.file.file_id,
+                report_id=ReportId(runtime.file.file_id),
                 report_name=runtime.report_name,
                 attempt_index=attempt_index,
                 plan=plan,
@@ -1015,7 +1016,7 @@ def _run_validation_regeneration_loop(
             dependencies=dependencies,
             validation_req=ValidationRequest(
                 schema_version="1.0",
-                report_id=runtime.file.file_id,
+                report_id=ReportId(runtime.file.file_id),
                 report=regenerated_payload,
                 artifacts=current_artifacts,
                 evidence_packs=evidence_packs,
@@ -1153,7 +1154,7 @@ def _run_validation_with_fallback(
             AnalysisPackPathRequest(
                 schema_version="1.0",
                 output_dir=runtime.settings.output_dir,
-                report_id=runtime.file.file_id,
+                report_id=ReportId(runtime.file.file_id),
                 pack_name=pack_name,
                 report_slug=runtime.report_name,
             ),
@@ -1178,7 +1179,7 @@ def _run_validation_with_fallback(
                 AnalysisStorePackRequest(
                     schema_version="1.0",
                     output_dir=runtime.settings.output_dir,
-                    report_id=runtime.file.file_id,
+                    report_id=ReportId(runtime.file.file_id),
                     pack_name=pack_name,
                     payload=fallback_report.to_dict(),
                     report_slug=runtime.report_name,
@@ -1214,7 +1215,7 @@ def _store_validation_snapshot(
         AnalysisPackPathRequest(
             schema_version="1.0",
             output_dir=runtime.settings.output_dir,
-            report_id=runtime.file.file_id,
+            report_id=ReportId(runtime.file.file_id),
             pack_name=pack_name,
             report_slug=runtime.report_name,
         ),
@@ -1226,7 +1227,7 @@ def _store_validation_snapshot(
         AnalysisStorePackRequest(
             schema_version="1.0",
             output_dir=runtime.settings.output_dir,
-            report_id=runtime.file.file_id,
+            report_id=ReportId(runtime.file.file_id),
             pack_name=pack_name,
             payload=payload,
             report_slug=runtime.report_name,

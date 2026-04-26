@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import html
 import re
-from typing import Any
+from typing import Any, Mapping
 from urllib.parse import parse_qs, urljoin, urlsplit
 
 from src.contracts.publisher_inventory import PublisherInventoryRawCandidate
@@ -951,6 +951,10 @@ def _page_query_value(url: str) -> int | None:
 
 
 def _positive_int_or_none(value: object) -> int | None:
+    if isinstance(value, bool):
+        return int(value) if value > 0 else None
+    if not isinstance(value, (int, float, str, bytes, bytearray)):
+        return None
     try:
         parsed = int(value)
     except (TypeError, ValueError):
@@ -962,7 +966,7 @@ def _normalize_text(value: str) -> str:
     return " ".join(str(value or "").split()).strip()
 
 
-def _select_anchor_title(item: dict[str, object]) -> str:
+def _select_anchor_title(item: Mapping[str, object]) -> str:
     text = _normalize_text(str(item.get("text") or ""))
     heading_text = _normalize_text(str(item.get("heading_text") or ""))
     aria_label = _normalize_text(str(item.get("aria_label") or ""))

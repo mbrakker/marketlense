@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Dict, List, Sequence
+from typing import Any, Dict, List, Sequence
 
 from src.contracts.config import AppSettings
 from src.contracts.openai import OpenAIJSONPromptRequest
@@ -235,7 +235,8 @@ def semantic_payload(insights: Sequence[dict], quotes: Sequence[dict]) -> dict:
     for idx, insight in enumerate(insights):
         if not isinstance(insight, dict):
             continue
-        metric = insight.get("metric") if isinstance(insight.get("metric"), dict) else {}
+        raw_metric = insight.get("metric")
+        metric: dict[str, Any] = raw_metric if isinstance(raw_metric, dict) else {}
         metrics.append(
             {
                 "id": s(insight.get("id") or f"insight_{idx + 1}"),

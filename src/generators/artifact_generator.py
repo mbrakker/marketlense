@@ -1602,10 +1602,9 @@ def audit_toc_artifacts(
     }
     expected_ids = [entry["section_id"] for entry in expected_entries]
 
-    actual_entries_raw = (
-        artifacts.get("toc_entries")
-        if isinstance(artifacts.get("toc_entries"), list)
-        else []
+    raw_toc_entries = artifacts.get("toc_entries")
+    actual_entries_raw: list[Any] = (
+        raw_toc_entries if isinstance(raw_toc_entries, list) else []
     )
     actual_entries = normalize_artifact_toc_entries(actual_entries_raw)
     actual_ids = [_s(entry.get("section_id")).strip() for entry in actual_entries]
@@ -1711,11 +1710,8 @@ def audit_toc_artifacts(
         )
 
     expected_topics = expected_bundle.get("toc_topics") or []
-    actual_topics = (
-        artifacts.get("toc_topics")
-        if isinstance(artifacts.get("toc_topics"), list)
-        else []
-    )
+    raw_toc_topics = artifacts.get("toc_topics")
+    actual_topics: list[Any] = raw_toc_topics if isinstance(raw_toc_topics, list) else []
     if actual_topics != expected_topics:
         diagnostics.append(
             {
@@ -1727,10 +1723,9 @@ def audit_toc_artifacts(
         )
 
     expected_briefs = expected_bundle.get("toc_topics_expanded") or []
-    actual_briefs = (
-        artifacts.get("toc_topics_expanded")
-        if isinstance(artifacts.get("toc_topics_expanded"), list)
-        else []
+    raw_toc_briefs = artifacts.get("toc_topics_expanded")
+    actual_briefs: list[Any] = (
+        raw_toc_briefs if isinstance(raw_toc_briefs, list) else []
     )
     if len(actual_briefs) != len(expected_briefs):
         diagnostics.append(
@@ -1799,10 +1794,9 @@ def build_topic_briefs(
             continue
         section = _select_topic_section(topic=topic, sections=sections)
         section_summary = _s(section.get("summary")).strip() if section else ""
-        section_points = (
-            section.get("key_points")
-            if section and isinstance(section.get("key_points"), list)
-            else []
+        raw_section_points = section.get("key_points") if section else []
+        section_points: list[Any] = (
+            raw_section_points if isinstance(raw_section_points, list) else []
         )
         key_points = _dedupe_non_empty_text(
             [_s(point) for point in section_points], limit=TOPIC_BRIEF_MAX_KEY_POINTS
