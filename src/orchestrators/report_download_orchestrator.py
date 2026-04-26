@@ -68,6 +68,7 @@ from src.utils.drive_utils import extract_drive_folder_id
 from src.utils.logging import log_event
 from src.utils.errors import AppError
 from src.utils.cache_utils import sha256_json
+from src.utils.coercion import coerce_int
 from src.utils.url_utils import normalize_url
 
 logger = logging.getLogger("market_lense.report_download_orchestrator")
@@ -250,10 +251,12 @@ def _record_idempotency_outcome(
     )
 
 
-def _restore_report_source_record(payload: dict[str, object]) -> ReportSourceRecordResponse:
+def _restore_report_source_record(
+    payload: dict[str, object],
+) -> ReportSourceRecordResponse:
     return ReportSourceRecordResponse(
         schema_version=str(payload.get("schema_version") or "1.0"),
-        record_id=int(payload.get("record_id") or 0),
+        record_id=coerce_int(payload.get("record_id"), 0),
         source_domain=str(payload.get("source_domain") or ""),
         report_name=str(payload.get("report_name") or ""),
         landing_page_url=str(payload.get("landing_page_url") or ""),
@@ -262,14 +265,22 @@ def _restore_report_source_record(payload: dict[str, object]) -> ReportSourceRec
     )
 
 
+def _payload_optional_str(payload: dict[str, object], key: str) -> str | None:
+    value = payload.get(key)
+    if value is None:
+        return None
+    token = str(value).strip()
+    return token or None
+
+
 def _restore_drive_file(payload: dict[str, object]) -> DriveFile:
     return DriveFile(
         schema_version=str(payload.get("schema_version") or "1.0"),
         file_id=str(payload.get("file_id") or ""),
         name=str(payload.get("name") or ""),
-        modified_time=payload.get("modified_time"),
-        md5_checksum=payload.get("md5_checksum"),
-        mime_type=payload.get("mime_type"),
+        modified_time=_payload_optional_str(payload, "modified_time"),
+        md5_checksum=_payload_optional_str(payload, "md5_checksum"),
+        mime_type=_payload_optional_str(payload, "mime_type"),
     )
 
 
@@ -294,7 +305,7 @@ def _restore_drive_upload(payload: dict[str, object]) -> ReportDownloadDriveUplo
         mime_type=str(payload.get("mime_type") or ""),
         folder_id=str(payload.get("folder_id") or ""),
         status=str(payload.get("status") or ""),
-        size=int(payload.get("size") or 0),
+        size=coerce_int(payload.get("size"), 0),
         md5=(str(payload.get("md5")) if payload.get("md5") is not None else None),
         drive_file=drive_file,
     )

@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import urlsplit
 
-import requests
+import requests  # type: ignore[import-untyped]
 
 from src.contracts.http_acquisition import (
     HttpAcquisitionRequest,
@@ -247,7 +247,9 @@ def execute_http_acquisition(
 
 def _request_kwargs(request: HttpAcquisitionRequest) -> dict[str, object]:
     kwargs: dict[str, object] = {
-        "headers": {str(key): str(value) for key, value in dict(request.headers).items()},
+        "headers": {
+            str(key): str(value) for key, value in dict(request.headers).items()
+        },
         "timeout": request.timeout_seconds,
     }
     if request.allow_redirects is not None:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from src.contracts.config import AppSettings
+from src.contracts.ingest import IngestSettings
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationRequest
 
@@ -20,7 +21,7 @@ from .shared import (
 
 def prepare_validation_inputs(
     request: ValidationRequest,
-    settings: AppSettings,
+    settings: AppSettings | IngestSettings,
     ctx: RunContext,
     *,
     md5: str | None,

@@ -698,7 +698,7 @@ def _coerce_prompt_benchmark_int(
     value: object, *, namespace: str, field_name: str
 ) -> int:
     try:
-        parsed = int(value or 0)
+        parsed = int(str(value or 0))
     except (TypeError, ValueError) as exc:
         raise AppError(
             code="prompt_dry_run_fixture_registry_invalid",

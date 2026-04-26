@@ -4,6 +4,7 @@ import re
 from typing import Any, Dict, List, Optional
 
 from src.contracts.config import AppSettings
+from src.contracts.ingest import IngestSettings
 from src.utils.json_utils import safe_json_dumps
 
 METRIC_FIELDS = (
@@ -36,7 +37,7 @@ def artifact_base_variables(
 
 def normalize_artifact_source_status(
     source_status: Optional[Dict[str, Any]],
-    settings: AppSettings,
+    settings: AppSettings | IngestSettings,
     *,
     has_density: bool,
     vector_store_id: Optional[str] = None,
@@ -61,7 +62,7 @@ def normalize_artifact_source_status(
 
 
 def artifact_vector_store_enabled(
-    *, settings: AppSettings, vector_store_id: Optional[str]
+    *, settings: AppSettings | IngestSettings, vector_store_id: Optional[str]
 ) -> bool:
     return bool(vector_store_id) and bool(
         getattr(settings, "artifacts_use_vector_store", False)

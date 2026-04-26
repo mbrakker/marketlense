@@ -7,7 +7,7 @@ from dataclasses import asdict, replace
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urljoin, urlsplit
 
-import requests
+import requests  # type: ignore[import-untyped]
 
 from src.contracts.browser_download import (
     BrowserDownloadConfirmationEvidence,
@@ -191,7 +191,9 @@ def try_http_access_challenge_probe(
     page_url: str | None = None,
     preflight: bool = False,
 ) -> BrowserReportDownloadResult | None:
-    target_url = str(page_url or request.attempt_url or request.url).strip() or request.url
+    target_url = (
+        str(page_url or request.attempt_url or request.url).strip() or request.url
+    )
     logger.info(
         log_event(
             ctx,
@@ -284,7 +286,11 @@ def try_http_access_challenge_probe(
         matched_marker=matched_marker,
         route_family=(
             request.route_family_hint
-            or ("http_access_challenge_preflight" if preflight else "http_access_challenge_probe")
+            or (
+                "http_access_challenge_preflight"
+                if preflight
+                else "http_access_challenge_probe"
+            )
         ),
     )
     logger.info(
@@ -309,7 +315,9 @@ def try_report_page_pdf_link_download(
 ) -> BrowserReportDownloadResult | None:
     if not _should_try_report_page_pdf_link_probe(request):
         return None
-    target_url = str(page_url or request.attempt_url or request.url).strip() or request.url
+    target_url = (
+        str(page_url or request.attempt_url or request.url).strip() or request.url
+    )
     logger.info(
         log_event(
             ctx,
@@ -388,7 +396,9 @@ def try_report_page_pdf_link_download(
             },
         )
     )
-    if response.status_code >= 400 or ("html" not in content_type and "xml" not in content_type):
+    if response.status_code >= 400 or (
+        "html" not in content_type and "xml" not in content_type
+    ):
         return None
     final_url = str(response.final_url or target_url).strip() or target_url
     pdf_candidates = _filter_relevant_pdf_candidates(
@@ -512,9 +522,14 @@ def try_static_email_gate_probe(
     normalized_url: str,
     page_url: str | None = None,
 ) -> BrowserReportDownloadResult | None:
-    if str(request.route_family_hint or "").strip() not in _STATIC_EMAIL_GATE_ROUTE_FAMILIES:
+    if (
+        str(request.route_family_hint or "").strip()
+        not in _STATIC_EMAIL_GATE_ROUTE_FAMILIES
+    ):
         return None
-    target_url = str(page_url or request.attempt_url or request.url).strip() or request.url
+    target_url = (
+        str(page_url or request.attempt_url or request.url).strip() or request.url
+    )
     if not _route_context_supports_static_email_gate(
         request=request,
         target_url=target_url,
@@ -566,7 +581,9 @@ def try_static_email_gate_probe(
         )
     except AppError as exc:
         timeout_cause = isinstance(exc.cause, requests.Timeout)
-        if timeout_cause and _route_context_supports_static_email_gate(request=request, target_url=target_url):
+        if timeout_cause and _route_context_supports_static_email_gate(
+            request=request, target_url=target_url
+        ):
             result = _build_static_email_gate_result(
                 request=request,
                 normalized_url=normalized_url,
@@ -576,7 +593,11 @@ def try_static_email_gate_probe(
                     "Route-confirmed email-delivery page exceeded the static "
                     "HTML preflight timeout before browser interaction."
                 ),
-                evidence_labels=["static_email_gate", "static_fetch_timeout", "email_delivery"],
+                evidence_labels=[
+                    "static_email_gate",
+                    "static_fetch_timeout",
+                    "email_delivery",
+                ],
             )
             logger.info(
                 log_event(
@@ -688,10 +709,12 @@ def _looks_like_static_email_gate_html(html: str) -> bool:
     has_email = any(marker in plain_text for marker in _STATIC_EMAIL_FIELD_MARKERS)
     has_report_cta = any(marker in plain_text for marker in _STATIC_REPORT_FORM_MARKERS)
     has_form_provider = any(
-        marker in lowered or marker in plain_text for marker in _STATIC_FORM_PROVIDER_MARKERS
+        marker in lowered or marker in plain_text
+        for marker in _STATIC_FORM_PROVIDER_MARKERS
     )
     has_report_context = any(
-        marker in lowered or marker in plain_text for marker in _STATIC_REPORT_CONTEXT_MARKERS
+        marker in lowered or marker in plain_text
+        for marker in _STATIC_REPORT_CONTEXT_MARKERS
     )
     if has_form and has_email and has_report_cta:
         return True
@@ -709,7 +732,10 @@ def _route_context_supports_static_email_gate(
 ) -> bool:
     if str(request.route_kind_hint or "").strip() != "email_delivery":
         return False
-    if str(request.route_family_hint or "").strip() not in _STATIC_EMAIL_GATE_ROUTE_FAMILIES:
+    if (
+        str(request.route_family_hint or "").strip()
+        not in _STATIC_EMAIL_GATE_ROUTE_FAMILIES
+    ):
         return False
     context_parts = [
         request.url,
@@ -827,7 +853,9 @@ def _filter_relevant_pdf_candidates(
     page_tokens = _report_relevance_tokens(page_url)
     if request.candidate_trace is not None:
         page_tokens.update(_report_relevance_tokens(request.candidate_trace.title))
-        page_tokens.update(_report_relevance_tokens(request.candidate_trace.canonical_url))
+        page_tokens.update(
+            _report_relevance_tokens(request.candidate_trace.canonical_url)
+        )
     result: list[str] = []
     for candidate in candidates:
         candidate_url = urljoin(page_url, candidate)
@@ -1109,7 +1137,9 @@ def try_direct_onsite_capture(
 ) -> BrowserReportDownloadResult | None:
     if not _should_try_direct_onsite_capture(request):
         return None
-    target_url = str(page_url or request.attempt_url or request.url).strip() or request.url
+    target_url = (
+        str(page_url or request.attempt_url or request.url).strip() or request.url
+    )
     logger.info(
         log_event(
             ctx,
@@ -1185,7 +1215,9 @@ def try_direct_onsite_capture(
             },
         )
     )
-    if response.status_code >= 400 or ("html" not in content_type and "xml" not in content_type):
+    if response.status_code >= 400 or (
+        "html" not in content_type and "xml" not in content_type
+    ):
         return None
     html = str(response.text_body or "")
     if not _looks_like_onsite_capture_html(
@@ -1716,7 +1748,11 @@ def _route_context_supports_direct_onsite_capture(
             str(request.url or ""),
             str(request.attempt_url or ""),
             str(title or ""),
-            str(request.candidate_trace.title if request.candidate_trace is not None else ""),
+            str(
+                request.candidate_trace.title
+                if request.candidate_trace is not None
+                else ""
+            ),
         ]
     ).casefold()
     positive_markers = {

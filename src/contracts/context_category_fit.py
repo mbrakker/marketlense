@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import List, Optional
 
 from src.contracts.config import AppSettings
+from src.contracts.ingest import IngestSettings
 from src.contracts.report_store import ReportMetadataGetResponse
 from src.contracts.semantic_ids import ReportId, SemanticIdContract
 
@@ -118,7 +119,7 @@ class ContextCategoryFitRequest:
     context: ReportCategoryContext = field(
         metadata={"doc": "Deterministic report context used for model evaluation."}
     )
-    settings: AppSettings = field(
+    settings: AppSettings | IngestSettings = field(
         metadata={"doc": "Resolved application settings for model configuration."}
     )
     category_mapping_path: str = field(

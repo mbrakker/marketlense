@@ -4,13 +4,14 @@ import hashlib
 import json
 import logging
 from pathlib import Path
-from typing import Any, Callable, Optional, Protocol
+from typing import Any, Optional, Protocol
 
 from src.contracts.files import ReadTextRequest, WriteBytesRequest
 from src.contracts.ingest import IngestSettings
 from src.contracts.report_analysis import AnalysisPackPathRequest
 from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.run_context import RunContext
+from src.contracts.semantic_ids import ReportId
 from src.contracts.state import StateRecordRequest
 from src.utils.analysis_family import family_is_abstained
 from src.utils.errors import AppError
@@ -23,19 +24,21 @@ logger = logging.getLogger(LOGGER_NAME)
 
 
 class SupportsReadText(Protocol):
-    read_text: Callable[[ReadTextRequest, RunContext], Any]
+    def read_text(self, request: ReadTextRequest, ctx: RunContext) -> Any: ...
 
 
 class SupportsWriteBytes(Protocol):
-    write_bytes: Callable[[WriteBytesRequest, RunContext], Any]
+    def write_bytes(self, request: WriteBytesRequest, ctx: RunContext) -> Any: ...
 
 
 class SupportsAnalysisPackPath(Protocol):
-    analysis_pack_path: Callable[[AnalysisPackPathRequest, RunContext], Any]
+    def analysis_pack_path(
+        self, request: AnalysisPackPathRequest, ctx: RunContext
+    ) -> Any: ...
 
 
 class SupportsStateRecord(Protocol):
-    state_record: Callable[[StateRecordRequest, RunContext], Any]
+    def state_record(self, request: StateRecordRequest, ctx: RunContext) -> Any: ...
 
 
 def derive_title(name: str) -> str:
@@ -399,7 +402,7 @@ def pack_paths(
             AnalysisPackPathRequest(
                 schema_version="1.0",
                 output_dir=output_dir,
-                report_id=report_id,
+                report_id=ReportId(report_id),
                 pack_name=name,
                 report_slug=report_name,
             ),

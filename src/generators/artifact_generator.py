@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 
 from src.contracts.analysis_family import AnalysisFamilyStatus
 from src.contracts.config import AppSettings
+from src.contracts.ingest import IngestSettings
 from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIResponseRequest
 from src.contracts.prompts import PromptLoadRequest
 from src.contracts.report_analysis import (
@@ -14,6 +15,7 @@ from src.contracts.report_analysis import (
     AnalysisStorePackRequest,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.semantic_ids import ReportId
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.generators.artifact_normalization import (
     artifact_base_variables,
@@ -696,7 +698,10 @@ def _summary_confidence_score(summary: Dict[str, Any]) -> float:
         for claim in claim_map:
             if not isinstance(claim, dict):
                 continue
-            if _s(claim.get("evidence_id")).strip() or _s(claim.get("evidence")).strip():
+            if (
+                _s(claim.get("evidence_id")).strip()
+                or _s(claim.get("evidence")).strip()
+            ):
                 supported_claims += 1
         score += 0.14 * (supported_claims / max(1, len(claim_map)))
     return score
@@ -974,7 +979,7 @@ def render_artifact_json_model(
     *,
     namespace: str,
     variables: Dict[str, Any],
-    settings: AppSettings,
+    settings: AppSettings | IngestSettings,
     ctx: RunContext,
     openai_client,
     prompt_client,
@@ -2007,20 +2012,24 @@ def _attach_cached_artifact_family_status(payload: Dict[str, Any]) -> Dict[str, 
         return {}
     if isinstance(payload.get("family_status"), dict):
         return payload
-    summary = payload.get("summary") if isinstance(payload.get("summary"), dict) else {}
-    insights_candidates = (
-        payload.get("insights_candidates")
-        if isinstance(payload.get("insights_candidates"), list)
+    raw_summary = payload.get("summary")
+    raw_insights_candidates = payload.get("insights_candidates")
+    raw_insights_final = payload.get("insights_final")
+    raw_quotes_final = payload.get("quotes_final")
+    summary: Dict[str, Any] = raw_summary if isinstance(raw_summary, dict) else {}
+    insights_candidates: List[Dict[str, Any]] = (
+        [item for item in raw_insights_candidates if isinstance(item, dict)]
+        if isinstance(raw_insights_candidates, list)
         else []
     )
-    insights_final = (
-        payload.get("insights_final")
-        if isinstance(payload.get("insights_final"), list)
+    insights_final: List[Dict[str, Any]] = (
+        [item for item in raw_insights_final if isinstance(item, dict)]
+        if isinstance(raw_insights_final, list)
         else []
     )
-    quotes_final = (
-        payload.get("quotes_final")
-        if isinstance(payload.get("quotes_final"), list)
+    quotes_final: List[Dict[str, Any]] = (
+        [item for item in raw_quotes_final if isinstance(item, dict)]
+        if isinstance(raw_quotes_final, list)
         else []
     )
     enriched = dict(payload)
@@ -2049,7 +2058,7 @@ def _resolve_pack_path(
         request=AnalysisPackPathRequest(
             schema_version="1.0",
             output_dir=output_dir,
-            report_id=report_id,
+            report_id=ReportId(report_id),
             pack_name=pack_name,
             report_slug=report_slug,
         ),
@@ -2072,7 +2081,7 @@ def _store_pack(
         request=AnalysisStorePackRequest(
             schema_version="1.0",
             output_dir=output_dir,
-            report_id=report_id,
+            report_id=ReportId(report_id),
             pack_name=pack_name,
             payload=payload,
             report_slug=report_slug,
@@ -2087,19 +2096,18 @@ def _validate_artifact_semantic_fields(
 ) -> None:
     missing_fields: List[str] = []
     sentinel_values = {"not available from text"}
-    summary = (
-        artifacts_payload.get("summary")
-        if isinstance(artifacts_payload.get("summary"), dict)
-        else {}
-    )
-    insights_final = (
-        artifacts_payload.get("insights_final")
-        if isinstance(artifacts_payload.get("insights_final"), list)
+    raw_summary = artifacts_payload.get("summary")
+    raw_insights_final = artifacts_payload.get("insights_final")
+    raw_quotes_final = artifacts_payload.get("quotes_final")
+    summary: Dict[str, Any] = raw_summary if isinstance(raw_summary, dict) else {}
+    insights_final: List[Dict[str, Any]] = (
+        [item for item in raw_insights_final if isinstance(item, dict)]
+        if isinstance(raw_insights_final, list)
         else []
     )
-    quotes_final = (
-        artifacts_payload.get("quotes_final")
-        if isinstance(artifacts_payload.get("quotes_final"), list)
+    quotes_final: List[Dict[str, Any]] = (
+        [item for item in raw_quotes_final if isinstance(item, dict)]
+        if isinstance(raw_quotes_final, list)
         else []
     )
 
@@ -2126,12 +2134,9 @@ def _validate_artifact_semantic_fields(
             missing_fields.append(f"insights_final[{index}].text")
     if not quotes_abstained and not quotes_final:
         missing_fields.append("quotes_final")
-    elif (
-        not quotes_abstained
-        and (
-            not isinstance(quotes_final[0], dict)
-            or _missing_text(quotes_final[0].get("text"))
-        )
+    elif not quotes_abstained and (
+        not isinstance(quotes_final[0], dict)
+        or _missing_text(quotes_final[0].get("text"))
     ):
         missing_fields.append("quotes_final[0].text")
     if not expert_abstained and _missing_text(artifacts_payload.get("expert_comment")):

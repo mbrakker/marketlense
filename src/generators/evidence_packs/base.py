@@ -33,9 +33,7 @@ class EvidencePackStrategy:
     )
 
 
-def build_list_pack_empty_payload(
-    *, root_key: str, reason: str
-) -> dict[str, object]:
+def build_list_pack_empty_payload(*, root_key: str, reason: str) -> dict[str, object]:
     return {"schema_version": "1.0", "not_found_reason": reason, root_key: []}
 
 
@@ -79,7 +77,7 @@ def build_list_pack_strategy(
     schema_name: str,
     root_key: str,
     source_aliases: Sequence[str] = (),
-    normalize_items: Callable[[object], list[object]],
+    normalize_items: Callable[[object], Sequence[object]],
 ) -> EvidencePackStrategy:
     def build_empty_payload(reason: str) -> dict[str, object]:
         return build_list_pack_empty_payload(root_key=root_key, reason=reason)
@@ -97,10 +95,12 @@ def build_list_pack_strategy(
                 raw_value = root.get(alias)
                 if raw_value is not None:
                     break
-        normalized[root_key] = normalize_items(raw_value)
+        normalized[root_key] = list(normalize_items(raw_value))
         if cache_meta:
             normalized["_cache"] = cache_meta
-        return PackNormalizationResult(payload=normalized, changed=normalized != payload)
+        return PackNormalizationResult(
+            payload=normalized, changed=normalized != payload
+        )
 
     return EvidencePackStrategy(
         pack_name=pack_name,
@@ -142,7 +142,9 @@ def build_scalar_pack_strategy(
         normalized[root_key] = normalize_value(raw_value)
         if cache_meta:
             normalized["_cache"] = cache_meta
-        return PackNormalizationResult(payload=normalized, changed=normalized != payload)
+        return PackNormalizationResult(
+            payload=normalized, changed=normalized != payload
+        )
 
     return EvidencePackStrategy(
         pack_name=pack_name,

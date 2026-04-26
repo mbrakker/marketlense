@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-import requests
+import requests  # type: ignore[import-untyped]
 
 from src.contracts.http_acquisition import (
     HttpAcquisitionRequest,
@@ -246,7 +246,16 @@ def _classify_preflight_scenario(
         )
     except AppError as exc:
         marker = str(exc).casefold()
-        if any(term in marker for term in ("captcha", "access denied", "just a moment", "timed out", "temporarily unavailable")):
+        if any(
+            term in marker
+            for term in (
+                "captcha",
+                "access denied",
+                "just a moment",
+                "timed out",
+                "temporarily unavailable",
+            )
+        ):
             return _build_scenario_summary(
                 scenario_class="challenge_prone",
                 source_surface_class="unknown",
@@ -263,7 +272,10 @@ def _classify_preflight_scenario(
             browser_preferred=bool(request.settings.force_browser),
             notes="Preflight classification could not fetch the source page.",
         )
-    final_url = _normalize_absolute_url(str(response.final_url or normalized_url)) or normalized_url
+    final_url = (
+        _normalize_absolute_url(str(response.final_url or normalized_url))
+        or normalized_url
+    )
     content_type = str(response.content_type or "").casefold()
     html = str(response.text_body or "")
     lower_html = html.casefold()
@@ -272,7 +284,9 @@ def _classify_preflight_scenario(
     if title_start >= 0:
         title_close = lower_html.find("</title>", title_start)
         title_text = html[title_start:title_close] if title_close > title_start else ""
-    combined = " ".join(part for part in (final_url, title_text, lower_html[:5000]) if part).casefold()
+    combined = " ".join(
+        part for part in (final_url, title_text, lower_html[:5000]) if part
+    ).casefold()
     final_path = urlsplit(final_url).path.casefold()
     if ".pdf" in final_path or "application/pdf" in content_type:
         return _build_scenario_summary(
@@ -287,8 +301,19 @@ def _classify_preflight_scenario(
     download_signal = any(marker in combined for marker in _DOWNLOAD_HINT_MARKERS)
     archive_signal = any(marker in final_path for marker in _ARCHIVE_URL_MARKERS)
     filter_signal = _looks_like_preflight_filter_route(final_url)
-    tab_signal = any(label in combined for label in ("featured", "reports", "insights", "research", "latest"))
-    challenge_signal = any(marker in combined for marker in ("access denied", "captcha", "just a moment", "verify you are human"))
+    tab_signal = any(
+        label in combined
+        for label in ("featured", "reports", "insights", "research", "latest")
+    )
+    challenge_signal = any(
+        marker in combined
+        for marker in (
+            "access denied",
+            "captcha",
+            "just a moment",
+            "verify you are human",
+        )
+    )
     if challenge_signal:
         return _build_scenario_summary(
             scenario_class="challenge_prone",
@@ -382,9 +407,13 @@ def _build_browser_route_trace(
         followed_report_listing=metrics.report_route_clicks > 0,
         applied_report_filter=metrics.report_filter_applied > 0,
         selected_filters=(["report"] if metrics.report_filter_applied > 0 else []),
-        selected_tab_labels=[label for label in selected_tab_labels if str(label).strip()],
+        selected_tab_labels=[
+            label for label in selected_tab_labels if str(label).strip()
+        ],
         pagination_mode=pagination_mode,
-        preferred_control_labels=list(dict.fromkeys(initial_state.load_more_labels[:3])),
+        preferred_control_labels=list(
+            dict.fromkeys(initial_state.load_more_labels[:3])
+        ),
         candidate_surface_guard=(
             "report_filter"
             if metrics.report_filter_applied > 0
@@ -437,7 +466,9 @@ def discover_publisher_inventory(
     normalized_url = _validate_and_normalize_url(request.insights_url)
     _validate_request(request, normalized_url)
     scenario_summary = (
-        _classify_preflight_scenario(request=request, normalized_url=normalized_url, ctx=ctx)
+        _classify_preflight_scenario(
+            request=request, normalized_url=normalized_url, ctx=ctx
+        )
         if request.settings.enable_preflight_classifier_and_direct_detail
         else None
     )
@@ -460,7 +491,9 @@ def discover_publisher_inventory(
                 "headed": request.settings.headed,
                 "force_browser": request.settings.force_browser,
                 "scenario_class": (
-                    scenario_summary.scenario_class if scenario_summary is not None else ""
+                    scenario_summary.scenario_class
+                    if scenario_summary is not None
+                    else ""
                 ),
             },
         )
@@ -520,7 +553,11 @@ def discover_publisher_inventory(
                 role="service",
                 event="publisher_inventory_http_fallback",
                 module=logger.name,
-                fields={"normalized_url": normalized_url, "error": exc.message, "code": exc.code},
+                fields={
+                    "normalized_url": normalized_url,
+                    "error": exc.message,
+                    "code": exc.code,
+                },
             )
         )
     return _discover_with_browser(
@@ -689,17 +726,21 @@ def _discover_with_browser(
                 normalized_url=url,
             ),
             load_browser_use_runtime=_load_browser_use_runtime,
-            run_browser_traversal=lambda browser, req, run_ctx, url: _run_browser_traversal_with_timeout(
-                browser=browser,
-                request=req,
-                ctx=run_ctx,
-                normalized_url=url,
+            run_browser_traversal=lambda browser, req, run_ctx, url: (
+                _run_browser_traversal_with_timeout(
+                    browser=browser,
+                    request=req,
+                    ctx=run_ctx,
+                    normalized_url=url,
+                )
             ),
-            extract_http_supplement=lambda req, page, url, run_ctx: _extract_browser_http_supplement_candidates(
-                request=req,
-                page=page,
-                normalized_url=url,
-                ctx=run_ctx,
+            extract_http_supplement=lambda req, page, url, run_ctx: (
+                _extract_browser_http_supplement_candidates(
+                    request=req,
+                    page=page,
+                    normalized_url=url,
+                    ctx=run_ctx,
+                )
             ),
             fallback_http_discovery=lambda req, run_ctx, url, hint: _discover_with_http(
                 req,
@@ -934,13 +975,19 @@ async def _run_browser_traversal(
                 initial_state = await _extract_rendered_inventory_state(page)
                 seeded_pages = []
                 seeded_candidates = []
-        selected_tab_labels = _select_tab_labels_for_traversal(normalized_url, initial_state)
-        archive_expected = _is_archive_surface(initial_state) or bool(selected_tab_labels)
+        selected_tab_labels = _select_tab_labels_for_traversal(
+            normalized_url, initial_state
+        )
+        archive_expected = _is_archive_surface(initial_state) or bool(
+            selected_tab_labels
+        )
         bounded_by_pagination_limit = False
         if selected_tab_labels:
             seen_tabs: set[str] = set()
             current_state = initial_state
-            active_tab_label = _normalize_text(current_state.active_tab_label or "").casefold()
+            active_tab_label = _normalize_text(
+                current_state.active_tab_label or ""
+            ).casefold()
             for tab_label in selected_tab_labels:
                 normalized_label = _normalize_text(tab_label).casefold()
                 if not normalized_label or normalized_label in seen_tabs:
@@ -952,7 +999,10 @@ async def _run_browser_traversal(
                             code="publisher_inventory_browser_tab_click_failed",
                             message="Browser-render inventory discovery could not switch tabbed report sections",
                             retryable=True,
-                            context={"normalized_url": normalized_url, "tab_label": tab_label},
+                            context={
+                                "normalized_url": normalized_url,
+                                "tab_label": tab_label,
+                            },
                         )
                     await _close_unexpected_blank_pages(
                         browser=browser,
@@ -972,9 +1022,15 @@ async def _run_browser_traversal(
                     )
                     await _wait_for_tab_activation(page, tab_label)
                     current_state = await _extract_rendered_inventory_state(page)
-                    active_tab_label = _normalize_text(current_state.active_tab_label or "").casefold()
+                    active_tab_label = _normalize_text(
+                        current_state.active_tab_label or ""
+                    ).casefold()
                 seen_tabs.add(normalized_label)
-                page_number, metrics, tab_bounded_by_pagination_limit = await _collect_browser_inventory_pages(
+                (
+                    page_number,
+                    metrics,
+                    tab_bounded_by_pagination_limit,
+                ) = await _collect_browser_inventory_pages(
                     browser=browser,
                     page=page,
                     current_state=current_state,
@@ -991,9 +1047,15 @@ async def _run_browser_traversal(
                     bounded_by_pagination_limit or tab_bounded_by_pagination_limit
                 )
                 current_state = await _extract_rendered_inventory_state(page)
-                active_tab_label = _normalize_text(current_state.active_tab_label or "").casefold()
+                active_tab_label = _normalize_text(
+                    current_state.active_tab_label or ""
+                ).casefold()
         else:
-            _page_number, metrics, bounded_by_pagination_limit = await _collect_browser_inventory_pages(
+            (
+                _page_number,
+                metrics,
+                bounded_by_pagination_limit,
+            ) = await _collect_browser_inventory_pages(
                 browser=browser,
                 page=page,
                 current_state=initial_state,
@@ -1176,14 +1238,14 @@ async def _extract_rendered_html_supplement_candidates(
         log_event(
             ctx,
             role="service",
-                event="publisher_inventory_browser_rendered_html_supplement_request",
-                module=logger.name,
-                fields={
-                    "page_url": state.page_url,
-                    "page_number": page_number,
-                },
-            )
+            event="publisher_inventory_browser_rendered_html_supplement_request",
+            module=logger.name,
+            fields={
+                "page_url": state.page_url,
+                "page_number": page_number,
+            },
         )
+    )
     try:
         html = str(await page.evaluate(_browser_rendered_html_script()) or "")
     except Exception as exc:
@@ -1206,13 +1268,13 @@ async def _extract_rendered_html_supplement_candidates(
             ctx,
             role="service",
             event="publisher_inventory_browser_rendered_html_supplement_response",
-                module=logger.name,
-                fields={
-                    "page_url": state.page_url,
-                    "page_number": page_number,
-                    "html_length": len(html),
-                },
-            )
+            module=logger.name,
+            fields={
+                "page_url": state.page_url,
+                "page_number": page_number,
+                "html_length": len(html),
+            },
+        )
     )
     parser = _InventoryHtmlParser()
     try:
@@ -1254,13 +1316,13 @@ async def _extract_rendered_html_supplement_candidates(
             ctx,
             role="service",
             event="publisher_inventory_browser_rendered_html_supplement_extracted",
-                module=logger.name,
-                fields={
-                    "page_url": state.page_url,
-                    "page_number": page_number,
-                    "candidate_count": len(candidates),
-                },
-            )
+            module=logger.name,
+            fields={
+                "page_url": state.page_url,
+                "page_number": page_number,
+                "candidate_count": len(candidates),
+            },
+        )
     )
     return candidates
 
@@ -1351,13 +1413,10 @@ async def _collect_browser_inventory_pages(
             archive_surface=_is_archive_surface(state),
             provenance="browser_dom",
         )
-        if (
-            archive_expected
-            and _requires_archive_surface_recovery(
-                state=state,
-                page_candidates=page_candidates,
-                normalized_url=normalized_url,
-            )
+        if archive_expected and _requires_archive_surface_recovery(
+            state=state,
+            page_candidates=page_candidates,
+            normalized_url=normalized_url,
         ):
             if state.page_url not in archive_surface_recovery_urls:
                 archive_surface_recovery_urls.add(state.page_url)
@@ -1387,7 +1446,9 @@ async def _collect_browser_inventory_pages(
             next_page_url=next_page_url,
         ):
             hydration_attempts += 1
-            await _browser_wait_for_settle(page=page, delay_seconds=1.0, timeout_seconds=10.0)
+            await _browser_wait_for_settle(
+                page=page, delay_seconds=1.0, timeout_seconds=10.0
+            )
             await _prime_browser_inventory_surface(page)
             state = await _extract_rendered_inventory_state(page)
             next_page_url = _resolve_next_page_url(
@@ -1444,7 +1505,9 @@ async def _collect_browser_inventory_pages(
             pages
             and state.page_url == previous_page_url
             and not new_candidate_urls
-            and not (state.load_more_labels or next_page_url or state.has_pagination_next)
+            and not (
+                state.load_more_labels or next_page_url or state.has_pagination_next
+            )
         ):
             logger.info(
                 log_event(
@@ -1538,7 +1601,8 @@ async def _collect_browser_inventory_pages(
         duplicate_page_inventory_state = bool(
             pages
             and pages[-1].page_url == state.page_url
-            and last_recorded_page_candidate_signature == current_page_candidate_signature
+            and last_recorded_page_candidate_signature
+            == current_page_candidate_signature
         )
         if not same_page_entry and not duplicate_page_inventory_state:
             pages.append(
@@ -1560,7 +1624,9 @@ async def _collect_browser_inventory_pages(
         if not same_page_entry and not duplicate_page_inventory_state:
             page_candidates_to_add = page_candidates
         candidates.extend(page_candidates_to_add)
-        cumulative_candidate_urls.update(candidate.url for candidate in page_candidates_to_add)
+        cumulative_candidate_urls.update(
+            candidate.url for candidate in page_candidates_to_add
+        )
         logger.info(
             log_event(
                 ctx,
@@ -1726,9 +1792,9 @@ async def _collect_browser_inventory_pages(
 
 async def _extract_rendered_inventory_state(page: Any) -> _RenderedInventoryState:
     payload = json.loads(await page.evaluate(_browser_inventory_state_script()))
-    page_url = _normalize_absolute_url(str(payload.get("page_url") or "")) or _normalize_absolute_url(
-        await page.get_url()
-    )
+    page_url = _normalize_absolute_url(
+        str(payload.get("page_url") or "")
+    ) or _normalize_absolute_url(await page.get_url())
     anchors = [
         {
             "href": _normalize_text(item.get("href", "")),
@@ -1743,8 +1809,12 @@ async def _extract_rendered_inventory_state(page: Any) -> _RenderedInventoryStat
         for label in payload.get("tab_labels", [])
         if _normalize_text(str(label or ""))
     ]
-    active_tab_label = _normalize_text(str(payload.get("active_tab_label") or "")) or None
-    report_link_url = _normalize_absolute_url(str(payload.get("report_link_url") or "")) or None
+    active_tab_label = (
+        _normalize_text(str(payload.get("active_tab_label") or "")) or None
+    )
+    report_link_url = (
+        _normalize_absolute_url(str(payload.get("report_link_url") or "")) or None
+    )
     return _RenderedInventoryState(
         page_url=page_url,
         page_title=_normalize_text(str(payload.get("page_title") or "")),
@@ -1795,16 +1865,22 @@ async def _click_load_more(
     page_candidates: list[PublisherInventoryRawCandidate],
     require_candidate_surface_match: bool,
 ) -> str:
-    result = str(
-        await page.evaluate(
-        _browser_click_named_control_script(),
-        {
-            "labels": labels,
-            "candidate_urls": [candidate.url for candidate in page_candidates if candidate.url],
-            "require_candidate_surface": require_candidate_surface_match,
-        },
+    result = (
+        str(
+            await page.evaluate(
+                _browser_click_named_control_script(),
+                {
+                    "labels": labels,
+                    "candidate_urls": [
+                        candidate.url for candidate in page_candidates if candidate.url
+                    ],
+                    "require_candidate_surface": require_candidate_surface_match,
+                },
+            )
+        )
+        .strip()
+        .lower()
     )
-    ).strip().lower()
     if result == "not_relevant":
         return "not_relevant"
     return "clicked" if result == "true" else "missing"
@@ -1883,7 +1959,10 @@ async def _wait_for_inventory_growth(
             next_page_url=next_page_url,
         )
         current_candidate_urls = {candidate.url for candidate in current_candidates}
-        if len(current_candidates) > current_candidate_count or current_candidate_urls != previous_candidate_urls:
+        if (
+            len(current_candidates) > current_candidate_count
+            or current_candidate_urls != previous_candidate_urls
+        ):
             return
         if _rendered_state_anchor_fingerprint(state) != previous_anchor_fingerprint:
             return
@@ -1901,7 +1980,9 @@ async def _wait_for_inventory_growth_probe(
     delay_seconds: float = 0.2,
     timeout_seconds: float = 4.0,
 ) -> bool:
-    previous_url = _normalize_absolute_url(previous_state.page_url) or previous_state.page_url
+    previous_url = (
+        _normalize_absolute_url(previous_state.page_url) or previous_state.page_url
+    )
     previous_anchor_count = len(previous_state.anchors)
     max_attempts = max(1, int(timeout_seconds / delay_seconds))
     for _ in range(max_attempts):
@@ -1968,7 +2049,8 @@ async def _wait_for_inventory_transition(
         )
         current_urls = {candidate.url for candidate in current_candidates}
         if previous_state.result_range_end is None and (
-            len(current_candidates) > current_candidate_count or current_urls != previous_urls
+            len(current_candidates) > current_candidate_count
+            or current_urls != previous_urls
         ):
             return
     raise AppError(
@@ -2018,15 +2100,15 @@ async def _browser_wait_for_settle(
 def _browser_named_control_selector() -> str:
     return (
         "button, "
-        "[role=\"button\"], "
-        "a[role=\"button\"], "
+        '[role="button"], '
+        'a[role="button"], '
         "a.button, "
         "a.btn, "
         "a.wp-block-button__link, "
         "a.cursor-pointer, "
-        "a[class*=\"btn\"], "
-        "input[type=\"button\"], "
-        "input[type=\"submit\"], "
+        'a[class*="btn"], '
+        'input[type="button"], '
+        'input[type="submit"], '
         ".load-more"
     )
 
@@ -2189,7 +2271,9 @@ def _browser_inventory_state_script() -> str:
 
 
 def _browser_rendered_html_script() -> str:
-    return """() => document.documentElement ? document.documentElement.outerHTML : ''"""
+    return (
+        """() => document.documentElement ? document.documentElement.outerHTML : ''"""
+    )
 
 
 def _browser_click_named_control_script() -> str:
@@ -2677,7 +2761,9 @@ def _extract_browser_http_supplement_candidates(
     if response is None:
         return []
 
-    final_page_url = _validate_and_normalize_url(str(response.final_url or page.page_url))
+    final_page_url = _validate_and_normalize_url(
+        str(response.final_url or page.page_url)
+    )
     html = str(response.text_body or "")
     logger.info(
         log_event(
@@ -2810,7 +2896,9 @@ def _prepare_session_dir(*, root_dir: str, normalized_url: str) -> Path:
 
 def _load_browser_use_runtime(normalized_url: str) -> Any:
     os.environ.setdefault("BROWSER_USE_SETUP_LOGGING", "false")
-    vendored_root = (Path(__file__).resolve().parents[2] / "tools" / "browser-use").resolve()
+    vendored_root = (
+        Path(__file__).resolve().parents[2] / "tools" / "browser-use"
+    ).resolve()
     load_errors: list[tuple[str, Exception]] = []
     for import_mode, extra_path in (
         ("direct", None),
@@ -2827,9 +2915,7 @@ def _load_browser_use_runtime(normalized_url: str) -> Any:
 
     final_mode, final_error = load_errors[-1]
     missing_dependency = (
-        final_error.name
-        if isinstance(final_error, ModuleNotFoundError)
-        else ""
+        final_error.name if isinstance(final_error, ModuleNotFoundError) else ""
     )
     raise AppError(
         code="browser_use_unavailable",

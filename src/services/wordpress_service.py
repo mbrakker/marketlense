@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from typing import Any, Dict, Iterator, NoReturn, Optional
 
 import requests  # type: ignore[import-untyped]
-import urllib3  # type: ignore[import-untyped]
+import urllib3
 
 from src.contracts.run_context import RunContext
 from src.contracts.wordpress import (

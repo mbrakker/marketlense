@@ -7,7 +7,7 @@ from typing import Any
 # Keep these characters because they carry numeric/unit semantics.
 _PRESERVED_NUMERIC_PUNCT = ".,%$€£¥"
 
-_CHAR_REPLACEMENTS = {
+_CHAR_REPLACEMENTS: dict[str, str | int | None] = {
     "\u2018": "'",
     "\u2019": "'",
     "\u201a": "'",
@@ -63,7 +63,12 @@ def normalize_for_lookup(value: Any) -> str:
         return ""
     cleaned = []
     for ch in text:
-        if ch.isalnum() or ch.isspace() or ch in _PRESERVED_NUMERIC_PUNCT or ch in {"-", "/", ":", ">", "<", "=", "~", "≈"}:
+        if (
+            ch.isalnum()
+            or ch.isspace()
+            or ch in _PRESERVED_NUMERIC_PUNCT
+            or ch in {"-", "/", ":", ">", "<", "=", "~", "≈"}
+        ):
             cleaned.append(ch)
         else:
             cleaned.append(" ")

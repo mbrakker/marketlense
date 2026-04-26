@@ -19,6 +19,7 @@ from src.contracts.report_generation import (
     ReportSourceState,
 )
 from src.contracts.report_store import ReportMetadataGetResponse
+from src.contracts.semantic_ids import ReportId
 from src.contracts.state import StateGetRequest
 from src.contracts.taxonomy import TaxonomyExtractRequest
 from src.contracts.vector_store import (
@@ -137,7 +138,7 @@ def start_vector_store_indexing(
                 name=runtime.file.file_id,
                 metadata=VectorStoreMetadata(
                     schema_version="1.0",
-                    report_id=runtime.file.file_id,
+                    report_id=ReportId(runtime.file.file_id),
                     report_name=runtime.file_name or runtime.file.file_id,
                     taxonomy=[],
                     categories=[],
@@ -255,7 +256,7 @@ def _resolve_taxonomy(
     taxonomy_resp = dependencies.extract_taxonomy(
         TaxonomyExtractRequest(
             schema_version="1.0",
-            report_id=runtime.file.file_id,
+            report_id=ReportId(runtime.file.file_id),
             report_title=runtime.report_title,
             vector_store_id=vector_store_id or "",
             settings=runtime.settings,

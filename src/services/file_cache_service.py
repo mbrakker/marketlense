@@ -14,6 +14,7 @@ from src.contracts.file_cache import (
     FileCacheMd5SidecarWriteResponse,
 )
 from src.contracts.run_context import RunContext
+from src.utils.coercion import coerce_float
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -272,7 +273,7 @@ def _record_from_payload(
     if normalized_md5 is None:
         return None
     try:
-        size_bytes = int(payload.get("size_bytes"))
+        size_bytes = int(str(payload.get("size_bytes")))
     except (TypeError, ValueError):
         return None
     normalized_mtime = _normalize_mtime(payload.get("mtime_utc"))
@@ -361,6 +362,6 @@ def _normalize_mtime(value: object) -> int | None:
     if value is None:
         return None
     try:
-        return int(value)
+        return int(coerce_float(value))
     except (TypeError, ValueError):
         return None

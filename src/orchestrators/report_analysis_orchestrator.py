@@ -559,7 +559,7 @@ def run_report_analysis(
         file_id=runtime.file.file_id,
         md5=runtime.md5,
         ctx=mode_ctx,
-        dependencies=dependencies.figure_caption,
+        dependencies=dependencies,
         stage="evidence_packs",
         vector_store_id=vector_state.vector_store_id,
         vector_store_status=vector_state.vector_store_status,

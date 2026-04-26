@@ -12,6 +12,7 @@ from src.contracts.report_analysis import (
     AnalysisStorePackRequest,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.semantic_ids import ReportId
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.generators.analysis_pack_cache import (
     CachedPackAdaptResult,
@@ -165,7 +166,8 @@ def _pack_confidence_score(pack_name: str, payload: dict) -> float:
 
 
 def _doc_map_confidence_score(payload: dict) -> float:
-    sections = payload.get("sections") if isinstance(payload.get("sections"), list) else []
+    raw_sections = payload.get("sections")
+    sections = raw_sections if isinstance(raw_sections, list) else []
     title_present = bool(str(payload.get("title") or "").strip())
     doc_id_present = bool(str(payload.get("doc_id") or "").strip())
     sections_with_summary = 0
@@ -195,7 +197,9 @@ def _scalar_or_list_pack_confidence(payload: dict, *, root_key: str) -> float:
             if isinstance(item, str) and item.strip():
                 substantive += 1
                 continue
-            if isinstance(item, dict) and any(str(v or "").strip() for v in item.values()):
+            if isinstance(item, dict) and any(
+                str(v or "").strip() for v in item.values()
+            ):
                 substantive += 1
         ratio = substantive / max(1, len(value))
         return max(0.0, min(1.0, round(0.4 + (0.5 * ratio), 3)))
@@ -288,7 +292,9 @@ def generate_evidence_packs(
                     "vector_store_id": vector_store_id,
                     "sections_count": completeness["sections_count"],
                     "sections_with_summary": completeness["sections_with_summary"],
-                    "sections_missing_summary": completeness["sections_missing_summary"],
+                    "sections_missing_summary": completeness[
+                        "sections_missing_summary"
+                    ],
                     "summary_coverage_ratio": completeness["summary_coverage_ratio"],
                     "sections_with_key_points": completeness[
                         "sections_with_key_points"
@@ -812,7 +818,7 @@ def _resolve_pack_path(
         request=AnalysisPackPathRequest(
             schema_version="1.0",
             output_dir=output_dir,
-            report_id=report_id,
+            report_id=ReportId(report_id),
             pack_name=pack_name,
             report_slug=report_name,
         ),
@@ -835,7 +841,7 @@ def _store_pack(
         request=AnalysisStorePackRequest(
             schema_version="1.0",
             output_dir=output_dir,
-            report_id=report_id,
+            report_id=ReportId(report_id),
             pack_name=pack_name,
             payload=payload,
             report_slug=report_name,

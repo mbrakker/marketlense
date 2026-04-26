@@ -5,6 +5,7 @@ import re
 from typing import Any, Dict, List, Sequence
 
 from src.contracts.config import AppSettings
+from src.contracts.ingest import IngestSettings
 from src.contracts.validation import ValidationIssue, ValidationRequest
 
 LOGGER_NAME = "market_lense.validation_generator"
@@ -137,7 +138,7 @@ def has_data_gap(artifacts: dict) -> bool:
     return False
 
 
-def validation_parallel_workers(settings: AppSettings) -> int:
+def validation_parallel_workers(settings: AppSettings | IngestSettings) -> int:
     raw = getattr(settings, "report_worker_limit", 1)
     try:
         workers = int(raw)
@@ -149,7 +150,7 @@ def validation_parallel_workers(settings: AppSettings) -> int:
 
 
 def resolve_grounding_vector_store_mode(
-    *, request: ValidationRequest, settings: AppSettings
+    *, request: ValidationRequest, settings: AppSettings | IngestSettings
 ) -> bool:
     return bool(request.vector_store_id) and bool(
         getattr(settings, "validation_grounding_use_vector_store", False)

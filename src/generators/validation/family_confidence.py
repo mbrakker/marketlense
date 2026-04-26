@@ -4,6 +4,7 @@ from typing import List
 
 from src.contracts.validation import ValidationIssue
 from src.utils.analysis_family import get_family_status
+from src.utils.coercion import coerce_float
 
 from .models import ValidationRuntime
 from .shared import ensure_dict, issue, s
@@ -76,7 +77,4 @@ def run_family_confidence_rule(runtime: ValidationRuntime) -> List[ValidationIss
 
 
 def _format_confidence(value: object) -> str:
-    try:
-        return f"{float(value):.2f}"
-    except (TypeError, ValueError):
-        return "0.00"
+    return f"{coerce_float(value, 0.0):.2f}"

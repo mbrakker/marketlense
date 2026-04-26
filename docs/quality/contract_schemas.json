@@ -324,6 +324,41 @@
       ],
       "type": "object"
     },
+    "src.contracts.analysis_family.AnalysisFamilyStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence_score": {
+          "type": "number"
+        },
+        "family": {
+          "type": "string"
+        },
+        "policy_action": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "family",
+        "source",
+        "status",
+        "confidence_score",
+        "policy_action"
+      ],
+      "type": "object"
+    },
     "src.contracts.analytics_projection.AnalyticsProjectionBatch": {
       "additionalProperties": false,
       "properties": {
@@ -4092,7 +4127,14 @@
           "type": "string"
         },
         "settings": {
-          "$ref": "#/$defs/src.contracts.config.AppSettings"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.config.AppSettings"
+            },
+            {
+              "$ref": "#/$defs/src.contracts.ingest.IngestSettings"
+            }
+          ]
         }
       },
       "required": [
@@ -6364,6 +6406,230 @@
       ],
       "type": "object"
     },
+    "src.contracts.file_cache.FileCacheMd5SidecarRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "file_id": {
+          "type": "string"
+        },
+        "md5": {
+          "type": "string"
+        },
+        "mtime_utc": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "size_bytes": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "file_id",
+        "name",
+        "md5",
+        "size_bytes",
+        "mtime_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.file_cache.FileCacheMd5SidecarResolveRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "cache_path": {
+          "type": "string"
+        },
+        "file_id": {
+          "type": "string"
+        },
+        "mtime_utc": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "size_bytes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "cache_path",
+        "file_id",
+        "size_bytes",
+        "mtime_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.file_cache.FileCacheMd5SidecarResolveResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "cache_path": {
+          "type": "string"
+        },
+        "hit": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "record": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.file_cache.FileCacheMd5SidecarRecord"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resolved_md5": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "sidecar_exists": {
+          "type": "boolean"
+        },
+        "sidecar_path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "cache_path",
+        "sidecar_path",
+        "sidecar_exists",
+        "hit",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "src.contracts.file_cache.FileCacheMd5SidecarWriteRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "cache_path": {
+          "type": "string"
+        },
+        "file_id": {
+          "type": "string"
+        },
+        "file_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "md5": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mtime_utc": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "size_bytes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "cache_path",
+        "file_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.file_cache.FileCacheMd5SidecarWriteResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "cache_path": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "record": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.file_cache.FileCacheMd5SidecarRecord"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "sidecar_path": {
+          "type": "string"
+        },
+        "written": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema_version",
+        "cache_path",
+        "sidecar_path",
+        "written",
+        "reason"
+      ],
+      "type": "object"
+    },
     "src.contracts.files.DeleteFileRequest": {
       "additionalProperties": false,
       "properties": {
@@ -6840,6 +7106,426 @@
         "path",
         "bytes_written",
         "md5"
+      ],
+      "type": "object"
+    },
+    "src.contracts.http_acquisition.HttpAcquisitionRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "allow_redirects": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "body_too_large_code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "body_too_large_message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "context_fields": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "data": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "error_code": {
+          "type": "string"
+        },
+        "error_message": {
+          "type": "string"
+        },
+        "headers": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "method": {
+          "type": "string"
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "range_header": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "response_policy": {
+          "$ref": "#/$defs/src.contracts.http_acquisition.HttpAcquisitionResponsePolicy"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "timeout_seconds": {
+          "type": "number"
+        },
+        "url": {
+          "type": "string"
+        },
+        "write_error_code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "write_error_message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "purpose",
+        "method",
+        "url",
+        "headers",
+        "timeout_seconds",
+        "response_policy",
+        "error_code",
+        "error_message"
+      ],
+      "type": "object"
+    },
+    "src.contracts.http_acquisition.HttpAcquisitionResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "body_bytes": {
+          "anyOf": [
+            {
+              "contentEncoding": "base64",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "body_truncated": {
+          "type": "boolean"
+        },
+        "content_length_bytes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "content_type": {
+          "type": "string"
+        },
+        "final_url": {
+          "type": "string"
+        },
+        "headers": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "method": {
+          "type": "string"
+        },
+        "pool_key": {
+          "type": "string"
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "request_url": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status_code": {
+          "type": "integer"
+        },
+        "streamed_bytes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "streamed_to_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "text_body": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "used_pooled_session": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema_version",
+        "purpose",
+        "method",
+        "request_url",
+        "final_url",
+        "status_code",
+        "headers",
+        "content_type"
+      ],
+      "type": "object"
+    },
+    "src.contracts.http_acquisition.HttpAcquisitionResponsePolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "capture_binary": {
+          "type": "boolean"
+        },
+        "capture_content_type_markers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "capture_text": {
+          "type": "boolean"
+        },
+        "chunk_size_bytes": {
+          "type": "integer"
+        },
+        "max_body_bytes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_stream_bytes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "require_success_status": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "stream_to_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "truncate_body": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema_version",
+        "require_success_status",
+        "capture_text"
+      ],
+      "type": "object"
+    },
+    "src.contracts.idempotency.OrchestratorIdempotencyGetRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "db_path": {
+          "type": "string"
+        },
+        "idempotency_key": {
+          "type": "string"
+        },
+        "input_checksum": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "scope",
+        "idempotency_key",
+        "input_checksum"
+      ],
+      "type": "object"
+    },
+    "src.contracts.idempotency.OrchestratorIdempotencyLookupResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "found": {
+          "type": "boolean"
+        },
+        "record": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.idempotency.OrchestratorIdempotencyRecord"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "found"
+      ],
+      "type": "object"
+    },
+    "src.contracts.idempotency.OrchestratorIdempotencyRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_references": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "idempotency_key": {
+          "type": "string"
+        },
+        "input_checksum": {
+          "type": "string"
+        },
+        "outcome_payload": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "recorded_at_utc": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "scope",
+        "idempotency_key",
+        "input_checksum",
+        "outcome_payload",
+        "recorded_at_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.idempotency.OrchestratorIdempotencyRecordRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_references": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "idempotency_key": {
+          "type": "string"
+        },
+        "input_checksum": {
+          "type": "string"
+        },
+        "outcome_payload": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "db_path",
+        "scope",
+        "idempotency_key",
+        "input_checksum",
+        "outcome_payload"
       ],
       "type": "object"
     },
@@ -9422,6 +10108,172 @@
         "schema_version",
         "path",
         "page_count"
+      ],
+      "type": "object"
+    },
+    "src.contracts.prompts.PromptDryRunBenchmark": {
+      "additionalProperties": false,
+      "properties": {
+        "expected_browser_attempts": {
+          "type": "integer"
+        },
+        "expected_ocr_calls": {
+          "type": "integer"
+        },
+        "expected_output_tokens": {
+          "type": "integer"
+        },
+        "expected_tool_calls": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts.prompts.PromptDryRunFixture": {
+      "additionalProperties": false,
+      "properties": {
+        "benchmark": {
+          "$ref": "#/$defs/src.contracts.prompts.PromptDryRunBenchmark"
+        },
+        "family": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "system_variables": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "temperature": {
+          "type": "number"
+        },
+        "user_variables": {
+          "additionalProperties": {},
+          "type": "object"
+        }
+      },
+      "required": [
+        "schema_version",
+        "namespace",
+        "family",
+        "system_variables",
+        "user_variables"
+      ],
+      "type": "object"
+    },
+    "src.contracts.prompts.PromptDryRunRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "force_reload": {
+          "type": "boolean"
+        },
+        "namespaces": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "reload_if_changed": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts.prompts.PromptDryRunResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "results": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.prompts.PromptDryRunResult"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "results"
+      ],
+      "type": "object"
+    },
+    "src.contracts.prompts.PromptDryRunResult": {
+      "additionalProperties": false,
+      "properties": {
+        "benchmark": {
+          "$ref": "#/$defs/src.contracts.prompts.PromptDryRunBenchmark"
+        },
+        "family": {
+          "type": "string"
+        },
+        "fixture_path": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "render_runtime_ms": {
+          "type": "number"
+        },
+        "rendered_system_prompt": {
+          "type": "string"
+        },
+        "rendered_user_prompt": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "system_path": {
+          "type": "string"
+        },
+        "system_sha256": {
+          "type": "string"
+        },
+        "temperature": {
+          "type": "number"
+        },
+        "user_path": {
+          "type": "string"
+        },
+        "user_sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "namespace",
+        "family",
+        "fixture_path",
+        "system_path",
+        "user_path",
+        "system_sha256",
+        "user_sha256",
+        "rendered_system_prompt",
+        "rendered_user_prompt"
       ],
       "type": "object"
     },
@@ -15560,6 +16412,85 @@
       ],
       "type": "object"
     },
+    "src.contracts.sqlite_migration.SqliteMigrationAppliedStep": {
+      "additionalProperties": false,
+      "properties": {
+        "duration_ms": {
+          "type": "integer"
+        },
+        "migration_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "migration_id",
+        "version",
+        "duration_ms"
+      ],
+      "type": "object"
+    },
+    "src.contracts.sqlite_migration.SqliteMigrationApplyRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "ctx": {
+          "$ref": "#/$defs/src.contracts.run_context.RunContext"
+        },
+        "database_key": {
+          "type": "string"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "target_version": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_version",
+        "database_key",
+        "db_path",
+        "target_version",
+        "ctx"
+      ],
+      "type": "object"
+    },
+    "src.contracts.sqlite_migration.SqliteMigrationApplyResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "applied_steps": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.sqlite_migration.SqliteMigrationAppliedStep"
+          },
+          "type": "array"
+        },
+        "current_version": {
+          "type": "integer"
+        },
+        "database_key": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "database_key",
+        "current_version",
+        "applied_steps"
+      ],
+      "type": "object"
+    },
     "src.contracts.state.StateBatchCheckItem": {
       "additionalProperties": false,
       "properties": {
@@ -17152,7 +18083,14 @@
           "type": "string"
         },
         "settings": {
-          "$ref": "#/$defs/src.contracts.config.AppSettings"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.config.AppSettings"
+            },
+            {
+              "$ref": "#/$defs/src.contracts.ingest.IngestSettings"
+            }
+          ]
         },
         "vector_store_id": {
           "type": "string"
@@ -19085,28 +20023,6 @@
         "schema_version",
         "vector_store_id",
         "openai_file_id"
-      ],
-      "type": "object"
-    },
-    "src.contracts.vector_store.VectorStoreWaitRequest": {
-      "additionalProperties": false,
-      "properties": {
-        "poll_interval_s": {
-          "type": "integer"
-        },
-        "schema_version": {
-          "type": "string"
-        },
-        "timeout_s": {
-          "type": "integer"
-        },
-        "vector_store_id": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "schema_version",
-        "vector_store_id"
       ],
       "type": "object"
     },

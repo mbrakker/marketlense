@@ -1,5 +1,5 @@
 {
-  "error_count": 171,
+  "error_count": 141,
   "errors": [
     {
       "code": "arg-type",
@@ -24,14 +24,6 @@
       "message": "Argument \"run_id\" to \"UiRunReplayRequest\" has incompatible type \"str\"; expected \"RunId\"",
       "owner": "quality/type-safety",
       "path": "src/cli.py"
-    },
-    {
-      "code": "arg-type",
-      "expires_at": "2026-06-30",
-      "line": 115,
-      "message": "Argument 1 to \"__call__\" of \"_lru_cache_wrapper\" has incompatible type \"type[object]\"; expected \"Hashable\"",
-      "owner": "quality/type-safety",
-      "path": "src/contracts/semantic_ids.py"
     },
     {
       "code": "union-attr",
@@ -292,7 +284,7 @@
     {
       "code": "union-attr",
       "expires_at": "2026-06-30",
-      "line": 1288,
+      "line": 1614,
       "message": "Item \"None\" of \"Any | list[Any] | None\" has no attribute \"__iter__\" (not iterable)",
       "owner": "quality/type-safety",
       "path": "src/generators/artifact_generator.py"
@@ -300,7 +292,7 @@
     {
       "code": "arg-type",
       "expires_at": "2026-06-30",
-      "line": 1409,
+      "line": 1735,
       "message": "Argument 1 to \"len\" has incompatible type \"Any | list[Any] | None\"; expected \"Sized\"",
       "owner": "quality/type-safety",
       "path": "src/generators/artifact_generator.py"
@@ -308,7 +300,7 @@
     {
       "code": "arg-type",
       "expires_at": "2026-06-30",
-      "line": 1419,
+      "line": 1745,
       "message": "Argument 2 to \"zip\" has incompatible type \"Any | list[Any] | None\"; expected \"Iterable[Any]\"",
       "owner": "quality/type-safety",
       "path": "src/generators/artifact_generator.py"
@@ -316,7 +308,7 @@
     {
       "code": "union-attr",
       "expires_at": "2026-06-30",
-      "line": 1482,
+      "line": 1808,
       "message": "Item \"None\" of \"Any | list[Any] | None\" has no attribute \"__iter__\" (not iterable)",
       "owner": "quality/type-safety",
       "path": "src/generators/artifact_generator.py"
@@ -324,55 +316,7 @@
     {
       "code": "arg-type",
       "expires_at": "2026-06-30",
-      "line": 1697,
-      "message": "Argument \"report_id\" to \"AnalysisPackPathRequest\" has incompatible type \"str\"; expected \"ReportId\"",
-      "owner": "quality/type-safety",
-      "path": "src/generators/artifact_generator.py"
-    },
-    {
-      "code": "arg-type",
-      "expires_at": "2026-06-30",
-      "line": 1720,
-      "message": "Argument \"report_id\" to \"AnalysisStorePackRequest\" has incompatible type \"str\"; expected \"ReportId\"",
-      "owner": "quality/type-safety",
-      "path": "src/generators/artifact_generator.py"
-    },
-    {
-      "code": "union-attr",
-      "expires_at": "2026-06-30",
-      "line": 1755,
-      "message": "Item \"None\" of \"Any | dict[Any, Any] | None\" has no attribute \"get\"",
-      "owner": "quality/type-safety",
-      "path": "src/generators/artifact_generator.py"
-    },
-    {
-      "code": "union-attr",
-      "expires_at": "2026-06-30",
-      "line": 1757,
-      "message": "Item \"None\" of \"Any | dict[Any, Any] | None\" has no attribute \"get\"",
-      "owner": "quality/type-safety",
-      "path": "src/generators/artifact_generator.py"
-    },
-    {
-      "code": "arg-type",
-      "expires_at": "2026-06-30",
-      "line": 1759,
-      "message": "Argument 1 to \"len\" has incompatible type \"Any | list[Any] | None\"; expected \"Sized\"",
-      "owner": "quality/type-safety",
-      "path": "src/generators/artifact_generator.py"
-    },
-    {
-      "code": "index",
-      "expires_at": "2026-06-30",
-      "line": 1761,
-      "message": "Value of type \"Any | list[Any] | None\" is not indexable",
-      "owner": "quality/type-safety",
-      "path": "src/generators/artifact_generator.py"
-    },
-    {
-      "code": "arg-type",
-      "expires_at": "2026-06-30",
-      "line": 255,
+      "line": 252,
       "message": "Argument 1 to \"float\" has incompatible type \"Any | None\"; expected \"str | Buffer | SupportsFloat | SupportsIndex\"",
       "owner": "quality/type-safety",
       "path": "src/generators/context_category_fit_generator.py"
@@ -380,7 +324,7 @@
     {
       "code": "arg-type",
       "expires_at": "2026-06-30",
-      "line": 300,
+      "line": 297,
       "message": "Argument \"report_id\" to \"ContextCategoryFitResponse\" has incompatible type \"str\"; expected \"ReportId\"",
       "owner": "quality/type-safety",
       "path": "src/generators/context_category_fit_generator.py"
@@ -392,78 +336,6 @@
       "message": "Argument 4 to \"build_cover_asset_path\" has incompatible type \"str | None\"; expected \"str\"",
       "owner": "quality/type-safety",
       "path": "src/generators/cover_image_generator.py"
-    },
-    {
-      "code": "arg-type",
-      "expires_at": "2026-06-30",
-      "line": 696,
-      "message": "Argument \"report_id\" to \"AnalysisPackPathRequest\" has incompatible type \"str\"; expected \"ReportId\"",
-      "owner": "quality/type-safety",
-      "path": "src/generators/evidence_pack_generator.py"
-    },
-    {
-      "code": "arg-type",
-      "expires_at": "2026-06-30",
-      "line": 719,
-      "message": "Argument \"report_id\" to \"AnalysisStorePackRequest\" has incompatible type \"str\"; expected \"ReportId\"",
-      "owner": "quality/type-safety",
-      "path": "src/generators/evidence_pack_generator.py"
-    },
-    {
-      "code": "arg-type",
-      "expires_at": "2026-06-30",
-      "line": 71,
-      "message": "Argument \"normalize_items\" to \"build_list_pack_strategy\" has incompatible type \"Callable[[object], list[dict[str, object]]]\"; expected \"Callable[[object], list[object]]\"",
-      "owner": "quality/type-safety",
-      "path": "src/generators/evidence_packs/contradictions_strategy.py"
-    },
-    {
-      "code": "arg-type",
-      "expires_at": "2026-06-30",
-      "line": 71,
-      "message": "Argument \"normalize_items\" to \"build_list_pack_strategy\" has incompatible type \"Callable[[object], list[dict[str, object]]]\"; expected \"Callable[[object], list[object]]\"",
-      "owner": "quality/type-safety",
-      "path": "src/generators/evidence_packs/findings_strategy.py"
-    },
-    {
-      "code": "arg-type",
-      "expires_at": "2026-06-30",
-      "line": 70,
-      "message": "Argument \"normalize_items\" to \"build_list_pack_strategy\" has incompatible type \"Callable[[object], list[dict[str, object]]]\"; expected \"Callable[[object], list[object]]\"",
-      "owner": "quality/type-safety",
-      "path": "src/generators/evidence_packs/key_metrics_strategy.py"
-    },
-    {
-      "code": "arg-type",
-      "expires_at": "2026-06-30",
-      "line": 49,
-      "message": "Argument \"normalize_items\" to \"build_list_pack_strategy\" has incompatible type \"Callable[[object], list[str]]\"; expected \"Callable[[object], list[object]]\"",
-      "owner": "quality/type-safety",
-      "path": "src/generators/evidence_packs/limitations_strategy.py"
-    },
-    {
-      "code": "arg-type",
-      "expires_at": "2026-06-30",
-      "line": 71,
-      "message": "Argument \"normalize_items\" to \"build_list_pack_strategy\" has incompatible type \"Callable[[object], list[dict[str, object]]]\"; expected \"Callable[[object], list[object]]\"",
-      "owner": "quality/type-safety",
-      "path": "src/generators/evidence_packs/quote_candidates_strategy.py"
-    },
-    {
-      "code": "arg-type",
-      "expires_at": "2026-06-30",
-      "line": 65,
-      "message": "Argument \"normalize_items\" to \"build_list_pack_strategy\" has incompatible type \"Callable[[object], list[dict[str, object]]]\"; expected \"Callable[[object], list[object]]\"",
-      "owner": "quality/type-safety",
-      "path": "src/generators/evidence_packs/recommendations_strategy.py"
-    },
-    {
-      "code": "arg-type",
-      "expires_at": "2026-06-30",
-      "line": 66,
-      "message": "Argument \"normalize_items\" to \"build_list_pack_strategy\" has incompatible type \"Callable[[object], list[dict[str, object]]]\"; expected \"Callable[[object], list[object]]\"",
-      "owner": "quality/type-safety",
-      "path": "src/generators/evidence_packs/risk_register_strategy.py"
     },
     {
       "code": "arg-type",
@@ -532,38 +404,6 @@
     {
       "code": "arg-type",
       "expires_at": "2026-06-30",
-      "line": 141,
-      "message": "Argument \"report_id\" to \"VectorStoreMetadata\" has incompatible type \"str\"; expected \"ReportId\"",
-      "owner": "quality/type-safety",
-      "path": "src/generators/report_analysis_generator.py"
-    },
-    {
-      "code": "arg-type",
-      "expires_at": "2026-06-30",
-      "line": 337,
-      "message": "Argument \"report_id\" to \"TaxonomyExtractRequest\" has incompatible type \"str\"; expected \"ReportId\"",
-      "owner": "quality/type-safety",
-      "path": "src/generators/report_analysis_generator.py"
-    },
-    {
-      "code": "arg-type",
-      "expires_at": "2026-06-30",
-      "line": 340,
-      "message": "Argument \"settings\" to \"TaxonomyExtractRequest\" has incompatible type \"IngestSettings\"; expected \"AppSettings\"",
-      "owner": "quality/type-safety",
-      "path": "src/generators/report_analysis_generator.py"
-    },
-    {
-      "code": "arg-type",
-      "expires_at": "2026-06-30",
-      "line": 397,
-      "message": "Argument \"settings\" to \"ContextCategoryFitRequest\" has incompatible type \"IngestSettings\"; expected \"AppSettings\"",
-      "owner": "quality/type-safety",
-      "path": "src/generators/report_analysis_generator.py"
-    },
-    {
-      "code": "arg-type",
-      "expires_at": "2026-06-30",
       "line": 52,
       "message": "Argument \"report_id\" to \"ReportCategoryContext\" has incompatible type \"str\"; expected \"ReportId\"",
       "owner": "quality/type-safety",
@@ -572,7 +412,7 @@
     {
       "code": "union-attr",
       "expires_at": "2026-06-30",
-      "line": 284,
+      "line": 313,
       "message": "Item \"None\" of \"Any | dict[Any, Any] | None\" has no attribute \"get\"",
       "owner": "quality/type-safety",
       "path": "src/generators/report_generation_shared.py"
@@ -580,7 +420,7 @@
     {
       "code": "union-attr",
       "expires_at": "2026-06-30",
-      "line": 285,
+      "line": 314,
       "message": "Item \"None\" of \"Any | dict[Any, Any] | None\" has no attribute \"get\"",
       "owner": "quality/type-safety",
       "path": "src/generators/report_generation_shared.py"
@@ -588,7 +428,7 @@
     {
       "code": "union-attr",
       "expires_at": "2026-06-30",
-      "line": 294,
+      "line": 323,
       "message": "Item \"None\" of \"Any | dict[Any, Any] | None\" has no attribute \"get\"",
       "owner": "quality/type-safety",
       "path": "src/generators/report_generation_shared.py"
@@ -596,7 +436,7 @@
     {
       "code": "union-attr",
       "expires_at": "2026-06-30",
-      "line": 295,
+      "line": 324,
       "message": "Item \"None\" of \"Any | dict[Any, Any] | None\" has no attribute \"get\"",
       "owner": "quality/type-safety",
       "path": "src/generators/report_generation_shared.py"
@@ -604,7 +444,7 @@
     {
       "code": "union-attr",
       "expires_at": "2026-06-30",
-      "line": 296,
+      "line": 325,
       "message": "Item \"None\" of \"Any | dict[Any, Any] | None\" has no attribute \"get\"",
       "owner": "quality/type-safety",
       "path": "src/generators/report_generation_shared.py"
@@ -612,7 +452,7 @@
     {
       "code": "union-attr",
       "expires_at": "2026-06-30",
-      "line": 309,
+      "line": 338,
       "message": "Item \"None\" of \"Any | dict[Any, Any] | None\" has no attribute \"get\"",
       "owner": "quality/type-safety",
       "path": "src/generators/report_generation_shared.py"
@@ -620,7 +460,7 @@
     {
       "code": "union-attr",
       "expires_at": "2026-06-30",
-      "line": 328,
+      "line": 357,
       "message": "Item \"None\" of \"Any | dict[Any, Any] | None\" has no attribute \"get\"",
       "owner": "quality/type-safety",
       "path": "src/generators/report_generation_shared.py"
@@ -628,7 +468,7 @@
     {
       "code": "union-attr",
       "expires_at": "2026-06-30",
-      "line": 330,
+      "line": 359,
       "message": "Item \"None\" of \"Any | dict[Any, Any] | None\" has no attribute \"get\"",
       "owner": "quality/type-safety",
       "path": "src/generators/report_generation_shared.py"
@@ -636,7 +476,7 @@
     {
       "code": "union-attr",
       "expires_at": "2026-06-30",
-      "line": 350,
+      "line": 379,
       "message": "Item \"None\" of \"Any | list[Any] | None\" has no attribute \"__iter__\" (not iterable)",
       "owner": "quality/type-safety",
       "path": "src/generators/report_generation_shared.py"
@@ -644,47 +484,7 @@
     {
       "code": "arg-type",
       "expires_at": "2026-06-30",
-      "line": 376,
-      "message": "Argument \"report_id\" to \"AnalysisPackPathRequest\" has incompatible type \"str\"; expected \"ReportId\"",
-      "owner": "quality/type-safety",
-      "path": "src/generators/report_generation_shared.py"
-    },
-    {
-      "code": "arg-type",
-      "expires_at": "2026-06-30",
-      "line": 121,
-      "message": "Argument 2 to \"normalize_artifact_source_status\" has incompatible type \"IngestSettings\"; expected \"AppSettings\"",
-      "owner": "quality/type-safety",
-      "path": "src/generators/report_regeneration_generator.py"
-    },
-    {
-      "code": "arg-type",
-      "expires_at": "2026-06-30",
-      "line": 130,
-      "message": "Argument \"settings\" to \"artifact_vector_store_enabled\" has incompatible type \"IngestSettings\"; expected \"AppSettings\"",
-      "owner": "quality/type-safety",
-      "path": "src/generators/report_regeneration_generator.py"
-    },
-    {
-      "code": "arg-type",
-      "expires_at": "2026-06-30",
-      "line": 295,
-      "message": "Argument 2 to \"prepare_validation_inputs\" has incompatible type \"IngestSettings\"; expected \"AppSettings\"",
-      "owner": "quality/type-safety",
-      "path": "src/generators/report_regeneration_generator.py"
-    },
-    {
-      "code": "arg-type",
-      "expires_at": "2026-06-30",
-      "line": 586,
-      "message": "Argument \"settings\" to \"render_artifact_json_model\" has incompatible type \"IngestSettings\"; expected \"AppSettings\"",
-      "owner": "quality/type-safety",
-      "path": "src/generators/report_regeneration_generator.py"
-    },
-    {
-      "code": "arg-type",
-      "expires_at": "2026-06-30",
-      "line": 524,
+      "line": 638,
       "message": "Argument \"report_id\" to \"AnalysisPackPathRequest\" has incompatible type \"str\"; expected \"ReportId\"",
       "owner": "quality/type-safety",
       "path": "src/generators/report_selection_generator.py"
@@ -692,7 +492,7 @@
     {
       "code": "arg-type",
       "expires_at": "2026-06-30",
-      "line": 587,
+      "line": 701,
       "message": "Argument \"report_id\" to \"AnalysisStorePackRequest\" has incompatible type \"str\"; expected \"ReportId\"",
       "owner": "quality/type-safety",
       "path": "src/generators/report_selection_generator.py"
@@ -764,7 +564,7 @@
     {
       "code": "arg-type",
       "expires_at": "2026-06-30",
-      "line": 393,
+      "line": 390,
       "message": "Argument \"report_id\" to \"AnalysisPackPathRequest\" has incompatible type \"str\"; expected \"ReportId\"",
       "owner": "quality/type-safety",
       "path": "src/generators/taxonomy_generator.py"
@@ -772,7 +572,7 @@
     {
       "code": "arg-type",
       "expires_at": "2026-06-30",
-      "line": 415,
+      "line": 412,
       "message": "Argument \"report_id\" to \"AnalysisStorePackRequest\" has incompatible type \"str\"; expected \"ReportId\"",
       "owner": "quality/type-safety",
       "path": "src/generators/taxonomy_generator.py"
@@ -954,17 +754,9 @@
       "path": "src/orchestrators/cover_image_orchestrator.py"
     },
     {
-      "code": "arg-type",
-      "expires_at": "2026-06-30",
-      "line": 256,
-      "message": "Argument 1 to \"int\" has incompatible type \"Any | None\"; expected \"str | Buffer | SupportsInt | SupportsIndex | SupportsTrunc\"",
-      "owner": "quality/type-safety",
-      "path": "src/orchestrators/ingest_orchestrator.py"
-    },
-    {
       "code": "call-arg",
       "expires_at": "2026-06-30",
-      "line": 761,
+      "line": 620,
       "message": "Unexpected keyword argument \"max_workers\"",
       "owner": "quality/type-safety",
       "path": "src/orchestrators/ingest_orchestrator.py"
@@ -972,7 +764,7 @@
     {
       "code": "misc",
       "expires_at": "2026-06-30",
-      "line": 711,
+      "line": 934,
       "message": "Cannot infer type of lambda",
       "owner": "quality/type-safety",
       "path": "src/orchestrators/publisher_inventory_orchestrator.py"
@@ -980,7 +772,15 @@
     {
       "code": "arg-type",
       "expires_at": "2026-06-30",
-      "line": 1005,
+      "line": 1018,
+      "message": "Argument \"report_id\" to \"ValidationRequest\" has incompatible type \"str\"; expected \"ReportId\"",
+      "owner": "quality/type-safety",
+      "path": "src/orchestrators/report_analysis_orchestrator.py"
+    },
+    {
+      "code": "arg-type",
+      "expires_at": "2026-06-30",
+      "line": 1156,
       "message": "Argument \"report_id\" to \"AnalysisPackPathRequest\" has incompatible type \"str\"; expected \"ReportId\"",
       "owner": "quality/type-safety",
       "path": "src/orchestrators/report_analysis_orchestrator.py"
@@ -988,7 +788,7 @@
     {
       "code": "arg-type",
       "expires_at": "2026-06-30",
-      "line": 1017,
+      "line": 1181,
       "message": "Argument \"report_id\" to \"AnalysisStorePackRequest\" has incompatible type \"str\"; expected \"ReportId\"",
       "owner": "quality/type-safety",
       "path": "src/orchestrators/report_analysis_orchestrator.py"
@@ -996,7 +796,15 @@
     {
       "code": "arg-type",
       "expires_at": "2026-06-30",
-      "line": 384,
+      "line": 1217,
+      "message": "Argument \"report_id\" to \"AnalysisPackPathRequest\" has incompatible type \"str\"; expected \"ReportId\"",
+      "owner": "quality/type-safety",
+      "path": "src/orchestrators/report_analysis_orchestrator.py"
+    },
+    {
+      "code": "arg-type",
+      "expires_at": "2026-06-30",
+      "line": 1229,
       "message": "Argument \"report_id\" to \"AnalysisStorePackRequest\" has incompatible type \"str\"; expected \"ReportId\"",
       "owner": "quality/type-safety",
       "path": "src/orchestrators/report_analysis_orchestrator.py"
@@ -1004,7 +812,15 @@
     {
       "code": "arg-type",
       "expires_at": "2026-06-30",
-      "line": 399,
+      "line": 596,
+      "message": "Argument \"report_id\" to \"AnalysisStorePackRequest\" has incompatible type \"str\"; expected \"ReportId\"",
+      "owner": "quality/type-safety",
+      "path": "src/orchestrators/report_analysis_orchestrator.py"
+    },
+    {
+      "code": "arg-type",
+      "expires_at": "2026-06-30",
+      "line": 611,
       "message": "Argument \"report_id\" to \"VectorStoreMetadata\" has incompatible type \"str\"; expected \"ReportId\"",
       "owner": "quality/type-safety",
       "path": "src/orchestrators/report_analysis_orchestrator.py"
@@ -1012,7 +828,7 @@
     {
       "code": "arg-type",
       "expires_at": "2026-06-30",
-      "line": 537,
+      "line": 749,
       "message": "Argument \"report_id\" to \"ValidationRequest\" has incompatible type \"str\"; expected \"ReportId\"",
       "owner": "quality/type-safety",
       "path": "src/orchestrators/report_analysis_orchestrator.py"
@@ -1020,7 +836,7 @@
     {
       "code": "arg-type",
       "expires_at": "2026-06-30",
-      "line": 626,
+      "line": 838,
       "message": "Argument \"report_id\" to \"AnalysisStorePackRequest\" has incompatible type \"str\"; expected \"ReportId\"",
       "owner": "quality/type-safety",
       "path": "src/orchestrators/report_analysis_orchestrator.py"
@@ -1028,32 +844,8 @@
     {
       "code": "arg-type",
       "expires_at": "2026-06-30",
-      "line": 771,
+      "line": 983,
       "message": "Argument \"report_id\" to \"ArtifactRegenerationRequest\" has incompatible type \"str\"; expected \"ReportId\"",
-      "owner": "quality/type-safety",
-      "path": "src/orchestrators/report_analysis_orchestrator.py"
-    },
-    {
-      "code": "arg-type",
-      "expires_at": "2026-06-30",
-      "line": 806,
-      "message": "Argument \"report_id\" to \"ValidationRequest\" has incompatible type \"str\"; expected \"ReportId\"",
-      "owner": "quality/type-safety",
-      "path": "src/orchestrators/report_analysis_orchestrator.py"
-    },
-    {
-      "code": "arg-type",
-      "expires_at": "2026-06-30",
-      "line": 944,
-      "message": "Argument \"report_id\" to \"AnalysisPackPathRequest\" has incompatible type \"str\"; expected \"ReportId\"",
-      "owner": "quality/type-safety",
-      "path": "src/orchestrators/report_analysis_orchestrator.py"
-    },
-    {
-      "code": "arg-type",
-      "expires_at": "2026-06-30",
-      "line": 969,
-      "message": "Argument \"report_id\" to \"AnalysisStorePackRequest\" has incompatible type \"str\"; expected \"ReportId\"",
       "owner": "quality/type-safety",
       "path": "src/orchestrators/report_analysis_orchestrator.py"
     },
@@ -1130,14 +922,6 @@
       "path": "src/services/_browser_report_download/browser_worker.py"
     },
     {
-      "code": "import-untyped",
-      "expires_at": "2026-06-30",
-      "line": 10,
-      "message": "Library stubs not installed for \"requests\"",
-      "owner": "quality/type-safety",
-      "path": "src/services/_browser_report_download/http.py"
-    },
-    {
       "code": "arg-type",
       "expires_at": "2026-06-30",
       "line": 201,
@@ -1156,7 +940,7 @@
     {
       "code": "arg-type",
       "expires_at": "2026-06-30",
-      "line": 1002,
+      "line": 1012,
       "message": "Argument \"report_id\" to \"AnalyticsProjectionFailureResponse\" has incompatible type \"str\"; expected \"ReportId\"",
       "owner": "quality/type-safety",
       "path": "src/services/analytics_store_service.py"
@@ -1164,7 +948,7 @@
     {
       "code": "arg-type",
       "expires_at": "2026-06-30",
-      "line": 899,
+      "line": 909,
       "message": "Argument \"report_id\" to \"AnalyticsProjectionUpsertResponse\" has incompatible type \"str\"; expected \"ReportId\"",
       "owner": "quality/type-safety",
       "path": "src/services/analytics_store_service.py"
@@ -1218,17 +1002,9 @@
       "path": "src/services/cover_image_service.py"
     },
     {
-      "code": "import-untyped",
-      "expires_at": "2026-06-30",
-      "line": 16,
-      "message": "Library stubs not installed for \"requests\"",
-      "owner": "quality/type-safety",
-      "path": "src/services/publisher_inventory_service.py"
-    },
-    {
       "code": "arg-type",
       "expires_at": "2026-06-30",
-      "line": 120,
+      "line": 107,
       "message": "Argument \"run_id\" to \"UiRunRecord\" has incompatible type \"str\"; expected \"RunId\"",
       "owner": "quality/type-safety",
       "path": "src/services/run_registry_service.py"
@@ -1236,18 +1012,10 @@
     {
       "code": "return",
       "expires_at": "2026-06-30",
-      "line": 66,
+      "line": 65,
       "message": "Missing return statement",
       "owner": "quality/type-safety",
       "path": "src/services/vector_store_service.py"
-    },
-    {
-      "code": "unused-ignore",
-      "expires_at": "2026-06-30",
-      "line": 10,
-      "message": "Unused \"type: ignore\" comment",
-      "owner": "quality/type-safety",
-      "path": "src/services/wordpress_service.py"
     },
     {
       "code": "misc",
@@ -1360,14 +1128,6 @@
       "message": "Argument 1 to \"add\" of \"set\" has incompatible type \"tuple[str, str, int, int, int]\"; expected \"tuple[str, str, int, int, str]\"",
       "owner": "quality/type-safety",
       "path": "src/utils/quantity.py"
-    },
-    {
-      "code": "arg-type",
-      "expires_at": "2026-06-30",
-      "line": 44,
-      "message": "Argument 1 to \"maketrans\" of \"str\" has incompatible type \"dict[str, str]\"; expected \"dict[int, str | int | None] | dict[str, str | int | None] | dict[str | int, str | int | None]\"",
-      "owner": "quality/type-safety",
-      "path": "src/utils/text_normalization.py"
     }
   ],
   "expires_at": "2026-06-30",

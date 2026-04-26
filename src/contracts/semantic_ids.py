@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import fields, is_dataclass
-from functools import lru_cache
 from types import UnionType
 from typing import Any, ClassVar, Union, get_args, get_origin, get_type_hints
 
@@ -55,8 +54,13 @@ class SemanticIdContract:
         coerce_semantic_id_fields(self)
 
 
-@lru_cache(maxsize=None)
-def _semantic_id_annotations(contract_cls: type[object]) -> dict[str, Any]:
+_SEMANTIC_ID_ANNOTATIONS_CACHE: dict[type[Any], dict[str, Any]] = {}
+
+
+def _semantic_id_annotations(contract_cls: type[Any]) -> dict[str, Any]:
+    cached = _SEMANTIC_ID_ANNOTATIONS_CACHE.get(contract_cls)
+    if cached is not None:
+        return cached
     if not is_dataclass(contract_cls):
         return {}
     hints = get_type_hints(contract_cls, include_extras=True)
@@ -65,6 +69,7 @@ def _semantic_id_annotations(contract_cls: type[object]) -> dict[str, Any]:
         annotation = hints.get(field_def.name, field_def.type)
         if _is_supported_semantic_id_annotation(annotation):
             annotations[field_def.name] = annotation
+    _SEMANTIC_ID_ANNOTATIONS_CACHE[contract_cls] = annotations
     return annotations
 
 
