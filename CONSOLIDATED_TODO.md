@@ -163,16 +163,6 @@ Suggested priority order:
 
 ## 4. Browser Acquisition & Publisher Inventory
 
-- **Title:** Add DOM-event quorum stabilization for browser terminal states [Impact: 4/5, Effort: 3/5]
-  - Explanation: Replace brittle fixed sleeps with route-family stabilization policies based on URL, DOM markers, network/download events, page text, and button state. Browser services currently include explicit waits and terminal-state polling that should become evidence-based.
-  - Pros: More deterministic browser automation and lower flake rate.
-  - Cons: Requires route-family instrumentation and careful timeout tuning.
-  - Acceptance Criteria:
-    - Stabilization policy is codified per route family.
-    - Terminal-state logs include quorum evidence.
-    - Fixed sleeps are removed or justified by explicit browser boundary constraints.
-    - Flake rate is measured before/after in CI or integration runs.
-
 - **Title:** Persist failure forensics packs for failed acquisition attempts [Impact: 3/5, Effort: 3/5]
   - Explanation: Standardize HAR, DOM snapshot, screenshots, terminal evidence, route plan, and classified error metadata for failed HTTP/browser acquisition attempts.
   - Pros: Faster root-cause analysis and better replay evidence.
@@ -548,7 +538,6 @@ Suggested priority order:
 - Budget-aware model routing with deterministic context compaction.
 - Page-level PDF triage.
 - Durable checkpoint/restart.
-- DOM-event quorum stabilization.
 - Explicit SQLite migration ledgers.
 
 ### Phase 3: Resilience and Quality (8-16+ weeks)

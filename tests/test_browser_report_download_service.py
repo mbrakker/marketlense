@@ -3510,9 +3510,11 @@ def test_download_report_with_browser_use_falls_back_to_history_terminal_state(
 
 def test_download_report_with_browser_use_stabilizes_transient_submit_state(
     tmp_path: Path,
+    caplog,
     run_context,
     external_boundary_mocks_only,
 ) -> None:
+    caplog.set_level(logging.INFO, logger=service.logger.name)
     runtime = _runtime(
         tmp_path,
         route_kind="email_delivery",
@@ -3621,6 +3623,19 @@ def test_download_report_with_browser_use_stabilizes_transient_submit_state(
         == "Thank you for downloading the report"
     )
     assert "success_url" in response.confirmation_evidence.signal_labels
+    terminal_events = [
+        event
+        for event in _service_events(caplog)
+        if event.get("event") == "browser_report_download_terminal_state_assessed"
+    ]
+    assert len(terminal_events) == 1
+    assert terminal_events[0]["fields"]["quorum_met"] is True
+    assert "success_url" in terminal_events[0]["fields"]["quorum_signal_labels"]
+    assert "success_text" in terminal_events[0]["fields"]["quorum_signal_labels"]
+    assert "page_text_transient" not in terminal_events[0]["fields"][
+        "quorum_transient_labels"
+    ]
+    assert terminal_events[0]["fields"]["attempts"] >= 0
 
 
 def test_download_report_with_browser_use_clears_phantom_pdf_metadata_without_file(
@@ -6310,9 +6325,11 @@ def test_download_report_with_browser_use_accepts_nullable_structured_result_fie
 
 def test_download_report_with_browser_use_lookup_submission_assist_upgrades_email_requested(
     tmp_path: Path,
+    caplog,
     run_context,
     external_boundary_mocks_only,
 ) -> None:
+    caplog.set_level(logging.INFO, logger=service.logger.name)
     runtime = _runtime(
         tmp_path,
         route_kind="email_delivery",
@@ -6414,6 +6431,13 @@ def test_download_report_with_browser_use_lookup_submission_assist_upgrades_emai
         "import_module",
         lambda module_name: runtime,
     )
+    external_boundary_mocks_only.setattr(
+        browser_runtime.time,
+        "sleep",
+        lambda seconds: (_ for _ in ()).throw(
+            AssertionError(f"unexpected blind sleep: {seconds}")
+        ),
+    )
 
     response = service.download_report_with_browser_use(
         BrowserReportDownloadRequest(
@@ -6432,6 +6456,17 @@ def test_download_report_with_browser_use_lookup_submission_assist_upgrades_emai
     assert response.confirmation_evidence is not None
     assert response.confirmation_evidence.visible_confirmation_text.startswith(
         "Thank you for your interest."
+    )
+    terminal_events = [
+        event
+        for event in _service_events(caplog)
+        if event.get("event") == "browser_report_download_terminal_state_assessed"
+    ]
+    assert any(
+        event["fields"]["trigger_reason"] == "lookup_submission_assist"
+        and event["fields"]["quorum_met"] is True
+        and "success_text" in event["fields"]["quorum_signal_labels"]
+        for event in terminal_events
     )
 
 
@@ -6900,6 +6935,50 @@ def test_kill_browser_force_stops_local_watchdog_process_tree(
     assert child.kill_calls == 0
     assert grandchild.kill_calls == 0
     assert fake_browser._local_browser_watchdog._subprocess is None
+
+
+def test_prepare_browser_for_shutdown_awaits_cancelled_reconnect_task(
+    run_context,
+) -> None:
+    event_calls: list[str] = []
+
+    class FakeReconnectTask:
+        def __init__(self) -> None:
+            self.cancelled = False
+            self.awaited = False
+
+        def done(self) -> bool:
+            return False
+
+        def cancel(self) -> None:
+            self.cancelled = True
+
+        def __await__(self):
+            self.awaited = True
+            if False:
+                yield None
+            return None
+
+    reconnect_task = FakeReconnectTask()
+    fake_browser = SimpleNamespace(
+        browser_profile=SimpleNamespace(cdp_url="ws://example"),
+        _reconnect_task=reconnect_task,
+        _reconnect_event=SimpleNamespace(set=lambda: event_calls.append("set")),
+        _reconnecting=True,
+    )
+
+    browser_runtime._prepare_browser_for_shutdown(
+        fake_browser,
+        ctx=run_context,
+        normalized_url="https://example.com/report",
+    )
+
+    assert reconnect_task.cancelled is True
+    assert reconnect_task.awaited is True
+    assert fake_browser._reconnect_task is None
+    assert fake_browser._reconnecting is False
+    assert fake_browser.browser_profile.cdp_url is None
+    assert event_calls == ["set"]
 
 
 def test_download_report_with_browser_use_maps_browser_start_timeout_to_typed_error(
