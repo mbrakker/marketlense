@@ -26,13 +26,14 @@ from src.contracts.vector_store import (
     VectorStoreUploadFileRequest,
     VectorStoreUploadFileResponse,
 )
-from src.services import openai_service
+from src.services import llm_service
 from src.utils.coercion import clean_string_list
 from src.utils.errors import AppError
 from src.utils.logging import log_event, new_run_context
 
 logger = logging.getLogger("market_lense.vector_store_service")
 _T = TypeVar("_T")
+openai_service = llm_service
 
 
 def _ctx_or_new(ctx: Optional[RunContext]) -> RunContext:
@@ -120,7 +121,7 @@ def create_vector_store(request: VectorStoreCreateRequest, ctx: Optional[RunCont
         },
     ))
     resp = _call_openai(
-        call=lambda: openai_service.openai_vector_store_create(
+        call=lambda: llm_service.openai_vector_store_create(
             OpenAIVectorStoreCreateRequest(
                 schema_version="1.0",
                 api_key=api_key,
@@ -160,7 +161,7 @@ def upload_file(request: VectorStoreUploadFileRequest, ctx: Optional[RunContext]
         fields={"pdf_path": file_path, "vector_store_id": vector_store_id},
     ))
     try:
-        resp = openai_service.openai_vector_store_upload_file(
+        resp = llm_service.openai_vector_store_upload_file(
             OpenAIVectorStoreFileUploadRequest(
                 schema_version="1.0",
                 api_key=api_key,
@@ -212,7 +213,7 @@ def attach_file(request: VectorStoreAttachFileRequest, ctx: Optional[RunContext]
         fields={"vector_store_id": vector_store_id, "openai_file_id": file_id},
     ))
     resp = _call_openai(
-        call=lambda: openai_service.openai_vector_store_attach_file(
+        call=lambda: llm_service.openai_vector_store_attach_file(
             OpenAIVectorStoreAttachFileRequest(
                 schema_version="1.0",
                 api_key=api_key,
@@ -251,7 +252,7 @@ def get_vector_store_status(request: VectorStoreStatusRequest, ctx: Optional[Run
         fields={"vector_store_id": vector_store_id},
     ))
     resp = _call_openai(
-        call=lambda: openai_service.openai_vector_store_status(
+        call=lambda: llm_service.openai_vector_store_status(
             OpenAIVectorStoreStatusRequest(
                 schema_version="1.0",
                 api_key=api_key,
@@ -299,7 +300,7 @@ def update_metadata(request: VectorStoreUpdateMetadataRequest, ctx: Optional[Run
         },
     ))
     resp = _call_openai(
-        call=lambda: openai_service.openai_vector_store_update_metadata(
+        call=lambda: llm_service.openai_vector_store_update_metadata(
             OpenAIVectorStoreUpdateMetadataRequest(
                 schema_version="1.0",
                 api_key=api_key,

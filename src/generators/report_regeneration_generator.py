@@ -36,7 +36,7 @@ from src.generators.artifact_generator import (
 )
 from src.generators.validation.evidence import retrieve_evidence_windows
 from src.generators.validation.preparation import prepare_validation_inputs
-from src.services import llm_service, openai_service, prompt_service, report_analysis_store_service
+from src.services import llm_service, prompt_service, report_analysis_store_service
 from src.utils.errors import AppError
 from src.utils.json_utils import safe_json_dumps
 from src.utils.logging import child_context, log_event
@@ -100,12 +100,9 @@ def regenerate_artifacts(
     analysis_store=report_analysis_store_service,
 ) -> ArtifactRegenerationResponse:
     ctx = request.ctx
-    openai_client = openai_client or llm_service.build_openai_client(
-        base_client=openai_service,
-        policy=llm_service.openai_client_policy_from_settings(
-            request.settings,
-            scope="artifact_regeneration",
-        ),
+    openai_client = openai_client or llm_service.build_openai_client_for_settings(
+        request.settings,
+        scope="artifact_regeneration",
     )
     safe_artifacts = (
         deepcopy(request.current_artifacts)

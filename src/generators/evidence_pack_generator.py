@@ -38,7 +38,6 @@ from src.generators.evidence_packs.registry import (
 )
 from src.services import file_service
 from src.services import llm_service
-from src.services import openai_service
 from src.services import prompt_service
 from src.services import report_analysis_store_service
 from src.services.schema_validator_service import validate_schema
@@ -108,12 +107,9 @@ def generate_evidence_packs(
     analysis_store=report_analysis_store_service,
 ) -> Dict[str, dict]:
     ctx = ctx or new_run_context(task_id=f"evidence_pack:{report_id}")
-    openai_client = openai_client or llm_service.build_openai_client(
-        base_client=openai_service,
-        policy=llm_service.openai_client_policy_from_settings(
-            settings,
-            scope="evidence_pack_generator",
-        ),
+    openai_client = openai_client or llm_service.build_openai_client_for_settings(
+        settings,
+        scope="evidence_pack_generator",
     )
     logger.info(
         log_event(

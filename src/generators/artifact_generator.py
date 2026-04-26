@@ -41,7 +41,6 @@ from src.generators.analysis_store_adapter import (
 from src.services import (
     file_service,
     llm_service,
-    openai_service,
     prompt_service,
     report_analysis_store_service,
 )
@@ -127,12 +126,9 @@ def generate_artifacts(
     analysis_store=report_analysis_store_service,
 ) -> Dict[str, Any]:
     ctx = ctx or new_run_context(task_id=f"artifacts:{report_id}")
-    openai_client = openai_client or llm_service.build_openai_client(
-        base_client=openai_service,
-        policy=llm_service.openai_client_policy_from_settings(
-            settings,
-            scope="artifact_generator",
-        ),
+    openai_client = openai_client or llm_service.build_openai_client_for_settings(
+        settings,
+        scope="artifact_generator",
     )
     logger.info(
         log_event(

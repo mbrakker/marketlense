@@ -12,7 +12,7 @@ from src.orchestrators.report_generation_orchestrator import (
     run_report_generation as generate_report_orchestrator,
 )
 from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
-from src.services import llm_service, openai_service
+from src.services import llm_service
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.coercion import coerce_int
@@ -87,26 +87,21 @@ def run_report_pipeline(
     configured_retries = max(0, int(retries))
     base_delay_seconds = 1.0
     jitter_seconds = 0.25
-    base_openai_client = openai_client_override or openai_service
-    evidence_openai_client = llm_service.build_openai_client(
-        base_client=base_openai_client,
-        policy=llm_service.openai_client_policy_from_settings(
-            settings,
-            scope="evidence_pack",
-            rate_limit_max_in_flight=evidence_max_in_flight,
-            rate_limit_min_interval_ms=evidence_min_interval_ms,
-        ),
+    evidence_openai_client = llm_service.build_openai_client_for_settings(
+        settings,
+        scope="evidence_pack",
+        rate_limit_max_in_flight=evidence_max_in_flight,
+        rate_limit_min_interval_ms=evidence_min_interval_ms,
+        base_client=openai_client_override,
         sleep_fn=time.sleep,
         monotonic_fn=time.monotonic,
     )
-    artifact_openai_client = llm_service.build_openai_client(
-        base_client=base_openai_client,
-        policy=llm_service.openai_client_policy_from_settings(
-            settings,
-            scope="artifact",
-            rate_limit_max_in_flight=artifact_max_in_flight,
-            rate_limit_min_interval_ms=artifact_min_interval_ms,
-        ),
+    artifact_openai_client = llm_service.build_openai_client_for_settings(
+        settings,
+        scope="artifact",
+        rate_limit_max_in_flight=artifact_max_in_flight,
+        rate_limit_min_interval_ms=artifact_min_interval_ms,
+        base_client=openai_client_override,
         sleep_fn=time.sleep,
         monotonic_fn=time.monotonic,
     )

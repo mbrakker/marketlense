@@ -80,7 +80,7 @@ from src.generators.report_regeneration_generator import regenerate_artifacts
 from src.generators.taxonomy_generator import extract_taxonomy
 from src.generators.validation_generator import validate_report as run_validation
 from src.services import (
-    openai_service,
+    llm_service,
     report_analysis_store_service,
     state_service,
     vector_store_service,
@@ -147,7 +147,7 @@ class ReportSourceDependencies:
             sample_pdf_text=sample_pdf_text,
             load_prompt_set=load_prompt_set,
             render_prompt=render_prompt,
-            openai_ocr_pdf=openai_service.openai_ocr_pdf,
+            openai_ocr_pdf=llm_service.openai_ocr_pdf,
             file_stat=file_stat,
             read_text=read_text,
             write_bytes=write_bytes,
@@ -203,7 +203,7 @@ class FigureCaptionDependencies:
         return cls(
             load_prompt_set=load_prompt_set,
             render_prompt=render_prompt,
-            openai_chat_json_with_images=openai_service.openai_chat_json_with_images,
+            openai_chat_json_with_images=llm_service.openai_chat_json_with_images,
             analysis_store_pack=report_analysis_store_service.store_pack,
         )
 

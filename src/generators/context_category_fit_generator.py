@@ -14,7 +14,7 @@ from src.contracts.context_category_fit import (
 from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIResponseResult
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.generators.prompt_preparation import prepare_prompt_bundle
-from src.services import llm_service, openai_service, prompt_service
+from src.services import llm_service, prompt_service
 from src.services.category_mapping_service import load_mappings as load_category_mappings
 from src.services.schema_validator_service import validate_schema
 from src.utils.errors import AppError
@@ -31,12 +31,9 @@ def fit_report_categories_from_context(
     prompt_client=prompt_service,
     mapping_client=load_category_mappings,
 ) -> ContextCategoryFitResponse:
-    openai_client = openai_client or llm_service.build_openai_client(
-        base_client=openai_service,
-        policy=llm_service.openai_client_policy_from_settings(
-            request.settings,
-            scope="context_category_fit",
-        ),
+    openai_client = openai_client or llm_service.build_openai_client_for_settings(
+        request.settings,
+        scope="context_category_fit",
     )
     logger.info(
         log_event(

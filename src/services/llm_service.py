@@ -54,6 +54,12 @@ _RATE_LIMITERS_LOCK = threading.Lock()
 _RATE_LIMITERS: dict[str, _RateLimiterState] = {}
 
 
+def _openai_boundary() -> Any:
+    from src.services import openai_service
+
+    return openai_service
+
+
 def _llm_retry_decision(exc: Exception) -> _LLMRetryDecision:
     if not isinstance(exc, AppError):
         return _LLMRetryDecision(False, "non_app_error")
@@ -479,7 +485,47 @@ class LLMServiceClient:
         self._sleep_fn = sleep_fn
         self._monotonic_fn = monotonic_fn
 
-    def _run(self, operation_name: str, ctx: RunContext, call: Callable[[], _T]) -> _T:
+    def _run(
+        self,
+        operation_name: str,
+        ctx: RunContext,
+        call: Callable[[], _T],
+        *,
+        request: Any | None = None,
+    ) -> _T:
+        if request is not None:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="llm_policy_context",
+                    module=logger.name,
+                    fields={
+                        "operation": operation_name,
+                        "scope": self._policy.scope,
+                        "provider_decision": "openai_primary",
+                        "provider": "openai",
+                        "model": str(getattr(request, "model", "") or ""),
+                        "timeout_seconds": getattr(request, "timeout_seconds", None),
+                        "semantic_cache_decision": (
+                            "enabled"
+                            if bool(getattr(request, "response_cache_enabled", False))
+                            else "disabled"
+                        ),
+                        "semantic_cache_enabled": bool(
+                            getattr(request, "response_cache_enabled", False)
+                        ),
+                        "semantic_cache_ttl_seconds": getattr(
+                            request, "response_cache_ttl_seconds", None
+                        ),
+                        "budget_decision": "not_configured",
+                        "budget_enforced": False,
+                        "vector_store_id_present": bool(
+                            str(getattr(request, "vector_store_id", "") or "").strip()
+                        ),
+                    },
+                )
+            )
         return _execute_with_policy(
             ctx=ctx,
             operation_name=operation_name,
@@ -494,6 +540,7 @@ class LLMServiceClient:
             "openai_chat_json",
             ctx,
             lambda: self._base_client.openai_chat_json(req, ctx),
+            request=req,
         )
 
     def openai_chat_json_with_images(self, req: Any, ctx: RunContext) -> Any:
@@ -501,6 +548,7 @@ class LLMServiceClient:
             "openai_chat_json_with_images",
             ctx,
             lambda: self._base_client.openai_chat_json_with_images(req, ctx),
+            request=req,
         )
 
     def openai_ocr_pdf(self, req: Any, ctx: RunContext) -> Any:
@@ -508,6 +556,7 @@ class LLMServiceClient:
             "openai_ocr_pdf",
             ctx,
             lambda: self._base_client.openai_ocr_pdf(req, ctx),
+            request=req,
         )
 
     def openai_respond_with_vector_store(self, req: Any, ctx: RunContext) -> Any:
@@ -515,6 +564,7 @@ class LLMServiceClient:
             "openai_respond_with_vector_store",
             ctx,
             lambda: self._base_client.openai_respond_with_vector_store(req, ctx),
+            request=req,
         )
 
 
@@ -586,6 +636,13 @@ def build_openai_client(
     )
 
 
+def default_openai_client_policy(
+    *,
+    scope: str,
+) -> LLMClientPolicy:
+    return LLMClientPolicy(schema_version="1.0", scope=scope)
+
+
 def build_openai_client_from_callables(
     *,
     policy: LLMClientPolicy,
@@ -604,6 +661,29 @@ def build_openai_client_from_callables(
             openai_respond_with_vector_store=openai_respond_with_vector_store,
         ),
         policy=policy,
+        sleep_fn=sleep_fn,
+        monotonic_fn=monotonic_fn,
+    )
+
+
+def build_openai_client_for_settings(
+    settings: Any,
+    *,
+    scope: str,
+    rate_limit_max_in_flight: Optional[int] = None,
+    rate_limit_min_interval_ms: int = 0,
+    base_client: Any | None = None,
+    sleep_fn: Callable[[float], None] = time.sleep,
+    monotonic_fn: Callable[[], float] = time.monotonic,
+) -> LLMServiceClient:
+    return build_openai_client(
+        base_client=base_client or _openai_boundary(),
+        policy=openai_client_policy_from_settings(
+            settings,
+            scope=scope,
+            rate_limit_max_in_flight=rate_limit_max_in_flight,
+            rate_limit_min_interval_ms=rate_limit_min_interval_ms,
+        ),
         sleep_fn=sleep_fn,
         monotonic_fn=monotonic_fn,
     )
@@ -639,3 +719,39 @@ def openai_client_policy_from_settings(
             float(getattr(settings, "llm_circuit_breaker_recovery_seconds", 30.0)),
         ),
     )
+
+
+def openai_chat_json(req: Any, ctx: RunContext) -> Any:
+    return _openai_boundary().openai_chat_json(req, ctx)
+
+
+def openai_chat_json_with_images(req: Any, ctx: RunContext) -> Any:
+    return _openai_boundary().openai_chat_json_with_images(req, ctx)
+
+
+def openai_ocr_pdf(req: Any, ctx: RunContext) -> Any:
+    return _openai_boundary().openai_ocr_pdf(req, ctx)
+
+
+def openai_respond_with_vector_store(req: Any, ctx: RunContext) -> Any:
+    return _openai_boundary().openai_respond_with_vector_store(req, ctx)
+
+
+def openai_vector_store_create(req: Any, ctx: RunContext) -> Any:
+    return _openai_boundary().openai_vector_store_create(req, ctx)
+
+
+def openai_vector_store_upload_file(req: Any, ctx: RunContext) -> Any:
+    return _openai_boundary().openai_vector_store_upload_file(req, ctx)
+
+
+def openai_vector_store_attach_file(req: Any, ctx: RunContext) -> Any:
+    return _openai_boundary().openai_vector_store_attach_file(req, ctx)
+
+
+def openai_vector_store_status(req: Any, ctx: RunContext) -> Any:
+    return _openai_boundary().openai_vector_store_status(req, ctx)
+
+
+def openai_vector_store_update_metadata(req: Any, ctx: RunContext) -> Any:
+    return _openai_boundary().openai_vector_store_update_metadata(req, ctx)

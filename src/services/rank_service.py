@@ -4,6 +4,7 @@ import json
 import logging
 from typing import Any
 
+from src.contracts.llm import LLMClientPolicy
 from src.contracts.openai import OpenAIJSONImagePromptRequest, OpenAIJSONPromptRequest
 from src.contracts.report_assets import (
     CropRefineCandidate,
@@ -15,12 +16,18 @@ from src.contracts.report_assets import (
 )
 from src.contracts.report_models import RankedCandidate
 from src.contracts.run_context import RunContext
-from src.services.openai_service import openai_chat_json, openai_chat_json_with_images
+from src.services import llm_service
 from src.utils.coercion import coerce_bool, coerce_int
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.rank_service")
+openai_chat_json = llm_service.openai_chat_json
+openai_chat_json_with_images = llm_service.openai_chat_json_with_images
+
+
+def _rank_llm_policy(scope: str) -> LLMClientPolicy:
+    return llm_service.default_openai_client_policy(scope=scope)
 
 
 def _to_bbox(
@@ -135,7 +142,11 @@ def rank_candidates(request: RankRequest, ctx: RunContext) -> RankResponse:
         )
     )
     try:
-        response = openai_chat_json(
+        llm_client = llm_service.build_openai_client_from_callables(
+            policy=_rank_llm_policy("rank_candidates"),
+            openai_chat_json=openai_chat_json,
+        )
+        response = llm_client.openai_chat_json(
             OpenAIJSONPromptRequest(
                 schema_version="1.0",
                 system_prompt=request.system_prompt,
@@ -227,7 +238,11 @@ def refine_candidate_crops(
             },
         )
     )
-    response = openai_chat_json_with_images(
+    llm_client = llm_service.build_openai_client_from_callables(
+        policy=_rank_llm_policy("crop_refine"),
+        openai_chat_json_with_images=openai_chat_json_with_images,
+    )
+    response = llm_client.openai_chat_json_with_images(
         OpenAIJSONImagePromptRequest(
             schema_version="1.0",
             system_prompt=request.system_prompt,

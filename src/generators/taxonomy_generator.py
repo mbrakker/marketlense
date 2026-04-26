@@ -25,7 +25,7 @@ from src.generators.analysis_store_adapter import (
 )
 from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.services.category_mapping_service import load_mappings as load_category_mappings
-from src.services import file_service, llm_service, openai_service, prompt_service, report_analysis_store_service
+from src.services import file_service, llm_service, prompt_service, report_analysis_store_service
 from src.utils.errors import AppError
 from src.utils.tag_utils import normalize_slug_tag
 from src.utils.logging import log_event
@@ -44,12 +44,9 @@ def extract_taxonomy(
     analysis_store=report_analysis_store_service,
     file_client=file_service,
 ) -> TaxonomyExtractResponse:
-    openai_client = openai_client or llm_service.build_openai_client(
-        base_client=openai_service,
-        policy=llm_service.openai_client_policy_from_settings(
-            request.settings,
-            scope="taxonomy",
-        ),
+    openai_client = openai_client or llm_service.build_openai_client_for_settings(
+        request.settings,
+        scope="taxonomy",
     )
     taxonomy_temperature = _resolve_taxonomy_temperature(request)
     logger.info(log_event(

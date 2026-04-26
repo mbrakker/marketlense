@@ -15,7 +15,7 @@ from src.contracts.publisher_inventory import (
     PublisherInventoryCandidateScreeningResponse,
 )
 from src.generators.prompt_preparation import prepare_prompt_bundle
-from src.services import llm_service, openai_service, prompt_service
+from src.services import llm_service, prompt_service
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -554,12 +554,9 @@ def screen_publisher_inventory_candidates(
             ctx=ctx,
         )
 
-    openai_client = openai_client or llm_service.build_openai_client(
-        base_client=openai_service,
-        policy=llm_service.openai_client_policy_from_settings(
-            request.settings,
-            scope="publisher_inventory_candidate_screening",
-        ),
+    openai_client = openai_client or llm_service.build_openai_client_for_settings(
+        request.settings,
+        scope="publisher_inventory_candidate_screening",
     )
     batch_size = _resolve_candidate_screening_batch_size(
         candidate_count=len(candidates_for_llm),

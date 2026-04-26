@@ -1,0 +1,56 @@
+{
+  "schema_version": "1.2",
+  "generated_at": "2026-04-25T22:03:06.489429+00:00",
+  "ledger_state": {
+    "schema_version": "1.0",
+    "ledger_path": "c:\\Programing\\Market lense\\tmp_live_llm_policy\\image_ledger.jsonl",
+    "size_bytes": 981,
+    "mtime_ns": 1777154586471062200,
+    "sha256": "c6923225a575034a94c14839988800b2e1ae67383614d524f313d3d910247529"
+  },
+  "totals": {
+    "2026-04-25": {
+      "schema_version": "1.0",
+      "date_utc": "2026-04-25",
+      "total_usd": 0.001382,
+      "input_tokens": 2706,
+      "output_tokens": 353,
+      "tool_calls": 0
+    }
+  },
+  "totals_by_date": {
+    "2026-04-25": {
+      "schema_version": "1.0",
+      "date_utc": "2026-04-25",
+      "total_usd": 0.001382,
+      "input_tokens": 2706,
+      "output_tokens": 353,
+      "tool_calls": 0
+    }
+  },
+  "totals_by_run": {
+    "cc36d14c-56ac-43f0-82d8-9cf26ea28164": {
+      "schema_version": "1.0",
+      "total_input_tokens": 1353,
+      "total_output_tokens": 196,
+      "total_tool_calls": 0,
+      "estimated_cost_usd": 0.00073
+    },
+    "fb95fe2b-fb2d-4e50-bef5-ae490b1e4e40": {
+      "schema_version": "1.0",
+      "total_input_tokens": 1353,
+      "total_output_tokens": 157,
+      "total_tool_calls": 0,
+      "estimated_cost_usd": 0.000652
+    }
+  },
+  "totals_by_task": {
+    "live_llm_policy_smoke": {
+      "schema_version": "1.0",
+      "total_input_tokens": 2706,
+      "total_output_tokens": 353,
+      "total_tool_calls": 0,
+      "estimated_cost_usd": 0.001382
+    }
+  }
+}
