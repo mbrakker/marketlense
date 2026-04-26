@@ -431,3 +431,52 @@ def test_render_creates_missing_nested_output_directory(tmp_path):
 
     assert out_dir.exists()
     assert Path(response.html_path).exists()
+
+
+def test_render_overwrites_existing_html_atomically(tmp_path):
+    first = RenderRequest(
+        schema_version="1.0",
+        data={
+            "title": "First Title",
+            "tldr": "TLDR",
+            "insights": ["Insight A", "Insight B", "Insight C", "Insight D", "Insight E"],
+            "quote": {"text": "Quote", "author": "Author"},
+            "commentary": "Commentary",
+            "publisher": "Publisher",
+            "taxonomy": ["tag"],
+            "region": "US",
+            "time_period": "2024",
+            "contents_page_number": 0,
+        },
+        doc_name="overwrite.pdf",
+        file_id="file_overwrite",
+        out_dir=str(tmp_path),
+        preview_png=None,
+    )
+    second = RenderRequest(
+        schema_version="1.0",
+        data={
+            "title": "Second Title",
+            "tldr": "TLDR",
+            "insights": ["Insight A", "Insight B", "Insight C", "Insight D", "Insight E"],
+            "quote": {"text": "Quote", "author": "Author"},
+            "commentary": "Commentary",
+            "publisher": "Publisher",
+            "taxonomy": ["tag"],
+            "region": "US",
+            "time_period": "2024",
+            "contents_page_number": 0,
+        },
+        doc_name="overwrite.pdf",
+        file_id="file_overwrite",
+        out_dir=str(tmp_path),
+        preview_png=None,
+    )
+
+    first_response = render_report(first, _ctx())
+    second_response = render_report(second, _ctx())
+
+    html = Path(second_response.html_path).read_text(encoding="utf-8")
+    assert first_response.html_path == second_response.html_path
+    assert "Second Title" in html
+    assert "First Title" not in html

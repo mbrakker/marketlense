@@ -11,7 +11,9 @@ from src.contracts.report_analysis import (
     AnalysisStorePackRequest,
     AnalysisStorePackResponse,
 )
+from src.contracts.files import WriteBytesRequest
 from src.contracts.run_context import RunContext
+from src.services import file_service
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.services.schema_validator_service import validate_schema
 from src.utils.errors import AppError
@@ -162,7 +164,14 @@ def store_pack(request: AnalysisStorePackRequest, ctx: RunContext) -> AnalysisSt
             ))
         primary_path.parent.mkdir(parents=True, exist_ok=True)
         payload_json = json.dumps(request.payload, ensure_ascii=False, indent=2)
-        primary_path.write_text(payload_json, encoding="utf-8")
+        file_service.write_bytes(
+            WriteBytesRequest(
+                schema_version="1.0",
+                path=str(primary_path),
+                content=payload_json.encode("utf-8"),
+            ),
+            ctx,
+        )
     except AppError:
         raise
     except Exception as exc:

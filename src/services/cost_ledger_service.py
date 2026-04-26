@@ -20,7 +20,9 @@ from src.contracts.costs import (
     DailyCostTotal,
     StepCostTotal,
 )
+from src.contracts.files import WriteBytesRequest
 from src.contracts.run_context import RunContext
+from src.services import file_service
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -375,6 +377,7 @@ def _load_rollup_cache(out_path: Path, ctx: RunContext) -> dict[str, Any] | None
 
 def _write_rollup_cache(
     *,
+    ctx: RunContext,
     ledger_path: Path,
     out_path: Path,
     ledger_size_bytes: int,
@@ -384,7 +387,6 @@ def _write_rollup_cache(
     totals_by_run: Dict[str, CostTotals],
     totals_by_task: Dict[str, CostTotals],
 ) -> None:
-    out_path.parent.mkdir(parents=True, exist_ok=True)
     serialized = _serialize_rollup(
         ledger_path=ledger_path,
         out_path=out_path,
@@ -395,8 +397,15 @@ def _write_rollup_cache(
         totals_by_run=totals_by_run,
         totals_by_task=totals_by_task,
     )
-    out_path.write_text(
-        json.dumps(serialized, ensure_ascii=False, indent=2), encoding="utf-8"
+    file_service.write_bytes(
+        WriteBytesRequest(
+            schema_version="1.0",
+            path=str(out_path),
+            content=json.dumps(
+                serialized, ensure_ascii=False, indent=2
+            ).encode("utf-8"),
+        ),
+        ctx,
     )
 
 
@@ -428,10 +437,19 @@ def append_entry(
             )
         )
         try:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            with path.open("a", encoding="utf-8") as f:
-                f.write(json.dumps(request.entry.__dict__, ensure_ascii=False) + "\n")
-        except Exception as exc:
+            existing = path.read_bytes() if path.exists() else b""
+            appended = existing + (
+                json.dumps(request.entry.__dict__, ensure_ascii=False) + "\n"
+            ).encode("utf-8")
+            file_service.write_bytes(
+                WriteBytesRequest(
+                    schema_version="1.0",
+                    path=str(path),
+                    content=appended,
+                ),
+                ctx,
+            )
+        except (AppError, OSError, TypeError, ValueError) as exc:
             raise AppError(
                 code="cost_ledger_append_failed",
                 message=f"Failed to append entry to cost ledger at {path}",
@@ -541,6 +559,7 @@ def rollup_daily(request: CostRollupRequest, ctx: RunContext) -> CostRollupRespo
                     )
                 )
                 _write_rollup_cache(
+                    ctx=ctx,
                     ledger_path=ledger_path,
                     out_path=out_path,
                     ledger_size_bytes=ledger_size_bytes,
@@ -566,6 +585,7 @@ def rollup_daily(request: CostRollupRequest, ctx: RunContext) -> CostRollupRespo
                     rows
                 )
                 _write_rollup_cache(
+                    ctx=ctx,
                     ledger_path=ledger_path,
                     out_path=out_path,
                     ledger_size_bytes=ledger_size_bytes,

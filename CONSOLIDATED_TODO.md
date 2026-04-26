@@ -96,15 +96,6 @@ Suggested priority order:
     - Cleanup logs include run/task/span identifiers and outcomes.
     - Tests cover missing remote assets, duplicate cleanup calls, and retention-disabled runs.
 
-- **Title:** Make analysis packs, HTML renders, semantic caches, and ledger artifacts atomic on write [Impact: 4/5, Effort: 3/5]
-  - Explanation: Several services write directly to final paths. Use temp-file plus atomic replace semantics for analysis packs, rendered HTML, OpenAI semantic cache files, cost ledgers, and replay/forensic artifacts.
-  - Pros: Better durability and fewer corrupted artifacts after interrupted runs.
-  - Cons: Slight write-path complexity and temp cleanup requirements.
-  - Acceptance Criteria:
-    - Target write paths use atomic replace semantics.
-    - Interrupted writes cannot leave partial final artifacts.
-    - Tests cover overwrite, failure-mid-write, and stale temp cleanup scenarios.
-
 ---
 
 ## 3. PDF, OCR, Candidate Extraction & Ranking
@@ -558,7 +549,6 @@ Suggested priority order:
 - Page-level PDF triage.
 - Durable checkpoint/restart.
 - DOM-event quorum stabilization.
-- Atomic artifact writes.
 - Explicit SQLite migration ledgers.
 
 ### Phase 3: Resilience and Quality (8-16+ weeks)

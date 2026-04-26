@@ -159,3 +159,38 @@ def test_store_pack_rejects_pack_name_path_traversal(
         retryable=False,
     )
     assert not (output_dir / "report" / "report_analysis" / "escaped.json").exists()
+
+
+def test_store_pack_overwrites_existing_pack_atomically(
+    run_context,
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "out"
+    first = _valid_doc_map_payload()
+    second = {**_valid_doc_map_payload(), "title": "Updated Title"}
+
+    response = store_pack(
+        AnalysisStorePackRequest(
+            schema_version="1.0",
+            output_dir=str(output_dir),
+            report_id="file123",
+            pack_name="doc_map",
+            payload=first,
+            report_slug="report",
+        ),
+        run_context,
+    )
+    store_pack(
+        AnalysisStorePackRequest(
+            schema_version="1.0",
+            output_dir=str(output_dir),
+            report_id="file123",
+            pack_name="doc_map",
+            payload=second,
+            report_slug="report",
+        ),
+        run_context,
+    )
+
+    stored = json.loads(Path(response.output_path).read_text(encoding="utf-8"))
+    assert stored["title"] == "Updated Title"

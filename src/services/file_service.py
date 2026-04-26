@@ -3,7 +3,9 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 import re
+import time
 from pathlib import Path
 from typing import List
 
@@ -37,6 +39,8 @@ from src.utils.logging import log_event
 logger = logging.getLogger("market_lense.file_service")
 _WINDOWS_ABSOLUTE_PATH_RX = re.compile(r"^[A-Za-z]:[\\/]")
 _PDF_CACHE_MD5_RX = re.compile(r"^[0-9a-fA-F]{32}$")
+_ATOMIC_WRITE_STALE_SECONDS = 3600.0
+_ATOMIC_WRITE_TEMP_TAG = ".tmp-write-"
 
 
 def _normalize_glob_pattern(raw_pattern: str) -> str:
@@ -286,7 +290,7 @@ def write_bytes(request: WriteBytesRequest, ctx: RunContext) -> WriteBytesRespon
     if request.make_parents:
         path.parent.mkdir(parents=True, exist_ok=True)
     try:
-        path.write_bytes(request.content)
+        _atomic_write_bytes(path, request.content)
     except OSError as exc:
         raise AppError(
             code="file_write_failed",
@@ -310,6 +314,43 @@ def write_bytes(request: WriteBytesRequest, ctx: RunContext) -> WriteBytesRespon
         bytes_written=len(request.content),
         md5=md5,
     )
+
+
+def _atomic_write_bytes(path: Path, content: bytes) -> None:
+    _cleanup_stale_atomic_temp_files(path)
+    temp_path = _atomic_temp_path(path)
+    try:
+        with temp_path.open("wb") as file_obj:
+            file_obj.write(content)
+            file_obj.flush()
+            os.fsync(file_obj.fileno())
+        os.replace(temp_path, path)
+    except Exception:
+        try:
+            temp_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
+
+
+def _atomic_temp_path(path: Path) -> Path:
+    token = f"{os.getpid()}-{time.time_ns()}"
+    return path.with_name(f"{path.name}{_ATOMIC_WRITE_TEMP_TAG}{token}")
+
+
+def _cleanup_stale_atomic_temp_files(path: Path) -> None:
+    now = time.time()
+    pattern = f"{path.name}{_ATOMIC_WRITE_TEMP_TAG}*"
+    for candidate in path.parent.glob(pattern):
+        try:
+            if not candidate.is_file():
+                continue
+            age_seconds = now - candidate.stat().st_mtime
+            if age_seconds < _ATOMIC_WRITE_STALE_SECONDS:
+                continue
+            candidate.unlink(missing_ok=True)
+        except OSError:
+            continue
 
 
 def file_md5(request: FileHashRequest, ctx: RunContext) -> FileHashResponse:

@@ -35,10 +35,11 @@ from src.contracts.openai import (
     OpenAIVectorStoreUpdateMetadataResponse,
     OpenAIUsageAccountingRequest,
 )
+from src.contracts.files import WriteBytesRequest
 from src.contracts.pdf_ocr import PdfOcrPageText
 from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.run_context import RunContext
-from src.services import openai_accounting_service
+from src.services import file_service, openai_accounting_service
 from src.utils.errors import AppError
 from src.utils.json_recovery import parse_json_from_text, strip_json_fence
 from src.utils.logging import log_event
@@ -385,12 +386,17 @@ def _write_semantic_response_cache(
         "response": response_payload,
     }
     try:
-        spec.path.parent.mkdir(parents=True, exist_ok=True)
-        spec.path.write_text(
-            json.dumps(payload, sort_keys=True, ensure_ascii=True, indent=2),
-            encoding="utf-8",
+        file_service.write_bytes(
+            WriteBytesRequest(
+                schema_version="1.0",
+                path=str(spec.path),
+                content=json.dumps(
+                    payload, sort_keys=True, ensure_ascii=True, indent=2
+                ).encode("utf-8"),
+            ),
+            ctx,
         )
-    except (OSError, TypeError, ValueError) as exc:
+    except (AppError, TypeError, ValueError) as exc:
         _log_semantic_cache_event(
             ctx,
             event="openai_semantic_cache_write_failed",

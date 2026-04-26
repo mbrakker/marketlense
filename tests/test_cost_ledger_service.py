@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from src.contracts.files import WriteBytesRequest
 from src.contracts.costs import (
     CostLedgerAppendRequest,
     CostLedgerEntry,
@@ -12,6 +13,7 @@ from src.contracts.costs import (
     CostRollupRequest,
 )
 from src.contracts.run_context import RunContext
+from src.services import cost_ledger_service
 from src.services.cost_ledger_service import (
     append_entry,
     generate_cost_report,
@@ -520,3 +522,47 @@ def test_generate_cost_report_rejects_invalid_date(
         code="cost_report_date_invalid",
         retryable=False,
     )
+
+
+def test_append_entry_preserves_existing_ledger_when_atomic_write_fails(
+    tmp_path: Path,
+    monkeypatch,
+    assert_app_error,
+) -> None:
+    ledger_path = tmp_path / "ledger.jsonl"
+    ledger_path.write_text('{"existing": true}\n', encoding="utf-8")
+    entry = CostLedgerEntry(
+        schema_version="1.0",
+        timestamp_utc=datetime.now(timezone.utc).isoformat(),
+        run_id="run1",
+        task_id="task1",
+        span_id="span1",
+        step_name="openai_analyze",
+        model="gpt-5",
+        input_tokens=1000,
+        output_tokens=500,
+        cached_input_tokens=None,
+        tool_calls=0,
+        estimated_cost_usd=0.05,
+    )
+
+    def _fail_write(request: WriteBytesRequest, ctx: RunContext):
+        raise AppError(
+            code="file_write_failed",
+            message="boom",
+            retryable=False,
+            context={"path": request.path},
+        )
+
+    monkeypatch.setattr(cost_ledger_service.file_service, "write_bytes", _fail_write)
+
+    with pytest.raises(AppError) as exc_info:
+        append_entry(
+            CostLedgerAppendRequest(
+                schema_version="1.0", path=str(ledger_path), entry=entry
+            ),
+            _ctx(),
+        )
+
+    assert_app_error(exc_info.value, code="cost_ledger_append_failed", retryable=False)
+    assert ledger_path.read_text(encoding="utf-8") == '{"existing": true}\n'

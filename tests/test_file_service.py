@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -9,12 +10,14 @@ from src.contracts.files import (
     ListDirectoryRequest,
     PdfCacheTextReadRequest,
     ReadTextRequest,
+    WriteBytesRequest,
 )
 from src.contracts.run_context import RunContext
 from src.services.file_service import (
     list_directory,
     read_latest_pdf_cache_text,
     read_text,
+    write_bytes,
 )
 from src.utils.errors import AppError
 
@@ -151,3 +154,58 @@ def test_read_latest_pdf_cache_text_rejects_invalid_md5_key(
         code="pdf_cache_md5_invalid",
         retryable=False,
     )
+
+
+def test_write_bytes_uses_atomic_replace_and_cleans_stale_temp(tmp_path: Path) -> None:
+    target = tmp_path / "atomic.bin"
+    stale_temp = tmp_path / "atomic.bin.tmp-write-stale"
+    stale_temp.write_bytes(b"stale")
+    stale_time = stale_temp.stat().st_mtime - 7200.0
+    os.utime(stale_temp, (stale_time, stale_time))
+
+    response = write_bytes(
+        WriteBytesRequest(
+            schema_version="1.0",
+            path=str(target),
+            content=b"fresh-bytes",
+        ),
+        _ctx(),
+    )
+
+    assert response.bytes_written == len(b"fresh-bytes")
+    assert target.read_bytes() == b"fresh-bytes"
+    assert not stale_temp.exists()
+    assert list(tmp_path.glob("atomic.bin.tmp-write-*")) == []
+
+
+def test_write_bytes_preserves_existing_file_when_replace_fails(
+    monkeypatch,
+    tmp_path: Path,
+    assert_app_error,
+) -> None:
+    target = tmp_path / "atomic.bin"
+    target.write_bytes(b"original")
+    created_temp_paths: list[Path] = []
+    original_replace = os.replace
+
+    def _failing_replace(src, dst):
+        created_temp_paths.append(Path(src))
+        raise OSError("replace failed")
+
+    monkeypatch.setattr(os, "replace", _failing_replace)
+
+    with pytest.raises(AppError) as exc_info:
+        write_bytes(
+            WriteBytesRequest(
+                schema_version="1.0",
+                path=str(target),
+                content=b"updated",
+            ),
+            _ctx(),
+        )
+
+    assert_app_error(exc_info.value, code="file_write_failed", retryable=False)
+    assert target.read_bytes() == b"original"
+    assert created_temp_paths
+    assert all(not path.exists() for path in created_temp_paths)
+    monkeypatch.setattr(os, "replace", original_replace)
