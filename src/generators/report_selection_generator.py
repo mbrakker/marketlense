@@ -35,6 +35,7 @@ from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.generators.report_generation_dependencies import ReportSelectionDependencies
 from src.generators.report_generation_shared import logger, read_cache_json
 from src.utils.cache_utils import sha256_json
+from src.utils.costing import estimate_cost_usd, estimate_text_tokens
 from src.utils.candidate_features import candidate_features, candidate_features_payload
 from src.utils.coercion import coerce_float, coerce_int
 from src.utils.logging import child_context, log_event
@@ -48,6 +49,33 @@ class _RankBatchResult:
     usage: dict[str, Optional[int]]
 
 
+_RANK_FEATURE_KEYS_BY_KIND: dict[str, tuple[str, ...]] = {
+    "chart": (
+        "area_frac",
+        "aspect",
+        "text_ratio",
+        "text_chars",
+        "ocr_density",
+        "visual_entropy",
+        "chart_confidence",
+    ),
+    "table": (
+        "area_frac",
+        "rows",
+        "cols",
+        "numeric_ratio",
+        "avg_words_per_cell",
+        "text_chars",
+        "ocr_density",
+        "table_confidence",
+    ),
+}
+
+_RANK_FLOAT_PRECISION = 3
+_RANK_TITLE_LIMIT = 220
+_RANK_TABLE_PREVIEW_LIMIT = 240
+
+
 def _candidate_meta(candidate: Candidate, key: str, default: float = 0.0) -> float:
     features = candidate_features(candidate)
     value = getattr(features, key, default)
@@ -57,10 +85,68 @@ def _candidate_meta(candidate: Candidate, key: str, default: float = 0.0) -> flo
 def _candidate_quality_signals(candidate: Candidate) -> dict[str, float]:
     features = candidate_features(candidate)
     return {
-        "ocr_density": coerce_float(features.ocr_density, 0.0),
-        "visual_entropy": coerce_float(features.visual_entropy, 0.0),
-        "chart_confidence": coerce_float(features.chart_confidence, 0.0),
-        "table_confidence": coerce_float(features.table_confidence, 0.0),
+        "ocr_density": round(coerce_float(features.ocr_density, 0.0), 3),
+        "visual_entropy": round(coerce_float(features.visual_entropy, 0.0), 3),
+        "chart_confidence": round(coerce_float(features.chart_confidence, 0.0), 3),
+        "table_confidence": round(coerce_float(features.table_confidence, 0.0), 3),
+    }
+
+
+def _rank_feature_value(value: Any) -> Any:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return round(float(value), _RANK_FLOAT_PRECISION)
+    return value
+
+
+def _compact_rank_features(candidate: Candidate) -> dict[str, Any]:
+    features = candidate_features(candidate)
+    compact: dict[str, Any] = {}
+    for key in _RANK_FEATURE_KEYS_BY_KIND.get(
+        candidate.kind, _RANK_FEATURE_KEYS_BY_KIND["chart"]
+    ):
+        value = _rank_feature_value(getattr(features, key, 0))
+        if isinstance(value, str):
+            if value.strip():
+                compact[key] = value.strip()
+            continue
+        if isinstance(value, bool):
+            compact[key] = value
+            continue
+        if isinstance(value, (int, float)) and value == 0:
+            continue
+        compact[key] = value
+    return compact
+
+
+def _legacy_rank_row(candidate: Candidate) -> dict[str, Any]:
+    return {
+        "id": candidate.id,
+        "type": candidate.kind,
+        "page": candidate.page,
+        "features": candidate_features_payload(candidate),
+        "quality_signals": _candidate_quality_signals(candidate),
+        "title_or_caption": (candidate.caption or "")[:300],
+        "table_preview": candidate.preview_text[:400]
+        if candidate.kind == "table"
+        else "",
+    }
+
+
+def _compact_rank_row(candidate: Candidate) -> dict[str, Any]:
+    return {
+        "id": candidate.id,
+        "type": candidate.kind,
+        "page": candidate.page,
+        "features": _compact_rank_features(candidate),
+        "quality_signals": _candidate_quality_signals(candidate),
+        "title_or_caption": (candidate.caption or "")[:_RANK_TITLE_LIMIT],
+        "table_preview": (candidate.preview_text or "")[:_RANK_TABLE_PREVIEW_LIMIT]
+        if candidate.kind == "table"
+        else "",
     }
 
 
@@ -302,21 +388,28 @@ def _rank_candidates_batch(
             },
         )
     rank_model = settings.rank_model or settings.openai_model
-    rows = [
-        {
-            "id": candidate.id,
-            "type": candidate.kind,
-            "page": candidate.page,
-            "features": candidate_features_payload(candidate),
-            "quality_signals": _candidate_quality_signals(candidate),
-            "title_or_caption": (candidate.caption or "")[:300],
-            "table_preview": candidate.preview_text[:400]
-            if candidate.kind == "table"
-            else "",
-        }
-        for candidate in candidates
-    ]
-    candidates_json = json.dumps(rows, ensure_ascii=True)
+    legacy_json = json.dumps(
+        [_legacy_rank_row(candidate) for candidate in candidates],
+        ensure_ascii=True,
+    )
+    rows = [_compact_rank_row(candidate) for candidate in candidates]
+    candidates_json = json.dumps(rows, ensure_ascii=True, separators=(",", ":"))
+    legacy_input_tokens = estimate_text_tokens(legacy_json)
+    compact_input_tokens = estimate_text_tokens(candidates_json)
+    legacy_input_cost = estimate_cost_usd(
+        rank_model,
+        legacy_input_tokens,
+        0,
+        0,
+        settings.model_pricing or {},
+    )
+    compact_input_cost = estimate_cost_usd(
+        rank_model,
+        compact_input_tokens,
+        0,
+        0,
+        settings.model_pricing or {},
+    )
     prompt_bundle = prepare_prompt_bundle(
         namespace="rank_candidates",
         settings=settings,
@@ -340,6 +433,31 @@ def _rank_candidates_batch(
                 "system_sha256": prompt_bundle.prompt_set.system.sha256,
                 "user_path": prompt_bundle.prompt_set.user.path,
                 "user_sha256": prompt_bundle.prompt_set.user.sha256,
+            },
+        )
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="rank_payload_profile",
+            module=logger.name,
+            fields={
+                "candidate_kind": kind,
+                "candidate_count": len(candidates),
+                "legacy_payload_chars": len(legacy_json),
+                "compact_payload_chars": len(candidates_json),
+                "payload_chars_saved": len(legacy_json) - len(candidates_json),
+                "legacy_input_tokens_est": legacy_input_tokens,
+                "compact_input_tokens_est": compact_input_tokens,
+                "input_tokens_saved_est": legacy_input_tokens - compact_input_tokens,
+                "legacy_input_cost_usd_est": legacy_input_cost,
+                "compact_input_cost_usd_est": compact_input_cost,
+                "input_cost_saved_usd_est": round(
+                    legacy_input_cost - compact_input_cost, 6
+                ),
+                "title_char_limit": _RANK_TITLE_LIMIT,
+                "table_preview_char_limit": _RANK_TABLE_PREVIEW_LIMIT,
             },
         )
     )

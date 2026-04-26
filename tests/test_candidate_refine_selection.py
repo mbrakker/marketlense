@@ -1,7 +1,8 @@
+import logging
 import json
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
-from dataclasses import replace
 
 from pypdf import PdfWriter
 
@@ -151,9 +152,20 @@ def test_prefilter_uses_typed_candidate_features_without_meta():
     assert rsg._candidate_is_obvious_pass(chart) is True
 
 
-def test_rank_candidates_payload_includes_quality_signals(tmp_path):
-    settings = _settings(tmp_path, rank_model="gpt-rank")
+def test_rank_candidates_payload_includes_quality_signals(tmp_path, caplog):
+    settings = _settings(
+        tmp_path,
+        rank_model="gpt-rank",
+        model_pricing={
+            "gpt-rank": {
+                "input_tokens_per_1k_usd": 1.0,
+                "output_tokens_per_1k_usd": 2.0,
+                "tool_call_usd": 0.0,
+            }
+        },
+    )
     captured_rows: list[dict[str, object]] = []
+    caplog.set_level(logging.INFO, logger="market_lense.report_generator")
 
     def _render_prompt(req, ctx):
         if "candidates_json" in req.variables:
@@ -222,9 +234,118 @@ def test_rank_candidates_payload_includes_quality_signals(tmp_path):
     }
     features = row["features"]
     assert isinstance(features, dict)
+    assert "schema_version" not in features
+    assert "method" not in features
     assert features["ocr_density"] == 4.0
     assert features["visual_entropy"] == 0.62
     assert features["chart_confidence"] == 0.84
+    assert features["area_frac"] == 0.18
+    assert features["text_chars"] == 72
+    assert "rows" not in features
+
+    payload_logs = [
+        json.loads(record.message)
+        for record in caplog.records
+        if '"event": "rank_payload_profile"' in record.message
+    ]
+    assert len(payload_logs) == 1
+    payload_fields = payload_logs[0]["fields"]
+    assert payload_fields["candidate_kind"] == "chart"
+    assert payload_fields["candidate_count"] == 1
+    assert payload_fields["legacy_payload_chars"] > payload_fields["compact_payload_chars"]
+    assert payload_fields["payload_chars_saved"] > 0
+    assert payload_fields["legacy_input_tokens_est"] > payload_fields["compact_input_tokens_est"]
+    assert payload_fields["input_tokens_saved_est"] > 0
+    assert payload_fields["legacy_input_cost_usd_est"] > payload_fields["compact_input_cost_usd_est"]
+    assert payload_fields["input_cost_saved_usd_est"] > 0.0
+
+
+def test_rank_candidates_payload_compacts_table_fields_and_text(tmp_path):
+    settings = _settings(tmp_path, rank_model="gpt-rank")
+    captured_rows: list[dict[str, object]] = []
+
+    def _render_prompt(req, ctx):
+        if "candidates_json" in req.variables:
+            captured_rows.extend(json.loads(req.variables["candidates_json"]))
+        return SimpleNamespace(text=req.variables.get("candidates_json", "system"))
+
+    def _rank_candidates(req, ctx):
+        return SimpleNamespace(
+            results=[
+                RankedCandidate(
+                    id="table_compact",
+                    type="table",
+                    score=95,
+                    quality_score=93,
+                    insight_score=90,
+                    data_score=96,
+                    keep=True,
+                )
+            ],
+            prompt_tokens=12,
+            completion_tokens=4,
+            total_tokens=16,
+            request_id="rank-table",
+            raw_content="{}",
+        )
+
+    deps = _deps(render_prompt=_render_prompt, rank_candidates=_rank_candidates)
+    candidate = Candidate(
+        schema_version="1.0",
+        id="table_compact",
+        kind="table",
+        page=4,
+        bbox=(10.0, 20.0, 300.0, 260.0),
+        caption="T" * 260,
+        preview_text="P" * 300,
+        meta={},
+        features=CandidateFeatures(
+            schema_version="1.0",
+            area_frac=0.1564,
+            aspect=1.8,
+            text_lines=14,
+            text_chars=180,
+            text_ratio=0.42,
+            rows=12,
+            cols=5,
+            numeric_ratio=0.4875,
+            avg_words_per_cell=2.2222,
+            ocr_density=3.4567,
+            visual_entropy=0.98,
+            chart_confidence=0.12,
+            table_confidence=0.8123,
+            method="vision-pass",
+        ),
+    )
+
+    result = rsg._rank_candidates_batch(
+        candidates=[candidate],
+        kind="table",
+        settings=settings,
+        ctx=_ctx(),
+        dependencies=deps,
+    )
+
+    assert result.ranked[0].id == "table_compact"
+    row = captured_rows[0]
+    assert len(row["title_or_caption"]) == 220
+    assert len(row["table_preview"]) == 240
+    assert row["quality_signals"] == {
+        "ocr_density": 3.457,
+        "visual_entropy": 0.98,
+        "chart_confidence": 0.12,
+        "table_confidence": 0.812,
+    }
+    assert row["features"] == {
+        "area_frac": 0.156,
+        "rows": 12,
+        "cols": 5,
+        "numeric_ratio": 0.487,
+        "avg_words_per_cell": 2.222,
+        "text_chars": 180,
+        "ocr_density": 3.457,
+        "table_confidence": 0.812,
+    }
 
 
 def test_prefilter_rejects_low_signal_chart_fragment():

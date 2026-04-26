@@ -139,16 +139,6 @@ Suggested priority order:
     - Correctness tests cover near-duplicate, overlapping, and distinct-table cases.
     - No regression in candidate quality on fixture reports.
 
-- **Title:** Pre-filter and compress candidate payload before LLM ranking [Impact: 4/5, Effort: 3/5]
-  - Explanation: Reduce ranking prompt size by applying conservative deterministic filters and compact payload representations before LLM ranking.
-  - Pros: Lower cost and faster ranking.
-  - Cons: Risk of discarding rare but valuable candidates; thresholds must be conservative.
-  - Acceptance Criteria:
-    - A deterministic pre-filter step exists with safe defaults.
-    - Prompt payload size and ranking cost are measured before/after.
-    - Held-out ranking quality does not regress.
-    - Filter decisions are logged with reason codes.
-
 - **Title:** Refactor PDF visual/table heuristics around stable semantic sub-capabilities [Impact: 4/5, Effort: 4/5]
   - Explanation: Long-file analysis shows very large PDF heuristic modules. Reduce complexity by extracting only true semantic sub-capabilities, such as geometry normalization, panel detection, legend handling, table-grid scoring, and candidate merge policy. Avoid pass-through helper layers.
   - Pros: Simpler defect isolation, easier targeted tests, lower cognitive load.
