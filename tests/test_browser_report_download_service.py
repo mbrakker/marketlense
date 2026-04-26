@@ -21,6 +21,7 @@ from src.contracts.browser_download import (
     BrowserDownloadSettings,
     BrowserReportDownloadRequest,
 )
+from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.contracts.publisher_inventory import PublisherInventoryCandidateTrace
 from src.services._browser_report_download import artifact as artifact_runtime
 from src.services._browser_report_download import browser as browser_runtime
@@ -34,6 +35,7 @@ from src.services._browser_report_download.request import (
     resolve_effective_identity_fields,
 )
 from src.services import browser_report_download_service as service
+from src.services import prompt_service
 from src.utils.errors import AppError
 
 
@@ -321,6 +323,40 @@ def test_browser_report_download_prompt_marks_unverified_memory_as_weak(
     assert "do not click unrelated navigation links" in bundle.task_prompt
     assert "click the exact matching option text" in bundle.task_prompt
     assert "return `blocked_email_domain` immediately" in bundle.task_prompt
+
+
+def test_browser_report_download_prompt_templates_fail_on_missing_variables(
+    run_context,
+    assert_app_error,
+) -> None:
+    prompt_set = prompt_service.load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="browser_report_download/browser_route",
+            reload_if_changed=True,
+        ),
+        run_context,
+    )
+
+    with pytest.raises(AppError) as err:
+        prompt_service.render_prompt(
+            PromptRenderRequest(
+                schema_version="1.0",
+                template=prompt_set.user,
+                variables={
+                    "normalized_url": "https://example.com/report",
+                    "execution_url": "https://example.com/report",
+                    "download_dir": "/tmp/downloads",
+                },
+            ),
+            run_context,
+        )
+
+    assert_app_error(
+        err.value,
+        code="prompt_render_missing_variable",
+        retryable=False,
+    )
 
 
 class _FakeResponse:
@@ -2059,8 +2095,9 @@ def test_download_report_with_browser_use_logs_discovery_prompt_context(
     assert fields["candidate_canonical_url"] == candidate_trace.canonical_url
     assert fields["candidate_source_page_urls"] == ["https://example.com/insights"]
     assert fields["publisher_recommended_discovery_route_kind"] == "browser_render"
-    assert "redirect" in fields["route_family_guidance"].casefold()
+    assert "redirect" in fields["rendered_user_prompt"].casefold()
     assert "https://example.com/insights" in fields["rendered_user_prompt"]
+    assert fields["prompt_variables"]["route_family_hint"] == "browser_tracker_redirect"
 
 
 def test_download_report_with_browser_use_logs_onsite_prompt_guidance(
@@ -2137,7 +2174,8 @@ def test_download_report_with_browser_use_logs_onsite_prompt_guidance(
     ]
     assert len(prompt_events) == 1
     fields = prompt_events[0]["fields"]
-    assert "on-site content" in fields["route_family_guidance"].casefold()
+    assert "on-site content" in fields["rendered_user_prompt"].casefold()
+    assert fields["prompt_variables"]["route_family_hint"] == "browser_onsite_report"
     assert response.route_kind == "onsite_report"
     assert response.outcome == "captured"
 

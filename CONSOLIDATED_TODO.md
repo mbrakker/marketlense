@@ -82,15 +82,6 @@ Suggested priority order:
     - Generator contracts do not depend on provider-specific response shapes.
     - Disaster-recovery test demonstrates failover success with logged provider decisions.
 
-- **Title:** Move browser-download task prompts into prompt-service namespaces [Impact: 3/5, Effort: 2/5]
-  - Explanation: Browser-download instructions currently live in service-side prompt construction. Move them into dedicated prompt namespaces so they are versioned, hash-logged, dry-run validated, and maintained with the rest of the prompt system.
-  - Pros: Better prompt observability, easier iteration, less service-level string assembly.
-  - Cons: Requires explicit prompt-variable contracts and fixture updates.
-  - Acceptance Criteria:
-    - Browser-download task text is loaded and rendered only through prompt service.
-    - Prompt paths, hashes, rendered text, and model parameters are logged for browser-download runs.
-    - Existing browser-download tests cover prompt rendering and missing-variable failures.
-
 ---
 
 ## 2. Cost, Resource Lifecycle & Artifact Durability

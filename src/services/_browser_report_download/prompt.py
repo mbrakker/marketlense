@@ -52,20 +52,55 @@ def render_browser_report_download_prompt(
         "normalized_url": normalized_url,
         "execution_url": execution_url,
         "download_dir": str(download_dir),
-        "identity_prompt": _render_identity_prompt(
+        "identity_entries": _build_identity_entries(
             request=request,
             delivery_email=delivery_email,
         ),
-        "route_hint_text": _render_route_hint_text(
-            route_hint=request.route_hint,
+        "delivery_email": str(delivery_email or "").strip(),
+        "route_hint": str(request.route_hint or "").strip(),
+        "route_kind_hint": str(request.route_kind_hint or "").strip(),
+        "route_step_lines": _build_route_step_lines(
             route_step_hints=request.route_step_hints,
-            route_kind_hint=request.route_kind_hint,
         ),
-        "delivery_instruction": _render_delivery_instruction(
-            delivery_email=delivery_email,
+        "route_family_hint": str(request.route_family_hint or "").strip(),
+        "publisher_discovery_route_kind": str(
+            request.publisher_discovery_route_kind or ""
+        ).strip(),
+        "publisher_recommended_discovery_route_kind": str(
+            request.publisher_recommended_discovery_route_kind or ""
+        ).strip(),
+        "source_page_url_hint": str(request.source_page_url_hint or "").strip(),
+        "candidate_title": (
+            str(request.candidate_trace.title).strip()
+            if request.candidate_trace is not None
+            else ""
         ),
-        "route_family_guidance": _render_route_family_guidance(request=request),
-        "discovery_context": _render_discovery_context(request=request),
+        "candidate_canonical_url": (
+            str(request.candidate_trace.canonical_url).strip()
+            if request.candidate_trace is not None
+            else ""
+        ),
+        "candidate_pdf_url": (
+            str(request.candidate_trace.pdf_url or "").strip()
+            if request.candidate_trace is not None
+            else ""
+        ),
+        "candidate_source_page_urls": (
+            list(request.candidate_trace.source_page_urls)
+            if request.candidate_trace is not None
+            else []
+        ),
+        "candidate_discovery_provenances": (
+            list(request.candidate_trace.discovery_provenances)
+            if request.candidate_trace is not None
+            else []
+        ),
+        "candidate_max_confidence": (
+            f"{request.candidate_trace.max_confidence:.3f}"
+            if request.candidate_trace is not None
+            and request.candidate_trace.max_confidence is not None
+            else ""
+        ),
     }
     rendered_system = prompt_service.render_prompt(
         PromptRenderRequest(
@@ -143,22 +178,44 @@ def render_browser_report_download_prompt(
                     request.publisher_recommended_discovery_route_kind or ""
                 ),
                 "route_family_hint": request.route_family_hint or "",
-                "route_family_guidance": variables["route_family_guidance"],
                 "source_page_url_hint": request.source_page_url_hint or "",
+                "prompt_variables": {
+                    "identity_entries": variables["identity_entries"],
+                    "delivery_email": variables["delivery_email"],
+                    "route_hint": variables["route_hint"],
+                    "route_kind_hint": variables["route_kind_hint"],
+                    "route_step_lines": variables["route_step_lines"],
+                    "route_family_hint": variables["route_family_hint"],
+                    "publisher_discovery_route_kind": variables[
+                        "publisher_discovery_route_kind"
+                    ],
+                    "publisher_recommended_discovery_route_kind": variables[
+                        "publisher_recommended_discovery_route_kind"
+                    ],
+                    "source_page_url_hint": variables["source_page_url_hint"],
+                    "candidate_title": variables["candidate_title"],
+                    "candidate_canonical_url": variables["candidate_canonical_url"],
+                    "candidate_pdf_url": variables["candidate_pdf_url"],
+                    "candidate_source_page_urls": variables[
+                        "candidate_source_page_urls"
+                    ],
+                    "candidate_discovery_provenances": variables[
+                        "candidate_discovery_provenances"
+                    ],
+                    "candidate_max_confidence": variables["candidate_max_confidence"],
+                },
             },
         )
     )
     return bundle
 
 
-def _render_identity_prompt(
+def _build_identity_entries(
     *,
     request: BrowserReportDownloadRequest,
     delivery_email: str | None,
-) -> str:
-    lines = [
-        "Use the following configured identity values when a matching form field is available. Do not invent missing values."
-    ]
+) -> list[dict[str, str]]:
+    entries: list[dict[str, str]] = []
     for field in resolve_effective_identity_fields(request):
         aliases = ", ".join(field.aliases)
         value = str(field.value or "").strip()
@@ -166,183 +223,32 @@ def _render_identity_prompt(
             value = delivery_email.strip()
         if not value:
             continue
-        alias_text = f" (aliases: {aliases})" if aliases else ""
-        lines.append(f"- {field.label}{alias_text}: {value}")
-    if len(lines) == 1:
-        lines.append("- No non-empty identity values are configured.")
-    lines.append(
-        "If a required field has no configured value, stop before submission, still report encountered_form_fields, and do not invent replacement values."
-    )
-    return "\n".join(lines)
+        entries.append(
+            {
+                "label": field.label,
+                "aliases": aliases,
+                "value": value,
+            }
+        )
+    return entries
 
 
-def _render_route_hint_text(
+def _build_route_step_lines(
     *,
-    route_hint: str | None,
     route_step_hints: list[BrowserDownloadRouteStep],
-    route_kind_hint: str | None,
-) -> str:
-    if not route_hint and not route_step_hints:
-        return "No remembered route summary is available for this URL."
+) -> list[str]:
     lines: list[str] = []
-    if route_kind_hint:
-        lines.append(f"Previously observed route kind: {route_kind_hint}.")
-    if route_hint:
-        lines.append(f"Previously observed route summary for this URL: {route_hint}")
-    if route_hint and not route_step_hints:
-        lines.append(
-            "Treat this as weak memory, not proof of success; avoid repeating any failure point described in the summary."
+    for index, step in enumerate(route_step_hints[:5], start=1):
+        action = str(getattr(step, "action", "") or "").strip() or "follow"
+        target = (
+            str(getattr(step, "target_text", "") or "").strip()
+            or str(getattr(step, "target_role", "") or "").strip()
+            or str(getattr(step, "target_url", "") or "").strip()
+            or "page"
         )
-    if route_step_hints:
-        lines.append(
-            "Replay these remembered structured route steps before broader exploration:"
-        )
-        for index, step in enumerate(route_step_hints[:5], start=1):
-            action = str(getattr(step, "action", "") or "").strip() or "follow"
-            target = (
-                str(getattr(step, "target_text", "") or "").strip()
-                or str(getattr(step, "target_role", "") or "").strip()
-                or str(getattr(step, "target_url", "") or "").strip()
-                or "page"
-            )
-            result = str(getattr(step, "result", "") or "").strip()
-            line = f"{index}. {action} {target}"
-            if result:
-                line = f"{line} -> {result}"
-            lines.append(line)
-        lines.append(
-            "If the page already matches that remembered terminal state, capture it immediately instead of re-exploring the site."
-        )
-    return "\n".join(lines)
-
-
-def _render_delivery_instruction(*, delivery_email: str | None) -> str:
-    if delivery_email:
-        return (
-            "If an email form is required, use this email address and confirm "
-            f"submission: {delivery_email}"
-        )
-    return (
-        "If the site requires email delivery and no configured email value is "
-        "available, do not invent one. Classify the route as `email_delivery` "
-        "and set email_submission_completed to false."
-    )
-
-
-def _render_route_family_guidance(*, request: BrowserReportDownloadRequest) -> str:
-    route_family = str(request.route_family_hint or "").strip()
-    if route_family == "browser_pdf_click":
-        return "\n".join(
-            [
-                "Route-family guidance for `browser_pdf_click`:",
-                "- Stay tightly scoped to the candidate page and visible report CTAs.",
-                "- Prefer direct PDF links or obvious download buttons over generic navigation.",
-                "- If the page forces a form instead of producing a PDF, classify that as `email_delivery` rather than pretending the PDF path worked.",
-                "- If the page turns into a lead form, switch to concise form handling instead of retrying every visible field as if it were required.",
-                "- Do not wander across unrelated resources, blog posts, or site navigation.",
-            ]
-        )
-    if route_family == "browser_email_form":
-        return "\n".join(
-            [
-                "Route-family guidance for `browser_email_form`:",
-                "- Stay on the candidate report page or opened form; do not click unrelated navigation links such as login, consulting, related posts, or recommended articles unless they are the report CTA itself.",
-                "- If the form lives behind an in-page anchor such as `#download`, use that form directly instead of exploring unrelated links.",
-                "- Inspect the form before submission and capture all encountered field labels.",
-                "- Use only configured identity values. If a required field is missing, stop and return the correct blocker code instead of guessing.",
-                "- For searchable dropdowns or comboboxes, do not rely on one-shot input alone: click into the field, type with keyboard events, wait for the suggestion list, click the exact matching option text, and verify the visible/input value persists after blur.",
-                "- Before clicking submit, verify that every required field is satisfied and that no required field still shows placeholder text, browser validation UI, or an empty combobox state.",
-                "- If you cannot verify a required searchable field such as Location or Country, do not report a completed submission.",
-                "- After submission, inspect confirmation text, URL change, button state, whether the form disappeared, and whether the terminal page still looks like the same form.",
-                "- If the page shows a transient submit state such as `Please Wait`, do not stop there; keep waiting for the final confirmation or blocker text.",
-                "- Do not keep retrying a field that becomes hidden, detached, or unavailable after a reasonable attempt. If submission is still possible, continue.",
-                "- Reserve `blocked_unknown_required_enum` for real enum/select blockers; treat missing phone, website, or other text fields as identity-data issues instead.",
-                "- A submit click alone is not enough; only classify success when the confirmation evidence is real.",
-            ]
-        )
-    if route_family == "browser_tracker_redirect":
-        return "\n".join(
-            [
-                "Route-family guidance for `browser_tracker_redirect`:",
-                "- Let the redirect resolve first and record the resolved target URL.",
-                "- If the redirect lands on a listing/source page, switch to the exact matching report candidate rather than exploring broadly.",
-                "- Avoid loops through tracking wrappers, share dialogs, or marketing overlays.",
-            ]
-        )
-    if route_family == "browser_listing_hub":
-        return "\n".join(
-            [
-                "Route-family guidance for `browser_listing_hub`:",
-                "- Start from the source/listing page and find the exact candidate title or URL from discovery context.",
-                "- Open only the most likely matching report candidate; ignore unrelated resources, blog cards, and marketing content.",
-                "- If the destination is an on-site longread instead of a PDF, classify it as `onsite_report` and capture it locally.",
-            ]
-        )
-    if route_family == "browser_onsite_report":
-        return "\n".join(
-            [
-                "Route-family guidance for `browser_onsite_report`:",
-                "- Treat the report as on-site content, not a failed PDF download.",
-                "- If the article body is already readable on the page, do not submit optional download or lead forms; capture the on-page report instead.",
-                "- Capture the article locally, return `onsite_capture_path`, and record `traversed_page_urls`.",
-                "- For pagination or infinite scroll, traverse only until the report is complete or clearly bounded; avoid endless scrolling.",
-                "- Deduplicate repeated sections and set `onsite_completeness_status` honestly.",
-                "- Use `complete` only when pagination or scrolling clearly reached the report end; otherwise prefer `partial` or `bounded_incomplete`.",
-            ]
-        )
-    return "\n".join(
-        [
-            "Route-family guidance for the current attempt:",
-            "- Stay tightly scoped to the candidate and the most direct report-acquisition path.",
-            "- Prefer deterministic download paths over exploratory browsing.",
-            "- If the route is blocked or becomes an on-site longread, classify that explicitly instead of forcing a PDF outcome.",
-        ]
-    )
-
-
-def _render_discovery_context(*, request: BrowserReportDownloadRequest) -> str:
-    candidate = request.candidate_trace
-    lines = [
-        f"Planned route family for this attempt: {request.route_family_hint or 'unspecified'}."
-    ]
-    if request.publisher_discovery_route_kind:
-        lines.append(
-            f"Publisher discovery route kind from the discovery/diff phase: {request.publisher_discovery_route_kind}."
-        )
-    if request.publisher_recommended_discovery_route_kind:
-        lines.append(
-            "Publisher recommended discovery route kind from the discovery/diff "
-            f"phase: {request.publisher_recommended_discovery_route_kind}."
-        )
-    if candidate is None:
-        lines.append("No discovery candidate trace is available for this attempt.")
-        return "\n".join(lines)
-    lines.append(f"Candidate title: {candidate.title}")
-    lines.append(f"Candidate canonical URL: {candidate.canonical_url}")
-    if candidate.pdf_url:
-        lines.append(
-            f"Discovery observed a candidate PDF URL for this report: {candidate.pdf_url}"
-        )
-        lines.append(
-            "Verify that candidate PDF target before exploring alternate download routes."
-        )
-    if candidate.source_page_urls:
-        lines.append(
-            "Discovery source pages where this candidate was observed: "
-            + ", ".join(candidate.source_page_urls)
-        )
-    if request.source_page_url_hint:
-        lines.append(
-            "If the candidate URL is thin, gated, or tracker-like, revisit this "
-            f"source page first: {request.source_page_url_hint}"
-        )
-    if candidate.discovery_provenances:
-        lines.append(
-            "Discovery provenance labels for this candidate: "
-            + ", ".join(candidate.discovery_provenances)
-        )
-    if candidate.max_confidence is not None:
-        lines.append(
-            f"Discovery maximum candidate confidence: {candidate.max_confidence:.3f}"
-        )
-    return "\n".join(lines)
+        result = str(getattr(step, "result", "") or "").strip()
+        line = f"{index}. {action} {target}"
+        if result:
+            line = f"{line} -> {result}"
+        lines.append(line)
+    return lines

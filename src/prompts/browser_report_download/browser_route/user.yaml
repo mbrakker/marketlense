@@ -14,14 +14,115 @@ text: |
 
   Always return a concise `route_summary` describing the successful clicks or form steps so the system can reuse it later.
 
-  {{ identity_prompt }}
+  Use the following configured identity values when a matching form field is available. Do not invent missing values.
+  {% for identity in identity_entries %}
+  - {{ identity.label }}{% if identity.aliases %} (aliases: {{ identity.aliases }}){% endif %}: {{ identity.value }}
+  {% endfor %}
+  {% if not identity_entries %}
+  - No non-empty identity values are configured.
+  {% endif %}
+  If a required field has no configured value, stop before submission, still report encountered_form_fields, and do not invent replacement values.
 
-  {{ route_hint_text }}
+  {% if not route_hint and not route_step_lines %}
+  No remembered route summary is available for this URL.
+  {% endif %}
+  {% if route_kind_hint %}
+  Previously observed route kind: {{ route_kind_hint }}.
+  {% endif %}
+  {% if route_hint %}
+  Previously observed route summary for this URL: {{ route_hint }}
+  {% endif %}
+  {% if route_hint and not route_step_lines %}
+  Treat this as weak memory, not proof of success; avoid repeating any failure point described in the summary.
+  {% endif %}
+  {% if route_step_lines %}
+  Replay these remembered structured route steps before broader exploration:
+  {% for route_step_line in route_step_lines %}
+  {{ route_step_line }}
+  {% endfor %}
+  If the page already matches that remembered terminal state, capture it immediately instead of re-exploring the site.
+  {% endif %}
 
-  {{ delivery_instruction }}
+  {% if delivery_email %}
+  If an email form is required, use this email address and confirm submission: {{ delivery_email }}
+  {% else %}
+  If the site requires email delivery and no configured email value is available, do not invent one. Classify the route as `email_delivery` and set email_submission_completed to false.
+  {% endif %}
 
-  {{ route_family_guidance }}
+  {% if route_family_hint == "browser_pdf_click" %}
+  Route-family guidance for `browser_pdf_click`:
+  - Stay tightly scoped to the candidate page and visible report CTAs.
+  - Prefer direct PDF links or obvious download buttons over generic navigation.
+  - If the page forces a form instead of producing a PDF, classify that as `email_delivery` rather than pretending the PDF path worked.
+  - If the page turns into a lead form, switch to concise form handling instead of retrying every visible field as if it were required.
+  - Do not wander across unrelated resources, blog posts, or site navigation.
+  {% elif route_family_hint == "browser_email_form" %}
+  Route-family guidance for `browser_email_form`:
+  - Stay on the candidate report page or opened form; do not click unrelated navigation links such as login, consulting, related posts, or recommended articles unless they are the report CTA itself.
+  - If the form lives behind an in-page anchor such as `#download`, use that form directly instead of exploring unrelated links.
+  - Inspect the form before submission and capture all encountered field labels.
+  - Use only configured identity values. If a required field is missing, stop and return the correct blocker code instead of guessing.
+  - For searchable dropdowns or comboboxes, do not rely on one-shot input alone: click into the field, type with keyboard events, wait for the suggestion list, click the exact matching option text, and verify the visible/input value persists after blur.
+  - Before clicking submit, verify that every required field is satisfied and that no required field still shows placeholder text, browser validation UI, or an empty combobox state.
+  - If you cannot verify a required searchable field such as Location or Country, do not report a completed submission.
+  - After submission, inspect confirmation text, URL change, button state, whether the form disappeared, and whether the terminal page still looks like the same form.
+  - If the page shows a transient submit state such as `Please Wait`, do not stop there; keep waiting for the final confirmation or blocker text.
+  - Do not keep retrying a field that becomes hidden, detached, or unavailable after a reasonable attempt. If submission is still possible, continue.
+  - Reserve `blocked_unknown_required_enum` for real enum/select blockers; treat missing phone, website, or other text fields as identity-data issues instead.
+  - A submit click alone is not enough; only classify success when the confirmation evidence is real.
+  {% elif route_family_hint == "browser_tracker_redirect" %}
+  Route-family guidance for `browser_tracker_redirect`:
+  - Let the redirect resolve first and record the resolved target URL.
+  - If the redirect lands on a listing/source page, switch to the exact matching report candidate rather than exploring broadly.
+  - Avoid loops through tracking wrappers, share dialogs, or marketing overlays.
+  {% elif route_family_hint == "browser_listing_hub" %}
+  Route-family guidance for `browser_listing_hub`:
+  - Start from the source/listing page and find the exact candidate title or URL from discovery context.
+  - Open only the most likely matching report candidate; ignore unrelated resources, blog cards, and marketing content.
+  - If the destination is an on-site longread instead of a PDF, classify it as `onsite_report` and capture it locally.
+  {% elif route_family_hint == "browser_onsite_report" %}
+  Route-family guidance for `browser_onsite_report`:
+  - Treat the report as on-site content, not a failed PDF download.
+  - If the article body is already readable on the page, do not submit optional download or lead forms; capture the on-page report instead.
+  - Capture the article locally, return `onsite_capture_path`, and record `traversed_page_urls`.
+  - For pagination or infinite scroll, traverse only until the report is complete or clearly bounded; avoid endless scrolling.
+  - Deduplicate repeated sections and set `onsite_completeness_status` honestly.
+  - Use `complete` only when pagination or scrolling clearly reached the report end; otherwise prefer `partial` or `bounded_incomplete`.
+  {% else %}
+  Route-family guidance for the current attempt:
+  - Stay tightly scoped to the candidate and the most direct report-acquisition path.
+  - Prefer deterministic download paths over exploratory browsing.
+  - If the route is blocked or becomes an on-site longread, classify that explicitly instead of forcing a PDF outcome.
+  {% endif %}
 
-  {{ discovery_context }}
+  Planned route family for this attempt: {{ route_family_hint or 'unspecified' }}.
+  {% if publisher_discovery_route_kind %}
+  Publisher discovery route kind from the discovery/diff phase: {{ publisher_discovery_route_kind }}.
+  {% endif %}
+  {% if publisher_recommended_discovery_route_kind %}
+  Publisher recommended discovery route kind from the discovery/diff phase: {{ publisher_recommended_discovery_route_kind }}.
+  {% endif %}
+  {% if candidate_canonical_url %}
+  Candidate title: {{ candidate_title }}
+  Candidate canonical URL: {{ candidate_canonical_url }}
+  {% if candidate_pdf_url %}
+  Discovery observed a candidate PDF URL for this report: {{ candidate_pdf_url }}
+  Verify that candidate PDF target before exploring alternate download routes.
+  {% endif %}
+  {% if candidate_source_page_urls %}
+  Discovery source pages where this candidate was observed: {{ candidate_source_page_urls | join(', ') }}
+  {% endif %}
+  {% if source_page_url_hint %}
+  If the candidate URL is thin, gated, or tracker-like, revisit this source page first: {{ source_page_url_hint }}
+  {% endif %}
+  {% if candidate_discovery_provenances %}
+  Discovery provenance labels for this candidate: {{ candidate_discovery_provenances | join(', ') }}
+  {% endif %}
+  {% if candidate_max_confidence %}
+  Discovery maximum candidate confidence: {{ candidate_max_confidence }}
+  {% endif %}
+  {% else %}
+  No discovery candidate trace is available for this attempt.
+  {% endif %}
 
   Do not return free text outside the structured result.
