@@ -207,16 +207,6 @@ Suggested priority order:
     - Replay tooling reproduces lifecycle transitions.
     - Tests cover migration from current state snapshots to event-backed reconstruction.
 
-- **Title:** Move SQLite schema changes into explicit migration ledgers [Impact: 5/5, Effort: 4/5]
-  - Explanation: `report_store_service`, `analytics_store_service`, `state_service` internals, and run-registry services embed `CREATE TABLE`, `ALTER TABLE`, and table rebuild logic in runtime service initialization. Replace ad hoc startup migrations with versioned migration ledgers per database boundary.
-  - Pros: Safer upgrades, faster startup, clearer rollback/replay behavior, easier schema review.
-  - Cons: Requires migration tooling and careful conversion of existing inline migrations.
-  - Acceptance Criteria:
-    - Each SQLite database has a schema version table and ordered migration ledger.
-    - Service startup applies only pending migrations and logs migration IDs/durations.
-    - Migration tests cover fresh DB, old DB upgrade, failed migration rollback, and idempotent re-run.
-    - Inline `ALTER TABLE`/table-rebuild logic is removed from normal service code paths.
-
 - **Title:** Add dead-letter workflow with typed triage categories [Impact: 4/5, Effort: 3/5]
   - Explanation: Route irrecoverable runs into dead-letter states with structured diagnosis metadata instead of leaving them as ambiguous failures.
   - Pros: Keeps primary queues healthy and improves human triage throughput.

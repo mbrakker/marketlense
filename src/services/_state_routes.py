@@ -28,7 +28,7 @@ def get_report_download_route(
             },
         )
     )
-    with _state_conn(request.state_db) as conn:
+    with _state_conn(request.state_db, ctx) as conn:
         cur = conn.execute(
             "SELECT normalized_url, source_url, route_kind, route_summary, outcome, "
             "last_downloaded_file_path, last_final_page_url, updated_at "
@@ -110,7 +110,7 @@ def record_report_download_route(
             },
         )
     )
-    with _state_conn(request.state_db) as conn:
+    with _state_conn(request.state_db, ctx) as conn:
         conn.execute(
             "INSERT OR REPLACE INTO report_download_routes("
             "normalized_url, source_url, route_kind, route_summary, outcome, "

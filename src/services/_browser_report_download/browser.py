@@ -89,6 +89,8 @@ _BROWSER_AGENT_WORKER_ENV = "MARKET_LENSE_BROWSER_AGENT_WORKER"
 # Let the worker finish its own timeout stop/cleanup path and write a typed
 # response instead of being killed by the outer subprocess envelope mid-exit.
 _BROWSER_AGENT_WORKER_TIMEOUT_BUFFER_SECONDS = 45.0
+_BROWSER_AGENT_WORKER_OUTPUT_MAX_CHARS = 1200
+_ANSI_ESCAPE_PATTERN = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
 _BROWSER_AGENT_USE_JUDGE = False
 _LOOKUP_FIELD_MARKERS = (
     "location",
@@ -1029,6 +1031,10 @@ def _run_browser_report_download_agent_subprocess(
     response_path.unlink(missing_ok=True)
     env = dict(os.environ)
     env[_BROWSER_AGENT_WORKER_ENV] = "1"
+    env["PYTHONIOENCODING"] = "utf-8"
+    env["PYTHONUTF8"] = "1"
+    env.setdefault("NO_COLOR", "1")
+    env.setdefault("RICH_DISABLE", "1")
     timeout_seconds = (
         _resolve_agent_run_timeout_seconds(request)
         + _BROWSER_AGENT_WORKER_TIMEOUT_BUFFER_SECONDS
@@ -1059,9 +1065,17 @@ def _run_browser_report_download_agent_subprocess(
             check=False,
             cwd=str(Path.cwd()),
             env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=timeout_seconds,
         )
     except subprocess.TimeoutExpired as exc:
+        worker_output_excerpt = _normalize_browser_worker_output_excerpt(
+            exc.stdout if isinstance(exc.stdout, str) else ""
+        )
         raise AppError(
             code="browser_download_agent_timeout",
             message="browser-use did not return within the configured execution budget",
@@ -1071,21 +1085,27 @@ def _run_browser_report_download_agent_subprocess(
                 "normalized_url": normalized_url,
                 "timeout_seconds": timeout_seconds,
                 "max_steps": request.settings.max_steps,
+                "worker_output_excerpt": worker_output_excerpt,
             },
         ) from exc
+    worker_output_excerpt = _normalize_browser_worker_output_excerpt(completed.stdout)
+    completion_fields: dict[str, Any] = {
+        "normalized_url": normalized_url,
+        "payload_path": str(payload_path),
+        "response_path": str(response_path),
+        "return_code": completed.returncode,
+        "response_exists": response_path.exists(),
+        "worker_output_captured": bool(completed.stdout),
+    }
+    if worker_output_excerpt:
+        completion_fields["worker_output_excerpt"] = worker_output_excerpt
     logger.info(
         log_event(
             ctx,
             role="service",
             event="browser_report_download_worker_complete",
             module=logger.name,
-            fields={
-                "normalized_url": normalized_url,
-                "payload_path": str(payload_path),
-                "response_path": str(response_path),
-                "return_code": completed.returncode,
-                "response_exists": response_path.exists(),
-            },
+            fields=completion_fields,
         )
     )
     if not response_path.exists():
@@ -1093,7 +1113,11 @@ def _run_browser_report_download_agent_subprocess(
             code="browser_download_agent_missing_result",
             message="browser-use worker completed without writing a response payload",
             retryable=True,
-            context={"normalized_url": normalized_url},
+            context={
+                "normalized_url": normalized_url,
+                "return_code": completed.returncode,
+                "worker_output_excerpt": worker_output_excerpt,
+            },
         )
     raw_response = json.loads(response_path.read_text(encoding="utf-8"))
     response = BrowserAgentWorkerResponse(
@@ -1127,6 +1151,28 @@ def _run_browser_report_download_agent_subprocess(
         retryable=True,
         context={"normalized_url": normalized_url},
     )
+
+
+def _normalize_browser_worker_output_excerpt(value: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        return ""
+    without_ansi = _ANSI_ESCAPE_PATTERN.sub("", value)
+    normalized = without_ansi.replace("\r\n", "\n").replace("\r", "\n")
+    ascii_only = "".join(
+        character
+        if character == "\n" or character == "\t" or 32 <= ord(character) <= 126
+        else " "
+        for character in normalized
+    )
+    collapsed_lines = [
+        re.sub(r"\s+", " ", line).strip()
+        for line in ascii_only.splitlines()
+        if line.strip()
+    ]
+    excerpt = "\n".join(collapsed_lines).strip()
+    if len(excerpt) <= _BROWSER_AGENT_WORKER_OUTPUT_MAX_CHARS:
+        return excerpt
+    return excerpt[: _BROWSER_AGENT_WORKER_OUTPUT_MAX_CHARS - 3].rstrip() + "..."
 
 
 def _deserialize_browser_agent_run_result(

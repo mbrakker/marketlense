@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import subprocess
 import tempfile
 import time
 from dataclasses import replace
@@ -6726,6 +6727,161 @@ def test_browser_worker_main_preserves_candidate_trace(
     assert observed_request.candidate_trace.discovery_provenances == (
         candidate_trace.discovery_provenances
     )
+
+
+def test_browser_worker_subprocess_forces_utf8_and_captures_output(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+    caplog,
+    assert_logs_have_required_fields,
+) -> None:
+    caplog.set_level(logging.INFO, logger=service.logger.name)
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://example.com/report",
+        settings=_settings(tmp_path),
+    )
+    prompt_bundle = prompt_runtime.BrowserDownloadPromptBundle(
+        schema_version="1.0",
+        namespace="browser_report_download/browser_route",
+        system_prompt_path="system.yaml",
+        user_prompt_path="user.yaml",
+        system_prompt_sha256="system",
+        user_prompt_sha256="user",
+        rendered_system_prompt="system",
+        rendered_user_prompt="user",
+        task_prompt="task",
+    )
+
+    def fake_run(*args, **kwargs):
+        assert kwargs["stdout"] == subprocess.PIPE
+        assert kwargs["stderr"] == subprocess.STDOUT
+        assert kwargs["text"] is True
+        assert kwargs["encoding"] == "utf-8"
+        assert kwargs["errors"] == "replace"
+        assert kwargs["env"][browser_runtime._BROWSER_AGENT_WORKER_ENV] == "1"
+        assert kwargs["env"]["PYTHONIOENCODING"] == "utf-8"
+        assert kwargs["env"]["PYTHONUTF8"] == "1"
+        assert kwargs["env"]["NO_COLOR"] == "1"
+        assert kwargs["env"]["RICH_DISABLE"] == "1"
+        response_path = Path(args[0][-1])
+        response_path.write_text(
+            json.dumps(
+                {
+                    "schema_version": "1.0",
+                    "status": "ok",
+                    "result": {
+                        "schema_version": "1.0",
+                        "raw_model_response": "{}",
+                        "final_page_url": "https://example.com/final",
+                        "final_page_title": "Final",
+                        "final_page_html": "<html></html>",
+                        "downloaded_files": [],
+                        "attachment_paths": [],
+                        "network_resource_urls": [],
+                        "network_events": [],
+                        "html_snapshot_path": "",
+                        "screenshot_path": "",
+                    },
+                    "error": None,
+                }
+            ),
+            encoding="utf-8",
+        )
+        return subprocess.CompletedProcess(
+            args=args[0],
+            returncode=0,
+            stdout="INFO browser_use.Agent Step 1: click download\n",
+        )
+
+    external_boundary_mocks_only.setattr(browser_runtime.subprocess, "run", fake_run)
+
+    result = browser_runtime._run_browser_report_download_agent_subprocess(
+        request=request,
+        ctx=run_context,
+        normalized_url=request.url,
+        execution_url=request.url,
+        download_dir=tmp_path / "worker-download",
+        prompt_bundle=prompt_bundle,
+    )
+
+    assert result.final_page_url == "https://example.com/final"
+    completion_events = [
+        event
+        for event in _service_events(caplog)
+        if event.get("event") == "browser_report_download_worker_complete"
+    ]
+    assert len(completion_events) == 1
+    completion_fields = completion_events[0]["fields"]
+    assert completion_fields["worker_output_captured"] is True
+    assert completion_fields["worker_output_excerpt"] == (
+        "INFO browser_use.Agent Step 1: click download"
+    )
+    assert_logs_have_required_fields(_service_events(caplog))
+
+
+def test_browser_worker_subprocess_sanitizes_failure_output_excerpt(
+    tmp_path: Path,
+    run_context,
+    external_boundary_mocks_only,
+    caplog,
+    assert_logs_have_required_fields,
+) -> None:
+    caplog.set_level(logging.INFO, logger=service.logger.name)
+    request = BrowserReportDownloadRequest(
+        schema_version="1.0",
+        url="https://example.com/report",
+        settings=_settings(tmp_path),
+    )
+    prompt_bundle = prompt_runtime.BrowserDownloadPromptBundle(
+        schema_version="1.0",
+        namespace="browser_report_download/browser_route",
+        system_prompt_path="system.yaml",
+        user_prompt_path="user.yaml",
+        system_prompt_sha256="system",
+        user_prompt_sha256="user",
+        rendered_system_prompt="system",
+        rendered_user_prompt="user",
+        task_prompt="task",
+    )
+
+    def fake_run(*args, **kwargs):
+        return subprocess.CompletedProcess(
+            args=args[0],
+            returncode=1,
+            stdout="browser_use.Agent🤖\r\n\x1b[31mStep 1 failed\x1b[0m\r\n",
+        )
+
+    external_boundary_mocks_only.setattr(browser_runtime.subprocess, "run", fake_run)
+
+    with pytest.raises(AppError) as exc_info:
+        browser_runtime._run_browser_report_download_agent_subprocess(
+            request=request,
+            ctx=run_context,
+            normalized_url=request.url,
+            execution_url=request.url,
+            download_dir=tmp_path / "worker-download",
+            prompt_bundle=prompt_bundle,
+        )
+
+    assert exc_info.value.code == "browser_download_agent_missing_result"
+    assert exc_info.value.context == {
+        "normalized_url": "https://example.com/report",
+        "return_code": 1,
+        "worker_output_excerpt": "browser_use.Agent\nStep 1 failed",
+    }
+    completion_events = [
+        event
+        for event in _service_events(caplog)
+        if event.get("event") == "browser_report_download_worker_complete"
+    ]
+    assert len(completion_events) == 1
+    completion_fields = completion_events[0]["fields"]
+    assert completion_fields["worker_output_excerpt"] == (
+        "browser_use.Agent\nStep 1 failed"
+    )
+    assert_logs_have_required_fields(_service_events(caplog))
 
 
 def test_download_report_with_browser_use_cleans_stale_browser_use_temp_dirs_before_launch(

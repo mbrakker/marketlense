@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from src.contracts.run_context import RunContext
+from src.contracts.sqlite_migration import SqliteMigrationApplyRequest
 from src.contracts.ui_run_control import (
     UiRunRecord,
     UiRunRecordGetRequest,
@@ -18,6 +19,7 @@ from src.contracts.ui_run_control import (
     UiRunRecordWriteRequest,
     UiRunRecordWriteResponse,
 )
+from src.services.sqlite_migration_service import apply_ui_run_registry_migrations
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -26,37 +28,13 @@ logger = logging.getLogger("market_lense.run_registry_service")
 DEFAULT_BUSY_TIMEOUT_SECONDS = 5.0
 _RUN_REGISTRY_LOCK = threading.Lock()
 
-DDL = """
-CREATE TABLE IF NOT EXISTS ui_runs (
-  run_id TEXT PRIMARY KEY,
-  run_type TEXT NOT NULL,
-  display_name TEXT NOT NULL,
-  status TEXT NOT NULL,
-  request_payload_json TEXT NOT NULL,
-  command_json TEXT NOT NULL,
-  created_at_utc TEXT NOT NULL,
-  updated_at_utc TEXT NOT NULL,
-  started_at_utc TEXT NOT NULL DEFAULT '',
-  finished_at_utc TEXT NOT NULL DEFAULT '',
-  output_path TEXT NOT NULL DEFAULT '',
-  request_path TEXT NOT NULL DEFAULT '',
-  artifact_paths_json TEXT NOT NULL DEFAULT '[]',
-  result_summary_json TEXT NOT NULL DEFAULT '{}',
-  pid INTEGER,
-  exit_code INTEGER,
-  error_code TEXT NOT NULL DEFAULT '',
-  error_message TEXT NOT NULL DEFAULT ''
-);
-"""
-
-
 def default_ui_run_registry_path(state_db: str) -> str:
     state_path = Path(state_db).expanduser().resolve()
     return str(state_path.with_name("ui_runs.sqlite"))
 
 
 @contextmanager
-def _registry_conn(path: str):
+def _registry_conn(path: str, ctx: RunContext):
     if not path:
         raise AppError(
             code="ui_run_registry_missing",
@@ -83,7 +61,16 @@ def _registry_conn(path: str):
         )
         conn.execute("PRAGMA synchronous=NORMAL")
         with _RUN_REGISTRY_LOCK:
-            conn.executescript(DDL)
+            apply_ui_run_registry_migrations(
+                SqliteMigrationApplyRequest(
+                    schema_version="1.0",
+                    database_key="ui_run_registry",
+                    db_path=path,
+                    target_version=1,
+                    ctx=ctx,
+                ),
+                conn,
+            )
             conn.commit()
         yield conn
         conn.commit()
@@ -155,7 +142,7 @@ def write_ui_run_record(
             },
         )
     )
-    with _registry_conn(request.registry_path) as conn:
+    with _registry_conn(request.registry_path, ctx) as conn:
         conn.row_factory = sqlite3.Row
         conn.execute(
             """
@@ -214,7 +201,7 @@ def get_ui_run_record(
             fields={"registry_path": request.registry_path, "run_id": request.run_id},
         )
     )
-    with _registry_conn(request.registry_path) as conn:
+    with _registry_conn(request.registry_path, ctx) as conn:
         conn.row_factory = sqlite3.Row
         row = conn.execute(
             "SELECT * FROM ui_runs WHERE run_id = ?",
@@ -262,7 +249,7 @@ def list_ui_run_records(
         params.extend(normalized_statuses)
     query += " ORDER BY created_at_utc DESC, run_id DESC LIMIT ?"
     params.append(int(request.limit))
-    with _registry_conn(request.registry_path) as conn:
+    with _registry_conn(request.registry_path, ctx) as conn:
         conn.row_factory = sqlite3.Row
         rows = conn.execute(query, tuple(params)).fetchall()
     records = [_row_to_record(row) for row in rows]

@@ -441,6 +441,93 @@ def test_projection_store_records_failure_and_validates_embedding_status(
     assert row["projection_error_retryable"] == 0
 
 
+def test_projection_store_migrates_legacy_reports_schema_and_records_ledger(
+    tmp_path,
+    run_context: RunContext,
+) -> None:
+    db_path = tmp_path / "legacy_reports.sqlite"
+    with sqlite3.connect(db_path) as conn:
+        conn.executescript(
+            """
+            CREATE TABLE reports (
+              file_id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              taxonomy_json TEXT NOT NULL,
+              created_at INTEGER NOT NULL,
+              updated_at INTEGER NOT NULL
+            );
+            """
+        )
+        conn.commit()
+
+    response = record_projection_failure(
+        AnalyticsProjectionFailureRequest(
+            schema_version=PROJECTION_SCHEMA_VERSION,
+            db_path=str(db_path),
+            report_id="drive-file-1",
+            projection_schema_version=PROJECTION_SCHEMA_VERSION,
+            projection_version=PROJECTION_VERSION,
+            generated_at_utc="2026-04-22T12:00:00Z",
+            error_code="analytics_projection_test_failure",
+            error_message="projection failed",
+            error_retryable=False,
+        ),
+        run_context,
+    )
+
+    assert response.projection_status == "failed"
+    row = _fetch_one(
+        str(db_path),
+        """
+        SELECT projection_status, projection_error_code
+        FROM reports WHERE file_id=?
+        """,
+        ("drive-file-1",),
+    )
+    assert row["projection_status"] == "failed"
+    assert row["projection_error_code"] == "analytics_projection_test_failure"
+    with sqlite3.connect(db_path) as conn:
+        schema_version = conn.execute(
+            "SELECT current_version FROM schema_version WHERE database_key='reports_db'"
+        ).fetchone()
+        ledger_count = conn.execute(
+            "SELECT COUNT(*) FROM schema_migration_ledger WHERE database_key='reports_db'"
+        ).fetchone()[0]
+        analytics_tables = {
+            row[0]
+            for row in conn.execute(
+                """
+                SELECT name
+                FROM sqlite_master
+                WHERE type='table' AND name IN (
+                  'report_sections',
+                  'report_findings',
+                  'report_metrics',
+                  'report_quotes',
+                  'report_claims',
+                  'report_tags',
+                  'report_categories',
+                  'report_figures',
+                  'vector_projection_queue'
+                )
+                """
+            ).fetchall()
+        }
+    assert schema_version == (10,)
+    assert ledger_count == 10
+    assert analytics_tables == {
+        "report_sections",
+        "report_findings",
+        "report_metrics",
+        "report_quotes",
+        "report_claims",
+        "report_tags",
+        "report_categories",
+        "report_figures",
+        "vector_projection_queue",
+    }
+
+
 def test_projection_orchestrator_records_failure_status(
     ingest_settings: IngestSettings,
     run_context: RunContext,

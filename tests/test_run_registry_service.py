@@ -109,6 +109,20 @@ def test_run_registry_service_write_get_and_list(
     assert isinstance(loaded.run_id, RunId)
     assert all(isinstance(item.run_id, RunId) for item in listed)
     assert [item.run_id for item in listed] == ["run-new", "run-old"]
+    with sqlite3.connect(registry_path) as conn:
+        schema_version = conn.execute(
+            "SELECT current_version FROM schema_version WHERE database_key='ui_run_registry'"
+        ).fetchone()
+        ledger_rows = conn.execute(
+            """
+            SELECT migration_id
+            FROM schema_migration_ledger
+            WHERE database_key='ui_run_registry'
+            ORDER BY version ASC
+            """
+        ).fetchall()
+    assert schema_version == (1,)
+    assert ledger_rows == [("ui_run_registry_001_create_ui_runs",)]
     assert_logs_have_required_fields(caplog.records)
 
 

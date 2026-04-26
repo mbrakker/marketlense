@@ -50,6 +50,8 @@ from src.contracts.report_store import (
     ReportMetadataUpsertRequest,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.sqlite_migration import SqliteMigrationApplyRequest
+from src.services.sqlite_migration_service import apply_reports_db_migrations
 from src.utils.coercion import clean_string_list
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -1617,7 +1619,7 @@ def _backfill_publisher_normalized_insights_urls(conn: sqlite3.Connection) -> No
 
 
 @contextmanager
-def _metadata_conn(path: str):
+def _metadata_conn(path: str, ctx: RunContext):
     if not path:
         raise AppError(
             code="metadata_db_missing",
@@ -1643,8 +1645,16 @@ def _metadata_conn(path: str):
             busy_timeout_seconds=DEFAULT_BUSY_TIMEOUT_SECONDS,
         )
         with _REPORT_CONN_LOCK:
-            conn.executescript(DDL)
-            _ensure_schema(conn)
+            apply_reports_db_migrations(
+                SqliteMigrationApplyRequest(
+                    schema_version="1.0",
+                    database_key="reports_db",
+                    db_path=path,
+                    target_version=10,
+                    ctx=ctx,
+                ),
+                conn,
+            )
             conn.commit()
         yield conn
         conn.commit()
@@ -2051,7 +2061,7 @@ def upsert_metadata(request: ReportMetadataUpsertRequest, ctx: RunContext) -> No
             },
         )
     )
-    with _metadata_conn(request.db_path) as conn:
+    with _metadata_conn(request.db_path, ctx) as conn:
         conn.execute(
             """
             INSERT INTO reports(file_id, file_name, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, created_at, updated_at)
@@ -2118,7 +2128,7 @@ def get_metadata(
             fields={"file_id": request.file_id, "db_path": request.db_path},
         )
     )
-    with _metadata_conn(request.db_path) as conn:
+    with _metadata_conn(request.db_path, ctx) as conn:
         cur = conn.execute(
             """
             SELECT file_id, file_name, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, created_at, updated_at
@@ -2167,7 +2177,7 @@ def list_metadata(
         )
     )
     rows: List[ReportMetadataGetResponse] = []
-    with _metadata_conn(request.db_path) as conn:
+    with _metadata_conn(request.db_path, ctx) as conn:
         cur = conn.execute(
             """
             SELECT file_id, file_name, title, publisher, taxonomy_json, categories_json, region, time_period, source_url, html_path, md5, page_count, contents_page, pdf_metadata_json, analysis_mode, vector_store_id, evidence_packs_json, created_at, updated_at
@@ -2267,7 +2277,7 @@ def record_report_source(
         )
     )
     try:
-        with _metadata_conn(db_path) as conn:
+        with _metadata_conn(db_path, ctx) as conn:
             existing_row = conn.execute(
                 """
                 SELECT id, discovered_at_utc
@@ -2419,7 +2429,7 @@ def get_report_download_drive_folder(
             },
         )
     )
-    with _metadata_conn(db_path) as conn:
+    with _metadata_conn(db_path, ctx) as conn:
         if publisher_insights_url:
             row = conn.execute(
                 """
@@ -2606,7 +2616,7 @@ def record_discovered_report_source(
         )
     )
     try:
-        with _metadata_conn(db_path) as conn:
+        with _metadata_conn(db_path, ctx) as conn:
             existing_row = conn.execute(
                 """
                 SELECT id, source_status, downloaded_at_utc, md5
@@ -2810,7 +2820,7 @@ def replace_publishers(
         )
     )
     try:
-        with _metadata_conn(db_path) as conn:
+        with _metadata_conn(db_path, ctx) as conn:
             existing_row = conn.execute("SELECT COUNT(*) FROM publishers").fetchone()
             previous_count = int(existing_row[0] if existing_row else 0)
             preserved_rows = conn.execute(
@@ -3031,7 +3041,7 @@ def list_publishers(
             fields={"db_path": db_path, "limit": limit},
         )
     )
-    with _metadata_conn(db_path) as conn:
+    with _metadata_conn(db_path, ctx) as conn:
         rows = conn.execute(
             """
             SELECT
@@ -3116,7 +3126,7 @@ def get_publisher_download_route(
             fields={"db_path": db_path, "normalized_url": normalized_url},
         )
     )
-    with _metadata_conn(db_path) as conn:
+    with _metadata_conn(db_path, ctx) as conn:
         history_rows = conn.execute(
             """
             SELECT
@@ -3590,7 +3600,7 @@ def record_publisher_download_route(
         )
     )
     try:
-        with _metadata_conn(db_path) as conn:
+        with _metadata_conn(db_path, ctx) as conn:
             existing_history_rows = conn.execute(
                 """
                 SELECT outcome, route_status
@@ -3917,7 +3927,7 @@ def get_publisher_inventory_state(
             fields={"db_path": db_path, "normalized_url": normalized_url},
         )
     )
-    with _metadata_conn(db_path) as conn:
+    with _metadata_conn(db_path, ctx) as conn:
         row = conn.execute(
             """
             SELECT
@@ -4068,7 +4078,7 @@ def record_publisher_inventory_test_status(
         )
     )
     try:
-        with _metadata_conn(db_path) as conn:
+        with _metadata_conn(db_path, ctx) as conn:
             row = conn.execute(
                 """
                 SELECT id
@@ -4170,7 +4180,7 @@ def record_publisher_inventory_run_quality(
         )
     )
     try:
-        with _metadata_conn(db_path) as conn:
+        with _metadata_conn(db_path, ctx) as conn:
             row = conn.execute(
                 """
                 SELECT id
@@ -4318,7 +4328,7 @@ def get_publisher_inventory_recovery_cache_record(
             },
         )
     )
-    with _metadata_conn(db_path) as conn:
+    with _metadata_conn(db_path, ctx) as conn:
         row = conn.execute(
             """
             SELECT
@@ -4427,7 +4437,7 @@ def record_publisher_inventory_recovery_cache_record(
         )
     )
     try:
-        with _metadata_conn(db_path) as conn:
+        with _metadata_conn(db_path, ctx) as conn:
             conn.execute(
                 """
                 INSERT INTO publisher_inventory_candidate_recovery_cache(
@@ -4581,7 +4591,7 @@ def record_publisher_inventory_state(
         )
     )
     try:
-        with _metadata_conn(db_path) as conn:
+        with _metadata_conn(db_path, ctx) as conn:
             matched = conn.execute(
                 """
                 SELECT

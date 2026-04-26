@@ -1,0 +1,159 @@
+from __future__ import annotations
+
+import logging
+import sqlite3
+from pathlib import Path
+
+import pytest
+
+from src.contracts.sqlite_migration import SqliteMigrationApplyRequest
+from src.services.sqlite_migration_service import (
+    _MigrationSpec,
+    _apply_migration_plan,
+    apply_state_db_migrations,
+    apply_ui_run_registry_migrations,
+)
+from src.utils.errors import AppError
+from src.utils.logging import new_run_context
+
+
+def _ctx():
+    return new_run_context(task_id="test_sqlite_migration_service")
+
+
+def test_state_db_migrations_create_schema_version_and_ledger_on_fresh_db(
+    tmp_path: Path,
+    caplog,
+    assert_logs_have_required_fields,
+) -> None:
+    db_path = tmp_path / "state.sqlite"
+    caplog.set_level(logging.INFO)
+
+    with sqlite3.connect(db_path) as conn:
+        response = apply_state_db_migrations(
+            SqliteMigrationApplyRequest(
+                schema_version="1.0",
+                database_key="state_db",
+                db_path=str(db_path),
+                target_version=5,
+                ctx=_ctx(),
+            ),
+            conn,
+        )
+        ledger_rows = conn.execute(
+            """
+            SELECT migration_id, version
+            FROM schema_migration_ledger
+            WHERE database_key=?
+            ORDER BY version ASC
+            """,
+            ("state_db",),
+        ).fetchall()
+        version_row = conn.execute(
+            "SELECT current_version FROM schema_version WHERE database_key=?",
+            ("state_db",),
+        ).fetchone()
+
+    assert response.current_version == 5
+    assert [step.migration_id for step in response.applied_steps] == [
+        "state_db_001_create_base_tables",
+        "state_db_002_add_processed_vector_columns",
+        "state_db_003_add_processed_ocr_columns",
+        "state_db_004_add_published_post_type",
+        "state_db_005_add_report_download_final_page_url",
+    ]
+    assert ledger_rows == [
+        ("state_db_001_create_base_tables", 1),
+        ("state_db_002_add_processed_vector_columns", 2),
+        ("state_db_003_add_processed_ocr_columns", 3),
+        ("state_db_004_add_published_post_type", 4),
+        ("state_db_005_add_report_download_final_page_url", 5),
+    ]
+    assert version_row == (5,)
+    assert_logs_have_required_fields(caplog.records)
+
+
+def test_sqlite_migration_failure_rolls_back_schema_changes(
+    tmp_path: Path,
+    assert_app_error,
+) -> None:
+    db_path = tmp_path / "broken.sqlite"
+
+    def _failing_migration(conn: sqlite3.Connection) -> None:
+        conn.execute("CREATE TABLE broken_table(id INTEGER PRIMARY KEY)")
+        conn.execute("INSERT INTO broken_table(id) VALUES(1)")
+        raise RuntimeError("boom")
+
+    with sqlite3.connect(db_path) as conn:
+        with pytest.raises(AppError) as exc_info:
+            _apply_migration_plan(
+                SqliteMigrationApplyRequest(
+                    schema_version="1.0",
+                    database_key="broken_db",
+                    db_path=str(db_path),
+                    target_version=1,
+                    ctx=_ctx(),
+                ),
+                conn,
+                (
+                    _MigrationSpec(
+                        migration_id="broken_db_001_fail",
+                        version=1,
+                        apply_fn=_failing_migration,
+                    ),
+                ),
+            )
+
+    assert_app_error(
+        exc_info.value,
+        code="sqlite_migration_failed",
+        retryable=False,
+        severity="error",
+    )
+    with sqlite3.connect(db_path) as conn:
+        version_row = conn.execute(
+            "SELECT current_version FROM schema_version WHERE database_key=?",
+            ("broken_db",),
+        ).fetchone()
+        ledger_count = conn.execute(
+            "SELECT COUNT(*) FROM schema_migration_ledger WHERE database_key=?",
+            ("broken_db",),
+        ).fetchone()[0]
+        broken_table = conn.execute(
+            """
+            SELECT 1
+            FROM sqlite_master
+            WHERE type='table' AND name='broken_table'
+            """
+        ).fetchone()
+
+    assert version_row is None
+    assert ledger_count == 0
+    assert broken_table is None
+
+
+def test_ui_run_registry_migrations_are_idempotent_on_rerun(tmp_path: Path) -> None:
+    db_path = tmp_path / "ui_runs.sqlite"
+    request = SqliteMigrationApplyRequest(
+        schema_version="1.0",
+        database_key="ui_run_registry",
+        db_path=str(db_path),
+        target_version=1,
+        ctx=_ctx(),
+    )
+
+    with sqlite3.connect(db_path) as conn:
+        first = apply_ui_run_registry_migrations(request, conn)
+        second = apply_ui_run_registry_migrations(request, conn)
+        ledger_count = conn.execute(
+            "SELECT COUNT(*) FROM schema_migration_ledger WHERE database_key=?",
+            ("ui_run_registry",),
+        ).fetchone()[0]
+
+    assert first.current_version == 1
+    assert [step.migration_id for step in first.applied_steps] == [
+        "ui_run_registry_001_create_ui_runs"
+    ]
+    assert second.current_version == 1
+    assert second.applied_steps == ()
+    assert ledger_count == 1

@@ -26,7 +26,7 @@ def already_published(request: StatePublishCheckRequest, ctx: RunContext) -> boo
             fields={"file_id": request.file_id, "post_type": post_type},
         )
     )
-    with _state_conn(request.state_db) as conn:
+    with _state_conn(request.state_db, ctx) as conn:
         cur = conn.execute(
             "SELECT 1 FROM published WHERE file_id=? AND post_type=?",
             (request.file_id, post_type),
@@ -63,7 +63,7 @@ def record_publish(request: StatePublishRecordRequest, ctx: RunContext) -> None:
             },
         )
     )
-    with _state_conn(request.state_db) as conn:
+    with _state_conn(request.state_db, ctx) as conn:
         conn.execute(
             "INSERT OR REPLACE INTO published("
             "file_id, md5, published_at, wp_post_id, wp_post_url, post_type"
@@ -104,7 +104,7 @@ def get_publish(
             fields={"file_id": request.file_id, "post_type": post_type},
         )
     )
-    with _state_conn(request.state_db) as conn:
+    with _state_conn(request.state_db, ctx) as conn:
         cur = conn.execute(
             "SELECT file_id, md5, published_at, wp_post_id, wp_post_url, post_type "
             "FROM published WHERE file_id=? AND post_type=?",
@@ -163,7 +163,7 @@ def list_published(
     if limit <= 0:
         limit = 200
     rows: list[StatePublishedRow] = []
-    with _state_conn(request.state_db) as conn:
+    with _state_conn(request.state_db, ctx) as conn:
         cur = conn.execute(
             "SELECT file_id, md5, published_at, wp_post_id, wp_post_url, post_type "
             "FROM published ORDER BY published_at DESC LIMIT ?",

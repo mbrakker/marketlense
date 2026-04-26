@@ -17,6 +17,8 @@ from src.contracts.analytics_projection import (
     PROJECTION_SCHEMA_VERSION,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.sqlite_migration import SqliteMigrationApplyRequest
+from src.services.sqlite_migration_service import apply_reports_db_migrations
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -261,7 +263,7 @@ _REPORT_PROJECTION_COLUMNS: tuple[tuple[str, str], ...] = (
 
 
 @contextmanager
-def _analytics_conn(path: str):
+def _analytics_conn(path: str, ctx: RunContext):
     db_path = str(path or "").strip()
     if not db_path:
         raise AppError(
@@ -285,8 +287,16 @@ def _analytics_conn(path: str):
     try:
         _configure(conn)
         with _CONN_LOCK:
-            conn.executescript(DDL)
-            _ensure_reports_projection_columns(conn)
+            apply_reports_db_migrations(
+                SqliteMigrationApplyRequest(
+                    schema_version="1.0",
+                    database_key="reports_db",
+                    db_path=db_path,
+                    target_version=10,
+                    ctx=ctx,
+                ),
+                conn,
+            )
             conn.commit()
         yield conn
         conn.commit()
@@ -797,7 +807,7 @@ def upsert_projection(
         )
     )
     try:
-        with _analytics_conn(request.db_path) as conn:
+        with _analytics_conn(request.db_path, ctx) as conn:
             attempt_count = _upsert_report(conn, request)
             _upsert_sections(conn, request.batch.sections)
             _upsert_findings(conn, request.batch.findings)
@@ -934,7 +944,7 @@ def record_projection_failure(
         )
     )
     try:
-        with _analytics_conn(request.db_path) as conn:
+        with _analytics_conn(request.db_path, ctx) as conn:
             conn.execute(
                 """
                 INSERT INTO reports(

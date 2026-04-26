@@ -42,7 +42,7 @@ def get_ingest_cursor(
             fields={"state_db": request.state_db},
         )
     )
-    with _state_conn(request.state_db) as conn:
+    with _state_conn(request.state_db, ctx) as conn:
         cur = conn.execute(
             "SELECT value FROM ingest_state WHERE key=?",
             ("last_successful_ingest_utc",),
@@ -82,7 +82,7 @@ def set_ingest_cursor(request: StateIngestCursorSetRequest, ctx: RunContext) -> 
             },
         )
     )
-    with _state_conn(request.state_db) as conn:
+    with _state_conn(request.state_db, ctx) as conn:
         conn.execute(
             "INSERT OR REPLACE INTO ingest_state(key, value, updated_at) VALUES(?, ?, strftime('%s','now'))",
             ("last_successful_ingest_utc", request.last_successful_ingest_utc),
@@ -108,7 +108,7 @@ def already_processed(request: StateCheckRequest, ctx: RunContext) -> bool:
             fields={"file_id": request.file_id},
         )
     )
-    with _state_conn(request.state_db) as conn:
+    with _state_conn(request.state_db, ctx) as conn:
         cur = conn.execute(
             "SELECT 1 FROM processed WHERE file_id=? AND md5=?",
             (request.file_id, request.md5),
@@ -157,7 +157,7 @@ def already_processed_batch(
         return response
 
     matched: list[StateBatchCheckItem] = []
-    with _state_conn(request.state_db) as conn:
+    with _state_conn(request.state_db, ctx) as conn:
         for idx in range(0, len(items), BATCH_STATE_CHECK_MAX_PAIRS):
             chunk = items[idx : idx + BATCH_STATE_CHECK_MAX_PAIRS]
             where = " OR ".join("(file_id=? AND md5=?)" for _ in chunk)
@@ -204,7 +204,7 @@ def record(request: StateRecordRequest, ctx: RunContext) -> None:
             fields={"file_id": request.file_id},
         )
     )
-    with _state_conn(request.state_db) as conn:
+    with _state_conn(request.state_db, ctx) as conn:
         conn.execute(
             "INSERT OR REPLACE INTO processed("
             "file_id, md5, processed_at, openai_file_id, vector_store_id, vector_store_status, indexed_at_utc, "
@@ -252,7 +252,7 @@ def get(request: StateGetRequest, ctx: RunContext) -> Optional[StateGetResponse]
             fields={"file_id": request.file_id},
         )
     )
-    with _state_conn(request.state_db) as conn:
+    with _state_conn(request.state_db, ctx) as conn:
         cur = conn.execute(
             "SELECT file_id, md5, processed_at, openai_file_id, vector_store_id, vector_store_status, indexed_at_utc, "
             "last_error, text_validation_status, text_validation_reason, text_validation_pages_json, doc_map_summary_json, "
@@ -334,7 +334,7 @@ def list_processed(
     if limit <= 0:
         limit = 200
     rows: list[StateProcessedRow] = []
-    with _state_conn(request.state_db) as conn:
+    with _state_conn(request.state_db, ctx) as conn:
         cur = conn.execute(
             "SELECT file_id, md5, processed_at, openai_file_id, vector_store_id, vector_store_status, indexed_at_utc, "
             "last_error, text_validation_status, text_validation_reason, text_validation_pages_json, doc_map_summary_json, "

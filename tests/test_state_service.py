@@ -74,6 +74,12 @@ def test_migration_adds_vector_columns_and_preserves_data(tmp_path: Path) -> Non
     # Columns should exist after migration.
     conn = sqlite3.connect(db_path)
     cols = {row[1] for row in conn.execute("PRAGMA table_info(processed)")}
+    schema_version = conn.execute(
+        "SELECT current_version FROM schema_version WHERE database_key='state_db'"
+    ).fetchone()
+    ledger_count = conn.execute(
+        "SELECT COUNT(*) FROM schema_migration_ledger WHERE database_key='state_db'"
+    ).fetchone()[0]
     conn.close()
     assert {
         "vector_store_id",
@@ -95,6 +101,8 @@ def test_migration_adds_vector_columns_and_preserves_data(tmp_path: Path) -> Non
     assert resp.last_error is None
     assert resp.openai_file_id == "of_123"
     assert resp.doc_map_summary is None
+    assert schema_version == (5,)
+    assert ledger_count == 5
 
 
 def test_record_and_get_with_defaults(tmp_path: Path) -> None:

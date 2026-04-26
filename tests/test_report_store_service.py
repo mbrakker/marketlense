@@ -2148,6 +2148,12 @@ class TestReportStoreService(unittest.TestCase):
                     row[1]
                     for row in conn.execute("PRAGMA table_info(publishers)").fetchall()
                 ]
+                schema_version = conn.execute(
+                    "SELECT current_version FROM schema_version WHERE database_key='reports_db'"
+                ).fetchone()
+                ledger_count = conn.execute(
+                    "SELECT COUNT(*) FROM schema_migration_ledger WHERE database_key='reports_db'"
+                ).fetchone()[0]
                 row = conn.execute(
                     """
                     SELECT name, homepage, self_presentation, insights_url
@@ -2188,6 +2194,8 @@ class TestReportStoreService(unittest.TestCase):
                 ],
                 columns,
             )
+            self.assertEqual((10,), schema_version)
+            self.assertEqual(10, ledger_count)
             self.assertEqual(
                 (
                     "Activate Consulting",
