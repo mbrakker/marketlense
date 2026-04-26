@@ -61,3 +61,77 @@ class PromptNamespaceSummary:
 class PromptNamespaceListResponse:
     schema_version: str = field(metadata={"doc": "Prompt namespace list response schema version."})
     namespaces: list[PromptNamespaceSummary] = field(metadata={"doc": "Discovered prompt namespaces with hashes."})
+
+
+@dataclass(frozen=True)
+class PromptDryRunFixture:
+    schema_version: str = field(metadata={"doc": "Prompt dry-run fixture schema version."})
+    namespace: str = field(metadata={"doc": "Prompt namespace covered by this fixture."})
+    family: str = field(metadata={"doc": "Prompt family label used for coverage and reporting."})
+    system_variables: Dict[str, Any] = field(
+        metadata={"doc": "Variables used to render the system prompt template."}
+    )
+    user_variables: Dict[str, Any] = field(
+        metadata={"doc": "Variables used to render the user prompt template."}
+    )
+    model: str = field(
+        default="",
+        metadata={"doc": "Representative model identifier for this prompt fixture."},
+    )
+    temperature: float = field(
+        default=0.0,
+        metadata={"doc": "Representative temperature for this prompt fixture."},
+    )
+
+
+@dataclass(frozen=True)
+class PromptDryRunRequest:
+    schema_version: str = field(metadata={"doc": "Prompt dry-run request schema version."})
+    namespaces: list[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Optional explicit prompt namespaces to validate. Empty means all discovered namespaces."
+        },
+    )
+    reload_if_changed: bool = field(
+        default=True,
+        metadata={"doc": "Reload prompts from disk when source files changed."},
+    )
+    force_reload: bool = field(
+        default=False,
+        metadata={"doc": "Bypass prompt cache for prompt and namespace loading."},
+    )
+
+
+@dataclass(frozen=True)
+class PromptDryRunResult:
+    schema_version: str = field(metadata={"doc": "Prompt dry-run result schema version."})
+    namespace: str = field(metadata={"doc": "Validated prompt namespace."})
+    family: str = field(metadata={"doc": "Prompt family label for coverage and reporting."})
+    fixture_path: str = field(metadata={"doc": "Filesystem path to the fixture registry file."})
+    system_path: str = field(metadata={"doc": "Filesystem path to system.yaml."})
+    user_path: str = field(metadata={"doc": "Filesystem path to user.yaml."})
+    system_sha256: str = field(metadata={"doc": "SHA-256 hash of system prompt text."})
+    user_sha256: str = field(metadata={"doc": "SHA-256 hash of user prompt text."})
+    rendered_system_prompt: str = field(
+        metadata={"doc": "Rendered system prompt text produced by the dry-run."}
+    )
+    rendered_user_prompt: str = field(
+        metadata={"doc": "Rendered user prompt text produced by the dry-run."}
+    )
+    model: str = field(
+        default="",
+        metadata={"doc": "Representative model identifier recorded by the fixture."},
+    )
+    temperature: float = field(
+        default=0.0,
+        metadata={"doc": "Representative temperature recorded by the fixture."},
+    )
+
+
+@dataclass(frozen=True)
+class PromptDryRunResponse:
+    schema_version: str = field(metadata={"doc": "Prompt dry-run response schema version."})
+    results: list[PromptDryRunResult] = field(
+        metadata={"doc": "Validated prompt dry-run results for each namespace."}
+    )

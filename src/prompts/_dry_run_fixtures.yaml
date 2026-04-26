@@ -1,0 +1,359 @@
+schema_version: "1.0"
+shared:
+  doc_map_json: &doc_map_json >-
+    {"title":"Enterprise Payments Outlook 2026","publisher":"Market Lense Research","summary":"A report on digital payments growth, wallets, and merchant infrastructure.","sections":[{"id":"s1","title":"Market landscape","summary":"Wallet adoption keeps rising across enterprise commerce."}]}
+  evidence_json: &evidence_json >-
+    {"scope":{"summary":"Global enterprise payments market in 2026."},"findings":[{"id":"f1","text":"Digital wallets continue to expand in B2B and consumer checkout flows."},{"id":"f2","text":"Merchants prioritize orchestration, fraud controls, and conversion."}],"methods":{"methods":["Executive interviews","Cross-market survey"]},"limitations":{"items":["Forward-looking findings depend on disclosed assumptions."]}}
+  summary_json: &summary_json >-
+    {"tldr":"Digital wallets and payment orchestration are reshaping enterprise checkout.","executive_summary":"The report finds that wallet growth, fraud pressure, and orchestration complexity are changing merchant priorities."}
+  quotes_json: &quotes_json >-
+    {"quotes":[{"quote_id":"q1","speaker":"Lead Analyst","quote":"Wallet adoption now influences the entire enterprise payments stack.","section":"Market landscape"}]}
+  quote_candidates_json: &quote_candidates_json >-
+    {"quote_candidates":[{"quote_id":"q1","speaker":"Lead Analyst","quote":"Wallet adoption now influences the entire enterprise payments stack.","rationale":"Explains the structural market shift."}]}
+  insights_candidates_json: &insights_candidates_json >-
+    {"insights":[{"insight_id":"i1","headline":"Wallets become the default enterprise checkout layer","supporting_evidence_ids":["f1"]}]}
+  insights_final_json: &insights_final_json >-
+    {"insights":[{"insight_id":"i1","headline":"Wallets become the default enterprise checkout layer","body":"Payment teams increasingly treat wallet support as core checkout infrastructure rather than an optional channel.","supporting_evidence_ids":["f1","f2"]}]}
+  metrics_json: &metrics_json >-
+    [{"metric_id":"m1","label":"Wallet share of digital checkout","value":"42%","supporting_evidence_ids":["f1"]}]
+  report_json: &report_json >-
+    {"title":"Enterprise Payments Outlook 2026","summary":"Digital payments growth is being driven by wallets, orchestration, and fraud controls.","claims":[{"claim_id":"c1","text":"Wallet adoption is increasing across enterprise checkout flows."}]}
+  failure_reasons_json: &failure_reasons_json >-
+    [{"code":"grounding_missing_support","message":"The section needs stronger explicit evidence links."}]
+  fix_checklist_json: &fix_checklist_json >-
+    [{"id":"check-1","instruction":"Tie each claim to explicit evidence identifiers."}]
+  grounding_package_json: &grounding_package_json >-
+    {"findings":[{"claim":"Wallet adoption is increasing across enterprise checkout flows.","evidence_ids":["f1"]}],"quotes":[{"quote_id":"q1","speaker":"Lead Analyst"}]}
+  current_section_json: &current_section_json >-
+    {"section_id":"summary","body":"Payment innovation is changing rapidly."}
+  current_section_text: &current_section_text >-
+    Payment innovation is changing rapidly, but the current draft does not yet tie its claims tightly enough to explicit evidence.
+  report_context_json: &report_context_json >-
+    {"title":"Enterprise Payments Outlook 2026","publisher":"Market Lense Research","region":"Global","time_period":"2026","overview":"The report covers wallets, orchestration, fraud controls, and merchant infrastructure.","key_findings":["Wallet adoption continues to grow.","Merchants are investing in orchestration and fraud controls."]}
+  category_profiles_json: &category_profiles_json >-
+    [{"id":"digital_payments","label":"Digital Payments","definition":"Reports focused on payments infrastructure, wallets, merchant checkout, and transaction enablement."},{"id":"fintech","label":"Fintech","definition":"Reports centered on financial technology products and platforms."}]
+  candidate_items_json: &candidate_items_json >-
+    [{"url":"https://example.com/research/payments-2026","title":"Enterprise Payments Outlook 2026","reason":"Looks like a real report detail page."},{"url":"https://example.com/blog/company-news","title":"Company News","reason":"Likely editorial noise."}]
+  candidates_json: &candidates_json >-
+    [{"candidate_id":"cand-1","kind":"chart","page_number":4,"title":"Wallet adoption by region","ocr_text":"Wallet adoption by region","quality_signals":{"ocr_density":0.31,"visual_entropy":0.68,"chart_confidence":0.84,"table_confidence":0.05}}]
+  figure_context_json: &figure_context_json >-
+    {"title":"Enterprise Payments Outlook 2026","publisher":"Market Lense Research","region":"Global","time_period":"2026","summary":"Wallet growth and payment orchestration are reshaping enterprise checkout.","nearest_section":"Market landscape"}
+fixtures:
+  - namespace: "browser_report_download/browser_route"
+    family: "browser_download"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables:
+      normalized_url: "https://example.com/reports/enterprise-payments-outlook-2026"
+      execution_url: "https://example.com/reports/enterprise-payments-outlook-2026"
+      download_dir: "/tmp/browser-downloads/enterprise-payments-outlook-2026"
+      identity_entries:
+        - label: "Work email"
+          aliases: "email, business email"
+          value: "ops@example.com"
+      delivery_email: "ops@example.com"
+      route_hint: "Click the Download report button and wait for the PDF download."
+      route_kind_hint: "pdf_download"
+      route_step_lines:
+        - "1. click Download report -> Download started"
+      route_family_hint: "browser_pdf_click"
+      publisher_discovery_route_kind: "browser_render"
+      publisher_recommended_discovery_route_kind: "browser_render"
+      source_page_url_hint: "https://example.com/insights"
+      candidate_title: "Enterprise Payments Outlook 2026"
+      candidate_canonical_url: "https://example.com/reports/enterprise-payments-outlook-2026"
+      candidate_pdf_url: "https://cdn.example.com/reports/enterprise-payments-outlook-2026.pdf"
+      candidate_source_page_urls:
+        - "https://example.com/insights"
+      candidate_discovery_provenances:
+        - "browser_render"
+      candidate_max_confidence: "0.940"
+  - namespace: "pdf_text/ocr_fallback"
+    family: "report"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables:
+      source_page_start: 1
+      source_page_end: 3
+      page_count: 3
+  - namespace: "publisher_inventory/discovery"
+    family: "publisher_inventory"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables:
+      insights_url: "https://example.com/insights"
+      pagination_max_pages: 25
+      route_hint: "Open the insights archive and paginate through research report cards."
+      route_kind_hint: "browser_render"
+  - namespace: "publisher_inventory/meaningful_candidate_screen"
+    family: "publisher_inventory"
+    model: "gpt-5-nano"
+    temperature: 1.0
+    system_variables: {}
+    user_variables:
+      publisher_name: "Example Research"
+      insights_url: "https://example.com/insights"
+      candidate_items_json: *candidate_items_json
+  - namespace: "rank_candidates"
+    family: "ranking"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables:
+      candidates_json: *candidates_json
+  - namespace: "rank_candidates/crop_refine"
+    family: "ranking"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables:
+      candidates_json: *candidates_json
+      page_width: 1600
+      page_height: 2200
+      phase: "coarse"
+  - namespace: "report_vs/artifacts/expert_comment"
+    family: "publishing"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables:
+      expert_domain: "enterprise payments strategy"
+    user_variables:
+      summary_json: *summary_json
+      insights_final_json: *insights_final_json
+      quotes_json: *quotes_json
+  - namespace: "report_vs/artifacts/insights_candidates"
+    family: "publishing"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables:
+      doc_map_json: *doc_map_json
+      evidence_json: *evidence_json
+  - namespace: "report_vs/artifacts/insights_final"
+    family: "publishing"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables:
+      doc_map_json: *doc_map_json
+      evidence_json: *evidence_json
+      insights_candidates_json: *insights_candidates_json
+  - namespace: "report_vs/artifacts/linkedin_post"
+    family: "publishing"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables:
+      summary_json: *summary_json
+      insights_final_json: *insights_final_json
+  - namespace: "report_vs/artifacts/quotes"
+    family: "publishing"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables:
+      doc_map_json: *doc_map_json
+      evidence_json: *evidence_json
+      quote_candidates_json: *quote_candidates_json
+  - namespace: "report_vs/artifacts/regenerate/expert_comment"
+    family: "publishing"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables:
+      target_section: "expert_comment"
+      attempt_index: 2
+      current_section_text: *current_section_text
+      failure_reasons_json: *failure_reasons_json
+      fix_checklist_json: *fix_checklist_json
+      grounding_package_json: *grounding_package_json
+      expert_domain: "enterprise payments strategy"
+      summary_json: *summary_json
+      insights_final_json: *insights_final_json
+      quotes_json: *quotes_json
+  - namespace: "report_vs/artifacts/regenerate/insights_candidates"
+    family: "publishing"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables:
+      target_section: "insights_candidates"
+      attempt_index: 2
+      current_section_json: *current_section_json
+      failure_reasons_json: *failure_reasons_json
+      fix_checklist_json: *fix_checklist_json
+      grounding_package_json: *grounding_package_json
+      doc_map_json: *doc_map_json
+      evidence_json: *evidence_json
+  - namespace: "report_vs/artifacts/regenerate/insights_final"
+    family: "publishing"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables:
+      target_section: "insights_final"
+      attempt_index: 2
+      current_section_json: *current_section_json
+      failure_reasons_json: *failure_reasons_json
+      fix_checklist_json: *fix_checklist_json
+      grounding_package_json: *grounding_package_json
+      doc_map_json: *doc_map_json
+      evidence_json: *evidence_json
+      insights_candidates_json: *insights_candidates_json
+  - namespace: "report_vs/artifacts/regenerate/linkedin_post"
+    family: "publishing"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables:
+      target_section: "linkedin_post"
+      attempt_index: 2
+      current_section_text: *current_section_text
+      failure_reasons_json: *failure_reasons_json
+      fix_checklist_json: *fix_checklist_json
+      grounding_package_json: *grounding_package_json
+      summary_json: *summary_json
+      insights_final_json: *insights_final_json
+  - namespace: "report_vs/artifacts/regenerate/quotes"
+    family: "publishing"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables:
+      target_section: "quotes"
+      attempt_index: 2
+      current_section_json: *current_section_json
+      failure_reasons_json: *failure_reasons_json
+      fix_checklist_json: *fix_checklist_json
+      grounding_package_json: *grounding_package_json
+      doc_map_json: *doc_map_json
+      evidence_json: *evidence_json
+      quote_candidates_json: *quote_candidates_json
+  - namespace: "report_vs/artifacts/regenerate/summary"
+    family: "publishing"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables:
+      target_section: "summary"
+      attempt_index: 2
+      current_section_json: *current_section_json
+      failure_reasons_json: *failure_reasons_json
+      fix_checklist_json: *fix_checklist_json
+      grounding_package_json: *grounding_package_json
+      doc_map_json: *doc_map_json
+      evidence_json: *evidence_json
+  - namespace: "report_vs/artifacts/summary"
+    family: "publishing"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables:
+      doc_map_json: *doc_map_json
+      evidence_json: *evidence_json
+  - namespace: "report_vs/context_category_fit"
+    family: "report"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables:
+      report_context_json: *report_context_json
+      category_profiles_json: *category_profiles_json
+  - namespace: "report_vs/doc_map"
+    family: "report"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables: {}
+  - namespace: "report_vs/evidence_packs/contradictions"
+    family: "report"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables: {}
+  - namespace: "report_vs/evidence_packs/findings"
+    family: "report"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables: {}
+  - namespace: "report_vs/evidence_packs/key_metrics"
+    family: "report"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables: {}
+  - namespace: "report_vs/evidence_packs/limitations"
+    family: "report"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables: {}
+  - namespace: "report_vs/evidence_packs/methods"
+    family: "report"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables: {}
+  - namespace: "report_vs/evidence_packs/quote_candidates"
+    family: "report"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables: {}
+  - namespace: "report_vs/evidence_packs/recommendations"
+    family: "report"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables: {}
+  - namespace: "report_vs/evidence_packs/risk_register"
+    family: "report"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables: {}
+  - namespace: "report_vs/evidence_packs/scope"
+    family: "report"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables: {}
+  - namespace: "report_vs/figure_caption"
+    family: "report"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables:
+      max_chars: 400
+    user_variables:
+      max_chars: 400
+      context_json: *figure_context_json
+  - namespace: "report_vs/taxonomy"
+    family: "report"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables:
+      report_title: "Enterprise Payments Outlook 2026"
+      allowed_tags_json: >-
+        [{"slug":"digital-payments","label":"Digital Payments"},{"slug":"wallets","label":"Wallets"},{"slug":"merchant-infrastructure","label":"Merchant Infrastructure"}]
+  - namespace: "report_vs/validate/grounding"
+    family: "validation"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables:
+      report_json: *report_json
+      evidence_json: *evidence_json
+  - namespace: "report_vs/validate/semantic"
+    family: "validation"
+    model: "openai/gpt-5-mini"
+    temperature: 0.0
+    system_variables: {}
+    user_variables:
+      metrics_json: *metrics_json
+      quotes_json: *quotes_json
+      evidence_json: *evidence_json

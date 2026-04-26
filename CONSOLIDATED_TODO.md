@@ -41,16 +41,6 @@ Suggested priority order:
 
 ## 1. LLM, Prompts, Cost & Provider Policy
 
-- **Title:** Upgrade prompt namespaces and add repository-wide prompt dry-run validation [Impact: 4/5, Effort: 3/5]
-  - Explanation: Merge the existing prompt-upgrade work with a CI dry-run that renders every active prompt namespace against declared fixture inputs. This prevents prompt drift, missing variables, and unlogged prompt changes before runtime.
-  - Pros: Better output quality, safer generation, clearer audit trail, faster failures.
-  - Cons: Requires maintaining representative fixture inputs for each prompt family.
-  - Acceptance Criteria:
-    - All active prompt namespaces render successfully in CI.
-    - Missing variables and template syntax errors fail before runtime.
-    - Prompt file paths, version/hash, exact rendered prompts, and model parameters are logged for each model call.
-    - Fixture coverage exists for report, validation, ranking, browser-download, and publishing prompt families.
-
 - **Title:** Add prompt variant/A-B harness with offline scored corpora [Impact: 4/5, Effort: 4/5]
   - Explanation: Merge multi-prompt variants and the deep-analysis A/B harness into one capability: config-driven variants, deterministic selection, fixed corpora, and scorecards for schema validity, grounding, and cost.
   - Pros: Higher-quality outputs, safer prompt iteration, data-driven rollout decisions.

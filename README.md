@@ -776,6 +776,7 @@ src/prompts/report_vs/artifacts/regenerate/  # targeted regeneration prompts per
 Prompts are rendered with Jinja2 (`{{ variable }}`), loaded and hashed by `src/services/prompt_service.py`, and logged with their SHA256 hashes for reproducibility.
 
 - Prompt caching: prompt sets are cached in-memory per namespace for the duration of a process. Prompt namespace listing uses an in-memory manifest and validates known prompt-directory mtimes instead of rescanning the whole prompt tree on steady-state reads. `PromptLoadRequest` supports `reload_if_changed` (nanosecond mtime check) and `force_reload` (bypass cache) when you need to pick up edited prompt files mid-run.
+- Repository-wide prompt dry-run validation: `src/services/prompt_service.py` now exposes a prompt dry-run validator that renders every discovered prompt namespace against declarative fixture inputs in `src/prompts/_dry_run_fixtures.yaml`. `tests/test_prompt_dry_run_validation.py` is the CI gate: it fails when a namespace is missing fixture coverage, when a fixture references a stale namespace, or when a prompt render hits missing variables or invalid template syntax before runtime.
 
 ---
 

@@ -10,6 +10,10 @@ import yaml
 from jinja2 import Environment, StrictUndefined, TemplateSyntaxError, UndefinedError
 
 from src.contracts.prompts import (
+    PromptDryRunFixture,
+    PromptDryRunRequest,
+    PromptDryRunResponse,
+    PromptDryRunResult,
     PromptNamespaceListRequest,
     PromptNamespaceListResponse,
     PromptNamespaceSummary,
@@ -26,6 +30,7 @@ from src.utils.logging import log_event
 logger = logging.getLogger("market_lense.prompt_service")
 
 PROMPTS_ROOT = Path(__file__).resolve().parents[1] / "prompts"
+PROMPT_DRY_RUN_FIXTURE_PATH = PROMPTS_ROOT / "_dry_run_fixtures.yaml"
 JINJA_ENV = Environment(
     autoescape=False,
     undefined=StrictUndefined,
@@ -280,6 +285,162 @@ def render_prompt(
     return PromptRenderResponse(schema_version="1.0", text=text)
 
 
+def validate_prompt_dry_run(
+    request: PromptDryRunRequest, ctx: RunContext
+) -> PromptDryRunResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="prompt_dry_run_start",
+            module=logger.name,
+            fields={
+                "requested_namespaces": list(request.namespaces),
+                "reload_if_changed": request.reload_if_changed,
+                "force_reload": request.force_reload,
+                "fixture_path": str(PROMPT_DRY_RUN_FIXTURE_PATH),
+            },
+        )
+    )
+    fixtures = _load_prompt_dry_run_fixtures()
+    fixtures_by_namespace = {fixture.namespace: fixture for fixture in fixtures}
+    namespace_response = list_prompt_namespaces(
+        PromptNamespaceListRequest(
+            schema_version="1.0",
+            reload_if_changed=request.reload_if_changed,
+            force_reload=request.force_reload,
+        ),
+        ctx,
+    )
+    discovered_namespaces = [item.namespace for item in namespace_response.namespaces]
+    if request.namespaces:
+        target_namespaces = []
+        seen: set[str] = set()
+        for raw_namespace in request.namespaces:
+            namespace = _resolve_prompt_namespace(raw_namespace)
+            if namespace in seen:
+                continue
+            if namespace not in discovered_namespaces:
+                raise AppError(
+                    code="prompt_dry_run_namespace_unknown",
+                    message=f"Prompt dry-run namespace is not an active prompt namespace: {namespace}",
+                    retryable=False,
+                    context={"namespace": namespace},
+                )
+            seen.add(namespace)
+            target_namespaces.append(namespace)
+    else:
+        target_namespaces = list(discovered_namespaces)
+
+    missing_fixtures = [
+        namespace
+        for namespace in target_namespaces
+        if namespace not in fixtures_by_namespace
+    ]
+    if missing_fixtures:
+        raise AppError(
+            code="prompt_dry_run_fixture_missing",
+            message="Prompt dry-run fixtures are missing for one or more active namespaces",
+            retryable=False,
+            context={"namespaces": missing_fixtures},
+        )
+
+    stale_fixture_namespaces = sorted(
+        namespace
+        for namespace in fixtures_by_namespace
+        if namespace not in discovered_namespaces
+    )
+    if stale_fixture_namespaces:
+        raise AppError(
+            code="prompt_dry_run_fixture_stale",
+            message="Prompt dry-run fixtures reference namespaces that do not exist",
+            retryable=False,
+            context={"namespaces": stale_fixture_namespaces},
+        )
+
+    results: list[PromptDryRunResult] = []
+    for namespace in target_namespaces:
+        fixture = fixtures_by_namespace[namespace]
+        prompt_set = load_prompt_set(
+            PromptLoadRequest(
+                schema_version="1.0",
+                namespace=namespace,
+                reload_if_changed=request.reload_if_changed,
+                force_reload=request.force_reload,
+            ),
+            ctx,
+        )
+        rendered_system = render_prompt(
+            PromptRenderRequest(
+                schema_version="1.0",
+                template=prompt_set.system,
+                variables=dict(fixture.system_variables),
+            ),
+            ctx,
+        )
+        rendered_user = render_prompt(
+            PromptRenderRequest(
+                schema_version="1.0",
+                template=prompt_set.user,
+                variables=dict(fixture.user_variables),
+            ),
+            ctx,
+        )
+        result = PromptDryRunResult(
+            schema_version="1.0",
+            namespace=namespace,
+            family=fixture.family,
+            fixture_path=str(PROMPT_DRY_RUN_FIXTURE_PATH),
+            system_path=prompt_set.system.path,
+            user_path=prompt_set.user.path,
+            system_sha256=prompt_set.system.sha256,
+            user_sha256=prompt_set.user.sha256,
+            rendered_system_prompt=rendered_system.text,
+            rendered_user_prompt=rendered_user.text,
+            model=fixture.model,
+            temperature=float(fixture.temperature),
+        )
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="prompt_dry_run_namespace_validated",
+                module=logger.name,
+                fields={
+                    "namespace": result.namespace,
+                    "family": result.family,
+                    "fixture_path": result.fixture_path,
+                    "system_path": result.system_path,
+                    "user_path": result.user_path,
+                    "system_sha256": result.system_sha256,
+                    "user_sha256": result.user_sha256,
+                    "rendered_system_prompt": result.rendered_system_prompt,
+                    "rendered_user_prompt": result.rendered_user_prompt,
+                    "model": result.model,
+                    "temperature": result.temperature,
+                    "system_variable_keys": sorted(fixture.system_variables.keys()),
+                    "user_variable_keys": sorted(fixture.user_variables.keys()),
+                },
+            )
+        )
+        results.append(result)
+
+    response = PromptDryRunResponse(schema_version="1.0", results=results)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="prompt_dry_run_complete",
+            module=logger.name,
+            fields={
+                "validated_namespace_count": len(results),
+                "families": sorted({item.family for item in results}),
+            },
+        )
+    )
+    return response
+
+
 def _get_mtime(path: Path) -> int:
     stat = path.stat()
     return int(getattr(stat, "st_mtime_ns", int(stat.st_mtime * 1_000_000_000)))
@@ -370,6 +531,113 @@ def _directory_mtimes(
 
 def _is_prompt_namespace_cache_valid(entry: _PromptNamespaceCacheEntry) -> bool:
     return _directory_mtimes(entry.watched_dirs) == entry.directory_mtimes
+
+
+def _load_prompt_dry_run_fixtures() -> list[PromptDryRunFixture]:
+    try:
+        raw = PROMPT_DRY_RUN_FIXTURE_PATH.read_text(encoding="utf-8")
+    except FileNotFoundError as exc:
+        raise AppError(
+            code="prompt_dry_run_fixture_not_found",
+            message=f"Prompt dry-run fixture registry not found: {PROMPT_DRY_RUN_FIXTURE_PATH}",
+            cause=exc,
+            retryable=False,
+        ) from exc
+    try:
+        data = yaml.safe_load(raw)
+    except yaml.YAMLError as exc:
+        raise AppError(
+            code="prompt_dry_run_fixture_yaml_invalid",
+            message=f"Prompt dry-run fixture YAML invalid: {PROMPT_DRY_RUN_FIXTURE_PATH}",
+            cause=exc,
+            retryable=False,
+        ) from exc
+    if data is None:
+        data = {}
+    if not isinstance(data, dict):
+        raise AppError(
+            code="prompt_dry_run_fixture_yaml_invalid",
+            message="Prompt dry-run fixture registry root must be a mapping",
+            retryable=False,
+            context={"path": str(PROMPT_DRY_RUN_FIXTURE_PATH)},
+        )
+    raw_fixtures = data.get("fixtures", [])
+    if not isinstance(raw_fixtures, list) or not raw_fixtures:
+        raise AppError(
+            code="prompt_dry_run_fixture_registry_invalid",
+            message="Prompt dry-run fixture registry must declare a non-empty fixtures list",
+            retryable=False,
+            context={"path": str(PROMPT_DRY_RUN_FIXTURE_PATH)},
+        )
+    fixtures: list[PromptDryRunFixture] = []
+    seen_namespaces: set[str] = set()
+    for index, raw_fixture in enumerate(raw_fixtures):
+        fixture = _build_prompt_dry_run_fixture(raw_fixture, index=index)
+        if fixture.namespace in seen_namespaces:
+            raise AppError(
+                code="prompt_dry_run_fixture_duplicate_namespace",
+                message=f"Duplicate prompt dry-run fixture namespace: {fixture.namespace}",
+                retryable=False,
+                context={"namespace": fixture.namespace},
+            )
+        seen_namespaces.add(fixture.namespace)
+        fixtures.append(fixture)
+    return fixtures
+
+
+def _build_prompt_dry_run_fixture(
+    payload: object, *, index: int
+) -> PromptDryRunFixture:
+    if not isinstance(payload, dict):
+        raise AppError(
+            code="prompt_dry_run_fixture_registry_invalid",
+            message="Prompt dry-run fixture entries must be mappings",
+            retryable=False,
+            context={"index": index},
+        )
+    namespace = _resolve_prompt_namespace(str(payload.get("namespace") or "").strip())
+    family = str(payload.get("family") or "").strip()
+    if not family:
+        raise AppError(
+            code="prompt_dry_run_fixture_registry_invalid",
+            message="Prompt dry-run fixture family is required",
+            retryable=False,
+            context={"namespace": namespace, "index": index},
+        )
+    system_variables = _coerce_prompt_variable_mapping(
+        payload.get("system_variables", {}),
+        namespace=namespace,
+        field_name="system_variables",
+    )
+    user_variables = _coerce_prompt_variable_mapping(
+        payload.get("user_variables", {}),
+        namespace=namespace,
+        field_name="user_variables",
+    )
+    return PromptDryRunFixture(
+        schema_version=str(payload.get("schema_version", "1.0")),
+        namespace=namespace,
+        family=family,
+        system_variables=system_variables,
+        user_variables=user_variables,
+        model=str(payload.get("model") or "").strip(),
+        temperature=float(payload.get("temperature", 0.0)),
+    )
+
+
+def _coerce_prompt_variable_mapping(
+    payload: object, *, namespace: str, field_name: str
+) -> dict[str, object]:
+    if payload is None:
+        return {}
+    if not isinstance(payload, dict):
+        raise AppError(
+            code="prompt_dry_run_fixture_registry_invalid",
+            message=f"Prompt dry-run fixture {field_name} must be a mapping",
+            retryable=False,
+            context={"namespace": namespace, "field_name": field_name},
+        )
+    return {str(key): value for key, value in payload.items()}
 
 
 def _load_prompt(path: Path) -> PromptTemplate:
