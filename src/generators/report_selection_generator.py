@@ -196,11 +196,7 @@ def _candidate_prefilter_reject_reason(candidate: Candidate) -> str:
             and avg_words_per_cell >= 8.0
         ):
             return "table_large_text_block"
-        if (
-            0.0 < table_confidence < 0.32
-            and numeric_ratio < 0.12
-            and rows < 5
-        ):
+        if 0.0 < table_confidence < 0.32 and numeric_ratio < 0.12 and rows < 5:
             return "table_low_confidence"
         return ""
     text_ratio = _candidate_meta(candidate, "text_ratio", 0.0)
@@ -1566,7 +1562,12 @@ def _candidate_extraction_output_path(
     settings: IngestSettings,
     report_name: str,
 ) -> Path:
-    return Path(settings.output_dir) / str(report_name or "").strip() / "candidates" / "candidates.json"
+    return (
+        Path(settings.output_dir)
+        / str(report_name or "").strip()
+        / "candidates"
+        / "candidates.json"
+    )
 
 
 def _load_candidate_crop_path_map(

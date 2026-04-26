@@ -252,11 +252,19 @@ def test_rank_candidates_payload_includes_quality_signals(tmp_path, caplog):
     payload_fields = payload_logs[0]["fields"]
     assert payload_fields["candidate_kind"] == "chart"
     assert payload_fields["candidate_count"] == 1
-    assert payload_fields["legacy_payload_chars"] > payload_fields["compact_payload_chars"]
+    assert (
+        payload_fields["legacy_payload_chars"] > payload_fields["compact_payload_chars"]
+    )
     assert payload_fields["payload_chars_saved"] > 0
-    assert payload_fields["legacy_input_tokens_est"] > payload_fields["compact_input_tokens_est"]
+    assert (
+        payload_fields["legacy_input_tokens_est"]
+        > payload_fields["compact_input_tokens_est"]
+    )
     assert payload_fields["input_tokens_saved_est"] > 0
-    assert payload_fields["legacy_input_cost_usd_est"] > payload_fields["compact_input_cost_usd_est"]
+    assert (
+        payload_fields["legacy_input_cost_usd_est"]
+        > payload_fields["compact_input_cost_usd_est"]
+    )
     assert payload_fields["input_cost_saved_usd_est"] > 0.0
 
 
