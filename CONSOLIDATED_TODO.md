@@ -82,16 +82,6 @@ Suggested priority order:
     - Generator contracts do not depend on provider-specific response shapes.
     - Disaster-recovery test demonstrates failover success with logged provider decisions.
 
-- **Title:** Make LLM policy enforcement the single model-call path [Impact: 5/5, Effort: 4/5]
-  - Explanation: Several generators and services still mix direct `openai_service` calls with `llm_service` policy wrappers. Consolidate retries, rate limits, circuit breakers, budget checks, semantic cache policy, and provider selection behind one canonical model-call boundary so every model request follows the same controls.
-  - Pros: Simpler mental model, consistent cost/retry behavior, less duplicated model-call plumbing.
-  - Cons: Requires migrating call sites and preserving existing test seams.
-  - Acceptance Criteria:
-    - All production model calls go through one canonical LLM/OpenAI service boundary.
-    - Direct `openai_service` imports outside the canonical boundary are removed or explicitly allowlisted with expiry.
-    - Retry, circuit-breaker, rate-limit, budget, cache, and provider decisions are logged on every model call.
-    - Tests prove generators can still mock only the public service boundary.
-
 - **Title:** Move browser-download task prompts into prompt-service namespaces [Impact: 3/5, Effort: 2/5]
   - Explanation: Browser-download instructions currently live in service-side prompt construction. Move them into dedicated prompt namespaces so they are versioned, hash-logged, dry-run validated, and maintained with the rest of the prompt system.
   - Pros: Better prompt observability, easier iteration, less service-level string assembly.
@@ -600,7 +590,6 @@ Suggested priority order:
 - DOM-event quorum stabilization.
 - Atomic artifact writes.
 - Explicit SQLite migration ledgers.
-- Canonical LLM model-call path.
 
 ### Phase 3: Resilience and Quality (8-16+ weeks)
 
