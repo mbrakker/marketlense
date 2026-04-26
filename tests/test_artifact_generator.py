@@ -462,6 +462,8 @@ def test_generate_artifacts_validates_schema_and_evidence_ids(tmp_path):
     )
     assert all(item["evidence_id"] for item in payload["insights_candidates"])
     assert all(item["evidence_id"] for item in payload["insights_final"])
+    assert payload["family_status"]["summary"]["status"] == "generated"
+    assert payload["family_status"]["quotes"]["status"] == "generated"
     assert len([req for req in fake_openai.requests if req[0] == "chat"]) == 6
     assert len([req for req in fake_openai.requests if req[0] == "vector"]) == 0
     assert payload["toc_entries"][0]["section_title"] == "Intro"
@@ -473,6 +475,52 @@ def test_generate_artifacts_validates_schema_and_evidence_ids(tmp_path):
         _ctx(),
     )
     assert analysis_store.stored and analysis_store.stored[0][2] == "artifacts"
+
+
+def test_generate_artifacts_abstains_low_confidence_families_and_marks_regeneration(
+    tmp_path,
+):
+    responses = {
+        "summary": {
+            "summary": {
+                "tldr": "TLDR",
+                "executive_summary": "Exec",
+                "claim_evidence_map": [],
+            }
+        },
+        "insights_candidates": {"insights_candidates": []},
+        "insights_final": {"insights_final": []},
+        "quotes": {"quotes_final": []},
+        "expert_comment": {"expert_comment": "Keep the editorial note short."},
+        "linkedin_post": {"linkedin_post": "LinkedIn summary."},
+    }
+    payload = generate_artifacts(
+        report_id="r1",
+        report_name="report",
+        doc_map=_doc_map(),
+        evidence_packs=_evidence_packs(),
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        openai_client=FakeOpenAI(responses),
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert payload["summary"]["tldr"] == ""
+    assert payload["summary"]["executive_summary"] == ""
+    assert payload["insights_candidates"] == []
+    assert payload["insights_final"] == []
+    assert payload["quotes_final"] == []
+    assert payload["family_status"]["summary"]["status"] == "abstained"
+    assert payload["family_status"]["summary"]["policy_action"] == "regenerate"
+    assert payload["family_status"]["insights_bundle"]["status"] == "abstained"
+    assert payload["family_status"]["insights_bundle"]["policy_action"] == "regenerate"
+    assert payload["family_status"]["quotes"]["status"] == "abstained"
+    assert payload["family_status"]["quotes"]["policy_action"] == "regenerate"
+    assert payload["family_status"]["expert_comment"]["status"] == "generated"
+    assert payload["family_status"]["expert_comment"]["policy_action"] == "keep"
+    assert payload["family_status"]["linkedin_post"]["status"] == "generated"
+    assert payload["family_status"]["linkedin_post"]["policy_action"] == "keep"
 
 
 def test_generate_artifacts_expands_topic_briefs_from_doc_map(tmp_path):
@@ -879,9 +927,10 @@ def test_generate_artifacts_backfills_missing_ids(tmp_path):
         analysis_store=FakeAnalysisStore(),
     )
     assert payload["summary"]["claim_evidence_map"][0]["evidence_id"] == ""
-    assert payload["insights_candidates"][0]["evidence_id"] == ""
-    assert len(payload["insights_final"]) == 5
-    assert all(item["evidence_id"] == "" for item in payload["insights_final"])
+    assert payload["insights_candidates"] == []
+    assert payload["insights_final"] == []
+    assert payload["family_status"]["insights_bundle"]["status"] == "abstained"
+    assert payload["family_status"]["insights_bundle"]["policy_action"] == "regenerate"
     assert payload["quotes_final"][0]["evidence_id"] == ""
     validate_schema(
         SchemaValidateRequest(

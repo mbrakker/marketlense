@@ -165,6 +165,96 @@ def test_render_fallbacks_without_artifacts(tmp_path):
     assert "Source URL was not available in the extracted report metadata." in html
 
 
+def test_render_surfaces_explicit_abstain_notices(tmp_path):
+    data = {
+        "title": "Abstained Report",
+        "tldr": "",
+        "insights": ["", "", "", "", ""],
+        "quote": {"text": "", "author": ""},
+        "commentary": "",
+        "publisher": "Publisher",
+        "taxonomy": [],
+        "region": "US",
+        "time_period": "2026",
+        "contents_page_number": 0,
+        "artifacts": {
+            "summary": {
+                "tldr": "",
+                "executive_summary": "",
+                "claim_evidence_map": [],
+            },
+            "insights_final": [],
+            "quotes_final": [],
+            "expert_comment": "",
+            "linkedin_post": "",
+            "family_status": {
+                "summary": {
+                    "schema_version": "1.0",
+                    "family": "summary",
+                    "source": "artifact",
+                    "status": "abstained",
+                    "confidence_score": 0.4,
+                    "policy_action": "regenerate",
+                    "reason": "summary_missing_claim_evidence",
+                },
+                "insights_bundle": {
+                    "schema_version": "1.0",
+                    "family": "insights_bundle",
+                    "source": "artifact",
+                    "status": "abstained",
+                    "confidence_score": 0.35,
+                    "policy_action": "regenerate",
+                    "reason": "insights_missing_required_count",
+                },
+                "quotes": {
+                    "schema_version": "1.0",
+                    "family": "quotes",
+                    "source": "artifact",
+                    "status": "abstained",
+                    "confidence_score": 0.15,
+                    "policy_action": "regenerate",
+                    "reason": "quotes_missing",
+                },
+                "expert_comment": {
+                    "schema_version": "1.0",
+                    "family": "expert_comment",
+                    "source": "artifact",
+                    "status": "abstained",
+                    "confidence_score": 0.2,
+                    "policy_action": "abstain",
+                    "reason": "generated_text_missing",
+                },
+                "linkedin_post": {
+                    "schema_version": "1.0",
+                    "family": "linkedin_post",
+                    "source": "artifact",
+                    "status": "abstained",
+                    "confidence_score": 0.2,
+                    "policy_action": "abstain",
+                    "reason": "generated_text_missing",
+                },
+            },
+        },
+    }
+    req = RenderRequest(
+        schema_version="1.0",
+        data=data,
+        doc_name="abstained.pdf",
+        file_id="file_abstained",
+        out_dir=str(tmp_path),
+        preview_png=None,
+    )
+    resp = render_report(req, _ctx())
+    html = Path(resp.html_path).read_text(encoding="utf-8")
+
+    assert "TL;DR omitted because evidence support was too weak" in html
+    assert "Key data insights omitted because evidence support was too weak" in html
+    assert "Key quotes omitted because evidence support was too weak" in html
+    assert "Expert comment omitted because evidence support was too weak" in html
+    assert "LinkedIn post omitted because evidence support was too weak" in html
+    assert 'id="section-appendix"' in html
+
+
 def test_render_surfaces_report_identity_line_and_source_note(tmp_path):
     data = {
         "title": "Retail trends 2026",

@@ -8,6 +8,7 @@ from src.contracts.validation import ValidationIssue
 from src.utils.logging import log_event
 
 from .grounding import run_grounding_rule
+from .family_confidence import run_family_confidence_rule
 from .metrics import run_metric_rule
 from .models import ValidationRuntime
 from .numbers import run_number_rule
@@ -30,6 +31,11 @@ def build_validation_rule_registry() -> tuple[ValidationRule, ...]:
             rule_id="toc_integrity",
             stage="bootstrap",
             execute=run_topic_section_rule,
+        ),
+        ValidationRule(
+            rule_id="family_confidence",
+            stage="bootstrap",
+            execute=run_family_confidence_rule,
         ),
         ValidationRule(
             rule_id="semantic", stage="bootstrap", execute=run_semantic_rule

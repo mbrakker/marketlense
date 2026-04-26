@@ -2,6 +2,12 @@
 {% set art = data.artifacts if data.artifacts is defined else {} %}
 {% set summary = art.summary if art.summary is defined else {} %}
 {% set source_status = art.source_status if art.source_status is defined else {} %}
+{% set family_status = art.family_status if art.family_status is defined and art.family_status else {} %}
+{% set summary_status = family_status.summary if family_status.summary is defined else {} %}
+{% set insights_status = family_status.insights_bundle if family_status.insights_bundle is defined else {} %}
+{% set quotes_status = family_status.quotes if family_status.quotes is defined else {} %}
+{% set expert_status = family_status.expert_comment if family_status.expert_comment is defined else {} %}
+{% set linkedin_status = family_status.linkedin_post if family_status.linkedin_post is defined else {} %}
 {% set report_title = data.title if data.title is defined and data.title else "" %}
 {% set report_title = report_title|string|trim %}
 {% set publisher = data.publisher if data.publisher is defined and data.publisher else "" %}
@@ -83,7 +89,9 @@
 {% set has_claim_map = claim_map|length > 0 %}
 {% set has_expert_comment = expert_comment and (expert_comment|string|trim) %}
 {% set has_linkedin_post = linkedin_post and (linkedin_post|string|trim) %}
-{% set has_appendix = has_expert_comment or has_linkedin_post %}
+{% set expert_abstained = expert_status.status is defined and expert_status.status == "abstained" %}
+{% set linkedin_abstained = linkedin_status.status is defined and linkedin_status.status == "abstained" %}
+{% set has_appendix = has_expert_comment or has_linkedin_post or expert_abstained or linkedin_abstained %}
 {% set has_commentary = commentary and not has_expert_comment %}
 {% set report_identity_ns = namespace(items=[]) %}
 {% if report_title %}{% set report_identity_ns.items = report_identity_ns.items + ["Title: " ~ report_title] %}{% endif %}
@@ -1094,6 +1102,8 @@ h2{
           <h2>TL;DR</h2>
           {% if tldr_text %}
             <p class="summary-copy" style="max-width:none">{{ tldr_text }}</p>
+          {% elif summary_status.status is defined and summary_status.status == "abstained" %}
+            <p class="muted">TL;DR omitted because evidence support was too weak ({{ summary_status.reason if summary_status.reason is defined and summary_status.reason else "insufficient_evidence_support" }}).</p>
           {% else %}
             <p class="muted">Not available from text.</p>
           {% endif %}
@@ -1146,10 +1156,14 @@ h2{
         </section>
         {% endif %}
 
-        {% if exec_summary %}
+        {% if exec_summary or (summary_status.status is defined and summary_status.status == "abstained") %}
         <section class="panel" id="section-executive" data-reveal data-section data-tone="summary" aria-label="Executive summary">
           <h2>Executive summary</h2>
+          {% if exec_summary %}
           <p class="summary-copy" style="max-width:none">{{ exec_summary }}</p>
+          {% elif summary_status.status is defined and summary_status.status == "abstained" %}
+          <p class="muted">Executive summary omitted because evidence support was too weak ({{ summary_status.reason if summary_status.reason is defined and summary_status.reason else "insufficient_evidence_support" }}).</p>
+          {% endif %}
           {% if has_claim_map %}
           <ul class="claim-list" style="max-width:none">
             {% for claim in claim_map %}
@@ -1186,6 +1200,8 @@ h2{
               {% endif %}
             {% endfor %}
           </ol>
+          {% elif insights_status.status is defined and insights_status.status == "abstained" %}
+          <p class="muted">Key data insights omitted because evidence support was too weak ({{ insights_status.reason if insights_status.reason is defined and insights_status.reason else "insufficient_evidence_support" }}).</p>
           {% else %}
           <p class="muted">Not available from text.</p>
           {% endif %}
@@ -1338,6 +1354,8 @@ h2{
               {% endif %}
             {% endfor %}
           </ul>
+          {% elif quotes_status.status is defined and quotes_status.status == "abstained" %}
+          <p class="muted">Key quotes omitted because evidence support was too weak ({{ quotes_status.reason if quotes_status.reason is defined and quotes_status.reason else "insufficient_evidence_support" }}).</p>
           {% else %}
           <p class="muted">Not available from text.</p>
           {% endif %}
@@ -1373,6 +1391,12 @@ h2{
           {% if has_linkedin_post %}
           <h3>LinkedIn post</h3>
           <div class="prose-block" data-chunk-prose style="max-width:none">{{ linkedin_post }}</div>
+          {% endif %}
+          {% if expert_abstained and not has_expert_comment %}
+          <p class="muted">Expert comment omitted because evidence support was too weak ({{ expert_status.reason if expert_status.reason is defined and expert_status.reason else "insufficient_evidence_support" }}).</p>
+          {% endif %}
+          {% if linkedin_abstained and not has_linkedin_post %}
+          <p class="muted">LinkedIn post omitted because evidence support was too weak ({{ linkedin_status.reason if linkedin_status.reason is defined and linkedin_status.reason else "insufficient_evidence_support" }}).</p>
           {% endif %}
         </section>
         {% endif %}

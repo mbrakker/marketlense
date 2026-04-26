@@ -1169,6 +1169,7 @@ def test_validation_rule_registry_is_deterministic():
     registry = build_validation_rule_registry()
     assert [rule.rule_id for rule in registry] == [
         "toc_integrity",
+        "family_confidence",
         "semantic",
         "metrics",
         "quotes",
@@ -1178,11 +1179,156 @@ def test_validation_rule_registry_is_deterministic():
     assert [rule.stage for rule in registry] == [
         "bootstrap",
         "bootstrap",
+        "bootstrap",
         "dependent",
         "dependent",
         "independent",
         "independent",
     ]
+
+
+def test_validation_fails_on_regenerable_abstained_artifact_family(tmp_path):
+    settings = _settings(tmp_path)
+    artifacts = {
+        "summary": {
+            "tldr": "",
+            "executive_summary": "",
+            "claim_evidence_map": [],
+        },
+        "family_status": {
+            "summary": {
+                "schema_version": "1.0",
+                "family": "summary",
+                "source": "artifact",
+                "status": "abstained",
+                "confidence_score": 0.41,
+                "policy_action": "regenerate",
+                "reason": "summary_missing_claim_evidence",
+            }
+        },
+    }
+    result = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="r1",
+            report=_report(),
+            artifacts=artifacts,
+            evidence_packs={},
+            vector_store_id=None,
+        ),
+        settings,
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAI({"unsupported": []}),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert result.status == "fail"
+    assert any(issue.rule_id == "family_confidence" for issue in result.issues)
+    assert any(issue.repair_target == "summary" for issue in result.issues)
+    assert any("abstained at confidence=0.41" in issue.message for issue in result.issues)
+
+
+def test_validation_warns_on_soft_artifact_abstention_and_info_evidence_pack_abstention(
+    tmp_path,
+):
+    settings = _settings(tmp_path)
+    report = ReportPayload(
+        tldr="TLDR",
+        title="Report",
+        insights=[],
+        quote=Quote(text="Quoted text", author="Analyst"),
+        figure=Figure(title="Figure", evidence="Fig"),
+        commentary="Commentary",
+        source="Source",
+    )
+    artifacts = {
+        "summary": {
+            "tldr": "TLDR",
+            "executive_summary": "Exec",
+            "claim_evidence_map": [
+                {"claim": "Claim", "evidence_id": "f1", "evidence": "Evidence"}
+            ],
+        },
+        "insights_final": [],
+        "quotes_final": [
+            {
+                "id": "q1",
+                "text": "Quoted text",
+                "speaker": "Analyst",
+                "citation": "Quoted text",
+            }
+        ],
+        "expert_comment": "",
+        "linkedin_post": "",
+        "family_status": {
+            "expert_comment": {
+                "schema_version": "1.0",
+                "family": "expert_comment",
+                "source": "artifact",
+                "status": "abstained",
+                "confidence_score": 0.52,
+                "policy_action": "abstain",
+                "reason": "generated_text_missing",
+            }
+        },
+    }
+    evidence_packs = {
+        "findings": {
+            "schema_version": "1.0",
+            "findings": [],
+            "family_status": {
+                "schema_version": "1.0",
+                "family": "findings",
+                "source": "evidence_pack",
+                "status": "abstained",
+                "confidence_score": 0.0,
+                "policy_action": "abstain",
+                "reason": "insufficient_pack_content",
+            },
+        }
+    }
+    result = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="r1",
+            report=report,
+            artifacts=artifacts,
+            evidence_packs=evidence_packs,
+            vector_store_id=None,
+        ),
+        settings,
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAI(
+            {"metrics": [], "quotes": []},
+            semantic_payload={
+                "metrics": [],
+                "quotes": [
+                    {
+                        "id": "q1",
+                        "supported": True,
+                        "confidence": 0.86,
+                        "reason": "Exact match",
+                    }
+                ],
+            },
+            grounding_payload={"unsupported": []},
+        ),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert result.status == "pass"
+    assert result.severity == "warning"
+    assert any(
+        issue.rule_id == "family_confidence" and issue.severity == "warning"
+        for issue in result.issues
+    )
+    assert any(
+        issue.rule_id == "family_confidence" and issue.severity == "info"
+        for issue in result.issues
+    )
+    assert any("intentionally omitted" in issue.message for issue in result.issues)
 
 
 def test_validation_failures_include_rule_identity_prefix(tmp_path):

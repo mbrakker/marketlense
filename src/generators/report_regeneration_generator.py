@@ -30,6 +30,7 @@ from src.generators.artifact_normalization import (
 )
 from src.generators.artifact_generator import (
     assemble_artifacts_payload,
+    build_artifact_family_status,
     build_toc_artifacts,
     render_artifact_json_model,
     store_artifacts_payload,
@@ -37,6 +38,7 @@ from src.generators.artifact_generator import (
 from src.generators.validation.evidence import retrieve_evidence_windows
 from src.generators.validation.preparation import prepare_validation_inputs
 from src.services import llm_service, prompt_service, report_analysis_store_service
+from src.utils.analysis_family import family_is_abstained
 from src.utils.errors import AppError
 from src.utils.json_utils import safe_json_dumps
 from src.utils.logging import child_context, log_event
@@ -230,6 +232,14 @@ def regenerate_artifacts(
         expert_comment=state.expert_comment,
         linkedin_post=state.linkedin_post,
         source_status=availability,
+        family_status=build_artifact_family_status(
+            summary=state.summary,
+            insights_candidates=state.insights_candidates,
+            insights_final=state.insights_final,
+            quotes_final=state.quotes_final,
+            expert_comment=state.expert_comment,
+            linkedin_post=state.linkedin_post,
+        ),
         ctx=ctx,
     )
     artifacts_path = store_artifacts_payload(
@@ -299,20 +309,25 @@ def _regeneration_report_stub(artifacts: Dict[str, Any]):
     from src.generators.report_generation_shared import base_payload
 
     payload = base_payload("", 0, "", "")
+    summary_abstained = family_is_abstained(artifacts, "summary")
+    insights_abstained = family_is_abstained(artifacts, "insights_bundle")
+    quotes_abstained = family_is_abstained(artifacts, "quotes")
     summary = _copy_dict(artifacts.get("summary"))
-    if _s(summary.get("tldr")).strip():
+    if not summary_abstained and _s(summary.get("tldr")).strip():
         payload.tldr = _s(summary.get("tldr"))
-    if _s(summary.get("executive_summary")).strip():
+    if not summary_abstained and _s(summary.get("executive_summary")).strip():
         payload.commentary = _s(summary.get("executive_summary"))
-    payload.insights = [
-        _s(entry.get("text"))
-        for entry in _copy_list(artifacts.get("insights_final"))[:5]
-        if isinstance(entry, dict)
-    ]
+    payload.insights = []
+    if not insights_abstained:
+        payload.insights = [
+            _s(entry.get("text"))
+            for entry in _copy_list(artifacts.get("insights_final"))[:5]
+            if isinstance(entry, dict)
+        ]
     while len(payload.insights) < 5:
         payload.insights.append("")
     quotes = _copy_list(artifacts.get("quotes_final"))
-    if quotes and isinstance(quotes[0], dict):
+    if not quotes_abstained and quotes and isinstance(quotes[0], dict):
         payload.quote.text = _s(quotes[0].get("text"))
         payload.quote.author = _s(
             quotes[0].get("speaker") or quotes[0].get("author") or "Unknown"

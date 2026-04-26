@@ -12,6 +12,7 @@ from src.contracts.report_analysis import AnalysisPackPathRequest
 from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.run_context import RunContext
 from src.contracts.state import StateRecordRequest
+from src.utils.analysis_family import family_is_abstained
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 from src.utils.slugify import slugify
@@ -222,6 +223,9 @@ def merge_artifacts_into_payload(
 ) -> ReportPayload:
     if not isinstance(artifacts, dict):
         return payload
+    summary_abstained = family_is_abstained(artifacts, "summary")
+    insights_abstained = family_is_abstained(artifacts, "insights_bundle")
+    quotes_abstained = family_is_abstained(artifacts, "quotes")
     summary = (
         artifacts.get("summary") if isinstance(artifacts.get("summary"), dict) else {}
     )
@@ -229,16 +233,21 @@ def merge_artifacts_into_payload(
     exec_summary = (
         summary.get("executive_summary") if isinstance(summary, dict) else None
     )
-    if tldr:
+    if summary_abstained:
+        payload.tldr = ""
+        payload.commentary = ""
+    elif tldr:
         payload.tldr = str(tldr)
-    if exec_summary:
+    if not summary_abstained and exec_summary:
         payload.commentary = str(exec_summary)
     insights_final = (
         artifacts.get("insights_final")
         if isinstance(artifacts.get("insights_final"), list)
         else []
     )
-    if insights_final:
+    if insights_abstained:
+        payload.insights = ["", "", "", "", ""]
+    elif insights_final:
         normalized = []
         for item in insights_final[:5]:
             if isinstance(item, dict):
@@ -253,7 +262,9 @@ def merge_artifacts_into_payload(
         if isinstance(artifacts.get("quotes_final"), list)
         else []
     )
-    if quotes_final:
+    if quotes_abstained:
+        payload.quote = Quote(text="", author="Unknown")
+    elif quotes_final:
         first_quote = quotes_final[0] if quotes_final else {}
         if isinstance(first_quote, dict):
             payload.quote = Quote(

@@ -13,6 +13,30 @@
       ]
     },
     "not_found_reason": { "type": "string" },
-    "_cache": { "type": "object", "additionalProperties": true }
+    "_cache": { "type": "object", "additionalProperties": true },
+    "family_status": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "family",
+        "source",
+        "status",
+        "confidence_score",
+        "policy_action",
+        "reason"
+      ],
+      "properties": {
+        "schema_version": { "type": "string" },
+        "family": { "type": "string" },
+        "source": { "type": "string", "enum": ["evidence_pack"] },
+        "status": { "type": "string", "enum": ["generated", "abstained"] },
+        "confidence_score": { "type": "number" },
+        "policy_action": {
+          "type": "string",
+          "enum": ["keep", "regenerate", "abstain"]
+        },
+        "reason": { "type": "string" }
+      }
+    }
   }
 }

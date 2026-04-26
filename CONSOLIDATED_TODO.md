@@ -311,16 +311,6 @@ Suggested priority order:
     - Contract round-trip and schema snapshot tests cover every moved dataclass.
     - No generator/service logic is introduced into contract modules.
 
-- **Title:** Add confidence and abstain mode for evidence/artifact families [Impact: 5/5, Effort: 3/5]
-  - Explanation: Generated artifact families should emit confidence and abstain when evidence is too weak, routing to targeted regeneration or explicit omission instead of shipping unsupported output.
-  - Pros: Higher trust profile and fewer factual defects.
-  - Cons: Adds fallback states and policy decisions.
-  - Acceptance Criteria:
-    - Confidence score is emitted per generated artifact family.
-    - Low-confidence policy routes to regeneration or explicit abstain.
-    - Validation metrics show reduced unsupported claims.
-    - HTML/publish flows handle abstained artifacts explicitly.
-
 - **Title:** Add ensemble validation with schema, deterministic rules, and LLM verifier [Impact: 5/5, Effort: 4/5]
   - Explanation: Combine orthogonal validators to catch failure modes that one validator misses. Aggregate conflicts into a typed validation report instead of hiding disagreement.
   - Pros: Higher robustness and better defect detection.

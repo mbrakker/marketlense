@@ -261,6 +261,8 @@ def test_generate_evidence_packs_success(tmp_path):
     )
     assert "doc_map" in packs
     assert packs["doc_map"]["doc_id"] == "d1"
+    assert packs["doc_map"]["family_status"]["status"] == "generated"
+    assert packs["doc_map"]["family_status"]["policy_action"] == "keep"
 
 
 def test_generate_evidence_packs_creates_context_when_missing(tmp_path):
@@ -277,6 +279,40 @@ def test_generate_evidence_packs_creates_context_when_missing(tmp_path):
     )
 
     assert packs["doc_map"]["doc_id"] == "d1"
+
+
+def test_generate_evidence_packs_marks_optional_empty_pack_as_abstained(tmp_path):
+    packs = generate_evidence_packs(
+        report_id="r1",
+        report_name="report",
+        vector_store_id="vs_1",
+        settings=_settings(tmp_path, evidence_pack_registry=["doc_map", "findings"]),
+        ctx=_ctx(),
+        openai_client=RoutedOpenAIClient(
+            {
+                "doc_map": {
+                    "doc_id": "d1",
+                    "title": "title",
+                    "sections": [
+                        {
+                            "id": "s1",
+                            "title": "Overview",
+                            "summary": "Summary",
+                            "key_points": [],
+                        }
+                    ],
+                },
+                "findings": {},
+            }
+        ),
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert packs["findings"]["findings"] == []
+    assert packs["findings"]["family_status"]["status"] == "abstained"
+    assert packs["findings"]["family_status"]["policy_action"] == "abstain"
+    assert packs["findings"]["family_status"]["reason"] == "insufficient_pack_content"
 
 
 def test_generate_evidence_packs_logs_prompt_observability_and_raw_response(

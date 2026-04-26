@@ -5,6 +5,7 @@ import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List, Optional
 
+from src.contracts.analysis_family import AnalysisFamilyStatus
 from src.contracts.config import AppSettings
 from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIResponseRequest
 from src.contracts.prompts import PromptLoadRequest
@@ -53,6 +54,10 @@ from src.services.schema_validator_service import (
     validate_evidence_references,
     validate_schema,
 )
+from src.utils.analysis_family import (
+    family_is_abstained,
+    serialize_family_status,
+)
 from src.utils.cache_utils import sha256_json
 
 logger = logging.getLogger("market_lense.artifact_generator")
@@ -100,6 +105,14 @@ TOC_EXCLUDED_TITLE_MARKERS = (
     "thank you",
     "thanks",
 )
+_ARTIFACT_REGENERATE_FAMILIES = {"summary", "insights_bundle", "quotes"}
+_ARTIFACT_CONFIDENCE_THRESHOLDS = {
+    "summary": 0.72,
+    "insights_bundle": 0.78,
+    "quotes": 0.72,
+    "expert_comment": 0.76,
+    "linkedin_post": 0.72,
+}
 
 
 def _artifact_parallel_workers(settings: AppSettings, step_count: int) -> int:
@@ -459,6 +472,22 @@ def generate_artifacts(
     linkedin_post = strip_artifact_inline_reference_ids(
         _s(linkedin_result.get("linkedin_post"))
     )
+    (
+        summary,
+        insights_candidates,
+        insights_final,
+        quotes_final,
+        expert_comment,
+        linkedin_post,
+        family_status,
+    ) = apply_artifact_family_policy(
+        summary=summary,
+        insights_candidates=insights_candidates,
+        insights_final=insights_final,
+        quotes_final=quotes_final,
+        expert_comment=expert_comment,
+        linkedin_post=linkedin_post,
+    )
 
     artifacts_payload = assemble_artifacts_payload(
         report_id=report_id,
@@ -473,6 +502,7 @@ def generate_artifacts(
         expert_comment=expert_comment,
         linkedin_post=linkedin_post,
         source_status=availability,
+        family_status=family_status,
         ctx=ctx,
         cache_meta={**cache_meta, "key": cache_key} if cache_meta else None,
     )
@@ -503,6 +533,299 @@ def generate_artifacts(
     return artifacts_payload
 
 
+def apply_artifact_family_policy(
+    *,
+    summary: Dict[str, Any],
+    insights_candidates: List[Dict[str, Any]],
+    insights_final: List[Dict[str, Any]],
+    quotes_final: List[Dict[str, Any]],
+    expert_comment: str,
+    linkedin_post: str,
+) -> tuple[
+    Dict[str, Any],
+    List[Dict[str, Any]],
+    List[Dict[str, Any]],
+    List[Dict[str, Any]],
+    str,
+    str,
+    Dict[str, Dict[str, Any]],
+]:
+    summary_payload = dict(summary)
+    insights_candidate_payload = list(insights_candidates)
+    insights_final_payload = list(insights_final)
+    quotes_payload = list(quotes_final)
+    expert_payload = expert_comment
+    linkedin_payload = linkedin_post
+
+    family_status = build_artifact_family_status(
+        summary=summary_payload,
+        insights_candidates=insights_candidate_payload,
+        insights_final=insights_final_payload,
+        quotes_final=quotes_payload,
+        expert_comment=expert_payload,
+        linkedin_post=linkedin_payload,
+    )
+    if family_is_abstained({"family_status": family_status}, "summary"):
+        summary_payload = {
+            "tldr": "",
+            "executive_summary": "",
+            "claim_evidence_map": [],
+        }
+    if family_is_abstained({"family_status": family_status}, "insights_bundle"):
+        insights_candidate_payload = []
+        insights_final_payload = []
+    if family_is_abstained({"family_status": family_status}, "quotes"):
+        quotes_payload = []
+    if family_is_abstained({"family_status": family_status}, "expert_comment"):
+        expert_payload = ""
+    if family_is_abstained({"family_status": family_status}, "linkedin_post"):
+        linkedin_payload = ""
+    return (
+        summary_payload,
+        insights_candidate_payload,
+        insights_final_payload,
+        quotes_payload,
+        expert_payload,
+        linkedin_payload,
+        family_status,
+    )
+
+
+def build_artifact_family_status(
+    *,
+    summary: Dict[str, Any],
+    insights_candidates: List[Dict[str, Any]],
+    insights_final: List[Dict[str, Any]],
+    quotes_final: List[Dict[str, Any]],
+    expert_comment: str,
+    linkedin_post: str,
+) -> Dict[str, Dict[str, Any]]:
+    statuses = [
+        _artifact_family_status(
+            family="summary",
+            confidence_score=_summary_confidence_score(summary),
+            reason=_summary_confidence_reason(summary),
+        ),
+        _artifact_family_status(
+            family="insights_bundle",
+            confidence_score=_insights_confidence_score(
+                insights_candidates=insights_candidates,
+                insights_final=insights_final,
+            ),
+            reason=_insights_confidence_reason(
+                insights_candidates=insights_candidates,
+                insights_final=insights_final,
+            ),
+        ),
+        _artifact_family_status(
+            family="quotes",
+            confidence_score=_quotes_confidence_score(quotes_final),
+            reason=_quotes_confidence_reason(quotes_final),
+        ),
+        _artifact_family_status(
+            family="expert_comment",
+            confidence_score=_soft_text_confidence_score(
+                text=expert_comment,
+                summary=summary,
+                insights_final=insights_final,
+                quotes_final=quotes_final,
+            ),
+            reason=_soft_text_confidence_reason(
+                text=expert_comment,
+                supporting_artifacts_ready=bool(summary) and bool(insights_final),
+            ),
+        ),
+        _artifact_family_status(
+            family="linkedin_post",
+            confidence_score=_soft_text_confidence_score(
+                text=linkedin_post,
+                summary=summary,
+                insights_final=insights_final,
+                quotes_final=quotes_final,
+            ),
+            reason=_soft_text_confidence_reason(
+                text=linkedin_post,
+                supporting_artifacts_ready=bool(summary) and bool(insights_final),
+            ),
+        ),
+    ]
+    return {status.family: serialize_family_status(status) for status in statuses}
+
+
+def _artifact_family_status(
+    *,
+    family: str,
+    confidence_score: float,
+    reason: str,
+) -> AnalysisFamilyStatus:
+    threshold = _ARTIFACT_CONFIDENCE_THRESHOLDS[family]
+    below_threshold = confidence_score < threshold
+    if not below_threshold:
+        status = "generated"
+        policy_action = "keep"
+        status_reason = ""
+    elif family in _ARTIFACT_REGENERATE_FAMILIES:
+        status = "abstained"
+        policy_action = "regenerate"
+        status_reason = reason or "insufficient_evidence_support"
+    else:
+        status = "abstained"
+        policy_action = "abstain"
+        status_reason = reason or "insufficient_evidence_support"
+    return AnalysisFamilyStatus(
+        schema_version="1.0",
+        family=family,
+        source="artifact",
+        status=status,
+        confidence_score=max(0.0, min(1.0, round(confidence_score, 3))),
+        policy_action=policy_action,
+        reason=status_reason,
+    )
+
+
+def _summary_confidence_score(summary: Dict[str, Any]) -> float:
+    claim_map = summary.get("claim_evidence_map") if isinstance(summary, dict) else []
+    score = 0.0
+    if _s(summary.get("tldr")).strip():
+        score += 0.32
+    if _s(summary.get("executive_summary")).strip():
+        score += 0.36
+    if isinstance(claim_map, list) and claim_map:
+        score += 0.18
+        supported_claims = 0
+        for claim in claim_map:
+            if not isinstance(claim, dict):
+                continue
+            if _s(claim.get("evidence_id")).strip() or _s(claim.get("evidence")).strip():
+                supported_claims += 1
+        score += 0.14 * (supported_claims / max(1, len(claim_map)))
+    return score
+
+
+def _summary_confidence_reason(summary: Dict[str, Any]) -> str:
+    claim_map = summary.get("claim_evidence_map") if isinstance(summary, dict) else []
+    if not _s(summary.get("tldr")).strip():
+        return "summary_missing_tldr"
+    if not _s(summary.get("executive_summary")).strip():
+        return "summary_missing_executive_summary"
+    if not isinstance(claim_map, list) or not claim_map:
+        return "summary_missing_claim_evidence"
+    if not any(
+        isinstance(claim, dict)
+        and (_s(claim.get("evidence_id")).strip() or _s(claim.get("evidence")).strip())
+        for claim in claim_map
+    ):
+        return "summary_claim_evidence_unsupported"
+    return ""
+
+
+def _insights_confidence_score(
+    *,
+    insights_candidates: List[Dict[str, Any]],
+    insights_final: List[Dict[str, Any]],
+) -> float:
+    score = 0.0
+    nonempty_final = [
+        item
+        for item in insights_final
+        if isinstance(item, dict) and _s(item.get("text")).strip()
+    ]
+    if nonempty_final:
+        score += 0.28
+        score += 0.32 * (min(len(nonempty_final), 5) / 5.0)
+    evidence_supported = [
+        item
+        for item in nonempty_final
+        if _s(item.get("evidence_id")).strip() or _s(item.get("evidence")).strip()
+    ]
+    if nonempty_final:
+        score += 0.24 * (len(evidence_supported) / len(nonempty_final))
+    if isinstance(insights_candidates, list) and insights_candidates:
+        score += 0.16 * (min(len(insights_candidates), 5) / 5.0)
+    return score
+
+
+def _insights_confidence_reason(
+    *,
+    insights_candidates: List[Dict[str, Any]],
+    insights_final: List[Dict[str, Any]],
+) -> str:
+    nonempty_final = [
+        item
+        for item in insights_final
+        if isinstance(item, dict) and _s(item.get("text")).strip()
+    ]
+    if len(nonempty_final) < 5:
+        return "insights_missing_required_count"
+    if not any(
+        _s(item.get("evidence_id")).strip() or _s(item.get("evidence")).strip()
+        for item in nonempty_final
+    ):
+        return "insights_missing_evidence_support"
+    if not insights_candidates:
+        return "insights_candidates_empty"
+    return ""
+
+
+def _quotes_confidence_score(quotes_final: List[Dict[str, Any]]) -> float:
+    if not quotes_final:
+        return 0.0
+    first_quote = quotes_final[0] if isinstance(quotes_final[0], dict) else {}
+    score = 0.0
+    if _s(first_quote.get("text")).strip():
+        score += 0.55
+    if _s(first_quote.get("evidence_id")).strip():
+        score += 0.25
+    if (
+        _s(first_quote.get("speaker")).strip()
+        or _s(first_quote.get("citation")).strip()
+        or isinstance(first_quote.get("page"), int)
+    ):
+        score += 0.2
+    return score
+
+
+def _quotes_confidence_reason(quotes_final: List[Dict[str, Any]]) -> str:
+    if not quotes_final:
+        return "quotes_missing"
+    first_quote = quotes_final[0] if isinstance(quotes_final[0], dict) else {}
+    if not _s(first_quote.get("text")).strip():
+        return "quotes_missing_text"
+    if not (
+        _s(first_quote.get("evidence_id")).strip()
+        or _s(first_quote.get("citation")).strip()
+    ):
+        return "quotes_missing_support"
+    return ""
+
+
+def _soft_text_confidence_score(
+    *,
+    text: str,
+    summary: Dict[str, Any],
+    insights_final: List[Dict[str, Any]],
+    quotes_final: List[Dict[str, Any]],
+) -> float:
+    if not _s(text).strip():
+        return 0.0
+    score = 0.45
+    if _s(summary.get("executive_summary")).strip():
+        score += 0.2
+    if insights_final:
+        score += 0.2
+    if quotes_final:
+        score += 0.15
+    return score
+
+
+def _soft_text_confidence_reason(*, text: str, supporting_artifacts_ready: bool) -> str:
+    if not _s(text).strip():
+        return "generated_text_missing"
+    if not supporting_artifacts_ready:
+        return "supporting_artifacts_weak"
+    return ""
+
+
 def assemble_artifacts_payload(
     *,
     report_id: str,
@@ -517,6 +840,7 @@ def assemble_artifacts_payload(
     expert_comment: str,
     linkedin_post: str,
     source_status: Dict[str, Any],
+    family_status: Dict[str, Dict[str, Any]],
     ctx: RunContext,
     cache_meta: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
@@ -582,6 +906,7 @@ def assemble_artifacts_payload(
         "expert_comment": expert_comment,
         "linkedin_post": linkedin_post,
         "source_status": source_status,
+        "family_status": family_status,
     }
     if cache_meta:
         artifacts_payload["_cache"] = dict(cache_meta)
@@ -1640,6 +1965,7 @@ def _adapt_cached_artifacts_payload(
     report_id: str,
     ctx: RunContext,
 ) -> CachedPackAdaptResult[Dict[str, Any]]:
+    payload = _attach_cached_artifact_family_status(payload)
     try:
         validate_schema(
             SchemaValidateRequest(
@@ -1674,6 +2000,39 @@ def _adapt_cached_artifacts_payload(
         status="hit",
         value=payload,
     )
+
+
+def _attach_cached_artifact_family_status(payload: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(payload, dict):
+        return {}
+    if isinstance(payload.get("family_status"), dict):
+        return payload
+    summary = payload.get("summary") if isinstance(payload.get("summary"), dict) else {}
+    insights_candidates = (
+        payload.get("insights_candidates")
+        if isinstance(payload.get("insights_candidates"), list)
+        else []
+    )
+    insights_final = (
+        payload.get("insights_final")
+        if isinstance(payload.get("insights_final"), list)
+        else []
+    )
+    quotes_final = (
+        payload.get("quotes_final")
+        if isinstance(payload.get("quotes_final"), list)
+        else []
+    )
+    enriched = dict(payload)
+    enriched["family_status"] = build_artifact_family_status(
+        summary=summary,
+        insights_candidates=insights_candidates,
+        insights_final=insights_final,
+        quotes_final=quotes_final,
+        expert_comment=_s(payload.get("expert_comment")),
+        linkedin_post=_s(payload.get("linkedin_post")),
+    )
+    return enriched
 
 
 def _resolve_pack_path(
@@ -1748,24 +2107,36 @@ def _validate_artifact_semantic_fields(
         text = _s(value).strip()
         return not text or text.lower() in sentinel_values
 
-    if _missing_text(summary.get("tldr")):
+    summary_abstained = family_is_abstained(artifacts_payload, "summary")
+    insights_abstained = family_is_abstained(artifacts_payload, "insights_bundle")
+    quotes_abstained = family_is_abstained(artifacts_payload, "quotes")
+    expert_abstained = family_is_abstained(artifacts_payload, "expert_comment")
+    linkedin_abstained = family_is_abstained(artifacts_payload, "linkedin_post")
+
+    if not summary_abstained and _missing_text(summary.get("tldr")):
         missing_fields.append("summary.tldr")
-    if _missing_text(summary.get("executive_summary")):
+    if not summary_abstained and _missing_text(summary.get("executive_summary")):
         missing_fields.append("summary.executive_summary")
-    if len(insights_final) < 5:
+    if not insights_abstained and len(insights_final) < 5:
         missing_fields.append("insights_final")
     for index, insight in enumerate(insights_final[:5]):
+        if insights_abstained:
+            break
         if not isinstance(insight, dict) or _missing_text(insight.get("text")):
             missing_fields.append(f"insights_final[{index}].text")
-    if not quotes_final:
+    if not quotes_abstained and not quotes_final:
         missing_fields.append("quotes_final")
-    elif not isinstance(quotes_final[0], dict) or _missing_text(
-        quotes_final[0].get("text")
+    elif (
+        not quotes_abstained
+        and (
+            not isinstance(quotes_final[0], dict)
+            or _missing_text(quotes_final[0].get("text"))
+        )
     ):
         missing_fields.append("quotes_final[0].text")
-    if _missing_text(artifacts_payload.get("expert_comment")):
+    if not expert_abstained and _missing_text(artifacts_payload.get("expert_comment")):
         missing_fields.append("expert_comment")
-    if _missing_text(artifacts_payload.get("linkedin_post")):
+    if not linkedin_abstained and _missing_text(artifacts_payload.get("linkedin_post")):
         missing_fields.append("linkedin_post")
 
     if not missing_fields:
@@ -1777,7 +2148,14 @@ def _validate_artifact_semantic_fields(
             role="generator",
             event="artifact_contract_incomplete",
             module=logger.name,
-            fields={"missing_fields": missing_fields},
+            fields={
+                "missing_fields": missing_fields,
+                "summary_abstained": summary_abstained,
+                "insights_abstained": insights_abstained,
+                "quotes_abstained": quotes_abstained,
+                "expert_comment_abstained": expert_abstained,
+                "linkedin_post_abstained": linkedin_abstained,
+            },
         )
     )
     raise AppError(

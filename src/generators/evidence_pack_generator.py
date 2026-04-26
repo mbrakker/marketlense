@@ -4,6 +4,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, Optional, Tuple
 
+from src.contracts.analysis_family import AnalysisFamilyStatus
 from src.contracts.config import AppSettings
 from src.contracts.openai import OpenAIResponseRequest, OpenAIResponseResult
 from src.contracts.report_analysis import (
@@ -44,10 +45,23 @@ from src.services.schema_validator_service import validate_schema
 from src.utils.cache_utils import sha256_json
 from src.utils.coercion import coerce_int
 from src.utils.errors import AppError
+from src.utils.analysis_family import serialize_family_status
 from src.utils.json_recovery import parse_json_from_text, strip_json_fence
 from src.utils.logging import child_context, log_event, new_run_context
 
 logger = logging.getLogger("market_lense.evidence_pack_generator")
+
+_OPTIONAL_EVIDENCE_PACKS = {
+    "scope",
+    "methods",
+    "findings",
+    "limitations",
+    "quote_candidates",
+    "key_metrics",
+    "risk_register",
+    "recommendations",
+    "contradictions",
+}
 
 
 def _pack_parallel_workers(settings: AppSettings, step_count: int) -> int:
@@ -83,6 +97,114 @@ def _resolve_pack_steps(settings: AppSettings) -> list[EvidencePackStrategy]:
 
 def _prompt_namespace_for_strategy(strategy: EvidencePackStrategy) -> str:
     return f"report_vs/{strategy.prompt_namespace_suffix}"
+
+
+def _attach_pack_family_status(pack_name: str, payload: dict) -> dict:
+    enriched = dict(payload)
+    enriched["family_status"] = serialize_family_status(
+        _build_pack_family_status(pack_name, enriched)
+    )
+    return enriched
+
+
+def _build_pack_family_status(
+    pack_name: str,
+    payload: dict,
+) -> AnalysisFamilyStatus:
+    confidence_score = _pack_confidence_score(pack_name, payload)
+    not_found_reason = str(payload.get("not_found_reason") or "").strip()
+    if not_found_reason:
+        status = "abstained"
+        reason = not_found_reason
+    elif confidence_score <= 0.0:
+        status = "abstained"
+        reason = "insufficient_pack_content"
+    else:
+        status = "generated"
+        reason = ""
+    policy_action = _pack_policy_action(pack_name, status)
+    return AnalysisFamilyStatus(
+        schema_version="1.0",
+        family=pack_name,
+        source="evidence_pack",
+        status=status,
+        confidence_score=confidence_score,
+        policy_action=policy_action,
+        reason=reason,
+    )
+
+
+def _pack_policy_action(pack_name: str, status: str) -> str:
+    if status != "abstained":
+        return "keep"
+    if pack_name == "doc_map":
+        return "regenerate"
+    if pack_name in _OPTIONAL_EVIDENCE_PACKS:
+        return "abstain"
+    return "regenerate"
+
+
+def _pack_confidence_score(pack_name: str, payload: dict) -> float:
+    if str(payload.get("not_found_reason") or "").strip():
+        return 0.0
+    if pack_name == "doc_map":
+        return _doc_map_confidence_score(payload)
+    if pack_name in {"scope", "methods"}:
+        return _scalar_or_list_pack_confidence(payload, root_key=pack_name)
+    if pack_name in {
+        "findings",
+        "limitations",
+        "quote_candidates",
+        "key_metrics",
+        "risk_register",
+        "recommendations",
+        "contradictions",
+    }:
+        return _scalar_or_list_pack_confidence(payload, root_key=pack_name)
+    return 0.0
+
+
+def _doc_map_confidence_score(payload: dict) -> float:
+    sections = payload.get("sections") if isinstance(payload.get("sections"), list) else []
+    title_present = bool(str(payload.get("title") or "").strip())
+    doc_id_present = bool(str(payload.get("doc_id") or "").strip())
+    sections_with_summary = 0
+    for entry in sections:
+        if not isinstance(entry, dict):
+            continue
+        if str(entry.get("summary") or "").strip():
+            sections_with_summary += 1
+    score = 0.0
+    if title_present:
+        score += 0.2
+    if doc_id_present:
+        score += 0.15
+    if sections:
+        score += 0.35
+        score += 0.3 * (sections_with_summary / max(1, len(sections)))
+    return max(0.0, min(1.0, round(score, 3)))
+
+
+def _scalar_or_list_pack_confidence(payload: dict, *, root_key: str) -> float:
+    value = payload.get(root_key)
+    if isinstance(value, list):
+        if not value:
+            return 0.0
+        substantive = 0
+        for item in value:
+            if isinstance(item, str) and item.strip():
+                substantive += 1
+                continue
+            if isinstance(item, dict) and any(str(v or "").strip() for v in item.values()):
+                substantive += 1
+        ratio = substantive / max(1, len(value))
+        return max(0.0, min(1.0, round(0.4 + (0.5 * ratio), 3)))
+    if isinstance(value, dict):
+        substantive = any(str(v or "").strip() for v in value.values())
+        return 0.9 if substantive else 0.0
+    if isinstance(value, str):
+        return 0.9 if value.strip() else 0.0
+    return 0.0
 
 
 def _strip_json_fence(text: str) -> str:
@@ -444,7 +566,7 @@ def _generate_pack(
                     )
                 )
                 if cached is not None:
-                    return cached
+                    return _attach_pack_family_status(pack_name, cached)
     logger.info(
         log_event(
             ctx,
@@ -617,6 +739,7 @@ def _generate_pack(
             not_found_reason = exc.code
         parsed_json = None
     result_payload = parsed_json or _empty_payload(pack_name, not_found_reason)
+    result_payload = _attach_pack_family_status(pack_name, result_payload)
     if cache_meta and isinstance(result_payload, dict):
         result_payload = dict(result_payload)
         result_payload["_cache"] = {**cache_meta, "key": cache_key}
@@ -754,6 +877,7 @@ def _load_cached_pack(
         normalized_payload = dict(
             strategy.normalize_payload(payload, report_id, report_name).payload
         )
+        normalized_payload = _attach_pack_family_status(pack_name, normalized_payload)
         try:
             validate_schema(
                 SchemaValidateRequest(
