@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import asdict
+import hashlib
 import logging
 import time
 import json
@@ -7,6 +9,10 @@ from pathlib import Path
 from typing import List, Optional
 
 from src.contracts.files import ListHtmlRequest, ReadTextRequest
+from src.contracts.idempotency import (
+    OrchestratorIdempotencyGetRequest,
+    OrchestratorIdempotencyRecordRequest,
+)
 from src.contracts.publish import PublishOutcome, PublishRequest, PublishSettings
 from src.contracts.run_context import RunContext
 from src.contracts.state import (
@@ -26,6 +32,7 @@ from src.orchestrators.publish_shared import (
     load_html_file_id_map,
 )
 from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
+from src.services import idempotency_service
 from src.services.wordpress_service import find_post_by_file_id
 from src.utils.html_utils import extract_file_id
 from src.utils.errors import AppError
@@ -34,6 +41,7 @@ from src.utils.validation import parse_validation_report_payload
 from src.utils.wp_auth import build_auth_header
 
 logger = logging.getLogger("market_lense.publish_orchestrator")
+_PUBLISH_IDEMPOTENCY_SCOPE = "publish_orchestrator.publish_html"
 
 
 def _validation_paths(output_dir: str, file_id: str, html_path: str) -> list[Path]:
@@ -102,6 +110,97 @@ def _with_validation(
         error=outcome.error,
         validation_status=status,
         validation_issues=issues,
+    )
+
+
+def _publish_idempotency_key(*, file_id: str, post_type: str) -> str:
+    return f"{post_type}:{file_id}"
+
+
+def _publish_checksum(
+    *,
+    file_id: str,
+    html_path: str,
+    html_text: str,
+    post_type: str,
+    validation_status: str,
+    validation_issues: List[str],
+) -> str:
+    html_sha256 = hashlib.sha256((html_text or "").encode("utf-8")).hexdigest()
+    payload = {
+        "schema_version": "1.0",
+        "file_id": file_id,
+        "html_path": html_path,
+        "html_sha256": html_sha256,
+        "post_type": post_type,
+        "validation_status": validation_status,
+        "validation_issues": list(validation_issues or []),
+    }
+    return hashlib.sha256(
+        json.dumps(
+            payload,
+            ensure_ascii=True,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+
+
+def _lookup_publish_idempotency(
+    *,
+    settings: PublishSettings,
+    file_id: str,
+    post_type: str,
+    checksum: str,
+    ctx: RunContext,
+) -> PublishOutcome | None:
+    lookup = idempotency_service.get_outcome(
+        OrchestratorIdempotencyGetRequest(
+            schema_version="1.0",
+            db_path=settings.state_db,
+            scope=_PUBLISH_IDEMPOTENCY_SCOPE,
+            idempotency_key=_publish_idempotency_key(
+                file_id=file_id,
+                post_type=post_type,
+            ),
+            input_checksum=checksum,
+        ),
+        ctx,
+    )
+    if not lookup.found or lookup.record is None:
+        return None
+    return PublishOutcome(**dict(lookup.record.outcome_payload or {}))
+
+
+def _record_publish_idempotency(
+    *,
+    settings: PublishSettings,
+    outcome: PublishOutcome,
+    post_type: str,
+    checksum: str,
+    ctx: RunContext,
+) -> None:
+    if not outcome.file_id:
+        return
+    idempotency_service.record_outcome(
+        OrchestratorIdempotencyRecordRequest(
+            schema_version="1.0",
+            db_path=settings.state_db,
+            scope=_PUBLISH_IDEMPOTENCY_SCOPE,
+            idempotency_key=_publish_idempotency_key(
+                file_id=outcome.file_id,
+                post_type=post_type,
+            ),
+            input_checksum=checksum,
+            outcome_payload=asdict(outcome),
+            artifact_references={
+                "html_path": outcome.html_path,
+                "status": outcome.status,
+                "post_id": outcome.post_id,
+                "post_url": outcome.post_url,
+            },
+        ),
+        ctx,
     )
 
 
@@ -243,6 +342,53 @@ def run_publish(
             )
             continue
 
+        validation_report = _load_validation_report(
+            file_id, html_path, settings, file_ctx
+        )
+        validation_status = validation_report.status if validation_report else "missing"
+        validation_issues = (
+            [issue.message for issue in validation_report.issues]
+            if validation_report
+            else []
+        )
+        if preloaded_html is None:
+            preloaded_html = read_text(
+                ReadTextRequest(schema_version="1.0", path=html_path), file_ctx
+            ).content
+        publish_checksum = _publish_checksum(
+            file_id=file_id,
+            html_path=html_path,
+            html_text=preloaded_html or "",
+            post_type=settings.wp.post_type,
+            validation_status=validation_status,
+            validation_issues=validation_issues,
+        )
+        reused_outcome = _lookup_publish_idempotency(
+            settings=settings,
+            file_id=file_id,
+            post_type=settings.wp.post_type,
+            checksum=publish_checksum,
+            ctx=file_ctx,
+        )
+        if reused_outcome is not None:
+            logger.info(
+                log_event(
+                    file_ctx,
+                    role="orchestrator",
+                    event="publish_idempotency_reused",
+                    module=logger.name,
+                    fields={
+                        "file_id": file_id,
+                        "post_type": settings.wp.post_type,
+                        "status": reused_outcome.status,
+                        "post_id": reused_outcome.post_id,
+                    },
+                )
+            )
+            outcomes.append(reused_outcome)
+            if reused_outcome.status == "published":
+                published += 1
+            continue
         if state_already_published(
             StatePublishCheckRequest(
                 schema_version="1.0",
@@ -271,16 +417,6 @@ def run_publish(
                 )
             )
             continue
-
-        validation_report = _load_validation_report(
-            file_id, html_path, settings, file_ctx
-        )
-        validation_status = validation_report.status if validation_report else "missing"
-        validation_issues = (
-            [issue.message for issue in validation_report.issues]
-            if validation_report
-            else []
-        )
         if settings.validation_policy == "block" and validation_status != "pass":
             logger.info(
                 log_event(
@@ -395,6 +531,14 @@ def run_publish(
                         post_type=settings.wp.post_type,
                     ),
                     file_ctx,
+                )
+            if outcome.status in {"published", "skipped"}:
+                _record_publish_idempotency(
+                    settings=settings,
+                    outcome=outcome,
+                    post_type=settings.wp.post_type,
+                    checksum=publish_checksum,
+                    ctx=file_ctx,
                 )
             return outcome
 

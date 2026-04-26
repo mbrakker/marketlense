@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import mimetypes
 import time
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Optional
@@ -22,12 +22,17 @@ from src.contracts.browser_download import (
     ReportDownloadOrchestratorResult,
 )
 from src.contracts.drive import (
+    DriveFile,
     DriveFolderFileListRequest,
     DriveFolderFileListResponse,
     DriveUploadLocalFileRequest,
     DriveUploadLocalFileResponse,
 )
 from src.contracts.files import FileHashRequest, FileHashResponse
+from src.contracts.idempotency import (
+    OrchestratorIdempotencyGetRequest,
+    OrchestratorIdempotencyRecordRequest,
+)
 from src.contracts.report_store import (
     PublisherDownloadRouteGetRequest,
     PublisherDownloadRouteRecordRequest,
@@ -49,6 +54,7 @@ from src.orchestrators._report_download_route_planner import (
 from src.services.browser_report_download_service import (
     download_report_with_browser_use,
 )
+from src.services import idempotency_service
 from src.services.file_service import file_md5
 from src.services.drive_service import list_files_in_folder, upload_local_file
 from src.services.report_store_service import (
@@ -61,9 +67,12 @@ from src.services.config_service import upsert_browser_download_identity_fields
 from src.utils.drive_utils import extract_drive_folder_id
 from src.utils.logging import log_event
 from src.utils.errors import AppError
+from src.utils.cache_utils import sha256_json
 from src.utils.url_utils import normalize_url
 
 logger = logging.getLogger("market_lense.report_download_orchestrator")
+_REPORT_DOWNLOAD_SOURCE_RECORD_SCOPE = "report_download_orchestrator.source_record"
+_REPORT_DOWNLOAD_DRIVE_UPLOAD_SCOPE = "report_download_orchestrator.drive_upload"
 _NON_REPORT_URL_MARKERS = {
     "blog",
     "news",
@@ -194,6 +203,101 @@ class ReportDownloadDependencies:
             upsert_browser_download_identity_fields=upsert_browser_download_identity_fields,
             sleep_fn=time.sleep,
         )
+
+
+def _lookup_idempotency_record(
+    *,
+    db_path: str,
+    scope: str,
+    idempotency_key: str,
+    input_checksum: str,
+    ctx: RunContext,
+):
+    lookup = idempotency_service.get_outcome(
+        OrchestratorIdempotencyGetRequest(
+            schema_version="1.0",
+            db_path=db_path,
+            scope=scope,
+            idempotency_key=idempotency_key,
+            input_checksum=input_checksum,
+        ),
+        ctx,
+    )
+    return lookup.record if lookup.found else None
+
+
+def _record_idempotency_outcome(
+    *,
+    db_path: str,
+    scope: str,
+    idempotency_key: str,
+    input_checksum: str,
+    outcome_payload: dict[str, object],
+    artifact_references: dict[str, object],
+    ctx: RunContext,
+) -> None:
+    idempotency_service.record_outcome(
+        OrchestratorIdempotencyRecordRequest(
+            schema_version="1.0",
+            db_path=db_path,
+            scope=scope,
+            idempotency_key=idempotency_key,
+            input_checksum=input_checksum,
+            outcome_payload=outcome_payload,
+            artifact_references=artifact_references,
+        ),
+        ctx,
+    )
+
+
+def _restore_report_source_record(payload: dict[str, object]) -> ReportSourceRecordResponse:
+    return ReportSourceRecordResponse(
+        schema_version=str(payload.get("schema_version") or "1.0"),
+        record_id=int(payload.get("record_id") or 0),
+        source_domain=str(payload.get("source_domain") or ""),
+        report_name=str(payload.get("report_name") or ""),
+        landing_page_url=str(payload.get("landing_page_url") or ""),
+        downloaded_at_utc=str(payload.get("downloaded_at_utc") or ""),
+        md5=str(payload.get("md5") or ""),
+    )
+
+
+def _restore_drive_file(payload: dict[str, object]) -> DriveFile:
+    return DriveFile(
+        schema_version=str(payload.get("schema_version") or "1.0"),
+        file_id=str(payload.get("file_id") or ""),
+        name=str(payload.get("name") or ""),
+        modified_time=payload.get("modified_time"),
+        md5_checksum=payload.get("md5_checksum"),
+        mime_type=payload.get("mime_type"),
+    )
+
+
+def _restore_drive_upload(payload: dict[str, object]) -> ReportDownloadDriveUpload:
+    drive_file_payload = payload.get("drive_file")
+    drive_file = (
+        _restore_drive_file(drive_file_payload)
+        if isinstance(drive_file_payload, dict)
+        else DriveFile(
+            schema_version="1.0",
+            file_id="",
+            name="",
+            modified_time=None,
+            md5_checksum=None,
+            mime_type=None,
+        )
+    )
+    return ReportDownloadDriveUpload(
+        schema_version=str(payload.get("schema_version") or "1.0"),
+        local_path=str(payload.get("local_path") or ""),
+        file_name=str(payload.get("file_name") or ""),
+        mime_type=str(payload.get("mime_type") or ""),
+        folder_id=str(payload.get("folder_id") or ""),
+        status=str(payload.get("status") or ""),
+        size=int(payload.get("size") or 0),
+        md5=(str(payload.get("md5")) if payload.get("md5") is not None else None),
+        drive_file=drive_file,
+    )
 
 
 def run_report_download(
@@ -409,28 +513,77 @@ def run_report_download(
             ),
             ctx,
         )
-        source_record = run_with_retry(
-            step_name="report_download_source_record",
-            operation=lambda: deps.record_report_source(
-                ReportSourceRecordRequest(
-                    schema_version="1.0",
-                    db_path=request.reports_db,
-                    source_domain=_source_domain_for_url(result.source_url),
-                    report_name=_report_name_for_result(result),
-                    landing_page_url=result.source_url,
-                    downloaded_at_utc=_utc_now_iso(),
-                    md5=file_hash.md5,
-                ),
-                ctx,
-            ),
-            ctx=ctx,
-            logger=logger,
-            module_name=logger.name,
-            policy=policy,
-            retry_event="report_download_source_record_retry",
-            failure_event="report_download_source_record_failed",
-            sleep_fn=deps.sleep_fn,
+        source_record_request = ReportSourceRecordRequest(
+            schema_version="1.0",
+            db_path=request.reports_db,
+            source_domain=_source_domain_for_url(result.source_url),
+            report_name=_report_name_for_result(result),
+            landing_page_url=result.source_url,
+            downloaded_at_utc=_utc_now_iso(),
+            md5=file_hash.md5,
         )
+        source_record_checksum = sha256_json(
+            {
+                "schema_version": "1.0",
+                "source_domain": source_record_request.source_domain,
+                "report_name": source_record_request.report_name,
+                "landing_page_url": source_record_request.landing_page_url,
+                "md5": source_record_request.md5,
+            }
+        )
+        source_record_key = normalize_url(source_record_request.landing_page_url)
+        existing_source_record = _lookup_idempotency_record(
+            db_path=request.reports_db,
+            scope=_REPORT_DOWNLOAD_SOURCE_RECORD_SCOPE,
+            idempotency_key=source_record_key,
+            input_checksum=source_record_checksum,
+            ctx=ctx,
+        )
+        if existing_source_record is not None:
+            source_record = _restore_report_source_record(
+                dict(existing_source_record.outcome_payload or {})
+            )
+            logger.info(
+                log_event(
+                    ctx,
+                    role="orchestrator",
+                    event="report_download_source_record_idempotency_reused",
+                    module=logger.name,
+                    fields={
+                        "landing_page_url": source_record.landing_page_url,
+                        "record_id": source_record.record_id,
+                        "md5": source_record.md5,
+                    },
+                )
+            )
+        else:
+            source_record = run_with_retry(
+                step_name="report_download_source_record",
+                operation=lambda: deps.record_report_source(
+                    source_record_request,
+                    ctx,
+                ),
+                ctx=ctx,
+                logger=logger,
+                module_name=logger.name,
+                policy=policy,
+                retry_event="report_download_source_record_retry",
+                failure_event="report_download_source_record_failed",
+                sleep_fn=deps.sleep_fn,
+            )
+            _record_idempotency_outcome(
+                db_path=request.reports_db,
+                scope=_REPORT_DOWNLOAD_SOURCE_RECORD_SCOPE,
+                idempotency_key=source_record_key,
+                input_checksum=source_record_checksum,
+                outcome_payload=asdict(source_record),
+                artifact_references={
+                    "record_id": source_record.record_id,
+                    "landing_page_url": source_record.landing_page_url,
+                    "md5": source_record.md5,
+                },
+                ctx=ctx,
+            )
         logger.info(
             log_event(
                 ctx,
@@ -723,6 +876,43 @@ def _archive_single_artifact(
         ctx,
     )
     size = path.stat().st_size
+    upload_checksum = sha256_json(
+        {
+            "schema_version": "1.0",
+            "folder_id": folder_id,
+            "file_name": file_name,
+            "mime_type": mime_type,
+            "size": size,
+            "md5": file_hash.md5,
+        }
+    )
+    upload_key = f"{folder_id}:{file_name}"
+    existing_upload = _lookup_idempotency_record(
+        db_path=request.reports_db,
+        scope=_REPORT_DOWNLOAD_DRIVE_UPLOAD_SCOPE,
+        idempotency_key=upload_key,
+        input_checksum=upload_checksum,
+        ctx=ctx,
+    )
+    if existing_upload is not None:
+        upload = _restore_drive_upload(dict(existing_upload.outcome_payload or {}))
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="report_download_drive_upload_idempotency_reused",
+                module=logger.name,
+                fields={
+                    "local_path": upload.local_path,
+                    "folder_id": upload.folder_id,
+                    "file_name": upload.file_name,
+                    "status": upload.status,
+                    "drive_file_id": upload.drive_file.file_id,
+                    "md5": upload.md5 or "",
+                },
+            )
+        )
+        return upload
     duplicate = _find_duplicate_drive_file(
         request=request,
         folder_id=folder_id,
@@ -758,6 +948,21 @@ def _archive_single_artifact(
                     "md5": file_hash.md5,
                 },
             )
+        )
+        _record_idempotency_outcome(
+            db_path=request.reports_db,
+            scope=_REPORT_DOWNLOAD_DRIVE_UPLOAD_SCOPE,
+            idempotency_key=upload_key,
+            input_checksum=upload_checksum,
+            outcome_payload=asdict(upload),
+            artifact_references={
+                "folder_id": upload.folder_id,
+                "file_name": upload.file_name,
+                "drive_file_id": upload.drive_file.file_id,
+                "md5": upload.md5,
+                "status": upload.status,
+            },
+            ctx=ctx,
         )
         return upload
     upload_response = run_with_retry(
@@ -811,6 +1016,21 @@ def _archive_single_artifact(
                 "md5": upload.md5 or "",
             },
         )
+    )
+    _record_idempotency_outcome(
+        db_path=request.reports_db,
+        scope=_REPORT_DOWNLOAD_DRIVE_UPLOAD_SCOPE,
+        idempotency_key=upload_key,
+        input_checksum=upload_checksum,
+        outcome_payload=asdict(upload),
+        artifact_references={
+            "folder_id": upload.folder_id,
+            "file_name": upload.file_name,
+            "drive_file_id": upload.drive_file.file_id,
+            "md5": upload.md5,
+            "status": upload.status,
+        },
+        ctx=ctx,
     )
     return upload
 

@@ -1168,6 +1168,118 @@ def test_run_report_download_is_idempotent_for_route_memory(
     assert second.outcome == "downloaded"
 
 
+def test_run_report_download_reuses_idempotent_source_record_and_drive_upload(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    settings = _drive_enabled_settings(_settings(tmp_path))
+    pdf_path = Path(settings.output_dir) / "report.pdf"
+    pdf_path.parent.mkdir(parents=True, exist_ok=True)
+    pdf_path.write_bytes(b"%PDF-1.7 idempotent upload")
+    source_record_calls: list[object] = []
+    upload_calls: list[object] = []
+
+    def _record_source(req, ctx):
+        source_record_calls.append(req)
+        return ReportSourceRecordResponse(
+            schema_version="1.0",
+            record_id=11,
+            source_domain=req.source_domain,
+            report_name=req.report_name,
+            landing_page_url=req.landing_page_url,
+            downloaded_at_utc=req.downloaded_at_utc,
+            md5=req.md5,
+        )
+
+    def _upload_local_file(req, ctx):
+        upload_calls.append(req)
+        return DriveUploadLocalFileResponse(
+            schema_version="1.0",
+            file=DriveFile(
+                schema_version="1.0",
+                file_id="drive-file-1",
+                name=req.file_name or Path(req.source_path).name,
+                modified_time=None,
+                md5_checksum="remote-md5",
+                mime_type=req.mime_type,
+            ),
+            source_path=req.source_path,
+            size=Path(req.source_path).stat().st_size,
+            md5="remote-md5",
+        )
+
+    deps = ReportDownloadDependencies(
+        download_report_with_browser_use=lambda req, ctx: _result(
+            url="https://example.com/report",
+            used_route_hint=False,
+            path=str(pdf_path),
+        ),
+        get_publisher_download_route=lambda req, ctx: None,
+        record_publisher_download_route=lambda req, ctx: None,
+        file_md5=lambda req, ctx: FileHashResponse(
+            schema_version="1.0",
+            path=req.path,
+            md5=_md5_for_path(Path(req.path)),
+        ),
+        record_report_source=_record_source,
+        upsert_browser_download_identity_fields=lambda req, ctx: type(
+            "IdentityUpdate",
+            (),
+            {
+                "path": settings.identity_config_path,
+                "added_field_keys": [],
+                "total_fields": len(settings.identity_profile.fields),
+            },
+        )(),
+        sleep_fn=lambda seconds: None,
+        get_report_download_drive_folder=lambda req, ctx: (
+            ReportDownloadDriveFolderLookupResponse(
+                schema_version="1.0",
+                publisher_name="Example",
+                google_folder="folder123",
+                resolution_source="publisher_insights_url",
+            )
+        ),
+        list_files_in_folder=lambda req, ctx: DriveFolderFileListResponse(
+            schema_version="1.0",
+            folder_id=req.folder_id,
+            files=[],
+        ),
+        upload_local_file=_upload_local_file,
+    )
+
+    first = run_report_download(
+        ReportDownloadOrchestratorRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=settings,
+            state_db=settings.state_db,
+            reports_db=settings.reports_db,
+        ),
+        ctx=run_context,
+        dependencies=deps,
+    )
+    second = run_report_download(
+        ReportDownloadOrchestratorRequest(
+            schema_version="1.0",
+            url="https://example.com/report",
+            settings=settings,
+            state_db=settings.state_db,
+            reports_db=settings.reports_db,
+        ),
+        ctx=run_context,
+        dependencies=deps,
+    )
+
+    assert first.outcome == "downloaded"
+    assert second.outcome == "downloaded"
+    assert len(source_record_calls) == 1
+    assert len(upload_calls) == 1
+    assert len(second.drive_uploads) == 1
+    assert second.drive_uploads[0].status == "uploaded"
+    assert second.drive_uploads[0].drive_file.file_id == "drive-file-1"
+
+
 def test_run_report_download_does_not_record_source_for_email_outcome(
     tmp_path: Path,
     run_context,

@@ -197,16 +197,6 @@ Suggested priority order:
     - Resume command supports selected stage restart.
     - Consistency tests compare full run vs resumed run output.
 
-- **Title:** Add idempotency checksum per side-effecting orchestrator step [Impact: 5/5, Effort: 3/5]
-  - Explanation: Persist stable idempotency keys and prior outcomes for side-effecting steps so retries cannot duplicate files, DB rows, vector stores, Drive uploads, WordPress posts, or notifications.
-  - Pros: Retry safety and cleaner failure handling.
-  - Cons: Requires careful key semantics and migration of existing side effects.
-  - Acceptance Criteria:
-    - Side-effecting steps persist idempotency key, input checksum, outcome, and artifact references.
-    - Duplicate invocation returns prior outcome or fails with a typed mismatch error.
-    - Tests validate no duplicate rows, remote assets, files, or publications.
-    - Idempotency decisions are logged with run/task/span fields.
-
 - **Title:** Add event-sourced state transitions with immutable audit log [Impact: 5/5, Effort: 5/5]
   - Explanation: Record lifecycle transitions as immutable events so state can be reconstructed, replayed, and audited after failures.
   - Pros: Strong auditability, deterministic replay, better debugging.

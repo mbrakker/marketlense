@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import time
-from dataclasses import dataclass, replace
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 from typing import Callable, Optional
 from urllib.parse import urlsplit
@@ -16,6 +16,10 @@ from src.contracts.drive import (
     DriveFolderFileListResponse,
     DriveUploadBytesRequest,
     DriveUploadBytesResponse,
+)
+from src.contracts.idempotency import (
+    OrchestratorIdempotencyGetRequest,
+    OrchestratorIdempotencyRecordRequest,
 )
 from src.contracts.publisher_inventory import (
     PublisherInventoryBuildRequest,
@@ -74,6 +78,7 @@ from src.orchestrators.retry_orchestrator import (
     is_retryable_app_error,
     run_with_retry,
 )
+from src.services import idempotency_service
 from src.services.drive_service import download_pdf, list_files_in_folder, upload_bytes
 from src.services.publisher_inventory_service import discover_publisher_inventory
 from src.services.report_store_service import (
@@ -86,6 +91,7 @@ from src.services.report_store_service import (
     record_publisher_inventory_test_status,
 )
 from src.utils.drive_utils import extract_drive_folder_id
+from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.url_utils import normalize_url
@@ -93,6 +99,12 @@ from src.utils.url_utils import normalize_url
 logger = logging.getLogger("market_lense.publisher_inventory_orchestrator")
 
 _SNAPSHOT_PREFIX = "publisher_inventory_snapshot__"
+_SNAPSHOT_UPLOAD_IDEMPOTENCY_SCOPE = (
+    "publisher_inventory_orchestrator.snapshot_upload"
+)
+_REPORT_SOURCE_RECORD_IDEMPOTENCY_SCOPE = (
+    "publisher_inventory_orchestrator.report_source_record"
+)
 
 
 @dataclass(frozen=True)
@@ -187,6 +199,102 @@ class PublisherInventoryDependencies:
             download_pdf=download_pdf,
             upload_bytes=upload_bytes,
         )
+
+
+def _lookup_idempotency_record(
+    *,
+    db_path: str,
+    scope: str,
+    idempotency_key: str,
+    input_checksum: str,
+    ctx: RunContext,
+):
+    lookup = idempotency_service.get_outcome(
+        OrchestratorIdempotencyGetRequest(
+            schema_version="1.0",
+            db_path=db_path,
+            scope=scope,
+            idempotency_key=idempotency_key,
+            input_checksum=input_checksum,
+        ),
+        ctx,
+    )
+    return lookup.record if lookup.found else None
+
+
+def _record_idempotency_outcome(
+    *,
+    db_path: str,
+    scope: str,
+    idempotency_key: str,
+    input_checksum: str,
+    outcome_payload: dict[str, object],
+    artifact_references: dict[str, object],
+    ctx: RunContext,
+) -> None:
+    idempotency_service.record_outcome(
+        OrchestratorIdempotencyRecordRequest(
+            schema_version="1.0",
+            db_path=db_path,
+            scope=scope,
+            idempotency_key=idempotency_key,
+            input_checksum=input_checksum,
+            outcome_payload=outcome_payload,
+            artifact_references=artifact_references,
+        ),
+        ctx,
+    )
+
+
+def _restore_drive_file(payload: dict[str, object]) -> DriveFile:
+    return DriveFile(
+        schema_version=str(payload.get("schema_version") or "1.0"),
+        file_id=str(payload.get("file_id") or ""),
+        name=str(payload.get("name") or ""),
+        modified_time=payload.get("modified_time"),
+        md5_checksum=payload.get("md5_checksum"),
+        mime_type=payload.get("mime_type"),
+    )
+
+
+def _restore_upload_bytes_response(
+    payload: dict[str, object],
+) -> DriveUploadBytesResponse:
+    file_payload = payload.get("file")
+    return DriveUploadBytesResponse(
+        schema_version=str(payload.get("schema_version") or "1.0"),
+        file=(
+            _restore_drive_file(file_payload)
+            if isinstance(file_payload, dict)
+            else DriveFile(
+                schema_version="1.0",
+                file_id="",
+                name="",
+                modified_time=None,
+                md5_checksum=None,
+                mime_type=None,
+            )
+        ),
+        size=int(payload.get("size") or 0),
+        md5=(str(payload.get("md5")) if payload.get("md5") is not None else None),
+    )
+
+
+def _restore_report_source_record(
+    payload: dict[str, object],
+) -> ReportSourceDiscoveryRecordResponse:
+    return ReportSourceDiscoveryRecordResponse(
+        schema_version=str(payload.get("schema_version") or "1.0"),
+        record_id=int(payload.get("record_id") or 0),
+        publisher_name=str(payload.get("publisher_name") or ""),
+        source_domain=str(payload.get("source_domain") or ""),
+        report_name=str(payload.get("report_name") or ""),
+        landing_page_url=str(payload.get("landing_page_url") or ""),
+        source_page_url=str(payload.get("source_page_url") or ""),
+        discovered_at_utc=str(payload.get("discovered_at_utc") or ""),
+        discovered_on_page_number=int(payload.get("discovered_on_page_number") or 0),
+        created_new=bool(payload.get("created_new")),
+    )
 
 
 def run_publisher_inventory_discovery(
@@ -658,30 +766,84 @@ def run_publisher_inventory_discovery(
                 step_name="publisher_inventory_snapshot_upload",
                 ctx=ctx,
             )
-            upload_response = run_with_retry(
-                step_name="publisher_inventory_snapshot_upload",
-                operation=lambda: deps.upload_bytes(
-                    DriveUploadBytesRequest(
-                        schema_version="1.0",
-                        folder_id=folder_id,
-                        service_account_path=request.settings.google_sa_path,
-                        auth_mode=request.settings.drive_auth_mode,
-                        oauth_client_path=request.settings.google_oauth_client_path,
-                        oauth_token_path=request.settings.google_oauth_token_path,
-                        file_name=_snapshot_file_name(),
-                        content=build_response.snapshot_json.encode("utf-8"),
-                        mime_type="application/json",
-                        supports_all_drives=True,
-                    ),
-                    ctx,
-                ),
-                ctx=ctx,
-                logger=logger,
-                module_name=logger.name,
-                policy=policy,
-                retry_event="publisher_inventory_snapshot_upload_retry",
-                failure_event="publisher_inventory_snapshot_upload_failed",
+            snapshot_upload_request = DriveUploadBytesRequest(
+                schema_version="1.0",
+                folder_id=folder_id,
+                service_account_path=request.settings.google_sa_path,
+                auth_mode=request.settings.drive_auth_mode,
+                oauth_client_path=request.settings.google_oauth_client_path,
+                oauth_token_path=request.settings.google_oauth_token_path,
+                file_name=_snapshot_file_name(),
+                content=build_response.snapshot_json.encode("utf-8"),
+                mime_type="application/json",
+                supports_all_drives=True,
             )
+            snapshot_upload_key = (
+                f"{normalized_url}:{snapshot_upload_request.file_name}:"
+                f"{build_response.snapshot_sha256}"
+            )
+            snapshot_upload_checksum = sha256_json(
+                {
+                    "schema_version": "1.0",
+                    "folder_id": snapshot_upload_request.folder_id,
+                    "file_name": snapshot_upload_request.file_name or "",
+                    "mime_type": snapshot_upload_request.mime_type,
+                    "snapshot_sha256": build_response.snapshot_sha256,
+                }
+            )
+            existing_snapshot_upload = _lookup_idempotency_record(
+                db_path=request.reports_db,
+                scope=_SNAPSHOT_UPLOAD_IDEMPOTENCY_SCOPE,
+                idempotency_key=snapshot_upload_key,
+                input_checksum=snapshot_upload_checksum,
+                ctx=ctx,
+            )
+            if existing_snapshot_upload is not None:
+                upload_response = _restore_upload_bytes_response(
+                    dict(existing_snapshot_upload.outcome_payload or {})
+                )
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="orchestrator",
+                        event="publisher_inventory_snapshot_upload_idempotency_reused",
+                        module=logger.name,
+                        fields={
+                            "normalized_url": normalized_url,
+                            "snapshot_drive_file_id": upload_response.file.file_id,
+                            "snapshot_drive_file_name": upload_response.file.name or "",
+                            "snapshot_sha256": build_response.snapshot_sha256,
+                        },
+                    )
+                )
+            else:
+                upload_response = run_with_retry(
+                    step_name="publisher_inventory_snapshot_upload",
+                    operation=lambda: deps.upload_bytes(
+                        snapshot_upload_request,
+                        ctx,
+                    ),
+                    ctx=ctx,
+                    logger=logger,
+                    module_name=logger.name,
+                    policy=policy,
+                    retry_event="publisher_inventory_snapshot_upload_retry",
+                    failure_event="publisher_inventory_snapshot_upload_failed",
+                )
+                _record_idempotency_outcome(
+                    db_path=request.reports_db,
+                    scope=_SNAPSHOT_UPLOAD_IDEMPOTENCY_SCOPE,
+                    idempotency_key=snapshot_upload_key,
+                    input_checksum=snapshot_upload_checksum,
+                    outcome_payload=asdict(upload_response),
+                    artifact_references={
+                        "folder_id": snapshot_upload_request.folder_id,
+                        "snapshot_drive_file_id": upload_response.file.file_id,
+                        "snapshot_drive_file_name": upload_response.file.name or "",
+                        "snapshot_sha256": build_response.snapshot_sha256,
+                    },
+                    ctx=ctx,
+                )
             snapshot_drive_file_id = upload_response.file.file_id
             snapshot_drive_file_name = upload_response.file.name
             snapshot_sha256 = build_response.snapshot_sha256
@@ -706,31 +868,84 @@ def run_publisher_inventory_discovery(
                 step_name="publisher_inventory_report_source_record",
                 ctx=ctx,
             )
-            source_record = run_with_retry(
-                step_name="publisher_inventory_report_source_record",
-                operation=lambda item=item: deps.record_discovered_report_source(
-                    ReportSourceDiscoveryRecordRequest(
-                        schema_version="1.0",
-                        db_path=request.reports_db,
-                        publisher_name=publisher_state.publisher_name,
-                        source_domain=_source_domain_for_url(item.canonical_url),
-                        report_name=item.title,
-                        landing_page_url=item.canonical_url,
-                        source_page_url=page_url_by_number.get(
-                            item.discovered_on_page_number, publisher_state.insights_url
-                        ),
-                        discovered_at_utc=build_response.snapshot.discovered_at_utc,
-                        discovered_on_page_number=item.discovered_on_page_number,
-                    ),
-                    ctx,
+            source_record_request = ReportSourceDiscoveryRecordRequest(
+                schema_version="1.0",
+                db_path=request.reports_db,
+                publisher_name=publisher_state.publisher_name,
+                source_domain=_source_domain_for_url(item.canonical_url),
+                report_name=item.title,
+                landing_page_url=item.canonical_url,
+                source_page_url=page_url_by_number.get(
+                    item.discovered_on_page_number, publisher_state.insights_url
                 ),
-                ctx=ctx,
-                logger=logger,
-                module_name=logger.name,
-                policy=policy,
-                retry_event="publisher_inventory_report_source_record_retry",
-                failure_event="publisher_inventory_report_source_record_failed",
+                discovered_at_utc=build_response.snapshot.discovered_at_utc,
+                discovered_on_page_number=item.discovered_on_page_number,
             )
+            source_record_key = (
+                f"{item.canonical_url}:{source_record_request.discovered_at_utc}"
+            )
+            source_record_checksum = sha256_json(
+                {
+                    "schema_version": "1.0",
+                    "publisher_name": source_record_request.publisher_name,
+                    "source_domain": source_record_request.source_domain,
+                    "report_name": source_record_request.report_name,
+                    "landing_page_url": source_record_request.landing_page_url,
+                    "source_page_url": source_record_request.source_page_url,
+                    "discovered_on_page_number": source_record_request.discovered_on_page_number,
+                }
+            )
+            existing_source_record = _lookup_idempotency_record(
+                db_path=request.reports_db,
+                scope=_REPORT_SOURCE_RECORD_IDEMPOTENCY_SCOPE,
+                idempotency_key=source_record_key,
+                input_checksum=source_record_checksum,
+                ctx=ctx,
+            )
+            if existing_source_record is not None:
+                source_record = _restore_report_source_record(
+                    dict(existing_source_record.outcome_payload or {})
+                )
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="orchestrator",
+                        event="publisher_inventory_report_source_record_idempotency_reused",
+                        module=logger.name,
+                        fields={
+                            "publisher_name": source_record.publisher_name,
+                            "landing_page_url": source_record.landing_page_url,
+                            "record_id": source_record.record_id,
+                        },
+                    )
+                )
+            else:
+                source_record = run_with_retry(
+                    step_name="publisher_inventory_report_source_record",
+                    operation=lambda item=item: deps.record_discovered_report_source(
+                        source_record_request,
+                        ctx,
+                    ),
+                    ctx=ctx,
+                    logger=logger,
+                    module_name=logger.name,
+                    policy=policy,
+                    retry_event="publisher_inventory_report_source_record_retry",
+                    failure_event="publisher_inventory_report_source_record_failed",
+                )
+                _record_idempotency_outcome(
+                    db_path=request.reports_db,
+                    scope=_REPORT_SOURCE_RECORD_IDEMPOTENCY_SCOPE,
+                    idempotency_key=source_record_key,
+                    input_checksum=source_record_checksum,
+                    outcome_payload=asdict(source_record),
+                    artifact_references={
+                        "record_id": source_record.record_id,
+                        "landing_page_url": source_record.landing_page_url,
+                        "source_page_url": source_record.source_page_url,
+                    },
+                    ctx=ctx,
+                )
             logger.info(
                 log_event(
                     ctx,

@@ -124,6 +124,35 @@ def test_publish_runs_when_processed(
     assert publish_row.wp_post_url == "https://example.com/post/10"
 
 
+def test_publish_reuses_idempotent_outcome_without_second_post(
+    publish_settings_factory, run_context, wordpress_http
+) -> None:
+    settings = publish_settings_factory(validation_policy="warn")
+    _write_html(settings.output_dir, "report.html", "Drive fileId: file123")
+    _record_processed(settings.state_db, "file123", run_context)
+    wordpress_http.add_json(
+        "GET",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=200,
+        payload=[],
+    )
+    wordpress_http.add_json(
+        "POST",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=201,
+        payload={"id": 10, "link": "https://example.com/post/10", "status": "publish"},
+    )
+
+    first = orch.run_publish(settings, limit=1)
+    second = orch.run_publish(settings, limit=1)
+
+    assert first[0].status == "published"
+    assert second[0].status == "published"
+    assert second[0].post_id == 10
+    assert second[0].post_url == "https://example.com/post/10"
+    assert len(wordpress_http.calls_for("POST", "https://example.com/wp-json/wp/v2/ml_report")) == 1
+
+
 def test_publish_limit_applies_to_attempted_items_when_first_item_errors(
     publish_settings_factory, run_context, wordpress_http
 ) -> None:

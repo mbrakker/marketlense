@@ -930,6 +930,82 @@ def test_run_publisher_inventory_discovery_unchanged_rerun_skips_upload(
     assert uploads == []
 
 
+def test_run_publisher_inventory_discovery_reuses_idempotent_snapshot_and_source_steps(
+    tmp_path,
+    run_context,
+) -> None:
+    uploads = []
+    source_records = []
+    settings = _settings()
+    settings = PublisherInventorySettings(
+        **{**settings.__dict__, "reports_db": str(tmp_path / "reports.sqlite")}
+    )
+
+    deps = _dependencies(
+        get_publisher_inventory_state=lambda req, ctx: _publisher_state(
+            with_route=False, with_snapshot=False
+        ),
+        record_discovered_report_source=lambda req, ctx: (
+            source_records.append(req)
+            or ReportSourceDiscoveryRecordResponse(
+                schema_version="1.0",
+                record_id=1,
+                publisher_name=req.publisher_name,
+                source_domain=req.source_domain,
+                report_name=req.report_name,
+                landing_page_url=req.landing_page_url,
+                source_page_url=req.source_page_url,
+                discovered_at_utc=req.discovered_at_utc,
+                discovered_on_page_number=req.discovered_on_page_number,
+                created_new=True,
+            )
+        ),
+        upload_bytes=lambda req, ctx: (
+            uploads.append(req)
+            or DriveUploadBytesResponse(
+                schema_version="1.0",
+                file=DriveFile(
+                    schema_version="1.0",
+                    file_id="drive-file-1",
+                    name=req.file_name,
+                    modified_time=None,
+                    md5_checksum=None,
+                    mime_type="application/json",
+                ),
+                size=len(req.content),
+                md5="abc123",
+            )
+        ),
+    )
+
+    first = run_publisher_inventory_discovery(
+        PublisherInventoryDiscoveryRequest(
+            schema_version="1.0",
+            insights_url="https://www.activate.com/insights",
+            reports_db=settings.reports_db,
+            settings=settings,
+        ),
+        ctx=run_context,
+        dependencies=deps,
+    )
+    second = run_publisher_inventory_discovery(
+        PublisherInventoryDiscoveryRequest(
+            schema_version="1.0",
+            insights_url="https://www.activate.com/insights",
+            reports_db=settings.reports_db,
+            settings=settings,
+        ),
+        ctx=run_context,
+        dependencies=deps,
+    )
+
+    assert first.snapshot_changed is True
+    assert second.snapshot_changed is True
+    assert len(uploads) == 1
+    assert len(source_records) == 1
+    assert second.new_report_urls[0].canonical_url == first.new_report_urls[0].canonical_url
+
+
 def test_run_publisher_inventory_discovery_does_not_commit_raw_only_snapshot_drift(
     run_context,
 ):
