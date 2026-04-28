@@ -456,16 +456,6 @@ Suggested priority order:
     - Long-file report shows reduced concentration in the named hotspots.
     - Golden and behavior tests prove parity or explicitly approved improvements.
 
-- **Title:** Stream Drive listings and bound Drive client/scope caches [Impact: 3/5, Effort: 3/5]
-  - Explanation: Merge Drive pagination streaming, recursive folder-scope caching, and bounded thread-scoped client caches. Large-folder operations should yield incrementally, reuse stable folder topology, and evict stale clients.
-  - Pros: Lower memory usage, fewer Drive API calls, cleaner long-lived process behavior.
-  - Cons: Partial-failure and invalidation semantics need care.
-  - Acceptance Criteria:
-    - Drive file listing yields results incrementally across pages.
-    - Recursive folder-scope expansion is cached with explicit TTL or invalidation.
-    - Thread-scoped client cache has bounded size/lifetime.
-    - Tests cover partial completion, folder changes, reuse, eviction, and concurrent access.
-
 - **Title:** Simplify config editing into smaller capability-owned paths [Impact: 4/5, Effort: 4/5]
   - Explanation: `src/services/config_service.py` is one of the largest services and likely owns multiple config capabilities. Split only stable semantic areas, such as app settings, identity settings, publisher profiles, validation policy, and UI-safe redaction, while preserving one canonical config service boundary.
   - Pros: Easier config changes, clearer tests, smaller blast radius.
