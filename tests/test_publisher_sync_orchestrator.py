@@ -86,7 +86,10 @@ def test_run_publisher_sync_loads_snapshot_and_replaces_publishers(
     assert len(load_calls) == 1
     assert len(replace_calls) == 1
     assert replace_calls[0].db_path == "./state/reports.sqlite"
-    assert replace_calls[0].source_page_url == "https://www.notion.so/87c35358a78c4afc9eb7451dc1ade33d"
+    assert (
+        replace_calls[0].source_page_url
+        == "https://www.notion.so/87c35358a78c4afc9eb7451dc1ade33d"
+    )
     assert result.replaced_count == 1
     assert_no_defaulted_required_fields(result)
     assert_logs_have_required_fields(

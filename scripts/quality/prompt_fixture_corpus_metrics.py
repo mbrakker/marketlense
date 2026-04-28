@@ -17,40 +17,88 @@ class PromptFixtureNamespaceMetrics:
     namespace: str = field(metadata={"doc": "Prompt namespace."})
     family: str = field(metadata={"doc": "Prompt family label."})
     model: str = field(metadata={"doc": "Representative model identifier."})
-    runtime_ms: float = field(metadata={"doc": "Median prompt render runtime in milliseconds."})
-    input_tokens: int = field(metadata={"doc": "Estimated input tokens for rendered system plus user prompts."})
-    expected_output_tokens: int = field(metadata={"doc": "Expected output-token budget from fixture benchmark metadata."})
-    total_tokens: int = field(metadata={"doc": "Estimated total tokens for the fixture benchmark."})
-    expected_tool_calls: int = field(metadata={"doc": "Expected tool-call count from fixture benchmark metadata."})
-    expected_browser_attempts: int = field(metadata={"doc": "Expected browser-attempt count from fixture benchmark metadata."})
-    expected_ocr_calls: int = field(metadata={"doc": "Expected OCR-call count from fixture benchmark metadata."})
-    estimated_cost_usd: float = field(metadata={"doc": "Estimated fixture cost based on configured model pricing."})
+    runtime_ms: float = field(
+        metadata={"doc": "Median prompt render runtime in milliseconds."}
+    )
+    input_tokens: int = field(
+        metadata={
+            "doc": "Estimated input tokens for rendered system plus user prompts."
+        }
+    )
+    expected_output_tokens: int = field(
+        metadata={
+            "doc": "Expected output-token budget from fixture benchmark metadata."
+        }
+    )
+    total_tokens: int = field(
+        metadata={"doc": "Estimated total tokens for the fixture benchmark."}
+    )
+    expected_tool_calls: int = field(
+        metadata={"doc": "Expected tool-call count from fixture benchmark metadata."}
+    )
+    expected_browser_attempts: int = field(
+        metadata={
+            "doc": "Expected browser-attempt count from fixture benchmark metadata."
+        }
+    )
+    expected_ocr_calls: int = field(
+        metadata={"doc": "Expected OCR-call count from fixture benchmark metadata."}
+    )
+    estimated_cost_usd: float = field(
+        metadata={"doc": "Estimated fixture cost based on configured model pricing."}
+    )
 
 
 @dataclass(frozen=True)
 class PromptFixtureFamilyMetrics:
     schema_version: str = field(metadata={"doc": "Family metrics schema version."})
     family: str = field(metadata={"doc": "Prompt family label."})
-    namespace_count: int = field(metadata={"doc": "Number of prompt namespaces in the family."})
-    runtime_ms: float = field(metadata={"doc": "Median prompt render runtime total for the family in milliseconds."})
+    namespace_count: int = field(
+        metadata={"doc": "Number of prompt namespaces in the family."}
+    )
+    runtime_ms: float = field(
+        metadata={
+            "doc": "Median prompt render runtime total for the family in milliseconds."
+        }
+    )
     input_tokens: int = field(metadata={"doc": "Estimated family input-token total."})
-    expected_output_tokens: int = field(metadata={"doc": "Expected family output-token total."})
+    expected_output_tokens: int = field(
+        metadata={"doc": "Expected family output-token total."}
+    )
     total_tokens: int = field(metadata={"doc": "Estimated family token total."})
-    expected_tool_calls: int = field(metadata={"doc": "Expected family tool-call total."})
-    expected_browser_attempts: int = field(metadata={"doc": "Expected family browser-attempt total."})
+    expected_tool_calls: int = field(
+        metadata={"doc": "Expected family tool-call total."}
+    )
+    expected_browser_attempts: int = field(
+        metadata={"doc": "Expected family browser-attempt total."}
+    )
     expected_ocr_calls: int = field(metadata={"doc": "Expected family OCR-call total."})
     estimated_cost_usd: float = field(metadata={"doc": "Estimated family cost total."})
 
 
 @dataclass(frozen=True)
 class PromptFixtureCorpusMetrics:
-    schema_version: str = field(metadata={"doc": "Fixture corpus metrics schema version."})
-    generated_at_utc: str = field(metadata={"doc": "UTC timestamp when the metrics snapshot was generated."})
-    iterations: int = field(metadata={"doc": "Number of prompt dry-run iterations used for runtime medians."})
-    fixture_path: str = field(metadata={"doc": "Filesystem path to the prompt dry-run fixture registry."})
-    fixture_count: int = field(metadata={"doc": "Number of prompt namespaces included in the snapshot."})
+    schema_version: str = field(
+        metadata={"doc": "Fixture corpus metrics schema version."}
+    )
+    generated_at_utc: str = field(
+        metadata={"doc": "UTC timestamp when the metrics snapshot was generated."}
+    )
+    iterations: int = field(
+        metadata={
+            "doc": "Number of prompt dry-run iterations used for runtime medians."
+        }
+    )
+    fixture_path: str = field(
+        metadata={"doc": "Filesystem path to the prompt dry-run fixture registry."}
+    )
+    fixture_count: int = field(
+        metadata={"doc": "Number of prompt namespaces included in the snapshot."}
+    )
     families: dict[str, PromptFixtureFamilyMetrics] = field(
-        metadata={"doc": "Per-family aggregated benchmark metrics keyed by family name."}
+        metadata={
+            "doc": "Per-family aggregated benchmark metrics keyed by family name."
+        }
     )
     namespaces: dict[str, PromptFixtureNamespaceMetrics] = field(
         metadata={"doc": "Per-namespace benchmark metrics keyed by namespace."}
@@ -69,7 +117,9 @@ def collect_prompt_fixture_corpus_metrics(
     force_reload: bool = False,
 ) -> PromptFixtureCorpusMetrics:
     runtime_iterations = max(1, int(iterations))
-    requested_namespaces = tuple(str(item).strip() for item in namespaces if str(item).strip())
+    requested_namespaces = tuple(
+        str(item).strip() for item in namespaces if str(item).strip()
+    )
     runtime_samples: dict[str, list[float]] = {}
     final_results: dict[str, PromptDryRunResult] = {}
 
@@ -91,9 +141,9 @@ def collect_prompt_fixture_corpus_metrics(
 
     namespace_metrics: dict[str, PromptFixtureNamespaceMetrics] = {}
     for namespace, result in sorted(final_results.items()):
-        input_tokens = estimate_text_tokens(result.rendered_system_prompt) + estimate_text_tokens(
-            result.rendered_user_prompt
-        )
+        input_tokens = estimate_text_tokens(
+            result.rendered_system_prompt
+        ) + estimate_text_tokens(result.rendered_user_prompt)
         expected_output_tokens = int(result.benchmark.expected_output_tokens)
         expected_tool_calls = int(result.benchmark.expected_tool_calls)
         expected_browser_attempts = int(result.benchmark.expected_browser_attempts)

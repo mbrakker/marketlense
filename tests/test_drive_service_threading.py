@@ -12,7 +12,9 @@ def test_drive_client_is_thread_local(monkeypatch):
         assert scopes == ["https://www.googleapis.com/auth/drive"]
         return object()
 
-    def _fake_build(service_name: str, version: str, credentials, cache_discovery: bool):
+    def _fake_build(
+        service_name: str, version: str, credentials, cache_discovery: bool
+    ):
         assert service_name == "drive"
         assert version == "v3"
         assert credentials is not None
@@ -46,7 +48,9 @@ def test_drive_client_is_thread_local(monkeypatch):
     worker_client = {}
 
     def _worker():
-        worker_ctx = RunContext(schema_version="1.0", run_id="r2", task_id="t2", span_id="s2")
+        worker_ctx = RunContext(
+            schema_version="1.0", run_id="r2", task_id="t2", span_id="s2"
+        )
         worker_client["first"] = drive_service._get_drive_client(
             auth_mode="service_account",
             service_account_path="sa.json",

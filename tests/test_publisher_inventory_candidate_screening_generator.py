@@ -233,7 +233,10 @@ def test_screen_publisher_inventory_candidates_filters_rejected_items(
         "https://example.com/facebook"
     ]
     assert openai_client.requests[0][0].model == "gpt-5-nano"
-    assert '"canonical_url": "https://example.com/report-one"' in openai_client.requests[0][0].user_prompt
+    assert (
+        '"canonical_url": "https://example.com/report-one"'
+        in openai_client.requests[0][0].user_prompt
+    )
     assert response.request_id == "req-1"
     assert_no_defaulted_required_fields(response)
     assert_no_defaulted_required_fields(response.decisions[0])
@@ -246,7 +249,9 @@ def test_screen_publisher_inventory_candidates_filters_rejected_items(
     assert_logs_have_required_fields(records)
 
 
-def test_screen_publisher_inventory_candidates_falls_back_when_decisions_remain_missing() -> None:
+def test_screen_publisher_inventory_candidates_falls_back_when_decisions_remain_missing() -> (
+    None
+):
     openai_client = RecordingOpenAIClient(
         payload={
             "decisions": [
@@ -330,7 +335,9 @@ def test_screen_publisher_inventory_candidates_skips_llm_when_disabled() -> None
     assert response.model == "screening_disabled"
 
 
-def test_screen_publisher_inventory_candidates_collapses_duplicate_titles_after_llm() -> None:
+def test_screen_publisher_inventory_candidates_collapses_duplicate_titles_after_llm() -> (
+    None
+):
     candidates = [
         PublisherInventoryCandidateScreeningItem(
             schema_version="1.0",
@@ -405,7 +412,9 @@ def test_screen_publisher_inventory_candidates_collapses_duplicate_titles_after_
     assert duplicate_decision.reason.startswith("duplicate_in_run")
 
 
-def test_screen_publisher_inventory_candidates_keeps_distinct_generic_cta_titles() -> None:
+def test_screen_publisher_inventory_candidates_keeps_distinct_generic_cta_titles() -> (
+    None
+):
     candidates = [
         PublisherInventoryCandidateScreeningItem(
             schema_version="1.0",
@@ -459,7 +468,9 @@ def test_screen_publisher_inventory_candidates_keeps_distinct_generic_cta_titles
     assert response.rejected_items == []
 
 
-def test_screen_publisher_inventory_candidates_hard_rejects_publisher_success_titles() -> None:
+def test_screen_publisher_inventory_candidates_hard_rejects_publisher_success_titles() -> (
+    None
+):
     candidates = [
         PublisherInventoryCandidateScreeningItem(
             schema_version="1.0",
@@ -525,7 +536,9 @@ def test_screen_publisher_inventory_candidates_hard_rejects_publisher_success_ti
     }
 
 
-def test_screen_publisher_inventory_candidates_hard_rejects_medal_accolade_titles() -> None:
+def test_screen_publisher_inventory_candidates_hard_rejects_medal_accolade_titles() -> (
+    None
+):
     candidates = [
         PublisherInventoryCandidateScreeningItem(
             schema_version="1.0",
@@ -616,13 +629,18 @@ def test_screen_publisher_inventory_candidates_batches_large_candidate_sets() ->
 
 
 def test_resolve_candidate_screening_batch_size_grows_for_large_archives() -> None:
-    assert _resolve_candidate_screening_batch_size(
-        candidate_count=430,
-        configured_batch_size=10,
-    ) == 35
+    assert (
+        _resolve_candidate_screening_batch_size(
+            candidate_count=430,
+            configured_batch_size=10,
+        )
+        == 35
+    )
 
 
-def test_screen_publisher_inventory_candidates_prefilters_low_probability_items() -> None:
+def test_screen_publisher_inventory_candidates_prefilters_low_probability_items() -> (
+    None
+):
     response = screen_publisher_inventory_candidates(
         PublisherInventoryCandidateScreeningRequest(
             schema_version="1.0",
@@ -666,7 +684,9 @@ def test_screen_publisher_inventory_candidates_prefilters_low_probability_items(
     assert prefilter_decision.reason == "low_report_probability_prefilter"
 
 
-def test_screen_publisher_inventory_candidates_prefilters_support_and_webinar_items() -> None:
+def test_screen_publisher_inventory_candidates_prefilters_support_and_webinar_items() -> (
+    None
+):
     response = screen_publisher_inventory_candidates(
         PublisherInventoryCandidateScreeningRequest(
             schema_version="1.0",
@@ -705,15 +725,15 @@ def test_screen_publisher_inventory_candidates_prefilters_support_and_webinar_it
     assert [item.canonical_url for item in response.approved_items] == [
         "https://example.com/resources/asset/white-paper-search-benchmark"
     ]
-    assert {
-        item.canonical_url for item in response.rejected_items
-    } == {
+    assert {item.canonical_url for item in response.rejected_items} == {
         "https://support.example.com/hc/en-us/articles/123-report-generation",
         "https://example.com/resources/asset/webinar-ai-search",
     }
 
 
-def test_screen_publisher_inventory_candidates_prefilters_strong_report_detail_urls_without_llm() -> None:
+def test_screen_publisher_inventory_candidates_prefilters_strong_report_detail_urls_without_llm() -> (
+    None
+):
     openai_client = BatchAwareOpenAIClient()
 
     response = screen_publisher_inventory_candidates(
@@ -744,7 +764,9 @@ def test_screen_publisher_inventory_candidates_prefilters_strong_report_detail_u
     assert response.decisions[0].reason == "strong_report_detail_url_prefilter"
 
 
-def test_screen_publisher_inventory_candidates_prefilters_slugged_report_detail_urls_without_llm() -> None:
+def test_screen_publisher_inventory_candidates_prefilters_slugged_report_detail_urls_without_llm() -> (
+    None
+):
     openai_client = BatchAwareOpenAIClient()
 
     response = screen_publisher_inventory_candidates(
@@ -785,7 +807,9 @@ def test_screen_publisher_inventory_candidates_prefilters_slugged_report_detail_
     }
 
 
-def test_screen_publisher_inventory_candidates_rejects_report_collection_pages_with_listing_signals() -> None:
+def test_screen_publisher_inventory_candidates_rejects_report_collection_pages_with_listing_signals() -> (
+    None
+):
     openai_client = BatchAwareOpenAIClient()
 
     response = screen_publisher_inventory_candidates(
@@ -817,7 +841,9 @@ def test_screen_publisher_inventory_candidates_rejects_report_collection_pages_w
     assert response.decisions[0].reason == "low_report_probability_prefilter"
 
 
-def test_screen_publisher_inventory_candidates_rejects_case_study_and_blog_help_urls_without_llm() -> None:
+def test_screen_publisher_inventory_candidates_rejects_case_study_and_blog_help_urls_without_llm() -> (
+    None
+):
     openai_client = BatchAwareOpenAIClient()
 
     response = screen_publisher_inventory_candidates(
@@ -859,7 +885,9 @@ def test_screen_publisher_inventory_candidates_rejects_case_study_and_blog_help_
     }
 
 
-def test_screen_publisher_inventory_candidates_prefilters_buyers_guide_urls_without_llm() -> None:
+def test_screen_publisher_inventory_candidates_prefilters_buyers_guide_urls_without_llm() -> (
+    None
+):
     openai_client = BatchAwareOpenAIClient()
 
     response = screen_publisher_inventory_candidates(
@@ -890,7 +918,9 @@ def test_screen_publisher_inventory_candidates_prefilters_buyers_guide_urls_with
     assert response.decisions[0].reason == "strong_report_detail_url_prefilter"
 
 
-def test_screen_publisher_inventory_candidates_prefilters_editorial_report_detail_urls_without_llm() -> None:
+def test_screen_publisher_inventory_candidates_prefilters_editorial_report_detail_urls_without_llm() -> (
+    None
+):
     openai_client = BatchAwareOpenAIClient()
 
     response = screen_publisher_inventory_candidates(
@@ -921,7 +951,9 @@ def test_screen_publisher_inventory_candidates_prefilters_editorial_report_detai
     assert response.decisions[0].reason == "editorial_report_detail_url_prefilter"
 
 
-def test_screen_publisher_inventory_candidates_prefilters_blog_report_detail_urls_without_llm() -> None:
+def test_screen_publisher_inventory_candidates_prefilters_blog_report_detail_urls_without_llm() -> (
+    None
+):
     openai_client = BatchAwareOpenAIClient()
 
     response = screen_publisher_inventory_candidates(
@@ -952,7 +984,9 @@ def test_screen_publisher_inventory_candidates_prefilters_blog_report_detail_url
     assert response.decisions[0].reason == "editorial_report_detail_url_prefilter"
 
 
-def test_screen_publisher_inventory_candidates_prefilters_direct_detail_sources_without_llm() -> None:
+def test_screen_publisher_inventory_candidates_prefilters_direct_detail_sources_without_llm() -> (
+    None
+):
     openai_client = BatchAwareOpenAIClient()
 
     response = screen_publisher_inventory_candidates(
@@ -983,7 +1017,9 @@ def test_screen_publisher_inventory_candidates_prefilters_direct_detail_sources_
     assert response.decisions[0].reason == "direct_detail_source_prefilter"
 
 
-def test_screen_publisher_inventory_candidates_rejects_collection_root_hubs_without_llm() -> None:
+def test_screen_publisher_inventory_candidates_rejects_collection_root_hubs_without_llm() -> (
+    None
+):
     openai_client = BatchAwareOpenAIClient()
 
     response = screen_publisher_inventory_candidates(
@@ -1012,7 +1048,9 @@ def test_screen_publisher_inventory_candidates_rejects_collection_root_hubs_with
     assert response.decisions[0].reason == "low_report_probability_prefilter"
 
 
-def test_screen_publisher_inventory_candidates_rejects_editorial_blog_posts_without_report_detail_signals() -> None:
+def test_screen_publisher_inventory_candidates_rejects_editorial_blog_posts_without_report_detail_signals() -> (
+    None
+):
     openai_client = BatchAwareOpenAIClient()
 
     response = screen_publisher_inventory_candidates(
@@ -1041,7 +1079,9 @@ def test_screen_publisher_inventory_candidates_rejects_editorial_blog_posts_with
     assert response.decisions[0].reason == "low_report_probability_prefilter"
 
 
-def test_screen_publisher_inventory_candidates_keeps_distinct_urls_for_generic_cta_titles() -> None:
+def test_screen_publisher_inventory_candidates_keeps_distinct_urls_for_generic_cta_titles() -> (
+    None
+):
     openai_client = BatchAwareOpenAIClient()
 
     response = screen_publisher_inventory_candidates(
@@ -1080,7 +1120,9 @@ def test_screen_publisher_inventory_candidates_keeps_distinct_urls_for_generic_c
     assert all(decision.accepted for decision in response.decisions)
 
 
-def test_screen_publisher_inventory_candidates_keeps_distinct_generic_annual_report_downloads() -> None:
+def test_screen_publisher_inventory_candidates_keeps_distinct_generic_annual_report_downloads() -> (
+    None
+):
     openai_client = BatchAwareOpenAIClient()
 
     response = screen_publisher_inventory_candidates(
@@ -1119,7 +1161,9 @@ def test_screen_publisher_inventory_candidates_keeps_distinct_generic_annual_rep
     assert all(decision.accepted for decision in response.decisions)
 
 
-def test_screen_publisher_inventory_candidates_accepts_query_string_pdf_when_source_page_is_report_like() -> None:
+def test_screen_publisher_inventory_candidates_accepts_query_string_pdf_when_source_page_is_report_like() -> (
+    None
+):
     openai_client = BatchAwareOpenAIClient()
 
     response = screen_publisher_inventory_candidates(
@@ -1150,7 +1194,9 @@ def test_screen_publisher_inventory_candidates_accepts_query_string_pdf_when_sou
     assert response.decisions[0].accepted is True
 
 
-def test_screen_publisher_inventory_candidates_rejects_generic_cta_insights_articles_without_specific_report_slug() -> None:
+def test_screen_publisher_inventory_candidates_rejects_generic_cta_insights_articles_without_specific_report_slug() -> (
+    None
+):
     openai_client = BatchAwareOpenAIClient()
 
     response = screen_publisher_inventory_candidates(
@@ -1179,7 +1225,9 @@ def test_screen_publisher_inventory_candidates_rejects_generic_cta_insights_arti
     assert response.decisions[0].reason == "low_report_probability_prefilter"
 
 
-def test_screen_publisher_inventory_candidates_rejects_pdf_without_report_signals() -> None:
+def test_screen_publisher_inventory_candidates_rejects_pdf_without_report_signals() -> (
+    None
+):
     openai_client = BatchAwareOpenAIClient()
 
     response = screen_publisher_inventory_candidates(
@@ -1208,7 +1256,9 @@ def test_screen_publisher_inventory_candidates_rejects_pdf_without_report_signal
     assert response.decisions[0].reason == "low_report_probability_prefilter"
 
 
-def test_screen_publisher_inventory_candidates_truncates_long_titles_in_prompt() -> None:
+def test_screen_publisher_inventory_candidates_truncates_long_titles_in_prompt() -> (
+    None
+):
     long_title = "2026 Search Analysis " + ("A" * 500)
     openai_client = RecordingOpenAIClient(
         payload={
@@ -1249,7 +1299,9 @@ def test_screen_publisher_inventory_candidates_truncates_long_titles_in_prompt()
     assert "\\u2026" in rendered_user_prompt
 
 
-def test_screen_publisher_inventory_candidates_repairs_missing_batch_decisions() -> None:
+def test_screen_publisher_inventory_candidates_repairs_missing_batch_decisions() -> (
+    None
+):
     candidates = [
         PublisherInventoryCandidateScreeningItem(
             schema_version="1.0",
@@ -1290,7 +1342,9 @@ def test_screen_publisher_inventory_candidates_repairs_missing_batch_decisions()
     assert response.request_id == "req-1,req-2"
 
 
-def test_screen_publisher_inventory_candidates_accepts_human_titles_from_report_archive_context() -> None:
+def test_screen_publisher_inventory_candidates_accepts_human_titles_from_report_archive_context() -> (
+    None
+):
     openai_client = BatchAwareOpenAIClient()
 
     response = screen_publisher_inventory_candidates(

@@ -47,7 +47,9 @@ def validate_insight_metrics(
             )
             if part
         )
-        retrieved = retrieve_evidence_windows(metric_ctx_text, windows, top_k=RETRIEVE_TOP_K)
+        retrieved = retrieve_evidence_windows(
+            metric_ctx_text, windows, top_k=RETRIEVE_TOP_K
+        )
         retrieved_blob = " ".join(window.text for window in retrieved)
         evidence_blob = " ".join(
             part for part in (evidence_text, retrieved_blob) if part

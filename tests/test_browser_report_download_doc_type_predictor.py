@@ -165,7 +165,9 @@ def _runtime(
             _ = max_steps
             self.browser.url = "https://example.com/final"
             self.browser.title = "Example report terminal"
-            self.browser.html = "<html><body><h1>Example report terminal</h1></body></html>"
+            self.browser.html = (
+                "<html><body><h1>Example report terminal</h1></body></html>"
+            )
             download_dir = Path(self.browser.downloads_path)
             download_dir.mkdir(parents=True, exist_ok=True)
             if create_pdf:
@@ -470,7 +472,7 @@ def test_download_report_predicts_report_page_pdf_link_without_route_hint(
         return _FakeResponse(
             content=(
                 b"<html><head><title>AI Outlook 2026 Report</title></head>"
-                b"<body><a href=\"https://cdn.example.com/reports/ai-outlook-2026.pdf\">"
+                b'<body><a href="https://cdn.example.com/reports/ai-outlook-2026.pdf">'
                 b"Download report PDF</a></body></html>"
             ),
             headers={"Content-Type": "text/html; charset=utf-8"},

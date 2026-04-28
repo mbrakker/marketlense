@@ -29,7 +29,9 @@ def test_build_publish_queue_snapshot(
 
     def _read_text(req, ctx):
         if req.path.endswith("a.html"):
-            return SimpleNamespace(content='<meta name="drive-file-id" content="file_a">')
+            return SimpleNamespace(
+                content='<meta name="drive-file-id" content="file_a">'
+            )
         if req.path.endswith("b.html"):
             return SimpleNamespace(content="no file id marker")
         raise AppError(code="file_not_found", message="missing", retryable=False)
@@ -38,7 +40,11 @@ def test_build_publish_queue_snapshot(
     external_boundary_mocks_only.setattr(
         orch.state_service,
         "get_publish",
-        lambda req, ctx: SimpleNamespace(wp_post_id=7, wp_post_url="https://example.com/post") if req.file_id == "file_a" else None,
+        lambda req, ctx: (
+            SimpleNamespace(wp_post_id=7, wp_post_url="https://example.com/post")
+            if req.file_id == "file_a"
+            else None
+        ),
     )
 
     response = orch.build_publish_queue_snapshot(
@@ -111,7 +117,11 @@ def test_build_publish_queue_snapshot_prefers_reports_db_mapping(
     external_boundary_mocks_only.setattr(
         orch.state_service,
         "get_publish",
-        lambda req, ctx: SimpleNamespace(wp_post_id=11, wp_post_url="https://example.com/a") if req.file_id == "file_a" else None,
+        lambda req, ctx: (
+            SimpleNamespace(wp_post_id=11, wp_post_url="https://example.com/a")
+            if req.file_id == "file_a"
+            else None
+        ),
     )
 
     response = orch.build_publish_queue_snapshot(

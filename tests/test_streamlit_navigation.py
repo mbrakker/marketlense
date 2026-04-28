@@ -18,7 +18,9 @@ def test_navigation_groups_cover_required_pages() -> None:
     assert streamlit_app.NAV_SECTIONS[-1] == "Settings & Prompts"
     assert "Run Center" in streamlit_app.NAVIGATION_GROUPS["Overview"]
     assert "Publishing & Taxonomy" in streamlit_app.NAVIGATION_GROUPS["Core operations"]
-    assert "Report Download Lab" in streamlit_app.NAVIGATION_GROUPS["Publisher operations"]
+    assert (
+        "Report Download Lab" in streamlit_app.NAVIGATION_GROUPS["Publisher operations"]
+    )
     assert "Logs & Live Events" in streamlit_app.NAVIGATION_GROUPS["Observability"]
     assert all(section.strip() for section in streamlit_app.NAV_SECTIONS)
 

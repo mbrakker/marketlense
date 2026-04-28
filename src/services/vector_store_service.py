@@ -103,23 +103,27 @@ def _serialize_metadata(metadata: VectorStoreMetadata) -> Dict[str, str]:
     return {key: value for key, value in payload.items() if value != ""}
 
 
-def create_vector_store(request: VectorStoreCreateRequest, ctx: Optional[RunContext] = None) -> VectorStoreCreateResponse:
+def create_vector_store(
+    request: VectorStoreCreateRequest, ctx: Optional[RunContext] = None
+) -> VectorStoreCreateResponse:
     ctx = _ctx_or_new(ctx)
     name = _require_non_empty(request.name, "name")
     metadata_payload = _serialize_metadata(request.metadata)
     api_key = _api_key_from_env()
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="vector_store_create_start",
-        module=logger.name,
-        fields={
-            "name": name,
-            "metadata_keys": list(metadata_payload.keys()),
-            "taxonomy_count": len(request.metadata.taxonomy or []),
-            "categories_count": len(request.metadata.categories or []),
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="vector_store_create_start",
+            module=logger.name,
+            fields={
+                "name": name,
+                "metadata_keys": list(metadata_payload.keys()),
+                "taxonomy_count": len(request.metadata.taxonomy or []),
+                "categories_count": len(request.metadata.categories or []),
+            },
+        )
+    )
     resp = _call_openai(
         call=lambda: llm_service.openai_vector_store_create(
             OpenAIVectorStoreCreateRequest(
@@ -138,28 +142,36 @@ def create_vector_store(request: VectorStoreCreateRequest, ctx: Optional[RunCont
         code="vector_store_create_failed",
         message="Vector store create did not return an id",
     )
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="vector_store_create_complete",
-        module=logger.name,
-        fields={"name": name, "vector_store_id": vector_store_id},
-    ))
-    return VectorStoreCreateResponse(schema_version="1.0", vector_store_id=vector_store_id)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="vector_store_create_complete",
+            module=logger.name,
+            fields={"name": name, "vector_store_id": vector_store_id},
+        )
+    )
+    return VectorStoreCreateResponse(
+        schema_version="1.0", vector_store_id=vector_store_id
+    )
 
 
-def upload_file(request: VectorStoreUploadFileRequest, ctx: Optional[RunContext] = None) -> VectorStoreUploadFileResponse:
+def upload_file(
+    request: VectorStoreUploadFileRequest, ctx: Optional[RunContext] = None
+) -> VectorStoreUploadFileResponse:
     ctx = _ctx_or_new(ctx)
     vector_store_id = _require_non_empty(request.vector_store_id, "vector_store_id")
     file_path = _require_non_empty(request.file_path, "file_path")
     api_key = _api_key_from_env()
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="vector_store_upload_start",
-        module=logger.name,
-        fields={"pdf_path": file_path, "vector_store_id": vector_store_id},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="vector_store_upload_start",
+            module=logger.name,
+            fields={"pdf_path": file_path, "vector_store_id": vector_store_id},
+        )
+    )
     try:
         resp = llm_service.openai_vector_store_upload_file(
             OpenAIVectorStoreFileUploadRequest(
@@ -190,28 +202,40 @@ def upload_file(request: VectorStoreUploadFileRequest, ctx: Optional[RunContext]
         code="vector_store_upload_failed",
         message="Vector store file upload did not return an id",
     )
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="vector_store_upload_complete",
-        module=logger.name,
-        fields={"pdf_path": file_path, "openai_file_id": file_id, "vector_store_id": vector_store_id},
-    ))
-    return VectorStoreUploadFileResponse(schema_version="1.0", vector_store_id=vector_store_id, openai_file_id=file_id)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="vector_store_upload_complete",
+            module=logger.name,
+            fields={
+                "pdf_path": file_path,
+                "openai_file_id": file_id,
+                "vector_store_id": vector_store_id,
+            },
+        )
+    )
+    return VectorStoreUploadFileResponse(
+        schema_version="1.0", vector_store_id=vector_store_id, openai_file_id=file_id
+    )
 
 
-def attach_file(request: VectorStoreAttachFileRequest, ctx: Optional[RunContext] = None) -> VectorStoreAttachFileResponse:
+def attach_file(
+    request: VectorStoreAttachFileRequest, ctx: Optional[RunContext] = None
+) -> VectorStoreAttachFileResponse:
     ctx = _ctx_or_new(ctx)
     vector_store_id = _require_non_empty(request.vector_store_id, "vector_store_id")
     file_id = _require_non_empty(request.openai_file_id, "openai_file_id")
     api_key = _api_key_from_env()
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="vector_store_attach_start",
-        module=logger.name,
-        fields={"vector_store_id": vector_store_id, "openai_file_id": file_id},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="vector_store_attach_start",
+            module=logger.name,
+            fields={"vector_store_id": vector_store_id, "openai_file_id": file_id},
+        )
+    )
     resp = _call_openai(
         call=lambda: llm_service.openai_vector_store_attach_file(
             OpenAIVectorStoreAttachFileRequest(
@@ -230,27 +254,35 @@ def attach_file(request: VectorStoreAttachFileRequest, ctx: Optional[RunContext]
         code="vector_store_attach_failed",
         message="Vector store attach did not return an id",
     )
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="vector_store_attach_complete",
-        module=logger.name,
-        fields={"vector_store_id": vector_store_id, "openai_file_id": file_id},
-    ))
-    return VectorStoreAttachFileResponse(schema_version="1.0", vector_store_id=vector_store_id, openai_file_id=file_id)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="vector_store_attach_complete",
+            module=logger.name,
+            fields={"vector_store_id": vector_store_id, "openai_file_id": file_id},
+        )
+    )
+    return VectorStoreAttachFileResponse(
+        schema_version="1.0", vector_store_id=vector_store_id, openai_file_id=file_id
+    )
 
 
-def get_vector_store_status(request: VectorStoreStatusRequest, ctx: Optional[RunContext] = None) -> VectorStoreStatusResponse:
+def get_vector_store_status(
+    request: VectorStoreStatusRequest, ctx: Optional[RunContext] = None
+) -> VectorStoreStatusResponse:
     ctx = _ctx_or_new(ctx)
     vector_store_id = _require_non_empty(request.vector_store_id, "vector_store_id")
     api_key = _api_key_from_env()
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="vector_store_status_start",
-        module=logger.name,
-        fields={"vector_store_id": vector_store_id},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="vector_store_status_start",
+            module=logger.name,
+            fields={"vector_store_id": vector_store_id},
+        )
+    )
     resp = _call_openai(
         call=lambda: llm_service.openai_vector_store_status(
             OpenAIVectorStoreStatusRequest(
@@ -266,13 +298,15 @@ def get_vector_store_status(request: VectorStoreStatusRequest, ctx: Optional[Run
     status = resp.status
     indexed_at = resp.indexed_at_utc
     last_error = resp.last_error
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="vector_store_status_complete",
-        module=logger.name,
-        fields={"vector_store_id": vector_store_id, "status": status},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="vector_store_status_complete",
+            module=logger.name,
+            fields={"vector_store_id": vector_store_id, "status": status},
+        )
+    )
     return VectorStoreStatusResponse(
         schema_version="1.0",
         vector_store_id=vector_store_id,
@@ -282,23 +316,27 @@ def get_vector_store_status(request: VectorStoreStatusRequest, ctx: Optional[Run
     )
 
 
-def update_metadata(request: VectorStoreUpdateMetadataRequest, ctx: Optional[RunContext] = None) -> VectorStoreUpdateMetadataResponse:
+def update_metadata(
+    request: VectorStoreUpdateMetadataRequest, ctx: Optional[RunContext] = None
+) -> VectorStoreUpdateMetadataResponse:
     ctx = _ctx_or_new(ctx)
     vector_store_id = _require_non_empty(request.vector_store_id, "vector_store_id")
     metadata_payload = _serialize_metadata(request.metadata)
     api_key = _api_key_from_env()
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="vector_store_metadata_update_start",
-        module=logger.name,
-        fields={
-            "vector_store_id": vector_store_id,
-            "metadata_keys": list(metadata_payload.keys()),
-            "taxonomy_count": len(request.metadata.taxonomy or []),
-            "categories_count": len(request.metadata.categories or []),
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="vector_store_metadata_update_start",
+            module=logger.name,
+            fields={
+                "vector_store_id": vector_store_id,
+                "metadata_keys": list(metadata_payload.keys()),
+                "taxonomy_count": len(request.metadata.taxonomy or []),
+                "categories_count": len(request.metadata.categories or []),
+            },
+        )
+    )
     resp = _call_openai(
         call=lambda: llm_service.openai_vector_store_update_metadata(
             OpenAIVectorStoreUpdateMetadataRequest(
@@ -317,11 +355,15 @@ def update_metadata(request: VectorStoreUpdateMetadataRequest, ctx: Optional[Run
         code="vector_store_metadata_update_failed",
         message="Vector store metadata update did not return an id",
     )
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="vector_store_metadata_update_complete",
-        module=logger.name,
-        fields={"vector_store_id": updated_id},
-    ))
-    return VectorStoreUpdateMetadataResponse(schema_version="1.0", vector_store_id=updated_id)
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="vector_store_metadata_update_complete",
+            module=logger.name,
+            fields={"vector_store_id": updated_id},
+        )
+    )
+    return VectorStoreUpdateMetadataResponse(
+        schema_version="1.0", vector_store_id=updated_id
+    )

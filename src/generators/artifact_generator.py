@@ -1711,7 +1711,9 @@ def audit_toc_artifacts(
 
     expected_topics = expected_bundle.get("toc_topics") or []
     raw_toc_topics = artifacts.get("toc_topics")
-    actual_topics: list[Any] = raw_toc_topics if isinstance(raw_toc_topics, list) else []
+    actual_topics: list[Any] = (
+        raw_toc_topics if isinstance(raw_toc_topics, list) else []
+    )
     if actual_topics != expected_topics:
         diagnostics.append(
             {

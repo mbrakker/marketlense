@@ -116,60 +116,69 @@ def test_regeneration_contracts_roundtrip(assert_no_defaulted_required_fields) -
     response_raw = asdict(response)
 
     assert RegenerationIssue(**issue_raw) == issue
-    assert RegenerationTarget(
-        **{
-            **target_raw,
-            "issues": [RegenerationIssue(**item) for item in target_raw["issues"]],
-        }
-    ) == target
-    assert RegenerationPlan(
-        **{
-            **plan_raw,
-            "targets": [
-                RegenerationTarget(
-                    **{
-                        **item,
-                        "issues": [
-                            RegenerationIssue(**issue_item)
-                            for issue_item in item["issues"]
-                        ],
-                    }
-                )
-                for item in plan_raw["targets"]
-            ],
-            "unmappable_issues": [
-                RegenerationIssue(**item) for item in plan_raw["unmappable_issues"]
-            ],
-        }
-    ) == plan
+    assert (
+        RegenerationTarget(
+            **{
+                **target_raw,
+                "issues": [RegenerationIssue(**item) for item in target_raw["issues"]],
+            }
+        )
+        == target
+    )
+    assert (
+        RegenerationPlan(
+            **{
+                **plan_raw,
+                "targets": [
+                    RegenerationTarget(
+                        **{
+                            **item,
+                            "issues": [
+                                RegenerationIssue(**issue_item)
+                                for issue_item in item["issues"]
+                            ],
+                        }
+                    )
+                    for item in plan_raw["targets"]
+                ],
+                "unmappable_issues": [
+                    RegenerationIssue(**item) for item in plan_raw["unmappable_issues"]
+                ],
+            }
+        )
+        == plan
+    )
     assert RegenerationAttemptResult(**attempt_raw) == attempt
     assert RegenerationLoopState(**loop_raw) == loop
-    assert ArtifactRegenerationRequest(
-        **{
-            **request_raw,
-            "plan": RegenerationPlan(
-                **{
-                    **request_raw["plan"],
-                    "targets": [
-                        RegenerationTarget(
-                            **{
-                                **item,
-                                "issues": [
-                                    RegenerationIssue(**issue_item)
-                                    for issue_item in item["issues"]
-                                ],
-                            }
-                        )
-                        for item in request_raw["plan"]["targets"]
-                    ],
-                    "unmappable_issues": [
-                        RegenerationIssue(**item)
-                        for item in request_raw["plan"]["unmappable_issues"]
-                    ],
-                }
-            ),
-            "settings": IngestSettings(**request_raw["settings"]),
-            "ctx": RunContext(**request_raw["ctx"]),
-        }
-    ) == request
+    assert (
+        ArtifactRegenerationRequest(
+            **{
+                **request_raw,
+                "plan": RegenerationPlan(
+                    **{
+                        **request_raw["plan"],
+                        "targets": [
+                            RegenerationTarget(
+                                **{
+                                    **item,
+                                    "issues": [
+                                        RegenerationIssue(**issue_item)
+                                        for issue_item in item["issues"]
+                                    ],
+                                }
+                            )
+                            for item in request_raw["plan"]["targets"]
+                        ],
+                        "unmappable_issues": [
+                            RegenerationIssue(**item)
+                            for item in request_raw["plan"]["unmappable_issues"]
+                        ],
+                    }
+                ),
+                "settings": IngestSettings(**request_raw["settings"]),
+                "ctx": RunContext(**request_raw["ctx"]),
+            }
+        )
+        == request
+    )
     assert ArtifactRegenerationResponse(**response_raw) == response

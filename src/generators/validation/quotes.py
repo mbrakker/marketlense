@@ -54,7 +54,9 @@ def validate_quotes(
         semantic_entry = (semantic_support or {}).get(label)
         semantic_confidence = semantic_entry.confidence if semantic_entry else 0.0
         retrieved = retrieve_evidence_windows(text, windows, top_k=RETRIEVE_TOP_K)
-        candidate_evidence = list(evidence_texts) + [window.text for window in retrieved]
+        candidate_evidence = list(evidence_texts) + [
+            window.text for window in retrieved
+        ]
         verbatim_match = any(
             quote_near_verbatim(text, evidence) for evidence in candidate_evidence
         )
@@ -121,4 +123,3 @@ def validate_quotes(
                 )
             )
     return issues
-

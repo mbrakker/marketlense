@@ -35,9 +35,7 @@ def _build_identity_field(payload: dict) -> BrowserDownloadIdentityField:
         label=str(payload.get("label") or "").strip(),
         value=payload.get("value"),
         aliases=[
-            str(item)
-            for item in payload.get("aliases", [])
-            if str(item or "").strip()
+            str(item) for item in payload.get("aliases", []) if str(item or "").strip()
         ],
     )
 
@@ -208,7 +206,9 @@ def main() -> int:
     payload_path = Path(sys.argv[1]).resolve()
     response_path = Path(sys.argv[2]).resolve()
     raw_payload = json.loads(payload_path.read_text(encoding="utf-8"))
-    ctx = _build_ctx(raw_payload.get("ctx") if isinstance(raw_payload.get("ctx"), dict) else {})
+    ctx = _build_ctx(
+        raw_payload.get("ctx") if isinstance(raw_payload.get("ctx"), dict) else {}
+    )
     setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
     try:
         result = run_browser_report_download_agent(

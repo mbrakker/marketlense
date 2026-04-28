@@ -1410,15 +1410,20 @@ def _assess_terminal_snapshot_quorum(
         final_page_html=snapshot.html,
         network_events=network_events,
     )
-    submit_button_state = str(payload.get("submit_button_state") or "").strip().casefold()
+    submit_button_state = (
+        str(payload.get("submit_button_state") or "").strip().casefold()
+    )
     post_submit_message = str(payload.get("post_submit_message") or "").strip()
     email_submission_completed = (
-        normalize_optional_bool_signal(payload.get("email_submission_completed")) is True
+        normalize_optional_bool_signal(payload.get("email_submission_completed"))
+        is True
     )
     confirmation_url_changed = (
         normalize_optional_bool_signal(payload.get("confirmation_url_changed")) is True
     )
-    form_disappeared = normalize_optional_bool_signal(payload.get("form_disappeared")) is True
+    form_disappeared = (
+        normalize_optional_bool_signal(payload.get("form_disappeared")) is True
+    )
     downloaded_files = [
         str(path or "").strip()
         for path in getattr(browser, "downloaded_files", []) or []
@@ -1439,15 +1444,13 @@ def _assess_terminal_snapshot_quorum(
             marker in lowered_route_text for marker in _TERMINAL_SUCCESS_TEXT_MARKERS
         ):
             signal_labels.append("success_text")
-        if any(
-            event.signal_kind == "confirmation_request" for event in network_events
-        ):
+        if any(event.signal_kind == "confirmation_request" for event in network_events):
             signal_labels.append("network_confirmation_request")
-        if any(
-            event.signal_kind == "submission_request" for event in network_events
-        ):
+        if any(event.signal_kind == "submission_request" for event in network_events):
             signal_labels.append("network_submission_request")
-        if form_disappeared or (email_submission_completed and "<form" not in snapshot.html.casefold()):
+        if form_disappeared or (
+            email_submission_completed and "<form" not in snapshot.html.casefold()
+        ):
             signal_labels.append("form_disappeared")
         if any(
             label in signal_labels
@@ -1461,7 +1464,8 @@ def _assess_terminal_snapshot_quorum(
             transient_labels = [
                 label
                 for label in transient_labels
-                if label not in {"post_submit_message_transient", "submit_button_disabled"}
+                if label
+                not in {"post_submit_message_transient", "submit_button_disabled"}
             ]
     elif policy.route_kind == "onsite_report" or policy.route_family in {
         "browser_onsite_report",
@@ -1469,7 +1473,9 @@ def _assess_terminal_snapshot_quorum(
     }:
         if len(lowered_route_text) >= 400:
             signal_labels.append("onsite_html_body")
-        if any(marker in lowered_route_text for marker in _TERMINAL_REPORT_TEXT_MARKERS):
+        if any(
+            marker in lowered_route_text for marker in _TERMINAL_REPORT_TEXT_MARKERS
+        ):
             signal_labels.append("onsite_report_text")
         if any(
             event.signal_kind in {"navigation_request", "document_request"}
@@ -1479,9 +1485,7 @@ def _assess_terminal_snapshot_quorum(
     else:
         if downloaded_files:
             signal_labels.append("downloaded_file_present")
-        if any(
-            event.signal_kind == "document_request" for event in network_events
-        ):
+        if any(event.signal_kind == "document_request" for event in network_events):
             signal_labels.append("network_document_request")
         if any(_looks_like_documentish_url(url) for url in document_urls):
             signal_labels.append("document_url_observed")

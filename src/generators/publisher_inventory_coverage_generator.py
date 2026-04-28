@@ -188,7 +188,4 @@ def _is_undercoverage_regression(
     dropped_report_count = request.previous_report_count - request.current_report_count
     if dropped_report_count < 5:
         return False
-    return (
-        request.current_report_count / request.previous_report_count
-        <= 0.8
-    )
+    return request.current_report_count / request.previous_report_count <= 0.8

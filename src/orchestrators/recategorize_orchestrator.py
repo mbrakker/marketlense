@@ -7,14 +7,22 @@ from src.contracts.categories import (
     RecategorizeOutcome,
     RecategorizeRequest,
 )
-from src.contracts.report_store import ReportMetadataUpsertRequest, ReportMetadataListRequest
+from src.contracts.report_store import (
+    ReportMetadataUpsertRequest,
+    ReportMetadataListRequest,
+)
 from src.contracts.context_category_fit import (
     ContextCategoryFitRequest,
     ReportContextBuildRequest,
 )
-from src.generators.context_category_fit_generator import fit_report_categories_from_context
+from src.generators.context_category_fit_generator import (
+    fit_report_categories_from_context,
+)
 from src.generators.report_context_generator import build_report_category_context
-from src.services.report_store_service import list_metadata as list_report_metadata, upsert_metadata
+from src.services.report_store_service import (
+    list_metadata as list_report_metadata,
+    upsert_metadata,
+)
 from src.utils.logging import child_context, log_event, new_run_context
 
 logger = logging.getLogger("market_lense.recategorize_orchestrator")
@@ -22,13 +30,18 @@ logger = logging.getLogger("market_lense.recategorize_orchestrator")
 
 def run_recategorize(request: RecategorizeRequest) -> List[RecategorizeOutcome]:
     ctx = new_run_context()
-    logger.info(log_event(
-        ctx,
-        role="orchestrator",
-        event="recategorize_start",
-        module=logger.name,
-        fields={"db_path": request.db_path, "category_mapping_path": request.category_mapping_path},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="recategorize_start",
+            module=logger.name,
+            fields={
+                "db_path": request.db_path,
+                "category_mapping_path": request.category_mapping_path,
+            },
+        )
+    )
 
     list_resp = list_report_metadata(
         ReportMetadataListRequest(schema_version="1.1", db_path=request.db_path),
@@ -79,37 +92,45 @@ def run_recategorize(request: RecategorizeRequest) -> List[RecategorizeOutcome]:
                 ),
                 record_ctx,
             )
-            outcomes.append(RecategorizeOutcome(
-                schema_version="1.0",
-                file_id=record.file_id,
-                title=record.title,
-                categories=fit_response.categories,
-                unmapped_tags=[],
-                status="updated",
-            ))
+            outcomes.append(
+                RecategorizeOutcome(
+                    schema_version="1.0",
+                    file_id=record.file_id,
+                    title=record.title,
+                    categories=fit_response.categories,
+                    unmapped_tags=[],
+                    status="updated",
+                )
+            )
         except Exception as exc:
-            logger.info(log_event(
-                record_ctx,
-                role="orchestrator",
-                event="recategorize_error",
-                module=logger.name,
-                fields={"file_id": record.file_id, "error": str(exc)},
-            ))
-            outcomes.append(RecategorizeOutcome(
-                schema_version="1.0",
-                file_id=record.file_id,
-                title=record.title,
-                categories=[],
-                unmapped_tags=[],
-                status="error",
-                error=str(exc),
-            ))
+            logger.info(
+                log_event(
+                    record_ctx,
+                    role="orchestrator",
+                    event="recategorize_error",
+                    module=logger.name,
+                    fields={"file_id": record.file_id, "error": str(exc)},
+                )
+            )
+            outcomes.append(
+                RecategorizeOutcome(
+                    schema_version="1.0",
+                    file_id=record.file_id,
+                    title=record.title,
+                    categories=[],
+                    unmapped_tags=[],
+                    status="error",
+                    error=str(exc),
+                )
+            )
 
-    logger.info(log_event(
-        ctx,
-        role="orchestrator",
-        event="recategorize_complete",
-        module=logger.name,
-        fields={"count": len(outcomes)},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="recategorize_complete",
+            module=logger.name,
+            fields={"count": len(outcomes)},
+        )
+    )
     return outcomes

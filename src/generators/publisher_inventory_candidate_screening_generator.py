@@ -436,7 +436,9 @@ _PUBLISHER_SUCCESS_HARD_PATTERNS = (
     re.compile(r"\bcustomer favorite\b"),
     re.compile(r"\bhighest[- ]designated leader\b"),
     re.compile(r"\bbrings home the gold\b"),
-    re.compile(r"\b(?:earns?|receiv(?:e|es|ing)|wins?)\s+\d+\s+(?:exceptional[- ]rated\s+)?(?:gold\s+)?medals?\b"),
+    re.compile(
+        r"\b(?:earns?|receiv(?:e|es|ing)|wins?)\s+\d+\s+(?:exceptional[- ]rated\s+)?(?:gold\s+)?medals?\b"
+    ),
     re.compile(r"\bgoes big\b"),
     re.compile(r"\bjust ask\b"),
     re.compile(r"\bearns?\s+top ratings?\b"),
@@ -507,7 +509,7 @@ def screen_publisher_inventory_candidates(
                     "approved_count": len(response.approved_items),
                     "rejected_count": len(response.rejected_items),
                     "model": response.model,
-                "screening_skipped": True,
+                    "screening_skipped": True,
                 },
             )
         )
@@ -574,7 +576,9 @@ def screen_publisher_inventory_candidates(
                 "publisher_name": request.publisher_name,
                 "candidate_count": len(candidates),
                 "llm_candidate_count": len(candidates_for_llm),
-                "configured_batch_size": int(request.settings.candidate_screening_batch_size),
+                "configured_batch_size": int(
+                    request.settings.candidate_screening_batch_size
+                ),
                 "effective_batch_size": batch_size,
                 "batch_count": len(candidate_batches),
             },
@@ -661,11 +665,11 @@ def _screen_candidate_batch(
             "candidate_items_json": json.dumps(
                 [
                     {
-                            "canonical_url": item.canonical_url,
-                            "title": _truncate_prompt_text(item.title),
-                            "discovered_on_page_number": item.discovered_on_page_number,
-                            "source_page_url": item.source_page_url,
-                        }
+                        "canonical_url": item.canonical_url,
+                        "title": _truncate_prompt_text(item.title),
+                        "discovered_on_page_number": item.discovered_on_page_number,
+                        "source_page_url": item.source_page_url,
+                    }
                     for item in candidates
                 ],
                 ensure_ascii=True,
@@ -980,9 +984,7 @@ def _deduplicate_screening_response(
         item for item in response.approved_items if item.canonical_url in keep_urls
     ]
     rejected_items = list(response.rejected_items) + [
-        item
-        for item in response.approved_items
-        if item.canonical_url in duplicate_map
+        item for item in response.approved_items if item.canonical_url in duplicate_map
     ]
     decisions: list[PublisherInventoryCandidateScreeningDecision] = []
     for decision in response.decisions:
@@ -1114,8 +1116,7 @@ def _candidate_selection_key(
 def _normalize_title_fingerprint(title: str) -> str:
     token = unicodedata.normalize("NFKD", str(title or ""))
     normalized = "".join(
-        char.casefold() if char.isalnum() or char.isspace() else " "
-        for char in token
+        char.casefold() if char.isalnum() or char.isspace() else " " for char in token
     )
     return " ".join(normalized.split()).strip()
 
@@ -1164,13 +1165,16 @@ def _is_publisher_success_marketing_title(*, title: str, publisher_name: str) ->
         return False
     normalized_title = re.sub(r"^(read|download|view)\s+now\s+", "", normalized_title)
     publisher_tokens = _publisher_reference_tokens(publisher_name)
-    if publisher_tokens and not any(token in normalized_title for token in publisher_tokens):
+    if publisher_tokens and not any(
+        token in normalized_title for token in publisher_tokens
+    ):
         return False
-    if any(pattern.search(normalized_title) for pattern in _PUBLISHER_SUCCESS_HARD_PATTERNS):
+    if any(
+        pattern.search(normalized_title) for pattern in _PUBLISHER_SUCCESS_HARD_PATTERNS
+    ):
         return True
-    return (
-        "leader" in normalized_title
-        and any(marker in normalized_title for marker in _PUBLISHER_SUCCESS_ANALYST_MARKERS)
+    return "leader" in normalized_title and any(
+        marker in normalized_title for marker in _PUBLISHER_SUCCESS_ANALYST_MARKERS
     )
 
 
@@ -1209,7 +1213,9 @@ def _resolve_candidate_screening_batch_size(
     batch_size = max(configured_batch_size, 1)
     if candidate_count <= batch_size * _TARGET_MAX_SCREENING_BATCHES:
         return batch_size
-    dynamic_batch_size = (candidate_count + _TARGET_MAX_SCREENING_BATCHES - 1) // _TARGET_MAX_SCREENING_BATCHES
+    dynamic_batch_size = (
+        candidate_count + _TARGET_MAX_SCREENING_BATCHES - 1
+    ) // _TARGET_MAX_SCREENING_BATCHES
     return max(batch_size, min(dynamic_batch_size, _MAX_DYNAMIC_SCREENING_BATCH_SIZE))
 
 
@@ -1352,9 +1358,11 @@ def _prefilter_screening_decision(
             accepted=True,
             reason="editorial_report_detail_url_prefilter",
         )
-    if _is_generic_cta_title(normalized_title) and _looks_like_insights_detail_url(
-        candidate.canonical_url
-    ) and not _has_specific_editorial_report_slug(candidate.canonical_url):
+    if (
+        _is_generic_cta_title(normalized_title)
+        and _looks_like_insights_detail_url(candidate.canonical_url)
+        and not _has_specific_editorial_report_slug(candidate.canonical_url)
+    ):
         return PublisherInventoryCandidateScreeningDecision(
             schema_version="1.0",
             canonical_url=candidate.canonical_url,
@@ -1391,9 +1399,9 @@ def _prefilter_screening_decision(
             accepted=True,
             reason="specific_report_title_prefilter",
         )
-    if _has_report_archive_context(candidate.source_page_url) and _looks_like_human_archive_title(
-        normalized_title
-    ):
+    if _has_report_archive_context(
+        candidate.source_page_url
+    ) and _looks_like_human_archive_title(normalized_title):
         return PublisherInventoryCandidateScreeningDecision(
             schema_version="1.0",
             canonical_url=candidate.canonical_url,
@@ -1448,22 +1456,25 @@ def _has_report_archive_context(url: str) -> bool:
     path = urlsplit(normalized_url).path
     if any(marker in normalized_url for marker in _FALLBACK_NON_REPORT_URL_MARKERS):
         return False
-    return any(
-        marker in path
-        for marker in (
-            "/publication",
-            "/publications/",
-            "/report",
-            "/reports/",
-            "/research",
-            "/resources/",
-            "/whitepaper",
-            "/whitepapers/",
-            "/ebooks/",
-            "/guides-whitepapers",
-            "/livres-blancs",
+    return (
+        any(
+            marker in path
+            for marker in (
+                "/publication",
+                "/publications/",
+                "/report",
+                "/reports/",
+                "/research",
+                "/resources/",
+                "/whitepaper",
+                "/whitepapers/",
+                "/ebooks/",
+                "/guides-whitepapers",
+                "/livres-blancs",
+            )
         )
-    ) or "/type/report" in normalized_url
+        or "/type/report" in normalized_url
+    )
 
 
 def _looks_like_human_archive_title(title: str) -> bool:
@@ -1491,7 +1502,10 @@ def _has_pdf_report_signal(candidate: PublisherInventoryCandidateScreeningItem) 
     if not parsed_url.path.endswith(".pdf"):
         return False
     leaf_title = (
-        parsed_url.path.rsplit("/", 1)[-1].rsplit(".", 1)[0].replace("_", "-").replace("-", " ")
+        parsed_url.path.rsplit("/", 1)[-1]
+        .rsplit(".", 1)[0]
+        .replace("_", "-")
+        .replace("-", " ")
     )
     source_url_signal = str(candidate.source_page_url or "").strip().casefold()
     combined_signal_text = " ".join(
@@ -1503,7 +1517,9 @@ def _has_pdf_report_signal(candidate: PublisherInventoryCandidateScreeningItem) 
         )
         if part
     )
-    if _contains_any_title_marker(combined_signal_text, _FALLBACK_NON_REPORT_TITLE_MARKERS):
+    if _contains_any_title_marker(
+        combined_signal_text, _FALLBACK_NON_REPORT_TITLE_MARKERS
+    ):
         return False
     return _contains_any_title_marker(
         combined_signal_text,
@@ -1544,7 +1560,9 @@ def _has_editorial_report_detail_candidate(
         )
         if part
     )
-    leaf_tokens = [token for token in re.findall(r"[a-z0-9]+", combined_signal_text) if token]
+    leaf_tokens = [
+        token for token in re.findall(r"[a-z0-9]+", combined_signal_text) if token
+    ]
     return len(leaf_tokens) >= 3 and (
         _contains_any_title_marker(
             combined_signal_text,
@@ -1597,7 +1615,9 @@ def _looks_like_confident_direct_detail_source(
         return False
     if normalized_url != source_page_url:
         return False
-    if not any(marker in normalized_url for marker in _DIRECT_DETAIL_SOURCE_URL_MARKERS):
+    if not any(
+        marker in normalized_url for marker in _DIRECT_DETAIL_SOURCE_URL_MARKERS
+    ):
         return False
     return not _looks_like_collection_root_candidate_url(normalized_url)
 
@@ -1612,7 +1632,9 @@ def _looks_like_insights_detail_url(url: str) -> bool:
     if not path.startswith("/insights/"):
         return False
     segments = [segment for segment in path.split("/") if segment]
-    return len(segments) >= 2 and segments[-1] not in _FALLBACK_REPORT_COLLECTION_SEGMENTS
+    return (
+        len(segments) >= 2 and segments[-1] not in _FALLBACK_REPORT_COLLECTION_SEGMENTS
+    )
 
 
 def _has_specific_editorial_report_slug(url: str) -> bool:

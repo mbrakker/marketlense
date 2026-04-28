@@ -109,9 +109,15 @@ class _FakeBrowserPage:
         if script == service._browser_click_named_control_script():
             payload = args[0]
             if isinstance(payload, dict):
-                labels = [str(label).strip().lower() for label in payload.get("labels", [])]
-                candidate_urls = [str(url).strip() for url in payload.get("candidate_urls", [])]
-                require_candidate_surface = bool(payload.get("require_candidate_surface"))
+                labels = [
+                    str(label).strip().lower() for label in payload.get("labels", [])
+                ]
+                candidate_urls = [
+                    str(url).strip() for url in payload.get("candidate_urls", [])
+                ]
+                require_candidate_surface = bool(
+                    payload.get("require_candidate_surface")
+                )
             else:
                 labels = [str(label).strip().lower() for label in payload]
                 candidate_urls = []
@@ -124,7 +130,9 @@ class _FakeBrowserPage:
                     label = str(choice.get("label", "")).strip().lower()
                     if not label:
                         continue
-                    if any(label == wanted or label.find(wanted) >= 0 for wanted in labels):
+                    if any(
+                        label == wanted or label.find(wanted) >= 0 for wanted in labels
+                    ):
                         matched_choices.append(choice)
                 if matched_choices:
                     if candidate_urls:
@@ -135,10 +143,15 @@ class _FakeBrowserPage:
                             ),
                             reverse=True,
                         )
-                        min_relevant_hits = 1 if len(candidate_urls) <= 4 else min(3, -(-len(candidate_urls) // 4))
+                        min_relevant_hits = (
+                            1
+                            if len(candidate_urls) <= 4
+                            else min(3, -(-len(candidate_urls) // 4))
+                        )
                         if (
                             require_candidate_surface
-                            and int(matched_choices[0].get("candidate_hits", 0)) < min_relevant_hits
+                            and int(matched_choices[0].get("candidate_hits", 0))
+                            < min_relevant_hits
                         ):
                             return "not_relevant"
                     self._state_id = str(matched_choices[0]["next_state"])
@@ -181,11 +194,15 @@ class _FakeBrowserPage:
         return str(self._payload()["page_url"])
 
     async def goto(self, url: str) -> None:
-        normalized = service._normalize_absolute_url(str(url).strip()) or str(url).strip()
+        normalized = (
+            service._normalize_absolute_url(str(url).strip()) or str(url).strip()
+        )
         for state_id, state in self._states.items():
             payload = state["payload"]
             assert isinstance(payload, dict)
-            payload_url = service._normalize_absolute_url(str(payload.get("page_url"))) or str(payload.get("page_url"))
+            payload_url = service._normalize_absolute_url(
+                str(payload.get("page_url"))
+            ) or str(payload.get("page_url"))
             if payload_url == normalized:
                 self._state_id = state_id
                 return
@@ -233,7 +250,9 @@ class _FakeBrowser:
 
     async def new_page(self, url: str):
         assert self._started is True
-        self.page = _FakeBrowserPage(self, self._start_state, self._states, target_id="main")
+        self.page = _FakeBrowserPage(
+            self, self._start_state, self._states, target_id="main"
+        )
         return self.page
 
     async def get_pages(self):
@@ -365,7 +384,9 @@ def test_discover_publisher_inventory_http_parse_handles_multipage(
     assert response.candidates[0].confidence is not None
     assert response.candidates[0].confidence >= 0.60
     assert response.candidates[1].discovered_on_page_number == 2
-    assert response.candidates[1].source_page_url == "https://example.com/insights?page=2"
+    assert (
+        response.candidates[1].source_page_url == "https://example.com/insights?page=2"
+    )
     assert_no_defaulted_required_fields(response)
     assert_logs_have_required_fields(_events(caplog))
 
@@ -867,7 +888,9 @@ def test_select_anchor_title_uses_card_context_for_generic_cta_links() -> None:
         }
     )
 
-    assert selected.startswith("Retail Data & Trends, Seasonal Retail Advice Black Friday Benchmarks 2025")
+    assert selected.startswith(
+        "Retail Data & Trends, Seasonal Retail Advice Black Friday Benchmarks 2025"
+    )
 
 
 def test_extract_candidates_from_html_uses_heading_for_cta_only_links() -> None:
@@ -896,7 +919,9 @@ def test_extract_candidates_from_html_uses_heading_for_cta_only_links() -> None:
     assert candidates[0].title == "Black Friday Benchmarks 2025"
 
 
-def test_extract_candidates_from_html_resolves_relative_links_to_origin_host_when_browser_drifts() -> None:
+def test_extract_candidates_from_html_resolves_relative_links_to_origin_host_when_browser_drifts() -> (
+    None
+):
     candidates = service._extract_candidates_from_html(
         anchors=[
             {
@@ -953,7 +978,9 @@ def test_extract_candidates_from_html_uses_card_context_for_generic_cta_links() 
     ]
 
 
-def test_extract_candidates_from_html_keeps_direct_report_library_pages_on_archive_surfaces() -> None:
+def test_extract_candidates_from_html_keeps_direct_report_library_pages_on_archive_surfaces() -> (
+    None
+):
     candidates = service._extract_candidates_from_html(
         anchors=[],
         page_url="https://www.knightfrank.com/research/report-library/active-capital-the-report-11021.aspx",
@@ -1048,7 +1075,9 @@ def test_discover_publisher_inventory_browser_applies_generic_report_dropdown_fi
             },
         },
     }
-    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(
+        service, "import_module", lambda _name: _runtime_for_states(states)
+    )
     external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
 
     response = service.discover_publisher_inventory(
@@ -1075,7 +1104,9 @@ def test_discover_publisher_inventory_direct_pdf_source_short_circuits_browser(
     external_boundary_mocks_only,
 ) -> None:
     def _unexpected_runtime(_name: str):
-        raise AssertionError("browser runtime should not be loaded for direct PDF sources")
+        raise AssertionError(
+            "browser runtime should not be loaded for direct PDF sources"
+        )
 
     external_boundary_mocks_only.setattr(service, "import_module", _unexpected_runtime)
 
@@ -1093,7 +1124,10 @@ def test_discover_publisher_inventory_direct_pdf_source_short_circuits_browser(
     assert [candidate.url for candidate in response.candidates] == [
         "https://example.com/reports/state-of-retail-2026.pdf"
     ]
-    assert response.candidates[0].pdf_url == "https://example.com/reports/state-of-retail-2026.pdf"
+    assert (
+        response.candidates[0].pdf_url
+        == "https://example.com/reports/state-of-retail-2026.pdf"
+    )
     assert response.candidates[0].provenance == "direct_pdf_source"
     assert response.candidates[0].confidence == 1.0
 
@@ -1118,7 +1152,11 @@ def test_discover_publisher_inventory_browser_fallback_when_http_empty(
                 "page_url": "https://example.com/insights",
                 "page_title": "Insights",
                 "anchors": [
-                    {"href": "https://example.com/reports/report-one", "text": "Report One 2026", "rel": ""}
+                    {
+                        "href": "https://example.com/reports/report-one",
+                        "text": "Report One 2026",
+                        "rel": "",
+                    }
                 ],
                 "load_more_labels": ["Load more"],
             },
@@ -1129,13 +1167,23 @@ def test_discover_publisher_inventory_browser_fallback_when_http_empty(
                 "page_url": "https://example.com/insights",
                 "page_title": "Insights",
                 "anchors": [
-                    {"href": "https://example.com/reports/report-one", "text": "Report One 2026", "rel": ""},
-                    {"href": "https://example.com/reports/report-two", "text": "Report Two 2026", "rel": ""},
+                    {
+                        "href": "https://example.com/reports/report-one",
+                        "text": "Report One 2026",
+                        "rel": "",
+                    },
+                    {
+                        "href": "https://example.com/reports/report-two",
+                        "text": "Report Two 2026",
+                        "rel": "",
+                    },
                 ],
             }
         },
     }
-    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(
+        service, "import_module", lambda _name: _runtime_for_states(states)
+    )
     external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
 
     response = service.discover_publisher_inventory(
@@ -1179,7 +1227,11 @@ def test_discover_publisher_inventory_browser_closes_stray_blank_pages(
                 "page_url": "https://example.com/insights",
                 "page_title": "Insights",
                 "anchors": [
-                    {"href": "https://example.com/reports/report-one", "text": "Report One 2026", "rel": ""}
+                    {
+                        "href": "https://example.com/reports/report-one",
+                        "text": "Report One 2026",
+                        "rel": "",
+                    }
                 ],
             }
         }
@@ -1261,7 +1313,11 @@ def test_discover_publisher_inventory_browser_scrolls_to_hydrate_load_more(
                 "page_url": "https://www.bain.com/insights?filters=|types(424%2C420)",
                 "page_title": "Insights",
                 "anchors": [
-                    {"href": "https://www.bain.com/insights/books", "text": "Bain Books", "rel": ""}
+                    {
+                        "href": "https://www.bain.com/insights/books",
+                        "text": "Bain Books",
+                        "rel": "",
+                    }
                 ],
             },
             "scroll_next_state": "scrolled",
@@ -1300,7 +1356,9 @@ def test_discover_publisher_inventory_browser_scrolls_to_hydrate_load_more(
             }
         },
     }
-    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(
+        service, "import_module", lambda _name: _runtime_for_states(states)
+    )
     external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
 
     response = service.discover_publisher_inventory(
@@ -1316,7 +1374,8 @@ def test_discover_publisher_inventory_browser_scrolls_to_hydrate_load_more(
     assert response.route_kind == "browser_render"
     assert len(response.pages) == 2
     assert any(
-        candidate.url == "https://www.bain.com/insights/private-equitys-reality-check-gp-outlook-2026"
+        candidate.url
+        == "https://www.bain.com/insights/private-equitys-reality-check-gp-outlook-2026"
         and candidate.discovered_on_page_number == 2
         for candidate in response.candidates
     )
@@ -1435,8 +1494,18 @@ def test_discover_publisher_inventory_browser_prefers_candidate_dense_load_more_
                 "load_more_labels": ["Show more results", "Show More"],
             },
             "named_click_choices": [
-                {"label": "show more results", "next_state": "wrong_surface", "candidate_hits": 1, "top": 1100},
-                {"label": "show more", "next_state": "page_2", "candidate_hits": 6, "top": 900},
+                {
+                    "label": "show more results",
+                    "next_state": "wrong_surface",
+                    "candidate_hits": 1,
+                    "top": 1100,
+                },
+                {
+                    "label": "show more",
+                    "next_state": "page_2",
+                    "candidate_hits": 6,
+                    "top": 900,
+                },
             ],
         },
         "wrong_surface": {
@@ -1491,11 +1560,18 @@ def test_discover_publisher_inventory_browser_prefers_candidate_dense_load_more_
                 "load_more_labels": ["Show more results"],
             },
             "named_click_choices": [
-                {"label": "show more results", "next_state": "wrong_surface", "candidate_hits": 1, "top": 1200}
+                {
+                    "label": "show more results",
+                    "next_state": "wrong_surface",
+                    "candidate_hits": 1,
+                    "top": 1200,
+                }
             ],
         },
     }
-    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(
+        service, "import_module", lambda _name: _runtime_for_states(states)
+    )
     external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
 
     response = service.discover_publisher_inventory(
@@ -1511,7 +1587,8 @@ def test_discover_publisher_inventory_browser_prefers_candidate_dense_load_more_
     assert response.route_kind == "browser_render"
     assert len(response.pages) == 2
     assert any(
-        candidate.url == "https://www.algolia.com/resources/asset/ebook-why-agentic-ai-is-your-next-priority"
+        candidate.url
+        == "https://www.algolia.com/resources/asset/ebook-why-agentic-ai-is-your-next-priority"
         and candidate.discovered_on_page_number == 2
         for candidate in response.candidates
     )
@@ -1561,7 +1638,9 @@ def test_discover_publisher_inventory_browser_resets_empty_results_filters(
             }
         },
     }
-    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(
+        service, "import_module", lambda _name: _runtime_for_states(states)
+    )
     external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
 
     response = service.discover_publisher_inventory(
@@ -1618,7 +1697,9 @@ def test_discover_publisher_inventory_browser_uses_http_supplement_when_browser_
             },
         },
     }
-    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(
+        service, "import_module", lambda _name: _runtime_for_states(states)
+    )
     external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
 
     response = service.discover_publisher_inventory(
@@ -1675,7 +1756,9 @@ def test_discover_publisher_inventory_browser_uses_http_supplement_for_archive_r
             }
         }
     }
-    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(
+        service, "import_module", lambda _name: _runtime_for_states(states)
+    )
     external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
 
     response = service.discover_publisher_inventory(
@@ -1708,7 +1791,7 @@ def test_discover_publisher_inventory_browser_invalid_http_supplement_html_fails
         assert headers["Accept-Language"] == "en-US,en;q=0.9"
         return _FakeResponse(
             url="https://example.com/insights",
-            text="<![\ufffd\"\ufffd(\u001c\ufffd\u001c\ufffdB\ufffdo\u0011IRD\ufffd\\\\",
+            text='<![\ufffd"\ufffd(\u001c\ufffd\u001c\ufffdB\ufffdo\u0011IRD\ufffd\\\\',
         )
 
     external_boundary_mocks_only.setattr(service.requests, "get", _get)
@@ -1721,7 +1804,9 @@ def test_discover_publisher_inventory_browser_invalid_http_supplement_html_fails
             },
         }
     }
-    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(
+        service, "import_module", lambda _name: _runtime_for_states(states)
+    )
     external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
 
     with pytest.raises(AppError) as err:
@@ -1735,7 +1820,9 @@ def test_discover_publisher_inventory_browser_invalid_http_supplement_html_fails
             run_context,
         )
 
-    assert_app_error(err.value, code="publisher_inventory_browser_incomplete", retryable=True)
+    assert_app_error(
+        err.value, code="publisher_inventory_browser_incomplete", retryable=True
+    )
 
 
 def test_discover_publisher_inventory_browser_pagination_limit_falls_back_to_http(
@@ -1771,7 +1858,9 @@ def test_discover_publisher_inventory_browser_pagination_limit_falls_back_to_htt
             },
         }
     }
-    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(
+        service, "import_module", lambda _name: _runtime_for_states(states)
+    )
     external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
 
     response = service.discover_publisher_inventory(
@@ -1855,11 +1944,14 @@ def test_discover_publisher_inventory_browser_returns_bounded_result_after_multi
 
     assert response.route_kind == "browser_render"
     assert len(response.pages) == 2
-    assert response.candidates[0].url == "https://example.com/reports/consumer-benchmark-2026"
-    assert response.candidates[-1].url == "https://example.com/reports/retail-outlook-2026"
-    assert {
-        candidate.url for candidate in response.candidates
-    } == {
+    assert (
+        response.candidates[0].url
+        == "https://example.com/reports/consumer-benchmark-2026"
+    )
+    assert (
+        response.candidates[-1].url == "https://example.com/reports/retail-outlook-2026"
+    )
+    assert {candidate.url for candidate in response.candidates} == {
         "https://example.com/reports/consumer-benchmark-2026",
         "https://example.com/reports/retail-outlook-2026",
     }
@@ -1895,7 +1987,9 @@ def test_discover_publisher_inventory_browser_uses_rendered_html_supplement_when
             ),
         }
     }
-    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(
+        service, "import_module", lambda _name: _runtime_for_states(states)
+    )
     external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
 
     response = service.discover_publisher_inventory(
@@ -1937,8 +2031,8 @@ def test_discover_publisher_inventory_browser_extracts_custom_component_links_fr
                 "anchors": [],
             },
             "rendered_html": (
-                '<html><body>'
-                '<jb-article-card '
+                "<html><body>"
+                "<jb-article-card "
                 'link="{&quot;href&quot;:&quot;\\/en\\/insights\\/market-insights\\/market-outlook\\/iran-war-dominates-markets-what-now\\/&quot;}" '
                 'teaserHeader="{&quot;headline&quot;:&quot;Iran war dominates markets: What now?&quot;}">'
                 "</jb-article-card>"
@@ -1980,13 +2074,19 @@ def test_discover_publisher_inventory_browser_seeds_direct_report_page_when_dom_
                 "page_url": "https://example.com/2026-garden-trends-report",
                 "page_title": "2026 Garden Trends Report",
                 "anchors": [
-                    {"href": "https://example.com/expertise", "text": "Expertise", "rel": ""},
+                    {
+                        "href": "https://example.com/expertise",
+                        "text": "Expertise",
+                        "rel": "",
+                    },
                     {"href": "https://example.com/blog", "text": "Blog", "rel": ""},
                 ],
             },
         }
     }
-    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(
+        service, "import_module", lambda _name: _runtime_for_states(states)
+    )
     external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
 
     response = service.discover_publisher_inventory(
@@ -2044,7 +2144,9 @@ def test_discover_publisher_inventory_browser_preserves_pre_cookie_archive_candi
             "rendered_html": "<html><body></body></html>",
         },
     }
-    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(
+        service, "import_module", lambda _name: _runtime_for_states(states)
+    )
 
     response = service.discover_publisher_inventory(
         PublisherInventoryServiceRequest(
@@ -2099,7 +2201,9 @@ def test_discover_publisher_inventory_browser_recovers_from_cross_apex_host_drif
             },
         },
     }
-    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(
+        service, "import_module", lambda _name: _runtime_for_states(states)
+    )
     external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
 
     response = service.discover_publisher_inventory(
@@ -2165,9 +2269,11 @@ def test_discover_publisher_inventory_browser_falls_back_to_direct_http_when_bro
                 "page_title": "Resources - Bluecore",
                 "anchors": [],
             },
-        }
+        },
     }
-    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(
+        service, "import_module", lambda _name: _runtime_for_states(states)
+    )
     external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
 
     response = service.discover_publisher_inventory(
@@ -2269,7 +2375,9 @@ def test_discover_publisher_inventory_browser_prioritizes_button_pagination_over
             }
         },
     }
-    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(
+        service, "import_module", lambda _name: _runtime_for_states(states)
+    )
     external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
 
     response = service.discover_publisher_inventory(
@@ -2284,7 +2392,10 @@ def test_discover_publisher_inventory_browser_prioritizes_button_pagination_over
 
     assert response.route_kind == "browser_render"
     assert len(response.pages) == 2
-    assert response.pages[1].page_url == "https://business.adobe.com/resources/reports.html?page=2"
+    assert (
+        response.pages[1].page_url
+        == "https://business.adobe.com/resources/reports.html?page=2"
+    )
     assert [candidate.title for candidate in response.candidates] == [
         "Adobe Report One 2026",
         "Adobe Report Two 2026",
@@ -2341,7 +2452,9 @@ def test_discover_publisher_inventory_browser_stops_on_load_more_state_change_wi
             }
         },
     }
-    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(
+        service, "import_module", lambda _name: _runtime_for_states(states)
+    )
     external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
 
     response = service.discover_publisher_inventory(
@@ -2409,7 +2522,9 @@ def test_discover_publisher_inventory_browser_treats_inert_load_more_as_exhauste
             "named_clicks": {"load more": "page_2"},
         },
     }
-    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(
+        service, "import_module", lambda _name: _runtime_for_states(states)
+    )
     external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
 
     response = service.discover_publisher_inventory(
@@ -2727,7 +2842,9 @@ def test_wait_for_inventory_growth_probe_detects_same_page_anchor_growth(
     previous_state = service._RenderedInventoryState(
         page_url="https://example.com/insights",
         page_title="Insights",
-        anchors=[{"href": "https://example.com/report-one", "text": "Report One", "rel": ""}],
+        anchors=[
+            {"href": "https://example.com/report-one", "text": "Report One", "rel": ""}
+        ],
         load_more_labels=["Load more"],
         tab_labels=[],
         active_tab_label=None,
@@ -2821,7 +2938,7 @@ def test_discover_publisher_inventory_force_browser_skips_http(
             or _FakeResponse(
                 url="https://example.com/insights",
                 text="<html><body><a href='/reports/report-one'>Report One 2026</a></body></html>",
-                )
+            )
         ),
     )
     states = {
@@ -2830,14 +2947,20 @@ def test_discover_publisher_inventory_force_browser_skips_http(
                 "page_url": "https://example.com/insights",
                 "page_title": "Insights",
                 "anchors": [
-                    {"href": "https://example.com/reports/report-one", "text": "Report One 2026", "rel": ""}
+                    {
+                        "href": "https://example.com/reports/report-one",
+                        "text": "Report One 2026",
+                        "rel": "",
+                    }
                 ],
             }
         }
     }
     runtime = _runtime_for_states(states)
     vendored_root = str(
-        (Path(service.__file__).resolve().parents[2] / "tools" / "browser-use").resolve()
+        (
+            Path(service.__file__).resolve().parents[2] / "tools" / "browser-use"
+        ).resolve()
     )
     original_sys_path = list(service.sys.path)
     import_attempts: list[bool] = []
@@ -2885,7 +3008,11 @@ def test_discover_publisher_inventory_browser_traverses_tabs(
                 "page_url": "https://www.salesforce.com/eu/company/analyst-reports/#!page=1",
                 "page_title": "Analyst Reports | Salesforce EU",
                 "anchors": [
-                    {"href": "https://www.salesforce.com/eu/form/gartner-report", "text": "2025 Gartner Report", "rel": ""}
+                    {
+                        "href": "https://www.salesforce.com/eu/form/gartner-report",
+                        "text": "2025 Gartner Report",
+                        "rel": "",
+                    }
                 ],
                 "tab_labels": ["Gartner", "Forrester", "IDC"],
                 "active_tab_label": "Gartner",
@@ -2897,7 +3024,11 @@ def test_discover_publisher_inventory_browser_traverses_tabs(
                 "page_url": "https://www.salesforce.com/eu/company/analyst-reports/#!page=1",
                 "page_title": "Analyst Reports | Salesforce EU",
                 "anchors": [
-                    {"href": "https://www.salesforce.com/eu/form/forrester-report", "text": "2025 Forrester Wave", "rel": ""}
+                    {
+                        "href": "https://www.salesforce.com/eu/form/forrester-report",
+                        "text": "2025 Forrester Wave",
+                        "rel": "",
+                    }
                 ],
                 "tab_labels": ["Gartner", "Forrester", "IDC"],
                 "active_tab_label": "Forrester",
@@ -2909,14 +3040,20 @@ def test_discover_publisher_inventory_browser_traverses_tabs(
                 "page_url": "https://www.salesforce.com/eu/company/analyst-reports/#!page=1",
                 "page_title": "Analyst Reports | Salesforce EU",
                 "anchors": [
-                    {"href": "https://www.salesforce.com/eu/form/idc-report", "text": "2025 IDC MarketScape", "rel": ""}
+                    {
+                        "href": "https://www.salesforce.com/eu/form/idc-report",
+                        "text": "2025 IDC MarketScape",
+                        "rel": "",
+                    }
                 ],
                 "tab_labels": ["Gartner", "Forrester", "IDC"],
                 "active_tab_label": "IDC",
             }
         },
     }
-    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(
+        service, "import_module", lambda _name: _runtime_for_states(states)
+    )
     external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
 
     response = service.discover_publisher_inventory(
@@ -3050,7 +3187,11 @@ def test_discover_publisher_inventory_browser_follows_report_listing_route(
                 "page_url": "https://www.gfk-media-measurement.com/global/en/insights/",
                 "page_title": "Insights",
                 "anchors": [
-                    {"href": "https://www.gfk-media-measurement.com/global/en/insights/commentary/2025/example/", "text": "Commentary", "rel": ""}
+                    {
+                        "href": "https://www.gfk-media-measurement.com/global/en/insights/commentary/2025/example/",
+                        "text": "Commentary",
+                        "rel": "",
+                    }
                 ],
                 "report_link_url": "https://www.gfk-media-measurement.com/global/en/insights/report/2025/reports/",
             }
@@ -3069,7 +3210,9 @@ def test_discover_publisher_inventory_browser_follows_report_listing_route(
             }
         },
     }
-    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(
+        service, "import_module", lambda _name: _runtime_for_states(states)
+    )
     external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
 
     response = service.discover_publisher_inventory(
@@ -3083,8 +3226,14 @@ def test_discover_publisher_inventory_browser_follows_report_listing_route(
     )
 
     assert response.route_kind == "browser_render"
-    assert response.final_page_url == "https://www.gfk-media-measurement.com/global/en/insights/report/2025/reports"
-    assert response.candidates[0].url == "https://www.gfk-media-measurement.com/global/en/insights/report/2025/reports/q2-audience-report"
+    assert (
+        response.final_page_url
+        == "https://www.gfk-media-measurement.com/global/en/insights/report/2025/reports"
+    )
+    assert (
+        response.candidates[0].url
+        == "https://www.gfk-media-measurement.com/global/en/insights/report/2025/reports/q2-audience-report"
+    )
     assert "report listing route" in response.route_summary
 
 
@@ -3099,7 +3248,11 @@ def test_discover_publisher_inventory_browser_follows_whitepaper_listing_route(
                 "page_url": "https://onclusive.com/fr/expertise/insights/",
                 "page_title": "Insights",
                 "anchors": [
-                    {"href": "https://onclusive.com/fr/expertise/insights/article-one/", "text": "Article", "rel": ""}
+                    {
+                        "href": "https://onclusive.com/fr/expertise/insights/article-one/",
+                        "text": "Article",
+                        "rel": "",
+                    }
                 ],
                 "report_link_url": "https://onclusive.com/fr/ressources/livres-blancs/",
             }
@@ -3118,7 +3271,9 @@ def test_discover_publisher_inventory_browser_follows_whitepaper_listing_route(
             }
         },
     }
-    external_boundary_mocks_only.setattr(service, "import_module", lambda _name: _runtime_for_states(states))
+    external_boundary_mocks_only.setattr(
+        service, "import_module", lambda _name: _runtime_for_states(states)
+    )
     external_boundary_mocks_only.setattr(service.asyncio, "sleep", _fast_sleep)
 
     response = service.discover_publisher_inventory(
@@ -3132,11 +3287,18 @@ def test_discover_publisher_inventory_browser_follows_whitepaper_listing_route(
     )
 
     assert response.route_kind == "browser_render"
-    assert response.final_page_url == "https://onclusive.com/fr/ressources/livres-blancs"
-    assert response.candidates[0].url == "https://onclusive.com/fr/ressources/livres-blancs/barometre-medias-2026"
+    assert (
+        response.final_page_url == "https://onclusive.com/fr/ressources/livres-blancs"
+    )
+    assert (
+        response.candidates[0].url
+        == "https://onclusive.com/fr/ressources/livres-blancs/barometre-medias-2026"
+    )
 
 
-def test_extract_candidates_from_html_filters_false_positive_hub_and_social_links() -> None:
+def test_extract_candidates_from_html_filters_false_positive_hub_and_social_links() -> (
+    None
+):
     html = """
     <html><body>
       <a href="/blog/social-media-industry-benchmark-report/">2025 Social Media Industry Benchmark Report</a>
@@ -3177,7 +3339,9 @@ def test_extract_candidates_from_html_filters_false_positive_hub_and_social_link
     ]
 
 
-def test_extract_candidates_from_html_allows_original_host_when_rendered_page_uses_hosted_subdomain() -> None:
+def test_extract_candidates_from_html_allows_original_host_when_rendered_page_uses_hosted_subdomain() -> (
+    None
+):
     html = """
     <html><body>
       <a href="https://www.bluecore.com/lp/customer-movement-benchmarks/">Benchmarks for Identification, Conversion, and Retention</a>
@@ -3199,7 +3363,9 @@ def test_extract_candidates_from_html_allows_original_host_when_rendered_page_us
     ]
 
 
-def test_extract_candidates_from_html_accepts_archive_surface_cards_without_report_keywords() -> None:
+def test_extract_candidates_from_html_accepts_archive_surface_cards_without_report_keywords() -> (
+    None
+):
     html = """
     <html><body>
       <a href="https://www.publicissapient.com/resources/blog/modernization-risks-regulated-industries">
@@ -3232,7 +3398,9 @@ def test_extract_candidates_from_html_accepts_archive_surface_cards_without_repo
     ]
 
 
-def test_extract_candidates_from_html_accepts_external_report_host_on_archive_surface() -> None:
+def test_extract_candidates_from_html_accepts_external_report_host_on_archive_surface() -> (
+    None
+):
     html = """
     <html><body>
       <a href="https://psfk.gumroad.com/l/coffee-machine-innovation-report-psfk-for-waldo">
@@ -3266,25 +3434,25 @@ def test_browser_named_control_selector_covers_anchor_button_controls() -> None:
     pagination_click_script = service._browser_click_pagination_next_script()
     archive_expander_script = service._browser_click_archive_expander_script()
 
-    assert 'a.btn' in selector
+    assert "a.btn" in selector
     assert 'a[class*="btn"]' in selector
-    assert 'a.wp-block-button__link' in selector
-    assert '.load-more' in selector
-    assert 'a.btn' in inventory_script
-    assert 'a.wp-block-button__link' in inventory_script
-    assert 'a.btn' in click_script
-    assert 'a.wp-block-button__link' in click_script
-    assert 'candidate_urls' in click_script
-    assert 'scrollIntoView' in click_script
-    assert 'aria-disabled' in inventory_script
-    assert 'aria-disabled' in click_script
-    assert 'cookie' in cookie_click_script
-    assert 'consent' in cookie_click_script
-    assert 'aria-disabled' in pagination_click_script
-    assert 'has_pagination_next' in inventory_script
-    assert 'const pageCountMatch =' in pagination_click_script
-    assert 'explore' in archive_expander_script
-    assert 'library' in archive_expander_script
+    assert "a.wp-block-button__link" in selector
+    assert ".load-more" in selector
+    assert "a.btn" in inventory_script
+    assert "a.wp-block-button__link" in inventory_script
+    assert "a.btn" in click_script
+    assert "a.wp-block-button__link" in click_script
+    assert "candidate_urls" in click_script
+    assert "scrollIntoView" in click_script
+    assert "aria-disabled" in inventory_script
+    assert "aria-disabled" in click_script
+    assert "cookie" in cookie_click_script
+    assert "consent" in cookie_click_script
+    assert "aria-disabled" in pagination_click_script
+    assert "has_pagination_next" in inventory_script
+    assert "const pageCountMatch =" in pagination_click_script
+    assert "explore" in archive_expander_script
+    assert "library" in archive_expander_script
 
 
 def test_discover_publisher_inventory_browser_timeout_is_typed_error(

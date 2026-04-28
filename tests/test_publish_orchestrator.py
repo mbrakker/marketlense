@@ -150,7 +150,14 @@ def test_publish_reuses_idempotent_outcome_without_second_post(
     assert second[0].status == "published"
     assert second[0].post_id == 10
     assert second[0].post_url == "https://example.com/post/10"
-    assert len(wordpress_http.calls_for("POST", "https://example.com/wp-json/wp/v2/ml_report")) == 1
+    assert (
+        len(
+            wordpress_http.calls_for(
+                "POST", "https://example.com/wp-json/wp/v2/ml_report"
+            )
+        )
+        == 1
+    )
 
 
 def test_publish_limit_applies_to_attempted_items_when_first_item_errors(

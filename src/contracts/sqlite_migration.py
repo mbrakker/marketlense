@@ -17,7 +17,9 @@ class SqliteMigrationAppliedStep:
         metadata={"doc": "Monotonic schema version after the migration completed."}
     )
     duration_ms: int = field(
-        metadata={"doc": "Elapsed wall-clock duration for the migration in milliseconds."}
+        metadata={
+            "doc": "Elapsed wall-clock duration for the migration in milliseconds."
+        }
     )
 
 
@@ -27,13 +29,17 @@ class SqliteMigrationApplyRequest:
         metadata={"doc": "SQLite migration apply request schema version."}
     )
     database_key: str = field(
-        metadata={"doc": "Stable logical database boundary key, for example reports_db."}
+        metadata={
+            "doc": "Stable logical database boundary key, for example reports_db."
+        }
     )
     db_path: str = field(
         metadata={"doc": "Resolved SQLite database path receiving schema migrations."}
     )
     target_version: int = field(
-        metadata={"doc": "Highest expected schema version for the selected database boundary."}
+        metadata={
+            "doc": "Highest expected schema version for the selected database boundary."
+        }
     )
     ctx: RunContext = field(
         metadata={"doc": "Run context used for structured migration logging."}

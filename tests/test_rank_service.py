@@ -32,7 +32,9 @@ def _request(tmp_path, *, user_prompt: str = "[]") -> RankRequest:
     )
 
 
-def _patch_openai_chat_json(monkeypatch, *, text: str, parsed_json: dict | None) -> None:
+def _patch_openai_chat_json(
+    monkeypatch, *, text: str, parsed_json: dict | None
+) -> None:
     def _fake_openai_chat_json(req, ctx):
         return OpenAIResponseResult(
             schema_version="1.0",

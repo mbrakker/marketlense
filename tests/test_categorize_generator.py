@@ -21,7 +21,9 @@ from src.utils.tag_utils import normalize_slug_tag
 
 
 def _ctx() -> RunContext:
-    return RunContext(schema_version="1.0", run_id="run", task_id="task", span_id="span")
+    return RunContext(
+        schema_version="1.0", run_id="run", task_id="task", span_id="span"
+    )
 
 
 def _slug(value: str) -> str:
@@ -113,13 +115,17 @@ def test_categorize_taxonomy_prefers_specific_domain_over_generic_overlap() -> N
     assert assignment.score_details[0].category_id == "macroeconomics"
     assert assignment.score_details[0].eligible is True
     tech_detail = next(
-        detail for detail in assignment.score_details if detail.category_id == "technology"
+        detail
+        for detail in assignment.score_details
+        if detail.category_id == "technology"
     )
     assert tech_detail.eligible is False
     assert tech_detail.skip_reason == "generic_only_matches"
 
 
-def test_categorize_taxonomy_returns_secondary_category_only_when_it_is_strong() -> None:
+def test_categorize_taxonomy_returns_secondary_category_only_when_it_is_strong() -> (
+    None
+):
     mappings = _mappings(
         [
             CategoryDefinition(
@@ -305,7 +311,9 @@ def test_categorize_taxonomy_rescues_evidence_backed_secondary_category() -> Non
     assert consumer_detail.must_have_match_count == 2
 
 
-def test_categorize_taxonomy_rejects_secondary_without_enough_evidence_sections() -> None:
+def test_categorize_taxonomy_rejects_secondary_without_enough_evidence_sections() -> (
+    None
+):
     mappings = _mappings(
         [
             CategoryDefinition(
@@ -460,7 +468,9 @@ def test_category_mapping_service_loads_weighted_schema(tmp_path: Path) -> None:
     assert response.mappings.classification.global_generic_tags == ["digital_economy"]
     assert response.mappings.categories[0].core_tags == ["macroeconomic_outlook"]
     assert response.mappings.categories[0].supporting_tags == ["country_analysis"]
-    assert response.mappings.categories[0].secondary_supporting_tags == ["interest_rates"]
+    assert response.mappings.categories[0].secondary_supporting_tags == [
+        "interest_rates"
+    ]
     assert response.mappings.categories[0].descriptor_tags == ["country_forecasts"]
     assert response.mappings.categories[0].generic_tags == ["digital_economy"]
     assert response.mappings.categories[0].negative_tags == ["social_media"]
@@ -468,8 +478,13 @@ def test_category_mapping_service_loads_weighted_schema(tmp_path: Path) -> None:
     assert response.mappings.categories[0].priority == 5
     assert len(response.mappings.inference_rules) == 1
     assert response.mappings.inference_rules[0].name == "macro_to_growth"
-    assert response.mappings.inference_rules[0].target_category_id == "business_performance"
-    assert response.mappings.inference_rules[0].trigger_tags == ["macroeconomic_outlook"]
+    assert (
+        response.mappings.inference_rules[0].target_category_id
+        == "business_performance"
+    )
+    assert response.mappings.inference_rules[0].trigger_tags == [
+        "macroeconomic_outlook"
+    ]
     assert response.mappings.inference_rules[0].inferred_tag == "business_performance"
     assert response.mappings.inference_rules[0].context_keywords_any == ["growth"]
     assert response.mappings.inference_rules[0].remove_tags == ["digital_economy"]
@@ -499,7 +514,12 @@ def test_category_mapping_service_rejects_non_mapping_root(
 
 
 def test_repo_category_mapping_config_is_normalized() -> None:
-    mapping_path = Path(__file__).resolve().parents[1] / "src" / "config" / "category-mappings.yaml"
+    mapping_path = (
+        Path(__file__).resolve().parents[1]
+        / "src"
+        / "config"
+        / "category-mappings.yaml"
+    )
     payload = yaml.safe_load(mapping_path.read_text(encoding="utf-8"))
     categories = payload.get("categories") or []
     inference_rules = payload.get("inference_rules") or []
@@ -538,7 +558,12 @@ def test_repo_category_mapping_config_is_normalized() -> None:
 
 
 def test_repo_category_mapping_context_profiles_are_complete() -> None:
-    mapping_path = Path(__file__).resolve().parents[1] / "src" / "config" / "category-mappings.yaml"
+    mapping_path = (
+        Path(__file__).resolve().parents[1]
+        / "src"
+        / "config"
+        / "category-mappings.yaml"
+    )
     payload = yaml.safe_load(mapping_path.read_text(encoding="utf-8"))
 
     incomplete_profiles: list[str] = []
@@ -604,7 +629,12 @@ def test_load_mappings_rejects_portal_category_without_context_profile(
 
 
 def test_repo_category_mapping_rule_and_coverage_tags_are_scored() -> None:
-    mapping_path = Path(__file__).resolve().parents[1] / "src" / "config" / "category-mappings.yaml"
+    mapping_path = (
+        Path(__file__).resolve().parents[1]
+        / "src"
+        / "config"
+        / "category-mappings.yaml"
+    )
     payload = yaml.safe_load(mapping_path.read_text(encoding="utf-8"))
     categories = payload.get("categories") or []
     inference_rules = payload.get("inference_rules") or []
@@ -656,21 +686,34 @@ def test_repo_category_mapping_rule_and_coverage_tags_are_scored() -> None:
 
     assert "generative_ai_and_ai_agents" in scoring_tags_by_category["ai_automation"]
     assert "ai_and_productivity" in scoring_tags_by_category["ai_automation"]
-    assert "generative_engine_optimisation_geo" in scoring_tags_by_category["search_performance"]
-    assert "brand_safety_and_suitability" in scoring_tags_by_category["programmatic_ad_tech"]
+    assert (
+        "generative_engine_optimisation_geo"
+        in scoring_tags_by_category["search_performance"]
+    )
+    assert (
+        "brand_safety_and_suitability"
+        in scoring_tags_by_category["programmatic_ad_tech"]
+    )
     assert "emerging_tech" in scoring_tags_by_category["technology"]
     assert "tech_trends" in scoring_tags_by_category["technology"]
     assert "ai_in_retail" in scoring_tags_by_category["omnichannel_commerce"]
 
 
 def test_repo_category_mapping_broad_descriptors_stay_non_scoring() -> None:
-    mapping_path = Path(__file__).resolve().parents[1] / "src" / "config" / "category-mappings.yaml"
+    mapping_path = (
+        Path(__file__).resolve().parents[1]
+        / "src"
+        / "config"
+        / "category-mappings.yaml"
+    )
     payload = yaml.safe_load(mapping_path.read_text(encoding="utf-8"))
     categories = payload.get("categories") or []
     classification = payload.get("classification") or {}
 
     all_scoring_tags: set[str] = set()
-    descriptor_or_generic_tags: set[str] = set(classification.get("global_generic_tags") or [])
+    descriptor_or_generic_tags: set[str] = set(
+        classification.get("global_generic_tags") or []
+    )
     for item in categories:
         if not isinstance(item, dict):
             continue
@@ -692,7 +735,12 @@ def test_repo_category_mapping_broad_descriptors_stay_non_scoring() -> None:
 
 
 def test_repo_category_mapping_uses_slug_tags_only() -> None:
-    mapping_path = Path(__file__).resolve().parents[1] / "src" / "config" / "category-mappings.yaml"
+    mapping_path = (
+        Path(__file__).resolve().parents[1]
+        / "src"
+        / "config"
+        / "category-mappings.yaml"
+    )
     payload = yaml.safe_load(mapping_path.read_text(encoding="utf-8"))
 
     non_slug_entries: list[str] = []

@@ -58,7 +58,13 @@ def test_run_report_pipeline_retries_retryable(
     caplog, monkeypatch, assert_logs_have_required_fields
 ) -> None:
     caplog.set_level(logging.INFO, logger="market_lense.report_pipeline_orchestrator")
-    file = DriveFile(schema_version="1.0", file_id="f1", name="a.pdf", modified_time=None, md5_checksum="md5")
+    file = DriveFile(
+        schema_version="1.0",
+        file_id="f1",
+        name="a.pdf",
+        modified_time=None,
+        md5_checksum="md5",
+    )
     outcome = IngestOutcome(
         schema_version="1.0",
         file_id="f1",
@@ -73,11 +79,15 @@ def test_run_report_pipeline_retries_retryable(
     def _gen(file, local_pdf_path, settings, md5, ctx):
         calls["count"] += 1
         if calls["count"] < 3:
-            raise AppError(code="openai_request_failed", message="retry", retryable=True)
+            raise AppError(
+                code="openai_request_failed", message="retry", retryable=True
+            )
         return outcome
 
     monkeypatch.setattr(retry_orch.random, "uniform", lambda _a, _b: 0.0)
-    monkeypatch.setattr(orch.time, "sleep", lambda seconds: sleep_calls.append(float(seconds)))
+    monkeypatch.setattr(
+        orch.time, "sleep", lambda seconds: sleep_calls.append(float(seconds))
+    )
     response = orch.run_report_pipeline(
         file,
         local_pdf_path="./cache/a.pdf",
@@ -92,10 +102,20 @@ def test_run_report_pipeline_retries_retryable(
     assert response.status == "processed"
 
     events = _events(caplog)
-    retry_events = [event for event in events if event.get("event") == "report_pipeline_retry"]
-    complete_events = [event for event in events if event.get("event") == "report_pipeline_complete"]
-    start_events = [event for event in events if event.get("event") == "report_pipeline_start"]
-    transition_events = [event for event in events if event.get("event") == "report_pipeline_doc_map_retry_transition"]
+    retry_events = [
+        event for event in events if event.get("event") == "report_pipeline_retry"
+    ]
+    complete_events = [
+        event for event in events if event.get("event") == "report_pipeline_complete"
+    ]
+    start_events = [
+        event for event in events if event.get("event") == "report_pipeline_start"
+    ]
+    transition_events = [
+        event
+        for event in events
+        if event.get("event") == "report_pipeline_doc_map_retry_transition"
+    ]
 
     assert len(start_events) == 1
     assert len(retry_events) == 2
@@ -120,7 +140,13 @@ def test_run_report_pipeline_surfaces_retryable_error_after_retry_exhaustion(
     assert_logs_have_required_fields,
 ) -> None:
     caplog.set_level(logging.INFO, logger="market_lense.report_pipeline_orchestrator")
-    file = DriveFile(schema_version="1.0", file_id="f1", name="a.pdf", modified_time=None, md5_checksum="md5")
+    file = DriveFile(
+        schema_version="1.0",
+        file_id="f1",
+        name="a.pdf",
+        modified_time=None,
+        md5_checksum="md5",
+    )
     calls = {"count": 0}
     sleep_calls: list[float] = []
 
@@ -129,7 +155,9 @@ def test_run_report_pipeline_surfaces_retryable_error_after_retry_exhaustion(
         raise AppError(code="openai_request_failed", message="retry", retryable=True)
 
     monkeypatch.setattr(retry_orch.random, "uniform", lambda _a, _b: 0.0)
-    monkeypatch.setattr(orch.time, "sleep", lambda seconds: sleep_calls.append(float(seconds)))
+    monkeypatch.setattr(
+        orch.time, "sleep", lambda seconds: sleep_calls.append(float(seconds))
+    )
 
     with pytest.raises(AppError) as exc_info:
         orch.run_report_pipeline(
@@ -151,9 +179,15 @@ def test_run_report_pipeline_surfaces_retryable_error_after_retry_exhaustion(
     assert sleep_calls == [1.0]
 
     events = _events(caplog)
-    retry_events = [event for event in events if event.get("event") == "report_pipeline_retry"]
-    failure_events = [event for event in events if event.get("event") == "report_pipeline_failed"]
-    complete_events = [event for event in events if event.get("event") == "report_pipeline_complete"]
+    retry_events = [
+        event for event in events if event.get("event") == "report_pipeline_retry"
+    ]
+    failure_events = [
+        event for event in events if event.get("event") == "report_pipeline_failed"
+    ]
+    complete_events = [
+        event for event in events if event.get("event") == "report_pipeline_complete"
+    ]
 
     assert len(retry_events) == 1
     assert len(failure_events) == 1
@@ -170,9 +204,17 @@ def test_run_report_pipeline_surfaces_retryable_error_after_retry_exhaustion(
     assert failure_fields["error"] == "retry"
 
 
-def test_run_report_pipeline_retries_doc_map_transition_with_logs(caplog, monkeypatch) -> None:
+def test_run_report_pipeline_retries_doc_map_transition_with_logs(
+    caplog, monkeypatch
+) -> None:
     caplog.set_level(logging.INFO, logger="market_lense.report_pipeline_orchestrator")
-    file = DriveFile(schema_version="1.0", file_id="f1", name="a.pdf", modified_time=None, md5_checksum="md5")
+    file = DriveFile(
+        schema_version="1.0",
+        file_id="f1",
+        name="a.pdf",
+        modified_time=None,
+        md5_checksum="md5",
+    )
     calls = {"count": 0}
     retry_outcome = IngestOutcome(
         schema_version="1.0",
@@ -210,8 +252,14 @@ def test_run_report_pipeline_retries_doc_map_transition_with_logs(caplog, monkey
     assert response.status == "processed"
     assert calls["count"] == 2
     events = _events(caplog)
-    transition_events = [event for event in events if event.get("event") == "report_pipeline_doc_map_retry_transition"]
-    retry_events = [event for event in events if event.get("event") == "report_pipeline_retry"]
+    transition_events = [
+        event
+        for event in events
+        if event.get("event") == "report_pipeline_doc_map_retry_transition"
+    ]
+    retry_events = [
+        event for event in events if event.get("event") == "report_pipeline_retry"
+    ]
     assert len(transition_events) == 1
     assert len(retry_events) == 1
     transition_fields = transition_events[0]["fields"]
@@ -226,7 +274,13 @@ def test_run_report_pipeline_retries_doc_map_transition_with_logs(caplog, monkey
 
 
 def test_run_report_pipeline_doc_map_retry_is_bounded(monkeypatch) -> None:
-    file = DriveFile(schema_version="1.0", file_id="f1", name="a.pdf", modified_time=None, md5_checksum="md5")
+    file = DriveFile(
+        schema_version="1.0",
+        file_id="f1",
+        name="a.pdf",
+        modified_time=None,
+        md5_checksum="md5",
+    )
     settings = replace(_settings(), evidence_pack_doc_map_max_attempts=2)
     calls = {"count": 0}
     retry_outcome = IngestOutcome(
@@ -293,7 +347,13 @@ class _TrackingOpenAIClient:
 
 
 def test_run_report_pipeline_uses_orchestrator_rate_limiter() -> None:
-    file = DriveFile(schema_version="1.0", file_id="f1", name="a.pdf", modified_time=None, md5_checksum="md5")
+    file = DriveFile(
+        schema_version="1.0",
+        file_id="f1",
+        name="a.pdf",
+        modified_time=None,
+        md5_checksum="md5",
+    )
     settings = replace(
         _settings(),
         evidence_pack_global_max_in_flight=2,
@@ -319,13 +379,20 @@ def test_run_report_pipeline_uses_orchestrator_rate_limiter() -> None:
         chat_req = SimpleNamespace(model="gpt-5")
         with ThreadPoolExecutor(max_workers=4) as pool:
             futures = [
-                pool.submit(evidence_pack_openai_client.openai_respond_with_vector_store, vector_req, ctx)
+                pool.submit(
+                    evidence_pack_openai_client.openai_respond_with_vector_store,
+                    vector_req,
+                    ctx,
+                )
                 for _ in range(4)
             ]
             for future in futures:
                 future.result()
         with ThreadPoolExecutor(max_workers=4) as pool:
-            futures = [pool.submit(artifact_openai_client.openai_chat_json, chat_req, ctx) for _ in range(4)]
+            futures = [
+                pool.submit(artifact_openai_client.openai_chat_json, chat_req, ctx)
+                for _ in range(4)
+            ]
             for future in futures:
                 future.result()
         return IngestOutcome(
@@ -353,7 +420,13 @@ def test_run_report_pipeline_uses_orchestrator_rate_limiter() -> None:
 
 
 def test_run_report_pipeline_uses_shared_llm_retry_policy(monkeypatch) -> None:
-    file = DriveFile(schema_version="1.0", file_id="f1", name="a.pdf", modified_time=None, md5_checksum="md5")
+    file = DriveFile(
+        schema_version="1.0",
+        file_id="f1",
+        name="a.pdf",
+        modified_time=None,
+        md5_checksum="md5",
+    )
     settings = replace(
         _settings(),
         llm_retry_retries=1,
@@ -364,7 +437,9 @@ def test_run_report_pipeline_uses_shared_llm_retry_policy(monkeypatch) -> None:
         artifact_global_min_interval_ms=0,
     )
     sleep_calls: list[float] = []
-    monkeypatch.setattr(orch.time, "sleep", lambda seconds: sleep_calls.append(float(seconds)))
+    monkeypatch.setattr(
+        orch.time, "sleep", lambda seconds: sleep_calls.append(float(seconds))
+    )
 
     class _RetryThenSucceedClient:
         def __init__(self) -> None:

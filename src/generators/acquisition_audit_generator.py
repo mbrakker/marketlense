@@ -211,7 +211,10 @@ def _recommend_publisher_flow(
     failed_count: int,
 ) -> tuple[str, str]:
     if candidate_count <= 0:
-        return ("no_candidates", "Discovery produced no current candidates for this publisher.")
+        return (
+            "no_candidates",
+            "Discovery produced no current candidates for this publisher.",
+        )
     if downloaded_count == candidate_count:
         return (
             "publisher_prefers_pdf_download",
@@ -251,4 +254,3 @@ def _count_strings(values) -> dict[str, int]:
             continue
         counts[token] = counts.get(token, 0) + 1
     return counts
-

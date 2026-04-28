@@ -21,7 +21,9 @@ THEME_SOURCE_DIRS = (
 
 def _iter_files(root: Path, suffixes: tuple[str, ...]) -> list[Path]:
     return sorted(
-        path for path in root.rglob("*") if path.is_file() and path.suffix.lower() in suffixes
+        path
+        for path in root.rglob("*")
+        if path.is_file() and path.suffix.lower() in suffixes
     )
 
 
@@ -42,7 +44,9 @@ def assert_no_hardcoded_root_relative_links() -> None:
             content = path.read_text(encoding="utf-8")
             for token in patterns:
                 if token in content:
-                    offenders.append(f"{path.relative_to(REPO_ROOT)} contains {token!r}")
+                    offenders.append(
+                        f"{path.relative_to(REPO_ROOT)} contains {token!r}"
+                    )
 
     if offenders:
         raise SystemExit(

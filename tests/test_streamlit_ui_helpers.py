@@ -31,7 +31,7 @@ def test_inject_theme_includes_status_chip_and_terminal_styles(monkeypatch) -> N
     assert ".status-chip {" in body
     assert ".status-success {" in body
     assert ".ml-terminal {" in body
-    assert "font-family: \"JetBrains Mono\"" in body
+    assert 'font-family: "JetBrains Mono"' in body
     assert ".ml-panel {" in body
     assert ".ml-page-subtitle {" in body
     assert ".ml-empty-state {" in body
@@ -103,16 +103,12 @@ def test_dashboard_read_model_cache_invalidation_is_reason_scoped() -> None:
         loader=lambda: [{"name": "HTML", "count": 1}],
     )
 
-    removed = pages._invalidate_dashboard_read_models(
-        session_state, reason="ingest"
-    )
+    removed = pages._invalidate_dashboard_read_models(session_state, reason="ingest")
     cache = session_state[pages._DASHBOARD_READ_MODEL_CACHE_KEY]
 
     assert set(removed) == {"report_rows", "processed_rows", "directory_counts"}
     assert cache == {}
-    assert (
-        session_state[pages._DASHBOARD_CACHE_INVALIDATION_REASON_KEY] == "ingest"
-    )
+    assert session_state[pages._DASHBOARD_CACHE_INVALIDATION_REASON_KEY] == "ingest"
 
 
 def test_dashboard_read_model_cache_settings_invalidation_clears_all_views() -> None:
@@ -130,12 +126,8 @@ def test_dashboard_read_model_cache_settings_invalidation_clears_all_views() -> 
         loader=lambda: [{"path": "logs/app.log"}],
     )
 
-    removed = pages._invalidate_dashboard_read_models(
-        session_state, reason="settings"
-    )
+    removed = pages._invalidate_dashboard_read_models(session_state, reason="settings")
 
     assert set(removed) == {"report_rows", "log_files"}
     assert session_state[pages._DASHBOARD_READ_MODEL_CACHE_KEY] == {}
-    assert (
-        session_state[pages._DASHBOARD_CACHE_INVALIDATION_REASON_KEY] == "settings"
-    )
+    assert session_state[pages._DASHBOARD_CACHE_INVALIDATION_REASON_KEY] == "settings"

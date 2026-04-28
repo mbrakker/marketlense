@@ -73,7 +73,9 @@ NAVIGATION_GROUPS = {
     ],
     "Configuration": ["Settings & Prompts"],
 }
-NAV_SECTIONS = [section for sections in NAVIGATION_GROUPS.values() for section in sections]
+NAV_SECTIONS = [
+    section for sections in NAVIGATION_GROUPS.values() for section in sections
+]
 _EXPORTED_UI_HELPERS = (_tip, _chip_html)
 
 __all__ = [
@@ -87,13 +89,17 @@ __all__ = [
 ]
 
 
-def _load_runtime_state() -> tuple[object | None, object | None, str | None, str | None]:
+def _load_runtime_state() -> tuple[
+    object | None, object | None, str | None, str | None
+]:
     settings = None
     publish_settings = None
     publish_error = None
     settings_error = None
     try:
-        settings = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), _ctx("load_settings"))
+        settings = load_settings(
+            ConfigLoadRequest(schema_version="1.0", path=""), _ctx("load_settings")
+        )
     except UI_SURFACE_EXCEPTIONS as exc:
         settings_error = str(exc)
     try:
@@ -109,41 +115,121 @@ def _load_runtime_state() -> tuple[object | None, object | None, str | None, str
 def _build_navigation(valid_settings: bool):
     if not valid_settings:
         return st.navigation(
-            {"Configuration": [st.Page(render_settings_prompts, title="Settings & Prompts", icon=":material/settings:")]},
+            {
+                "Configuration": [
+                    st.Page(
+                        render_settings_prompts,
+                        title="Settings & Prompts",
+                        icon=":material/settings:",
+                    )
+                ]
+            },
             position="sidebar",
         )
     return st.navigation(
         {
             "Overview": [
-                st.Page(render_cockpit_overview, title="Cockpit Overview", icon=":material/dashboard:"),
-                st.Page(render_run_center, title="Run Center", icon=":material/play_circle:"),
+                st.Page(
+                    render_cockpit_overview,
+                    title="Cockpit Overview",
+                    icon=":material/dashboard:",
+                ),
+                st.Page(
+                    render_run_center, title="Run Center", icon=":material/play_circle:"
+                ),
             ],
             "Core operations": [
-                st.Page(render_ingest_control, title="Ingest Control", icon=":material/file_download:"),
-                st.Page(render_candidate_extraction, title="Candidate Extraction", icon=":material/table_chart:"),
-                st.Page(render_cover_images, title="Cover Images", icon=":material/image:"),
-                st.Page(render_publishing_and_taxonomy, title="Publishing & Taxonomy", icon=":material/publish:"),
+                st.Page(
+                    render_ingest_control,
+                    title="Ingest Control",
+                    icon=":material/file_download:",
+                ),
+                st.Page(
+                    render_candidate_extraction,
+                    title="Candidate Extraction",
+                    icon=":material/table_chart:",
+                ),
+                st.Page(
+                    render_cover_images, title="Cover Images", icon=":material/image:"
+                ),
+                st.Page(
+                    render_publishing_and_taxonomy,
+                    title="Publishing & Taxonomy",
+                    icon=":material/publish:",
+                ),
             ],
             "Publisher operations": [
-                st.Page(render_publisher_discovery, title="Publisher Discovery", icon=":material/travel_explore:"),
-                st.Page(render_report_download_lab, title="Report Download Lab", icon=":material/download:"),
-                st.Page(render_acquisition_audit, title="Acquisition Audit", icon=":material/assignment:"),
-                st.Page(render_publisher_sync, title="Publisher Sync", icon=":material/sync:"),
-                st.Page(render_auth_access, title="Auth & External Access", icon=":material/key:"),
+                st.Page(
+                    render_publisher_discovery,
+                    title="Publisher Discovery",
+                    icon=":material/travel_explore:",
+                ),
+                st.Page(
+                    render_report_download_lab,
+                    title="Report Download Lab",
+                    icon=":material/download:",
+                ),
+                st.Page(
+                    render_acquisition_audit,
+                    title="Acquisition Audit",
+                    icon=":material/assignment:",
+                ),
+                st.Page(
+                    render_publisher_sync,
+                    title="Publisher Sync",
+                    icon=":material/sync:",
+                ),
+                st.Page(
+                    render_auth_access,
+                    title="Auth & External Access",
+                    icon=":material/key:",
+                ),
             ],
             "Content QA": [
-                st.Page(render_report_command_center, title="Report Command Center", icon=":material/article:"),
-                st.Page(render_analysis_evidence, title="Analysis & Evidence", icon=":material/analytics:"),
-                st.Page(render_validation_center, title="Validation Center", icon=":material/rule:"),
+                st.Page(
+                    render_report_command_center,
+                    title="Report Command Center",
+                    icon=":material/article:",
+                ),
+                st.Page(
+                    render_analysis_evidence,
+                    title="Analysis & Evidence",
+                    icon=":material/analytics:",
+                ),
+                st.Page(
+                    render_validation_center,
+                    title="Validation Center",
+                    icon=":material/rule:",
+                ),
             ],
             "Observability": [
-                st.Page(render_cost_usage, title="Cost & Usage", icon=":material/query_stats:"),
-                st.Page(render_logs_events, title="Logs & Live Events", icon=":material/terminal:"),
-                st.Page(render_system_storage, title="System & Storage", icon=":material/storage:"),
-                st.Page(render_developer_tools, title="Developer & Test Tools", icon=":material/build:"),
+                st.Page(
+                    render_cost_usage,
+                    title="Cost & Usage",
+                    icon=":material/query_stats:",
+                ),
+                st.Page(
+                    render_logs_events,
+                    title="Logs & Live Events",
+                    icon=":material/terminal:",
+                ),
+                st.Page(
+                    render_system_storage,
+                    title="System & Storage",
+                    icon=":material/storage:",
+                ),
+                st.Page(
+                    render_developer_tools,
+                    title="Developer & Test Tools",
+                    icon=":material/build:",
+                ),
             ],
             "Configuration": [
-                st.Page(render_settings_prompts, title="Settings & Prompts", icon=":material/settings:"),
+                st.Page(
+                    render_settings_prompts,
+                    title="Settings & Prompts",
+                    icon=":material/settings:",
+                ),
             ],
         },
         position="sidebar",
@@ -151,7 +237,9 @@ def _build_navigation(valid_settings: bool):
 
 
 def main() -> None:
-    st.set_page_config(page_title="Market Lense Control Panel", page_icon="ML", layout="wide")
+    st.set_page_config(
+        page_title="Market Lense Control Panel", page_icon="ML", layout="wide"
+    )
     _inject_theme()
     if not st.session_state.get("gui_logging_ready"):
         setup_logging(LoggingSetupRequest(schema_version="1.0"), _ctx("setup_logging"))

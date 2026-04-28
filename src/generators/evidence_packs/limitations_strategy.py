@@ -9,6 +9,8 @@ from src.generators.evidence_packs.common import (
     text,
     to_dict,
 )
+
+
 def normalize_limitations(raw_limitations: object) -> list[str]:
     limitations: list[str] = []
     for entry in coerce_pack_items(raw_limitations):

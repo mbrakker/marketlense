@@ -629,7 +629,13 @@ def _process_ingest_batch(
             idx, file = futures[future]
             try:
                 result = future.result()
-            except (AppError, OSError, RuntimeError, ValueError, TypeError) as exc:  # pragma: no cover - defensive fallback
+            except (
+                AppError,
+                OSError,
+                RuntimeError,
+                ValueError,
+                TypeError,
+            ) as exc:  # pragma: no cover - defensive fallback
                 file_ctx = child_context(root_ctx, task_id=file.file_id)
                 logger.info(
                     log_event(

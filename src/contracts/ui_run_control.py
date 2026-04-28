@@ -23,16 +23,16 @@ class ProcessOutputChunk:
 
 @dataclass(frozen=True)
 class UiRunSummary(SemanticIdContract):
-    schema_version: str = field(
-        metadata={"doc": "UI-run summary schema version."}
-    )
+    schema_version: str = field(metadata={"doc": "UI-run summary schema version."})
     run_id: RunId = field(metadata={"doc": "Unique UI run identifier."})
     run_type: str = field(metadata={"doc": "Stable run type for this workflow."})
     display_name: str = field(
         metadata={"doc": "Human-readable display name for the workflow run."}
     )
     status: str = field(
-        metadata={"doc": "Run lifecycle status: queued, running, succeeded, failed, or canceled."}
+        metadata={
+            "doc": "Run lifecycle status: queued, running, succeeded, failed, or canceled."
+        }
     )
     created_at_utc: str = field(
         metadata={"doc": "UTC timestamp when the run record was created."}
@@ -61,19 +61,21 @@ class UiRunSummary(SemanticIdContract):
 
 @dataclass(frozen=True)
 class UiRunRecord(SemanticIdContract):
-    schema_version: str = field(
-        metadata={"doc": "UI-run record schema version."}
-    )
+    schema_version: str = field(metadata={"doc": "UI-run record schema version."})
     run_id: RunId = field(metadata={"doc": "Unique UI run identifier."})
     run_type: str = field(metadata={"doc": "Stable run type for this workflow."})
     display_name: str = field(
         metadata={"doc": "Human-readable display name for the workflow run."}
     )
     status: str = field(
-        metadata={"doc": "Run lifecycle status: queued, running, succeeded, failed, or canceled."}
+        metadata={
+            "doc": "Run lifecycle status: queued, running, succeeded, failed, or canceled."
+        }
     )
     request_payload: dict[str, Any] = field(
-        metadata={"doc": "Typed payload values that describe the requested workflow invocation."}
+        metadata={
+            "doc": "Typed payload values that describe the requested workflow invocation."
+        }
     )
     command: list[str] = field(
         metadata={"doc": "Concrete command used to start the background worker."}
@@ -104,7 +106,9 @@ class UiRunRecord(SemanticIdContract):
     )
     result_summary: dict[str, Any] = field(
         default_factory=dict,
-        metadata={"doc": "Workflow-specific summary fields persisted for UI inspection."},
+        metadata={
+            "doc": "Workflow-specific summary fields persisted for UI inspection."
+        },
     )
     pid: Optional[int] = field(
         default=None, metadata={"doc": "Worker PID when the run is or was active."}
@@ -136,7 +140,9 @@ class UiRunLaunchRequest:
         metadata={"doc": "Human-readable display name for the launched run."}
     )
     request_payload: dict[str, Any] = field(
-        metadata={"doc": "Typed payload values that describe the requested workflow invocation."}
+        metadata={
+            "doc": "Typed payload values that describe the requested workflow invocation."
+        }
     )
 
 
@@ -152,9 +158,7 @@ class UiRunLaunchResponse:
 
 @dataclass(frozen=True)
 class UiRunPollRequest(SemanticIdContract):
-    schema_version: str = field(
-        metadata={"doc": "UI-run poll request schema version."}
-    )
+    schema_version: str = field(metadata={"doc": "UI-run poll request schema version."})
     registry_path: str = field(
         metadata={"doc": "Filesystem path to the UI-run registry SQLite database."}
     )
@@ -205,9 +209,7 @@ class UiRunCancelResponse:
 
 @dataclass(frozen=True)
 class UiRunListRequest:
-    schema_version: str = field(
-        metadata={"doc": "UI-run list request schema version."}
-    )
+    schema_version: str = field(metadata={"doc": "UI-run list request schema version."})
     registry_path: str = field(
         metadata={"doc": "Filesystem path to the UI-run registry SQLite database."}
     )
@@ -239,7 +241,9 @@ class UiRunWorkerRequest(SemanticIdContract):
         metadata={"doc": "Filesystem path to the UI-run registry SQLite database."}
     )
     run_id: RunId = field(metadata={"doc": "Run identifier to execute."})
-    run_type: str = field(metadata={"doc": "Stable run type the worker should execute."})
+    run_type: str = field(
+        metadata={"doc": "Stable run type the worker should execute."}
+    )
     request_payload: dict[str, Any] = field(
         metadata={"doc": "Typed payload values that describe the workflow invocation."}
     )
@@ -326,7 +330,9 @@ class ProcessLaunchRequest:
     )
     env: dict[str, str] = field(
         default_factory=dict,
-        metadata={"doc": "Optional environment overrides merged onto the current process environment."},
+        metadata={
+            "doc": "Optional environment overrides merged onto the current process environment."
+        },
     )
 
 
@@ -339,9 +345,7 @@ class ProcessLaunchResponse:
     command: list[str] = field(
         metadata={"doc": "Concrete command used to launch the process."}
     )
-    cwd: str = field(
-        metadata={"doc": "Working directory used to launch the process."}
-    )
+    cwd: str = field(metadata={"doc": "Working directory used to launch the process."})
     output_path: str = field(
         metadata={"doc": "Filesystem path capturing combined stdout and stderr."}
     )

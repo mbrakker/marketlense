@@ -502,7 +502,13 @@ def test_render_creates_missing_nested_output_directory(tmp_path):
         data={
             "title": "Nested Output Report",
             "tldr": "TLDR",
-            "insights": ["Insight A", "Insight B", "Insight C", "Insight D", "Insight E"],
+            "insights": [
+                "Insight A",
+                "Insight B",
+                "Insight C",
+                "Insight D",
+                "Insight E",
+            ],
             "quote": {"text": "Quote", "author": "Author"},
             "commentary": "Commentary",
             "publisher": "Publisher",
@@ -529,7 +535,13 @@ def test_render_overwrites_existing_html_atomically(tmp_path):
         data={
             "title": "First Title",
             "tldr": "TLDR",
-            "insights": ["Insight A", "Insight B", "Insight C", "Insight D", "Insight E"],
+            "insights": [
+                "Insight A",
+                "Insight B",
+                "Insight C",
+                "Insight D",
+                "Insight E",
+            ],
             "quote": {"text": "Quote", "author": "Author"},
             "commentary": "Commentary",
             "publisher": "Publisher",
@@ -548,7 +560,13 @@ def test_render_overwrites_existing_html_atomically(tmp_path):
         data={
             "title": "Second Title",
             "tldr": "TLDR",
-            "insights": ["Insight A", "Insight B", "Insight C", "Insight D", "Insight E"],
+            "insights": [
+                "Insight A",
+                "Insight B",
+                "Insight C",
+                "Insight D",
+                "Insight E",
+            ],
             "quote": {"text": "Quote", "author": "Author"},
             "commentary": "Commentary",
             "publisher": "Publisher",

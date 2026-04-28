@@ -21,21 +21,24 @@ from src.utils.logging import child_context, log_event
 
 logger = logging.getLogger("market_lense.ops_dashboard_orchestrator")
 
+
 def collect_ops_dashboard_snapshot(
     request: OpsDashboardSnapshotRequest,
     ctx: RunContext,
 ) -> OpsDashboardSnapshotResponse:
-    logger.info(log_event(
-        ctx,
-        role="orchestrator",
-        event="ops_snapshot_start",
-        module=logger.name,
-        fields={
-            "reports_db": request.reports_db,
-            "state_db": request.state_db,
-            "ingest_lock_path": request.ingest_lock_path,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="ops_snapshot_start",
+            module=logger.name,
+            fields={
+                "reports_db": request.reports_db,
+                "state_db": request.state_db,
+                "ingest_lock_path": request.ingest_lock_path,
+            },
+        )
+    )
 
     reports_resp = report_store_service.list_metadata(
         ReportMetadataListRequest(schema_version="1.1", db_path=request.reports_db),
@@ -46,13 +49,21 @@ def collect_ops_dashboard_snapshot(
     reports = reports[: max(request.report_limit, 0)]
 
     processed_resp = state_service.list_processed(
-        StateProcessedListRequest(schema_version="1.0", state_db=request.state_db, limit=request.processed_limit),
+        StateProcessedListRequest(
+            schema_version="1.0",
+            state_db=request.state_db,
+            limit=request.processed_limit,
+        ),
         child_context(ctx, task_id="ops:list_processed"),
     )
     processed = row_dicts(processed_resp.rows, include_object_attrs=True)
 
     published_resp = state_service.list_published(
-        StatePublishedListRequest(schema_version="1.0", state_db=request.state_db, limit=request.published_limit),
+        StatePublishedListRequest(
+            schema_version="1.0",
+            state_db=request.state_db,
+            limit=request.published_limit,
+        ),
         child_context(ctx, task_id="ops:list_published"),
     )
     published = row_dicts(published_resp.rows, include_object_attrs=True)
@@ -93,39 +104,47 @@ def collect_ops_dashboard_snapshot(
                 FileStatRequest(schema_version="1.0", path=path),
                 target_ctx,
             )
-            storage_health.append(OpsStorageHealthItem(
-                schema_version="1.0",
-                name=name,
-                path=path,
-                exists=bool(stat.exists),
-                size_bytes=stat.size_bytes,
-                modified_utc=str(stat.mtime_utc) if stat.mtime_utc is not None else "",
-                error="",
-            ))
+            storage_health.append(
+                OpsStorageHealthItem(
+                    schema_version="1.0",
+                    name=name,
+                    path=path,
+                    exists=bool(stat.exists),
+                    size_bytes=stat.size_bytes,
+                    modified_utc=str(stat.mtime_utc)
+                    if stat.mtime_utc is not None
+                    else "",
+                    error="",
+                )
+            )
         except AppError as exc:
-            storage_health.append(OpsStorageHealthItem(
-                schema_version="1.0",
-                name=name,
-                path=path,
-                exists=False,
-                size_bytes=None,
-                modified_utc="",
-                error=exc.message,
-            ))
+            storage_health.append(
+                OpsStorageHealthItem(
+                    schema_version="1.0",
+                    name=name,
+                    path=path,
+                    exists=False,
+                    size_bytes=None,
+                    modified_utc="",
+                    error=exc.message,
+                )
+            )
 
-    logger.info(log_event(
-        ctx,
-        role="orchestrator",
-        event="ops_snapshot_complete",
-        module=logger.name,
-        fields={
-            "reports": len(reports),
-            "processed": len(processed),
-            "published": len(published),
-            "lock_found": lock.found,
-            "storage_targets": len(storage_health),
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="ops_snapshot_complete",
+            module=logger.name,
+            fields={
+                "reports": len(reports),
+                "processed": len(processed),
+                "published": len(published),
+                "lock_found": lock.found,
+                "storage_targets": len(storage_health),
+            },
+        )
+    )
     return OpsDashboardSnapshotResponse(
         schema_version="1.0",
         reports=reports,

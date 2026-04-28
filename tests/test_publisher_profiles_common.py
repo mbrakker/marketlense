@@ -43,7 +43,10 @@ def test_load_profile_rows_normalizes_urls_and_builds_term_payload(
     row = rows[0]
     assert row.slug == "impact"
     assert row.homepage == "https://Impact.com"
-    assert row.self_presentation == "Insights to Own the Future Our research informs client growth."
+    assert (
+        row.self_presentation
+        == "Insights to Own the Future Our research informs client growth."
+    )
     assert split_multiline_urls(row.insights_url) == [
         "https://example.com/report-one",
         "https://example.com/report-two",
@@ -111,5 +114,8 @@ def test_resolve_icon_download_url_prefers_public_override(tmp_path: Path) -> No
 
     rows = load_profile_rows(config_path)
 
-    assert resolve_icon_download_url(rows[0]) == "https://www.activate.com/assets/icon-light.png"
+    assert (
+        resolve_icon_download_url(rows[0])
+        == "https://www.activate.com/assets/icon-light.png"
+    )
     assert resolve_icon_download_url(rows[1]) == "https://www.cbcommerce.eu/icon.png"

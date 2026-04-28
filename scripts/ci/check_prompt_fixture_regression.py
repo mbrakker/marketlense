@@ -65,12 +65,18 @@ def load_allowlist(path: Path) -> tuple[PromptRegressionAllowlistEntry, ...]:
     payload = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     entries = payload.get("allowlist", [])
     if not isinstance(entries, list):
-        raise ValueError("prompt fixture regression allowlist must contain an allowlist list")
+        raise ValueError(
+            "prompt fixture regression allowlist must contain an allowlist list"
+        )
     parsed: list[PromptRegressionAllowlistEntry] = []
     for index, item in enumerate(entries, start=1):
         if not isinstance(item, dict):
             raise ValueError(f"allowlist entry {index} must be a mapping")
-        missing = [key for key in ("pattern", "owner", "reason", "expires_on") if not item.get(key)]
+        missing = [
+            key
+            for key in ("pattern", "owner", "reason", "expires_on")
+            if not item.get(key)
+        ]
         if missing:
             raise ValueError(
                 f"allowlist entry {index} missing required fields: {', '.join(missing)}"
@@ -195,7 +201,9 @@ def _compare_metric(
     if delta <= 0:
         return None
     metric_name = metric_path.split(".")[-1]
-    absolute_tolerance, percent_tolerance = DEFAULT_TOLERANCES.get(metric_name, (0.0, 0.0))
+    absolute_tolerance, percent_tolerance = DEFAULT_TOLERANCES.get(
+        metric_name, (0.0, 0.0)
+    )
     delta_percent = None
     if baseline_value > 0:
         delta_percent = delta / baseline_value
@@ -236,7 +244,11 @@ def _is_allowlisted(
         if not fnmatch.fnmatch(metric_path, entry.pattern):
             continue
         if delta > entry.max_delta_absolute:
-            if entry.max_delta_percent is None or delta_percent is None or delta_percent > entry.max_delta_percent:
+            if (
+                entry.max_delta_percent is None
+                or delta_percent is None
+                or delta_percent > entry.max_delta_percent
+            ):
                 continue
         return True
     return False
@@ -307,7 +319,9 @@ def main() -> int:
     return 0
 
 
-def _print_section(label: str, baseline: dict[str, Any], current: dict[str, Any]) -> None:
+def _print_section(
+    label: str, baseline: dict[str, Any], current: dict[str, Any]
+) -> None:
     if label:
         print(label + ":")
     for metric in REGRESSION_METRICS:
@@ -324,7 +338,7 @@ def _load_pricing(config_path: str) -> dict[str, dict[str, float]]:
         AppConfigReadRequest(schema_version="1.0", path=config_path),
         _ctx("prompt_fixture_regression_config"),
     )
-    return ((config.payload.get("cost") or {}).get("pricing") or {})
+    return (config.payload.get("cost") or {}).get("pricing") or {}
 
 
 def _ctx(span_id: str) -> RunContext:

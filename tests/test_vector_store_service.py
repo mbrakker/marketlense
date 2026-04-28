@@ -30,7 +30,9 @@ def test_create_vector_store(monkeypatch: pytest.MonkeyPatch):
     _install_api_key(monkeypatch)
 
     def _create(req, ctx):
-        return OpenAIVectorStoreCreateResponse(schema_version="1.0", vector_store_id="vs_123")
+        return OpenAIVectorStoreCreateResponse(
+            schema_version="1.0", vector_store_id="vs_123"
+        )
 
     monkeypatch.setattr(svc.openai_service, "openai_vector_store_create", _create)
     resp = svc.create_vector_store(
@@ -56,7 +58,9 @@ def test_upload_file(monkeypatch: pytest.MonkeyPatch, tmp_path):
     _install_api_key(monkeypatch)
 
     def _upload(req, ctx):
-        return OpenAIVectorStoreFileUploadResponse(schema_version="1.0", openai_file_id="file_123")
+        return OpenAIVectorStoreFileUploadResponse(
+            schema_version="1.0", openai_file_id="file_123"
+        )
 
     monkeypatch.setattr(svc.openai_service, "openai_vector_store_upload_file", _upload)
     pdf = tmp_path / "f.pdf"

@@ -47,7 +47,7 @@ def main() -> int:
         AppConfigReadRequest(schema_version="1.0", path=args.config),
         _ctx("prompt_fixture_baseline_config"),
     )
-    pricing = ((config.payload.get("cost") or {}).get("pricing") or {})
+    pricing = (config.payload.get("cost") or {}).get("pricing") or {}
     metrics = collect_prompt_fixture_corpus_metrics(
         pricing=pricing,
         iterations=max(1, int(args.iterations)),
@@ -55,7 +55,9 @@ def main() -> int:
     out_path = ROOT / args.baseline_out
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(
-        json.dumps(metrics_to_payload(metrics), ensure_ascii=False, indent=2, sort_keys=True),
+        json.dumps(
+            metrics_to_payload(metrics), ensure_ascii=False, indent=2, sort_keys=True
+        ),
         encoding="utf-8",
     )
     print(f"Prompt fixture corpus baseline written: {out_path}")

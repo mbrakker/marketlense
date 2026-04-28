@@ -48,7 +48,9 @@ _INDEX_TO_MONTH_SHORT = {
 }
 
 _YEAR_RE = re.compile(r"^(?P<y>\d{4})$")
-_YEAR_RANGE_RE = re.compile(r"^(?P<from>\d{4})\s*(?:-|to)\s*(?P<to>\d{4})$", re.IGNORECASE)
+_YEAR_RANGE_RE = re.compile(
+    r"^(?P<from>\d{4})\s*(?:-|to)\s*(?P<to>\d{4})$", re.IGNORECASE
+)
 _QUARTER_YEAR_RE = re.compile(r"^q(?P<q>[1-4])\s*(?P<y>\d{4})$", re.IGNORECASE)
 _YEAR_QUARTER_RE = re.compile(r"^(?P<y>\d{4})\s*q(?P<q>[1-4])$", re.IGNORECASE)
 _QUARTER_RANGE_SAME_YEAR_RE = re.compile(
@@ -187,7 +189,9 @@ def _expand_years(start: int, end: int) -> list[str]:
     return [str(year) for year in range(start, end + 1)]
 
 
-def _expand_quarters(start_q: int, start_year: int, end_q: int, end_year: int) -> list[str]:
+def _expand_quarters(
+    start_q: int, start_year: int, end_q: int, end_year: int
+) -> list[str]:
     start_idx = start_year * 4 + (start_q - 1)
     end_idx = end_year * 4 + (end_q - 1)
     if start_idx > end_idx:
@@ -200,7 +204,9 @@ def _expand_quarters(start_q: int, start_year: int, end_q: int, end_year: int) -
     return values
 
 
-def _expand_months(start_month: int, start_year: int, end_month: int, end_year: int) -> list[str]:
+def _expand_months(
+    start_month: int, start_year: int, end_month: int, end_year: int
+) -> list[str]:
     start_idx = start_year * 12 + (start_month - 1)
     end_idx = end_year * 12 + (end_month - 1)
     if start_idx > end_idx:

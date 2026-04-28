@@ -46,7 +46,9 @@ def _valid_artifacts_payload() -> dict:
     }
 
 
-def test_store_pack_writes_only_report_scoped_path_when_slug_present(run_context, tmp_path: Path) -> None:
+def test_store_pack_writes_only_report_scoped_path_when_slug_present(
+    run_context, tmp_path: Path
+) -> None:
     output_dir = tmp_path / "out"
     response = store_pack(
         AnalysisStorePackRequest(
@@ -66,10 +68,14 @@ def test_store_pack_writes_only_report_scoped_path_when_slug_present(run_context
     assert primary_path == output_dir / "report" / "report_analysis" / "doc_map.json"
     assert primary_path.exists()
     assert not legacy_root_path.exists()
-    assert json.loads(primary_path.read_text(encoding="utf-8"))["title"] == "Retail Trends"
+    assert (
+        json.loads(primary_path.read_text(encoding="utf-8"))["title"] == "Retail Trends"
+    )
 
 
-def test_store_pack_falls_back_to_report_id_slug_when_slug_missing(run_context, tmp_path: Path) -> None:
+def test_store_pack_falls_back_to_report_id_slug_when_slug_missing(
+    run_context, tmp_path: Path
+) -> None:
     output_dir = tmp_path / "out"
     response = store_pack(
         AnalysisStorePackRequest(

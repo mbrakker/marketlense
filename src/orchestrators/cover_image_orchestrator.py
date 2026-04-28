@@ -10,7 +10,10 @@ from src.contracts.cover_images import (
     CoverImageOrchestratorRequest,
     CoverImageReport,
 )
-from src.contracts.report_store import ReportMetadataGetRequest, ReportMetadataListRequest
+from src.contracts.report_store import (
+    ReportMetadataGetRequest,
+    ReportMetadataListRequest,
+)
 from src.contracts.run_context import RunContext
 from src.generators.cover_image_generator import generate_cover_images
 from src.services.report_store_service import get_metadata, list_metadata
@@ -54,25 +57,31 @@ def run_cover_image_generation(
     ctx: Optional[RunContext] = None,
 ) -> List[CoverImageGenerationOutcome]:
     root_ctx = ctx or new_run_context(task_id="cover_images")
-    logger.info(log_event(
-        root_ctx,
-        role="orchestrator",
-        event="cover_orchestrator_start",
-        module=logger.name,
-        fields={
-            "reports_db": request.reports_db,
-            "output_dir": request.output_dir,
-            "style_config_path": request.style_config_path,
-            "limit": request.limit,
-            "file_id": request.file_id or "",
-        },
-    ))
+    logger.info(
+        log_event(
+            root_ctx,
+            role="orchestrator",
+            event="cover_orchestrator_start",
+            module=logger.name,
+            fields={
+                "reports_db": request.reports_db,
+                "output_dir": request.output_dir,
+                "style_config_path": request.style_config_path,
+                "limit": request.limit,
+                "file_id": request.file_id or "",
+            },
+        )
+    )
 
     list_ctx = child_context(root_ctx, task_id="cover_list_reports")
     reports: List[CoverImageReport] = []
     if request.file_id:
         single_response = get_metadata(
-            ReportMetadataGetRequest(schema_version="1.0", db_path=request.reports_db, file_id=request.file_id),
+            ReportMetadataGetRequest(
+                schema_version="1.0",
+                db_path=request.reports_db,
+                file_id=request.file_id,
+            ),
             list_ctx,
         )
         if single_response is None:
@@ -94,13 +103,15 @@ def run_cover_image_generation(
     if request.limit is not None:
         reports = reports[: max(request.limit, 0)]
 
-    logger.info(log_event(
-        list_ctx,
-        role="orchestrator",
-        event="cover_orchestrator_reports_loaded",
-        module=logger.name,
-        fields={"count": len(reports)},
-    ))
+    logger.info(
+        log_event(
+            list_ctx,
+            role="orchestrator",
+            event="cover_orchestrator_reports_loaded",
+            module=logger.name,
+            fields={"count": len(reports)},
+        )
+    )
 
     gen_ctx = child_context(root_ctx, task_id="cover_generate")
     outcomes = generate_cover_images(
@@ -113,11 +124,13 @@ def run_cover_image_generation(
         gen_ctx,
     )
 
-    logger.info(log_event(
-        root_ctx,
-        role="orchestrator",
-        event="cover_orchestrator_complete",
-        module=logger.name,
-        fields={"outcome_count": len(outcomes)},
-    ))
+    logger.info(
+        log_event(
+            root_ctx,
+            role="orchestrator",
+            event="cover_orchestrator_complete",
+            module=logger.name,
+            fields={"outcome_count": len(outcomes)},
+        )
+    )
     return outcomes

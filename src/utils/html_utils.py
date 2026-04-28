@@ -19,7 +19,9 @@ _FILE_ID_META_RX = re.compile(
     re.IGNORECASE,
 )
 _FILE_ID_TEXT_RX = re.compile(r"Drive fileId:\s*([A-Za-z0-9._-]+)", re.IGNORECASE)
-_PREVIEW_BLOCK_RX = re.compile(r'<div class="preview".*?</div>', re.IGNORECASE | re.DOTALL)
+_PREVIEW_BLOCK_RX = re.compile(
+    r'<div class="preview".*?</div>', re.IGNORECASE | re.DOTALL
+)
 
 
 def extract_image_sources(html_text: str) -> List[str]:

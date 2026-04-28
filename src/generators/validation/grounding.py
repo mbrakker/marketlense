@@ -64,7 +64,9 @@ def run_grounding_check(
     prompt_namespace = "report_vs/validate/grounding"
     artifacts = request.artifacts if isinstance(request.artifacts, dict) else {}
     prompt_vars = {
-        "report_json": json.dumps(grounding_payload(request, artifacts), ensure_ascii=False),
+        "report_json": json.dumps(
+            grounding_payload(request, artifacts), ensure_ascii=False
+        ),
         "evidence_json": json.dumps(list(evidence_texts), ensure_ascii=False),
     }
     prompt_bundle = prepare_prompt_bundle(
@@ -181,7 +183,9 @@ def run_grounding_check(
                 module=LOGGER_NAME,
                 fields={
                     "has_json": isinstance(response.parsed_json, dict),
-                    "unsupported_count": len(unsupported) if isinstance(unsupported, list) else 0,
+                    "unsupported_count": len(unsupported)
+                    if isinstance(unsupported, list)
+                    else 0,
                 },
             )
         )
@@ -283,7 +287,9 @@ def run_grounding_check(
 
 def grounding_payload(request: ValidationRequest, artifacts: dict) -> dict:
     summary = artifacts.get("summary") if isinstance(artifacts, dict) else {}
-    insights_raw = artifacts.get("insights_final") if isinstance(artifacts, dict) else []
+    insights_raw = (
+        artifacts.get("insights_final") if isinstance(artifacts, dict) else []
+    )
     insights: List[dict] = []
     for insight in insights_raw if isinstance(insights_raw, list) else []:
         if not isinstance(insight, dict):
@@ -321,7 +327,9 @@ def grounding_payload(request: ValidationRequest, artifacts: dict) -> dict:
         "tldr": request.report.tldr,
         "title": request.report.title,
         "insights_final": insights,
-        "quotes_final": artifacts.get("quotes_final") if isinstance(artifacts, dict) else [],
+        "quotes_final": artifacts.get("quotes_final")
+        if isinstance(artifacts, dict)
+        else [],
         "summary": summary_clean,
         "expert_comment": sanitize_citation_tokens(
             s(artifacts.get("expert_comment") if isinstance(artifacts, dict) else "")
@@ -354,7 +362,9 @@ def infer_claim_classification(section_key: str, text: str) -> str:
             return "prescriptive_recommendation"
         return "analyst_interpretation"
     if policy == "mixed" and not METRIC_ATTRIBUTION_RE.search(lowered):
-        if re.search(r"\b(should|could|may|might|consider|recommend|priority)\b", lowered):
+        if re.search(
+            r"\b(should|could|may|might|consider|recommend|priority)\b", lowered
+        ):
             return "analyst_interpretation"
     return "factual_claim"
 
@@ -451,7 +461,9 @@ def grounding_issue_severity(
         if section_policy_value == "strict":
             return "error"
         if section_policy_value == "mixed":
-            if METRIC_ATTRIBUTION_RE.search(text) or quantity_has_metric_cues_from_text(text):
+            if METRIC_ATTRIBUTION_RE.search(text) or quantity_has_metric_cues_from_text(
+                text
+            ):
                 return "error"
             return "warning"
         if quantity_has_metric_cues_from_text(text):

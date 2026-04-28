@@ -127,7 +127,9 @@ def _source(runtime: ReportRuntimeState) -> ReportSourceState:
     )
 
 
-def _selection(runtime: ReportRuntimeState, source: ReportSourceState) -> ReportSelectionState:
+def _selection(
+    runtime: ReportRuntimeState, source: ReportSourceState
+) -> ReportSelectionState:
     return ReportSelectionState(
         schema_version="1.0",
         runtime=runtime,
@@ -230,9 +232,7 @@ def test_render_report_output_sources_metadata_from_db_and_returns_complete_outc
         html_path.write_text("<html></html>", encoding="utf-8")
         return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
 
-    deps = _deps(
-        render_report=_render_report
-    )
+    deps = _deps(render_report=_render_report)
 
     preview_resp = render_preview_asset(runtime, source, deps)
     outcome = render_report_output(
@@ -269,7 +269,9 @@ def test_render_report_output_preserves_analysis_metadata_when_db_metadata_missi
         html_path.write_text("<html></html>", encoding="utf-8")
         return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
 
-    deps = _deps(render_report=_render_report, get_report_metadata=lambda req, ctx: None)
+    deps = _deps(
+        render_report=_render_report, get_report_metadata=lambda req, ctx: None
+    )
 
     preview_resp = render_preview_asset(runtime, source, deps)
     render_report_output(

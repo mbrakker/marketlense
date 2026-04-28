@@ -19,7 +19,9 @@ from src.utils.errors import AppError
 
 
 def _ctx() -> RunContext:
-    return RunContext(schema_version="1.0", run_id="run", task_id="task", span_id="span")
+    return RunContext(
+        schema_version="1.0", run_id="run", task_id="task", span_id="span"
+    )
 
 
 def test_discover_log_files_sorts_by_mtime_desc(
@@ -30,14 +32,26 @@ def test_discover_log_files_sorts_by_mtime_desc(
         "list_directory",
         lambda req, ctx: SimpleNamespace(
             entries=[
-                SimpleNamespace(path="logs/market_lense_2026-02-01.log", name="market_lense_2026-02-01.log", mtime_utc=1.0, size_bytes=11),
-                SimpleNamespace(path="logs/market_lense_2026-02-02.log", name="market_lense_2026-02-02.log", mtime_utc=3.0, size_bytes=12),
+                SimpleNamespace(
+                    path="logs/market_lense_2026-02-01.log",
+                    name="market_lense_2026-02-01.log",
+                    mtime_utc=1.0,
+                    size_bytes=11,
+                ),
+                SimpleNamespace(
+                    path="logs/market_lense_2026-02-02.log",
+                    name="market_lense_2026-02-02.log",
+                    mtime_utc=3.0,
+                    size_bytes=12,
+                ),
             ]
         ),
     )
 
     response = gen.discover_log_files(
-        LogFileDiscoveryRequest(schema_version="1.0", log_dir="logs", file_prefix="market_lense", limit=100),
+        LogFileDiscoveryRequest(
+            schema_version="1.0", log_dir="logs", file_prefix="market_lense", limit=100
+        ),
         _ctx(),
     )
 
@@ -73,7 +87,9 @@ def test_load_log_events_parses_structured_lines(
     assert len(response.events) == 1
     assert response.events[0]["event"] == "ingest_start"
     assert response.events[0]["log_path"] == "logs/market_lense_2026-02-09.log"
-    assert str(response.events[0].get("timestamp_utc")).startswith("2026-02-09T12:01:02")
+    assert str(response.events[0].get("timestamp_utc")).startswith(
+        "2026-02-09T12:01:02"
+    )
 
 
 def test_summarize_validation_artifacts_extracts_status(
@@ -84,8 +100,18 @@ def test_summarize_validation_artifacts_extracts_status(
         "list_directory",
         lambda req, ctx: SimpleNamespace(
             entries=[
-                SimpleNamespace(path="out/r1/validation.json", name="validation.json", mtime_utc=2.0, size_bytes=22),
-                SimpleNamespace(path="out/r2/validation_policy.json", name="validation_policy.json", mtime_utc=3.0, size_bytes=33),
+                SimpleNamespace(
+                    path="out/r1/validation.json",
+                    name="validation.json",
+                    mtime_utc=2.0,
+                    size_bytes=22,
+                ),
+                SimpleNamespace(
+                    path="out/r2/validation_policy.json",
+                    name="validation_policy.json",
+                    mtime_utc=3.0,
+                    size_bytes=33,
+                ),
             ]
         ),
     )
@@ -98,7 +124,9 @@ def test_summarize_validation_artifacts_extracts_status(
     external_boundary_mocks_only.setattr(gen.file_service, "read_text", _read_text)
 
     response = gen.summarize_validation_artifacts(
-        ValidationArtifactSummaryRequest(schema_version="1.0", output_dir="out", limit=10),
+        ValidationArtifactSummaryRequest(
+            schema_version="1.0", output_dir="out", limit=10
+        ),
         _ctx(),
     )
 
@@ -111,7 +139,9 @@ def test_summarize_validation_artifacts_extracts_status(
 def test_load_state_rows_invalid_kind_raises() -> None:
     with pytest.raises(AppError) as exc_info:
         gen.load_state_rows(
-            StateRowsLoadRequest(schema_version="1.0", state_db="state.db", kind="unknown", limit=10),
+            StateRowsLoadRequest(
+                schema_version="1.0", state_db="state.db", kind="unknown", limit=10
+            ),
             _ctx(),
         )
     assert exc_info.value.code == "invalid_state_kind"
@@ -122,8 +152,12 @@ def test_collect_directory_counts_captures_errors(
 ) -> None:
     def _list_directory(req, ctx):
         if req.glob_pattern == "broken":
-            raise AppError(code="directory_not_found", message="missing", retryable=False)
-        return SimpleNamespace(entries=[SimpleNamespace(path="a"), SimpleNamespace(path="b")])
+            raise AppError(
+                code="directory_not_found", message="missing", retryable=False
+            )
+        return SimpleNamespace(
+            entries=[SimpleNamespace(path="a"), SimpleNamespace(path="b")]
+        )
 
     external_boundary_mocks_only.setattr(
         gen.file_service,
@@ -171,11 +205,15 @@ def test_load_ledger_entries_keeps_last_n_valid_objects(
     external_boundary_mocks_only.setattr(
         gen.file_service,
         "read_text",
-        lambda req, ctx: SimpleNamespace(content='{"usd":1}\nnot-json\n{"usd":2}\n{"usd":3}\n'),
+        lambda req, ctx: SimpleNamespace(
+            content='{"usd":1}\nnot-json\n{"usd":2}\n{"usd":3}\n'
+        ),
     )
 
     response = gen.load_ledger_entries(
-        LedgerEntriesLoadRequest(schema_version="1.0", ledger_path="state/costs.jsonl", limit=2),
+        LedgerEntriesLoadRequest(
+            schema_version="1.0", ledger_path="state/costs.jsonl", limit=2
+        ),
         _ctx(),
     )
 

@@ -19,7 +19,11 @@ def test_build_settings_workspace_metrics_counts_missing_auth() -> None:
 
     assert metrics == [
         {"label": "app.yaml keys", "value": "3", "delta": "structured form ready"},
-        {"label": "Operational assets", "value": "2", "delta": "service-backed editors"},
+        {
+            "label": "Operational assets",
+            "value": "2",
+            "delta": "service-backed editors",
+        },
         {"label": "Prompt namespaces", "value": "2", "delta": "system + user files"},
         {
             "label": "Auth issues",

@@ -82,7 +82,10 @@ class FakeOpenAI:
 
 class FailingOpenAI(FakeOpenAI):
     def __init__(self, *, semantic_exc=None, grounding_exc=None):
-        super().__init__(semantic_payload={"metrics": [], "quotes": []}, grounding_payload={"unsupported": []})
+        super().__init__(
+            semantic_payload={"metrics": [], "quotes": []},
+            grounding_payload={"unsupported": []},
+        )
         self.semantic_exc = semantic_exc
         self.grounding_exc = grounding_exc
 
@@ -1226,7 +1229,9 @@ def test_validation_fails_on_regenerable_abstained_artifact_family(tmp_path):
     assert result.status == "fail"
     assert any(issue.rule_id == "family_confidence" for issue in result.issues)
     assert any(issue.repair_target == "summary" for issue in result.issues)
-    assert any("abstained at confidence=0.41" in issue.message for issue in result.issues)
+    assert any(
+        "abstained at confidence=0.41" in issue.message for issue in result.issues
+    )
 
 
 def test_validation_warns_on_soft_artifact_abstention_and_info_evidence_pack_abstention(

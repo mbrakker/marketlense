@@ -151,14 +151,20 @@ def quantities_match(candidate: Quantity, evidence: Quantity) -> bool:
 
     family = _resolved_family(candidate, evidence)
     approx = candidate.comparator == "approx" or evidence.comparator == "approx"
-    tol = _tolerance(family, reference=max(abs(cand_values[0]), abs(ev_values[0]), 1.0), approx=approx)
+    tol = _tolerance(
+        family,
+        reference=max(abs(cand_values[0]), abs(ev_values[0]), 1.0),
+        approx=approx,
+    )
 
     if candidate.comparator == "range" or evidence.comparator == "range":
         return _ranges_overlap(candidate, evidence, tol)
 
     # Candidate exact/approx should be contained by evidence claim.
     if candidate.comparator in {"eq", "approx"}:
-        return any(_value_supported_by_comparator(v, evidence, tol) for v in cand_values)
+        return any(
+            _value_supported_by_comparator(v, evidence, tol) for v in cand_values
+        )
 
     # Candidate inequalities should be compatible with evidence.
     if evidence.comparator in {"eq", "approx"}:
@@ -178,7 +184,11 @@ def should_ground_quantity(
     explicit_unit = quantity.unit_family != "unknown" or bool(quantity.unit)
     metric_context = _has_metric_context(sentence_norm)
     if strict_section or section_policy == "strict":
-        if _looks_like_non_metric_token(quantity, sentence_norm) and not metric_context and not explicit_unit:
+        if (
+            _looks_like_non_metric_token(quantity, sentence_norm)
+            and not metric_context
+            and not explicit_unit
+        ):
             return False
         return True
     if explicit_unit:
@@ -189,7 +199,9 @@ def should_ground_quantity(
 
 
 def quantity_has_metric_cues(quantity: Quantity, sentence: str) -> bool:
-    return quantity.unit_family != "unknown" or _has_metric_context(normalize_text(sentence))
+    return quantity.unit_family != "unknown" or _has_metric_context(
+        normalize_text(sentence)
+    )
 
 
 def infer_timeframe(text: str) -> str:
@@ -384,8 +396,8 @@ def _resolve_unit_family(
     unit_norm = _clean_unit(unit)
     magnitude_norm = _clean_unit(magnitude)
     sentence_norm = normalize_text(sentence)
-    around = sentence_norm[max(0, span[0] - 32): min(len(sentence_norm), span[1] + 32)]
-    near = sentence_norm[max(0, span[0] - 10): min(len(sentence_norm), span[1] + 10)]
+    around = sentence_norm[max(0, span[0] - 32) : min(len(sentence_norm), span[1] + 32)]
+    near = sentence_norm[max(0, span[0] - 10) : min(len(sentence_norm), span[1] + 10)]
 
     if not magnitude_norm:
         if "trillion" in near or re.search(r"\btn\b", near):
@@ -405,16 +417,57 @@ def _resolve_unit_family(
 
     if unit_norm in {"%", "percent", "pct"}:
         return "percent", "percent", magnitude_norm
-    if unit_norm in {"pp", "percentage point", "percentage points", "basis point", "basis points", "bps"}:
-        return "points", "pp" if unit_norm in {"pp", "percentage point", "percentage points"} else "bps", magnitude_norm
+    if unit_norm in {
+        "pp",
+        "percentage point",
+        "percentage points",
+        "basis point",
+        "basis points",
+        "bps",
+    }:
+        return (
+            "points",
+            "pp"
+            if unit_norm in {"pp", "percentage point", "percentage points"}
+            else "bps",
+            magnitude_norm,
+        )
 
     if unit_norm in {"yoy", "mom", "qoq", "cagr"} or "per " in unit_norm:
         return "rate", unit_norm or "rate", magnitude_norm
 
-    if unit_norm in {"user", "users", "download", "downloads", "respondent", "respondents", "impression", "impressions", "install", "installs", "visit", "visits", "session", "sessions"}:
+    if unit_norm in {
+        "user",
+        "users",
+        "download",
+        "downloads",
+        "respondent",
+        "respondents",
+        "impression",
+        "impressions",
+        "install",
+        "installs",
+        "visit",
+        "visits",
+        "session",
+        "sessions",
+    }:
         return "count", unit_norm, magnitude_norm
 
-    if unit_norm in {"minute", "minutes", "hour", "hours", "day", "days", "week", "weeks", "month", "months", "year", "years"}:
+    if unit_norm in {
+        "minute",
+        "minutes",
+        "hour",
+        "hours",
+        "day",
+        "days",
+        "week",
+        "weeks",
+        "month",
+        "months",
+        "year",
+        "years",
+    }:
         return "time", unit_norm, magnitude_norm
 
     if unit_norm in {"point", "points"}:
@@ -423,7 +476,11 @@ def _resolve_unit_family(
         return unit_norm, unit_norm, magnitude_norm
 
     if ("usd" in around or "eur" in around or "gbp" in around or "jpy" in around) and (
-        magnitude_norm or any(token in around for token in ("revenue", "spend", "market size", "valuation"))
+        magnitude_norm
+        or any(
+            token in around
+            for token in ("revenue", "spend", "market size", "valuation")
+        )
     ):
         if "eur" in around:
             return "currency", "EUR", magnitude_norm
@@ -433,14 +490,23 @@ def _resolve_unit_family(
             return "currency", "JPY", magnitude_norm
         return "currency", "USD", magnitude_norm
 
-    if magnitude_norm and ("usd" in around or "eur" in around or "gbp" in around or "jpy" in around or "revenue" in around or "spend" in around):
+    if magnitude_norm and (
+        "usd" in around
+        or "eur" in around
+        or "gbp" in around
+        or "jpy" in around
+        or "revenue" in around
+        or "spend" in around
+    ):
         code = "USD" if "usd" in around or "$" in around else ""
         return "currency", code or "USD", magnitude_norm
     if magnitude_norm:
         return "count", "count", magnitude_norm
 
     if _has_metric_context(sentence_norm):
-        if any(t in around for t in {"%", "percent", "pct", "share", "conversion", "rate"}):
+        if any(
+            t in around for t in {"%", "percent", "pct", "share", "conversion", "rate"}
+        ):
             return "percent", "percent", magnitude_norm
         return "count", "count", magnitude_norm
 
@@ -495,11 +561,16 @@ def _unit_families_compatible(left: Quantity, right: Quantity) -> bool:
         return True
     if compat == {"points", "percent"}:
         combined = normalize_text(left.sentence + " " + right.sentence)
-        return any(token in combined for token in ("change", "delta", "increase", "decrease", "up", "down"))
+        return any(
+            token in combined
+            for token in ("change", "delta", "increase", "decrease", "up", "down")
+        )
     if "unknown" in compat:
         known = left if left.unit_family != "unknown" else right
         unknown = right if left.unit_family != "unknown" else left
-        return abs(known.value - unknown.value) <= _tolerance(known.unit_family, reference=max(abs(known.value), 1.0), approx=True)
+        return abs(known.value - unknown.value) <= _tolerance(
+            known.unit_family, reference=max(abs(known.value), 1.0), approx=True
+        )
     return False
 
 
@@ -531,13 +602,19 @@ def _inequality_compatible(candidate: Quantity, evidence: Quantity, tol: float) 
     c_low, c_high = _bounds(candidate)
     e_low, e_high = _bounds(evidence)
     # "candidate within evidence range or vice versa" for robust equivalence.
-    within = (c_low >= e_low - tol and c_high <= e_high + tol) or (e_low >= c_low - tol and e_high <= c_high + tol)
+    within = (c_low >= e_low - tol and c_high <= e_high + tol) or (
+        e_low >= c_low - tol and e_high <= c_high + tol
+    )
     overlap = max(c_low, e_low) <= min(c_high, e_high) + tol
     return within or overlap
 
 
 def _bounds(quantity: Quantity) -> Tuple[float, float]:
-    if quantity.comparator == "range" and quantity.low is not None and quantity.high is not None:
+    if (
+        quantity.comparator == "range"
+        and quantity.low is not None
+        and quantity.high is not None
+    ):
         return quantity.low, quantity.high
     if quantity.comparator in {"eq", "approx"}:
         return quantity.value, quantity.value
@@ -559,7 +636,9 @@ def _looks_like_non_metric_token(quantity: Quantity, sentence: str) -> bool:
     if quantity.value.is_integer() and 1 <= int(quantity.value) <= 50:
         if _SOFT_FOOTNOTE_RE.search(sentence):
             return True
-        around = sentence[max(0, quantity.start - 6): min(len(sentence), quantity.end + 6)]
+        around = sentence[
+            max(0, quantity.start - 6) : min(len(sentence), quantity.end + 6)
+        ]
         if re.fullmatch(r"[\s\[\(]*\d{1,2}[\]\)\s]*", around):
             return True
     if quantity.value.is_integer() and 1900 <= int(quantity.value) <= 2100:

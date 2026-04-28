@@ -26,7 +26,9 @@ from src.utils.tag_utils import normalize_slug_tag
 
 logger = logging.getLogger("market_lense.category_mapping_service")
 
-DEFAULT_MAPPING_PATH = Path(__file__).resolve().parents[1] / "config" / "category-mappings.yaml"
+DEFAULT_MAPPING_PATH = (
+    Path(__file__).resolve().parents[1] / "config" / "category-mappings.yaml"
+)
 
 
 @dataclass
@@ -112,7 +114,9 @@ def _sanitize_classification(raw: dict) -> dict:
     )
     return {
         "schema_version": str(classification_map.get("schema_version", "1.1")),
-        "max_categories": max(1, _clean_int(classification_map.get("max_categories"), 2)),
+        "max_categories": max(
+            1, _clean_int(classification_map.get("max_categories"), 2)
+        ),
         "min_primary_score": _clean_float(
             classification_map.get("min_primary_score"), 2.2
         ),
@@ -146,9 +150,7 @@ def _sanitize_classification(raw: dict) -> dict:
                 2,
             ),
         ),
-        "core_tag_weight": _clean_float(
-            classification_map.get("core_tag_weight"), 2.2
-        ),
+        "core_tag_weight": _clean_float(classification_map.get("core_tag_weight"), 2.2),
         "supporting_tag_weight": _clean_float(
             classification_map.get("supporting_tag_weight"), 1.2
         ),
@@ -204,47 +206,61 @@ def _sanitize_inference_rules(raw: dict) -> List[dict]:
     return rules
 
 
-def load_mappings(request: CategoryMappingLoadRequest, ctx: RunContext) -> CategoryMappingLoadResponse:
+def load_mappings(
+    request: CategoryMappingLoadRequest, ctx: RunContext
+) -> CategoryMappingLoadResponse:
     path = Path(request.path or DEFAULT_MAPPING_PATH).resolve()
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="category_mapping_load_start",
-        module=logger.name,
-        fields={"path": str(path)},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="category_mapping_load_start",
+            module=logger.name,
+            fields={"path": str(path)},
+        )
+    )
     with _CATEGORY_LOCK:
         entry, source = _get_or_load_entry(
             path,
             reload_if_changed=request.reload_if_changed,
             force_reload=request.force_reload,
         )
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="category_mapping_load_complete",
-        module=logger.name,
-        fields={
-            "path": str(path),
-            "categories": len(entry.mappings.categories),
-            "uncategorized": len(entry.mappings.uncategorized),
-            "max_categories": entry.mappings.classification.max_categories,
-            "cached": source != "reloaded",
-            "source": source,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="category_mapping_load_complete",
+            module=logger.name,
+            fields={
+                "path": str(path),
+                "categories": len(entry.mappings.categories),
+                "uncategorized": len(entry.mappings.uncategorized),
+                "max_categories": entry.mappings.classification.max_categories,
+                "cached": source != "reloaded",
+                "source": source,
+            },
+        )
+    )
     return CategoryMappingLoadResponse(schema_version="1.1", mappings=entry.mappings)
 
 
-def update_uncategorized_tags(request: UncategorizedTagsUpdateRequest, ctx: RunContext) -> None:
+def update_uncategorized_tags(
+    request: UncategorizedTagsUpdateRequest, ctx: RunContext
+) -> None:
     path = Path(request.path or DEFAULT_MAPPING_PATH).resolve()
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="category_uncategorized_update_start",
-        module=logger.name,
-        fields={"path": str(path), "title": request.report_title, "tag_count": len(request.tags)},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="category_uncategorized_update_start",
+            module=logger.name,
+            fields={
+                "path": str(path),
+                "title": request.report_title,
+                "tag_count": len(request.tags),
+            },
+        )
+    )
     with _CATEGORY_LOCK:
         entry, source = _get_or_load_entry(
             path,
@@ -258,13 +274,19 @@ def update_uncategorized_tags(request: UncategorizedTagsUpdateRequest, ctx: RunC
             request.tags,
         )
         if merged_uncategorized == (entry.data.get("uncategorized") or []):
-            logger.info(log_event(
-                ctx,
-                role="service",
-                event="category_uncategorized_update_noop",
-                module=logger.name,
-                fields={"path": str(path), "title": request.report_title, "source": source},
-            ))
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="category_uncategorized_update_noop",
+                    module=logger.name,
+                    fields={
+                        "path": str(path),
+                        "title": request.report_title,
+                        "source": source,
+                    },
+                )
+            )
             return
 
         entry.data["uncategorized"] = merged_uncategorized
@@ -280,43 +302,51 @@ def update_uncategorized_tags(request: UncategorizedTagsUpdateRequest, ctx: RunC
         )
         entry.dirty_uncategorized = True
         _CATEGORY_CACHE[path] = entry
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="category_uncategorized_update_complete",
-        module=logger.name,
-        fields={
-            "path": str(path),
-            "records": len(merged_uncategorized),
-            "dirty": entry.dirty_uncategorized,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="category_uncategorized_update_complete",
+            module=logger.name,
+            fields={
+                "path": str(path),
+                "records": len(merged_uncategorized),
+                "dirty": entry.dirty_uncategorized,
+            },
+        )
+    )
 
 
-def flush_uncategorized_tags(request: UncategorizedTagsFlushRequest, ctx: RunContext) -> None:
+def flush_uncategorized_tags(
+    request: UncategorizedTagsFlushRequest, ctx: RunContext
+) -> None:
     path = Path(request.path or DEFAULT_MAPPING_PATH).resolve()
     cached_entry = _CATEGORY_CACHE.get(path)
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="category_uncategorized_flush_start",
-        module=logger.name,
-        fields={
-            "path": str(path),
-            "cached": path in _CATEGORY_CACHE,
-            "dirty": cached_entry.dirty_uncategorized if cached_entry else False,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="category_uncategorized_flush_start",
+            module=logger.name,
+            fields={
+                "path": str(path),
+                "cached": path in _CATEGORY_CACHE,
+                "dirty": cached_entry.dirty_uncategorized if cached_entry else False,
+            },
+        )
+    )
     with _CATEGORY_LOCK:
         entry = _CATEGORY_CACHE.get(path)
         if not entry or not entry.dirty_uncategorized:
-            logger.info(log_event(
-                ctx,
-                role="service",
-                event="category_uncategorized_flush_skipped",
-                module=logger.name,
-                fields={"path": str(path), "reason": "no_pending_changes"},
-            ))
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="category_uncategorized_flush_skipped",
+                    module=logger.name,
+                    fields={"path": str(path), "reason": "no_pending_changes"},
+                )
+            )
             return
 
         serialized = {
@@ -328,22 +358,29 @@ def flush_uncategorized_tags(request: UncategorizedTagsFlushRequest, ctx: RunCon
         }
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(
-            yaml.safe_dump(serialized, sort_keys=False, allow_unicode=False, default_flow_style=False),
+            yaml.safe_dump(
+                serialized,
+                sort_keys=False,
+                allow_unicode=False,
+                default_flow_style=False,
+            ),
             encoding="utf-8",
         )
         entry.modified_time = _get_mtime(path)
         entry.dirty_uncategorized = False
         _CATEGORY_CACHE[path] = entry
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="category_uncategorized_flush_complete",
-        module=logger.name,
-        fields={
-            "path": str(path),
-            "records": len(serialized.get("uncategorized") or []),
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="category_uncategorized_flush_complete",
+            module=logger.name,
+            fields={
+                "path": str(path),
+                "records": len(serialized.get("uncategorized") or []),
+            },
+        )
+    )
 
 
 def _merge_uncategorized(
@@ -445,34 +482,36 @@ def _sanitize_mapping_data(raw: dict) -> dict:
         generic_tags = _clean_tags(item.get("generic_tags") or [])
         negative_tags = _clean_tags(item.get("negative_tags") or [])
         must_have_one_of = _clean_tags(item.get("must_have_one_of") or [])
-        categories.append({
-            "id": str(item.get("id") or "").strip(),
-            "label": str(item.get("label") or "").strip(),
-            "description": str(item.get("description") or "").strip(),
-            "definition": str(
-                item.get("definition") or item.get("description") or ""
-            ).strip(),
-            "include_when": [
-                str(value).strip()
-                for value in (item.get("include_when") or [])
-                if str(value).strip()
-            ],
-            "exclude_when": [
-                str(value).strip()
-                for value in (item.get("exclude_when") or [])
-                if str(value).strip()
-            ],
-            "tags": tags,
-            "core_tags": core_tags,
-            "supporting_tags": supporting_tags,
-            "secondary_supporting_tags": secondary_supporting_tags,
-            "descriptor_tags": descriptor_tags,
-            "generic_tags": generic_tags,
-            "negative_tags": negative_tags,
-            "must_have_one_of": must_have_one_of,
-            "priority": _clean_int(item.get("priority"), 0),
-            "portal_exposed": _clean_bool(item.get("portal_exposed"), True),
-        })
+        categories.append(
+            {
+                "id": str(item.get("id") or "").strip(),
+                "label": str(item.get("label") or "").strip(),
+                "description": str(item.get("description") or "").strip(),
+                "definition": str(
+                    item.get("definition") or item.get("description") or ""
+                ).strip(),
+                "include_when": [
+                    str(value).strip()
+                    for value in (item.get("include_when") or [])
+                    if str(value).strip()
+                ],
+                "exclude_when": [
+                    str(value).strip()
+                    for value in (item.get("exclude_when") or [])
+                    if str(value).strip()
+                ],
+                "tags": tags,
+                "core_tags": core_tags,
+                "supporting_tags": supporting_tags,
+                "secondary_supporting_tags": secondary_supporting_tags,
+                "descriptor_tags": descriptor_tags,
+                "generic_tags": generic_tags,
+                "negative_tags": negative_tags,
+                "must_have_one_of": must_have_one_of,
+                "priority": _clean_int(item.get("priority"), 0),
+                "portal_exposed": _clean_bool(item.get("portal_exposed"), True),
+            }
+        )
     known_tags: Set[str] = {
         normalize_slug_tag(tag)
         for item in categories
@@ -596,9 +635,7 @@ def _build_mappings(data: dict) -> CategoryMappings:
                 (data.get("classification") or {}).get("secondary_score_ratio"), 0.7
             ),
             secondary_rescue_score_ratio=_clean_float(
-                (data.get("classification") or {}).get(
-                    "secondary_rescue_score_ratio"
-                ),
+                (data.get("classification") or {}).get("secondary_rescue_score_ratio"),
                 0.55,
             ),
             secondary_rescue_min_strong_matches=max(

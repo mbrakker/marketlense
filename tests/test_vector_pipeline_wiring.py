@@ -254,15 +254,17 @@ def _make_ingest_process(*, generate_report):
             cache_pdf_path=lambda current_settings, current_file: str(
                 Path(current_settings.cache_dir) / f"{current_file.file_id}.pdf"
             ),
-            resolve_md5_sidecar=lambda request, _ctx: FileCacheMd5SidecarResolveResponse(
-                schema_version="1.0",
-                cache_path=request.cache_path,
-                sidecar_path=f"{request.cache_path}.md5.json",
-                sidecar_exists=False,
-                record=None,
-                resolved_md5=None,
-                hit=False,
-                reason="missing",
+            resolve_md5_sidecar=lambda request, _ctx: (
+                FileCacheMd5SidecarResolveResponse(
+                    schema_version="1.0",
+                    cache_path=request.cache_path,
+                    sidecar_path=f"{request.cache_path}.md5.json",
+                    sidecar_exists=False,
+                    record=None,
+                    resolved_md5=None,
+                    hit=False,
+                    reason="missing",
+                )
             ),
             ensure_file_name=lambda current_file, _settings, _ctx: current_file,
             write_md5_sidecar=lambda request, _ctx: FileCacheMd5SidecarWriteResponse(
@@ -371,25 +373,27 @@ def _base_vector_report_dependencies(
             limitations=[],
             sections=[],
         ),
-        "fit_report_categories_from_context": lambda req, ctx: ContextCategoryFitResponse(
-            schema_version="1.0",
-            report_id=req.context.report_id,
-            categories=["cat"],
-            category_labels=["Category"],
-            fits=[
-                CategoryFitCandidate(
-                    category_id="cat",
-                    label="Category",
-                    fit_score=0.91,
-                    decision="primary",
-                    why_fit="The report centers on Category.",
-                    why_not_fit="",
-                    evidence_sections=["Overview"],
-                )
-            ],
-            request_id="req-1",
-            model="gpt-5-mini",
-            raw_response="{}",
+        "fit_report_categories_from_context": lambda req, ctx: (
+            ContextCategoryFitResponse(
+                schema_version="1.0",
+                report_id=req.context.report_id,
+                categories=["cat"],
+                category_labels=["Category"],
+                fits=[
+                    CategoryFitCandidate(
+                        category_id="cat",
+                        label="Category",
+                        fit_score=0.91,
+                        decision="primary",
+                        why_fit="The report centers on Category.",
+                        why_not_fit="",
+                        evidence_sections=["Overview"],
+                    )
+                ],
+                request_id="req-1",
+                model="gpt-5-mini",
+                raw_response="{}",
+            )
         ),
         "extract_best_figure": lambda req, ctx: SimpleNamespace(
             image_path=None,

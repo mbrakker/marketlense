@@ -29,6 +29,7 @@ logger = logging.getLogger("market_lense.run_registry_service")
 DEFAULT_BUSY_TIMEOUT_SECONDS = 5.0
 _RUN_REGISTRY_LOCK = threading.Lock()
 
+
 def default_ui_run_registry_path(state_db: str) -> str:
     state_path = Path(state_db).expanduser().resolve()
     return str(state_path.with_name("ui_runs.sqlite"))
@@ -243,7 +244,9 @@ def list_ui_run_records(
     )
     query = "SELECT * FROM ui_runs"
     params: list[object] = []
-    normalized_statuses = [str(status).strip() for status in request.statuses if str(status).strip()]
+    normalized_statuses = [
+        str(status).strip() for status in request.statuses if str(status).strip()
+    ]
     if normalized_statuses:
         placeholders = ", ".join("?" for _ in normalized_statuses)
         query += f" WHERE status IN ({placeholders})"

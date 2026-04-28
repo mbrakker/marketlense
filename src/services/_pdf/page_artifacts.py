@@ -204,7 +204,8 @@ def get_crop_refine_text_block_rects(
             for block, text in pairs
             if str(text or "").strip()
             and not (
-                callable(is_page_number_text) and is_page_number_text(str(text or "").strip())
+                callable(is_page_number_text)
+                and is_page_number_text(str(text or "").strip())
             )
         ]
     page_number = int(getattr(page, "number", 0) or 0)
@@ -220,7 +221,8 @@ def get_crop_refine_text_block_rects(
         for block, text in pairs
         if str(text or "").strip()
         and not (
-            callable(is_page_number_text) and is_page_number_text(str(text or "").strip())
+            callable(is_page_number_text)
+            and is_page_number_text(str(text or "").strip())
         )
     ]
     with cache.lock:

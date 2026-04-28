@@ -398,7 +398,9 @@ def test_taxonomy_infers_agentic_commerce_from_ai_purchase_evidence(tmp_path):
     assert response.primary_tags == ["generative_ai_and_ai_agents"]
     assert response.secondary_tags == ["agentic_commerce"]
     assert response.taxonomy == ["generative_ai_and_ai_agents", "agentic_commerce"]
-    inferred = next(item for item in response.tag_evidence if item.tag == "agentic_commerce")
+    inferred = next(
+        item for item in response.tag_evidence if item.tag == "agentic_commerce"
+    )
     assert inferred.tier == "secondary"
     assert inferred.section_label == "Brand building with AI"
 

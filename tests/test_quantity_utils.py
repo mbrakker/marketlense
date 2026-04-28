@@ -23,8 +23,12 @@ def _any_match(left: str, right: str) -> bool:
 
 
 def test_extract_quantities_captures_generic_units_and_timeframes() -> None:
-    parsed = extract_quantities("Revenue was more than $10B and conversion reached 37.0% in Q3 2025.")
-    assert any(q.unit_family == "currency" and q.comparator in {"gt", "gte"} for q in parsed)
+    parsed = extract_quantities(
+        "Revenue was more than $10B and conversion reached 37.0% in Q3 2025."
+    )
+    assert any(
+        q.unit_family == "currency" and q.comparator in {"gt", "gte"} for q in parsed
+    )
     assert any(q.unit_family == "percent" for q in parsed)
     assert any("q3 2025" in q.timeframe for q in parsed if q.timeframe)
 
@@ -43,7 +47,9 @@ def test_currency_magnitude_forms_match() -> None:
 
 def test_percentage_points_require_change_context() -> None:
     assert not _any_match("Satisfaction is 3pp.", "Satisfaction is 3%.")
-    assert _any_match("Change in satisfaction was 3pp.", "Change in satisfaction was 3%.")
+    assert _any_match(
+        "Change in satisfaction was 3pp.", "Change in satisfaction was 3%."
+    )
 
 
 def test_ranges_approx_and_sample_size() -> None:
@@ -82,4 +88,6 @@ def test_property_like_equivalent_surface_forms() -> None:
             for j, evidence in enumerate(parsed):
                 if i == j:
                     continue
-                assert quantities_match(candidate, evidence), f"Expected match for {group[i]} <-> {group[j]}"
+                assert quantities_match(candidate, evidence), (
+                    f"Expected match for {group[i]} <-> {group[j]}"
+                )

@@ -401,9 +401,9 @@ def _write_rollup_cache(
         WriteBytesRequest(
             schema_version="1.0",
             path=str(out_path),
-            content=json.dumps(
-                serialized, ensure_ascii=False, indent=2
-            ).encode("utf-8"),
+            content=json.dumps(serialized, ensure_ascii=False, indent=2).encode(
+                "utf-8"
+            ),
         ),
         ctx,
     )

@@ -46,9 +46,7 @@ class ReportSourceCacheLoadResult(Generic[T]):
     schema_version: str = field(
         metadata={"doc": "Report-source cache load result schema version."}
     )
-    status: str = field(
-        metadata={"doc": "Cache load status: cache_disabled|miss|hit."}
-    )
+    status: str = field(metadata={"doc": "Cache load status: cache_disabled|miss|hit."})
     cache_hit: bool = field(
         metadata={"doc": "True when a typed cached value was returned."}
     )

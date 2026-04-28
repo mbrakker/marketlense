@@ -22,6 +22,7 @@ DEFAULT_BUSY_TIMEOUT_SECONDS = 5.0
 _STATE_CONN_LOCK = threading.Lock()
 BATCH_STATE_CHECK_MAX_PAIRS = 200
 
+
 @contextmanager
 def _state_conn(path: str, ctx: RunContext):
     if not path:
@@ -72,10 +73,9 @@ def _configure_sqlite_connection(
     busy_timeout_seconds: float,
 ) -> None:
     conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute(
-        f"PRAGMA busy_timeout={max(0, int(busy_timeout_seconds * 1000))}"
-    )
+    conn.execute(f"PRAGMA busy_timeout={max(0, int(busy_timeout_seconds * 1000))}")
     conn.execute("PRAGMA synchronous=NORMAL")
+
 
 def _normalize_post_type(post_type: str) -> str:
     token = str(post_type).strip().strip("/")

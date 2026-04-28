@@ -35,7 +35,10 @@ def test_status_chip_level_maps_known_states() -> None:
 
 
 def test_extract_log_date_from_filename() -> None:
-    assert extract_log_date_from_filename("logs/market_lense_2026-02-09.log") == "2026-02-09"
+    assert (
+        extract_log_date_from_filename("logs/market_lense_2026-02-09.log")
+        == "2026-02-09"
+    )
     assert extract_log_date_from_filename("logs/other.log") is None
 
 
@@ -50,8 +53,22 @@ def test_parse_structured_log_line_with_payload() -> None:
 
 def test_filter_log_events_by_dimensions() -> None:
     rows = [
-        {"run_id": "r1", "task_id": "t1", "span_id": "s1", "event": "ingest_start", "role": "orchestrator", "module": "a"},
-        {"run_id": "r2", "task_id": "t2", "span_id": "s2", "event": "publish_start", "role": "orchestrator", "module": "b"},
+        {
+            "run_id": "r1",
+            "task_id": "t1",
+            "span_id": "s1",
+            "event": "ingest_start",
+            "role": "orchestrator",
+            "module": "a",
+        },
+        {
+            "run_id": "r2",
+            "task_id": "t2",
+            "span_id": "s2",
+            "event": "publish_start",
+            "role": "orchestrator",
+            "module": "b",
+        },
     ]
     filtered = filter_log_events(rows, run_id="r2")
     assert len(filtered) == 1
@@ -101,7 +118,9 @@ def test_mapping_from_editor_records_builds_clean_map() -> None:
         {"namespace": " a ", "model": " gpt-5-mini "},
         {"namespace": "", "model": "skip"},
     ]
-    mapped = mapping_from_editor_records(rows, key_field="namespace", value_field="model")
+    mapped = mapping_from_editor_records(
+        rows, key_field="namespace", value_field="model"
+    )
     assert mapped == {"a": "gpt-5-mini"}
 
 

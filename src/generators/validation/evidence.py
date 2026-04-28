@@ -180,7 +180,9 @@ def collect_evidence_texts(
                     )
                     add(recommendation_text)
                     add_id_mapping(s(recommendation.get("id")), recommendation_text)
-                    add_id_mapping(s(recommendation.get("evidence_id")), recommendation_text)
+                    add_id_mapping(
+                        s(recommendation.get("evidence_id")), recommendation_text
+                    )
 
             contradictions = pack.get("contradictions")
             if isinstance(contradictions, list):
@@ -423,7 +425,9 @@ def metric_value_supported(
                 strict_section=True,
             ):
                 continue
-            if not quantity_supported(candidate, evidence_quantities, numeric_only=True):
+            if not quantity_supported(
+                candidate, evidence_quantities, numeric_only=True
+            ):
                 return False
         return True
     return False
@@ -492,4 +496,3 @@ def sanitize_citation_tokens(text: str) -> str:
     cleaned = re.sub(r"filecite|turn\d+file\d+", " ", cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r"\s+", " ", cleaned)
     return cleaned.strip()
-

@@ -422,9 +422,7 @@ def _load_text(
         file_id=runtime.file.file_id,
         phase="text",
         prefix=cache_prefix,
-        cache_key=text_cache_key(runtime.md5, runtime.settings)
-        if runtime.md5
-        else "",
+        cache_key=text_cache_key(runtime.md5, runtime.settings) if runtime.md5 else "",
     )
     text_cached = load_report_source_cache(
         text_binding,

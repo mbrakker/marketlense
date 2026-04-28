@@ -753,7 +753,9 @@ def test_regenerate_artifacts_rejects_unknown_target_section(
                         RegenerationTarget(
                             target_section="unsupported_section",
                             regenerate_steps=["summary"],
-                            prompt_namespaces=["report_vs/artifacts/regenerate/summary"],
+                            prompt_namespaces=[
+                                "report_vs/artifacts/regenerate/summary"
+                            ],
                             issues=[
                                 RegenerationIssue(
                                     rule_id="grounding",

@@ -70,7 +70,9 @@ def test_record_usage_appends_cost_ledger_and_rolls_up_daily(
 
     def _append_entry(request, ctx):
         appended_requests.append(request)
-        return type("AppendResponse", (), {"schema_version": "1.0", "path": request.path})()
+        return type(
+            "AppendResponse", (), {"schema_version": "1.0", "path": request.path}
+        )()
 
     def _rollup_daily(request, ctx):
         rollup_requests.append(request)

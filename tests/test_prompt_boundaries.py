@@ -87,9 +87,9 @@ class _PromptMutationScanner(ast.NodeVisitor):
         target_names: list[str] = []
         for target in node.targets:
             target_names.extend(_target_names(target))
-        if any(name in PROMPT_NAMES for name in target_names) and _is_prompt_mutation_expr(
-            node.value
-        ):
+        if any(
+            name in PROMPT_NAMES for name in target_names
+        ) and _is_prompt_mutation_expr(node.value):
             self._add(
                 node,
                 "prompt text concatenation/mutation is forbidden outside src/services/prompt_service.py",

@@ -94,7 +94,9 @@ def _evaluate(
         requires_review=requires_review,
         recommended_route_reason=recommended_route_reason,
         summary=_summary_text(request, coverage, quality_band),
-        candidate_provenance_counts=dict(sorted(request.candidate_provenance_counts.items())),
+        candidate_provenance_counts=dict(
+            sorted(request.candidate_provenance_counts.items())
+        ),
     )
 
 
@@ -136,8 +138,10 @@ def _recommended_route(
             "browser_render",
             "Recent drift or incomplete deltas favor the stronger browser-render route on the next run.",
         )
-    if request.route_kind == "http_parse" and request.page_count <= 1 and (
-        request.current_report_count <= 2 or request.raw_new_report_count == 0
+    if (
+        request.route_kind == "http_parse"
+        and request.page_count <= 1
+        and (request.current_report_count <= 2 or request.raw_new_report_count == 0)
     ):
         return (
             "browser_render",

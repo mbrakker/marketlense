@@ -10,9 +10,7 @@ class ConfigAssetReadRequest:
         metadata={"doc": "Config-asset read request schema version."}
     )
     path: str = field(metadata={"doc": "Filesystem path to the config asset."})
-    format: str = field(
-        metadata={"doc": "Asset format: yaml, json, or text."}
-    )
+    format: str = field(metadata={"doc": "Asset format: yaml, json, or text."})
     expected_root_type: str = field(
         default="any",
         metadata={"doc": "Optional decoded payload root type: any, mapping, or list."},
@@ -46,12 +44,8 @@ class ConfigAssetWriteRequest:
         metadata={"doc": "Config-asset write request schema version."}
     )
     path: str = field(metadata={"doc": "Filesystem path to write."})
-    format: str = field(
-        metadata={"doc": "Asset format: yaml, json, or text."}
-    )
-    content: str = field(
-        metadata={"doc": "Raw content to validate and write."}
-    )
+    format: str = field(metadata={"doc": "Asset format: yaml, json, or text."})
+    content: str = field(metadata={"doc": "Raw content to validate and write."})
     expected_root_type: str = field(
         default="any",
         metadata={"doc": "Optional decoded payload root type: any, mapping, or list."},

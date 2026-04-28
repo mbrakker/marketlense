@@ -57,7 +57,9 @@ class OpenAIUsageAccountingResponse:
     daily_path: str = field(metadata={"doc": "Daily rollup path used."})
     error: Optional[str] = field(
         default=None,
-        metadata={"doc": "Sanitized non-fatal accounting error, when recording failed."},
+        metadata={
+            "doc": "Sanitized non-fatal accounting error, when recording failed."
+        },
     )
 
 

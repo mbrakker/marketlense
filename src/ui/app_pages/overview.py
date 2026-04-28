@@ -31,7 +31,13 @@ def build_run_dashboard_metrics(
         {
             "label": "Succeeded",
             "value": str(
-                len([item for item in recent_runs if getattr(item, "status", "") == "succeeded"])
+                len(
+                    [
+                        item
+                        for item in recent_runs
+                        if getattr(item, "status", "") == "succeeded"
+                    ]
+                )
             ),
             "delta": f"{len(recent_runs)} tracked",
         },
@@ -53,20 +59,27 @@ def build_run_table_rows(records: list[Any]) -> list[dict[str, str]]:
     for record in records:
         rows.append(
             {
-                "workflow": str(getattr(record, "display_name", "") or getattr(record, "run_type", "")),
+                "workflow": str(
+                    getattr(record, "display_name", "")
+                    or getattr(record, "run_type", "")
+                ),
                 "status": str(getattr(record, "status", "")),
                 "run_id": str(getattr(record, "run_id", ""))[:8],
                 "created_at_utc": str(getattr(record, "created_at_utc", "")),
                 "started_at_utc": str(getattr(record, "started_at_utc", "")),
                 "finished_at_utc": str(getattr(record, "finished_at_utc", "")),
                 "error_code": str(getattr(record, "error_code", "")),
-                "pid": "" if getattr(record, "pid", None) is None else str(getattr(record, "pid", "")),
+                "pid": ""
+                if getattr(record, "pid", None) is None
+                else str(getattr(record, "pid", "")),
             }
         )
     return rows
 
 
-def build_report_rows(reports: list[dict[str, Any]], *, limit: int = 8) -> list[dict[str, str]]:
+def build_report_rows(
+    reports: list[dict[str, Any]], *, limit: int = 8
+) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
     for row in reports[:limit]:
         rows.append(
@@ -81,14 +94,13 @@ def build_report_rows(reports: list[dict[str, Any]], *, limit: int = 8) -> list[
     return rows
 
 
-def build_log_event_rows(events: list[dict[str, Any]], *, limit: int = 8) -> list[dict[str, str]]:
+def build_log_event_rows(
+    events: list[dict[str, Any]], *, limit: int = 8
+) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
     for event in events[:limit]:
         message = str(
-            event.get("message")
-            or event.get("event")
-            or event.get("detail")
-            or ""
+            event.get("message") or event.get("event") or event.get("detail") or ""
         )
         rows.append(
             {
@@ -101,7 +113,9 @@ def build_log_event_rows(events: list[dict[str, Any]], *, limit: int = 8) -> lis
     return rows
 
 
-def build_auth_status_rows(settings: Any | None, publish_settings: Any | None) -> list[dict[str, str]]:
+def build_auth_status_rows(
+    settings: Any | None, publish_settings: Any | None
+) -> list[dict[str, str]]:
     return [
         {
             "name": "Drive auth",
@@ -110,7 +124,9 @@ def build_auth_status_rows(settings: Any | None, publish_settings: Any | None) -
         },
         {
             "name": "OpenAI key",
-            "status": "present" if getattr(settings, "openai_api_key", "") else "missing",
+            "status": "present"
+            if getattr(settings, "openai_api_key", "")
+            else "missing",
             "source": "env/config",
         },
         {
@@ -176,9 +192,13 @@ def render_cockpit_overview() -> None:
     logs = legacy._discover_log_files()
     recent_paths = [row["path"] for row in logs[:2]]
     events = legacy._load_log_events(recent_paths)
-    active_runs = list_recent_runs(settings, statuses=["queued", "running"], limit=20).records
+    active_runs = list_recent_runs(
+        settings, statuses=["queued", "running"], limit=20
+    ).records
     recent_runs = list_recent_runs(settings, limit=20).records
-    recent_failures = [item for item in recent_runs if getattr(item, "status", "") == "failed"][:6]
+    recent_failures = [
+        item for item in recent_runs if getattr(item, "status", "") == "failed"
+    ][:6]
 
     status_level = "warn" if lock.get("found") else "success"
     clicked, filters, main_col, detail_col = _page_shell(
@@ -250,7 +270,9 @@ def render_cockpit_overview() -> None:
                     "publisher": "Publisher",
                     "analysis_mode": "Mode",
                     "updated_at_utc": "Updated (UTC)",
-                    "html_path": st.column_config.TextColumn("HTML path", width="large"),
+                    "html_path": st.column_config.TextColumn(
+                        "HTML path", width="large"
+                    ),
                 },
             )
         with lower_right:
@@ -319,7 +341,9 @@ def render_run_center() -> None:
     if clicked:
         st.rerun()
 
-    active = list_recent_runs(settings, statuses=["queued", "running"], limit=20).records
+    active = list_recent_runs(
+        settings, statuses=["queued", "running"], limit=20
+    ).records
     recent = list_recent_runs(settings, limit=50).records
     failed = [record for record in recent if getattr(record, "status", "") == "failed"]
 
@@ -375,7 +399,9 @@ def render_run_center() -> None:
                 },
                 {
                     "label": "Succeeded",
-                    "value": str(len([item for item in recent if item.status == "succeeded"])),
+                    "value": str(
+                        len([item for item in recent if item.status == "succeeded"])
+                    ),
                     "delta": f"{len(recent)} tracked",
                 },
                 {
@@ -385,7 +411,9 @@ def render_run_center() -> None:
                 },
                 {
                     "label": "Canceled",
-                    "value": str(len([item for item in recent if item.status == "canceled"])),
+                    "value": str(
+                        len([item for item in recent if item.status == "canceled"])
+                    ),
                     "delta": "manual stops",
                 },
             ]
@@ -427,7 +455,10 @@ def render_run_center() -> None:
                     "Select a tracked run above to inspect the latest worker output and registry state.",
                 )
             else:
-                st.code((polled.output_chunk.text if polled.output_chunk else "") or "[worker] no output yet")
+                st.code(
+                    (polled.output_chunk.text if polled.output_chunk else "")
+                    or "[worker] no output yet"
+                )
 
     with detail_col:
         with st.container(border=True):
@@ -451,7 +482,9 @@ def render_run_center() -> None:
                         width="stretch",
                         hide_index=True,
                         column_config={
-                            "path": st.column_config.TextColumn("Artifact path", width="large")
+                            "path": st.column_config.TextColumn(
+                                "Artifact path", width="large"
+                            )
                         },
                     )
                 with st.expander("Result summary", expanded=True):

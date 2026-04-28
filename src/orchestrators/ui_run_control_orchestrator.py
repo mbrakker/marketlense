@@ -76,7 +76,9 @@ def _summary(record: UiRunRecord) -> UiRunSummary:
     )
 
 
-def _write_worker_request(request_path: Path, worker_request: UiRunWorkerRequest) -> None:
+def _write_worker_request(
+    request_path: Path, worker_request: UiRunWorkerRequest
+) -> None:
     request_path.parent.mkdir(parents=True, exist_ok=True)
     request_path.write_text(
         json.dumps(asdict(worker_request), ensure_ascii=True, indent=2),
@@ -84,9 +86,7 @@ def _write_worker_request(request_path: Path, worker_request: UiRunWorkerRequest
     )
 
 
-def launch_ui_run(
-    request: UiRunLaunchRequest, ctx: RunContext
-) -> UiRunLaunchResponse:
+def launch_ui_run(request: UiRunLaunchRequest, ctx: RunContext) -> UiRunLaunchResponse:
     created_at = _utc_now()
     run_id = RunId(str(uuid4()))
     run_dir = _run_state_dir(request.registry_path) / run_id
@@ -319,9 +319,7 @@ def poll_ui_run(request: UiRunPollRequest, ctx: RunContext) -> UiRunPollResponse
     )
 
 
-def cancel_ui_run(
-    request: UiRunCancelRequest, ctx: RunContext
-) -> UiRunCancelResponse:
+def cancel_ui_run(request: UiRunCancelRequest, ctx: RunContext) -> UiRunCancelResponse:
     stored = get_ui_run_record(
         UiRunRecordGetRequest(
             schema_version="1.0",

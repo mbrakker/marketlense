@@ -23,14 +23,16 @@ logger = logging.getLogger("market_lense.report_pipeline_orchestrator")
 
 
 def _doc_map_reason(outcome: IngestOutcome) -> str:
-    summary = outcome.doc_map_summary if isinstance(outcome.doc_map_summary, dict) else {}
+    summary = (
+        outcome.doc_map_summary if isinstance(outcome.doc_map_summary, dict) else {}
+    )
     reason = str(summary.get("not_found_reason") or "").strip()
     if reason:
         return reason
     error_text = str(outcome.error or "")
     prefix = "doc_map_empty:"
     if error_text.startswith(prefix):
-        return error_text[len(prefix):].strip()
+        return error_text[len(prefix) :].strip()
     return ""
 
 
@@ -82,12 +84,24 @@ def run_report_pipeline(
     openai_client_override=None,
 ) -> IngestOutcome:
     report_fn = generate_report_fn or generate_report_orchestrator
-    evidence_max_in_flight = coerce_int(getattr(settings, "evidence_pack_global_max_in_flight", 2), 2, min_value=1)
-    evidence_min_interval_ms = coerce_int(getattr(settings, "evidence_pack_global_min_interval_ms", 250), 250, min_value=0)
-    artifact_max_in_flight = coerce_int(getattr(settings, "artifact_global_max_in_flight", 2), 2, min_value=1)
-    artifact_min_interval_ms = coerce_int(getattr(settings, "artifact_global_min_interval_ms", 250), 250, min_value=0)
-    doc_map_max_attempts = coerce_int(getattr(settings, "evidence_pack_doc_map_max_attempts", 3), 3, min_value=1)
-    doc_map_retry_delay_ms = coerce_int(getattr(settings, "evidence_pack_doc_map_retry_delay_ms", 500), 500, min_value=0)
+    evidence_max_in_flight = coerce_int(
+        getattr(settings, "evidence_pack_global_max_in_flight", 2), 2, min_value=1
+    )
+    evidence_min_interval_ms = coerce_int(
+        getattr(settings, "evidence_pack_global_min_interval_ms", 250), 250, min_value=0
+    )
+    artifact_max_in_flight = coerce_int(
+        getattr(settings, "artifact_global_max_in_flight", 2), 2, min_value=1
+    )
+    artifact_min_interval_ms = coerce_int(
+        getattr(settings, "artifact_global_min_interval_ms", 250), 250, min_value=0
+    )
+    doc_map_max_attempts = coerce_int(
+        getattr(settings, "evidence_pack_doc_map_max_attempts", 3), 3, min_value=1
+    )
+    doc_map_retry_delay_ms = coerce_int(
+        getattr(settings, "evidence_pack_doc_map_retry_delay_ms", 500), 500, min_value=0
+    )
     configured_retries = max(0, int(retries))
     base_delay_seconds = 1.0
     jitter_seconds = 0.25
@@ -109,26 +123,28 @@ def run_report_pipeline(
         sleep_fn=time.sleep,
         monotonic_fn=time.monotonic,
     )
-    logger.info(log_event(
-        ctx,
-        role="orchestrator",
-        event="report_pipeline_start",
-        module=logger.name,
-        fields={
-            "file_id": file.file_id,
-            "md5": md5 or "",
-            "local_pdf_path": local_pdf_path,
-            "retries": retries,
-            "effective_retries": configured_retries,
-            "doc_map_max_attempts": doc_map_max_attempts,
-            "retry_delay_ms": doc_map_retry_delay_ms,
-            "retry_jitter_seconds": jitter_seconds,
-            "evidence_pack_global_max_in_flight": evidence_max_in_flight,
-            "evidence_pack_global_min_interval_ms": evidence_min_interval_ms,
-            "artifact_global_max_in_flight": artifact_max_in_flight,
-            "artifact_global_min_interval_ms": artifact_min_interval_ms,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="report_pipeline_start",
+            module=logger.name,
+            fields={
+                "file_id": file.file_id,
+                "md5": md5 or "",
+                "local_pdf_path": local_pdf_path,
+                "retries": retries,
+                "effective_retries": configured_retries,
+                "doc_map_max_attempts": doc_map_max_attempts,
+                "retry_delay_ms": doc_map_retry_delay_ms,
+                "retry_jitter_seconds": jitter_seconds,
+                "evidence_pack_global_max_in_flight": evidence_max_in_flight,
+                "evidence_pack_global_min_interval_ms": evidence_min_interval_ms,
+                "artifact_global_max_in_flight": artifact_max_in_flight,
+                "artifact_global_min_interval_ms": artifact_min_interval_ms,
+            },
+        )
+    )
 
     attempt_state = {"value": 0}
 
@@ -151,34 +167,38 @@ def run_report_pipeline(
             and _is_retryable_doc_map_reason(doc_map_reason)
             and current_attempt < doc_map_max_attempts - 1
         )
-        logger.info(log_event(
-            ctx,
-            role="orchestrator",
-            event="report_pipeline_complete",
-            module=logger.name,
-            fields={
-                "file_id": file.file_id,
-                "status": outcome.status,
-                "html_path": outcome.html_path or "",
-                "error": outcome.error or "",
-                "attempt": current_attempt,
-                "doc_map_reason": doc_map_reason,
-                "retry_transition": should_retry_doc_map,
-            },
-        ))
-        if should_retry_doc_map:
-            logger.info(log_event(
+        logger.info(
+            log_event(
                 ctx,
                 role="orchestrator",
-                event="report_pipeline_doc_map_retry_transition",
+                event="report_pipeline_complete",
                 module=logger.name,
                 fields={
                     "file_id": file.file_id,
-                    "attempt": current_attempt + 1,
-                    "max_attempts": doc_map_max_attempts,
-                    "reason": doc_map_reason,
+                    "status": outcome.status,
+                    "html_path": outcome.html_path or "",
+                    "error": outcome.error or "",
+                    "attempt": current_attempt,
+                    "doc_map_reason": doc_map_reason,
+                    "retry_transition": should_retry_doc_map,
                 },
-            ))
+            )
+        )
+        if should_retry_doc_map:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="orchestrator",
+                    event="report_pipeline_doc_map_retry_transition",
+                    module=logger.name,
+                    fields={
+                        "file_id": file.file_id,
+                        "attempt": current_attempt + 1,
+                        "max_attempts": doc_map_max_attempts,
+                        "reason": doc_map_reason,
+                    },
+                )
+            )
             raise AppError(
                 code="doc_map_generation_retry",
                 message=f"Retrying report pipeline for doc_map reason: {doc_map_reason}",

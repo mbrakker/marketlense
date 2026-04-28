@@ -20,13 +20,19 @@ class PublisherProfileRecord:
         metadata={"doc": "Publisher homepage URL, or an empty string when missing."}
     )
     self_presentation: str = field(
-        metadata={"doc": "Publisher self-description text, or an empty string when missing."}
+        metadata={
+            "doc": "Publisher self-description text, or an empty string when missing."
+        }
     )
     insights_url: str = field(
-        metadata={"doc": "Publisher insights or reports landing-page URL, or an empty string when missing."}
+        metadata={
+            "doc": "Publisher insights or reports landing-page URL, or an empty string when missing."
+        }
     )
     icon_source: str = field(
-        metadata={"doc": "Publisher icon source URL or data URI, or an empty string when missing."}
+        metadata={
+            "doc": "Publisher icon source URL or data URI, or an empty string when missing."
+        }
     )
 
 

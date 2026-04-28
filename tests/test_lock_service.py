@@ -21,7 +21,9 @@ def _ctx() -> RunContext:
 
 def test_get_lock_reflects_lock_lifecycle(tmp_path: Path) -> None:
     lock_path = tmp_path / "ingest.lock"
-    before = get_lock(LockGetRequest(schema_version="1.0", lock_path=str(lock_path)), _ctx())
+    before = get_lock(
+        LockGetRequest(schema_version="1.0", lock_path=str(lock_path)), _ctx()
+    )
     assert before.found is False
     assert before.lock is None
 
@@ -36,7 +38,9 @@ def test_get_lock_reflects_lock_lifecycle(tmp_path: Path) -> None:
         _ctx(),
     )
     assert acquired.acquired is True
-    current = get_lock(LockGetRequest(schema_version="1.0", lock_path=str(lock_path)), _ctx())
+    current = get_lock(
+        LockGetRequest(schema_version="1.0", lock_path=str(lock_path)), _ctx()
+    )
     assert current.found is True
     assert current.lock is not None
     assert current.lock.owner_id == "owner-1"
@@ -51,7 +55,9 @@ def test_get_lock_reflects_lock_lifecycle(tmp_path: Path) -> None:
         _ctx(),
     )
     assert released.released is True
-    after = get_lock(LockGetRequest(schema_version="1.0", lock_path=str(lock_path)), _ctx())
+    after = get_lock(
+        LockGetRequest(schema_version="1.0", lock_path=str(lock_path)), _ctx()
+    )
     assert after.found is False
 
 

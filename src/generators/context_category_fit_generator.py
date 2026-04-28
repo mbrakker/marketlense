@@ -16,7 +16,9 @@ from src.contracts.schema_validation import SchemaValidateRequest
 from src.contracts.semantic_ids import ReportId
 from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.services import llm_service, prompt_service
-from src.services.category_mapping_service import load_mappings as load_category_mappings
+from src.services.category_mapping_service import (
+    load_mappings as load_category_mappings,
+)
 from src.services.schema_validator_service import validate_schema
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -278,7 +280,9 @@ def _coerce_fit_response(
         key=lambda item: (
             0
             if item.decision == "primary"
-            else 1 if item.decision == "secondary" else 2,
+            else 1
+            if item.decision == "secondary"
+            else 2,
             -item.fit_score,
             item.category_id,
         )
@@ -290,7 +294,10 @@ def _coerce_fit_response(
             selected_ids.append(text)
     if not selected_ids:
         for fit in fits:
-            if fit.decision in {"primary", "secondary"} and fit.category_id not in selected_ids:
+            if (
+                fit.decision in {"primary", "secondary"}
+                and fit.category_id not in selected_ids
+            ):
                 selected_ids.append(fit.category_id)
             if len(selected_ids) >= 2:
                 break

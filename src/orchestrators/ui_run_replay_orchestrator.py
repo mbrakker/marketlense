@@ -232,7 +232,9 @@ def replay_ui_run(request: UiRunReplayRequest, ctx: RunContext) -> UiRunReplayRe
     )
     deltas = [
         _delta("status", manifest_response.manifest.status, execution.status),
-        _delta("error_code", manifest_response.manifest.error_code, execution.error_code),
+        _delta(
+            "error_code", manifest_response.manifest.error_code, execution.error_code
+        ),
         _delta(
             "error_message",
             manifest_response.manifest.error_message,

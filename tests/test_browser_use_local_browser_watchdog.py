@@ -13,7 +13,9 @@ from types import SimpleNamespace
 
 import pytest
 
-VENDORED_BROWSER_USE_ROOT = Path(__file__).resolve().parents[1] / "tools" / "browser-use"
+VENDORED_BROWSER_USE_ROOT = (
+    Path(__file__).resolve().parents[1] / "tools" / "browser-use"
+)
 if str(VENDORED_BROWSER_USE_ROOT) not in sys.path:
     sys.path.insert(0, str(VENDORED_BROWSER_USE_ROOT))
 
@@ -62,7 +64,9 @@ def test_local_browser_watchdog_launches_browser_with_devnull_stdio(
         captured["cmd"] = cmd
         captured["stdout"] = stdout
         captured["stderr"] = stderr
-        debug_arg = next(arg for arg in cmd if str(arg).startswith("--remote-debugging-port="))
+        debug_arg = next(
+            arg for arg in cmd if str(arg).startswith("--remote-debugging-port=")
+        )
         debug_port = int(str(debug_arg).split("=", 1)[1])
         started_servers.append(_start_cdp_server(debug_port))
         return SimpleNamespace(pid=4242)
@@ -85,7 +89,9 @@ def test_local_browser_watchdog_launches_browser_with_devnull_stdio(
         user_data_dir=profile_dir,
         executable_path="fake-browser",
     )
-    watchdog = LocalBrowserWatchdog(event_bus=session.event_bus, browser_session=session)
+    watchdog = LocalBrowserWatchdog(
+        event_bus=session.event_bus, browser_session=session
+    )
 
     try:
         process, cdp_url = asyncio.run(watchdog._launch_browser(max_retries=1))

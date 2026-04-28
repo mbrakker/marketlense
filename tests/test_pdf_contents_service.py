@@ -18,7 +18,9 @@ from src.utils.errors import AppError
 
 
 def _ctx() -> RunContext:
-    return RunContext(schema_version="1.0", run_id="run", task_id="task", span_id="span")
+    return RunContext(
+        schema_version="1.0", run_id="run", task_id="task", span_id="span"
+    )
 
 
 def _events(caplog) -> list[dict[str, object]]:

@@ -341,7 +341,10 @@ class _LandingPageInspectionHtmlParser(HTMLParser):
             self._capture_h1 = False
             self._h1_parts = []
             return
-        if lowered_tag in {"a", "button"} and self._current_interactive_parts is not None:
+        if (
+            lowered_tag in {"a", "button"}
+            and self._current_interactive_parts is not None
+        ):
             label = _normalize_text(" ".join(self._current_interactive_parts))
             label = label or self._current_interactive_seed
             if label:
@@ -548,15 +551,17 @@ def discover_inventory_via_http(
         normalized_url=normalized_url,
         candidates=candidates,
     ):
-        ajax_pages, ajax_candidates, ajax_action = _discover_inventory_via_wordpress_ajax(
-            request=request,
-            ctx=ctx,
-            normalized_url=normalized_url,
-            page_url=pages[-1].page_url if pages else normalized_url,
+        ajax_pages, ajax_candidates, ajax_action = (
+            _discover_inventory_via_wordpress_ajax(
+                request=request,
+                ctx=ctx,
+                normalized_url=normalized_url,
+                page_url=pages[-1].page_url if pages else normalized_url,
                 page_title=page_title if "page_title" in locals() else "",
                 html=html if "html" in locals() else "",
                 headers=headers,
                 requests_module=requests_module,
+            )
         )
         if ajax_candidates:
             existing_urls = {candidate.url for candidate in candidates}
@@ -638,7 +643,10 @@ def discover_inventory_via_http(
                 "candidate_count": len(service_response.candidates),
                 "rejected_low_confidence_count": rejected_low_confidence_count,
                 "average_confidence": round(
-                    sum(candidate.confidence or 0.0 for candidate in service_response.candidates)
+                    sum(
+                        candidate.confidence or 0.0
+                        for candidate in service_response.candidates
+                    )
                     / len(service_response.candidates),
                     4,
                 ),
@@ -796,7 +804,9 @@ def _discover_inventory_via_wordpress_ajax(
                     )
                 )
                 candidates.extend(qualified_page_candidates)
-                seen_urls.update(candidate.url for candidate in qualified_page_candidates)
+                seen_urls.update(
+                    candidate.url for candidate in qualified_page_candidates
+                )
             if page_number >= max_pages:
                 break
         if candidates:
@@ -852,9 +862,7 @@ def _extract_wordpress_ajax_config(
         payload = json.loads(str(match.group("payload") or ""))
     except json.JSONDecodeError:
         return None
-    ajax_url = _normalize_absolute_url(
-        urljoin(page_url, str(payload.get("url") or ""))
-    )
+    ajax_url = _normalize_absolute_url(urljoin(page_url, str(payload.get("url") or "")))
     nonce = str(payload.get("nonce") or "").strip()
     if not ajax_url or not nonce:
         return None
@@ -958,7 +966,9 @@ def _same_host_script_urls(
     page_host = str(urlsplit(page_url).hostname or "").strip().casefold()
     script_urls: list[str] = []
     for match in _SCRIPT_SRC_RE.finditer(str(html or "")):
-        script_url = _normalize_absolute_url(urljoin(page_url, str(match.group("src") or "")))
+        script_url = _normalize_absolute_url(
+            urljoin(page_url, str(match.group("src") or ""))
+        )
         script_host = str(urlsplit(script_url).hostname or "").strip().casefold()
         if not script_url or script_host != page_host or script_url in script_urls:
             continue
@@ -1072,9 +1082,7 @@ def inspect_inventory_landing_pages(
                     ),
                 )
             observations_by_url[item.canonical_url] = observation
-    observations = [
-        observations_by_url[item.canonical_url] for item in request.items
-    ]
+    observations = [observations_by_url[item.canonical_url] for item in request.items]
     response = PublisherInventoryLandingPageInspectionResponse(
         schema_version="1.0",
         observations=observations,
@@ -1120,7 +1128,10 @@ def _inspect_landing_page_item(
             role="service",
             event="publisher_inventory_landing_page_request",
             module=logger.name,
-            fields={"candidate_url": normalized_url, "timeout_seconds": timeout_seconds},
+            fields={
+                "candidate_url": normalized_url,
+                "timeout_seconds": timeout_seconds,
+            },
         )
     )
     try:
@@ -1154,7 +1165,10 @@ def _inspect_landing_page_item(
             final_url=normalized_url,
             fetch_error=exc.message,
         )
-    final_url = _normalize_absolute_url(str(response.final_url or normalized_url)) or normalized_url
+    final_url = (
+        _normalize_absolute_url(str(response.final_url or normalized_url))
+        or normalized_url
+    )
     content_type = str(response.content_type or "").strip()
     status_code = int(response.status_code)
     logger.info(
@@ -1173,7 +1187,10 @@ def _inspect_landing_page_item(
         )
     )
     lowered_content_type = content_type.casefold()
-    if final_url.casefold().endswith(".pdf") or "application/pdf" in lowered_content_type:
+    if (
+        final_url.casefold().endswith(".pdf")
+        or "application/pdf" in lowered_content_type
+    ):
         verification_class, recovery_eligible = _classify_verification(
             final_url=final_url,
             final_title="",
@@ -1294,7 +1311,9 @@ def _inspect_landing_page_item(
             _contains_any_marker(interactive_lower, _PURCHASE_MARKERS)
             or _contains_price_signal(combined_text)
         ),
-        has_print_language=_contains_any_marker(combined_lower, _PRINT_LANGUAGE_MARKERS),
+        has_print_language=_contains_any_marker(
+            combined_lower, _PRINT_LANGUAGE_MARKERS
+        ),
         has_editorial_url_pattern=_has_editorial_url_pattern(final_url),
         has_editorial_markers=_contains_any_marker(combined_lower, _EDITORIAL_MARKERS),
         has_related_posts=_contains_any_marker(combined_lower, _RELATED_POST_MARKERS),
@@ -1448,14 +1467,31 @@ def _classify_source_surface(
     ):
         return "service_membership"
     if source_url and source_url.rstrip("/") != candidate_url.rstrip("/"):
-        if any(marker in source_url for marker in ("/reports", "/research", "/resources", "/insights")):
+        if any(
+            marker in source_url
+            for marker in ("/reports", "/research", "/resources", "/insights")
+        ):
             return "archive_feed"
         return "mixed_content_hub"
-    if any(marker in candidate_url for marker in ("/report/", "/reports/", "/research-library/", "/study/", "/survey/")):
+    if any(
+        marker in candidate_url
+        for marker in (
+            "/report/",
+            "/reports/",
+            "/research-library/",
+            "/study/",
+            "/survey/",
+        )
+    ):
         return "direct_detail"
-    if any(marker in candidate_url for marker in ("/research", "/insights", "/resources")):
+    if any(
+        marker in candidate_url for marker in ("/research", "/insights", "/resources")
+    ):
         return "research_hub"
-    if any(marker in source_title_lower for marker in ("report", "study", "survey", "benchmark", "playbook")):
+    if any(
+        marker in source_title_lower
+        for marker in ("report", "study", "survey", "benchmark", "playbook")
+    ):
         return "direct_detail"
     return "unknown"
 
@@ -1475,9 +1511,20 @@ def _classify_verification(
     has_dead_page_marker: bool,
 ) -> tuple[str, bool]:
     combined = " ".join(
-        part for part in (final_url, final_title, h1_title, og_title, fetch_error) if part
+        part
+        for part in (final_url, final_title, h1_title, og_title, fetch_error)
+        if part
     ).casefold()
-    if any(marker in combined for marker in ("access denied", "captcha", "just a moment", "verify you are human", "attention required")):
+    if any(
+        marker in combined
+        for marker in (
+            "access denied",
+            "captcha",
+            "just a moment",
+            "verify you are human",
+            "attention required",
+        )
+    ):
         return "challenge", True
     if fetch_error and any(
         marker in fetch_error.casefold()
@@ -1499,7 +1546,9 @@ def _classify_verification(
         return "protected_document", True
     if fetch_error or has_dead_page_marker:
         return "dead", False
-    if not (is_pdf or has_asset_type_term or has_download_language or has_document_structure):
+    if not (
+        is_pdf or has_asset_type_term or has_download_language or has_document_structure
+    ):
         return "weak_signal_html", False
     return "verified", False
 

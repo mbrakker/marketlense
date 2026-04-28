@@ -685,9 +685,7 @@ def _handle_insights_bundle_regeneration(
             "attempt_index": execution.runtime.request.attempt_index,
             "target_section": execution.target.target_section,
             "current_section_json": _dump_json(execution.state.insights_final),
-            "insights_candidates_json": _dump_json(
-                execution.state.insights_candidates
-            ),
+            "insights_candidates_json": _dump_json(execution.state.insights_candidates),
             "failure_reasons_json": _issues_json(execution.target.issues),
             "fix_checklist_json": _fix_checklist_json(execution.target),
             "grounding_package_json": _dump_json(execution.grounding_package),

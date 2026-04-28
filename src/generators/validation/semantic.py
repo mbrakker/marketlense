@@ -159,7 +159,9 @@ def run_semantic_validation(
             ),
             semantic_ctx,
         )
-        parsed = response.parsed_json if isinstance(response.parsed_json, dict) else None
+        parsed = (
+            response.parsed_json if isinstance(response.parsed_json, dict) else None
+        )
         logger.info(
             log_event(
                 semantic_ctx,

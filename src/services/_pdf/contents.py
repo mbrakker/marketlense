@@ -19,20 +19,27 @@ from .text import _close_pypdf_reader, _extract_text
 
 PDF_CONTENTS_EXCEPTIONS = (OSError, ValueError, TypeError)
 
-def detect_contents_page(request: PdfContentsDetectionRequest, ctx: RunContext) -> PdfContentsDetectionResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="pdf_contents_detect_start",
-        module=logger.name,
-        fields={
-            "path": request.path,
-            "max_pages": request.max_pages,
-            "min_headings": request.min_headings,
-            "keyword_count": len(request.keywords or []),
-            "using_context": bool(request.pdf_context and request.pdf_context.pypdf_reader),
-        },
-    ))
+
+def detect_contents_page(
+    request: PdfContentsDetectionRequest, ctx: RunContext
+) -> PdfContentsDetectionResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="pdf_contents_detect_start",
+            module=logger.name,
+            fields={
+                "path": request.path,
+                "max_pages": request.max_pages,
+                "min_headings": request.min_headings,
+                "keyword_count": len(request.keywords or []),
+                "using_context": bool(
+                    request.pdf_context and request.pdf_context.pypdf_reader
+                ),
+            },
+        )
+    )
     reader = request.pdf_context.pypdf_reader if request.pdf_context else None
     owns_reader = False
     if reader is None:
@@ -71,7 +78,9 @@ def detect_contents_page(request: PdfContentsDetectionRequest, ctx: RunContext) 
             text = _extract_text(reader, i)
             if not text.strip():
                 continue
-            score, matched_heading = _score_page(text, request.keywords or [], request.min_headings)
+            score, matched_heading = _score_page(
+                text, request.keywords or [], request.min_headings
+            )
             if score > confidence:
                 confidence = score
                 page_index = i
@@ -87,24 +96,27 @@ def detect_contents_page(request: PdfContentsDetectionRequest, ctx: RunContext) 
             heading=heading,
             confidence=confidence,
         )
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="pdf_contents_detect_complete",
-            module=logger.name,
-            fields={
-                "has_contents": has_contents,
-                "page_index": page_index,
-                "page_number": page_number,
-                "confidence": round(confidence, 3),
-                "heading": heading,
-                "scanned_pages": max_pages,
-            },
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="pdf_contents_detect_complete",
+                module=logger.name,
+                fields={
+                    "has_contents": has_contents,
+                    "page_index": page_index,
+                    "page_number": page_number,
+                    "confidence": round(confidence, 3),
+                    "heading": heading,
+                    "scanned_pages": max_pages,
+                },
+            )
+        )
         return response
     finally:
         if owns_reader and reader is not None:
             _close_pypdf_reader(reader)
+
 
 def _score_page(text: str, keywords: list[str], min_headings: int) -> Tuple[float, str]:
     lowered = text.lower()

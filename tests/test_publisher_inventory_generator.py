@@ -119,10 +119,19 @@ def test_build_publisher_inventory_snapshot_normalizes_dedupes_and_diffs(
     assert response.current_report_count == 2
     assert response.previous_report_count == 1
     assert len(response.new_items) == 1
-    assert response.new_items[0].canonical_url == "https://www.activate.com/reports/new-report"
+    assert (
+        response.new_items[0].canonical_url
+        == "https://www.activate.com/reports/new-report"
+    )
     assert response.new_items[0].discovered_on_page_number == 2
-    assert response.snapshot.items[0].canonical_url == "https://www.activate.com/reports/existing-report"
-    assert response.snapshot.items[1].canonical_url == "https://www.activate.com/reports/new-report"
+    assert (
+        response.snapshot.items[0].canonical_url
+        == "https://www.activate.com/reports/existing-report"
+    )
+    assert (
+        response.snapshot.items[1].canonical_url
+        == "https://www.activate.com/reports/new-report"
+    )
     assert response.snapshot.pages[0].page_number == 1
     assert_no_defaulted_required_fields(response.snapshot)
     parsed = parse_publisher_inventory_snapshot(
@@ -259,4 +268,6 @@ def test_build_publisher_inventory_snapshot_replaces_placeholder_title_with_url_
         run_context,
     )
 
-    assert response.snapshot.items[0].title == "buyers guide marketing resource management"
+    assert (
+        response.snapshot.items[0].title == "buyers guide marketing resource management"
+    )

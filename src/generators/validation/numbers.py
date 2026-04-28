@@ -62,7 +62,9 @@ def validate_new_numbers(
             sentence_quantities = extract_quantities(sentence)
             if not sentence_quantities:
                 continue
-            retrieved = retrieve_evidence_windows(sentence, windows, top_k=RETRIEVE_TOP_K)
+            retrieved = retrieve_evidence_windows(
+                sentence, windows, top_k=RETRIEVE_TOP_K
+            )
             local_evidence_quantities = list(allowed_quantities)
             for window in retrieved:
                 local_evidence_quantities.extend(window.quantities)

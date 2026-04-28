@@ -8,6 +8,8 @@ from src.generators.evidence_packs.common import (
     first_non_empty_text,
     to_dict,
 )
+
+
 def normalize_risk_register(raw_risks: object) -> list[dict[str, object]]:
     risks: list[dict[str, object]] = []
     for idx, entry in enumerate(coerce_pack_items(raw_risks)):

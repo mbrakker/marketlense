@@ -3633,9 +3633,10 @@ def test_download_report_with_browser_use_stabilizes_transient_submit_state(
     assert terminal_events[0]["fields"]["quorum_met"] is True
     assert "success_url" in terminal_events[0]["fields"]["quorum_signal_labels"]
     assert "success_text" in terminal_events[0]["fields"]["quorum_signal_labels"]
-    assert "page_text_transient" not in terminal_events[0]["fields"][
-        "quorum_transient_labels"
-    ]
+    assert (
+        "page_text_transient"
+        not in terminal_events[0]["fields"]["quorum_transient_labels"]
+    )
     assert terminal_events[0]["fields"]["attempts"] >= 0
 
 

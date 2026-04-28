@@ -358,7 +358,9 @@ class TestCli(unittest.TestCase):
         load_mock.assert_called_once()
         sync_mock.assert_called_once()
         request = sync_mock.call_args.args[0]
-        self.assertEqual("./Wordpress/config/publisher-profiles.json", request.snapshot_path)
+        self.assertEqual(
+            "./Wordpress/config/publisher-profiles.json", request.snapshot_path
+        )
         self.assertEqual("./state/reports.sqlite", request.reports_db)
 
     def test_audit_acquisition_paths_wires_settings_and_orchestrator(self) -> None:
@@ -493,7 +495,9 @@ class TestCli(unittest.TestCase):
 
         with patch.object(cli, "load_settings", return_value=app_settings) as load_app:
             with patch.object(
-                cli, "load_publisher_inventory_settings", return_value=inventory_settings
+                cli,
+                "load_publisher_inventory_settings",
+                return_value=inventory_settings,
             ) as load_inventory:
                 with patch.object(
                     cli, "load_browser_download_settings", return_value=browser_settings
@@ -606,7 +610,9 @@ class TestCli(unittest.TestCase):
         self.assertEqual("./state/reports.sqlite", request.reports_db)
         self.assertEqual("gpt-5-mini", request.settings.model)
 
-    def test_discover_publisher_inventory_treats_pagination_limit_as_bounded(self) -> None:
+    def test_discover_publisher_inventory_treats_pagination_limit_as_bounded(
+        self,
+    ) -> None:
         import src.cli as cli
 
         settings = PublisherInventorySettings(

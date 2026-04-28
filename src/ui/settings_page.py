@@ -46,7 +46,9 @@ def _refresh_runtime_state() -> None:
     st.session_state[ui_state.PUBLISH_ERROR_KEY] = publish_error
 
 
-def _build_asset_specs(settings: Any | None, browser_settings: Any | None) -> list[dict[str, str]]:
+def _build_asset_specs(
+    settings: Any | None, browser_settings: Any | None
+) -> list[dict[str, str]]:
     if settings is None:
         return []
     browser_identity_path = ""
@@ -102,7 +104,11 @@ def build_settings_workspace_metrics(
     if config_doc is not None and isinstance(config_doc.payload, dict):
         key_count = len(config_doc.payload)
     return [
-        {"label": "app.yaml keys", "value": str(key_count), "delta": "structured form ready"},
+        {
+            "label": "app.yaml keys",
+            "value": str(key_count),
+            "delta": "structured form ready",
+        },
         {
             "label": "Operational assets",
             "value": str(len(asset_specs)),
@@ -116,7 +122,9 @@ def build_settings_workspace_metrics(
         {
             "label": "Auth issues",
             "value": str(missing_auth),
-            "delta": "resolve missing secrets/files" if missing_auth else "all required sources present",
+            "delta": "resolve missing secrets/files"
+            if missing_auth
+            else "all required sources present",
         },
     ]
 
@@ -156,12 +164,16 @@ def build_settings_auth_rows(
         },
         {
             "name": "OPENAI_API_KEY",
-            "status": "present" if os.getenv("OPENAI_API_KEY", "").strip() else "missing",
+            "status": "present"
+            if os.getenv("OPENAI_API_KEY", "").strip()
+            else "missing",
             "source": "env",
         },
         {
             "name": "OPENROUTER_API_KEY",
-            "status": "present" if os.getenv("OPENROUTER_API_KEY", "").strip() else "missing",
+            "status": "present"
+            if os.getenv("OPENROUTER_API_KEY", "").strip()
+            else "missing",
             "source": "env",
         },
         {
@@ -170,8 +182,7 @@ def build_settings_auth_rows(
                 "present"
                 if publish_settings
                 and (
-                    publish_settings.wp.app_password
-                    or publish_settings.wp.bearer_token
+                    publish_settings.wp.app_password or publish_settings.wp.bearer_token
                 )
                 else "missing"
             ),
@@ -407,13 +418,10 @@ def _render_asset_editor(
                 if save_notice_prefix == "prompt_editor_notice"
                 else f"{save_notice_prefix}:{spec['key']}"
             )
-            st.session_state[notice_key] = (
-                f"Saved `{write_response.path}`"
-                + (
-                    f" with backup `{write_response.backup_path}`."
-                    if write_response.backup_path
-                    else "."
-                )
+            st.session_state[notice_key] = f"Saved `{write_response.path}`" + (
+                f" with backup `{write_response.backup_path}`."
+                if write_response.backup_path
+                else "."
             )
             st.rerun()
 
@@ -505,9 +513,7 @@ def render_settings_and_prompts(
                 "***REDACTED***" if publish_snapshot["wp"].get("app_password") else None
             )
             publish_snapshot["wp"]["bearer_token"] = (
-                "***REDACTED***"
-                if publish_snapshot["wp"].get("bearer_token")
-                else None
+                "***REDACTED***" if publish_snapshot["wp"].get("bearer_token") else None
             )
     else:
         publish_snapshot = {
@@ -563,13 +569,9 @@ def render_settings_and_prompts(
                     form_payload = parsed_editor_payload
                     form_payload_source = "yaml editor"
                 else:
-                    form_payload_error = (
-                        "Current YAML editor root is not a mapping; structured form is using disk content."
-                    )
+                    form_payload_error = "Current YAML editor root is not a mapping; structured form is using disk content."
             except yaml.YAMLError:
-                form_payload_error = (
-                    "Current YAML editor is invalid; structured form is using disk content."
-                )
+                form_payload_error = "Current YAML editor is invalid; structured form is using disk content."
 
         with st.container(horizontal=True):
             for metric in build_settings_workspace_metrics(
@@ -616,7 +618,9 @@ def render_settings_and_prompts(
                         hide_index=True,
                         column_config={
                             "area": "Area",
-                            "summary": st.column_config.TextColumn("Summary", width="large"),
+                            "summary": st.column_config.TextColumn(
+                                "Summary", width="large"
+                            ),
                         },
                     )
                 with right:
@@ -646,7 +650,9 @@ def render_settings_and_prompts(
                         ),
                     )
                     selected_asset = next(
-                        spec for spec in asset_specs if spec["key"] == selected_asset_key
+                        spec
+                        for spec in asset_specs
+                        if spec["key"] == selected_asset_key
                     )
                     _render_asset_editor(
                         spec=selected_asset,
@@ -671,7 +677,9 @@ def render_settings_and_prompts(
                         ),
                     )
                     selected_prompt_row = next(
-                        row for row in prompt_rows if row["namespace"] == selected_namespace
+                        row
+                        for row in prompt_rows
+                        if row["namespace"] == selected_namespace
                     )
                     prompt_kind = st.segmented_control(
                         "Prompt file",
@@ -707,7 +715,9 @@ def render_settings_and_prompts(
                     "Use the raw app.yaml editor for changes that do not map cleanly onto the structured form."
                 )
                 if editor_key not in st.session_state:
-                    st.session_state[editor_key] = config_doc.content if config_doc else ""
+                    st.session_state[editor_key] = (
+                        config_doc.content if config_doc else ""
+                    )
                 if saved_key not in st.session_state:
                     st.session_state[saved_key] = st.session_state.get(editor_key, "")
                 editor_text = st.text_area(
@@ -743,7 +753,9 @@ def render_settings_and_prompts(
                     else:
                         st.success("Editor is in sync with disk.")
                 with st.expander("Diff vs disk", expanded=unsaved):
-                    _render_diff(st.session_state[saved_key], editor_text, label="app.yaml")
+                    _render_diff(
+                        st.session_state[saved_key], editor_text, label="app.yaml"
+                    )
                 if save_clicked:
                     save_response, save_error = pages._try_write_app_config(
                         editor_text,
@@ -782,7 +794,9 @@ def render_settings_and_prompts(
                 st.json({"ingest": sanitized_settings, "publish": publish_snapshot})
                 if config_doc:
                     with st.expander("Top-level app.yaml keys"):
-                        st.code("\n".join(str(key) for key in config_doc.payload.keys()))
+                        st.code(
+                            "\n".join(str(key) for key in config_doc.payload.keys())
+                        )
 
     with detail_col:
         with st.container(border=True):

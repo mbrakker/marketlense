@@ -10,7 +10,9 @@ from src.contracts.browser_download import (
 )
 from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.contracts.run_context import RunContext
-from src.services._browser_report_download.request import resolve_effective_identity_fields
+from src.services._browser_report_download.request import (
+    resolve_effective_identity_fields,
+)
 from src.services import prompt_service
 from src.utils.logging import log_event
 

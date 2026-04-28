@@ -238,8 +238,12 @@ def _extract_component_link_anchors(
     normalized_page_url = _normalize_absolute_url(page_url) or page_url
     for pattern in _COMPONENT_LINK_WITH_HEADER_PATTERNS:
         for match in pattern.finditer(str(html_text or "")):
-            link_payload = html.unescape(str(match.group("link") or "")).replace("\\/", "/")
-            header_payload = html.unescape(str(match.group("header") or "")).replace("\\/", "/")
+            link_payload = html.unescape(str(match.group("link") or "")).replace(
+                "\\/", "/"
+            )
+            header_payload = html.unescape(str(match.group("header") or "")).replace(
+                "\\/", "/"
+            )
             href_match = _EMBEDDED_HREF_RE.search(link_payload)
             if href_match is None:
                 continue
@@ -458,7 +462,9 @@ def _should_expand_archive_library(
         return False
     if state.page_total_hint and state.page_total_hint > 1:
         return False
-    if state.result_range_total and state.result_range_total > max(len(page_candidates), 0):
+    if state.result_range_total and state.result_range_total > max(
+        len(page_candidates), 0
+    ):
         return False
     if len(page_candidates) > 3:
         return False
@@ -497,7 +503,9 @@ def _select_tab_labels_for_traversal(
     normalized_url: str,
     state: Any,
 ) -> list[str]:
-    labels = [_normalize_text(label) for label in state.tab_labels if _normalize_text(label)]
+    labels = [
+        _normalize_text(label) for label in state.tab_labels if _normalize_text(label)
+    ]
     if not labels:
         return []
     unique_labels: list[str] = []
@@ -563,7 +571,10 @@ def _is_terminal_results_page(state: Any) -> bool:
         return True
     if state.result_range_end is None or state.result_range_total is None:
         return False
-    return state.result_range_total > 0 and state.result_range_end >= state.result_range_total
+    return (
+        state.result_range_total > 0
+        and state.result_range_end >= state.result_range_total
+    )
 
 
 def _needs_additional_hydration(
@@ -599,9 +610,9 @@ def _is_exhausted_inert_load_more(
 ) -> bool:
     if stalled_state.page_url != previous_state.page_url:
         return False
-    if _rendered_state_anchor_fingerprint(stalled_state) != _rendered_state_anchor_fingerprint(
-        previous_state
-    ):
+    if _rendered_state_anchor_fingerprint(
+        stalled_state
+    ) != _rendered_state_anchor_fingerprint(previous_state):
         return False
     if (
         stalled_state.result_range_end != previous_state.result_range_end
@@ -640,25 +651,37 @@ def _build_browser_route_summary(
     bounded_by_pagination_limit: bool = False,
 ) -> str:
     host = str(urlsplit(normalized_url).hostname or "").strip().lower()
-    steps = [f"Rendered {host} in browser and extracted {len(pages)} inventory state(s)."]
+    steps = [
+        f"Rendered {host} in browser and extracted {len(pages)} inventory state(s)."
+    ]
     if metrics.cookies_dismissed:
         steps.append(f"Dismissed cookie banners {metrics.cookies_dismissed} time(s).")
     if metrics.report_route_clicks:
         steps.append("Followed the report listing route before extraction.")
     if metrics.archive_expansion_clicks:
-        steps.append(f"Expanded archive surfaces {metrics.archive_expansion_clicks} time(s).")
+        steps.append(
+            f"Expanded archive surfaces {metrics.archive_expansion_clicks} time(s)."
+        )
     if metrics.report_filter_applied:
         steps.append("Applied the report format filter.")
     if used_tabs and metrics.tab_clicks:
         steps.append(f"Traversed {metrics.tab_clicks + 1} tabbed publisher section(s).")
     if metrics.load_more_clicks:
-        steps.append(f"Expanded load-more pagination {metrics.load_more_clicks} time(s).")
+        steps.append(
+            f"Expanded load-more pagination {metrics.load_more_clicks} time(s)."
+        )
     if metrics.button_pagination_clicks:
-        steps.append(f"Clicked button pagination {metrics.button_pagination_clicks} time(s).")
+        steps.append(
+            f"Clicked button pagination {metrics.button_pagination_clicks} time(s)."
+        )
     if metrics.next_page_visits:
-        steps.append(f"Visited {metrics.next_page_visits} additional pagination URL(s).")
+        steps.append(
+            f"Visited {metrics.next_page_visits} additional pagination URL(s)."
+        )
     if bounded_by_pagination_limit:
-        steps.append("Stopped at the configured pagination limit after collecting a bounded candidate set.")
+        steps.append(
+            "Stopped at the configured pagination limit after collecting a bounded candidate set."
+        )
     return " ".join(steps)
 
 
@@ -724,23 +747,27 @@ def _looks_like_report_candidate(
         return True
     if _is_inventory_article_path(absolute_url):
         return True
-    if any(keyword in lowered_url for keyword in _WEAK_REPORT_KEYWORDS) and _is_inventory_article_path(
-        absolute_url
-    ):
+    if any(
+        keyword in lowered_url for keyword in _WEAK_REPORT_KEYWORDS
+    ) and _is_inventory_article_path(absolute_url):
         return True
-    if any(keyword in lowered_title for keyword in _WEAK_REPORT_KEYWORDS) and _is_inventory_article_path(
-        absolute_url
-    ):
+    if any(
+        keyword in lowered_title for keyword in _WEAK_REPORT_KEYWORDS
+    ) and _is_inventory_article_path(absolute_url):
         return True
     if archive_surface and _is_same_inventory_domain(candidate_host, page_host):
         if title and len(title) >= 12 and _looks_like_human_report_title(title):
             return True
-    if archive_surface and _has_report_focused_surface_context(
-        page_url=page_url,
-        origin_url=origin_url,
-        page_title=page_title,
-        active_tab_label=active_tab_label,
-    ) and _is_same_inventory_domain(candidate_host, page_host):
+    if (
+        archive_surface
+        and _has_report_focused_surface_context(
+            page_url=page_url,
+            origin_url=origin_url,
+            page_title=page_title,
+            active_tab_label=active_tab_label,
+        )
+        and _is_same_inventory_domain(candidate_host, page_host)
+    ):
         if title and len(title) >= 8 and _looks_like_human_report_title(title):
             return True
     if (
@@ -827,7 +854,11 @@ def _requires_origin_host_recovery(*, page_url: str, normalized_url: str) -> boo
         return False
     page_host = str(urlsplit(normalized_page_url).hostname or "").strip().casefold()
     origin_host = str(urlsplit(normalized_origin_url).hostname or "").strip().casefold()
-    return bool(page_host and origin_host and _apex_domain(page_host) != _apex_domain(origin_host))
+    return bool(
+        page_host
+        and origin_host
+        and _apex_domain(page_host) != _apex_domain(origin_host)
+    )
 
 
 def _apex_domain(host: str) -> str:
@@ -859,7 +890,11 @@ def _is_inventory_article_path(url: str) -> bool:
 def _is_inventory_type_archive_path(url: str) -> bool:
     segments = [
         segment
-        for segment in str(urlsplit(url).path or "").strip().casefold().rstrip("/").split("/")
+        for segment in str(urlsplit(url).path or "")
+        .strip()
+        .casefold()
+        .rstrip("/")
+        .split("/")
         if segment
     ]
     if len(segments) >= 3 and segments[0] == "insights" and segments[1] == "type":
@@ -877,7 +912,11 @@ def _is_inventory_topic_hub_path(url: str) -> bool:
 def _is_reports_hub_path(url: str) -> bool:
     segments = [
         segment
-        for segment in str(urlsplit(url).path or "").strip().casefold().rstrip("/").split("/")
+        for segment in str(urlsplit(url).path or "")
+        .strip()
+        .casefold()
+        .rstrip("/")
+        .split("/")
         if segment
     ]
     return len(segments) >= 2 and "insights" in segments and segments[-1] == "reports"
@@ -886,7 +925,11 @@ def _is_reports_hub_path(url: str) -> bool:
 def _is_root_or_locale_home(url: str) -> bool:
     segments = [
         segment
-        for segment in str(urlsplit(url).path or "").strip().casefold().rstrip("/").split("/")
+        for segment in str(urlsplit(url).path or "")
+        .strip()
+        .casefold()
+        .rstrip("/")
+        .split("/")
         if segment
     ]
     if not segments:

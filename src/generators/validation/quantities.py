@@ -76,7 +76,9 @@ def collect_quantities_from_artifacts(artifacts: dict) -> List[Quantity]:
                 continue
             quantities.extend(extract_quantities(s(claim.get("claim"))))
             quantities.extend(extract_quantities(s(claim.get("evidence"))))
-    quantities.extend(collect_quantities_from_insights(artifacts.get("insights_final") or []))
+    quantities.extend(
+        collect_quantities_from_insights(artifacts.get("insights_final") or [])
+    )
     quantities.extend(
         collect_quantities_from_insights(artifacts.get("insights_candidates") or [])
     )
@@ -270,13 +272,15 @@ def numeric_inequality_compatible(
     return within or overlap
 
 
-def unsupported_quantity_severity(*, policy: str, quantity: Quantity, sentence: str) -> str:
+def unsupported_quantity_severity(
+    *, policy: str, quantity: Quantity, sentence: str
+) -> str:
     if policy == "strict":
         return "error"
     if policy == "mixed":
-        if METRIC_ATTRIBUTION_RE.search(normalize_text(sentence)) or quantity_has_metric_cues(
-            quantity, sentence
-        ):
+        if METRIC_ATTRIBUTION_RE.search(
+            normalize_text(sentence)
+        ) or quantity_has_metric_cues(quantity, sentence):
             return "error"
         return "warning"
     if quantity_has_metric_cues(quantity, sentence):
@@ -289,4 +293,3 @@ def quantity_has_metric_cues_from_text(text: str) -> bool:
     if not quantities:
         return False
     return any(quantity_has_metric_cues(quantity, text) for quantity in quantities)
-

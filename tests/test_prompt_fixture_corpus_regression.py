@@ -143,12 +143,15 @@ def test_prompt_fixture_regression_allowlist_requires_unexpired_bound() -> None:
         ),
     )
 
-    assert compare_prompt_fixture_metrics(
-        baseline=baseline,
-        current=current,
-        allowlist=allowlist,
-        today=date(2026, 4, 25),
-    ) == ()
+    assert (
+        compare_prompt_fixture_metrics(
+            baseline=baseline,
+            current=current,
+            allowlist=allowlist,
+            today=date(2026, 4, 25),
+        )
+        == ()
+    )
 
     failures = compare_prompt_fixture_metrics(
         baseline=baseline,

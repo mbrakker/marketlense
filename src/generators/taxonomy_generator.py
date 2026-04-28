@@ -6,7 +6,10 @@ import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from src.contracts.openai import OpenAIResponseRequest, OpenAIResponseResult
-from src.contracts.report_analysis import AnalysisPackPathRequest, AnalysisStorePackRequest
+from src.contracts.report_analysis import (
+    AnalysisPackPathRequest,
+    AnalysisStorePackRequest,
+)
 from src.contracts.run_context import RunContext
 from src.contracts.categories import CategoryMappingLoadRequest, TaxonomyInferenceRule
 from src.contracts.schema_validation import SchemaValidateRequest
@@ -25,8 +28,15 @@ from src.generators.analysis_store_adapter import (
     store_pack as store_analysis_pack,
 )
 from src.generators.prompt_preparation import prepare_prompt_bundle
-from src.services.category_mapping_service import load_mappings as load_category_mappings
-from src.services import file_service, llm_service, prompt_service, report_analysis_store_service
+from src.services.category_mapping_service import (
+    load_mappings as load_category_mappings,
+)
+from src.services import (
+    file_service,
+    llm_service,
+    prompt_service,
+    report_analysis_store_service,
+)
 from src.utils.errors import AppError
 from src.utils.tag_utils import normalize_slug_tag
 from src.utils.logging import log_event
@@ -50,20 +60,22 @@ def extract_taxonomy(
         scope="taxonomy",
     )
     taxonomy_temperature = _resolve_taxonomy_temperature(request)
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="taxonomy_extract_start",
-        module=logger.name,
-        fields={
-            "report_id": request.report_id,
-            "vector_store_id": request.vector_store_id,
-            "prompt_namespace": request.prompt_namespace,
-            "report_title": request.report_title,
-            "md5": request.md5 or "",
-            "report_slug": request.report_slug or "",
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="taxonomy_extract_start",
+            module=logger.name,
+            fields={
+                "report_id": request.report_id,
+                "vector_store_id": request.vector_store_id,
+                "prompt_namespace": request.prompt_namespace,
+                "report_title": request.report_title,
+                "md5": request.md5 or "",
+                "report_slug": request.report_slug or "",
+            },
+        )
+    )
     mappings_resp = load_category_mappings(
         CategoryMappingLoadRequest(
             schema_version="1.0",
@@ -73,16 +85,18 @@ def extract_taxonomy(
         ctx,
     )
     allowed_tags = _collect_allowed_tags(mappings_resp)
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="taxonomy_allowed_tags_loaded",
-        module=logger.name,
-        fields={
-            "count": len(allowed_tags),
-            "path": request.settings.category_mapping_path,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="taxonomy_allowed_tags_loaded",
+            module=logger.name,
+            fields={
+                "count": len(allowed_tags),
+                "path": request.settings.category_mapping_path,
+            },
+        )
+    )
     prompt_bundle = prepare_prompt_bundle(
         namespace=request.prompt_namespace,
         settings=request.settings,
@@ -95,42 +109,48 @@ def extract_taxonomy(
         },
         reload_if_changed=True,
     )
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="taxonomy_prompt_selected",
-        module=logger.name,
-        fields={
-            "namespace": request.prompt_namespace,
-            "system_path": prompt_bundle.prompt_set.system.path,
-            "system_sha256": prompt_bundle.prompt_set.system.sha256,
-            "user_path": prompt_bundle.prompt_set.user.path,
-            "user_sha256": prompt_bundle.prompt_set.user.sha256,
-        },
-    ))
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="taxonomy_prompt_rendered",
-        module=logger.name,
-        fields={
-            "system_prompt": prompt_bundle.system_prompt,
-            "user_prompt": prompt_bundle.user_prompt,
-        },
-    ))
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="taxonomy_model_resolved",
-        module=logger.name,
-        fields={
-            "namespace": request.prompt_namespace,
-            "resolved_model": prompt_bundle.resolved_model,
-            "default_model": request.settings.openai_model,
-            "temperature": taxonomy_temperature,
-            "seed": request.settings.openai_seed,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="taxonomy_prompt_selected",
+            module=logger.name,
+            fields={
+                "namespace": request.prompt_namespace,
+                "system_path": prompt_bundle.prompt_set.system.path,
+                "system_sha256": prompt_bundle.prompt_set.system.sha256,
+                "user_path": prompt_bundle.prompt_set.user.path,
+                "user_sha256": prompt_bundle.prompt_set.user.sha256,
+            },
+        )
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="taxonomy_prompt_rendered",
+            module=logger.name,
+            fields={
+                "system_prompt": prompt_bundle.system_prompt,
+                "user_prompt": prompt_bundle.user_prompt,
+            },
+        )
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="taxonomy_model_resolved",
+            module=logger.name,
+            fields={
+                "namespace": request.prompt_namespace,
+                "resolved_model": prompt_bundle.resolved_model,
+                "default_model": request.settings.openai_model,
+                "temperature": taxonomy_temperature,
+                "seed": request.settings.openai_seed,
+            },
+        )
+    )
     cache_key = ""
     cache_eligible, cache_skip_reason = _taxonomy_cache_eligibility(request)
     if cache_eligible:
@@ -152,38 +172,44 @@ def extract_taxonomy(
             ctx=ctx,
         )
         if cached_response is not None:
-            logger.info(log_event(
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="taxonomy_cache_hit",
+                    module=logger.name,
+                    fields={
+                        "report_id": request.report_id,
+                        "cache_key": cache_key,
+                    },
+                )
+            )
+            return cached_response
+        logger.info(
+            log_event(
                 ctx,
                 role="generator",
-                event="taxonomy_cache_hit",
+                event="taxonomy_cache_miss",
                 module=logger.name,
                 fields={
                     "report_id": request.report_id,
-                    "cache_key": cache_key,
+                    "reason": miss_reason,
                 },
-            ))
-            return cached_response
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="taxonomy_cache_miss",
-            module=logger.name,
-            fields={
-                "report_id": request.report_id,
-                "reason": miss_reason,
-            },
-        ))
+            )
+        )
     else:
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="taxonomy_cache_skipped",
-            module=logger.name,
-            fields={
-                "report_id": request.report_id,
-                "reason": cache_skip_reason,
-            },
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="taxonomy_cache_skipped",
+                module=logger.name,
+                fields={
+                    "report_id": request.report_id,
+                    "reason": cache_skip_reason,
+                },
+            )
+        )
 
     parsed_json: Dict[str, Any] | None = None
     not_found_reason = ""
@@ -207,71 +233,85 @@ def extract_taxonomy(
             ctx,
         )
         raw_text = resp.text or ""
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="taxonomy_model_response",
-            module=logger.name,
-            fields={
-                "model": getattr(resp, "model", prompt_bundle.resolved_model),
-                "raw_response": raw_text,
-                "has_json": bool(resp.parsed_json),
-            },
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="taxonomy_model_response",
+                module=logger.name,
+                fields={
+                    "model": getattr(resp, "model", prompt_bundle.resolved_model),
+                    "raw_response": raw_text,
+                    "has_json": bool(resp.parsed_json),
+                },
+            )
+        )
         parsed_json = resp.parsed_json if isinstance(resp.parsed_json, dict) else None
         if parsed_json is None:
             not_found_reason = "model_returned_no_json"
     except AppError as exc:
         if exc.retryable:
-            logger.info(log_event(
-                ctx,
-                role="generator",
-                event="taxonomy_retryable_error_propagated",
-                module=logger.name,
-                fields={"code": exc.code, "message": exc.message},
-            ))
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="taxonomy_retryable_error_propagated",
+                    module=logger.name,
+                    fields={"code": exc.code, "message": exc.message},
+                )
+            )
             raise
         not_found_reason = exc.code
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="taxonomy_model_failed",
-            module=logger.name,
-            fields={"code": exc.code, "message": exc.message},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="taxonomy_model_failed",
+                module=logger.name,
+                fields={"code": exc.code, "message": exc.message},
+            )
+        )
 
     payload = parsed_json or _empty_payload(not_found_reason)
     try:
         validate_schema(
-            SchemaValidateRequest(schema_version="1.0", payload=payload, schema_name="taxonomy"),
+            SchemaValidateRequest(
+                schema_version="1.0", payload=payload, schema_name="taxonomy"
+            ),
             ctx,
         )
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="taxonomy_schema_valid",
-            module=logger.name,
-            fields={"reason": not_found_reason or ""},
-        ))
-    except AppError as exc:
-        if exc.retryable:
-            logger.info(log_event(
+        logger.info(
+            log_event(
                 ctx,
                 role="generator",
-                event="taxonomy_retryable_error_propagated",
+                event="taxonomy_schema_valid",
                 module=logger.name,
-                fields={"code": exc.code, "message": exc.message},
-            ))
+                fields={"reason": not_found_reason or ""},
+            )
+        )
+    except AppError as exc:
+        if exc.retryable:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="taxonomy_retryable_error_propagated",
+                    module=logger.name,
+                    fields={"code": exc.code, "message": exc.message},
+                )
+            )
             raise
         not_found_reason = not_found_reason or f"schema_validation_failed:{exc.code}"
         payload = _empty_payload(not_found_reason)
-        logger.info(log_event(
-            ctx,
-            role="generator",
-            event="taxonomy_schema_invalid",
-            module=logger.name,
-            fields={"code": exc.code, "message": exc.message},
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="taxonomy_schema_invalid",
+                module=logger.name,
+                fields={"code": exc.code, "message": exc.message},
+            )
+        )
 
     primary_tags = _normalize_tags(payload.get("primary_tags"))
     secondary_tags = _normalize_tags(payload.get("secondary_tags"))
@@ -319,21 +359,23 @@ def extract_taxonomy(
             analysis_store=analysis_store,
             ctx=ctx,
         )
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="taxonomy_extract_complete",
-        module=logger.name,
-        fields={
-            "taxonomy_count": len(taxonomy),
-            "primary_tag_count": len(primary_tags),
-            "secondary_tag_count": len(secondary_tags),
-            "tag_evidence_count": len(tag_evidence),
-            "region": region,
-            "time_period": time_period,
-            "not_found_reason": not_found_reason or "",
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="taxonomy_extract_complete",
+            module=logger.name,
+            fields={
+                "taxonomy_count": len(taxonomy),
+                "primary_tag_count": len(primary_tags),
+                "secondary_tag_count": len(secondary_tags),
+                "tag_evidence_count": len(tag_evidence),
+                "region": region,
+                "time_period": time_period,
+                "not_found_reason": not_found_reason or "",
+            },
+        )
+    )
     return response
 
 
@@ -368,7 +410,9 @@ def _taxonomy_cache_meta(
 
 
 def _resolve_taxonomy_temperature(request: TaxonomyExtractRequest) -> float:
-    configured = getattr(request.settings, "taxonomy_temperature", request.settings.temperature)
+    configured = getattr(
+        request.settings, "taxonomy_temperature", request.settings.temperature
+    )
     try:
         return float(configured)
     except (TypeError, ValueError):
@@ -580,13 +624,15 @@ def _store_taxonomy_cache(
         payload=payload,
         ctx=ctx,
     )
-    logger.info(log_event(
-        ctx,
-        role="generator",
-        event="taxonomy_cache_written",
-        module=logger.name,
-        fields={"report_id": request.report_id, "path": output_path},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="generator",
+            event="taxonomy_cache_written",
+            module=logger.name,
+            fields={"report_id": request.report_id, "path": output_path},
+        )
+    )
 
 
 def _normalize_tags(items: Any) -> List[str]:
@@ -660,7 +706,9 @@ def _normalize_tag_evidence(
         if known_norms and tag not in known_norms:
             continue
         section_label = _s(
-            item.get("section_label") or item.get("section") or item.get("section_title")
+            item.get("section_label")
+            or item.get("section")
+            or item.get("section_title")
         ).strip()
         evidence = _s(item.get("evidence")).strip()
         tier = _s(item.get("tier")).strip().lower()
@@ -743,7 +791,10 @@ def _find_trigger_evidence_for_rule(
         if not context_keywords_any:
             return item
         haystack = f"{item.section_label} {item.evidence}"
-        if any(_keyword_matches_evidence(keyword, haystack) for keyword in context_keywords_any):
+        if any(
+            _keyword_matches_evidence(keyword, haystack)
+            for keyword in context_keywords_any
+        ):
             return item
     return None
 
@@ -774,9 +825,7 @@ def _apply_inference_rule(
     tag_evidence: List[TaxonomyTagEvidence],
 ) -> tuple[List[str], List[str], List[TaxonomyTagEvidence]]:
     remove_norms = {
-        normalize_slug_tag(tag)
-        for tag in rule.remove_tags
-        if normalize_slug_tag(tag)
+        normalize_slug_tag(tag) for tag in rule.remove_tags if normalize_slug_tag(tag)
     }
     inferred_tag = normalize_slug_tag(rule.inferred_tag)
     inferred_norm = inferred_tag

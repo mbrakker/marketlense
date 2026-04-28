@@ -300,7 +300,10 @@ def test_run_report_analysis_polls_vector_store_status_until_ready(
     assert_logs_have_required_fields,
 ):
     caplog.set_level(logging.INFO, logger="market_lense.report_analysis_orchestrator")
-    runtime = replace(_runtime(tmp_path), settings=replace(_runtime(tmp_path).settings, openai_timeout_seconds=10.0))
+    runtime = replace(
+        _runtime(tmp_path),
+        settings=replace(_runtime(tmp_path).settings, openai_timeout_seconds=10.0),
+    )
     source = _source(runtime)
     selection = _selection(runtime, source)
     statuses = iter(
@@ -367,10 +370,15 @@ def test_run_report_analysis_surfaces_vector_store_timeout(
     external_boundary_mocks_only,
     assert_app_error,
 ):
-    runtime = replace(_runtime(tmp_path), settings=replace(_runtime(tmp_path).settings, openai_timeout_seconds=5.0))
+    runtime = replace(
+        _runtime(tmp_path),
+        settings=replace(_runtime(tmp_path).settings, openai_timeout_seconds=5.0),
+    )
     source = _source(runtime)
     selection = _selection(runtime, source)
-    external_boundary_mocks_only.setattr(retry_orch.time, "sleep", lambda _seconds: None)
+    external_boundary_mocks_only.setattr(
+        retry_orch.time, "sleep", lambda _seconds: None
+    )
 
     deps = _deps(
         vector_store_get_status=lambda req, ctx: SimpleNamespace(
@@ -569,7 +577,9 @@ def test_run_report_analysis_uses_context_fit_categories_not_taxonomy_tags(tmp_p
             },
             "scope": {"scope": "Retail commerce strategy"},
             "methods": {"methods": ["Survey"]},
-            "findings": {"findings": [{"id": "f1", "text": "AI is reshaping retail execution."}]},
+            "findings": {
+                "findings": [{"id": "f1", "text": "AI is reshaping retail execution."}]
+            },
             "limitations": {"limitations": []},
         },
         generate_artifacts=lambda **kwargs: _artifacts(),
@@ -669,7 +679,9 @@ def test_run_report_analysis_returns_complete_report_payload_contract(
         state.payload,
         sentinel_values={"Not available from text"},
     )
-    assert_no_defaulted_required_fields(state.payload.quote, sentinel_values={"Unknown"})
+    assert_no_defaulted_required_fields(
+        state.payload.quote, sentinel_values={"Unknown"}
+    )
     assert_no_defaulted_required_fields(state.payload.figure)
 
 

@@ -73,7 +73,10 @@ def test_load_publisher_profiles_snapshot_returns_validated_rows(
     )
 
     assert result.publisher_count == 2
-    assert result.source_page_url == "https://www.notion.so/87c35358a78c4afc9eb7451dc1ade33d"
+    assert (
+        result.source_page_url
+        == "https://www.notion.so/87c35358a78c4afc9eb7451dc1ade33d"
+    )
     assert result.publishers[0].name == "Activate Consulting"
     assert_no_defaulted_required_fields(result)
     assert_logs_have_required_fields(

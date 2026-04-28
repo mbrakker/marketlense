@@ -181,7 +181,9 @@ def _coerce_findings(findings: Any, *, limit: int) -> List[str]:
     return _dedupe_preserve_order(results)
 
 
-def _coerce_sections(doc_map: Any, findings: Any, *, limit: int) -> List[ReportContextSection]:
+def _coerce_sections(
+    doc_map: Any, findings: Any, *, limit: int
+) -> List[ReportContextSection]:
     sections: List[ReportContextSection] = []
     if isinstance(doc_map, dict):
         for section in doc_map.get("sections") or []:
@@ -209,7 +211,9 @@ def _coerce_sections(doc_map: Any, findings: Any, *, limit: int) -> List[ReportC
                     key_points=key_points,
                 )
             )
-    findings_bucket: List[str] = _coerce_findings(findings, limit=max(0, limit - len(sections)))
+    findings_bucket: List[str] = _coerce_findings(
+        findings, limit=max(0, limit - len(sections))
+    )
     for idx, text in enumerate(findings_bucket, start=1):
         sections.append(
             ReportContextSection(
@@ -249,7 +253,11 @@ def _clean_text_list(values: Any, *, limit: int, item_limit: int) -> List[str]:
 
 
 def _join_unique(values: List[str], *, limit: int) -> str:
-    joined = " ".join(_dedupe_preserve_order([_clean_text(value) for value in values if _clean_text(value)]))
+    joined = " ".join(
+        _dedupe_preserve_order(
+            [_clean_text(value) for value in values if _clean_text(value)]
+        )
+    )
     if limit > 0 and len(joined) > limit:
         return joined[: limit - 3].rstrip() + "..."
     return joined

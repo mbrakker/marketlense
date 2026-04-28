@@ -15,7 +15,16 @@ LOG_DATE_RE = re.compile(r"market_lense_(?P<date>\d{4}-\d{2}-\d{2})\.log$")
 
 def status_chip_level(status: str | None) -> str:
     value = str(status or "").strip().lower()
-    if value in {"processed", "published", "generated", "pass", "success", "ready", "complete", "indexed"}:
+    if value in {
+        "processed",
+        "published",
+        "generated",
+        "pass",
+        "success",
+        "ready",
+        "complete",
+        "indexed",
+    }:
         return "success"
     if value in {"skipped", "warn", "warning", "missing", "partial"}:
         return "warn"
@@ -31,7 +40,9 @@ def extract_log_date_from_filename(path: str) -> str | None:
     return match.group("date")
 
 
-def parse_structured_log_line(line: str, *, log_date: str | None = None) -> dict[str, Any] | None:
+def parse_structured_log_line(
+    line: str, *, log_date: str | None = None
+) -> dict[str, Any] | None:
     match = LOG_LINE_RE.match(line.strip())
     if not match:
         return None
@@ -128,15 +139,19 @@ def compute_task_duration_rollups(events: list[dict[str, Any]]) -> list[dict[str
     rows: list[dict[str, Any]] = []
     for acc in grouped.values():
         duration_s = int((acc["ended_at"] - acc["started_at"]).total_seconds())
-        rows.append({
-            "run_id": acc["run_id"],
-            "task_id": acc["task_id"],
-            "started_at": acc["started_at"].isoformat(),
-            "ended_at": acc["ended_at"].isoformat(),
-            "duration_seconds": duration_s,
-            "event_count": acc["event_count"],
-        })
-    rows.sort(key=lambda item: (-item["duration_seconds"], item["run_id"], item["task_id"]))
+        rows.append(
+            {
+                "run_id": acc["run_id"],
+                "task_id": acc["task_id"],
+                "started_at": acc["started_at"].isoformat(),
+                "ended_at": acc["ended_at"].isoformat(),
+                "duration_seconds": duration_s,
+                "event_count": acc["event_count"],
+            }
+        )
+    rows.sort(
+        key=lambda item: (-item["duration_seconds"], item["run_id"], item["task_id"])
+    )
     return rows
 
 
@@ -196,7 +211,9 @@ def coerce_editor_records(value: Any) -> list[dict[str, Any]]:
     return []
 
 
-def mapping_from_editor_records(value: Any, *, key_field: str, value_field: str) -> dict[str, str]:
+def mapping_from_editor_records(
+    value: Any, *, key_field: str, value_field: str
+) -> dict[str, str]:
     rows = coerce_editor_records(value)
     mapped: dict[str, str] = {}
     for row in rows:
@@ -208,7 +225,9 @@ def mapping_from_editor_records(value: Any, *, key_field: str, value_field: str)
     return mapped
 
 
-def pricing_from_editor_records(value: Any) -> tuple[dict[str, dict[str, float]], list[str]]:
+def pricing_from_editor_records(
+    value: Any,
+) -> tuple[dict[str, dict[str, float]], list[str]]:
     rows = coerce_editor_records(value)
     pricing: dict[str, dict[str, float]] = {}
     errors: list[str] = []

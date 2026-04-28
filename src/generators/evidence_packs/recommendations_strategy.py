@@ -8,6 +8,8 @@ from src.generators.evidence_packs.common import (
     first_non_empty_text,
     to_dict,
 )
+
+
 def normalize_recommendations(
     raw_recommendations: object,
 ) -> list[dict[str, object]]:

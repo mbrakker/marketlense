@@ -327,13 +327,15 @@ def collect_candidate_pack_metrics(candidate_root: str) -> dict[str, Any]:
             chart_count = sum(
                 1
                 for candidate in candidates
-                if isinstance(candidate, dict) and str(candidate.get("kind") or "") == "chart"
+                if isinstance(candidate, dict)
+                and str(candidate.get("kind") or "") == "chart"
             )
         if table_count is None:
             table_count = sum(
                 1
                 for candidate in candidates
-                if isinstance(candidate, dict) and str(candidate.get("kind") or "") == "table"
+                if isinstance(candidate, dict)
+                and str(candidate.get("kind") or "") == "table"
             )
         total_charts += int(chart_count or 0)
         total_tables += int(table_count or 0)

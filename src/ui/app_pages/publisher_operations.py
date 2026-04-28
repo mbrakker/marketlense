@@ -65,7 +65,9 @@ def _format_payload(payload: object) -> str:
     if payload in (None, "", [], {}):
         return "{}"
     try:
-        return json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=True, default=str)
+        return json.dumps(
+            payload, indent=2, sort_keys=True, ensure_ascii=True, default=str
+        )
     except TypeError:
         return str(payload)
 
@@ -250,7 +252,9 @@ def _render_run_summary(
         [
             {
                 "label": "Run status",
-                "value": str(getattr(record, "status", "") or "").replace("_", " ").title(),
+                "value": str(getattr(record, "status", "") or "")
+                .replace("_", " ")
+                .title(),
                 "help": _tip(
                     "Current lifecycle state for the selected background job.",
                     "Succeeded means the worker finished without an error.",
@@ -303,7 +307,11 @@ def _render_run_details(
             },
             {
                 "label": "Workflow",
-                "value": str(getattr(record, "display_name", "") or getattr(record, "run_type", "") or ""),
+                "value": str(
+                    getattr(record, "display_name", "")
+                    or getattr(record, "run_type", "")
+                    or ""
+                ),
                 "help": _tip(
                     "Human-readable workflow name for the selected run.",
                     "This tells you which background tool produced the results shown here.",
@@ -371,7 +379,9 @@ def _load_saved_publishers(settings: object) -> tuple[list[dict[str, str]], str 
         response = load_publisher_profiles_snapshot(
             PublisherProfilesSnapshotLoadRequest(
                 schema_version="1.0",
-                snapshot_path=str(getattr(settings, "publisher_profiles_path", "") or ""),
+                snapshot_path=str(
+                    getattr(settings, "publisher_profiles_path", "") or ""
+                ),
             ),
             _ctx("publisher_profiles_snapshot"),
         )
@@ -471,7 +481,9 @@ def render_publisher_discovery() -> None:
             ).strip()
     if clicked:
         if not selected_url.strip():
-            st.warning("Pick a saved publisher or enter an insights URL before launching discovery.")
+            st.warning(
+                "Pick a saved publisher or enter an insights URL before launching discovery."
+            )
         else:
             response = launch_background_run(
                 settings,
@@ -665,7 +677,9 @@ def render_report_download_lab() -> None:
     )
     if clicked:
         if not selected_url.strip():
-            st.warning("Pick a saved publisher page or enter a report URL before launching download.")
+            st.warning(
+                "Pick a saved publisher page or enter a report URL before launching download."
+            )
         else:
             response = launch_background_run(
                 settings,
@@ -716,7 +730,10 @@ def render_report_download_lab() -> None:
                 },
                 {
                     "label": "Identity profile file",
-                    "value": str(getattr(browser_settings, "identity_config_path", "") or "Unavailable"),
+                    "value": str(
+                        getattr(browser_settings, "identity_config_path", "")
+                        or "Unavailable"
+                    ),
                     "help": _tip(
                         "Source file used to load saved browser form identity values.",
                         "This helps operators understand where the saved delivery email came from.",
@@ -950,7 +967,10 @@ def render_acquisition_audit() -> None:
                 },
                 {
                     "label": "Identity profile file",
-                    "value": str(getattr(browser_settings, "identity_config_path", "") or "Unavailable"),
+                    "value": str(
+                        getattr(browser_settings, "identity_config_path", "")
+                        or "Unavailable"
+                    ),
                     "help": _tip(
                         "Source file used to load saved browser identity values for the audit.",
                         "This explains where the saved delivery email came from.",
@@ -1046,7 +1066,9 @@ def render_publisher_sync() -> None:
         )
     if clicked:
         if not snapshot_path.strip():
-            st.warning("Choose a configured snapshot or enter a custom snapshot path before syncing.")
+            st.warning(
+                "Choose a configured snapshot or enter a custom snapshot path before syncing."
+            )
         else:
             try:
                 result = run_publisher_sync(
@@ -1058,7 +1080,9 @@ def render_publisher_sync() -> None:
                     ctx=_ctx("publisher_sync"),
                 )
                 st.session_state["last_publisher_sync_result"] = result
-                st.success(f"Publisher sync complete: {result.replaced_count} rows replaced.")
+                st.success(
+                    f"Publisher sync complete: {result.replaced_count} rows replaced."
+                )
             except UI_SURFACE_EXCEPTIONS as exc:
                 st.error(str(exc))
     result = st.session_state.get("last_publisher_sync_result")
@@ -1148,7 +1172,8 @@ def render_auth_access() -> None:
     requires_oauth_files = settings.drive_auth_mode == "oauth_user"
     status_level = (
         "warn"
-        if requires_oauth_files and (not configured_client_path.strip() or not configured_token_path.strip())
+        if requires_oauth_files
+        and (not configured_client_path.strip() or not configured_token_path.strip())
         else "info"
     )
     status_label = "Needs setup" if status_level == "warn" else "Ready"
@@ -1244,7 +1269,9 @@ def render_auth_access() -> None:
             )
     if clicked:
         if not resolved_client_path.strip() or not resolved_token_path.strip():
-            st.warning("Choose configured OAuth files or provide both custom OAuth file paths before logging in.")
+            st.warning(
+                "Choose configured OAuth files or provide both custom OAuth file paths before logging in."
+            )
         else:
             try:
                 result = authorize_oauth_user(
@@ -1286,7 +1313,8 @@ def render_auth_access() -> None:
                     "label": "Google OAuth client",
                     "value": (
                         f"Present: {resolved_client_path}"
-                        if resolved_client_path.strip() and os.path.exists(resolved_client_path.strip())
+                        if resolved_client_path.strip()
+                        and os.path.exists(resolved_client_path.strip())
                         else f"Missing: {resolved_client_path or 'path not set'}"
                     ),
                     "help": _tip(
@@ -1298,7 +1326,8 @@ def render_auth_access() -> None:
                     "label": "Google OAuth token",
                     "value": (
                         f"Present: {resolved_token_path}"
-                        if resolved_token_path.strip() and os.path.exists(resolved_token_path.strip())
+                        if resolved_token_path.strip()
+                        and os.path.exists(resolved_token_path.strip())
                         else f"Missing: {resolved_token_path or 'path not set'}"
                     ),
                     "help": _tip(
@@ -1308,7 +1337,9 @@ def render_auth_access() -> None:
                 },
                 {
                     "label": "OpenAI API key",
-                    "value": "Present in environment" if os.getenv("OPENAI_API_KEY", "").strip() else "Missing from environment",
+                    "value": "Present in environment"
+                    if os.getenv("OPENAI_API_KEY", "").strip()
+                    else "Missing from environment",
                     "help": _tip(
                         "Whether an OpenAI API key is available to the app.",
                         "The actual secret value is never shown here.",
@@ -1316,7 +1347,9 @@ def render_auth_access() -> None:
                 },
                 {
                     "label": "OpenRouter API key",
-                    "value": "Present in environment" if os.getenv("OPENROUTER_API_KEY", "").strip() else "Missing from environment",
+                    "value": "Present in environment"
+                    if os.getenv("OPENROUTER_API_KEY", "").strip()
+                    else "Missing from environment",
                     "help": _tip(
                         "Whether an OpenRouter API key is available to the app.",
                         "The actual secret value is never shown here.",
@@ -1326,7 +1359,8 @@ def render_auth_access() -> None:
                     "label": "WordPress auth",
                     "value": (
                         "Present"
-                        if publish_settings and getattr(publish_settings.wp, "app_password", "")
+                        if publish_settings
+                        and getattr(publish_settings.wp, "app_password", "")
                         else "Missing"
                     ),
                     "help": _tip(
@@ -1336,7 +1370,10 @@ def render_auth_access() -> None:
                 },
                 {
                     "label": "Browser identity profile",
-                    "value": str(getattr(browser_settings, "identity_config_path", "") or "Unavailable"),
+                    "value": str(
+                        getattr(browser_settings, "identity_config_path", "")
+                        or "Unavailable"
+                    ),
                     "help": _tip(
                         "Path to the browser download identity profile used for gated report forms.",
                         "This file stores non-secret identity fields such as contact details and form defaults.",
@@ -1382,7 +1419,9 @@ def render_auth_access() -> None:
         else:
             _render_payload_area(
                 "Latest OAuth result",
-                oauth_result.__dict__ if hasattr(oauth_result, "__dict__") else oauth_result,
+                oauth_result.__dict__
+                if hasattr(oauth_result, "__dict__")
+                else oauth_result,
                 help_text=_tip(
                     "Full structured result from the latest OAuth login in this session.",
                     "Use this when you need the raw metadata behind the most recent login flow.",

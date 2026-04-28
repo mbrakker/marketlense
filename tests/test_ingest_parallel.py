@@ -62,15 +62,17 @@ def _make_real_process_file(
             cache_pdf_path=lambda current_settings, current_file: str(
                 Path(current_settings.cache_dir) / f"{current_file.file_id}.pdf"
             ),
-            resolve_md5_sidecar=lambda request, _ctx: FileCacheMd5SidecarResolveResponse(
-                schema_version="1.0",
-                cache_path=request.cache_path,
-                sidecar_path=f"{request.cache_path}.md5.json",
-                sidecar_exists=False,
-                record=None,
-                resolved_md5=None,
-                hit=False,
-                reason="missing",
+            resolve_md5_sidecar=lambda request, _ctx: (
+                FileCacheMd5SidecarResolveResponse(
+                    schema_version="1.0",
+                    cache_path=request.cache_path,
+                    sidecar_path=f"{request.cache_path}.md5.json",
+                    sidecar_exists=False,
+                    record=None,
+                    resolved_md5=None,
+                    hit=False,
+                    reason="missing",
+                )
             ),
             ensure_file_name=lambda current_file, _settings, _ctx: current_file,
             write_md5_sidecar=lambda request, _ctx: FileCacheMd5SidecarWriteResponse(

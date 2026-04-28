@@ -312,7 +312,9 @@ def _configure(conn: sqlite3.Connection) -> None:
 
 
 def _ensure_reports_projection_columns(conn: sqlite3.Connection) -> None:
-    cols = {str(row[1]) for row in conn.execute("PRAGMA table_info(reports)").fetchall()}
+    cols = {
+        str(row[1]) for row in conn.execute("PRAGMA table_info(reports)").fetchall()
+    }
     for column_name, column_type in _REPORT_PROJECTION_COLUMNS:
         if column_name not in cols:
             conn.execute(f"ALTER TABLE reports ADD COLUMN {column_name} {column_type}")
@@ -355,7 +357,9 @@ def _delete_stale(
     conn.execute(f"DELETE FROM {table} WHERE report_id=?", (report_id,))
 
 
-def _upsert_report(conn: sqlite3.Connection, request: AnalyticsProjectionUpsertRequest) -> int:
+def _upsert_report(
+    conn: sqlite3.Connection, request: AnalyticsProjectionUpsertRequest
+) -> int:
     report = request.batch.report
     report_id = str(report.report_id)
     title = report.title.strip()

@@ -436,7 +436,11 @@ def _build_quotes(
             raw.get("id") or raw.get("evidence_id") or f"quote-{index + 1}"
         )
         page_raw = raw.get("page")
-        page = int(page_raw) if isinstance(page_raw, int) and not isinstance(page_raw, bool) else None
+        page = (
+            int(page_raw)
+            if isinstance(page_raw, int) and not isinstance(page_raw, bool)
+            else None
+        )
         rows.append(
             ReportQuoteProjection(
                 schema_version=PROJECTION_SCHEMA_VERSION,
@@ -453,7 +457,9 @@ def _build_quotes(
                     source_ref=f"{source_pack}[{index}]",
                     generated_at_utc=generated_at_utc,
                     analysis_run_id=analysis_run_id,
-                    model=_source_pack_model(artifacts if source_pack == "artifacts" else quote_candidates),
+                    model=_source_pack_model(
+                        artifacts if source_pack == "artifacts" else quote_candidates
+                    ),
                 ),
             )
         )
@@ -570,7 +576,9 @@ def _build_categories(
                 fit_score=float(raw.get("fit_score") or 0.0),
                 decision=_clean_text(raw.get("decision")),
                 selected=category_id in selected_ids,
-                evidence_sections=_clean_string_list(raw.get("evidence_sections") or []),
+                evidence_sections=_clean_string_list(
+                    raw.get("evidence_sections") or []
+                ),
                 lineage=_lineage(
                     source_pack="context_category_fit",
                     source_ref=f"category_fits[{index}]",
@@ -869,7 +877,9 @@ def build_projection(
         else {}
     )
     artifacts: dict[str, Any] = (
-        analysis.artifacts_payload if isinstance(analysis.artifacts_payload, dict) else {}
+        analysis.artifacts_payload
+        if isinstance(analysis.artifacts_payload, dict)
+        else {}
     )
     doc_map = _unwrap_doc_map(
         analysis.evidence_packs.get("doc_map", {})

@@ -453,7 +453,10 @@ def _is_secondary_rescue_eligible(
     category: CategoryDefinition,
     config: CategoryClassificationConfig,
 ) -> bool:
-    if primary_score > 0.0 and score < primary_score * config.secondary_rescue_score_ratio:
+    if (
+        primary_score > 0.0
+        and score < primary_score * config.secondary_rescue_score_ratio
+    ):
         return False
     if strong_match_count < config.secondary_rescue_min_strong_matches:
         return False

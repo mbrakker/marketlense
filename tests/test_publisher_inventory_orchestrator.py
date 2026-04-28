@@ -1003,7 +1003,10 @@ def test_run_publisher_inventory_discovery_reuses_idempotent_snapshot_and_source
     assert second.snapshot_changed is True
     assert len(uploads) == 1
     assert len(source_records) == 1
-    assert second.new_report_urls[0].canonical_url == first.new_report_urls[0].canonical_url
+    assert (
+        second.new_report_urls[0].canonical_url
+        == first.new_report_urls[0].canonical_url
+    )
 
 
 def test_run_publisher_inventory_discovery_does_not_commit_raw_only_snapshot_drift(

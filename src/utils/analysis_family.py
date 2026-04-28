@@ -26,9 +26,9 @@ def get_family_status(payload: Any, family: str) -> dict[str, Any]:
 
 
 def family_is_abstained(payload: Any, family: str) -> bool:
-    return str(get_family_status(payload, family).get("status") or "").strip().lower() == (
-        "abstained"
-    )
+    return str(
+        get_family_status(payload, family).get("status") or ""
+    ).strip().lower() == ("abstained")
 
 
 def family_policy_action(payload: Any, family: str) -> str:

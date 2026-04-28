@@ -11,18 +11,22 @@ from src.utils.logging import log_event
 logger = logging.getLogger("market_lense.cost_reporting_orchestrator")
 
 
-def run_cost_reporting(request: CostReportingRequest, ctx: RunContext) -> CostReportingResponse:
+def run_cost_reporting(
+    request: CostReportingRequest, ctx: RunContext
+) -> CostReportingResponse:
     if request.report_request is None and request.rollup_request is None:
-        logger.info(log_event(
-            ctx,
-            role="orchestrator",
-            event="cost_reporting_invalid_request",
-            module=logger.name,
-            fields={
-                "has_report_request": False,
-                "has_rollup_request": False,
-            },
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="cost_reporting_invalid_request",
+                module=logger.name,
+                fields={
+                    "has_report_request": False,
+                    "has_rollup_request": False,
+                },
+            )
+        )
         raise AppError(
             code="cost_reporting_request_invalid",
             message="At least one of report_request or rollup_request must be provided.",
@@ -30,16 +34,18 @@ def run_cost_reporting(request: CostReportingRequest, ctx: RunContext) -> CostRe
             context={"has_report_request": False, "has_rollup_request": False},
         )
 
-    logger.info(log_event(
-        ctx,
-        role="orchestrator",
-        event="cost_reporting_start",
-        module=logger.name,
-        fields={
-            "has_report_request": request.report_request is not None,
-            "has_rollup_request": request.rollup_request is not None,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="cost_reporting_start",
+            module=logger.name,
+            fields={
+                "has_report_request": request.report_request is not None,
+                "has_rollup_request": request.rollup_request is not None,
+            },
+        )
+    )
 
     report = (
         cost_ledger_service.generate_cost_report(request.report_request, ctx)
@@ -52,19 +58,21 @@ def run_cost_reporting(request: CostReportingRequest, ctx: RunContext) -> CostRe
         else None
     )
 
-    logger.info(log_event(
-        ctx,
-        role="orchestrator",
-        event="cost_reporting_complete",
-        module=logger.name,
-        fields={
-            "report_filter_type": report.filter_type if report else "",
-            "report_filter_value": report.filter_value if report else "",
-            "report_matched_entries": report.matched_entries if report else 0,
-            "rollup_out_path": rollup.out_path if rollup else "",
-            "rollup_days": len(rollup.totals_by_date) if rollup else 0,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="orchestrator",
+            event="cost_reporting_complete",
+            module=logger.name,
+            fields={
+                "report_filter_type": report.filter_type if report else "",
+                "report_filter_value": report.filter_value if report else "",
+                "report_matched_entries": report.matched_entries if report else 0,
+                "rollup_out_path": rollup.out_path if rollup else "",
+                "rollup_days": len(rollup.totals_by_date) if rollup else 0,
+            },
+        )
+    )
     return CostReportingResponse(
         schema_version="1.0",
         report=report,

@@ -32,17 +32,19 @@ def _build_tag_acronym_map(acronyms: list[str]) -> dict[str, str]:
 
 def render_report(request: RenderRequest, ctx: RunContext) -> RenderResponse:
     tag_acronym_map = _build_tag_acronym_map(request.tag_acronyms)
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="render_html_start",
-        module=logger.name,
-        fields={
-            "doc_name": request.doc_name,
-            "file_id": request.file_id,
-            "tag_acronyms_count": len(tag_acronym_map),
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="render_html_start",
+            module=logger.name,
+            fields={
+                "doc_name": request.doc_name,
+                "file_id": request.file_id,
+                "tag_acronyms_count": len(tag_acronym_map),
+            },
+        )
+    )
     report_title = str(request.data.get("title") or "").strip()
     html = JINJA_ENV.get_template("report.html.j2").render(
         data=request.data,
@@ -75,11 +77,13 @@ def render_report(request: RenderRequest, ctx: RunContext) -> RenderResponse:
             context={"out_path": str(out_path)},
         ) from exc
     html_path = str(out_path)
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="render_html_complete",
-        module=logger.name,
-        fields={"html_path": html_path},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="render_html_complete",
+            module=logger.name,
+            fields={"html_path": html_path},
+        )
+    )
     return RenderResponse(schema_version="1.0", html_path=html_path)

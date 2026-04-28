@@ -91,7 +91,8 @@ def build_publisher_inventory_snapshot(
     )
     previous_snapshot = request.previous_snapshot
     previous_urls = {
-        item.canonical_url for item in (previous_snapshot.items if previous_snapshot else [])
+        item.canonical_url
+        for item in (previous_snapshot.items if previous_snapshot else [])
     }
     new_items = [
         PublisherInventoryDiffItem(
@@ -183,7 +184,8 @@ def parse_publisher_inventory_snapshot(
                 discovered_on_page_number=int(item["discovered_on_page_number"]),
                 pdf_url=(
                     str(item.get("pdf_url")).strip()
-                    if item.get("pdf_url") is not None and str(item.get("pdf_url")).strip()
+                    if item.get("pdf_url") is not None
+                    and str(item.get("pdf_url")).strip()
                     else None
                 ),
                 published_at_text=(
@@ -217,7 +219,11 @@ def parse_publisher_inventory_snapshot(
             severity="error",
             context={"source": source},
         ) from exc
-    if not snapshot.publisher_name or not snapshot.normalized_insights_url or not snapshot.items:
+    if (
+        not snapshot.publisher_name
+        or not snapshot.normalized_insights_url
+        or not snapshot.items
+    ):
         raise AppError(
             code="publisher_inventory_snapshot_incomplete",
             message="Publisher inventory snapshot is missing required populated fields",
@@ -242,7 +248,9 @@ def parse_publisher_inventory_snapshot(
     return snapshot
 
 
-def _normalize_pages(pages: Iterable[PublisherInventoryPage]) -> list[PublisherInventoryPage]:
+def _normalize_pages(
+    pages: Iterable[PublisherInventoryPage],
+) -> list[PublisherInventoryPage]:
     normalized: dict[tuple[int, str], PublisherInventoryPage] = {}
     for page in pages:
         page_url = _normalize_absolute_url(page.page_url)
@@ -266,7 +274,9 @@ def _normalize_items(
     normalized_candidates: list[tuple[str, int, str, str, str | None, str | None]] = []
     for candidate in candidates:
         source_page_url = _normalize_absolute_url(candidate.source_page_url)
-        canonical_url = _normalize_candidate_url(candidate.url, base_url=source_page_url)
+        canonical_url = _normalize_candidate_url(
+            candidate.url, base_url=source_page_url
+        )
         if not canonical_url:
             continue
         page_number = int(candidate.discovered_on_page_number)
@@ -275,7 +285,9 @@ def _normalize_items(
         title = _normalize_title(candidate.title)
         if not title:
             title = _fallback_title_from_url(canonical_url)
-        pdf_url_raw = _normalize_candidate_url(candidate.pdf_url, base_url=source_page_url)
+        pdf_url_raw = _normalize_candidate_url(
+            candidate.pdf_url, base_url=source_page_url
+        )
         pdf_url = pdf_url_raw or None
         if canonical_url.lower().endswith(".pdf") and not pdf_url:
             pdf_url = canonical_url
@@ -303,7 +315,14 @@ def _normalize_items(
     aggregated: list[PublisherInventoryItem] = []
     current_url = None
     current_item: PublisherInventoryItem | None = None
-    for canonical_url, page_number, _source_page_url, title, pdf_url, published_at_text in normalized_candidates:
+    for (
+        canonical_url,
+        page_number,
+        _source_page_url,
+        title,
+        pdf_url,
+        published_at_text,
+    ) in normalized_candidates:
         if canonical_url != current_url:
             if current_item is not None:
                 aggregated.append(current_item)
@@ -346,12 +365,12 @@ def _build_candidate_traces(
     raw_candidates: Iterable[PublisherInventoryRawCandidate],
     normalized_items: Iterable[PublisherInventoryItem],
 ) -> list[PublisherInventoryCandidateTrace]:
-    raw_by_url: dict[
-        str, dict[str, object]
-    ] = {}
+    raw_by_url: dict[str, dict[str, object]] = {}
     for candidate in raw_candidates:
         source_page_url = _normalize_absolute_url(candidate.source_page_url)
-        canonical_url = _normalize_candidate_url(candidate.url, base_url=source_page_url)
+        canonical_url = _normalize_candidate_url(
+            candidate.url, base_url=source_page_url
+        )
         if not canonical_url:
             continue
         entry = raw_by_url.setdefault(
@@ -391,16 +410,14 @@ def _build_candidate_traces(
             raw_source_page_urls if isinstance(raw_source_page_urls, set) else set()
         )
         source_page_urls = sorted(
-            str(value).strip()
-            for value in source_page_url_values
-            if str(value).strip()
+            str(value).strip() for value in source_page_url_values if str(value).strip()
         )
         raw_provenances = details.get("provenances")
-        provenance_values = raw_provenances if isinstance(raw_provenances, set) else set()
+        provenance_values = (
+            raw_provenances if isinstance(raw_provenances, set) else set()
+        )
         provenances = sorted(
-            str(value).strip()
-            for value in provenance_values
-            if str(value).strip()
+            str(value).strip() for value in provenance_values if str(value).strip()
         )
         max_confidence = details.get("max_confidence")
         traces.append(
@@ -460,7 +477,9 @@ def _fallback_title_from_url(url: str) -> str:
 
 
 def _serialize_snapshot(snapshot: PublisherInventorySnapshot) -> str:
-    return json.dumps(asdict(snapshot), ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return json.dumps(
+        asdict(snapshot), ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    )
 
 
 def _serialize_stable_snapshot(snapshot: PublisherInventorySnapshot) -> str:
@@ -472,4 +491,6 @@ def _serialize_stable_snapshot(snapshot: PublisherInventorySnapshot) -> str:
         "pages": [asdict(page) for page in snapshot.pages],
         "items": [asdict(item) for item in snapshot.items],
     }
-    return json.dumps(stable_payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return json.dumps(
+        stable_payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    )

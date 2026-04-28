@@ -327,15 +327,16 @@ def test_run_acquisition_audit_builds_candidate_and_publisher_maps(
     assert result.candidates[0].recommended_report_flow == "automate_pdf_download"
     assert result.candidates[1].recommended_report_flow == "complete_identity_profile"
     assert len(download_requests) == 2
-    assert download_requests[0].candidate_trace == _discovery_result().current_candidates[0]
+    assert (
+        download_requests[0].candidate_trace
+        == _discovery_result().current_candidates[0]
+    )
     assert download_requests[0].publisher_discovery_route_kind == "browser_render"
     assert (
         download_requests[0].publisher_recommended_discovery_route_kind
         == "browser_render"
     )
-    assert all(
-        req.reports_db != "./state/reports.sqlite" for req in download_requests
-    )
+    assert all(req.reports_db != "./state/reports.sqlite" for req in download_requests)
     assert len(writes) == 1
     payload = json.loads(writes[0].content.decode("utf-8"))
     assert payload["publisher_count"] == 1

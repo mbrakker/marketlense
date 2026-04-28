@@ -295,9 +295,10 @@ def test_projection_generator_stable_ids_and_vector_serialization(
     finding_queue = queue_by_type["finding"]
     assert finding_queue.embedding_status == "pending"
     assert len(finding_queue.content_hash) == 64
-    assert finding_queue.content_hash == {
-        row.entity_type: row for row in second.vector_queue
-    }["finding"].content_hash
+    assert (
+        finding_queue.content_hash
+        == {row.entity_type: row for row in second.vector_queue}["finding"].content_hash
+    )
     assert finding_queue.content_class == "evidence"
     assert "Budgets are increasing" in finding_queue.text_payload
     assert finding_queue.metadata["source_pack"] == "findings"
@@ -330,9 +331,9 @@ def test_projection_store_idempotent_upsert_and_report_scoped_stale_cleanup(
 
     assert first.projection_status == "projected"
     assert second.projection_attempt_count == 2
-    assert _fetch_one(
-        db_path, "SELECT COUNT(*) AS count FROM report_findings"
-    )["count"] == len(batch.findings)
+    assert _fetch_one(db_path, "SELECT COUNT(*) AS count FROM report_findings")[
+        "count"
+    ] == len(batch.findings)
     report = _fetch_one(
         db_path,
         "SELECT projection_status, projection_attempt_count, projection_error_code FROM reports WHERE file_id=?",
@@ -375,14 +376,20 @@ def test_projection_store_idempotent_upsert_and_report_scoped_stale_cleanup(
         run_context,
     )
 
-    assert _fetch_one(
-        db_path,
-        "SELECT COUNT(*) AS count FROM report_findings WHERE report_id='drive-file-1' AND finding_uid LIKE '%stale'",
-    )["count"] == 0
-    assert _fetch_one(
-        db_path,
-        "SELECT COUNT(*) AS count FROM report_findings WHERE report_id='other-report'",
-    )["count"] == 1
+    assert (
+        _fetch_one(
+            db_path,
+            "SELECT COUNT(*) AS count FROM report_findings WHERE report_id='drive-file-1' AND finding_uid LIKE '%stale'",
+        )["count"]
+        == 0
+    )
+    assert (
+        _fetch_one(
+            db_path,
+            "SELECT COUNT(*) AS count FROM report_findings WHERE report_id='other-report'",
+        )["count"]
+        == 1
+    )
 
 
 def test_projection_store_records_failure_and_validates_embedding_status(

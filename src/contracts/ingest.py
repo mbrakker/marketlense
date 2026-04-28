@@ -10,7 +10,9 @@ from src.contracts.docpacks import DocPackPathMap
 class IngestSettings:
     schema_version: str = field(metadata={"doc": "Settings schema version."})
     google_sa_path: str = field(
-        metadata={"doc": "Filesystem path to the Google service account JSON when drive_auth_mode=service_account."}
+        metadata={
+            "doc": "Filesystem path to the Google service account JSON when drive_auth_mode=service_account."
+        }
     )
     gdrive_folder_id: str = field(
         metadata={"doc": "Google Drive folder ID containing source PDFs."}
@@ -46,11 +48,15 @@ class IngestSettings:
     )
     google_oauth_client_path: Optional[str] = field(
         default=None,
-        metadata={"doc": "Optional OAuth desktop client JSON path when drive_auth_mode=oauth_user."},
+        metadata={
+            "doc": "Optional OAuth desktop client JSON path when drive_auth_mode=oauth_user."
+        },
     )
     google_oauth_token_path: Optional[str] = field(
         default=None,
-        metadata={"doc": "Optional OAuth authorized-user token JSON path when drive_auth_mode=oauth_user."},
+        metadata={
+            "doc": "Optional OAuth authorized-user token JSON path when drive_auth_mode=oauth_user."
+        },
     )
     taxonomy_temperature: float = field(
         default=1.0,
@@ -250,7 +256,9 @@ class IngestSettings:
     )
     llm_retry_backoff_step_seconds: float = field(
         default=1.0,
-        metadata={"doc": "Additional linear backoff delay added per LLM retry attempt."},
+        metadata={
+            "doc": "Additional linear backoff delay added per LLM retry attempt."
+        },
     )
     llm_retry_jitter_seconds: float = field(
         default=0.25,
@@ -258,11 +266,15 @@ class IngestSettings:
     )
     llm_circuit_breaker_failure_threshold: int = field(
         default=3,
-        metadata={"doc": "Consecutive retryable LLM failures required to open the circuit breaker."},
+        metadata={
+            "doc": "Consecutive retryable LLM failures required to open the circuit breaker."
+        },
     )
     llm_circuit_breaker_recovery_seconds: float = field(
         default=30.0,
-        metadata={"doc": "Cooldown in seconds before the LLM circuit breaker allows a probe call."},
+        metadata={
+            "doc": "Cooldown in seconds before the LLM circuit breaker allows a probe call."
+        },
     )
     rank_timeout_seconds: float = field(
         default=600.0, metadata={"doc": "Timeout in seconds for OpenAI ranking calls."}

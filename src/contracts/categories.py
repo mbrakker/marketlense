@@ -26,9 +26,7 @@ class CategoryClassificationConfig:
     )
     secondary_score_ratio: float = field(
         default=0.7,
-        metadata={
-            "doc": "Minimum ratio between secondary and primary category score."
-        },
+        metadata={"doc": "Minimum ratio between secondary and primary category score."},
     )
     secondary_rescue_score_ratio: float = field(
         default=0.55,
@@ -80,9 +78,7 @@ class CategoryClassificationConfig:
     )
     global_generic_tags: List[str] = field(
         default_factory=list,
-        metadata={
-            "doc": "Cross-cutting tags that should be downweighted globally."
-        },
+        metadata={"doc": "Cross-cutting tags that should be downweighted globally."},
     )
 
 
@@ -111,7 +107,7 @@ class CategoryDefinition:
     )
     tags: List[str] = field(
         default_factory=list,
-        metadata={"doc": "Legacy tags/keywords that map to this category."}
+        metadata={"doc": "Legacy tags/keywords that map to this category."},
     )
     core_tags: List[str] = field(
         default_factory=list,
@@ -300,7 +296,9 @@ class CategoryScoreDetail:
     )
     evidence_tag_count: int = field(
         default=0,
-        metadata={"doc": "Count of distinct strong matched tags that carry evidence support."},
+        metadata={
+            "doc": "Count of distinct strong matched tags that carry evidence support."
+        },
     )
     evidence_section_count: int = field(
         default=0,
@@ -308,7 +306,9 @@ class CategoryScoreDetail:
     )
     secondary_tier_match_count: int = field(
         default=0,
-        metadata={"doc": "Count of matched tags that the extractor labeled as secondary."},
+        metadata={
+            "doc": "Count of matched tags that the extractor labeled as secondary."
+        },
     )
     must_have_match_count: int = field(
         default=0,
@@ -316,7 +316,9 @@ class CategoryScoreDetail:
     )
     secondary_rescue_eligible: bool = field(
         default=False,
-        metadata={"doc": "Whether this category qualifies for evidence-backed secondary rescue."},
+        metadata={
+            "doc": "Whether this category qualifies for evidence-backed secondary rescue."
+        },
     )
     eligible: bool = field(
         default=False,

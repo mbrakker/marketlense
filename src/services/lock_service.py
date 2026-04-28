@@ -44,43 +44,49 @@ def _read_lock(path: str) -> Optional[LockInfo]:
 
 
 def get_lock(request: LockGetRequest, ctx: RunContext) -> LockGetResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="lock_get_start",
-        module=logger.name,
-        fields={"lock_path": request.lock_path},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="lock_get_start",
+            module=logger.name,
+            fields={"lock_path": request.lock_path},
+        )
+    )
     info = _read_lock(request.lock_path)
     response = LockGetResponse(schema_version="1.0", found=info is not None, lock=info)
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="lock_get_complete",
-        module=logger.name,
-        fields={
-            "lock_path": request.lock_path,
-            "found": response.found,
-            "owner_id": info.owner_id if info else "",
-            "pid": info.pid if info else None,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="lock_get_complete",
+            module=logger.name,
+            fields={
+                "lock_path": request.lock_path,
+                "found": response.found,
+                "owner_id": info.owner_id if info else "",
+                "pid": info.pid if info else None,
+            },
+        )
+    )
     return response
 
 
 def acquire_lock(request: LockAcquireRequest, ctx: RunContext) -> LockAcquireResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="lock_acquire_start",
-        module=logger.name,
-        fields={
-            "lock_path": request.lock_path,
-            "owner_id": request.owner_id,
-            "pid": request.pid,
-            "ttl_seconds": request.ttl_seconds,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="lock_acquire_start",
+            module=logger.name,
+            fields={
+                "lock_path": request.lock_path,
+                "owner_id": request.owner_id,
+                "pid": request.pid,
+                "ttl_seconds": request.ttl_seconds,
+            },
+        )
+    )
     lock_path = Path(request.lock_path)
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     requested_ttl = (
@@ -94,18 +100,20 @@ def acquire_lock(request: LockAcquireRequest, ctx: RunContext) -> LockAcquireRes
     )
     stale_ttl = existing_ttl if existing_ttl is not None else requested_ttl
     if existing and stale_ttl and (now - existing.created_at) > stale_ttl:
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="lock_stale_evicted",
-            module=logger.name,
-            fields={
-                "lock_path": request.lock_path,
-                "owner_id": existing.owner_id,
-                "pid": existing.pid,
-                "age_seconds": now - existing.created_at,
-            },
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="lock_stale_evicted",
+                module=logger.name,
+                fields={
+                    "lock_path": request.lock_path,
+                    "owner_id": existing.owner_id,
+                    "pid": existing.pid,
+                    "age_seconds": now - existing.created_at,
+                },
+            )
+        )
         try:
             lock_path.unlink(missing_ok=True)
         except OSError as exc:
@@ -119,18 +127,20 @@ def acquire_lock(request: LockAcquireRequest, ctx: RunContext) -> LockAcquireRes
         existing = None
 
     if existing:
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="lock_conflict",
-            module=logger.name,
-            fields={
-                "lock_path": request.lock_path,
-                "existing_owner": existing.owner_id,
-                "existing_pid": existing.pid,
-                "created_at": existing.created_at,
-            },
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="lock_conflict",
+                module=logger.name,
+                fields={
+                    "lock_path": request.lock_path,
+                    "existing_owner": existing.owner_id,
+                    "existing_pid": existing.pid,
+                    "created_at": existing.created_at,
+                },
+            )
+        )
         return LockAcquireResponse(
             schema_version="1.0",
             acquired=False,
@@ -154,17 +164,19 @@ def acquire_lock(request: LockAcquireRequest, ctx: RunContext) -> LockAcquireRes
             raise
     except FileExistsError:
         conflict = _read_lock(request.lock_path)
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="lock_conflict",
-            module=logger.name,
-            fields={
-                "lock_path": request.lock_path,
-                "existing_owner": conflict.owner_id if conflict else None,
-                "existing_pid": conflict.pid if conflict else None,
-            },
-        ))
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="lock_conflict",
+                module=logger.name,
+                fields={
+                    "lock_path": request.lock_path,
+                    "existing_owner": conflict.owner_id if conflict else None,
+                    "existing_pid": conflict.pid if conflict else None,
+                },
+            )
+        )
         return LockAcquireResponse(
             schema_version="1.0",
             acquired=False,
@@ -186,60 +198,72 @@ def acquire_lock(request: LockAcquireRequest, ctx: RunContext) -> LockAcquireRes
         owner_id=request.owner_id,
         pid=request.pid,
         created_at=now,
-        ttl_seconds=requested_ttl if requested_ttl is not None else DEFAULT_LOCK_TTL_SECONDS,
+        ttl_seconds=requested_ttl
+        if requested_ttl is not None
+        else DEFAULT_LOCK_TTL_SECONDS,
     )
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="lock_acquire_complete",
-        module=logger.name,
-        fields={
-            "lock_path": request.lock_path,
-            "owner_id": request.owner_id,
-            "pid": request.pid,
-        },
-    ))
-    return LockAcquireResponse(schema_version="1.0", acquired=True, lock=info, conflict=None)
-
-
-def release_lock(request: LockReleaseRequest, ctx: RunContext) -> LockReleaseResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="lock_release_start",
-        module=logger.name,
-        fields={
-            "lock_path": request.lock_path,
-            "owner_id": request.owner_id,
-            "pid": request.pid,
-        },
-    ))
-    lock_path = Path(request.lock_path)
-    existing = _read_lock(request.lock_path)
-
-    if not lock_path.exists():
-        logger.info(log_event(
+    logger.info(
+        log_event(
             ctx,
             role="service",
-            event="lock_release_missing",
-            module=logger.name,
-            fields={"lock_path": request.lock_path},
-        ))
-        return LockReleaseResponse(schema_version="1.0", released=False)
-
-    if existing and existing.owner_id and existing.owner_id != request.owner_id:
-        logger.info(log_event(
-            ctx,
-            role="service",
-            event="lock_release_not_owner",
+            event="lock_acquire_complete",
             module=logger.name,
             fields={
                 "lock_path": request.lock_path,
                 "owner_id": request.owner_id,
-                "current_owner": existing.owner_id,
-                "current_pid": existing.pid,
+                "pid": request.pid,
             },
-        ))
+        )
+    )
+    return LockAcquireResponse(
+        schema_version="1.0", acquired=True, lock=info, conflict=None
+    )
+
+
+def release_lock(request: LockReleaseRequest, ctx: RunContext) -> LockReleaseResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="lock_release_start",
+            module=logger.name,
+            fields={
+                "lock_path": request.lock_path,
+                "owner_id": request.owner_id,
+                "pid": request.pid,
+            },
+        )
+    )
+    lock_path = Path(request.lock_path)
+    existing = _read_lock(request.lock_path)
+
+    if not lock_path.exists():
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="lock_release_missing",
+                module=logger.name,
+                fields={"lock_path": request.lock_path},
+            )
+        )
+        return LockReleaseResponse(schema_version="1.0", released=False)
+
+    if existing and existing.owner_id and existing.owner_id != request.owner_id:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="lock_release_not_owner",
+                module=logger.name,
+                fields={
+                    "lock_path": request.lock_path,
+                    "owner_id": request.owner_id,
+                    "current_owner": existing.owner_id,
+                    "current_pid": existing.pid,
+                },
+            )
+        )
         return LockReleaseResponse(schema_version="1.0", released=False)
 
     try:
@@ -253,15 +277,17 @@ def release_lock(request: LockReleaseRequest, ctx: RunContext) -> LockReleaseRes
             context={"lock_path": request.lock_path},
         ) from exc
 
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="lock_release_complete",
-        module=logger.name,
-        fields={
-            "lock_path": request.lock_path,
-            "owner_id": request.owner_id,
-            "pid": request.pid,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="lock_release_complete",
+            module=logger.name,
+            fields={
+                "lock_path": request.lock_path,
+                "owner_id": request.owner_id,
+                "pid": request.pid,
+            },
+        )
+    )
     return LockReleaseResponse(schema_version="1.0", released=True)

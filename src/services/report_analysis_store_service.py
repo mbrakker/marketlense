@@ -71,44 +71,54 @@ def _validate_pack_name(pack_name: str) -> str:
     )
 
 
-def pack_path(request: AnalysisPackPathRequest, ctx: RunContext) -> AnalysisPackPathResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="analysis_pack_path_start",
-        module=logger.name,
-        fields={
-            "report_id": request.report_id,
-            "pack_name": request.pack_name,
-            "report_slug": request.report_slug or "",
-        },
-    ))
+def pack_path(
+    request: AnalysisPackPathRequest, ctx: RunContext
+) -> AnalysisPackPathResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="analysis_pack_path_start",
+            module=logger.name,
+            fields={
+                "report_id": request.report_id,
+                "pack_name": request.pack_name,
+                "report_slug": request.report_slug or "",
+            },
+        )
+    )
     slug = _resolve_report_slug(request.report_slug, request.report_id)
     pack_name = _validate_pack_name(request.pack_name)
     path = _report_base_dir(request.output_dir, slug) / f"{pack_name}.json"
     response = AnalysisPackPathResponse(schema_version="1.0", output_path=str(path))
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="analysis_pack_path_complete",
-        module=logger.name,
-        fields={"path": response.output_path},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="analysis_pack_path_complete",
+            module=logger.name,
+            fields={"path": response.output_path},
+        )
+    )
     return response
 
 
-def store_pack(request: AnalysisStorePackRequest, ctx: RunContext) -> AnalysisStorePackResponse:
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="analysis_store_start",
-        module=logger.name,
-        fields={
-            "report_id": request.report_id,
-            "pack_name": request.pack_name,
-            "report_slug": request.report_slug or "",
-        },
-    ))
+def store_pack(
+    request: AnalysisStorePackRequest, ctx: RunContext
+) -> AnalysisStorePackResponse:
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="analysis_store_start",
+            module=logger.name,
+            fields={
+                "report_id": request.report_id,
+                "pack_name": request.pack_name,
+                "report_slug": request.report_slug or "",
+            },
+        )
+    )
 
     primary_path = Path(
         pack_path(
@@ -135,33 +145,37 @@ def store_pack(request: AnalysisStorePackRequest, ctx: RunContext) -> AnalysisSt
                     ctx,
                 )
             except AppError as exc:
-                logger.info(log_event(
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="service",
+                        event="analysis_store_schema_validation_failed",
+                        module=logger.name,
+                        fields={
+                            "report_id": request.report_id,
+                            "pack_name": request.pack_name,
+                            "schema_name": schema_name,
+                            "path": str(primary_path),
+                            "code": exc.code,
+                            "message": exc.message,
+                        },
+                    )
+                )
+                raise
+            logger.info(
+                log_event(
                     ctx,
                     role="service",
-                    event="analysis_store_schema_validation_failed",
+                    event="analysis_store_schema_validated",
                     module=logger.name,
                     fields={
                         "report_id": request.report_id,
                         "pack_name": request.pack_name,
                         "schema_name": schema_name,
                         "path": str(primary_path),
-                        "code": exc.code,
-                        "message": exc.message,
                     },
-                ))
-                raise
-            logger.info(log_event(
-                ctx,
-                role="service",
-                event="analysis_store_schema_validated",
-                module=logger.name,
-                fields={
-                    "report_id": request.report_id,
-                    "pack_name": request.pack_name,
-                    "schema_name": schema_name,
-                    "path": str(primary_path),
-                },
-            ))
+                )
+            )
         primary_path.parent.mkdir(parents=True, exist_ok=True)
         payload_json = json.dumps(request.payload, ensure_ascii=False, indent=2)
         file_service.write_bytes(
@@ -192,15 +206,17 @@ def store_pack(request: AnalysisStorePackRequest, ctx: RunContext) -> AnalysisSt
         schema_version="1.0",
         output_path=str(primary_path),
     )
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="analysis_store_complete",
-        module=logger.name,
-        fields={
-            "report_id": request.report_id,
-            "pack_name": request.pack_name,
-            "path": response.output_path,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="analysis_store_complete",
+            module=logger.name,
+            fields={
+                "report_id": request.report_id,
+                "pack_name": request.pack_name,
+                "path": response.output_path,
+            },
+        )
+    )
     return response

@@ -23,12 +23,20 @@ def _normalize_text(value: str | None) -> str:
 def _parse_hex_color(value: str, label: str) -> Tuple[int, int, int]:
     text = _normalize_text(value)
     if not text.startswith("#"):
-        raise AppError(code="cover_color_invalid", message=f"{label} must be hex color", retryable=False)
+        raise AppError(
+            code="cover_color_invalid",
+            message=f"{label} must be hex color",
+            retryable=False,
+        )
     hex_value = text[1:]
     if len(hex_value) == 3:
         hex_value = "".join(ch * 2 for ch in hex_value)
     if len(hex_value) != 6:
-        raise AppError(code="cover_color_invalid", message=f"{label} must be 3 or 6 hex digits", retryable=False)
+        raise AppError(
+            code="cover_color_invalid",
+            message=f"{label} must be 3 or 6 hex digits",
+            retryable=False,
+        )
     try:
         return (
             int(hex_value[0:2], 16),
@@ -36,24 +44,42 @@ def _parse_hex_color(value: str, label: str) -> Tuple[int, int, int]:
             int(hex_value[4:6], 16),
         )
     except ValueError as exc:
-        raise AppError(code="cover_color_invalid", message=f"{label} has invalid hex digits", cause=exc, retryable=False) from exc
+        raise AppError(
+            code="cover_color_invalid",
+            message=f"{label} has invalid hex digits",
+            cause=exc,
+            retryable=False,
+        ) from exc
 
 
 def _load_font(path: str, size: int, label: str) -> ImageFont.FreeTypeFont:
     if not path:
-        raise AppError(code="cover_font_missing", message=f"Missing font path for {label}", retryable=False)
+        raise AppError(
+            code="cover_font_missing",
+            message=f"Missing font path for {label}",
+            retryable=False,
+        )
     try:
         return ImageFont.truetype(path, size=size)
     except OSError as exc:
-        raise AppError(code="cover_font_invalid", message=f"Unable to load font: {path}", cause=exc, retryable=False) from exc
+        raise AppError(
+            code="cover_font_invalid",
+            message=f"Unable to load font: {path}",
+            cause=exc,
+            retryable=False,
+        ) from exc
 
 
-def _text_bbox(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont) -> Tuple[int, int]:
+def _text_bbox(
+    draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont
+) -> Tuple[int, int]:
     bbox = draw.textbbox((0, 0), text, font=font)
     return bbox[2] - bbox[0], bbox[3] - bbox[1]
 
 
-def _split_long_word(word: str, max_width: int, draw: ImageDraw.ImageDraw, font: ImageFont.FreeTypeFont) -> List[str]:
+def _split_long_word(
+    word: str, max_width: int, draw: ImageDraw.ImageDraw, font: ImageFont.FreeTypeFont
+) -> List[str]:
     if not word:
         return []
     chunks: List[str] = []
@@ -74,7 +100,9 @@ def _split_long_word(word: str, max_width: int, draw: ImageDraw.ImageDraw, font:
     return chunks
 
 
-def _wrap_text(text: str, max_width: int, draw: ImageDraw.ImageDraw, font: ImageFont.FreeTypeFont) -> List[str]:
+def _wrap_text(
+    text: str, max_width: int, draw: ImageDraw.ImageDraw, font: ImageFont.FreeTypeFont
+) -> List[str]:
     words = text.split()
     if not words:
         return []
@@ -147,14 +175,27 @@ def _normalize_time_period(value: str | None) -> str:
 
 def _load_background(style_path: str | None, size: tuple[int, int]) -> Image.Image:
     if not style_path:
-        raise AppError(code="cover_background_missing", message="Background image path not provided", retryable=False)
+        raise AppError(
+            code="cover_background_missing",
+            message="Background image path not provided",
+            retryable=False,
+        )
     path = Path(style_path)
     if not path.exists():
-        raise AppError(code="cover_background_missing", message=f"Background image not found: {style_path}", retryable=False)
+        raise AppError(
+            code="cover_background_missing",
+            message=f"Background image not found: {style_path}",
+            retryable=False,
+        )
     try:
         image = Image.open(path)
     except OSError as exc:
-        raise AppError(code="cover_background_invalid", message=f"Unable to open background image: {style_path}", cause=exc, retryable=False) from exc
+        raise AppError(
+            code="cover_background_invalid",
+            message=f"Unable to open background image: {style_path}",
+            cause=exc,
+            retryable=False,
+        ) from exc
     return image.convert("RGB").resize(size, Image.LANCZOS)
 
 
@@ -162,26 +203,34 @@ def _ensure_dir(path: str) -> None:
     Path(path).parent.mkdir(parents=True, exist_ok=True)
 
 
-def render_cover_image(request: CoverImageRenderRequest, ctx: RunContext) -> CoverImageRenderResponse:
+def render_cover_image(
+    request: CoverImageRenderRequest, ctx: RunContext
+) -> CoverImageRenderResponse:
     title = _normalize_text(request.title)
     publisher = _normalize_text(request.publisher)
     if not title:
-        raise AppError(code="cover_title_missing", message="Report title is required", retryable=False)
+        raise AppError(
+            code="cover_title_missing",
+            message="Report title is required",
+            retryable=False,
+        )
 
     layout = request.layout
     style = request.style
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="cover_render_start",
-        module=logger.name,
-        fields={
-            "output_path": request.output_path,
-            "width": layout.width,
-            "height": layout.height,
-            "accent_width": layout.accent_width,
-        },
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="cover_render_start",
+            module=logger.name,
+            fields={
+                "output_path": request.output_path,
+                "width": layout.width,
+                "height": layout.height,
+                "accent_width": layout.accent_width,
+            },
+        )
+    )
 
     bg_color = _parse_hex_color(style.background_color, "background_color")
     accent_color = _parse_hex_color(style.accent_color, "accent_color")
@@ -250,8 +299,12 @@ def render_cover_image(request: CoverImageRenderRequest, ctx: RunContext) -> Cov
         pill_height = time_text_height + layout.pill_padding_y * 2
         pill_y = publisher_y - layout.footer_gap - pill_height
 
-    title_top = label_y + _text_bbox(draw, label_text or "Ag", label_font)[1] + layout.label_gap
-    title_bottom = pill_y - layout.footer_gap if time_period else publisher_y - layout.footer_gap
+    title_top = (
+        label_y + _text_bbox(draw, label_text or "Ag", label_font)[1] + layout.label_gap
+    )
+    title_bottom = (
+        pill_y - layout.footer_gap if time_period else publisher_y - layout.footer_gap
+    )
     title_height = max(title_bottom - title_top, layout.title_font_min)
     title_font, title_lines = _fit_multiline_text(
         title,
@@ -271,7 +324,9 @@ def render_cover_image(request: CoverImageRenderRequest, ctx: RunContext) -> Cov
         if index < len(title_lines) - 1:
             current_y += line_height + spacing
 
-    draw.text((content_left, publisher_y), publisher, font=publisher_font, fill=text_color)
+    draw.text(
+        (content_left, publisher_y), publisher, font=publisher_font, fill=text_color
+    )
 
     if time_period:
         pill_x = content_left
@@ -290,13 +345,15 @@ def render_cover_image(request: CoverImageRenderRequest, ctx: RunContext) -> Cov
     _ensure_dir(request.output_path)
     base_image.save(request.output_path, format="PNG")
 
-    logger.info(log_event(
-        ctx,
-        role="service",
-        event="cover_render_complete",
-        module=logger.name,
-        fields={"output_path": request.output_path},
-    ))
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="cover_render_complete",
+            module=logger.name,
+            fields={"output_path": request.output_path},
+        )
+    )
     return CoverImageRenderResponse(
         schema_version="1.0",
         output_path=request.output_path,

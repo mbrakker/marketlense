@@ -92,7 +92,11 @@ def _load_golden_reports(golden_root: Path) -> list[GoldenReport]:
         summary_path = report_dir / "summary.json"
         charts_path = report_dir / "charts_only" / "charts.json"
         tables_path = report_dir / "tables_only" / "tables.json"
-        if not summary_path.exists() or not charts_path.exists() or not tables_path.exists():
+        if (
+            not summary_path.exists()
+            or not charts_path.exists()
+            or not tables_path.exists()
+        ):
             continue
         summary = _load_json(summary_path)
         reports.append(
@@ -112,11 +116,7 @@ def _filter_reports(
 ) -> list[GoldenReport]:
     if not selected_names:
         return reports
-    return [
-        report
-        for report in reports
-        if report.report_name in selected_names
-    ]
+    return [report for report in reports if report.report_name in selected_names]
 
 
 def _sha256(path: Path) -> str:
@@ -151,9 +151,17 @@ def _compare_kind(
     }
     expected_ids = sorted(expected)
     actual_ids = sorted(actual_by_id)
-    matched_ids = sorted(candidate_id for candidate_id in expected_ids if candidate_id in actual_by_id)
-    removed_ids = sorted(candidate_id for candidate_id in expected_ids if candidate_id not in actual_by_id)
-    added_ids = sorted(candidate_id for candidate_id in actual_ids if candidate_id not in expected)
+    matched_ids = sorted(
+        candidate_id for candidate_id in expected_ids if candidate_id in actual_by_id
+    )
+    removed_ids = sorted(
+        candidate_id
+        for candidate_id in expected_ids
+        if candidate_id not in actual_by_id
+    )
+    added_ids = sorted(
+        candidate_id for candidate_id in actual_ids if candidate_id not in expected
+    )
 
     bbox_changes: list[dict[str, Any]] = []
     crop_items: list[CropItem] = []
@@ -162,7 +170,9 @@ def _compare_kind(
         expected_candidate = expected[candidate_id]
         actual_candidate = actual_by_id[candidate_id]
         actual_bbox = tuple(float(value) for value in actual_candidate.bbox)
-        if not _bbox_matches(expected_candidate.bbox, actual_bbox, tolerance=bbox_tolerance):
+        if not _bbox_matches(
+            expected_candidate.bbox, actual_bbox, tolerance=bbox_tolerance
+        ):
             bbox_changes.append(
                 {
                     "id": candidate_id,
@@ -309,11 +319,7 @@ def _summarize(compare_rows: list[dict[str, Any]], min_recall: float) -> dict[st
             bbox_change_total += len(kind_row["bbox_changes"])
             image_change_total += len(kind_row["image_changes"])
     recall = (matched_total / expected_total) if expected_total else 1.0
-    passed = (
-        recall >= min_recall
-        and bbox_change_total == 0
-        and image_change_total == 0
-    )
+    passed = recall >= min_recall and bbox_change_total == 0 and image_change_total == 0
     return {
         "expected_total": expected_total,
         "matched_total": matched_total,
@@ -364,7 +370,9 @@ def main() -> int:
     output_root.mkdir(parents=True, exist_ok=True)
     root_results: list[dict[str, Any]] = []
     all_compare_rows: list[dict[str, Any]] = []
-    selected_names = {str(name or "").strip() for name in args.report_name if str(name or "").strip()}
+    selected_names = {
+        str(name or "").strip() for name in args.report_name if str(name or "").strip()
+    }
 
     for golden_root_arg in args.golden_root:
         golden_root = Path(golden_root_arg).resolve()
@@ -398,8 +406,15 @@ def main() -> int:
         "aggregate": aggregate,
     }
     summary_path = output_root / "summary.json"
-    summary_path.write_text(json.dumps(payload, ensure_ascii=True, indent=2), encoding="utf-8")
-    print(json.dumps({"summary_path": str(summary_path), "aggregate": aggregate}, ensure_ascii=True))
+    summary_path.write_text(
+        json.dumps(payload, ensure_ascii=True, indent=2), encoding="utf-8"
+    )
+    print(
+        json.dumps(
+            {"summary_path": str(summary_path), "aggregate": aggregate},
+            ensure_ascii=True,
+        )
+    )
     return 0 if aggregate["passed"] else 1
 
 

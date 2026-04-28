@@ -6,9 +6,7 @@ from typing import Optional
 
 @dataclass(frozen=True)
 class FileCacheMd5SidecarRecord:
-    schema_version: str = field(
-        metadata={"doc": "MD5 sidecar payload schema version."}
-    )
+    schema_version: str = field(metadata={"doc": "MD5 sidecar payload schema version."})
     file_id: str = field(
         metadata={"doc": "Drive file identifier associated with the cached PDF."}
     )
@@ -39,7 +37,9 @@ class FileCacheMd5SidecarResolveRequest:
         metadata={"doc": "Observed cached PDF size in bytes, if available."}
     )
     mtime_utc: Optional[float] = field(
-        metadata={"doc": "Observed cached PDF modified time in epoch seconds, if available."}
+        metadata={
+            "doc": "Observed cached PDF modified time in epoch seconds, if available."
+        }
     )
 
 
@@ -59,11 +59,15 @@ class FileCacheMd5SidecarResolveResponse:
         metadata={"doc": "True when the sidecar matched the observed file stat."}
     )
     reason: str = field(
-        metadata={"doc": "Typed cache-sidecar result reason such as missing or matched."}
+        metadata={
+            "doc": "Typed cache-sidecar result reason such as missing or matched."
+        }
     )
     record: Optional[FileCacheMd5SidecarRecord] = field(
         default=None,
-        metadata={"doc": "Parsed sidecar record when the payload was structurally valid."},
+        metadata={
+            "doc": "Parsed sidecar record when the payload was structurally valid."
+        },
     )
     resolved_md5: Optional[str] = field(
         default=None,
@@ -113,7 +117,9 @@ class FileCacheMd5SidecarWriteResponse:
         metadata={"doc": "True when the sidecar was written to disk."}
     )
     reason: str = field(
-        metadata={"doc": "Typed write result reason such as written or incomplete_metadata."}
+        metadata={
+            "doc": "Typed write result reason such as written or incomplete_metadata."
+        }
     )
     record: Optional[FileCacheMd5SidecarRecord] = field(
         default=None,

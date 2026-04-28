@@ -290,7 +290,9 @@ def _render_terminal_panel() -> None:
     terminal = str(st.session_state.get("live_terminal_output") or "").strip()
     if not terminal:
         terminal = "[terminal] No UI-triggered output yet."
-    st.markdown(f'<pre class="ml-terminal">{escape(terminal)}</pre>', unsafe_allow_html=True)
+    st.markdown(
+        f'<pre class="ml-terminal">{escape(terminal)}</pre>', unsafe_allow_html=True
+    )
 
 
 def _as_utc(ts: int | float | str | None) -> str:
@@ -303,6 +305,8 @@ def _as_utc(ts: int | float | str | None) -> str:
             ts = float(ts)
         if not isinstance(ts, (int, float)):
             return str(ts)
-        return datetime.fromtimestamp(float(ts), timezone.utc).strftime("%Y-%m-%d %H:%M:%SZ")
+        return datetime.fromtimestamp(float(ts), timezone.utc).strftime(
+            "%Y-%m-%d %H:%M:%SZ"
+        )
     except (TypeError, ValueError, OSError):
         return str(ts)

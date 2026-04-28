@@ -71,8 +71,12 @@ def test_cost_reporting_runs_requested_steps(
     response = orch.run_cost_reporting(
         CostReportingRequest(
             schema_version="1.0",
-            report_request=CostReportRequest(schema_version="1.0", ledger_path="a.jsonl", date_utc="2026-02-10"),
-            rollup_request=CostRollupRequest(schema_version="1.0", ledger_path="a.jsonl", out_path="daily.json"),
+            report_request=CostReportRequest(
+                schema_version="1.0", ledger_path="a.jsonl", date_utc="2026-02-10"
+            ),
+            rollup_request=CostRollupRequest(
+                schema_version="1.0", ledger_path="a.jsonl", out_path="daily.json"
+            ),
         ),
         _ctx(),
     )

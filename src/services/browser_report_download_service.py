@@ -215,9 +215,18 @@ def download_report_with_browser_use(
     report_page_link_request = request
     if (
         doc_type_prediction.predicted_doc_type == "report_page_pdf_link"
-        and request.route_family_hint not in {"http_pdf_probe", "browser_email_form", "browser_pdf_click", "browser_tracker_redirect", "browser_listing_hub"}
+        and request.route_family_hint
+        not in {
+            "http_pdf_probe",
+            "browser_email_form",
+            "browser_pdf_click",
+            "browser_tracker_redirect",
+            "browser_listing_hub",
+        }
     ):
-        report_page_link_request = replace(request, route_family_hint="browser_pdf_click")
+        report_page_link_request = replace(
+            request, route_family_hint="browser_pdf_click"
+        )
     report_page_pdf_link_result = try_report_page_pdf_link_download(
         request=report_page_link_request,
         ctx=ctx,

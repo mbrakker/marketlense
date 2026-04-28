@@ -118,7 +118,9 @@ class RequestsBoundary:
         key = (call.method, call.url)
         queue = self._routes.get(key)
         if not queue:
-            raise AssertionError(f"no fake route registered for {call.method} {call.url}")
+            raise AssertionError(
+                f"no fake route registered for {call.method} {call.url}"
+            )
         current = queue[0]
         if len(queue) > 1:
             queue.pop(0)
@@ -235,7 +237,9 @@ def test_client_raises_when_rest_root_cannot_be_discovered(
         )
     )
 
-    with pytest.raises(RuntimeError, match="Unable to discover WordPress REST API root"):
+    with pytest.raises(
+        RuntimeError, match="Unable to discover WordPress REST API root"
+    ):
         client.get("wp/v2/pages")
 
 

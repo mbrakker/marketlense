@@ -6,14 +6,20 @@ from typing import Any, Dict
 
 @dataclass(frozen=True)
 class PromptDryRunBenchmark:
-    schema_version: str = field(metadata={"doc": "Prompt dry-run benchmark schema version."})
+    schema_version: str = field(
+        metadata={"doc": "Prompt dry-run benchmark schema version."}
+    )
     expected_output_tokens: int = field(
         default=0,
-        metadata={"doc": "Expected output-token budget used for fixture-corpus cost estimation."},
+        metadata={
+            "doc": "Expected output-token budget used for fixture-corpus cost estimation."
+        },
     )
     expected_tool_calls: int = field(
         default=0,
-        metadata={"doc": "Expected tool-call count used for fixture-corpus cost estimation."},
+        metadata={
+            "doc": "Expected tool-call count used for fixture-corpus cost estimation."
+        },
     )
     expected_browser_attempts: int = field(
         default=0,
@@ -29,20 +35,31 @@ class PromptDryRunBenchmark:
 class PromptLoadRequest:
     schema_version: str = field(metadata={"doc": "Prompt load request schema version."})
     namespace: str = field(metadata={"doc": "Prompt namespace under src/prompts."})
-    reload_if_changed: bool = field(default=False, metadata={"doc": "Force reload from disk if prompt files changed."})
-    force_reload: bool = field(default=False, metadata={"doc": "Bypass cache and reload prompts from disk."})
+    reload_if_changed: bool = field(
+        default=False,
+        metadata={"doc": "Force reload from disk if prompt files changed."},
+    )
+    force_reload: bool = field(
+        default=False, metadata={"doc": "Bypass cache and reload prompts from disk."}
+    )
 
 
 @dataclass(frozen=True)
 class PromptRenderRequest:
-    schema_version: str = field(metadata={"doc": "Prompt render request schema version."})
+    schema_version: str = field(
+        metadata={"doc": "Prompt render request schema version."}
+    )
     template: "PromptTemplate" = field(metadata={"doc": "Prompt template to render."})
-    variables: Dict[str, Any] = field(metadata={"doc": "Variables to render into the prompt template."})
+    variables: Dict[str, Any] = field(
+        metadata={"doc": "Variables to render into the prompt template."}
+    )
 
 
 @dataclass(frozen=True)
 class PromptRenderResponse:
-    schema_version: str = field(metadata={"doc": "Prompt render response schema version."})
+    schema_version: str = field(
+        metadata={"doc": "Prompt render response schema version."}
+    )
     text: str = field(metadata={"doc": "Rendered prompt text."})
 
 
@@ -63,14 +80,24 @@ class PromptTemplate:
 
 @dataclass(frozen=True)
 class PromptNamespaceListRequest:
-    schema_version: str = field(metadata={"doc": "Prompt namespace list request schema version."})
-    reload_if_changed: bool = field(default=True, metadata={"doc": "Reload namespaces when on-disk prompt files change."})
-    force_reload: bool = field(default=False, metadata={"doc": "Bypass in-memory cache for namespace prompt loading."})
+    schema_version: str = field(
+        metadata={"doc": "Prompt namespace list request schema version."}
+    )
+    reload_if_changed: bool = field(
+        default=True,
+        metadata={"doc": "Reload namespaces when on-disk prompt files change."},
+    )
+    force_reload: bool = field(
+        default=False,
+        metadata={"doc": "Bypass in-memory cache for namespace prompt loading."},
+    )
 
 
 @dataclass(frozen=True)
 class PromptNamespaceSummary:
-    schema_version: str = field(metadata={"doc": "Prompt namespace summary schema version."})
+    schema_version: str = field(
+        metadata={"doc": "Prompt namespace summary schema version."}
+    )
     namespace: str = field(metadata={"doc": "Prompt namespace path under src/prompts."})
     system_path: str = field(metadata={"doc": "Filesystem path to system.yaml."})
     user_path: str = field(metadata={"doc": "Filesystem path to user.yaml."})
@@ -80,15 +107,25 @@ class PromptNamespaceSummary:
 
 @dataclass(frozen=True)
 class PromptNamespaceListResponse:
-    schema_version: str = field(metadata={"doc": "Prompt namespace list response schema version."})
-    namespaces: list[PromptNamespaceSummary] = field(metadata={"doc": "Discovered prompt namespaces with hashes."})
+    schema_version: str = field(
+        metadata={"doc": "Prompt namespace list response schema version."}
+    )
+    namespaces: list[PromptNamespaceSummary] = field(
+        metadata={"doc": "Discovered prompt namespaces with hashes."}
+    )
 
 
 @dataclass(frozen=True)
 class PromptDryRunFixture:
-    schema_version: str = field(metadata={"doc": "Prompt dry-run fixture schema version."})
-    namespace: str = field(metadata={"doc": "Prompt namespace covered by this fixture."})
-    family: str = field(metadata={"doc": "Prompt family label used for coverage and reporting."})
+    schema_version: str = field(
+        metadata={"doc": "Prompt dry-run fixture schema version."}
+    )
+    namespace: str = field(
+        metadata={"doc": "Prompt namespace covered by this fixture."}
+    )
+    family: str = field(
+        metadata={"doc": "Prompt family label used for coverage and reporting."}
+    )
     system_variables: Dict[str, Any] = field(
         metadata={"doc": "Variables used to render the system prompt template."}
     )
@@ -97,7 +134,9 @@ class PromptDryRunFixture:
     )
     benchmark: PromptDryRunBenchmark = field(
         default_factory=lambda: PromptDryRunBenchmark(schema_version="1.0"),
-        metadata={"doc": "Benchmark metadata used for fixture-corpus regression budgets."},
+        metadata={
+            "doc": "Benchmark metadata used for fixture-corpus regression budgets."
+        },
     )
     model: str = field(
         default="",
@@ -111,7 +150,9 @@ class PromptDryRunFixture:
 
 @dataclass(frozen=True)
 class PromptDryRunRequest:
-    schema_version: str = field(metadata={"doc": "Prompt dry-run request schema version."})
+    schema_version: str = field(
+        metadata={"doc": "Prompt dry-run request schema version."}
+    )
     namespaces: list[str] = field(
         default_factory=list,
         metadata={
@@ -130,10 +171,16 @@ class PromptDryRunRequest:
 
 @dataclass(frozen=True)
 class PromptDryRunResult:
-    schema_version: str = field(metadata={"doc": "Prompt dry-run result schema version."})
+    schema_version: str = field(
+        metadata={"doc": "Prompt dry-run result schema version."}
+    )
     namespace: str = field(metadata={"doc": "Validated prompt namespace."})
-    family: str = field(metadata={"doc": "Prompt family label for coverage and reporting."})
-    fixture_path: str = field(metadata={"doc": "Filesystem path to the fixture registry file."})
+    family: str = field(
+        metadata={"doc": "Prompt family label for coverage and reporting."}
+    )
+    fixture_path: str = field(
+        metadata={"doc": "Filesystem path to the fixture registry file."}
+    )
     system_path: str = field(metadata={"doc": "Filesystem path to system.yaml."})
     user_path: str = field(metadata={"doc": "Filesystem path to user.yaml."})
     system_sha256: str = field(metadata={"doc": "SHA-256 hash of system prompt text."})
@@ -150,7 +197,9 @@ class PromptDryRunResult:
     )
     render_runtime_ms: float = field(
         default=0.0,
-        metadata={"doc": "Measured prompt load and render runtime for this namespace in milliseconds."},
+        metadata={
+            "doc": "Measured prompt load and render runtime for this namespace in milliseconds."
+        },
     )
     model: str = field(
         default="",
@@ -164,7 +213,9 @@ class PromptDryRunResult:
 
 @dataclass(frozen=True)
 class PromptDryRunResponse:
-    schema_version: str = field(metadata={"doc": "Prompt dry-run response schema version."})
+    schema_version: str = field(
+        metadata={"doc": "Prompt dry-run response schema version."}
+    )
     results: list[PromptDryRunResult] = field(
         metadata={"doc": "Validated prompt dry-run results for each namespace."}
     )

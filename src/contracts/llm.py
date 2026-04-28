@@ -6,11 +6,11 @@ from typing import Optional
 
 @dataclass(frozen=True)
 class LLMClientPolicy:
-    schema_version: str = field(
-        metadata={"doc": "LLM client policy schema version."}
-    )
+    schema_version: str = field(metadata={"doc": "LLM client policy schema version."})
     scope: str = field(
-        metadata={"doc": "Stable scope name used for circuit-breaker and rate-limit state."}
+        metadata={
+            "doc": "Stable scope name used for circuit-breaker and rate-limit state."
+        }
     )
     retries: int = field(
         default=1,
@@ -34,11 +34,15 @@ class LLMClientPolicy:
     )
     rate_limit_min_interval_ms: int = field(
         default=0,
-        metadata={"doc": "Optional minimum interval between call starts for this scope."},
+        metadata={
+            "doc": "Optional minimum interval between call starts for this scope."
+        },
     )
     circuit_breaker_failure_threshold: int = field(
         default=3,
-        metadata={"doc": "Consecutive retryable failures required to open the circuit."},
+        metadata={
+            "doc": "Consecutive retryable failures required to open the circuit."
+        },
     )
     circuit_breaker_recovery_seconds: float = field(
         default=30.0,

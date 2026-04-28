@@ -35,6 +35,8 @@ def test_openai_responses_smoke() -> None:
             cost_daily_path="./out/cost-daily.json",
             model_pricing={},
         ),
-        RunContext(schema_version="1.0", run_id="smoke", task_id="smoke", span_id="smoke"),
+        RunContext(
+            schema_version="1.0", run_id="smoke", task_id="smoke", span_id="smoke"
+        ),
     )
     assert response.parsed_json == {"ok": "OK"}

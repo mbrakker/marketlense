@@ -1052,7 +1052,10 @@ def test_generate_artifacts_fails_when_inputs_unavailable_without_vector_store(
         severity="error",
     )
     assert exc_info.value.context["report_id"] == "low_text"
-    assert exc_info.value.context["reason"] == "evidence_packs_empty,text_density_below_threshold"
+    assert (
+        exc_info.value.context["reason"]
+        == "evidence_packs_empty,text_density_below_threshold"
+    )
     assert exc_info.value.context["evidence_present"] is False
     assert analysis_store.stored == []
 
@@ -1403,9 +1406,7 @@ def test_artifact_cache_isolated_by_retrieval_mode(tmp_path):
 
 def test_load_cached_artifacts_rejects_schema_invalid_payload(tmp_path):
     report_name = "artifact cache invalid"
-    cache_path = (
-        tmp_path / slugify(report_name) / "report_analysis" / "artifacts.json"
-    )
+    cache_path = tmp_path / slugify(report_name) / "report_analysis" / "artifacts.json"
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     cache_path.write_text(
         json.dumps({"_cache": {"key": "cache-key"}}),

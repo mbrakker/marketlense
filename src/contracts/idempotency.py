@@ -41,11 +41,15 @@ class OrchestratorIdempotencyRecordRequest:
         metadata={"doc": "Deterministic checksum of the step input payload."}
     )
     outcome_payload: Dict[str, Any] = field(
-        metadata={"doc": "Serialized step outcome returned when the side effect completed."}
+        metadata={
+            "doc": "Serialized step outcome returned when the side effect completed."
+        }
     )
     artifact_references: Dict[str, Any] = field(
         default_factory=dict,
-        metadata={"doc": "Artifact identifiers or paths created by the completed step."},
+        metadata={
+            "doc": "Artifact identifiers or paths created by the completed step."
+        },
     )
 
 
@@ -62,14 +66,18 @@ class OrchestratorIdempotencyRecord:
         metadata={"doc": "Deterministic checksum of the step input payload."}
     )
     outcome_payload: Dict[str, Any] = field(
-        metadata={"doc": "Serialized step outcome returned when the side effect completed."}
+        metadata={
+            "doc": "Serialized step outcome returned when the side effect completed."
+        }
     )
     recorded_at_utc: str = field(
         metadata={"doc": "UTC timestamp when this idempotency record was last written."}
     )
     artifact_references: Dict[str, Any] = field(
         default_factory=dict,
-        metadata={"doc": "Artifact identifiers or paths created by the completed step."},
+        metadata={
+            "doc": "Artifact identifiers or paths created by the completed step."
+        },
     )
 
 

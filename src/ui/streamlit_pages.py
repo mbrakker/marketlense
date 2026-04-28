@@ -70,7 +70,11 @@ from src.services.cover_style_service import load_cover_styles
 from src.services.logging_service import DEFAULT_LOG_DIR, LOG_DIR_ENV, LOG_FILE_PREFIX
 from src.services.prompt_service import list_prompt_namespaces
 from src.ui import state as ui_state
-from src.ui.run_control import launch_background_run, list_recent_runs, poll_selected_run
+from src.ui.run_control import (
+    launch_background_run,
+    list_recent_runs,
+    poll_selected_run,
+)
 from src.services.state_service import get as get_state
 from src.utils.coercion import (
     coerce_extended_bool as _as_bool,
@@ -91,7 +95,14 @@ from src.utils.cover_path_utils import build_cover_asset_path
 from src.utils.logging import new_run_context
 from src.utils.slugify import slugify
 
-UI_SURFACE_EXCEPTIONS = (AppError, OSError, RuntimeError, ValueError, TypeError, yaml.YAMLError)
+UI_SURFACE_EXCEPTIONS = (
+    AppError,
+    OSError,
+    RuntimeError,
+    ValueError,
+    TypeError,
+    yaml.YAMLError,
+)
 
 _DASHBOARD_READ_MODEL_CACHE_KEY = "dashboard_read_models"
 _DASHBOARD_CACHE_INVALIDATION_REASON_KEY = "dashboard_read_models_last_invalidation"
@@ -214,6 +225,7 @@ def _selected_report_index(reports: list[dict[str, Any]]) -> int:
         if str(row.get("file_id") or "").strip() == selected_report_id:
             return idx
     return 0
+
 
 def _chip_html(label: str, level: str, *, tooltip: str | None = None) -> str:
     tip = tooltip or _tip(
@@ -642,14 +654,16 @@ def _load_log_events(
         st.session_state,
         view_name="log_events",
         identity=(tuple(log_paths), max_lines_per_file),
-        loader=lambda: load_log_events(
-            LogEventLoadRequest(
-                schema_version="1.0",
-                log_paths=log_paths,
-                max_lines_per_file=max_lines_per_file,
-            ),
-            _ctx("load_log_events"),
-        ).events,
+        loader=lambda: (
+            load_log_events(
+                LogEventLoadRequest(
+                    schema_version="1.0",
+                    log_paths=log_paths,
+                    max_lines_per_file=max_lines_per_file,
+                ),
+                _ctx("load_log_events"),
+            ).events
+        ),
     )
 
 
@@ -772,10 +786,14 @@ def _load_report_rows(settings: Any) -> list[dict[str, Any]]:
         st.session_state,
         view_name="report_rows",
         identity=(settings.reports_db,),
-        loader=lambda: load_report_rows(
-            ReportRowsLoadRequest(schema_version="1.0", reports_db=settings.reports_db),
-            _ctx("load_report_rows"),
-        ).rows,
+        loader=lambda: (
+            load_report_rows(
+                ReportRowsLoadRequest(
+                    schema_version="1.0", reports_db=settings.reports_db
+                ),
+                _ctx("load_report_rows"),
+            ).rows
+        ),
     )
 
 
@@ -784,15 +802,17 @@ def _load_processed_rows(settings: Any) -> list[dict[str, Any]]:
         st.session_state,
         view_name="processed_rows",
         identity=(settings.state_db, 1000),
-        loader=lambda: load_state_rows(
-            StateRowsLoadRequest(
-                schema_version="1.0",
-                state_db=settings.state_db,
-                kind="processed",
-                limit=1000,
-            ),
-            _ctx("load_processed_rows"),
-        ).rows,
+        loader=lambda: (
+            load_state_rows(
+                StateRowsLoadRequest(
+                    schema_version="1.0",
+                    state_db=settings.state_db,
+                    kind="processed",
+                    limit=1000,
+                ),
+                _ctx("load_processed_rows"),
+            ).rows
+        ),
     )
 
 
@@ -801,15 +821,17 @@ def _load_published_rows(settings: Any) -> list[dict[str, Any]]:
         st.session_state,
         view_name="published_rows",
         identity=(settings.state_db, 1000),
-        loader=lambda: load_state_rows(
-            StateRowsLoadRequest(
-                schema_version="1.0",
-                state_db=settings.state_db,
-                kind="published",
-                limit=1000,
-            ),
-            _ctx("load_published_rows"),
-        ).rows,
+        loader=lambda: (
+            load_state_rows(
+                StateRowsLoadRequest(
+                    schema_version="1.0",
+                    state_db=settings.state_db,
+                    kind="published",
+                    limit=1000,
+                ),
+                _ctx("load_published_rows"),
+            ).rows
+        ),
     )
 
 
@@ -929,7 +951,9 @@ def _render_cockpit_overview(settings: Any) -> None:
     logs = _discover_log_files()
     recent_paths = [row["path"] for row in logs[:2]]
     events = _load_log_events(recent_paths)
-    active_runs = list_recent_runs(settings, statuses=["queued", "running"], limit=20).records
+    active_runs = list_recent_runs(
+        settings, statuses=["queued", "running"], limit=20
+    ).records
     recent_runs = list_recent_runs(settings, limit=20).records
     recent_failures = [item for item in recent_runs if item.status == "failed"][:5]
 
@@ -965,7 +989,9 @@ def _render_cockpit_overview(settings: Any) -> None:
         m6.metric("Failed Runs", f"{len(recent_failures)}")
         st.subheader("Active Runs")
         if active_runs:
-            st.dataframe(row_dicts(active_runs), use_container_width=True, hide_index=True)
+            st.dataframe(
+                row_dicts(active_runs), use_container_width=True, hide_index=True
+            )
         else:
             st.caption("No queued or running background jobs.")
         st.subheader("Recent Reports")
@@ -990,7 +1016,9 @@ def _render_cockpit_overview(settings: Any) -> None:
         st.dataframe(health, use_container_width=True, hide_index=True)
         st.subheader("Recent Failures")
         if recent_failures:
-            st.dataframe(row_dicts(recent_failures), use_container_width=True, hide_index=True)
+            st.dataframe(
+                row_dicts(recent_failures), use_container_width=True, hide_index=True
+            )
         else:
             st.caption("No failed background runs recorded.")
         st.subheader("Ingest Lock")
@@ -1202,9 +1230,19 @@ def _render_candidate_extraction(settings: Any) -> None:
         st.subheader("Pipeline Stepper")
         _render_stepper(
             CANDIDATE_STEPS,
-            done_count=(len(CANDIDATE_STEPS) if polled and polled.record.status == "succeeded" else 0),
-            active_index=(0 if polled and polled.record.status in {"queued", "running"} else None),
-            error_index=(len(CANDIDATE_STEPS) - 1 if polled and polled.record.status == "failed" else None),
+            done_count=(
+                len(CANDIDATE_STEPS)
+                if polled and polled.record.status == "succeeded"
+                else 0
+            ),
+            active_index=(
+                0 if polled and polled.record.status in {"queued", "running"} else None
+            ),
+            error_index=(
+                len(CANDIDATE_STEPS) - 1
+                if polled and polled.record.status == "failed"
+                else None
+            ),
         )
         if polled is None:
             st.info("Launch extraction to create a tracked background run.")
@@ -1921,7 +1959,9 @@ def _render_cost_and_usage(settings: Any) -> None:
             return
         try:
             resolved_run_id = (
-                RunId(run_id_value) if filter_mode == "run_id" and run_id_value else None
+                RunId(run_id_value)
+                if filter_mode == "run_id" and run_id_value
+                else None
             )
             reporting = run_cost_reporting(
                 CostReportingRequest(

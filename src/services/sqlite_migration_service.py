@@ -546,7 +546,11 @@ def _apply_migration_plan(
     conn.commit()
     current_version = _current_version(conn, request.database_key)
     applied_ids = _applied_migration_ids(conn, request.database_key)
-    pending = [migration for migration in migrations if migration.migration_id not in applied_ids]
+    pending = [
+        migration
+        for migration in migrations
+        if migration.migration_id not in applied_ids
+    ]
     logger.info(
         log_event(
             request.ctx,
@@ -558,7 +562,9 @@ def _apply_migration_plan(
                 "db_path": request.db_path,
                 "current_version": current_version,
                 "target_version": request.target_version,
-                "pending_migration_ids": [migration.migration_id for migration in pending],
+                "pending_migration_ids": [
+                    migration.migration_id for migration in pending
+                ],
             },
         )
     )
@@ -740,9 +746,7 @@ def _add_column_if_missing(
     column_type: str,
 ) -> None:
     if column_name not in _fetch_columns(conn, table_name):
-        conn.execute(
-            f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}"
-        )
+        conn.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
 
 
 def _reports_db_001_create_reports_core(conn: sqlite3.Connection) -> None:
@@ -795,8 +799,13 @@ def _reports_db_003_normalize_report_sources(conn: sqlite3.Connection) -> None:
             """
         )
         if current:
-            rows = conn.execute("SELECT * FROM report_sources ORDER BY id ASC").fetchall()
-            column_order = [str(row[1]) for row in conn.execute("PRAGMA table_info(report_sources)").fetchall()]
+            rows = conn.execute(
+                "SELECT * FROM report_sources ORDER BY id ASC"
+            ).fetchall()
+            column_order = [
+                str(row[1])
+                for row in conn.execute("PRAGMA table_info(report_sources)").fetchall()
+            ]
             current_epoch = int(
                 conn.execute("SELECT strftime('%s','now')").fetchone()[0]
             )
@@ -806,11 +815,14 @@ def _reports_db_003_normalize_report_sources(conn: sqlite3.Connection) -> None:
                 normalized_landing_page_url = _normalize_url_key(landing_page_url)
                 if not landing_page_url or not normalized_landing_page_url:
                     continue
-                downloaded_at_utc = str(source.get("downloaded_at_utc") or "").strip() or None
-                source_status = str(source.get("source_status") or "").strip() or "downloaded"
+                downloaded_at_utc = (
+                    str(source.get("downloaded_at_utc") or "").strip() or None
+                )
+                source_status = (
+                    str(source.get("source_status") or "").strip() or "downloaded"
+                )
                 source_page_url = (
-                    str(source.get("source_page_url") or "").strip()
-                    or landing_page_url
+                    str(source.get("source_page_url") or "").strip() or landing_page_url
                 )
                 discovered_at_utc = (
                     str(source.get("discovered_at_utc") or "").strip()
@@ -954,7 +966,8 @@ def _reports_db_005_normalize_publishers(conn: sqlite3.Connection) -> None:
                 f"SELECT * FROM publishers ORDER BY {order_column} ASC"
             ).fetchall()
             column_order = [
-                str(row[1]) for row in conn.execute("PRAGMA table_info(publishers)").fetchall()
+                str(row[1])
+                for row in conn.execute("PRAGMA table_info(publishers)").fetchall()
             ]
             insert_columns = [
                 "id",
@@ -985,16 +998,17 @@ def _reports_db_005_normalize_publishers(conn: sqlite3.Connection) -> None:
                 "inventory_run_quality_updated_at",
             ]
             available_insert_columns = [
-                column for column in insert_columns if column != "id" or column in current
+                column
+                for column in insert_columns
+                if column != "id" or column in current
             ]
             placeholders = ", ".join("?" for _ in available_insert_columns)
             for fetched in rows:
                 source = dict(zip(column_order, fetched))
                 insights_url = str(source.get("insights_url") or "").strip()
-                normalized_insights_url = (
-                    str(source.get("normalized_insights_url") or "").strip()
-                    or _normalize_url_key(insights_url)
-                )
+                normalized_insights_url = str(
+                    source.get("normalized_insights_url") or ""
+                ).strip() or _normalize_url_key(insights_url)
                 values: list[object] = []
                 for column in available_insert_columns:
                     if column == "normalized_insights_url":
@@ -1191,7 +1205,9 @@ def _reports_db_007_normalize_inventory_recovery_cache(
                 FROM publisher_inventory_candidate_recovery_cache
                 """
             )
-        conn.execute("DROP TABLE IF EXISTS publisher_inventory_candidate_recovery_cache")
+        conn.execute(
+            "DROP TABLE IF EXISTS publisher_inventory_candidate_recovery_cache"
+        )
         conn.execute(
             "ALTER TABLE publisher_inventory_candidate_recovery_cache_new RENAME TO publisher_inventory_candidate_recovery_cache"
         )
@@ -1228,7 +1244,9 @@ def _reports_db_009_add_reports_projection_columns(conn: sqlite3.Connection) -> 
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_reports_publisher ON reports(publisher)"
     )
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_reports_file_name ON reports(file_name)")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_reports_file_name ON reports(file_name)"
+    )
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_reports_projection_status ON reports(projection_status)"
     )

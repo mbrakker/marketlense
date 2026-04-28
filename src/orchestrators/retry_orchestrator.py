@@ -20,17 +20,28 @@ SleepFn = Callable[[float], None]
 
 @dataclass(frozen=True)
 class RetryPolicy:
-    retries: int = field(default=0, metadata={"doc": "Maximum retry count after the initial attempt."})
-    base_delay_seconds: float = field(default=1.0, metadata={"doc": "Base delay before the first retry."})
-    backoff_step_seconds: float = field(default=1.0, metadata={"doc": "Additional delay added per retry attempt."})
-    jitter_seconds: float = field(default=0.0, metadata={"doc": "Optional random jitter added to each retry delay."})
+    retries: int = field(
+        default=0, metadata={"doc": "Maximum retry count after the initial attempt."}
+    )
+    base_delay_seconds: float = field(
+        default=1.0, metadata={"doc": "Base delay before the first retry."}
+    )
+    backoff_step_seconds: float = field(
+        default=1.0, metadata={"doc": "Additional delay added per retry attempt."}
+    )
+    jitter_seconds: float = field(
+        default=0.0,
+        metadata={"doc": "Optional random jitter added to each retry delay."},
+    )
 
 
 def is_retryable_app_error(exc: Exception) -> bool:
     return isinstance(exc, AppError) and bool(exc.retryable)
 
 
-def _default_retry_fields(step_name: str, exc: Exception, attempt: int) -> dict[str, Any]:
+def _default_retry_fields(
+    step_name: str, exc: Exception, attempt: int
+) -> dict[str, Any]:
     fields: dict[str, Any] = {"step": step_name, "attempt": attempt + 1}
     if isinstance(exc, AppError):
         fields["code"] = exc.code
@@ -39,7 +50,9 @@ def _default_retry_fields(step_name: str, exc: Exception, attempt: int) -> dict[
     return fields
 
 
-def _default_failure_fields(step_name: str, exc: Exception, attempt: int, retryable: bool) -> dict[str, Any]:
+def _default_failure_fields(
+    step_name: str, exc: Exception, attempt: int, retryable: bool
+) -> dict[str, Any]:
     fields: dict[str, Any] = {
         "step": step_name,
         "attempt": attempt,
@@ -54,7 +67,9 @@ def _default_failure_fields(step_name: str, exc: Exception, attempt: int, retrya
 
 
 def _retry_delay_seconds(policy: RetryPolicy, attempt: int) -> float:
-    base = float(policy.base_delay_seconds) + float(policy.backoff_step_seconds) * float(attempt)
+    base = float(policy.base_delay_seconds) + float(
+        policy.backoff_step_seconds
+    ) * float(attempt)
     if policy.jitter_seconds > 0:
         base += random.uniform(0.0, float(policy.jitter_seconds))
     return max(0.0, base)
@@ -89,26 +104,30 @@ def run_with_retry(
                         if failure_fields_builder
                         else _default_failure_fields(step_name, exc, attempt, retryable)
                     )
-                    logger.info(log_event(
-                        ctx,
-                        role="orchestrator",
-                        event=failure_event,
-                        module=module_name,
-                        fields=fields,
-                    ))
+                    logger.info(
+                        log_event(
+                            ctx,
+                            role="orchestrator",
+                            event=failure_event,
+                            module=module_name,
+                            fields=fields,
+                        )
+                    )
                 raise
             fields = (
                 retry_fields_builder(exc, attempt)
                 if retry_fields_builder
                 else _default_retry_fields(step_name, exc, attempt)
             )
-            logger.info(log_event(
-                ctx,
-                role="orchestrator",
-                event=retry_event,
-                module=module_name,
-                fields=fields,
-            ))
+            logger.info(
+                log_event(
+                    ctx,
+                    role="orchestrator",
+                    event=retry_event,
+                    module=module_name,
+                    fields=fields,
+                )
+            )
             sleep_fn(_retry_delay_seconds(policy, attempt))
             attempt += 1
 
@@ -130,7 +149,12 @@ def run_step_with_default_policy(
         ctx=ctx,
         logger=logger,
         module_name=module_name,
-        policy=RetryPolicy(retries=retries, base_delay_seconds=1.0, backoff_step_seconds=1.0, jitter_seconds=0.25),
+        policy=RetryPolicy(
+            retries=retries,
+            base_delay_seconds=1.0,
+            backoff_step_seconds=1.0,
+            jitter_seconds=0.25,
+        ),
         retry_event="step_retry",
         retry_fields_builder=lambda exc, attempt: {
             "step": step_name,

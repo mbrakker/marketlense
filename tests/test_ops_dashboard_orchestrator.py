@@ -19,7 +19,12 @@ def test_collect_ops_dashboard_snapshot(
     external_boundary_mocks_only.setattr(
         orch.report_store_service,
         "list_metadata",
-        lambda req, ctx: SimpleNamespace(records=[SimpleNamespace(file_id="f1", updated_at=2), SimpleNamespace(file_id="f2", updated_at=1)]),
+        lambda req, ctx: SimpleNamespace(
+            records=[
+                SimpleNamespace(file_id="f1", updated_at=2),
+                SimpleNamespace(file_id="f2", updated_at=1),
+            ]
+        ),
     )
     external_boundary_mocks_only.setattr(
         orch.state_service,
@@ -34,7 +39,9 @@ def test_collect_ops_dashboard_snapshot(
     external_boundary_mocks_only.setattr(
         orch.lock_service,
         "get_lock",
-        lambda req, ctx: SimpleNamespace(found=True, lock=SimpleNamespace(owner_id="owner", pid=123)),
+        lambda req, ctx: SimpleNamespace(
+            found=True, lock=SimpleNamespace(owner_id="owner", pid=123)
+        ),
     )
     external_boundary_mocks_only.setattr(
         orch.file_service,

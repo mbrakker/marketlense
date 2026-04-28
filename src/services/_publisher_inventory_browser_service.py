@@ -49,7 +49,9 @@ class BrowserInventoryAcquisitionDependencies:
     asyncio_module: Any
     prepare_session_dir: Callable[[str, str], Path]
     load_browser_use_runtime: Callable[[str], Any]
-    run_browser_traversal: Callable[[Any, PublisherInventoryServiceRequest, RunContext, str], Any]
+    run_browser_traversal: Callable[
+        [Any, PublisherInventoryServiceRequest, RunContext, str], Any
+    ]
     extract_http_supplement: Callable[
         [PublisherInventoryServiceRequest, PublisherInventoryPage, str, RunContext],
         list[PublisherInventoryRawCandidate],
@@ -59,7 +61,9 @@ class BrowserInventoryAcquisitionDependencies:
         PublisherInventoryServiceResponse,
     ]
     kill_browser: Callable[[Any, RunContext], None]
-    candidate_provenance_counts: Callable[[list[PublisherInventoryRawCandidate]], dict[str, int]]
+    candidate_provenance_counts: Callable[
+        [list[PublisherInventoryRawCandidate]], dict[str, int]
+    ]
 
 
 def discover_inventory_via_browser(
@@ -176,9 +180,11 @@ def discover_inventory_via_browser(
             },
         )
     )
-    structurally_empty_candidates = _should_attempt_http_recovery_for_sparse_archive_root(
-        candidates=candidates,
-        normalized_url=normalized_url,
+    structurally_empty_candidates = (
+        _should_attempt_http_recovery_for_sparse_archive_root(
+            candidates=candidates,
+            normalized_url=normalized_url,
+        )
     )
     if pages and (not candidates or structurally_empty_candidates):
         supplemented_candidates: list[PublisherInventoryRawCandidate] = []
@@ -199,9 +205,7 @@ def discover_inventory_via_browser(
                     if _normalize_candidate_url(candidate.url)
                     != _normalize_candidate_url(normalized_url)
                 ]
-                candidates = (
-                    non_root_supplemented_candidates or supplemented_candidates
-                )
+                candidates = non_root_supplemented_candidates or supplemented_candidates
             else:
                 candidates = supplemented_candidates
             structurally_empty_candidates = False
@@ -291,15 +295,16 @@ def _should_attempt_http_recovery_for_sparse_archive_root(
     if not candidates:
         return False
     normalized_candidates = {
-        _normalize_candidate_url(candidate.url) for candidate in candidates if candidate.url
+        _normalize_candidate_url(candidate.url)
+        for candidate in candidates
+        if candidate.url
     }
     if not normalized_candidates or len(normalized_candidates) != 1:
         return False
     only_candidate = next(iter(normalized_candidates))
-    return (
-        only_candidate == _normalize_candidate_url(normalized_url)
-        and _looks_like_archive_root_url(only_candidate)
-    )
+    return only_candidate == _normalize_candidate_url(
+        normalized_url
+    ) and _looks_like_archive_root_url(only_candidate)
 
 
 def _normalize_candidate_url(url: str) -> str:
@@ -350,4 +355,6 @@ def _coerce_browser_error(
 
 
 def _should_attempt_http_recovery(error: AppError) -> bool:
-    return error.retryable or error.code == "publisher_inventory_browser_pagination_limit"
+    return (
+        error.retryable or error.code == "publisher_inventory_browser_pagination_limit"
+    )

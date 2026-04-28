@@ -3,7 +3,11 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 
-from src.contracts.costs import CostLedgerAppendRequest, CostLedgerEntry, CostRollupRequest
+from src.contracts.costs import (
+    CostLedgerAppendRequest,
+    CostLedgerEntry,
+    CostRollupRequest,
+)
 from src.contracts.openai import (
     OpenAIUsageAccountingRequest,
     OpenAIUsageAccountingResponse,
@@ -98,7 +102,9 @@ def record_usage(
             cached_input_tokens=request.cached_input_tokens,
             tool_calls=tool_calls,
             estimated_cost_usd=estimated_cost,
-            extra={"request_id": str(request.request_id) if request.request_id else None},
+            extra={
+                "request_id": str(request.request_id) if request.request_id else None
+            },
         )
         cost_ledger_service.append_entry(
             CostLedgerAppendRequest(

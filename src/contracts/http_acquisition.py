@@ -57,7 +57,9 @@ class HttpAcquisitionResponsePolicy:
     )
     chunk_size_bytes: int = field(
         default=65536,
-        metadata={"doc": "Chunk size used when reading or streaming the response body."},
+        metadata={
+            "doc": "Chunk size used when reading or streaming the response body."
+        },
     )
 
 
@@ -80,9 +82,7 @@ class HttpAcquisitionRequest:
     headers: dict[str, str] = field(
         metadata={"doc": "Normalized outbound request headers."}
     )
-    timeout_seconds: float = field(
-        metadata={"doc": "Per-request timeout in seconds."}
-    )
+    timeout_seconds: float = field(metadata={"doc": "Per-request timeout in seconds."})
     response_policy: HttpAcquisitionResponsePolicy = field(
         metadata={"doc": "Bounded response handling policy for the request."}
     )
@@ -148,18 +148,10 @@ class HttpAcquisitionResponse:
     purpose: str = field(
         metadata={"doc": "Purpose label copied from the originating request."}
     )
-    method: str = field(
-        metadata={"doc": "Normalized HTTP method that was executed."}
-    )
-    request_url: str = field(
-        metadata={"doc": "Original request URL before redirects."}
-    )
-    final_url: str = field(
-        metadata={"doc": "Final response URL after redirects."}
-    )
-    status_code: int = field(
-        metadata={"doc": "Final HTTP response status code."}
-    )
+    method: str = field(metadata={"doc": "Normalized HTTP method that was executed."})
+    request_url: str = field(metadata={"doc": "Original request URL before redirects."})
+    final_url: str = field(metadata={"doc": "Final response URL after redirects."})
+    status_code: int = field(metadata={"doc": "Final HTTP response status code."})
     headers: dict[str, str] = field(
         metadata={"doc": "Sanitized response headers returned by the remote server."}
     )
@@ -168,9 +160,7 @@ class HttpAcquisitionResponse:
     )
     content_length_bytes: Optional[int] = field(
         default=None,
-        metadata={
-            "doc": "Parsed content-length header when the server provided one."
-        },
+        metadata={"doc": "Parsed content-length header when the server provided one."},
     )
     text_body: Optional[str] = field(
         default=None,

@@ -93,7 +93,7 @@ def test_build_report_category_context_compacts_evidence_packs(
                         "summary": "Enterprise AI platforms are becoming operating layers.",
                         "key_points": [
                             "Agentic systems are moving into production.",
-                            "Infrastructure choices matter more than novelty."
+                            "Infrastructure choices matter more than novelty.",
                         ],
                     }
                 ],
@@ -191,16 +191,24 @@ def test_fit_report_categories_from_context_returns_selected_categories(
                 label="Technology & Innovation",
                 description="Reports about major technology shifts, enterprise systems, and innovation.",
                 definition="Reports whose primary subject is enterprise technology platforms, infrastructure, and technology change.",
-                include_when=["Repeated evidence centers on enterprise technology shifts or infrastructure decisions."],
-                exclude_when=["Reject when technology is only an enabling theme inside a broader consumer or media report."],
+                include_when=[
+                    "Repeated evidence centers on enterprise technology shifts or infrastructure decisions."
+                ],
+                exclude_when=[
+                    "Reject when technology is only an enabling theme inside a broader consumer or media report."
+                ],
             ),
             CategoryDefinition(
                 id="ai_automation",
                 label="AI & Automation",
                 description="Reports whose central subject is AI systems, automation, and agentic execution.",
                 definition="Reports mainly about AI systems, automation, agents, or workflow transformation driven by AI.",
-                include_when=["Evidence repeatedly focuses on AI agents, automation systems, or AI operating models."],
-                exclude_when=["Reject when AI is only one feature inside a broader technology market overview."],
+                include_when=[
+                    "Evidence repeatedly focuses on AI agents, automation systems, or AI operating models."
+                ],
+                exclude_when=[
+                    "Reject when AI is only one feature inside a broader technology market overview."
+                ],
             ),
         ],
         classification=CategoryClassificationConfig(),
@@ -307,8 +315,12 @@ def test_fit_report_categories_from_context_defaults_missing_optional_fields() -
                 label="Technology & Innovation",
                 description="Reports about major technology shifts, enterprise systems, and innovation.",
                 definition="Reports whose primary subject is enterprise technology platforms, infrastructure, and technology change.",
-                include_when=["Repeated evidence centers on enterprise technology shifts or infrastructure decisions."],
-                exclude_when=["Reject when technology is only an enabling theme inside a broader consumer or media report."],
+                include_when=[
+                    "Repeated evidence centers on enterprise technology shifts or infrastructure decisions."
+                ],
+                exclude_when=[
+                    "Reject when technology is only an enabling theme inside a broader consumer or media report."
+                ],
             )
         ],
         classification=CategoryClassificationConfig(),

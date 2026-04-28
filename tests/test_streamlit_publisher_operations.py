@@ -31,7 +31,9 @@ def test_build_publisher_choice_options_filters_empty_urls_and_sorts() -> None:
     options = pages.build_publisher_choice_options(
         [
             SimpleNamespace(name="Zulu", insights_url=" https://zulu.example/reports "),
-            SimpleNamespace(name="Alpha", insights_url="https://alpha.example/insights"),
+            SimpleNamespace(
+                name="Alpha", insights_url="https://alpha.example/insights"
+            ),
             SimpleNamespace(name="Blank", insights_url=" "),
         ]
     )
