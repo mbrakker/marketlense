@@ -1,6 +1,6 @@
 # Consolidated TODO
 
-Last compiled: 2026-04-25
+Last compiled: 2026-04-28
 
 This file is the single source of truth for open backlog items. It now includes the remaining consolidated backlog plus the moved items from `docs/quality/deep-analysis-x10-plan-2026-04-15.md`.
 
@@ -13,7 +13,9 @@ Deep-analysis evidence used for this consolidation:
 - Architecture import gate passes: `python scripts/ci/check_architecture_imports.py`.
 - Forbidden patching gate passes: `python scripts/ci/check_forbidden_patching.py`.
 - Long-file concentration remains high in `src/services/report_store_service.py`, `src/services/_pdf/visual_heuristics.py`, `src/services/_browser_report_download/artifact.py`, `src/services/config_service.py`, `src/ui/streamlit_pages.py`, `src/services/_browser_report_download/browser.py`, `src/services/publisher_inventory_service.py`, `src/generators/report_selection_generator.py`, and large paired tests.
-- Additional hotspots from the 2026-04-25 scan: `src/generators/report_generation_dependencies.py` imports 37 internal dependencies, several model-call paths mix `openai_service` and `llm_service`, and SQLite DDL/migrations are embedded in service startup paths.
+- Additional hotspots from the 2026-04-28 scan: `src/generators/report_generation_dependencies.py` imports 90 symbols, several model-call paths still mix `openai_service` and `llm_service`, and SQLite DDL/migrations remain embedded in service startup paths.
+- Prompt infrastructure now includes namespace-level dry-run contracts and loaders (`src/contracts/prompts.py`, `src/services/prompt_service.py`), so prompt workstream tasks should target CI enforcement and corpus quality thresholds instead of first-time scaffolding.
+- `docs/quality/initiative_ledger.yaml` tracks active initiatives (`ocr-confidence-gating`, `side-effect-idempotency`, `spend-guardrails`, `prompt-dry-run-validation`) and already-completed initiatives (`performance-cost-regression`, `repository-hygiene`); backlog priorities should align to that ledger.
 - Current x10 opportunities concentrate around cost-aware LLM routing, PDF/OCR triage, resumable orchestration, browser acquisition stability, publish durability, and regression gates.
 
 How to use this backlog:
@@ -488,17 +490,17 @@ Suggested priority order:
 
 ### Phase 1: Highest-Leverage Foundations (2-4 weeks)
 
-- OCR confidence gating.
+- OCR confidence gating hardening (threshold calibration + negative-path regression coverage).
 - Idempotency checksum per side-effecting orchestrator step.
-- Real-time spend guardrails.
-- Prompt dry-run validation.
+- Real-time spend guardrails at run/day/publisher scopes with operator override flow.
+- Prompt dry-run validation enforcement in CI with fixture corpus coverage targets.
 
 ### Phase 2: Speed and Recovery (4-8 weeks)
 
 - Budget-aware model routing with deterministic context compaction.
 - Page-level PDF triage.
 - Durable checkpoint/restart.
-- Explicit SQLite migration ledgers.
+- Deterministic per-page/per-figure fingerprint cache.
 
 ### Phase 3: Resilience and Quality (8-16+ weeks)
 
@@ -507,7 +509,7 @@ Suggested priority order:
 - Durable publish queue with transactional outbox.
 - Canary release train.
 - Dynamic concurrency and fairness controller.
-- Shared HTTP acquisition executor.
+- Dead-letter workflow with typed triage categories.
 
 ### Phase 4: Simplicity and Maintainability (ongoing)
 
