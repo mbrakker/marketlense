@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 import hashlib
 import io
 import logging
 import json
 import threading
+import time
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Iterable, Iterator, Optional
 
 from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request as GoogleAuthRequest
@@ -45,8 +47,30 @@ from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.drive_service")
 Credentials = ServiceAccountCredentials
-_DRIVE_CLIENTS: dict[tuple[str, str, int], object] = {}
+DRIVE_CLIENT_CACHE_TTL_SECONDS = 900.0
+DRIVE_CLIENT_CACHE_MAX_ENTRIES = 32
+DRIVE_FOLDER_SCOPE_CACHE_TTL_SECONDS = 300.0
+DRIVE_FOLDER_SCOPE_CACHE_MAX_ENTRIES = 128
+
+
+@dataclass
+class _DriveClientCacheEntry:
+    client: object
+    expires_at: float
+    last_access_at: float
+
+
+@dataclass
+class _DriveFolderScopeCacheEntry:
+    folder_ids: tuple[str, ...]
+    expires_at: float
+    last_access_at: float
+
+
+_DRIVE_CLIENTS: dict[tuple[str, str, int], _DriveClientCacheEntry] = {}
 _DRIVE_CLIENTS_LOCK = threading.Lock()
+_FOLDER_SCOPE_CACHE: dict[tuple[str, str, str, bool, bool], _DriveFolderScopeCacheEntry] = {}
+_FOLDER_SCOPE_CACHE_LOCK = threading.Lock()
 DRIVE_BOUNDARY_EXCEPTIONS = (HttpError, OSError, RuntimeError, ValueError, TypeError)
 DRIVE_SCOPES = ["https://www.googleapis.com/auth/drive"]
 
@@ -96,6 +120,18 @@ def _normalize_drive_auth_mode(raw_mode: str | None) -> str:
         message="Drive auth mode must be service_account or oauth_user",
         retryable=False,
         context={"auth_mode": raw_mode or ""},
+    )
+
+
+def _now_monotonic_seconds() -> float:
+    return float(time.monotonic())
+
+
+def _principal_path(*, auth_mode: str, service_account_path: str, oauth_token_path: str | None) -> str:
+    return (
+        str(service_account_path or "").strip()
+        if auth_mode == "service_account"
+        else str(oauth_token_path or "").strip()
     )
 
 
@@ -192,6 +228,28 @@ def _build_drive_client(
     return build("drive", "v3", credentials=creds, cache_discovery=False)
 
 
+def _prune_drive_client_cache(now: float) -> int:
+    removed = 0
+    for cache_key, entry in list(_DRIVE_CLIENTS.items()):
+        if entry.expires_at > now:
+            continue
+        _DRIVE_CLIENTS.pop(cache_key, None)
+        removed += 1
+    return removed
+
+
+def _evict_drive_client_cache(limit: int) -> int:
+    evicted = 0
+    while len(_DRIVE_CLIENTS) > max(0, int(limit)):
+        oldest_key = min(
+            _DRIVE_CLIENTS.items(),
+            key=lambda item: (item[1].last_access_at, item[0]),
+        )[0]
+        _DRIVE_CLIENTS.pop(oldest_key, None)
+        evicted += 1
+    return evicted
+
+
 def _get_drive_client(
     *,
     auth_mode: str,
@@ -200,30 +258,19 @@ def _get_drive_client(
     ctx: RunContext,
 ):
     thread_id = threading.get_ident()
-    principal_path = (
-        service_account_path
-        if auth_mode == "service_account"
-        else str(oauth_token_path or "")
+    credential_path = _principal_path(
+        auth_mode=auth_mode,
+        service_account_path=service_account_path,
+        oauth_token_path=oauth_token_path,
     )
-    cache_key = (auth_mode, principal_path, thread_id)
-    if cache_key in _DRIVE_CLIENTS:
-        logger.info(
-            log_event(
-                ctx,
-                role="service",
-                event="drive_client_reuse",
-                module=logger.name,
-                fields={
-                    "auth_mode": auth_mode,
-                    "credential_path": principal_path,
-                    "thread_id": thread_id,
-                },
-            )
-        )
-        return _DRIVE_CLIENTS[cache_key]
+    cache_key = (auth_mode, credential_path, thread_id)
     with _DRIVE_CLIENTS_LOCK:
+        now = _now_monotonic_seconds()
+        expired = _prune_drive_client_cache(now)
         cached = _DRIVE_CLIENTS.get(cache_key)
-        if cached is not None:
+        if cached is not None and cached.expires_at > now:
+            cached.last_access_at = now
+            cached.expires_at = now + DRIVE_CLIENT_CACHE_TTL_SECONDS
             logger.info(
                 log_event(
                     ctx,
@@ -232,19 +279,26 @@ def _get_drive_client(
                     module=logger.name,
                     fields={
                         "auth_mode": auth_mode,
-                        "credential_path": principal_path,
+                        "credential_path": credential_path,
                         "thread_id": thread_id,
+                        "expired_evictions": expired,
+                        "cache_size": len(_DRIVE_CLIENTS),
                     },
                 )
             )
-            return cached
+            return cached.client
         client = _build_drive_client(
             auth_mode=auth_mode,
             service_account_path=service_account_path,
             oauth_token_path=oauth_token_path,
             ctx=ctx,
         )
-        _DRIVE_CLIENTS[cache_key] = client
+        _DRIVE_CLIENTS[cache_key] = _DriveClientCacheEntry(
+            client=client,
+            expires_at=now + DRIVE_CLIENT_CACHE_TTL_SECONDS,
+            last_access_at=now,
+        )
+        evicted = _evict_drive_client_cache(DRIVE_CLIENT_CACHE_MAX_ENTRIES)
     logger.info(
         log_event(
             ctx,
@@ -253,8 +307,11 @@ def _get_drive_client(
             module=logger.name,
             fields={
                 "auth_mode": auth_mode,
-                "credential_path": principal_path,
+                "credential_path": credential_path,
                 "thread_id": thread_id,
+                "expired_evictions": expired,
+                "max_entry_evictions": evicted,
+                "cache_size": len(_DRIVE_CLIENTS),
             },
         )
     )
@@ -287,11 +344,11 @@ def _request_auth_mode(request) -> str:
     return _normalize_drive_auth_mode(getattr(request, "auth_mode", "service_account"))
 
 
-def _list_files_paginated(
+def _iter_list_files_paginated(
     drive, list_kwargs: dict, request: DriveListRequest, ctx: RunContext
-) -> list[dict]:
+) -> Iterator[dict]:
     page_token: Optional[str] = None
-    items: list[dict] = []
+    page_index = 0
     while True:
         try:
             kwargs = dict(list_kwargs)
@@ -314,16 +371,109 @@ def _list_files_paginated(
                 retryable=True,
                 context={"folder_id": request.folder_id},
             ) from exc
-        items.extend(resp.get("files", []))
+        page_index += 1
+        page_files = resp.get("files", [])
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="drive_list_page_loaded",
+                module=logger.name,
+                fields={
+                    "folder_id": request.folder_id,
+                    "page_index": page_index,
+                    "page_token": page_token or "",
+                    "page_file_count": len(page_files),
+                    "has_next_page": bool(resp.get("nextPageToken")),
+                },
+            )
+        )
+        for item in page_files:
+            yield item
         page_token = resp.get("nextPageToken")
         if not page_token:
             break
-    return items
+
+
+def _folder_scope_cache_key(
+    request: DriveListRequest,
+) -> tuple[str, str, str, bool, bool]:
+    auth_mode = _request_auth_mode(request)
+    principal = _principal_path(
+        auth_mode=auth_mode,
+        service_account_path=request.service_account_path,
+        oauth_token_path=request.oauth_token_path,
+    )
+    return (
+        principal,
+        str(request.folder_id or "").strip(),
+        str(request.drive_id or "").strip(),
+        bool(request.supports_all_drives),
+        bool(request.include_items_from_all_drives),
+    )
+
+
+def _prune_folder_scope_cache(now: float) -> int:
+    removed = 0
+    for cache_key, entry in list(_FOLDER_SCOPE_CACHE.items()):
+        if entry.expires_at > now:
+            continue
+        _FOLDER_SCOPE_CACHE.pop(cache_key, None)
+        removed += 1
+    return removed
+
+
+def _evict_folder_scope_cache(limit: int) -> int:
+    evicted = 0
+    while len(_FOLDER_SCOPE_CACHE) > max(0, int(limit)):
+        oldest_key = min(
+            _FOLDER_SCOPE_CACHE.items(),
+            key=lambda item: (item[1].last_access_at, item[0]),
+        )[0]
+        _FOLDER_SCOPE_CACHE.pop(oldest_key, None)
+        evicted += 1
+    return evicted
+
+
+def _invalidate_folder_scope_cache(*, folder_id: str | None = None) -> int:
+    target = str(folder_id or "").strip()
+    with _FOLDER_SCOPE_CACHE_LOCK:
+        removed = 0
+        for cache_key in list(_FOLDER_SCOPE_CACHE.keys()):
+            if target and cache_key[1] != target:
+                continue
+            _FOLDER_SCOPE_CACHE.pop(cache_key, None)
+            removed += 1
+        return removed
 
 
 def _resolve_folder_scope(
     drive, request: DriveListRequest, ctx: RunContext
 ) -> list[str]:
+    cache_key = _folder_scope_cache_key(request)
+    with _FOLDER_SCOPE_CACHE_LOCK:
+        now = _now_monotonic_seconds()
+        expired = _prune_folder_scope_cache(now)
+        cached = _FOLDER_SCOPE_CACHE.get(cache_key)
+        if cached is not None and cached.expires_at > now:
+            cached.last_access_at = now
+            cached.expires_at = now + DRIVE_FOLDER_SCOPE_CACHE_TTL_SECONDS
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="drive_list_folder_scope_cache_hit",
+                    module=logger.name,
+                    fields={
+                        "root_folder_id": request.folder_id,
+                        "folder_count": len(cached.folder_ids),
+                        "expired_evictions": expired,
+                        "cache_size": len(_FOLDER_SCOPE_CACHE),
+                    },
+                )
+            )
+            return list(cached.folder_ids)
+
     folder_ids = [request.folder_id]
     seen = {request.folder_id}
     queue = [request.folder_id]
@@ -340,14 +490,23 @@ def _resolve_folder_scope(
         if request.drive_id:
             list_kwargs["driveId"] = request.drive_id
             list_kwargs["corpora"] = "drive"
-        subfolders = _list_files_paginated(drive, list_kwargs, request, ctx)
-        for subfolder in subfolders:
+        for subfolder in _iter_list_files_paginated(drive, list_kwargs, request, ctx):
             subfolder_id = subfolder.get("id", "")
             if not subfolder_id or subfolder_id in seen:
                 continue
             seen.add(subfolder_id)
             folder_ids.append(subfolder_id)
             queue.append(subfolder_id)
+
+    with _FOLDER_SCOPE_CACHE_LOCK:
+        now = _now_monotonic_seconds()
+        expired = _prune_folder_scope_cache(now)
+        _FOLDER_SCOPE_CACHE[cache_key] = _DriveFolderScopeCacheEntry(
+            folder_ids=tuple(folder_ids),
+            expires_at=now + DRIVE_FOLDER_SCOPE_CACHE_TTL_SECONDS,
+            last_access_at=now,
+        )
+        evicted = _evict_folder_scope_cache(DRIVE_FOLDER_SCOPE_CACHE_MAX_ENTRIES)
 
     logger.info(
         log_event(
@@ -358,6 +517,9 @@ def _resolve_folder_scope(
             fields={
                 "root_folder_id": request.folder_id,
                 "folder_count": len(folder_ids),
+                "expired_evictions": expired,
+                "max_entry_evictions": evicted,
+                "cache_size": len(_FOLDER_SCOPE_CACHE),
             },
         )
     )
@@ -427,8 +589,7 @@ def list_pdfs(request: DriveListRequest, ctx: RunContext) -> Iterable[DriveFile]
             if request.drive_id:
                 list_kwargs["driveId"] = request.drive_id
                 list_kwargs["corpora"] = "drive"
-            files = _list_files_paginated(drive, list_kwargs, request, ctx)
-            for f in files:
+            for f in _iter_list_files_paginated(drive, list_kwargs, request, ctx):
                 total += 1
                 yield DriveFile(
                     schema_version="1.0",
@@ -783,40 +944,44 @@ def list_files_in_folder(
     if request.drive_id:
         list_kwargs["driveId"] = request.drive_id
         list_kwargs["corpora"] = "drive"
-    rows = _list_files_paginated(
+    list_request = DriveListRequest(
+        schema_version="1.0",
+        folder_id=request.folder_id,
+        service_account_path=request.service_account_path,
+        page_size=request.page_size,
+        order_by=request.order_by,
+        modified_after=None,
+        list_mode="full",
+        supports_all_drives=request.supports_all_drives,
+        include_items_from_all_drives=request.include_items_from_all_drives,
+        drive_id=request.drive_id,
+        auth_mode=request.auth_mode,
+        oauth_client_path=request.oauth_client_path,
+        oauth_token_path=request.oauth_token_path,
+    )
+    limit = request.limit if request.limit > 0 else 50
+    files: list[DriveFile] = []
+    for row in _iter_list_files_paginated(
         drive,
         list_kwargs,
-        DriveListRequest(
-            schema_version="1.0",
-            folder_id=request.folder_id,
-            service_account_path=request.service_account_path,
-            page_size=request.page_size,
-            order_by=request.order_by,
-            modified_after=None,
-            list_mode="full",
-            supports_all_drives=request.supports_all_drives,
-            include_items_from_all_drives=request.include_items_from_all_drives,
-            drive_id=request.drive_id,
-            auth_mode=request.auth_mode,
-            oauth_client_path=request.oauth_client_path,
-            oauth_token_path=request.oauth_token_path,
-        ),
+        list_request,
         ctx,
-    )
-    files = [
-        DriveFile(
-            schema_version="1.0",
-            file_id=str(row.get("id", "")),
-            name=row.get("name"),
-            modified_time=row.get("modifiedTime"),
-            md5_checksum=row.get("md5Checksum"),
-            mime_type=row.get("mimeType"),
+    ):
+        file_id = str(row.get("id", "")).strip()
+        if not file_id:
+            continue
+        files.append(
+            DriveFile(
+                schema_version="1.0",
+                file_id=file_id,
+                name=row.get("name"),
+                modified_time=row.get("modifiedTime"),
+                md5_checksum=row.get("md5Checksum"),
+                mime_type=row.get("mimeType"),
+            )
         )
-        for row in rows
-        if str(row.get("id", "")).strip()
-    ]
-    limit = request.limit if request.limit > 0 else 50
-    files = files[:limit]
+        if len(files) >= limit:
+            break
     response = DriveFolderFileListResponse(
         schema_version="1.0",
         folder_id=request.folder_id,
@@ -828,7 +993,11 @@ def list_files_in_folder(
             role="service",
             event="drive_folder_file_list_complete",
             module=logger.name,
-            fields={"folder_id": request.folder_id, "count": len(files)},
+            fields={
+                "folder_id": request.folder_id,
+                "count": len(files),
+                "truncated": len(files) >= limit,
+            },
         )
     )
     return response
