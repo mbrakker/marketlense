@@ -3455,6 +3455,93 @@ def test_browser_named_control_selector_covers_anchor_button_controls() -> None:
     assert "library" in archive_expander_script
 
 
+def test_browser_inventory_probe_scripts_emit_expected_runtime_keys() -> None:
+    growth_probe_script = service._browser_inventory_growth_probe_script()
+    settle_probe_script = service._browser_inventory_settle_probe_script()
+
+    assert "pageUrl" in growth_probe_script
+    assert "anchorCount" in growth_probe_script
+    assert "readyState" in settle_probe_script
+    assert "title" in settle_probe_script
+    assert "anchorCount" in settle_probe_script
+
+
+def test_increment_browser_traversal_metrics_updates_only_requested_counter() -> None:
+    baseline = service._new_browser_traversal_metrics()
+
+    updated = service._increment_browser_traversal_metrics(
+        baseline,
+        load_more_clicks=2,
+    )
+
+    assert updated.cookies_dismissed == 0
+    assert updated.report_route_clicks == 0
+    assert updated.report_filter_applied == 0
+    assert updated.tab_clicks == 0
+    assert updated.load_more_clicks == 2
+    assert updated.next_page_visits == 0
+    assert updated.archive_expansion_clicks == 0
+    assert updated.button_pagination_clicks == 0
+
+
+def test_rendered_inventory_state_from_payload_normalizes_payload() -> None:
+    state = service._rendered_inventory_state_from_payload(
+        {
+            "page_url": "https://example.com/reports",
+            "page_title": "  Reports   ",
+            "anchors": [
+                {
+                    "href": "https://example.com/reports/alpha",
+                    "text": "Learn more",
+                    "heading_text": "Alpha report",
+                    "rel": "nofollow",
+                },
+                {
+                    "href": "",
+                    "text": "Ignored",
+                },
+            ],
+            "load_more_labels": ["  Load   more  ", ""],
+            "tab_labels": [" Reports ", None],
+            "active_tab_label": " Reports ",
+            "report_link_url": "https://example.com/reports/all",
+            "empty_results_visible": 0,
+            "reset_filter_labels": [" Reset all filters ", ""],
+            "has_report_filter": 1,
+            "has_apply_button": 0,
+            "has_pagination_next": 1,
+            "result_range_end": "24",
+            "result_range_total": "96",
+            "page_index_hint": "2",
+            "page_total_hint": "4",
+        },
+        page_url_fallback="https://example.com/insights",
+    )
+
+    assert state.page_url == "https://example.com/reports"
+    assert state.page_title == "Reports"
+    assert state.anchors == [
+        {
+            "href": "https://example.com/reports/alpha",
+            "text": "Alpha report",
+            "rel": "nofollow",
+        }
+    ]
+    assert state.load_more_labels == ["Load more"]
+    assert state.tab_labels == ["Reports"]
+    assert state.active_tab_label == "Reports"
+    assert state.report_link_url == "https://example.com/reports/all"
+    assert state.empty_results_visible is False
+    assert state.reset_filter_labels == ["Reset all filters"]
+    assert state.has_report_filter is True
+    assert state.has_apply_button is False
+    assert state.has_pagination_next is True
+    assert state.result_range_end == 24
+    assert state.result_range_total == 96
+    assert state.page_index_hint == 2
+    assert state.page_total_hint == 4
+
+
 def test_discover_publisher_inventory_browser_timeout_is_typed_error(
     tmp_path: Path,
     run_context,

@@ -165,16 +165,6 @@ Suggested priority order:
     - Retention policy controls sensitive or large artifacts.
     - Triage playbook uses the bundle consistently.
 
-- **Title:** Externalize publisher-inventory browser scripts and traversal state [Impact: 3/5, Effort: 4/5]
-  - Explanation: `src/services/publisher_inventory_service.py` embeds large JavaScript snippets with repeated selector, visibility, and normalization helpers. Move browser action/state extraction into named internal script builders or assets, reuse one helper bundle, and model traversal-state updates through explicit typed helpers.
-  - Pros: Smaller service surface, less duplicated browser logic, easier targeted tests.
-  - Cons: Requires careful script-loading and browser-test updates.
-  - Acceptance Criteria:
-    - Inline browser action/state scripts are replaced by named internal script builders or assets.
-    - Shared selector, visibility, and normalization logic is defined once and reused.
-    - Traversal state/metrics updates use explicit helpers instead of repeated manual dataclass reconstruction.
-    - Browser-inventory tests cover the extracted script/runtime contract.
-
 - **Title:** Add deferred acquisition recovery recipes for high-confidence failures [Impact: 4/5, Effort: 3/5]
   - Explanation: Existing discovery docs identify second-pass recovery opportunities. Implement typed, bounded recovery recipes for strong candidates rejected due to recoverable landing-page/browser failures, without bypassing quality gates.
   - Pros: Higher acquisition yield on difficult publishers.
