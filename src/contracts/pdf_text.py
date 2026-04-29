@@ -43,6 +43,16 @@ class PdfTextSample:
     has_text: bool = field(
         metadata={"doc": "Whether the sampled page contains extractable text."}
     )
+    word_count: int = field(
+        default=0,
+        metadata={"doc": "Number of meaningful native words extracted for the page."},
+    )
+    confidence_score: float = field(
+        default=0.0,
+        metadata={
+            "doc": "Deterministic native-text confidence score for the sampled page."
+        },
+    )
     schema_version: str = field(
         default="1.0", metadata={"doc": "PDF text sample schema version."}
     )
@@ -73,4 +83,10 @@ class PdfTextSampleResponse:
     )
     any_text: bool = field(
         metadata={"doc": "True when any sampled page contains extractable text."}
+    )
+    document_confidence_score: float = field(
+        default=0.0,
+        metadata={
+            "doc": "Deterministic native-text confidence score aggregated across sampled pages."
+        },
     )

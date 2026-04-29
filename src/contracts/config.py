@@ -129,10 +129,28 @@ class AppSettings:
         default=3,
         metadata={"doc": "Number of pages to sample when validating extractable text."},
     )
+    pdf_text_native_confidence_threshold: float = field(
+        default=0.55,
+        metadata={
+            "doc": "Minimum aggregated native-text confidence required to avoid OCR fallback."
+        },
+    )
+    pdf_text_native_page_confidence_threshold: float = field(
+        default=0.35,
+        metadata={
+            "doc": "Minimum per-page native-text confidence used to flag weak sampled pages."
+        },
+    )
     pdf_text_ocr_enabled: bool = field(
         default=False,
         metadata={
             "doc": "Whether OCR fallback should run when extractable text validation fails."
+        },
+    )
+    pdf_text_ocr_policy: str = field(
+        default="native_first_selective",
+        metadata={
+            "doc": "OCR fallback policy: native_first_selective or always."
         },
     )
     pdf_text_ocr_model: str = field(

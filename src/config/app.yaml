@@ -44,8 +44,11 @@ ingest:
     max_chars: 80000
     min_density: 250
     sample_pages: 3
+    native_confidence_threshold: 0.55
+    native_page_confidence_threshold: 0.35
     ocr_fallback:
       enabled: false
+      policy: "native_first_selective"
       model: "gpt-5-mini"
       timeout_seconds: 600
       prompt_namespace: "pdf_text/ocr_fallback"

@@ -147,8 +147,10 @@ def test_prepare_report_source_writes_caches_and_marks_low_density(
 
     state = prepare_report_source(runtime, deps)
 
-    assert state.text_validation_status == "pass"
+    assert state.text_validation_status == "fail"
+    assert state.text_validation_reason == "text_density_below_threshold"
     assert state.payload._text_not_available is True
+    assert state.text_status["ocr_recommended"] is True
     assert any("pdf_info_" in path for path in writes)
     assert any("contents_" in path for path in writes)
     assert any("text_" in path for path in writes)
@@ -446,7 +448,7 @@ def test_prepare_report_source_does_not_call_ocr_when_native_text_is_extractable
     ingest_settings, run_context, tmp_path
 ):
     runtime = _runtime(
-        replace(ingest_settings, pdf_text_ocr_enabled=True),
+        replace(ingest_settings, pdf_text_ocr_enabled=True, pdf_text_ocr_cache_enabled=False),
         run_context,
         tmp_path,
     )
@@ -461,16 +463,24 @@ def test_prepare_report_source_does_not_call_ocr_when_native_text_is_extractable
         sample_pdf_text=lambda req, ctx: PdfTextSampleResponse(
             schema_version="1.0",
             samples=[
-                PdfTextSample(page_index=0, page_number=1, char_count=12, has_text=True)
+                PdfTextSample(
+                    page_index=0,
+                    page_number=1,
+                    char_count=120,
+                    has_text=True,
+                    word_count=18,
+                    confidence_score=0.92,
+                )
             ],
             any_text=True,
+            document_confidence_score=0.92,
         ),
         extract_pdf_text=lambda req, ctx: PdfTextExtractResponse(
             schema_version="1.0",
             text="native text",
             pages_extracted=1,
-            char_count=11,
-            text_density=11.0,
+            char_count=180,
+            text_density=420.0,
         ),
         openai_ocr_pdf=lambda req, ctx: ocr_calls.__setitem__(
             "count", ocr_calls["count"] + 1
@@ -482,6 +492,118 @@ def test_prepare_report_source_does_not_call_ocr_when_native_text_is_extractable
     assert state.ocr_fallback_used is False
     assert state.analysis_pdf_path == runtime.local_pdf_path
     assert ocr_calls["count"] == 0
+
+
+def test_prepare_report_source_uses_ocr_for_weak_native_text_even_when_any_text_exists(
+    ingest_settings, run_context, tmp_path
+):
+    runtime = _runtime(
+        replace(
+            ingest_settings,
+            pdf_text_ocr_enabled=True,
+            pdf_text_ocr_cache_enabled=False,
+        ),
+        run_context,
+        tmp_path,
+    )
+    ocr_calls = {"count": 0}
+    deps = _deps(
+        extract_pdf_info=lambda req, ctx: PdfInfoResponse(
+            schema_version="1.0",
+            path=req.path,
+            page_count=2,
+            metadata={},
+        ),
+        sample_pdf_text=lambda req, ctx: (
+            PdfTextSampleResponse(
+                schema_version="1.0",
+                samples=[
+                    PdfTextSample(
+                        page_index=0,
+                        page_number=1,
+                        char_count=14,
+                        has_text=True,
+                        word_count=2,
+                        confidence_score=0.18,
+                    )
+                ],
+                any_text=True,
+                document_confidence_score=0.18,
+            )
+            if req.path == runtime.local_pdf_path
+            else PdfTextSampleResponse(
+                schema_version="1.0",
+                samples=[
+                    PdfTextSample(
+                        page_index=0,
+                        page_number=1,
+                        char_count=120,
+                        has_text=True,
+                        word_count=18,
+                        confidence_score=0.9,
+                    )
+                ],
+                any_text=True,
+                document_confidence_score=0.9,
+            )
+        ),
+        extract_pdf_text=lambda req, ctx: (
+            PdfTextExtractResponse(
+                schema_version="1.0",
+                text="tiny native",
+                pages_extracted=1,
+                char_count=11,
+                text_density=18.0,
+            )
+            if req.path == runtime.local_pdf_path
+            else PdfTextExtractResponse(
+                schema_version="1.0",
+                text="ocr recovered text",
+                pages_extracted=2,
+                char_count=220,
+                text_density=320.0,
+            )
+        ),
+        openai_ocr_pdf=lambda req, ctx: (
+            ocr_calls.__setitem__("count", ocr_calls["count"] + 1)
+            or SimpleNamespace(
+                schema_version="1.0",
+                pages=[
+                    SimpleNamespace(
+                        schema_version="1.0",
+                        page_number=1,
+                        text="ocr recovered text",
+                    ),
+                    SimpleNamespace(
+                        schema_version="1.0",
+                        page_number=2,
+                        text="ocr recovered text two",
+                    ),
+                ],
+                raw_text='{"pages":[{"page_number":1,"text":"ocr recovered text"},{"page_number":2,"text":"ocr recovered text two"}]}',
+                model=req.model,
+                request_id="req_weak_native",
+            )
+        ),
+        render_text_pdf=lambda req, ctx: SimpleNamespace(
+            schema_version="1.0",
+            output_path=str(tmp_path / "weak-native-ocr.pdf"),
+            rendered_page_count=len(req.pages),
+        ),
+    )
+
+    state = prepare_report_source(runtime, deps)
+
+    assert state.ocr_fallback_used is True
+    assert state.text_status["ocr_recommendation_reason"] in {
+        "native_page_confidence_below_threshold",
+        "native_text_confidence_below_threshold",
+        "text_density_below_threshold",
+    }
+    assert float(state.text_status["native_confidence_score"]) < float(
+        runtime.settings.pdf_text_native_confidence_threshold
+    )
+    assert ocr_calls["count"] == 1
 
 
 def test_prepare_report_source_uses_ocr_fallback_and_keeps_original_preview_source(
@@ -602,7 +724,7 @@ def test_prepare_report_source_uses_ocr_fallback_and_keeps_original_preview_sour
     assert state.analysis_pdf_path == ocr_pdf_path
     assert state.ocr_pdf_path == ocr_pdf_path
     assert detect_paths == [ocr_pdf_path]
-    assert extract_paths == [ocr_pdf_path]
+    assert extract_paths == [runtime.local_pdf_path, ocr_pdf_path]
     assert preview_paths == [runtime.local_pdf_path]
 
 
@@ -943,6 +1065,13 @@ def test_prepare_report_source_surfaces_pdf_text_ocr_failed(
                 PdfTextSample(page_index=0, page_number=1, char_count=0, has_text=False)
             ],
             any_text=False,
+        ),
+        extract_pdf_text=lambda req, ctx: PdfTextExtractResponse(
+            schema_version="1.0",
+            text="",
+            pages_extracted=1,
+            char_count=0,
+            text_density=0.0,
         ),
         openai_ocr_pdf=lambda req, ctx: (_ for _ in ()).throw(
             AppError(

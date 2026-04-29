@@ -509,8 +509,11 @@ class TestConfigService(unittest.TestCase):
                 "max_chars": 80000,
                 "min_density": 250,
                 "sample_pages": 3,
+                "native_confidence_threshold": 0.61,
+                "native_page_confidence_threshold": 0.42,
                 "ocr_fallback": {
                     "enabled": True,
+                    "policy": "always",
                     "model": "gpt-5-mini",
                     "timeout_seconds": 321.0,
                     "prompt_namespace": "pdf_text/ocr_fallback",
@@ -529,6 +532,9 @@ class TestConfigService(unittest.TestCase):
                 )
 
         self.assertTrue(settings.pdf_text_ocr_enabled)
+        self.assertEqual(0.61, settings.pdf_text_native_confidence_threshold)
+        self.assertEqual(0.42, settings.pdf_text_native_page_confidence_threshold)
+        self.assertEqual("always", settings.pdf_text_ocr_policy)
         self.assertEqual("gpt-5-mini", settings.pdf_text_ocr_model)
         self.assertEqual(321.0, settings.pdf_text_ocr_timeout_seconds)
         self.assertEqual(

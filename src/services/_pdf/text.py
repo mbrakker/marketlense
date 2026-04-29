@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 
 import pymupdf as fitz
 from pypdf import PdfReader, PdfWriter
@@ -377,19 +378,37 @@ def sample_pdf_text(
                 continue
             text = _extract_text(reader, idx)
             char_count = len(text)
+            word_count = _meaningful_word_count(text)
+            confidence_score = _score_native_text_confidence(
+                text=text,
+                char_count=char_count,
+                word_count=word_count,
+            )
             samples.append(
                 PdfTextSample(
                     page_index=idx,
                     page_number=idx + 1,
                     char_count=char_count,
                     has_text=bool(text.strip()),
+                    word_count=word_count,
+                    confidence_score=confidence_score,
                 )
             )
         any_text = any(sample.has_text for sample in samples)
+        document_confidence_score = round(
+            (
+                sum(float(sample.confidence_score) for sample in samples)
+                / float(len(samples))
+            )
+            if samples
+            else 0.0,
+            3,
+        )
         response = PdfTextSampleResponse(
             schema_version="1.0",
             samples=samples,
             any_text=any_text,
+            document_confidence_score=document_confidence_score,
         )
         logger.info(
             log_event(
@@ -401,6 +420,10 @@ def sample_pdf_text(
                     "sample_count": len(samples),
                     "any_text": any_text,
                     "page_indices": [sample.page_index for sample in samples],
+                    "page_confidence_scores": [
+                        round(float(sample.confidence_score), 3) for sample in samples
+                    ],
+                    "document_confidence_score": document_confidence_score,
                 },
             )
         )
@@ -671,3 +694,46 @@ def _compute_text_density(text: str, pages: int) -> float:
         return len(text or "") / float(pages)
     except (TypeError, ValueError):
         return 0.0
+
+
+_WORD_PATTERN = re.compile(r"[A-Za-z0-9]{2,}")
+
+
+def _meaningful_word_count(text: str) -> int:
+    if not text:
+        return 0
+    return len(_WORD_PATTERN.findall(text))
+
+
+def _score_native_text_confidence(
+    *,
+    text: str,
+    char_count: int,
+    word_count: int,
+) -> float:
+    stripped = (text or "").strip()
+    if not stripped or char_count <= 0 or word_count <= 0:
+        return 0.0
+
+    non_space_chars = sum(1 for char in stripped if not char.isspace())
+    if non_space_chars <= 0:
+        return 0.0
+
+    alpha_numeric_chars = sum(1 for char in stripped if char.isalnum())
+    alpha_numeric_ratio = alpha_numeric_chars / float(non_space_chars)
+    words = _WORD_PATTERN.findall(stripped)
+    long_word_count = sum(1 for word in words if len(word) >= 4)
+    long_word_ratio = (
+        long_word_count / float(word_count) if word_count > 0 else 0.0
+    )
+    char_signal = min(char_count / 80.0, 1.0)
+    word_signal = min(word_count / 12.0, 1.0)
+    alpha_signal = min(alpha_numeric_ratio / 0.55, 1.0)
+    long_word_signal = min(long_word_ratio / 0.45, 1.0)
+    score = (
+        (char_signal * 0.35)
+        + (word_signal * 0.35)
+        + (alpha_signal * 0.15)
+        + (long_word_signal * 0.15)
+    )
+    return round(max(0.0, min(score, 1.0)), 3)

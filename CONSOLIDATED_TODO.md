@@ -112,16 +112,6 @@ Suggested priority order:
     - Evaluation set confirms required recall threshold.
     - Stage metrics show extraction/crop/OCR work avoided.
 
-- **Title:** Add OCR confidence gating with native-first selective fallback [Impact: 5/5, Effort: 2/5]
-  - Explanation: Use native text extraction first and call OCR only when text confidence, density, or page-quality thresholds fail. This can cut OCR spend substantially on mixed corpora.
-  - Pros: Lower cost and latency with clearer OCR rationale.
-  - Cons: Thresholds need calibration and ongoing monitoring.
-  - Acceptance Criteria:
-    - Native text confidence metric is defined and logged per page/document.
-    - OCR is called only when the threshold fails or policy explicitly requires it.
-    - Negative tests prove weak native text triggers OCR.
-    - Cost report shows reduced OCR usage on fixture corpus.
-
 - **Title:** Add deterministic per-page/per-figure fingerprint cache [Impact: 5/5, Effort: 3/5]
   - Explanation: Cache expensive intermediate PDF outputs at sub-document granularity. Fingerprints must include content, page/figure identity, parser versions, settings, and prompt/model versions where relevant.
   - Pros: High rerun speedups and lower CPU/model cost.

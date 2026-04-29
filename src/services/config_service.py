@@ -1279,6 +1279,34 @@ def _resolve_pdf_text_settings(
                 ),
                 coerce=_to_int,
             ),
+            _SettingSpec(
+                field_name="pdf_text_native_confidence_threshold",
+                config_key="native_confidence_threshold",
+                default=_to_float(
+                    _default_config_value(
+                        "ingest",
+                        "pdf_text",
+                        "native_confidence_threshold",
+                        fallback=0.55,
+                    ),
+                    0.55,
+                ),
+                coerce=_to_float,
+            ),
+            _SettingSpec(
+                field_name="pdf_text_native_page_confidence_threshold",
+                config_key="native_page_confidence_threshold",
+                default=_to_float(
+                    _default_config_value(
+                        "ingest",
+                        "pdf_text",
+                        "native_page_confidence_threshold",
+                        fallback=0.35,
+                    ),
+                    0.35,
+                ),
+                coerce=_to_float,
+            ),
         ],
     )
     ocr_fallback_cfg = pdf_text.get("ocr_fallback") or {}
@@ -1340,6 +1368,20 @@ def _resolve_pdf_text_settings(
                 ),
             ],
         )
+    )
+    resolved["pdf_text_ocr_policy"] = _resolve_allowed_string(
+        ocr_fallback_cfg.get("policy"),
+        default=str(
+            _default_config_value(
+                "ingest",
+                "pdf_text",
+                "ocr_fallback",
+                "policy",
+                fallback="native_first_selective",
+            )
+        ).strip()
+        or "native_first_selective",
+        allowed={"native_first_selective", "always"},
     )
     resolved["pdf_text_ocr_model"] = _to_str(
         ocr_fallback_cfg.get("model"),
@@ -1700,7 +1742,10 @@ def _config_load_complete_fields(
         "pdf_text_max_chars": settings.pdf_text_max_chars,
         "pdf_text_min_density": settings.pdf_text_min_density,
         "pdf_text_sample_pages": settings.pdf_text_sample_pages,
+        "pdf_text_native_confidence_threshold": settings.pdf_text_native_confidence_threshold,
+        "pdf_text_native_page_confidence_threshold": settings.pdf_text_native_page_confidence_threshold,
         "pdf_text_ocr_enabled": settings.pdf_text_ocr_enabled,
+        "pdf_text_ocr_policy": settings.pdf_text_ocr_policy,
         "pdf_text_ocr_model": settings.pdf_text_ocr_model,
         "pdf_text_ocr_timeout_seconds": settings.pdf_text_ocr_timeout_seconds,
         "pdf_text_ocr_prompt_namespace": settings.pdf_text_ocr_prompt_namespace,
@@ -1846,7 +1891,14 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         pdf_text_max_chars=pdf_text_settings["pdf_text_max_chars"],
         pdf_text_min_density=pdf_text_settings["pdf_text_min_density"],
         pdf_text_sample_pages=pdf_text_settings["pdf_text_sample_pages"],
+        pdf_text_native_confidence_threshold=pdf_text_settings[
+            "pdf_text_native_confidence_threshold"
+        ],
+        pdf_text_native_page_confidence_threshold=pdf_text_settings[
+            "pdf_text_native_page_confidence_threshold"
+        ],
         pdf_text_ocr_enabled=pdf_text_settings["pdf_text_ocr_enabled"],
+        pdf_text_ocr_policy=pdf_text_settings["pdf_text_ocr_policy"],
         pdf_text_ocr_model=pdf_text_settings["pdf_text_ocr_model"],
         pdf_text_ocr_timeout_seconds=pdf_text_settings["pdf_text_ocr_timeout_seconds"],
         pdf_text_ocr_prompt_namespace=pdf_text_settings[

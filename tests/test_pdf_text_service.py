@@ -144,6 +144,9 @@ def test_pdf_text_service_facade_preserves_contracts_and_logs(
     assert text_response.text_density > 0
     assert sample_response.any_text is True
     assert [sample.page_number for sample in sample_response.samples] == [1, 2]
+    assert all(sample.word_count > 0 for sample in sample_response.samples)
+    assert all(sample.confidence_score > 0.5 for sample in sample_response.samples)
+    assert sample_response.document_confidence_score > 0.5
 
     for response in (eof_response, info_response, text_response, sample_response):
         assert_no_defaulted_required_fields(response)
