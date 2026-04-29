@@ -271,6 +271,8 @@ def _execution_response(
     config_snapshot: dict[str, Any],
     error_code: str = "",
     error_message: str = "",
+    error_retryable: bool = False,
+    error_severity: str = "error",
 ) -> UiRunExecutionResponse:
     return UiRunExecutionResponse(
         schema_version="1.0",
@@ -283,6 +285,8 @@ def _execution_response(
         config_fingerprint=sha256_json(config_snapshot),
         error_code=error_code,
         error_message=error_message,
+        error_retryable=error_retryable,
+        error_severity=error_severity,
     )
 
 
@@ -685,6 +689,8 @@ def execute_ui_run(
             config_snapshot=config_snapshot,
             error_code=exc.code,
             error_message=exc.message,
+            error_retryable=exc.retryable,
+            error_severity=exc.severity,
         )
         logger.info(
             log_event(
@@ -710,6 +716,8 @@ def execute_ui_run(
             config_snapshot=config_snapshot,
             error_code="ui_run_worker_failed",
             error_message=str(exc),
+            error_retryable=False,
+            error_severity="error",
         )
         logger.info(
             log_event(

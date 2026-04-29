@@ -138,7 +138,7 @@ def test_ui_run_registry_migrations_are_idempotent_on_rerun(tmp_path: Path) -> N
         schema_version="1.0",
         database_key="ui_run_registry",
         db_path=str(db_path),
-        target_version=1,
+        target_version=2,
         ctx=_ctx(),
     )
 
@@ -149,11 +149,24 @@ def test_ui_run_registry_migrations_are_idempotent_on_rerun(tmp_path: Path) -> N
             "SELECT COUNT(*) FROM schema_migration_ledger WHERE database_key=?",
             ("ui_run_registry",),
         ).fetchone()[0]
+        dead_letter_tables = conn.execute(
+            """
+            SELECT name
+            FROM sqlite_master
+            WHERE type='table' AND name IN ('ui_run_dead_letters', 'ui_run_dead_letter_actions')
+            ORDER BY name ASC
+            """
+        ).fetchall()
 
-    assert first.current_version == 1
+    assert first.current_version == 2
     assert [step.migration_id for step in first.applied_steps] == [
-        "ui_run_registry_001_create_ui_runs"
+        "ui_run_registry_001_create_ui_runs",
+        "ui_run_registry_002_add_dead_letter_ledger",
     ]
-    assert second.current_version == 1
+    assert second.current_version == 2
     assert second.applied_steps == ()
-    assert ledger_count == 1
+    assert ledger_count == 2
+    assert dead_letter_tables == [
+        ("ui_run_dead_letter_actions",),
+        ("ui_run_dead_letters",),
+    ]

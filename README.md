@@ -1295,7 +1295,7 @@ The entrypoint is thin and the UI is now split into grouped multi-page surfaces 
 - `src/ui/run_control.py`: Streamlit-facing helpers for launching, polling, listing, canceling, and retrying persisted UI runs.
 - `src/orchestrators/ui_run_control_orchestrator.py`: background run orchestration over local worker processes plus registry persistence.
 - `src/services/process_service.py`: canonical local-process boundary for launch/poll/output/terminate.
-- `src/services/run_registry_service.py`: SQLite-backed run registry persisted beside the state DB.
+- `src/services/run_registry_service.py`: SQLite-backed run registry persisted beside the state DB. The same registry now also maintains a typed dead-letter ledger plus action history for failed background runs, including triage category, inferred stage, publisher/report identity hints, and last artifact links.
 - `src/services/config_asset_service.py`: canonical YAML/JSON/text asset editor boundary with validation and optional backups.
 - `src/generators/streamlit_dashboard_generator.py`: read-model assembly for dashboard/log/storage views.
 
@@ -1316,8 +1316,8 @@ Grouped sidebar navigation:
 
 Design and behavior highlights:
 
-- Long-running workflows launched from Streamlit now run through the persisted UI run registry instead of blocking the browser session inline. The Run Center can inspect, cancel, and retry tracked jobs.
-- The overview and Run Center now use card-based dashboard composition with bordered KPI rows, tighter run/history tables, and selected-run context that carries into observability pages.
+- Long-running workflows launched from Streamlit now run through the persisted UI run registry instead of blocking the browser session inline. The Run Center can inspect, cancel, retry, and discard tracked jobs, and failed runs auto-enter a dead-letter workflow with typed triage categories instead of remaining ambiguous `failed` rows.
+- The overview and Run Center now use card-based dashboard composition with bordered KPI rows, tighter run/history tables, selected-run context that carries into observability pages, and dead-letter backlog plus age-trend views for operator triage.
 - Workflow coverage now includes publisher discovery, report download, acquisition audit, publisher sync, and Drive OAuth/auth visibility in addition to ingest, candidate extraction, cover generation, publish, taxonomy, QA, and observability pages.
 - The configuration surface now covers `app.yaml`, category mappings, cover styles, browser download identity, publisher snapshot JSON, and prompt YAML files through service-backed editors with validation, diff visibility, and optional backups.
 - The config studio defaults to four task-oriented workspaces: `Common`, `Assets`, `Prompts`, and `Advanced`, so routine operator changes no longer open on the raw YAML editor by default.

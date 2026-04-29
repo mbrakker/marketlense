@@ -66,6 +66,14 @@ class UiRunExecutionResponse(SemanticIdContract):
         default="",
         metadata={"doc": "Human-readable failure detail when execution failed."},
     )
+    error_retryable: bool = field(
+        default=False,
+        metadata={"doc": "Whether the execution failure was retryable."},
+    )
+    error_severity: str = field(
+        default="error",
+        metadata={"doc": "Typed AppError severity when execution failed."},
+    )
 
 
 @dataclass(frozen=True)

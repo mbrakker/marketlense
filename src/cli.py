@@ -4,6 +4,7 @@ import logging
 import os
 import json
 
+import click
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -131,6 +132,8 @@ def _update_ui_run_record(
     artifact_paths: list[str] | None = None,
     error_code: str = "",
     error_message: str = "",
+    error_retryable: bool | None = None,
+    error_severity: str = "",
 ) -> UiRunRecord:
     existing = get_ui_run_record(
         UiRunRecordGetRequest(
@@ -174,6 +177,8 @@ def _update_ui_run_record(
         exit_code=exit_code if exit_code is not None else existing.exit_code,
         error_code=error_code,
         error_message=error_message,
+        error_retryable=error_retryable,
+        error_severity=error_severity,
     )
     write_ui_run_record(
         UiRunRecordWriteRequest(
@@ -990,6 +995,8 @@ def ui_run_worker(
                 exit_code=1,
                 error_code=execution.error_code or "ui_run_worker_failed",
                 error_message=execution.error_message or "UI run execution failed.",
+                error_retryable=execution.error_retryable,
+                error_severity=execution.error_severity,
             )
             print(
                 f"[ui-run-worker] failed run_id={worker_request.run_id} code={execution.error_code} message={execution.error_message}",
@@ -1020,12 +1027,16 @@ def ui_run_worker(
             exit_code=1,
             error_code=exc.code,
             error_message=exc.message,
+            error_retryable=exc.retryable,
+            error_severity=exc.severity,
         )
         print(
             f"[ui-run-worker] failed run_id={worker_request.run_id} code={exc.code} message={exc.message}",
             flush=True,
         )
         raise typer.Exit(code=1)
+    except click.exceptions.Exit:
+        raise
     except Exception as exc:
         _update_ui_run_record(
             worker_request=worker_request,
@@ -1036,6 +1047,8 @@ def ui_run_worker(
             exit_code=1,
             error_code="ui_run_worker_failed",
             error_message=str(exc),
+            error_retryable=False,
+            error_severity="error",
         )
         print(
             f"[ui-run-worker] failed run_id={worker_request.run_id} error={exc}",

@@ -57,6 +57,14 @@ class UiRunSummary(SemanticIdContract):
     error_code: str = field(
         default="", metadata={"doc": "Typed AppError code for failed runs."}
     )
+    error_retryable: Optional[bool] = field(
+        default=None,
+        metadata={"doc": "Whether the recorded failure was retryable when known."},
+    )
+    error_severity: str = field(
+        default="",
+        metadata={"doc": "Typed AppError severity for failed runs when known."},
+    )
 
 
 @dataclass(frozen=True)
@@ -122,8 +130,172 @@ class UiRunRecord(SemanticIdContract):
     error_message: str = field(
         default="", metadata={"doc": "Human-readable failure detail for failed runs."}
     )
+    error_retryable: Optional[bool] = field(
+        default=None,
+        metadata={"doc": "Whether the recorded failure was retryable when known."},
+    )
+    error_severity: str = field(
+        default="",
+        metadata={"doc": "Typed AppError severity for failed runs when known."},
+    )
 
 
+@dataclass(frozen=True)
+class UiRunDeadLetterErrorTaxonomy:
+    schema_version: str = field(
+        metadata={"doc": "UI-run dead-letter error taxonomy schema version."}
+    )
+    error_code: str = field(
+        metadata={"doc": "Typed AppError code associated with the failed run."}
+    )
+    error_message: str = field(
+        metadata={"doc": "Human-readable failure detail associated with the run."}
+    )
+    retryable: bool = field(
+        metadata={"doc": "Whether the underlying failure was retryable."}
+    )
+    severity: str = field(
+        metadata={"doc": "Typed AppError severity for the failed run."}
+    )
+    stage: str = field(
+        metadata={"doc": "Stable workflow stage inferred for dead-letter triage."}
+    )
+
+
+@dataclass(frozen=True)
+class UiRunDeadLetterIdentity:
+    schema_version: str = field(
+        metadata={"doc": "UI-run dead-letter identity schema version."}
+    )
+    publisher_name: str = field(
+        default="",
+        metadata={"doc": "Publisher display name when one can be inferred."},
+    )
+    publisher_insights_url: str = field(
+        default="",
+        metadata={"doc": "Publisher insights URL when one can be inferred."},
+    )
+    report_url: str = field(
+        default="",
+        metadata={"doc": "Report or landing-page URL when one can be inferred."},
+    )
+
+
+@dataclass(frozen=True)
+class UiRunDeadLetterArtifactLinks:
+    schema_version: str = field(
+        metadata={"doc": "UI-run dead-letter artifact-link schema version."}
+    )
+    output_path: str = field(
+        default="",
+        metadata={"doc": "Worker output log path for the failed run."},
+    )
+    request_path: str = field(
+        default="",
+        metadata={"doc": "Serialized worker request path for the failed run."},
+    )
+    manifest_path: str = field(
+        default="",
+        metadata={"doc": "Replay manifest path captured for the failed run when known."},
+    )
+    artifact_paths: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Known artifact paths associated with the failed run."},
+    )
+
+
+@dataclass(frozen=True)
+class UiRunDeadLetterRecord(SemanticIdContract):
+    schema_version: str = field(
+        metadata={"doc": "UI-run dead-letter record schema version."}
+    )
+    run_id: RunId = field(
+        metadata={"doc": "Failed UI run identifier tracked in the dead-letter ledger."}
+    )
+    run_type: str = field(
+        metadata={"doc": "Stable run type associated with the failed run."}
+    )
+    display_name: str = field(
+        metadata={"doc": "Human-readable workflow name associated with the failed run."}
+    )
+    run_status: str = field(
+        metadata={"doc": "Persisted UI-run status that produced the dead letter."}
+    )
+    triage_status: str = field(
+        metadata={
+            "doc": "Dead-letter workflow status: open, recovery_requested, or discarded."
+        }
+    )
+    triage_category: str = field(
+        metadata={"doc": "Typed dead-letter category inferred for operator triage."}
+    )
+    triage_reason: str = field(
+        metadata={"doc": "Short human-readable explanation for the triage category."}
+    )
+    failed_at_utc: str = field(
+        metadata={"doc": "UTC timestamp when the run first entered dead-letter state."}
+    )
+    updated_at_utc: str = field(
+        metadata={"doc": "UTC timestamp when the dead-letter record was last updated."}
+    )
+    error_taxonomy: UiRunDeadLetterErrorTaxonomy = field(
+        metadata={"doc": "Structured error taxonomy captured for the failed run."}
+    )
+    identity: UiRunDeadLetterIdentity = field(
+        metadata={"doc": "Publisher/report identity metadata inferred for the run."}
+    )
+    artifact_links: UiRunDeadLetterArtifactLinks = field(
+        metadata={"doc": "Known artifact and evidence links for the failed run."}
+    )
+    result_summary: dict[str, Any] = field(
+        default_factory=dict,
+        metadata={"doc": "Workflow-specific summary fields captured before failure."},
+    )
+    recovery_run_id: str = field(
+        default="",
+        metadata={"doc": "Replacement run identifier when recovery was requested."},
+    )
+    last_action: str = field(
+        default="",
+        metadata={"doc": "Most recent dead-letter action recorded for the run."},
+    )
+    last_action_note: str = field(
+        default="",
+        metadata={"doc": "Operator/system note stored with the most recent action."},
+    )
+    last_action_at_utc: str = field(
+        default="",
+        metadata={"doc": "UTC timestamp of the most recent dead-letter action."},
+    )
+
+
+@dataclass(frozen=True)
+class UiRunDeadLetterActionRecord:
+    schema_version: str = field(
+        metadata={"doc": "UI-run dead-letter action-record schema version."}
+    )
+    run_id: RunId = field(
+        metadata={"doc": "Dead-letter run identifier associated with the action."}
+    )
+    action: str = field(
+        metadata={"doc": "Stable dead-letter action name that was recorded."}
+    )
+    actor: str = field(
+        metadata={"doc": "Actor identifier for the action, for example system or ui."}
+    )
+    created_at_utc: str = field(
+        metadata={"doc": "UTC timestamp when the action was recorded."}
+    )
+    note: str = field(
+        default="",
+        metadata={"doc": "Optional operator/system note stored with the action."},
+    )
+    related_run_id: str = field(
+        default="",
+        metadata={
+            "doc": "Replacement run identifier when the action launched a recovery attempt."
+        },
+    )
 @dataclass(frozen=True)
 class UiRunLaunchRequest:
     schema_version: str = field(
@@ -313,6 +485,102 @@ class UiRunRecordListResponse:
     )
     records: list[UiRunRecord] = field(
         metadata={"doc": "Matching persisted run records sorted newest first."}
+    )
+
+
+@dataclass(frozen=True)
+class UiRunDeadLetterListRequest:
+    schema_version: str = field(
+        metadata={"doc": "UI-run dead-letter list request schema version."}
+    )
+    registry_path: str = field(
+        metadata={"doc": "Filesystem path to the UI-run registry SQLite database."}
+    )
+    triage_statuses: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Optional dead-letter triage-status filter list."},
+    )
+    limit: int = field(
+        default=50, metadata={"doc": "Maximum number of dead-letter records to return."}
+    )
+
+
+@dataclass(frozen=True)
+class UiRunDeadLetterListResponse:
+    schema_version: str = field(
+        metadata={"doc": "UI-run dead-letter list response schema version."}
+    )
+    records: list[UiRunDeadLetterRecord] = field(
+        metadata={"doc": "Matching dead-letter records sorted newest first."}
+    )
+
+
+@dataclass(frozen=True)
+class UiRunDeadLetterActionListRequest(SemanticIdContract):
+    schema_version: str = field(
+        metadata={"doc": "UI-run dead-letter action-list request schema version."}
+    )
+    registry_path: str = field(
+        metadata={"doc": "Filesystem path to the UI-run registry SQLite database."}
+    )
+    run_id: RunId = field(
+        metadata={"doc": "Dead-letter run identifier whose actions should be listed."}
+    )
+    limit: int = field(
+        default=20, metadata={"doc": "Maximum number of action records to return."}
+    )
+
+
+@dataclass(frozen=True)
+class UiRunDeadLetterActionListResponse:
+    schema_version: str = field(
+        metadata={"doc": "UI-run dead-letter action-list response schema version."}
+    )
+    actions: list[UiRunDeadLetterActionRecord] = field(
+        metadata={"doc": "Recorded dead-letter actions sorted newest first."}
+    )
+
+
+@dataclass(frozen=True)
+class UiRunDeadLetterActionRequest(SemanticIdContract):
+    schema_version: str = field(
+        metadata={"doc": "UI-run dead-letter action request schema version."}
+    )
+    registry_path: str = field(
+        metadata={"doc": "Filesystem path to the UI-run registry SQLite database."}
+    )
+    run_id: RunId = field(
+        metadata={"doc": "Dead-letter run identifier to update."}
+    )
+    action: str = field(
+        metadata={"doc": "Dead-letter action to record: retry_requested or discarded."}
+    )
+    actor: str = field(
+        default="ui",
+        metadata={"doc": "Actor label recorded with the action."},
+    )
+    note: str = field(
+        default="",
+        metadata={"doc": "Optional operator note recorded with the action."},
+    )
+    related_run_id: str = field(
+        default="",
+        metadata={
+            "doc": "Replacement run identifier recorded when recovery is requested."
+        },
+    )
+
+
+@dataclass(frozen=True)
+class UiRunDeadLetterActionResponse:
+    schema_version: str = field(
+        metadata={"doc": "UI-run dead-letter action response schema version."}
+    )
+    record: UiRunDeadLetterRecord = field(
+        metadata={"doc": "Updated dead-letter record after the action was recorded."}
+    )
+    action_record: UiRunDeadLetterActionRecord = field(
+        metadata={"doc": "Persisted dead-letter action record."}
     )
 
 

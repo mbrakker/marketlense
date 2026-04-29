@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any
 
 import streamlit as st
@@ -9,10 +10,34 @@ from src.ui import state as ui_state
 from src.ui.common import _page_shell, _render_empty_state, _tip
 from src.ui.run_control import (
     cancel_selected_run,
+    discard_dead_letter,
     launch_background_run,
+    list_dead_letters,
     list_recent_runs,
+    list_selected_dead_letter_actions,
+    mark_dead_letter_recovery_requested,
     poll_selected_run,
 )
+
+
+def _parse_utc(value: object) -> datetime | None:
+    token = str(value or "").strip()
+    if not token:
+        return None
+    try:
+        return datetime.fromisoformat(token.replace("Z", "+00:00")).astimezone(
+            timezone.utc
+        )
+    except ValueError:
+        return None
+
+
+def _age_hours_label(value: object) -> str:
+    parsed = _parse_utc(value)
+    if parsed is None:
+        return ""
+    hours = max(0.0, (datetime.now(timezone.utc) - parsed).total_seconds() / 3600.0)
+    return f"{hours:.1f}h"
 
 
 def build_run_dashboard_metrics(
@@ -20,8 +45,20 @@ def build_run_dashboard_metrics(
     active_runs: list[Any],
     recent_runs: list[Any],
     recent_failures: list[Any],
+    dead_letter_backlog: list[Any],
     recent_events: list[dict[str, Any]],
 ) -> list[dict[str, str]]:
+    oldest_dead_letter_age = (
+        max(
+            (
+                _age_hours_label(getattr(item, "failed_at_utc", ""))
+                for item in dead_letter_backlog
+            ),
+            default="clear",
+        )
+        if dead_letter_backlog
+        else "clear"
+    )
     return [
         {
             "label": "Active runs",
@@ -45,6 +82,11 @@ def build_run_dashboard_metrics(
             "label": "Failed",
             "value": str(len(recent_failures)),
             "delta": "needs attention" if recent_failures else "clear",
+        },
+        {
+            "label": "Dead letters",
+            "value": str(len(dead_letter_backlog)),
+            "delta": oldest_dead_letter_age,
         },
         {
             "label": "Recent events",
@@ -75,6 +117,70 @@ def build_run_table_rows(records: list[Any]) -> list[dict[str, str]]:
             }
         )
     return rows
+
+
+def build_dead_letter_rows(records: list[Any]) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for record in records:
+        taxonomy = getattr(record, "error_taxonomy", None)
+        identity = getattr(record, "identity", None)
+        rows.append(
+            {
+                "workflow": str(getattr(record, "display_name", "")),
+                "triage_status": str(getattr(record, "triage_status", "")),
+                "triage_category": str(getattr(record, "triage_category", "")),
+                "stage": str(getattr(taxonomy, "stage", "")),
+                "error_code": str(getattr(taxonomy, "error_code", "")),
+                "publisher_name": str(getattr(identity, "publisher_name", "")),
+                "report_url": str(getattr(identity, "report_url", "")),
+                "failed_at_utc": str(getattr(record, "failed_at_utc", "")),
+                "age": _age_hours_label(getattr(record, "failed_at_utc", "")),
+            }
+        )
+    return rows
+
+
+def build_dead_letter_age_trend_rows(records: list[Any]) -> list[dict[str, str]]:
+    buckets = {
+        "lt_4h": 0,
+        "4h_to_24h": 0,
+        "1d_to_3d": 0,
+        "gt_3d": 0,
+    }
+    for record in records:
+        parsed = _parse_utc(getattr(record, "failed_at_utc", ""))
+        if parsed is None:
+            continue
+        age_hours = max(
+            0.0, (datetime.now(timezone.utc) - parsed).total_seconds() / 3600.0
+        )
+        if age_hours < 4:
+            buckets["lt_4h"] += 1
+        elif age_hours < 24:
+            buckets["4h_to_24h"] += 1
+        elif age_hours < 72:
+            buckets["1d_to_3d"] += 1
+        else:
+            buckets["gt_3d"] += 1
+    return [
+        {"bucket": "<4h", "count": str(buckets["lt_4h"])},
+        {"bucket": "4h-24h", "count": str(buckets["4h_to_24h"])},
+        {"bucket": "1d-3d", "count": str(buckets["1d_to_3d"])},
+        {"bucket": ">3d", "count": str(buckets["gt_3d"])},
+    ]
+
+
+def build_dead_letter_action_rows(actions: list[Any]) -> list[dict[str, str]]:
+    return [
+        {
+            "action": str(getattr(item, "action", "")),
+            "actor": str(getattr(item, "actor", "")),
+            "note": str(getattr(item, "note", "")),
+            "related_run_id": str(getattr(item, "related_run_id", ""))[:8],
+            "created_at_utc": str(getattr(item, "created_at_utc", "")),
+        }
+        for item in actions
+    ]
 
 
 def build_report_rows(
@@ -199,6 +305,9 @@ def render_cockpit_overview() -> None:
     recent_failures = [
         item for item in recent_runs if getattr(item, "status", "") == "failed"
     ][:6]
+    dead_letter_backlog = list_dead_letters(
+        settings, triage_statuses=["open"], limit=20
+    ).records
 
     status_level = "warn" if lock.get("found") else "success"
     clicked, filters, main_col, detail_col = _page_shell(
@@ -227,6 +336,7 @@ def render_cockpit_overview() -> None:
                 active_runs=active_runs,
                 recent_runs=recent_runs,
                 recent_failures=recent_failures,
+                dead_letter_backlog=dead_letter_backlog,
                 recent_events=events,
             )
         )
@@ -261,6 +371,33 @@ def render_cockpit_overview() -> None:
         lower_left, lower_right = st.columns(2, gap="large")
         with lower_left:
             _render_table_card(
+                "Dead-letter backlog",
+                build_dead_letter_rows(dead_letter_backlog[:10]),
+                empty_title="No open dead letters",
+                empty_detail="Background runs that fail final triage will appear here with typed categories and ages.",
+                column_config={
+                    "workflow": "Workflow",
+                    "triage_status": "Status",
+                    "triage_category": "Category",
+                    "stage": "Stage",
+                    "error_code": "Error code",
+                    "publisher_name": "Publisher",
+                    "age": "Age",
+                },
+            )
+        with lower_right:
+            _render_table_card(
+                "Dead-letter age trend",
+                build_dead_letter_age_trend_rows(dead_letter_backlog),
+                empty_title="No dead-letter age trend",
+                empty_detail="Open dead letters will be bucketed by age to highlight stale operational backlog.",
+                column_config={
+                    "bucket": "Age bucket",
+                    "count": "Open dead letters",
+                },
+            )
+        with st.container(border=True):
+            _render_table_card(
                 "Recent reports",
                 build_report_rows(reports, limit=10),
                 empty_title="No report metadata yet",
@@ -275,7 +412,7 @@ def render_cockpit_overview() -> None:
                     ),
                 },
             )
-        with lower_right:
+        with st.container(border=True):
             _render_table_card(
                 "Latest log events",
                 build_log_event_rows(events, limit=10),
@@ -346,6 +483,7 @@ def render_run_center() -> None:
     ).records
     recent = list_recent_runs(settings, limit=50).records
     failed = [record for record in recent if getattr(record, "status", "") == "failed"]
+    dead_letters = list_dead_letters(settings, limit=50).records
 
     with filters:
         view_mode = st.segmented_control(
@@ -410,6 +548,19 @@ def render_run_center() -> None:
                     "delta": "triage now" if failed else "clear",
                 },
                 {
+                    "label": "Dead letters",
+                    "value": str(
+                        len(
+                            [
+                                item
+                                for item in dead_letters
+                                if getattr(item, "triage_status", "") == "open"
+                            ]
+                        )
+                    ),
+                    "delta": "operator backlog",
+                },
+                {
                     "label": "Canceled",
                     "value": str(
                         len([item for item in recent if item.status == "canceled"])
@@ -434,6 +585,21 @@ def render_run_center() -> None:
                 },
             )
         with top_right:
+            _render_table_card(
+                "Dead-letter queue",
+                build_dead_letter_rows(dead_letters[:12]),
+                empty_title="No dead-letter queue",
+                empty_detail="Failed background runs that require operator triage will appear here.",
+                column_config={
+                    "workflow": "Workflow",
+                    "triage_status": "Status",
+                    "triage_category": "Category",
+                    "stage": "Stage",
+                    "publisher_name": "Publisher",
+                    "age": "Age",
+                },
+            )
+        with st.container(border=True):
             _render_table_card(
                 "Recent run history",
                 build_run_table_rows(recent[:12]),
@@ -470,6 +636,7 @@ def render_run_center() -> None:
                 )
             else:
                 selected_record = polled.record
+                dead_letter_actions = list_selected_dead_letter_actions(settings, limit=20)
                 summary_cols = st.columns(2)
                 summary_cols[0].metric("Status", selected_record.status)
                 summary_cols[1].metric("Artifacts", len(selected_record.artifact_paths))
@@ -493,6 +660,22 @@ def render_run_center() -> None:
                     st.json(selected_record.request_payload)
                 with st.expander("Registry record"):
                     st.json(selected_record.__dict__)
+                if dead_letter_actions and dead_letter_actions.actions:
+                    with st.expander("Dead-letter actions", expanded=True):
+                        st.dataframe(
+                            build_dead_letter_action_rows(dead_letter_actions.actions),
+                            width="stretch",
+                            hide_index=True,
+                            column_config={
+                                "action": "Action",
+                                "actor": "Actor",
+                                "note": st.column_config.TextColumn(
+                                    "Note", width="large"
+                                ),
+                                "related_run_id": "Recovery run",
+                                "created_at_utc": "Recorded (UTC)",
+                            },
+                        )
                 with st.container(horizontal=True):
                     if selected_record.status in {"queued", "running"}:
                         if st.button(
@@ -518,10 +701,34 @@ def render_run_center() -> None:
                                 "Use after fixing config or transient external issues.",
                             ),
                         ):
-                            launch_background_run(
+                            response = launch_background_run(
                                 settings,
                                 run_type=selected_record.run_type,
                                 display_name=selected_record.display_name,
                                 request_payload=selected_record.request_payload,
                             )
+                            if selected_record.status == "failed":
+                                mark_dead_letter_recovery_requested(
+                                    settings,
+                                    run_id=str(selected_record.run_id),
+                                    recovery_run_id=str(response.record.run_id),
+                                    note="Retry launched from Run Center.",
+                                )
+                                ui_state.set_selected_run_id(str(response.record.run_id))
                             st.rerun()
+                        if selected_record.status == "failed":
+                            if st.button(
+                                "Discard dead letter",
+                                width="stretch",
+                                key="discard_selected_dead_letter",
+                                help=_tip(
+                                    "Mark the failed run as intentionally discarded.",
+                                    "Use when the failure is understood and you do not want it counted as open backlog anymore.",
+                                ),
+                            ):
+                                discard_dead_letter(
+                                    settings,
+                                    run_id=str(selected_record.run_id),
+                                    note="Discarded from Run Center.",
+                                )
+                                st.rerun()

@@ -11,6 +11,12 @@ from uuid import uuid4
 from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import RunId
 from src.contracts.ui_run_control import (
+    UiRunDeadLetterActionListRequest,
+    UiRunDeadLetterActionListResponse,
+    UiRunDeadLetterActionRequest,
+    UiRunDeadLetterActionResponse,
+    UiRunDeadLetterListRequest,
+    UiRunDeadLetterListResponse,
     ProcessLaunchRequest,
     ProcessOutputChunk,
     ProcessOutputReadRequest,
@@ -39,7 +45,10 @@ from src.services.process_service import (
 )
 from src.services.run_registry_service import (
     get_ui_run_record,
+    list_ui_run_dead_letter_actions,
+    list_ui_run_dead_letters,
     list_ui_run_records,
+    record_ui_run_dead_letter_action,
     write_ui_run_record,
 )
 from src.utils.errors import AppError
@@ -73,6 +82,8 @@ def _summary(record: UiRunRecord) -> UiRunSummary:
         pid=record.pid,
         exit_code=record.exit_code,
         error_code=record.error_code,
+        error_retryable=record.error_retryable,
+        error_severity=record.error_severity,
     )
 
 
@@ -169,6 +180,8 @@ def launch_ui_run(request: UiRunLaunchRequest, ctx: RunContext) -> UiRunLaunchRe
             request_path=record.request_path,
             error_code="ui_run_launch_failed",
             error_message=str(exc),
+            error_retryable=exc.retryable if isinstance(exc, AppError) else False,
+            error_severity=exc.severity if isinstance(exc, AppError) else "error",
         )
         write_ui_run_record(
             UiRunRecordWriteRequest(
@@ -293,6 +306,8 @@ def poll_ui_run(request: UiRunPollRequest, ctx: RunContext) -> UiRunPollResponse
                 error_code=record.error_code or "ui_run_worker_exited_unexpectedly",
                 error_message=record.error_message
                 or "Background worker exited without recording a terminal status.",
+                error_retryable=False,
+                error_severity="error",
             )
             write_ui_run_record(
                 UiRunRecordWriteRequest(
@@ -364,6 +379,8 @@ def cancel_ui_run(request: UiRunCancelRequest, ctx: RunContext) -> UiRunCancelRe
             exit_code=stored.exit_code,
             error_code=stored.error_code,
             error_message=stored.error_message,
+            error_retryable=stored.error_retryable,
+            error_severity=stored.error_severity,
         )
         write_ui_run_record(
             UiRunRecordWriteRequest(
@@ -394,3 +411,21 @@ def list_ui_runs(request: UiRunListRequest, ctx: RunContext) -> UiRunListRespons
         schema_version="1.0",
         records=[_summary(record) for record in records],
     )
+
+
+def list_dead_letter_runs(
+    request: UiRunDeadLetterListRequest, ctx: RunContext
+) -> UiRunDeadLetterListResponse:
+    return list_ui_run_dead_letters(request, ctx)
+
+
+def list_dead_letter_actions(
+    request: UiRunDeadLetterActionListRequest, ctx: RunContext
+) -> UiRunDeadLetterActionListResponse:
+    return list_ui_run_dead_letter_actions(request, ctx)
+
+
+def apply_dead_letter_action(
+    request: UiRunDeadLetterActionRequest, ctx: RunContext
+) -> UiRunDeadLetterActionResponse:
+    return record_ui_run_dead_letter_action(request, ctx)

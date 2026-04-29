@@ -199,16 +199,6 @@ Suggested priority order:
     - Replay tooling reproduces lifecycle transitions.
     - Tests cover migration from current state snapshots to event-backed reconstruction.
 
-- **Title:** Add dead-letter workflow with typed triage categories [Impact: 4/5, Effort: 3/5]
-  - Explanation: Route irrecoverable runs into dead-letter states with structured diagnosis metadata instead of leaving them as ambiguous failures.
-  - Pros: Keeps primary queues healthy and improves human triage throughput.
-  - Cons: Requires process ownership and dashboard support.
-  - Acceptance Criteria:
-    - Dead-letter states and categories are defined.
-    - Auto-triage metadata includes error taxonomy, stage, publisher/report identity, and last artifact links.
-    - Ops dashboards expose dead-letter backlog and age trends.
-    - Recovery or discard actions are logged.
-
 - **Title:** Add dynamic concurrency controller with capacity-aware publisher fairness [Impact: 5/5, Effort: 4/5]
   - Explanation: Merge dynamic concurrency and fair scheduling. Adjust concurrency based on queue depth, failure budget, cost budget, browser capacity, and publisher cohort fairness.
   - Pros: Better throughput stability, less starvation, safer burst handling.

@@ -1,6 +1,9 @@
+import json
 import sys
+import tempfile
 import types
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 import click
@@ -15,7 +18,11 @@ from src.contracts.browser_download import (
     ReportDownloadOrchestratorResult,
 )
 from src.contracts.ui_run_control import UiRunRecord
-from src.contracts.ui_run_replay import UiRunReplayReport, UiRunReplayResponse
+from src.contracts.ui_run_replay import (
+    UiRunExecutionResponse,
+    UiRunReplayReport,
+    UiRunReplayResponse,
+)
 from src.contracts.acquisition_audit import (
     AcquisitionAuditBatchResult,
     AcquisitionAuditCandidateResult,
@@ -808,6 +815,82 @@ class TestCli(unittest.TestCase):
                     )
 
         self.assertEqual(1, exc_info.exception.exit_code)
+
+    def test_ui_run_worker_preserves_failed_execution_error_code(self) -> None:
+        import src.cli as cli
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            registry_path = str((tmp_path / "state" / "ui_runs.sqlite").resolve())
+            request_path = tmp_path / "request.json"
+            worker_request_payload = {
+                "schema_version": "1.0",
+                "registry_path": registry_path,
+                "run_id": "run-worker",
+                "run_type": "publisher_discovery",
+                "request_payload": {"insights_url": "https://example.com/insights"},
+            }
+            request_path.write_text(
+                json.dumps(worker_request_payload), encoding="utf-8"
+            )
+            cli.write_ui_run_record(
+                cli.UiRunRecordWriteRequest(
+                    schema_version="1.0",
+                    registry_path=registry_path,
+                    record=UiRunRecord(
+                        schema_version="1.0",
+                        run_id="run-worker",
+                        run_type="publisher_discovery",
+                        display_name="Publisher discovery",
+                        status="queued",
+                        request_payload={"insights_url": "https://example.com/insights"},
+                        command=["python", "-m", "src.cli", "ui-run-worker"],
+                        created_at_utc="2026-04-29T10:00:00+00:00",
+                        updated_at_utc="2026-04-29T10:00:00+00:00",
+                        output_path=str(tmp_path / "output.log"),
+                        request_path=str(request_path),
+                    ),
+                ),
+                cli.new_run_context(task_id="seed_ui_run_record"),
+            )
+
+            with patch.object(
+                cli,
+                "execute_ui_run",
+                return_value=UiRunExecutionResponse(
+                    schema_version="1.0",
+                    run_id="run-worker",
+                    run_type="publisher_discovery",
+                    status="failed",
+                    result_summary={},
+                    artifact_paths=[],
+                    config_snapshot={"run_type": "publisher_discovery"},
+                    config_fingerprint="cfg",
+                    error_code="publisher_inventory_browser_timeout",
+                    error_message="Timed out",
+                    error_retryable=True,
+                    error_severity="error",
+                ),
+            ):
+                with patch.object(cli, "setup_logging"):
+                    with self.assertRaises(click.exceptions.Exit) as exc_info:
+                        cli.ui_run_worker(request_json=str(request_path))
+
+            self.assertEqual(1, exc_info.exception.exit_code)
+            stored = cli.get_ui_run_record(
+                cli.UiRunRecordGetRequest(
+                    schema_version="1.0",
+                    registry_path=registry_path,
+                    run_id="run-worker",
+                ),
+                cli.new_run_context(task_id="load_ui_run_record"),
+            ).record
+
+            self.assertEqual("failed", stored.status)
+            self.assertEqual(
+                "publisher_inventory_browser_timeout", stored.error_code
+            )
+            self.assertTrue(stored.error_retryable)
 
 
 if __name__ == "__main__":

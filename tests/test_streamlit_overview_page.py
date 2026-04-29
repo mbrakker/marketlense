@@ -28,19 +28,27 @@ def test_build_run_dashboard_metrics_counts_states() -> None:
         _run_summary(status="failed", error_code="io_failed"),
     ]
     failures = [recent[-1]]
+    dead_letters = [
+        SimpleNamespace(
+            failed_at_utc="2026-04-09T09:00:00+00:00",
+            triage_status="open",
+        )
+    ]
     events = [{"event": "worker_finished"}, {"event": "run_polled"}]
 
     metrics = overview.build_run_dashboard_metrics(
         active_runs=active,
         recent_runs=recent,
         recent_failures=failures,
+        dead_letter_backlog=dead_letters,
         recent_events=events,
     )
 
     assert metrics[0] == {"label": "Active runs", "value": "2", "delta": "1 running"}
     assert metrics[1]["value"] == "1"
     assert metrics[2]["value"] == "1"
-    assert metrics[3]["value"] == "2"
+    assert metrics[3]["value"] == "1"
+    assert metrics[4]["value"] == "2"
 
 
 def test_build_run_table_rows_formats_identifiers() -> None:
@@ -89,3 +97,31 @@ def test_build_log_event_rows_prefers_message_fields() -> None:
             "message": "worker launched successfully",
         }
     ]
+
+
+def test_build_dead_letter_rows_and_age_buckets() -> None:
+    record = SimpleNamespace(
+        display_name="Publisher discovery",
+        triage_status="open",
+        triage_category="external_dependency",
+        failed_at_utc="2026-04-09T10:00:00+00:00",
+        error_taxonomy=SimpleNamespace(
+            stage="publisher_discovery",
+            error_code="publisher_inventory_browser_timeout",
+        ),
+        identity=SimpleNamespace(
+            publisher_name="Example Publisher",
+            report_url="https://example.com/report",
+        ),
+    )
+
+    rows = overview.build_dead_letter_rows([record])
+    trend = overview.build_dead_letter_age_trend_rows([record])
+
+    assert rows[0]["workflow"] == "Publisher discovery"
+    assert rows[0]["triage_category"] == "external_dependency"
+    assert rows[0]["stage"] == "publisher_discovery"
+    assert rows[0]["publisher_name"] == "Example Publisher"
+    assert rows[0]["report_url"] == "https://example.com/report"
+    assert rows[0]["age"].endswith("h")
+    assert len(trend) == 4
