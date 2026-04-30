@@ -131,10 +131,40 @@ def test_validate_schema_enforces_one_of_for_methods_items():
 
 def test_validate_evidence_references_passes_for_known_ids():
     artifacts_payload = {
-        "summary": {"claim_evidence_map": [{"claim": "c", "evidence_id": "f1"}]},
-        "insights_candidates": [{"id": "i1", "evidence_id": "f1"}],
+        "summary": {
+            "claim_evidence_map": [
+                {
+                    "claim": "c",
+                    "evidence_id": "f1",
+                    "evidence_spans": [
+                        {"evidence_id": "f1", "source_pack": "findings", "page": 2}
+                    ],
+                }
+            ]
+        },
+        "insights_candidates": [
+            {
+                "id": "i1",
+                "evidence_id": "f1",
+                "evidence_spans": [
+                    {"evidence_id": "f1", "source_pack": "findings", "page": 2}
+                ],
+            }
+        ],
         "insights_final": [{"id": "i2", "evidence_id": "f1"}],
-        "quotes_final": [{"text": "q", "evidence_id": "q1"}],
+        "quotes_final": [
+            {
+                "text": "q",
+                "evidence_id": "q1",
+                "evidence_spans": [
+                    {
+                        "evidence_id": "q1",
+                        "source_pack": "quote_candidates",
+                        "page": 1,
+                    }
+                ],
+            }
+        ],
     }
     evidence_packs = {
         "findings": {

@@ -104,6 +104,9 @@ def normalize_artifact_insights(items: Any, *, prefix: str) -> List[Dict[str, An
             "text": _s(item.get("text")),
             "evidence_id": evidence_id,
             "evidence": _s(item.get("evidence")),
+            "evidence_spans": _normalize_evidence_spans(
+                item.get("evidence_spans"), evidence_id=evidence_id
+            ),
             "metric": metric,
             "pages": pages,
         }
@@ -163,6 +166,9 @@ def normalize_artifact_quotes(items: Any) -> List[Dict[str, Any]]:
                 "citation": _s(item.get("citation")),
                 "page": page,
                 "evidence_id": evidence_id,
+                "evidence_spans": _normalize_evidence_spans(
+                    item.get("evidence_spans"), evidence_id=evidence_id
+                ),
             }
         )
     return normalized
@@ -290,6 +296,123 @@ def normalize_artifact_evidence_ids(
     }
 
 
+def bind_artifact_evidence_spans(
+    *,
+    summary: Dict[str, Any],
+    insights_candidates: List[Dict[str, Any]],
+    insights_final: List[Dict[str, Any]],
+    quotes_final: List[Dict[str, Any]],
+    doc_map: Dict[str, Any],
+    evidence_packs: Dict[str, Any],
+) -> Dict[str, int]:
+    span_index = _build_evidence_span_index(doc_map=doc_map, evidence_packs=evidence_packs)
+    bound_count = 0
+    unbound_count = 0
+
+    def _bind_item(item: Any, *, page_keys: tuple[str, ...]) -> None:
+        nonlocal bound_count, unbound_count
+        if not isinstance(item, dict):
+            return
+        evidence_id = _s(item.get("evidence_id")).strip()
+        if not evidence_id:
+            item["evidence_spans"] = []
+            return
+        existing = _normalize_evidence_spans(
+            item.get("evidence_spans"), evidence_id=evidence_id
+        )
+        derived = [
+            dict(span)
+            for span in span_index.get(evidence_id.casefold(), [])
+        ]
+        spans = existing or derived
+        if not spans:
+            fallback_pages: List[int] = []
+            for key in page_keys:
+                raw_pages = item.get(key)
+                if isinstance(raw_pages, list):
+                    fallback_pages.extend(
+                        int(page)
+                        for page in raw_pages
+                        if isinstance(page, int) and page > 0
+                    )
+                elif isinstance(raw_pages, int) and raw_pages > 0:
+                    fallback_pages.append(raw_pages)
+            deduped_pages = list(dict.fromkeys(fallback_pages))
+            if deduped_pages:
+                spans = [
+                    {
+                        "evidence_id": evidence_id,
+                        "source_pack": "artifact",
+                        "page": page,
+                        "text": _pick_first_non_empty_text(
+                            item.get("evidence"),
+                            item.get("citation"),
+                            item.get("text"),
+                        ),
+                    }
+                    for page in deduped_pages
+                ]
+        item["evidence_spans"] = spans
+        if spans:
+            bound_count += 1
+        else:
+            unbound_count += 1
+
+    claim_map = summary.get("claim_evidence_map")
+    if isinstance(claim_map, list):
+        for claim in claim_map:
+            if not isinstance(claim, dict):
+                continue
+            evidence_id = _s(claim.get("evidence_id")).strip()
+            claim["evidence_spans"] = []
+            if not evidence_id:
+                continue
+            existing = _normalize_evidence_spans(
+                claim.get("evidence_spans"), evidence_id=evidence_id
+            )
+            derived = [
+                dict(span)
+                for span in span_index.get(evidence_id.casefold(), [])
+            ]
+            spans = existing or derived
+            if not spans:
+                claim_pages = [
+                    int(page)
+                    for page in claim.get("pages") or []
+                    if isinstance(page, int) and page > 0
+                ]
+                if claim_pages:
+                    spans = [
+                        {
+                            "evidence_id": evidence_id,
+                            "source_pack": "artifact",
+                            "page": page,
+                            "text": _pick_first_non_empty_text(
+                                claim.get("evidence"), claim.get("claim")
+                            ),
+                        }
+                        for page in list(dict.fromkeys(claim_pages))
+                    ]
+            claim["evidence_spans"] = spans
+            if spans:
+                bound_count += 1
+            else:
+                unbound_count += 1
+
+    for item in insights_candidates:
+        _bind_item(item, page_keys=("pages",))
+    for item in insights_final:
+        _bind_item(item, page_keys=("pages",))
+    for item in quotes_final:
+        _bind_item(item, page_keys=("page",))
+
+    return {
+        "bound_count": bound_count,
+        "unbound_count": unbound_count,
+        "indexed_reference_count": len(span_index),
+    }
+
+
 def normalize_expert_domain(categories: Optional[List[str]]) -> str:
     if not isinstance(categories, (list, tuple)):
         return "industry"
@@ -337,6 +460,9 @@ def _normalize_claims(items: Any) -> List[Dict[str, Any]]:
                 "claim": _s(item.get("claim")),
                 "evidence_id": evidence_id,
                 "evidence": _s(item.get("evidence")),
+                "evidence_spans": _normalize_evidence_spans(
+                    item.get("evidence_spans"), evidence_id=evidence_id
+                ),
                 "pages": pages,
             }
         )
@@ -460,6 +586,228 @@ def _canonicalize_evidence_id(
                 return canonical
         if candidate in known_ids:
             return candidate
+    return ""
+
+
+def _normalize_evidence_spans(
+    raw_spans: Any,
+    *,
+    evidence_id: str,
+) -> List[Dict[str, Any]]:
+    if not isinstance(raw_spans, list):
+        return []
+    normalized: List[Dict[str, Any]] = []
+    seen: set[tuple[object, ...]] = set()
+    for raw_span in raw_spans:
+        if not isinstance(raw_span, dict):
+            continue
+        span_evidence_id = _s(raw_span.get("evidence_id") or evidence_id).strip()
+        if not span_evidence_id:
+            continue
+        page = raw_span.get("page")
+        start_offset = raw_span.get("start_offset")
+        end_offset = raw_span.get("end_offset")
+        normalized_span: Dict[str, Any] = {
+            "evidence_id": span_evidence_id,
+            "source_pack": _s(raw_span.get("source_pack")),
+        }
+        if isinstance(raw_span.get("section_id"), str) and _s(raw_span.get("section_id")):
+            normalized_span["section_id"] = _s(raw_span.get("section_id"))
+        if isinstance(page, int) and page > 0:
+            normalized_span["page"] = page
+        if isinstance(start_offset, int) and start_offset >= 0:
+            normalized_span["start_offset"] = start_offset
+        if isinstance(end_offset, int) and end_offset >= 0:
+            normalized_span["end_offset"] = end_offset
+        text_value = _pick_first_non_empty_text(
+            raw_span.get("text"),
+            raw_span.get("evidence"),
+            raw_span.get("citation"),
+        )
+        if text_value:
+            normalized_span["text"] = text_value
+        dedupe_key = (
+            normalized_span.get("evidence_id"),
+            normalized_span.get("source_pack"),
+            normalized_span.get("section_id"),
+            normalized_span.get("page"),
+            normalized_span.get("start_offset"),
+            normalized_span.get("end_offset"),
+            normalized_span.get("text"),
+        )
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
+        normalized.append(normalized_span)
+    return normalized
+
+
+def _build_evidence_span_index(
+    *,
+    doc_map: Dict[str, Any],
+    evidence_packs: Dict[str, Any],
+) -> Dict[str, List[Dict[str, Any]]]:
+    index: Dict[str, List[Dict[str, Any]]] = {}
+
+    def _register(
+        *,
+        evidence_id: Any,
+        source_pack: str,
+        pages: List[int] | None = None,
+        text: Any = "",
+        section_id: Any = "",
+        start_offset: Any = None,
+        end_offset: Any = None,
+    ) -> None:
+        normalized_evidence_id = _s(evidence_id).strip()
+        if not normalized_evidence_id:
+            return
+        normalized_text = _s(text).strip()
+        normalized_section_id = _s(section_id).strip()
+        normalized_pages = [page for page in (pages or []) if isinstance(page, int) and page > 0]
+        spans: List[Dict[str, Any]] = []
+        if normalized_pages:
+            for page in list(dict.fromkeys(normalized_pages)):
+                span: Dict[str, Any] = {
+                    "evidence_id": normalized_evidence_id,
+                    "source_pack": source_pack,
+                    "page": page,
+                }
+                if normalized_section_id:
+                    span["section_id"] = normalized_section_id
+                if normalized_text:
+                    span["text"] = normalized_text
+                if isinstance(start_offset, int) and start_offset >= 0:
+                    span["start_offset"] = start_offset
+                if isinstance(end_offset, int) and end_offset >= 0:
+                    span["end_offset"] = end_offset
+                spans.append(span)
+        else:
+            span = {
+                "evidence_id": normalized_evidence_id,
+                "source_pack": source_pack,
+            }
+            if normalized_section_id:
+                span["section_id"] = normalized_section_id
+            if normalized_text:
+                span["text"] = normalized_text
+            if isinstance(start_offset, int) and start_offset >= 0:
+                span["start_offset"] = start_offset
+            if isinstance(end_offset, int) and end_offset >= 0:
+                span["end_offset"] = end_offset
+            spans.append(span)
+        bucket = index.setdefault(normalized_evidence_id.casefold(), [])
+        for span in spans:
+            if span not in bucket:
+                bucket.append(span)
+
+    if isinstance(evidence_packs, dict):
+        findings_pack = evidence_packs.get("findings")
+        if isinstance(findings_pack, dict):
+            for item in findings_pack.get("findings") or []:
+                if not isinstance(item, dict):
+                    continue
+                _register(
+                    evidence_id=item.get("id"),
+                    source_pack="findings",
+                    pages=_coerce_span_pages(item),
+                    text=_pick_first_non_empty_text(
+                        item.get("evidence"), item.get("text"), item.get("statement")
+                    ),
+                )
+        quotes_pack = evidence_packs.get("quote_candidates")
+        if isinstance(quotes_pack, dict):
+            for item in quotes_pack.get("quote_candidates") or []:
+                if not isinstance(item, dict):
+                    continue
+                pages = []
+                if isinstance(item.get("page"), int) and item.get("page") > 0:
+                    pages = [int(item["page"])]
+                _register(
+                    evidence_id=item.get("id"),
+                    source_pack="quote_candidates",
+                    pages=pages,
+                    text=item.get("text"),
+                    start_offset=item.get("start_offset"),
+                    end_offset=item.get("end_offset"),
+                )
+        for pack_name, root_key, text_keys in (
+            ("key_metrics", "key_metrics", ("metric", "value", "unit")),
+            ("risk_register", "risk_register", ("risk", "impact", "likelihood", "mitigation")),
+            ("recommendations", "recommendations", ("recommendation", "rationale")),
+        ):
+            pack = evidence_packs.get(pack_name)
+            if not isinstance(pack, dict):
+                continue
+            for item in pack.get(root_key) or []:
+                if not isinstance(item, dict):
+                    continue
+                _register(
+                    evidence_id=item.get("id") or item.get("evidence_id"),
+                    source_pack=pack_name,
+                    pages=_coerce_span_pages(item),
+                    text=" ".join(
+                        value
+                        for value in (_s(item.get(key)).strip() for key in text_keys)
+                        if value
+                    ),
+                )
+        contradictions_pack = evidence_packs.get("contradictions")
+        if isinstance(contradictions_pack, dict):
+            for item in contradictions_pack.get("contradictions") or []:
+                if not isinstance(item, dict):
+                    continue
+                contradiction_text = " ".join(
+                    value
+                    for value in (
+                        _s(item.get("statement_a")).strip(),
+                        _s(item.get("statement_b")).strip(),
+                        _s(item.get("explanation")).strip(),
+                    )
+                    if value
+                )
+                for evidence_id in item.get("evidence_ids") or []:
+                    _register(
+                        evidence_id=evidence_id,
+                        source_pack="contradictions",
+                        pages=_coerce_span_pages(item),
+                        text=contradiction_text,
+                    )
+
+    if isinstance(doc_map, dict):
+        for section in doc_map.get("sections") or []:
+            if not isinstance(section, dict):
+                continue
+            _register(
+                evidence_id=section.get("id"),
+                source_pack="doc_map",
+                pages=_coerce_span_pages(section),
+                text=_pick_first_non_empty_text(
+                    section.get("summary"), section.get("title"), section.get("heading")
+                ),
+                section_id=section.get("id"),
+            )
+    return index
+
+
+def _coerce_span_pages(item: Dict[str, Any]) -> List[int]:
+    pages: List[int] = []
+    raw_pages = item.get("pages")
+    if isinstance(raw_pages, list):
+        pages.extend(
+            int(page) for page in raw_pages if isinstance(page, int) and page > 0
+        )
+    raw_page = item.get("page")
+    if isinstance(raw_page, int) and raw_page > 0:
+        pages.append(int(raw_page))
+    return list(dict.fromkeys(pages))
+
+
+def _pick_first_non_empty_text(*values: Any) -> str:
+    for value in values:
+        text = _s(value).strip()
+        if text:
+            return text
     return ""
 
 

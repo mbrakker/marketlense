@@ -1,0 +1,220 @@
+from __future__ import annotations
+
+import os
+from pathlib import Path
+from unittest.mock import patch
+
+import yaml
+
+from src.contracts.browser_download import BrowserDownloadIdentityFieldUpsertRequest
+from src.contracts.config import (
+    AppConfigReadRequest,
+    AppConfigWriteRequest,
+)
+from src.contracts.run_context import RunContext
+from src.services.config_service import (
+    read_app_config,
+    upsert_browser_download_identity_fields,
+    write_app_config,
+)
+from src.utils.errors import AppError
+
+
+def _ctx() -> RunContext:
+    return RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
+
+
+def _write_app_config_fixture(tmp_path: Path) -> tuple[Path, Path]:
+    identity_path = tmp_path / "browser_download_identity.yaml"
+    identity_path.write_text(
+        yaml.safe_dump(
+            {
+                "schema_version": "1.0",
+                "fields": [
+                    {
+                        "schema_version": "1.0",
+                        "key": "work_email",
+                        "label": "Work email",
+                        "value": "ops@example.com",
+                        "aliases": ["email"],
+                    },
+                    {
+                        "schema_version": "1.0",
+                        "key": "company",
+                        "label": "Company",
+                        "value": "Market Lense",
+                        "aliases": ["business"],
+                    },
+                ],
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    config_path = tmp_path / "app.yaml"
+    config_path.write_text(
+        yaml.safe_dump(
+            {
+                "schema_version": "1.0",
+                "paths": {
+                    "output_dir": str(tmp_path / "out"),
+                    "cache_dir": str(tmp_path / "cache"),
+                    "state_db": str(tmp_path / "state" / "index.sqlite"),
+                    "reports_db": str(tmp_path / "state" / "reports.sqlite"),
+                },
+                "ingest": {
+                    "google_sa_path": str(tmp_path / "sa.json"),
+                    "gdrive_folder_id": "folder",
+                    "openai_model": "gpt-5",
+                },
+                "browser_download": {
+                    "identity_config_path": str(identity_path),
+                },
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    return config_path, identity_path
+
+
+def test_read_and_write_app_config_round_trip(tmp_path: Path) -> None:
+    config_path, _ = _write_app_config_fixture(tmp_path)
+
+    read_response = read_app_config(
+        AppConfigReadRequest(schema_version="1.0", path=str(config_path)),
+        _ctx(),
+    )
+
+    updated_payload = yaml.safe_load(read_response.content)
+    updated_payload["ingest"]["batch_limit"] = 37
+    write_response = write_app_config(
+        AppConfigWriteRequest(
+            schema_version="1.0",
+            path=str(config_path),
+            content=yaml.safe_dump(updated_payload, sort_keys=False),
+            make_backup=True,
+        ),
+        _ctx(),
+    )
+
+    assert "ingest" in read_response.payload
+    assert read_response.size_bytes > 0
+    assert read_response.modified_utc is not None
+    assert write_response.bytes_written > 0
+    assert "ingest" in write_response.top_level_keys
+    assert write_response.backup_path
+    assert Path(str(write_response.backup_path)).exists()
+    assert (
+        yaml.safe_load(config_path.read_text(encoding="utf-8"))["ingest"]["batch_limit"]
+        == 37
+    )
+
+
+def test_app_config_editor_uses_env_bootstrap_path_when_request_path_blank(
+    tmp_path: Path,
+) -> None:
+    config_path, _ = _write_app_config_fixture(tmp_path)
+
+    with patch.dict(
+        os.environ,
+        {"MARKET_LENSE_CONFIG_PATH": str(config_path)},
+        clear=True,
+    ):
+        read_response = read_app_config(
+            AppConfigReadRequest(schema_version="1.0", path=""),
+            _ctx(),
+        )
+        write_response = write_app_config(
+            AppConfigWriteRequest(
+                schema_version="1.0",
+                path="",
+                content=read_response.content,
+                make_backup=False,
+            ),
+            _ctx(),
+        )
+
+    assert Path(read_response.path) == config_path.resolve()
+    assert Path(write_response.path) == config_path.resolve()
+
+
+def test_read_app_config_missing_file_raises_not_found_code(tmp_path: Path) -> None:
+    with patch.dict(os.environ, {}, clear=True):
+        missing_path = tmp_path / "missing.yaml"
+        try:
+            read_app_config(
+                AppConfigReadRequest(schema_version="1.0", path=str(missing_path)),
+                _ctx(),
+            )
+        except AppError as exc:
+            assert exc.code == "config_file_not_found"
+        else:  # pragma: no cover
+            raise AssertionError("Expected AppError")
+
+
+def test_read_app_config_invalid_yaml_raises_invalid_code(tmp_path: Path) -> None:
+    config_path = tmp_path / "app.yaml"
+    config_path.write_text("schema_version: [1,\n", encoding="utf-8")
+
+    try:
+        read_app_config(
+            AppConfigReadRequest(schema_version="1.0", path=str(config_path)),
+            _ctx(),
+        )
+    except AppError as exc:
+        assert exc.code == "config_yaml_invalid"
+    else:  # pragma: no cover
+        raise AssertionError("Expected AppError")
+
+
+def test_write_app_config_rejects_non_mapping_yaml(tmp_path: Path) -> None:
+    config_path = tmp_path / "app.yaml"
+    config_path.write_text("schema_version: '1.0'\n", encoding="utf-8")
+
+    try:
+        write_app_config(
+            AppConfigWriteRequest(
+                schema_version="1.0",
+                path=str(config_path),
+                content="- one\n- two\n",
+                make_backup=False,
+            ),
+            _ctx(),
+        )
+    except AppError as exc:
+        assert exc.code == "config_yaml_root_invalid"
+        assert "mapping" in str(exc).lower()
+    else:  # pragma: no cover
+        raise AssertionError("Expected AppError")
+
+
+def test_upsert_browser_download_identity_fields_adds_and_filters_keys(
+    tmp_path: Path,
+) -> None:
+    _, identity_path = _write_app_config_fixture(tmp_path)
+
+    response = upsert_browser_download_identity_fields(
+        BrowserDownloadIdentityFieldUpsertRequest(
+            schema_version="1.0",
+            path=str(identity_path),
+            encountered_form_fields=[
+                "Submit",
+                "Download report",
+                "Budget Range",
+                "Name",
+                "Budget Range",
+            ],
+        ),
+        _ctx(),
+    )
+
+    payload = yaml.safe_load(identity_path.read_text(encoding="utf-8"))
+    assert response.added_field_keys == ["budget_range", "name"]
+    assert response.total_fields == 4
+    assert [field["key"] for field in payload["fields"]] == [
+        "work_email",
+        "company",
+        "budget_range",
+        "name",
+    ]

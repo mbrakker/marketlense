@@ -1173,6 +1173,7 @@ def test_validation_rule_registry_is_deterministic():
     assert [rule.rule_id for rule in registry] == [
         "toc_integrity",
         "family_confidence",
+        "claim_support",
         "semantic",
         "metrics",
         "quotes",
@@ -1180,6 +1181,7 @@ def test_validation_rule_registry_is_deterministic():
         "grounding",
     ]
     assert [rule.stage for rule in registry] == [
+        "bootstrap",
         "bootstrap",
         "bootstrap",
         "bootstrap",
@@ -1234,6 +1236,48 @@ def test_validation_fails_on_regenerable_abstained_artifact_family(tmp_path):
     )
 
 
+def test_validation_fails_when_summary_claim_is_missing_span_support(tmp_path):
+    settings = _settings(tmp_path)
+    artifacts = {
+        "summary": {
+            "tldr": "TLDR",
+            "executive_summary": "Exec",
+            "claim_evidence_map": [
+                {"claim": "Grounded claim", "evidence_id": "f1", "evidence": "Support"}
+            ],
+        },
+        "insights_final": [],
+        "quotes_final": [],
+        "expert_comment": "",
+        "linkedin_post": "",
+    }
+    evidence_packs = {
+        "findings": {
+            "schema_version": "1.0",
+            "findings": [{"id": "f1", "text": "Finding", "evidence": "Support"}],
+        }
+    }
+    result = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="r1",
+            report=_report(),
+            artifacts=artifacts,
+            evidence_packs=evidence_packs,
+            vector_store_id=None,
+        ),
+        settings,
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAI({"unsupported": []}),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert result.status == "fail"
+    assert any(issue.rule_id == "claim_support" for issue in result.issues)
+    assert any(issue.repair_target == "summary" for issue in result.issues)
+
+
 def test_validation_warns_on_soft_artifact_abstention_and_info_evidence_pack_abstention(
     tmp_path,
 ):
@@ -1252,7 +1296,14 @@ def test_validation_warns_on_soft_artifact_abstention_and_info_evidence_pack_abs
             "tldr": "TLDR",
             "executive_summary": "Exec",
             "claim_evidence_map": [
-                {"claim": "Claim", "evidence_id": "f1", "evidence": "Evidence"}
+                {
+                    "claim": "Claim",
+                    "evidence_id": "f1",
+                    "evidence": "Evidence",
+                    "evidence_spans": [
+                        {"evidence_id": "f1", "source_pack": "findings", "page": 2}
+                    ],
+                }
             ],
         },
         "insights_final": [],
@@ -1262,6 +1313,13 @@ def test_validation_warns_on_soft_artifact_abstention_and_info_evidence_pack_abs
                 "text": "Quoted text",
                 "speaker": "Analyst",
                 "citation": "Quoted text",
+                "evidence_spans": [
+                    {
+                        "evidence_id": "q1",
+                        "source_pack": "quote_candidates",
+                        "page": 1,
+                    }
+                ],
             }
         ],
         "expert_comment": "",
@@ -1281,7 +1339,7 @@ def test_validation_warns_on_soft_artifact_abstention_and_info_evidence_pack_abs
     evidence_packs = {
         "findings": {
             "schema_version": "1.0",
-            "findings": [],
+            "findings": [{"id": "f1", "text": "Finding", "evidence": "Evidence"}],
             "family_status": {
                 "schema_version": "1.0",
                 "family": "findings",

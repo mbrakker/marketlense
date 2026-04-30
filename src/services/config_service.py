@@ -4,7 +4,6 @@ import os
 import logging
 from functools import lru_cache
 from dataclasses import asdict, dataclass, fields
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Sequence
 
@@ -21,7 +20,6 @@ from src.contracts.config import (
     IngestSettingsBuildRequest,
 )
 from src.contracts.browser_download import (
-    BrowserDownloadIdentityField,
     BrowserDownloadIdentityFieldUpsertRequest,
     BrowserDownloadIdentityFieldUpsertResponse,
     BrowserDownloadSettings,
@@ -32,10 +30,13 @@ from src.contracts.publish import PublishSettings
 from src.contracts.run_context import RunContext
 from src.contracts.wordpress import WordPressAuthSettings
 from src.services._config_identity import (
-    identity_field_match_tokens as _identity_field_match_tokens,
     load_browser_download_identity as _load_browser_download_identity,
-    normalize_browser_download_identity_key as _normalize_browser_download_identity_key,
-    should_upsert_browser_download_identity_field as _should_upsert_browser_download_identity_field,
+    plan_browser_download_identity_field_upserts as _plan_browser_download_identity_field_upserts,
+    serialize_browser_download_identity as _serialize_browser_download_identity,
+)
+from src.services._config_app_document import (
+    read_app_config_document as _read_app_config_document,
+    write_app_config_document as _write_app_config_document,
 )
 from src.services._yaml_config import (
     YamlMappingError,
@@ -261,159 +262,23 @@ def _resolve_config_path(path: str) -> Path:
 def read_app_config(
     request: AppConfigReadRequest, ctx: RunContext
 ) -> AppConfigReadResponse:
-    cfg_path = _resolve_config_path(request.path)
-    logger.info(
-        log_event(
-            ctx,
-            role="service",
-            event="app_config_read_start",
-            module=logger.name,
-            fields={"path": str(cfg_path)},
-        )
+    return _read_app_config_document(
+        request,
+        ctx,
+        resolve_config_path=_resolve_config_path,
+        parse_yaml_mapping=_parse_yaml_mapping,
     )
-    if not cfg_path.exists():
-        raise AppError(
-            code="config_file_not_found",
-            message=f"Config file not found: {cfg_path}",
-            retryable=False,
-            context={"path": str(cfg_path)},
-        )
-    try:
-        content = cfg_path.read_text(encoding="utf-8")
-    except Exception as exc:
-        raise AppError(
-            code="config_read_failed",
-            message=f"Failed to read config file: {cfg_path}",
-            cause=exc,
-            retryable=False,
-            context={"path": str(cfg_path)},
-        ) from exc
-    try:
-        payload = _parse_yaml_mapping(content, label="Config", path=cfg_path)
-    except YamlMappingError as exc:
-        if exc.kind == "invalid":
-            raise AppError(
-                code="config_yaml_invalid",
-                message=f"Config YAML invalid: {cfg_path}",
-                cause=exc.cause,
-                retryable=False,
-                context={"path": str(cfg_path)},
-            ) from exc
-        raise AppError(
-            code="config_yaml_root_invalid",
-            message=f"Config YAML root must be a mapping: {cfg_path}",
-            retryable=False,
-            context={"path": str(cfg_path), "root_type": exc.root_type or ""},
-        ) from exc
-    stat = cfg_path.stat()
-    response = AppConfigReadResponse(
-        schema_version="1.0",
-        path=str(cfg_path),
-        content=content,
-        payload=payload,
-        size_bytes=int(stat.st_size),
-        modified_utc=float(stat.st_mtime),
-    )
-    logger.info(
-        log_event(
-            ctx,
-            role="service",
-            event="app_config_read_complete",
-            module=logger.name,
-            fields={
-                "path": response.path,
-                "size_bytes": response.size_bytes,
-                "modified_utc": response.modified_utc,
-                "top_level_keys": list(payload.keys()),
-            },
-        )
-    )
-    return response
 
 
 def write_app_config(
     request: AppConfigWriteRequest, ctx: RunContext
 ) -> AppConfigWriteResponse:
-    cfg_path = _resolve_config_path(request.path)
-    logger.info(
-        log_event(
-            ctx,
-            role="service",
-            event="app_config_write_start",
-            module=logger.name,
-            fields={
-                "path": str(cfg_path),
-                "make_backup": request.make_backup,
-                "content_length": len(request.content),
-            },
-        )
+    return _write_app_config_document(
+        request,
+        ctx,
+        resolve_config_path=_resolve_config_path,
+        parse_yaml_mapping=_parse_yaml_mapping,
     )
-    normalized_content = request.content.replace("\r\n", "\n")
-    if normalized_content and not normalized_content.endswith("\n"):
-        normalized_content = f"{normalized_content}\n"
-    try:
-        payload = _parse_yaml_mapping(normalized_content, label="Config", path=cfg_path)
-    except YamlMappingError as exc:
-        if exc.kind == "invalid":
-            raise AppError(
-                code="config_yaml_invalid",
-                message=f"Config YAML invalid: {cfg_path}",
-                cause=exc.cause,
-                retryable=False,
-                context={"path": str(cfg_path)},
-            ) from exc
-        raise AppError(
-            code="config_yaml_root_invalid",
-            message=f"Config YAML root must be a mapping: {cfg_path}",
-            retryable=False,
-            context={"path": str(cfg_path), "root_type": exc.root_type or ""},
-        ) from exc
-
-    cfg_path.parent.mkdir(parents=True, exist_ok=True)
-    backup_path: str | None = None
-    if request.make_backup and cfg_path.exists():
-        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        backup = cfg_path.with_name(f"{cfg_path.name}.{stamp}.bak")
-        backup.write_text(cfg_path.read_text(encoding="utf-8"), encoding="utf-8")
-        backup_path = str(backup)
-
-    try:
-        cfg_path.write_text(normalized_content, encoding="utf-8")
-    except Exception as exc:
-        raise AppError(
-            code="config_write_failed",
-            message=f"Failed to write config file: {cfg_path}",
-            cause=exc,
-            retryable=False,
-            context={"path": str(cfg_path)},
-        ) from exc
-
-    stat = cfg_path.stat()
-    top_level_keys = [str(key) for key in payload.keys()]
-    response = AppConfigWriteResponse(
-        schema_version="1.0",
-        path=str(cfg_path),
-        bytes_written=len(normalized_content.encode("utf-8")),
-        modified_utc=float(stat.st_mtime),
-        top_level_keys=top_level_keys,
-        backup_path=backup_path,
-    )
-    logger.info(
-        log_event(
-            ctx,
-            role="service",
-            event="app_config_write_complete",
-            module=logger.name,
-            fields={
-                "path": response.path,
-                "bytes_written": response.bytes_written,
-                "modified_utc": response.modified_utc,
-                "backup_path": response.backup_path or "",
-                "top_level_keys": response.top_level_keys,
-            },
-        )
-    )
-    return response
 
 
 class _ConfigResolver:
@@ -3138,70 +3003,15 @@ def upsert_browser_download_identity_fields(
         load_yaml_mapping=_load_yaml_mapping,
         is_missing=_is_missing,
     )
-    existing_tokens: set[str] = set()
-    for field in identity_profile.fields:
-        existing_tokens.update(_identity_field_match_tokens(field))
-
-    added_fields: list[BrowserDownloadIdentityField] = []
-    seen_new_tokens: set[str] = set()
-    for raw_label in request.encountered_form_fields:
-        label = str(raw_label or "").strip()
-        normalized = _normalize_browser_download_identity_key(label)
-        if not label or not normalized:
-            continue
-        if not _should_upsert_browser_download_identity_field(
-            label=label,
-            normalized_key=normalized,
-        ):
-            continue
-        if normalized in existing_tokens or normalized in seen_new_tokens:
-            continue
-        seen_new_tokens.add(normalized)
-        added_fields.append(
-            BrowserDownloadIdentityField(
-                schema_version="1.0",
-                key=normalized,
-                label=label,
-                value=None,
-                aliases=[],
-            )
-        )
-
+    added_fields = _plan_browser_download_identity_field_upserts(
+        identity_profile,
+        encountered_form_fields=request.encountered_form_fields,
+    )
     if added_fields:
-        payload = {
-            "schema_version": identity_profile.schema_version,
-            "fields": [
-                {
-                    "schema_version": field.schema_version,
-                    "key": field.key,
-                    "label": field.label,
-                    "value": field.value,
-                    "aliases": field.aliases,
-                }
-                for field in [*identity_profile.fields, *added_fields]
-            ],
-        }
-        if identity_profile.delivery_emails:
-            payload["delivery_emails"] = list(identity_profile.delivery_emails)
-        if identity_profile.publisher_overrides:
-            payload["publisher_overrides"] = [
-                {
-                    "schema_version": override.schema_version,
-                    "host_pattern": override.host_pattern,
-                    "delivery_emails": list(override.delivery_emails),
-                    "field_values": [
-                        {
-                            "schema_version": field.schema_version,
-                            "key": field.key,
-                            "label": field.label,
-                            "value": field.value,
-                            "aliases": field.aliases,
-                        }
-                        for field in override.field_values
-                    ],
-                }
-                for override in identity_profile.publisher_overrides
-            ]
+        payload = _serialize_browser_download_identity(
+            identity_profile,
+            extra_fields=added_fields,
+        )
         identity_path.parent.mkdir(parents=True, exist_ok=True)
         identity_path.write_text(
             yaml.safe_dump(payload, sort_keys=False, allow_unicode=False),

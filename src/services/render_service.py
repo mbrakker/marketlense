@@ -54,6 +54,10 @@ def _coerce_list(value: object) -> list[Any]:
     return value if isinstance(value, list) else []
 
 
+def _coerce_positive_int(value: object) -> int | None:
+    return value if isinstance(value, int) and value > 0 else None
+
+
 def _pick_first_text(*values: object) -> str:
     for value in values:
         candidate = _s(value)
@@ -234,10 +238,19 @@ def _coerce_claim_map(summary: dict[str, Any]) -> list[dict[str, str]]:
         claim = _s(item.get("claim"))
         if not claim:
             continue
+        evidence_id = _s(item.get("evidence_id"))
+        citation_line = _build_citation_micro_line(
+            evidence_id=evidence_id,
+            citation="",
+            evidence_spans=item.get("evidence_spans"),
+            pages=item.get("pages"),
+        )
         items.append(
             {
                 "claim": claim,
+                "evidence_id": evidence_id,
                 "evidence": _s(item.get("evidence")),
+                "citation_line": citation_line,
             }
         )
     return items
@@ -253,11 +266,23 @@ def _coerce_insights(raw_insights: object) -> list[dict[str, str]]:
             text = _s(raw_item)
         if not text:
             continue
-        insights.append({"text": text})
+        insights.append(
+            {
+                "text": text,
+                "citation_line": _build_citation_micro_line(
+                    evidence_id=_s(item.get("evidence_id")),
+                    citation="",
+                    evidence_spans=item.get("evidence_spans"),
+                    pages=item.get("pages"),
+                ),
+            }
+        )
     return insights
 
 
-def _coerce_quotes(raw_quotes: object, data: dict[str, Any]) -> list[dict[str, str]]:
+def _coerce_quotes(
+    raw_quotes: object, data: dict[str, Any], publisher: str
+) -> list[dict[str, str]]:
     quotes: list[dict[str, str]] = []
     for raw_item in _coerce_list(raw_quotes):
         item = _coerce_dict(raw_item)
@@ -267,12 +292,17 @@ def _coerce_quotes(raw_quotes: object, data: dict[str, Any]) -> list[dict[str, s
         quotes.append(
             {
                 "text": text,
-                "author": _pick_first_text(
-                    item.get("speaker"),
-                    item.get("author"),
-                    "Unknown",
+                "author": _display_quote_author(
+                    _pick_first_text(item.get("speaker"), item.get("author")),
+                    publisher,
                 ),
                 "citation": _s(item.get("citation")),
+                "citation_line": _build_citation_micro_line(
+                    evidence_id=_s(item.get("evidence_id")),
+                    citation=_s(item.get("citation")),
+                    evidence_spans=item.get("evidence_spans"),
+                    pages=[item.get("page")] if isinstance(item.get("page"), int) else [],
+                ),
             }
         )
     if quotes:
@@ -282,11 +312,93 @@ def _coerce_quotes(raw_quotes: object, data: dict[str, Any]) -> list[dict[str, s
         return [
             {
                 "text": _s(legacy_quote.get("text")),
-                "author": _pick_first_text(legacy_quote.get("author"), "Unknown"),
+                "author": _display_quote_author(
+                    _pick_first_text(legacy_quote.get("author"), "Unknown"),
+                    publisher,
+                ),
                 "citation": "",
+                "citation_line": "",
             }
         ]
     return []
+
+
+def _display_quote_author(author: str, publisher: str) -> str:
+    normalized_author = _s(author)
+    if normalized_author and normalized_author.casefold() != "unknown":
+        return normalized_author
+    normalized_publisher = _s(publisher)
+    if normalized_publisher:
+        return f"{normalized_publisher} expert team"
+    return "Expert team"
+
+
+def _coerce_evidence_spans(raw_spans: object) -> list[dict[str, Any]]:
+    spans: list[dict[str, Any]] = []
+    seen: set[tuple[object, ...]] = set()
+    for raw_span in _coerce_list(raw_spans):
+        span = _coerce_dict(raw_span)
+        evidence_id = _s(span.get("evidence_id"))
+        source_pack = _s(span.get("source_pack"))
+        if not evidence_id:
+            continue
+        page = _coerce_positive_int(span.get("page"))
+        dedupe_key = (
+            evidence_id,
+            source_pack,
+            _s(span.get("section_id")),
+            page,
+            span.get("start_offset"),
+            span.get("end_offset"),
+        )
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
+        normalized: dict[str, Any] = {
+            "evidence_id": evidence_id,
+            "source_pack": source_pack,
+        }
+        if page is not None:
+            normalized["page"] = page
+        if _s(span.get("section_id")):
+            normalized["section_id"] = _s(span.get("section_id"))
+        spans.append(normalized)
+    return spans
+
+
+def _build_citation_micro_line(
+    *,
+    evidence_id: str,
+    citation: str,
+    evidence_spans: object,
+    pages: object,
+) -> str:
+    parts: list[str] = []
+    if evidence_id:
+        parts.append(evidence_id)
+    span_pages = [
+        page
+        for page in (
+            _coerce_positive_int(span.get("page"))
+            for span in _coerce_evidence_spans(evidence_spans)
+        )
+        if page is not None
+    ]
+    explicit_pages = [
+        page
+        for page in (
+            _coerce_positive_int(page) for page in _coerce_list(pages)
+        )
+        if page is not None
+    ]
+    all_pages = list(dict.fromkeys([*span_pages, *explicit_pages]))
+    if all_pages:
+        page_label = "report page" if len(all_pages) == 1 else "report pages"
+        parts.append(f"{page_label} {', '.join(str(page) for page in all_pages)}")
+    normalized_citation = _s(citation)
+    if normalized_citation:
+        parts.append(normalized_citation)
+    return " · ".join(part for part in parts if part)
 
 
 def _coerce_topic_briefs(artifacts: dict[str, Any]) -> list[dict[str, Any]]:
@@ -611,7 +723,7 @@ def _build_render_view(request: RenderRequest, tag_acronym_map: dict[str, str]) 
     insights = _coerce_insights(
         artifacts.get("insights_final") if _coerce_list(artifacts.get("insights_final")) else data.get("insights")
     )
-    quotes = _coerce_quotes(artifacts.get("quotes_final"), data)
+    quotes = _coerce_quotes(artifacts.get("quotes_final"), data, publisher)
     figure_section_enabled = bool(data.get("_figure_section_enabled", True))
     figure_slides = _build_figure_slides(data, out_dir, report_title) if figure_section_enabled else []
     hero_image = None

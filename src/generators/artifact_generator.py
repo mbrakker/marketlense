@@ -19,6 +19,7 @@ from src.contracts.semantic_ids import ReportId
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.generators.artifact_normalization import (
     artifact_base_variables,
+    bind_artifact_evidence_spans,
     artifact_quote_candidates,
     artifact_retrieval_mode,
     normalize_artifact_toc_entries,
@@ -409,6 +410,26 @@ def generate_artifacts(
                 fields=evidence_id_stats,
             )
         )
+    evidence_span_stats = bind_artifact_evidence_spans(
+        summary=summary,
+        insights_candidates=insights_candidates,
+        insights_final=insights_final,
+        quotes_final=quotes_final,
+        doc_map=safe_doc_map,
+        evidence_packs=safe_evidence,
+    )
+    if evidence_span_stats.get("bound_count", 0) > 0 or evidence_span_stats.get(
+        "unbound_count", 0
+    ) > 0:
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="artifact_evidence_spans_bound",
+                module=logger.name,
+                fields=evidence_span_stats,
+            )
+        )
 
     expert_ctx = child_context(ctx, task_id=f"{ctx.task_id}:expert_comment")
     expert_vars = {
@@ -689,21 +710,18 @@ def _summary_confidence_score(summary: Dict[str, Any]) -> float:
     claim_map = summary.get("claim_evidence_map") if isinstance(summary, dict) else []
     score = 0.0
     if _s(summary.get("tldr")).strip():
-        score += 0.32
+        score += 0.28
     if _s(summary.get("executive_summary")).strip():
-        score += 0.36
+        score += 0.28
     if isinstance(claim_map, list) and claim_map:
-        score += 0.18
+        score += 0.08
         supported_claims = 0
         for claim in claim_map:
             if not isinstance(claim, dict):
                 continue
-            if (
-                _s(claim.get("evidence_id")).strip()
-                or _s(claim.get("evidence")).strip()
-            ):
+            if claim.get("evidence_spans"):
                 supported_claims += 1
-        score += 0.14 * (supported_claims / max(1, len(claim_map)))
+        score += 0.36 * (supported_claims / max(1, len(claim_map)))
     return score
 
 
@@ -717,10 +735,22 @@ def _summary_confidence_reason(summary: Dict[str, Any]) -> str:
         return "summary_missing_claim_evidence"
     if not any(
         isinstance(claim, dict)
-        and (_s(claim.get("evidence_id")).strip() or _s(claim.get("evidence")).strip())
+        and (
+            claim.get("evidence_spans")
+            or
+            _s(claim.get("evidence_id")).strip()
+            or _s(claim.get("evidence")).strip()
+        )
         for claim in claim_map
     ):
         return "summary_claim_evidence_unsupported"
+    if any(
+        isinstance(claim, dict)
+        and _s(claim.get("claim")).strip()
+        and not (claim.get("evidence_spans") or [])
+        for claim in claim_map
+    ):
+        return "summary_claim_span_missing"
     return ""
 
 
@@ -897,6 +927,26 @@ def assemble_artifacts_payload(
                 event="artifact_evidence_ids_normalized",
                 module=logger.name,
                 fields=evidence_id_stats,
+            )
+        )
+    evidence_span_stats = bind_artifact_evidence_spans(
+        summary=summary,
+        insights_candidates=insights_candidates,
+        insights_final=insights_final,
+        quotes_final=quotes_final,
+        doc_map=doc_map,
+        evidence_packs=evidence_packs,
+    )
+    if evidence_span_stats.get("bound_count", 0) > 0 or evidence_span_stats.get(
+        "unbound_count", 0
+    ) > 0:
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="artifact_evidence_spans_bound",
+                module=logger.name,
+                fields=evidence_span_stats,
             )
         )
     artifacts_payload: Dict[str, Any] = {
@@ -2121,6 +2171,17 @@ def _validate_artifact_semantic_fields(
         missing_fields.append("summary.tldr")
     if not summary_abstained and _missing_text(summary.get("executive_summary")):
         missing_fields.append("summary.executive_summary")
+    if not summary_abstained:
+        for index, claim in enumerate(summary.get("claim_evidence_map") or []):
+            if not isinstance(claim, dict) or _missing_text(claim.get("claim")):
+                continue
+            if not (
+                isinstance(claim.get("evidence_spans"), list)
+                and (claim.get("evidence_spans") or [])
+            ):
+                missing_fields.append(
+                    f"summary.claim_evidence_map[{index}].evidence_spans"
+                )
     if not insights_abstained and len(insights_final) < 5:
         missing_fields.append("insights_final")
     for index, insight in enumerate(insights_final[:5]):

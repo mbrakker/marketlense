@@ -175,6 +175,84 @@ def identity_field_match_tokens(field: BrowserDownloadIdentityField) -> set[str]
     return {token for token in tokens if token}
 
 
+def plan_browser_download_identity_field_upserts(
+    identity_profile: BrowserDownloadIdentity,
+    *,
+    encountered_form_fields: list[str],
+) -> list[BrowserDownloadIdentityField]:
+    existing_tokens: set[str] = set()
+    for field in identity_profile.fields:
+        existing_tokens.update(identity_field_match_tokens(field))
+
+    added_fields: list[BrowserDownloadIdentityField] = []
+    seen_new_tokens: set[str] = set()
+    for raw_label in encountered_form_fields:
+        label = str(raw_label or "").strip()
+        normalized = normalize_browser_download_identity_key(label)
+        if not label or not normalized:
+            continue
+        if not should_upsert_browser_download_identity_field(
+            label=label,
+            normalized_key=normalized,
+        ):
+            continue
+        if normalized in existing_tokens or normalized in seen_new_tokens:
+            continue
+        seen_new_tokens.add(normalized)
+        added_fields.append(
+            BrowserDownloadIdentityField(
+                schema_version="1.0",
+                key=normalized,
+                label=label,
+                value=None,
+                aliases=[],
+            )
+        )
+    return added_fields
+
+
+def serialize_browser_download_identity(
+    identity_profile: BrowserDownloadIdentity,
+    *,
+    extra_fields: list[BrowserDownloadIdentityField] | None = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "schema_version": identity_profile.schema_version,
+        "fields": [
+            {
+                "schema_version": field.schema_version,
+                "key": field.key,
+                "label": field.label,
+                "value": field.value,
+                "aliases": field.aliases,
+            }
+            for field in [*identity_profile.fields, *(extra_fields or [])]
+        ],
+    }
+    if identity_profile.delivery_emails:
+        payload["delivery_emails"] = list(identity_profile.delivery_emails)
+    if identity_profile.publisher_overrides:
+        payload["publisher_overrides"] = [
+            {
+                "schema_version": override.schema_version,
+                "host_pattern": override.host_pattern,
+                "delivery_emails": list(override.delivery_emails),
+                "field_values": [
+                    {
+                        "schema_version": field.schema_version,
+                        "key": field.key,
+                        "label": field.label,
+                        "value": field.value,
+                        "aliases": field.aliases,
+                    }
+                    for field in override.field_values
+                ],
+            }
+            for override in identity_profile.publisher_overrides
+        ]
+    return payload
+
+
 def resolve_browser_download_publisher_override(
     identity_profile: BrowserDownloadIdentity,
     *,

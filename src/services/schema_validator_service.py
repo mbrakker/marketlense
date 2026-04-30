@@ -185,6 +185,12 @@ def validate_evidence_references(
                 value = str(claim.get("evidence_id") or "").strip()
                 if value:
                     references.append(value)
+                for span in claim.get("evidence_spans") or []:
+                    if not isinstance(span, dict):
+                        continue
+                    span_value = str(span.get("evidence_id") or "").strip()
+                    if span_value:
+                        references.append(span_value)
     for key in ("insights_candidates", "insights_final", "quotes_final"):
         for item in artifacts_payload.get(key) or []:
             if not isinstance(item, dict):
@@ -192,6 +198,12 @@ def validate_evidence_references(
             value = str(item.get("evidence_id") or "").strip()
             if value:
                 references.append(value)
+            for span in item.get("evidence_spans") or []:
+                if not isinstance(span, dict):
+                    continue
+                span_value = str(span.get("evidence_id") or "").strip()
+                if span_value:
+                    references.append(span_value)
 
     missing = sorted(
         {reference for reference in references if reference not in evidence_ids}

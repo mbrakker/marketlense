@@ -67,6 +67,22 @@
               "claim": { "type": "string" },
               "evidence_id": { "type": "string" },
               "evidence": { "type": "string" },
+              "evidence_spans": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["evidence_id", "source_pack"],
+                  "properties": {
+                    "evidence_id": { "type": "string" },
+                    "source_pack": { "type": "string" },
+                    "section_id": { "type": "string" },
+                    "page": { "type": "integer" },
+                    "start_offset": { "type": "integer" },
+                    "end_offset": { "type": "integer" },
+                    "text": { "type": "string" }
+                  }
+                }
+              },
               "pages": {
                 "type": "array",
                 "items": { "type": "integer" }
@@ -86,6 +102,22 @@
           "text": { "type": "string" },
           "evidence_id": { "type": "string" },
           "evidence": { "type": "string" },
+          "evidence_spans": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["evidence_id", "source_pack"],
+              "properties": {
+                "evidence_id": { "type": "string" },
+                "source_pack": { "type": "string" },
+                "section_id": { "type": "string" },
+                "page": { "type": "integer" },
+                "start_offset": { "type": "integer" },
+                "end_offset": { "type": "integer" },
+                "text": { "type": "string" }
+              }
+            }
+          },
           "metric": {
             "type": "object",
             "properties": {
@@ -117,6 +149,22 @@
           "text": { "type": "string" },
           "evidence_id": { "type": "string" },
           "evidence": { "type": "string" },
+          "evidence_spans": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["evidence_id", "source_pack"],
+              "properties": {
+                "evidence_id": { "type": "string" },
+                "source_pack": { "type": "string" },
+                "section_id": { "type": "string" },
+                "page": { "type": "integer" },
+                "start_offset": { "type": "integer" },
+                "end_offset": { "type": "integer" },
+                "text": { "type": "string" }
+              }
+            }
+          },
           "metric": {
             "type": "object",
             "properties": {
@@ -147,7 +195,23 @@
           "speaker": { "type": "string" },
           "citation": { "type": "string" },
           "page": { "type": "integer" },
-          "evidence_id": { "type": "string" }
+          "evidence_id": { "type": "string" },
+          "evidence_spans": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["evidence_id", "source_pack"],
+              "properties": {
+                "evidence_id": { "type": "string" },
+                "source_pack": { "type": "string" },
+                "section_id": { "type": "string" },
+                "page": { "type": "integer" },
+                "start_offset": { "type": "integer" },
+                "end_offset": { "type": "integer" },
+                "text": { "type": "string" }
+              }
+            }
+          }
         }
       }
     },

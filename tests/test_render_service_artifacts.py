@@ -28,17 +28,39 @@ def test_render_includes_artifact_sections(tmp_path):
             "summary": {
                 "tldr": "Artifact TLDR",
                 "executive_summary": "Artifact executive summary",
-                "claim_evidence_map": [{"claim": "Claim 1", "evidence": "Evidence 1"}],
+                "claim_evidence_map": [
+                    {
+                        "claim": "Claim 1",
+                        "evidence_id": "f1",
+                        "evidence": "Evidence 1",
+                        "pages": [4],
+                        "evidence_spans": [
+                            {
+                                "evidence_id": "f1",
+                                "source_pack": "findings",
+                                "page": 4,
+                            }
+                        ],
+                    }
+                ],
             },
             "insights_final": [
                 {
                     "id": "i1",
                     "text": "Artifact insight 1",
+                    "evidence_id": "f1",
+                    "evidence_spans": [
+                        {"evidence_id": "f1", "source_pack": "findings", "page": 4}
+                    ],
                     "metric": {"value": "10", "unit": "%", "timeframe": "2024"},
                 },
                 {
                     "id": "i2",
                     "text": "Artifact insight 2",
+                    "evidence_id": "f2",
+                    "evidence_spans": [
+                        {"evidence_id": "f2", "source_pack": "findings", "page": 5}
+                    ],
                     "metric": {"value": "", "unit": "", "timeframe": ""},
                 },
             ],
@@ -48,6 +70,14 @@ def test_render_includes_artifact_sections(tmp_path):
                     "speaker": "Speaker",
                     "citation": "Report",
                     "page": 2,
+                    "evidence_id": "q1",
+                    "evidence_spans": [
+                        {
+                            "evidence_id": "q1",
+                            "source_pack": "quote_candidates",
+                            "page": 2,
+                        }
+                    ],
                 }
             ],
             "expert_comment": "Expert take",
@@ -85,6 +115,8 @@ def test_render_includes_artifact_sections(tmp_path):
     assert '<section class="panel" id="section-snapshot"' in html
     assert "Metadata below the lead" in html
     assert "<ul class=\"claim-list\"" in html
+    assert "f1 · report page 4" in html
+    assert "q1 · report page 2 · Report" in html
     assert "style=\"max-width:none\"" not in html
 
 
@@ -290,6 +322,82 @@ def test_render_surfaces_report_identity_line_and_source_note(tmp_path):
     )
     assert "Publisher:</span> Capgemini" in html
     assert "Source URL was not available in the extracted report metadata." in html
+
+
+def test_render_relabels_unknown_quote_speakers_and_shows_citation_micro_lines(tmp_path):
+    data = {
+        "title": "Unknown speaker report",
+        "tldr": "TLDR",
+        "insights": ["legacy insight"] * 5,
+        "quote": {"text": "Legacy quote", "author": "Unknown"},
+        "commentary": "Commentary",
+        "publisher": "Artlist",
+        "taxonomy": [],
+        "region": "US",
+        "time_period": "2026",
+        "contents_page_number": 0,
+        "artifacts": {
+            "summary": {
+                "tldr": "Artifact TLDR",
+                "executive_summary": "Artifact executive summary",
+                "claim_evidence_map": [
+                    {
+                        "claim": "Claim 1",
+                        "evidence_id": "f1",
+                        "evidence": "Evidence 1",
+                        "pages": [7],
+                        "evidence_spans": [
+                            {
+                                "evidence_id": "f1",
+                                "source_pack": "findings",
+                                "page": 7,
+                            }
+                        ],
+                    }
+                ],
+            },
+            "insights_final": [
+                {
+                    "id": "i1",
+                    "text": "Artifact insight 1",
+                    "evidence_id": "f1",
+                    "evidence_spans": [
+                        {"evidence_id": "f1", "source_pack": "findings", "page": 7}
+                    ],
+                    "metric": {},
+                }
+            ],
+            "quotes_final": [
+                {
+                    "text": "Artifact quote",
+                    "speaker": "Unknown",
+                    "citation": "",
+                    "page": 7,
+                    "evidence_id": "q1",
+                    "evidence_spans": [
+                        {
+                            "evidence_id": "q1",
+                            "source_pack": "quote_candidates",
+                            "page": 7,
+                        }
+                    ],
+                }
+            ],
+        },
+    }
+    req = RenderRequest(
+        schema_version="1.0",
+        data=data,
+        doc_name="unknown.pdf",
+        file_id="file_unknown",
+        out_dir=str(tmp_path),
+        preview_png=None,
+    )
+    resp = render_report(req, _ctx())
+    html = Path(resp.html_path).read_text(encoding="utf-8")
+
+    assert "Artlist expert team" in html
+    assert "q1 · report page 7" in html
 
 
 def test_render_surfaces_editorial_details_from_evidence_packs(tmp_path):

@@ -5,14 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 import yaml
 
-from src.contracts.config import (
-    AppConfigReadRequest,
-    AppConfigWriteRequest,
-    ConfigLoadRequest,
-)
-from src.contracts.browser_download import (
-    BrowserDownloadIdentityFieldUpsertRequest,
-)
+from src.contracts.config import ConfigLoadRequest
 from src.contracts.publisher_inventory import PublisherInventorySettings
 from src.contracts.run_context import RunContext
 from src.services.config_service import (
@@ -20,9 +13,6 @@ from src.services.config_service import (
     load_publisher_inventory_settings,
     load_publish_settings,
     load_settings,
-    read_app_config,
-    upsert_browser_download_identity_fields,
-    write_app_config,
 )
 from src.utils.errors import AppError
 
@@ -817,63 +807,6 @@ class TestConfigService(unittest.TestCase):
                         )
         self.assertIn("OPENROUTER_API_KEY", str(ctx.exception))
 
-    def test_upsert_browser_download_identity_fields_adds_new_keys(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            cfg_path = self._write_config(tmp_dir, include_publish=False)
-            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
-            identity_path = cfg_data["browser_download"]["identity_config_path"]
-            response = upsert_browser_download_identity_fields(
-                BrowserDownloadIdentityFieldUpsertRequest(
-                    schema_version="1.0",
-                    path=identity_path,
-                    encountered_form_fields=[
-                        "Name",
-                        "Business",
-                        "Budget Range",
-                        "Budget Range",
-                    ],
-                ),
-                RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
-            )
-
-            payload = yaml.safe_load(Path(identity_path).read_text(encoding="utf-8"))
-
-        self.assertEqual(["name", "budget_range"], response.added_field_keys)
-        self.assertEqual(4, response.total_fields)
-        self.assertEqual(
-            ["work_email", "company", "name", "budget_range"],
-            [field["key"] for field in payload["fields"]],
-        )
-
-    def test_upsert_browser_download_identity_fields_skips_generic_controls(
-        self,
-    ) -> None:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            cfg_path = self._write_config(tmp_dir, include_publish=False)
-            cfg_data = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
-            identity_path = cfg_data["browser_download"]["identity_config_path"]
-            response = upsert_browser_download_identity_fields(
-                BrowserDownloadIdentityFieldUpsertRequest(
-                    schema_version="1.0",
-                    path=identity_path,
-                    encountered_form_fields=[
-                        "Submit",
-                        "Download report",
-                        "Select region",
-                        "Budget Range",
-                    ],
-                ),
-                RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
-            )
-
-            payload = yaml.safe_load(Path(identity_path).read_text(encoding="utf-8"))
-
-        self.assertEqual(["budget_range"], response.added_field_keys)
-        self.assertEqual(
-            ["work_email", "company", "budget_range"],
-            [field["key"] for field in payload["fields"]],
-        )
-
     def test_publisher_inventory_settings_load_and_fallback_to_browser_download(
         self,
     ) -> None:
@@ -1057,40 +990,6 @@ class TestConfigService(unittest.TestCase):
         self.assertFalse(settings.candidate_screening_enabled)
         self.assertEqual("", settings.openai_api_key)
 
-    def test_read_and_write_app_config_round_trip(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            cfg_path = self._write_config(
-                tmp_dir, include_analysis=True, include_publish=True
-            )
-            ctx = RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
-            read_response = read_app_config(
-                AppConfigReadRequest(schema_version="1.0", path=cfg_path),
-                ctx,
-            )
-            self.assertIn("ingest", read_response.payload)
-            self.assertGreater(read_response.size_bytes, 0)
-            self.assertIsNotNone(read_response.modified_utc)
-
-            updated_payload = yaml.safe_load(read_response.content)
-            updated_payload["ingest"]["batch_limit"] = 37
-            updated_text = yaml.safe_dump(updated_payload, sort_keys=False)
-            write_response = write_app_config(
-                AppConfigWriteRequest(
-                    schema_version="1.0",
-                    path=cfg_path,
-                    content=updated_text,
-                    make_backup=True,
-                ),
-                ctx,
-            )
-            self.assertGreater(write_response.bytes_written, 0)
-            self.assertIn("ingest", write_response.top_level_keys)
-            self.assertIsNotNone(write_response.backup_path)
-            self.assertTrue(Path(str(write_response.backup_path)).exists())
-
-            final_payload = yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8"))
-            self.assertEqual(37, final_payload["ingest"]["batch_limit"])
-
     def test_load_settings_uses_env_config_path_profile_and_local_overlay(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_path = Path(self._write_config(tmp_dir, include_analysis=False))
@@ -1127,49 +1026,6 @@ class TestConfigService(unittest.TestCase):
 
         self.assertEqual(41, settings.batch_limit)
         self.assertEqual(["overview", "toc"], settings.contents_keywords)
-
-    def test_read_app_config_missing_file_raises_not_found_code(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            cfg_path = Path(tmp_dir) / "missing.yaml"
-            with self.assertRaises(AppError) as ctx:
-                read_app_config(
-                    AppConfigReadRequest(schema_version="1.0", path=str(cfg_path)),
-                    RunContext(
-                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
-                    ),
-                )
-        self.assertEqual("config_file_not_found", ctx.exception.code)
-
-    def test_read_app_config_invalid_yaml_raises_invalid_code(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            cfg_path = Path(tmp_dir) / "app.yaml"
-            cfg_path.write_text("schema_version: [1,\n", encoding="utf-8")
-            with self.assertRaises(AppError) as ctx:
-                read_app_config(
-                    AppConfigReadRequest(schema_version="1.0", path=str(cfg_path)),
-                    RunContext(
-                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
-                    ),
-                )
-        self.assertEqual("config_yaml_invalid", ctx.exception.code)
-
-    def test_write_app_config_rejects_non_mapping_yaml(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            cfg_path = Path(tmp_dir) / "app.yaml"
-            cfg_path.write_text("schema_version: '1.0'\n", encoding="utf-8")
-            with self.assertRaises(AppError) as ctx:
-                write_app_config(
-                    AppConfigWriteRequest(
-                        schema_version="1.0",
-                        path=str(cfg_path),
-                        content="- one\n- two\n",
-                        make_backup=False,
-                    ),
-                    RunContext(
-                        schema_version="1.0", run_id="r", task_id="t", span_id="s"
-                    ),
-                )
-            self.assertIn("mapping", str(ctx.exception).lower())
 
     def test_load_settings_rejects_non_mapping_yaml_root(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

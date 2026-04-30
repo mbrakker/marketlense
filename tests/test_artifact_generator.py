@@ -462,6 +462,22 @@ def test_generate_artifacts_validates_schema_and_evidence_ids(tmp_path):
     )
     assert all(item["evidence_id"] for item in payload["insights_candidates"])
     assert all(item["evidence_id"] for item in payload["insights_final"])
+    assert payload["summary"]["claim_evidence_map"][0]["evidence_spans"] == [
+        {
+            "evidence_id": "f1",
+            "source_pack": "findings",
+            "page": 2,
+            "text": "Revenue +10% YoY",
+        }
+    ]
+    assert payload["quotes_final"][0]["evidence_spans"] == [
+        {
+            "evidence_id": "q1",
+            "source_pack": "quote_candidates",
+            "page": 3,
+            "text": "We are expanding rapidly",
+        }
+    ]
     assert payload["family_status"]["summary"]["status"] == "generated"
     assert payload["family_status"]["quotes"]["status"] == "generated"
     assert len([req for req in fake_openai.requests if req[0] == "chat"]) == 6
@@ -926,12 +942,15 @@ def test_generate_artifacts_backfills_missing_ids(tmp_path):
         prompt_client=FakePromptClient(),
         analysis_store=FakeAnalysisStore(),
     )
-    assert payload["summary"]["claim_evidence_map"][0]["evidence_id"] == ""
+    assert payload["summary"]["claim_evidence_map"] == []
+    assert payload["family_status"]["summary"]["status"] == "abstained"
+    assert payload["family_status"]["summary"]["reason"] == "summary_claim_span_missing"
     assert payload["insights_candidates"] == []
     assert payload["insights_final"] == []
     assert payload["family_status"]["insights_bundle"]["status"] == "abstained"
     assert payload["family_status"]["insights_bundle"]["policy_action"] == "regenerate"
     assert payload["quotes_final"][0]["evidence_id"] == ""
+    assert payload["quotes_final"][0]["evidence_spans"] == []
     validate_schema(
         SchemaValidateRequest(
             schema_version="1.0", payload=payload, schema_name="artifacts"

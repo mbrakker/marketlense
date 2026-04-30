@@ -235,16 +235,6 @@ Suggested priority order:
     - Conflicts between validators are surfaced explicitly.
     - Regression suite demonstrates improved defect detection on known bad fixtures.
 
-- **Title:** Bind every non-trivial claim to evidence spans and render citation micro-lines [Impact: 5/5, Effort: 4/5]
-  - Explanation: Merge claim-span binding with existing citation/quote formatting work. Claims should carry evidence references tied to doc_map/page offsets, and rendered artifacts should expose concise citation micro-lines.
-  - Pros: Better auditability, lower hallucination risk, clearer reader trust signals.
-  - Cons: Requires robust span extraction and mapping.
-  - Acceptance Criteria:
-    - Claim contracts include evidence/span references for non-trivial claims.
-    - Validation rejects unsupported claims.
-    - HTML renders citation micro-lines with evidence ID and "report page X" where available.
-    - `Unknown` quote speaker labels become `<Publisher name> expert team`.
-
 - **Title:** Add deterministic failure-to-fix planner for targeted regeneration [Impact: 4/5, Effort: 4/5]
   - Explanation: Map known validation failure classes to deterministic repair recipes before full regeneration, reducing expensive broad reruns.
   - Pros: Fewer full reruns and clearer repair behavior.
@@ -356,16 +346,6 @@ Suggested priority order:
     - No new pass-through wrapper modules are introduced.
     - Long-file report shows reduced concentration in the named hotspots.
     - Golden and behavior tests prove parity or explicitly approved improvements.
-
-- **Title:** Simplify config editing into smaller capability-owned paths [Impact: 4/5, Effort: 4/5]
-  - Explanation: `src/services/config_service.py` is one of the largest services and likely owns multiple config capabilities. Split only stable semantic areas, such as app settings, identity settings, publisher profiles, validation policy, and UI-safe redaction, while preserving one canonical config service boundary.
-  - Pros: Easier config changes, clearer tests, smaller blast radius.
-  - Cons: Risk of unnecessary layering if split too aggressively.
-  - Acceptance Criteria:
-    - One canonical config service boundary remains for callers.
-    - Internal capability modules each own a distinct config concern.
-    - No duplicate constants or competing config entrypoints are introduced.
-    - Config tests are grouped by capability and preserve current behavior.
 
 - **Title:** Decompose Streamlit UI pages by workflow without nested card/layout drift [Impact: 3/5, Effort: 4/5]
   - Explanation: `src/ui/streamlit_pages.py` is a long UI coordination file. Move workflow-specific views into existing `src/ui/app_pages/**` modules when that reduces coupling and improves scanability.

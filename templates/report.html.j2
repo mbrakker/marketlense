@@ -185,7 +185,10 @@
             <span class="meta-label">Claim evidence map</span>
             <ul class="claim-list" style="margin-top:10px">
               {% for claim in view.summary.claim_map %}
-              <li><strong>{{ claim.claim }}</strong>{% if claim.evidence %}: {{ claim.evidence }}{% endif %}</li>
+              <li>
+                <strong>{{ claim.claim }}</strong>{% if claim.evidence %}: {{ claim.evidence }}{% endif %}
+                {% if claim.citation_line %}<div class="citation-micro">{{ claim.citation_line }}</div>{% endif %}
+              </li>
               {% endfor %}
             </ul>
           </div>
@@ -206,7 +209,10 @@
             <li class="insight-card">
               <div class="insight-head">
                 <span class="insight-index">{{ loop.index }}</span>
-                <p class="insight-text">{{ insight.text }}</p>
+                <div>
+                  <p class="insight-text">{{ insight.text }}</p>
+                  {% if insight.citation_line %}<div class="citation-micro">{{ insight.citation_line }}</div>{% endif %}
+                </div>
               </div>
             </li>
             {% endfor %}
@@ -316,6 +322,7 @@
                   <span class="quote-author">{{ quote.author }}</span>
                   {% if quote.citation %}<span class="quote-citation">{{ quote.citation }}</span>{% endif %}
                 </figcaption>
+                {% if quote.citation_line %}<div class="citation-micro">{{ quote.citation_line }}</div>{% endif %}
               </figure>
             </li>
             {% endfor %}
