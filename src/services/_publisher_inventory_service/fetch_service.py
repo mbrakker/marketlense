@@ -26,7 +26,7 @@ from src.contracts.http_acquisition import (
 )
 from src.contracts.run_context import RunContext
 from src.services._http_acquisition import execute_http_acquisition
-from src.services._publisher_inventory_discovery_activity import (
+from src.services._publisher_inventory_service.discovery_activity import (
     _anchor_fingerprint,
     _extract_component_link_anchors,
     _extract_candidates_from_html,

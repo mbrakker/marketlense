@@ -32,7 +32,7 @@ from src.services._browser_report_download.request import (
     prepare_download_dir,
     resolve_effective_identity_fields,
 )
-from src.services._config_identity import (
+from src.services._config_service.identity import (
     identity_field_match_tokens,
     normalize_browser_download_identity_key,
 )

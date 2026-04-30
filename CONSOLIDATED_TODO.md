@@ -122,10 +122,11 @@ Suggested priority order:
     - No regression in candidate quality on fixture reports.
 
 - **Title:** Refactor PDF visual/table heuristics around stable semantic sub-capabilities [Impact: 4/5, Effort: 4/5]
-  - Explanation: Long-file analysis shows very large PDF heuristic modules. Reduce complexity by extracting only true semantic sub-capabilities, such as geometry normalization, panel detection, legend handling, table-grid scoring, and candidate merge policy. Avoid pass-through helper layers.
+  - Explanation: Long-file analysis shows very large PDF heuristic modules. Reduce complexity by converting the large file into a facade-plus-family layout: keep the current public entrypoint file (for example `src/services/_pdf/visual_heuristics.py`) as the discoverable facade only, and move real semantic families into a same-name internal subfolder (for example `src/services/_pdf/_visual_heuristics/geometry.py`, `panel_detection.py`, `legend_handling.py`, `table_grid.py`, `candidate_merge.py`). Extract only true semantic sub-capabilities and avoid pass-through helper layers.
   - Pros: Simpler defect isolation, easier targeted tests, lower cognitive load.
   - Cons: Refactor risk is high because heuristic behavior is fragile.
   - Acceptance Criteria:
+    - The original heuristic module remains as the canonical facade, while family modules live under a dedicated same-name internal subfolder.
     - Each extracted module has one semantic responsibility and no pass-through-only wrapper role.
     - Public PDF service entrypoints remain canonical and unchanged for callers.
     - Golden fixture outputs are unchanged except for explicitly approved improvements.
@@ -217,10 +218,11 @@ Suggested priority order:
     - Serialized fixture snapshots cover representative stored artifacts.
 
 - **Title:** Split oversized contract modules by semantic contract families [Impact: 4/5, Effort: 4/5]
-  - Explanation: Contract files such as `publisher_inventory.py`, `browser_download.py`, and `report_store.py` are over 1k lines and mix many request/response families. Split them only by stable semantic families while keeping dataclasses as the single source of truth and preserving public import compatibility where needed.
+  - Explanation: Contract files such as `publisher_inventory.py`, `browser_download.py`, and `report_store.py` are over 1k lines and mix many request/response families. Split them with a facade-plus-family layout: keep the current top-level module as the public compatibility facade, and move family dataclasses into a same-name internal subfolder (for example `src/contracts/publisher_inventory.py` plus `src/contracts/_publisher_inventory/discovery.py`, `candidate_trace.py`, `screening.py`). Split only by stable semantic families while keeping dataclasses as the single source of truth and preserving public import compatibility where needed.
   - Pros: Easier contract review, smaller schema-diff blast radius, clearer ownership.
   - Cons: Import migration can be noisy if compatibility shims are not handled carefully.
   - Acceptance Criteria:
+    - Each oversized contract file remains as the public import facade, with semantic families moved into a dedicated same-name internal subfolder.
     - Oversized contract modules are split by semantic families, not arbitrary file size.
     - Public compatibility imports remain during migration with documented removal dates.
     - Contract round-trip and schema snapshot tests cover every moved dataclass.
@@ -269,10 +271,11 @@ Suggested priority order:
     - Contract round-trip tests cover every added/modified dataclass contract.
 
 - **Title:** Decompose mega-tests into behavior suites with shared fixture builders [Impact: 4/5, Effort: 4/5]
-  - Explanation: Tests such as `test_browser_report_download_service.py`, `test_pdf_figures_service.py`, and `test_publisher_inventory_service.py` are thousands of lines long. Split them by externally observable behavior and introduce shared builders that keep assertions semantic rather than broad mock narratives.
+  - Explanation: Tests such as `test_browser_report_download_service.py`, `test_pdf_figures_service.py`, and `test_publisher_inventory_service.py` are thousands of lines long. Split them with a suite-family layout: keep the original top-level test module as a thin suite index or compatibility wrapper only when needed, and move behavior families into a same-name test subfolder (for example `tests/test_browser_report_download_service/route_memory.py`, `terminal_state.py`, `artifact_validation.py`) plus shared builders local to that folder. Assertions must stay semantic rather than broad mock narratives.
   - Pros: Faster review, easier targeted test runs, clearer failure localization.
   - Cons: Refactor can accidentally weaken tests if assertions are not preserved.
   - Acceptance Criteria:
+    - Each mega-test is decomposed into a dedicated same-name test subfolder with behavior-family files and shared fixture builders.
     - Mega-tests are split by behavior family with stable fixture builders.
     - Each split file keeps positive, negative, log-field, and remove-the-logic sentinel coverage where applicable.
     - No new private-helper monkeypatching or tautological assertions are introduced.
@@ -337,10 +340,11 @@ Suggested priority order:
 ## 9. Architecture Simplification & Code Reduction
 
 - **Title:** Split long-file hotspots only along real capability boundaries [Impact: 5/5, Effort: 5/5]
-  - Explanation: Long-file analysis identifies concentration in report store, PDF heuristics, browser-download artifact handling, config service, Streamlit pages, publisher inventory, and report selection. Refactor only where module boundaries reduce real coupling, improve test isolation, or clarify ownership; do not create pass-through layers.
+  - Explanation: Long-file analysis identifies concentration in report store, PDF heuristics, browser-download artifact handling, config service, Streamlit pages, publisher inventory, and report selection. Refactor these hotspots with a consistent facade-plus-family pattern: keep the original discoverable module file as the public boundary, and move semantic families into a same-name internal subfolder. Example targets include `src/services/report_store_service.py` plus `src/services/_report_store_service/*`, `src/services/publisher_inventory_service.py` plus `src/services/_publisher_inventory_service/*`, and `src/generators/report_selection_generator.py` plus `src/generators/_report_selection_generator/*`. Refactor only where module boundaries reduce real coupling, improve test isolation, or clarify ownership; do not create pass-through layers.
   - Pros: Higher simplicity, lower cognitive load, better defect containment.
   - Cons: Large refactors can add fragmentation if boundaries are artificial.
   - Acceptance Criteria:
+    - Each hotspot keeps one canonical facade file, with real semantic families moved into a dedicated same-name internal subfolder.
     - Each split has a documented semantic responsibility and concrete reason.
     - Canonical service/generator/orchestrator entrypoints remain discoverable.
     - No new pass-through wrapper modules are introduced.
@@ -348,14 +352,25 @@ Suggested priority order:
     - Golden and behavior tests prove parity or explicitly approved improvements.
 
 - **Title:** Decompose Streamlit UI pages by workflow without nested card/layout drift [Impact: 3/5, Effort: 4/5]
-  - Explanation: `src/ui/streamlit_pages.py` is a long UI coordination file. Move workflow-specific views into existing `src/ui/app_pages/**` modules when that reduces coupling and improves scanability.
+  - Explanation: `src/ui/streamlit_pages.py` is a long UI coordination file. Split it with a facade-plus-family layout: keep `src/ui/streamlit_pages.py` as navigation/composition only, and move workflow families into a same-name internal subfolder and/or the existing capability-owned page modules where that reduces coupling and improves scanability. The intended outcome is one top-level navigation facade with family-level page modules, not another long peer file.
   - Pros: Easier UI maintenance and clearer page ownership.
   - Cons: Streamlit session-state behavior can regress during moves.
   - Acceptance Criteria:
-    - `streamlit_pages.py` becomes navigation/composition only.
-    - Workflow views live in capability-owned page modules.
+    - `streamlit_pages.py` becomes navigation/composition-only facade code.
+    - Workflow views live in family modules under a same-name split layout and/or existing capability-owned page modules.
     - Session-state contracts remain explicit and tested.
     - UI tests cover navigation and representative page rendering.
+
+- **Title:** Split report-generation dependency bundle by semantic dependency families [Impact: 4/5, Effort: 4/5]
+  - Explanation: `src/generators/report_generation_dependencies.py` is called out in the hotspot scan for importing a very large symbol set and acting as a concentration point. Refactor it with the same facade-plus-family pattern: keep `src/generators/report_generation_dependencies.py` as the discoverable dependency facade only, and move stable dependency families into `src/generators/_report_generation_dependencies/` modules such as `analysis.py`, `render.py`, `validation.py`, `artifacts.py`, and `publishing.py`. The goal is to reduce import fan-in and make dependency ownership legible without creating competing entrypoints.
+  - Pros: Lower import concentration, easier reasoning about dependency ownership, smaller blast radius for report-pipeline changes.
+  - Cons: Refactor can become noisy if families are sliced too mechanically.
+  - Acceptance Criteria:
+    - `report_generation_dependencies.py` remains the only public dependency bundle facade for callers.
+    - Real dependency families move into a dedicated same-name internal subfolder.
+    - Family modules reflect stable capability groupings, not arbitrary symbol-count balancing.
+    - Import fan-in and long-file concentration are reduced in the hotspot report.
+    - Behavior and pipeline wiring tests prove no regression.
 
 ## Priority Launch Plan
 
@@ -384,8 +399,7 @@ Suggested priority order:
 
 ### Phase 4: Simplicity and Maintainability (ongoing)
 
-- Long-file hotspot splits by real capability boundary.
-- Config service capability split.
-- Streamlit workflow page decomposition.
-- Contract module family split.
-- Report-generation dependency-bundle split.
+- Long-file hotspot splits by real capability boundary using facade file + same-name internal family subfolder layout.
+- Streamlit workflow page decomposition using navigation facade + family modules.
+- Contract module family split using public module facade + same-name internal family subfolder layout.
+- Report-generation dependency-bundle split using public facade + semantic dependency-family modules.

@@ -19,7 +19,7 @@ from src.contracts.state import (
     StateReportDownloadRouteGetRequest,
     StateReportDownloadRouteRecordRequest,
 )
-from src.services import _state_common as state_common
+from src.services._state_service import common as state_common
 from src.services.state_service import (
     already_processed_batch,
     already_processed,

@@ -11,7 +11,7 @@ from src.contracts.state import (
     StatePublishedRow,
     StatePublishRecordRequest,
 )
-from src.services._state_common import _normalize_post_type, _state_conn, logger
+from src.services._state_service.common import _normalize_post_type, _state_conn, logger
 from src.utils.logging import log_event
 
 

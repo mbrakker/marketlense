@@ -4,7 +4,7 @@ import sqlite3
 
 from src.contracts.run_context import RunContext
 from src.contracts.state import StateDbAccessRequest, StateDbAccessResponse
-from src.services._state_common import (
+from src.services._state_service.common import (
     ACCESS_TIMEOUT_SECONDS,
     _configure_sqlite_connection,
     _is_lock_error,

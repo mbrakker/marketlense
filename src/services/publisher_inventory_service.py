@@ -30,7 +30,7 @@ from src.contracts.publisher_inventory import (
 )
 from src.contracts.run_context import RunContext
 from src.services._http_acquisition import execute_http_acquisition
-from src.services._publisher_inventory_discovery_activity import (
+from src.services._publisher_inventory_service.discovery_activity import (
     _build_browser_route_summary,
     _candidate_url_signature,
     _extract_component_link_anchors,
@@ -53,11 +53,11 @@ from src.services._publisher_inventory_discovery_activity import (
     _should_expand_archive_library,
     _should_follow_report_listing,
 )
-from src.services._publisher_inventory_browser_service import (
+from src.services._publisher_inventory_service.browser_service import (
     BrowserInventoryAcquisitionDependencies,
     discover_inventory_via_browser,
 )
-from src.services._publisher_inventory_browser_scripts import (
+from src.services._publisher_inventory_service.browser_scripts import (
     _browser_apply_report_filter_script,
     _browser_click_archive_expander_script,
     _browser_click_cookie_banner_script,
@@ -71,7 +71,7 @@ from src.services._publisher_inventory_browser_scripts import (
     _browser_rendered_html_script,
     _browser_scroll_to_ratio_script,
 )
-from src.services._publisher_inventory_browser_traversal_state import (
+from src.services._publisher_inventory_service.browser_traversal_state import (
     _BrowserTraversalMetrics,
     _RenderedInventoryState,
     _build_browser_route_trace,
@@ -79,7 +79,7 @@ from src.services._publisher_inventory_browser_traversal_state import (
     _new_browser_traversal_metrics,
     _rendered_inventory_state_from_payload,
 )
-from src.services._publisher_inventory_fetch_service import (
+from src.services._publisher_inventory_service.fetch_service import (
     HTTP_BROWSER_HEADERS,
     _InventoryHtmlParser,
     discover_inventory_via_http,

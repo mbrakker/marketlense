@@ -19,7 +19,7 @@ from src.contracts.state import (
     StateProcessedRow,
     StateRecordRequest,
 )
-from src.services._state_common import (
+from src.services._state_service.common import (
     BATCH_STATE_CHECK_MAX_PAIRS,
     _normalize_batch_items,
     _parse_dict,

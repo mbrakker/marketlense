@@ -10,7 +10,7 @@ from dataclasses import dataclass, replace
 from typing import Any, Mapping
 
 from src.contracts.publisher_inventory import PublisherInventoryRouteTrace
-from src.services._publisher_inventory_discovery_activity import (
+from src.services._publisher_inventory_service.discovery_activity import (
     _is_archive_surface,
     _normalize_absolute_url,
     _normalize_text,

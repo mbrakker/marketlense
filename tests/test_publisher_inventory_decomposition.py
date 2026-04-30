@@ -15,7 +15,7 @@ from src.generators.publisher_inventory_coverage_generator import (
 from src.generators.publisher_inventory_run_quality_generator import (
     evaluate_publisher_inventory_run_quality,
 )
-from src.orchestrators._publisher_inventory_route_planner import (
+from src.orchestrators._publisher_inventory_orchestrator.route_planner import (
     plan_publisher_inventory_routes,
 )
 

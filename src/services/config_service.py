@@ -29,16 +29,16 @@ from src.contracts.ingest import IngestSettings
 from src.contracts.publish import PublishSettings
 from src.contracts.run_context import RunContext
 from src.contracts.wordpress import WordPressAuthSettings
-from src.services._config_identity import (
+from src.services._config_service.identity import (
     load_browser_download_identity as _load_browser_download_identity,
     plan_browser_download_identity_field_upserts as _plan_browser_download_identity_field_upserts,
     serialize_browser_download_identity as _serialize_browser_download_identity,
 )
-from src.services._config_app_document import (
+from src.services._config_service.app_document import (
     read_app_config_document as _read_app_config_document,
     write_app_config_document as _write_app_config_document,
 )
-from src.services._yaml_config import (
+from src.services._config_service.yaml_mapping import (
     YamlMappingError,
     deep_merge_mappings,
     load_yaml_mapping as _read_yaml_mapping,

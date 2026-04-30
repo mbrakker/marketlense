@@ -8,7 +8,7 @@ from src.contracts.state import (
     StateReportDownloadRouteRecordRequest,
     StateReportDownloadRouteResponse,
 )
-from src.services._state_common import _state_conn, logger
+from src.services._state_service.common import _state_conn, logger
 from src.utils.logging import log_event
 
 

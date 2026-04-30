@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from src.services._state_access import check_state_db_access
-from src.services._state_processed import (
+from src.services._state_service.access import check_state_db_access
+from src.services._state_service.processed import (
     already_processed,
     already_processed_batch,
     get,
@@ -10,13 +10,13 @@ from src.services._state_processed import (
     record,
     set_ingest_cursor,
 )
-from src.services._state_publish import (
+from src.services._state_service.publish import (
     already_published,
     get_publish,
     list_published,
     record_publish,
 )
-from src.services._state_routes import (
+from src.services._state_service.routes import (
     get_report_download_route,
     record_report_download_route,
 )

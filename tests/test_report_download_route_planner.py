@@ -7,7 +7,7 @@ from src.contracts.browser_download import (
     ReportDownloadRoutePlanRequest,
 )
 from src.contracts.publisher_inventory import PublisherInventoryCandidateTrace
-from src.orchestrators._report_download_route_planner import plan_report_download_routes
+from src.orchestrators._report_download_orchestrator.route_planner import plan_report_download_routes
 
 
 def test_plan_report_download_routes_prefers_email_form_for_tracker_redirect(

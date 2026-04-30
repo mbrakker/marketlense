@@ -70,7 +70,7 @@ from src.generators.publisher_inventory_candidate_screening_generator import (
 from src.generators.publisher_inventory_candidate_quality_generator import (
     qualify_publisher_inventory_candidates,
 )
-from src.orchestrators._publisher_inventory_route_planner import (
+from src.orchestrators._publisher_inventory_orchestrator.route_planner import (
     plan_publisher_inventory_routes,
 )
 from src.orchestrators.retry_orchestrator import (

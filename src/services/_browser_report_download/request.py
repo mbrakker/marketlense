@@ -12,7 +12,7 @@ from src.contracts.browser_download import (
     BrowserDownloadIdentityField,
     BrowserReportDownloadRequest,
 )
-from src.services._config_identity import (
+from src.services._config_service.identity import (
     identity_field_match_tokens,
     normalize_browser_download_identity_key,
     resolve_browser_download_delivery_emails,
